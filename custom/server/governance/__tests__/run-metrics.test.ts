@@ -89,7 +89,7 @@ describe('computeRunMetrics', () => {
   it('metrics CSV 行格式（M1/M3/M4/M5；score 三位小数）', () => {
     const m = mk()
     const m1 = m.metricsRows.find((r) => r.id === 'M1')!
-    expect(m1.csv).toBe('2026-10-27,RFD-001,M1,0.667,4/6,2026-10-27..2026-10-27,state.env 落键实算,六闸全计（G3/G6 落键型无记录即首过；治理服务 run-metrics 单源计算）')
+    expect(m1.csv).toBe('2026-10-27,RFD-001,M1,0.667,4/6,2026-10-27..2026-10-27,state.env 落键实算,六闸全计（缺完成键=unknown 不产本行；治理服务 run-metrics 单源计算）')
     expect(m.metricsRows.find((r) => r.id === 'M3')!.csv).toContain('3/4')
     expect(m.metricsRows.find((r) => r.id === 'M4')!.csv).toBe('2026-10-27,RFD-001,M4,1,1,2026-10-27..2026-10-27,issues.log 实算,打回次数=打回/拒收/熔断行计数')
   })
@@ -135,6 +135,64 @@ describe('computeRunMetrics', () => {
     // 悬挂 DISP：处置类型段无对应 ISSUE 类型（夹具 security-gate-unlock-chain）
     expect(m.danglingDispTypes).toContain('security-gate-unlock-chain')
     expect(by('g1-review·bella').freq).toBe(1)
+  })
+})
+
+describe('unknown 四态（P0 Task 6：完成键缺失=未观测，不产 M1 不显 0/6）', () => {
+  const withoutKey = (key: string) => STATE.split('\n').filter((l) => !l.startsWith(`${key}=`)).join('\n')
+
+  it('空状态/空 issues：六闸全 unknown、首过 0、不产 M1、trend 末项 ⬜', () => {
+    const empty = computeRunMetrics({ run: 'empty', rfd: 'RFD-X', issuesLog: '', stateEnv: '' })
+    expect(empty.gateStats.every((gate) => gate.state === 'unknown')).toBe(true)
+    expect(empty.firstPass).toBe(0)
+    expect(empty.supplementCount).toBe(0)
+    expect(empty.rejectGateCount).toBe(0)
+    expect(empty.unknownGateCount).toBe(6)
+    // M1（首过率分母成绩）不产；计数型/独立分母行如实保留
+    expect(empty.metricsRows.some((row) => row.id === 'M1')).toBe(false)
+    expect(empty.metricsRows.some((row) => row.id === 'M4')).toBe(true)
+    expect(empty.metricsRows.some((row) => row.id === 'M5')).toBe(true)
+    expect(empty.trend.at(-1)!.firstPass).toBe('⬜')
+  })
+
+  it('单闸缺完成键（g2_arch_pass）：unknownGateCount=1、M1 不产、计数全从 gateStats 出', () => {
+    const partial = mk({ stateEnv: withoutKey('g2_arch_pass') })
+    expect(partial.unknownGateCount).toBe(1)
+    expect(partial.gateStats.find((g) => g.gate === 'G2')!.state).toBe('unknown')
+    // G1 补过、G5 打回、G2 unknown，余 G3/G4/G6 首过：四态计数和=6（禁反推公式）
+    expect(partial.firstPass).toBe(3)
+    expect(partial.supplementCount).toBe(1)
+    expect(partial.rejectGateCount).toBe(1)
+    expect(partial.firstPass + partial.supplementCount + partial.rejectGateCount + partial.unknownGateCount).toBe(6)
+    expect(partial.metricsRows.some((row) => row.id === 'M1')).toBe(false)
+    expect(partial.trend.at(-1)!.firstPass).toBe('⬜')
+  })
+
+  it('空串完成键同缺键：g4_pass= → G4 unknown', () => {
+    const blank = mk({ stateEnv: STATE.replace('g4_pass=1790000003', 'g4_pass=') })
+    expect(blank.gateStats.find((g) => g.gate === 'G4')!.state).toBe('unknown')
+    expect(blank.unknownGateCount).toBe(1)
+  })
+
+  it('打回优先于完成键：G5 键缺失+判词 FAIL → 打回（非 unknown，unknown 计 0）', () => {
+    const m = mk({ stateEnv: withoutKey('g5_ready') })
+    expect(m.gateStats.find((g) => g.gate === 'G5')!.state).toBe('打回')
+    expect(m.unknownGateCount).toBe(0)   // 唯一缺键闸已被判词定性，不重复计 unknown
+    expect(m.rejectGateCount).toBe(1)
+  })
+
+  it('补证不掩盖缺键：g1_frozen 缺（g1_supplement=1 在）→ G1 unknown、补过数 0', () => {
+    const m = mk({ stateEnv: withoutKey('g1_frozen') })
+    expect(m.gateStats.find((g) => g.gate === 'G1')!.state).toBe('unknown')
+    expect(m.supplementCount).toBe(0)
+  })
+
+  it('分母完整（完整样本）：unknownGateCount=0 → M1 在场、trend 末项 4/6（旧数值不变）', () => {
+    const m = mk()
+    expect(m.unknownGateCount).toBe(0)
+    expect(m.metricsRows.find((r) => r.id === 'M1')!.csv).toContain('4/6')
+    expect(m.trend.at(-1)!.firstPass).toBe('4/6')
+    expect(m.trend.at(-1)!.rejectRate).toBe('1/6')
   })
 })
 

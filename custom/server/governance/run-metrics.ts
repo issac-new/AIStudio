@@ -2,21 +2,26 @@
  * 治理指标计算（融合批三）——run 级治理数字的唯一实现。
  *
  * 移植自 simharness gov_report/gov_archive_commit（mx-scenario-lib.sh）的指标计算面：
- * 首过/补过/打回三态、证据一次通过率、打回次数、人工介入、告警族聚合、DISP 归桶、
- * metrics-log CSV 行、上轮基线与近 5 轮趋势。口径逐条对齐原实现（含 run13 复盘 C3
- * 修订：打回只认判词 FAIL/显式打回语义行，闸段其余问题单不计打回）；
+ * 首过/补过/打回/unknown 四态、证据一次通过率、打回次数、人工介入、告警族聚合、
+ * DISP 归桶、metrics-log CSV 行、上轮基线与近 5 轮趋势。口径逐条对齐原实现（含
+ * run13 复盘 C3 修订：打回只认判词 FAIL/显式打回语义行，闸段其余问题单不计打回）；
  * simharness 侧计算退役（gov_report 改渲染壳，数字取本 DTO）。
+ *
+ * P0 Task 6：四态判定正本=平台证据适配器（platform/evidence/gate-evidence），
+ * 本文件只消费其 status——完成键缺失/空=unknown（未观测不猜首过，旧口径「无记录
+ * 即首过」退役）；任一闸 unknown 时首过率分母不完整，不产 M1 行、trend 显 ⬜。
  *
  * 数据源（只读）：runs/<run>/evidence/issues.log、runs/<run>/state.env、
  * runs/<run>/evidence/product-outcome/quality-summary.env、历史轮 governance-report.md。
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { gateEvidenceFromState } from '../platform/evidence/gate-evidence'
 
 export type GateId = 'G1' | 'G2' | 'G3' | 'G4' | 'G5' | 'G6'
-export type GatePassState = '首过' | '补过' | '打回'
+export type GatePassState = '首过' | '补过' | '打回' | 'unknown'
 
-/** 六闸 state 键（G3/G6 为落键型，无对应记录即首过——run10 起统一六分母口径）。 */
+/** 六闸 state 完成键（缺键/空值=unknown 未观测——P0 Task 6 起统一口径）。 */
 export const GATE_STATE_KEYS: Readonly<Record<GateId, string>> = {
   G1: 'g1_frozen', G2: 'g2_arch_pass', G3: 'g3_code_pass',
   G4: 'g4_pass', G5: 'g5_ready', G6: 'retro_done',
@@ -50,6 +55,8 @@ export interface RunMetrics {
   firstPass: number
   supplementCount: number
   rejectGateCount: number
+  /** unknown 闸数（完成键缺失/空——首过率分母不完整位，>0 时不产 M1 行）。 */
+  unknownGateCount: number
   evidenceRate: { doneKeys: number; credentialMissing: number; text: string }
   rejectCount: number
   humanInterventions: number
@@ -107,20 +114,29 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
   const state = parseStateEnvKeys(stateEnv)
 
   const gateStats: GateStat[] = []
-  let supplementCount = 0
-  let rejectGateCount = 0
   let gateSegmentIssues = 0
   for (let n = 1; n <= 6; n++) {
     const gate = `G${n}` as GateId
     const seg = issueLines.filter((l) => l.startsWith(`ISSUE|g${n}-`))
     gateSegmentIssues += seg.length
-    const failed = seg.some((l) => REJECT_WORD_RE.test(l))
-    const supplement = state[`g${n}_supplement`] === '1' && !failed
-    if (supplement) supplementCount++
-    if (failed) rejectGateCount++
-    gateStats.push({ gate, state: failed ? '打回' : supplement ? '补过' : '首过', supplement, segmentIssues: seg.length })
+    // 四态判定正本=平台证据适配器（判定序：FAIL→打回；完成键缺失/空→unknown；
+    // 补证→补过；其余→首过——打回证据优先于完成键，补证不掩盖缺键）
+    const evidence = gateEvidenceFromState({
+      gate,
+      completionValue: state[GATE_STATE_KEYS[gate]],
+      failed: seg.some((l) => REJECT_WORD_RE.test(l)),
+      supplement: state[`g${n}_supplement`] === '1',
+    })
+    const gateState: GatePassState = evidence.status === 'fail' ? '打回'
+      : evidence.status === 'unknown' ? 'unknown'
+        : evidence.supplement ? '补过' : '首过'
+    gateStats.push({ gate, state: gateState, supplement: evidence.supplement, segmentIssues: seg.length })
   }
-  const firstPass = 6 - rejectGateCount - supplementCount
+  // 四态计数一律从 gateStats 正数（禁反推公式：unknown 在场时 6-打回-补过 会虚增首过）
+  const firstPass = gateStats.filter((g) => g.state === '首过').length
+  const supplementCount = gateStats.filter((g) => g.state === '补过').length
+  const rejectGateCount = gateStats.filter((g) => g.state === '打回').length
+  const unknownGateCount = gateStats.filter((g) => g.state === 'unknown').length
 
   const doneKeys = Object.keys(state).filter((k) => /^[a-z0-9_]+_done$/.test(k)).length
   const credentialMissing = issueLines.filter((l) => CREDENTIAL_MISS_RE.test(l.slice(6))).length
@@ -216,13 +232,14 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     ...Object.values(GATE_STATE_KEYS), 'uat_done',
   ].map((key) => ({ key, value: state[key] ?? '未落' }))
 
-  const rejectGateRate = 6 - firstPass - supplementCount
   const window = `${today}..${today}`
   const metricsRows: MetricsRow[] = [
-    {
-      id: 'M1',
-      csv: `${today},${rfd},M1,${round3(firstPass / 6)},${firstPass}/6,${window},state.env 落键实算,六闸全计（G3/G6 落键型无记录即首过；治理服务 run-metrics 单源计算）`,
-    },
+    // M1（首过率）只在分母完整时产出：任一闸 unknown（完成键缺失/空）即缺行，
+    // 不显 0/6 或 6/6 假成绩（设计书：界面与报告呈现未观测）。
+    ...(unknownGateCount === 0 ? [{
+      id: 'M1' as const,
+      csv: `${today},${rfd},M1,${round3(firstPass / 6)},${firstPass}/6,${window},state.env 落键实算,六闸全计（缺完成键=unknown 不产本行；治理服务 run-metrics 单源计算）`,
+    }] : []),
     ...(doneKeys > 0 ? [{
       id: 'M3' as const,
       csv: `${today},${rfd},M3,${round3((doneKeys - credentialMissing) / doneKeys)},${doneKeys - credentialMissing}/${doneKeys},${window},issues.log+state.env 实算,证据一次通过率=1-凭证缺件记录/完成环节键`,
@@ -252,7 +269,14 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
   const trendRuns = [...runDirs.filter((d) => d !== run), run].sort().slice(-5)
   const trend = trendRuns.map((r) => {
     if (r === run) {
-      return { run: r, firstPass: `${firstPass}/6`, rejectRate: `${rejectGateRate}/6`, density: defectDensity.includes('⬜') ? '⬜' : defectDensity }
+      // 分母不完整（任一闸 unknown）→ 首过率如实 ⬜（渲染读 trend 末项，不拼 0/6）；
+      // 打回数不依赖完成键，保持实数。
+      return {
+        run: r,
+        firstPass: unknownGateCount > 0 ? '⬜' : `${firstPass}/6`,
+        rejectRate: `${rejectGateCount}/6`,
+        density: defectDensity.includes('⬜') ? '⬜' : defectDensity,
+      }
     }
     const txt = readPrev(r)
     if (!txt) return { run: r, firstPass: '⬜', rejectRate: '⬜', density: '⬜' }
@@ -267,7 +291,7 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
     run, rfd,
     issuesTotal: issueLines.length,
     dispTotal: dispLines.length,
-    gateStats, firstPass, supplementCount, rejectGateCount,
+    gateStats, firstPass, supplementCount, rejectGateCount, unknownGateCount,
     evidenceRate: { doneKeys, credentialMissing, text: evidenceText },
     rejectCount, humanInterventions,
     alertFamily: { count: alertKeys.length, keys: alertKeys },

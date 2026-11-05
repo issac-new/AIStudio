@@ -2710,9 +2710,10 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     echo "## 硬闸状态"
     printf '%s' "$dto" | jq -r '.gateKeyLines[] | "- \(.key): \(.value)"'
     echo
-    echo "## 六闸三态（治理服务判定：首过/补过/打回）"
+    echo "## 六闸四态（治理服务判定：首过/补过/打回/unknown）"
     printf '%s' "$dto" | jq -r '[.gateStats[] | .gate + .state] | join(" ")'
     printf '%s' "$dto" | jq -r 'if .supplementCount > 0 then "（补过 \(.supplementCount)，拆分/补交形态不计首过）" else empty end'
+    printf '%s' "$dto" | jq -r 'if .unknownGateCount > 0 then "（unknown \(.unknownGateCount)：完成键缺失/空——首过率分母不完整，本轮不产 M1 行）" else empty end'
     printf '%s' "$dto" | jq -r 'if ([.gateStats[].segmentIssues] | add // 0) > 0 then "（闸段问题单 \([.gateStats[].segmentIssues] | add) 起，不计打回）" else empty end'
     echo
     echo "## 问题单台账（共 $(printf '%s' "$dto" | jq -r '.issuesTotal') 条；DISP $(printf '%s' "$dto" | jq -r '.dispTotal') 条——键=类型·主体，缺行=待处置）"
@@ -2735,7 +2736,9 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     echo "## 基线对比（§2.6-5 上次基线+1 机制）"
     if printf '%s' "$dto" | jq -e '.baseline != null' >/dev/null 2>&1; then
       echo "- 上轮（$(printf '%s' "$dto" | jq -r '.baseline.prevRun')）：$(printf '%s' "$dto" | jq -r '.baseline.line')"
-      echo "- 本轮（${RUN_ID}）：首过率 $(printf '%s' "$dto" | jq -r '.firstPass')/6"
+      # 首过率读 trend 末项（P0 Task 6）：分母不完整（任一闸 unknown）时 DTO 已显 ⬜，
+      # 渲染侧不得用 firstPass 数字自拼 X/6——unknown 轮会呈现假 0/6 成绩
+      echo "- 本轮（${RUN_ID}）：首过率 $(printf '%s' "$dto" | jq -r '.trend | last | .firstPass')"
     else
       echo "- 无上轮基线（首轮或上轮治理报告缺席）——如实留空"
     fi

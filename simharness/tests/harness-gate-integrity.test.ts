@@ -705,7 +705,28 @@ describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10
     // 计算正本在产品模块（六闸全计口径）
     const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
     expect(metrics).toContain('六闸全计')
-    expect(metrics).toContain("failed ? '打回' : supplement ? '补过' : '首过'")
+  })
+
+  it('四态判定正本=平台证据适配器（P0 Task 6：run-metrics 只消费 gateEvidenceFromState 状态）', () => {
+    const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
+    expect(metrics).toContain("from '../platform/evidence/gate-evidence'")
+    expect(metrics).toContain('gateEvidenceFromState')
+    // 任一闸 unknown → 不产 M1（分母不完整不显成绩）
+    expect(metrics).toContain('unknownGateCount === 0')
+    // 适配器契约在平台 contracts（证据统一四值 pass/fail/unknown/waived）
+    const contract = read(join(HARNESS, '..', 'custom', 'platform', 'contracts', 'evidence.ts'))
+    expect(contract).toContain("'pass' | 'fail' | 'unknown' | 'waived'")
+    const adapter = read(join(HARNESS, '..', 'custom', 'server', 'platform', 'evidence', 'gate-evidence.ts'))
+    expect(adapter).toContain('gateEvidenceFromState')
+  })
+
+  it('gov_report 本轮首过率读 trend 末项（P0 Task 6：unknown 显示 ⬜，不自行拼 0/6）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('.trend | last | .firstPass')
+    // 禁回归：DTO firstPass 数字 + 渲染侧自拼 /6（unknown 轮会显示假 0/6）
+    expect(lib).not.toContain("jq -r '.firstPass')/6")
+    // unknown 面如实呈现（缺完成键计数可见，不静默）
+    expect(lib).toContain('.unknownGateCount')
   })
 
   it('gov_report 基线对比行（§2.6.5：基线/趋势计算正本=产品 run-metrics，驱动渲染）', () => {
