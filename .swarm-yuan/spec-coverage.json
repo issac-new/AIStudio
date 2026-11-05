@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-05T04:28:50.951Z",
+  "generatedAt": "2026-11-05T04:40:54.690Z",
   "total": 561,
-  "covered": 124,
-  "coverage": 0.22103386809269163,
+  "covered": 125,
+  "coverage": 0.22281639928698752,
   "uncovered": [
     "docs/superpowers/specs/2026-06-18-kanban-advanced-features-design.md",
     "docs/superpowers/specs/2026-06-19-kanban-comment-bar-design.md",
@@ -436,7 +436,6 @@
     "docs/superpowers/specs/2026-11-04-agentteams-pending-batch.md",
     "docs/superpowers/specs/2026-11-04-release-v1.0.11-overlay.md",
     "docs/superpowers/specs/2026-11-04-win-regression-pending-batch.md",
-    "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md",
     "docs/superpowers/specs/2026-11-05-org-governance-metric-discipline.md",
     "docs/superpowers/specs/2026-11-05-org-governance-premise-log.md",
     "docs/superpowers/specs/2026-11-05-org-governance-thin-items.md",
