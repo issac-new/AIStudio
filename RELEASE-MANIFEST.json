@@ -101,7 +101,16 @@
       "notes": "四模块中发布链最成熟：CHANGELOG semver＋.bundle-version 溯源＋体积预算门禁齐备。"
     }
   },
-  "releaseBatches": [],
+  "releaseBatches": [
+    {
+      "id": "v1.0.12-overlay",
+      "tag": "v1.0.12-overlay",
+      "commit": "5f160d3c226263c06182c544a9c8b6ed04ca6335",
+      "treeHash": "65090612010d3aaead9ba5b8a49a05ceb873b312",
+      "createdAt": "2026-11-05",
+      "note": "v1.0.12-overlay 发布轮实际打包 commit（tag 指向）；后续发布轮按同形态追加，不得改写历史批次。"
+    }
+  ],
   "packaging": {
     "format": "tar.gz",
     "outputDir": "dist/release/",
