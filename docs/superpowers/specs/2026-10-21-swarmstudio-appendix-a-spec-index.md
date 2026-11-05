@@ -569,6 +569,7 @@
 | 2026-11-05-kanban-junk-runid-tolerance | kanban 毒 run 指针免疫与 dir 卡建卡校验（run27 派单器停滞根治） | patch 754：非整型 current_run_id 四读点免疫（reclaim 关开行清指针/_current_run_id None/goal superseded/评审守卫）＋dir 缺 workspace_path 建卡即拒；simharness 行为测试 5 断言；同批证伪 matrix 零重试（重试链实跑 16:56 重连）与日志漂移（双汇非缺陷） |
 | 2026-11-05-g4-probe-profile-fix | G4 能力探测 profile 指向修复（收编热修） | 场景脚本 --profile default→fanfan：SIM 42 档无 default，404 先于语义判定钉死 userenv 组；37/37 实证 |
 | 2026-11-05-run27-retro-root-cause | run27 全程复盘根治批 | 失败指纹时间戳归一化（同因秒败硬停可触发）/驱动静默心跳 900s/G5 FAIL 判词重入消费（翻绿分派先行）/探测三态分型（fetch failed 全败=基座不可达 exit 2 不冻结）/patch 755 readpool fd 计数 0.25s→30s（GIL 热点两连崩根治） |
+| 2026-11-06-run27-steps-ledger-keys | run27 步 21 台账键注册修正（查14c 真未触发误伤） | STEPS_META 步 21 并入实发键（破空渲染 FAIL＋消未注册 WARN 双效属实）；查14c 判据语义修订挂晨间批 |
 
 ### 角色/排除（非 spec 文档）
 

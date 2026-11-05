@@ -1858,7 +1858,7 @@ ISSUE_KEYS_BY_STEP = {
     20: ['eval-live-evidence-missing', 'eval-remediation-open', 'eval-gate-gap',
          'g5-humangate-proxy', 'g5-approval-history-missing', 'evidence-push',
          'release-gate-ledger'],
-    21: ['uat-ac-failed'],
+    21: ['uat-ac-failed', 'frame-content-mismatch', 'frame-capture-failed', 'dispatch-send-failed', 'dispatch-send-retry'],  # run27 实发键并入（report 段帧采集/派发族；spec 2026-11-06-run27-steps-ledger-keys）
     22: ['zero-delivery', 'product-outcome-missing'],
     23: ['audit-finding'],
     24: ['retro-open-items'],
