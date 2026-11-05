@@ -31,6 +31,8 @@ import Router from '@koa/router'
 import { mountRedteam } from '../redteam/routes'
 import { setsHandlers } from './routes/sets'
 import { runsHandlers } from './routes/runs'
+import { flywheelHandlers } from './routes/flywheel'
+import { verdictsHandlers } from './routes/verdicts'
 import { analysisHandlers } from './routes/analysis'
 
 const router = new Router({ prefix: '/api/hermes/eval' })
@@ -63,16 +65,16 @@ router.post('/runs/:id/remediations', runsHandlers.postRunsIdRemediations)
 router.get('/runs/:id/remediations', runsHandlers.getRunsIdRemediations)
 router.get('/remediations', runsHandlers.getRemediations)
 router.post('/remediations/:id/verify', runsHandlers.postRemediationsIdVerify)
-router.get('/runs/compare', runsHandlers.getRunsCompare)
-router.post('/runs/:id/reflow', runsHandlers.postRunsIdReflow)
-router.post('/badcase/distill', runsHandlers.postBadcaseDistill)
-router.post('/badcase/variants', runsHandlers.postBadcaseVariants)
-router.get('/flywheel', runsHandlers.getFlywheel)
-router.get('/flywheel/fewshot', runsHandlers.getFlywheelFewshot)
-router.post('/flywheel/merge-gate', runsHandlers.postFlywheelMergeGate)
-router.post('/skill-grade', runsHandlers.postSkillGrade)
-router.get('/runs/:id', runsHandlers.getRunsId)
-router.post('/runs/:id/verdicts', runsHandlers.postRunsIdVerdicts)
+router.get('/runs/compare', flywheelHandlers.getRunsCompare)
+router.post('/runs/:id/reflow', flywheelHandlers.postRunsIdReflow)
+router.post('/badcase/distill', flywheelHandlers.postBadcaseDistill)
+router.post('/badcase/variants', flywheelHandlers.postBadcaseVariants)
+router.get('/flywheel', flywheelHandlers.getFlywheel)
+router.get('/flywheel/fewshot', flywheelHandlers.getFlywheelFewshot)
+router.post('/flywheel/merge-gate', flywheelHandlers.postFlywheelMergeGate)
+router.post('/skill-grade', flywheelHandlers.postSkillGrade)
+router.get('/runs/:id', verdictsHandlers.getRunsId)
+router.post('/runs/:id/verdicts', verdictsHandlers.postRunsIdVerdicts)
 // ---------- analysis ----------
 router.get('/runs/:id/agreement', analysisHandlers.getRunsIdAgreement)
 router.get('/runs/:id/release-hold', analysisHandlers.getRunsIdReleaseHold)
