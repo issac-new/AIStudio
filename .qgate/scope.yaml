@@ -354,3 +354,9 @@ paths:
   - simharness/tests/fixtures/kanban-junk-runid.py
   - docs/manuals/aistudio-design-document-index.md
 
+  # run27 复盘根治批（a8f824e75）＋并行会话在推送范围内的批次（机械解堵代声明）
+  - docs/superpowers/specs/2026-11-05-run27-retro-root-cause.md
+  - docs/superpowers/specs/2026-11-05-g4-probe-profile-fix.md
+  - patches/755-readpool-fd-count-throttle.patch
+  - simharness/mux/mx-capability-probes.mjs
+  - simharness/tests/capability-probes.test.ts
