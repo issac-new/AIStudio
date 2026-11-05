@@ -56,6 +56,10 @@ export interface DetectOptions {
   /** D9 上下文水位告警阈（百分比，默认 85；≥watermarkHighPct 升 high） */
   watermarkWarnPct?: number
   watermarkHighPct?: number
+  /** plan.stale 计划悬挂阈 ms（默认 1800000=30min 与 plan-mode TTL 同值；
+   *  ≥2× 升 high。2026-11-05 AI Native 吸收批 T3：requested 永久悬挂无人裁决
+   *  =计划卡死形态（六死法·Plan 卡死）的可见锚。 */
+  planStaleMs?: number
   /** push-stalled 陈化阈 ms（默认 600000=10min：日志尾失败签名新鲜=warn，超阈=high。
    *  48935f58 落地时漏声明导致 ts-node 拒启（2026-10-18 立查立改补型） */
   pushStalledStaleMs?: number
@@ -570,6 +574,42 @@ export function detectDiskCapacity(
     }))
 }
 
+/** plan.stale：Plan Mode 计划悬挂检测（2026-11-05 AI Native 吸收批 T3，六死法·
+ *  计划卡死）。requested 停在「申请后无人裁决」超阈值即报——Plan Mode 原五态
+ *  无 TTL，requested 可永久悬挂（评审面板无人看=只分析不执行的卡死形态）。
+ *  数据源=控制器注入 planRequests（plan-mode listAllPlans，fail-soft）；
+ *  未接线=合法空态。plan-mode 侧 TTL 到点会自转 expired（读路径惰性执法），
+ *  本检测器报的是「已过期仍在悬挂」与「临近过期的 requested」。 */
+export function detectPlanStale(
+  snap: ClusterSnapshot & { planRequests?: Array<{ planId: string; fromAgent: string; taskId?: string; at: number; state: string }> },
+  opts: DetectOptions = {},
+): Anomaly[] {
+  const plans = snap.planRequests
+  if (!plans || plans.length === 0) return []
+  const threshold = opts.planStaleMs ?? 30 * 60 * 1000
+  const now = Date.now()
+  const out: Anomaly[] = []
+  for (const p of plans) {
+    const age = now - p.at
+    if (p.state === 'expired') {
+      out.push({
+        detector: 'plan.stale', subject: `plan:${p.planId}`,
+        severity: 'warn',
+        summary: `计划 ${p.planId}（${p.fromAgent}）requested 超 TTL 已自动过期——agent 须重新申请；若反复过期查该 agent 的计划质量`,
+        detail: { planId: p.planId, fromAgent: p.fromAgent, taskId: p.taskId ?? null, at: p.at, ageMs: age, state: p.state },
+      })
+    } else if (p.state === 'requested' && age >= threshold) {
+      out.push({
+        detector: 'plan.stale', subject: `plan:${p.planId}`,
+        severity: age >= threshold * 2 ? 'high' : 'warn',
+        summary: `计划 ${p.planId}（${p.fromAgent}）requested 悬挂 ${Math.round(age / 60000)} 分钟无人裁决——计划卡死形态：确认门没人看，agent 停在申请态`,
+        detail: { planId: p.planId, fromAgent: p.fromAgent, taskId: p.taskId ?? null, at: p.at, ageMs: age, state: p.state },
+      })
+    }
+  }
+  return out
+}
+
 /** agent.push-stalled：推送受阻检测（run21 2026-10-18 40 分钟盲区实录产品化）。
  *  本地 rebase/push 失败是静默的——owner 在长回合里反复重试或放弃，全集群
  *  无一方可见（实录：checkpoint 落库后三文件 rebase 冲突，owner 本地失败
@@ -756,6 +796,8 @@ export function detectAll(snap: ClusterSnapshot, opts: DetectOptions = {}): Anom
     ...detectSpawnHealth(snap, opts),
     ...detectWorkExpectedSilent(snap, opts),
     ...detectDiskCapacity(snap as ClusterSnapshot & { diskUsage?: Array<{ mount: string; usedPct: number }> }, opts),
+    // 计划悬挂（2026-11-05 AI Native 吸收批 T3）：requested 过期/临过期可见锚
+    ...detectPlanStale(snap as ClusterSnapshot & { planRequests?: ClusterSnapshot['planRequests'] }, opts),
     // 安全轮 M7（2026-10-16，预警先行版）：三条工具面告警——只产 Anomaly 不拦截
     ...detectToolRate(snap, opts),
     ...detectOffhoursHighRisk(snap, opts),

@@ -35,6 +35,7 @@ import { collectMcpDrift, snapshotMcpDrift } from '../mcpcatalog/mcp-drift'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
 import { planResume } from '../resume/resume-planner'
 import { collectProcessQuality } from '../observability/process-quality'
+import { collectTerminations } from '../loop/termination-collect'
 import { collectObsSignals } from '../obssignals/collect'
 import { collectObsAlerts } from '../obsalerts/collect'
 import { overlayCallgate, parseCallgateRule } from '../callgate/registry'
@@ -290,6 +291,16 @@ router.get('/resume-plan', async (ctx) => {
 router.get('/process-quality', async (ctx) => {
   try {
     ctx.body = { ok: true, ...collectProcessQuality(daysOf(ctx.query.days)) }
+  } catch (e) {
+    fail(ctx, 500, e instanceof Error ? e.message : String(e))
+  }
+})
+
+// 统一终止码分布（2026-11-05 AI Native 吸收批 T2）：四族终态词表映射到十七码
+// 视图（映射不替换），回答「这次 loop 为什么出来」；数据面 fail-soft 不猜数。
+router.get('/terminations', async (ctx) => {
+  try {
+    ctx.body = { ok: true, ...collectTerminations(daysOf(ctx.query.days)) }
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }

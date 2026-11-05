@@ -11,7 +11,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from '
 import { join, resolve } from 'path'
 import { underWebUi } from '../lib/paths'
 
-export type PlanState = 'requested' | 'confirmed' | 'auto-approved' | 'rejected' | 'executing'
+export type PlanState = 'requested' | 'confirmed' | 'auto-approved' | 'rejected' | 'executing' | 'expired'
+
+/** requested 停留 TTL（AI Native 吸收批 T3 计划卡死修复）：默认 30 分钟，PLAN_TTL_MS 覆盖。
+ *  超时未裁决的计划转 expired——过期计划不可再 confirm（decidePlan 的 state 门自然拦截），
+ *  agent 须重新申请；requested 永久悬挂（评审面板无人看）不再可能。 */
+export function planTtlMs(): number {
+  const raw = Number(process.env.PLAN_TTL_MS)
+  return Number.isFinite(raw) && raw > 0 ? raw : 30 * 60 * 1000
+}
 
 export interface PlanRequest {
   planId: string
@@ -95,8 +103,31 @@ export function markExecuting(planId: string): PlanRequest | { error: string } {
   return p
 }
 
-/** 待确认队列（评审面板数据面）。 */
+/** TTL 到点的 requested 计划转 expired（读路径惰性执法，幂等）。返回本轮过期清单。 */
+export function expireStalePlans(ttlMs?: number): PlanRequest[] {
+  const ttl = ttlMs ?? planTtlMs()
+  const now = Date.now()
+  const expired: PlanRequest[] = []
+  try {
+    if (!existsSync(planDir())) return expired
+    const { readdirSync } = require('fs') as typeof import('fs')
+    for (const f of readdirSync(planDir())) {
+      if (!f.endsWith('.json')) continue
+      const p = loadPlan(f.slice(0, -5))
+      if (p && p.state === 'requested' && now - p.at >= ttl) {
+        p.state = 'expired'
+        p.decision = { by: 'ttl', at: now, note: `requested 超 TTL(${Math.round(ttl / 1000)}s) 未裁决自动过期` }
+        save(p)
+        expired.push(p)
+      }
+    }
+  } catch { /* 目录缺席跳过 */ }
+  return expired
+}
+
+/** 待确认队列（评审面板数据面）——读取前先惰性过期（requested 悬挂不可能）。 */
 export function listRequested(): PlanRequest[] {
+  expireStalePlans()
   const out: PlanRequest[] = []
   try {
     if (!existsSync(planDir())) return out
@@ -105,6 +136,21 @@ export function listRequested(): PlanRequest[] {
       if (!f.endsWith('.json')) continue
       const p = loadPlan(f.slice(0, -5))
       if (p && p.state === 'requested') out.push(p)
+    }
+  } catch { /* 目录缺席跳过 */ }
+  return out.sort((a, b) => a.at - b.at)
+}
+
+/** 全量计划（含 expired；plan.stale 检测面数据源）。 */
+export function listAllPlans(): PlanRequest[] {
+  const out: PlanRequest[] = []
+  try {
+    if (!existsSync(planDir())) return out
+    const { readdirSync } = require('fs') as typeof import('fs')
+    for (const f of readdirSync(planDir())) {
+      if (!f.endsWith('.json')) continue
+      const p = loadPlan(f.slice(0, -5))
+      if (p) out.push(p)
     }
   } catch { /* 目录缺席跳过 */ }
   return out.sort((a, b) => a.at - b.at)
