@@ -26,7 +26,8 @@
   },
   "include": [
     "custom/client/**/*.ts",
-    "custom/client/**/*.vue"
+    "custom/client/**/*.vue",
+    "vendor/hermes-studio/packages/client/src/env.d.ts"
   ],
   "exclude": [
     "custom/client/**/__tests__/**",
