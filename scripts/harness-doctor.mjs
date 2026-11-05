@@ -94,9 +94,9 @@ function exists(p) { return existsSync(join(ROOT, p)) }
     if (/approvals:\s*\n\s*mode:\s*"off"/.test(cfg)) off += 1
   }
   const enforceOn = process.env.HERMES_TOOL_ENFORCE === '1'
-  if (!enforceOn && off === profiles.length && profiles.length > 0) {
+  if (!enforceOn && off > 0) {
     report('permission', 'warn',
-      `权限执法总闸未开（HERMES_TOOL_ENFORCE=${enforceEnv}）且 ${off}/${profiles.length} profile approvals.mode=off——审批规则/策略存在但不拦（挂账 N01，2026-11-05 AI Native D1 记账）`)
+      `工具执法总闸未开（HERMES_TOOL_ENFORCE=${enforceEnv}）；${off}/${profiles.length} profile approvals.mode=off 关的是 agent 内置交互审批流——审批实际由推演程序承担（mx-approval-proxy 代批＋HumanGate 闭环），执法拦截面未启用（挂账 N01，2026-11-05 AI Native D1 记账）`)
   } else {
     report('permission', 'pass', `HERMES_TOOL_ENFORCE=${enforceEnv}；approvals off=${off}/${profiles.length}`)
   }

@@ -101,7 +101,7 @@
 
 ### D1 记账（本轮不实施）
 
-权限最小化缺口挂账：30/30 profile `approvals.mode: "off"`、无 managed-settings、无按角色工具矩阵、`.git` 无护栏。台账 `docs/superpowers/specs/2026-11-05-ainative-pending-batch.md` 编号 N01 登记，不纳入本批实现。
+权限最小化缺口挂账。口径澄清（2026-11-05 用户纠正）：`approvals.mode: "off"`（30/30 profile）关闭的是 agent 内置逐条交互式审批流；审批实际由推演程序承担——`simharness/mux/mx-approval-proxy.sh` 导演代批（30s 轮询待批令，每笔落代偿台账）＋`mx-scenario-lib.sh` HumanGate 产品闭环（注册→收件箱→decide 留痕），非"零审批裸跑"。真实缺口=工具执法总闸 `HERMES_TOOL_ENFORCE` 默认未启用（审批规则/策略不参与执行拦截）、无 managed-settings、无按角色工具矩阵、`.git` 无护栏、OS 沙箱未接 Agent 主执行面。台账 `docs/superpowers/specs/2026-11-05-ainative-pending-batch.md` 编号 N01 登记，不纳入本批实现。
 
 ## 决策记录
 
