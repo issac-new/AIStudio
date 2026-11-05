@@ -567,6 +567,8 @@
 | 2026-11-05-sim-direct-llm-channel | SIM 直连 LLM 通道（代登记） | 推演网关脱离 cc-switch 代理直连模型端点；口径与判据见 spec 正文 |
 | 2026-11-05-ainative-pending-batch | AI Native 吸收批挂账台账 | N01 权限最小化 2026-11-05 同日清偿（总闸默认开＋默认策略包＋managed 锁定＋角色矩阵＋路径沙箱补强）；OS 沙箱全量接入列为观察项 |
 | 2026-11-05-kanban-junk-runid-tolerance | kanban 毒 run 指针免疫与 dir 卡建卡校验（run27 派单器停滞根治） | patch 754：非整型 current_run_id 四读点免疫（reclaim 关开行清指针/_current_run_id None/goal superseded/评审守卫）＋dir 缺 workspace_path 建卡即拒；simharness 行为测试 5 断言；同批证伪 matrix 零重试（重试链实跑 16:56 重连）与日志漂移（双汇非缺陷） |
+| 2026-11-05-g4-probe-profile-fix | G4 能力探测 profile 指向修复（收编热修） | 场景脚本 --profile default→fanfan：SIM 42 档无 default，404 先于语义判定钉死 userenv 组；37/37 实证 |
+| 2026-11-05-run27-retro-root-cause | run27 全程复盘根治批 | 失败指纹时间戳归一化（同因秒败硬停可触发）/驱动静默心跳 900s/G5 FAIL 判词重入消费（翻绿分派先行）/探测三态分型（fetch failed 全败=基座不可达 exit 2 不冻结）/patch 755 readpool fd 计数 0.25s→30s（GIL 热点两连崩根治） |
 
 ### 角色/排除（非 spec 文档）
 
