@@ -1,0 +1,17 @@
+{
+  "requirements": [
+    {
+      "id": "GOV-1",
+      "prdRef": "docs/superpowers/specs/2026-11-05-governance-truth-restoration.md",
+      "requiredTypes": ["behavior"],
+      "acceptanceCriteria": [
+        {
+          "id": "GOV-1-AC1",
+          "codeFiles": ["custom/qgate/src/core/health.ts", "scripts/qgate-health.mjs"],
+          "testGateIds": ["L0.registers"],
+          "type": "behavior"
+        }
+      ]
+    }
+  ]
+}

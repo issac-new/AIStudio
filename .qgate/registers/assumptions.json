@@ -1,0 +1,20 @@
+[
+  {
+    "id": "A-GOV-1",
+    "assumption": "全量测试门在本地注入态可复现（2026-11-05 实测 8030 用例、0 失败）",
+    "confirmed": true,
+    "source": { "file": "custom/qgate/src/core/health.ts" }
+  },
+  {
+    "id": "A-GOV-2",
+    "assumption": "pre-push 的 L0 门在 .qgate/scope.yaml 声明面内可判定；范围外变更必须显式扩 scope",
+    "confirmed": true,
+    "source": { "gateId": "L0.scope-check" }
+  },
+  {
+    "id": "A-GOV-3",
+    "assumption": "发布证据必须比源文件新，否则先重跑 engineering.basic-check 再发版",
+    "confirmed": true,
+    "source": { "file": "scripts/release-evidence.mjs" }
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "rules": [
+    {
+      "id": "GOV-CONV-1",
+      "include": "console\\.log\\(",
+      "paths": ["custom/qgate/src/core/health.ts", "scripts/qgate-health.mjs"],
+      "severity": "fail",
+      "message": "核心治理模块禁止 console.log（用结构化输出）"
+    }
+  ]
+}
