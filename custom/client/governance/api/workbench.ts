@@ -152,7 +152,9 @@ export interface PromotionDto {
   applied: boolean
   targetPath?: string
   backupPath?: string
-  /** R7：'false'=未应用；via-workbench=managed 面直写；via-surface=既有管理面人审应用。 */
+  /** 本次晋级实际用到的最强验证层（对齐服务端 PromotionRecord.verificationTier）。 */
+  verificationTier?: 'command' | 'heldout' | 'regression' | 'judge' | 'none'
+  /** 应用通道（R7）：false=未应用；via-workbench=managed 面直写；via-surface=既有管理面人审应用。 */
   appliedVia?: 'false' | 'via-workbench' | 'via-surface'
 }
 
@@ -271,13 +273,6 @@ export interface ProposalDto {
   /** W3：采用的组件库 donor。 */
   donorRefs?: string[]
   donorSkipped?: Array<{ id: string; reason: string }>
-  /** D5：约束保持断言记录（面板回显用）。 */
-  constraints?: {
-    checks: Array<{ id: string; statement: string; status: 'pass' | 'fail' | 'unknown'; evidenceRef?: string; detail?: string }>
-    actor: string
-    at: string
-    note?: string
-  } | null
   budgetCapUsd: number
   evidenceRefs: string[]
   experienceIds: string[]
@@ -291,6 +286,8 @@ export interface ProposalDto {
   composition: CompositionDto | null
   promotion: PromotionDto | null
   rollback: { actor: string; at: string; reason: string; restoredDigest: string | null; fileRestored: boolean } | null
+  /** 约束保持断言记录（D5，对齐服务端 Proposal.constraints）；null=尚未录入。 */
+  constraints?: ConstraintRecordDto | null
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -486,6 +483,14 @@ export interface ConstraintCheckDto {
   status: 'pass' | 'fail' | 'unknown'
   evidenceRef?: string
   detail?: string
+}
+
+/** 一次约束检查记录（对齐服务端 ConstraintRecord）；actor 必填，便于审计。 */
+export interface ConstraintRecordDto {
+  checks: ConstraintCheckDto[]
+  actor: string
+  at: string
+  note?: string
 }
 
 export function recordWorkbenchConstraints(
