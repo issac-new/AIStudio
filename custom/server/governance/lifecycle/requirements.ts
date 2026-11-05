@@ -13,7 +13,30 @@ export interface RequirementJudgeResult {
   missing: string[]
 }
 
-const FUZZY_RE = /性能良好|体验优秀|快速|稳定/
+// 模糊词单一事实源=config/fuzzy-words.json 的 core 表（2026-11-05 AI Native 吸收批 T1，
+// 决策 D-3）；读取失败 fail-soft 回落到内嵌同表，判定语义不变。
+const FUZZY_FALLBACK = ['性能良好', '体验优秀', '快速', '稳定'] as const
+
+function loadFuzzyWords(): readonly string[] {
+  try {
+    // require 形态与域内 controller.ts 的运行时读取一致（CJS 编译产物兼容）
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { existsSync, readFileSync } = require('node:fs') as typeof import('node:fs')
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { join } = require('node:path') as typeof import('node:path')
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { repoRoot } = require('../../lib/upstream') as typeof import('../../lib/upstream')
+    const path = join(repoRoot(), 'config/fuzzy-words.json')
+    if (!existsSync(path)) return FUZZY_FALLBACK
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as { core?: string[] }
+    if (!Array.isArray(parsed.core) || parsed.core.length === 0) return FUZZY_FALLBACK
+    return parsed.core
+  } catch {
+    return FUZZY_FALLBACK
+  }
+}
+
+const FUZZY_RE = new RegExp(loadFuzzyWords().join('|'))
 const AC_ITEM_RE = /^- \*\*AC-\d+/
 
 /** 提取「## 验收标准」节内容（到下一个 `## ` 行为止，含终止行——sed 区间同款）。 */

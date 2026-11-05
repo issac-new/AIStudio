@@ -11,7 +11,7 @@
 现状断点：四段机检只判「四个标题存在 + 每段一行非空」（`.swarm-yuan/hooks/spec-first-lib.sh:399-435`），564 份 spec 中 349 份靠基线豁免；模糊词检测只存在于 simharness PRD（`custom/server/governance/lifecycle/requirements.ts:16` 的 `FUZZY_RE`），未接 spec 链；无验收条件（GWT）与异常场景覆盖检查。
 
 落点：
-- 新增 `config/fuzzy-words.json` 作为模糊词单一事实源（从 `requirements.ts` 的 `FUZZY_RE` 抽取并扩充：性能良好/体验优秀/快速/稳定/适当/合理/尽量/必要时/等等），`requirements.ts` 与 shell 判定库共读，消除双表漂移。
+- 新增 `config/fuzzy-words.json` 作为模糊词单一事实源（`core` 表＝simharness reqgate 四词逐字口径；`extended` 表＝保真度门扩充词表，正本以该文件为准），`requirements.ts` 与 shell 判定库共读，消除双表漂移。
 - `spf_spec_fidelity_check` 新增于 `spec-first-lib.sh`（与四段机检同库），四维判据：完整性（模糊词 0 命中）、一致性（决策记录 ≥1 条）、无歧义（模糊词 + 术语首现全称）、可验证（「变更」段含 ≥1 条 GWT 或带判据的验收条件）。
 - L3 门 `skills/swarm-yuan/assets/gates/process/spec-first.sh` 增加 fidelity 检查，`SPEC_FIDELITY_ENFORCE` 三档 warn/block（默认 warn）。
 - 存量基线 `.swarm-yuan/spec-fidelity-baseline.txt` 只许减（同四段基线范式）。
