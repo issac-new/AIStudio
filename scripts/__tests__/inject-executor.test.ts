@@ -282,3 +282,33 @@ describe('executor+journal：absent-tree 语义保留', () => {
     expect(r.logs.join('\n')).toContain('tree absent')
   })
 })
+
+describe('executor+journal：多补丁同文件叠加回滚字节断言（P2 Task 4）', () => {
+  it('第 4 个补丁失败 → src.txt 上已叠加的 001+003 逐层回滚，字节==基线（非 git reset 取巧）', async () => {
+    resetAll()
+    const r = await run({ badPatch: '004-s4.patch' })
+    expect(r.manifest.status).toBe('failed')
+    const p = r.manifest.patches
+    expect(p.map((x: any) => [x.name, x.status])).toEqual([
+      ['001-s1.patch', 'rolled-back'],
+      ['002-s2.patch', 'rolled-back'],
+      ['003-s3.patch', 'rolled-back'],
+      ['004-s4.patch', 'failed'],
+      ['005-a1.patch', 'applied'],
+      ['006-a2.patch', 'applied'],
+    ])
+    // 关键断言：失败时刻 src.txt = base + '#1' + '#3'（两补丁叠加态），回滚后逐字节回基线
+    expect(readFileSync(join(studioRoot, 'src.txt')).equals(baselineBytes['src.txt'])).toBe(true)
+    // 叠加态确实不同于基线（防止「从未应用」的假回滚）
+    const appliedState = `${'base\n'}#1\n#3\n`
+    expect(appliedState.length).toBeGreaterThan(baselineBytes['src.txt'].length)
+    // 新增文件回滚删除
+    expect(existsSync(join(studioRoot, 'new-studio.txt'))).toBe(false)
+    // journal 备份链留档：001 与 003 的 pre 备份都在
+    expect(existsSync(join(stateOut, 'journal', '001-s1.patch.pre', 'files', 'src.txt'))).toBe(true)
+    expect(existsSync(join(stateOut, 'journal', '003-s3.patch.pre', 'files', 'src.txt'))).toBe(true)
+    // 回滚后的 003 备份内容=「base+#1」叠加态（证明回滚是按备份逐层还原，不是只回滚最后一层）
+    const backup003 = readFileSync(join(stateOut, 'journal', '003-s3.patch.pre', 'files', 'src.txt'), 'utf8')
+    expect(backup003).toBe('base\n#1\n')
+  })
+})

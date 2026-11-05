@@ -35,19 +35,32 @@ const isEntry = (() => {
   catch { return false; }
 })();
 
-/** JUnit XML 复析：聚合 testsuite(s) 的 failures/errors 属性（编排层独立于门内核）。 */
+/** JUnit XML 复析：聚合 testsuite(s) 的 failures/errors 属性（编排层独立于门内核）。
+ *  P2 Task 4：顶层 <testsuites tests failures errors> 聚合属性也计入——旧正则
+ *  `(?:testsuites\/)?testsuite` 从不匹配顶层元素（拼不出 `<testsuites/…>` 形态），
+ *  只把失败写在顶层聚合属性的报告器方言（内层 testsuite 无属性）会整体漏检。
+ *  顶层与内层双写一致时取 max（不重复累加），属性全缺时数实体元素兜底。 */
 function junitFailureCounts(file) {
   const text = readFileSync(file, 'utf8');
   let failures = 0;
   let errors = 0;
   let suites = 0;
-  for (const m of text.matchAll(/<(?:testsuites\/)?testsuite\b[^>]*>/g)) {
+  for (const m of text.matchAll(/<testsuite\b[^>]*>/g)) {
     const tag = m[0];
     const f = /\bfailures\s*=\s*"(\d+)"/.exec(tag);
     const e = /\berrors\s*=\s*"(\d+)"/.exec(tag);
     failures += f ? Number(f[1]) : 0;
     errors += e ? Number(e[1]) : 0;
     suites += 1;
+  }
+  // 顶层 testsuites 聚合属性（与内层求和取 max——双写形态数值一致，不双算）
+  const top = /<testsuites\b[^>]*>/.exec(text);
+  if (top) {
+    suites = Math.max(suites, 1);
+    const f = /\bfailures\s*=\s*"(\d+)"/.exec(top[0]);
+    const e = /\berrors\s*=\s*"(\d+)"/.exec(top[0]);
+    failures = Math.max(failures, f ? Number(f[1]) : 0);
+    errors = Math.max(errors, e ? Number(e[1]) : 0);
   }
   // 兜底：属性缺失时数实体元素（报告器方言差异不失守）
   const failureEls = (text.match(/<(?:failure|error)\b/g) ?? []).length;
@@ -77,6 +90,7 @@ function readBundleIdentity() {
     return { ok: false, reason: `unreadable: ${e.message}`, file };
   }
   const bundleId = /^bundleId: ([0-9a-f]{64})$/m.exec(text)?.[1];
+  const identityCommit = /^commit: ([0-9a-f]{40})$/m.exec(text)?.[1] ?? null;
   const patchDigestsSha = /^patches: (\d+) sha256:([0-9a-f]{64})$/m.exec(text);
   const runtimeManifest = /^runtimeManifest: sha256:([0-9a-f]{64}) assets:(\d+)$/m.exec(text);
   if (!bundleId || !patchDigestsSha || !runtimeManifest) {
@@ -90,12 +104,63 @@ function readBundleIdentity() {
     return { ok: false, reason: `stale（mtime ${new Date(mtimeMs).toISOString()} 早于 gate 起点 ${new Date(startedAtMs).toISOString()}——非本次构建产物）`, file, bundleId };
   }
   return {
-    ok: true, file, bundleId, mtimeMs,
+    ok: true, file, bundleId, mtimeMs, commit: identityCommit,
     patchCount: Number(patchDigestsSha[1]),
     patchDigestsSha: patchDigestsSha[2],
     runtimeManifestDigest: runtimeManifest[1],
     assetCount: Number(runtimeManifest[2]),
   };
+}
+
+/**
+ * 身份复算（P2 Task 4 复审加固）：mtime 新鲜只证明「有人刚写过」，不证明「写的是
+ * 本树产物」——touch 上一轮身份文件、或从别的树拷一份新鲜身份，旧检全放行。终检
+ * 以当前树的真实输入（注入 manifest v2 + runtime 资产清单 + 当前 HEAD）经装配层
+ * 纯函数复算期望 bundleId，与身份文件逐项比对（bundleId 与 commit 两项）。
+ * 复算输入缺席=无法证明身份属于本树 → fail-closed 拦（不降级为只看 mtime）。
+ * RELEASE_GATE_INJECTION_MANIFEST_FILE / RELEASE_GATE_RUNTIME_MANIFEST_FILE 为
+ * 测试 seam；缺省与 build.mjs 同源解析（OVERLAY_STATE_OUT→仓根 .overlay-injected.json；
+ * runtime 清单在 hermesStudioRoot dist/server/runtime-assets.json）。
+ */
+function recomputeExpectedIdentity() {
+  const stateOut = process.env.OVERLAY_STATE_OUT?.trim() || overlayRoot;
+  const injectionPath = process.env.RELEASE_GATE_INJECTION_MANIFEST_FILE?.trim()
+    ?? resolve(stateOut, '.overlay-injected.json');
+  const runtimePath = process.env.RELEASE_GATE_RUNTIME_MANIFEST_FILE?.trim()
+    ?? resolve(resolveUpstreamRoots(overlayRoot).hermesStudioRoot, 'dist', 'server', 'runtime-assets.json');
+  const absent = [injectionPath, runtimePath].filter((f) => !existsSync(f));
+  if (absent.length > 0) {
+    return { ok: false, reason: `复算输入缺席（${absent.join('、')}）——无法证明身份文件属于本树，fail-closed 拦`, injectionPath, runtimePath };
+  }
+  const buildTs = resolve(overlayRoot, 'custom', 'server', 'platform', 'delivery', 'bundle-identity-build.ts');
+  const shim = `const m = require(${JSON.stringify(buildTs)});`
+    + `const r = m.releaseIdentityFromManifests({`
+    + `commit: ${JSON.stringify(commit)},`
+    + `injectionManifest: JSON.parse(require('node:fs').readFileSync(${JSON.stringify(injectionPath)}, 'utf8')),`
+    + `runtimeManifest: JSON.parse(require('node:fs').readFileSync(${JSON.stringify(runtimePath)}, 'utf8'))});`
+    + `process.stdout.write(JSON.stringify({ bundleId: r.bundleId }));`;
+  const r = spawnSync(process.execPath, ['-r', 'ts-node/register', '--eval', shim], {
+    cwd: overlayRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      TS_NODE_PROJECT: 'scripts/platform/release/tsconfig.evidence.json',
+      TS_NODE_TRANSPILE_ONLY: '1',
+    },
+  });
+  if (r.status !== 0) {
+    return { ok: false, reason: `复算执行失败（exit=${r.status}）：${(r.stderr || r.stdout || '').slice(0, 300)}`, injectionPath, runtimePath };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(r.stdout);
+  } catch (e) {
+    return { ok: false, reason: `复算输出不可解析：${e.message}`, injectionPath, runtimePath };
+  }
+  if (typeof parsed?.bundleId !== 'string' || !/^[0-9a-f]{64}$/.test(parsed.bundleId)) {
+    return { ok: false, reason: '复算输出 bundleId 形态非法', injectionPath, runtimePath };
+  }
+  return { ok: true, expectedBundleId: parsed.bundleId, injectionPath, runtimePath };
 }
 
 /** 内建步序（argv 中 '{START_TS}' 于执行时替换为 gate 起点时戳）。编排测试锚定：typecheck 双门与严格报告步不得缺席。 */
@@ -278,12 +343,16 @@ for (const step of steps) {
 // 不可解析即准出失败（发布门不得无 bundle 身份通过，spec §4.4-3）。
 if (!failed) {
   const identity = readBundleIdentity();
+  const recomputed = recomputeExpectedIdentity();
   const t = Date.now();
-  if (identity.ok) {
+  const recomputeMatches = identity.ok && recomputed.ok
+    && recomputed.expectedBundleId === identity.bundleId && identity.commit === commit;
+  if (identity.ok && recomputeMatches) {
     receipt.bundleIdentity = {
       bundleId: identity.bundleId, file: identity.file, generatedAtMs: identity.mtimeMs,
       patchCount: identity.patchCount, assetCount: identity.assetCount,
       patchDigestsSha: identity.patchDigestsSha, runtimeManifestDigest: identity.runtimeManifestDigest,
+      recomputedMatch: true,
     };
     try {
       appendEvidence({
@@ -297,7 +366,7 @@ if (!failed) {
         sourceDigest: `bundleId=${identity.bundleId} commit=${commit.slice(0, 12)} patches=${identity.patchCount}(sha256:${identity.patchDigestsSha.slice(0, 12)}…) assets=${identity.assetCount} runtimeManifest=sha256:${identity.runtimeManifestDigest.slice(0, 12)}…`,
         artifactRefs: [identity.file],
       });
-      console.log(`[release:gate] ✓ bundle 身份在位（bundleId=${identity.bundleId.slice(0, 12)}…，${identity.patchCount} 补丁/${identity.assetCount} 资产）`);
+      console.log(`[release:gate] ✓ bundle 身份在位且复算相符（bundleId=${identity.bundleId.slice(0, 12)}…，${identity.patchCount} 补丁/${identity.assetCount} 资产，commit=${identity.commit.slice(0, 12)}）`);
     } catch (e) {
       failed = true;
       receipt.status = 'failed';
@@ -307,6 +376,50 @@ if (!failed) {
       console.error(`\n[release:gate] ✗ bundle 身份证据落盘失败：${e.message}`);
       process.exit(1);
     }
+  } else if (identity.ok && recomputed.ok) {
+    // 复算比对（P2 Task 4）：形状与 mtime 都新鲜，但内容不是本树产物——touch 旧
+    // 身份/跨树拷贝重放面在此拦截。
+    failed = true;
+    receipt.status = 'failed';
+    receipt.failedStep = 'bundle-identity';
+    const reason = identity.commit !== commit
+      ? `commit 不符（身份文件 ${identity.commit ?? 'null'} vs 本树 ${commit.slice(0, 12)}——跨树重放）`
+      : `bundleId 复算不符（身份文件 ${identity.bundleId.slice(0, 12)}… vs 本树期望 ${recomputed.expectedBundleId.slice(0, 12)}…——touch/跨树重放）`;
+    receipt.bundleIdentity = { recomputedMatch: false, reason, file: identity.file };
+    try {
+      appendEvidence({
+        evidenceId: `${evidenceId}/bundle-identity`,
+        subjectId: 'release-gate/bundle-identity',
+        status: 'fail',
+        producer: 'release-gate',
+        commit,
+        startedAt: t,
+        endedAt: t,
+        sourceDigest: `recomputed-mismatch——${reason}（期望 bundleId=${recomputed.expectedBundleId}）`,
+        artifactRefs: [],
+      });
+    } catch { /* 证据失败不掩盖拦截事实 */ }
+    console.error(`\n[release:gate] ✗ bundle 身份复算不符（${reason}）`);
+  } else if (identity.ok && !recomputed.ok) {
+    // 复算输入缺席/失败：无法证明身份属于本树 → fail-closed（不降级为只看 mtime）
+    failed = true;
+    receipt.status = 'failed';
+    receipt.failedStep = 'bundle-identity';
+    receipt.bundleIdentity = { recomputedMatch: false, reason: recomputed.reason, file: identity.file };
+    try {
+      appendEvidence({
+        evidenceId: `${evidenceId}/bundle-identity`,
+        subjectId: 'release-gate/bundle-identity',
+        status: 'fail',
+        producer: 'release-gate',
+        commit,
+        startedAt: t,
+        endedAt: t,
+        sourceDigest: `recompute-unavailable——${recomputed.reason}`,
+        artifactRefs: [],
+      });
+    } catch { /* 证据失败不掩盖拦截事实 */ }
+    console.error(`\n[release:gate] ✗ bundle 身份复算不可用（${recomputed.reason}）`);
   } else {
     failed = true;
     receipt.status = 'failed';

@@ -50,14 +50,17 @@ import {
   mcpCategoryOf,
   osSandboxAttestation,
   parseEnvList,
+  sandboxNetworkViolation,
   sandboxPathViolation,
   sandboxRootsConfigured,
 } from '../../platform/contracts/execution'
-import type { OsSandboxAttestation, OsSandboxProbeSignals, SandboxPathContext } from '../../platform/contracts/execution'
+import type { OsSandboxAttestation, OsSandboxProbeSignals, SandboxPathContext, SkippedNoContext } from '../../platform/contracts/execution'
 // 旧导入面保持（P0-5 前消费者直接从本模块导入这些符号；P1-1 起 osSandboxProofActive
-// 全仓唯一消费方即本模块，已随升格改名——无外部调用方需要过渡别名）
-export { isUnknownMcpTool, mcpCategoryOf, osSandboxAttestation, sandboxPathViolation, sandboxRootsConfigured }
-export type { OsSandboxAttestation, OsSandboxProbeSignals, SandboxPathContext }
+// 全仓唯一消费方即本模块，已随升格改名——无外部调用方需要过渡别名）。P2 Task 4：
+// sandboxNetworkViolation 上移契约硬边界段后在此 re-export；SkippedNoContext 是
+// sandboxPathViolation 第三返回形态的契约类型，一并保持旧导入面。
+export { isUnknownMcpTool, mcpCategoryOf, osSandboxAttestation, sandboxNetworkViolation, sandboxPathViolation, sandboxRootsConfigured }
+export type { OsSandboxAttestation, OsSandboxProbeSignals, SandboxPathContext, SkippedNoContext }
 
 /** ekko ToolExecuteHook 形状（结构化类型，不 import 上游——toolresultguard 同款先例）。
  *  context 字段面=上游 AgentToolContext 的子集（vendor ekko-agent tools/types.ts）；
@@ -274,25 +277,6 @@ export function toolAllowedByList(tool: string, list: string[]): boolean {
 // D1 2026-11-05 的「exec 相对路径按 cwd 解析后再判」补强由契约的 context 解析语义
 // 覆盖并收紧（真实执行 cwd/workspaceRoot 基准 + canonical 判定取代入参 cwd 猜测），
 // 不保留并行实现——路径判定单一事实源在 contracts/execution.ts。
-
-const URL_KEYS = ['url', 'href', 'link', 'target_url', 'navigate_to']
-
-/** 浏览器 URL 检查：配置了 allow/deny 才生效；denylist 优先（browsersec 语义）。 */
-export function sandboxNetworkViolation(tool: string, input: Record<string, unknown>): string | null {
-  if (!tool.startsWith('browser_') && tool !== 'delegate_task') return null
-  const allow = parseEnvList('HERMES_BROWSER_ALLOWLIST')
-  const deny = parseEnvList('HERMES_BROWSER_DENYLIST')
-  if (allow.length === 0 && deny.length === 0) return null
-  let url: string | null = null
-  for (const key of URL_KEYS) {
-    const v = input[key]
-    if (typeof v === 'string' && /^https?:\/\//i.test(v)) { url = v; break }
-  }
-  // 没有 URL 的浏览器动作（click/press）无法在裁决层判定目标域，交给独立 profile 隔离。
-  if (!url) return null
-  const decision = browserVerdict(url, { allowlist: allow, denylist: deny, isolatedProfile: true })
-  return decision.verdict === 'deny' ? `${url}（${decision.reason}）` : null
-}
 
 /** 总闸判定（D1 2026-11-05）：managed-settings 锁定 > env 显式 0 关 > 默认开。
  *  独立函数便于 doctor/评分卡/测试同口径消费。 */

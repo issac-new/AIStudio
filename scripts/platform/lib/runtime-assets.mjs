@@ -32,6 +32,16 @@ function walkFiles(dir) {
   return out;
 }
 
+/** rel → 源文件绝对路径（单一事实源：目录资产=runtime/<rel 去 runtime/ 前缀>，
+ *  单文件资产=RUNTIME_ASSET_FILES 映射——P2 Task 4 下沉：build.mjs 的复制面与
+ *  清单面共用本映射，不在脚本侧维护第二份源路径）。 */
+export function runtimeAssetSource(root, rel) {
+  if (rel.startsWith('runtime/')) return resolve(root, 'runtime', rel.slice('runtime/'.length));
+  const entry = RUNTIME_ASSET_FILES.find(([, r]) => r === rel);
+  if (!entry) throw new Error(`runtime 资产 rel 无源映射: ${rel}（RUNTIME_ASSET_FILES 未登记——新单文件资产先入清单映射）`);
+  return resolve(root, entry[0]);
+}
+
 /**
  * 构建运行时资产清单（纯读，不写盘）。
  * @param overlayRoot 仓根（runtime/ 与 custom/ 的所在树）

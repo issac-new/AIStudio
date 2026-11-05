@@ -9,6 +9,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { releaseIdentityFromManifests } from '../../custom/server/platform/delivery/bundle-identity-build'
 
 const repoRoot = resolve(import.meta.dirname, '..', '..')
 const gateScript = resolve(repoRoot, 'scripts/platform/release/release-gate.mjs')
@@ -21,16 +22,16 @@ let junitFile: string
 let identityFile: string
 
 /** 造一份新鲜 bundle 身份文件（mtime=当下；可指定 bundleId 与回拨时间）。 */
-function makeIdentity(bundleId = 'b'.repeat(64), ageMs = 0): void {
+function makeIdentity(bundleId = 'b'.repeat(64), ageMs = 0, commit = 'c'.repeat(40), patchCount = 468, assetCount = 19): void {
   writeFileSync(identityFile, [
     '# bundle-identity',
     `bundleId: ${bundleId}`,
-    `commit: ${'c'.repeat(40)}`,
+    `commit: ${commit}`,
     'vendorBaseline.hermes-studio: null',
     'vendorBaseline.hermes-agent: null',
     'vendorBaseline.zcode: null',
-    `patches: 468 sha256:${'1'.repeat(64)}`,
-    `runtimeManifest: sha256:${'2'.repeat(64)} assets:19`,
+    `patches: ${patchCount} sha256:${'1'.repeat(64)}`,
+    `runtimeManifest: sha256:${'2'.repeat(64)} assets:${assetCount}`,
     `assets: sha256:${'3'.repeat(64)}`,
     '',
   ].join('\n'))
@@ -87,6 +88,36 @@ function evidenceLines(): Array<Record<string, unknown>> {
   return readFileSync(evidenceFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
 }
 
+// 复算输入夹具（P2 Task 4）：终检默认开启——注入 manifest+runtime 清单+HEAD 复算
+// 期望 bundleId，身份文件必须逐项相符。所有用例共享该基线（覆盖 identityFile 即得负例）。
+function recomputeFixtures(): { expected: string; head: string } {
+  const inj = join(tmp, 'overlay-injected.json')
+  const runManifest = join(tmp, 'runtime-assets.json')
+  writeFileSync(inj, JSON.stringify({
+    schemaVersion: 2,
+    baseline: { treeOids: { 'hermes-studio': 'ts-oid', 'hermes-agent': 'ta-oid', zcode: null } },
+    patches: [
+      { name: 'p1.patch', sha256: 'a'.repeat(64) },
+      { name: 'p2.patch', sha256: 'b'.repeat(64) },
+    ],
+  }))
+  writeFileSync(runManifest, JSON.stringify({
+    schemaVersion: 1,
+    assets: [{ rel: 'runtime/pricing/models.yaml', sha256: 'e'.repeat(64), bytes: 10 }],
+  }))
+  process.env.RELEASE_GATE_INJECTION_MANIFEST_FILE = inj
+  process.env.RELEASE_GATE_RUNTIME_MANIFEST_FILE = runManifest
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim()
+  const { bundleId } = releaseIdentityFromManifests({
+    commit: head,
+    injectionManifest: JSON.parse(readFileSync(inj, 'utf8')),
+    runtimeManifest: JSON.parse(readFileSync(runManifest, 'utf8')),
+  })
+  return { expected: bundleId, head }
+}
+
+let fixtures: { expected: string; head: string }
+
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), 'release-gate-'))
   stepsFile = join(tmp, 'steps.json')
@@ -94,7 +125,8 @@ beforeEach(() => {
   evidenceFile = join(tmp, 'evidence.jsonl')
   junitFile = join(tmp, 'junit-report.xml')
   identityFile = join(tmp, 'bundle-identity.txt')
-  makeIdentity() // 缺省提供新鲜身份——单步失败类用例不受身份终检干扰（失败先于终检）
+  fixtures = recomputeFixtures()
+  makeIdentity(fixtures.expected, 0, fixtures.head, 2, 1) // 缺省=复算一致的新鲜身份；负例用例自行覆盖
 })
 afterEach(() => rmSync(tmp, { recursive: true, force: true }))
 
@@ -236,21 +268,107 @@ describe('bundle 身份终检（P1 round-2：发布门不得无 bundle 身份通
     expect(r.out).toContain('unparseable')
   })
 
-  it('新鲜身份：通过 + receipt 携带 bundleId + release-report 步证据 sourceDigest 绑身份', () => {
-    const bid = 'f'.repeat(64)
-    makeIdentity(bid)
+  it('新鲜身份（复算一致）：通过 + receipt 携带 bundleId + release-report 步证据 sourceDigest 绑身份', () => {
+    const bid = fixtures.expected
+    makeIdentity(bid, 0, fixtures.head, 2, 1)
     writeSteps([stubStep('release-report', 0)])
     const r = runGate()
     expect(r.code).toBe(0)
     const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
     expect(receipt.bundleIdentity.bundleId).toBe(bid)
-    expect(receipt.bundleIdentity.patchCount).toBe(468)
-    expect(receipt.bundleIdentity.assetCount).toBe(19)
+    expect(receipt.bundleIdentity.patchCount).toBe(2)
+    expect(receipt.bundleIdentity.assetCount).toBe(1)
     const reportEv = evidenceLines().find((l) => l.subjectId === 'release-gate/release-report')
     expect(String(reportEv?.sourceDigest)).toContain(`bundleId=${bid}`)
     expect(String(reportEv?.sourceDigest)).toContain('injectPatches=')
     const idEv = evidenceLines().find((l) => l.subjectId === 'release-gate/bundle-identity')
     expect(idEv?.status).toBe('pass')
     expect(idEv?.artifactRefs).toEqual([identityFile])
+  })
+})
+
+describe('P2 Task 4：中间步失败 + JUnit testsuites 顶层属性 + 身份复算比对', () => {
+  it('中间步失败：首步绿、次步红 → 第三步不执行、failedStep=次步、首步证据 pass', () => {
+    writeSteps([stubStep('step-a', 0), stubStep('step-b', 1), stubStep('step-c', 0)])
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('step-b 失败')
+    expect(existsSync(join(tmp, 'marker-step-a'))).toBe(true)
+    expect(existsSync(join(tmp, 'marker-step-b'))).toBe(true)
+    expect(existsSync(join(tmp, 'marker-step-c'))).toBe(false)
+    const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
+    expect(receipt.status).toBe('failed')
+    expect(receipt.failedStep).toBe('step-b')
+    expect(receipt.steps).toHaveLength(2)
+    expect(receipt.steps[0].status).toBe('pass')
+    expect(receipt.steps[1].status).toBe('fail')
+    const lines = evidenceLines().filter(l => l.subjectId.startsWith('release-gate/step-'))
+    expect(lines).toHaveLength(2)
+    expect(lines[0].status).toBe('pass')
+    expect(lines[1].status).toBe('fail')
+  })
+
+  it('JUnit 复析：顶层 testsuites 聚合属性承载失败（内层无属性）也拦（报告器方言不失守）', () => {
+    const topOnly = stub('stub-junit-top', [
+      `import { writeFileSync } from 'node:fs'`,
+      // 顶层聚合属性形态：failures 只出现在 <testsuites>，内层 testsuite 不带属性
+      `writeFileSync(${JSON.stringify(junitFile)}, '<testsuites name="vitest" tests="8000" failures="2" errors="1"><testsuite name="s1"></testsuite><testsuite name="s2"></testsuite></testsuites>')`,
+      `process.exit(0)`,
+    ].join('\n'))
+    writeFileSync(stepsFile, `${JSON.stringify({ steps: [{ id: 'gate-basic-check', label: 'stub', argv: ['node', topOnly], junit: true }] })}\n`)
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('JUnit 复析拦截')
+    expect(r.out).toContain('failures=2')
+    expect(r.out).toContain('errors=1')
+  })
+
+  it('JUnit 复析：顶层与内层同时携带一致计数（双写聚合形态）不误伤', () => {
+    const both = stub('stub-junit-both', [
+      `import { writeFileSync } from 'node:fs'`,
+      `writeFileSync(${JSON.stringify(junitFile)}, '<testsuites tests="10" failures="0" errors="0"><testsuite name="s" tests="10" failures="0" errors="0"></testsuite></testsuites>')`,
+      `process.exit(0)`,
+    ].join('\n'))
+    writeFileSync(stepsFile, `${JSON.stringify({ steps: [{ id: 'gate-basic-check', label: 'stub', argv: ['node', both], junit: true }] })}\n`)
+    makeIdentity(fixtures.expected, 0, fixtures.head, 2, 1)
+    const r = runGate()
+    expect(r.code, r.out).toBe(0)
+  })
+
+  // ── bundle 身份复算比对（复审加固：封 touch/跨树重放面）──
+  // mtime 新鲜只证明「有人刚写过」，不证明「写的是本树产物」——touch 旧身份或从
+  // 别的树拷来一份新鲜身份都能过旧检。终检必须复算：注入 manifest+runtime 清单
+  // +当前 HEAD → 期望 bundleId，与身份文件的 bundleId/commit 逐项比对。
+
+  it('身份复算比对：bundleId 与本树期望不符（touch/跨树重放）→ 拦', () => {
+    const { expected, head } = fixtures
+    makeIdentity('f'.repeat(64), 0, head) // 新鲜 mtime+正确 commit，但 bundleId 是别树产物
+    writeSteps([stubStep('step-a', 0)])
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('复算')
+    expect(r.out).toContain(expected.slice(0, 12))
+    const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
+    expect(receipt.failedStep).toBe('bundle-identity')
+  })
+
+  it('身份复算比对：commit 行非当前 HEAD（跨树重放）→ 拦', () => {
+    makeIdentity('f'.repeat(64), 0, 'd'.repeat(40)) // 新鲜但绑定别的 commit
+    writeSteps([stubStep('step-a', 0)])
+    const r = runGate()
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('commit')
+    expect(r.out).toContain('复算')
+  })
+
+  it('身份复算比对：bundleId+commit 与本树复算一致 → 通过（receipt 携带期望值）', () => {
+    const { expected, head } = fixtures
+    makeIdentity(expected, 0, head)
+    writeSteps([stubStep('step-a', 0)])
+    const r = runGate()
+    expect(r.code, r.out).toBe(0)
+    const receipt = JSON.parse(readFileSync(receiptFile, 'utf8'))
+    expect(receipt.bundleIdentity.bundleId).toBe(expected)
+    expect(receipt.bundleIdentity.recomputedMatch).toBe(true)
   })
 })

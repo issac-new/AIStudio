@@ -371,3 +371,28 @@ describe('无 context 相对路径观测事件（P1 Task 1：relative-path-no-co
     expect(queryGovEvents({ domain: 'sandbox', typePrefix: 'relative-path-no-context' })).toHaveLength(0)
   })
 })
+
+describe('执行契约单一事实源（P2 Task 4 挂账②：sandboxNetworkViolation 上移）', () => {
+  it('sandboxNetworkViolation 由 contracts/execution 导出（沙箱硬边界段），执法门保持旧导入面', async () => {
+    const contracts = await import('../../../platform/contracts/execution')
+    expect(typeof contracts.sandboxNetworkViolation).toBe('function')
+    // 语义保持：denylist 优先、allowlist 外拒绝、无规则放行（与执法门内实现同口径）
+    process.env.HERMES_BROWSER_ALLOWLIST = 'good.example'
+    try {
+      expect(contracts.sandboxNetworkViolation('browser_navigate', { url: 'https://other.example/x' })).toContain('allowlist')
+      expect(contracts.sandboxNetworkViolation('browser_navigate', { url: 'https://good.example/a' })).toBeNull()
+      expect(contracts.sandboxNetworkViolation('browser_click', { selector: '#a' })).toBeNull()
+    } finally {
+      delete process.env.HERMES_BROWSER_ALLOWLIST
+    }
+  })
+
+  it('执法门 re-export SkippedNoContext 契约类型（旧导入面不破）', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(import.meta.dirname, '../enforce-gate.ts'), 'utf8')
+    // re-export 面补齐：SkippedNoContext 与 sandboxPathViolation 返回形态同源
+    expect(src).toMatch(/export type \{[^}]*SkippedNoContext[^}]*\}/)
+    expect(src).toContain('SkippedNoContext')
+  })
+})

@@ -82,7 +82,10 @@ export function fetchVirtualPnl(days = 30): Promise<VirtualPnlDto> {
 
 // ---- F. 治理事件总线 ----
 
-export type GovEventDomainDto = 'quality' | 'security' | 'cost' | 'approval' | 'autonomy' | 'system'
+// sandbox 域（P1 Task 1 服务端已落，P2 Task 4 客户端补齐）：沙箱执行面观测事件
+// （非拒绝的可见性留痕，如相对路径无基准 skippedNoContext）——与服务端
+// govbus GOV_EVENT_DOMAINS 逐域一致（守门 incident-suite-sections 平价用例锁）。
+export type GovEventDomainDto = 'quality' | 'security' | 'cost' | 'approval' | 'autonomy' | 'sandbox' | 'system'
 export type GovEventSeverityDto = 'info' | 'warn' | 'high'
 
 export interface GovEventDto {

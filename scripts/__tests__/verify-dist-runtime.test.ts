@@ -138,3 +138,18 @@ describe('verify-dist 运行时资产清单（--server）', () => {
     expect(r.code).toBe(0)
   })
 })
+
+describe('单文件资产源映射单一事实源（P2 Task 4：src 下沉 runtime-assets.mjs）', () => {
+  it('build.mjs 不再硬编码单文件资产源——映射消费自 runtime-assets.mjs', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const root = resolve(import.meta.dirname, '../..')
+    const build = readFileSync(resolve(root, 'scripts/build.mjs'), 'utf8')
+    expect(build).not.toContain('semantica-bridge.py')
+    expect(build).not.toContain('decisiongraph')
+    expect(build).toMatch(/runtimeAssetSource|RUNTIME_ASSET_FILES/)
+    const lib = readFileSync(resolve(root, 'scripts/platform/lib/runtime-assets.mjs'), 'utf8')
+    expect(lib).toMatch(/export function runtimeAssetSource/)
+    expect(lib).toContain("['custom/server/decisiongraph/semantica-bridge.py', 'semantica-bridge.py']")
+  })
+})

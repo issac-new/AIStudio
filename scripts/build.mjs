@@ -8,7 +8,7 @@ import { resolve } from 'path';
 // 上游根解析单一事实源（P1 Task 6）：env > 仓内 vendor > 旧兄弟 upstream（realpath）。
 import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
 // 运行时资产清单（P1 Task 7）：随包资源的事实源（pricing/roster/semantica-bridge）。
-import { buildRuntimeAssetManifest, renderManifestFile } from './platform/lib/runtime-assets.mjs';
+import { buildRuntimeAssetManifest, renderManifestFile, runtimeAssetSource } from './platform/lib/runtime-assets.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 const upstream = resolveUpstreamRoots(overlayRoot).hermesStudioRoot;
@@ -53,10 +53,8 @@ run('node scripts/build-server.mjs', upstream, 'build-server → dist/server');
 const runtimeManifest = buildRuntimeAssetManifest(overlayRoot);
 const runtimeResOut = resolve(upstream, 'dist', 'server');
 for (const asset of runtimeManifest.assets) {
-  // rel 即部署路径；源=runtime/<rel 去 runtime/ 前缀> 或单文件资产映射
-  const src = asset.rel.startsWith('runtime/')
-    ? resolve(overlayRoot, 'runtime', asset.rel.slice('runtime/'.length))
-    : resolve(overlayRoot, 'custom/server/decisiongraph/semantica-bridge.py');
+  // rel 即部署路径；rel→源映射单一事实源在 runtime-assets.mjs（runtimeAssetSource）
+  const src = runtimeAssetSource(overlayRoot, asset.rel);
   const dst = resolve(runtimeResOut, asset.rel);
   mkdirSync(resolve(dst, '..'), { recursive: true });
   cpSync(src, dst);

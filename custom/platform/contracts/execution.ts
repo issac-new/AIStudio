@@ -22,6 +22,7 @@ import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync } from 
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { ToolCategory } from '../../server/permmodes/permission-modes'
+import { browserVerdict } from '../../server/browsersec/browser-security'
 
 // ---------- MCP 工具细分类（H3 剩余项③ + P0-5 收口；自 enforce-gate 迁入） ----------
 // 背景：MCP 动态工具（运行时 mcp__{server}__{tool} 形态）无静态类别声明。分类信号
@@ -103,6 +104,29 @@ export function parseEnvList(name: string, env: NodeJS.ProcessEnv = process.env)
     .split(/[:,]/)
     .map((v) => v.trim())
     .filter(Boolean)
+}
+
+/** 浏览器/委托动作的 URL 提取键（裁决层可判目标域的入参形态）。 */
+const URL_KEYS = ['url', 'href', 'link', 'target_url', 'navigate_to']
+
+/** 沙箱网络边界（P1 终审挂账②，P2 Task 4 上移至契约硬边界段——与 sandboxPathViolation
+ *  同段同源）：浏览器/委托工具的目标 URL 准入。配置了 HERMES_BROWSER_ALLOWLIST/
+ *  DENYLIST 才生效（未配置=不假装有网络边界）；denylist 优先（browsersec 语义）；
+ *  无 URL 的浏览器动作（click/press）裁决层不可判目标域，交独立 profile 隔离。
+ *  返回拒绝说明串或 null。 */
+export function sandboxNetworkViolation(tool: string, input: Record<string, unknown>, env: NodeJS.ProcessEnv = process.env): string | null {
+  if (!tool.startsWith('browser_') && tool !== 'delegate_task') return null
+  const allow = parseEnvList('HERMES_BROWSER_ALLOWLIST', env)
+  const deny = parseEnvList('HERMES_BROWSER_DENYLIST', env)
+  if (allow.length === 0 && deny.length === 0) return null
+  let url: string | null = null
+  for (const key of URL_KEYS) {
+    const v = input[key]
+    if (typeof v === 'string' && /^https?:\/\//i.test(v)) { url = v; break }
+  }
+  if (!url) return null
+  const decision = browserVerdict(url, { allowlist: allow, denylist: deny, isolatedProfile: true })
+  return decision.verdict === 'deny' ? `${url}（${decision.reason}）` : null
 }
 
 /** 已配置沙箱根非空=沙箱模式开启（terminal 证明门据此执法）。 */

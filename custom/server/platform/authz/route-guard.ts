@@ -32,11 +32,19 @@ function routeLayers(routers: Router[]): RouterLayer[] {
 }
 
 function policyMatchesLayer(policy: PlatformRoutePolicy, layer: RouterLayer, method: PlatformRouteMethod): boolean {
-  return policy.method === method && policy.pathPattern === layer.path
+  return policy.method === method && normalizePattern(policy.pathPattern) === normalizePattern(layer.path as string)
 }
 
 function isParamSegment(segment: string): boolean {
   return segment.startsWith(':')
+}
+
+/** 路径模式归一（P2 Task 4）：去尾斜杠（根 '/' 除外）——'/api/x' 与 '/api/x/' 是
+ *  同一路由的两种写法，重叠判定与启动对账都必须在归一空间比对，否则一条尾斜杠
+ *  就能绕过重叠守卫或制造假悬垂/假漏登记。 */
+function normalizePattern(pathPattern: string): string {
+  if (pathPattern === '/') return pathPattern
+  return pathPattern.length > 1 && pathPattern.endsWith('/') ? pathPattern.slice(0, -1) : pathPattern
 }
 
 /**
@@ -52,8 +60,8 @@ export function assertNoPolicyPathOverlap(policies: PlatformRoutePolicy[]): void
       const a = policies[i]
       const b = policies[j]
       if (a.method !== b.method) continue
-      const sa = a.pathPattern.split('/')
-      const sb = b.pathPattern.split('/')
+      const sa = normalizePattern(a.pathPattern).split('/')
+      const sb = normalizePattern(b.pathPattern).split('/')
       if (sa.length !== sb.length) continue
       const overlapping = sa.every((seg, k) => seg === sb[k] || isParamSegment(seg) || isParamSegment(sb[k]))
       if (overlapping) {
@@ -93,7 +101,7 @@ export function assertPlatformRoutePolicies(routers: Router[], policies: Platfor
   // Task3②：双向对账——注册表政策也必须指向真实路由（方法+路径都一致），
   // 悬垂政策此前只有源序测试能发现，现在启动即失败。
   const dangling = policies.filter((policy) => !layers.some((layer) =>
-    (layer.methods ?? []).includes(policy.method) && policy.pathPattern === layer.path))
+    (layer.methods ?? []).includes(policy.method) && policyMatchesLayer(policy, layer, policy.method)))
   if (dangling.length > 0) {
     throw new Error(`Platform route policies without matching routes: ${dangling.map((policy) => `${policy.method} ${policy.pathPattern}`).join(', ')}`)
   }
@@ -126,7 +134,7 @@ function matchingPolicy(
   const routedMethod = method === 'HEAD' ? 'GET' : method
   for (const policy of policies) {
     if (policy.method !== routedMethod) continue
-    const layer = layers.find((candidate) => candidate.path === policy.pathPattern && candidate.match(path))
+    const layer = layers.find((candidate) => normalizePattern(candidate.path as string) === normalizePattern(policy.pathPattern) && candidate.match(path))
     if (layer) return { policy, layer }
   }
   return null

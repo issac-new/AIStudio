@@ -129,6 +129,14 @@ beforeAll(async () => {
   root.use(skillRoutes.routes(), skillRoutes.allowedMethods())
   const app = new Koa()
   app.use(bodyParser())
+  // 鉴权夹具（2026-11-06，存量红修复）：25c7c8e77 起用户面（userenv 等）走
+  // requireProfileParameterAccess——无 ctx.state.user 一律 401。生产装配里该状态
+  // 由上游 requireUserJwt 写入；本测试 Koa 未挂认证链，补同形 principal 夹具
+  // （super_admin 可跨 profile）。判据不放宽：探测全绿要求不变。
+  app.use(async (ctx, next) => {
+    ctx.state.user = { id: 1, username: 'probe-admin', role: 'super_admin', status: 'active' }
+    await next()
+  })
   app.use(root.routes())
   server = createServer(app.callback())
   await new Promise<void>((r) => server!.listen(0, '127.0.0.1', r))

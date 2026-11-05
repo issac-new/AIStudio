@@ -349,8 +349,10 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
   const trend = trendRuns.map((r) => {
     if (r === run) {
       // 分母不完整（任一闸 unknown）→ 首过率与打回率均如实 ⬜（分母 6 含未观测闸，
-      // 产 X/6 即系统性低估打回面；渲染读 trend 末项，不自拼数字）；打回计数本体
-      // 仍由 rejectGateCount 与 M4 行如实承载。
+      // 产 X/6 即系统性低估打回面；渲染读 trend 末项，不自拼数字）。打回有两个
+      // 口径不同的面，trend ⬜ 不吞它们：闸面 rejectGateCount（gateStats state=打回
+      // 计数，rejectRate 分母）与 issues.log 行面 M4（REJECT_WORD_RE 打回/拒收/熔断
+      // 行计数，恒产出行）——两者来源与含义都不同，不得互相替代或合并。
       return {
         run: r,
         firstPass: unknownGateCount > 0 ? '⬜' : `${firstPass}/6`,

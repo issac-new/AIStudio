@@ -313,3 +313,39 @@ describe('政策路径重叠守卫（P1 Task 1：assertNoPolicyPathOverlap）', 
     ])).toThrow(/overlap/)
   })
 })
+
+describe('路径归一：trailing-slash 不得绕过重叠判定与对账（P2 Task 4）', () => {
+  it('重叠判定：/api/x 与 /api/x/ 是同一路由的两种写法 → 抛重叠错', () => {
+    const policies: PlatformRoutePolicy[] = [
+      { method: 'POST', pathPattern: '/api/x', access: 'authenticated' },
+      { method: 'POST', pathPattern: '/api/x/', access: 'super-admin' },
+    ]
+    expect(() => assertNoPolicyPathOverlap(policies)).toThrow(/overlap/i)
+  })
+
+  it('重叠判定：/api/:id 与 /api/:id/ 同为参数尾斜杠 → 抛重叠错', () => {
+    const policies: PlatformRoutePolicy[] = [
+      { method: 'GET', pathPattern: '/api/:id', access: 'authenticated' },
+      { method: 'GET', pathPattern: '/api/:id/', access: 'authenticated' },
+    ]
+    expect(() => assertNoPolicyPathOverlap(policies)).toThrow(/overlap/i)
+  })
+
+  it('启动对账：政策尾斜杠与 Router 层无斜杠互认（归一后不悬垂、不漏登记）', () => {
+    const router = new Router()
+    router.post('/api/y', () => {})
+    const policies: PlatformRoutePolicy[] = [
+      { method: 'POST', pathPattern: '/api/y/', access: 'authenticated' },
+    ]
+    expect(() => assertPlatformRoutePolicies([router], policies)).not.toThrow()
+  })
+
+  it('启动对账：政策与真实路由确为不同路径时仍悬垂（归一不吞真差异）', () => {
+    const router = new Router()
+    router.post('/api/y', () => {})
+    const policies: PlatformRoutePolicy[] = [
+      { method: 'POST', pathPattern: '/api/z/', access: 'authenticated' },
+    ]
+    expect(() => assertPlatformRoutePolicies([router], policies)).toThrow(/without matching routes/)
+  })
+})
