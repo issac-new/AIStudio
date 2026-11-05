@@ -68,9 +68,9 @@
 - Produces: `buildPlan(seriesText, zcodeSeriesText, patchDir)` → 有序 `PlanItem[]{channel,target,name,sha256,seriesIndex,addedFiles[]}`；`emptyManifest(baseline)`；`applyPlanToManifest(manifest, item, result)`；`deriveAppliedPatches(manifest)`（只从 status==='applied' 派生）；`planIncrement(manifest, plan)` → `{kind:'noop'|'tail-append', items[]}` 或抛 `IncrementRefusedError{reason}`（rename/modify/insert/reorder/baseline-change/root-change/last-failed/v1-manifest）。
 - Consumes: 现有 `patches/series` 解析逻辑（从 inject.mjs 抽出，不复制）；补丁 sha256 用 node:crypto。
 
-- [ ] **Step 1: 负例（纯函数可直接红）**——修改已应用补丁内容（sha 变）→ IncrementRefused；中插新补丁→Refused；v1 manifest→Refused 且 reason 含 'v1'；尾部纯追加→tail-append；全空 plan→noop；appliedPatches 排除 failed/skipped。
-- [ ] **Step 2: 红→实现**（不改 inject.mjs 主流程——接线在 Task 5）。
-- [ ] **Step 3: 绿后提交** `feat(platform): 注入计划器与 manifest v2 契约`。
+- [x] **Step 1: 负例（纯函数可直接红）**——修改已应用补丁内容（sha 变）→ IncrementRefused；中插新补丁→Refused；v1 manifest→Refused 且 reason 含 'v1'；尾部纯追加→tail-append；全空 plan→noop；appliedPatches 排除 failed/skipped。
+- [x] **Step 2: 红→实现**（不改 inject.mjs 主流程——接线在 Task 5）。
+- [x] **Step 3: 绿后提交** `feat(platform): 注入计划器与 manifest v2 契约`。
 
 ### Task 4: Executor 与 Journal（事务化注入）
 
@@ -83,9 +83,9 @@
 - Produces: `runInjection(plan, opts{roots, stateOut, applyRuntimeDeploy})` → `{manifest, results[]}`；Journal 在每个补丁 apply 前 fsync 目标文件备份（`<stateOut>/journal/<patch>.pre`），apply 后记录 addedFiles 实际落盘清单；失败时 `rollbackTo(journalPoint)` 恢复本次会话已改文件；`git apply --check` 预检；首个失败后同 lane 后续记 `skipped/blocked-by-failed`。
 - Consumes: Task 3 的 planner/manifest；现有 inject.mjs 的目标树路由规则（`resolvePatchTargetRoot` 语义，抽出复用）。
 
-- [ ] **Step 1: 负例（用临时 git 仓+临时 overlay 快照夹具）**——①注入中强制第 N 个补丁失败→前 N-1 个已应用项全部回滚（文件字节比对）、manifest status=failed、后续 skipped；②部署预检返回 partial→注入中止不写 applied 投影；③成功路径 manifest=complete 且 appliedPatches 与 plan 一致；④中断后重跑→IncrementRefused（last-failed）提示 clean。
-- [ ] **Step 2: 红→实现**。夹具参照现有 `scripts/__tests__/inject-absent-tree.test.ts` 的临时根构造法。
-- [ ] **Step 3: 绿后提交** `feat(platform): 事务化注入执行器与回滚日志`。
+- [x] **Step 1: 负例（用临时 git 仓+临时 overlay 快照夹具）**——①注入中强制第 N 个补丁失败→前 N-1 个已应用项全部回滚（文件字节比对）、manifest status=failed、后续 skipped；②部署预检返回 partial→注入中止不写 applied 投影；③成功路径 manifest=complete 且 appliedPatches 与 plan 一致；④中断后重跑→IncrementRefused（last-failed）提示 clean。
+- [x] **Step 2: 红→实现**。夹具参照现有 `scripts/__tests__/inject-absent-tree.test.ts` 的临时根构造法。
+- [x] **Step 3: 绿后提交** `feat(platform): 事务化注入执行器与回滚日志`。
 
 ### Task 5: inject/ensure-injected/clean 切换到平台核心
 
@@ -100,10 +100,10 @@
 - Produces: `.overlay-injected.json` schemaVersion=2；`clean` 按 manifest.addedFiles 的 targetRoot 分树删除（containment 校验）；deploy 输出末行 `RESULT status=complete|partial|failed`。
 - Consumes: Task 3/4 全部接口。
 
-- [ ] **Step 1: 负例**——①agent 补丁新增文件经 clean 后从 hermes-agent 树消失、studio 树同路径不动（P0 审查实锤缺陷的反面）；②deploy kept>0 → exit 2 且 inject 不写 complete；③ensure 对 last-failed manifest 非零退出。
-- [ ] **Step 2: 红→改主流程**（v1 manifest 存在时 ensure 打印一次性迁移指引退出 3，不自动收养）。
-- [ ] **Step 3: 隔离快照完整重放**——临时 HOME/SIM_ROOT/HERMES_HOME 下 clean→inject→clean→inject 幂等二连，`cmp` 逐字节对账（Task 2 同款验证法）。
-- [ ] **Step 4: 绿后提交** `feat(platform): 注入链切换平台核心——严格增量与分树清理`。
+- [x] **Step 1: 负例**——①agent 补丁新增文件经 clean 后从 hermes-agent 树消失、studio 树同路径不动（P0 审查实锤缺陷的反面）；②deploy kept>0 → exit 2 且 inject 不写 complete；③ensure 对 last-failed manifest 非零退出。
+- [x] **Step 2: 红→改主流程**（v1 manifest 存在时 ensure 打印一次性迁移指引退出 3，不自动收养）。
+- [x] **Step 3: 隔离快照完整重放**——临时 HOME/SIM_ROOT/HERMES_HOME 下 clean→inject→clean→inject 幂等二连，`cmp` 逐字节对账（Task 2 同款验证法）。
+- [x] **Step 4: 绿后提交** `feat(platform): 注入链切换平台核心——严格增量与分树清理`。
 
 ### Task 6: 统一 upstream 根解析与入口前置
 

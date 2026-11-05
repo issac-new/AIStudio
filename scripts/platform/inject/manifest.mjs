@@ -95,6 +95,19 @@ export function deriveAppliedZcodePatches(manifest) {
   return manifest.patches.filter((p) => p.status === 'applied' && p.channel === 'zcode').map((p) => p.name);
 }
 
+/**
+ * partial 是否可接受（standalone 语义保留的边界）：
+ * 仅当所有非 applied 项都是 absent-tree 跳过、且 runtime 部署无 partial/failed。
+ * 其它 partial（blocked-by-failed 残余、部署保留目标等）一律不可当成功。
+ */
+export function isAcceptablePartial(manifest) {
+  if (!isV2Manifest(manifest) || manifest.status !== 'partial') return false;
+  if (manifest.patches.some((p) => p.status !== 'applied' && p.reason !== 'absent-tree')) return false;
+  const rd = manifest.runtimeDeploy;
+  if (rd && rd.apply && rd.apply !== 'complete') return false;
+  return true;
+}
+
 /** 读 manifest 文件：缺席返回 null（不猜）；JSON 损坏抛错（不静默当 v1/v2）。 */
 export function readManifestFile(path) {
   if (!existsSync(path)) return null;

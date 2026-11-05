@@ -1,6 +1,8 @@
 # 派生构建产物(inject 生成,不入库)
 .overlay-injected.json
 vite.config.overlay.mts
+# 注入 journal（P1 平台核心：失败会话回滚备份/取证面，随 OVERLAY_STATE_OUT 重定向）
+/journal/
 *.log
 .env.local
 node_modules

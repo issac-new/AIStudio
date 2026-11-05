@@ -54,12 +54,30 @@ describe('inject 缺目标树跳过（standalone cockpit 包形态）', () => {
       expect(existsSync(join(r.stateDir, 'vite.config.overlay.mts')), '派生 config 应落 OVERLAY_STATE_OUT').toBe(true)
       const after = existsSync(repoConfig) ? readFileSync(repoConfig, 'utf8') : null
       expect(after, '仓根 vite.config.overlay.ts 被测试污染').toBe(before)
+      // P1 Task 5：manifest v2 落 OVERLAY_STATE_OUT——standalone 形态=partial（仅缺树跳过）
+      const mPath = join(r.stateDir, '.overlay-injected.json')
+      expect(existsSync(mPath), 'v2 manifest 应落 OVERLAY_STATE_OUT').toBe(true)
+      const m = JSON.parse(readFileSync(mPath, 'utf8'))
+      expect(m.schemaVersion).toBe(2)
+      expect(m.status).toBe('partial')
+      // 非 applied 项全部是缺树跳过（无失败伪装、无其它 partial 成因）
+      expect(m.patches.filter((p: any) => p.status !== 'applied')
+        .every((p: any) => p.reason === 'absent-tree')).toBe(true)
+      // 兼容投影只从 applied 派生
+      const appliedHermes = m.patches.filter((p: any) => p.status === 'applied' && p.channel === 'hermes')
+      expect(m.appliedPatches).toHaveLength(appliedHermes.length)
+      expect(m.appliedZcodePatches).toEqual([])
     }, 300_000)
 
-  it('缺席判定锚与汇总行在源码在位（防漂移）', () => {
+  it('缺席判定锚与汇总行在源码在位（防漂移；P1 Task 5 起注入执行面移驻 executor）', () => {
+    // 判定锚：inject.mjs 的 absentTreeCheck（树在位双锚 hermes_cli/pyproject.toml）
     const src = readFileSync(join(ROOT, 'scripts/inject.mjs'), 'utf8')
-    expect(src).toContain('(hermes-agent tree absent, standalone/partial checkout)')
-    expect(src).toContain('skippedAbsentTree')
     expect(src).toContain("resolve(hermesAgentRoot, 'hermes_cli')")
+    expect(src).toContain("resolve(hermesAgentRoot, 'pyproject.toml')")
+    // SKIP 行与汇总计数：executor.mjs（P1 平台核心的注入执行面）
+    const exec = readFileSync(join(ROOT, 'scripts/platform/inject/executor.mjs'), 'utf8')
+    expect(exec).toContain('tree absent, standalone/partial checkout')
+    expect(exec).toContain('absentSkipCount')
+    expect(exec).toContain('树缺席跳过（standalone/partial checkout 形态；全仓检出无此现象）')
   })
 })

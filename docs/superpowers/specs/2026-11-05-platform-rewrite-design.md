@@ -221,6 +221,13 @@ simharness/                      仅保留平台 CLI 的 Shell 适配与场景�
 | 部署预检失败不写 manifest（P1-4） | 预检 partial/failed 即中止：零补丁应用、不写 manifest（保留既有 manifest 原状）、results 全记 skipped/runtime-deploy-precheck | 写一个全 skipped 的 failed manifest | 预检失败时树未动——写 failed manifest 会毒化 planIncrement（last-failed）迫使用户无谓 clean；不写=修复部署漂移后可直接重试 | Mechanical | approved |
 | 部署后置 partial/failed 降级（P1-4） | 补丁全部应用后 runtime apply=partial→整体 partial、failed→整体 failed，runtimeDeploy 字段如实记录两阶段 | 只记日志不改整体 status | 「补丁成功但部署 partial」若报 complete 即复活「保留旧文件仍报告成功」的 P0 实锤缺陷 | Mechanical | approved |
 | journal 生命周期（P1-4） | 会话开始 reset（回滚数据只对本会话有效）；成功会话收尾 prune（回滚窗口关闭）；失败会话保留取证 | 永久累积或永不清理 | 失败会话的备份是取证面（对账回滚正确性）；成功会话再无回滚可能，累积=无谓占用 stateOut | Mechanical | approved |
+| 脏树门与 v2 管理态（P1-5） | inject 先读 manifest 算增量：v2 noop/tail 时树为 manifest 管理态（注入产物是预期工作态），脏树门跳过；无清单/v1 才走「全量须净树」门 | 一律先过脏树门 | 注入态本就是脏树——门与管理态互斥；v1 无逐项状态不可信，维持净树要求（P0 行为不变） | Mechanical | approved |
+| v1→v2 迁移通道（P1-5） | v1 manifest 可辅助 clean（反放+分树删新增文件），clean 收尾删除旧清单；随后 inject 全量重建 v2。ensure 对 v1 打印一次性迁移指引 exit 3，不自动收养 | ensure 自动把 v1 升级为 v2；或 v1 直接当成功放行 | 迁移只经「clean→inject」一条路（全量重放验证）；exit 3 与 0/1/2 区分让 CI/钩子可编程识别迁移态 | Mechanical | approved |
+| clean 分树删除数据面（P1-5） | v2 clean 按 manifest 逐项 addedFiles×targetRoot 删除（containment 校验，越界拒绝+非零退出）；legacy 路径按补丁声明的目标树路由删除 | 维持旧实现（全部新增文件硬删在 hermesStudioRoot 下） | 旧实现是 P0 审查实锤缺陷：agent 树新增文件 clean 后永不消失、studio 同路径文件面临误删风险 | Mechanical | approved |
+| clean 收尾删注入态指纹（P1-5） | clean 成功后删除 manifest 与 journal——树净=无注入态，下次 inject 全量重建 | 保留 manifest（旧行为） | 保留旧清单会让后续 inject/ensure 基于过期状态判断（P0 脏树假绿的根源之一） | Mechanical | approved |
+| deploy 状态面（P1-5） | deploy-agent-runtime 末行 RESULT status=complete|partial|failed；exit 0/2/1；kept/conflict 一律 partial（--force 已覆盖的 conflict 亦然） | 只按 missing 退出非零（旧实现） | 「保留旧文件仍报告成功」是 P0 实锤缺陷；inject 预检/后置同步按退出码消费同一状态 | Mechanical | approved |
+| ensure 假绿路径删除（P1-5） | 删除「cockpit 路由存在即放行 inject 部分失败」与「脏树无清单 exit 0」两条路径：inject 失败即非零；脏树无清单=不可验证=非零 | 保留放行（向后兼容） | 两条路径都是「尝试过伪装成成功」的实锤样本；P1 目标即消灭该语义 | Mechanical | approved |
+| ensure 差量补套单写入门（P1-5） | series 领先 manifest（tail-append）时打印清单后 spawn inject 主链补套（runInjection 事务化+manifest 原子更新），ensure 不再裸 git apply | ensure 侧自建 applyDelta+手写 manifest（旧实现） | 单一写入路径消灭「手工登记 manifest」回退面；ensure 专职判定与守门 | Mechanical | approved |
 
 ## 验证
 
@@ -295,6 +302,15 @@ P1 Task 4（事务化注入 Executor 与 Journal）负例先红后绿的真实�
 - 实现中修复的真实缺陷（红阶段实测）：journal checkpoint 对纯新增文件补丁不建入口目录（__index.json ENOENT）；rollbackLane 按绝对根匹配而调用方传树名（restore 0）——两者均以负例咬住后修复。
 - 变异探针：摘除失败回滚 → 负例①红；预检 partial 放行 → 负例②红；还原后全绿。
 - 相邻回归：`npx vitest run scripts/__tests__/inject-planner.test.ts scripts/__tests__/inject-manifest.test.ts custom/server/__tests__/ensure-injected-delta-guard.test.ts` 与 executor 合跑 4 文件 / 35 通过 / 0 失败。
+
+P1 Task 5（inject/ensure-injected/clean 切换平台核心）负例先红后绿与隔离完整重放（同一隔离 HOME；重放用独立临时 HOME/HERMES_HOME/SIM_ROOT）：
+
+- 负例先红（deploy 面）：`npx vitest run scripts/__tests__/deploy-agent-runtime.test.ts` 实现前 5 用例全红（kept→exit 2/RESULT 行/状态映射均不存在）。
+- 负例先红（主链面）：`npx vitest run scripts/__tests__/inject-clean-v2.test.ts` 实现前 8/9 红（v2 manifest 不产、noop 不成立、clean 不删 agent 树新增文件、ensure 无 v1/failed/脏树非零语义）。
+- 实现后：两文件 5+9 通过；适配后 `inject-absent-tree` 2 通过（standalone 真实全量 inject 保持 rc=0/SKIP 汇总/applied>300，新增 v2 manifest=partial 断言）、`ensure-injected-delta-guard` 5 通过（差量守卫迁移 v2 语义：planIncrement tail-append→inject 主链补套、v1/last-failed 拒绝、前缀双源对账保留）。
+- 注入核心全量回归：`npx vitest run scripts/__tests__/` 28 文件 / 204 通过 / 0 失败。
+- 隔离完整重放（本 worktree 真实 468 补丁链，独立 HOME）：v1 注入态快照 → clean（legacy 分树路径，348 M+87 ?? 全清、dirty=0、v1 manifest 删除）→ inject#1（v2 complete，460 hermes+8 zcode）→ noop inject（exit 0 零重放）→ clean → inject 全量重放；6 关键文件（三树 tracked/untracked 代表+派生 config）+ 归一 manifest 逐字节 cmp 全等；deploy 幂等 62/62 same（RESULT status=complete）；journal 无残留；ensure noop exit 0。
+- 迁移语义实证：本 worktree v1 manifest 已被 clean+inject 迁移为 v2（clean 删旧清单→inject 重建），后续 pretest/ensure 走 v2 noop。
 
 | 风险 | 缓解与回滚 |
 |---|---|
