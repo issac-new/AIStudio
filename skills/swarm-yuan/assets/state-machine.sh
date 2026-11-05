@@ -284,6 +284,9 @@ guard_phase() {
       # warn 不 fail：存量状态文件无此字段，硬 fail 破坏向后兼容（守决策 26 预算：不新增 fail 调用）。
       local ev
       ev=$(get_field verify_evidence)
+      # 规格库归档提示（2026-11-05 AI Native 吸收批 T7，warn 档不阻塞）：
+      # spec 含 OpenSpec delta 段时建议跑 spec-archive 合并进主规格库 registry/。
+      echo "  ⠿ 含 delta 段的治理 spec 建议随批归档：node scripts/spec-archive.mjs docs/superpowers/specs/<spec>.md（合并进 registry/<域>.md；warn 不阻塞）"
       if [[ -n "$ev" ]]; then
         pass "archive 准入: verify_evidence=${ev}（收口有据）"
       else
