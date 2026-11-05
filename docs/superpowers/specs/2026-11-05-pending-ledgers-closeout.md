@@ -25,7 +25,13 @@
    环境，本机 mac 无法验收；N03 页面级改造（vendor 页面）在无实测数据下不宜动。
    四项合并为「Windows 批」留存台账，判据与实施建议在册。run26 N12 维持「run27
    观察」原判。
-6. **D-GOV-4 → resolved**：`.qgate/registers/decisions.json` 的 deferred 项
+6. **pre-existing 4 红定谳与修复（全量验证时撞出，非本批引入——main 单跑同红）**：
+   - specialist-presets 防漂移用例 ENOENT：根因=upstream 缓存卷（/Volumes/nvme2230）未挂载，
+     `~/lab/upstream/routa` 断链。修复=源缺席时显式 skip（标题注明缺席路径与恢复条件），
+     仓内四用例照常执行——fail-soft 不造假，源恢复自动恢复守门。
+   - diagram-export 3 红：playwright chromium 缓存缺席（清理轮误伤）——重装
+     `npx playwright install chromium` 恢复环境（环境恢复非代码变更）。
+7. **D-GOV-4 → resolved**：`.qgate/registers/decisions.json` 的 deferred 项
    （releaseBatches 留空）已由收尾批落真（v1.0.12 批次＋release:preflight 串
    release-evidence --write），revisitBy 条件提前达成。
 
@@ -47,6 +53,7 @@
   （遮挡 10s 后 cap 放行／cap 后再 pending 正常遮挡／MAX_MS=0 不上限／initialOnly
   cap 不置首显完成）
 - 台账一致性：三份台账计数节与正文条目状态一致
+- specialist-presets：源缺席 → 4 过＋1 skip（标题含原因）；源在位分支不变（CI/有源机照常对照）
 - 全量 `npm test` 对照基线 8041/0
 
 ## 设计文档影响

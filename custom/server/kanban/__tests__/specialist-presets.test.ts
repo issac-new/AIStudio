@@ -4,12 +4,19 @@
 // 不得漂移——来源 routa/resources/specialists/workflows/kanban/*.yaml 与
 // review/{pr-reviewer,security-reviewer,pr-analyzer}.yaml）。
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { SPECIALIST_PRESETS, getPreset } from '../specialist-presets'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
 const ROUTA = resolve(OVERLAY_ROOT, '../upstream/routa/resources/specialists')
+
+// 上游 routa 源在仓外 upstream 缓存（解析序见 AGENTS.md 规则 9；本机锚点
+// ~/lab/upstream/routa → NVMe 缓存卷）。源缺席（缓存卷未挂载等）时逐字对照
+// 无从谈起——显式 skip 并标注原因，不冒充通过也不假红（fail-soft 不造假）；
+// 源恢复即自动恢复守门。仓内四用例（全量/id 唯一/列覆盖/词表/路由注册）不受影响。
+const ROUTA_AVAILABLE = existsSync(ROUTA)
+const itIfRouta = ROUTA_AVAILABLE ? it : it.skip
 
 describe('specialist 预置库（routa 九件套+review 三层）', () => {
   it('12 件全量（看板 9 + 评审 3），id 唯一', () => {
@@ -17,7 +24,7 @@ describe('specialist 预置库（routa 九件套+review 三层）', () => {
     expect(new Set(SPECIALIST_PRESETS.map(p => p.id)).size).toBe(12)
   })
 
-  it('看板九件套 id/name/reminder 与上游 yaml 逐字一致（防漂移）', () => {
+  itIfRouta('看板九件套 id/name/reminder 与上游 yaml 逐字一致（防漂移）' + (ROUTA_AVAILABLE ? '' : '（SKIP：上游 routa 源缺席=' + ROUTA + '，恢复 upstream 缓存后自动恢复守门）'), () => {
     for (const base of ['backlog-refiner', 'todo-orchestrator', 'dev-executor', 'qa-frontend', 'review-guard', 'blocked-resolver', 'done-reporter', 'pr-publisher']) {
       const yaml = readFileSync(resolve(ROUTA, 'workflows/kanban', `${base}.yaml`), 'utf-8')
       const preset = getPreset(`kanban-${base}`)
