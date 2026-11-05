@@ -167,6 +167,10 @@ export interface ClusterSnapshot {
   spawnHealth?: { ok: boolean; detail: string }
   /** 磁盘水位面（C4 增件）：控制器注入 df -P 解析（挂载点×已用%）；未接线=合法空态 */
   diskUsage?: Array<{ mount: string; usedPct: number }>
+  /** Plan Mode 计划面（plan.stale 检测面，2026-11-05 AI Native T3）：控制器注入
+   *  listAllPlans()（含 expired）；未接线=合法空态。requested 悬挂超 TTL 无人裁决
+   *  =计划卡死形态（六死法之一）的可见锚。 */
+  planRequests?: Array<{ planId: string; fromAgent: string; taskId?: string; at: number; state: string }>
   /** 交付分支推送情报（delivery.pushed 检测面，V8.33 持续集成）——控制器注入（NUDGE_REPO 仓本地 vs origin tip 比对），未接线=合法空态。 */
   deliveryBranchIntel?: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string; tipTs?: number }>
   expectedWorkCards?: RunningCardsFace

@@ -11,6 +11,7 @@ Origin: upstream/minimax-code ``packages/agent-modules/runaway-guard/src/contrac
 - abab_action_cycle          A/B 交替动作循环（周期 2）
 - polling_repeat             轮询式重复：同工具同目标反复且结果不变
 - unchanged_progress_repeat  动作在变但结果持续不变（无进展）
+- file_edit_thrash           同一文件反复编辑且其间验证连续失败（颤振）
 
 语义边界：本守卫只观测与报告（warn 日志 + agent._last_runaway_signal + 观察者通知），
 默认不打断执行；``HERMES_RUNAWAY_GUARD_INTERRUPT=1`` 时触发 agent.interrupt()，
@@ -36,6 +37,10 @@ RUNAWAY_SIGNALS = (
     "abab_action_cycle",
     "polling_repeat",
     "unchanged_progress_repeat",
+    # 2026-11-05 AI Native 吸收批 T3（六死法·颤振）：同一文件反复编辑且其间验证
+    # 连续失败——「改了又改改不过」形态。同参数完全相同的重复已由
+    # exact_action_repeat（连续阈 3）覆盖，本信号补「同文件不同编辑」的颤振。
+    "file_edit_thrash",
 )
 
 # 文本侧信号（mimo max-mode ngram 原语，P6 spec §3.2；与工具侧六信号分表冻结）。
@@ -108,6 +113,9 @@ class RunawayGuard:
     polling_threshold: int = 4           # 同工具同结果轮询次数
     unchanged_threshold: int = 5         # 动作变结果不变次数
     error_family_threshold: int = 3      # 同族错误窗口内次数
+    file_edit_threshold: int = 5         # 窗口内同文件编辑次数（颤振判定主阈）
+    file_edit_fail_floor: int = 2        # 其间验证失败次数下限（防正常多步改写误报）
+    _file_edits: list = field(default_factory=list)  # [(path, error_family|None)]
     _actions: list = field(default_factory=list)   # [(tool, action_fp)]
     _results: list = field(default_factory=list)   # [result_fp]
     _errors: list = field(default_factory=list)    # [family]
@@ -123,7 +131,11 @@ class RunawayGuard:
         self._actions.append((tool, action_fp))
         self._results.append(result_fp)
         self._errors.append(family)
-        for buf in (self._actions, self._results, self._errors):
+        if tool in ("write_file", "patch") and isinstance(args, dict):
+            path = args.get("path")
+            if isinstance(path, str) and path:
+                self._file_edits.append((path, family))
+        for buf in (self._actions, self._results, self._errors, self._file_edits):
             # window 下限夹到 ≥1：防御性误设 window=0 时 -0==0 什么都不裁（无界增长）。
             del buf[: -max(1, self.window)]
 
@@ -134,6 +146,7 @@ class RunawayGuard:
             or self._check_abab_cycle(tool)
             or self._check_polling_repeat(tool, action_fp, result_fp)
             or self._check_unchanged_progress(tool, result_fp)
+            or self._check_file_edit_thrash(tool)
         )
         if signal is not None:
             self._last_signal = signal
@@ -258,6 +271,26 @@ class RunawayGuard:
             if distinct_actions >= 2:
                 return RunawaySignal("unchanged_progress_repeat", tool, n,
                                      f"结果连续 {n} 次不变而动作有 {distinct_actions} 种（无进展）", result_fp)
+        return None
+
+    def _check_file_edit_thrash(self, tool: str) -> Optional[RunawaySignal]:
+        """同一文件反复编辑且其间验证连续失败（颤振，AI Native 吸收批 T3）。
+
+        判据：窗口内同一路径的写类编辑 ≥ file_edit_threshold 次，且这些编辑的结果
+        中错误族 ≥ file_edit_fail_floor 次——「改了又改、改不过还改」才叫颤振；
+        干净的多步改写（零失败）不报。完全相同的重复编辑由 exact_action_repeat 先拦。
+        """
+        if not self._file_edits:
+            return None
+        path = self._file_edits[-1][0]
+        edits = [fam for p, fam in self._file_edits if p == path]
+        if len(edits) < self.file_edit_threshold:
+            return None
+        fails = sum(1 for fam in edits if fam is not None)
+        if fails >= self.file_edit_fail_floor:
+            return RunawaySignal(
+                "file_edit_thrash", tool, len(edits),
+                f"{path} 窗口内编辑 {len(edits)} 次其中 {fails} 次失败（颤振——换思路或回滚）")
         return None
 
 

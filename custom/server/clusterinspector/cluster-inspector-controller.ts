@@ -214,7 +214,17 @@ function diskUsageProbe(): Array<{ mount: string; usedPct: number }> {
   } catch { return [] }
 }
 
-const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, getDiskUsage: diskUsageProbe,
+/** Plan Mode 计划面探针（plan.stale 检测面，2026-11-05 AI Native T3）：
+ *  listAllPlans() fail-soft（plan 域缺席=未接线合法空态）。 */
+function planRequestsProbe(): Array<{ planId: string; fromAgent: string; taskId?: string; at: number; state: string }> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { listAllPlans } = require('../plan/plan-mode') as typeof import('../plan/plan-mode')
+    return listAllPlans().map((p) => ({ planId: p.planId, fromAgent: p.fromAgent, taskId: p.taskId, at: p.at, state: p.state }))
+  } catch { return [] }
+}
+
+const insp = ensureInspector({ getKanbanDiagnostics: kanbanDiagnosticsProvider(), getRunningCards: runningCardsProvider(), getBlockedCards: blockedCardsProvider(), getFailedVerdictCards: failedVerdictCardsProvider(), getUnassignedCards: unassignedCardsProvider(), getExpectedWorkCards: expectedWorkCardsProvider(), getDeliveryBranchIntel: deliveryBranchIntelProvider(), getFederationSnapshot: federationSnapshotProvider(), getSpawnHealth: spawnHealthProbe, getDiskUsage: diskUsageProbe, getPlanRequests: planRequestsProbe,
   // #9 决策影子层：默认把催办决策点的「建议动作+置信度+特征」落 decisiongraph
   // （category=shadow-nudge）。fail-soft 动态 require：decisiongraph 缺席不炸、不阻断真值链；
   // CLUSTER_INSPECTOR_SHADOW_JUDGE=off 可关（缺省 on，仅记录不接管）。

@@ -102,6 +102,10 @@ export interface PatternTemplate {
   costEstimate: 'low' | 'medium' | 'high' | 'very-high'
   goalTemplate: string
   stopConditionTemplate: string
+  /** PR 守望上限（2026-11-05 AI Native 吸收批 T3，六死法·PR 守望）：守望类模板
+   *  的「无变化轮询次数上限」——达上限即收敛退出并升级人工，禁无限守望
+   *  （上游 Claude #77310 实录：PR 四天没人管，agent 跑了 50 轮 full-context）。 */
+  maxPollsWithoutChange?: number
 }
 
 export interface TaskSource {
@@ -259,7 +263,9 @@ export const PATTERN_TEMPLATES: Record<LoopPattern, PatternTemplate> = {
   'pr-babysitter': {
     pattern: 'pr-babysitter', defaultCron: '*/15 * * * *', defaultLevel: 'L1', costEstimate: 'high',
     goalTemplate: 'Monitor open PRs for CI status',
-    stopConditionTemplate: 'All tracked PRs are merged or closed',
+    stopConditionTemplate: 'All tracked PRs are merged or closed, or 12 consecutive polls saw no change (escalate to human)',
+    // 12 次×15min=3h 无变化即收敛升级（六死法·PR 守望的上限锚；0.5 天量级）
+    maxPollsWithoutChange: 12,
   },
   'ci-sweeper': {
     pattern: 'ci-sweeper', defaultCron: '*/10 * * * *', defaultLevel: 'L2', costEstimate: 'very-high',

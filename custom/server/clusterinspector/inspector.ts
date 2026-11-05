@@ -42,6 +42,9 @@ export interface InspectorDeps {
   getSpawnHealth?: () => { ok: boolean; detail: string }
   /** 磁盘水位面（C4 增件）：df -P 解析为挂载点×已用%；未接线=合法空态 */
   getDiskUsage?: () => Array<{ mount: string; usedPct: number }>
+  /** Plan Mode 计划面（plan.stale 检测面，2026-11-05 AI Native 吸收批 T3）：
+   *  未接线=合法空态（检测器静默跳过）。 */
+  getPlanRequests?: () => Array<{ planId: string; fromAgent: string; taskId?: string; at: number; state: string }>
   /** 交付分支推送情报接线（delivery.pushed 面，V8.33 持续集成） */
   getDeliveryBranchIntel?: () => Promise<Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }>>
   /** 联邦注册表快照注入（进度联邦模块；缺省=该面 not wired，D8 空转零误报） */
@@ -624,6 +627,9 @@ export class ClusterInspector {
       // 磁盘水位面（disk.capacity）：未接线=合法空态
       let diskUsage: Array<{ mount: string; usedPct: number }> | undefined
       if (this.deps.getDiskUsage) { try { diskUsage = this.deps.getDiskUsage() } catch { diskUsage = undefined } }
+      // Plan Mode 计划面（plan.stale）：未接线=合法空态
+      let planRequests: ClusterSnapshot['planRequests']
+      if (this.deps.getPlanRequests) { try { planRequests = this.deps.getPlanRequests() } catch { planRequests = undefined } }
       // 交付分支推送情报面（delivery.pushed）：未接线=合法空态
       let deliveryBranchIntel: Array<{ branch: string; localTip: string; originTip: string; pushed: boolean; profile: string }> | undefined
       if (this.deps.getDeliveryBranchIntel) {
@@ -649,6 +655,7 @@ export class ClusterInspector {
         deliveryBranchIntel: deliveryBranchIntel as unknown as ClusterSnapshot['deliveryBranchIntel'],
         spawnHealth: spawnHealth as unknown as ClusterSnapshot['spawnHealth'],
         diskUsage: diskUsage as unknown as ClusterSnapshot['diskUsage'],
+        planRequests,
         federation: this.deps.getFederationSnapshot
           ? this.deps.getFederationSnapshot()
           : { ok: false, error: 'not wired', nowMs: t0, machines: [] },
