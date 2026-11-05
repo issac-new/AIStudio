@@ -1,0 +1,225 @@
+diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
+--- a/agent/conversation_loop.py
++++ b/agent/conversation_loop.py
+@@ -123,6 +123,18 @@ def _review_input_budget_exhausted(agent: Any) -> bool:
+     return isinstance(used, int) and not isinstance(used, bool) and used >= budget
+ 
+ 
++def _run_budget_exhausted(agent: Any) -> bool:
++    """True when the configured wall-clock run budget is fully spent (100% hard stop).
++
++    The 80% wrap-up notice only nudges the model; this predicate is the enforceable
++    stop: the generic loop checks it at each iteration boundary (never mid-call), so
++    one hung tool call may overshoot slightly but no NEW call starts after the budget.
++    Unset budget (``run_budget_seconds`` falsy) keeps behaviour unchanged."""
++    budget = getattr(agent, "run_budget_seconds", None)
++    started = getattr(agent, "_run_budget_started_at", None)
++    return bool(budget and started and (time.time() - started) >= float(budget))
++
++
+ def _maybe_inject_run_budget_wrapup(agent: Any, messages: list[dict[str, Any]]) -> bool:
+     """Inject the one-time wall-clock wrap-up notice when past 80% of budget.
+ 
+@@ -1745,6 +1757,20 @@ def _run_conversation_turn(
+     while _prelude_action != "break" and (
+         (s.api_call_count < agent.max_iterations and agent.iteration_budget.remaining > 0) or agent._budget_grace_call
+     ):
++        # Wall-clock hard stop (agent.run_budget_seconds): the loop only reaches this top
++        # between iterations, so stopping here never cuts an in-flight tool call. The 80%
++        # wrap-up notice is advice; this boundary check is the enforceable stop
++        # (exit reason wall_clock_exhausted — no post-budget summary call is made).
++        if _run_budget_exhausted(agent):
++            s._turn_exit_reason = "wall_clock_exhausted"
++            agent._emit_diagnostic_status(
++                "⏱️ Run budget exhausted (wall clock) — stopping at iteration boundary"
++            )
++            if not agent.quiet_mode:
++                agent._safe_print(
++                    "\n⏱️  Run budget exhausted (wall clock) — stopping this turn.", diagnostic=True,
++                )
++            break
+         if _run_phase(begin_iteration, agent, s).action == "break":
+             break
+         _run_phase(prepare_iteration, agent, s)
+diff --git a/agent/iteration_budget.py b/agent/iteration_budget.py
+--- a/agent/iteration_budget.py
++++ b/agent/iteration_budget.py
+@@ -1,7 +1,7 @@
+ """Per-agent iteration budget — thread-safe consume/refund counter.
+ 
+ Each ``AIAgent`` (parent or subagent) holds its own :class:`IterationBudget`: the parent's
+-cap is ``max_iterations`` (default 500), each subagent's ``delegation.max_iterations``
++cap is ``max_iterations`` (default 200), each subagent's ``delegation.max_iterations``
+ (default 50), so total iterations across parent + subagents can exceed the parent's cap.
+ """
+ 
+diff --git a/hermes_cli/config.py b/hermes_cli/config.py
+--- a/hermes_cli/config.py
++++ b/hermes_cli/config.py
+@@ -1713,12 +1713,19 @@ def _canonicalize_config(config: dict[str, Any]) -> dict[str, Any]:
+ # the iteration budget without an "unlimited" special case, and is unreachable in practice.
+ TURN_LIMIT_UNLIMITED = sys.maxsize
+ 
++# Default cap when nothing configures one (2026-11-05 convergence, AI Native absorption T5):
++# three help texts disagreed (500 / 60 / unlimited) while code defaulted to TURN_LIMIT_UNLIMITED.
++# An unconfigured agent can then loop unbounded (loop-death beats silent truncation as the
++# worse failure); 200 is generous for a single turn. Explicit "none"/"unlimited"/"inf"/0/-1
++# spellings still resolve to TURN_LIMIT_UNLIMITED — opting back into unlimited stays possible.
++TURN_LIMIT_DEFAULT = 200
++
+ # Spellings that mean "no limit" (compared lowercased, whitespace-stripped).
+ _UNLIMITED_SPELLINGS = frozenset({
+     "none", "null", "unlimited", "infinite", "infinity", "inf", "∞", "-1", "0"})
+ 
+ 
+-def resolve_turn_limit(raw: Any, default: int = TURN_LIMIT_UNLIMITED) -> int:
++def resolve_turn_limit(raw: Any, default: int = TURN_LIMIT_DEFAULT) -> int:
+     """Normalize a raw ``agent.max_turns`` value into an int iteration cap (always >= 1)."""
+     # bool is a subclass of int; reject explicitly so True/False don't become 1/0.
+     if raw is None or isinstance(raw, bool):
+diff --git a/hermes_cli/config_defaults.py b/hermes_cli/config_defaults.py
+--- a/hermes_cli/config_defaults.py
++++ b/hermes_cli/config_defaults.py
+@@ -61,8 +61,9 @@ DEFAULT_CONFIG = {
+         "storage": "hermes-home",
+     },
+     "agent": {
+-        # Turn cap. null = unlimited (default; caps caused silent mid-task truncation). Positive int
+-        # caps; "none"/"unlimited"/"inf"/0/-1 also mean unlimited (resolve_turn_limit).
++        # Turn cap. null/unset = TURN_LIMIT_DEFAULT (200; bounded-by-default since 2026-11-05 —
++        # unconfigured agents previously looped unbounded). Positive int caps; explicit
++        # "none"/"unlimited"/"inf"/0/-1 still mean unlimited (resolve_turn_limit).
+         "max_turns": None,
+         # Optional one-time model-visible checkpoint warning before a finite turn cap is exhausted.
+         # null = off; set a ratio strictly between 0 and 1 (for example, 0.75).
+diff --git a/hermes_cli/_parser.py b/hermes_cli/_parser.py
+--- a/hermes_cli/_parser.py
++++ b/hermes_cli/_parser.py
+@@ -296,7 +296,7 @@ def _build_chat_parser(subparsers) -> argparse.ArgumentParser:
+     inherited(chat_parser, "--checkpoints", action="store_true", default=SUPPRESS,
+               help="Enable filesystem checkpoints before destructive file operations (use /rollback to restore)")
+     add("--max-turns", type=int, default=None, metavar="N",
+-        help="Maximum tool-calling iterations per conversation turn (default: 500, or agent.max_turns in config)")
++        help="Maximum tool-calling iterations per conversation turn (default: 200, or agent.max_turns in config)")
+     add("--run-budget", type=float, default=None, metavar="SECONDS", dest="run_budget", help=(
+         "Optional wall-clock budget in seconds for each conversation run. "
+         "At 80%% elapsed the agent gets a one-time wrap-up notice, and "
+diff --git a/run_agent.py b/run_agent.py
+--- a/run_agent.py
++++ b/run_agent.py
+@@ -238,7 +238,7 @@ class AIAgent(
+         base_url: str | None = None, api_key: str | None = None, provider: str | None = None, api_mode: str | None = None,
+         acp_command: str | None = None, acp_args: list[str] | None = None, command: str | None = None, args: list[str] | None = None,
+         model: str = "",
+-        max_iterations: int = sys.maxsize,  # unlimited tool-calling iterations by default (shared with subagents)
++        max_iterations: int = 200,  # bounded by default (TURN_LIMIT_DEFAULT; explicit "unlimited" spellings lift it)
+         tool_delay: float | None = None,  # deprecated: accepted for compatibility, ignored
+         enabled_toolsets: list[str] | None = None, disabled_toolsets: list[str] | None = None,
+         save_trajectories: bool = False, verbose_logging: bool = False, quiet_mode: bool = False,
+diff --git a/cli.py b/cli.py
+--- a/cli.py
++++ b/cli.py
+@@ -1715,7 +1715,7 @@ def main(
+         reasoning: Reasoning effort for this run (none|minimal|low|medium|high|xhigh|max|ultra). Overrides agent.reasoning_effort.
+         api_key: API key for authentication
+         base_url: Base URL for the API
+-        max_turns: Maximum tool-calling iterations (default: 60)
++        max_turns: Maximum tool-calling iterations (default: 200)
+         verbose: Enable verbose logging
+         compact: Use compact display mode
+         list_tools: List available tools and exit
+diff --git a/tests/hermes_cli/test_resolve_turn_limit.py b/tests/hermes_cli/test_resolve_turn_limit.py
+--- a/tests/hermes_cli/test_resolve_turn_limit.py
++++ b/tests/hermes_cli/test_resolve_turn_limit.py
+@@ -8,7 +8,7 @@ garbage) and the config→env bridge in the gateway and TUI resolvers.
+ import os
+ import pytest
+ 
+-from hermes_cli.config import resolve_turn_limit, TURN_LIMIT_UNLIMITED
++from hermes_cli.config import resolve_turn_limit, TURN_LIMIT_DEFAULT, TURN_LIMIT_UNLIMITED
+ 
+ 
+ class TestNumericValues:
+@@ -56,37 +56,38 @@ class TestUnlimitedSpellings:
+ 
+ class TestAbsentAndDefault:
+     def test_none_returns_default(self):
+-        # Default is now unlimited (max_turns caused more problems than it solved).
+-        assert resolve_turn_limit(None) == TURN_LIMIT_UNLIMITED
++        # Default is bounded (TURN_LIMIT_DEFAULT=200) since 2026-11-05; explicit
++        # unlimited spellings still reach TURN_LIMIT_UNLIMITED (see TestUnlimitedSpellings).
++        assert resolve_turn_limit(None) == TURN_LIMIT_DEFAULT
+ 
+     def test_none_custom_default(self):
+         assert resolve_turn_limit(None, default=500) == 500
+ 
+     def test_empty_string_returns_default(self):
+-        assert resolve_turn_limit("") == TURN_LIMIT_UNLIMITED
++        assert resolve_turn_limit("") == TURN_LIMIT_DEFAULT
+ 
+     def test_whitespace_only_returns_default(self):
+-        assert resolve_turn_limit("   ") == TURN_LIMIT_UNLIMITED
++        assert resolve_turn_limit("   ") == TURN_LIMIT_DEFAULT
+ 
+ 
+ 
+ class TestInvalidInputs:
+     def test_bool_rejected(self):
+         # bool is an int subclass — must not silently become 1/0
+-        assert resolve_turn_limit(True) == TURN_LIMIT_UNLIMITED
+-        assert resolve_turn_limit(False) == TURN_LIMIT_UNLIMITED
++        assert resolve_turn_limit(True) == TURN_LIMIT_DEFAULT
++        assert resolve_turn_limit(False) == TURN_LIMIT_DEFAULT
+ 
+     def test_garbage_string_returns_default(self):
+-        assert resolve_turn_limit("garbage") == TURN_LIMIT_UNLIMITED
+-        assert resolve_turn_limit("not_a_number") == TURN_LIMIT_UNLIMITED
++        assert resolve_turn_limit("garbage") == TURN_LIMIT_DEFAULT
++        assert resolve_turn_limit("not_a_number") == TURN_LIMIT_DEFAULT
+ 
+     def test_list_returns_default(self):
+-        assert resolve_turn_limit([]) == TURN_LIMIT_UNLIMITED
+-        assert resolve_turn_limit([90]) == TURN_LIMIT_UNLIMITED
++        assert resolve_turn_limit([]) == TURN_LIMIT_DEFAULT
++        assert resolve_turn_limit([90]) == TURN_LIMIT_DEFAULT
+ 
+     def test_dict_returns_default(self):
+-        assert resolve_turn_limit({}) == TURN_LIMIT_UNLIMITED
+-        assert resolve_turn_limit({"max_turns": 90}) == TURN_LIMIT_UNLIMITED
++        assert resolve_turn_limit({}) == TURN_LIMIT_DEFAULT
++        assert resolve_turn_limit({"max_turns": 90}) == TURN_LIMIT_DEFAULT
+ 
+ 
+ 
+diff --git a/tests/agent/test_run_budget.py b/tests/agent/test_run_budget.py
+--- a/tests/agent/test_run_budget.py
++++ b/tests/agent/test_run_budget.py
+@@ -374,3 +374,28 @@ def test_gemini_long_decode_scales_implicit_stale_timeout_by_hops(monkeypatch, t
+     assert agent._compute_non_stream_stale_timeout(long_decode) == 600.0 * 8
+     monkeypatch.setenv("HERMES_API_CALL_STALE_TIMEOUT", "120")
+     assert agent._compute_non_stream_stale_timeout(long_decode) == 120.0
++
++# ── wall-clock hard stop predicate (2026-11-05 AI Native absorption T5) ────
++
++def test_run_budget_exhausted_false_when_unset():
++    """No budget (or no running turn clock) keeps loop behaviour unchanged."""
++    from agent.conversation_loop import _run_budget_exhausted
++    assert _run_budget_exhausted(_StubAgent(budget=None, started=time.time())) is False
++    assert _run_budget_exhausted(_StubAgent(budget=900, started=None)) is False
++
++def test_run_budget_exhausted_false_before_deadline():
++    from agent.conversation_loop import _run_budget_exhausted
++    agent = _StubAgent(budget=900, started=time.time() - 100)  # 11% elapsed
++    assert _run_budget_exhausted(agent) is False
++
++def test_run_budget_exhausted_true_at_and_past_deadline():
++    """At 100% the loop top stops the turn (wall_clock_exhausted) — the
++    enforceable stop the 80% wrap-up notice only nudges toward."""
++    from agent.conversation_loop import _run_budget_exhausted
++    assert _run_budget_exhausted(_StubAgent(budget=900, started=time.time() - 900)) is True
++    assert _run_budget_exhausted(_StubAgent(budget=900, started=time.time() - 5_000)) is True
++
++def test_run_budget_exhausted_accepts_float_budget():
++    from agent.conversation_loop import _run_budget_exhausted
++    assert _run_budget_exhausted(_StubAgent(budget=0.5, started=time.time() - 1)) is True
++    assert _run_budget_exhausted(_StubAgent(budget=0.5, started=time.time())) is False

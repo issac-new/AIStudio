@@ -1165,3 +1165,10 @@
 #      Win 回归 N04——PageLoading 统一最长遮挡上限（默认 10s，VITE_PAGE_LOADING_MAX_MS
 #      覆盖，0=不限）：pending 持续超限即放行内容，防慢接口长时间遮挡可用内容。
 752-client-page-loading-cap.patch
+
+# 753（2026-11-05 AI Native 吸收批 T5，spec 2026-11-05-ainative-absorption 决策 D-5/D-7）：
+#      墙钟 100% 硬中止——通用循环每次迭代边界判 run_budget_seconds 耗尽即
+#      turn_exit_reason=wall_clock_exhausted 收口（不打断在途工具调用，预算后不再发
+#      摘要请求；80% wrap-up 提示保留）；迭代默认值三处文案（500/60/unlimited）收敛
+#      为 TURN_LIMIT_DEFAULT=200（显式 none/unlimited/0/-1 拼写仍为无限）。
+753-agent-wallclock-hard-stop-and-turn-default.patch
