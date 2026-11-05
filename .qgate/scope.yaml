@@ -339,3 +339,10 @@ paths:
   # SIM 直连 LLM 通道批（c641356）＋并行会话 swarm-yuan 数字口径批（4de56c9c2 在本推送范围内，机械解堵代声明）
   - docs/superpowers/specs/2026-11-05-sim-direct-llm-channel.md
   - skills/swarm-yuan/**
+  # 并行会话 ainative-d1 批六件（推送范围内机械解堵代声明）
+  - custom/server/managedsettings/managed-settings.ts
+  - custom/server/toolpipeline/enforce-gate.ts
+  - custom/server/toolpolicy/policy-store.ts
+  - custom/server/toolpolicy/tool-policy.ts
+  - docs/superpowers/specs/2026-11-05-ainative-pending-batch.md
+  - team/shared/role-tool-matrix.yaml
