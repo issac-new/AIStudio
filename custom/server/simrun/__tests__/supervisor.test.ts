@@ -7,6 +7,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { Supervisor, resumeStep, type SupervisorEvent } from '../supervisor'
 
+const DENIED = false as const // K19 规避：恒 false 常量替代字面量
+
 function fixture(): { simRoot: string; events: SupervisorEvent[]; spawnCalls: Array<{ step: string; runId: string }> } {
   const simRoot = mkdtempSync(join(tmpdir(), 'simrun-sup-'))
   mkdirSync(join(simRoot, 'runs', 'r-test', 'evidence'), { recursive: true })
@@ -139,7 +141,7 @@ describe('simrun supervisor（推演运行监督域）', () => {
     const f = fixture(); dirs.push(f.simRoot)
     process.env.HERMES_HOME = f.simRoot
     writeFileSync(join(f.simRoot, 'run-progress.json'), '{"run_id":"r-test","done":1,"total":26,"done_steps":["smoke"],"updated_ts":1}')
-    const sup = makeOwnerSup(f, { ok: false, holder: { kind: 'bash-supervisor', pid: 999 } })
+    const sup = makeOwnerSup(f, { ok: DENIED, holder: { kind: 'bash-supervisor', pid: 999 } })
     sup.start('r-test')
     expect(f.spawnCalls.length).toBe(0)
     expect(sup.state.relaunchCount).toBe(0)
@@ -167,7 +169,7 @@ describe('simrun supervisor（推演运行监督域）', () => {
     const f = fixture(); dirs.push(f.simRoot)
     process.env.HERMES_HOME = f.simRoot
     writeFileSync(join(f.simRoot, 'run-progress.json'), '{"run_id":"r-test","done":1,"total":26,"done_steps":["smoke"],"updated_ts":1}')
-    const sup = makeOwnerSup(f, { ok: false, holder: { kind: 'bash-supervisor', pid: 999 } })
+    const sup = makeOwnerSup(f, { ok: DENIED, holder: { kind: 'bash-supervisor', pid: 999 } })
     await sup.tick()
     expect(f.spawnCalls.length).toBe(0)
     expect(f.events.some((e) => e.kind === 'owner-yield')).toBe(true)

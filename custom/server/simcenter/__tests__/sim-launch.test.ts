@@ -1,7 +1,7 @@
 // overlay/custom/server/harness/__tests__/sim-launch.test.ts
 // 受控 harness 启动器守门：默认关闭、super_admin 闸、runId 校验、固定脚本起停。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer } from 'node:http'
@@ -112,11 +112,25 @@ describe('受控 harness 启动器', () => {
     expect(after.body.running).toBe(false)
   })
 
-  it('已有驱动锁：拒绝双开 409', async () => {
+  it('已有活驱动锁（四因子判活）：拒绝双开 409；空锁目录（半写态）不误拦', async () => {
     await boot(true)
+    // 活锁：info 记本测试进程 pid＋宽匹配 node——真实进程表判活，sim-launch 409
     mkdirSync(join(root, '.driver.lock.d'))
+    writeFileSync(join(root, '.driver.lock.d', 'info'), [
+      `pid=${process.pid}`,
+      'instance=fixture-live',
+      'kind=driver',
+      'runId=run-other',
+      'cmdMatcher=node',
+      `simRoot=${realpathSync(root)}`,
+    ].join('\n') + '\n')
     const start = await post('/start', { runId: 'run-test-2' })
     expect(start.status).toBe(409)
-    expect(String(start.body.error)).toContain('驱动锁')
+    expect(String(start.body.error)).toContain('拒绝双开')
+    // 半写态：锁目录在但无 info——新语义不按占用误拦（陈锁不再误拦，P2 Task 1）
+    rmSync(join(root, '.driver.lock.d'), { recursive: true, force: true })
+    mkdirSync(join(root, '.driver.lock.d'))
+    const start2 = await post('/start', { runId: 'run-test-3' })
+    expect(start2.status).toBe(200)
   })
 })
