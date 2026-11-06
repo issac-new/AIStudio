@@ -11,7 +11,6 @@ Origin: upstream/minimax-code ``packages/agent-modules/runaway-guard/src/contrac
 - abab_action_cycle          A/B 交替动作循环（周期 2）
 - polling_repeat             轮询式重复：同工具同目标反复且结果不变
 - unchanged_progress_repeat  动作在变但结果持续不变（无进展）
-- file_edit_thrash           同一文件反复编辑且其间验证连续失败（颤振）
 
 语义边界：本守卫只观测与报告（warn 日志 + agent._last_runaway_signal + 观察者通知），
 默认不打断执行；``HERMES_RUNAWAY_GUARD_INTERRUPT=1`` 时触发 agent.interrupt()，
@@ -113,13 +112,13 @@ class RunawayGuard:
     polling_threshold: int = 4           # 同工具同结果轮询次数
     unchanged_threshold: int = 5         # 动作变结果不变次数
     error_family_threshold: int = 3      # 同族错误窗口内次数
-    file_edit_threshold: int = 5         # 窗口内同文件编辑次数（颤振判定主阈）
-    file_edit_fail_floor: int = 2        # 其间验证失败次数下限（防正常多步改写误报）
-    _file_edits: list = field(default_factory=list)  # [(path, error_family|None)]
     _actions: list = field(default_factory=list)   # [(tool, action_fp)]
     _results: list = field(default_factory=list)   # [result_fp]
     _errors: list = field(default_factory=list)    # [family]
     _texts: list = field(default_factory=list)     # [frozenset(ngram) | None]
+    file_edit_threshold: int = 5         # 窗口内同文件编辑次数（颤振判定主阈）
+    file_edit_fail_floor: int = 2        # 其间验证失败次数下限（防正常多步改写误报）
+    _file_edits: list = field(default_factory=list)  # [(path, error_family|None)]
     _text_hot_windows: int = 0
     _last_signal: Optional[RunawaySignal] = None
 
@@ -141,12 +140,12 @@ class RunawayGuard:
 
         signal = (
             self._check_exact_action_repeat(tool, action_fp)
+            or self._check_file_edit_thrash(tool)
             or self._check_exact_result_repeat(tool, result_fp)
             or self._check_same_error_family(tool, family)
             or self._check_abab_cycle(tool)
             or self._check_polling_repeat(tool, action_fp, result_fp)
             or self._check_unchanged_progress(tool, result_fp)
-            or self._check_file_edit_thrash(tool)
         )
         if signal is not None:
             self._last_signal = signal
@@ -212,6 +211,26 @@ class RunawayGuard:
                                  f"同一动作连续 {n} 次（阈值 {self.exact_repeat_threshold}）", action_fp)
         return None
 
+    def _check_file_edit_thrash(self, tool: str) -> Optional[RunawaySignal]:
+        """同一文件反复编辑且其间验证连续失败（颤振，AI Native 吸收批 T3）。
+
+        判据：窗口内同一路径的写类编辑 ≥ file_edit_threshold 次，且这些编辑的结果
+        中错误族 ≥ file_edit_fail_floor 次——「改了又改、改不过还改」才叫颤振；
+        干净的多步改写（零失败）不报。完全相同的重复编辑由 exact_action_repeat 先拦。
+        """
+        if not self._file_edits:
+            return None
+        path = self._file_edits[-1][0]
+        edits = [fam for p, fam in self._file_edits if p == path]
+        if len(edits) < self.file_edit_threshold:
+            return None
+        fails = sum(1 for fam in edits if fam is not None)
+        if fails >= self.file_edit_fail_floor:
+            return RunawaySignal(
+                "file_edit_thrash", tool, len(edits),
+                f"{path} 窗口内编辑 {len(edits)} 次其中 {fails} 次失败（颤振——换思路或回滚）")
+        return None
+
     def _check_exact_result_repeat(self, tool: str, result_fp: str) -> Optional[RunawaySignal]:
         """同工具内同一结果连续重复；跨工具的"结果不变"归 unchanged_progress_repeat。"""
         n = 0
@@ -271,26 +290,6 @@ class RunawayGuard:
             if distinct_actions >= 2:
                 return RunawaySignal("unchanged_progress_repeat", tool, n,
                                      f"结果连续 {n} 次不变而动作有 {distinct_actions} 种（无进展）", result_fp)
-        return None
-
-    def _check_file_edit_thrash(self, tool: str) -> Optional[RunawaySignal]:
-        """同一文件反复编辑且其间验证连续失败（颤振，AI Native 吸收批 T3）。
-
-        判据：窗口内同一路径的写类编辑 ≥ file_edit_threshold 次，且这些编辑的结果
-        中错误族 ≥ file_edit_fail_floor 次——「改了又改、改不过还改」才叫颤振；
-        干净的多步改写（零失败）不报。完全相同的重复编辑由 exact_action_repeat 先拦。
-        """
-        if not self._file_edits:
-            return None
-        path = self._file_edits[-1][0]
-        edits = [fam for p, fam in self._file_edits if p == path]
-        if len(edits) < self.file_edit_threshold:
-            return None
-        fails = sum(1 for fam in edits if fam is not None)
-        if fails >= self.file_edit_fail_floor:
-            return RunawaySignal(
-                "file_edit_thrash", tool, len(edits),
-                f"{path} 窗口内编辑 {len(edits)} 次其中 {fails} 次失败（颤振——换思路或回滚）")
         return None
 
 

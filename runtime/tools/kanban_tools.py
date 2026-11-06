@@ -1307,6 +1307,18 @@ def _handle_create(args: dict, **kw) -> str:
     # mutate review evidence or race its checkout). Project identity is the one safe thing
     # to inherit implicitly (the DB turns it into a fresh per-task worktree).
     workspace_kind, workspace_path = args.get("workspace_kind"), args.get("workspace_path")
+    # A "dir" card without a path can never spawn: the dispatcher resolves the
+    # workspace before starting a worker and refuses a pathless dir (run27: five
+    # defect cards burned their whole retry budget to gave_up at spawn time).
+    # Reject at creation with the fix in the message — same shape as the
+    # placeholder-assignee rejection above.
+    if str(workspace_kind if workspace_kind is not None else "").lower() == "dir" \
+            and not str(workspace_path if workspace_path is not None else "").strip():
+        raise ValueError(
+            "workspace_kind='dir' requires workspace_path — an unpathed dir card "
+            "can never spawn a worker. Pass workspace_path, or omit workspace_kind "
+            "to get a fresh per-task worktree."
+        )
     # See #67567. ``project=""`` is an explicit "no project" (no ``or`` collapse, #106342).
     project_id = args["project"] if "project" in args else args.get("project_id")
     project_source_task_id = None

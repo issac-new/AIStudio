@@ -422,6 +422,9 @@ paths:
   - scripts/build.mjs
   - scripts/serve-server.mjs
   - custom/server/eval/__tests__/eval-gaps.test.ts
+  # runtime v0.23.0 重灌批
+  - docs/superpowers/specs/2026-11-06-runtime-v0230-regen.md
+  - runtime/**
   # 2026-11-05/06 平台重写 P1 批二（Task 6-10 mega 批：统一根/资源/产物身份/发布门/验收，spec 2026-11-05-platform-rewrite-design）
   - docs/superpowers/specs/2026-11-05-platform-rewrite-design.md
   - docs/superpowers/plans/2026-11-05-platform-rewrite-p1.md
