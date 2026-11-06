@@ -603,6 +603,8 @@
 - [2026-11-06-frame-capture-accuracy.md](../superpowers/specs/2026-11-06-frame-capture-accuracy.md)
 - [2026-11-06-frame-program-revision.md](../superpowers/specs/2026-11-06-frame-program-revision.md)
 - [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
+- [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
+- [2026-11-06-run27-optimizations-pending-batch.md](../superpowers/specs/2026-11-06-run27-optimizations-pending-batch.md)
 - [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
 - [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
 
@@ -622,6 +624,8 @@
 - [2026-11-04-release-v1.0.11-overlay.md](../superpowers/specs/2026-11-04-release-v1.0.11-overlay.md)
 - [2026-11-05-teardown-void-type-fix.md](../superpowers/specs/2026-11-05-teardown-void-type-fix.md)
 - [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
+- [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
+- [2026-11-06-run27-optimizations-pending-batch.md](../superpowers/specs/2026-11-06-run27-optimizations-pending-batch.md)
 - [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
 - [2026-11-06-frame-program-revision.md](../superpowers/specs/2026-11-06-frame-program-revision.md)
 - [2026-11-06-frame-capture-accuracy.md](../superpowers/specs/2026-11-06-frame-capture-accuracy.md)
