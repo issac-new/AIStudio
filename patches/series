@@ -1137,10 +1137,11 @@
 # 741（2026-11-04 B1 双树漂移既有债清偿，让号 740 后）：dispatch 链全量回灌补丁链——12 个双树差异
 #      文件（含批一 D8 点名 4 特性+guardrail 层）+3 个被依赖 overlay 原生模块+9 测试入链；
 #      布局敏感测试加双布局解析器；manifest 零漂移不变量恢复（vendor+series == runtime，cmp 0 差异）。
-# 742（2026-11-04 B1 漂移清偿补遗）：v0.22.7 换血后 runtime 保有而补丁链丢失的 4 文件收编
-#      （cron room 目标/platforms typing_metadata/toolsets selection_key/tool_executor memo 读穿）；
-#      同时 408/470/593 在 v0.22.7 干净基线上重建（撞窗事故修复：对方再生成补丁基底错致链断）。
-742-agent-v0227-runtime-resync.patch
+# 742 已退役（2026-11-06 v0.23.0 换血批，spec 2026-11-06-vendor-upgrade-agent-v0230）：
+#      其 5 文件目标内容（cron room 目标/platforms typing_metadata＋failure_notice_sent/
+#      toolsets selection_key/tool_executor memo 读穿/helpers typing_metadata_for_turn）
+#      已被上游 v0.23.0 原生全吸收（helpers 段与上游逐字一致，保留即重复定义）；原件
+#      .archived-patches/742-agent-v0227-runtime-resync.patch。207 先例同型。
 
 # 743（2026-11-04 userenv 挂载清偿，spec 2026-11-04-userenv-route-mount）：N01 profile
 #      环境变量编辑域路由挂载——原批（ledger-items）禁改 patches/ 把挂载推后续批次后被遗忘，

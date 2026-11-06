@@ -767,7 +767,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
 CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
 CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
     ON async_delegations(delivery_state, completed_at);
-"""
+
+-- overlay[485] 前缀复用层 2：会话指纹链表（独立表零迁移；append_message 增量维护）。
+CREATE TABLE IF NOT EXISTS session_prefix_chain (
+  session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+  chain_head TEXT NOT NULL,
+  verified_index INTEGER NOT NULL DEFAULT 0,
+  updated_at REAL NOT NULL
+);"""
 
 # Indexes on later-added columns must run AFTER _reconcile_columns(), or executescript fails on legacy DBs.
 # sessions_runtime_ledger_delete_guard: every delete path in this release retires a session's ledger rows

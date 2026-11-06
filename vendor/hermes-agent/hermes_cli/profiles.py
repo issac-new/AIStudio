@@ -1333,6 +1333,80 @@ def _bootstrap_profile_dir(profile_dir: Path, source_dir: Optional[Path],
         _clone_file(source_dir, profile_dir, "import-sync.json")
 
 
+# Overlay: ensure the run-trace plugin is available in every new profile.
+# Copies the plugin from the global ~/.hermes/plugins/run-trace/ into the
+# new profile's plugins/ directory and adds it to plugins.enabled in the
+# profile's config.yaml. All operations are best-effort so profile creation
+# never fails over an optional observability plugin.
+_RUN_TRACE_PLUGIN_NAME = "run-trace"
+
+
+def _seed_run_trace_plugin(profile_dir: Path) -> None:
+    """Copy the run-trace plugin into a new profile's plugins/ directory.
+
+    Source: global ~/.hermes/plugins/run-trace/ (the default profile's
+    shared plugin directory). Silently skips if the source is missing, so
+    profile creation never fails over an optional plugin.
+    """
+    try:
+        from hermes_constants import get_default_hermes_root
+        global_plugins = get_default_hermes_root() / "plugins" / _RUN_TRACE_PLUGIN_NAME
+        if not global_plugins.is_dir():
+            return
+        dest = profile_dir / "plugins" / _RUN_TRACE_PLUGIN_NAME
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(global_plugins, dest)
+        # Drop __pycache__ so the gateway compiles fresh bytecode for this copy.
+        pycache = dest / "__pycache__"
+        if pycache.is_dir():
+            shutil.rmtree(pycache, ignore_errors=True)
+    except Exception:
+        pass  # best-effort — don't fail profile creation
+
+
+def _ensure_run_trace_enabled_in_config(profile_dir: Path) -> None:
+    """Ensure run-trace is in plugins.enabled of the profile's config.yaml.
+
+    For fresh profiles (no config.yaml), writes a minimal config with just
+    the plugins section. For cloned profiles (config.yaml already exists),
+    merges run-trace into the existing plugins.enabled list without
+    duplicating or removing existing entries.
+    """
+    try:
+        import yaml
+    except ImportError:
+        return
+
+    config_path = profile_dir / "config.yaml"
+    try:
+        # Overlay: raw user-config reads must go through the config owner
+        # (hermes config read guard) — read_user_config_raw is the sanctioned
+        # primitive for a write-back round-trip on a specific config path.
+        from hermes_cli.config import read_user_config_raw
+        if config_path.exists():
+            cfg = read_user_config_raw(config_path)
+        else:
+            cfg = {}
+
+        plugins_cfg = cfg.get("plugins")
+        if not isinstance(plugins_cfg, dict):
+            plugins_cfg = {}
+        enabled = plugins_cfg.get("enabled")
+        if not isinstance(enabled, list):
+            enabled = []
+        if _RUN_TRACE_PLUGIN_NAME not in enabled:
+            enabled.append(_RUN_TRACE_PLUGIN_NAME)
+        plugins_cfg["enabled"] = enabled
+        cfg["plugins"] = plugins_cfg
+
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    except Exception:
+        pass  # best-effort — don't fail profile creation
+
+
 def create_profile(
     name: str, clone_from: Optional[str] = None, clone_all: bool = False, clone_config: bool = False,
     no_alias: bool = False, no_skills: bool = False, description: Optional[str] = None,
@@ -1400,6 +1474,15 @@ def create_profile(
             clone_key = _clone_all_into(source_dir, staging, canon)
         else:
             _bootstrap_profile_dir(staging, source_dir, sync_imports=sync_imports)
+        if source_dir is not None:
+            from hermes_cli.setup_profile import release_setup_copy, setup_marker_state
+            release_setup_copy(staging, setup_state=setup_marker_state(source_dir))
+        # Overlay: seed the run-trace plugin into the new profile's staging
+        # tree so L2 trace data is captured from the very first session.
+        # Skipped for clone_all (it copytrees the whole source tree, including
+        # any plugins/ dir, so seeding here would be overwritten immediately
+        # — the config-merge step below still ensures run-trace is enabled).
+        _seed_run_trace_plugin(staging)
         if source_dir is not None and not clone_channels:
             from hermes_cli.profile_channels import strip_channel_settings
             stripped = strip_channel_settings(staging, include_state=clone_all, source_dir=source_dir)
@@ -1411,11 +1494,19 @@ def create_profile(
         discard_unpublished_vault_key(clone_key)
         shutil.rmtree(staging, ignore_errors=True)
         raise
+    from hermes_cli.profile_memory_config import notify_memory_provider
+    notify_memory_provider(profile_dir, lambda p: p.on_profile_created(canon, str(profile_dir)))
 
     # Inside a container under s6, register the gateway as a runtime s6 service so
     # `hermes -p <profile> gateway start` supervises via `s6-svc -u` instead of a bare
     # process. No-op on host (systemd/launchd/windows unit generation handles lifecycle).
     _maybe_register_gateway_service(canon)
+
+    # Overlay: ensure run-trace is in plugins.enabled. Done after any clone
+    # so cloned configs also pick it up. For fresh profiles this writes a
+    # minimal config.yaml; for cloned profiles it merges into the existing
+    # plugins.enabled list without removing existing entries.
+    _ensure_run_trace_enabled_in_config(profile_dir)
     # A running multiplexer enumerates profiles/ at boot: ask it to serve this one now (it also
     # rescans periodically, so a missed signal only delays serving).
     _notify_multiplexer(canon)
@@ -2238,21 +2329,6 @@ def import_profile(archive_path: str, name: Optional[str] = None) -> Path:
 
 # Rename
 
-def _record_profile_rename(new_dir: Path, old_canon: str) -> None:
-    """Append ``old_canon`` to the renamed profile's ``previous_names`` history.
-    Best-effort: never raises, so a metadata write failure cannot fail the rename.
-
-    Only reached for a real slug change — ``rename_profile`` returns early for the
-    default profile (display-name only) and refuses ``old == new`` (target exists)."""
-    try:
-        history = read_profile_meta(new_dir).get("previous_names") or []
-        if old_canon not in history:
-            history = [*history, old_canon]
-        write_profile_meta(new_dir, previous_names=history)
-    except Exception as exc:  # unwritable / corrupt profile.yaml — history is advisory
-        logger.debug("profile rename: could not record previous name %r in %s: %s", old_canon, new_dir, exc)
-
-
 def _refuse_rename_without_file_tooling(old_canon: str) -> None:
     """A remote config backend keys each profile's settings by its canonical name, and the plane
     has no rename: renaming the local home would leave the settings under the old name and read
@@ -2338,11 +2414,15 @@ def rename_profile(old_name: str, new_name: str) -> Path:
     # 2b. Record the rename so Bot Mode group chats can re-link persisted
     # member descriptors to the new slug (#110200). Best-effort: a metadata
     # write failure must never fail the rename itself.
+    from hermes_cli.profile_identity import _record_profile_rename
     _record_profile_rename(new_dir, old_canon)
 
     # 3. Update profile-scoped Honcho host blocks, preserving aiPeer identity
     from hermes_cli.profiles_honcho import migrate_honcho_profile_host
     migrate_honcho_profile_host(old_canon, new_canon, new_dir)
+    # 3b. Let the profile's memory provider re-key what it stores under the old name.
+    from hermes_cli.profile_memory_config import notify_memory_provider
+    notify_memory_provider(new_dir, lambda p: p.on_profile_renamed(old_canon, new_canon, str(new_dir)))
 
     # 4. Update wrapper script
     remove_wrapper_script(old_canon)

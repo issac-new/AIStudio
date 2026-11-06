@@ -120,6 +120,22 @@ class HomeIOGuard:
             for prefix in _INTERPRETER_PREFIX_STRS:
                 if _within(absolute, prefix) or (metadata and _contains(absolute, prefix)):
                     return
+            # Home-root reads are allowed — the class docstring above promises
+            # "Reads stay allowed: several update paths only probe it", and the
+            # installed-app branch below already implements that asymmetry. The
+            # home branch historically refused *every* access (lexical + resolved,
+            # regardless of destructive), which broke legitimate read-only probes
+            # of the real home from routed/isolated children — concretely
+            # ``pm.environments._payload_manifest`` reading ``<real-home>/manifest.json``
+            # to detect a sealed payload (run19 fix; a read, not Hermes state
+            # mutation). The exemption fires only for plain reads
+            # (metadata=False and destructive=False): the stat family stays
+            # refused, and the mutation calls the wrap table used to mislabel
+            # as non-destructive (mkdir/makedirs/sqlite3.connect — connect
+            # defaults to READWRITE|CREATE, i.e. it creates) are destructive
+            # there, so none of them can ride this branch.
+            if not metadata and not destructive:
+                return
             # Check the lexical path first: resolving must not probe a protected
             # tree merely to decide that the original path was forbidden.
             for root in roots:
@@ -197,15 +213,16 @@ class HomeIOGuard:
         for module in (builtins, io):
             wrap(module, "open", (("file", None),), destructive=open_writes)
         for name in ("mkdir", "unlink", "remove", "rmdir", "chmod", "utime"):
-            wrap(os, name, (("path", "dir_fd"),), destructive=name != "mkdir")
+            wrap(os, name, (("path", "dir_fd"),), destructive=True)
         for name in ("stat", "lstat", "readlink", "access"):
             wrap(os, name, (("path", "dir_fd"),), metadata=True)
-        for name in ("makedirs", "listdir", "scandir"):
-            wrap(os, name, (("name" if name == "makedirs" else "path", None),))
+        wrap(os, "makedirs", (("name", None),), destructive=True)
+        for name in ("listdir", "scandir"):
+            wrap(os, name, (("path", None),))
         for name in ("rename", "replace"):
             wrap(os, name, (("src", "src_dir_fd"), ("dst", "dst_dir_fd")), destructive=True)
         wrap(shutil, "rmtree", (("path", "dir_fd"),), destructive=True)
-        wrap(sqlite3, "connect", (("database", None),))
+        wrap(sqlite3, "connect", (("database", None),), destructive=True)
 
         original_open, original_close = os.open, os.close
 

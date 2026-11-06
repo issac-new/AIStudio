@@ -2360,11 +2360,11 @@ def _resolve_gateway_model_context(
     ``route`` (``provider`` / ``base_url`` / ``api_key`` of a session-only /model switch) replaces the
     default runtime credentials so the window is looked up against the endpoint that actually serves
     ``model``; a ``model.context_length`` pin only survives when that route still matches the config.
-    ``context_source`` is ``"default"`` only for a model unknown to the catalog that fell through to
-    ``DEFAULT_FALLBACK_CONTEXT`` — a catalog-listed 256K model is ``"detected"``.
+    ``context_source`` is ``"default"`` only for a model no source knows that fell through to a resolver
+    default (Bedrock's static 128K, or ``DEFAULT_FALLBACK_CONTEXT``) — a catalog-listed model is ``"detected"``.
     """
-    from agent.model_metadata import (
-        DEFAULT_CONTEXT_LENGTHS, DEFAULT_FALLBACK_CONTEXT, _longest_key_match, get_model_context_length)
+    from agent.context_pin import is_fallback_context_length
+    from agent.model_metadata import get_model_context_length
     resolved_model = model or _resolve_gateway_model()
     config_context_length = provider = base_url = api_key = custom_providers = None
     configured_model = configured_provider = configured_base_url = None
@@ -2427,8 +2427,8 @@ def _resolve_gateway_model_context(
         resolved_model, base_url=base_url or "", api_key=api_key or "",
         config_context_length=config_context_length, provider=provider or "",
         custom_providers=custom_providers)
-    fell_through = (context_length == DEFAULT_FALLBACK_CONTEXT
-                    and _longest_key_match(DEFAULT_CONTEXT_LENGTHS, str(resolved_model).lower()) is None)
+    fell_through = is_fallback_context_length(  # Bedrock's static 128K or the generic 256K, unknown model
+        context_length, model=str(resolved_model), provider=provider or "", base_url=base_url or "")
     context_source = ("config" if config_context_length is not None
                       else "default" if fell_through else "detected")
     return _GatewayModelContext(
@@ -4478,6 +4478,37 @@ def _drain_restart_safe_cron_deliveries(adapters, loop, runner=None) -> None:
             cron_scheduler.drain_delivery_queue(profile_adapters, loop)
 
 
+def _housekeeping_wedged_agent_sweep(runner, loop=None) -> None:
+    """run11 实锤（capacity-queue-drop-zombie / g5-session-stall）：hindsight 交互
+    卡死或马拉松回合长期占槽时，槽位驱逐检查只挂在同 key 的下一条入站消息快路径
+    上——挂死 key 无新消息则永不被扫，容量被占到人工重启网关（run11 三次实锤）。
+    本 chore 周期扫全部 running 槽并复用 _hm_evict_idle_stale_agent 的同一判定
+    （HERMES_AGENT_TIMEOUT 活动钟 + 无活动面墙钟兜底），驱逐语义与快路径完全一
+    致；有事件循环时经 call_soon_threadsafe 编排到 loop 线程执行（eviction 非线
+    程安全）。"""
+    sweep = getattr(runner, "_hm_evict_idle_stale_agent", None)
+    snapshot = getattr(runner, "_snapshot_running_agents", None)
+    if not callable(sweep) or not callable(snapshot):
+        return
+    try:
+        keys = list(snapshot() or {})
+    except Exception:
+        logger.debug("wedged-agent sweep snapshot failed", exc_info=True)
+        return
+    for key in keys:
+        if loop is not None:
+            loop.call_soon_threadsafe(_wedged_sweep_one, sweep, key)
+        else:
+            _wedged_sweep_one(sweep, key)
+
+
+def _wedged_sweep_one(sweep, key) -> None:
+    try:
+        sweep(key)
+    except Exception:
+        logger.debug("wedged-agent sweep failed for %s", key, exc_info=True)
+
+
 def _start_gateway_housekeeping(
     stop_event: threading.Event, adapters=None, loop=None, interval: int = 60, cron_provider=None, runner=None,
     cron_thread=None,
@@ -4500,6 +4531,8 @@ def _start_gateway_housekeeping(
         chores.append((1, DRAIN_LABEL, lambda: _drain_restart_safe_cron_deliveries(adapters, loop, runner)))
     chores += [
         (5, "Channel directory refresh", lambda: adapters and _housekeeping_channel_directory(adapters, loop)),
+        # run11 根治件：挂死 running 槽周期扫（无入站也扫，驱逐判定复用快路径）
+        (5, "Wedged running-agent sweep", lambda: _housekeeping_wedged_agent_sweep(runner, loop)),
         (60, "Media cache cleanup", housekeeping_media_caches),
         (60, "Paste sweep", _housekeeping_paste_sweep)]
     # Low disk + auto-prune undecided: ask on the home channel (two syscalls; snoozed per post).
@@ -5179,14 +5212,10 @@ def _exit_after_graceful_shutdown(exit_code: int) -> None:
     """Flush stdio, release the PID file + lock, stamp the clean exit, flush opt-in metrics, hard-exit.
     ``os._exit`` (not ``sys.exit``): SystemExit runs ``Py_FinalizeEx``, which joins every non-daemon
     thread — exactly the hang a wedged worker causes. It bypasses ``atexit``, so the metrics flush,
-    PID/lock release and the bounded log drain (file handlers sit behind a ``QueueListener`` thread)
-    are done here explicitly; graceful teardown is already complete by the time this runs. See #53107.
-    The atexit-registered ``remove_pid_file`` / ``release_gateway_runtime_lock`` (``start_gateway``) never
-    run either. ``_stop_impl`` releases both on the full shutdown, but the EARLY exits — clean-fatal-config
-    (#51228) and startup-aborted-before-running — raise ``SystemExit`` right after ``runner.start()``
-    without ``_stop_impl``, so atexit was all that released them there; this backstop does now (#53107).
-    Both are idempotent (``remove_pid_file`` only unlinks this process's PID file; the lock release no-ops
-    once released): a no-op on the normal shutdown, the actual cleanup on the early exits.
+    PID/lock release, CPU profile and bounded log drain (``QueueListener`` thread) are done here explicitly.
+    The atexit ``remove_pid_file`` / ``release_gateway_runtime_lock`` (``start_gateway``) never run either:
+    ``_stop_impl`` releases both on full shutdown, but the EARLY exits (clean-fatal-config #51228,
+    startup-aborted) raise ``SystemExit`` without it, so this idempotent backstop does (#53107).
     """
     for stream in (sys.stdout, sys.stderr):
         with suppress(Exception):
@@ -5209,13 +5238,17 @@ def _exit_after_graceful_shutdown(exit_code: int) -> None:
         from hermes_cli.observability.shared_metrics_process import flush_before_hard_exit
         flush_before_hard_exit()  # the runtimes' atexit flush: open sessions + queued opt-in rows (bounded)
 
+    def _write_cpu_profile() -> None:  # --cpu-profile's atexit writer never runs past os._exit; no-op when off
+        from hermes_cli.cpu_profile import write_cpu_profile
+        write_cpu_profile()
+
     def _drain_logs() -> None:
         # os._exit bypasses the listener's atexit drain. Bounded, no restart — NOT flush_log_queue():
         # a listener wedged on the rotation lock would re-freeze shutdown in an unbounded stop() join.
         from hermes_logging import drain_log_queue
         drain_log_queue(timeout=1.0)
 
-    for _step in (_release_locks, _mark_exited, _flush_metrics, _drain_logs):
+    for _step in (_release_locks, _mark_exited, _flush_metrics, _write_cpu_profile, _drain_logs):
         _best_effort(_step)
     os._exit(exit_code)
 

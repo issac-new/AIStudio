@@ -1,8 +1,8 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
-index b6c53a54fd..cf03128ffb 100644
+index b5fd212587..2a0fa9ed3c 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -2118,7 +2118,13 @@ work, describe the reverse signal accurately and DO NOT carry forward the
+@@ -2103,7 +2103,13 @@ work, describe the reverse signal accurately and DO NOT carry forward the
  cancelled task.
  Example: "User asked to stop the prior task — earlier work is cancelled."
  If no outstanding task exists, write "None."]""",
@@ -17,7 +17,7 @@ index b6c53a54fd..cf03128ffb 100644
          "constraints": (
              "[User preferences, coding style, constraints, important decisions. Any security or safety constraint "
              "the user stated (files/data to avoid, operations that must not be performed, credential-handling rules) "
-@@ -3638,6 +3644,12 @@ None recoverable from deterministic fallback.
+@@ -3546,6 +3552,12 @@ None recoverable from deterministic fallback.
  ## Resolved Questions
  None recoverable from deterministic fallback.
  
@@ -30,8 +30,8 @@ index b6c53a54fd..cf03128ffb 100644
  ## Relevant Files
  {_bullets(anchors["relevant_files"], limit=12)}
  
-@@ -4048,7 +4060,10 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
-             + _language_and_provenance_rule +
+@@ -3960,7 +3972,10 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
+             + _language_and_provenance_rule + EPISTEMIC_STANCE_RULE +
              "NEVER include API keys, tokens, passwords, secrets, credentials, or connection strings in the "
              "summary — replace any that appear with [REDACTED]. Note that credentials were present, but do "
 -            "not preserve their values."
@@ -42,7 +42,7 @@ index b6c53a54fd..cf03128ffb 100644
          )
          # Lean mode folds the session log into this SAME single request (one aux call).
          _session_log_section = _LEAN_SESSION_LOG_SECTION if getattr(self, "tail_mode", "lean") == "lean" else ""
-@@ -4066,7 +4081,7 @@ PREVIOUS SUMMARY:
+@@ -3978,7 +3993,7 @@ PREVIOUS SUMMARY:
  NEW TURNS TO INCORPORATE:
  {content_to_summarize}{_memory_section}
  
@@ -51,7 +51,7 @@ index b6c53a54fd..cf03128ffb 100644
  
  {_template_sections}"""
          else:
-@@ -4149,6 +4164,19 @@ the user's correction and record what changed as a result.]
+@@ -4061,6 +4076,19 @@ the user's correction and record what changed as a result.]
  ## Resolved Questions
  {_section["resolved_questions"]}
  

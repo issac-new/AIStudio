@@ -8,7 +8,7 @@ garbage) and the config→env bridge in the gateway and TUI resolvers.
 import os
 import pytest
 
-from hermes_cli.config import resolve_turn_limit, TURN_LIMIT_UNLIMITED
+from hermes_cli.config import resolve_turn_limit, TURN_LIMIT_DEFAULT, TURN_LIMIT_UNLIMITED
 
 
 class TestNumericValues:
@@ -56,37 +56,38 @@ class TestUnlimitedSpellings:
 
 class TestAbsentAndDefault:
     def test_none_returns_default(self):
-        # Default is now unlimited (max_turns caused more problems than it solved).
-        assert resolve_turn_limit(None) == TURN_LIMIT_UNLIMITED
+        # Default is bounded (TURN_LIMIT_DEFAULT=200) since 2026-11-05; explicit
+        # unlimited spellings still reach TURN_LIMIT_UNLIMITED (see TestUnlimitedSpellings).
+        assert resolve_turn_limit(None) == TURN_LIMIT_DEFAULT
 
     def test_none_custom_default(self):
         assert resolve_turn_limit(None, default=500) == 500
 
     def test_empty_string_returns_default(self):
-        assert resolve_turn_limit("") == TURN_LIMIT_UNLIMITED
+        assert resolve_turn_limit("") == TURN_LIMIT_DEFAULT
 
     def test_whitespace_only_returns_default(self):
-        assert resolve_turn_limit("   ") == TURN_LIMIT_UNLIMITED
+        assert resolve_turn_limit("   ") == TURN_LIMIT_DEFAULT
 
 
 
 class TestInvalidInputs:
     def test_bool_rejected(self):
         # bool is an int subclass — must not silently become 1/0
-        assert resolve_turn_limit(True) == TURN_LIMIT_UNLIMITED
-        assert resolve_turn_limit(False) == TURN_LIMIT_UNLIMITED
+        assert resolve_turn_limit(True) == TURN_LIMIT_DEFAULT
+        assert resolve_turn_limit(False) == TURN_LIMIT_DEFAULT
 
     def test_garbage_string_returns_default(self):
-        assert resolve_turn_limit("garbage") == TURN_LIMIT_UNLIMITED
-        assert resolve_turn_limit("not_a_number") == TURN_LIMIT_UNLIMITED
+        assert resolve_turn_limit("garbage") == TURN_LIMIT_DEFAULT
+        assert resolve_turn_limit("not_a_number") == TURN_LIMIT_DEFAULT
 
     def test_list_returns_default(self):
-        assert resolve_turn_limit([]) == TURN_LIMIT_UNLIMITED
-        assert resolve_turn_limit([90]) == TURN_LIMIT_UNLIMITED
+        assert resolve_turn_limit([]) == TURN_LIMIT_DEFAULT
+        assert resolve_turn_limit([90]) == TURN_LIMIT_DEFAULT
 
     def test_dict_returns_default(self):
-        assert resolve_turn_limit({}) == TURN_LIMIT_UNLIMITED
-        assert resolve_turn_limit({"max_turns": 90}) == TURN_LIMIT_UNLIMITED
+        assert resolve_turn_limit({}) == TURN_LIMIT_DEFAULT
+        assert resolve_turn_limit({"max_turns": 90}) == TURN_LIMIT_DEFAULT
 
 
 

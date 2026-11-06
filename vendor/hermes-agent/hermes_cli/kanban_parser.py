@@ -107,6 +107,9 @@ _BOARD_SPECS = [
         _arg("--color", help="Optional hex color (e.g. '#8b5cf6') for the dashboard"),
         _arg("--switch", action="store_true", help="Switch to the new board after creating it"),
         _arg("--default-workdir", help="Default workspace path for tasks created on this board"),
+        _arg("--project",  # HERMES_CUSTOM[v020]
+             help="Scope the board to a project (id or slug): default_workdir "
+                  "mirrors the project's primary folder and new tasks inherit the project"),
     ], aliases=["new"], help="Create a new board"),
     _cmd("rm", [
         _SLUG,
@@ -122,6 +125,11 @@ _BOARD_SPECS = [
         _SLUG,
         _arg("path", nargs="?", help="Absolute path to use as default workdir. Omit to clear."),
     ], help="Set the default workspace path for tasks on a board"),
+    _cmd("set-project", [  # HERMES_CUSTOM[v020]
+        _SLUG,
+        _arg("project", nargs="?",
+             help="Project id or slug. Omit or 'none' to clear."),
+    ], help="Scope a board to a project (or clear the scope)"),
     _cmd("export", [
         _arg("slug", nargs="?", help="Board to export (default: the current board)"),
         _arg("-o", "--output", help="Archive path (default: ./<slug>.tar.gz)"),
@@ -203,6 +211,12 @@ _SPECS = [
         _arg("--provider", dest="provider_override",
              help="Provider the --model belongs to (passed as --provider <name> to "
                   "the worker). Requires --model."),
+        _arg("--reasoning", default=None, dest="reasoning_effort", metavar="LEVEL",  # HERMES_CUSTOM[v020]
+             help="Pin the worker's thinking depth for this task "
+                  "(minimal/low/medium/high/xhigh/max/ultra, or 'none' for thinking "
+                  "off). Omit to use the assignee profile's agent.reasoning_effort."),
+        _arg("--raci", metavar="JSON",
+             help='Structured RACI as JSON object, e.g. {"responsible":["chen"],"approver":["wei"]}'),
         _arg("--completion-contract", metavar="CONTRACT",
              help="local-only (default), OWNER/REPO for publication, or exact GitHub PR URL; required CI gates done."),
         _arg("--goal", action="store_true", dest="goal_mode",
@@ -257,6 +271,18 @@ _SPECS = [
              help="Provider the model belongs to (worker is spawned with "
                   "--provider <name>). Cleared together with the model."),
     ], help="Set or clear a task's model/provider override (takes effect on the next dispatch)"),
+    _cmd("set-reasoning", [  # HERMES_CUSTOM[v020]
+        _TASK_ID,
+        _arg("effort", nargs="?",
+             help="minimal/low/medium/high/xhigh/max/ultra, 'none' to pin thinking "
+                  "off, or 'clear' to inherit the profile default"),
+    ], help="Set or clear a task's reasoning effort override (takes effect on the next dispatch)"),
+    _cmd("estimate", [  # HERMES_CUSTOM[v020]
+        _arg("task_id", nargs="?", help="Existing task id; omit to estimate raw --title/--body"),
+        _arg("--title"),
+        _arg("--body"),
+        _json_flag(),
+    ], help="Rough token + complexity estimate via the auxiliary model"),
     _cmd("reclaim", [_TASK_ID, _RECLAIM_REASON], help="Release an active worker claim on a running task"),
     _cmd("reassign", [
         _TASK_ID,
@@ -265,6 +291,12 @@ _SPECS = [
              help="Release any active claim before reassigning (required if task is running)"),
         _RECLAIM_REASON,
     ], help="Reassign a task to a different profile, optionally reclaiming first"),
+    _cmd("sleeping-workers", [
+        _arg("--idle-sec", type=int, default=1800,
+             help="Idle threshold in seconds (default 1800 = 30min)"),
+    ], help="List running-card assignees with no real work beyond threshold (PR-3 probe; read-only)"),
+    _cmd("selfcheck", [
+    ], help="Write-path self-check: sanctioned UDF + guard triggers + fail-closed bare-conn probe (PR-4)"),
     _cmd("diagnostics", [
         _arg("--severity", choices=["warning", "error", "critical"],
              help="Only show diagnostics at or above this severity"),
@@ -300,6 +332,11 @@ _SPECS = [
         _arg("--metadata",
              help='JSON dict of structured facts (e.g. \'{"changed_files": [...], '
                   '"tests_run": 12}\'). Stored on the closing run.'),
+        _arg("--receipt",
+             help="Completion-contract evidence receipt (JSON literal, or @file to read from a "
+                  "path). REQUIRED when the card declares AC criteria and was dispatched with a "
+                  "DoD contract; the kernel re-validates evidence paths/sha256 and TAP/JUnit "
+                  "counts before the card may close."),
         _arg("--force", action="store_true",
              help="Override the live-claim guard: complete a running, claimed task "
                   "even without owning its run (closes the worker's run)."),
