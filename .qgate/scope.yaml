@@ -370,3 +370,4 @@ paths:
   # 截图核查采集程序修订批（96031e0）
   - docs/superpowers/specs/2026-11-06-frame-program-revision.md
   - simharness/tests/frame-program-rev.test.ts
+  - docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md

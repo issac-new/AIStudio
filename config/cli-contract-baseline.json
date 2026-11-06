@@ -1,0 +1,389 @@
+{
+  "generatedAt": "2026-11-06T01:49:20.437Z",
+  "entries": {
+    "scripts/board-staleness-watchdog.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "no-redact"
+    ],
+    "scripts/build-dmg.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/build.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/check-bundle-budget.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/ensure-injected.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/forge-benchmark.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/harness-doctor.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/inject.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/install-hooks.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/make-incremental-package.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/make-offline-package.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "scripts/make-release-packages.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "scripts/qgate-health.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "scripts/regression/ide-selfcheck-cli.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/regression/ide-smoke.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/runtime/register-runtime.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/runtime/runtime-doctor.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/runtime/vendor-pua.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "scripts/serve-server.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/skill-build.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/start-training-manual.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/test-classify.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "scripts/typecheck-client-baseline.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/verify-clean.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/verify-dist.mjs": [
+      "no-contract",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/verify-release-manifest.mjs": [
+      "no-contract",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/zcode-catalog-check.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/zcode-engine.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-approval-proxy.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-board-supply-check.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-burn-test.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-clean.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-closure-snapshot.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "no-redact",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-compensation-ledger.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-delivery-smoke.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-down.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-dup-ratio.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-enable-file-approval.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-enable-run-trace.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-fleet-telemetry.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-gateway-babysit.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-gateway-nanny.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-grant-profiles.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-harness-snapshot.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "no-redact",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-hermes-shim.py": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-lite-seed.sh": [
+      "no-contract",
+      "no-format"
+    ],
+    "simharness/mux/mx-load-probe.py": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-log-sanitize.py": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-mixed-motive.py": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-mutation-score.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-narrative-skeleton.py": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-night-sentinel.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-night-watchdog.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-node-heartbeat.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format"
+    ],
+    "simharness/mux/mx-pin-review-object.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-prelaunch-check.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-relay.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-report-audit.py": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-report-gen.py": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-retro-sink.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-run.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-setup.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-sim-gateway-service.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-sim-mautrix-ensure.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-smoke.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-state-query.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-up.sh": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ]
+  }
+}

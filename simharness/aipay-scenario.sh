@@ -2089,25 +2089,30 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     [[ -s "$EVID_DIR/load-probe.jsonl" ]] && note "[评测] 容量探针已落 evidence/load-probe.jsonl（N04 接线）"
   fi
   _eval_rc=0
+  _eval_gate_ok=0
   eval_flow || _eval_rc=$?
+  # 退出码契约（2026-11-06）：0=PASS；4=GAP（放行）；1=FAIL；2=环境/前置；3=用法。
+  # 旧实现把 GAP 与环境失败共用 2，且用 `_eval_rc != 1` 判通过——建集/发起失败时也置
+  # g4_pass（fail-open）。现在只有 0/4 算「验证过」。
   case "$_eval_rc" in
-    0) note "[G4] 评测子门 PASS（评测/红队/三角/覆盖/锚点）" ;;
-    2) note "[G4] 评测子门 GAP（缺口已记录，放行并如实呈现）" ;;
+    0) note "[G4] 评测子门 PASS（评测/红队/三角/覆盖/锚点）"; _eval_gate_ok=1 ;;
+    4) note "[G4] 评测子门 GAP（缺口已记录，放行并如实呈现）"; _eval_gate_ok=1 ;;
+    2) note "[G4] 评测环境/前置不满足（rc=2，g4_pass 不置位）" ;;
+    3) note "[G4] 评测入口用法错误（rc=3，g4_pass 不置位）" ;;
     *) note "[G4] 评测子门 FAIL（g4_pass 不置位，G5 不得进入）" ;;
   esac
   capture_step "testpass_done" "/app/stage/build?tab=board"
   capture_step "eval_done" "/app/eval" "click:[data-testid=eval-tab-metrics]"
 
   sset testpass_done 1
-  # G4 置位条件（2026-11-04 扩）：评测子门非 FAIL 且新能力探测全绿——两者任一失败
-  # 都不置 g4_pass，问题单分键落账（g4_eval_blocked / g4_capability_blocked）。
-  if (( _eval_rc != 1 && _cap_rc == 0 )); then
+  # G4 置位条件：评测子门 0/4 且新能力探测全绿——两者任一失败都不置 g4_pass。
+  if (( _eval_gate_ok == 1 && _cap_rc == 0 )); then
     sset_once g4_pass "$(date +%s)"   # V3：G4 硬闸键（未验证不发布）
     dlv_gate_try G4 pass "独立验证过（测试执行+新能力探测+缺口如实记录）"
   else
-    if (( _eval_rc == 1 )); then
+    if (( _eval_gate_ok == 0 )); then
       sset g4_eval_blocked 1
-      echo "ISSUE|g4-eval-blocked|${RFD_ID}|评测子门 FAIL：G4 未置位（详见 evidence/evals/eval-summary.json）" >> "$EVID_DIR/issues.log"
+      echo "ISSUE|g4-eval-blocked|${RFD_ID}|评测子门未通过或环境不满足（rc=${_eval_rc}）：G4 未置位（详见 evidence/evals/eval-summary.json）" >> "$EVID_DIR/issues.log"
     fi
     if (( _cap_rc != 0 )); then
       sset g4_capability_blocked 1

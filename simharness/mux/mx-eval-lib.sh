@@ -173,13 +173,14 @@ eval_collect() { # <runId> [redteamRunId]：落证据文件（缺项跳过，不
 }
 
 eval_summary() { # 组装摘要+合并产品判定（融合批三：PASS/GAP/FAIL 判据正本=产品 e2e-verdict）
+  # 退出码契约（2026-11-06）：0=PASS；4=GAP；1=FAIL；2=环境/前置；3=用法。
+  # 阈值参数已删除——GAP/FAIL 阈值由产品侧 EVAL_MAX_UNKNOWN/EVAL_REDTEAM_FP_MAX 读取，
+  # 旧参数传了也从不被读取（2026-11-06 CLI 契约批清理死参数）。
   local d; d=$(eval_dir)
   local _rc=0 _line
   _line=$(gov_eval_verdict "$d") || _rc=$?
   note "[评测] ${_line}"
   MX_EVAL_VERDICT_JSON="$d/verdict.json" python3 "$SCRIPT_DIR/mux/mx-eval-summary.py" --dir "$d" \
-    --max-unknown "${EVAL_MAX_UNKNOWN:-0.10}" \
-    --max-redteam-fp "${EVAL_REDTEAM_FP_MAX:-0.20}" \
     --out "$d/eval-summary.json" >/dev/null || _rc=$?
   return $_rc
 }
@@ -279,8 +280,9 @@ eval_flow() { # 步 20 主流程：建集→运行→红队→采集→线上证
   eval_remediation_flow "$run_id" >/dev/null 2>&1 || issue_once eval-remediation-open "$RFD_ID" "处置链存在未关闭项（详见 evidence/evals/remediations.json）"
   case "$rc" in
     0) sset_once g4_eval_pass "$(date +%s)"; return 0 ;;
-    2) sset g4_eval_gap 1; issue_once eval-gate-gap "$RFD_ID" "$out"; return 2 ;;
-    *) sset g4_eval_gap 1; issue_once eval-gate-fail "$RFD_ID" "$out"; return 1 ;;
+    4) sset g4_eval_gap 1; issue_once eval-gate-gap "$RFD_ID" "$out"; return 4 ;;
+    2|3) sset g4_eval_blocked 1; issue_once eval-gate-blocked "$RFD_ID" "评测环境/前置不满足（rc=$rc）：$out"; return 1 ;;
+    *) sset g4_eval_blocked 1; issue_once eval-gate-fail "$RFD_ID" "$out"; return 1 ;;
   esac
 }
 

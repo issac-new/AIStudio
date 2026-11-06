@@ -224,3 +224,4 @@
 {"at":"2026-11-06T00:34:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-gap-rootfix.md","receipt":"70348f736ce3755a701bc42f323a4e903c4fa15d","commit":"d38cfe8d1"}
 {"at":"2026-11-06T00:50:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-optimizations.md","receipt":"c94d7cfab8182b974a078f3e5a2acfe08cfaca47","commit":"e3c402fb1"}
 {"at":"2026-11-06T01:08:09Z","spec":"docs/superpowers/specs/2026-11-06-frame-program-revision.md","receipt":"6c445f20c6c42be411c20197a54c6a05793611b9","commit":"08183ab02"}
+{"at":"2026-11-06T02:00:45Z","spec":"docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md","receipt":"b8812cbc23159c043e8021e8f28b71664a12eacb","commit":"66cd3bb43"}

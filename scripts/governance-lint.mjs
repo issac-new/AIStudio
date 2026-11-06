@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { checkCliContract } from './lib/cli-contract-lint.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const LEDGERS = {
@@ -29,6 +30,7 @@ const LEDGERS = {
 }
 const SCHEMA_PATH = 'config/governance-schema.json'
 const BUDGET_PATH = 'config/mechanism-budget.json'
+const CLI_BASELINE_PATH = 'config/cli-contract-baseline.json'
 const SILENT_BASELINE_PATH = 'config/silent-return-baseline.json'
 const SPECS_DIR = 'docs/superpowers/specs'
 const COVERAGE_OUT = '.swarm-yuan/spec-coverage.json'
@@ -306,10 +308,10 @@ export function checkBudget(budget) {
 function main(argv = process.argv.slice(2), out = process.stdout, err = process.stderr) {
   const flags = new Set(argv)
   if (flags.has('--help') || flags.has('-h')) {
-    out.write('usage: node scripts/governance-lint.mjs [--strict] [--budget] [--spec-coverage] [--silent-returns] [--normalize-decisions] [--commits] [--only-commits] [--range origin/main..HEAD] [--enforce] [--json]\n')
+    out.write('usage: node scripts/governance-lint.mjs [--strict] [--budget] [--spec-coverage] [--silent-returns] [--normalize-decisions] [--commits] [--only-commits] [--range origin/main..HEAD] [--enforce] [--json] [--cli-contract] [--update-baseline]\n')
     return 0
   }
-  const known = new Set(['--strict', '--budget', '--spec-coverage', '--silent-returns', '--normalize-decisions', '--commits', '--only-commits', '--enforce', '--json', '--range'])
+  const known = new Set(['--strict', '--budget', '--spec-coverage', '--silent-returns', '--normalize-decisions', '--commits', '--only-commits', '--enforce', '--json', '--range', '--cli-contract', '--update-baseline'])
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i]
     if (a === '--range') { i += 1; continue }
@@ -317,6 +319,10 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
       err.write(`governance-lint: unknown argument: ${a}\n`)
       return 2
     }
+  }
+  if (flags.has('--update-baseline') && !flags.has('--cli-contract')) {
+    err.write('governance-lint: --update-baseline 只能与 --cli-contract 一起使用\n')
+    return 2
   }
   const schema = readJson(SCHEMA_PATH, null)
   const allProblems = []
@@ -381,6 +387,17 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
     const v = checkSilentReturns(baseline)
     allProblems.push(...v.problems); allWarnings.push(...v.warnings)
     results.silentReturns = { count: v.count }
+  }
+
+  if (flags.has('--cli-contract')) {
+    const baseline = readJson(CLI_BASELINE_PATH, null)
+    const v = checkCliContract({ root: ROOT, baseline })
+    allProblems.push(...v.problems); allWarnings.push(...v.warnings)
+    results.cliContract = v.stats
+    if (flags.has('--update-baseline')) {
+      writeFileSync(join(ROOT, CLI_BASELINE_PATH), JSON.stringify(v.baselineNext, null, 2) + '\n')
+      allWarnings.push(`已重写基线 ${CLI_BASELINE_PATH}（${v.stats.violating} 项存量违规）`)
+    }
   }
 
   if (flags.has('--normalize-decisions')) {
