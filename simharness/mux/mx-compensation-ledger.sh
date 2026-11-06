@@ -222,9 +222,30 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       # 投影，未闭环债务跨清场存活）。
       IL="$(dirname "$F")/issues.log"
       if [ ! -f "$IL" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 无 issues.log）"; exit 0; fi
-      KEYS=$(awk -F'|' '$1=="DISP" { k=$2"·"$3; last[k]=$4 } END { for (k in last) if (last[k] ~ /^延后/) print k }' "$IL" | sort)
+      # pairing 同构（run-metrics 末次适用口径，P2 终审收口）：只认真实 ISSUE 键；
+      # 选择序 exact＞generic（泛指广播）＞single（同类型唯一键容差），类别内取行序
+      # 末条；畸形 DISP（无第四段/空处置）不参与。泛指广播可置「延后」但不得批量
+      # 解禁——chosen 来自 generic 且词面已修/已闭环（无逐键 exact）仍判未逐键处置。
+      KEYS=$(awk -F'|' '
+        $1=="ISSUE" && NF>=3 { k=$2"·"$3; if (!(k in seen)) { seen[k]=1; keys[++nk]=k; tcnt[$2]++ } }
+        $1=="DISP" && NF>=4 && $4!="" {
+          t=$2; s=$3
+          if (s=="director"||s=="monitor"||s=="harness"||s=="导演"||s=="监控") { gcat[t]="generic"; gdisp[t]=$4 }
+          else { k=t"·"s; ecat[k]="exact"; edisp[k]=$4; ngdisp[t]=$4 }
+        }
+        END {
+          for (i=1;i<=nk;i++) {
+            k=keys[i]; split(k,ka,"·"); t=ka[1]
+            d=""; c=""
+            if (k in ecat) { d=edisp[k]; c="exact" }
+            else if (t in gcat) { d=gdisp[t]; c="generic" }
+            else if (tcnt[t]==1 && (t in ngdisp)) { d=ngdisp[t]; c="single" }
+            if (d ~ /^延后/) print k
+            else if (c=="generic" && d ~ /^(已修|已闭环)/) print k
+          }
+        }' "$IL" | sort)
       if [ -z "$KEYS" ]; then echo "延后清账 ✓（$(_mx_led_run_id) 问题单延后桶=0，末次 DISP 口径）"; exit 0; fi
-      echo "延后清账 ✗：$(printf '%s\n' "$KEYS" | wc -l | tr -d ' ') 个延后唯一键未处置（人工带锚回写 DISP 行，或经用户裁定豁免；纪律 56/§5.9）："
+      echo "延后清账 ✗：$(printf '%s\n' "$KEYS" | wc -l | tr -d ' ') 个唯一键未逐键处置（延后中，或仅被泛指广播声称已修/已闭环——须逐键带锚回写 exact DISP，或经用户裁定豁免；纪律 56/§5.9/pairing 同构）："
       printf '%s\n' "$KEYS" | sed 's/^/  /'
       exit 1
       ;;

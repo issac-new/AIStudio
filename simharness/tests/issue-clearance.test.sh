@@ -149,4 +149,44 @@ else
   echo "FAIL ⑥b 清场后延后单未拦（rc=${RC6}）——债务随清场蒸发："; printf '%s\n' "$OUT6"; fails=$((fails+1))
 fi
 
+# ── 场景⑦/⑧：pairing 同构（P2 终审收口）——泛指广播与伪键回写 ──
+R7="$SR/runs/20261106-v8-runG"; mkdir -p "$R7/evidence"
+: > "$R7/evidence/compensation-ledger.tsv"
+cat > "$R7/evidence/issues.log" <<'EOF'
+ISSUE|conclusion-gap|DEV-A|缺结论
+ISSUE|conclusion-gap|DEV-B|缺结论
+DISP|conclusion-gap|director|延后（等评审收口）
+EOF
+OUT7="$(AIPAY_SIM_ROOT="$SR" RUN_ID=20261106-v8-runG bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC7=$?
+if [ "$RC7" -ne 0 ] \
+   && printf '%s' "$OUT7" | grep -q 'conclusion-gap·DEV-A' \
+   && printf '%s' "$OUT7" | grep -q 'conclusion-gap·DEV-B' \
+   && ! printf '%s' "$OUT7" | grep -q 'director'; then
+  echo "PASS ⑦ 泛指延后广播→真实键两枚入列、无伪键（director 不成键）"
+else
+  echo "FAIL ⑦ 泛指广播应按 pairing 拦真实键（rc=$RC7）："; printf '%s\n' "$OUT7"; fails=$((fails+1))
+fi
+# ⑧ 伪键回写解禁（终审实证绕过形态）：对泛指主体再回写「已修」广播
+AIPAY_SIM_ROOT="$SR" RUN_ID=20261106-v8-runG bash "$HERE/mux/mx-compensation-ledger.sh" \
+  append-disp conclusion-gap director '已修（统一修复锚 main@feedface）' >/dev/null 2>&1
+OUT8="$(AIPAY_SIM_ROOT="$SR" RUN_ID=20261106-v8-runG bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC8=$?
+if [ "$RC8" -ne 0 ] \
+   && printf '%s' "$OUT8" | grep -q 'conclusion-gap·DEV-A' \
+   && printf '%s' "$OUT8" | grep -q '逐键'; then
+  echo "PASS ⑧ 泛指已修广播不批量解禁——伪键回写后仍拦（须逐键带锚 exact）"
+else
+  echo "FAIL ⑧ 泛指广播解禁绕过复发（rc=$RC8）："; printf '%s\n' "$OUT8"; fails=$((fails+1))
+fi
+# ⑨ 逐键带锚 exact 回写 → 真正放行
+AIPAY_SIM_ROOT="$SR" RUN_ID=20261106-v8-runG bash "$HERE/mux/mx-compensation-ledger.sh" \
+  append-disp conclusion-gap DEV-A '已修（锚 main@1111111）' >/dev/null 2>&1
+AIPAY_SIM_ROOT="$SR" RUN_ID=20261106-v8-runG bash "$HERE/mux/mx-compensation-ledger.sh" \
+  append-disp conclusion-gap DEV-B '已修（锚 main@2222222）' >/dev/null 2>&1
+OUT9="$(AIPAY_SIM_ROOT="$SR" RUN_ID=20261106-v8-runG bash "$HERE/mux/mx-compensation-ledger.sh" check-issue-clearance 2>&1)"; RC9=$?
+if [ "$RC9" -eq 0 ]; then
+  echo "PASS ⑨ 逐键带锚 exact 回写→放行（正道出口畅通）"
+else
+  echo "FAIL ⑨ 逐键 exact 回写应放行（rc=$RC9）："; printf '%s\n' "$OUT9"; fails=$((fails+1))
+fi
+
 [ "$fails" -eq 0 ] && echo "issue-clearance: ALL-PASS" || { echo "issue-clearance: ${fails} FAIL"; exit 1; }
