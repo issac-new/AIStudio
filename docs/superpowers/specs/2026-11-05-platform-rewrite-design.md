@@ -376,4 +376,4 @@ Task 5 验收（隔离 SIM_ROOT/随机端口，不碰宿主运行态）：
 
 ## 设计文档影响
 
-DESIGN_SYNC: none——本提交仅形成已批准的平台重写正本规格，尚未改变现行实现。P0/P1/P2 实施及最终切换批次必须将本声明修订为 touched，并同批更新 `2026-10-23-swarmstudio-integrated-design.md`、`2026-10-23-swarmstudio-design-ledger.md`、README、使用与运维手册；合入前以实际改动面核验，不以本声明预支完成状态。
+DESIGN_SYNC: touched（docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §8.4 平台四行、docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md §C 平台批次行——同批兑现；README/USAGE 措辞随批）
