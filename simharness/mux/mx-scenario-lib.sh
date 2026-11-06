@@ -2122,16 +2122,40 @@ mx_gate_card_text() { # <user> <卡 needle> [since-ms] → 卡 body（空=未命
 }
 
 mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
-  local t
+  local t _v
   t=$(mx_gate_room_text "$1" "$2" "${4:-0}")
   [[ -n "$t" ]] || { printf ''; return 0; }
-  gov_lc_verdict "$3" "$t" "" | cut -d'|' -f2
+  _v=$(gov_lc_verdict "$3" "$t" "" | cut -d'|' -f2)
+  mx_verdict_receipt "$3" "$_v" "$1" "" room
+  printf '%s' "$_v"
 }
 
 kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
-  local b
+  local b _v
   b=$(mx_gate_card_text "$1" "$2" "${4:-}")
-  gov_lc_verdict "$3" "" "$b" | cut -d'|' -f3
+  _v=$(gov_lc_verdict "$3" "" "$b" | cut -d'|' -f3)
+  mx_verdict_receipt "$3" "$_v" "" "$2" card
+  printf '%s' "$_v"
+}
+
+# ── 判词决策回执（2026-11-06 B 批，spec 2026-11-06-decision-receipts.md）──────
+# 每次闸判词提取即落一行结构化回执：来源（房间行/卡面）、末判词、时刻。
+# 幂等键 run×gate×room_sha×card_sha×verdict——同来源同结论只记首行（重跑驱动
+# 不刷行）；改判=新行追加，tail -1 即末判词（与「末判词赢」判定语义同构）。
+# 空判词不落（无判词≠决策事件）；落盘 fail-soft，绝不影响判词返回。
+mx_verdict_receipt() { # <gate> <verdict> <room> <card-needle> <source>
+  local _v="$2" _r="$3" _c="$4" _src="$5" _dir _rsha _csha _key _f
+  [[ -n "$_v" ]] || return 0
+  _dir="${EVID_DIR:-}"
+  [[ -n "$_dir" && -d "$_dir" ]] || return 0
+  _rsha=$(printf '%s' "$_r" | shasum -a 256 | cut -c1-12)
+  _csha=$(printf '%s' "$_c" | shasum -a 256 | cut -c1-12)
+  _key="${RUN_ID:-?}|$1|${_rsha}|${_csha}|${_v}"
+  _f="$_dir/gate-verdicts.jsonl"
+  { [[ -f "$_f" ]] && grep -qF "\"id\":\"$_key\"" "$_f"; } 2>/dev/null && return 0
+  printf '{"id":"%s","ts":"%s","gate":"%s","verdict":"%s","source":"%s","room":"%s","room_sha":"%s","card":"%s","card_sha":"%s"}\n' \
+    "$_key" "$(date -u +%FT%TZ)" "$1" "$_v" "$_src" "${_r:0:80}" "$_rsha" "${_c:0:80}" "$_csha" \
+    >> "$_f" 2>/dev/null || true
 }
 
 mx_gate_verdict_seen() { # <room> <sender> <gate> [since-ms] → 0 当出现任一判词结论行
@@ -2163,6 +2187,8 @@ mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <ca
     sset "verdict_relay_${3}" 1
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" "[判词对照行·relay] ${3}-${cv}（来源=评审卡 ${6} body 结论行；房间原行未达，代发对照行补记录）" >/dev/null 2>&1 || true
   fi
+  # 判词回执（B 批）：双源合并结果是主判定入口，落回执（rv/cv 双源结论也入 data）
+  mx_verdict_receipt "$3" "$v" "$1" "$6" "combined:room=${rv:-无},card=${cv:-无}"
   printf '%s' "$v"
 }
 
@@ -2218,6 +2244,14 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   if [ "$(posture)" = "strict" ]; then
     # V8.29 §2.4 待收紧面：strict 不发预写派发词（拆分/人日/纪律归组织侧自主产出）
     set -- "$1" "【自主组织】收到需求派单：请对 ${RFD_ID:-当前轮} 需求按你的职能自主拆分、评估与派发执行；验收以 G1 冻结单 AC 为准，双凭证（commit+卡号）收口。本消息不预设拆分与人日。" "${3:-}"
+    # 自派发台账（2026-11-06 B 批）：一行=一次真实自主派单，报告净额行实算消费。
+    # 独立 jsonl 而非 compensate——自派发是净额达标行为，进代偿账会被清偿门当
+    # 待清偿代偿（open 笔须清偿/waive），语义相反。fail-soft。
+    if [[ -n "${EVID_DIR:-}" && -d "${EVID_DIR}" ]]; then
+      printf '{"ts":"%s","run":"%s","from":"%s","requirement":"%s"}\n' \
+        "$(date -u +%FT%TZ)" "${RUN_ID:-?}" "$1" "${2:0:80}" \
+        >> "$EVID_DIR/self-dispatch.jsonl" 2>/dev/null || true
+    fi
   else
     compensate dispatch-preset "from=$1 text=${2:0:60}（预写派发词代演人类派单）" 2>/dev/null || true
   fi
