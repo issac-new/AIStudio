@@ -16,6 +16,7 @@
 import { readFileSync, existsSync, copyFileSync, mkdirSync, lstatSync, readdirSync, unlinkSync } from 'node:fs';
 import { resolve, dirname, join, basename } from 'node:path';
 import { homedir } from 'node:os';
+import { deriveAgentPatchTouchedFiles } from './platform/deploy/patch-touched.mjs';
 
 // 路径解析（Z5）：worktree 检出（.claude/worktrees/<x>）与正常检出（ncwk/overlay）层级
 // 不同，固定层数回溯必差一层——旧写法 ncwkRoot=overlayRoot/.. 在 worktree 指向
@@ -84,23 +85,70 @@ const pruneBackups = (target) => { // 超限删最旧；非数字后缀（人工
   }
 };
 console.log(`[deploy-agent-runtime] ${apply ? 'APPLY' : 'DRY-RUN'}  ${manifest.root} → ${dstRoot}`);
-for (const f of manifest.files) {
-  const s = join(srcRoot, f.source);
+
+// 补丁触碰面派生（N-1 根治，spec 2026-11-06-runtime-patch-touched-deploy）：默认清单
+// 模式下把 series 里 agent 面补丁触碰的文件（源=vendor/hermes-agent 注入态）并入同步
+// ——manifest 只登记补丁新增文件，修改类接线（601/470 等）此前从未自动到达宿主。
+// 测试隔离面（RUNTIME_DEPLOY_MANIFEST 覆盖）不启用；manifest 可显式 agentPatchSync:false 关断。
+let patchTouchedEntries = [];
+const manifestDestSet = new Set(manifest.files.map((f) => f.dest));
+if (!process.env.RUNTIME_DEPLOY_MANIFEST && manifest.agentPatchSync !== false) {
+  const patchesDir = resolve(overlayRoot, 'patches');
+  const agentSrc = resolve(overlayRoot, 'vendor/hermes-agent');
+  try {
+    const derived = deriveAgentPatchTouchedFiles(patchesDir, readFileSync(join(patchesDir, 'series'), 'utf8'));
+    patchTouchedEntries = [...derived.files]
+      .filter((f) => !manifestDestSet.has(f))       // manifest 已登记的不重复（新增文件面以 manifest 为准）
+      .map((f) => ({ source: join(agentSrc, f), dest: f, _touched: true }));
+    console.log(`[deploy-agent-runtime] 补丁触碰面 ${derived.files.size} 文件（agent 补丁 ${derived.agentPatches} 枚；删除态 ${derived.deleted.size} 不同步）`);
+  } catch (e) {
+    console.warn(`[deploy-agent-runtime] 补丁触碰面派生失败（跳过，不阻断清单同步）：${e.message}`);
+  }
+}
+
+let touchedMissing = 0;        // 触碰面源缺失（本检出未注入等）：跳过并报告，不算 failed
+let touchedConverge = 0;       // 触碰面差异待收口（apply 备份覆盖可自动解决）：不触发 partial
+// 降级哨兵（N-1 安全语义）：源树非完整注入态（触碰面有源缺失，如未注入的 worktree/
+// CI 检出独立跑 --apply）时，收口方向=pristine 覆盖宿主接线=降级事故——跳过整个触碰面
+// 并大声警示。inject 链路内（先注入后部署）源恒为完整注入态，缺失数 0，不受影响。
+let touchedEntries = patchTouchedEntries;
+if (apply && patchTouchedEntries.length > 0) {
+  const absent = patchTouchedEntries.filter((e) => !existsSync(e.source)).length;
+  if (absent > 0) {
+    console.warn(`[deploy-agent-runtime] ⚠ 源树非完整注入态（触碰面 ${absent}/${patchTouchedEntries.length} 源缺失）——跳过触碰面同步（防 pristine 降级宿主接线）；完整链路=npm run inject`);
+    touchedEntries = [];
+  }
+}
+for (const f of [...manifest.files, ...touchedEntries]) {
+  const s = typeof f.source === 'string' && f.source.startsWith('/')
+    ? f.source                                        // 触碰面条目携带绝对源（vendor 注入态）
+    : join(srcRoot, f.source);
   const d = join(dstRoot, f.dest);
-  if (!existsSync(s)) { console.log(`  ! 源缺失: ${f.source}`); missing++; continue; }
+  if (!existsSync(s)) {
+    if (f._touched) { touchedMissing++; continue; }   // 无注入态真值可同步（如未注入检出）——跳过不计 missing
+    console.log(`  ! 源缺失: ${f.source}`); missing++; continue;
+  }
   const sContent = readFileSync(s);
   if (existsSync(d)) {
     const dContent = readFileSync(d);
     if (Buffer.compare(sContent, dContent) === 0) { same++; continue; }
-    // 目标已存在且内容不同：安装树可能带着比模板更新的本地修复——
-    // 默认保留目标（kept），只有 --force 才备份后覆盖（conflict）。
-    conflict++;
-    if (!force) {
-      kept++;
-      keptList.push(f.dest);
-      continue;
+    if (f._touched) {
+      // 触碰面差异=宿主偏离补丁态（源=vendor 注入态=补丁态权威）——apply 备份后
+      // 覆盖收口，dry-run 记待收口。不走 manifest.files 的保留语义（kept）：接线漂移
+      // 靠本通道自动收口，保留反而会让 inject 部署预检常态性 partial 中止（预检死锁）。
+      touchedConverge++;
+      if (!apply) { conflicts.push(`${f.dest}.bak.${stamp}`); continue; }
+    } else {
+      // 目标已存在且内容不同：安装树可能带着比模板更新的本地修复——
+      // 默认保留目标（kept），只有 --force 才备份后覆盖（conflict）。
+      conflict++;
+      if (!force) {
+        kept++;
+        keptList.push(f.dest);
+        continue;
+      }
+      conflicts.push(`${f.dest}.bak.${stamp}`);
     }
-    conflicts.push(`${f.dest}.bak.${stamp}`);
   }
   if (apply) {
     try {
@@ -110,13 +158,13 @@ for (const f of manifest.files) {
         pruneBackups(d);                        // 同目标备份只留最近 KEEP_BACKUPS 份（H8）
       }
       copyFileSync(s, d);
-      copied++; console.log(`  ✓ 同步 ${f.source}`);
+      copied++; console.log(`  ✓ 同步 ${f.dest}${f._touched ? '（补丁触碰面收口）' : ''}`);
     } catch (e) {
       // 复制/备份失败=failed（不吞）：运行时同步失败不得报告成功
-      copyErr++; console.log(`  ✗ 同步失败 ${f.source}: ${e.message}`);
+      copyErr++; console.log(`  ✗ 同步失败 ${f.dest}: ${e.message}`);
     }
   } else {
-    copied++; console.log(`  ~ 待同步 ${f.source}`);
+    copied++; console.log(`  ~ 待同步 ${f.dest}`);
   }
 }
 if (keptList.length > 0) {
@@ -127,11 +175,17 @@ if (conflicts.length > 0) {
   console.log(`  ! 目标文件与源不同 ${conflicts.length} 个，${apply ? '旧文件已备份' : '--apply 时旧文件将备份'}为 .bak.${stamp}：`);
   for (const c of conflicts) console.log(`      ${c}`);
 }
-console.log(`[deploy-agent-runtime] 清单 ${manifest.files.length} ｜ 相同 ${same} ｜ ${apply ? '已同步' : '待同步'} ${copied} ｜ 源缺失 ${missing} ｜ 保留目标 ${kept} ｜ 差异 ${conflict} ｜ 同步失败 ${copyErr}`);
+const touchedSeg = touchedEntries.length > 0
+  ? `＋补丁触碰 ${touchedEntries.length}`
+  : (patchTouchedEntries.length > 0 ? '（触碰面已跳过）' : '');
+const touchedMissSeg = touchedMissing > 0 ? `（触碰面跳过 ${touchedMissing}）` : '';
+console.log(`[deploy-agent-runtime] 清单 ${manifest.files.length}${touchedSeg} ｜ 相同 ${same} ｜ ${apply ? '已同步' : '待同步'} ${copied} ｜ 源缺失 ${missing}${touchedMissSeg} ｜ 保留目标 ${kept} ｜ 差异 ${conflict} ｜ 触碰待收口 ${touchedConverge} ｜ 同步失败 ${copyErr}`);
 if (kept > 0) console.log('提示：保留的差异文件需人工比对；若宿主侧是更新修复，应回灌 runtime/ 模板后重跑。');
 if (copied > 0 && apply) console.log('提示：运行时已更新，需重启各 profile gateway 生效。');
 // 状态面（P1）：kept/conflict → partial（exit 2）；missing/复制失败 → failed（exit 1）；
 // 只有全同或无冲突同步成功才是 complete（exit 0）。末行 RESULT 供 inject 预检/后置消费。
+// 触碰面的 touchedMissing/touchedConverge 不参与状态：前者=本检出未注入（无真值），
+// 后者=apply 可自动收口（inject 链路内先注入后部署，源恒为新注入态）。
 const deployFailed = missing > 0 || copyErr > 0;
 const deployPartial = kept > 0 || conflict > 0;
 const deployStatus = deployFailed ? 'failed' : deployPartial ? 'partial' : 'complete';

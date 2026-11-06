@@ -459,3 +459,10 @@ paths:
   - README.md
   - AGENTS.md
   - RELEASE-MANIFEST.json
+  # 挂账清偿 N-1：deploy 补丁触碰面派生（spec 2026-11-06-runtime-patch-touched-deploy）
+  - docs/superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md
+  - scripts/platform/deploy/patch-touched.mjs
+  - scripts/deploy-agent-runtime.mjs
+  - scripts/__tests__/deploy-patch-touched.test.ts
+  - patches/759-agent-runaway-file-edit-thrash.patch
+  - patches/series
