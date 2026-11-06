@@ -56,6 +56,6 @@ DESIGN_SYNC: touched —— `docs/superpowers/specs/2026-10-23-swarmstudio-desig
 
 | # | 项 | 处置建议 |
 |---|---|---|
-| N-1 | runtime-manifest.json 只收补丁新增文件、不含补丁对既有文件的修改（601/605 接线类依赖宿主 git 工作态而非 manifest 到达） | 单独立项：manifest 增加「patchTouchedFiles」派生面或部署器改读 inject manifest |
-| N-2 | 宿主网关进程（14:29 起）仍跑换血前代码，重启后才加载 v0.23.0＋149 件接线 | launchd KeepAlive 在位，空闲窗 kill 网关进程即自愈拉新 |
-| N-3 | npm test 27 例 pre-existing 红（cognition P0 批验证窗外债：ensure-injected.mjs:68 `isHermesAgentPatchPath` 残留等三族） | cognition 域清偿批处置，本批按边界纪律不顺修 |
+| N-1 | ~~runtime-manifest 只收补丁新增文件~~ **已清偿（2026-11-06 挂账清偿批，spec 2026-11-06-runtime-patch-touched-deploy）**：deploy 器动态派生补丁触碰面（纯函数库 platform/deploy/patch-touched.mjs＋哨兵防降级＋守门 10/10），T3 嫁接收编 759 入链（agent 补丁 90→91）；全链 inject 出口自动收口（唯一真漂移 shutdown_watchdog.py 实证） | 已根治 |
+| N-2 | ~~宿主网关跑旧代码~~ **已清偿（同批）**：网关 PID 59117（15:16:53 起）加载 v0.23.0＋接线，完整启动序列稳定；途中根治两事故——launchd 域 pytest 污染 job（bootout＋隔离）与宿主 hostile_load 半套热修（3 文件存档 /tmp/v0230-stray-quarantine/hostile-load-hotfix-1418/ 后还原，热修属主待认领） | 已根治（热修属主待认领） |
+| N-3 | ~~npm test 27 红~~ **已清偿**：根因=cognition 合入回退事故（非 P0 批验证窗债），由并行批 fix-platform-restore（06fd2a1e2）根治；本挂账清偿批独立验收复跑 **8518 passed / 0 failed** | 已根治（并行批） |

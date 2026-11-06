@@ -1197,3 +1197,9 @@
 # 真实 Router stack 启动覆盖对账；公开登录/健康检查显式登记，认证后 userenv/permmode
 # 按 profile 授权，自治与 permmode 写面、审批收件箱限 super_admin；未登记写请求默认 403。
 758-platform-route-authz.patch
+
+# 759（2026-11-06 挂账清偿 N-1 收编，spec 2026-11-06-runtime-patch-touched-deploy）：
+#      runaway 颤振信号 T3（六死法·file_edit_thrash）收编入链——原以 runtime 模板/
+#      宿主直改形态存在（发版批 9b4ad890f 嫁接）未落补丁链，触碰面收口会将其冲掉
+#      （宿主行为变更必须落 patches/ 的仓规执法）；正身=预演仓注入态 vs 模板 diff。
+759-agent-runaway-file-edit-thrash.patch
