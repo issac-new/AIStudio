@@ -223,3 +223,4 @@
 {"at":"2026-11-05T23:49:00Z","spec":"docs/superpowers/specs/2026-11-06-run27-steps-ledger-keys.md","receipt":"e6ba800d3ca85ab2f86e4933b745071e39814421","commit":"7c921dc9b"}
 {"at":"2026-11-06T00:34:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-gap-rootfix.md","receipt":"70348f736ce3755a701bc42f323a4e903c4fa15d","commit":"d38cfe8d1"}
 {"at":"2026-11-06T00:50:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-optimizations.md","receipt":"c94d7cfab8182b974a078f3e5a2acfe08cfaca47","commit":"e3c402fb1"}
+{"at":"2026-11-06T01:08:09Z","spec":"docs/superpowers/specs/2026-11-06-frame-program-revision.md","receipt":"6c445f20c6c42be411c20197a54c6a05793611b9","commit":"08183ab02"}

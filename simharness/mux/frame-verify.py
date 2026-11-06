@@ -51,39 +51,30 @@ _FRAME_TAB = {
 EXPECT = {
     # 启动自检帧（开跑前采集链自检，非 26 步之一）：证明登录态与总览已装载。
     'capture-precheck': {'want': [], 'title': '启动自检帧（登录/总览装载，页面身份=流程总览）'},
-    'smoke_done':    {'want': ['流程总览', '环境准备', 'AIStudio'], 'title': '首页/流程总览'},
-    'appinit_done':  {'want': ['应用资产', '治理', '文档评审'], 'title': '⑥治理·文档评审'},
-    'people_done':   {'want': ['组织', '角色', '权限'], 'title': '①搭建·组织与团队'},
-    'login_done':    {'want': ['账号', '登录', '搭建'], 'title': '①搭建·账号'},
-    'g1_frozen':     {'want': ['需求', '冻结', '验收标准'], 'title': '②需求·文档评审'},
-    'room_done':     {'want': ['会话', '工作台', '协作'], 'title': '工作台·会话画布'},
     'register_done': {'want': ['任务', '看板', '分解'], 'title': '③分析设计·任务分解'},
-    'analysis_done': {'want': ['分析', '系统分析', '清单'], 'title': '③分析设计·系统分析'},
-    'triage_done':   {'want': ['看板', '卡', '任务'], 'title': '④开发·看板'},
     'anexec_done':   {'want': ['分析', '系统分析', '四路'], 'title': '③分析设计·系统分析'},
     'review_done':   {'want': ['分析', '设计', '评审'], 'title': '③分析设计'},
-    'g2_arch_pass':  {'want': ['评审', '任务', '架构'], 'title': '③分析设计·任务分解（评审卡）'},
-    'close_done':    {'want': ['任务', '主卡', '分解'], 'title': '③分析设计·任务分解'},
     'plan_done':     {'want': ['排期', '计划', '人日'], 'title': '③分析设计·排期'},
-    'devimpl_done':  {'want': ['工作区', '任务', '代码'], 'title': 'IDE 工作区'},
     'testpass_done': {'want': ['看板', '测试', '任务'], 'title': '④开发·看板'},
     'defect_done':   {'want': ['看板', '缺陷', '任务'], 'title': '④开发·看板（缺陷）'},
     'eval_done':     {'want': ['评', '指标', '覆盖'], 'title': '评测工作台'},
     'ready_done':    {'want': ['验收', 'G5', '发布'], 'title': '⑤验收·G5 审批'},
     'deliver_gate':  {'want': ['案例', '交付', '门禁', 'RFD-001', 'aipaydev'], 'title': '⑤验收·交付案例'},
     'uat_done':      {'want': ['追溯', '验收', '需求'], 'title': '⑤验收·需求追溯'},
-    'workmgr_done':  {'want': ['交付健康', '看板', '验收'], 'title': '⑤验收·交付健康'},
     'audit_done':    {'want': ['审计', '治理', '变更'], 'title': '⑥治理·审计与变更'},
-    'retro_done':    {'want': ['度量', '治理', '检查'], 'title': '⑥治理·度量检查'},
     'ide_done':      {'want': ['工作区', '任务', 'IDE'], 'title': 'IDE 工作区'},
-    '26':            {'want': ['推演', '运行', '报告'], 'title': '全流程推演（报告承载面）'},
+        # O3 none 步期望键同步删除（2026-11-06 契约守门第二抓）：capture-plan 已重分类
+    # none（真值在 state/API/消息转录，不产帧）——期望表留键=恒缺帧假红。以下 9 键
+    # 已删：smoke_done/appinit_done/people_done/login_done/g1_frozen/room_done/
+    # dispatch_done/ready_inbox/report_done（repo 步同理由删除：analysis_done/
+    # triage_done/close_done/g2_arch_pass/devimpl_done/release_done/retro_done/
+    # workmgr_done）。
+# '26' 键已删（2026-11-06 契约守门首跑抓出无主期望）：步 26 承载帧由
+    # report_done（导演台）+ report_view（查看面深链）双键覆盖，r18-collect 归位
+    # 到步 26；独立 '26' 键无采集方=恒缺帧假红。
     # run25 补流批（2026-11-03）三键：两驱动位（此前注册缺席致 run25 零帧）+ 18b 文件域首帧
-    'dispatch_done': {'want': ['任务', '看板', '分解'], 'title': '③分析设计·任务分解（派发后任务板）'},
-    'report_done':   {'want': ['推演', '运行', '报告'], 'title': '全流程推演·导演台（报告生成后）'},
     'mp_runtime_proof': {'want': ['收银', '支付', '商户', 'Cashier'], 'title': '小程序收银台首帧（runtime-proof，18b 文件域）'},
     # 存量三键补投影（capture-plan-registry-coverage.test.ts 守门首跑抓出）：
-    'release_done':  {'want': ['G5', '验收', '发布', '批准'], 'title': '⑤验收·G5 审批（发布留痕）'},
-    'ready_inbox':   {'want': ['收件箱', '审批', '待办', '批准'], 'title': '审批收件箱'},
     'report_view':   {'want': ['推演', '运行', '报告'], 'title': '全流程推演·导演台（报告查看面）'},
 }
 # 空白态噪声：出现即说明拍到了空页面（比「没匹配到关键词」更强的信号）

@@ -57,8 +57,9 @@ describe('capture-plan 注册表覆盖对账（D1/D2 根治）', () => {
   it('frame-verify EXPECT 与注册表投影同步（改拍摄位须同步期望词）', () => {
     const reg = registryKeys(PLAN)
     const exp = expectKeys(FRAME_VERIFY)
-    // 注册表平台位（url 形态）逐键须有 EXPECT 投影；文件域位与 '26' 类特殊键同样要求
-    const missing = [...reg.keys()].filter((k) => !exp.has(k))
+    // 注册表平台位（url 形态）逐键须有 EXPECT 投影；文件域位同样要求。
+    // none/repo 步豁免（2026-11-06 O3 四态：不产帧=不进期望表，恒缺帧假红已根治）
+    const missing = [...reg.keys()].filter((k) => !exp.has(k) && /^(\/|file:)/.test(reg.get(k) ?? ''))
     expect(missing, `注册键缺 frame-verify EXPECT 投影：${missing.join('、')}`).toEqual([])
   })
 })
@@ -99,7 +100,7 @@ describe('18b 目标运行时验证面接线（run26 N10）', () => {
     expect(DRIVER).toMatch(/runtime-proof-missing/)
     expect(DRIVER).toMatch(/DEV-MP-runtime-proof\.json/)
     // fail-soft 语义：核验失败只落 issues.log，不进 gate_blocked/exit 路径
-    const seg = DRIVER.slice(DRIVER.indexOf('18b 目标运行时验证面核验'), DRIVER.indexOf('18b 目标运行时验证面核验') + 900)
+    const seg = DRIVER.slice(DRIVER.indexOf('18b 目标运行时验证面核验'), DRIVER.indexOf('18b 目标运行时验证面核验') + 1100)  // 2026-11-06 窗口 900→1100：18b 块新增文件域帧补拍行后 issues.log 距锚 960
     expect(seg).toMatch(/issues\.log/)
     expect(seg).not.toMatch(/gate_blocked|process exit|熔断/)
   })
