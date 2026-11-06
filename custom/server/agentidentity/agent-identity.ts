@@ -13,6 +13,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
+import { listPeople } from './people'
+import { cardGaps, validateCard, type ResponsibilityCard } from './responsibility'
+import { canTransition, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
 export type CredentialStatus = 'active' | 'revoked'
@@ -73,6 +76,10 @@ export interface AgentIdentity {
   capabilityBoundary?: CapabilityBoundary
   /** 审计要求（2026-11-05 起；存量身份可缺） */
   auditRequirement?: AuditRequirement
+  /** 责任卡（2026-11-06 起）：任务边界之外的追责要素；存量身份可缺，缺口由 cardGaps 报出 */
+  responsibilityCard?: ResponsibilityCard
+  /** 五阶段生命周期（2026-11-06 起）：缺省按 registered 展示，不批量回填 */
+  lifecycle?: Lifecycle
   credentials: CredentialRecord[]
   delegations: DelegationRecord[]
   createdAt: number
@@ -477,4 +484,79 @@ export function listEvents(limit = 100): IdentityEvent[] {
 export function _useStoreDirForTests(dir: string): void {
   process.env.AGENT_IDENTITY_STORE = dir
   process.env.AGENT_IDENTITY_NO_EVENTS = '0'
+}
+
+// ── 责任卡与五阶段生命周期（2026-11-06 第一增量）──
+// 写入路径只有两条：保存责任卡、迁移生命周期。两者都校验在岗自然人与阶段守卫；
+// 存量身份不批量回填，缺口由 getCardView 报出。
+
+export function updateResponsibilityCard(
+  id: string,
+  card: ResponsibilityCard,
+  actor: string,
+): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
+  const people = listPeople()
+  const problems = validateCard(card, people)
+  if (problems.length) return { ok: false, problems }
+  const store = readStore()
+  const identity = store.identities.find((i) => i.id === id)
+  if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
+  const prevOwner = identity.responsibilityCard?.primaryOwner
+  identity.responsibilityCard = card
+  const lc = normalizeLifecycle(identity.lifecycle)
+  // 主责任人变更不是静默改名：已准入/运行中的单元强制转入变更态，重启须两条证据
+  if (prevOwner && prevOwner !== card.primaryOwner && lc.stage !== 'registered') {
+    lc.history.push({
+      from: lc.stage, to: 'changing', at: Date.now(), by: card.primaryOwner,
+      reason: 'owner-change', evidenceRefs: [],
+    })
+    lc.stage = 'changing'
+  }
+  identity.lifecycle = lc
+  identity.updatedAt = Date.now()
+  writeStore(store)
+  appendEvent({ actor, action: 'update', targetId: id, detail: 'responsibility-card' })
+  return { ok: true, identity: { ...identity } }
+}
+
+export function transitionIdentity(
+  id: string,
+  input: TransitionInput,
+  actor: string,
+): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
+  const store = readStore()
+  const identity = store.identities.find((i) => i.id === id)
+  if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
+  const verdict = canTransition(identity, input, listPeople())
+  if (!verdict.ok) return verdict
+  const lc = normalizeLifecycle(identity.lifecycle)
+  const from = lc.stage
+  lc.history.push({
+    from, to: input.to, at: Date.now(), by: input.by,
+    reason: input.reason.trim(), evidenceRefs: input.evidenceRefs ?? [],
+  })
+  lc.stage = input.to
+  if (input.to === 'retired') lc.exit = { ...input.exit!, confirmedAt: Date.now() }
+  identity.lifecycle = lc
+  identity.updatedAt = Date.now()
+  writeStore(store)
+  appendEvent({ actor, action: 'update', targetId: id, detail: `lifecycle:${from}->${input.to}` })
+  return { ok: true, identity: { ...identity } }
+}
+
+export function getCardView(id: string): {
+  card: ResponsibilityCard | null
+  lifecycle: Lifecycle
+  stage: string
+  gaps: ReturnType<typeof cardGaps>
+} | null {
+  const identity = getIdentity(id)
+  if (!identity) return null
+  const lc = normalizeLifecycle(identity.lifecycle)
+  return {
+    card: identity.responsibilityCard ?? null,
+    lifecycle: lc,
+    stage: stageOf(identity),
+    gaps: cardGaps(identity.responsibilityCard, listPeople(), { forAdmission: lc.stage === 'registered' }),
+  }
 }
