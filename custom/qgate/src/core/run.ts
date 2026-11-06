@@ -33,6 +33,9 @@ export interface RunInput {
   /** profile 覆盖后的有效 policy（缺省用门自带）；贯通 decide——否则 override 只影响
       CLI 阻断计算而 verdict 已被门自带 warn 降级，block 覆盖永远拦不住（v0.3 根治）。 */
   effectivePolicy?: GateSpec['spec']['policy']
+  /** 跳过缓存读（P1 Task 9 --no-cache）：发布准出必须真跑——缓存证据是「输入未变
+   *  复用上轮」的声明，不是本轮观测。缓存写保持（后续常规任务门可复用本轮产物）。 */
+  noCache?: boolean
 }
 
 export interface RunResult {
@@ -41,14 +44,18 @@ export interface RunResult {
   decision: Decision
 }
 
-/** git 上下文（无 git 或命令失败 → undefined，新鲜度退化为时间判定；stderr 静默防噪声泄漏）。 */
+/** git 上下文（无 git 或命令失败 → undefined，新鲜度退化为时间判定；stderr 静默防噪声泄漏）。
+ * 输出只剥尾部换行（trimEnd）不用 trim——status --porcelain 的首行以「XY 」两态码开头，
+ * 未暂存行是 ' M path'（前导空格是格式的一部分）：trim 会吃掉前导空格，调用方的
+ * l.slice(3) 随即吃掉路径首字符（' M .qgate/x' → 'qgate/x'，2026-11-06 release:gate
+ * 真跑前置检查实锤：首条变更路径按排序序被随机截字符，scope/appliesWhen 判定漂移）。 */
 function gitOut(workspace: string, args: string[]): string | undefined {
   try {
     return execFileSync('git', args, {
       cwd: workspace,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
+    }).trimEnd()
   } catch {
     return undefined
   }
@@ -103,7 +110,7 @@ export async function runGate(input: RunInput): Promise<RunResult> {
   const maxAgeHours = spec.spec.policy.maxAgeHours ?? 24
   let cached = false
   let evidence: Evidence[] = []
-  const hit = cacheKey ? cacheGet(qgateDir, cacheKey, maxAgeHours) : null
+  const hit = input.noCache ? null : (cacheKey ? cacheGet(qgateDir, cacheKey, maxAgeHours) : null)
   if (hit && hit.evidence.length > 0) {
     cached = true
     evidence = markCached(hit.evidence, cacheKey!)

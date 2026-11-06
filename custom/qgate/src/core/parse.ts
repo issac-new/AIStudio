@@ -22,7 +22,10 @@ const TRIGGERS: readonly Trigger[] = [
 ]
 const POLICY_ACTIONS: readonly PolicyAction[] = ['block', 'warn']
 const CRITICALITY: readonly Criticality[] = ['high', 'medium', 'low']
-const EXECUTIONS: readonly EvidenceExecution[] = ['present', 'wired', 'exercised']
+// 'cached'（P1 Task 9 修复）：§49 缓存命中证据 execution='cached' 落盘后此前不可回读
+// （parseEvidence 拒收 → loadRunEvidence 空），严格报告的 no-cache 判定因此永远看不见
+// 缓存形态——types.ts 词表本就含 cached，此处对齐。
+const EXECUTIONS: readonly EvidenceExecution[] = ['present', 'wired', 'exercised', 'cached']
 const INDEPENDENCE: readonly EvidenceIndependence[] = [
   'self-generated', 'implementation-derived', 'spec-derived',
   'existing-independent', 'runtime-observed', 'human-reviewed',
@@ -162,6 +165,11 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
     const mode = enumOf(raw.mode, modes)
     if (!mode) return null
     out.mode = mode
+    if (type === 'ops' && raw.scanGlobs !== undefined) {
+      const scanGlobs = strList(raw.scanGlobs, 64)
+      if (!scanGlobs || scanGlobs.length === 0) return null
+      out.scanGlobs = scanGlobs
+    }
     if (type !== 'ops') {
       const expectedFile = str(raw.expectedFile)
       if (expectedFile !== undefined) out.expectedFile = expectedFile

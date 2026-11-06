@@ -190,3 +190,22 @@ describe('⑥ 降级诚实', () => {
     expect(w1.text() + w3.text() + w4.text()).toMatch(/失败|错误|读取失败/)
   })
 })
+
+describe('治理事件域 DTO 平价（P2 Task 4：客户端补 sandbox 域）', () => {
+  it('客户端 GovEventDomainDto 与服务端 GOV_EVENT_DOMAINS 逐域一致（含 sandbox）', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const root = resolve(import.meta.dirname, '../../..')
+    const api = readFileSync(resolve(root, 'client/governance/api/incident-suite.ts'), 'utf8')
+    const m = /export type GovEventDomainDto = ([^\n]+)/.exec(api)
+    expect(m, 'GovEventDomainDto 定义缺席').toBeTruthy()
+    const clientDomains = [...m![1].matchAll(/'([a-z]+)'/g)].map(x => x[1]).sort()
+    const server = await import('../../../server/govbus/event-log')
+    expect(clientDomains).toEqual([...server.GOV_EVENT_DOMAINS].sort())
+    expect(clientDomains).toContain('sandbox')
+    // 治理 UI 过滤器同步暴露 sandbox 域
+    const section = readFileSync(resolve(root, 'client/governance/components/GovEventStreamSection.vue'), 'utf8')
+    expect(section).toContain("'sandbox'")
+    expect(section).toMatch(/sandbox[^\n]*沙箱/)
+  })
+})

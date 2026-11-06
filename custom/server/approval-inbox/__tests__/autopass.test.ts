@@ -89,7 +89,7 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     _resetAutopassScanThrottleForTests()
     const app = new Koa()
     app.use(async (ctx, next) => {
-      (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+      (ctx.state as { user?: { username?: string; role?: string } }).user = { username: 'qa-lead', role: 'super_admin' }
       await next()
     })
     app.use(async (ctx, next) => {
@@ -116,9 +116,28 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     writeFileSync(join(queueDir, 'queue.jsonl'), JSON.stringify(entry) + '\n', { flag: 'a' })
   }
 
-  it('低风险只读命令自动放行：pending 不在列 + 台账 auto_pass + 响应文件 once；高危仍在列人审', async () => {
+  // P0 Task 4（2026-11-05）：读端点零副作用——自动放行只由显式写命令触发。
+  it('GET pending 与 summary 不产生 auto_pass 或响应文件（读端点零副作用）', async () => {
+    enqueue('rq-read-only', 'ls -la /tmp/pay-demo')
+    await fetchJson(base, '/api/approvals/pending')
+    await fetchJson(base, '/api/approvals/pending-summary')
+    expect(existsSync(join(queueDir, 'responses', 'rq-read-only.json'))).toBe(false)
+    const { queryApprovalLog } = await import('../approval-log')
+    expect(queryApprovalLog(50).filter((x) => x.decision === 'auto_pass')).toHaveLength(0)
+  })
+
+  it('只有显式 POST scan 才执行一次自动审批', async () => {
+    enqueue('rq-scan', 'git status')
+    const response = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+    expect(response.body.acted).toBe(1)
+    expect(existsSync(join(queueDir, 'responses', 'rq-scan.json'))).toBe(true)
+  })
+
+  it('低风险只读命令自动放行：显式 POST scan 后 pending 不在列 + 台账 auto_pass + 响应文件 once；高危仍在列人审', async () => {
     enqueue('rq-low', 'ls -la /tmp/pay-demo')
     enqueue('rq-high', 'rm -rf /tmp/pay-live-demo')
+    const scan = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+    expect(scan.body.acted).toBe(1)
     const pending = await fetchJson(base, '/api/approvals/pending')
     const ids = (pending.body.items as Array<{ id: string; risk: string }>).map(i => i.id)
     expect(ids).not.toContain('fleetfile:rq-low')
@@ -139,9 +158,9 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     expect((JSON.parse(readFileSync(respPath, 'utf8')) as { choice: string; actor: string }).choice).toBe('once')
   })
 
-  it('抽检链：rate=1 全量入队 → GET /spotcheck 在列 → veto 落台账回灌 → 一次定音 404', async () => {
+  it('抽检链：rate=1 全量入队 → POST scan 放行 → GET /spotcheck 在列 → veto 落台账回灌 → 一次定音 404', async () => {
     enqueue('rq-veto', 'git status')
-    await fetchJson(base, '/api/approvals/pending')  // 触发放行 + 入抽检队列
+    await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })  // 触发放行 + 入抽检队列
     const open = await fetchJson(base, '/api/approvals/spotcheck')
     const items = open.body.items as Array<{ id: string; verdict?: string }>
     expect(items.some(i => i.id === 'fleetfile:rq-veto' && !i.verdict)).toBe(true)
@@ -171,11 +190,13 @@ describe('抽检器 REST（V4.1 §七）：低风险自动放行 + 抽检处置'
     expect(((after.body.items) as unknown[]).some(i => (i as { id: string }).id === 'fleetfile:rq-veto')).toBe(false)
   })
 
-  it('开关：HERMES_APPROVALS_AUTOPASS=0 时低风险项留在 pending 人审（不自动放行）', async () => {
+  it('开关：HERMES_APPROVALS_AUTOPASS=0 时 POST scan 不放行（acted=0），低风险项留在 pending 人审', async () => {
     process.env.HERMES_APPROVALS_AUTOPASS = '0'
     const { _resetAutopassScanThrottleForTests } = await import('../pending-controller')
     _resetAutopassScanThrottleForTests()
     enqueue('rq-frozen', 'cat /tmp/pay-config.yaml')
+    const scan = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+    expect(scan.body.acted).toBe(0)
     const pending = await fetchJson(base, '/api/approvals/pending')
     const ids = (pending.body.items as Array<{ id: string }>).map(i => i.id)
     expect(ids).toContain('fleetfile:rq-frozen')

@@ -43,7 +43,7 @@ import { buildBehaviorSignals } from '../behavior-signals'
 import { businessSummaryOf } from '../business-summary'
 import { collectObsSignals } from '../../obssignals/collect'
 
-import { actorOf, setSummary } from './shared.js'
+import { actorOf, setSummary } from './shared'
 
 /** POST /sample-from-trace */
 export async function postSampleFromTrace(ctx: Context) {

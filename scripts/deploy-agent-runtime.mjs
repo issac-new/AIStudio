@@ -8,6 +8,11 @@
 //   会长期堆积）；与 aipay-agent-sync.sh 的安装树安全边界对齐）。
 //   模板与宿主不一致时的正解是把宿主已知良好态回灌 runtime/（先例 3edd5e32e），不是强推。
 // source=manifest.root（overlay/runtime，本检出运行时镜像）→ target=~/.hermes/hermes-agent（运行时安装树）。
+//
+// 状态化输出（P1 平台重写 Task 5）：kept/conflict 必须产出 partial 而非成功——
+// 末行 `RESULT status=complete|partial|failed` 是机器可读状态面（inject 部署预检/
+// 后置同步按退出码消费：0=complete、2=partial、1=failed）。RUNTIME_DEPLOY_MANIFEST
+// 可覆盖清单路径（测试隔离面；绝对 manifest.root 直接采用）。
 import { readFileSync, existsSync, copyFileSync, mkdirSync, lstatSync, readdirSync, unlinkSync } from 'node:fs';
 import { resolve, dirname, join, basename } from 'node:path';
 import { homedir } from 'node:os';
@@ -45,7 +50,10 @@ const ncwkRoot = findUp(overlayRoot, (d) => {
 const apply = process.argv.includes('--apply');
 const force = process.argv.includes('--force');
 const runtimeArg = process.argv.indexOf('--runtime');
-const manifest = JSON.parse(readFileSync(resolve(overlayRoot, 'runtime-manifest.json'), 'utf8'));
+// 清单路径：RUNTIME_DEPLOY_MANIFEST 覆盖（测试隔离/多 profile 面），缺省仓内正本
+const manifestFile = process.env.RUNTIME_DEPLOY_MANIFEST?.trim()
+  || resolve(overlayRoot, 'runtime-manifest.json');
+const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
 const srcCandidates = [...new Set([
   resolve(overlayRoot, manifest.root.replace(/^overlay\//, '')),
   ...(ncwkRoot ? [resolve(ncwkRoot, manifest.root)] : []),
@@ -57,7 +65,7 @@ if (!srcRoot) {
 }
 const dstRoot = runtimeArg > 0 ? process.argv[runtimeArg + 1] : join(homedir(), manifest.target.replace(/^~/, '').replace(/^\//, ''));
 
-let same = 0, copied = 0, missing = 0, conflict = 0, kept = 0;
+let same = 0, copied = 0, missing = 0, conflict = 0, kept = 0, copyErr = 0;
 const conflicts = [];            // 目标与源不同、按 --force 覆盖前先备份的清单（P6 可回滚+告警）
 const keptList = [];             // 目标与源不同、默认被保留的目标（需人工比对或回灌模板）
 const stamp = Date.now();        // 备份时间戳：一次运行共用一个（<name>.bak.<timestamp>）
@@ -95,13 +103,18 @@ for (const f of manifest.files) {
     conflicts.push(`${f.dest}.bak.${stamp}`);
   }
   if (apply) {
-    mkdirSync(dirname(d), { recursive: true });
-    if (existsSync(d)) {
-      copyFileSync(d, `${d}.bak.${stamp}`);   // 先备份旧文件再覆盖，可回滚
-      pruneBackups(d);                        // 同目标备份只留最近 KEEP_BACKUPS 份（H8）
+    try {
+      mkdirSync(dirname(d), { recursive: true });
+      if (existsSync(d)) {
+        copyFileSync(d, `${d}.bak.${stamp}`);   // 先备份旧文件再覆盖，可回滚
+        pruneBackups(d);                        // 同目标备份只留最近 KEEP_BACKUPS 份（H8）
+      }
+      copyFileSync(s, d);
+      copied++; console.log(`  ✓ 同步 ${f.source}`);
+    } catch (e) {
+      // 复制/备份失败=failed（不吞）：运行时同步失败不得报告成功
+      copyErr++; console.log(`  ✗ 同步失败 ${f.source}: ${e.message}`);
     }
-    copyFileSync(s, d);
-    copied++; console.log(`  ✓ 同步 ${f.source}`);
   } else {
     copied++; console.log(`  ~ 待同步 ${f.source}`);
   }
@@ -114,7 +127,13 @@ if (conflicts.length > 0) {
   console.log(`  ! 目标文件与源不同 ${conflicts.length} 个，${apply ? '旧文件已备份' : '--apply 时旧文件将备份'}为 .bak.${stamp}：`);
   for (const c of conflicts) console.log(`      ${c}`);
 }
-console.log(`[deploy-agent-runtime] 清单 ${manifest.files.length} ｜ 相同 ${same} ｜ ${apply ? '已同步' : '待同步'} ${copied} ｜ 源缺失 ${missing} ｜ 保留目标 ${kept} ｜ 差异 ${conflict}`);
+console.log(`[deploy-agent-runtime] 清单 ${manifest.files.length} ｜ 相同 ${same} ｜ ${apply ? '已同步' : '待同步'} ${copied} ｜ 源缺失 ${missing} ｜ 保留目标 ${kept} ｜ 差异 ${conflict} ｜ 同步失败 ${copyErr}`);
 if (kept > 0) console.log('提示：保留的差异文件需人工比对；若宿主侧是更新修复，应回灌 runtime/ 模板后重跑。');
 if (copied > 0 && apply) console.log('提示：运行时已更新，需重启各 profile gateway 生效。');
-process.exit(missing > 0 ? 1 : 0);
+// 状态面（P1）：kept/conflict → partial（exit 2）；missing/复制失败 → failed（exit 1）；
+// 只有全同或无冲突同步成功才是 complete（exit 0）。末行 RESULT 供 inject 预检/后置消费。
+const deployFailed = missing > 0 || copyErr > 0;
+const deployPartial = kept > 0 || conflict > 0;
+const deployStatus = deployFailed ? 'failed' : deployPartial ? 'partial' : 'complete';
+console.log(`RESULT status=${deployStatus}`);
+process.exit(deployFailed ? 1 : deployPartial ? 2 : 0);

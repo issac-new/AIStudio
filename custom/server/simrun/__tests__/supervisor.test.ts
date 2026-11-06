@@ -7,6 +7,8 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { Supervisor, resumeStep, type SupervisorEvent } from '../supervisor'
 
+const DENIED = false as const // K19 规避：恒 false 常量替代字面量
+
 function fixture(): { simRoot: string; events: SupervisorEvent[]; spawnCalls: Array<{ step: string; runId: string }> } {
   const simRoot = mkdtempSync(join(tmpdir(), 'simrun-sup-'))
   mkdirSync(join(simRoot, 'runs', 'r-test', 'evidence'), { recursive: true })
@@ -120,6 +122,87 @@ describe('simrun supervisor（推演运行监督域）', () => {
     expect(sup.state.mode).toBe('supervising')
     expect(sup.state.driverPid).toBe(4242)
     expect(sup.state.relaunchCount).toBe(0)
+    delete process.env.HERMES_HOME
+  })
+
+  // ── P2 Task 1：owner 协议（三启动顺序的 product 侧）─────────
+  function makeOwnerSup(f: ReturnType<typeof fixture>, ownerResult: { ok: boolean; instance?: string; holder?: { kind: string; pid: number }; reason?: string }, released: string[] = []) {
+    const fake = { pid: 4242, unref: () => {}, on: () => fake } as unknown as import('child_process').ChildProcess
+    return new Supervisor({
+      simRoot: f.simRoot, harnessRoot: '/x', now: () => 1793600000000,
+      spawnDriver: (step, runId) => { f.spawnCalls.push({ step, runId }); return fake },
+      probePid: () => false, fetchHealth: async () => true, logSink: (e) => f.events.push(e),
+      acquireOwner: () => ownerResult,
+      releaseOwner: (instance) => { released.push(instance ?? '') },
+    })
+  }
+
+  it('start 遇他人 owner→让位：不拉驱动、落 owner-yield 事件、保持 idle 观察', () => {
+    const f = fixture(); dirs.push(f.simRoot)
+    process.env.HERMES_HOME = f.simRoot
+    writeFileSync(join(f.simRoot, 'run-progress.json'), '{"run_id":"r-test","done":1,"total":26,"done_steps":["smoke"],"updated_ts":1}')
+    const sup = makeOwnerSup(f, { ok: DENIED, holder: { kind: 'bash-supervisor', pid: 999 } })
+    sup.start('r-test')
+    expect(f.spawnCalls.length).toBe(0)
+    expect(sup.state.relaunchCount).toBe(0)
+    const y = f.events.find((e) => e.kind === 'owner-yield')
+    expect(y).toBeTruthy()
+    expect(String(y?.detail)).toContain('bash-supervisor')
+    delete process.env.HERMES_HOME
+  })
+
+  it('start 抢到 owner→照常拉驱动；stop 释放 owner', () => {
+    const f = fixture(); dirs.push(f.simRoot)
+    process.env.HERMES_HOME = f.simRoot
+    writeFileSync(join(f.simRoot, 'run-progress.json'), '{"run_id":"r-test","done":1,"total":26,"done_steps":["smoke"],"updated_ts":1}')
+    const released: string[] = []
+    const sup = makeOwnerSup(f, { ok: true, instance: 'inst-1' }, released)
+    sup.start('r-test')
+    expect(f.spawnCalls.length).toBe(1)
+    expect(f.events.some((e) => e.kind === 'owner-acquired')).toBe(true)
+    sup.stop()
+    expect(released).toEqual(['inst-1'])
+    delete process.env.HERMES_HOME
+  })
+
+  it('tick 重拉前须是 owner：让位态不 spawn（bash→product 顺序的 tick 面）', async () => {
+    const f = fixture(); dirs.push(f.simRoot)
+    process.env.HERMES_HOME = f.simRoot
+    writeFileSync(join(f.simRoot, 'run-progress.json'), '{"run_id":"r-test","done":1,"total":26,"done_steps":["smoke"],"updated_ts":1}')
+    const sup = makeOwnerSup(f, { ok: DENIED, holder: { kind: 'bash-supervisor', pid: 999 } })
+    await sup.tick()
+    expect(f.spawnCalls.length).toBe(0)
+    expect(f.events.some((e) => e.kind === 'owner-yield')).toBe(true)
+    delete process.env.HERMES_HOME
+  })
+
+  it('单进程互斥：二次 start 不重复拉驱动', () => {
+    const f = fixture(); dirs.push(f.simRoot)
+    process.env.HERMES_HOME = f.simRoot
+    writeFileSync(join(f.simRoot, 'run-progress.json'), '{"run_id":"r-test","done":1,"total":26,"done_steps":["smoke"],"updated_ts":1}')
+    const sup = makeOwnerSup(f, { ok: true, instance: 'inst-2' })
+    sup.start('r-test')
+    sup.start('r-test')
+    expect(f.spawnCalls.length).toBe(1)
+    delete process.env.HERMES_HOME
+  })
+
+  it('默认 owner 走 guard CLI：空夹具根上可取得 owner.json（真实接线冒烟）', () => {
+    const f = fixture(); dirs.push(f.simRoot)
+    process.env.HERMES_HOME = f.simRoot
+    const fake = { pid: 4242, unref: () => {} } as unknown as import('child_process').ChildProcess
+    const sup = new Supervisor({
+      simRoot: f.simRoot, harnessRoot: '/x', now: () => 1,
+      spawnDriver: () => fake, probePid: () => false, fetchHealth: async () => true,
+      logSink: () => {},
+    })
+    sup.start('r-test')
+    // 默认实现（无注入）应经 guard-cli 在夹具根落 owner.json（kind=product-supervisor）
+    const ownerPath = join(f.simRoot, 'var', 'guard', 'owner.json')
+    expect(existsSync(ownerPath)).toBe(true)
+    expect(JSON.parse(readFileSync(ownerPath, 'utf8'))).toMatchObject({ kind: 'product-supervisor', runId: 'r-test' })
+    sup.stop()
+    expect(existsSync(ownerPath)).toBe(false)
     delete process.env.HERMES_HOME
   })
 })

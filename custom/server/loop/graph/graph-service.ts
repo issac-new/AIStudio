@@ -16,12 +16,22 @@
 // - replayRun 为 UI 回放数据层（P2 用）
 // - 本模块不含 HTTP；P1 装配 Koa 时由 controllers 薄壳调用
 
+import { randomUUID } from 'node:crypto'
 import type {
   GraphDef, GraphInstance, GraphStatus, StateValues, GraphEvent, GraphDeps,
 } from './types'
 import { GraphRuntime } from './graph-runtime'
 import { CheckpointManager } from './checkpoint-manager'
 import type { EventLogStore, GraphLogEvent, StoredCheckpoint } from './event-log-store'
+
+/**
+ * 新 run/fork 的 id 后缀（node:crypto randomUUID）。
+ * 模块级函数而非内联，便于阅读与将来按 runId 形态做统计；无注入位——UUID 语义
+ * 就是不可预测（测试断言形态而非具体值）。
+ */
+function newRunSuffix(): string {
+  return randomUUID()
+}
 
 export interface GraphServiceOptions {
   eventLog: EventLogStore
@@ -47,7 +57,6 @@ interface RunRecord {
 export class GraphService {
   private graphs = new Map<string, GraphDef>()
   private runs = new Map<string, RunRecord>()
-  private seqCounters = new Map<string, number>()
   private listeners: Array<(e: GraphEvent) => void> = []
   private checkpointManager: CheckpointManager
 
@@ -107,9 +116,10 @@ export class GraphService {
       return { runId, instance: rec.instance }
     }
 
-    const seq = (this.seqCounters.get(graphId) ?? 0) + 1
-    this.seqCounters.set(graphId, seq)
-    const newRunId = `run-${graphId}-${seq}`
+    // 新 run 用 UUID（P1 Task 8）：进程内序号在双 service 同 event log 重建后归零
+    // 复用旧 runId（P0 审查实锤——撞既有日志流/串图）。旧 run-<graph>-<seq> 记录
+    // 仍可 rebuild/resume（rebuildRegistryFromLog 按 runId 逐流恢复，与生成规则无关）。
+    const newRunId = `run-${graphId}-${newRunSuffix()}`
     const runtime = this.makeRuntime(newRunId)
     const instance = await runtime.start(def, newRunId, initialState)
     this.runs.set(newRunId, {
@@ -146,9 +156,8 @@ export class GraphService {
     const rec = this.runs.get(runId)
     if (!rec) throw new Error(`Run not found: ${runId}`)
 
-    const seq = (this.seqCounters.get(rec.graphId) ?? 0) + 1
-    this.seqCounters.set(rec.graphId, seq)
-    const forkedId = `run-${rec.graphId}-fork-${seq}`
+    // fork 同 UUID 化（P1 Task 8，同 startRun 的重建复用缺陷面）
+    const forkedId = `run-${rec.graphId}-fork-${newRunSuffix()}`
     const forkedCheckpoint = await this.checkpointManager.fork(runId, superStep, forkedId)
 
     const ts = new Date().toISOString()

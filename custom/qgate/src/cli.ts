@@ -46,6 +46,7 @@ commands:
   extract-openapi <openapi.json> [--out <file>]
                                       OpenAPI 3.0.x JSON → contract 期望契约（kind:api，子集外退出码 3）
   release-report [--out <file>]       生成发布证据包（md + json）
+    [--require-pass] [--no-cache] [--since <ms>]  严格准出面（P1 Task 9）
   init                                在当前项目创建 .qgate/ 骨架`
 
 function fail(msg: string): never {
@@ -124,7 +125,7 @@ async function main(): Promise<void> {
   if (!loaded) fail(`no .qgate/ directory in ${workspace} — run 'qgate init' first`)
   const paths = storePaths(loaded.qgateDir)
   const profile = findProfile(loaded.profiles, loaded.config.profile)
-  const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile)
+  const resolved = resolveProfile(loaded.gates, profile, loaded.config.profile, loaded.config.enableGates)
   const enabledGates = loaded.gates.filter((g) => resolved.enabled.get(g.metadata.id) === true)
 
   // ── R5 配置生命周期（templates/inspect/leftovers/update；上游本地方言：
@@ -171,7 +172,7 @@ async function main(): Promise<void> {
   }
 
   if (cmd === 'leftovers') {
-    const known = new Set(['qgate.yaml', 'state.json', 'hooks.log', 'stop-state.json', 'release-report.md', 'release-report.json', 'junit-report.xml', 'baseline.json', '.gitignore'])
+    const known = new Set(['qgate.yaml', 'state.json', 'hooks.log', 'stop-state.json', 'release-report.md', 'release-report.json', 'junit-report.xml', 'baseline.json', '.gitignore', 'release-gate.json', 'release-gate-evidence.jsonl'])
     const reservedDirs = new Set(['runs', 'evidence', 'risks', 'exceptions', 'cache', 'registers', 'observations', 'gates', 'profiles'])
     const leftovers: string[] = []
     try {
@@ -242,6 +243,11 @@ async function main(): Promise<void> {
       const target = rest[0]
       const triggerArg = flag(rest, '--trigger') ?? 'task_close'
       const trigger = (TRIGGERS as string[]).includes(triggerArg) ? (triggerArg as Trigger) : 'task_close'
+      // --require-pass/--no-cache（P1 Task 9，release:gate 消费；缺省行为不变）：
+      // require-pass=任一 verdict 非 PASS（含 CONDITIONAL/WAIVED，不受 policy warn
+      // 降级放行）即 exit 1——普通准出不接受条件判定与豁免；no-cache=跳过缓存读。
+      const requirePass = hasFlag(rest, '--require-pass')
+      const noCache = hasFlag(rest, '--no-cache')
       const changedArg = flag(rest, '--changed')
       const budgetArg = flag(rest, '--budget-ms')
       const budgetMs = budgetArg !== undefined ? Number(budgetArg) : undefined
@@ -278,7 +284,7 @@ async function main(): Promise<void> {
             continue
           }
         }
-        const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed, effectivePolicy: effectivePolicy(spec, resolved) })
+        const result = await runGate({ spec, trigger, workspace, qgateDir: loaded.qgateDir, changedPaths: changed, effectivePolicy: effectivePolicy(spec, resolved), noCache })
         runIds.push(result.run.runId)
         const policy = effectivePolicy(spec, resolved)
         const isBlocking =
@@ -316,6 +322,18 @@ async function main(): Promise<void> {
         process.stdout.write(`evidence archived to docs/delivery-evidence/ (${runIds.length} runs)\n`)
       }
       if (blocking > 0) process.stdout.write(`fix-first: ${FIX_FIRST_DISCIPLINE}\n`)
+      // require-pass 汇总（P1 Task 9）：从 runIds 逐 run 复核 verdict——预算耗尽路径
+      // 的 run 也在 runIds 里，判定面一致（非 PASS 即违规）。
+      if (requirePass) {
+        const nonPass = runIds
+          .map((id) => loadRun(paths, id)?.verdict)
+          .filter((v) => v !== 'PASS')
+        if (nonPass.length > 0) {
+          process.stdout.write(`require-pass: ${nonPass.length} 个 run 非 PASS（${nonPass.join(', ')}）——仅 PASS 可准出\n`)
+          process.exit(1)
+          return
+        }
+      }
       process.exit(blocking > 0 ? 1 : 0)
       return
     }
@@ -611,7 +629,19 @@ async function main(): Promise<void> {
     }
 
     case 'release-report': {
-      const data = buildReleaseReport(loaded)
+      // 严格准出（P1 Task 9）：--require-pass/--no-cache/--since <epochMs> 任一在场即
+      // 计算 strict 违规面；缺省行为（unresolved 阻断）与既往完全一致。
+      const strictOpts = hasFlag(rest, '--require-pass') || hasFlag(rest, '--no-cache') || flag(rest, '--since') !== undefined
+        ? {
+            requirePass: hasFlag(rest, '--require-pass'),
+            noCache: hasFlag(rest, '--no-cache'),
+            since: flag(rest, '--since') !== undefined ? Number(flag(rest, '--since')) : undefined,
+          }
+        : undefined
+      if (strictOpts?.since !== undefined && (!Number.isFinite(strictOpts.since) || strictOpts.since <= 0)) {
+        fail('--since must be a positive epoch-ms number')
+      }
+      const data = buildReleaseReport(loaded, strictOpts)
       const md = renderReleaseReportMd(data)
       const outFile = flag(rest, '--out') ?? resolve(loaded.qgateDir, 'release-report.md')
       mkdirSync(resolve(outFile, '..'), { recursive: true })
@@ -620,7 +650,11 @@ async function main(): Promise<void> {
       process.stdout.write(`release evidence package written: ${outFile} (+ .json)\n`)
       const blocking = data.unresolved.length
       for (const u of data.unresolved) process.stdout.write(`  unresolved: ${u}\n`)
-      process.exit(blocking > 0 ? 1 : 0)
+      if (data.strict) {
+        for (const v of data.strict.violations) process.stdout.write(`  strict: ${v}\n`)
+        if (data.strict.violations.length === 0) process.stdout.write('  strict: pass (require-pass/no-cache/since 全满足)\n')
+      }
+      process.exit(blocking > 0 || (data.strict?.violations.length ?? 0) > 0 ? 1 : 0)
       return
     }
 

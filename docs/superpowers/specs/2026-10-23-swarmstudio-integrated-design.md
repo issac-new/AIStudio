@@ -1450,6 +1450,10 @@ npm run serve
 | 运行面新增模块 | 未逐项纳入本文，避免把未验证实现写成稳定契约 | 以代码、测试和专题文档为准 |
 | 任务模型读投影（2026-11-04 W3；W4 补写侧） | taskmodel v1 只读派生（kanban-task-fast 详情→schemaVersion/userGoal/inputRefs/artifactRefs/runs/conversation）；W4 起补丁 750 在 run 开启（claim CAS）时写 input_manifest（body sha256+附件行清单）入 task_runs.metadata，读侧 inputVersions 据实为 true | 读投影 fail-soft（缺字段 null 不猜）；宿主运行时未部署补丁 750 前，旧 runtime 认领的 run 仍无 manifest（inputVersions=false 是真实读数——生效三层：仓内已合、部署与网关重启归运维面） |
 | 执行记录关联面（2026-11-04 W3；W4 补生产者） | ExecutionRecord v2 增可选 traceId/stepId/workflowVersion/promptVersion/inputRef/outputRef/retryCount/approvalId；/api/harness/execution-join 四源归并（记录/审计/批单/结果投影）；W4 起 traceId 兜底=sessionId（otel 同口径，只兜底不覆盖显式值）、run-manifest 落账置 ambient 关联（promptVersion=promptHash 生产者） | v1 旧档缺字段=未知不猜；单源缺席 available:false 不得 500；显式关联不得被兜底覆盖 |
+| 平台身份核心（2026-11-06 平台重写 P0） | Matrix 任意 IdP＋零权限建号：新身份 disabled＋空 profiles 不签 JWT/不存 session；已有账号 origin+MXID 联合绑定（冲突 409）；统一认证四通道拒普通 admin 空授权；路由政策注册表（6 受管 Router）启动双向对账+未登记写面默认 403 | 跨 IdP 认领/pending 得 token/空授权访问/跨 profile 读写四负例守门；harness/eval/orchestrator 写面按后续节奏扩登记（ registries/server/platform-route-policy.ts 头注边界） |
+| 平台执行与证据核心（2026-11-06 P0/P1） | 未知 MCP 硬拒（mcp-unknown）+真实路径沙箱（cwd 解析/canonicalize/悬垂 symlink 检出）+OS 沙箱 attestation（声明可观测化）；EvidenceRecord 九字段+追加式存储；六闸四态（缺完成键=unknown，无 M1 数值成绩） | 未知工具判 read/相对与符号链接越界/空状态首过/类型工具故障退 0 四负例守门；terminal 无证明=unavailable 不可审批放行 |
+| 平台交付核心（2026-11-06 P1） | 注入 manifest v2（逐补丁 sha256/真实状态/严格尾部增量/失败回滚）+部署三态（kept=partial）+统一上游根四入口前置+bundle 身份（build 产 bundleId，release:gate 终检缺席/畸形/过期/复算不符全拦）+release:gate 14 步真跑链（--require-pass/--no-cache/--since，waived/CONDITIONAL/缓存/过期全拦） | failed 混入 applied/deploy kept 报 complete/身份过期过门/任一步非零仍续行四负例守门；release:gate 于本批提交树 14 步全绿 |
+| 平台推演与文档核心（2026-11-06 P2） | SIM_ROOT 单一所有权（owner/driver-lock/resident/clean-lease 四因子判活，link 独占提交，product/bash/relay/sim-launch 四方共守）+烧机收据 digest 真身绑定（最新 fail 覆盖）+clearance 投影跨清场+DISP 末次适用 pairing 同构（泛指不批量解禁）+文档 marker 块生成器（真注册链单一事实源）+催办 routed/sent/received 诚实三态 | 双 owner/旧 pass 盖新 fail/清场删债/伪键回写解禁四反例守门（终审核真）；真烧机与桌面构建未活体=已知开口按 spec 红线不宣称 |
 
 这些边界是实现检查项，不是新的设计原则。
 主要代码锚点为 `zcode-acp-delegate.py` 的 `resolve_engine_bin_env`、

@@ -5,7 +5,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  evaluateEnforcement, ekkoEnforceGateHook, toolCategoryOf, riskOfCall, approvalPointHit,
+  APPROVAL_CLASS_RULES, applyApprovalBridge, evaluateEnforcement, ekkoEnforceGateHook,
+  isUnknownMcpTool, mcpCategoryOf, toolCategoryOf, riskOfCall, approvalPointHit,
 } from '../enforce-gate'
 import { upsertLadder, _useLadderDirForTests, _resetLadderDirForTests, type AutonomyLadderEntry } from '../../autonomyladder/autonomy-ladder'
 import { queryGovEvents, _useGovEventDirForTests, _resetGovEventDirForTests } from '../../govbus/event-log'
@@ -25,6 +26,9 @@ beforeEach(() => {
   _useGovEventDirForTests(govDir)
   delete process.env.HERMES_TOOL_ENFORCE
   delete process.env.HERMES_TOOL_ENFORCE_MODE
+  // P0-5：沙箱/OS 证明 env 只在本文件沙箱用例内显式设置，防跨文件污染
+  delete process.env.HERMES_TOOL_SANDBOX_ROOTS
+  delete process.env.HERMES_TOOL_OS_SANDBOX_PROOF
 })
 
 afterAll(() => {
@@ -32,6 +36,8 @@ afterAll(() => {
   _resetGovEventDirForTests()
   delete process.env.HERMES_TOOL_ENFORCE
   delete process.env.HERMES_TOOL_ENFORCE_MODE
+  delete process.env.HERMES_TOOL_SANDBOX_ROOTS
+  delete process.env.HERMES_TOOL_OS_SANDBOX_PROOF
   rmSync(ladderDir, { recursive: true, force: true })
   rmSync(govDir, { recursive: true, force: true })
 })
@@ -46,18 +52,18 @@ describe('工具类别与风险分档', () => {
     expect(toolCategoryOf('totally_unknown_tool')).toBe('write')
   })
 
-  it('MCP 细分类（H3③）：连接器只读面+动词启发式；判不出仍保守 write', () => {
-    // ① 连接器只读面（github 在目录内）+ 只读动词 → read
+  it('MCP 细分类（H3③+P0-5）：动词启发式一层；判不出仍保守 write', () => {
+    // ① 只读动词 → read（连接器只读目录已删——分类只看动词，审查 M-1）
     expect(toolCategoryOf('mcp__github__list_issues')).toBe('read')
     expect(toolCategoryOf('mcp__algolia__search_index')).toBe('read')
-    // ② 连接器只读面但动词是写 → 动词层 refine（github__create_issue 仍 write）
+    // ② 写动词 → write（同一连接器的写工具不被只读动词误放）
     expect(toolCategoryOf('mcp__github__create_issue')).toBe('write')
     expect(toolCategoryOf('mcp__notion__delete_page')).toBe('write')
-    // ③ 目录外连接器靠动词：只读动词 → read；写动词 → write；执行动词 → exec
+    // ③ 执行动词 → exec
     expect(toolCategoryOf('mcp__airtable__list_records')).toBe('read')
     expect(toolCategoryOf('mcp__airtable__create_record')).toBe('write')
     expect(toolCategoryOf('mcp__jenkins__run_build')).toBe('exec')
-    // ④ 判不出（目录外+非常规动词）→ 保守 write（旧行为不回归）
+    // ④ 判不出（非常规动词）→ 保守 write（toolCategoryOf 口径不回归）
     expect(toolCategoryOf('mcp__weird__do_something')).toBe('write')
     // ⑤ 非 MCP 前缀不受影响
     expect(toolCategoryOf('memory_search')).toBe('read')
@@ -74,6 +80,53 @@ describe('工具类别与风险分档', () => {
     expect(approvalPointHit(fakeLadder, 'terminal_exec', { command: 'sh 生产部署.sh' })).toBe('生产部署')
     expect(approvalPointHit(fakeLadder, 'terminal_exec', { command: 'git push origin main' })).toBe('(高危调用)')
     expect(approvalPointHit(fakeLadder, 'terminal_exec', { command: 'ls' })).toBeNull()
+  })
+})
+
+describe('未知 MCP 硬拒（P0 Task 5）', () => {
+  it('未知动词不再默认 read：判不出即 null（未知）', () => {
+    // merge 不在任何动词表内——不能给未评估动词发只读通行证（连接器目录已删，只看动词）
+    expect(mcpCategoryOf('mcp__github__merge_pull_request')).toBeNull()
+    // 已知动词分类不回归
+    expect(mcpCategoryOf('mcp__github__list_issues')).toBe('read')
+    expect(mcpCategoryOf('mcp__github__create_issue')).toBe('write')
+    expect(mcpCategoryOf('mcp__jenkins__run_build')).toBe('exec')
+  })
+
+  it('isUnknownMcpTool：mcp__ 前缀且动词启发式判不出；已知动词与非 MCP 名不算', () => {
+    expect(isUnknownMcpTool('mcp__weird__do_something')).toBe(true)
+    expect(isUnknownMcpTool('mcp__github__merge_pull_request')).toBe(true)
+    expect(isUnknownMcpTool('mcp__github__list_issues')).toBe(false)
+    expect(isUnknownMcpTool('mcp__airtable__run_script')).toBe(false)  // exec 动词命中
+    expect(isUnknownMcpTool('read_file')).toBe(false)                  // 非 MCP 工具
+    expect(isUnknownMcpTool('mcp_some_tool')).toBe(false)              // 非 mcp__ 前缀，仍走保守 write
+  })
+
+  it('执法门硬拒未知 MCP：bypass 档也拦，规则 mcp-unknown；已知 read 工具同档不受影响', () => {
+    const bypassEnv = { masterOn: true, globalMode: 'auto' as const, ladderOf }
+    // auto 档本会放行 write 类——未知 MCP 仍拦（硬边界先于档位链）
+    expect(evaluateEnforcement('mcp__weird__do_something', {}, 'p1', bypassEnv))
+      .toMatchObject({ enforcing: true, allow: false, rule: 'mcp-unknown' })
+    // 对照：已知 read 工具同档正常放行（不误伤合法连接器工具）
+    expect(evaluateEnforcement('mcp__github__list_issues', {}, 'p1', bypassEnv))
+      .toMatchObject({ enforcing: true, allow: true, rule: 'mode-pass' })
+  })
+
+  it('身份 allowlist 显式覆盖也拦不住未知 MCP（mcp-unknown 先于身份链）', () => {
+    const v = evaluateEnforcement('mcp__weird__do_something', {}, 'p1', {
+      masterOn: true,
+      userId: 'alice',
+      identityOf: () => ({ id: 'aid-9', name: 'alice', toolAllowlist: ['mcp__weird__do_something'] }),
+      ladderOf,
+    })
+    expect(v).toMatchObject({ enforcing: true, allow: false, rule: 'mcp-unknown' })
+  })
+
+  it('mcp-unknown 不在审批类规则集，审批桥不放行（不可经普通审批放行）', () => {
+    expect(APPROVAL_CLASS_RULES.has('mcp-unknown')).toBe(false)
+    const deny = evaluateEnforcement('mcp__weird__do_something', {}, 'p1', { masterOn: true, globalMode: 'auto', ladderOf })
+    const bridged = applyApprovalBridge(deny, { approved: true })
+    expect(bridged).toMatchObject({ allow: false, rule: 'mcp-unknown' })
   })
 })
 

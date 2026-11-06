@@ -21,10 +21,12 @@ import { randomBytes } from 'crypto'
 import { atomicWriteText } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 
-export type GovEventDomain = 'quality' | 'security' | 'cost' | 'approval' | 'autonomy' | 'system'
+export type GovEventDomain = 'quality' | 'security' | 'cost' | 'approval' | 'autonomy' | 'sandbox' | 'system'
 export type GovEventSeverity = 'info' | 'warn' | 'high'
 
-export const GOV_EVENT_DOMAINS: readonly GovEventDomain[] = ['quality', 'security', 'cost', 'approval', 'autonomy', 'system']
+// sandbox 域（P1 Task 1）：沙箱执行面的观测事件（非拒绝的可见性留痕，如相对路径
+// 无解析基准放行）——与 security 域的拒绝留痕分面，避免告警流被观测噪音稀释。
+export const GOV_EVENT_DOMAINS: readonly GovEventDomain[] = ['quality', 'security', 'cost', 'approval', 'autonomy', 'sandbox', 'system']
 export const GOV_EVENT_SEVERITIES: readonly GovEventSeverity[] = ['info', 'warn', 'high']
 
 export interface GovEvent {

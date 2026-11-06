@@ -7,13 +7,29 @@
 //
 // 用法：npm run release:packages [-- --dry-run]（dry-run 只打印计划不写盘）
 
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const DRY = process.argv.includes('--dry-run')
+
+// 发布准出前置（P1 Task 9）：实际写包前跑 release:gate（真实执行链：qgate 构建→
+// 全量测试门→评测门→启用门池→类型双门→build:full→严格证据报告），非零即停——
+// 不再把未过准出的源码包落盘。dry-run 只打印计划，不执行准出（如实标注）。
+if (DRY) {
+  console.log('[release:packages] dry-run：仅打印打包计划，未执行 release:gate 准出')
+} else {
+  const gate = spawnSync(process.execPath, [resolve(ROOT, 'scripts/platform/release/release-gate.mjs')], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  })
+  if (gate.status !== 0) {
+    console.error(`[release:packages] release:gate 未通过（exit=${gate.status}）——不写包。`)
+    process.exit(gate.status ?? 1)
+  }
+}
 
 const manifest = JSON.parse(readFileSync(resolve(ROOT, 'RELEASE-MANIFEST.json'), 'utf8'))
 const outDir = resolve(ROOT, manifest.packaging.outputDir)

@@ -24,6 +24,8 @@ export function createCockpitFilterSlice(deps: FilterSliceDeps) {
   const { collapsed, midTopCollapsed, midBottomCollapsed, timelineActorFilter, filters, searchQuery,
     sessionSearchCache: _sessionSearchCache, sessionSearching: _sessionSearching, attentionTaskIds: _attentionTaskIds,
     workspaceMode, maximized, selectedGraphNodeIds, focusedGraphNodeId } = deps
+  // 搜索防抖 timer：随 runSearch/clearSearch 一起拆入本切片（拆分前在 cockpit store 闭包内）
+  let _searchTimer: ReturnType<typeof setTimeout> | undefined
   // ── 工作区/折叠/筛选 ──
   function toggleCollapsed(col: ColumnKey) { collapsed.value[col] = !collapsed.value[col] }
   function toggleMidTop() { midTopCollapsed.value = !midTopCollapsed.value }

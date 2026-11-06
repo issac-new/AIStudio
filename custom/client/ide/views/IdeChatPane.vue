@@ -72,8 +72,6 @@ import {
   type OpenSubagentStreamDetail,
 } from '@/utils/hermes/subagent-stream'
 import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
-import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
-import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { isSessionModelInvalid, firstAvailableModel } from '../utils/modelInvalid'
 import { useCockpitStore } from '@/custom/shared/store/cockpit'
 import IdePlanFloat from '../components/IdePlanFloat.vue'
@@ -92,7 +90,6 @@ import { IDE_LOCAL_TEXT, ideLocaleOf } from '../i18n'
 import IdeActivityInbox from './IdeActivityInbox.vue'
 import IdeWorktreeBadge from './IdeWorktreeBadge.vue'
 import IdeGoalBudgetFloat from './IdeGoalBudgetFloat.vue'
-import { useIdeSessionHooks } from '../composables/useIdeSessionHooks'
 import { useIdeBoot } from '../composables/useIdeBoot'
 import { useAuthedMediaRewrite } from '../utils/authedMedia'
 import { resolveBootSession } from '../utils/sessionBoot'
@@ -175,6 +172,14 @@ const {
   labels,
   t,
   locale,
+  // 模板直引的会话钩子/工具轨迹/工作区根：由 useIdeChatPane 统一调用并透出
+  //（拆分前组件里缺失这些绑定，模板引用在运行时为 undefined）
+  recap,
+  dismissRecap,
+  flaggedSubagents,
+  toolTraceVisible,
+  toggleToolTraceVisible,
+  root,
 } = useIdeChatPane()
 </script>
 

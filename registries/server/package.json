@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "comment": "显式声明 CJS(无 type:module):overlay 根 package.json 的 type:module 会泄漏到注册表 TS 文件,而服务端 ts-node 用 CJS require 加载(platform-route-policy 被 route-guard 值导入即 ERR_REQUIRE_ESM——P2 Task 5 真启动冒烟逮住)。与 custom/server、custom/platform 的同形屏蔽。"
+}

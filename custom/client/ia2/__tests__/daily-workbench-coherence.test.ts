@@ -141,7 +141,14 @@ vi.mock('vue-i18n', () => ({
   createI18n: () => ({ global: { t: (k: string) => k, locale: 'zh' } }),
 }))
 vi.mock('@/stores/hermes/app', () => ({ useAppStore: () => ({ connected: true }) }))
-vi.mock('@/api/client', () => ({ getStoredUsername: () => 'tester' }))
+// request 补齐（P0 Task 4，2026-11-05）：审批面板经 approvals API 真调 request；
+// 此前 mock 缺 request 时，fetchPendingApprovals（改 async 后）先产出被拒 promise、
+// 同数组内旧式 fetchApprovalHistory 仍同步抛——Promise.all 未及挂 handler，
+// 拒绝 promise 成孤儿（unhandled rejection）。给个 fail-soft 解析值，读面自然落空态。
+vi.mock('@/api/client', () => ({
+  getStoredUsername: () => 'tester',
+  request: vi.fn(async () => ({ ok: true })),
+}))
 
 // ── 重组件桩（对齐 loop-workflow-boundary.test.ts；中栏画布只留可断言薄壳）──
 vi.mock('@/custom/ia2/workflow', () => ({

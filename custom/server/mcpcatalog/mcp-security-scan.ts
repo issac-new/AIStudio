@@ -65,7 +65,8 @@ const SECRET_SHAPES: Array<[RegExp, string]> = [
 
 const LOOPBACK_RE = /^(?:localhost|127\.0\.0\.1|::1|\[::1\]|.*\.local)$/i
 
-/** 内置常见连接器名（与 enforce-gate MCP_READ_CONNECTORS 同源子集 + 本机自管前缀）。 */
+/** 内置常见连接器名（常见 MCP 目录的人工判读子集 + 本机自管前缀；与执法门分类
+ *  无联动——enforce 侧连接器只读目录已删，分类只看动词）。 */
 const BUILTIN_KNOWN_NAMES = new Set([
   'ekko-studio-api', 'ekko-studio-browser', 'ekko-studio-desktop', 'ekko-studio',
   'github', 'gitlab', 'notion', 'confluence', 'slack', 'figma', 'linear',

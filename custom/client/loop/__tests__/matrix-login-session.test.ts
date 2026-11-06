@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => ({
   findByMatrixUserId: vi.fn(),
   createFromMatrix: vi.fn(),
   syncMatrixMetadata: vi.fn(),
+  listUserProfiles: vi.fn(() => []),
+  replaceUserProfiles: vi.fn(),
+  countActiveSuperAdmins: vi.fn(() => 1),
+  updateMatrixUserAccess: vi.fn(),
 }))
 
 vi.mock('../../../server/matrix/session-store', () => ({ saveMatrixSession: mocks.saveMatrixSession }))
@@ -59,7 +63,7 @@ vi.mock(`${UPSTREAM}/public/users`, () => ({
   DEFAULT_USERNAME: 'admin',
   DEFAULT_PASSWORD: '123456',
   bootstrapDefaultSuperAdmin: vi.fn(),
-  countActiveSuperAdmins: vi.fn(() => 1),
+  countActiveSuperAdmins: mocks.countActiveSuperAdmins,
   countUsers: vi.fn(() => 1),
   createFromMatrix: mocks.createFromMatrix,
   createUser: vi.fn(),
@@ -68,11 +72,12 @@ vi.mock(`${UPSTREAM}/public/users`, () => ({
   findUserById: vi.fn(),
   findUserByUsername: vi.fn(),
   getUserAvatar: vi.fn(),
-  listUserProfiles: vi.fn(() => []),
+  listUserProfiles: mocks.listUserProfiles,
   listUsers: vi.fn(() => []),
-  replaceUserProfiles: vi.fn(),
+  replaceUserProfiles: mocks.replaceUserProfiles,
   setUserAvatar: vi.fn(),
   syncMatrixMetadata: mocks.syncMatrixMetadata,
+  updateMatrixUserAccess: mocks.updateMatrixUserAccess,
   updateMatrixUserMetadata: vi.fn(),
   updateUser: vi.fn(),
   updateUsername: vi.fn(),
@@ -112,6 +117,9 @@ beforeEach(() => {
   mocks.getMatrixUserInfo.mockResolvedValue({ displayName: 'Swarm', avatarUrl: '' })
   mocks.findByMatrixUserId.mockReturnValue(USER)
   mocks.issueUserJwt.mockResolvedValue('jwt-app-token')
+  mocks.listUserProfiles.mockReturnValue([])
+  mocks.saveMatrixSession.mockImplementation(() => {})
+  mocks.countActiveSuperAdmins.mockReturnValue(1)
 })
 
 const LOGIN_BODY = {
@@ -160,10 +168,106 @@ describe('matrixLogin → saveMatrixSession（patch 012）', () => {
     expect(ctx.status).toBeUndefined()
   })
 
+  it('JWT 签发失败返回 500 错误体，不向上抛出未捕获异常', async () => {
+    mocks.issueUserJwt.mockRejectedValue(new Error('JWT signing unavailable'))
+    const ctx = makeCtx(LOGIN_BODY)
+
+    await expect(matrixLogin(ctx as never)).resolves.toBeUndefined()
+
+    expect(ctx.status).toBe(500)
+    expect(ctx.body).toEqual({ error: 'JWT signing unavailable' })
+  })
+
   it('老用户（syncMatrixMetadata 路径）同样落盘', async () => {
     const ctx = makeCtx(LOGIN_BODY)
     await matrixLogin(ctx as never)
     expect(mocks.syncMatrixMetadata).toHaveBeenCalledWith(USER.id, expect.objectContaining({ lastLoginAt: expect.any(Number) }))
     expect(mocks.saveMatrixSession).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('matrixLogin 零权限供应与来源绑定', () => {
+  it('新 Matrix 身份返回待激活，不授权、不保存 session、不签 JWT', async () => {
+    const pending = { ...USER, role: 'admin', status: 'disabled' }
+    mocks.findByMatrixUserId.mockReturnValueOnce(null).mockReturnValue(pending)
+    mocks.createFromMatrix.mockReturnValue(pending)
+    const ctx = makeCtx(LOGIN_BODY)
+
+    await matrixLogin(ctx as never)
+
+    expect(ctx.status).toBe(403)
+    expect(ctx.body).toMatchObject({ code: 'ACCOUNT_PENDING_ACTIVATION' })
+    expect(ctx.body).not.toHaveProperty('token')
+    expect(mocks.createFromMatrix).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'admin',
+      status: 'disabled',
+    }))
+    expect(mocks.replaceUserProfiles).not.toHaveBeenCalled()
+    expect(mocks.saveMatrixSession).not.toHaveBeenCalled()
+    expect(mocks.issueUserJwt).not.toHaveBeenCalled()
+  })
+
+  it('零 super_admin 时 pending 返回既有 CLI break-glass 指引', async () => {
+    const pending = { ...USER, role: 'admin', status: 'disabled' }
+    mocks.findByMatrixUserId.mockReturnValueOnce(null).mockReturnValue(pending)
+    mocks.createFromMatrix.mockReturnValue(pending)
+    mocks.countActiveSuperAdmins.mockReturnValue(0)
+    const ctx = makeCtx(LOGIN_BODY)
+
+    await matrixLogin(ctx as never)
+
+    expect(ctx.status).toBe(403)
+    expect(ctx.body).toMatchObject({
+      code: 'ACCOUNT_PENDING_ACTIVATION',
+      error: expect.stringContaining('hermes-web-ui reset-default-login'),
+    })
+    expect(ctx.body).not.toHaveProperty('token')
+    expect(mocks.saveMatrixSession).not.toHaveBeenCalled()
+    expect(mocks.issueUserJwt).not.toHaveBeenCalled()
+  })
+
+  it('已有 MXID 的 origin 冲突返回 409，且不同步元数据或改绑', async () => {
+    const ctx = makeCtx({ ...LOGIN_BODY, homeserverUrl: 'http://localhost:9000' })
+
+    await matrixLogin(ctx as never)
+
+    expect(ctx.status).toBe(409)
+    expect(ctx.body).toMatchObject({ code: 'MATRIX_IDENTITY_CONFLICT' })
+    expect(ctx.body).not.toHaveProperty('token')
+    expect(mocks.syncMatrixMetadata).not.toHaveBeenCalled()
+    expect(mocks.replaceUserProfiles).not.toHaveBeenCalled()
+    expect(mocks.saveMatrixSession).not.toHaveBeenCalled()
+    expect(mocks.issueUserJwt).not.toHaveBeenCalled()
+  })
+
+  it('active 普通 admin 空 profiles 返回 403，不自动补 default', async () => {
+    mocks.findByMatrixUserId.mockReturnValue({ ...USER, role: 'admin' })
+    mocks.listUserProfiles.mockReturnValue([])
+    const ctx = makeCtx(LOGIN_BODY)
+
+    await matrixLogin(ctx as never)
+
+    expect(ctx.status).toBe(403)
+    expect(ctx.body).toMatchObject({ code: 'PROFILE_GRANT_REQUIRED' })
+    expect(ctx.body).not.toHaveProperty('token')
+    expect(mocks.syncMatrixMetadata).not.toHaveBeenCalled()
+    expect(mocks.replaceUserProfiles).not.toHaveBeenCalled()
+    expect(mocks.saveMatrixSession).not.toHaveBeenCalled()
+    expect(mocks.issueUserJwt).not.toHaveBeenCalled()
+  })
+
+  it('active 普通 admin 获得 profile 后才保存 session 并签 JWT', async () => {
+    mocks.findByMatrixUserId.mockReturnValue({ ...USER, role: 'admin' })
+    mocks.listUserProfiles.mockReturnValue([{ profile_name: 'swarm' }])
+    const ctx = makeCtx(LOGIN_BODY)
+
+    await matrixLogin(ctx as never)
+
+    expect(ctx.status).toBeUndefined()
+    expect(ctx.body).toMatchObject({ token: 'jwt-app-token' })
+    expect(mocks.syncMatrixMetadata).toHaveBeenCalledOnce()
+    expect(mocks.saveMatrixSession).toHaveBeenCalledOnce()
+    expect(mocks.issueUserJwt).toHaveBeenCalledOnce()
+    expect(mocks.replaceUserProfiles).not.toHaveBeenCalled()
   })
 })

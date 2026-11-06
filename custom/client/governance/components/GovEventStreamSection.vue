@@ -5,7 +5,7 @@
 import { onMounted, ref } from 'vue'
 import { fetchGovEvents, type GovEventDomainDto, type GovEventDto, type GovEventSeverityDto } from '@/custom/governance/api/incident-suite'
 
-const DOMAINS: GovEventDomainDto[] = ['quality', 'security', 'cost', 'approval', 'autonomy', 'system']
+const DOMAINS: GovEventDomainDto[] = ['quality', 'security', 'cost', 'approval', 'autonomy', 'sandbox', 'system']
 const SEVERITIES: { key: GovEventSeverityDto | ''; label: string }[] = [
   { key: '', label: '全部级别' },
   { key: 'info', label: 'info+' },
@@ -13,7 +13,7 @@ const SEVERITIES: { key: GovEventSeverityDto | ''; label: string }[] = [
   { key: 'high', label: '仅 high' },
 ]
 const DOMAIN_LABELS: Record<GovEventDomainDto, string> = {
-  quality: '质量', security: '安全', cost: '成本', approval: '审批', autonomy: '自治', system: '系统',
+  quality: '质量', security: '安全', cost: '成本', approval: '审批', autonomy: '自治', sandbox: '沙箱', system: '系统',
 }
 
 const activeDomains = ref<Set<GovEventDomainDto>>(new Set(DOMAINS))

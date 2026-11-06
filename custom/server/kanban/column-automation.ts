@@ -14,13 +14,15 @@
 //
 // 本模块=纯匹配器+配置加载（执行编排 drain 依赖 loop 会话域，列后续）。
 // 配置单一事实源：runtime/roster/columns.yaml（HERMES_COLUMNS_FILE 覆盖；坏文件回空）。
-// 路径多候选探测（P-E）：打包产物下 __dirname 不指向源码树，见 resolveRosterFile。
+// 路径多候选探测（P-E）：打包产物下 __dirname 不指向源码树，见 lib/runtime-resources。
 // 配置校验（P-D(d)）：provider 限词表（zcode）；id/role/specialist 限长 + 限字符集
 // （[A-Za-z0-9._-]）——这些字段会拼进派单文本，宽松放行即 mention/指令注入面。
 // 违规 step 拼文本前由 column-dispatch 硬拦（REST 400 配置错误），加载时 warn 不静默。
 import { readFileSync, existsSync, statSync } from 'fs'
 import { resolve } from 'path'
-import { resolveRosterFile } from '../zcode/squad-protocol'
+// P1 Task 7：多候选探测收敛到 lib/runtime-resources 单一解析器（roster 族历史
+// import 面保留 wrapper；本模块直连事实源）。
+import { resolveRuntimeResource } from '../lib/runtime-resources'
 
 export const AUTOMATION_TIMINGS = ['entry', 'exit', 'both'] as const
 export type AutomationTiming = (typeof AUTOMATION_TIMINGS)[number]
@@ -106,7 +108,7 @@ let cachedMtimeMs = -1
 export function columnsFilePath(): string {
   const env = process.env.HERMES_COLUMNS_FILE?.trim()
   if (env) return resolve(env)
-  return resolveRosterFile('roster/columns.yaml') ?? resolve(__dirname, '../../../runtime/roster/columns.yaml')
+  return resolveRuntimeResource('roster/columns.yaml') ?? resolve(__dirname, '../../../runtime/roster/columns.yaml')
 }
 
 export function loadColumnAutomations(): Record<string, ColumnAutomation> {

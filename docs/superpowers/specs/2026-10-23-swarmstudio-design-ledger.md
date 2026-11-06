@@ -79,6 +79,7 @@
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
 | yuan skill 模块 | v2.95.0 | `skills/swarm-yuan/CHANGELOG.md` |
 | 整体源码包 | 1.0.0-overlay | 仓根 `package.json` 与发布清单 |
+| 平台重写批次（2026-11-05~06） | P0 身份/执行/证据＋P1 注入/交付/发布门＋P2 推演/文档三域核心；补丁 755/756 两枚平台载体；分文未升模块版本号（随下个发布轮进位） | `docs/superpowers/specs/2026-11-05-platform-rewrite-design.md` 及其三段「实施验证」小节 |
 
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 不得把其中任意一个字段单独改写成另外两个字段。

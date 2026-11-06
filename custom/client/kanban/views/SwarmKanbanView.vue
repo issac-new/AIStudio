@@ -491,7 +491,9 @@ async function handleBulkUnblock() {
 }
 
 /** 催办 owner 动态路由（2026-10-22 P0 接线批）：对选中卡逐张解析催办对象——
- *  assignee 优先、板 team 回落、双空显式无人态（run21/22 错侧催办产品化①）。 */
+ *  assignee 优先、板 team 回落、双空显式无人态（run21/22 错侧催办产品化①）。
+ *  P2 Task 3 诚实三态：只解析路由、未发送消息（服务端 delivery 契约 routed-only，
+ *  sent/received=null）——提示语不得宣称送达。 */
 async function handleNudge() {
   const keys = Array.from(selectedIds.value)
   if (!keys.length) return
@@ -508,12 +510,12 @@ async function handleNudge() {
     try {
       const d = await nudgeRoute(cardId)
       if (d.route === 'unassigned') unassigned += 1
-      else { routed += 1; message.info(`催办已路由 → ${d.target}${d.route === 'board-team' ? '（板归属）' : ''}：${d.title ?? cardId}`) }
+      else { routed += 1; message.info(`解析催办路由 → ${d.target}${d.route === 'board-team' ? '（板归属）' : ''}：${d.title ?? cardId}；未发送消息`) }
     } catch (err) {
-      message.error(`催办失败 ${cardId}：${err instanceof Error ? err.message : String(err)}`)
+      message.error(`催办解析失败 ${cardId}：${err instanceof Error ? err.message : String(err)}`)
     }
   }
-  if (unassigned > 0) message.warning(`${unassigned} 张卡无负责人且无板归属——先派人再催办`)
+  if (unassigned > 0) message.warning(`${unassigned} 张卡无负责人且无板归属——先派人再催办（未发送消息）`)
   if (routed === 0 && unassigned === 0) message.error('未解析出任何催办对象')
 }
 

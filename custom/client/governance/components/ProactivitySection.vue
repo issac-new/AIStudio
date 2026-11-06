@@ -45,9 +45,11 @@ function goEdit(): void {
   void router?.push(editTarget)
 }
 
-// 介入治理（注意力轴）状态
-const attForm = reactive<AttentionPrefsDto>({
-  quietHours: { startHour: 22, endHour: 8 },
+// 介入治理（注意力轴）状态。嵌套 quietHours 是唯一数据源（P0 Task 8 类型清偿）：
+// 根级不再另存 startHour/endHour 双源；quietHoursEnabled 由 quietHours 是否在案派生。
+const attForm = reactive<AttentionPrefsDto & { quietHoursEnabled: boolean }>({
+  quietHoursEnabled: false,
+  quietHours: null,
   dailyBudget: 8,
   hourlyBudget: 3,
   cooldownMinutes: 30,
@@ -62,6 +64,37 @@ function pct(v: number | null): string {
   return v == null ? '—' : `${(v * 100).toFixed(1)}%`
 }
 
+/** 加载/保存回读同源：以 quietHours 是否在案派生开关，不维护第二份启用状态。 */
+function applyPrefs(prefs: AttentionPrefsDto | undefined): void {
+  if (!prefs) return
+  Object.assign(attForm, prefs)
+  // 键缺席的畸形载荷不得残留旧值（Object.assign 跳过缺席键，须显式归 null）
+  attForm.quietHours = prefs.quietHours ?? null
+  attForm.quietHoursEnabled = prefs.quietHours != null
+}
+
+/** 开关直写唯一数据源：开=确保 quietHours 对象在（缺省 22–8），关=清 null。 */
+function setQuietHoursEnabled(on: boolean): void {
+  attForm.quietHoursEnabled = on
+  attForm.quietHours = on ? attForm.quietHours ?? { startHour: 22, endHour: 8 } : null
+}
+
+// 输入面经这对可写 computed 读写嵌套 quietHours——模板不出现根级字段，杜绝双源复发。
+const quietStart = computed({
+  get: () => attForm.quietHours?.startHour ?? 22,
+  set: (v: number | string) => {
+    setQuietHoursEnabled(true)
+    if (attForm.quietHours) attForm.quietHours.startHour = Number(v)
+  },
+})
+const quietEnd = computed({
+  get: () => attForm.quietHours?.endHour ?? 8,
+  set: (v: number | string) => {
+    setQuietHoursEnabled(true)
+    if (attForm.quietHours) attForm.quietHours.endHour = Number(v)
+  },
+})
+
 async function loadAttention(): Promise<void> {
   try {
     const [p, sc, iv, bp] = await Promise.all([
@@ -71,7 +104,7 @@ async function loadAttention(): Promise<void> {
       fetchBreakpoint().catch(() => null),
     ])
     if (bp) breakpoint.value = bp as BreakpointDto
-    if (p?.prefs) Object.assign(attForm, p.prefs)
+    applyPrefs(p?.prefs)
     if (sc?.scorecard) scorecard.value = sc.scorecard
     if (iv?.interventions) interventions.value = iv.interventions
   } catch {
@@ -82,16 +115,16 @@ async function loadAttention(): Promise<void> {
 async function saveAttention(): Promise<void> {
   try {
     const r = await putAttentionPrefs({
-      quietHours: attForm.quietHours && attForm.startHour !== undefined
-        ? { startHour: Number(attForm.startHour ?? 22), endHour: Number(attForm.endHour ?? 8) }
+      quietHours: attForm.quietHours
+        ? { startHour: Number(attForm.quietHours.startHour), endHour: Number(attForm.quietHours.endHour) }
         : null,
       dailyBudget: Number(attForm.dailyBudget ?? 8),
       hourlyBudget: Number(attForm.hourlyBudget ?? 3),
       cooldownMinutes: Number(attForm.cooldownMinutes ?? 30),
       rejectionBackoffHours: Number(attForm.rejectionBackoffHours ?? 12),
       minScore: Number(attForm.minScore ?? 0.2),
-    } as AttentionPrefsDto)
-    if (r?.prefs) Object.assign(attForm, r.prefs)
+    })
+    applyPrefs(r?.prefs)
     msg.value = '注意力偏好已保存'
     await loadAttention()
   } catch (e) {
@@ -393,9 +426,16 @@ onMounted(() => {
       </div>
       <div class="pa__row">
         <label class="pa__check">安静时段
-          <input class="pa__num" type="number" min="0" max="23" v-model.number="attForm.startHour" :disabled="props.readonly" data-testid="pa-att-start" />
+          <input
+            type="checkbox"
+            data-testid="pa-att-quiet-enabled"
+            :checked="attForm.quietHoursEnabled"
+            :disabled="props.readonly"
+            @change="setQuietHoursEnabled(($event.target as HTMLInputElement).checked)"
+          />
+          <input class="pa__num" type="number" min="0" max="23" v-model.number="quietStart" :disabled="props.readonly || !attForm.quietHoursEnabled" data-testid="pa-att-start" />
           –
-          <input class="pa__num" type="number" min="0" max="23" v-model.number="attForm.endHour" :disabled="props.readonly" data-testid="pa-att-end" />
+          <input class="pa__num" type="number" min="0" max="23" v-model.number="quietEnd" :disabled="props.readonly || !attForm.quietHoursEnabled" data-testid="pa-att-end" />
         </label>
         <label class="pa__check">日预算 <input class="pa__num" type="number" min="0" max="200" v-model.number="attForm.dailyBudget" :disabled="props.readonly" data-testid="pa-att-daily" /></label>
         <label class="pa__check">时预算 <input class="pa__num" type="number" min="0" max="50" v-model.number="attForm.hourlyBudget" :disabled="props.readonly" data-testid="pa-att-hourly" /></label>

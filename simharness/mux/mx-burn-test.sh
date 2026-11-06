@@ -17,9 +17,10 @@
 #
 # 退出码：0=pass / 1=fail / 2=blocked（活体 run 占锁等前置不满足）/ 3=用法错误
 #
-# 产物：$SIM_ROOT/runs/<RUN_ID>/burn-test-receipt.json（含步进、判据、失败行摘录）
+# 产物：$SIM_ROOT/runs/<RUN_ID>/burn-test-receipt.json（schema 2：机制 digest 绑定+
+#      coverage+driver_log_sha256；由 mux/mx-mechanism-receipt.py emit 序列化——P2 Task 2）
 #      $SIM_ROOT/runs/<RUN_ID>/evidence/**（驱动原生证据，与真 run 同构）
-#      .qgate/burn/burn-receipts.jsonl（仓内运行态索引，一行一条；gitignored）
+#      .qgate/burn/burn-receipts.jsonl（仓内运行态索引，一行一条；gitignored；dry-run 不落件）
 set -u
 LC_ALL=C
 
@@ -60,19 +61,32 @@ _preflight() { # 返回 0=可跑；非 0=blocked（原因写全局 BLOCK_REASON�
   [ -f "$HERE/aipay-scenario.sh" ] || { BLOCK_REASON="驱动脚本缺席：$HERE/aipay-scenario.sh"; return 1; }
   bash -n "$HERE/aipay-scenario.sh" 2>/dev/null || { BLOCK_REASON="驱动脚本语法错（bash -n）"; return 1; }
   bash -n "$HERE/mux/run-driver-supervisor.sh" 2>/dev/null || { BLOCK_REASON="监督器语法错（bash -n）"; return 1; }
+  python3 -I -m py_compile "$HERE/mux/mx-mechanism-receipt.py" 2>/dev/null \
+    || { BLOCK_REASON="收据件语法错（py_compile mx-mechanism-receipt.py）"; return 1; }
   curl -s -m 5 "$GATEWAY_HEALTH" >/dev/null 2>&1 || { BLOCK_REASON="gateway 健康检查失败：$GATEWAY_HEALTH"; return 1; }
   return 0
 }
 
+# 机制文件清单根（digest 用）：仓根=HERE 的上一级
+REPO_ROOT="$(cd "$HERE/.." && pwd)"
+RECEIPT_PY="$HERE/mux/mx-mechanism-receipt.py"
+
+# 锁判活走 guard CLI 四因子（P2 Task 2 修复：旧实现读 $LOCK/pid——锁目录内实际文件名
+# 是 info，ls 恒空 → _lock_free 恒真，活体 run 占锁时烧机会与之并发互踩）
+_mg_root=""
+_d="$REPO_ROOT"
+while [ "$_d" != "/" ]; do
+  [ -f "$_d/scripts/platform/runtime/guard-cli.mjs" ] && { _mg_root="$_d"; break; }
+  _d="$(dirname "$_d")"
+done
+MG_CLI="${_mg_root:+$_mg_root/scripts/platform/runtime/guard-cli.mjs}"
 _lock_free() {
-  [ -d "$LOCK" ] || return 0
-  # 锁目录内 pid 文件判活（与 mx_driver_lock_acquire 同源口径：pid 数字真死才视为空锁）
-  local pf pid
-  pf="$(ls "$LOCK"/pid 2>/dev/null | head -1)"
-  [ -n "$pf" ] || return 0
-  pid="$(tr -cd '0-9' < "$pf" | head -c 8)"
-  [ -n "$pid" ] || return 0
-  kill -0 "$pid" 2>/dev/null && return 1 || return 0
+  [ -n "$MG_CLI" ] || { echo "guard-cli.mjs 未找到（锁判活不可用，fail-closed 拒跑）" >&2; return 1; }
+  local st
+  st="$("${MX_GUARD_NODE:-node}" "$MG_CLI" lock-status --sim-root "$SIM" 2>/dev/null)" || return 1
+  # 推演域独占：owner 或驱动锁持有人任一活（四因子）→ 忙；死/无锁 → 空
+  printf '%s' "$st" | jq -e '.driver.alive == true or .owner.alive == true' >/dev/null 2>&1 && return 1
+  return 0
 }
 
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -127,30 +141,17 @@ esac
 
 FAIL_EXCERPT="$(grep -E '^\[mux FAIL |\[ERR\]|unbound variable|Traceback' "$LOG" 2>/dev/null | tail -8 | tr '\n' ' | ' | cut -c1-1200)"
 
-cat > "$RUN_DIR/burn-test-receipt.json" <<EOF
-{
-  "kind": "burn-test-receipt",
-  "schema": 1,
-  "run_id": "$RUN_ID",
-  "until": "$UNTIL",
-  "status": "$ST",
-  "reasons": "${REASONS:-none}",
-  "driver_rc": $DRV_RC,
-  "fail_lines": ${FAIL_LINES:-0},
-  "done_keys": ${DONE_KEYS:-0},
-  "goal_step_reached": ${GOAL_OK:-0},
-  "started_at": $STARTED_AT,
-  "finished_at": $FINISHED_AT,
-  "elapsed_sec": $ELAPSED,
-  "log": "$LOG",
-  "fail_excerpt": "$(printf '%s' "$FAIL_EXCERPT" | sed 's/"/\\"/g')"
-}
-EOF
-
-# 仓内运行态索引（一行一条，供 report/审计侧消费；不参与门禁红绿）
-printf '{"run_id":"%s","until":"%s","status":"%s","finished_at":%s,"elapsed_sec":%s,"reasons":"%s"}\n' \
-  "$RUN_ID" "$UNTIL" "$ST" "$FINISHED_AT" "$ELAPSED" "${REASONS:-none}" \
-  >> "$HERE/../.qgate/burn/burn-receipts.jsonl" 2>/dev/null || true
+# 收据落件走 mx-mechanism-receipt.py emit（P2 Task 2）：schema 2 + 机制 digest 绑定 +
+# coverage + driver_log_sha256，json 序列化替代 shell 拼 JSON（空值场景不再产破损行）
+python3 -I "$RECEIPT_PY" emit \
+  --root "$REPO_ROOT" \
+  --out "$RUN_DIR/burn-test-receipt.json" \
+  --index "$HERE/../.qgate/burn/burn-receipts.jsonl" \
+  --run-id "$RUN_ID" --until "$UNTIL" --status "$ST" \
+  --driver-rc "$DRV_RC" --fail-lines "${FAIL_LINES:-0}" --done-keys "${DONE_KEYS:-0}" \
+  --goal-ok "${GOAL_OK:-0}" --started-at "$STARTED_AT" --finished-at "$FINISHED_AT" \
+  --log "$LOG" --reasons "${REASONS:-none}" --fail-excerpt "$FAIL_EXCERPT" \
+  || echo "WARN: 收据落件失败（rc=$?）——prelaunch ㉛ 会拦，须修复 mx-mechanism-receipt.py"
 
 echo "=== 烧机结果：${ST}（${ELAPSED}s，done 键 ${DONE_KEYS}，FAIL 行 ${FAIL_LINES}）${REASONS:+ 原因=${REASONS}}"
 echo "    收据：$RUN_DIR/burn-test-receipt.json"

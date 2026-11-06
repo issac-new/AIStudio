@@ -705,7 +705,28 @@ describe('⑫b 治理度量五项+承载面审计（差距审计 P5/P8 → run10
     // 计算正本在产品模块（六闸全计口径）
     const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
     expect(metrics).toContain('六闸全计')
-    expect(metrics).toContain("failed ? '打回' : supplement ? '补过' : '首过'")
+  })
+
+  it('四态判定正本=平台证据适配器（P0 Task 6：run-metrics 只消费 gateEvidenceFromState 状态）', () => {
+    const metrics = read(join(HARNESS, '..', 'custom', 'server', 'governance', 'run-metrics.ts'))
+    expect(metrics).toContain("from '../platform/evidence/gate-evidence'")
+    expect(metrics).toContain('gateEvidenceFromState')
+    // 任一闸 unknown → 不产 M1（分母不完整不显成绩）
+    expect(metrics).toContain('unknownGateCount === 0')
+    // 适配器契约在平台 contracts（证据统一四值 pass/fail/unknown/waived）
+    const contract = read(join(HARNESS, '..', 'custom', 'platform', 'contracts', 'evidence.ts'))
+    expect(contract).toContain("'pass' | 'fail' | 'unknown' | 'waived'")
+    const adapter = read(join(HARNESS, '..', 'custom', 'server', 'platform', 'evidence', 'gate-evidence.ts'))
+    expect(adapter).toContain('gateEvidenceFromState')
+  })
+
+  it('gov_report 本轮首过率读 trend 末项（P0 Task 6：unknown 显示 ⬜，不自行拼 0/6）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    expect(lib).toContain('.trend | last | .firstPass')
+    // 禁回归：DTO firstPass 数字 + 渲染侧自拼 /6（unknown 轮会显示假 0/6）
+    expect(lib).not.toContain("jq -r '.firstPass')/6")
+    // unknown 面如实呈现（缺完成键计数可见，不静默）
+    expect(lib).toContain('.unknownGateCount')
   })
 
   it('gov_report 基线对比行（§2.6.5：基线/趋势计算正本=产品 run-metrics，驱动渲染）', () => {
@@ -739,6 +760,71 @@ describe('⑫c run10 前置补（P14/P15 → R26 原子化/R29 全程开启）',
     expect(lib).toContain('archive-commit-failed')
     const scen = read(join(HARNESS, 'aipay-scenario.sh'))
     expect(scen).toContain('gov_archive_commit')
+  })
+
+  it('绊线：gov_archive_commit 回读按 DTO 实际产出对账（禁硬编码 M1 恒验——unknown 轮记假单）', () => {
+    const lib = read(join(MX, 'mx-scenario-lib.sh'))
+    // 禁回归：读回硬编码 grep M1——P0 Task 6 起 unknown 轮（unknownGateCount>0）M1
+    // 不产出，恒验必失败 → 假 archive-commit-failed ISSUE（fix round 1 根因）
+    expect(lib).not.toContain('| grep -qF ",${rfd},M1,"')
+    // 新对账面三件：DTO 逐行对账 + M4 恒在锚 + M1 按 unknownGateCount 条件验证
+    expect(lib).toContain('回读按 DTO 实际产出对账')
+    expect(lib).toContain('逐行对账')
+    expect(lib).toContain('M1 条件对账')
+    expect(lib).toContain('.unknownGateCount')
+  })
+
+  it('行为：unknown 轮 M1 缺席=回读通过对账（不记假 archive-commit-failed）；完整轮 M1 必在场', () => {
+    // 本地中央仓夹具（bare origin + clone），gov_* 服务函数打桩——只验回读对账逻辑。
+    const archive = (dto: string, root: string, runId: string): string => sh(`
+printf 'ISSUE|demo|setup|行为测试夹具\\n' > "$EVID_DIR/issues.log"
+# 中央仓夹具：docs/governance/metrics-log.csv 与 docs/issues/ISSUES-LOG.md 均从
+# 历史在场（与真实 central 仓同形——upsert 与追加不建目录）
+git init -q --bare "$AIPAY_SIM_ROOT/origin.git"
+git clone -q "$AIPAY_SIM_ROOT/origin.git" "$DIRECTOR_CLONE" 2>/dev/null
+git -C "$DIRECTOR_CLONE" config user.email t@t.local
+git -C "$DIRECTOR_CLONE" config user.name t
+mkdir -p "$DIRECTOR_CLONE/docs/governance" "$DIRECTOR_CLONE/docs/issues"
+printf 'date,change,gate,score,ratio,window,source,note\\n' > "$DIRECTOR_CLONE/docs/governance/metrics-log.csv"
+printf '# 推演问题台账（issues.log 归档）\\n' > "$DIRECTOR_CLONE/docs/issues/ISSUES-LOG.md"
+git -C "$DIRECTOR_CLONE" add -A
+git -C "$DIRECTOR_CLONE" commit -q -m init
+git -C "$DIRECTOR_CLONE" branch -M main
+git -C "$DIRECTOR_CLONE" push -q origin main
+gov_report() { :; }
+gov_run_metrics() { cat <<'DTO'
+${dto}
+DTO
+}
+_rc=0; gov_archive_commit || _rc=$?
+echo "rc=$_rc"
+echo "fail_issue=$(grep -c 'archive-commit-failed' "$EVID_DIR/issues.log" || true)"
+_mlog=$(git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null || true)
+echo "m1_landed=$(printf '%s\\n' "$_mlog" | grep -cF ',RFD-001,M1,' || true)"
+echo "m4_landed=$(printf '%s\\n' "$_mlog" | grep -cF ',RFD-001,M4,' || true)"`, root, { RUN_ID: runId, RFD_ID: 'RFD-001' })
+    const m4row = '2026-11-05,RFD-001,M4,1,1,2026-11-05..2026-11-05,issues.log 实算,打回次数'
+    // unknown 轮（unknownGateCount=2，DTO 不产 M1）：落账回读必须通过——M1 缺席是
+    // 预期行为，旧实现恒验 M1 会记假 archive-commit-failed
+    const unknown = archive(`{"ok":true,"unknownGateCount":2,"gateStats":[],"metricsRows":[
+ {"id":"M3","csv":"2026-11-05,RFD-001,M3,0.750,3/4,2026-11-05..2026-11-05,issues.log+state.env 实算,证据一次通过率"},
+ {"id":"M4","csv":"${m4row}"},
+ {"id":"M5","csv":"2026-11-05,RFD-001,M5,0,0,2026-11-05..2026-11-05,issues.log 实算,人工介入"}]}`, sandbox(), '20261105-v9-run1')
+    expect(unknown).toContain('rc=0')
+    expect(unknown).toContain('fail_issue=0')
+    expect(unknown).toContain('m1_landed=0')
+    expect(unknown).toContain('m4_landed=1')
+    // 完整轮（unknownGateCount=0）：M1 必产必落
+    const complete = archive(`{"ok":true,"unknownGateCount":0,"gateStats":[],"metricsRows":[
+ {"id":"M1","csv":"2026-11-05,RFD-001,M1,0.667,4/6,2026-11-05..2026-11-05,state.env 落键实算,六闸全计"},
+ {"id":"M4","csv":"${m4row}"}]}`, sandbox(), '20261105-v9-run2')
+    expect(complete).toContain('rc=0')
+    expect(complete).toContain('fail_issue=0')
+    expect(complete).toContain('m1_landed=1')
+    // 完整轮但 DTO 未产 M1（契约违规）：回读须拦（M1 条件对账——完整轮验证在场）
+    const violated = archive(`{"ok":true,"unknownGateCount":0,"gateStats":[],"metricsRows":[
+ {"id":"M4","csv":"${m4row}"}]}`, sandbox(), '20261105-v9-run3')
+    expect(violated).toContain('rc=1')
+    expect(violated).toContain('fail_issue=1')
   })
 
   it('delivery 协议面缺省启用+显式关闭记单（P15/R29 全程开启）', () => {

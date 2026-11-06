@@ -2,24 +2,31 @@
 // 拆分纪律：纯移动，无行为变更；依赖以 getter 注入，避免循环 import。
 import { ref } from 'vue'
 import { Room, KnownMembership, NotificationCountType, EventType, DeviceVerification } from 'matrix-js-sdk'
+import type { MatrixClient, MatrixEvent } from 'matrix-js-sdk'
 
 export type RoomNotificationLevel = 'highlight' | 'total' | 'none'
 
+/** 分页状态形状＝matrix-room store 的 paginationState ref（事实源在 store，此处为注入契约） */
+export type RoomPaginationState = Record<string, { oldestToken: string | null; hasMore: boolean; isLoadingOlder: boolean }>
+
 export interface RoomReaderDeps {
-  getClient: () => any
-  getActiveRoom: () => any
+  getClient: () => MatrixClient | null
+  getActiveRoom: () => Room | null
   getActiveRoomId: () => string | null
-  getMessageList: () => any[]
-  getPaginationState: () => Record<string, { oldestToken: string | null; hasMore: boolean; isLoadingOlder: boolean }>
+  getMessageList: () => MatrixEvent[]
+  getPaginationState: () => RoomPaginationState
   bumpRoomVersion: () => void
+  /** 拆分前为 clientStore.error 赋值；错误面归 client store，经注入写入 */
+  setError: (message: string | null) => void
 }
 
 export function createRoomReaderFns(deps: RoomReaderDeps) {
-  const { getClient, getActiveRoom, getActiveRoomId, getMessageList, getPaginationState, bumpRoomVersion } = deps
+  const { getClient, getActiveRoom, getActiveRoomId, getMessageList, getPaginationState, bumpRoomVersion, setError } = deps
   // ── Room member helpers ──
   /** Get sorted member list for a room, grouped by role */
   function getRoomMemberList(roomId: string): { admins: any[]; mods: any[]; defaults: any[]; invited: any[] } {
-    const room = clientStore.client?.getRoom(roomId)
+    const client = getClient()
+    const room = client?.getRoom(roomId)
     if (!room) return { admins: [], mods: [], defaults: [], invited: [] }
 
     const members = room.getJoinedMembers()
@@ -50,7 +57,7 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Get the power level (role) of a member */
   function getMemberPowerLevel(roomId: string, userId: string): number {
-    const room = clientStore.client?.getRoom(roomId)
+    const room = getClient()?.getRoom(roomId)
     if (!room) return 0
     const member = room.getMember(userId)
     return member?.powerLevel ?? 0
@@ -58,9 +65,11 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Check if the current user can kick/ban in a room */
   function canKickInRoom(roomId: string): boolean {
-    const room = clientStore.client?.getRoom(roomId)
+    const client = getClient()
+    if (!client) return false
+    const room = client.getRoom(roomId)
     if (!room) return false
-    const myUserId = clientStore.userId
+    const myUserId = client.getUserId()
     if (!myUserId) return false
     const me = room.getMember(myUserId)
     return (me?.powerLevel ?? 0) >= 50 // Need mod or admin level
@@ -68,20 +77,22 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
   // ── Room readers ──
   /** Get room avatar URL (mxc -> http) */
   function getRoomAvatarUrl(room: any, size = 96): string | null {
-    if (!clientStore.client) return null
+    const client = getClient()
+    if (!client) return null
     const mxcUrl = room.getMxcAvatarUrl()
     if (!mxcUrl) return null
-    return clientStore.client.mxcUrlToHttp(mxcUrl, size, size, 'crop') ?? null
+    return client.mxcUrlToHttp(mxcUrl, size, size, 'crop') ?? null
   }
 
   /** Get user avatar URL */
   function getUserAvatarUrl(memberOrUserId: any, size = 64): string | null {
-    if (!clientStore.client) return null
+    const client = getClient()
+    if (!client) return null
     const mxcUrl = typeof memberOrUserId === 'string'
-      ? clientStore.client.getUser(memberOrUserId)?.avatarUrl
+      ? client.getUser(memberOrUserId)?.avatarUrl
       : memberOrUserId?.getMxcAvatarUrl?.() ?? memberOrUserId?.avatarUrl
     if (!mxcUrl) return null
-    return clientStore.client.mxcUrlToHttp(mxcUrl, size, size, 'crop') ?? null
+    return client.mxcUrlToHttp(mxcUrl, size, size, 'crop') ?? null
   }
 
   /** Get room topic */
@@ -96,7 +107,7 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Check if a room is encrypted */
   function isRoomEncrypted(roomId: string): boolean {
-    const room = clientStore.client?.getRoom(roomId)
+    const room = getClient()?.getRoom(roomId)
     if (!room) return false
     return room.hasEncryptionStateEvent()
   }
@@ -119,35 +130,40 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Check if current room is marked as favorite */
   function isRoomFavorite(): boolean {
-    if (!activeRoom.value) return false
-    const tags = (activeRoom.value as any).tags as Record<string, Record<string, any>> | undefined
+    const room = getActiveRoom()
+    if (!room) return false
+    const tags = room.tags as Record<string, Record<string, any>> | undefined
     return !!tags?.['m.favourite']
   }
 
   /** Toggle favorite tag on current room */
   async function toggleRoomFavorite(): Promise<void> {
-    if (!clientStore.client || !activeRoom.value) return
+    const client = getClient()
+    const room = getActiveRoom()
+    if (!client || !room) return
     const fav = isRoomFavorite()
     try {
       if (fav) {
-        await clientStore.client.deleteRoomTag(activeRoom.value.roomId, 'm.favourite')
+        await client.deleteRoomTag(room.roomId, 'm.favourite')
       } else {
-        await clientStore.client.setRoomTag(activeRoom.value.roomId, 'm.favourite', { order: 0 })
+        await client.setRoomTag(room.roomId, 'm.favourite', { order: 0 })
       }
       bumpRoomVersion()
     } catch (err: any) {
-      clientStore.error = err?.message || 'Failed to toggle favorite'
+      setError(err?.message || 'Failed to toggle favorite')
       throw err
     }
   }
 
   /** Check if the current user can edit the room topic */
   function canEditTopic(): boolean {
-    if (!activeRoom.value || !clientStore.client) return false
-    const uid = clientStore.client.getUserId()
+    const client = getClient()
+    const room = getActiveRoom()
+    if (!room || !client) return false
+    const uid = client.getUserId()
     if (!uid) return false
     try {
-      return activeRoom.value.currentState.maySendStateEvent(EventType.RoomTopic, uid)
+      return room.currentState.maySendStateEvent(EventType.RoomTopic, uid)
     } catch {
       return false
     }
@@ -155,12 +171,14 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Set room topic */
   async function setRoomTopic(topicText: string): Promise<void> {
-    if (!clientStore.client || !activeRoomId.value) return
+    const client = getClient()
+    const roomId = getActiveRoomId()
+    if (!client || !roomId) return
     try {
-      await clientStore.client.setRoomTopic(activeRoomId.value, topicText)
+      await client.setRoomTopic(roomId, topicText)
       bumpRoomVersion()
     } catch (err: any) {
-      clientStore.error = err?.message || 'Failed to set room topic'
+      setError(err?.message || 'Failed to set room topic')
       throw err
     }
   }
@@ -201,7 +219,7 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
     if (e2eRefreshing.has(roomId)) return
     e2eRefreshing.add(roomId)
     try {
-      const client = clientStore.client
+      const client = getClient()
       const room = client?.getRoom(roomId)
       if (!client || !room || !room.hasEncryptionStateEvent()) return
       const crypto = client.getCrypto?.()
@@ -231,10 +249,11 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Check if a room is a direct message (1:1 chat). Matches element-web useIsDirectMessage. */
   function isDirectMessage(room: any): boolean {
-    if (!room || !clientStore.client) return false
+    const client = getClient()
+    if (!room || !client) return false
     try {
       // Check m.direct account data first (authoritative)
-      const directEvent = clientStore.client.getAccountData(EventType.Direct)
+      const directEvent = client.getAccountData(EventType.Direct)
       if (directEvent) {
         const content = directEvent.getContent() as Record<string, string[]>
         for (const [, roomIds] of Object.entries(content)) {
@@ -267,9 +286,10 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Check if the current user can invite new members to the room. Matches element-web canInviteTo. */
   function canInviteToRoom(room: any): boolean {
-    if (!room || !clientStore.client) return false
+    const client = getClient()
+    if (!room || !client) return false
     try {
-      const uid = clientStore.client.getSafeUserId()
+      const uid = client.getSafeUserId()
       return room.canInvite(uid) && room.getMyMembership() === 'join'
     } catch {
       return false
@@ -304,9 +324,10 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Search the user directory for matching users */
   async function searchUserDirectory(query: string): Promise<Array<{ userId: string; displayName: string | null; avatarUrl: string | null }>> {
-    if (!clientStore.client || !query.trim()) return []
+    const client = getClient()
+    if (!client || !query.trim()) return []
     try {
-      const result = await clientStore.client.searchUserDirectory({ term: query.trim(), limit: 20 })
+      const result = await client.searchUserDirectory({ term: query.trim(), limit: 20 })
       return (result.results || []).map((u: any) => ({
         userId: u.user_id,
         displayName: u.display_name || null,
@@ -319,8 +340,9 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
   /** Get presence status of a user */
   function getUserPresence(userIdToCheck: string): { status: string; lastActive?: number } {
-    if (!clientStore.client) return { status: 'offline' }
-    const user = clientStore.client.getUser(userIdToCheck)
+    const client = getClient()
+    if (!client) return { status: 'offline' }
+    const user = client.getUser(userIdToCheck)
     if (!user) return { status: 'offline' }
     const presence = user.presence ?? 'offline'
     const lastActiveAgo = user.lastActiveAgo ?? undefined
@@ -336,9 +358,9 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
    * Wraps matrix-js-sdk Room.getEventReadReceipts. Excludes the local user.
    */
   function getEventReadReceipts(eventId: string | null): Array<{ userId: string; ts: number }> {
-    const room = activeRoom.value
+    const room = getActiveRoom()
     if (!room || !eventId) return []
-    const me = clientStore.client?.getUserId() ?? ''
+    const me = getClient()?.getUserId() ?? ''
     try {
       const raw = (room as any).getEventReadReceipts?.(eventId) ?? []
       return raw
@@ -372,10 +394,11 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
    */
   const threadTimelineVersion = ref(0)
   async function initRoomThreads(): Promise<void> {
-    if (!activeRoom.value) return
+    const room = getActiveRoom()
+    if (!room) return
     try {
-      await (activeRoom.value as any).createThreadsTimelineSets()
-      await (activeRoom.value as any).fetchRoomThreads()
+      await (room as any).createThreadsTimelineSets()
+      await (room as any).fetchRoomThreads()
     } catch {
       // Server may not support threads — ignore
     } finally {
@@ -390,17 +413,19 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
    */
   function getThreadsTimelineSet(filter: 'all' | 'my'): any | undefined {
     void threadTimelineVersion.value // 响应式依赖
-    if (!activeRoom.value) return undefined
-    const sets = (activeRoom.value as any).threadsTimelineSets
+    const room = getActiveRoom()
+    if (!room) return undefined
+    const sets = (room as any).threadsTimelineSets
     if (!sets) return undefined
     return filter === 'my' ? sets[1] : sets[0]
   }
 
   /** 按 id 取 SDK Thread 对象 */
   function getThreadById(threadId: string): any | null {
-    if (!activeRoom.value) return null
+    const room = getActiveRoom()
+    if (!room) return null
     try {
-      return (activeRoom.value as any).getThread(threadId) ?? null
+      return (room as any).getThread(threadId) ?? null
     } catch {
       return null
     }
@@ -413,7 +438,7 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
    * 返回一个对象(也 console.log 出来),含 room 属性 + timeline + /messages 原始 chunk。
    */
   async function diagnoseRoom(roomId: string): Promise<any> {
-    const client = clientStore.client
+    const client = getClient()
     if (!client) return { error: 'no client' }
     const room: any = client.getRoom(roomId)
     if (!room) return { error: `room ${roomId} not found in client` }
@@ -478,10 +503,10 @@ export function createRoomReaderFns(deps: RoomReaderDeps) {
 
     // 本 store 的状态
     const storeState = {
-      activeRoomId: activeRoomId.value,
-      isActive: activeRoomId.value === roomId,
-      messageListLength: messageList.value.length,
-      paginationState: paginationState.value[roomId] ?? null,
+      activeRoomId: getActiveRoomId(),
+      isActive: getActiveRoomId() === roomId,
+      messageListLength: getMessageList().length,
+      paginationState: getPaginationState()[roomId] ?? null,
     }
 
     const diag = { roomProps, rawMessages, storeState }

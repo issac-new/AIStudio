@@ -6,8 +6,8 @@
 
 import { existsSync, promises as fs } from 'node:fs'
 import { resolve } from 'node:path'
-import { migrateLoops } from '../custom/server/loop/graph/graph-migrate'
-import { GraphSpecStore } from '../custom/server/loop/graph/graph-rest'
+import { migrateLoops } from '../../custom/server/loop/graph/graph-migrate'
+import { GraphSpecStore } from '../../custom/server/loop/graph/graph-rest'
 
 const args = process.argv.slice(2)
 const apply = args.includes('--apply')

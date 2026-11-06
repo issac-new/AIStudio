@@ -226,3 +226,17 @@
 {"at":"2026-11-06T01:08:09Z","spec":"docs/superpowers/specs/2026-11-06-frame-program-revision.md","receipt":"6c445f20c6c42be411c20197a54c6a05793611b9","commit":"08183ab02"}
 {"at":"2026-11-06T01:13:03Z","spec":"docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md","receipt":"077fa519bc97eb8cf9cb56bc8bf85560945d841b","commit":"08183ab02"}
 {"at":"2026-11-06T02:00:45Z","spec":"docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md","receipt":"b8812cbc23159c043e8021e8f28b71664a12eacb","commit":"66cd3bb43"}
+{"at":"2026-11-05T04:53:33Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"a07e46f44e678733e7c9244ccdebcd74609ce910","commit":"32bf92b02"}
+
+{"at":"2026-11-05T12:52:45Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"99045b37b4196a8a0bb9b5ebdf0d0aa46875090b","commit":"e8186dba6"}
+{"at":"2026-11-05T13:15:29Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"7109211fbe6ccdcfafe0f58341b1fd347b66f688","commit":"2f99b4624"}
+{"at":"2026-11-05T14:47:16Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"38589e1491776c45ebbf4fb382f63dd3013acaad","commit":"5887bf865"}
+{"at":"2026-11-05T15:05:46Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"c9e9f9c4b872ca7831a68a50792597620857eecc","commit":"001db4138"}
+{"at":"2026-11-05T15:22:33Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"549398be82d0d0b5936e833fdc985ed4f5207e25","commit":"bb0da7ef6"}
+{"at":"2026-11-05T15:31:34Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"7353207bafc5ecff09a0b3217a41a3d4a8e246f0","commit":"60a44fdd0"}
+{"at":"2026-11-05T15:50:36Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"2d2938acd8aa097b2463383ef96c8915a501ebbe","commit":"6287b179b"}
+{"at":"2026-11-05T16:37:09Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"43fcc7e2c77ee330e14c42a6be556cbf08df54c9","commit":"06a30b7d7"}
+{"at":"2026-11-05T17:12:49Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"ded8c031333c74522ad857443ef52452a4942eb1","commit":"08dee0156"}
+{"at":"2026-11-05T17:50:17Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"1e6c949c38ce7f4b130b5249f1c98a36a13f26af","commit":"568384e44"}
+{"at":"2026-11-06T00:24:46Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"89813208b80e4224aaf89c66fafc292cb8b3b996","commit":"78e6aceea"}
+{"at":"2026-11-06T01:10:51Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"30ca9e0cbf3467c190254321c237945846906685","commit":"42daf7159"}

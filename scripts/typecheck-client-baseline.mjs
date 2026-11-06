@@ -7,6 +7,10 @@
 //   node scripts/typecheck-client-baseline.mjs --check  与基线比较，错误数上升即 exit 1
 //
 // 判据只看「错误总数」：存量允许存在，但只许减少。按域清零时同步下调基线。
+// 退出码契约（2026-11-05 P0 Task 7，spec §判定契约）：0=判定完成且未超基线（或基线已刷新）；
+// 1=错误数超基线；2=INCONCLUSIVE 无法形成判定（工具缺席/崩溃/超时/信号退出/输出截断/
+// --check 基线文件缺席），此时绝不写基线、不判定——否则门禁会把工具故障当"通过"放行
+// （PATH=/nonexistent 实录；基线缺席 Infinity 兜底实录 Task7-Important）。
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -14,6 +18,13 @@ import { dirname, resolve } from 'node:path'
 const ROOT = resolve(import.meta.dirname, '..')
 const BASELINE = resolve(ROOT, 'config/typecheck-client-baseline.json')
 const checkMode = process.argv.includes('--check')
+
+// 工具运行时限：vue-tsc 全量需数分钟，默认 10 分钟兜底防挂死；TYPECHECK_CLIENT_TIMEOUT_MS
+// 覆盖仅供故障注入测试使用（scripts/__tests__/typecheck-client-baseline.test.ts 超时用例）。
+const TIMEOUT_MS = (() => {
+  const v = Number.parseInt(process.env.TYPECHECK_CLIENT_TIMEOUT_MS ?? '', 10)
+  return Number.isFinite(v) && v > 0 ? v : 10 * 60 * 1000
+})()
 
 function runVueTsc() {
   // vue-tsc 走上游客户端 tsconfig；--noEmit 不改产物
@@ -24,23 +35,36 @@ function runVueTsc() {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 64 * 1024 * 1024,
+      timeout: TIMEOUT_MS,
     })
     return { errors: 0, sample: [] }
   } catch (e) {
+    // 工具级故障优先于输出内容判定：spawn 失败（ENOENT）/超时（ETIMEDOUT）/输出截断
+    // （ENOBUFS）/信号退出时输出可能只是残缺清单——即使夹带 TS 错误行也不得据此判定。
+    // 错误形态经本机 execFileSync 实测：四类故障均 status=null（超时/截断另带 SIGTERM）；
+    // 正常非零退出 status=数字且 signal=null，走下方 TS 错误行解析。
+    const toolFailure =
+      e.status === null || e.signal != null ||
+      e.code === 'ENOENT' || e.code === 'ETIMEDOUT' || e.code === 'ENOBUFS'
     const out = `${e.stdout ?? ''}${e.stderr ?? ''}`
-    const lines = out.split('\n').filter((l) => /error TS\d+/.test(l))
+    const tail = out.split('\n').filter(Boolean).slice(-3)
+    if (toolFailure) {
+      return { errors: null, inconclusive: true, reason: `status=${e.status} signal=${e.signal} code=${e.code}`, sample: tail }
+    }
     // 区分「有类型错」与「工具自身崩溃」：崩溃时没有 TS 错误行但退出码非 0，不能当 0 错基线
-    if (lines.length === 0) return { errors: null, inconclusive: true, sample: out.split('\n').slice(-3) }
+    const lines = out.split('\n').filter((l) => /error TS\d+/.test(l))
+    if (lines.length === 0) return { errors: null, inconclusive: true, reason: `status=${e.status} 且无 TS 错误行`, sample: tail }
     return { errors: lines.length, sample: lines.slice(0, 5) }
   }
 }
 
-const { errors, sample, inconclusive } = runVueTsc()
+const { errors, sample, inconclusive, reason } = runVueTsc()
 const now = new Date().toISOString()
 
 if (inconclusive) {
-  console.warn('[typecheck:client] INCONCLUSIVE：vue-tsc 未能产出类型错误清单（工具崩溃/环境问题），不写基线、不判定')
-  process.exit(0)
+  console.warn(`[typecheck:client] INCONCLUSIVE：vue-tsc 未能产出类型错误清单（工具崩溃/环境问题，${reason}），不写基线、不判定`)
+  if (sample.length) { console.warn('  尾部输出：'); for (const s of sample) console.warn(`   - ${s.trim()}`) }
+  process.exit(2)
 }
 
 if (!checkMode) {
@@ -51,7 +75,13 @@ if (!checkMode) {
   process.exit(0)
 }
 
-const baseline = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : { errors: Infinity }
+// Task7-Important 存量债收口：--check 基线缺席曾以 { errors: Infinity } 兜底 → 恒 exit 0
+// （假阴性门，比工具故障更尖）。无基线即无判定 → INCONCLUSIVE exit 2；建基线走生成模式。
+if (!existsSync(BASELINE)) {
+  console.error('[typecheck:client] INCONCLUSIVE：基线文件缺失（config/typecheck-client-baseline.json），--check 无从比较；先运行 node scripts/typecheck-client-baseline.mjs 生成基线')
+  process.exit(2)
+}
+const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'))
 if (errors > baseline.errors) {
   console.error(`✗ typecheck:client 棘轮：错误数 ${errors} > 基线 ${baseline.errors}（新增 ${errors - baseline.errors}）`)
   for (const s of sample) console.error(`  - ${s.trim()}`)

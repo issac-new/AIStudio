@@ -2416,31 +2416,49 @@ _verify_dispatch_delivery() { # <user> <event-id> <body> <mentions> → 生效 e
   printf '%s' "$ev"
 }
 
-# ── 推演单驱动锁（单一事实源，可单测）────────────────────────
-# 双会话双开推演是实测最高频互踩源（共享 state.env/板库/房间双写）。mkdir 原子锁
-# （macOS 无 flock；mkdir 在各文件系统均原子）：锁不可得即大声拒绝，不静默并发。
-# 陈锁判定根治（2026-09-29 V4-run1 02:26 实锤）：旧版 `sed -n 's/^pid=//p'` 把
-# "pid=84431 start=… host=…" 整段取出，`kill -0 "84431 start=…"` 报 illegal pid
-# 恒失败 → **活锁被误判陈锁、被接管**——run1 ready 续跑误抢 run2 活锁，双驱动同栈
-# 互写 12 分钟。判活只取 pid 数字段；解析不出一律按活锁拒绝（宁停勿抢）。
-mx_lock_holder_pid() { # <info-file> → 持锁 pid（仅数字段；解析不出=空串）
+# ── 推演单驱动锁（P2 Task 1：锁语义正本=scripts/platform/runtime/guard-cli.mjs）──
+# 双会话双开推演是实测最高频互踩源（共享 state.env/板库/房间双写）。判活从「pid 单
+# 因子」升级为四因子（pid+cmdMatcher+instance+规范化 simRoot）——pid 被无关进程复用
+# 不算活、release 匹配 pid+instance 防误删、锁目录跨根搬家不认。本包装保留原签名与
+# 返回码（0 取得 / 1 活锁被占 / 2 接管竞争失败），Bash 侧零改面。
+# 陈锁判定史（2026-09-29 V4-run1 02:26 实锤）：旧版 `sed -n 's/^pid=//p'` 把整段取出
+# 致 kill -0 恒失败、活锁被误接管——判活只取 pid 数字段；解析不出一律按活锁拒绝
+# （宁停勿抢，CLI 正本同语义）。
+mx_guard_root() { # → guard-cli.mjs 所在仓根（MX_OVERLAY_ROOT 优先，其后从本文件位置向上找）
+  local d
+  if [ -n "${MX_OVERLAY_ROOT:-}" ] && [ -f "$MX_OVERLAY_ROOT/scripts/platform/runtime/guard-cli.mjs" ]; then
+    printf '%s\n' "$MX_OVERLAY_ROOT"; return 0
+  fi
+  d="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  while [ "$d" != "/" ]; do
+    if [ -f "$d/scripts/platform/runtime/guard-cli.mjs" ]; then printf '%s\n' "$d"; return 0; fi
+    d="$(dirname "$d")"
+  done
+  return 1
+}
+
+mx_guard_cli() { # <guard-cli 子命令与参数…> → stdout=单行 JSON；退出码透传（0/1/2/64）
+  local root
+  root="$(mx_guard_root)" || { echo '{"ok":false,"code":2,"reason":"guard-cli.mjs 未找到（仓根解析失败）"}' >&2; return 2; }
+  "${MX_GUARD_NODE:-node}" "$root/scripts/platform/runtime/guard-cli.mjs" "$@"
+}
+
+mx_lock_holder_pid() { # <info-file> → 持锁 pid（兼容读：仅数字段；判活/接管一律走 CLI 正本）
   sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' "$1" 2>/dev/null | head -1
 }
 
-mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 接管竞争失败
-  local d="$1" pid="$2" held
-  _mx_lock_info() { printf 'pid=%s start=%s host=%s\n' "$2" "$(date '+%F %T')" "$(hostname -s)" > "$1/info"; }
-  if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; return 0; fi
-  held=$(mx_lock_holder_pid "$d/info")
-  if [[ -n "$held" ]] && ! kill -0 "$held" 2>/dev/null; then
-    # 接管原子化：mv 摘走陈锁再 mkdir，绝不原地 rm——kill -0 判死与 rm 之间第三方
-    # 可新建活锁被误删（双驱动同栈互写）。竞争失败时陈锁归档 ${d}.stale.$$ 可回查。
-    local stale="${d}.stale.$$"
-    mv "$d" "$stale" 2>/dev/null || return 2
-    if mkdir "$d" 2>/dev/null; then _mx_lock_info "$d" "$pid"; rm -rf "$stale"; return 0; fi
-    return 2
-  fi
-  return 1
+mx_driver_lock_acquire() { # <lock-dir> <pid> → 0 取得 / 1 活锁被占 / 2 接管竞争失败（正本=guard-cli driver-acquire）
+  local out rc
+  out="$(mx_guard_cli driver-acquire --sim-root "${SIM_ROOT:?}" --lock-dir "$1" \
+    --kind driver --run-id "${RUN_ID:-}" --pid "$2" \
+    --cmd-matcher "${MX_DRIVER_CMD_MATCHER:-aipay-scenario}" 2>/dev/null)" && rc=0 || rc=$?
+  case "$rc" in
+    0|1|2) return "$rc" ;;
+    *) # 用法错/环境坏按竞争失败处理（宁停勿抢，不静默放行）
+      [ -n "$out" ] || out='guard-cli 无输出'
+      echo "[mux] driver-acquire 异常 rc=$rc：$out" >&2
+      return 2 ;;
+  esac
 }
 
 # ── 硬闸打回熔断（融合批二：判定与持久化正本上移治理服务）──────────
@@ -2710,13 +2728,18 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     echo "## 硬闸状态"
     printf '%s' "$dto" | jq -r '.gateKeyLines[] | "- \(.key): \(.value)"'
     echo
-    echo "## 六闸三态（治理服务判定：首过/补过/打回）"
+    echo "## 六闸四态（治理服务判定：首过/补过/打回/unknown）"
     printf '%s' "$dto" | jq -r '[.gateStats[] | .gate + .state] | join(" ")'
     printf '%s' "$dto" | jq -r 'if .supplementCount > 0 then "（补过 \(.supplementCount)，拆分/补交形态不计首过）" else empty end'
+    printf '%s' "$dto" | jq -r 'if .unknownGateCount > 0 then "（unknown \(.unknownGateCount)：完成键缺失/空——首过率/打回率分母不完整（trend 显 ⬜），本轮不产 M1 行）" else empty end'
     printf '%s' "$dto" | jq -r 'if ([.gateStats[].segmentIssues] | add // 0) > 0 then "（闸段问题单 \([.gateStats[].segmentIssues] | add) 起，不计打回）" else empty end'
     echo
     echo "## 问题单台账（共 $(printf '%s' "$dto" | jq -r '.issuesTotal') 条；DISP $(printf '%s' "$dto" | jq -r '.dispTotal') 条——键=类型·主体，缺行=待处置）"
     awk -F'|' '/^ISSUE\|/{print "- ["$2"] "$3"："$4}' "$EVID_DIR/issues.log" 2>/dev/null | sort | uniq -c | sort -rn
+    echo
+    echo "## DISP 终态分计数（P2 严格口径：closed=exact/single 带锚已修·已闭环；deferred=延后；invalid=缺锚/缺理由/表外词/generic 不可批量关）"
+    printf '%s' "$dto" | jq -r '"- closed \(.dispClosure.closed) / deferred \(.dispClosure.deferred) / pending \(.dispClosure.pending) / invalid \(.dispClosure.invalid)（合计 \(.dispClosure.closed + .dispClosure.deferred + .dispClosure.pending + .dispClosure.invalid) = 唯一键数）"' 2>/dev/null \
+      || echo "- dispClosure 缺席（治理服务 DTO 旧版——升级服务后出数）"
     echo
     echo "## 凭证与回灌"
     echo "- 证据一次通过率：$(printf '%s' "$dto" | jq -r '.evidenceRate.text')"
@@ -2735,7 +2758,9 @@ gov_report() { # 生成治理报告 evidence/governance-report.md（融合批三
     echo "## 基线对比（§2.6-5 上次基线+1 机制）"
     if printf '%s' "$dto" | jq -e '.baseline != null' >/dev/null 2>&1; then
       echo "- 上轮（$(printf '%s' "$dto" | jq -r '.baseline.prevRun')）：$(printf '%s' "$dto" | jq -r '.baseline.line')"
-      echo "- 本轮（${RUN_ID}）：首过率 $(printf '%s' "$dto" | jq -r '.firstPass')/6"
+      # 首过率读 trend 末项（P0 Task 6）：分母不完整（任一闸 unknown）时 DTO 已显 ⬜，
+      # 渲染侧不得用 firstPass 数字自拼 X/6——unknown 轮会呈现假 0/6 成绩
+      echo "- 本轮（${RUN_ID}）：首过率 $(printf '%s' "$dto" | jq -r '.trend | last | .firstPass')"
     else
       echo "- 无上轮基线（首轮或上轮治理报告缺席）——如实留空"
     fi
@@ -2754,6 +2779,8 @@ gov_archive_commit() { # 治理归档落账原子化（P14→R26：metrics-log+I
   # 「产出了没落账」根治：治理报告的 metrics 行与 issues 唯一键在此一并写入中央仓
   # origin/main（docs/governance/metrics-log.csv + docs/issues/ISSUES-LOG.md 单提交），
   # 推送后回读 origin/main 验证——写、提、推、验四环一体，失败记录返回 1 不击杀驱动。
+  # 回读按 DTO 实际产出对账（P0 Task 6 fix）：M1 只在完整轮产出，unknown 轮缺席
+  # 是预期——逐行对账+M4 恒在锚+M1 条件对账，不再硬编码 grep M1（会记假失败单）。
   # 幂等：metrics 行按内容去重；ISSUES-LOG 的 ## <RUN>（ 段存在则替换不追加。
   local run="${RUN_ID:-default}" rfd="${RFD_ID:-RFD-001}"
   local _ilog="$EVID_DIR/issues.log"
@@ -2836,7 +2863,28 @@ PYEOF
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin main:main 2>/dev/null || true
   if [ "$_rc" = 0 ]; then
     git -C "$DIRECTOR_CLONE" show origin/main:docs/issues/ISSUES-LOG.md 2>/dev/null | grep -qF "## ${run}（" || _rc=1
-    git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null | grep -qF ",${rfd},M1," || _rc=1
+    # P0 Task 6 fix：回读按 DTO 实际产出对账——M1 只在完整轮（unknownGateCount=0）
+    # 产出，unknown 轮 M1 缺席是预期，旧版硬编码 grep M1 必失败记假
+    # archive-commit-failed 单。对账三条：① DTO metrics 行逐行对账（每行都已落
+    # origin/main=落账面与 DTO 一致）；② M4 恒在行锚（DTO ok 必产 M4，防空壳
+    # metricsRows 静默过验）；③ M1 条件对账（unknownGateCount=0 → M1 必在；
+    # >0 → M1 必缺席）。DTO 不可达（archive-metrics-unavailable 已记单）时
+    # metrics-log 无本轮产出可对账，不叠加假 archive-commit-failed——ISSUES-LOG
+    # 段验证仍恒在。
+    if [[ -n "$_rows" ]]; then
+      local _landed _ugc _m1n
+      _landed=$(git -C "$DIRECTOR_CLONE" show origin/main:docs/governance/metrics-log.csv 2>/dev/null || true)
+      [[ -n "$_landed" ]] || _rc=1
+      while IFS= read -r _row; do
+        [[ -z "$_row" ]] && continue
+        printf '%s\n' "$_landed" | grep -qF -- "$_row" || _rc=1
+      done <<< "$_rows"
+      printf '%s\n' "$_rows" | grep -qF -- ",${rfd},M4," || _rc=1
+      _ugc=$(printf '%s' "$_dto" | jq -r '.unknownGateCount // 0' 2>/dev/null || echo 0)
+      _m1n=$(printf '%s\n' "$_rows" | grep -cF -- ",${rfd},M1," || true)
+      if [[ "$_ugc" == 0 && "$_m1n" == 0 ]]; then _rc=1; fi   # 完整轮：M1 必在场
+      if [[ "$_ugc" != 0 && "$_m1n" != 0 ]]; then _rc=1; fi   # unknown 轮：M1 必缺席
+    fi
   fi
   rm -rf "$_wt"; git -C "$DIRECTOR_CLONE" worktree prune >/dev/null 2>&1 || true
   if [ "$_rc" != 0 ]; then

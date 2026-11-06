@@ -5,7 +5,7 @@
  * simharness 侧对应函数降级为渲染壳（数字/判定取本 DTO）。
  *
  * 端点：
- *   GET  /run/:run/metrics?rfd=      治理指标 DTO（三态/证据率/密度/告警族/CSV 行/基线/趋势）
+ *   GET  /run/:run/metrics?rfd=      治理指标 DTO（四态含 unknown/证据率/密度/告警族/CSV 行/基线/趋势）
  *   POST /run/:run/work-report       工作台账 DTO（按人×状态/WIP/stale/零交付——编制映射由导演传）
  *   GET  /run/:run/audit-check?rfd=  合规审计检查（门禁留痕/台账格式/交付物对账）
  */

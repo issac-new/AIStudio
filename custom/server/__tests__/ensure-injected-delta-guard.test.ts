@@ -2,6 +2,9 @@
 // 守门：ensure-injected.mjs 必须处理「series 领先 manifest」差量。
 // 根因（2026-09-22）：旧逻辑只看 manifest 存在就 exit(0)，series 尾部新 patch
 // （336-338 事件）永远不上树且无日志，曾被迫手动 git apply + 手工登记。
+// P1 Task 5（2026-11-05）起差量语义升级：ensure 读 manifest v2 + planIncrement 严格
+// 增量——尾部增量（tail-append）打印清单后经 inject 主链（runInjection 事务化应用
+// + manifest 原子更新）自动补套；v1/last-failed/前缀破坏等形态拒绝并指引 clean。
 // 本测试做源码标记断言（脚本顶层副作用无法直接 import），防止回退到静默跳过。
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync } from 'fs'
@@ -14,26 +17,40 @@ const scriptPath = resolve(__dirname, '../../../scripts/ensure-injected.mjs')
 describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）', () => {
   const src = readFileSync(scriptPath, 'utf8')
 
-  it('存在差量计算与自动补套', () => {
+  it('存在差量计算与自动补套（planIncrement tail-append → inject 主链）', () => {
     expect(src).toContain('series 领先 manifest')
-    expect(src).toContain('applyDelta')
-    expect(src).toContain("filter((p) => !injectedSet.has(p))")
+    expect(src).toContain('planIncrement')
+    expect(src).toContain("inc.kind === 'noop'")
+    // 补套走 inject 主链单一写入路径（runInjection 事务化应用），不再裸 git apply
+    expect(src).toContain("spawnSync('node', ['scripts/inject.mjs']")
   })
 
   it('差量非空必须打印清单（防回退为裸 exit(0)）', () => {
-    // 差量分支内先 console.warn 清单再 apply；不允许 delta.length>0 时无输出退出
-    const deltaBranch = src.slice(src.indexOf('const delta ='))
+    // 差量分支内先 console.warn 清单再补套；不允许 tail-append 时无输出退出
+    const deltaBranch = src.slice(src.indexOf("inc.kind === 'noop'"))
     expect(deltaBranch).toContain('console.warn(`[ensure-injected] series 领先 manifest')
   })
 
-  it('补套成功后把差量写回 manifest（防再出现手工登记）', () => {
-    expect(src).toContain('appliedPatches: nextApplied')
+  it('补套成功后 manifest 由主链原子更新（防再出现手工登记）', () => {
+    // 差量入册在 inject 主链（executor→writeManifestAtomic）完成；ensure 侧不得
+    // 再出现 v1 式手写 manifest（writeFileSync appliedPatches）回退面
+    expect(src).not.toContain('appliedPatches: nextApplied')
+    expect(src).not.toMatch(/writeFileSync\([^)]*manifestPath/)
+    const execSrc = readFileSync(resolve(__dirname, '../../../scripts/platform/inject/executor.mjs'), 'utf8')
+    expect(execSrc).toContain('writeManifestAtomic')
+  })
+
+  it('v1 manifest 与 last-failed 必须拒绝（不自动收养/失败态不作成功输入）', () => {
+    expect(src).toContain('isV2Manifest(manifest)')
+    expect(src).toContain('process.exit(3)')
+    expect(src).toContain('last-failed')
   })
 
   it('hermes-agent 目标路由与 inject.mjs 前缀集一致', () => {
     // 2026-09-23 收敛:前缀集在 inject.mjs 以 HERMES_AGENT_PATCH_PREFIXES 单一导出,
-    // ensure-injected.mjs import 复用谓词。守卫从"两处文本一致"升级为:
-    // ① 清单内容行为断言(含基础运行时前缀);② ensure-injected 确实复用而非内联。
+    // P1 Task 5 起 ensure 不再自行路由补丁（路由归 inject 主链/planner 单一事实源）。
+    // 守卫从"两处文本一致"升级为:① 清单内容行为断言(含基础运行时前缀);② ensure
+    // 侧不得内联前缀(内联=恢复双源漂移面)。
     const { HERMES_AGENT_PATCH_PREFIXES } = injectModule
     const expected = [
       'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
@@ -48,8 +65,8 @@ describe('ensure-injected 差量守卫（series 领先 manifest 不许静默）'
     expect(injectSrc).toContain('export const HERMES_AGENT_PATCH_PREFIXES')
     // ensure-injected 不得再内联前缀(内联=恢复双源漂移面)
     const ensureSrc = readFileSync(resolve(__dirname, '../../../scripts/ensure-injected.mjs'), 'utf8')
-    expect(ensureSrc).toContain("isHermesAgentPatchPath } from './inject.mjs'")
     expect(ensureSrc).not.toContain("startsWith('hermes_cli/')")
+    expect(ensureSrc).not.toContain('isHermesAgentPatchPath(')
   })
 
   it('aipay-agent-sync.sh 的 AGENT_PREFIXES 与 inject.mjs 前缀集双向相等（2a02847 防复发）', () => {

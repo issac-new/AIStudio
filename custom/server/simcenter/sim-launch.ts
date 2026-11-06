@@ -14,7 +14,7 @@
 // - 已有 harness 驱动锁（SIM_ROOT/.driver.lock.d）= 拒绝双开；
 // - 只杀自己拉起的 PID，不碰外部驱动。
 import Router from '@koa/router'
-import { spawn, type ChildProcess } from 'child_process'
+import { spawn, spawnSync, type ChildProcess } from 'child_process'
 import { closeSync, existsSync, openSync, readFileSync, statSync } from 'fs'
 import { resolve } from 'path'
 import { fail } from '../lib/http'
@@ -33,6 +33,29 @@ const SCRIPT_DIR = process.env.SIM_HARNESS_DIR?.trim()
 const SCRIPT = resolve(SCRIPT_DIR, 'aipay-scenario.sh')
 const SIM_ROOT = process.env.SIM_ROOT?.trim() || process.env.OBS_SIM_ROOT?.trim() || resolve(WORKSPACE_ROOT, 'ncwk-sim-mux')
 const DRIVER_LOCK = resolve(SIM_ROOT, '.driver.lock.d')
+// P2 Task 1：驱动/owner 判活走 guard CLI（四因子）；sim-launch 不自持锁——
+// 有活 owner 时委托（监督者负责拉起），无 owner 的 standalone 仍经统一锁面拒双开。
+const GUARD_CLI = resolve(OVERLAY_ROOT, 'scripts/platform/runtime/guard-cli.mjs')
+
+interface GuardLockStatus {
+  ok: boolean
+  owner: { kind: string | null; pid: number | null; alive: boolean } | null
+  driver: { pid: number | null; alive: boolean } | null
+}
+
+/** 读锁状态；CLI 失败=unknown（fail-closed：状态不明时拒绝启动，不放行双开） */
+function guardLockStatus(): GuardLockStatus | 'unavailable' {
+  try {
+    const r = spawnSync(process.execPath, [GUARD_CLI, 'lock-status', '--sim-root', SIM_ROOT], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10_000,
+    })
+    const parsed = JSON.parse(r.stdout || 'null')
+    if (!parsed || parsed.ok !== true) return 'unavailable'
+    return parsed as GuardLockStatus
+  } catch {
+    return 'unavailable'
+  }
+}
 
 interface RunningInfo {
   runId: string
@@ -114,8 +137,19 @@ simLaunchRoutes.post('/start', (ctx) => {
     fail(ctx, 503, `SIM_ROOT 不存在：${SIM_ROOT}`)
     return
   }
-  if (existsSync(DRIVER_LOCK)) {
-    fail(ctx, 409, `已有 harness 驱动锁：${DRIVER_LOCK}（拒绝双开）`)
+  // P2 Task 1：先看 owner（有活监督者=拉起权已委托，本端点不另起）；再看驱动锁
+  // （四因子判活——陈锁不再误拦，活锁照旧拒双开）。CLI 不可用=状态不明拒绝启动。
+  const lock = guardLockStatus()
+  if (lock === 'unavailable') {
+    fail(ctx, 503, 'guard CLI 不可用（锁状态不明，fail-closed 拒绝启动）')
+    return
+  }
+  if (lock.owner?.alive) {
+    fail(ctx, 409, `推演拉起权已由 owner 持有（kind=${lock.owner.kind} pid=${lock.owner.pid}）——已委托该监督者，本端点不另起驱动`)
+    return
+  }
+  if (lock.driver?.alive) {
+    fail(ctx, 409, `已有 harness 驱动在跑（driver pid=${lock.driver.pid}，四因子判活）——拒绝双开`)
     return
   }
   const logFile = resolve(SIM_ROOT, 'logs', `${runId}-driver.log`)

@@ -14,12 +14,12 @@
 
 | 团队 | 主读章节 | 主要输入 | 必须交付的结果 |
 |---|---|---|---|
-| 产品需求分析 | 第 2、6 章 | 用户目标、业务约束、既有系统 | 冻结 spec、AC、影响面、G1/G2、UAT 判词与需求追溯 |
-| 项目管理 | 第 7—11 章 | 任务、人员、依赖、容量和质量门 | RACI、派工计划、阻塞处置、质量门结论、发布决策与复盘行动项 |
+| 产品需求分析 | 第 2、7 章 | 用户目标、业务约束、既有系统 | 冻结 spec、AC、影响面、G1/G2、UAT 判词与需求追溯 |
+| 项目管理 | 第 7—12 章 | 任务、人员、依赖、容量和质量门 | RACI、派工计划、阻塞处置、质量门结论、发布决策与复盘行动项 |
 | 研发 | 第 3—7 章 | 冻结 spec、任务契约、工作区 | 真实提交、可审查 diff、自测输出、receipt 和完成总结 |
 | 测试 | 第 6—7 章 | 当前 commit、AC、测试设计和证据 | 独立测试报告、Eval 记录、缺陷闭环、独立评审与复评结论 |
-| 运维监控 | 第 12 章 | 部署配置、服务、运行日志、发布包 |  readiness 记录、健康检查、恢复记录、观察与回滚结果 |
-| 安全合规及审计内控 | 第 13 章 | 权限、策略、证据、攻击面和审计对象 | 安全姿态核对、独立审计、裁决记录、证据链检查和合规整改 |
+| 运维监控 | 第 13 章 | 部署配置、服务、运行日志、发布包 |  readiness 记录、健康检查、恢复记录、观察与回滚结果 |
+| 安全合规及审计内控 | 第 14 章 | 权限、策略、证据、攻击面和审计对象 | 安全姿态核对、独立审计、裁决记录、证据链检查和合规整改 |
 
 每章都要留下交付物。只读完页面、聊过需求或看过别人截图，不算完成本章。
 
@@ -508,7 +508,13 @@ dispatcher 会检查 assignee 是否为真实 profile、板级 `board.json profi
 
 新 `/api/orchestrator` 的 `routed` 只表示编排评估状态，不表示 worker 已启动。最小执行证据是后续真实 `claimed`、running run、worker log/PID/heartbeat。
 
-当前看板“催办”按钮逐卡调用 `/api/kanban/nudge/route`，只解析 assignee → board team → unassigned 并返回 decision。界面“催办已路由”是本地提示，**没有实际发送 Matrix 或外部消息，也不解除阻塞**。真实通知须走任务评论、真实房间消息或结构化交接单，并保留接收证据。
+当前看板“催办”按钮逐卡调用 `/api/kanban/nudge/route`，只解析 assignee → board team → unassigned 并返回 decision；响应必带 `delivery{state:'routed-only', sent/received 均为 null}`——**没有实际发送 Matrix 或外部消息，也不解除阻塞**。界面提示为「解析催办路由；未发送消息」。催办三态定义：
+
+1. **routed-only（路由已解析，未发送消息）**：assignee 或板归属解析成功。这只是投递前置，`sent/received 均为 null`，发送面为零。
+2. **unassigned（显式无人态）**：assignee 与板 team 双空。先派人再催办，绝不改投固定接收方（run21/22 错侧催办两实录）。
+3. **解析失败（可见失败）**：卡不存在、缺参或卡源未接线（4xx/5xx）。失败可见，不静默改投。
+
+真实通知须走任务评论、真实房间消息或结构化交接单，并保留接收证据。
 
 ### 8.5 reclaim/reassign 是真实干预
 
@@ -550,7 +556,7 @@ Reclaim 会终止并释放当前 claim、恢复原阶段、清重试预算，不
 | ready 很多就反复全板 Nudge | 先查围栏、依赖、容量和最近失败原因 |
 | 为解卡删除围栏或盲目加并发 | 修 assignee 全名、名单和真实容量，必要时排队 |
 | 把 `routed` 当 worker 已启动 | 核对 claimed、run 和 worker 信号 |
-| 把“催办已路由”当消息已送达 | 走真实评论/房间/交接单并保留接收证据 |
+| 把“解析催办路由”当消息已送达 | 催办三态均未发送；走真实评论/房间/交接单并保留接收证据 |
 | 把 done 当发布完成 | 分开核对 UAT、G5、发布回执和观察窗 |
 | 把 GAP 当 PASS | 保留缺口和处置记录，允许继续不等于达标 |
 
@@ -924,7 +930,7 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 1. 分类四类队列并标注数据源异常。
 2. 复核一张 ready 卡的 RACI、依赖、围栏和容量。
 3. 触发一次 dispatcher，核对 claimed 而非 routed。
-4. 对 blocked 卡补真实输入并解除阻塞，不使用“催办已路由”冒充投递。
+4. 对 blocked 卡补真实输入并解除阻塞，不把「解析催办路由；未发送消息」的解析结果冒充投递。
 5. 为 review 卡指定独立评审人，核对 actor 与当前 commit。
 6. 按 G5/UAT 清单作放行或冻结决定。
 7. 为一个模拟问题写 DISP、owner、期限和验收判据。
@@ -1027,3 +1033,140 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 - [发布清单](../../RELEASE-MANIFEST.json)：当前模块版本与两件发布资产政策。
 
 页面名称、路由或操作契约变化时，应同步修订本手册、功能清单、运维参考和文档入口。新增或移动 spec 时同步设计导读与机械索引；动态文件数不进入稳定设计总账。
+
+<!-- docs-projection:begin 由 scripts/platform/docs/sync-training-docs.mjs 生成（--write 写入 / --check 对账）；手改此块即 docs:check 红，先跑 npm run docs:sync -->
+### 17.10 当前构建的页面路由投影（生成区，勿手改）
+
+本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。
+
+- 适用版本：AIStudio 1.0.12-overlay（package.json）
+- 路由计数：routes=121（page 80 / redirect 41）；stageTabs=37；visitStates=158
+- 模块版本（RELEASE-MANIFEST.json）：cockpit 1.0.9-studio.11 · agent-teams v0.22.7-team.2 · ycode 3.17.2 · yuan-skill v2.99.2
+- 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
+
+全量路由清单（行序=注册链输出序；redirect 类不可直访）：
+
+| 路由 | path | 类型 |
+|---|---|---|
+|  | /app/collab/history/session/:sessionId | redirect |
+|  | /app/collab/global-agent/session/:sessionId | redirect |
+|  | /hermes/history/group-chat/:roomId | redirect |
+|  | /hermes/group-chat/history/:roomId | redirect |
+| ia2.collabSession | /app/s/chat/:sessionId | page |
+| ia2.commsRoom | /app/s/room/:roomId | page |
+| ia2.groupRoom | /app/s/group/:roomId | page |
+| ia2.simDirectorRun | /app/sim/director/:runId | page |
+| ia2.collabHistorySession | /app/history/session/:sessionId | page |
+| ia2.collabGlobalAgentSession | /app/agent/session/:sessionId | page |
+|  | /app/ops/runs/:runId | redirect |
+|  | /app/comms/room/:roomId | redirect |
+| hermes.globalAgentSession | /hermes/global-agent/session/:sessionId | page |
+| hermes.groupChatRoom | /hermes/group-chat/room/:roomId | page |
+| ia2.stage1 | /app/stage/setup | page |
+| ia2.stage2 | /app/stage/reqs | page |
+| ia2.stage3 | /app/stage/design | page |
+| ia2.stage4 | /app/stage/build | page |
+| ia2.stage5 | /app/stage/accept | page |
+| ia2.stage6 | /app/stage/govern | page |
+| ia2.collabChat | /app/s/chat | page |
+| ia2.govOrgAssets | /app/gov/org-assets | redirect |
+| ia2.govClearance | /app/gov/clearance | redirect |
+| ia2.govIssues | /app/gov/issues | redirect |
+| ia2.govAudit | /app/gov/audit | redirect |
+| ia2.govDocs | /app/gov/docs | redirect |
+| ia2.govMetrics | /app/gov/metrics | redirect |
+| ia2.simSupervision | /app/sim/supervision | page |
+| ia2.simOps | /app/sim/ops | page |
+| ia2.simEvidence | /app/sim/evidence | page |
+| ia2.simDelivery | /app/sim/delivery | redirect |
+| ia2.simTrace | /app/sim/trace | redirect |
+| ia2.simSettings | /app/sim/settings | page |
+| ia2.simOrchestration | /app/sim/orchestration | page |
+| ia2.simMap | /app/sim/map | page |
+|  | /app/collab/chat | redirect |
+|  | /app/collab/history | redirect |
+|  | /app/collab/global-agent | redirect |
+| ia2.govSettings | /app/gov/settings | page |
+| ia2.modelProviders | /app/gov/model-providers | page |
+| hermes.configSettings | /hermes/config/settings | page |
+| codingAgent.config | /studio/agents/:agentId/:section(skills|mcp|settings|plugins|presets) | page |
+| ia2.recordDetail | /app/records/:kind/:id | page |
+| ia2.loopCanvas | /app/l/:loopId | page |
+| ia2.runDetail | /app/runs/:runId | page |
+| hermes.session | /hermes/session/:sessionId | page |
+| matrix.clientRoom | /matrix/room/:roomId | page |
+| share.groupChat | /share/group-chat/:inviteCode? | page |
+| hermes.tasks | /hermes/tasks | redirect |
+| hermes.apiRelay | /hermes/api-relay | page |
+| hermes.agentManager | /studio/agents | page |
+| ekko.memory | /ekko/memory | page |
+| ekko.skills | /ekko/skills | page |
+| ekko.mcp | /ekko/mcp | page |
+| ekko.settings | /ekko/settings | page |
+|  | /hermes/agents | redirect |
+|  | /hermes/coding-agents | redirect |
+|  | /app/journey | redirect |
+| ia2.notFound | /app/not-found | page |
+| ia2.search | /app/search | redirect |
+| ia2.collab | /app/collab | page |
+| ia2.dash | /app/dash | page |
+| ia2.board | /app/board | page |
+| ia2.inbox | /app/inbox | page |
+| ia2.governance | /app/gov | redirect |
+| ia2.teams | /app/teams | redirect |
+| ia2.agents | /app/agents | redirect |
+| ia2.accounts | /app/accounts | redirect |
+| ia2.eng | /app/eng | redirect |
+| ia2.deliveryCases | /app/cases | redirect |
+| ia2.sim | /app/sim | page |
+| ia2.runs | /app/runs | redirect |
+| ia2.records | /app/records | page |
+| ia2.collabHistory | /app/history | page |
+| ia2.collabGlobalAgent | /app/agent | page |
+|  | /app/ops | redirect |
+|  | /app/tasks | redirect |
+|  | /app/comms | redirect |
+| hermes.settings | /app/settings | page |
+| hermes.chat | /hermes/chat | page |
+| hermes.globalAgent | /hermes/global-agent | page |
+| hermes.models | /hermes/models | page |
+| hermes.connections | /hermes/connections | page |
+| hermes.groupChat | /hermes/group-chat | page |
+| hermes.workflow | /hermes/workflow | page |
+| hermes.files | /hermes/files | page |
+| hermes.skills | /hermes/skills | page |
+| hermes.plugins | /hermes/plugins | page |
+| hermes.mcp | /hermes/mcp | page |
+| hermes.memory | /hermes/memory | page |
+| hermes.channels | /hermes/channels | page |
+| hermes.jobs | /hermes/jobs | page |
+| hermes.kanban | /hermes/kanban | redirect |
+| hermes.journey | /hermes/journey | redirect |
+| hermes.logs | /hermes/logs | page |
+| hermes.usage | /hermes/usage | page |
+| hermes.performance | /hermes/performance | page |
+| hermes.profiles | /hermes/profiles | page |
+| hermes.theme | /hermes/theme | page |
+| hermes.petdex | /hermes/petdex | redirect |
+| hermes.skillsUsage | /hermes/skills-usage | page |
+| hermes.terminal | /hermes/terminal | page |
+| hermes.versionPreview | /hermes/version-preview | page |
+|  | /hermes/settings | redirect |
+| ide.shell | /app/ide | page |
+| ia2.eval | /app/eval | page |
+| ia2.bpa | /app/bpa | page |
+| ia2.ontology | /app/ontology | page |
+| ia2.skillgov | /app/skillgov | page |
+| desktop.chat | /desktop-chat/:sessionId | page |
+|  | /ide/:rest(.*) | redirect |
+| hermes.person | /person | page |
+| desktop.pet | /desktop-pet | page |
+| login | / | page |
+| groupChat.link | /group-chat-link | page |
+|  | /social-messages | redirect |
+| ia2.loginAlias | /login | redirect |
+| ia2.journey | /app | page |
+|  | /ide | redirect |
+| matrix.client | /matrix | page |
+|  | /:pathMatch(.*)* | redirect |
+<!-- docs-projection:end -->

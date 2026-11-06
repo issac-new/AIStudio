@@ -31,6 +31,7 @@ export function resolveProfile(
   gates: readonly GateSpec[],
   profile: Profile | undefined,
   configuredProfileId: string | undefined,
+  configEnableGates?: readonly string[],
 ): ResolvedProfile {
   const chosen = profile
   // 未配置或未找到 → 全门启用（裁剪是 opt-in，不是默认收缩）
@@ -50,6 +51,13 @@ export function resolveProfile(
   }
   for (const pattern of chosen.spec.disable) {
     for (const g of gates) if (patternMatches(pattern, g)) resolved.enabled.set(g.metadata.id, false)
+  }
+  // 档位后配置覆盖（round-2）：qgate.yaml enableGates 按 id 逐门复活——发布流需要
+  // 覆盖被档位（域级）禁用但 claim 已声明的门（求值序最后，胜过 enable/disable）。
+  if (configEnableGates && configEnableGates.length > 0) {
+    for (const id of configEnableGates) {
+      if (gates.some((g) => g.metadata.id === id)) resolved.enabled.set(id, true)
+    }
   }
   for (const [gateId, override] of Object.entries(chosen.spec.overrides ?? {})) {
     if (override.policy && Object.keys(override.policy).length > 0) {

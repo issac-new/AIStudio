@@ -2,7 +2,7 @@
 // 切档子集、REST 查/切/清（真实 Koa 挂载）。引擎协议锚=upstream/zcode
 // packages/shared/src/zcode-protocol-v4/command.ts:39/216（createSession.config.mode
 // 与 switchCollaborationMode build/edit/plan/yolo）。
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
 import bodyParser from '@koa/bodyparser'
@@ -10,10 +10,20 @@ import type { AddressInfo } from 'net'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { PlatformPrincipal } from '../../../platform/contracts/identity'
+
+const engine = vi.hoisted(() => ({
+  connect: vi.fn(),
+  send: vi.fn(),
+  close: vi.fn(),
+}))
+vi.mock('../../zcode/engine-bridge', () => ({ connectZCodeEngine: engine.connect }))
+vi.mock('../../zcode/mention-dispatch', () => ({ uuidV7Like: () => 'command-test' }))
 
 const dir = mkdtempSync(join(tmpdir(), 'sess-mode-'))
 let base = ''
 let srv: ReturnType<typeof createServer>
+let currentUser: PlatformPrincipal | undefined
 
 beforeAll(async () => {
   process.env.HERMES_SESSION_MODES_DIR = dir
@@ -21,11 +31,28 @@ beforeAll(async () => {
   delete process.env.HERMES_TOOL_ENFORCE_MODE
   const { sessionModeRoutes } = await import('../session-mode-controller')
   const app = new Koa()
+  app.use(async (ctx, next) => {
+    if (currentUser) (ctx.state as { user?: PlatformPrincipal }).user = currentUser
+    await next()
+  })
   app.use(bodyParser())
   app.use(sessionModeRoutes.routes())
   srv = createServer(app.callback())
   await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r))
   base = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`
+})
+
+beforeEach(() => {
+  currentUser = { id: 1, username: 'root', role: 'super_admin', status: 'active' }
+  engine.connect.mockReset()
+  engine.send.mockReset()
+  engine.close.mockReset()
+  engine.send.mockResolvedValue({ status: 'accepted' })
+  engine.connect.mockResolvedValue({
+    clientId: 'client-test',
+    agent: { sendConversationCommandV4: engine.send },
+    close: engine.close,
+  })
 })
 
 afterAll(() => {
@@ -115,5 +142,46 @@ describe('REST 查/切/清', () => {
     expect(del.json.removed).toBe(true)
     const get2 = await req('GET', '/api/hermes/permmodes/session-mode/chen')
     expect(get2.json.sessionMode).toBeNull()
+  })
+
+  it('普通 admin 不得切 bypassPermissions；存储、引擎调用和连接均无副作用', async () => {
+    const store = await import('../session-mode-store')
+    store.setSessionMode('alice', 'plan')
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+
+    const response = await req('PUT', '/api/hermes/permmodes/session-mode/alice', {
+      mode: 'bypassPermissions', sessionId: 'session-alice', workspacePath: '/tmp/alice',
+    })
+
+    expect(response.status).toBe(403)
+    expect(store.sessionModeOf('alice')).toBe('plan')
+    expect(engine.connect).not.toHaveBeenCalled()
+    expect(engine.send).not.toHaveBeenCalled()
+  })
+
+  it('普通 admin 不得清除会话档，super_admin 仍可清除', async () => {
+    const store = await import('../session-mode-store')
+    store.setSessionMode('alice', 'acceptEdits')
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+    expect((await req('DELETE', '/api/hermes/permmodes/session-mode/alice')).status).toBe(403)
+    expect(store.sessionModeOf('alice')).toBe('acceptEdits')
+
+    currentUser = { id: 1, role: 'super_admin', status: 'active' }
+    expect((await req('DELETE', '/api/hermes/permmodes/session-mode/alice')).status).toBe(200)
+    expect(store.sessionModeOf('alice')).toBeNull()
+  })
+
+  it('permmode 读按 profileId 授权；无身份与空授权均不得读取', async () => {
+    const store = await import('../session-mode-store')
+    store.setSessionMode('alice', 'plan')
+    store.setSessionMode('bob', 'readonly')
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+    expect((await req('GET', '/api/hermes/permmodes/session-mode/alice')).status).toBe(200)
+    expect((await req('GET', '/api/hermes/permmodes/session-mode/bob')).status).toBe(403)
+
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: [] }
+    expect((await req('GET', '/api/hermes/permmodes/session-mode/alice')).status).toBe(403)
+    currentUser = undefined
+    expect((await req('GET', '/api/hermes/permmodes/session-mode/alice')).status).toBe(401)
   })
 })

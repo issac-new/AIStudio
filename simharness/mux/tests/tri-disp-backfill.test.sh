@@ -39,4 +39,23 @@ cp "$HERE/tests/fixtures/tri-disp-issues.log" "$T2/runs/x/evidence/issues.log"
 AIPAY_SIM_ROOT="$T2" python3 "$HERE/mux/tri-disp-backfill.py" --run x | grep -q '快照缺席' || { echo "FAIL: 快照缺席应安静退出"; exit 1; }
 rm -rf "$T2"
 
-echo "PASS tri-disp-backfill（归桶 $N1 键 / 幂等 / 零自动升桶 / 快照缺席不盲写）"
+# ── P2 Task 2：幂等依据改「末次 DISP」──
+# 旧口径「存在任一三态行即跳过」：人工先回写三态、又追加非三态行后，末次适用=非三态
+# 仍须归桶；旧口径误跳。场景：tri 键首跑归桶（追加三态行）→ 人工回写非三态新终态 →
+# 重跑必须再归桶（末次适用行=人工非三态行）。
+T3="$(mktemp -d)"; mkdir -p "$T3/runs/y/evidence"
+cp "$T/runs/tri-disp-test/evidence/issues.log" "$T3/runs/y/evidence/issues.log"
+cp "$T/runs/tri-disp-test/evidence/governance-metrics.json" "$T3/runs/y/evidence/governance-metrics.json"
+AIPAY_SIM_ROOT="$T3" python3 "$HERE/mux/tri-disp-backfill.py" --run y >/dev/null
+B1=$(grep -c '观察（收尾归桶' "$T3/runs/y/evidence/issues.log")
+# 人工在末尾回写非三态终态（receipt 键——该键末次适用行变为非三态）
+printf 'DISP|receipt-missing|AN-PAYCORE|终态复核 2026-11-06：回执已在案（人工补记，快照后新行）\n' >> "$T3/runs/y/evidence/issues.log"
+AIPAY_SIM_ROOT="$T3" python3 "$HERE/mux/tri-disp-backfill.py" --run y >/dev/null
+B2=$(grep -c '观察（收尾归桶' "$T3/runs/y/evidence/issues.log")
+[ "$B2" -eq $((B1 + 1)) ] || { echo "FAIL: 末次 DISP 口径未生效（人工回写非三态后应再归桶 1 键：$B1 -> $B2）"; rm -rf "$T3"; exit 1; }
+AIPAY_SIM_ROOT="$T3" python3 "$HERE/mux/tri-disp-backfill.py" --run y >/dev/null
+B3=$(grep -c '观察（收尾归桶' "$T3/runs/y/evidence/issues.log")
+[ "$B3" -eq "$B2" ] || { echo "FAIL: 末次口径下幂等破坏（$B2 -> $B3）"; rm -rf "$T3"; exit 1; }
+rm -rf "$T3"
+
+echo "PASS tri-disp-backfill（归桶 $N1 键 / 幂等 / 零自动升桶 / 快照缺席不盲写 / 末次 DISP 口径）"

@@ -32,6 +32,30 @@ if [[ -n "$_others" ]]; then
   exit 0
 fi
 
+# ── 推演单所有权（P2 Task 1）：relay 参与 owner 协议 ──
+# 有活 owner（product/bash supervisor）→ relay 让位退出（监督者负责拉起，双拉=互踩）；
+# 无 owner → relay 取 owner（kind=relay）接管驱动拉起权；退出按 pid+instance 释放。
+# 四因子判活/陈 owner 原子接管均在 guard CLI 正本（scripts/platform/runtime/guard-cli.mjs）。
+_mg_root=""
+_d="$(cd "$(dirname "$0")/.." && pwd)"
+while [ "$_d" != "/" ]; do
+  [ -f "$_d/scripts/platform/runtime/guard-cli.mjs" ] && { _mg_root="$_d"; break; }
+  _d="$(dirname "$_d")"
+done
+if [ -z "$_mg_root" ]; then
+  echo "[relay] guard-cli.mjs 未找到（仓根解析失败）——单所有权协议不可用，拒绝无仲裁接力" >&2
+  exit 5
+fi
+_mg() { "${MX_GUARD_NODE:-node}" "$_mg_root/scripts/platform/runtime/guard-cli.mjs" "$@"; }
+if ! _rjson="$(_mg owner-acquire --sim-root "$SIM_ROOT" --kind relay --run-id "$RUN_ID" --pid $$ --cmd-matcher 'mx-relay' 2>/dev/null)"; then
+  _rk="$(printf '%s' "$_rjson" | jq -r '.holder.kind // "?"' 2>/dev/null)"
+  echo "[relay] owner 在位（kind=${_rk}）——监督者负责拉起，relay 让位退出（单所有权协议）"
+  exit 0
+fi
+RELAY_INSTANCE="$(printf '%s' "$_rjson" | jq -r '.instance // empty' 2>/dev/null)"
+trap '_mg owner-release --sim-root "$SIM_ROOT" --pid $$ --instance "$RELAY_INSTANCE" >/dev/null 2>&1' EXIT
+echo "[relay] owner 取得（instance=${RELAY_INSTANCE:0:8}…，relay pid=$$）"
+
 heal_runtime() {
   if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
     ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" ) >>"$RELAY_LOG" 2>&1 \

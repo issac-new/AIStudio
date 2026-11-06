@@ -8,15 +8,15 @@
 //   默认: --mac (arm64 DMG + zip)
 
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
 import { resolve } from 'path';
+// 上游根解析单一事实源（P1 Task 6）：env > 仓内 vendor > 旧兄弟 upstream（realpath）。
+// 旧实现无 vendor 分支——单仓全新克隆（无 ../upstream 兄弟）下 DMG 打包目标必落空。
+import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
+import { treeGitCtx } from './inject.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
-const ncwkRoot = resolve(overlayRoot, '..');
-// OVERLAY_UPSTREAM_ROOT：与 inject.mjs 同款私有上游隔离——缺省行为不变（ncwk 共享树）。
-const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim())
-  : resolve(ncwkRoot, 'upstream');
-const upstream = resolve(upstreamRoot, 'hermes-studio');
+const upstream = resolveUpstreamRoots(overlayRoot).hermesStudioRoot;
 const desktopDir = resolve(upstream, 'packages/desktop');
 
 const platform = process.argv.includes('--win') ? 'win'
@@ -48,8 +48,20 @@ try {
 } catch {
   console.log('[build-dmg] clean 非零退出（残留已由后续 restore 兜底），继续');
 }
-// clean 后可能残留 untracked patch 产物（旧版 clean 不删），统一清点
-run('git checkout -- .', upstream, 'restore upstream tracked files');
+// clean 后可能残留 untracked patch 产物（旧版 clean 不删），统一清点。
+// tracked restore 复用 treeGitCtx 语义（P1 Task 6）：vendor 子树无自身 .git——裸
+// `git checkout -- .` 只在自持 .git 树成立；vendor 模式经外仓 pathspec 还原，
+// 无任何 git 上下文（env 指向裸目录）时跳过（restore 对非 git 树无意义）。
+{
+  const c = treeGitCtx(upstream);
+  if (c.relPrefix) {
+    run(`git checkout -- "${c.relPrefix}"`, c.gitCwd, 'restore upstream tracked files (vendor pathspec)');
+  } else if (existsSync(resolve(upstream, '.git'))) {
+    run('git checkout -- .', upstream, 'restore upstream tracked files');
+  } else {
+    console.log('[build-dmg] 目标树无 git 上下文（裸目录注入树），跳过 tracked restore');
+  }
+}
 // 隔离模式（OVERLAY_UPSTREAM_ROOT 显式指定 = 一次性构建树）追加硬还原：
 // inject --clean 对「补丁新建文件」的反向剥离不完整——同树二连跑（mac 后跑 win）
 // 时 024 号类创建型补丁的产物残留必撞 "already exists"（2026-10-15 三目标轮⑯两
@@ -58,8 +70,10 @@ if (process.env.OVERLAY_UPSTREAM_ROOT?.trim()) {
   run('git clean -fde node_modules', upstream, 'isolated mode: hard-clean untracked (keep node_modules)');
 }
 
-// === Step 0: Inject (apply patches, create symlinks, generate overlay vite config) ===
-run('node scripts/inject.mjs', overlayRoot, 'inject patches → upstream');
+// === Step 0: ensure-injected（P1 Task 6 起：注入前置走 ensure 主链）===
+// Step -1 已 clean（无清单净树）→ ensure 判定未注入后经 inject 主链全量重放，
+// 与裸 inject 等效但复用同一守门（失败/partial 非零即中止打包，不静默续跑）。
+run('node scripts/ensure-injected.mjs', overlayRoot, 'ensure-injected → inject patches → upstream');
 
 // === Step 0.5: v0735-fixes 类型修复（2026-10-16 v0.7.36 轮接线）===
 // inject 只落补丁；apply.sh 的 mimo 级联/类型断言是 post-inject 树手术（Step -1 的

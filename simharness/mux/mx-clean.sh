@@ -44,12 +44,33 @@ for a in "$@"; do
 done
 say() { echo "[mx-clean $([ "$APPLY" = 1 ] && echo APPLY || echo DRY-RUN)] $*"; }
 
-# 0) 推演在跑则拒绝（单驱动锁判活）
-if [ -f "$SIM_ROOT/.driver.lock.d/info" ]; then
-  LP=$(sed -n 's/^pid=\([0-9]*\).*/\1/p' "$SIM_ROOT/.driver.lock.d/info" 2>/dev/null || true)
-  if [ -n "$LP" ] && kill -0 "$LP" 2>/dev/null; then
-    echo "[mx-clean FAIL] 推演进行中（驱动 pid $LP 活锁）——拒绝清理；结束推演后重试" >&2; exit 3
-  fi
+# 0) 推演在跑则拒绝（P2 Task 1：清场租约 + 活角色断言，四因子判活走 guard CLI）
+#    clean-begin 取租约（租约内任何 owner/driver/resident 注册都被拒——清场中不许
+#    新角色进场）；clean-assert 在第一个停栈/归档/删除动作前列活角色（owner/驱动/
+#    常驻注册任一活即拒）。旧「sed 读 pid + kill -0」单因子判活退役。
+MG_ROOT=""
+_d="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+while [ "$_d" != "/" ]; do
+  [ -f "$_d/scripts/platform/runtime/guard-cli.mjs" ] && { MG_ROOT="$_d"; break; }
+  _d="$(dirname "$_d")"
+done
+if [ -z "$MG_ROOT" ]; then
+  echo "[mx-clean FAIL] guard-cli.mjs 未找到（仓根解析失败）——清场租约不可用，拒绝无仲裁清理" >&2; exit 3
+fi
+MG_CLI="$MG_ROOT/scripts/platform/runtime/guard-cli.mjs"
+_mg() { "${MX_GUARD_NODE:-node}" "$MG_CLI" "$@"; }
+CLEAN_INSTANCE=""
+if ! CLEAN_JSON="$(_mg clean-begin --sim-root "$SIM_ROOT" --pid $$ --cmd-matcher 'mx-clean' 2>/dev/null)"; then
+  echo "[mx-clean FAIL] 清场租约取得失败（另一清场在途或 guard 异常）：$(printf '%s' "$CLEAN_JSON" | head -c 200)" >&2; exit 3
+fi
+CLEAN_INSTANCE="$(printf '%s' "$CLEAN_JSON" | jq -r '.instance // empty' 2>/dev/null)"
+_mg_clean_end() { [ -n "$CLEAN_INSTANCE" ] && _mg clean-end --sim-root "$SIM_ROOT" --pid $$ --instance "$CLEAN_INSTANCE" >/dev/null 2>&1 || true; }
+trap '_mg_clean_end' EXIT
+if ! ASSERT_JSON="$(_mg clean-assert --sim-root "$SIM_ROOT" 2>/dev/null)"; then
+  echo "[mx-clean FAIL] 活角色在位，拒绝清理（首个停栈/归档/删除前拒绝；结束推演/停监督器与 relay 后重试）：" >&2
+  printf '%s' "$ASSERT_JSON" | jq -r '.residents[]? | "  - \(.kind // .role) pid=\(.pid // "?") \(.reason // "")"' 2>/dev/null >&2 || printf '%s\n' "$ASSERT_JSON" >&2
+  _mg_clean_end
+  exit 3
 fi
 # 0a2) 端口兜底（2026-10-19 实测）：pid 复用守卫跳杀后 studio 可能仍活——清场与
 #      活服务互踩（rm "Directory not empty"、sqlite 库锁、半清树）。端口仍在听即中止。
@@ -117,6 +138,35 @@ if [ -n "$_cur_run" ] && [ -f "$SIM_ROOT/runs/$_cur_run/state.env" ]; then
     mkdir -p "$SIM_ROOT/runs/$_cur_run/evidence" 2>/dev/null || true
     echo "ISSUE|integration-retention-guard|$_cur_run|mx-clean 试图删 integration 分支但轮 $_cur_run report_done 未落——保留守卫触发，分支未删（run20 13 件死锚教训的产品化；报告持久化后再清）" >> "$SIM_ROOT/runs/$_cur_run/evidence/issues.log" 2>/dev/null || true
   fi
+fi
+# ── 2 前置·clearance 投影（P2 Task 2）：未闭环债务跨清场存活 ──
+# 归档 tar 是冻结件不回改；开跑前清偿门（⑯/⑯b）与人工 resolve/append-disp 需要
+# 可写载体。清场前把锚定轮（无锚定轮则 runs/ 最新轮）的台账+issues.log 原子写到
+# var/clearance/<RUN>/（temp+mv），并落 current 指针。投影写在首个数据毁伤动作
+# （归档/删除）之前——停栈在 1) 段更早且仅 TERM 进程不毁数据；守卫拒绝时投影
+# 不写；dry-run 零副作用（APPLY 守卫）。
+if [ "$APPLY" = 1 ]; then
+_cl_proj_run="$_cur_run"
+if [ -z "$_cl_proj_run" ] && [ -d "$SIM_ROOT/runs" ]; then
+  _cl_proj_run="$(ls -1t "$SIM_ROOT/runs" 2>/dev/null | head -1 || true)"
+fi
+if [ -n "$_cl_proj_run" ]; then
+  _cl_src="$SIM_ROOT/runs/$_cl_proj_run/evidence"
+  if [ -d "$_cl_src" ]; then
+    mkdir -p "$SIM_ROOT/var/clearance/$_cl_proj_run"
+    for _cl_f in compensation-ledger.tsv issues.log; do
+      if [ -f "$_cl_src/$_cl_f" ]; then
+        _cl_tmp="$SIM_ROOT/var/clearance/$_cl_proj_run/$_cl_f.tmp.$$"
+        cp "$_cl_src/$_cl_f" "$_cl_tmp" && mv "$_cl_tmp" "$SIM_ROOT/var/clearance/$_cl_proj_run/$_cl_f" \
+          && say "clearance 投影：$_cl_f → var/clearance/$_cl_proj_run/（未闭环债务跨清场存活）" \
+          || say "⚠ clearance 投影写失败（$_cl_f）——人工核验（债务可能随清场失载）"
+      fi
+    done
+    printf '%s\n' "$_cl_proj_run" > "$SIM_ROOT/var/clearance/.current.tmp.$$" \
+      && mv "$SIM_ROOT/var/clearance/.current.tmp.$$" "$SIM_ROOT/var/clearance/current" \
+      || true
+  fi
+fi
 fi
 say "runs/ 与 state.env → ${ARC}（tar 归档后删除原物）"
 if [ "$APPLY" = 1 ]; then

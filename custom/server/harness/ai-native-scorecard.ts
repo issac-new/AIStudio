@@ -37,10 +37,8 @@ function read(root: string, rel: string): string | null {
 }
 
 function fileAgeDays(root: string, rel: string): number | null {
-  try {
-    const st = readdirSync ? null : null
-    void st
-  } catch { /* noop */ }
+  // 死代码清除（P1 Task 10）：首段 try 是历史误植（readdirSync 恒真条件 + void 丢弃），
+  // 除触发 tsc TS2774 阻断 build:full 外无任何作用——release:gate 真跑逮住后摘除。
   try {
     const { statSync } = require('node:fs') as typeof import('node:fs')
     const s = statSync(join(root, rel))

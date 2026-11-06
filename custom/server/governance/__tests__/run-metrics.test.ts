@@ -2,7 +2,7 @@
 // 移植。钉三态（首过/补过/打回）、证据率、密度双源、告警族、DISP 归桶、metrics
 // CSV 行格式、基线/趋势缺文件=⬜（run13 C3：闸段事故单不计打回）。
 import { describe, expect, it } from 'vitest'
-import { computeRunMetrics, parseStateEnvKeys } from '../run-metrics'
+import { computeRunMetrics, gateStateFromEvidence, parseStateEnvKeys } from '../run-metrics'
 
 const ISSUES = `ISSUE|g1-review|bella|G1 判读缺要素后补齐（首过前补交形态）
 ISSUE|g2-style|arch|设计五要素缺验证计划（闸段观察单）
@@ -89,7 +89,7 @@ describe('computeRunMetrics', () => {
   it('metrics CSV 行格式（M1/M3/M4/M5；score 三位小数）', () => {
     const m = mk()
     const m1 = m.metricsRows.find((r) => r.id === 'M1')!
-    expect(m1.csv).toBe('2026-10-27,RFD-001,M1,0.667,4/6,2026-10-27..2026-10-27,state.env 落键实算,六闸全计（G3/G6 落键型无记录即首过；治理服务 run-metrics 单源计算）')
+    expect(m1.csv).toBe('2026-10-27,RFD-001,M1,0.667,4/6,2026-10-27..2026-10-27,state.env 落键实算,六闸全计（缺完成键=unknown 不产本行；治理服务 run-metrics 单源计算）')
     expect(m.metricsRows.find((r) => r.id === 'M3')!.csv).toContain('3/4')
     expect(m.metricsRows.find((r) => r.id === 'M4')!.csv).toBe('2026-10-27,RFD-001,M4,1,1,2026-10-27..2026-10-27,issues.log 实算,打回次数=打回/拒收/熔断行计数')
   })
@@ -138,8 +138,213 @@ describe('computeRunMetrics', () => {
   })
 })
 
+describe('unknown 四态（P0 Task 6：完成键缺失=未观测，不产 M1 不显 0/6）', () => {
+  const withoutKey = (key: string) => STATE.split('\n').filter((l) => !l.startsWith(`${key}=`)).join('\n')
+
+  it('空状态/空 issues：六闸全 unknown、首过 0、不产 M1、trend 末项 ⬜', () => {
+    const empty = computeRunMetrics({ run: 'empty', rfd: 'RFD-X', issuesLog: '', stateEnv: '' })
+    expect(empty.gateStats.every((gate) => gate.state === 'unknown')).toBe(true)
+    expect(empty.firstPass).toBe(0)
+    expect(empty.supplementCount).toBe(0)
+    expect(empty.rejectGateCount).toBe(0)
+    expect(empty.unknownGateCount).toBe(6)
+    // M1（首过率分母成绩）不产；计数型/独立分母行如实保留
+    expect(empty.metricsRows.some((row) => row.id === 'M1')).toBe(false)
+    expect(empty.metricsRows.some((row) => row.id === 'M4')).toBe(true)
+    expect(empty.metricsRows.some((row) => row.id === 'M5')).toBe(true)
+    expect(empty.trend.at(-1)!.firstPass).toBe('⬜')
+    // 分母不完整不产率：打回率分母 6 同样含未观测闸，unknown 轮不得显 X/6（系统性低估）
+    expect(empty.trend.at(-1)!.rejectRate).toBe('⬜')
+  })
+
+  it('单闸缺完成键（g2_arch_pass）：unknownGateCount=1、M1 不产、计数全从 gateStats 出', () => {
+    const partial = mk({ stateEnv: withoutKey('g2_arch_pass') })
+    expect(partial.unknownGateCount).toBe(1)
+    expect(partial.gateStats.find((g) => g.gate === 'G2')!.state).toBe('unknown')
+    // G1 补过、G5 打回、G2 unknown，余 G3/G4/G6 首过：四态计数和=6（禁反推公式）
+    expect(partial.firstPass).toBe(3)
+    expect(partial.supplementCount).toBe(1)
+    expect(partial.rejectGateCount).toBe(1)
+    expect(partial.firstPass + partial.supplementCount + partial.rejectGateCount + partial.unknownGateCount).toBe(6)
+    expect(partial.metricsRows.some((row) => row.id === 'M1')).toBe(false)
+    expect(partial.trend.at(-1)!.firstPass).toBe('⬜')
+    expect(partial.trend.at(-1)!.rejectRate).toBe('⬜')
+  })
+
+  it('空串完成键同缺键：g4_pass= → G4 unknown', () => {
+    const blank = mk({ stateEnv: STATE.replace('g4_pass=1790000003', 'g4_pass=') })
+    expect(blank.gateStats.find((g) => g.gate === 'G4')!.state).toBe('unknown')
+    expect(blank.unknownGateCount).toBe(1)
+  })
+
+  it('打回优先于完成键：G5 键缺失+判词 FAIL → 打回（非 unknown，unknown 计 0）', () => {
+    const m = mk({ stateEnv: withoutKey('g5_ready') })
+    expect(m.gateStats.find((g) => g.gate === 'G5')!.state).toBe('打回')
+    expect(m.unknownGateCount).toBe(0)   // 唯一缺键闸已被判词定性，不重复计 unknown
+    expect(m.rejectGateCount).toBe(1)
+  })
+
+  it('补证不掩盖缺键：g1_frozen 缺（g1_supplement=1 在）→ G1 unknown、补过数 0', () => {
+    const m = mk({ stateEnv: withoutKey('g1_frozen') })
+    expect(m.gateStats.find((g) => g.gate === 'G1')!.state).toBe('unknown')
+    expect(m.supplementCount).toBe(0)
+  })
+
+  it('分母完整（完整样本）：unknownGateCount=0 → M1 在场、trend 末项 4/6（旧数值不变）', () => {
+    const m = mk()
+    expect(m.unknownGateCount).toBe(0)
+    expect(m.metricsRows.find((r) => r.id === 'M1')!.csv).toContain('4/6')
+    expect(m.trend.at(-1)!.firstPass).toBe('4/6')
+    expect(m.trend.at(-1)!.rejectRate).toBe('1/6')
+  })
+})
+
+describe('gateStateFromEvidence（status→四态显式分支；意外 status 抛错不静默落首过）', () => {
+  // 九字段形状（P1 Task 2）：gateStateFromEvidence 只读 status/supplement，此处手工构造全字段保持类型如实
+  const rec = (status: 'pass' | 'fail' | 'unknown' | 'waived', supplement = false) =>
+    ({
+      evidenceId: 'gev/test/1', subjectId: 'G1', status, producer: 'gate-evidence', commit: null,
+      startedAt: 1, endedAt: 1, sourceDigest: status === 'unknown' ? null : '1790000000',
+      artifactRefs: [], supplement, declaredMissing: true,
+    })
+
+  it('pass±补证 / unknown / fail 各归位（与闸循环判定同源）', () => {
+    expect(gateStateFromEvidence(rec('pass'))).toBe('首过')
+    expect(gateStateFromEvidence(rec('pass', true))).toBe('补过')
+    expect(gateStateFromEvidence(rec('unknown'))).toBe('unknown')
+    expect(gateStateFromEvidence(rec('fail'))).toBe('打回')
+  })
+
+  it('意外 status（含未来 waived）抛错——豁免闸接入前须扩映射，禁静默落首过', () => {
+    expect(() => gateStateFromEvidence(rec('waived'))).toThrow(/waived/)
+  })
+})
+
 describe('parseStateEnvKeys（首行胜出）', () => {
   it('重复键取首行', () => {
     expect(parseStateEnvKeys('g1_frozen=1\ng1_frozen=2\n')).toEqual({ g1_frozen: '1' })
+  })
+})
+
+// ── P2 Task 2：DISP 终态严格化（每键行序末次适用 + 关闭有效性判定） ──
+describe('DISP 终态严格化（closed/valid/closureError + 分计数）', () => {
+  const mk2 = (issues: string, disps: string) => computeRunMetrics({
+    run: 'r2', rfd: 'R', issuesLog: [issues, disps].filter(Boolean).join('\n'),
+    stateEnv: '', runDirs: [], readPrevReport: () => null, today: '2026-11-06',
+  })
+
+  it('末次适用按行序：同键先「已修」后「观察」→ 观察生效（末次 DISP 口径）', () => {
+    const m = mk2(
+      'ISSUE|g1-review|bella|缺要素',
+      ['DISP|g1-review|bella|已修 补齐后过', 'DISP|g1-review|bella|观察 人工复核改判'].join('\n'),
+    )
+    const row = m.pairing.find((r) => r.key === 'g1-review·bella')!
+    expect(row.bucket).toBe('观察')
+    expect(row.closed).toBe(false)
+    expect(row.valid).toBe(true) // 观察有复核理由
+  })
+
+  it('exact 优先于 generic：exact 在前、generic 在后 → 仍取 exact 末次', () => {
+    const m = mk2(
+      ['ISSUE|gw-restart|studio|网关重启', 'ISSUE|gw-restart|director|泛指'].join('\n'),
+      ['DISP|gw-restart|director|观察 广播处置', 'DISP|gw-restart|studio|已修（合并锚 main@abcdef123）'].join('\n'),
+    )
+    const exact = m.pairing.find((r) => r.key === 'gw-restart·studio')!
+    expect(exact.mode).toBe('exact')
+    expect(exact.closed).toBe(true) // exact 已修带锚 → 关闭
+    const generic = m.pairing.find((r) => r.key === 'gw-restart·director')!
+    expect(generic.mode).toBe('generic')
+    expect(generic.closed).toBe(false) // generic 广播不得关闭
+  })
+
+  it('generic 不批量关不同 subject：泛指「已修（带锚）」也关不掉 exact 键', () => {
+    const m = mk2(
+      'ISSUE|r18-collection-missing|step-23|A 处置',
+      'DISP|r18-collection-missing|monitor|已修（统一修复锚 main@1122334）'.replace('（统一修复锚 main@1122334）', '（统一修复锚 main@1122334）'),
+    )
+    const row = m.pairing.find((r) => r.key === 'r18-collection-missing·step-23')!
+    expect(row.bucket).toBe('已修')
+    expect(row.closed).toBe(false)
+    expect(row.valid).toBe(false)
+    expect(row.closureError).toContain('generic')
+  })
+
+  it('已修/已闭环需证据锚：无锚 invalid；带锚（sha/URL/file:line）closed', () => {
+    const noAnchor = mk2('ISSUE|g5-ready-fail|fanfan|G5 FAIL', 'DISP|g5-ready-fail|fanfan|已修 补齐后过')
+    const rowA = noAnchor.pairing.find((r) => r.key === 'g5-ready-fail·fanfan')!
+    expect(rowA.closed).toBe(false)
+    expect(rowA.valid).toBe(false)
+    expect(rowA.closureError).toContain('锚')
+
+    for (const disp of [
+      '已修（合并锚 main@abcdef123）',
+      '已闭环（证据 https://git.example/commit/abc1234）',
+      '已修（custom/server/x.ts:42 修复）',
+    ]) {
+      const m = mk2('ISSUE|g5-ready-fail|fanfan|G5 FAIL', `DISP|g5-ready-fail|fanfan|${disp}`)
+      const row = m.pairing.find((r) => r.key === 'g5-ready-fail·fanfan')!
+      expect(row.closed, disp).toBe(true)
+      expect(row.valid, disp).toBe(true)
+      expect(row.closureError, disp).toBeNull()
+    }
+  })
+
+  it('观察需复核理由：裸「观察」invalid；有理由 valid 但不 closed', () => {
+    const bare = mk2('ISSUE|gw-restart|studio|重启', 'DISP|gw-restart|studio|观察')
+    const rowBare = bare.pairing[0]
+    expect(rowBare.valid).toBe(false)
+    expect(rowBare.closureError).toContain('理由')
+    const withReason = mk2('ISSUE|gw-restart|studio|重启', 'DISP|gw-restart|studio|观察 重启后自愈，连续两轮无复发')
+    const row = withReason.pairing[0]
+    expect(row.valid).toBe(true)
+    expect(row.closed).toBe(false)
+  })
+
+  it('延后 valid 不 closed（deferred 计数）', () => {
+    const m = mk2('ISSUE|uat-cond|fanfan|有条件', 'DISP|uat-cond|fanfan|延后 放行权归 bella（下轮前置处置）')
+    const row = m.pairing[0]
+    expect(row.valid).toBe(true)
+    expect(row.closed).toBe(false)
+    expect(m.dispClosure.deferred).toBe(1)
+  })
+
+  it('报告分计数 closed/deferred/pending/invalid 分区全量（和=唯一键数）', () => {
+    const m = mk2(
+      [
+        'ISSUE|a-closed|s1|x',        // exact 已修带锚 → closed
+        'ISSUE|a-defer|s2|x',         // exact 延后 → deferred
+        'ISSUE|a-observe|s3|x',       // exact 观察有理由 → pending
+        'ISSUE|a-noanchor|s4|x',      // exact 已修无锚 → invalid
+        'ISSUE|a-none|s5|x',          // 无 DISP → pending
+        'ISSUE|g-gen|director|x',     // generic 观察有理由 → pending
+      ].join('\n'),
+      [
+        'DISP|a-closed|s1|已修（main@abcdef123）',
+        'DISP|a-defer|s2|延后（下轮前置）',
+        'DISP|a-observe|s3|观察 理由在案',
+        'DISP|a-noanchor|s4|已修 无锚声明',
+        'DISP|g-gen|director|观察 理由在案',
+      ].join('\n'),
+    )
+    expect(m.dispClosure).toEqual({ closed: 1, deferred: 1, pending: 3, invalid: 1 })
+    const sum = m.dispClosure.closed + m.dispClosure.deferred + m.dispClosure.pending + m.dispClosure.invalid
+    expect(sum).toBe(m.pairing.length)
+  })
+
+  it('畸形 DISP 行（3 字段无处置段）不参与配对：分区不变量保持，先到有效 DISP 不被抹（I-3）', () => {
+    const m = mk2(
+      'ISSUE|g2-arch|bella|缺判词',
+      [
+        'DISP|g2-arch|bella',                    // 畸形：无第四段（旧实现会放行并抹掉下行有效处置）
+        'DISP|g2-arch|bella|延后（下轮补判词）', // 有效：应成为末次适用
+      ].join('\n'),
+    )
+    const row = m.pairing.find((r) => r.key === 'g2-arch·bella')!
+    expect(row.bucket).toBe('延后')
+    expect(row.valid).toBe(true)
+    expect(row.closed).toBe(false)
+    expect(m.dispClosure.deferred).toBe(1)
+    const sum = m.dispClosure.closed + m.dispClosure.deferred + m.dispClosure.pending + m.dispClosure.invalid
+    expect(sum).toBe(m.pairing.length)
   })
 })

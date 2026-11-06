@@ -2,13 +2,16 @@
  * 人工审批收件箱 REST（/api/approvals/*）——P1 §二（2026-09-28 产品 UI 缺陷修复）。
  *
  * GET  /api/approvals/pending            待审聚合（fleet 命令审批 + 评审域未裁决）
+ * POST /api/approvals/autopass/scan      显式自动放行扫描（唯一触发点，返回 {ok,acted}）
  * POST /api/approvals/:id/decide         就地裁决（id 前缀路由到对应域，决策落历史）
  * GET  /api/approvals/history?limit=50   决策历史（时间+操作人+对象+结果）
  * GET  /api/approvals/spotcheck          待抽检清单（低风险自动放行的事后回看）
  * POST /api/approvals/spotcheck/:id/resolve  抽检处置（confirm 认可 / veto 误放行回灌）
  *
- * V4.1 §七 抽检器（2026-09-29）：pending 聚合前先跑低风险自动放行（autopass.ts，
- * 纯只读命令过宽限期自动 once 放行 + 确定性抽检入队），人审聚焦 high/medium。
+ * V4.1 §七 抽检器（2026-09-29 起，2026-11-05 P0 Task 4 改造）：低风险自动放行
+ * （autopass.ts，纯只读命令过宽限期自动 once 放行 + 确定性抽检入队）不再挂在
+ * GET 读请求上——读端点（/pending、/pending-summary）零副作用，扫描只由显式
+ * 写命令 POST /autopass/scan 触发（客户端读面前置调用），人审聚焦 high/medium。
  *
  * 数据源复用既有域（不另起炉灶）：
  *   - fleet 命令审批：services/hermes/fleet-tap（buildFleetSnapshotFromTap 的
@@ -40,8 +43,12 @@ import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from
 import { atomicWriteJson } from '../lib/fs-store'
 import { fail, ok } from '../lib/http'
 import { hermesHome } from '../lib/paths'
+import { requirePlatformSuperAdmin } from '../platform/authz/policy'
 
 const router = new Router({ prefix: '/api/approvals' })
+// 六源归属协议未齐前整个收件箱（含嵌套 human-gate）限 super_admin；
+// router.use 必须先于本文件全部路由声明，拒绝先于 pending 自动放行与任何裁决写入。
+router.use(requirePlatformSuperAdmin)
 
 export interface PendingItem {
   id: string
@@ -335,7 +342,7 @@ function collectPendingItems(): PendingItem[] {
   return items
 }
 
-// V4.1 抽检器：扫描节流（并发 pending 查询不重复放行；1s 内只扫一次）
+// V4.1 抽检器：扫描节流（并发扫描请求不重复放行；1s 内只扫一次）
 let lastAutopassScan = 0
 
 /** 低风险自动放行扫描：候选（纯只读命令且过宽限期）执行 once 放行 + 记账入抽检。 */
@@ -366,12 +373,17 @@ async function runAutoPassScan(items: PendingItem[]): Promise<number> {
   return acted
 }
 
-router.get('/pending', async (ctx) => {
-  const pre = collectPendingItems()
-  // V4.1 抽检器：聚合前先放行低风险项（放行后重取，人审只看 high/medium）
-  const acted = await runAutoPassScan(pre)
-  const items = acted > 0 ? collectPendingItems() : pre
+// P0 Task 4（2026-11-05）：自动放行的唯一显式触发点（写命令）。GET 读面零副作用，
+// 客户端读函数前置调用本端点； acted=本次扫描实际放行条数（含开关关闭与节流窗口内 0）。
+router.post('/autopass/scan', async (ctx) => {
+  const acted = await runAutoPassScan(collectPendingItems())
+  ctx.body = { ok: true, acted }
+})
 
+// 读端点（P0 Task 4）：纯读零副作用——不再内嵌自动放行扫描，低风险项由
+// POST /autopass/scan 显式放行后经下一次读取自然消失。
+router.get('/pending', async (ctx) => {
+  const items = collectPendingItems()
   // V4-N1：高危置顶，同档内按时间新→旧
   const tierOrder: Record<ApprovalRiskTier, number> = { high: 0, medium: 1, low: 2 }
   items.sort((a, b) => (tierOrder[a.risk] - tierOrder[b.risk]) || (b.createdAt - a.createdAt))
@@ -404,10 +416,9 @@ export function summarizePendingItems(items: PendingItem[]): PendingSummary {
   return { total: items.length, command, review, enforce, byRisk, ts: Date.now() }
 }
 
+// 读端点（P0 Task 4）：纯读零副作用，与 /pending 同一聚合管线（spec 2026-10-19-studio-p2 §2.3）。
 router.get('/pending-summary', async (ctx) => {
-  const pre = collectPendingItems()
-  const acted = await runAutoPassScan(pre)
-  const items = acted > 0 ? collectPendingItems() : pre
+  const items = collectPendingItems()
   ctx.body = { ok: true, ...summarizePendingItems(items) }
 })
 

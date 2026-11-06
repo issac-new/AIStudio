@@ -4,8 +4,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
 import type { AddressInfo } from 'net'
-import { readFileSync, mkdirSync } from 'fs'
+import { readFileSync, mkdirSync, existsSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import type { PlatformPrincipal } from '../../../platform/contracts/identity'
 
 const LOG_FILE_BEFORE = process.env.HERMES_APPROVALS_LOG_FILE
 const REVIEW_DIR_BEFORE = process.env.HERMES_REVIEW_DIR
@@ -19,6 +20,7 @@ async function fetchJson(base: string, path: string, init?: RequestInit) {
 describe('审批收件箱 REST（/api/approvals）', () => {
   let base: string
   let server: ReturnType<typeof createServer>
+  let currentUser: PlatformPrincipal | undefined
 
   afterEach(async () => {
     await new Promise<void>((r) => server.close(() => r()))
@@ -31,6 +33,7 @@ describe('审批收件箱 REST（/api/approvals）', () => {
   })
 
   beforeEach(async () => {
+    currentUser = { id: 1, username: 'qa-lead', role: 'super_admin', status: 'active' }
     process.env.HERMES_APPROVALS_LOG_FILE = `/tmp/p1-approvals-log-${process.pid}-${Date.now()}.json`
     process.env.HERMES_REVIEW_DIR = `/tmp/p1-review-dir-${process.pid}-${Date.now()}`
     process.env.HERMES_APPROVALS_QUEUE_DIR = `/tmp/p1-approvals-queue-${process.pid}-${Date.now()}`
@@ -46,7 +49,7 @@ describe('审批收件箱 REST（/api/approvals）', () => {
 
     const app = new Koa()
     app.use(async (ctx, next) => {
-      (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+      if (currentUser) (ctx.state as { user?: PlatformPrincipal }).user = currentUser
       await next()
     })
     app.use(async (ctx, next) => {
@@ -315,12 +318,85 @@ describe('审批收件箱 REST（/api/approvals）', () => {
 
   it('V4-N1：review 裁决台账记风险档（baseline 评审=medium）', async () => {
     await fetchJson(base, '/api/approvals/review:rev-pending-1/decide', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST',
       body: JSON.stringify({ decision: 'approve' }),
     })
     const hist = await fetchJson(base, '/api/approvals/history')
     const entries = hist.body.entries as Array<{ targetId: string; risk?: string }>
     expect(entries.find((e) => e.targetId === 'rev-pending-1')?.risk).toBe('medium')
+  })
+
+  it('普通 admin 裁决审批为 403，评审与审批历史均不产生副作用', async () => {
+    currentUser = { id: 2, username: 'alice-admin', role: 'admin', status: 'active', profiles: ['alice'] }
+    const response = await fetchJson(base, '/api/approvals/review:rev-pending-1/decide', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve', note: '越权批准' }),
+    })
+
+    expect(response.status).toBe(403)
+    const { loadReview } = await import('../../review/review-store')
+    expect(loadReview('rev-pending-1')?.verdict).toBeUndefined()
+    const { queryApprovalLog } = await import('../approval-log')
+    expect(queryApprovalLog(50)).toEqual([])
+  })
+
+  it('普通 admin 读取 pending 为 403，自动放行扫描不得先写审批响应', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!
+    writeFileSync(join(dir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-denied-autopass', digest: 'd1', command: 'git status',
+      timeout_seconds: 300, enqueued_at: Date.now() - 10_000,
+    }) + '\n')
+    process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS = '0'
+    const { _resetAutopassScanThrottleForTests } = await import('../pending-controller')
+    _resetAutopassScanThrottleForTests()
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+    try {
+      const response = await fetchJson(base, '/api/approvals/pending')
+      expect(response.status).toBe(403)
+      expect(existsSync(join(dir, 'responses', 'rq-denied-autopass.json'))).toBe(false)
+    } finally {
+      delete process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS
+    }
+  })
+
+  // P0 Task 4（2026-11-05）：自动放行从 GET 读请求迁入显式写命令 POST /autopass/scan。
+  it('POST /autopass/scan：无身份 401、普通 admin 403 且不落扫描副作用、super_admin 200 返回 {ok,acted}', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!
+    writeFileSync(join(dir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-scan-authz', digest: 'd1', command: 'git status',
+      timeout_seconds: 300, enqueued_at: Date.now() - 10_000,
+    }) + '\n')
+    process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS = '0'
+    const { _resetAutopassScanThrottleForTests } = await import('../pending-controller')
+    try {
+      currentUser = undefined
+      expect((await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })).status).toBe(401)
+
+      currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+      const denied = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+      expect(denied.status).toBe(403)
+      expect(existsSync(join(dir, 'responses', 'rq-scan-authz.json'))).toBe(false)
+
+      currentUser = { id: 1, username: 'qa-lead', role: 'super_admin', status: 'active' }
+      _resetAutopassScanThrottleForTests()
+      const allowed = await fetchJson(base, '/api/approvals/autopass/scan', { method: 'POST' })
+      expect(allowed.status).toBe(200)
+      expect(allowed.body.ok).toBe(true)
+      expect(allowed.body.acted).toBe(1)
+      expect(existsSync(join(dir, 'responses', 'rq-scan-authz.json'))).toBe(true)
+    } finally {
+      delete process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS
+    }
+  })
+
+  it('收件箱读面无身份 401，普通 admin 与空授权 admin 均为 403', async () => {
+    currentUser = undefined
+    expect((await fetchJson(base, '/api/approvals/history')).status).toBe(401)
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: ['alice'] }
+    expect((await fetchJson(base, '/api/approvals/history')).status).toBe(403)
+    currentUser = { id: 2, role: 'admin', status: 'active', profiles: [] }
+    expect((await fetchJson(base, '/api/approvals/pending-summary')).status).toBe(403)
   })
 })
 
@@ -350,7 +426,7 @@ describe('pending-summary 计数契约', () => {
     openReview({ reviewId: 'rev-sum-1', taskId: 't_sum', domain: 'uncommitted' })
     const app = new Koa()
     app.use(async (ctx, next) => {
-      (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+      (ctx.state as { user?: { username?: string; role?: string } }).user = { username: 'qa-lead', role: 'super_admin' }
       await next()
     })
     app.use(approvalsRoutes.routes())
@@ -383,7 +459,7 @@ describe('执法审批桥入收件箱（H3 收口轮：enf: 聚合+裁决）', (
 
       const app = new Koa()
       app.use(async (ctx, next) => {
-        (ctx.state as { user?: { username?: string } }).user = { username: 'qa-lead' }
+        (ctx.state as { user?: { username?: string; role?: string } }).user = { username: 'qa-lead', role: 'super_admin' }
         if (ctx.method === 'POST') {
           const chunks: Buffer[] = []
           for await (const c of ctx.req) chunks.push(c as Buffer)

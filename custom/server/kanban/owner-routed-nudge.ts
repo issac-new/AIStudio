@@ -39,6 +39,17 @@ export function resolveNudgeTarget(cards: NudgeCardLike[], cardId: string): Nudg
 
 export const nudgeRouter = new Router({ prefix: '/api/kanban/nudge' })
 
+/** 催办投递三态（P2 Task 3 诚实化）：本端点只解析路由，不发送任何消息。
+ *  delivery.state 恒 'routed-only'，sent/received 恒 null——「未发送消息」是服务端
+ *  契约不是 UI 措辞；消费者不得把路由解析当送达（run21/22 错侧催办之后的第二道
+ *  防线：错不出发送面）。真实通知走任务评论/房间消息/交接单并留接收证据。 */
+export interface NudgeDelivery {
+  state: 'routed-only'
+  sent: null
+  received: null
+}
+export const NUDGE_DELIVERY: NudgeDelivery = Object.freeze({ state: 'routed-only', sent: null, received: null })
+
 /** 卡源注入（控制器装配点可换 DB 直读；缺省无源=503 显式不可用，不猜）。
  *  2026-10-22 P0 接线批：允许返回 Promise——装配点（bootstrap patch 676）经
  *  command-post 看板聚合异步取卡；同步注入方不受影响。 */
@@ -55,5 +66,5 @@ nudgeRouter.post('/route', async ctx => {
   if (!cards) { ctx.status = 503; ctx.body = { ok: false, detail: '卡源未接线（setNudgeCardProvider）' }; return }
   const decision = resolveNudgeTarget(cards, cardId)
   if (!decision.found) { ctx.status = 404; ctx.body = { ok: false, detail: '卡不存在', cardId }; return }
-  ctx.body = { ok: true, decision, ts: Date.now() }
+  ctx.body = { ok: true, decision, delivery: NUDGE_DELIVERY, ts: Date.now() }
 })
