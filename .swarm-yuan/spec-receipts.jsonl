@@ -221,3 +221,4 @@
 {"at":"2026-11-05T11:47:18Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"0dc7dac4393117806206fa6fe5afc113c7423b0a","commit":"0a860e5f9"}
 {"at":"2026-11-05T14:30:27Z","spec":"docs/superpowers/specs/2026-11-05-g4-probe-profile-fix.md","receipt":"4015404412fe1c10cf43d3a1876201035ee75b5e","commit":"7d5b9ddd3"}
 {"at":"2026-11-05T23:49:00Z","spec":"docs/superpowers/specs/2026-11-06-run27-steps-ledger-keys.md","receipt":"e6ba800d3ca85ab2f86e4933b745071e39814421","commit":"7c921dc9b"}
+{"at":"2026-11-06T00:34:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-gap-rootfix.md","receipt":"70348f736ce3755a701bc42f323a4e903c4fa15d","commit":"d38cfe8d1"}

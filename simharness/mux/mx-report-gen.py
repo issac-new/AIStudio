@@ -3301,7 +3301,7 @@ def issues_stats():
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
     return (stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order),
-            len(open_k), len(nonstd), exact_paired, bcast_paired, dangling)
+            len(open_k), len(nonstd), exact_paired, bcast_paired, dangling, len(closed))
 
 def main_head():
     try:
@@ -3541,7 +3541,7 @@ def skill_duty_html():
             + '</details>')
 
 
-stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd, n_exact_pair, n_bcast_pair, n_dangling = issues_stats()
+stat, stat_note, itable, n_closed, n_issue_keys, n_issue_open, n_nonstd, n_exact_pair, n_bcast_pair, n_dangling, n_fixed = issues_stats()
 n_resolved = n_closed + (n_issue_keys - n_closed - n_issue_open - n_nonstd) + 0  # 已修+观察+延后（观察/延后=keys-closed-open-nonstd）
 main_sha = main_head()
 
@@ -4707,11 +4707,41 @@ def _posture_net_zone_html():
     <b>本轮姿态：{H.escape(p)}</b>——{H.escape(_POSTURE_POLICY.get(p, _POSTURE_POLICY['standard']))}<br>
     能力声明适用范围：{H.escape(scope)}
   </div>
+  {_net_pair_table()}
   <table style="margin-top:8px"><tr><th>代偿类型</th><th>笔数</th><th>open</th><th>产品缺陷（清偿门对照）</th></tr>{trows}</table>
   <p class="stat-note">{H.escape(net_note)}；open 笔＝下一轮开跑前必须根治合入产品能力（用户裁定 2026-10-15）或显式 waive，机械执法＝mux/mx-compensation-ledger.sh check-clearance。本轮 open {n_open} 笔。</p>
   <h3 style="font-size:13px;margin:14px 0 6px">六道关卡 · 判词 provenance（§2.6.5 闸键语义补则）</h3>
   <table><tr><th>闸</th><th>判词来源</th></tr>{prov_rows}</table>
 '''
+
+
+def _net_pair_table() -> str:
+    """含代偿/净额双行（V8.29 §2.6.5 强制：只呈含代偿行即虚报）。
+
+    run27 复盘实锤：该节只声明「双行并列」却从未渲染双行，净额判据满足面缺席。
+    净额口径按方案原文扣减：代批环放行的关卡不计「过」；驱动代走 done 的卡不计交付；
+    脚本预写派发词的组织动作不计「组织自派发」。
+    """
+    rows = _ledger_rows()
+    by = {}
+    for r in rows:
+        by[r.get('type', '?')] = by.get(r.get('type', '?'), 0) + 1
+    n_proxy = by.get('dispatch-preset', 0)
+    n_nudge = by.get('nudge', 0) + by.get('sleep-wakeup', 0)
+    n_card = by.get('card-backfill', 0) + by.get('card-walk-done', 0)
+    # G5 代批（director-proxy）是否在案：issues.log 里 g5-humangate-proxy 行
+    _g5proxy = False
+    try:
+        _g5proxy = any('ISSUE|g5-humangate-proxy|' in l
+                       for l in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines())
+    except Exception:
+        pass
+    gate_gross = sum(1 for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6'] if _gate_passed(g)) if '_gate_passed' in globals() else 0
+    gate_net = gate_gross - (1 if (_g5proxy and gate_gross) else 0)
+    gate_net_note = '（G5 由 director-proxy 代批，净额不计「过」）' if _g5proxy else ''
+    return f'''<table style="margin-top:8px"><tr><th>口径</th><th>六闸</th><th>问题单</th><th>组织派发与提醒</th></tr>
+    <tr><td><b>含代偿</b></td><td>{gate_gross}/6</td><td>{n_issue_keys} 键（记账 {n_resolved}）</td><td>脚本预写派发 {n_proxy} 条 · 代为提醒 {n_nudge} 次 · 卡代操作 {n_card} 张</td></tr>
+    <tr><td><b>净额</b>（判据满足面）</td><td>{gate_net}/6{gate_net_note}</td><td>已修 {n_fixed}/{n_issue_keys}（观察/延后不计修复）</td><td>组织自派发在案 0 条（全部为脚本代演）</td></tr></table>'''
 
 
 # 第 9 章结论块实测统计（同块曾硬编码「16 个问题」——run10 的计数渲进任何一轮都是假值）。
@@ -4776,7 +4806,18 @@ if _missing_ref:
     print(f'[mx-report-gen] WARN 注册但缺文件 {len(_missing_ref)} 张（冒配，报告内红标）: {", ".join(_missing_ref)}')
 # 补拍帧检测：图注自报「收尾后补拍」即 hero/页脚如实带补拍语义（「全部实拍」不冒充当轮实时帧）
 _reshoot = any('补拍' in cap for _, _, _, m in STEPS for _, cap, _ in m.get('imgs', []))
-_img_honest_note = ' · 全部实拍（收尾后补拍，非当轮实时帧——采集链未挂驱动，记入问题清单 r18-collection-missing）' if _reshoot else (' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）')
+# 摘要口径（run27 复盘根治，2026-11-06）：帧核验态分级后不得裸称「全部实拍」——run27
+# 实录 170 条前后零变化（19 步）+ 64 条内容不符（8 步），而摘要仍写「58 图次·全部实拍」。
+_n_fv_bad = sum(1 for _r in _FRAME_VERIFY.values() if not _r.get('ok'))
+_n_fv_ok = sum(1 for _r in _FRAME_VERIFY.values() if _r.get('ok'))
+_n_same_frame_steps = len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME})
+if _n_fv_bad or _n_same_frame_steps:
+    _img_honest_note = (f' · 实拍可核验 {_n_fv_ok} 步 / 内容不符 {_n_fv_bad} 步 / 前后零变化 {_n_same_frame_steps} 步'
+                        '（逐帧徽章标注，摘要不按「全部实拍」呈现）')
+elif _reshoot:
+    _img_honest_note = ' · 全部实拍（收尾后补拍，非当轮实时帧——采集链未挂驱动，记入问题清单 r18-collection-missing）'
+else:
+    _img_honest_note = ' · 全部实拍' if total_imgs > 0 else '（本轮未拍摄，如实留空）'
 
 ckpt_intro_note = (f'{len(CHECKPOINTS)} 个人工卡点按流程顺序排列，每卡点配真实产品界面实拍（点击放大）：谁在把关、把什么关、证据在哪。六域判定的「关联卡点」可跳回此处。'
                    if total_imgs > 0 else
@@ -5863,8 +5904,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <div class="govgrid">
     <table><tr><th>度量</th><th>终态值</th><th>含义</th></tr>
     {gov_metrics_rows}
+    <tr><td>修复率（已修 ÷ 唯一键）</td><td>{n_fixed}/{n_issue_keys}（{f'{n_fixed * 100 // n_issue_keys}%' if n_issue_keys else '0%'}）</td><td>run27 复盘新增（2026-11-06）：记账完成≠修复——观察/延后桶不计修复，此项才是「缺陷报→修→验」口径</td></tr>
     <tr><td>发布基线</td><td>aipaydev main {main_sha}</td><td>构建可复现的锚点</td></tr>
-    <tr><td>处置完整循环率</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
+    <tr><td>记账完成率（DISP 分桶）</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失（≠已修复）；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
     </table>
   </div>
   <p class="stat-note">每个问题从发现（ISSUE 行）到处置（DISP 行）全程在看板上留痕，AIStudio ⑥治理·问题清单（/app/stage/govern?tab=issues）的台账区可随时回查。</p>
