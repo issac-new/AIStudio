@@ -622,6 +622,7 @@
 - [2026-11-06-vendor-upgrade-agent-v0230.md](../superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md)
 - [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
 - [2026-11-06-workunit-responsibility-ledger.md](../superpowers/specs/2026-11-06-workunit-responsibility-ledger.md)
+- [2026-11-07-sim-config-schema-align.md](../superpowers/specs/2026-11-07-sim-config-schema-align.md)
 
 ## archive（2 份，不计入上述根目录）
 

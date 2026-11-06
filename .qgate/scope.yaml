@@ -501,5 +501,6 @@ paths:
   - docs/superpowers/specs/2026-11-06-design-doc-descaffold.md
   - docs/superpowers/specs/2026-11-06-design-doc-restructure.md
   - docs/superpowers/specs/2026-11-06-design-doc-stable-name.md
+  - docs/superpowers/specs/2026-11-07-sim-config-schema-align.md
   - docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md
   - docs/README.md

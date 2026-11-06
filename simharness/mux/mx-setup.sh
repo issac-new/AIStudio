@@ -199,6 +199,43 @@ mxp_rotation_mode() { # <mode> ；不传=auto
 _rot_out="$(mxp_rotation_mode auto)"
 [ -n "$_rot_out" ] && log "会话轮换档位归一：${_rot_out}"
 
+# ── 4d. config schema 对齐（v52 盖章，2026-11-07 specs/2026-11-07-sim-config-schema-align.md）──
+# 三生成器（write_root_config/write_user_profile/write_agent_profile）仍产 legacy
+# custom_providers（列表四键形态），宿主 v0.23.0 已全量迁 providers map＋_config_version: 52。
+# 用产品自身 migrate_config 幂等盖章：兼容读取层 get_compatible_custom_providers 两种键
+# 都认（按 name+base_url+model 去重），通道无感。护栏：变更键必须 ⊆ 三键白名单且版本戳
+# 落地，违例回滚该份原件、告警跳过——fail-soft 不阻断 setup（与 4b/4c 同风格）。
+_mxpy_schema=$(_mx_yaml_py) || _mxpy_schema=""
+_schema_ok=0; _schema_skip=0
+for _cfg in "$HERMES_ROOT/config.yaml" "$HERMES_ROOT"/profiles/*/config.yaml; do
+  [ -f "$_cfg" ] || continue
+  if [ -z "$_mxpy_schema" ]; then _schema_skip=$((_schema_skip+1)); continue; fi
+  cp "$_cfg" "$_cfg.schema-align.bak"
+  if HERMES_HOME="$(dirname "$_cfg")" MX_AGENT_SRC="$AGENT_SRC" "$_mxpy_schema" - "$_cfg" <<'PYN'
+import os, shutil, sys, yaml
+cfg_path = sys.argv[1]
+sys.path.insert(0, os.environ.get('MX_AGENT_SRC') or '')
+try:
+    from hermes_cli.config import migrate_config
+except Exception as exc:  # 依赖缺位＝该份跳过，不阻断 setup
+    print(f'migrate_config 不可导入: {exc}', file=sys.stderr)
+    sys.exit(1)
+before = yaml.safe_load(open(cfg_path)) or {}
+migrate_config(interactive=False, quiet=True)
+after = yaml.safe_load(open(cfg_path)) or {}
+allowed = ('_config_version', 'providers', 'custom_providers')
+bad = [k for k in set(before) | set(after)
+       if before.get(k) != after.get(k) and k not in allowed]
+if bad or after.get('_config_version') is None:
+    shutil.copy2(cfg_path + '.schema-align.bak', cfg_path)  # 违例回滚该份
+    print(f'schema 迁移违例: changed={bad}', file=sys.stderr)
+    sys.exit(1)
+os.remove(cfg_path + '.schema-align.bak')  # 通过后清临时备份
+PYN
+  then _schema_ok=$((_schema_ok+1)); else _schema_skip=$((_schema_skip+1)); log "config schema 对齐跳过：$_cfg（见 stderr，原件保留）"; fi
+done
+log "config schema 对齐：${_schema_ok} 份盖章，${_schema_skip} 份跳过"
+
 # ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
 # 围栏=全编制名册（2026-11-02 立法 specs/2026-11-02-board-fence-full-roster.md）：SIM 单
 # home 内基名＋全部子编制 profile 都是合法领卡人（缺陷卡跨板指派子编制、修订卡指基名），
