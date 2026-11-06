@@ -2122,19 +2122,23 @@ mx_gate_card_text() { # <user> <卡 needle> [since-ms] → 卡 body（空=未命
 }
 
 mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
-  local t _v
+  local t out _v _av
   t=$(mx_gate_room_text "$1" "$2" "${4:-0}")
   [[ -n "$t" ]] || { printf ''; return 0; }
-  _v=$(gov_lc_verdict "$3" "$t" "" | cut -d'|' -f2)
-  mx_verdict_receipt "$3" "$_v" "$1" "" room
+  out=$(gov_lc_verdict "$3" "$t" "")
+  _v=$(printf '%s' "$out" | cut -d'|' -f2)
+  _av=$(printf '%s' "$out" | cut -d'|' -f4)
+  mx_verdict_receipt "$3" "$_v" "$1" "" room "${_av:-ok}"
   printf '%s' "$_v"
 }
 
 kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
-  local b _v
+  local b out _v _av
   b=$(mx_gate_card_text "$1" "$2" "${4:-}")
-  _v=$(gov_lc_verdict "$3" "" "$b" | cut -d'|' -f3)
-  mx_verdict_receipt "$3" "$_v" "" "$2" card
+  out=$(gov_lc_verdict "$3" "" "$b")
+  _v=$(printf '%s' "$out" | cut -d'|' -f3)
+  _av=$(printf '%s' "$out" | cut -d'|' -f4)
+  mx_verdict_receipt "$3" "$_v" "" "$2" card "${_av:-ok}"
   printf '%s' "$_v"
 }
 
@@ -2142,19 +2146,31 @@ kanban_card_gate_verdict() { # <user> <卡 needle> <gate 前缀> [since-ms] → 
 # 每次闸判词提取即落一行结构化回执：来源（房间行/卡面）、末判词、时刻。
 # 幂等键 run×gate×room_sha×card_sha×verdict——同来源同结论只记首行（重跑驱动
 # 不刷行）；改判=新行追加，tail -1 即末判词（与「末判词赢」判定语义同构）。
-# 空判词不落（无判词≠决策事件）；落盘 fail-soft，绝不影响判词返回。
-mx_verdict_receipt() { # <gate> <verdict> <room> <card-needle> <source>
-  local _v="$2" _r="$3" _c="$4" _src="$5" _dir _rsha _csha _key _f
-  [[ -n "$_v" ]] || return 0
+# 源缺席不落（无判词≠决策事件）；D 批（spec 2026-11-06-verdict-availability-receipt.md）
+# 追加「判词调用已发起但服务不可达」的弃权回执：verdict 保持空串，任何按非空
+# verdict 统计的消费者都不会把回退算成结论。落盘 fail-soft，绝不影响判词返回。
+mx_verdict_receipt() { # <gate> <verdict> <room> <card-needle> <source> [availability=ok|unavailable]
+  local _v="$2" _r="$3" _c="$4" _src="$5" _av="${6:-ok}" _dir _rsha _csha _key _disp _reason _f
   _dir="${EVID_DIR:-}"
   [[ -n "$_dir" && -d "$_dir" ]] || return 0
+  _disp=accepted
+  _reason=''
+  if [[ -z "$_v" ]]; then
+    [[ "$_av" == "unavailable" ]] || return 0
+    _disp=abstained
+    _reason=upstream_unavailable
+  fi
   _rsha=$(printf '%s' "$_r" | shasum -a 256 | cut -c1-12)
   _csha=$(printf '%s' "$_c" | shasum -a 256 | cut -c1-12)
-  _key="${RUN_ID:-?}|$1|${_rsha}|${_csha}|${_v}"
+  if [[ "$_disp" == "abstained" ]]; then
+    _key="${RUN_ID:-?}|$1|${_rsha}|${_csha}|abstained:${_reason}"
+  else
+    _key="${RUN_ID:-?}|$1|${_rsha}|${_csha}|${_v}"
+  fi
   _f="$_dir/gate-verdicts.jsonl"
   { [[ -f "$_f" ]] && grep -qF "\"id\":\"$_key\"" "$_f"; } 2>/dev/null && return 0
-  printf '{"id":"%s","ts":"%s","gate":"%s","verdict":"%s","source":"%s","room":"%s","room_sha":"%s","card":"%s","card_sha":"%s"}\n' \
-    "$_key" "$(date -u +%FT%TZ)" "$1" "$_v" "$_src" "${_r:0:80}" "$_rsha" "${_c:0:80}" "$_csha" \
+  printf '{"id":"%s","ts":"%s","gate":"%s","verdict":"%s","source":"%s","room":"%s","room_sha":"%s","card":"%s","card_sha":"%s","disposition":"%s","abstainReason":"%s"}\n' \
+    "$_key" "$(date -u +%FT%TZ)" "$1" "$_v" "$_src" "${_r:0:80}" "$_rsha" "${_c:0:80}" "$_csha" "$_disp" "$_reason" \
     >> "$_f" 2>/dev/null || true
 }
 
@@ -2176,19 +2192,21 @@ mx_gate_verdict_combined() { # <room> <sender> <gate> <since-ms> <card-user> <ca
   # 房间行+评审卡双源一次送治理服务保守合并（R-A2：FAIL 任一即 FAIL）；卡面判词
   # 而房间行缺失=发送哑火——代发一条显式标注的对照行补房间记录（转写卡面判词并
   # 注明来源，不改判词语义；每闸至多一次）——对照行代发是导演域消息动作，留此。
-  local rt ct out v rv cv
+  local rt ct out v rv cv av
   rt=$(mx_gate_room_text "$1" "$2" "$4")
   ct=$(mx_gate_card_text "$5" "$6" "$4")
   out=$(gov_lc_verdict "$3" "$rt" "$ct")
   v=$(printf '%s' "$out" | cut -d'|' -f1)
   rv=$(printf '%s' "$out" | cut -d'|' -f2)
   cv=$(printf '%s' "$out" | cut -d'|' -f3)
+  av=$(printf '%s' "$out" | cut -d'|' -f4)
   if [[ -n "$cv" && -z "$rv" && "$(sget "verdict_relay_${3}")" != "1" ]]; then
     sset "verdict_relay_${3}" 1
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" "[判词对照行·relay] ${3}-${cv}（来源=评审卡 ${6} body 结论行；房间原行未达，代发对照行补记录）" >/dev/null 2>&1 || true
   fi
   # 判词回执（B 批）：双源合并结果是主判定入口，落回执（rv/cv 双源结论也入 data）
-  mx_verdict_receipt "$3" "$v" "$1" "$6" "combined:room=${rv:-无},card=${cv:-无}"
+  # D 批：服务不可达时透传第 4 段，让「无判词」与「调用失败」在回执里可区分。
+  mx_verdict_receipt "$3" "$v" "$1" "$6" "combined:room=${rv:-无},card=${cv:-无}" "${av:-ok}"
   printf '%s' "$v"
 }
 

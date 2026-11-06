@@ -30,12 +30,21 @@ _gov_lc_post() { # <path> <jq-args…> → stdout: 响应 JSON（失败 rc=1）
   printf '%s' "$resp"
 }
 
-gov_lc_verdict() { # <gate> <roomText> <cardText> → stdout: "verdict|room|card"（失败=空）
-  local resp
-  resp=$(_gov_lc_post /lifecycle/gate-verdict \
+gov_lc_verdict() { # <gate> <roomText> <cardText> → stdout: "verdict|room|card|availability"
+  # 第 4 段是可用性带内信号（2026-11-06 文章三 D 批）：调用点都是命令替换，函数内
+  # 全局标记无法从子 shell 回传；前三段逐字不变，cut -f1/2/3 消费者取值零变化。
+  # 不可达仍不假判词（fail-closed 不变），只是把「源无判词」与「服务不可用」分开。
+  local resp tri
+  if ! resp=$(_gov_lc_post /lifecycle/gate-verdict \
     --arg gate "$1" --arg roomText "$2" --arg cardText "$3" \
-    '{gate:$gate,roomText:$roomText,cardText:$cardText}') || { printf ''; return 0; }
-  printf '%s' "$resp" | jq -r '[.verdict // "", .room // "", .card // ""] | join("|")' 2>/dev/null || printf ''
+    '{gate:$gate,roomText:$roomText,cardText:$cardText}'); then
+    printf '|||unavailable'
+    return 0
+  fi
+  # 服务可达但响应无判词时 jq 仍输出 "||"；仅空响应/解析失败才判 unavailable。
+  tri=$(printf '%s' "$resp" | jq -r '[.verdict // "", .room // "", .card // ""] | join("|")' 2>/dev/null) || tri=''
+  [[ -n "$tri" ]] || { printf '|||unavailable'; return 0; }
+  printf '%s|ok' "$tri"
 }
 
 gov_lc_reqjudge() { # <doc> → 0 全过 / 1 缺件（stdout=缺失清单"）；"连接，与驱动回灌文案同源）

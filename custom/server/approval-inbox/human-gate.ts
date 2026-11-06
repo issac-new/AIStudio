@@ -514,11 +514,8 @@ humanGateRouter.post('/:id/decide', async ctx => {
     && decision === 'approve' && pending.taskId && pending.board) {
     const recheck = await recheckTaskRevision(ctx, pending)
     if (recheck.outcome === 'mismatch') {
-      ctx.status = 409
-      ctx.body = {
-        ok: false, code: 'revision_mismatch',
-        detail: '批准期间任务已变更（建单 revision≠当前），拒绝签发旧版本 grant——请刷新任务后重新发起批准单',
-      }
+      // 统一失败信封（K19）：detail 文案并入 error；消费侧按 code=revision_mismatch 判定。
+      fail(ctx, 409, '批准期间任务已变更（建单 revision≠当前），拒绝签发旧版本 grant——请刷新任务后重新发起批准单', { code: 'revision_mismatch' })
       return
     }
     if (recheck.outcome === 'unavailable') {

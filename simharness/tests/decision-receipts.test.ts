@@ -219,3 +219,88 @@ describe('④ HumanGate 批准前版本复核 recheckTaskRevision', () => {
     expect(src).toContain('recheck_unavailable')
   })
 })
+
+describe('⑤ 判词可用性分型与弃权回执（2026-11-06 文章三 D 批）', () => {
+  /** 客户端四段输出探针：前三段是既有 cut -f1/2/3 契约，第 4 段是本批新增信号。 */
+  const probe = (post: string) => bash(`
+set -u
+_gov_lc_post() { ${post}; }
+${extract('governance-client.sh', 'gov_lc_verdict')}
+out=$(gov_lc_verdict G2 '房间正文' '卡面正文')
+printf 'out=[%s] f1=[%s] f2=[%s] f3=[%s] f4=[%s]\\n' "$out" \\
+  "$(printf '%s' "$out" | cut -d'|' -f1)" \\
+  "$(printf '%s' "$out" | cut -d'|' -f2)" \\
+  "$(printf '%s' "$out" | cut -d'|' -f3)" \\
+  "$(printf '%s' "$out" | cut -d'|' -f4)"
+`)
+
+  it('服务不可达：|||unavailable，前三段仍全空（等待环取值零变化）', () => {
+    const out = probe('return 1')
+    expect(out).toContain('out=[|||unavailable]')
+    expect(out).toContain('f1=[] f2=[] f3=[] f4=[unavailable]')
+  })
+
+  it('服务可达但响应无判词：|||ok（不判为不可用，不落弃权行）', () => {
+    const out = probe("echo '{}'")
+    expect(out).toContain('out=[|||ok]')
+    expect(out).toContain('f4=[ok]')
+  })
+
+  it('响应损坏：判为 unavailable，不把解析失败折叠成「无判词」', () => {
+    expect(probe("echo 'not-json'")).toContain('out=[|||unavailable]')
+  })
+
+  it('正常响应：原三段逐字保留，仅追加第 4 段', () => {
+    const out = probe("echo '{\"verdict\":\"PASS\",\"room\":\"PASS\"}'")
+    expect(out).toContain('out=[PASS|PASS||ok]')
+    expect(out).toContain('f1=[PASS] f2=[PASS] f3=[] f4=[ok]')
+  })
+
+  const roomRun = (evid: string, modes: string[]) => bash(`
+set -u
+EVID_DIR=${JSON.stringify(evid)}
+RUN_ID=r-avail
+mx_gate_room_text() { echo '房间正文'; }
+gov_lc_verdict() { if [[ "$GOV_MODE" == "down" ]]; then echo '|||unavailable'; else echo 'PASS|PASS||ok'; fi; }
+${extract('mx-scenario-lib.sh', 'mx_verdict_receipt')}
+${extract('mx-scenario-lib.sh', 'mx_room_gate_verdict')}
+${modes.map((m) => `GOV_MODE=${m}; printf 'v=[%s]\\n' "$(mx_room_gate_verdict '!room1:x' '@a:matrix.test' G2 0)"`).join('\n')}
+`)
+
+  it('调用点：不可达落 abstain 行且同键幂等；服务恢复追加 accepted 行；弃权不计为结论', () => {
+    const evid = tempDir('verdict-avail-')
+    const out = roomRun(evid, ['down', 'down', 'up'])
+    expect([...out.matchAll(/v=\[([^\]]*)\]/g)].map((m) => m[1])).toEqual(['', '', 'PASS'])
+
+    const rows = readFileSync(join(evid, 'gate-verdicts.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
+    expect(rows.length).toBe(2)
+    expect(rows[0]).toMatchObject({ gate: 'G2', verdict: '', disposition: 'abstained', abstainReason: 'upstream_unavailable' })
+    expect(rows[0].id).toContain('abstained:upstream_unavailable')
+    expect(rows[1]).toMatchObject({ verdict: 'PASS', disposition: 'accepted', abstainReason: '' })
+    expect(rows[1].id).toContain('|PASS')
+    // 文章「避免将回退误统计为选择器的成功案例」：按非空 verdict 统计只应有 1 条
+    expect(rows.filter((r) => r.verdict !== '').length).toBe(1)
+  })
+
+  it('服务可达无判词：不落盘（B 批「无判词≠决策事件」语义保留）', () => {
+    const evid = tempDir('verdict-avail-empty-')
+    const out = bash(`
+set -u
+EVID_DIR=${JSON.stringify(evid)}
+RUN_ID=r-avail-empty
+mx_gate_room_text() { echo '房间正文'; }
+gov_lc_verdict() { echo '|||ok'; }
+${extract('mx-scenario-lib.sh', 'mx_verdict_receipt')}
+${extract('mx-scenario-lib.sh', 'mx_room_gate_verdict')}
+mx_room_gate_verdict '!room1:x' '@a:matrix.test' G2 0
+`)
+    expect(out).toBe('')
+    expect(existsSync(join(evid, 'gate-verdicts.jsonl'))).toBe(false)
+  })
+
+  it('源码级：三个判词入口都读取并透传可用性第 4 段', () => {
+    const src = readFileSync(join(MX, 'mx-scenario-lib.sh'), 'utf8')
+    expect((src.match(/cut -d'\|' -f4/g) ?? []).length).toBe(3)
+    expect((src.match(/mx_verdict_receipt "[^\n]*\$\{_?av:-ok\}/g) ?? []).length).toBe(3)
+  })
+})

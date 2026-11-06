@@ -606,8 +606,11 @@
 - [2026-11-06-eval-golden-set.md](../superpowers/specs/2026-11-06-eval-golden-set.md)
 - [2026-11-06-frame-capture-accuracy.md](../superpowers/specs/2026-11-06-frame-capture-accuracy.md)
 - [2026-11-06-frame-program-revision.md](../superpowers/specs/2026-11-06-frame-program-revision.md)
+- [2026-11-06-release-v1.0.13-overlay.md](../superpowers/specs/2026-11-06-release-v1.0.13-overlay.md)
+- [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
 - [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
 - [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
+- [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
 - [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
 
 ## archive（2 份，不计入上述根目录）
@@ -632,6 +635,7 @@
 - [2026-11-06-frame-program-revision.md](../superpowers/specs/2026-11-06-frame-program-revision.md)
 - [2026-11-06-frame-capture-accuracy.md](../superpowers/specs/2026-11-06-frame-capture-accuracy.md)
 - [2026-11-06-cognition-review-p0-landing.md](../superpowers/specs/2026-11-06-cognition-review-p0-landing.md)
+- [2026-11-06-release-v1.0.13-overlay.md](../superpowers/specs/2026-11-06-release-v1.0.13-overlay.md)
 - [2026-11-05-frame-expect-dash-keys-fix.md](../superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md)
 - [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)
 - [2026-11-05-review-anchor-pin.md](../superpowers/specs/2026-11-05-review-anchor-pin.md)
