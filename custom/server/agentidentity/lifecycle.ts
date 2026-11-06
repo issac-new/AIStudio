@@ -65,7 +65,9 @@ export function canTransition(
   identity: { responsibilityCard?: ResponsibilityCard; lifecycle?: Lifecycle },
   input: TransitionInput,
   people: Person[],
-): { ok: true } | { ok: false; problems: string[] } {
+  // 返回型不用判别联合：typecheck:harness 跑 --strict false，布尔判别不生效；
+  // 调用方一律按 problems.length 判定（ok 仅为便捷镜像）。
+): { ok: boolean; problems: string[] } {
   const problems: string[] = []
   const active = new Set(people.filter((p) => p.active).map((p) => p.id))
   const from = stageOf(identity)
@@ -97,5 +99,5 @@ export function canTransition(
       problems.push('高风险执行单元退出确认人不得与主责任人为同一人')
     }
   }
-  return problems.length ? { ok: false, problems } : { ok: true }
+  return { ok: problems.length === 0, problems }
 }

@@ -528,7 +528,7 @@ export function transitionIdentity(
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
   const verdict = canTransition(identity, input, listPeople())
-  if (!verdict.ok) return verdict
+  if (verdict.problems.length > 0) return { ok: false, problems: verdict.problems }
   const lc = normalizeLifecycle(identity.lifecycle)
   const from = lc.stage
   lc.history.push({
