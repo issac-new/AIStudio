@@ -370,3 +370,7 @@ paths:
   # 截图核查采集程序修订批（96031e0）
   - docs/superpowers/specs/2026-11-06-frame-program-revision.md
   - simharness/tests/frame-program-rev.test.ts
+  # 帧采集准确性根治批（75ea8770 merge）
+  - docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md
+  - docs/governance/run-metrics.jsonl
+  - simharness/var-templates/run27-frame-quarantine.py
