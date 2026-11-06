@@ -475,3 +475,7 @@ paths:
   - custom/server/eval/__tests__/golden-gate.test.ts
   - simharness/mux/mx-eval-lib.sh
   - package.json
+  # O7 派发权移交总监（spec 2026-11-06-director-dispatch）
+  - docs/superpowers/specs/2026-11-06-director-dispatch.md
+  - simharness/mux/mx-scenario-lib.sh
+  - simharness/tests/director-dispatch.test.ts

@@ -2259,7 +2259,45 @@ dispatch_task() { # <humanUser> <requirement> <ac-line> <refs> <discipline> <men
 
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local m uid rid u lp members
-  if [ "$(posture)" = "strict" ]; then
+  # ── O7 派发权移交总监（PR-7，spec 2026-11-06-director-dispatch）──
+  # MX_DISPATCH_MODE=director：脚本只交需求草稿给团队负责人（wei-agent），拆分/
+  # 指派/任务书由总监自主产出；wait 其在房内 @ 执行者。超时降级 strict（不回
+  # preset——O7 退役面）。缺省未设=零新行为。活体验证=run28 首跑。
+  local _d_degraded=0
+  if [[ "${MX_DISPATCH_MODE:-}" = "director" ]]; then
+    local _d_lead _d_tok _d_body _d_marker _d_dir
+    _d_lead="$(agent_mxid wei)"                       # 团队负责人A（displayname 职能表）
+    _d_tok="$(load_token "$1")"
+    _d_body="【需求移交】${RFD_ID:+（${RFD_ID}）}以下是需求草稿（供参考，可调整拆分与指派）：
+$2
+
+@${_d_lead#@} 请由团队负责人牵头：审阅需求、拆分任务、指派执行者并向被指派者发出任务书（须带派发标识与验收口径）。本消息不预设分工与人日。"
+    rid="$(sget room_analysis)"
+    _d_marker=$(mx_send "$_d_tok" "$rid" "$_d_body" "$_d_lead" 2>/dev/null) || _d_marker="SEND-FAILED"
+    if [[ "$_d_marker" != "SEND-FAILED" ]]; then
+      _d_dir=$(mx_wait_sender "$_d_tok" "$rid" "$_d_lead" "$_d_marker" "${MX_DIRECTOR_TIMEOUT:-480}" '@[a-z-]+-agent' 2>/dev/null || true)
+      if [[ -n "$_d_dir" ]]; then
+        # 净额达标台账（B 批 self-dispatch 同族；mode 字段 additive）
+        if [[ -n "${EVID_DIR:-}" && -d "${EVID_DIR:-}" ]]; then
+          printf '{"ts":"%s","run":"%s","from":"wei-agent","mode":"director","requirement":"%s"}\n' \
+            "$(date -u +%FT%TZ)" "${RUN_ID:-?}" "${2:0:80}" \
+            >> "$EVID_DIR/self-dispatch.jsonl" 2>/dev/null || true
+        fi
+        note "[PR-7] 总监派发 ✓（wei-agent 自主产出任务书；移交锚 ${_d_marker:0:18}）"
+        echo "$_d_marker"
+        return 0
+      fi
+      compensate director-dispatch-timeout "run=${RUN_ID:-?} wei-agent ${MX_DIRECTOR_TIMEOUT:-480}s 未产出派发（降级 strict 自主组织）" 2>/dev/null || true
+      _d_degraded=1
+      note "[PR-7] 总监派发超时——降级 strict 自主组织消息"
+    else
+      compensate director-dispatch-timeout "run=${RUN_ID:-?} 需求移交 SEND-FAILED（降级 strict 自主组织）" 2>/dev/null || true
+      _d_degraded=1
+      note "[PR-7] 需求移交发送失败——降级 strict 自主组织消息"
+    fi
+  fi
+  # strict 判定收编 director 降级（D4：降级链 director→strict，不回 preset）
+  if [ "$(posture)" = "strict" ] || [[ "$_d_degraded" = "1" ]]; then
     # V8.29 §2.4 待收紧面：strict 不发预写派发词（拆分/人日/纪律归组织侧自主产出）
     set -- "$1" "【自主组织】收到需求派单：请对 ${RFD_ID:-当前轮} 需求按你的职能自主拆分、评估与派发执行；验收以 G1 冻结单 AC 为准，双凭证（commit+卡号）收口。本消息不预设拆分与人日。" "${3:-}"
     # 自派发台账（2026-11-06 B 批）：一行=一次真实自主派单，报告净额行实算消费。
