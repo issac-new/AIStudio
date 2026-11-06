@@ -46,7 +46,7 @@ import { buildBehaviorSignals } from '../behavior-signals'
 import { businessSummaryOf } from '../business-summary'
 import { collectObsSignals } from '../../obssignals/collect'
 
-import { actorOf, outcomeContext, runSummary, setForRun, parseStabilityRetest } from './shared.js'
+import { actorOf, outcomeContext, runSummary, setForRun, parseStabilityRetest } from './shared'
 
 /** POST /runs */
 export async function postRuns(ctx: Context) {

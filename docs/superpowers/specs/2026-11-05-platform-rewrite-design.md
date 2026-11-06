@@ -345,6 +345,25 @@ P1 Task 10（集成验收）真跑与变异探针（2026-11-06）：
 - 真跑前置检查逮住并修复四个存量缺陷（修复实现不放宽判据）：①qgate gitContext 首路径截字符（gitOut .trim() 吃 porcelain 首行前导空格→slice(3) 吃路径首字符，改 trimEnd+回归锚定）；②symbols 扫描面静默截断（仓 5.2 万件超 5000 走读顶按 readdir 序随机截断，executor 增 scanGlobs 字面根剪枝+截断 fail-closed，symbol-grounding 声明管辖面 custom/scripts/config ~2.8k 件）；③scripts/maintenance/graph-migrate-cli.ts 迁址后烂掉的相对 import（接地门逮住修正）；④ai-native-scorecard.ts 历史误植死代码（TS2774 阻断 build:full，P0 未执行项实锤，摘除后 7/7 绿）。
 - 变异探针四连（临时变异→目标测试红→还原→绿，探针态不入提交）：①manifest failed 混入 appliedPatches 投影→inject-manifest 红；②deploy kept 仍 complete→deploy 测试红；③release-gate 内建步序摘除 typecheck-harness→编排测试红；④bundle 身份忽略 runtimeManifestDigest→敏感性测试红。四连全部先红后绿。
 
+### 6. P2 实施验证（2026-11-06）
+
+P2 Task 1（SIM 运行时单一所有权核心，c37016a0c）+ Task 2（烧机收据真身绑定与清账跨清场存活，637d79a5f）的真实验证见两提交说明；本节记录批次二（Task 3 文档投影与催办三态 b6e1600e4、Task 4 挂账扫尾九项 efe208ec2、Task 5 验收）：
+
+Task 3/4 负例先红后绿与回归计数（隔离 HOME，worktree 树）：
+
+- Task 3 负例：sync-training-docs 8 例（版本漂移/路由漂移/手改投影块/块缺席均非零+写入幂等+接线+usage）实现前全红（生成器缺席）；owner-routed-nudge delivery 契约 3 例红（响应无 delivery 字段）；催办文案负例 2 例红（含旧文案「催办已路由」触发已发送语义禁令）；手册分层 4 例红（§1.1 旧指引 产品 2、6/项目 7—11/运维 12/审计 13 与期望章节集不符、§8.4 无三态定义、12 幕无 layer/practiceRef、命令块无「本页不执行」标注）。实现后 `npx vitest run scripts/__tests__/sync-training-docs.test.ts custom/server/kanban/__tests__/owner-routed-nudge.test.ts custom/client/ia2/__tests__/humangate-nudge-wiring.test.ts custom/__tests__/interactive-training-manual.test.ts`：41 通过 / 0 失败；route-manifest 真链对账集成例绿（真注册链 121 路由/37 页签投影与手册 marker 块逐字节一致）。
+- Task 4 负例：trailing-slash 重叠/对账 4 例先红；治理域平价 1 例红（客户端缺 sandbox）；SkippedNoContext re-export 与 sandboxNetworkViolation 契约导出 2 例红；junit 顶层属性用例红（旧正则恒漏检顶层聚合形态）；复算比对 3 例红（变异摘除比对后双红）；build.mjs 硬编码断言红。纯注释项（M4 双口径措辞）直接改。变异探针三处红→还原绿：回滚不还原字节→叠加回滚断言红；顶层属性不计入→方言用例红；摘除复算比对→重放双红。存量红清偿：capability-probes userenv 401（25c7c8e77 授权边界后测试 Koa 缺认证夹具）补 super_admin principal 夹具转绿，判据未放宽。
+- 回归面：受影响面 63 文件 584 通过 / 0 失败；simharness 全套 `npx vitest run --root simharness` 296/296（转绿后零红）；`npm run typecheck:harness` exit 0。
+
+Task 5 验收（隔离 SIM_ROOT/随机端口，不碰宿主运行态）：
+
+- SIM 三启动顺序活体夹具（真进程+真 ps 探针+真 cmdMatcher，事件流留痕）：product→bash / bash→product / 并发三序各 8 断言共 24/24 PASS×两轮（恰一 owner、败方响应携 holder、owner-acquired 恰 1、owner-refused≥1、活 driver 互斥、死 holder 陈锁可接管、收尾无活锁；并发胜者两轮分属不同方，恰一不变量对称成立）。
+- 烧机收据链：`mx-burn-test.sh --dry-run` 双根（默认根+隔离根）BURN-DRY-RUN-OK（工具自检含 guard CLI lock-status）；真跑未活体——40 分钟真 gateway 驱动会向宿主 sim 网关（127.0.0.1:8801 活体在册）写真实房间/板库，按「不碰宿主进程/服务」纪律不执行，以收据链活体夹具证机制：当前仓真实 digest（dc5d2591…，16 机制文件）emit pass→verify-latest 放行→追发后 fail→拦→末行恢复 pass→放行→短场景（until=smoke）→coverage 拦，四态全验。**未活体标注：机制四类组合行为（恢复/催办/闸门等待/熔断）本轮未在真 gateway 上复跑**，prelaunch ㉛ 面由上述链路+mechanism-behavior 34/34 覆盖。
+- 清场-清账跨轮：`bash simharness/tests/issue-clearance.test.sh` ALL-PASS（10 场景：造 open 债→mx-clean --apply 清场前原子写投影→轮目录已清后清偿门回落投影仍拦 open/延后→append-disp 回写终态→resolve 作用于投影→放行）。
+- 变异探针三连（临时变异→红→还原→绿，探针态不入提交）：①owner 并发败方放行→runtime-guard 8 路恰一用例红；②verify-latest 后 fail 放行→mechanism-behavior 末行用例红；③mx-clean 投影跳过（清场删债）→issue-clearance ⑥/⑥b 双红（债务蒸发被逮）。三连全部先红后绿。
+- 文档与发布门：`npm run docs:check` 绿（routes=121，version=1.0.12-overlay）；`npm run release:check` 绿（四模块对账）；release:gate 全绿（计数见批报告；运行树=本批提交内容）。
+- 真启动冒烟（P0 终审前置⑥）逮住三个存量启动缺陷并修复：①custom/platform 树缺 CJS 屏蔽 package.json（根 package.json type:module 泄漏，ts-node CJS require contracts/execution 即 ERR_REQUIRE_ESM——P0 Task 5 引入值导入后从未活体起服）；②registries/server 同型泄漏（platform-route-policy 值导入）；③eval 路由 5 处 `./shared.js` 后缀导入（80e70c36c 引入，vitest 可解析、ts-node CJS 不能）。修复=custom/platform/package.json 与 registries/server/package.json 同形 CJS 声明+导入去后缀回归全树约定。冒烟结果：隔离 HOME、随机端口 18747 起 serve，~33s 后 `/livez`=200（{"status":"ok"}）且 `/health`=200（gateway:running、agent_bridge:ready）；serve cwd=本 worktree；探毕即停、端口零残留。
+
 | 风险 | 缓解与回滚 |
 |---|---|
 | 一次性切换回归面大 | 单 worktree 三阶段行为测试、完整迁移演练和最终全量回归；失败不切换 |

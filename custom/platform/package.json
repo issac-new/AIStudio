@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "comment": "显式声明 CJS(无 type:module):overlay 根 package.json 的 type:module 会泄漏到 platform 契约/服务文件,而服务端 ts-node 用 CJS require 加载它们(enforce-gate 值导入 contracts/execution 即 ERR_REQUIRE_ESM——P2 Task 5 真启动冒烟逮住,P0 Task 5 引入值导入后从未活体起服)。本 package.json 覆盖为 CJS,与 custom/server/package.json 同形同由。"
+}

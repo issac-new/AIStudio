@@ -43,7 +43,7 @@ import { buildBehaviorSignals } from '../behavior-signals'
 import { businessSummaryOf } from '../business-summary'
 import { collectObsSignals } from '../../obssignals/collect'
 
-import { actorOf, runSummary, setForRun } from './shared.js'
+import { actorOf, runSummary, setForRun } from './shared'
 
 /** GET /runs/:id/agreement */
 export async function getRunsIdAgreement(ctx: Context) {
