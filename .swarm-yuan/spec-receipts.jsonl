@@ -245,3 +245,4 @@
 {"at":"2026-11-06T06:10:47Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"f37cf1b62469f34294056e37cac36ec911ea3da5","commit":"6e57ade47"}
 {"at":"2026-11-06T06:22:10Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"3be89810ea073676e8bb0b124a1f646341fd0332","commit":"91664a5d7"}
 {"at":"2026-11-06T06:38:30Z","spec":"docs/superpowers/specs/2026-11-06-inject-seam-restore.md","receipt":"e0f176a6623f30986c9c6f6ec569db314ff46ab5","commit":"4e3228ab4"}
+{"at":"2026-11-06T07:01:05Z","spec":"docs/superpowers/specs/2026-11-06-platform-wiring-restore.md","receipt":"b39cdb6cbb6fd2cae47cf68883db97ddebaa5125","commit":"ba492bd13"}

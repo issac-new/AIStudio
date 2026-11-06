@@ -3,19 +3,25 @@
 // 对应上游 `npm run build`,但 vite build 改用 overlay config(@/custom alias + entry shim)。
 // 自包含(不 import config/bootstrap.ts,路径内联)。
 import { execSync } from 'child_process';
-import { cpSync, existsSync } from 'fs';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
-import { resolveUpstreamRoots } from './inject.mjs';
+// 上游根解析单一事实源（P1 Task 6）：env > 仓内 vendor > 旧兄弟 upstream（realpath）。
+import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
+// 运行时资产清单（P1 Task 7）：随包资源的事实源（pricing/roster/semantica-bridge）。
+import { buildRuntimeAssetManifest, renderManifestFile, runtimeAssetSource } from './platform/lib/runtime-assets.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
-// 上游根单一事实源（AGENTS.md 规则 9）：env ＞ 仓内 vendor/ ＞ 旧兄弟 upstream/。
-// 与 inject.mjs 共用，避免构建与注入对「上游在哪」给出不同答案。
-const upstream = resolveUpstreamRoots(overlayRoot).studio;
+const upstream = resolveUpstreamRoots(overlayRoot).hermesStudioRoot;
 
 function run(cmd, cwd, label) {
   console.log(`\n[overlay-build] ▶ ${label}`);
   execSync(cmd, { cwd, stdio: 'inherit' });
 }
+
+// 0. 注入前置（P1 Task 6）：build:full 直呼 node（不经 npm 生命周期，prebuild 钩子
+// 不触发）——显式 ensure（幂等：noop/差量补套/全量注入），非零即中止构建。
+// 此前依赖调用方自觉先 inject，裸跑 build:full 在未注入树上产物静默缺自定义面。
+run('node scripts/ensure-injected.mjs', overlayRoot, 'ensure-injected（注入前置）');
 
 // 直接指向包内 JS 入口而非 .bin shim:Windows 下 node_modules/.bin/<name> 是
 // cmd-shim 生成的 sh 脚本,`node <shim>` 把 shell 脚本当 JS 解析必炸;统一走
@@ -40,26 +46,50 @@ run(
 run(bin('typescript/bin/tsc') + ' --noEmit -p packages/server/tsconfig.json', upstream, 'tsc server type-check');
 // 4. server 打包
 run('node scripts/build-server.mjs', upstream, 'build-server → dist/server');
-// 5. 运行时配置资源随包（打包态 __dirname=dist/server，多候选加载器按 __dirname 同级
-// runtime/ 探测；不拷则价目表/列编排/squad 三表在装机产物里静默回空——dev 形态经
-// overlay 软链布局可解析、打包态不可见，2026-09-25 审查实证的验证盲区）。
-const runtimeResSrc = resolve(overlayRoot, 'runtime');
-const runtimeResOut = resolve(upstream, 'packages/server/dist/server/runtime');
-for (const sub of ['pricing', 'roster']) {
-  const from = resolve(runtimeResSrc, sub);
-  if (!existsSync(from)) throw new Error(`[overlay-build] 运行时配置缺失: ${from}`);
-  cpSync(from, resolve(runtimeResOut, sub), { recursive: true });
+// 5. 运行时配置资源随包（P1 Task 7 起复制到**真** dist/server/runtime——build-server
+// 产物根在 dist/server，旧落点 packages/server/dist/server 是上游旧布局残影，打包态
+// __dirname=dist/server 的多候选探测看不见）。资产清单（runtime-assets.json）同批落
+// dist/server/，verify-dist --server 逐项校验、桌面 afterPack 与 bundle 身份共用。
+const runtimeManifest = buildRuntimeAssetManifest(overlayRoot);
+const runtimeResOut = resolve(upstream, 'dist', 'server');
+for (const asset of runtimeManifest.assets) {
+  // rel 即部署路径；rel→源映射单一事实源在 runtime-assets.mjs（runtimeAssetSource）
+  const src = runtimeAssetSource(overlayRoot, asset.rel);
+  const dst = resolve(runtimeResOut, asset.rel);
+  mkdirSync(resolve(dst, '..'), { recursive: true });
+  cpSync(src, dst);
 }
-console.log('[overlay-build] ▶ 运行时配置资源 → dist/server/runtime/{pricing,roster}');
+mkdirSync(runtimeResOut, { recursive: true });
+writeFileSync(resolve(runtimeResOut, 'runtime-assets.json'), renderManifestFile(runtimeManifest));
+console.log(`[overlay-build] ▶ 运行时资源+清单 → dist/server/runtime + runtime-assets.json（${runtimeManifest.assets.length} 项）`);
 
-// 5b. decisiongraph semantica 桥（.py 运行时资产）：board-graph bridge 按
-// <dist>/server/semantica-bridge.py 用 HERMES_BIN python 直调——构建不拷则装机
-// 产物里 bridge 进程全灭（2026-10-06 重建实锤：product-dist rsync --delete 清掉
-// 历史手工补放件后日志连刷 "can't open file semantica-bridge.py"）。
-const semBridgeSrc = resolve(overlayRoot, 'custom/server/decisiongraph/semantica-bridge.py');
-if (!existsSync(semBridgeSrc)) throw new Error(`[overlay-build] semantica 桥缺失: ${semBridgeSrc}`);
-cpSync(semBridgeSrc, resolve(upstream, 'dist/server/semantica-bridge.py'));
-console.log('[overlay-build] ▶ decisiongraph semantica 桥 → dist/server/semantica-bridge.py');
+// 5c. bundle 身份（P1 round-2 接线，spec §4.3-1/§4.4-3）：注入 manifest v2 数据面
+//（baseline.treeOids + patches[].sha256）+ runtime 清单 + 当前 HEAD → bundleId，落
+// dist/server/bundle-identity.txt（确定性内容）。release:gate 读它并拦截缺席/过期——
+// 发布门不得无 bundle 身份通过。经 ts-node transpile-only shim 复用服务端 TS 单一
+// 实现（computeBundleIdentity + 装配层），不在脚本侧重写摘要语义。
+{
+  const commit = execSync('git rev-parse HEAD', { cwd: overlayRoot, encoding: 'utf8' }).trim();
+  const stateOut = process.env.OVERLAY_STATE_OUT?.trim() || overlayRoot;
+  const shimDir = resolve(overlayRoot, 'scripts', 'platform', 'release');
+  const buildTs = resolve(overlayRoot, 'custom/server/platform/delivery/bundle-identity-build.ts');
+  const args = JSON.stringify({
+    commit,
+    injectionManifestPath: resolve(stateOut, '.overlay-injected.json'),
+    runtimeManifestPath: resolve(runtimeResOut, 'runtime-assets.json'),
+    outFile: resolve(runtimeResOut, 'bundle-identity.txt'),
+  });
+  execSync(`node -r ts-node/register --eval ${JSON.stringify(`const m = require(${JSON.stringify(buildTs)}); m.writeBundleIdentity(${args});`)}`, {
+    cwd: overlayRoot,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      TS_NODE_PROJECT: resolve(shimDir, 'tsconfig.evidence.json').replace(overlayRoot + '/', ''),
+      TS_NODE_TRANSPILE_ONLY: '1',
+    },
+  });
+  console.log(`[overlay-build] ▶ bundle 身份 → dist/server/bundle-identity.txt（commit ${commit.slice(0, 12)}）`);
+}
 
 console.log('\n[overlay-build] ✓ 完整构建完成:');
 console.log('  dist/client/  — 客户端(含自定义矩阵/看板/品牌)');
@@ -69,4 +99,6 @@ console.log('  dist/server/  — 服务端');
 // 不经 npm 生命周期),postbuild 钩子只在 `npm run build`(纯 vite client 构建)后
 // 触发——门禁此前从不覆盖交付链,09-27 dist/client 空壳事故(服务 ready 但 SPA
 // 全 404)正发生在这条链路上。execSync 非零即抛,校验失败=构建失败。
-run('node scripts/verify-dist.mjs', overlayRoot, 'verify-dist: 产物完整性门禁');
+// --server（P1 Task 7）：交付链按运行时资产清单校验 server 面；postbuild 的
+// client-only 模式（npm run build）不校验 server 面（vite-only 无 server 产物）。
+run('node scripts/verify-dist.mjs --server', overlayRoot, 'verify-dist: 产物完整性门禁（client+server 清单）');
