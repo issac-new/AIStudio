@@ -258,18 +258,7 @@ def _resolve_short_name(name: str, sources, console: Console, attempt: Optional[
 def _resolve_source_meta_and_bundle(identifier: str, sources):
     """(meta, bundle, source) from ONE adapter — mixing skills.sh metadata with a ClawHub zip of
     a same-named skill once showed the wrong SKILL.md. Falls back to the first meta-only hit.
-
-    overlay[737] 统一 registry URI：带显式前缀的标识符先经 tools.skills_hub_uri
-    解析——命中且源在已知源集合内 → 只对该源 inspect/fetch（等同 --source 固定，
-    省 N-1 次无效探测）；解析不出（无前缀短名/裸路径）或源不在集合（如
-    nacos:// 本仓无实例）→ 完全走下方现状分发链，现有短名行为不变。
     """
-    from tools.skills_hub_uri import parse_skill_uri
-    parsed = parse_skill_uri(identifier)
-    if parsed is not None:
-        pinned = [src for src in sources if src.source_id() == parsed[0]]
-        if pinned:
-            sources = pinned
     first_meta = None
     first_meta_source = None
     for src in sources:
@@ -775,13 +764,6 @@ def _registry_prefixes() -> tuple:
 
 
 def _registry_from_identifier(identifier: str) -> str:
-    # overlay[737] 先走统一解析器（前缀表与其保持单一事实源）；解析器有意排除
-    # 的形态（well-known 裸 URL、index.json）回落原有判定——除 nacos:// 由
-    # unresolved 变为具名 nacos 外，其余标识符映射等价不变。
-    from tools.skills_hub_uri import parse_skill_uri
-    parsed = parse_skill_uri(identifier)
-    if parsed is not None:
-        return parsed[0]
     lowered = identifier.lower()
     if lowered.startswith(("http://", "https://")) and "/.well-known/skills/" in lowered:
         return "well-known"

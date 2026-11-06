@@ -15,9 +15,7 @@ locks). Schema: tasks, task_links, task_comments, task_events, task_runs, attach
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
-import math
 import os
 import re
 import secrets
@@ -152,101 +150,6 @@ def _assert_not_delegated_child_mutation(path: str | Path | None = None) -> None
     if kanban_path_is_fenced(kanban_home() if path is None else path):
         raise PermissionError("delegate_task child contexts cannot mutate Kanban tasks or boards")
 
-
-
-
-
-# ── 看板写闸层（607 收编：宿主自更新带入的 sanctioned-writer guardrail）──
-GUARDRAIL_UDF_NAME = "kanban_write_sanctioned"
-
-# Every user table the kanban schema owns. install_guardrail_triggers() puts
-# an INSERT/UPDATE/DELETE guard trigger on each so NO write path — not the
-# CLI, not the structured tools, not a raw `sqlite3` process poking the file —
-# can touch board state without an attesting connection. 2026-09-01
-# t_d37428d2: a delegated child bypassed the CLI guard by shelling out to
-# `sqlite3 INSERT` directly; this layer closes that vector at the schema.
-
-_GUARDRAIL_TABLES = (
-    "tasks",
-    "task_links",
-    "task_comments",
-    "task_events",
-    "task_runs",
-    "task_attachments",
-    "kanban_notify_subs",
-)
-
-def _guardrail_trigger_name(table: str, op: str) -> str:
-    """Trigger name for *table*/*op*; also documents the DROP rollback form."""
-    return f"kanban_guard_{table}_{op}"
-
-def register_write_sanction_udf(
-    conn: sqlite3.Connection,
-    *,
-    guard_fn=None,
-) -> None:
-    """Mark *conn* as a sanctioned kanban writer for schema-level guard triggers.
-
-    Boards protected by ``install_guardrail_triggers()`` reject any INSERT /
-    UPDATE / DELETE whose WHEN clause sees ``kanban_write_sanctioned() <> 1``.
-    The guard UDF is connection-scoped, so a bare ``sqlite3`` process (no UDF
-    registered) is rejected at prepare time with "no such function" — that is
-    the fail-closed property this whole layer rests on.
-
-    ``guard_fn`` lets tests inject the attestation; production callers omit it
-    and get the delegation-context check: attestation is granted only when this
-    process is NOT a ``delegate_task`` child, mirroring
-    ``_assert_not_delegated_child_mutation()`` at the DB layer.
-    """
-    if guard_fn is None:
-        def guard_fn() -> int:
-            try:
-                from agent.delegation_context import is_delegated_child_process_context
-
-                return 0 if is_delegated_child_process_context() else 1
-            except Exception:
-                return 0
-
-    conn.create_function(GUARDRAIL_UDF_NAME, 0, guard_fn)
-# <<< swarm:kanban-guardrail-rearm <<<
-
-def install_guardrail_triggers(conn: sqlite3.Connection) -> None:
-    """Install the sanctioned-writer guard triggers on a kanban DB.
-
-    Idempotent (``CREATE TRIGGER IF NOT EXISTS``), safe to call from multiple
-    processes (DDL takes the DB write lock briefly). After installation every
-    INSERT/UPDATE/DELETE on kanban tables is rejected unless the writing
-    connection has register_write_sanction_udf's UDF registered:
-
-    * a bare ``sqlite3`` process (the 2026-09-01 incident vector) fails at
-      statement-prepare time — the WHEN clause references a function its
-      connection doesn't have — with ``no such function:
-      kanban_write_sanctioned``;
-    * a Python connection that went through ``connect`` attests via the
-      delegation-context guard and passes;
-    * an in-process delegated child that imports this module directly and
-      builds its own raw ``sqlite3.connect()`` fails the guard_fn check.
-
-    Reads are untouched. Rollback = ``DROP TRIGGER kanban_guard_<table>_<op>;``
-    (see _guardrail_trigger_name).
-    """
-    # Installing the triggers is itself a schema mutation: same trust bar.
-    _assert_not_delegated_child_mutation()
-    for table in _GUARDRAIL_TABLES:
-        for op in ("insert", "update", "delete"):
-            conn.execute(
-                f"""
-                CREATE TRIGGER IF NOT EXISTS {_guardrail_trigger_name(table, op)}
-                BEFORE {op} ON {table}
-                FOR EACH ROW
-                WHEN kanban_write_sanctioned() <> 1
-                BEGIN
-                    SELECT RAISE(ABORT,
-                        'unsanctioned kanban write (delegate child or raw sqlite3 client)');
-                END
-                """
-            )
-    conn.commit()
 
 def _fire_kanban_lifecycle_hook(event: str, task_id: str, **fields: Any) -> None:
     """Best-effort lifecycle hook. Call AFTER the write txn commits (plugins never
@@ -517,28 +420,10 @@ def current_board_path() -> Path:
     return kanban_home() / "kanban" / "current"
 
 
-def _home_default_board() -> str:
-    """HERMES_CUSTOM[home-default-board]: per-home ``kanban.default_board`` read from
-    the scoped home's user config (a multiplex profile pins its own default board in
-    its ``config.yaml``). Absent key or unreadable config falls through to the legacy
-    resolution chain — this must never raise."""
-    try:
-        from hermes_cli.config_effective import load_user_config_effective
-        kanban = (load_user_config_effective(fail_closed=True) or {}).get("kanban", {})
-    except Exception:
-        return ""
-    if isinstance(kanban, dict):
-        raw = kanban.get("default_board")
-        if isinstance(raw, str):
-            return raw.strip()
-    return ""
-
-
 def get_current_board() -> str:
-    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> per-home
-    ``kanban.default_board`` -> ``<root>/kanban/current`` (only while that board
-    exists) -> ``DEFAULT_BOARD``. A malformed/stale slug falls through — the
-    dispatcher must never crash on a hand-edited file."""
+    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> ``<root>/kanban/current``
+    (only while that board exists) -> ``DEFAULT_BOARD``. A malformed/stale slug
+    falls through — the dispatcher must never crash on a hand-edited file."""
     def _existing(candidate: str) -> Optional[str]:
         if not candidate:
             return None
@@ -558,7 +443,6 @@ def get_current_board() -> str:
     for candidate in (
         (_CURRENT_BOARD_OVERRIDE.get() or "").strip(),
         os.environ.get("HERMES_KANBAN_BOARD", "").strip(),
-        _home_default_board(),
     ):
         found = _existing(candidate)
         if found:
@@ -580,28 +464,6 @@ def get_current_board() -> str:
     return DEFAULT_BOARD
 
 
-def _atomic_write_bytes(path: Path, data: bytes) -> None:
-    """Write ``data`` to ``path`` via a same-dir temp file + ``os.replace``, so a
-    crash mid-write can never leave a truncated file behind (board.json, the
-    current-board pointer, attachment blobs)."""
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp")
-    try:
-        with tmp.open("wb") as f:
-            f.write(data)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-    except BaseException:
-        with contextlib.suppress(OSError):
-            tmp.unlink(missing_ok=True)
-        raise
-
-
-def _atomic_write_text(path: Path, text: str) -> None:
-    """``_atomic_write_bytes`` for text (UTF-8): a crash-safe ``write_text``."""
-    _atomic_write_bytes(path, text.encode("utf-8"))
-
-
 def set_current_board(slug: str) -> Path:
     """Persist ``slug`` as the active board; returns the file written. Does NOT
     check the board exists — callers do (so ``boards switch <typo>`` errors)."""
@@ -609,7 +471,7 @@ def set_current_board(slug: str) -> Path:
     normed = _require_slug(slug)
     path = current_board_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    _atomic_write_text(path, normed + "\n")
+    path.write_text(normed + "\n", encoding="utf-8")
     return path
 
 
@@ -717,33 +579,8 @@ def attachments_root(board: Optional[str] = None) -> Path:
 
 
 def task_attachments_dir(task_id: str, board: Optional[str] = None) -> Path:
-    """Return the per-task attachment directory ``<root>/<task_id>/``.
-
-    ``task_id`` must be a single safe path segment (:func:`_require_task_id_segment`):
-    tool-supplied ids reach :func:`store_attachment_bytes` through here, and an
-    unchecked ``/etc/x`` or ``../../..`` would escape the attachments root and
-    create/write arbitrary locations."""
-    return attachments_root(board=board) / _require_task_id_segment(task_id)
-
-
-# ``t_<hex>`` ids are letters/digits/underscore only, but imported or
-# hand-written ids may carry dots or dashes; the point is one path segment.
-_TASK_ID_SEGMENT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
-
-
-def _require_task_id_segment(task_id: str) -> str:
-    """Validate ``task_id`` as one safe path segment; ``ValueError`` naming the
-    reason for anything with a separator (``/``, ``\\``), traversal (``..``),
-    an absolute path, or an empty id. This is the trust boundary for
-    caller-supplied task ids used in filesystem paths."""
-    tid = task_id if isinstance(task_id, str) else ""
-    if (not tid or tid in (".", "..") or not _TASK_ID_SEGMENT_RE.match(tid)
-            or Path(tid).name != tid):
-        raise ValueError(
-            f"invalid task_id {task_id!r}: must be a single path-safe segment "
-            "(no '/', '\\\\', '..', or empty)"
-        )
-    return tid
+    """Return the per-task attachment directory ``<root>/<task_id>/``."""
+    return attachments_root(board=board) / task_id
 
 
 def worker_logs_dir(board: Optional[str] = None) -> Path:
@@ -801,21 +638,12 @@ class Task:
     block_kind: Optional[str] = None
     block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
     completion_contract: Optional[str] = None
-    raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
-    estimate_days: Optional[float] = None    # HERMES_CUSTOM[estimate] person-days; None = unestimated
-    estimate_meta: Optional[dict] = None     # estimate provenance JSON (complexity/tokens/source/...)
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Task:
         g = lambda col, default=None: _lossy_text(_row_get(row, col, default))
         parsed = _json_or(g("skills"))
         skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
-        raci_parsed = _json_or(g("raci"))
-        raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
-        est_days_raw = g("estimate_days")
-        est_days_value = float(est_days_raw) if est_days_raw not in (None, "") else None
-        est_meta_parsed = _json_or(g("estimate_meta"))
-        est_meta_value = est_meta_parsed if isinstance(est_meta_parsed, dict) else None
         return cls(
             **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
             **{col: _to_epoch(g(col)) for col in _TASK_EPOCH_COLUMNS},  # outside writers may store text: epoch or None
@@ -826,9 +654,6 @@ class Task:
             consecutive_failures=g("consecutive_failures", g("spawn_failures", 0)),
             last_failure_error=g("last_failure_error", g("last_spawn_error")),
             skills=skills_value,
-            raci=raci_value,
-            estimate_days=est_days_value,
-            estimate_meta=est_meta_value,
             goal_mode=bool(g("goal_mode")),
             block_recurrences=int(g("block_recurrences") or 0),
         )
@@ -960,7 +785,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at           INTEGER NOT NULL,
     started_at           INTEGER,
     completed_at         INTEGER,
-    workspace_kind       TEXT NOT NULL DEFAULT 'dir',
+    workspace_kind       TEXT NOT NULL DEFAULT 'scratch',
     workspace_path       TEXT,
     branch_name          TEXT,
     -- Optional link to a first-class Project (hermes_cli/projects_db). When set,
@@ -1000,8 +825,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- Force-loaded skills for the worker on this task, stored as JSON.
     -- Passed to the worker via `--skills`. NULL or empty array = no extras.
     skills               TEXT,
-    -- HERMES_CUSTOM[raci] Structured RACI (JSON {responsible,approver,consulted,informed}).
-    raci                 TEXT,
     -- Per-task model override. When set, the dispatcher passes -m <model>
     -- to the worker, overriding the profile's default model. NULL = use
     -- the profile default.
@@ -1051,12 +874,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- ``blocked`` so a cron can't spin it forever. Reset to 0 only on a
     -- successful completion — NOT on unblock (resetting on unblock is exactly
     -- the amnesia that let the loop run unbounded).
-    block_recurrences    INTEGER NOT NULL DEFAULT 0,
-    -- HERMES_CUSTOM[estimate]（团队并行二期）：人日估算。NULL = 未评估（派发
-    -- 重排保守计 1 人日）；decompose 落库前已把超帽子卡钳到 1 天帽值。
-    estimate_days        REAL,
-    -- 估算来源 JSON（complexity/est_tokens/source 等），estimate_set 事件同源。
-    estimate_meta        TEXT
+    block_recurrences    INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS task_links (
@@ -1350,7 +1168,6 @@ def create_task(
     project_source_task_id: Optional[str] = None,
     creator_task_id: Optional[str] = None,
     completion_contract: Optional[str] = None,
-    raci: Optional[dict] = None,
 ) -> str:
     """Create a task (optionally under ``parents``); returns its id.
 
@@ -1388,10 +1205,7 @@ def create_task(
         except Exception:
             pass
     if workspace_kind is None:
-        # overlay: default to dir workspace on plain boards; project-scoped
-        # boards keep the upstream flow (scratch -> project worktree upgrade
-        # in _resolve_project_link, #106342).
-        workspace_kind = "scratch" if project_id is not None else "dir"
+        workspace_kind = "scratch"
     if workspace_kind not in VALID_WORKSPACE_KINDS:
         raise ValueError(
             f"workspace_kind must be one of {sorted(VALID_WORKSPACE_KINDS)}, "
@@ -1431,11 +1245,6 @@ def create_task(
     # Retry once on the extremely unlikely id collision.
     for attempt in range(2):
         task_id = _new_task_id()
-        # Overlay: a default ``dir`` task created without an explicit path lands on
-        # the managed per-task workspace dir (absolute, path-stable, cleanup-guard
-        # safe). Upstream v0.21.3 raises at resolve time on dir-without-path.
-        if workspace_kind == "dir" and not workspace_path:
-            workspace_path = str(workspaces_root(board=board) / task_id)
         try:
             # allow_nested: graph builders compose create_task under one outer
             # commit so the dispatcher never sees a half-built graph.
@@ -1449,17 +1258,17 @@ def create_task(
                     if not branch_name:
                         branch_name = _project_branch_name(project_obj, task_id, title)
 
-                cursor = conn.execute(
+                conn.execute(
                     """
-                    INSERT OR IGNORE INTO tasks (
+                    INSERT INTO tasks (
                         id, title, body, assignee, status, priority,
                         created_by, created_at, workspace_kind, workspace_path,
                         branch_name, project_id, tenant, idempotency_key,
                         max_runtime_seconds,
                         skills, max_retries, model_override, provider_override,
                         reasoning_effort,
-                        goal_mode, goal_max_turns, session_id, completion_contract, raci
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        goal_mode, goal_max_turns, session_id, completion_contract
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         task_id, title.strip(), body, assignee, task_status, priority,
@@ -1469,21 +1278,8 @@ def create_task(
                         json.dumps(skills_list) if skills_list is not None else None,
                         _opt_int(max_retries), model_override, provider_override, reasoning_effort,
                         1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
-                        json.dumps(raci) if isinstance(raci, dict) else None,
                     ),
                 )
-                if cursor.rowcount == 0:
-                    # 跨进程同键并发（唯一索引生效）：返回既有卡，不插 links/events。
-                    if idempotency_key:
-                        row = conn.execute(
-                            "SELECT id FROM tasks WHERE idempotency_key = ? "
-                            "AND status != 'archived' "
-                            "ORDER BY created_at DESC LIMIT 1", (idempotency_key,),
-                        ).fetchone()
-                        if row:
-                            return row["id"]
-                    # 非幂等键的 id 碰撞：外层 attempt 循环重试一次。
-                    continue
                 for pid in parents:
                     _link(conn, pid, task_id)
                 _append_event(
@@ -1531,7 +1327,7 @@ def create_task(
         except sqlite3.IntegrityError:
             if attempt == 1:
                 raise
-    raise RuntimeError("task id collision persisted after retry")
+    raise RuntimeError("unreachable")
 
 
 def _board_meta_for(board: Optional[str]) -> dict:
@@ -1731,41 +1527,6 @@ def set_reasoning_effort(conn: sqlite3.Connection, task_id: str, effort: Optiona
         "reasoning_effort_set", {"reasoning_effort": effort},
         ("reasoning_effort",), archived_msg="cannot set reasoning effort",
     )
-
-
-def set_estimate(
-    conn: sqlite3.Connection,
-    task_id: str,
-    days: Optional[float],
-    meta: Optional[dict] = None,
-) -> bool:
-    """HERMES_CUSTOM[estimate]: persist a person-day estimate (``None`` clears).
-
-    Every write lands an ``estimate_set`` event in ``task_events`` — the audit
-    chain the ready-lane workload reorder reads as truth (decompose clamps
-    over-cap children to the 1-day cap before calling in). Archived tasks are
-    refused like the other per-task setters; non-numeric/non-positive values
-    raise ``ValueError``. ``meta`` is stored verbatim as the ``estimate_meta``
-    JSON column."""
-    if days is not None:
-        if isinstance(days, bool) or not isinstance(days, (int, float)):
-            raise ValueError(f"estimate days must be a number or None, got {days!r}")
-        if not math.isfinite(float(days)) or float(days) <= 0:
-            raise ValueError(f"estimate days must be a positive finite number, got {days!r}")
-    meta_value = meta if isinstance(meta, dict) else None
-    with write_txn(conn):
-        status = _task_status(conn, task_id)
-        if status is None:
-            return False
-        if status == "archived":
-            raise RuntimeError(f"cannot set estimate on archived task {task_id}")
-        conn.execute(
-            "UPDATE tasks SET estimate_days = ?, estimate_meta = ? WHERE id = ?",
-            (days, _json_or_null(meta_value), task_id),
-        )
-        _append_event(conn, task_id, "estimate_set", {"estimate_days": days, **(meta_value or {})})
-    notify_task_updated(conn, task_id, ("estimate_days", "estimate_meta"))
-    return True
 
 
 # --- Links ---
@@ -1999,7 +1760,7 @@ def store_attachment_bytes(
     dest_dir = task_attachments_dir(task_id, board=board)
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = _collision_free_path(dest_dir, safe_name)
-    _atomic_write_bytes(dest_path, data)
+    dest_path.write_bytes(data)
     try:
         return add_attachment(
             conn, task_id, filename=dest_path.name, stored_path=str(dest_path.resolve()),
@@ -2084,15 +1845,9 @@ def _insert_comment(
 
 def _append_event(
     conn: sqlite3.Connection, task_id: str, kind: str, payload: Optional[dict] = None, *,
-    run_id: Optional[int] = None, collab_event_id: Optional[str] = None,
+    run_id: Optional[int] = None,
 ) -> None:
-    """Insert an event row inside the caller's txn; ``run_id`` groups it by attempt (NULL = task-scoped).
-
-    ``collab_event_id``（可选，边界设计 §6-T4b）：本事件由哪个 Matrix ``$event_id`` 驱动
-    （协议事件派单/回执触发看板变更时携带），并入 payload 落盘——本机留痕对外引用
-    一律锚定该 id，与 task_events 既有的本地自增 id 分工不同。"""
-    if collab_event_id:
-        payload = {**(payload or {}), "collab_event_id": collab_event_id}
+    """Insert an event row inside the caller's txn; ``run_id`` groups it by attempt (NULL = task-scoped)."""
     conn.execute(
         "INSERT INTO task_events (task_id, run_id, kind, payload, created_at) "
         "VALUES (?, ?, ?, ?, ?)", (task_id, run_id, kind, _json_or_null(payload), int(time.time())),
@@ -2155,19 +1910,9 @@ def _task_status(conn: sqlite3.Connection, task_id: str) -> Optional[str]:
     return row["status"] if row else None
 
 
-def _coerce_run_id(value: Any) -> Optional[int]:
-    """Best-effort integer run id. A non-integer pointer (an external writer
-    stored a run slug, run27) references no ``task_runs.id`` — coerce to
-    ``None`` instead of poisoning every caller with a ValueError."""
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def _current_run_id(conn: sqlite3.Connection, task_id: str) -> Optional[int]:
     row = conn.execute("SELECT current_run_id FROM tasks WHERE id = ?", (task_id,)).fetchone()
-    return _coerce_run_id(row["current_run_id"]) if row and row["current_run_id"] else None
+    return int(row["current_run_id"]) if row and row["current_run_id"] else None
 
 
 # Distinguishes "caller named the acting profile" (which may legitimately be
@@ -2229,31 +1974,6 @@ def _synthesize_ended_run(
 
 
 # --- Dependency resolution (todo -> ready) ---
-
-def _run_input_manifest(conn: sqlite3.Connection, task_id: str) -> dict:
-    """W4 输入冻结（2026-11-04）：run 开启时把任务输入面快照进 run metadata——
-    body 哈希 + 附件行清单（id/文件名/字节数）。历史 run 复现的依据是快照，
-    不是开 run 时刻之后仍可变的 tasks 行；读侧（taskmodel）据此报
-    available.inputVersions=true。附件文件内容不在此哈希（体积与 IO 成本），
-    行级清单+size 足以判定「附件集是否变化」。"""
-    trow = conn.execute(
-        "SELECT body FROM tasks WHERE id = ?", (task_id,),
-    ).fetchone()
-    body_sha = None
-    if trow is not None and trow["body"]:
-        body_sha = hashlib.sha256(str(trow["body"]).encode("utf-8", "replace")).hexdigest()
-    atts = conn.execute(
-        "SELECT id, filename, size FROM task_attachments WHERE task_id = ? ORDER BY id",
-        (task_id,),
-    ).fetchall()
-    return {
-        "bodySha256": body_sha,
-        "attachments": [
-            {"id": int(a["id"]), "filename": a["filename"], "size": int(a["size"] or 0)}
-            for a in atts
-        ],
-    }
-
 
 def _has_sticky_block(conn: sqlite3.Connection, task_id: str) -> bool:
     """True when the newest ``blocked``/``unblocked``/``gave_up`` event says the
@@ -2431,13 +2151,12 @@ def _claim_and_open_run(
         INSERT INTO task_runs (
             task_id, profile, step_key, status,
             claim_lock, claim_expires, max_runtime_seconds,
-            metadata, started_at
-        ) VALUES (?, ?, ?, 'running', ?, ?, ?, ?, ?)
+            started_at
+        ) VALUES (?, ?, ?, 'running', ?, ?, ?, ?)
         """,
         (
             task_id, trow["assignee"] if trow else None, trow["current_step_key"] if trow else None,
-            lock, expires, trow["max_runtime_seconds"] if trow else None,
-            _json_or_null({"input_manifest": _run_input_manifest(conn, task_id)}), now,
+            lock, expires, trow["max_runtime_seconds"] if trow else None, now,
         ),
     )
     run_id = run_cur.lastrowid
@@ -2549,19 +2268,15 @@ def goal_run_status(
     if task is None:
         return None
     if expected_run_id is not None:
-        expected = _coerce_run_id(expected_run_id)
-        if expected is None:
-            # The caller names a run no task_runs row can carry — it owns nothing.
-            return "superseded"
         row = conn.execute(
             "SELECT outcome FROM task_runs WHERE id = ? AND task_id = ?",
-            (expected, task_id),
+            (int(expected_run_id), task_id),
         ).fetchone()
         outcome = str(row["outcome"]) if row and row["outcome"] is not None else None
         terminal_status = _RUN_OUTCOME_TERMINAL_STATUS.get(outcome)
         if terminal_status is not None:
             return terminal_status
-        if outcome is not None or _coerce_run_id(task.current_run_id) != expected:
+        if outcome is not None or task.current_run_id != int(expected_run_id):
             return "superseded"
     if task.status in {"ready", "todo"}:
         event = conn.execute(
@@ -2922,89 +2637,11 @@ def _claim_is_live(trow) -> bool:
     )
 
 
-def _gate_completion_contract(
-    conn: sqlite3.Connection, task_id: str, *,
-    receipt: Optional[dict], workspace: Optional[str],
-) -> Optional[dict]:
-    """内核完成契约门（模型波动加固 A 层下沉，2026-11-01 演练实锤后）。
-
-    契约由派发方写入 env（``HERMES_KANBAN_DOD_CONTRACT`` + 源哈希锁）；本函数在
-    ``complete_task`` 内核边界执行——工具/CLI/面板任一完成面都必须经过这里，
-    堵住「worker 绕开 kanban_complete 工具、直接终端跑 hermes kanban complete」
-    的穿透向量（dod-drill R1/R2 实录）。返回规范化回执（无契约/通过）；
-    违规抛 :class:`ContractViolation`（ValueError 子类，调用方按既有 ValueError
-    通道结构化报错）。拒绝留痕 ``completion_blocked_contract`` 事件。
-    """
-    import os as _os
-
-    raw = _os.environ.get("HERMES_KANBAN_DOD_CONTRACT", "").strip()
-    if not raw:
-        return None
-    try:
-        from completion_contract import (
-            ContractViolation, contract_source_sha256, parse_contract, validate_receipt,
-        )
-    except ImportError as exc:  # 部署缺模块：fail-closed——宁可拒完成也不无门放行
-        raise ValueError(
-            f"kanban_complete blocked: completion-contract module unavailable ({exc}). "
-            "This is a deployment error; kanban_block with kind='dependency' and ask the "
-            "operator to re-deploy the runtime."
-        ) from None
-    try:
-        contract = parse_contract(raw)
-    except ContractViolation as exc:
-        _append_event(conn, task_id, "completion_blocked_contract",
-                      {"reason": "contract_unparseable", "detail": str(exc)[:400]})
-        raise ValueError(
-            f"kanban_complete blocked: dispatch-time completion contract is unparseable ({exc}). "
-            "This is a dispatcher/config error; kanban_block with kind='dependency' and ask the "
-            "operator to re-dispatch the card."
-        ) from None
-    if contract["mode"] == "off":
-        return None
-    if contract["mode"] != "enforce":  # warn 档：违规不拦，但事件留痕
-        try:
-            validate_receipt(contract, receipt, workspace or _os.getcwd())
-        except ContractViolation as exc:
-            _append_event(conn, task_id, "completion_contract_warning",
-                          {"detail": str(exc)[:600]})
-            return None
-    row = conn.execute("SELECT body FROM tasks WHERE id = ?", (task_id,)).fetchone()
-    expected = _os.environ.get("HERMES_KANBAN_DOD_SOURCE_SHA256", "").strip()
-    if expected and row is not None:
-        actual = contract_source_sha256(row["body"] or "")
-        if actual != expected:
-            _append_event(conn, task_id, "completion_blocked_contract", {
-                "reason": "contract_source_changed",
-                "expectedSha256": expected, "actualSha256": actual,
-            })
-            raise ValueError(
-                "kanban_complete blocked: the card's acceptance contract changed after "
-                "dispatch (AC/dod block was edited). Restore the original AC/dod block, or "
-                "ask the operator to re-dispatch. Do not fabricate a receipt for the new text."
-            ) from None
-    try:
-        validated = validate_receipt(contract, receipt, workspace or _os.getcwd())
-    except ContractViolation as exc:
-        _append_event(conn, task_id, "completion_blocked_contract", {
-            "reason": "receipt_violation", "detail": str(exc)[:600],
-            "contractSha256": contract.get("sourceSha256"),
-        })
-        raise ValueError(
-            f"kanban_complete blocked by the completion contract: {exc}. "
-            "Fix the evidence or artifact, then complete again with a corrected receipt "
-            "(kanban_complete tool receipt 参数，或 CLI --receipt)。Nothing changed; "
-            "the task is still in-flight."
-        ) from None
-    return validated
-
-
 def complete_task(
     conn: sqlite3.Connection, task_id: str, *, result: Optional[str] = None,
     summary: Optional[str] = None, metadata: Optional[dict] = None,
     created_cards: Optional[Iterable[str]] = None, expected_run_id: Optional[int] = None,
     fire_lifecycle_hook: bool = True, force: bool = False,
-    receipt: Optional[dict] = None, workspace: Optional[str] = None,
 ) -> bool:
     """``running|ready|blocked|review -> done``; records ``result``.
 
@@ -3027,21 +2664,9 @@ def complete_task(
     # Cheap pre-check; re-checked inside the txn to close the parent-reopen race.
     if not _parents_satisfied(conn, task_id):
         return False
-    # routa 流转门禁四件套（overlay 吸收第一批 #8）：done 列声明式门（approval/
-    # checklist/validator，gateMode blocking|warning）；无 gates.json 即无门。
-    # 拒绝/告警事件留在事务外；通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
-    from hermes_cli.kanban_gates import gate_transition
-    _, gate_payload = gate_transition(conn, task_id, "done", evidence=summary or result)
     from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
     verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
     _gate_empty_completion(conn, task_id, result=result, summary=summary)
-    # 内核完成契约门（A 层下沉）：任何完成面（工具/CLI/面板）都必须过这里。
-    validated_receipt = _gate_completion_contract(conn, task_id, receipt=receipt, workspace=workspace)
-    if validated_receipt is not None and validated_receipt.get("ok"):
-        metadata = dict(metadata or {})
-        metadata["completion_receipt"] = validated_receipt
-        if validated_receipt.get("sourceSha256"):
-            metadata["completion_contract_sha256"] = validated_receipt["sourceSha256"]
     metadata = _merge_completion_prose_artifacts(
         conn, task_id, metadata, summary=summary, result=result,
     )
@@ -3049,77 +2674,65 @@ def complete_task(
     acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
     if acceptance is False:
         return False
-    # Staged copies live outside the txn: a rollback after staging must not
-    # leave orphans that make the retry stage ``name_1.ext`` beside them
-    # (same fence as ``request_review``).
-    staged_copies: list[Path] = []
-    try:
-        with write_txn(conn):
-            # Hard invariant even for human review approval: a parent may have
-            # reopened while this task waited.
-            if not _parents_satisfied(conn, task_id):
-                return False
-            if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
-                return False
-            trow = conn.execute(
-                "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
-                (task_id,),
-            ).fetchone()
-            prior_status = trow["status"] if trow else None
-            # Refuse to close a LIVE worker's run without proof of ownership
-            # (expected_run_id) or an explicit human override (force=True); see
-            # _claim_is_live for what "live" means.
-            if expected_run_id is None and not force and trow and _claim_is_live(trow):
-                raise LiveClaimError(task_id)
-            sql = """
-                    UPDATE tasks
-                       SET status       = 'done',
-                           result       = ?,
-                           completed_at = ?,
-                           claim_lock   = NULL,
-                           claim_expires= NULL,
-                           worker_pid   = NULL,
-                           block_kind   = NULL,
-                           block_recurrences = 0
-                     WHERE id = ?
-                       AND status IN ('running', 'ready', 'blocked', 'review')
-                    """
-            params: tuple = (result, now, task_id)
-            if expected_run_id is not None:
-                sql += " AND current_run_id = ?"
-                params = (*params, int(expected_run_id))
-            if conn.execute(sql, params).rowcount != 1:
-                return False
-            if isinstance(metadata, dict):
-                staged_copies = _stage_completion_artifacts(conn, task_id, metadata, now)
-            run_id = _end_run(
-                conn, task_id, outcome="completed", status="done", summary=handoff_summary,
-                metadata=metadata,
+    with write_txn(conn):
+        # Hard invariant even for human review approval: a parent may have
+        # reopened while this task waited.
+        if not _parents_satisfied(conn, task_id):
+            return False
+        if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
+            return False
+        trow = conn.execute(
+            "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
+            (task_id,),
+        ).fetchone()
+        prior_status = trow["status"] if trow else None
+        # Refuse to close a LIVE worker's run without proof of ownership
+        # (expected_run_id) or an explicit human override (force=True); see
+        # _claim_is_live for what "live" means.
+        if expected_run_id is None and not force and trow and _claim_is_live(trow):
+            raise LiveClaimError(task_id)
+        sql = """
+                UPDATE tasks
+                   SET status       = 'done',
+                       result       = ?,
+                       completed_at = ?,
+                       claim_lock   = NULL,
+                       claim_expires= NULL,
+                       worker_pid   = NULL,
+                       block_kind   = NULL,
+                       block_recurrences = 0
+                 WHERE id = ?
+                   AND status IN ('running', 'ready', 'blocked', 'review')
+                """
+        params: tuple = (result, now, task_id)
+        if expected_run_id is not None:
+            sql += " AND current_run_id = ?"
+            params = (*params, int(expected_run_id))
+        if conn.execute(sql, params).rowcount != 1:
+            return False
+        if isinstance(metadata, dict):
+            _stage_completion_artifacts(conn, task_id, metadata, now)
+        run_id = _end_run(
+            conn, task_id, outcome="completed", status="done", summary=handoff_summary,
+            metadata=metadata,
+        )
+        # Never-claimed task: synthesize a run so the handoff fields survive.
+        if run_id is None and (summary or metadata or result or prior_status == "review"):
+            synth_summary, synth_metadata = handoff_summary, metadata
+            if prior_status == "review" and not synth_summary and not synth_metadata:
+                synth_summary = _REVIEW_APPROVED_NOTE
+                synth_metadata = {"source_status": "review", "approval": "manual"}
+            run_id = _synthesize_ended_run(
+                conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
             )
-            # Never-claimed task: synthesize a run so the handoff fields survive.
-            if run_id is None and (summary or metadata or result or prior_status == "review"):
-                synth_summary, synth_metadata = handoff_summary, metadata
-                if prior_status == "review" and not synth_summary and not synth_metadata:
-                    synth_summary = _REVIEW_APPROVED_NOTE
-                    synth_metadata = {"source_status": "review", "approval": "manual"}
-                run_id = _synthesize_ended_run(
-                    conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
-                )
-            event_summary = handoff_summary
-            if prior_status == "review" and not event_summary:
-                event_summary = _REVIEW_APPROVED_NOTE
-            _append_event(
-                conn, task_id, "completed",
-                _completed_event_payload(result, event_summary, verified_cards, metadata),
-                run_id=run_id,
-            )
-            if gate_payload:
-                # 通过事件与状态 UPDATE 同一提交：流转不成（提前 return/回滚）就不落。
-                _append_event(conn, task_id, "column_transition", gate_payload)
-    except Exception:
-        if staged_copies:
-            _discard_staged_copies(staged_copies, staged_copies[0].parent)
-        raise
+        event_summary = handoff_summary
+        if prior_status == "review" and not event_summary:
+            event_summary = _REVIEW_APPROVED_NOTE
+        _append_event(
+            conn, task_id, "completed",
+            _completed_event_payload(result, event_summary, verified_cards, metadata),
+            run_id=run_id,
+        )
     _flag_phantom_prose_refs(conn, task_id, run_id, summary, result, verified_cards)
     # Success wipes the breaker counter (history stays on the event log).
     _clear_failure_counter(conn, task_id)
@@ -3201,24 +2814,14 @@ def _stage_completion_artifacts(
 ) -> list[Path]:
     """Copy scratch artifacts to the attachments dir and record each as an
     attachment row; returns the copies so the caller can discard them if its
-    transaction rolls back. A failure while recording the rows discards the
-    copies here first (the caller only learns them on a normal return) and
-    re-raises."""
+    transaction rolls back."""
     _persist_scratch_completion_artifacts(conn, task_id, metadata)
     staged = [Path(stored_path) for stored_path in metadata.pop("_staged_artifacts", [])]
-    try:
-        for path in staged:
-            _insert_completion_attachment(
-                conn, task_id, filename=path.name, stored_path=str(path),
-                size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
-            )
-    except Exception:
-        # The caller's rollback cleanup cannot see these: its ``staged_copies``
-        # is only assigned on a normal return. Deleting here is idempotent with
-        # that cleanup (unlink missing_ok, rmdir suppressed).
-        if staged:
-            _discard_staged_copies(staged, staged[0].parent)
-        raise
+    for path in staged:
+        _insert_completion_attachment(
+            conn, task_id, filename=path.name, stored_path=str(path),
+            size=path.stat().st_size, created_at=now, uploaded_by=uploaded_by,
+        )
     return staged
 
 
@@ -3358,25 +2961,11 @@ def _persist_scratch_completion_artifacts(
         problem = None
         if not src.is_file():
             problem = f"declared scratch artifact is unavailable or not a regular file: {artifact}"
-        else:
-            try:
-                artifact_size = resolved_src.stat().st_size
-            except OSError:
-                # TOCTOU: the source can vanish between ``is_file`` and ``stat``;
-                # a bare OSError here would skip the staged-copy cleanup below.
-                # Same fate as the unavailable branch above: discard the copies
-                # and raise ArtifactPreservationError, matching request_review's
-                # "a declared artifact that cannot be preserved raises" promise.
-                problem = (
-                    "declared scratch artifact is unavailable or not a regular "
-                    f"file: {artifact} (disappeared while staging)"
-                )
-            else:
-                if artifact_size > KANBAN_ATTACHMENT_MAX_BYTES:
-                    problem = (
-                        f"declared scratch artifact exceeds the "
-                        f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
-                    )
+        elif resolved_src.stat().st_size > KANBAN_ATTACHMENT_MAX_BYTES:
+            problem = (
+                f"declared scratch artifact exceeds the "
+                f"{KANBAN_ATTACHMENT_MAX_BYTES}-byte limit: {artifact}"
+            )
         if problem:
             _discard_copies()
             raise ArtifactPreservationError(problem)
@@ -3695,11 +3284,6 @@ def request_review(
 
     summary = redact_review_value(summary)
     metadata = redact_review_value(metadata)
-    # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
-    # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）；拒绝/告警
-    # 事件留在事务外，通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
-    from hermes_cli.kanban_gates import gate_transition
-    _, gate_payload = gate_transition(conn, task_id, "review", evidence=summary)
     # Declared (metadata["artifacts"]) and prose-referenced files
     # must be durable BEFORE anything can clean the scratch workspace up: for a
     # review-bound card the reviewer's completion is the cleanup trigger.
@@ -3794,9 +3378,6 @@ def request_review(
             if staged:
                 payload["artifacts"] = staged
             _append_event(conn, task_id, "review_requested", payload, run_id=run_id)
-        if gate_payload:
-            # 通过事件与状态 UPDATE 同一提交（"回滚后无事件"不变量由此保住）。
-            _append_event(conn, task_id, "column_transition", gate_payload)
     except Exception:
         if staged_copies:
             _discard_staged_copies(staged_copies, staged_copies[0].parent)
@@ -3843,10 +3424,7 @@ def request_changes(
         current_run_id = task_row["current_run_id"]
         if task_row["status"] != "running" or current_run_id is None:
             return False, "task is not in an active review run"
-        if (
-            expected_run_id is not None
-            and _coerce_run_id(current_run_id) != _coerce_run_id(expected_run_id)
-        ):
+        if expected_run_id is not None and int(current_run_id) != int(expected_run_id):
             return False, "run_id mismatch"
 
         claimed_event = _latest_event(conn, task_id, "claimed", current_run_id)
@@ -3931,16 +3509,6 @@ def promote_task(
             f"`hermes kanban unlink <parent_id> {task_id}`)"
         )
 
-    # routa 流转门禁四件套（overlay 吸收第一批 #8）：ready 列声明式门；
-    # promote 是 (ok, reason) 语义，blocking 门拒绝转 reason 返回。
-    # dry_run 只校验不落事件（docstring: dry_run only validates）。
-    from hermes_cli.kanban_gates import GateBlockedError, gate_transition
-    try:
-        _, gate_payload = gate_transition(
-            conn, task_id, "ready", actor=actor, dry_run=dry_run)
-    except GateBlockedError as exc:
-        return False, str(exc)
-
     if dry_run:
         return True, None
 
@@ -3952,9 +3520,6 @@ def promote_task(
         if upd.rowcount != 1:
             return False, f"task {task_id} status changed during promotion"
         _append_event(conn, task_id, "promoted_manual", {"actor": actor, "reason": reason})
-        if gate_payload:
-            # 通过事件与状态 UPDATE 同一提交：状态没改成（rowcount≠1/回滚）就不落。
-            _append_event(conn, task_id, "column_transition", gate_payload)
 
     return True, None
 
@@ -3970,28 +3535,6 @@ def _reclaim_dangling_run(
         (task_id, *statuses),
     ).fetchone()
     if stale and stale["current_run_id"]:
-        run_id = _coerce_run_id(stale["current_run_id"])
-        if run_id is None:
-            # Junk pointer (external writer stored a run slug, run27): it cannot
-            # name a task_runs.id, so close whatever run rows are still open for
-            # THIS task and clear the pointer — the invariant must hold again
-            # either way, and a poison value must never kill the caller's
-            # transaction (one slug stalled the dispatcher tick for hours).
-            conn.execute(
-                """
-                UPDATE task_runs
-                   SET status = 'reclaimed', outcome = 'reclaimed',
-                       summary = COALESCE(summary, ?),
-                       ended_at = ?,
-                       claim_lock = NULL, claim_expires = NULL, worker_pid = NULL
-                 WHERE task_id = ? AND ended_at IS NULL
-                """,
-                (note, now, task_id),
-            )
-            conn.execute(
-                "UPDATE tasks SET current_run_id = NULL WHERE id = ?", (task_id,),
-            )
-            return
         conn.execute(
             """
             UPDATE task_runs
@@ -4001,7 +3544,7 @@ def _reclaim_dangling_run(
                    claim_lock = NULL, claim_expires = NULL, worker_pid = NULL
              WHERE id = ? AND ended_at IS NULL
             """,
-            (note, now, run_id),
+            (note, now, int(stale["current_run_id"])),
         )
 
 
@@ -4369,41 +3912,10 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
     _ctx_attachments(lines, list_attachments(conn, task_id))
     _ctx_prior_attempts(lines, conn, task_id, now)
     _ctx_parent_results(lines, conn, task_id, now)
-    _ctx_checkpoint_recap(lines, task_id, task)
     _ctx_role_history(lines, conn, task, now)
     _ctx_comments(lines, list_comments(conn, task_id), now)
-    # 604 交接检查点段：轮换/分叉会话留下的机械交接记录（无则空段；fail-open）
-    with contextlib.suppress(Exception):
-        from agent.handoff_checkpoint import worker_context_block
-        _ckpt_block = worker_context_block()
-        if _ckpt_block:
-            lines.append(_ckpt_block)
     return "\n".join(lines).rstrip() + "\n"
 
-
-def _ctx_checkpoint_recap(lines: list[str], task_id: str, task: Task) -> None:
-    """recap v1（cc/codex/dsh 三源合并域，矩阵 §3.9 recap 行 P0）：任务重派时若存在
-    checkpoint（P7 写手在预算触顶/中断落盘），把 上次进展 注入开局——续跑不重做。
-    对账判级锚定任务 workspace（相对文件锚点不按网关进程 cwd 误判）；reconcile 会把
-    [unverified] 标注原子回写 checkpoint 文件（非只读），注入文本取回写前内容。无
-    workspace 不判级；load/reconcile 异常零影响。"""
-    try:
-        from agent.session_checkpoint import load_checkpoint, reconcile_checkpoint
-        _cp = load_checkpoint(str(task_id))
-        if _cp:
-            if task.workspace_path:
-                try:
-                    reconcile_checkpoint(str(task_id), workspace_root=Path(task.workspace_path))
-                except Exception:
-                    pass
-            lines.append("## 上次进展（checkpoint 续跑——已完成项勿重做）")
-            for _sec in ("goal", "done", "next", "blockers"):
-                _body = (_cp.get(_sec) or "").strip()
-                if _body and _body.lower() != "none":
-                    lines.append(f"- {_sec}: {_body[:400]}")
-            lines.append("")
-    except Exception:
-        pass
 
 # --- Stats + SLA helpers ---
 
@@ -4717,72 +4229,3 @@ from hermes_cli.kanban_db_dispatch import (
     _worker_survived_termination,
     _worker_terminal_timeout_env,
 )
-
-
-# ── 写路径启动自检（PR-4，V8.29 治理轮；run14 实锤：判词进群不进卡，根因=写闸
-#    UDF 未随连接注册）。供 `hermes kanban selfcheck`（kanban.py _cmd_selfcheck）
-#    与网关启动诊断调用；只读探测，不写任何业务数据。──
-def write_path_selfcheck(board: str | None = None) -> dict:
-    """三面探测：①sanctioned UDF 可注册且返回 1（本进程非委托子进程）②守卫触发器
-    在全部受护表在位（sqlite_master 查询）③裸连接（无 UDF）的 UPDATE 在 prepare
-    阶段被拒（fail-closed 证明——"no such function" 即设计语义）。任一面失败即
-    返回 ok=False 与明细，调用方据此 fail-fast 或告警。"""
-    import sqlite3 as _sq
-    from hermes_cli import kanban_db_connect as _kdc
-    report: dict = {"ok": True, "board": board, "checks": {}}
-    conn = None
-    try:
-        conn = _kdc.connect(board=board) if board is not None else _kdc.connect()
-    except Exception as exc:
-        return {"ok": False, "board": board, "error": f"connect failed: {exc}"}
-    try:
-        try:
-            register_write_sanction_udf(conn)
-            val = conn.execute("SELECT kanban_write_sanctioned()").fetchone()[0]
-            report["checks"]["udf_registers"] = {"ok": True, "value": val}
-        except Exception as exc:
-            report["checks"]["udf_registers"] = {"ok": False, "error": str(exc)}
-            report["ok"] = False
-        missing: list[str] = []
-        try:
-            names = {r[0] for r in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
-            for _tbl in _GUARDRAIL_TABLES:
-                if f"kanban_guard_{_tbl}_update" not in names:
-                    missing.append(_tbl)
-            report["checks"]["guard_triggers"] = {
-                "ok": not missing, "missing_tables": missing,
-                "note": "缺表=该板未装守卫触发器（607 未覆盖或旧库）"}
-            if missing:
-                report["ok"] = False
-        except Exception as exc:
-            report["checks"]["guard_triggers"] = {"ok": False, "error": str(exc)}
-            report["ok"] = False
-        try:
-            db_path = None
-            row = conn.execute("PRAGMA database_list").fetchone()
-            if row and len(row) > 2:
-                db_path = row[2]
-            if db_path:
-                bare = _sq.connect(db_path)
-                try:
-                    bare.execute("UPDATE tasks SET title=title WHERE 1=0")
-                    report["checks"]["bare_conn_rejected"] = {
-                        "ok": False, "error": "bare connection UPDATE prepared (guard NOT fail-closed)"}
-                    report["ok"] = False
-                except _sq.Error:
-                    report["checks"]["bare_conn_rejected"] = {
-                        "ok": True, "note": "prepare rejected on bare conn (fail-closed holds)"}
-                finally:
-                    bare.close()
-            else:
-                report["checks"]["bare_conn_rejected"] = {"ok": True, "note": "db path unavailable; skipped"}
-        except Exception as exc:
-            report["checks"]["bare_conn_rejected"] = {"ok": False, "error": str(exc)}
-            report["ok"] = False
-    finally:
-        try:
-            conn.close()
-        except Exception:
-            pass
-    return report

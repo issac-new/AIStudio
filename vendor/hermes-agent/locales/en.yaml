@@ -267,9 +267,6 @@ gateway:
       board_tag: "[{board}] "
       assignee_tag: "@{assignee} "
       head: "{board_tag}{assignee_tag}Kanban {task_id}"
-      assigned: "🔀 {head} reassigned{move}"
-      reassign_move: ": {frm} → {to}"
-      assign_move: " → {to}"
 
   personality:
     none_configured: "No personalities configured in `{path}/config.yaml`"

@@ -215,9 +215,7 @@ class _KanbanDispatcher:
 
     def tick_once(self) -> list[tuple[str, Optional[object]]]:
         """Run one dispatch_once per board. Returns (slug, result) pairs."""
-        results = [(slug, self.tick_once_for_board(slug)) for slug in self._board_slugs()]
-        _record_tick(_log_spawn_results(results))
-        return results
+        return [(slug, self.tick_once_for_board(slug)) for slug in self._board_slugs()]
 
     def ready_nonempty(self) -> bool:
         """Is there a ready+assigned+unclaimed task on ANY board the dispatcher would spawn for?
@@ -259,10 +257,6 @@ class _KanbanDispatcher:
             return 0
         attempted = 0
         successes = 0
-        # overlay[732] 项目暂停拦机器派单：存在 paused 项目时，paused 项目的
-        # triage 卡本 tick 不进分解计数（按住新卡孵化面，不动已有卡面）。
-        from hermes_cli.kanban_projects_pause import paused_project_ids
-        paused_projects = paused_project_ids()
         from hermes_cli import kanban_db as _kb
         with _default_profile_secret_scope(), _kb.pin_first_board_resolution():
             for slug in self._board_slugs():
@@ -278,7 +272,6 @@ class _KanbanDispatcher:
                     except Exception as exc:
                         logger.debug("kanban auto-decompose: list_triage_ids failed on board %s (%s)", slug, exc)
                         triage_ids = []
-                    triage_ids = _filter_paused_triage(slug, triage_ids, paused_projects)
                     for tid in triage_ids:
                         if attempted >= auto_decompose_per_tick:
                             break
@@ -308,42 +301,6 @@ class _KanbanDispatcher:
         else:
             logger.info("kanban auto-decompose [%s]: %s → single task (no fanout)", slug, tid)
         return 1
-
-
-def _filter_paused_triage(slug: str, triage_ids: list, paused_projects: frozenset) -> list:
-    """732：从 triage 待分解清单中滤掉 paused 项目的卡。
-
-    只在存在暂停项目且清单非空时才开连查库（其余情况零开销，行为与现状
-    逐字节等价）；一句 ``SELECT id, project_id FROM tasks WHERE status='triage'``
-    与 triage_ids 求交，比逐卡一查省。读库任何异常都按不过滤返回
-    （fail-open：暂停判定故障不拖垮 auto-decompose 主链路）。"""
-    if not paused_projects or not triage_ids:
-        return triage_ids
-    conn = None
-    try:
-        conn = _kbc().connect(board=slug)
-        rows = conn.execute(
-            "SELECT id, project_id FROM tasks WHERE status = 'triage'"
-        ).fetchall()
-    except Exception as exc:
-        logger.debug(
-            "kanban auto-decompose: paused-project filter failed on board %s (%s); dispatching unfiltered",
-            slug, exc,
-        )
-        return triage_ids
-    finally:
-        if conn is not None:
-            with contextlib.suppress(Exception):
-                conn.close()
-    paused_ids = {row["id"] for row in rows if row["project_id"] in paused_projects}
-    if not paused_ids:
-        return triage_ids
-    kept = [tid for tid in triage_ids if tid not in paused_ids]
-    logger.info(
-        "kanban auto-decompose [%s]: %d triage task(s) held back by paused projects",
-        slug, len(triage_ids) - len(kept),
-    )
-    return kept
 
 
 @contextlib.contextmanager
@@ -386,232 +343,3 @@ def _log_spawn_results(results: Optional[list]) -> bool:
                 len(res.auto_blocked) if hasattr(res.auto_blocked, "__len__") else 0,
             )
     return any_spawned
-
-
-# ---------------------------------------------------------------------------
-# 723（2026-11-01 run24 根治·诊断面）：0 spawn 但 ready 非空的拒绝原因显形。
-#
-# 触发背景（run24 铁证）：网关日志从 2026-11-01 01:25 起连续 196+ 个 tick 打出
-#   "kanban dispatcher stuck: ready queue non-empty for 196 consecutive ticks but
-#    0 workers spawned."
-# 而这行既没有 "Last tick held back: ..." 后缀（describe_suppression() 为空），也没有
-# 任何逐卡线索。复盘定谳（干跑复现）：spawn 被 _dispatch_lane_task 的
-#   profile_exists(assignee) is False 分支整批拒掉，落进 DispatchResult.skipped_nonspawnable
-# ——该桶既不在 describe_suppression 的计数里，_log_spawn_results 又在 spawned 为空时
-# 完全静默，于是「拒绝原因」这条链路上三个出口全是黑的。
-#
-# 误设的配置项与期望值（run24 实证）：
-#   * board.json（<kanban_home>/kanban/boards/<board>/board.json）的
-#     `profiles` / `profile_scope` 团队表 —— patch 391 board-team-fence 的围栏来源，
-#     spawn 路径按它 fail-closed 判否（cards 的 assignee 不在表内即 skipped_nonspawnable）。
-#     run24: board `qi-test-pay` 团队表=['qi-tester','hu','lin','chen','xiao']，
-#     而该板 ready 卡的 assignee 是子编制 'chen-csw-pay-core' / 'lin-csw-channel-alipay' /
-#     'qi' —— 一个都不在表内，8 小时零 spawn。期望值：团队表必须覆盖派发面实际使用的
-#     assignee 全名（子编制要逐条列出，不能只写基名 'chen'/'lin'），或整键删除以关闭围栏。
-#   * 遥测口径（同因）：has_spawnable_ready()/has_spawnable_review() 调
-#     _profile_exists_fn() 时不带 board（历史 fail-open 口径），所以「遥测说 ready 非空、
-#     派发说全部不可 spawn」。本补丁不改这个口径（改口径=改行为），只把不一致喊出来。
-#   * kanban.max_spawn / kanban.max_in_progress：可配成 <= 已在跑数量而让 tick 在
-#     进入逐卡循环前就 return（这类零 spawn 连桶都不会有，本补丁记作 unattributed）。
-#     期望值：两者为 null（不限）或 >= 当前 running 总数 + 1。
-#
-# 本补丁只显形，不改任何 spawn 行为：每 tick 把 DispatchResult 的拒绝桶聚合计数，
-# stuck 期间每 300s 打一行 "spawn refusals by reason={...}"，并在每段 stuck 的
-# 首次聚合额外打一行 actionable hint（点名上表的配置项与期望值）。
-# ---------------------------------------------------------------------------
-
-# 逐卡拒绝桶：值都是 task id 列表（skipped_per_profile_capped 是三元组，单独处理）。
-_REFUSAL_ID_BUCKETS = ("skipped_unassigned", "skipped_nonspawnable", "auto_blocked", "rate_limited")
-
-
-def _spawn_refusal_reasons(results: Optional[list]) -> dict[str, int]:
-    """Aggregate one tick's per-reason refusal counts from the dispatch buckets.
-
-    Returns ``{reason: count}`` where every count is a number of task ids (or
-    tick-level holds) the tick refused. Empty dict means the tick refused
-    *something* the buckets cannot attribute (budget refusal before the row
-    loop, a lost claim race, or a spawn/workspace failure already recorded on
-    the card) — the caller then counts it as ``unattributed``.
-    """
-    counts: dict[str, int] = {}
-
-    def _bump(reason: str, n: int = 1) -> None:
-        if n > 0:
-            counts[reason] = counts.get(reason, 0) + int(n)
-
-    for _slug, res in (results or []):
-        if res is None:
-            continue
-        for bucket in _REFUSAL_ID_BUCKETS:
-            ids = getattr(res, bucket, None)
-            if ids:
-                _bump(bucket, len(ids))
-        for _task_id, _assignee, _running in (getattr(res, "skipped_per_profile_capped", None) or ()):
-            _bump("skipped_per_profile_capped")
-        # respawn guard 原因保持细分（blocker_auth / recent_success / active_pr）。
-        for _task_id, reason in (getattr(res, "respawn_guarded", None) or ()):
-            _bump(f"respawn_guard:{reason}")
-        if getattr(res, "skipped_locked", False):
-            _bump("skipped_locked")
-        pressure = getattr(res, "memory_pressure", None)
-        if pressure:
-            _bump(f"memory_pressure:{pressure}")
-    return counts
-
-
-def _board_team_of(kb: Any, slug: str) -> Optional[list]:
-    """board.json 的团队表（patch 391 围栏来源）；键缺席返回 None（= 无围栏）。"""
-    meta = kb.read_board_metadata(slug)
-    if not isinstance(meta, dict):
-        return None
-    for key in ("profiles", "profile_scope"):
-        raw = meta.get(key)
-        if raw is None:
-            continue
-        if isinstance(raw, (list, tuple)):
-            return [str(n) for n in raw]
-        return [part.strip() for part in str(raw).split(",") if part.strip()]
-    return None
-
-
-def _fenced_out_assignees(kb: Any, slug: str, task_ids: list) -> tuple[list, Optional[list]]:
-    """(该板被围栏拒掉的 assignee 去重表, 团队表)；读失败返回 ([], None)。"""
-    if not task_ids:
-        return [], None
-    from hermes_cli import kanban_db as _kb
-
-    conn = None
-    try:
-        with _kb.pin_first_board_resolution():
-            conn = _kbc().connect(board=slug)
-            placeholders = ",".join("?" for _ in task_ids)
-            rows = conn.execute(
-                f"SELECT DISTINCT assignee FROM tasks WHERE id IN ({placeholders})",
-                tuple(task_ids),
-            ).fetchall()
-    except Exception:
-        return [], None
-    finally:
-        if conn is not None:
-            with contextlib.suppress(Exception):
-                conn.close()
-    assignees = [str(r[0]) for r in rows if r[0]]
-    team = _board_team_of(kb, slug)
-    if not team:
-        # 围栏键缺席却仍被判否 —— 拒绝原因不在团队表上，原样回报 assignee 供人工判读。
-        return sorted(set(assignees)), team
-    norm = {name.strip().lower() for name in team}
-    return sorted({a for a in assignees if a.strip().lower() not in norm}), team
-
-
-def _refusal_hint(kb: Any, settings: _DispatcherSettings, results: Optional[list]) -> str:
-    """One actionable line naming the config key and its expected value.
-
-    Best-effort and read-only: every probe is wrapped, an unreadable board
-    answers with the generic hint instead of raising into the dispatcher loop.
-    """
-    try:
-        boarded: dict[str, list] = {}
-        for slug, res in (results or []):
-            if res is None:
-                continue
-            ids = list(getattr(res, "skipped_nonspawnable", None) or ())
-            if ids:
-                boarded.setdefault(slug or "", []).extend(ids)
-        # 第一优先：板级团队表把整板 ready 卡围栏在外（run24 定谳现场：两块板同时中招）。
-        fenced: list[str] = []
-        for slug, ids in sorted(boarded.items()):
-            try:
-                excluded, team = _fenced_out_assignees(kb, slug, ids[:32])
-            except Exception:
-                continue
-            if excluded:
-                fenced.append(f"{slug!r} team={team or []} excludes {excluded}")
-        if fenced:
-            return (
-                "board.json team fence (HERMES_CUSTOM board-team-fence) is refusing whole "
-                "boards: " + "; ".join(fenced) + ". Expected: board.json `profiles` lists "
-                "EVERY assignee the dispatcher must spawn (sub-profiles like "
-                "'chen-csw-pay-core', not just the base 'chen'), or the key is removed to "
-                "disable the per-board fence. Note the health probe (has_spawnable_ready) is "
-                "board-unfenced, so it keeps reporting 'ready non-empty' while dispatch "
-                "refuses — the two readings disagree by design."
-            )
-        if boarded:
-            return (
-                "cards were refused as nonspawnable (assignee is not a live profile): "
-                "check `hermes kanban list --status ready` assignees against "
-                "`hermes profile list`."
-            )
-        # 无桶：tick 在逐卡循环前就被预算挡下，或 claim/spawn 腿失败。
-        return (
-            "no per-card refusal was recorded: this tick was suppressed before the row "
-            f"loop (kanban.max_spawn={settings.max_spawn!r}, "
-            f"kanban.max_in_progress={settings.max_in_progress!r}, "
-            f"kanban.max_in_progress_per_profile={settings.max_in_progress_per_profile!r} — "
-            "expected null (uncapped) or >= current running count + 1) or a claim/spawn "
-            "attempt failed on the card; check `hermes kanban tail` for spawn_failed events."
-        )
-    except Exception:  # pragma: no cover - diagnostics must never break dispatch
-        logger.debug("kanban dispatcher: refusal hint unavailable", exc_info=True)
-        return ""
-
-
-# ── 派发器健康面（PR-1 最小面，V8.29 治理轮）──
-# run12/run19 实锤：ready 卡滞留数小时零孵化且根因未明——先让病可见，根治用本
-# 数据面开展。消费方：cluster-inspector/哨兵/studio 运行中心（import 本模块调
-# dispatcher_health_snapshot()）；报警阈值 env DISPATCHER_STALL_ALARM_TICKS（缺省
-# 60 拍）。根因未明前不自动重排队列（识别不干预），只报警留痕。
-_HEALTH = {"last_spawn_ts": 0.0, "stall_ticks": 0, "last_tick_ts": 0.0, "total_ticks": 0}
-
-
-def _record_tick(any_spawned: bool) -> None:
-    now = time.time()
-    _HEALTH["last_tick_ts"] = now
-    _HEALTH["total_ticks"] += 1
-    if any_spawned:
-        _HEALTH["last_spawn_ts"] = now
-        _HEALTH["stall_ticks"] = 0
-    else:
-        _HEALTH["stall_ticks"] += 1
-    try:
-        threshold = int(os.environ.get("DISPATCHER_STALL_ALARM_TICKS", "60"))
-    except ValueError:
-        threshold = 60
-    if _HEALTH["stall_ticks"] == threshold:
-        logger.warning("kanban dispatcher stall alarm: %d ticks with zero spawns (ready may be stuck); snapshot=%s",
-                       _HEALTH["stall_ticks"], dispatcher_health_snapshot())
-
-
-def dispatcher_health_snapshot() -> dict:
-    """只读健康快照：ready 在场板清单/距最近孵化秒数/连续零孵化拍数/总拍数。
-    不写任何库；板级 ready 判定与 ready_nonempty() 同源（spawnable+assigned）。"""
-    boards_with_ready: list[str] = []
-    try:
-        kbd = _kbd()
-        from hermes_cli import kanban_db as _kb
-        disp = _KanbanDispatcher(None, _resolve_dispatcher_settings({}, None))
-        with _kb.pin_first_board_resolution():
-            for slug in disp._board_slugs():
-                conn = None
-                try:
-                    conn = _kbc().connect(board=slug)
-                    if kbd.has_spawnable_ready(conn):
-                        boards_with_ready.append(slug)
-                except Exception:
-                    continue
-                finally:
-                    if conn is not None:
-                        with contextlib.suppress(Exception):
-                            conn.close()
-    except Exception:
-        pass
-    now = time.time()
-    last = _HEALTH["last_spawn_ts"]
-    return {
-        "boards_with_ready": boards_with_ready,
-        "ready_nonempty": bool(boards_with_ready),
-        "seconds_since_last_spawn": round(now - last, 1) if last else None,
-        "stall_ticks": _HEALTH["stall_ticks"],
-        "total_ticks": _HEALTH["total_ticks"],
-    }

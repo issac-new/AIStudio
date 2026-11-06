@@ -2296,18 +2296,6 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             configured_model=_resolve_gateway_model(), runtime_status=runtime,
             active_api_runs=active_api_runs, process_completion_queue_depth=process_depth,
             active_delegations=active_delegations)
-        # ``platforms`` is a persistent diagnostic map and may carry entries stamped by a
-        # previous gateway run (survived restarts) or another profile. Loaded set only keeps
-        # entries this process wrote, so dashboards cannot mistake stale/other-profile state
-        # for channels loaded by the current gateway.
-        current_start = runtime.get("start_time")
-        loaded_platforms = {
-            key: value for key, value in (runtime.get("platforms") or {}).items()
-            if isinstance(value, dict)
-            and value.get("writer_pid") == os.getpid()
-            and current_start is not None
-            and value.get("writer_start_time") == current_start
-        }
         return web.json_response({
 "status": readiness["status"], "readiness": readiness, "platform": "hermes-agent",
             "version": _hermes_version(), "gateway_state": gw_state,
@@ -2315,8 +2303,6 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
             "api_server": api_status,
             "metrics_today": api_status["metrics_today"],
             "last_heartbeat": api_status["last_heartbeat"],
-            "loaded_platforms": loaded_platforms,
-            "served_profiles": runtime.get("served_profiles", []),
             "active_agents": gw_active,
             "gateway_busy": derive_gateway_busy(
                 gateway_running=True, gateway_state=gw_state, active_agents=gw_active),
@@ -2816,14 +2802,6 @@ class APIServerAdapter(OpenAICompatRoutesMixin, BasePlatformAdapter):
         except ValueError as exc:
             return _error_response(str(exc), 400, code="invalid_title")
         fork = await asyncio.to_thread(db.get_session, fork_id) or {"id": fork_id, "parent_session_id": source_id}
-        # 604 交接检查点写侧：fork 即生命周期边界，给子会话留机械指针（fail-open）
-        with suppress(Exception):
-            from agent.handoff_checkpoint import write_checkpoint
-            write_checkpoint(f"fork-{fork_id}", "fork", {
-                "objective": str(source.get("title") or ""),
-                "pointers": {"parent_session_id": source_id, "fork_session_id": fork_id},
-                "left": "the fork carries the parent transcript; confirm continuity from it",
-            })
         return web.json_response({"object": "hermes.session", "session": self._session_response(fork)}, status=201)
 
     async def _prepare_session_chat(self, request: web.Request) -> tuple:

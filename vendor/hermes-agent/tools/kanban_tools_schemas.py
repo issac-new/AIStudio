@@ -160,24 +160,6 @@ KANBAN_COMPLETE_SCHEMA = _schema(
                 "task in-flight so you can fix the path and retry."
             ),
         },
-        "receipt": {
-            "type": "object",
-            "description": (
-                "Structured evidence receipt. REQUIRED when the card body declares "
-                "acceptance criteria (AC-1/AC-2/...) or a ```dod JSON block — the "
-                "kernel derives the contract at dispatch time and rejects a "
-                "completion without a valid receipt. Shape: "
-                '{"version":1,"criteria":[{"id":"AC-1","status":"pass|na",'
-                '"note":"why na","evidence":[{"kind":"artifact|test_report|command|doc",'
-                '"path":"relative/path","sha256":"optional"}]}],'
-                '"artifacts":["relative/path"],"verifications":[{"command":"...",'
-                '"exitCode":0,"report":"relative/tap-or-junit","format":"tap|junit"}]}. '
-                "Paths must stay inside the task workspace. TAP/JUnit reports are "
-                "re-counted by the kernel and must show zero failures; a prose "
-                'report (format "text") cannot satisfy a criterion that requires '
-                "test evidence."
-            ),
-        },
     },
     [],
 )
@@ -510,11 +492,6 @@ KANBAN_CREATE_SCHEMA = _schema(
                 "open-ended cards where one shot rarely finishes the "
                 "work. Defaults to false (classic single-shot worker)."
         )),
-        "raci": {
-            "type": "object",
-            "description": "Structured RACI assignment: keys responsible/approver/consulted/informed, values arrays of account names. Takes precedence over body-text RACI.",
-            "additionalProperties": { "type": "array", "items": { "type": "string" } },
-        },
         "completion_contract": _prop("string", (
             "Declare at creation: local-only (default), OWNER/REPO for PR publication, or an exact GitHub PR URL. "
             "PR tasks cannot complete until repository-required exact-head CI passes. On publication pass metadata.published_pr."

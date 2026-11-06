@@ -1034,40 +1034,6 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                     result = agent.run_conversation(api_message, **kwargs)
                 finally:
                     agent._silence_marker_needs_reply = False
-                # run24 复盘批（2026-11-02，chat 恢复第二块）：回合终态失败后在**同一会话、
-                # 同一 agent**里注入一次「从中断处续做」提示再跑——722 只在回合内重试，
-                # 回合一旦结束（流掐断耗尽/传输失败）会话就静止，run24 四现场全靠人工 DM
-                # 唤醒。仅瞬态失败恢复（auth/billing/policy 等确定性失败不重试），预算
-                # HERMES_CHAT_TURN_RECOVERY（缺省 1，0 关，上限 3）；恢复 turn 不重复持久化
-                # 用户原始消息（去掉 persist_* 与 prelude，历史取自上一回合 messages）。
-                try:
-                    from agent.chat_turn_recovery import run_chat_recovery
-                    from agent.recovery_kwargs import filter_recovery_kwargs
-
-                    # 转发白名单抽纯函数（2026-11-02 机制治理批）：这是 recovery 唯一的
-                    # "决策"部分，必须能被无 agent/无 provider 的行为测试直接调用。run25
-                    # 教训：382 条标记断言全绿仍连炸——测"代码在不在"测不出"行为对不对"。
-                    # 白名单本体见 agent/recovery_kwargs.py（含 conversation_history 硬禁：
-                    # kwargs 自带时与 _recover_turn 显式实参撞重复关键字，恢复哑火）。
-                    _rec_kwargs = filter_recovery_kwargs(kwargs)
-
-                    def _recover_turn(nudge):  # noqa: ANN001 — one synthetic continuation
-                        prior = result.get("messages") if isinstance(result, dict) else None
-                        with notification_turn(agent, muted=ctx.mute_notification_reply,
-                                               session_id=ctx.session_id or ""):
-                            return agent.run_conversation(
-                                nudge, conversation_history=prior or agent_history, **_rec_kwargs)
-
-                    _recovered = run_chat_recovery(
-                        _recover_turn,
-                        get_result=lambda: result,
-                        interrupted_fn=lambda: bool(getattr(agent, "_interrupt_requested", False)),
-                        emit=lambda msg: logger.warning("%s", msg),
-                    )
-                    if _recovered:
-                        logger.warning("chat turn recovered after %d attempt(s)", _recovered)
-                except Exception as _rec_exc:  # noqa: BLE001 — recovery must never break a settle path
-                    logger.warning("chat turn recovery skipped: %s", _rec_exc)
             if captured is not None:
                 incoming = max(0, (getattr(agent, 'session_prompt_tokens', 0) or 0) - before[0])
                 outgoing = max(0, (getattr(agent, 'session_completion_tokens', 0) or 0) - before[1])

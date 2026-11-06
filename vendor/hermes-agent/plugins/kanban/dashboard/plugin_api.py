@@ -24,10 +24,8 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Optional
 
 from fastapi import (
-    APIRouter, File, Form, HTTPException, Query, Request, Response, UploadFile, WebSocket,
-    WebSocketDisconnect, status as http_status)
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.routing import APIRoute
+    APIRouter, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect, status as http_status)
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from hermes_cli import kanban_db
@@ -42,55 +40,7 @@ from hermes_cli.kanban_db import KANBAN_ATTACHMENT_MAX_BYTES, _collision_free_pa
 
 log = logging.getLogger(__name__)
 
-# --- RFC 9457 problem+json conflict rendering -------------------------------
-#
-# Every 409 of this API is produced by ``_conflict`` / ``_map_conflict`` below and
-# renders as an ``application/problem+json`` document (RFC 9457): a stable machine-
-# readable ``type`` token (``kanban/<variant>``) plus ``title``/``status``/``detail``.
-# Non-409 errors keep FastAPI's default ``{"detail": ...}`` shape.
-
-
-class ProblemConflict(HTTPException):
-    """A 409 Conflict rendered as an RFC 9457 ``application/problem+json`` document.
-
-    ``ptype`` (the RFC 9457 ``type`` member) is a stable token clients can branch on
-    instead of matching detail text. ``detail`` keeps the same human-readable message
-    the legacy ``{"detail": ...}`` body carried, so consumers that read ``detail``
-    (dashboard toasts, tests) keep working.
-    """
-
-    def __init__(self, detail: str, ptype: str = "kanban/conflict") -> None:
-        super().__init__(status_code=409, detail=detail)
-        self.ptype = ptype
-
-
-def _problem_response(exc: ProblemConflict) -> JSONResponse:
-    return JSONResponse(
-        status_code=409,
-        content={"type": exc.ptype, "title": "Conflict", "status": 409, "detail": exc.detail},
-        media_type="application/problem+json")
-
-
-class _ProblemRoute(APIRoute):
-    """Route class rendering ``ProblemConflict`` as problem+json.
-
-    Router-level on purpose (not an app-level exception handler): every mount of this
-    router — the dashboard server, TestClient fixtures, probes — renders identically.
-    """
-
-    def get_route_handler(self):
-        original = super().get_route_handler()
-
-        async def problem_aware(request: Request) -> Response:
-            try:
-                return await original(request)
-            except ProblemConflict as exc:
-                return _problem_response(exc)
-
-        return problem_aware
-
-
-router = APIRouter(route_class=_ProblemRoute)
+router = APIRouter()
 
 _BOARD_Q = Query(None, description="Kanban board slug (omit for current)")
 
@@ -192,10 +142,8 @@ def _require_ok(ok: bool) -> None:
         raise HTTPException(status_code=404, detail="task not found")
 
 
-def _conflict(detail: str, ptype: Optional[str] = None) -> ProblemConflict:
-    """409 factory; ``ptype`` is the RFC 9457 type token (unspecified → generic
-    ``kanban/conflict``)."""
-    return ProblemConflict(detail, ptype or "kanban/conflict")
+def _conflict(detail: str) -> HTTPException:
+    return HTTPException(status_code=409, detail=detail)
 
 
 @contextmanager
@@ -205,16 +153,6 @@ def _map_errors(status: int, *types: type[BaseException]) -> Iterator[None]:
         yield
     except types as e:
         raise HTTPException(status_code=status, detail=str(e))
-
-
-@contextmanager
-def _map_conflict(*types: type[BaseException], ptype: str = "kanban/conflict") -> Iterator[None]:
-    """Like ``_map_errors(409, *types)`` but raises a problem+json ``ProblemConflict``
-    carrying a stable type token."""
-    try:
-        yield
-    except types as e:
-        raise ProblemConflict(str(e), ptype)
 
 
 _value_error_400 = partial(_map_errors, 400, ValueError)  # domain-layer validation refusals
@@ -479,7 +417,7 @@ class CreateTaskBody(BaseModel):
     assignee: Optional[str] = None
     tenant: Optional[str] = None
     priority: int = 0
-    workspace_kind: Optional[str] = None  # None = the board project's worktree when scoped, else dir (overlay fallback)
+    workspace_kind: Optional[str] = None  # None = scratch, or the board project's worktree when scoped
     workspace_path: Optional[str] = None
     parents: list[str] = Field(default_factory=list)
     triage: bool = False
@@ -713,12 +651,8 @@ def _patch_status(conn, task_id: str, payload: UpdateTaskBody, review_assignee_d
     blockers = _parents_blocking_ready(conn, task_id) if s == "ready" else []
     if blockers:
         names = ", ".join(f"{p['title']!r} ({p['id']}, status={p['status']})" for p in blockers)
-        raise _conflict(f"Cannot move to 'ready': blocked by parent(s) not done — {names}",
-                        ptype="kanban/parent-not-done")
-    refusal = _open_parent_refusal(conn, task_id, s)
-    raise _conflict(
-        refusal or f"task {task_id}: status transition to {s!r} not valid from current state",
-        ptype="kanban/unsatisfied-parent-dependencies" if refusal else "kanban/invalid-transition")
+        raise _conflict(f"Cannot move to 'ready': blocked by parent(s) not done — {names}")
+    raise _conflict(_open_parent_refusal(conn, task_id, s) or f"status transition to {s!r} not valid from current state")
 
 
 def _open_parent_refusal(conn, task_id: str, s: str) -> Optional[str]:
@@ -755,10 +689,7 @@ def _patch_title_body(conn, task_id: str, payload: UpdateTaskBody, board: Option
         conn, task_id, [f for f in ("title", "body") if getattr(payload, f) is not None], board=board)
 
 
-@router.patch(
-    "/tasks/{task_id}",
-    responses={409: {"description": "Conflict: status transition or assignee change not valid for the task's current state"}},
-)
+@router.patch("/tasks/{task_id}")
 def update_task(task_id: str, payload: UpdateTaskBody, board: Optional[str] = Query(None)):
     with _board_conn(board) as (board, conn):
         _require_task(conn, task_id)
@@ -766,7 +697,7 @@ def update_task(task_id: str, payload: UpdateTaskBody, board: Optional[str] = Qu
         # current implementer before the task is routed to the reviewer.
         review_assignee_deferred = payload.status == "review" and payload.assignee is not None
         if payload.assignee is not None and not review_assignee_deferred:
-            with _map_conflict(RuntimeError, ptype="kanban/running-claimed"):
+            with _map_errors(409, RuntimeError):
                 _require_ok(kanban_db.assign_task(conn, task_id, payload.assignee or None))
         if payload.status is not None:
             _patch_status(conn, task_id, payload, review_assignee_deferred)
@@ -1051,10 +982,7 @@ class TerminateRunBody(BaseModel):
     reason: Optional[str] = None
 
 
-@router.post(
-    "/runs/{run_id}/terminate",
-    responses={409: {"description": "Conflict: run already ended, or its task is no longer reclaimable"}},
-)
+@router.post("/runs/{run_id}/terminate")
 def terminate_run_endpoint(run_id: int, payload: TerminateRunBody, board: Optional[str] = _BOARD_Q):
     """Terminate an in-flight run via ``reclaim_task`` (same SIGTERM->SIGKILL flow, bookkeeping
     and events as ``POST /tasks/{id}/reclaim``); 409 if already ended / not reclaimable.
@@ -1065,10 +993,9 @@ def terminate_run_endpoint(run_id: int, payload: TerminateRunBody, board: Option
     with _board_conn(board) as (board, conn):
         r = _require_run(conn, run_id)
         if r.ended_at is not None:
-            raise _conflict(f"run {run_id} already ended", ptype="kanban/run-already-ended")
+            raise _conflict(f"run {run_id} already ended")
         if not kanban_db.reclaim_task(conn, r.task_id, reason=payload.reason):
-            raise _conflict(f"cannot terminate run {run_id}: task {r.task_id} is no longer in a reclaimable state; reclaim or complete the task first",
-                            ptype="kanban/not-reclaimable")
+            raise _conflict(f"cannot terminate run {run_id}: task {r.task_id} is no longer in a reclaimable state")
         return {"ok": True, "run_id": run_id, "task_id": r.task_id}
 
 
@@ -1078,17 +1005,13 @@ class ReclaimBody(BaseModel):
     reason: Optional[str] = None
 
 
-@router.post(
-    "/tasks/{task_id}/reclaim",
-    responses={409: {"description": "Conflict: task is not in a claimable state"}},
-)
+@router.post("/tasks/{task_id}/reclaim")
 def reclaim_task_endpoint(task_id: str, payload: ReclaimBody, board: Optional[str] = Query(None)):
     """Release an active worker claim without waiting for the claim TTL
     (``hermes kanban reclaim <task_id> --reason ...``)."""
     with _board_conn(board) as (board, conn):
-        _require_task(conn, task_id)
         if not kanban_db.reclaim_task(conn, task_id, reason=payload.reason):
-            raise _conflict(f"cannot reclaim {task_id}: not in a claimable state", ptype="kanban/not-claimable")
+            raise _conflict(f"cannot reclaim {task_id}: not in a claimable state (not running, or unknown id)")
         return {"ok": True, "task_id": task_id}
 
 
@@ -1113,22 +1036,17 @@ class ReassignBody(BaseModel):
     reason: Optional[str] = None
 
 
-@router.post(
-    "/tasks/{task_id}/reassign",
-    responses={409: {"description": "Conflict: task is still running under a live claim (pass reclaim_first=true)"}},
-)
+@router.post("/tasks/{task_id}/reassign")
 def reassign_task_endpoint(task_id: str, payload: ReassignBody, board: Optional[str] = Query(None)):
     """Reassign to another profile, optionally reclaiming first
     (``hermes kanban reassign <task_id> <profile> [--reclaim]``)."""
     with _board_conn(board) as (board, conn):
-        _require_task(conn, task_id)
         ok = kanban_db.reassign_task(
             conn, task_id, payload.profile or None, reclaim_first=bool(payload.reclaim_first), reason=payload.reason)
         if not ok:
             raise _conflict(
-                f"cannot reassign {task_id}: still "
-                "running (pass reclaim_first=true to release the claim first)",
-                ptype="kanban/still-running")
+                f"cannot reassign {task_id}: unknown id, or still "
+                "running (pass reclaim_first=true to release the claim first)")
         return {"ok": True, "task_id": task_id, "assignee": payload.profile or None}
 
 

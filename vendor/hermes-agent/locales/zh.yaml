@@ -264,9 +264,6 @@ gateway:
       board_tag: "[{board}] "
       assignee_tag: "@{assignee} "
       head: "{board_tag}{assignee_tag}看板 {task_id}"
-      assigned: "🔀 {head} 已改派{move}"
-      reassign_move: "：{frm} → {to}"
-      assign_move: " → {to}"
   personality:
     none_configured: "`{path}/config.yaml` 中未配置人格设定"
     header: "🎭 **可用人格**\n"
