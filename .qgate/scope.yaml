@@ -367,3 +367,6 @@ paths:
   # run27 设计优化批（c36496d）
   - docs/superpowers/specs/2026-11-06-run27-design-optimizations.md
   - simharness/tests/frame-four-state.test.ts
+  # 截图核查采集程序修订批（96031e0）
+  - docs/superpowers/specs/2026-11-06-frame-program-revision.md
+  - simharness/tests/frame-program-rev.test.ts
