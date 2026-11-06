@@ -17,7 +17,7 @@
       ],
       "version": "1.0.9-studio.11",
       "versionCarrier": "RELEASE-NOTES.md",
-      "buildCommand": "npm run build:dmg（需将 OVERLAY_UPSTREAM_ROOT 指向仓根 vendor；产物 DMG/zip，desktop 管理独立 hermes runtime）",
+      "buildCommand": "npm run build:dmg（缺省解析仓内 vendor/，可用 OVERLAY_UPSTREAM_ROOT 显式指向隔离构建树；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
       "install": "源码包解包后 npm install（vendor/hermes-studio 内）＋npm run inject＋npm run dev／build:dmg；DMG/zip 安装（mac arm64 / win x64）",
       "packageIncludes": [

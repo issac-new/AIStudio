@@ -20,15 +20,19 @@ const LABELS: Record<string, { zh: string; en: string; flag: string }> = {
 }
 const meta = computed(() => LABELS[props.feature] ?? LABELS.eval)
 const isZh = computed(() => String(locale.value ?? 'zh').startsWith('zh'))
+// 开关只门控导航与页面注册，不卸载路由与端点（config/features.ts:8-12）。
+// 此处如实告知，避免用户把「入口隐藏」误当成「能力停用」。
 const copy = computed(() => (isZh.value
   ? {
       title: `${meta.value.zh}当前未开启`,
       body: `这是一个构建时开关：设置环境变量 ${meta.value.flag}=true 后重新构建即可启用。已有数据不会因为开关关闭而丢失。`,
+      notice: '注意：该开关只隐藏导航入口，不关闭服务端能力。直接访问此专题的网址或调用对应接口仍然可用；如需真正停用，须撤下相关补丁或调整服务端配置。',
       back: '返回工作台',
     }
   : {
       title: `${meta.value.en} is not enabled in this build`,
       body: `This is a build-time flag: set ${meta.value.flag}=true and rebuild to enable it. Existing data is kept while the feature is off.`,
+      notice: 'Note: this flag only hides navigation entries; server endpoints stay online. Direct links and API calls still work. To fully disable the capability, remove the related patches or change the server configuration.',
       back: 'Back to workbench',
     }))
 </script>
@@ -38,6 +42,7 @@ const copy = computed(() => (isZh.value
     <div class="fdv__card">
       <h2 class="fdv__title" data-testid="feature-disabled-title">{{ copy.title }}</h2>
       <p class="fdv__body" data-testid="feature-disabled-body">{{ copy.body }}</p>
+      <p class="fdv__notice" data-testid="feature-disabled-notice">{{ copy.notice }}</p>
       <button type="button" class="fdv__back" data-testid="feature-disabled-back" @click="router.push('/app')">
         {{ copy.back }}
       </button>
@@ -70,8 +75,17 @@ const copy = computed(() => (isZh.value
   color: var(--text-primary);
 }
 .fdv__body {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.fdv__notice {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--warning-color, var(--text-secondary));
+  background: var(--bg-tertiary);
+  font-size: 12px;
   line-height: 1.6;
   color: var(--text-secondary);
 }

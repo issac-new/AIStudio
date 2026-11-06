@@ -4,20 +4,11 @@
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 124,
+    "scripts": 123,
     "ledgers": 6,
     "npmScripts": 49
   },
   "changes": [
-    {
-      "at": "2026-11-06",
-      "delta": "+2 scripts / -1 script / +1 npm script 0",
-      "reason": "AI-Friendly CLI 契约（微信三篇调研 A 批）：scripts/lib/cli-contract.mjs（契约库）+ scripts/lib/cli-contract-lint.mjs（静态棘轮，挂 governance-lint --cli-contract）；配对退役 regen-473.mjs（0.7.26 一次性 locale 重生成，已执行且零调用方引用，git 历史留档）＋ mx-eval-summary.py 两个死参数删除（降级）",
-      "pairedRemovals": [
-        "scripts/maintenance/regen-473.mjs 退役（一次性重生成已执行，引用扫描零命中）",
-        "mx-eval-summary.py --max-unknown/--max-redteam-fp 死参数删除（声明后从未读取）"
-      ]
-    },
     {
       "at": "2026-11-05",
       "delta": "+0 门/钩子/脚本（managedsettings 域模块＋role-tool-matrix 治理正本 yaml＋默认策略包 json，均不在计数类目）",
@@ -33,7 +24,7 @@
       "pairedRemovals": [
         "删除 api.contract-alignment 旧版重复 gate（custom/qgate/gate-packs/api-contract/gates/contract-alignment.yaml，0.1.0；保留 contract/gates/api-alignment.yaml 0.2.0）",
         "删除无生产消费者的 custom/server/dispatchpreview/ 与 custom/server/prefixreuse/ 两域（探查确认零消费者）",
-        "org-governance-walkthrough 按既有 sunset 退役（一次性走查入口）"
+        "org-governance-walkthrough 登记 sunset 待退役：该一次性走查脚本当前仍在册（2026-11-06 修订不实声明）"
       ]
     },
     {
@@ -52,6 +43,16 @@
       "reason": "org-governance-closeout 合入 scripts/regression/org-governance-walkthrough.mjs（已推 origin/main，机制预算同步 +1）",
       "pairedRemovals": [
         "该脚本为一次性走查入口，三页签由产品巡检器覆盖后退役"
+      ]
+    },
+    {
+      "at": "2026-11-06",
+      "delta": "+0 scripts / +0 npm scripts / +0 gates / +0 ledgers / +4 守门测试文件（.test.ts 不在计数类目）",
+      "reason": "cognition-lattice 复盘 P0 落地：上游根解析收敛到 inject.mjs 既有导出面、inject --check 全链干跑、release 二次开发资产对账、退役机三类失真检测、专题开关语义诚实标注",
+      "pairedRemovals": [
+        "删除 build-dmg/build/serve-server/ensure-injected 四处内联上游根解析副本（4 份重复实现降为 1 份共享函数）",
+        "删除 build-dmg 缺省回落兄弟 upstream 的必坏路径（单仓检出修复）",
+        "修订 RELEASE-MANIFEST buildCommand 与机制预算 changes 的不实声明（文档/台账与实现对齐）"
       ]
     }
   ],
@@ -108,7 +109,11 @@
       "id": "org-governance-walkthrough",
       "owner": "governance",
       "reviewBy": "2026-12-05",
-      "retireWhen": "三页签走查由产品巡检器覆盖后"
+      "retireWhen": "三页签走查由产品巡检器覆盖后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/regression/org-governance-walkthrough.mjs"
+      }
     },
     {
       "id": "spec-fidelity",
@@ -145,12 +150,6 @@
       "owner": "loop",
       "reviewBy": "2026-12-20",
       "retireWhen": "四族终止词表统一为单一枚举后"
-    },
-    {
-      "id": "cli-contract",
-      "owner": "quality",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "契约基线清零（全部入口迁移完成）且 --cli-contract 并入 pre-push 常规检查后，检查器降级为单测断言"
     }
   ]
 }

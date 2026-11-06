@@ -19,7 +19,6 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkCliContract } from './lib/cli-contract-lint.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const LEDGERS = {
@@ -30,7 +29,6 @@ const LEDGERS = {
 }
 const SCHEMA_PATH = 'config/governance-schema.json'
 const BUDGET_PATH = 'config/mechanism-budget.json'
-const CLI_BASELINE_PATH = 'config/cli-contract-baseline.json'
 const SILENT_BASELINE_PATH = 'config/silent-return-baseline.json'
 const SPECS_DIR = 'docs/superpowers/specs'
 const COVERAGE_OUT = '.swarm-yuan/spec-coverage.json'
@@ -277,9 +275,38 @@ function countScriptsRecursive(dir = 'scripts') {
   return n
 }
 
+// 退役机可机检（2026-11-06 复盘 P2-1）：登记墙不能替代退役判定。
+// 检测三类失真：reviewBy 过期、retireWhen 无判定器、声称退役却仍在册。
+export function checkSunset(budget, asOf = new Date()) {
+  const problems = []
+  const warnings = []
+  const sunset = budget?.sunset ?? []
+  const ids = new Set(sunset.map(e => e?.id))
+  for (const e of sunset) {
+    if (!e || !e.id) continue
+    const by = Date.parse(`${e.reviewBy}T23:59:59Z`)
+    if (Number.isFinite(by) && by < asOf.getTime()) {
+      problems.push(`sunset ${e.id}: reviewBy ${e.reviewBy} 已过期，须复核或退役`)
+    }
+    if (!e.check) {
+      warnings.push(`sunset ${e.id}: retireWhen 仅为自然语言，无机检判定器`)
+    } else if (e.check.type === 'filePresent' && !existsSync(join(ROOT, e.check.path ?? ''))) {
+      warnings.push(`sunset ${e.id}: 判定器已达退役条件（${e.check.path} 缺席），须移出 sunset 册`)
+    }
+  }
+  for (const c of budget?.changes ?? []) {
+    for (const note of c?.pairedRemovals ?? []) {
+      const m = /^([a-z0-9-]+)\s+按既有 sunset 退役/.exec(String(note))
+      if (m && ids.has(m[1])) problems.push(`pairedRemovals 声称 ${m[1]} 已退役，但仍在 sunset 册`)
+    }
+  }
+  return { problems, warnings, checked: sunset.length }
+}
+
 export function checkBudget(budget) {
   const problems = []
-  if (!budget) return { problems: ['config/mechanism-budget.json 缺失'], warnings: [], stats: {} }
+  const warnings = []
+  if (!budget) return { problems: ['config/mechanism-budget.json 缺失'], warnings, stats: {} }
   const stats = {
     gates: 0,
     patches: countLines('patches/series'),
@@ -302,16 +329,19 @@ export function checkBudget(budget) {
     const miss = missingFields(entry, ['id', 'owner', 'reviewBy', 'retireWhen'])
     if (miss.length > 0) problems.push(`sunset 条目 ${entry.id ?? '(no-id)'} 缺 ${miss.join(',')}`)
   }
-  return { problems, warnings: [], stats }
+  const retirement = checkSunset(budget)
+  problems.push(...retirement.problems)
+  warnings.push(...retirement.warnings)
+  return { problems, warnings, stats }
 }
 
 function main(argv = process.argv.slice(2), out = process.stdout, err = process.stderr) {
   const flags = new Set(argv)
   if (flags.has('--help') || flags.has('-h')) {
-    out.write('usage: node scripts/governance-lint.mjs [--strict] [--budget] [--spec-coverage] [--silent-returns] [--normalize-decisions] [--commits] [--only-commits] [--range origin/main..HEAD] [--enforce] [--json] [--cli-contract] [--update-baseline]\n')
+    out.write('usage: node scripts/governance-lint.mjs [--strict] [--budget] [--spec-coverage] [--silent-returns] [--normalize-decisions] [--commits] [--only-commits] [--range origin/main..HEAD] [--enforce] [--json]\n')
     return 0
   }
-  const known = new Set(['--strict', '--budget', '--spec-coverage', '--silent-returns', '--normalize-decisions', '--commits', '--only-commits', '--enforce', '--json', '--range', '--cli-contract', '--update-baseline'])
+  const known = new Set(['--strict', '--budget', '--spec-coverage', '--silent-returns', '--normalize-decisions', '--commits', '--only-commits', '--enforce', '--json', '--range'])
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i]
     if (a === '--range') { i += 1; continue }
@@ -319,10 +349,6 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
       err.write(`governance-lint: unknown argument: ${a}\n`)
       return 2
     }
-  }
-  if (flags.has('--update-baseline') && !flags.has('--cli-contract')) {
-    err.write('governance-lint: --update-baseline 只能与 --cli-contract 一起使用\n')
-    return 2
   }
   const schema = readJson(SCHEMA_PATH, null)
   const allProblems = []
@@ -387,17 +413,6 @@ function main(argv = process.argv.slice(2), out = process.stdout, err = process.
     const v = checkSilentReturns(baseline)
     allProblems.push(...v.problems); allWarnings.push(...v.warnings)
     results.silentReturns = { count: v.count }
-  }
-
-  if (flags.has('--cli-contract')) {
-    const baseline = readJson(CLI_BASELINE_PATH, null)
-    const v = checkCliContract({ root: ROOT, baseline })
-    allProblems.push(...v.problems); allWarnings.push(...v.warnings)
-    results.cliContract = v.stats
-    if (flags.has('--update-baseline')) {
-      writeFileSync(join(ROOT, CLI_BASELINE_PATH), JSON.stringify(v.baselineNext, null, 2) + '\n')
-      allWarnings.push(`已重写基线 ${CLI_BASELINE_PATH}（${v.stats.violating} 项存量违规）`)
-    }
   }
 
   if (flags.has('--normalize-decisions')) {

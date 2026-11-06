@@ -10,34 +10,50 @@
 //
 // 注意:本脚本用 node 直跑(.mjs),不依赖 ts 加载器,因此路径在此内联计算,
 // 与 config/bootstrap.ts 保持一致(如需改路径,两处同步)。
-import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, mkdirSync, rmSync } from 'fs';
-import { execSync, spawnSync } from 'child_process';
+import { readFileSync, writeFileSync, existsSync, symlinkSync, lstatSync, unlinkSync, realpathSync, mkdirSync } from 'fs';
+import { execSync } from 'child_process';
 import { resolve, relative } from 'path';
 import { pathToFileURL } from 'url';
-// 平台注入核心（P1 Task 3/4/5）：planner 产计划、manifest v2 记逐项真实状态、
-// executor 事务化应用、journal 备份回滚。本脚本=CLI 入口与目标树根解析层
-//（根解析自 Task 6 起委托 platform/lib/upstream-root.mjs 单一事实源）。
-import { buildPlan, routePatchTarget } from './platform/inject/planner.mjs';
-import { runInjection } from './platform/inject/executor.mjs';
-import {
-  readManifestFile, planIncrement, isV2Manifest,
-  IncrementRefusedError, isAcceptablePartial,
-} from './platform/inject/manifest.mjs';
-import { isUnder } from './platform/inject/journal.mjs';
-import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
-import { addedFilesFromPatch } from './lib/zcode-patch-manifest.mjs';
 
-// 上游根解析收敛到平台单一事实源（P1 Task 6）：env 显式 > 仓内 vendor/ 钉版基线
-// (见 vendor/VENDOR.md) > 旧布局 ../upstream 共享树；realpath 规范化（worktree
-// 软链场景 vite root 与输入 html 必须同基）。vendor 树无自身 .git——其 git 操作
-// 经外仓以 --directory 前缀执行(见 treeGitCtx)，语义与自持 .git 的 upstream 树一致。
-const overlayRoot = resolve(import.meta.dirname, '..');
-const {
-  upstreamRoot, hermesStudioRoot, hermesAgentRoot, zcodeRoot,
-} = resolveUpstreamRoots(overlayRoot);
-const zcodePatchDir = process.env.OVERLAY_ZCODE_PATCH_DIR?.trim()
-  ? resolve(process.env.OVERLAY_ZCODE_PATCH_DIR.trim())
-  : resolve(overlayRoot, 'zcode-patches');
+// realpathSync：worktree 场景（.claude/worktrees/<feat>/ 经符号链接指回
+// upstream）必须取真实绝对路径，否则 vite 会因 root(realpath) 与输入
+// html(符号链接路径) 不一致而构建失败（emitFile 相对路径逃逸）。
+// 路径不存在时 realpath 抛 ENOENT——回退原样解析，交由 main() 的
+// 存在性守卫输出友好报错（2026-09-17 评审：不得在模块顶层裸抛）。
+const realpathOrSelf = (p) => {
+  try { return realpathSync(p); } catch { return p; }
+};
+const overlayRoot = realpathOrSelf(resolve(import.meta.dirname, '..'));
+// 直跑守卫：其它脚本 import 本模块复用导出函数时，不得触发 clean 探测、--check 或 main()。
+const isDirectRun = !!(process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href);
+
+// 上游根解析单一事实源（AGENTS.md 规则 9）：env ＞ 仓内 vendor/ ＞ 旧兄弟 upstream/。
+// 返回 root/source/studio/agent/zcode 五值，避免各脚本自行拼接层级；单仓检出没有
+// 兄弟 upstream，写死该层级必坏（2026-11-06 复盘 P0-3：build-dmg 缺省即此形态）。
+// vendor 树无自身 .git，git 操作经外仓 --directory 适配（见 treeGitCtx）。
+export function resolveUpstreamRoots(root = overlayRoot, env = process.env.OVERLAY_UPSTREAM_ROOT) {
+  const vendor = resolve(root, 'vendor');
+  const explicit = String(env ?? '').trim();
+  const base = explicit
+    ? realpathOrSelf(resolve(explicit))
+    : existsSync(resolve(vendor, 'hermes-studio'))
+      ? vendor
+      : realpathOrSelf(resolve(root, '..', 'upstream'));
+  return {
+    root: base,
+    source: explicit ? 'env' : (base === vendor ? 'vendor' : 'legacy'),
+    studio: resolve(base, 'hermes-studio'),
+    agent: resolve(base, 'hermes-agent'),
+    zcode: resolve(base, 'zcode'),
+  };
+}
+
+const roots = resolveUpstreamRoots();
+const upstreamRoot = roots.root;
+const hermesStudioRoot = roots.studio;
+const hermesAgentRoot = roots.agent;
+const zcodeRoot = roots.zcode;
+const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
 const zcodeSeriesFile = resolve(zcodePatchDir, 'series');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
 const overlayNodeModules = resolve(overlayRoot, 'node_modules');
@@ -45,12 +61,8 @@ const overlayNodeModules = resolve(overlayRoot, 'node_modules');
 // 故需把 overlay/custom/server 链接到上游 packages/server/src/custom。
 const upstreamServerCustom = resolve(hermesStudioRoot, 'packages/server/src/custom');
 const overlayServerCustom = resolve(overlayRoot, 'custom/server');
-// 补丁目录 seam（P1 Task 5）：OVERLAY_PATCH_DIR/OVERLAY_ZCODE_PATCH_DIR 供 e2e 测试
-// 以临时补丁集驱动真实 CLI；缺省=仓内正本，行为不变。
-const patchDir = process.env.OVERLAY_PATCH_DIR?.trim()
-  ? resolve(process.env.OVERLAY_PATCH_DIR.trim())
-  : resolve(overlayRoot, 'patches');
-const patchSeriesFile = resolve(patchDir, 'series');
+const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
+const patchDir = resolve(overlayRoot, 'patches');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 // 派生状态输出目录：默认仓根；测试/沙箱可经 OVERLAY_STATE_OUT 重定向。
 // 背景（2026-10-28）：inject-absent-tree 测试以临时树作 OVERLAY_UPSTREAM_ROOT 跑真实 inject，
@@ -82,7 +94,7 @@ function liveStudioServerListening() {
     return false;
   }
 }
-if (mode === 'clean' && liveStudioServerListening()) {
+if (isDirectRun && mode === 'clean' && liveStudioServerListening()) {
   console.error('[clean] 拒绝执行：检测到 8647 端口有 AIStudio server 在运行。');
   console.error('[clean] 带服 clean 会造成运行进程与树状态分裂（模块缓存/库句柄悬空），');
   console.error('[clean] 2026-10-13 夜间曾因此触发 server SQLite schema 缓存污染（登录 500）。');
@@ -118,6 +130,17 @@ export function applyPatchAtRoot(patchPath, treeRoot, extra = '') {
   git(`apply --whitespace=nowarn${win32WsFlag()}${c.dirFlag}${extra} "${patchPath}"`, c.gitCwd);
 }
 
+/** 串联补丁流经 stdin 一次性 git apply；--check 干跑必须走这条，才能保留 series
+ *  的链式顺序语义（逐条 check 每次都从 pristine 起算，会把依赖前置补丁的正常
+ *  补丁误报为失败）。 */
+function applyPatchTextAtRoot(patchText, treeRoot, extra = '') {
+  const c = treeGitCtx(treeRoot);
+  return execSync(
+    `git apply --whitespace=nowarn${win32WsFlag()}${c.dirFlag}${extra} -`,
+    { cwd: c.gitCwd, input: patchText, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 },
+  ).toString();
+}
+
 /** 目标树 status --porcelain（树内相对路径行）;vendor 模式经外仓 pathspec+剥前缀。失败返回 ''。 */
 export function treeStatus(treeRoot) {
   const c = treeGitCtx(treeRoot);
@@ -138,9 +161,8 @@ export const js = (p) => JSON.stringify(p);
 
 // Windows:Git for Windows 默认 core.autocrlf=true 时工作树为 CRLF 而 patch 上下文
 // 为 LF,首个内容 patch 即 does not apply。--ignore-whitespace 仅在 win32 启用,
-// POSIX 保持严格匹配、不放松现有门禁。（platform/inject/executor.mjs 复用——
-// git apply 预检/应用必须与 inject.mjs 主链同一容差口径。）
-export const win32WsFlag = () => (process.platform === 'win32' ? ' --ignore-whitespace' : '');
+// POSIX 保持严格匹配、不放松现有门禁。
+const win32WsFlag = () => (process.platform === 'win32' ? ' --ignore-whitespace' : '');
 
 function readSeries() {
   if (!existsSync(patchSeriesFile)) return [];
@@ -190,75 +212,86 @@ export function isHermesAgentPatchPath(targetPath) {
 }
 
 // 由 patch 文本首个 ---/+++ 目标路径判定路由目标根目录。
-// 解析规则单一事实源=planner.routePatchTarget（P1 Task 5 起：本函数只做树名→
-// 绝对根映射，头解析/前缀判定全部委托 planner，无双源漂移）。
+// 解析失败(读不到/无目标行)时默认 hermes-studio,与历史行为一致。
+// 2026-10-11 长会话治理轮补:594/595/596/599/600 等手写补丁无 ---/+++ 头(仅
+// diff --git + hunk),正则匹配不到即误路由 studio 硬死——加 diff --git 行回退,
+// 两处取首个 [ab]/ 路径,语义一致。
 export function resolvePatchTargetRoot(patchText) {
-  return routePatchTarget(patchText) === 'hermes-agent' ? hermesAgentRoot : hermesStudioRoot;
-}
-
-// ── 平台注入核心接线层（P1 Task 5）─────────────────────────────────────────
-// ensure-injected.mjs 复用的路径/计划/基线事实源（env seam 感知与 inject 一致）。
-export const overlayRoots = {
-  upstream: upstreamRoot,
-  hermesStudio: hermesStudioRoot,
-  hermesAgent: hermesAgentRoot,
-  zcode: zcodeRoot,
-};
-export const statePaths = { stateOut: stateOutDir, manifest: stateManifestPath };
-/** 补丁目录/series 路径（OVERLAY_PATCH_DIR/OVERLAY_ZCODE_PATCH_DIR seam 感知，ensure 复用）。 */
-export const patchPaths = { patchDir, patchSeriesFile, zcodePatchDir, zcodeSeriesFile };
-
-/** 当前 series/patchDir 下的完整注入计划（hermes+zcode 双通道，planner 产）。 */
-export function buildOverlayPlan() {
-  const seriesText = existsSync(patchSeriesFile) ? readFileSync(patchSeriesFile, 'utf8') : '';
-  const zcodeText = existsSync(zcodeSeriesFile) ? readFileSync(zcodeSeriesFile, 'utf8') : '';
-  return buildPlan(seriesText, zcodeText, { hermes: patchDir, zcode: zcodePatchDir });
-}
-
-/**
- * 三树基线 treeOid：vendor 模式=外仓 HEAD 下该路径的树对象；自持 .git=HEAD^{tree}；
- * 树缺席/无 git=null（未观测，不参与增量基线比对——planner/manifest 口径）。
- */
-export function captureTreeOids() {
-  const oid = (root) => {
-    if (!existsSync(root)) return null;
-    const c = treeGitCtx(root);
-    try {
-      if (c.relPrefix) {
-        return git(`rev-parse HEAD^{tree}:${c.relPrefix.replace(/\/$/, '')}`, c.gitCwd).trim() || null;
-      }
-      return git('rev-parse HEAD^{tree}', c.gitCwd).trim() || null;
-    } catch {
-      return null;
-    }
-  };
-  return {
-    'hermes-studio': oid(hermesStudioRoot),
-    'hermes-agent': oid(hermesAgentRoot),
-    zcode: oid(zcodeRoot),
-  };
-}
-
-/** deploy-agent-runtime 子进程执行：退出码→状态（0=complete、2=partial、1/other=failed）。 */
-export function runDeployAgentRuntime(args = []) {
-  const r = spawnSync('node', [resolve(overlayRoot, 'scripts/deploy-agent-runtime.mjs'), ...args], {
-    cwd: overlayRoot,
-    stdio: 'inherit',
-  });
-  if (r.status === 0) return { status: 'complete' };
-  if (r.status === 2) return { status: 'partial', detail: 'kept/conflict（保留目标或差异未收口）' };
-  return { status: 'failed', detail: `exit=${r.status ?? 'signal'}` };
-}
-
-// 目标树缺席判定（standalone/partial checkout 语义，2026-10-27 起行为保持：
-// agent 树以 hermes_cli/pyproject.toml 双锚判定在位；zcode 以目录在位；studio 必需）
-function absentTreeCheck(target) {
-  if (target === 'hermes-agent') {
-    return !existsSync(resolve(hermesAgentRoot, 'hermes_cli'))
-      && !existsSync(resolve(hermesAgentRoot, 'pyproject.toml'));
+  let targetPath = null;
+  const headerMatch = patchText.match(/^(?:---|\+\+\+) [ab]\/(.+?)$/m);
+  if (headerMatch) {
+    targetPath = headerMatch[1];
+  } else {
+    const gitLineMatch = patchText.match(/^diff --git a\/(.+?) b\/.+$/m);
+    if (gitLineMatch) targetPath = gitLineMatch[1];
   }
-  if (target === 'zcode') return !existsSync(zcodeRoot);
-  return !existsSync(hermesStudioRoot);
+  if (!targetPath) return hermesStudioRoot;
+  return isHermesAgentPatchPath(targetPath) ? hermesAgentRoot : hermesStudioRoot;
+}
+
+function applyPatches() {
+  const patches = readSeries();
+  if (patches.length === 0) {
+    console.log('[inject] 无 B 类 patch(空跑或尚未迁移)');
+    return patches;
+  }
+  // 目标树缺席跳过计数（standalone 模块包用，见循环内注释）
+  let skippedAbsentTree = 0;
+  // agent 补丁失败不再逐条静默跳过：末端汇总可见，STRICT_INJECT=1 可收紧为硬拦。
+  const agentFailures = [];
+  for (const p of patches) {
+    const patchPath = resolve(patchDir, p);
+    if (!existsSync(patchPath)) {
+      console.error(`[inject] FAILED: patch 文件不存在: ${p}`);
+      process.exit(1);
+    }
+	    // 判断 patch 目标：hermes-agent 还是 hermes-studio（规则单一事实源见 resolvePatchTargetRoot）
+	    let targetRoot = hermesStudioRoot;
+	    try {
+	      const patchText = readFileSync(patchPath, 'utf8');
+	      targetRoot = resolvePatchTargetRoot(patchText);
+	    } catch { /* 读取失败时使用默认 hermesStudioRoot */ }
+
+    // 目标树缺席跳过（2026-10-27 standalone 模块包挂账清偿）：模块源码包只含自己的
+    // vendor 树（如 cockpit 包无 vendor/hermes-agent），路由到缺席树的补丁明确跳过，
+    // 不再硬死——部分检出/模块独立包可独立 inject；全仓检出两树俱在、零行为变化。
+    if (targetRoot === hermesAgentRoot
+        && !existsSync(resolve(hermesAgentRoot, 'hermes_cli'))
+        && !existsSync(resolve(hermesAgentRoot, 'pyproject.toml'))) {
+      skippedAbsentTree++;
+      console.warn(`[inject] SKIP (hermes-agent tree absent, standalone/partial checkout): ${p}`);
+      continue;
+    }
+
+    try {
+      applyPatchAtRoot(patchPath, targetRoot);
+      console.log(`[inject] applied patch: ${p} (to ${targetRoot === hermesAgentRoot ? 'hermes-agent' : 'hermes-studio'})`);
+    } catch (e) {
+      // hermes-agent 的 patch 失败时容错跳过（与桌面应用构建无关，不影响 hermes-studio）
+      if (targetRoot === hermesAgentRoot) {
+        const stderrStr = typeof e.stderr === 'string' ? e.stderr : (e.stderr?.toString?.() || '');
+        agentFailures.push({ patch: p, reason: stderrStr.trim() || e.message });
+        continue;
+      }
+      console.error(`[inject] FAILED to apply patch: ${p}`);
+      console.error(`  message: ${e.message}`);
+      console.error(`  stderr: ${e.stderr}`);
+      console.error('  用 git apply --reject 手动排查,修复后重跑');
+      process.exit(1);
+    }
+  }
+  if (skippedAbsentTree > 0) {
+    console.warn(`[inject] 共 ${skippedAbsentTree} 个补丁因 hermes-agent 树缺席跳过（standalone/partial checkout 形态；全仓检出无此现象）`);
+  }
+  if (agentFailures.length > 0) {
+    console.warn(`[inject] WARN: ${agentFailures.length} 个 hermes-agent 补丁未套用（不再是静默跳过）：`);
+    for (const f of agentFailures) console.warn(`  ${f.patch}: ${f.reason}`);
+    if (process.env.STRICT_INJECT === '1') {
+      console.error('[inject] STRICT_INJECT=1：agent 补丁失败不允许继续，请修复补丁上下文后重跑');
+      process.exit(1);
+    }
+  }
+  return patches;
 }
 
 function reversePatches(patches) {  for (const p of [...patches].reverse()) {
@@ -308,6 +341,28 @@ function zcodePatchNewFiles(patchText) {
     if (m && /^new file mode/.test(lines[i + 1] ?? '')) files.push(m[2]);
   }
   return files;
+}
+
+function applyZcodePatches() {
+  if (!existsSync(zcodeRoot)) return [];
+  const patches = readZcodeSeries();
+  for (const p of patches) {
+    const patchPath = resolve(zcodePatchDir, p);
+    if (!existsSync(patchPath)) {
+      console.error(`[inject] FAILED: zcode patch 文件不存在: ${p}`);
+      process.exit(1);
+    }
+    try {
+      applyPatchAtRoot(patchPath, zcodeRoot);
+      console.log(`[inject] applied zcode patch: ${p} (to zcode)`);
+    } catch (e) {
+      // zcode 与 hermes-studio 构建无关,失败容错跳过(同 hermes-agent 语义)
+      console.warn(`[inject] WARN: zcode patch 失败,跳过: ${p}`);
+      const stderrStr = typeof e.stderr === 'string' ? e.stderr : (e.stderr?.toString?.() || '');
+      console.warn(`  ${stderrStr.trim() || e.message}`);
+    }
+  }
+  return patches;
 }
 
 function reverseZcodePatches(patches) {
@@ -677,56 +732,10 @@ function main() {
   }
 
   if (mode === 'inject') {
-    // ── 平台核心前置（P1 Task 5）：先读 manifest、算严格增量——
-    //    v2 noop/tail 路径=树处于 manifest 管理态（注入产物是预期工作态），
-    //    脏树门跳过；无清单/v1 才走「全量注入须净树」门。拒绝即退出指引 clean。
-    const baseline = { upstreamRoot, treeOids: captureTreeOids() };
-    const planItems = buildOverlayPlan();
-    const plan = { baseline, items: planItems };
-    let items = planItems;
-    let baseManifest = null;
-    let managedTree = false;
-    const existingManifest = (() => {
-      try {
-        return readManifestFile(stateManifestPath);
-      } catch (e) {
-        console.error(`[inject] ${e.message}`);
-        process.exit(1);
-      }
-    })();
-    if (existingManifest) {
-      if (!isV2Manifest(existingManifest)) {
-        // v1：不可自动收养为 v2。已注入脏树形态将被下方脏树门拦截；能过门=树净，
-        // v1 属陈旧残留——按全量注入处理，成功后由 v2 取代。
-        console.warn('[inject] 检测到 v1 manifest（仅名字数组，无逐项状态）——不作为增量基线；本次全量注入后以 v2 取代。');
-      } else {
-        try {
-          const inc = planIncrement(existingManifest, plan);
-          if (inc.kind === 'noop') {
-            console.log('[inject] manifest v2 与 series 前缀精确一致（noop）：补丁面无事可做。');
-            items = [];
-          } else {
-            console.log(`[inject] 尾部增量 ${inc.items.length} 条：${inc.items.map((i) => i.name).join(', ')}`);
-            items = inc.items;
-          }
-          baseManifest = existingManifest;
-          managedTree = true;
-        } catch (e) {
-          if (e instanceof IncrementRefusedError) {
-            console.error(`[inject] ${e.message}`);
-            process.exit(1);
-          }
-          throw e;
-        }
-      }
-    }
-
     // 台账 #31:脏树校验前置——先探测,拒绝时零删除(旧序先删自身 symlink 再校验,
     // 校验失败会留下"半态":symlink 已删而 patch 未应用)。
     //    探测:porcelain 中排除自身残留(server/src/custom 符号链接、非 patch 产物),
     //    其余脏文件存在 → 报错退出,不做任何清理动作。
-    //    P1 Task 5 起：v2 增量路径（managedTree）不过此门——注入产物是预期态。
-    if (!managedTree) {
     const selfCustomResidual = (() => {
       try { return lstatSync(upstreamServerCustom).isSymbolicLink(); } catch { return false; }
     })();
@@ -765,10 +774,6 @@ function main() {
       // 非任何 patch 的产物）：app 在跑时每次 inject 都会出现，豁免之。
       // 与 docs/openapi.json 的"回滚管理"不同——这是活运行态，只能放行不能动。
       .filter((l) => !(l.startsWith('??') && l.slice(3).trim().startsWith('.loop/')))
-      // node_modules：ensureNodeModulesSymlink 在目标树内自建的软链（借用上游依赖
-      // 实例），非任何 patch 产物，不阻塞 inject（真实仓 .gitignore 已忽略；该豁免
-      // 只保护无忽略规则的检出/夹具树）。
-      .filter((l) => !(l.startsWith('??') && (l.slice(3).trim() === 'node_modules' || l.slice(3).trim().startsWith('node_modules/'))))
       .join('\n')
       .trim();
     if (precheck && patches.length > 0) {
@@ -787,7 +792,6 @@ function main() {
       }
       process.exit(1);
     }
-    } // end 脏树门（!managedTree）
     // 0. 校验通过 → 清理 inject/build 自身可能遗留的产物(此时删除是安全的)。
     //    a) server/src/custom 符号链接(inject 建的)
     try {
@@ -809,146 +813,142 @@ function main() {
         }
       } catch { /* 未配置则无虞 */ }
     }
-    // 2b. 事务化应用（部署预检 → journal 备份 → git apply --check → 应用 →
-    //     失败 lane 回滚 → manifest v2 原子写）
-    const result = runInjection(
-      { ...plan, items },
-      {
-        roots: { 'hermes-studio': hermesStudioRoot, 'hermes-agent': hermesAgentRoot, zcode: zcodeRoot },
-        patchDirs: { hermes: patchDir, zcode: zcodePatchDir },
-        stateOut: stateOutDir,
-        baseManifest,
-        absentTreeCheck,
-        applyRuntimeDeploy: (phase) => runDeployAgentRuntime(phase === 'apply' ? ['--apply'] : []),
-        log: (m) => console.log(m),
-      },
-    );
+    // 2. 应用 B 类 patch
+    const applied = applyPatches();
+    // 2b. 应用 zcode patch(独立树,容错)
+    const appliedZcode = applyZcodePatches();
     // 3. 确保 overlay 能解析上游依赖(符号链接 node_modules)
     ensureNodeModulesSymlink();
     // 3b. server 代码用相对路径 import '../custom/...',需把 overlay custom/server 链接到上游
     ensureServerCustomSymlink();
     // 4. 生成派生 config
     generateOverlayViteConfig();
-    // 5. 出口按 manifest 真实状态：complete/可接受 partial（仅缺树跳过）→0；其余非零。
-    //    部署预检中止（未写 manifest）也非零——未开始≠成功。
-    if (!result.wroteManifest) {
-      console.error('[inject] 注入中止（部署预检未通过）：未应用任何补丁。');
-      process.exit(1);
-    }
-    const m = result.manifest;
-    if (m.status === 'complete' || (m.status === 'partial' && isAcceptablePartial(m))) {
-      console.log(`[inject] done（status=${m.status}）`);
-      process.exit(0);
-    }
-    console.error(`[inject] 注入会话未达 complete（status=${m.status}${m.runtimeDeploy?.apply ? `，runtimeDeploy=${m.runtimeDeploy.apply}` : ''}）——失败/不可接受的部分完成不得报告成功；请处理后 npm run clean && npm run inject 重放。`);
-    process.exit(1);
+    // B1 双树漂移根治：inject 出口自动同步 agent 运行时（overlay/runtime -> ~/.hermes），
+    // 杜绝'修复只在工作树、不达运行时'（room-invite-gap 真根因）。幂等、仅清单内文件。
+    execSync('node scripts/deploy-agent-runtime.mjs --apply', { cwd: overlayRoot, stdio: 'inherit' });
+    // 5. 写清单
+    writeFileSync(
+      stateManifestPath,
+      JSON.stringify(
+        { appliedPatches: applied, appliedZcodePatches: appliedZcode, generatedAt: new Date().toISOString() },
+        null,
+        2,
+      ),
+    );
+    console.log('[inject] done');
   } else {
-    // clean：按 manifest 记录恢复。v2=逐项真实状态（反放 applied + 按 targetRoot 分树
-    // 删除 addedFiles，containment 校验）；v1/缺席=legacy 反放（保留既有容错语义），
-    // 新增文件删除面修正为按补丁路由分树——P0 实锤缺陷：旧代码把全部新增文件硬删在
-    // hermesStudioRoot 下，hermes-agent 树的新增文件 clean 后永不消失。
-    const manifest = (() => {
+    // clean
+    const manifest = existsSync(manifestPath)
+      ? JSON.parse(readFileSync(manifestPath, 'utf8'))
+      : {};
+    const applied = manifest.appliedPatches || readSeries();
+    // zcode patch 反向(独立树;manifest 缺项时回退 series 全量)
+    reverseZcodePatches(manifest.appliedZcodePatches || readZcodeSeries());
+    reversePatches(applied);
+    // 反放失败级联的 tracked 残留兜底还原（clean:260 注释承诺、此前未实现）
+    restorePatchTouchedResidue('clean');
+    // 还原非 patch 的 build 产物(如 openapi.json),保持上游完全干净
+    restoreNonPatchArtifacts('clean');
+    // 删除 patch 新增的 untracked 文件（git apply -R 不会删新文件,只还原修改）
+    const { patchNewFiles } = patchFileSets();
+    for (const f of patchNewFiles) {
+      const p = resolve(hermesStudioRoot, f);
       try {
-        return readManifestFile(stateManifestPath);
-      } catch (e) {
-        console.error(`[clean] ${e.message}`);
-        process.exit(1);
-      }
-    })();
-    let cleanFailures = 0;
-    const rootOf = (target) => (target === 'hermes-agent' ? hermesAgentRoot : target === 'zcode' ? zcodeRoot : hermesStudioRoot);
-    const removeAddedFile = (root, rel) => {
-      const abs = resolve(root, rel);
-      if (!isUnder(abs, root)) {
-        console.error(`[clean] 拒绝删除越出目标树的路径: ${rel}（root=${root}）`);
-        cleanFailures++;
-        return;
-      }
-      try {
-        if (existsSync(abs) && !lstatSync(abs).isSymbolicLink()) {
-          unlinkSync(abs);
-          console.log(`[clean] removed patch-added file: ${rel} (from ${root === hermesAgentRoot ? 'hermes-agent' : root === zcodeRoot ? 'zcode' : 'hermes-studio'})`);
+        if (existsSync(p) && !lstatSync(p).isSymbolicLink()) {
+          unlinkSync(p);
+          console.log(`[clean] removed patch-added file: ${f}`);
         }
-      } catch (e) {
-        console.warn(`[clean] WARN: 删除失败 ${rel}: ${e.message}`);
-        cleanFailures++;
-      }
-    };
-    if (isV2Manifest(manifest)) {
-      // v2 clean：只恢复 status==='applied' 的项（rolled-back 已在会话内还原；
-      // skipped/absent-tree 无落盘面）。反放逐补丁 fail-soft，残留由下方兜底。
-      for (const rec of [...manifest.patches].reverse()) {
-        if (rec.status !== 'applied') continue;
-        const patchPath = resolve(rec.channel === 'zcode' ? zcodePatchDir : patchDir, rec.name);
-        if (!existsSync(patchPath)) {
-          console.warn(`[clean] WARN: patch 文件不存在,跳过: ${rec.name}`);
-          continue;
-        }
-        try {
-          applyPatchAtRoot(patchPath, rootOf(rec.target), ' --reverse');
-          console.log(`[clean] reversed patch: ${rec.name} (from ${rec.target})`);
-        } catch {
-          // 反向失败不中断：untracked patch 产物清理必须执行（否则 inject 死循环），
-          // tracked 残留由随后的 restore 步兜底。
-          console.warn(`[clean] WARN: patch 反向失败,继续 untracked 清理: ${rec.name}`);
-        }
-      }
-      // 分树删除 addedFiles：目标树取自 manifest 逐项记录（P0 缺陷根治面）
-      for (const rec of manifest.patches) {
-        if (rec.status !== 'applied') continue;
-        for (const rel of rec.addedFiles ?? []) removeAddedFile(rootOf(rec.target), rel);
-      }
-      restorePatchTouchedResidue('clean');
-      restoreNonPatchArtifacts('clean');
-      // 移除 inject 创建的 server/src/custom 符号链接(保持上游纯净)
-      ensureServerCustomSymlink();
-    } else {
-      // v1/缺席 legacy 路径（v1 manifest 可辅助 clean，但不升级为可信 v2）
-      const applied = manifest?.appliedPatches || readSeries();
-      reverseZcodePatches(manifest?.appliedZcodePatches || readZcodeSeries());
-      reversePatches(applied);
-      restorePatchTouchedResidue('clean');
-      restoreNonPatchArtifacts('clean');
-      // 新增文件分树删除（修正 P0 缺陷）：按每个补丁声明的目标树路由
-      for (const p of readSeries()) {
-        const patchPath = resolve(patchDir, p);
-        if (!existsSync(patchPath)) continue;
-        let text;
-        try {
-          text = readFileSync(patchPath, 'utf8');
-        } catch { continue; }
-        const root = resolvePatchTargetRoot(text);
-        for (const f of addedFilesFromPatch(text)) removeAddedFile(root, f);
-      }
-      ensureServerCustomSymlink();
+      } catch { /* 已删或权限问题,跳过 */ }
     }
-    // 清除注入态指纹（journal + manifest）：树净=无注入态，下次 inject 全量重建
-    rmSync(resolve(stateOutDir, 'journal'), { recursive: true, force: true });
-    try {
-      if (existsSync(stateManifestPath)) unlinkSync(stateManifestPath);
-    } catch (e) {
-      console.warn(`[clean] WARN: 无法删除 manifest: ${e.message}`);
-      cleanFailures++;
-    }
-    if (cleanFailures > 0) {
-      console.error(`[clean] 完成，但存在 ${cleanFailures} 处清理失败（越界拒绝/删除失败不吞）——请人工核查后重跑。`);
-      process.exit(1);
-    }
+    // 移除 inject 创建的 server/src/custom 符号链接(保持上游纯净)
+    ensureServerCustomSymlink();
     console.log('[clean] done');
   }
+}
+
+// --check：全链干跑（git apply --check），只报告不改树。用于上游升级预检与 PR 门禁，
+// 让 series 的顺序有效性有机器证明，而不只靠文档与人力背书。
+// 必须按目标树分组、按 series 顺序把补丁串成单个 stdin 流：series 是顺序重放链，
+// 逐条 check 每次都从 pristine 起算，会把依赖前置补丁的正常补丁误报为失败。
+// opts 的依赖注入仅用于守门测试，生产调用一律走默认实现。
+export function checkPatchChain(opts = {}) {
+  const patches = opts.patches ?? readSeries();
+  const fileExists = opts.fileExists ?? existsSync;
+  const read = opts.read ?? ((p) => readFileSync(p, 'utf8'));
+  const route = opts.route ?? resolvePatchTargetRoot;
+  const isAgent = opts.isAgent ?? ((t) => t === hermesAgentRoot);
+  const agentTreePresent = opts.agentTreePresent ?? (
+    existsSync(resolve(hermesAgentRoot, 'hermes_cli')) || existsSync(resolve(hermesAgentRoot, 'pyproject.toml'))
+  );
+  const checkText = opts.checkText ?? ((text, treeRoot) => applyPatchTextAtRoot(text, treeRoot, ' --check'));
+  const failures = [];
+  const skipped = [];
+  const groups = { studio: [], agent: [] };
+  for (const p of patches) {
+    const patchPath = resolve(patchDir, p);
+    if (!fileExists(patchPath)) {
+      failures.push({ patch: p, reason: '补丁文件缺失' });
+      continue;
+    }
+    let text = '';
+    let targetRoot = hermesStudioRoot;
+    try {
+      text = read(patchPath);
+      targetRoot = route(text);
+    } catch { /* 读不到时沿用默认 studio，空文本由串联检查报出 */ }
+    if (isAgent(targetRoot) && !agentTreePresent) {
+      skipped.push({ patch: p, reason: '目标树缺席（部分检出）' });
+      continue;
+    }
+    groups[isAgent(targetRoot) ? 'agent' : 'studio'].push({ patch: p, text });
+  }
+  const chainText = (list) => list.map((i) => i.text).join('\n');
+  for (const [key, items] of Object.entries(groups)) {
+    if (items.length === 0) continue;
+    const treeRoot = key === 'agent' ? hermesAgentRoot : hermesStudioRoot;
+    try { checkText(chainText(items), treeRoot); } catch (e) {
+      const detail = String(e?.stderr?.toString?.() || e?.message || '未知错误').trim();
+      // 前缀二分定位首个破坏链式重放的补丁（失败时约 log2(n) 次检查；假设前缀失败单调）。
+      let lo = 1;
+      let hi = items.length;
+      let culprit = items[0];
+      while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        let ok = true;
+        try { checkText(chainText(items.slice(0, mid)), treeRoot); } catch { ok = false; }
+        if (ok) lo = mid + 1;
+        else { culprit = items[mid - 1]; hi = mid - 1; }
+      }
+      failures.push({ patch: culprit.patch, group: key, reason: `链式检查失败（${key} 组 ${items.length} 条）：${detail.slice(0, 300)}` });
+    }
+  }
+  return {
+    total: patches.length,
+    failures,
+    skipped,
+    groups: { studio: groups.studio.length, agent: groups.agent.length },
+  };
 }
 
 // --config-only：只生成派生构建 config + node_modules 软链，不触共享 upstream 注入态
 // （worktree 构建门禁用：build:full 需 vite.config.overlay.mts，而全量 inject 会重写
 // 共享 upstream——多会话并行期只允许 config 层操作）。
-if (process.argv.includes('--config-only')) {
+if (isDirectRun && process.argv.includes('--check')) {
+  const r = checkPatchChain();
+  console.log(`[inject] --check 干跑 ${r.total} 条补丁（studio ${r.groups.studio} / agent ${r.groups.agent}）：失败 ${r.failures.length}，跳过 ${r.skipped.length}`);
+  for (const f of r.failures) console.error(`  FAIL ${f.patch}: ${f.reason}`);
+  for (const s of r.skipped) console.warn(`  SKIP ${s.patch}: ${s.reason}`);
+  if (r.failures.length > 0) {
+    console.error('[inject] 若目标树已注入过，先 npm run clean；否则为上游基线/补丁上下文失配，须重生成对应补丁');
+  }
+  process.exit(r.failures.length > 0 ? 1 : 0);
+}
+if (isDirectRun && process.argv.includes('--config-only')) {
   generateOverlayViteConfig();
   ensureNodeModulesSymlink();
   console.log('[inject] --config-only done（未触碰 upstream 注入态）');
   process.exit(0);
 }
 
-// 直跑守卫:测试 import 本模块(断言 js 转义/win32 分支)不触发注入副作用。
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  main();
-}
+// 直跑守卫：测试与其它脚本 import 本模块复用导出函数时不触发注入副作用。
+if (isDirectRun) main();
