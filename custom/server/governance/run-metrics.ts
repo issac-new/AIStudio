@@ -225,7 +225,7 @@ export function computeRunMetrics(input: RunMetricsInput): RunMetrics {
   const dispEntries = dispLines.map((l, idx) => {
     const p = l.split('|')
     return { line: idx + 1, type: p[1] ?? '', subject: p[2] ?? '', disp: p.length > 3 ? p[3] : '' }
-  }).filter((e) => e.disp !== '' || e.type !== '')
+  }).filter((e) => e.disp !== '')
   const BUCKET_WORDS = ['已修', '已闭环', '观察', '延后']
   const bucketOfDisp = (d: string): IssuePairingRow['bucket'] => (BUCKET_WORDS.find((w) => d.startsWith(w)) ?? '表外词') as IssuePairingRow['bucket']
   // 证据锚形态（实体判定，非字面词——「无锚声明」含「锚」字不算锚）：commit sha

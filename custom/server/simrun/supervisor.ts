@@ -73,10 +73,14 @@ function guardCliPath(): string {
   return resolve(__dirname, '../../..', 'scripts/platform/runtime/guard-cli.mjs')
 }
 
-/** 调 guard-cli 子命令：stdout 单行 JSON；非 JSON/失败=null（fail-soft，不抛） */
+/** 调 guard-cli 子命令：stdout 单行 JSON；非 JSON/失败=null（fail-soft，不抛）。
+ *  超时（病态 fs/子进程挂起）按让位处理（ok:false），不得冻结服务事件循环。 */
 function runGuardCli(args: string[]): { result: OwnerAcquireResult | Record<string, unknown> | null; rc: number } {
   try {
-    const r = spawnSync(process.execPath, [guardCliPath(), ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    const r = spawnSync(process.execPath, [guardCliPath(), ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10_000 })
+    if (r.error && (r.error as NodeJS.ErrnoException).code === 'ETIMEDOUT') {
+      return { result: { ok: false, reason: 'guard-cli 超时（让位，不抢）' }, rc: 1 }
+    }
     try { return { result: JSON.parse(r.stdout || 'null'), rc: r.status ?? 1 } } catch { return { result: null, rc: r.status ?? 1 } }
   } catch { return { result: null, rc: 1 } }
 }

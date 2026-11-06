@@ -286,6 +286,28 @@ describe('三启动顺序验收（product/bash/relay 竞争 owner）', () => {
     const d2 = cli(asDriver(root, 1402), env)
     expect([d1, d2].filter((r) => r.json?.ok).length).toBe(1)
   })
+
+  it('并发：8 路 CLI 同时抢 driver 锁——恰一成功（半写态竞争真子进程验证，I-1）', async () => {
+    const root = freshRoot('driver-concurrent')
+    const pids = Array.from({ length: 8 }, (_, i) => 1600 + i)
+    const truth = probeEnv(pids, Object.fromEntries(pids.map((p) => [p, CMD.driver])))
+    const results = await Promise.all(pids.map((pid) =>
+      new Promise<{ rc: number; json: any }>((res) => {
+        const p = spawn(process.execPath, [CLI, ...asDriver(root, pid)], {
+          env: { ...process.env, MX_GUARD_PROBE: PROBE, ...truth },
+          stdio: ['ignore', 'pipe', 'ignore'],
+        })
+        let out = ''
+        p.stdout?.on('data', (d: Buffer) => { out += d.toString() })
+        p.on('exit', (c) => {
+          try { res({ rc: c ?? -1, json: JSON.parse(out || 'null') }) } catch { res({ rc: c ?? -1, json: null }) }
+        })
+      }),
+    ))
+    const winners = results.filter((r) => r.json?.ok === true)
+    expect(winners.length).toBe(1)
+    expect(eventsOf(root).filter((e) => e.kind === 'driver-acquired').length).toBe(1)
+  })
 })
 
 // ── lock-status 与 bash 兼容包装 ───────────────────────────

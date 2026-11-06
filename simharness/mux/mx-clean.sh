@@ -142,8 +142,9 @@ fi
 # ── 2 前置·clearance 投影（P2 Task 2）：未闭环债务跨清场存活 ──
 # 归档 tar 是冻结件不回改；开跑前清偿门（⑯/⑯b）与人工 resolve/append-disp 需要
 # 可写载体。清场前把锚定轮（无锚定轮则 runs/ 最新轮）的台账+issues.log 原子写到
-# var/clearance/<RUN>/（temp+mv），并落 current 指针。写在首个 mutation（停栈/归档/
-# 删除）之前——守卫拒绝时投影不写；dry-run 零副作用（APPLY 守卫）。
+# var/clearance/<RUN>/（temp+mv），并落 current 指针。投影写在首个数据毁伤动作
+# （归档/删除）之前——停栈在 1) 段更早且仅 TERM 进程不毁数据；守卫拒绝时投影
+# 不写；dry-run 零副作用（APPLY 守卫）。
 if [ "$APPLY" = 1 ]; then
 _cl_proj_run="$_cur_run"
 if [ -z "$_cl_proj_run" ] && [ -d "$SIM_ROOT/runs" ]; then

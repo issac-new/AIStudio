@@ -241,9 +241,8 @@ function parseDriverInfo(text) {
   return out
 }
 
-function writeDriverInfo(lockDir, { pid, instance, kind, runId, cmdMatcher, simRoot }) {
-  mkdirSync(lockDir, { recursive: true })
-  const lines = [
+function formatDriverInfo({ pid, instance, kind, runId, cmdMatcher, simRoot }) {
+  return [
     `pid=${pid}`,
     `instance=${instance}`,
     `kind=${kind ?? 'driver'}`,
@@ -252,8 +251,30 @@ function writeDriverInfo(lockDir, { pid, instance, kind, runId, cmdMatcher, simR
     `started=${new Date().toISOString()}`,
     `host=${hostname()}`,
     `simRoot=${simRoot}`,
-  ]
-  writeFileSync(join(lockDir, 'info'), lines.join('\n') + '\n', 'utf8')
+  ].join('\n') + '\n'
+}
+
+function writeDriverInfo(lockDir, payload) {
+  mkdirSync(lockDir, { recursive: true })
+  writeFileSync(join(lockDir, 'info'), formatDriverInfo(payload), 'utf8')
+}
+
+/** 独占提交 driver info（link 原子创建）：恰一进程能落 info——半写态接管竞态的
+ *  根治提交点（P2 批一审查 I-1 方案 b）。返回 instance|null（null=EEXIST 败北）。 */
+function commitDriverInfoExclusive(lockDir, { pid, kind, runId, cmdMatcher, simRoot }) {
+  const instance = token()
+  const tmp = join(lockDir, `.info.tmp.${process.pid}.${instance}`)
+  mkdirSync(lockDir, { recursive: true })
+  writeFileSync(tmp, formatDriverInfo({ pid, instance, kind, runId, cmdMatcher, simRoot }), 'utf8')
+  try {
+    linkSync(tmp, join(lockDir, 'info'))
+    unlinkSync(tmp)
+    return instance
+  } catch (e) {
+    try { unlinkSync(tmp) } catch { /* noop */ }
+    if (e && e.code === 'EEXIST') return null
+    throw e
+  }
 }
 
 export function driverLockDir(simRoot, lockDir) {
@@ -271,53 +292,69 @@ export function driverAcquire({ simRoot, lockDir, kind = 'driver', runId, pid, c
     appendEvent(root, 'driver-refused', leaseBlock.reason, { requesterPid: pid })
     return leaseBlock
   }
-  try {
-    mkdirSync(dir)
-    const instance = token()
-    writeDriverInfo(dir, { pid, instance, kind, runId, cmdMatcher, simRoot: root })
+  // 独占提交点：mkdir 只是容器，info 经 link() 原子创建——并发者恰一胜出，
+  // 败方落 EEXIST 分支按"锁已存在"判活（I-1 根治，双 ok 窗口封死）。
+  try { mkdirSync(dir) } catch { /* 已存在 → 先试独占提交再判活 */ }
+  const instance = commitDriverInfoExclusive(dir, { pid, kind, runId, cmdMatcher, simRoot: root })
+  if (instance !== null) {
     appendEvent(root, 'driver-acquired', `driver pid=${pid}（${kind}）`, { pid, kind, runId: runId ?? null })
     return { ok: true, instance }
-  } catch { /* 已存在 → 走判活分支 */ }
-  const infoPath = join(dir, 'info')
-  const held = existsSync(infoPath)
-    ? parseDriverInfo(readFileSync(infoPath, 'utf8'))
-    : null
-  if (held) {
-    const v = holderAlive(held, root)
-    if (v.alive) {
-      appendEvent(root, 'driver-refused', `驱动锁在位且持有人活（${v.reason}）`, { requesterPid: pid, holder: { pid: held.pid, runId: held.runId } })
-      return { ok: false, code: 1, reason: `驱动锁被占（pid=${held.pid}，${v.reason}）`, holder: { pid: held.pid, runId: held.runId } }
-    }
-    const stale = `${dir}.stale.${Date.now()}-${process.pid}`
-    try {
-      renameSync(dir, stale)
-    } catch {
-      appendEvent(root, 'driver-refused', '接管竞争失败（另一驱动者先到）', { requesterPid: pid })
-      return { ok: false, code: 2, reason: '接管竞争失败（另一驱动者先到）', holder: null }
-    }
-    try {
-      mkdirSync(dir)
-      const instance = token()
-      writeDriverInfo(dir, { pid, instance, kind, runId, cmdMatcher, simRoot: root })
-      appendEvent(root, 'driver-takeover-stale', `陈驱动锁 pid=${held.pid} 不活（${v.reason}）→ pid=${pid} 接管`, { pid })
-      appendEvent(root, 'driver-acquired', `driver pid=${pid}（接管）`, { pid, kind })
-      return { ok: true, instance, tookOverFrom: { pid: held.pid } }
-    } catch {
-      appendEvent(root, 'driver-refused', '接管竞争失败（mkdir 失败）', { requesterPid: pid })
-      return { ok: false, code: 2, reason: '接管竞争失败', holder: null }
-    }
-    // 陈驱动锁归档 ${stale} 保留（接管留痕）
   }
-  // 目录在但 info 缺席（半写态）：判为陈锁直接接管
+  const judgeExisting = () => {
+    const infoPath = join(dir, 'info')
+    const held = existsSync(infoPath)
+      ? parseDriverInfo(readFileSync(infoPath, 'utf8'))
+      : null
+    if (held && Number.isInteger(held.pid)) {
+      const v = holderAlive(held, root)
+      if (v.alive) {
+        appendEvent(root, 'driver-refused', `驱动锁在位且持有人活（${v.reason}）`, { requesterPid: pid, holder: { pid: held.pid, runId: held.runId } })
+        return { ok: false, code: 1, reason: `驱动锁被占（pid=${held.pid}，${v.reason}）`, holder: { pid: held.pid, runId: held.runId } }
+      }
+      const stale = `${dir}.stale.${Date.now()}-${process.pid}`
+      try {
+        renameSync(dir, stale)
+      } catch {
+        appendEvent(root, 'driver-refused', '接管竞争失败（另一驱动者先到）', { requesterPid: pid })
+        return { ok: false, code: 2, reason: '接管竞争失败（另一驱动者先到）', holder: null }
+      }
+      try {
+        mkdirSync(dir)
+        const inst = commitDriverInfoExclusive(dir, { pid, kind, runId, cmdMatcher, simRoot: root })
+        if (inst === null) {
+          appendEvent(root, 'driver-refused', '接管竞争判负（info 独占创建败北）', { requesterPid: pid })
+          return { ok: false, code: 2, reason: '接管竞争判负（info 独占创建败北）', holder: null }
+        }
+        appendEvent(root, 'driver-takeover-stale', `陈驱动锁 pid=${held.pid} 不活（${v.reason}）→ pid=${pid} 接管`, { pid })
+        appendEvent(root, 'driver-acquired', `driver pid=${pid}（接管）`, { pid, kind })
+        return { ok: true, instance: inst, tookOverFrom: { pid: held.pid } }
+      } catch {
+        appendEvent(root, 'driver-refused', '接管竞争失败（mkdir 失败）', { requesterPid: pid })
+        return { ok: false, code: 2, reason: '接管竞争失败', holder: null }
+      }
+    }
+    return null // 无 info 或 info 不可解析：半写态 → 外层宽限重试
+  }
+  const first = judgeExisting()
+  if (first) return first
+  // 目录在但 info 缺席/不可解析（半写态）：创建者可能正处于 mkdir→link 之间——
+  // 短宽限后复查（link 原子性保证 info 一旦出现即完整），仍缺席才按陈锁接管。
+  const sleepSync = (ms) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) }
+  sleepSync(50)
+  const second = judgeExisting()
+  if (second) return second
   const stale = `${dir}.stale.${Date.now()}-${process.pid}`
   try {
     renameSync(dir, stale)
     mkdirSync(dir)
-    const instance = token()
-    writeDriverInfo(dir, { pid, instance, kind, runId, cmdMatcher, simRoot: root })
+    const inst = commitDriverInfoExclusive(dir, { pid, kind, runId, cmdMatcher, simRoot: root })
+    if (inst === null) {
+      appendEvent(root, 'driver-refused', '半写态接管判负（info 独占创建败北）', { requesterPid: pid })
+      return { ok: false, code: 2, reason: '半写态接管判负（info 独占创建败北）', holder: null }
+    }
     appendEvent(root, 'driver-takeover-stale', `驱动锁无 info（半写态）→ pid=${pid} 接管`, { pid })
     appendEvent(root, 'driver-acquired', `driver pid=${pid}`, { pid, kind })
-    return { ok: true, instance }
+    return { ok: true, instance: inst }
   } catch {
     return { ok: false, code: 2, reason: '接管竞争失败（半写态）', holder: null }
   }

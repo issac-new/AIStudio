@@ -330,4 +330,21 @@ describe('DISP 终态严格化（closed/valid/closureError + 分计数）', () =
     const sum = m.dispClosure.closed + m.dispClosure.deferred + m.dispClosure.pending + m.dispClosure.invalid
     expect(sum).toBe(m.pairing.length)
   })
+
+  it('畸形 DISP 行（3 字段无处置段）不参与配对：分区不变量保持，先到有效 DISP 不被抹（I-3）', () => {
+    const m = mk2(
+      'ISSUE|g2-arch|bella|缺判词',
+      [
+        'DISP|g2-arch|bella',                    // 畸形：无第四段（旧实现会放行并抹掉下行有效处置）
+        'DISP|g2-arch|bella|延后（下轮补判词）', // 有效：应成为末次适用
+      ].join('\n'),
+    )
+    const row = m.pairing.find((r) => r.key === 'g2-arch·bella')!
+    expect(row.bucket).toBe('延后')
+    expect(row.valid).toBe(true)
+    expect(row.closed).toBe(false)
+    expect(m.dispClosure.deferred).toBe(1)
+    const sum = m.dispClosure.closed + m.dispClosure.deferred + m.dispClosure.pending + m.dispClosure.invalid
+    expect(sum).toBe(m.pairing.length)
+  })
 })
