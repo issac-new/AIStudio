@@ -26,19 +26,20 @@
 | D4 | 不为 0.23.0 新增补丁号 | 90 枚覆盖面完整，升级只重生成存量 6 枚＋退役 1 枚，无新行为面 |
 | D5 | team 载体链进 v0.23.0-team.1（扩展序归 1） | team/VERSION 注释立法「底座升级时底座段跟进、扩展序归 1」；与发版轮 v1.0.13 在途的 team.3（0.22.7 基线）撞面，合并序无论谁先，终态以底座升级规则为准，冲突属主解（AGENTS.md 规则 12） |
 | D6 | simharness 与 docs/manuals 的 0.22.7 字面引用不随批改 | v0227 批 D4 先例（历史叙事与快照记录，来历归 git） |
-| D7 | runtime 宿主部署只定向 base.py/hosted_rooms.py 两件方向待对照、不整树 --force | AGENTS.md 部署规则默认保留差异件；并行会话在途域（manifest 差异 28 件族）不碰 |
+| D7 | runtime 宿主部署定向覆盖 kanban_db.py 单件、不整树盲 force | 终态差异仅 1 件且方向明确（宿主旧态，vendor 注入态与模板一致）；原「在途域」依据随 739/741 合入消失 |
 
 ## 验证
 
 - [x] 预演终局：/tmp/agent-v0230-prep pristine v0.23.0 按 series 序（planner.routePatchTarget 口径）全量重放 **90/90 direct 零 threeway 零 STOP**（镜像补丁目录含 6 regen＋742 移除）。
 - [x] 预演口径修正留痕：首轮 firstTarget 只认 `--- a/` 漏筛 4 枚纯新文件补丁（457 等 `--- /dev/null` 形态），终局改 import planner.routePatchTarget 单一事实源（`---`/`+++` 双头回退 diff --git 行）。
 - [x] 手解 6 文件 py_compile/ast 语法全过（预演仓内）。
-- [ ] worktree 净基线单跑：`npm run clean && npm run inject` 全量 0 条真告警（WARN/SKIP/ERROR 前缀严格匹配）。
-- [ ] `.gitignore` 误伤面核验（d.ts/export 无新增命中）。
-- [ ] 台账一致性：VENDOR.md 基线 commit = upstream/hermes-agent HEAD = `2bd378ed1`。
-- [ ] `npm test` 全量（合并前门）。
-- [ ] `release:check` 四模块对账（agent-teams=v0.23.0-team.1）。
-- [ ] 拼合树 pytest runtime/tests（v0227 批配方 146 例基线）。
+- [x] worktree 净基线单跑：`npm run clean && npm run inject` 全量 **agent 90＋studio 370 全应用、WARN/SKIP 零条、幂等二连 rc=0**（首次 rc=1 系 deploy-agent-runtime 对宿主 33 差异件的 partial 报告，非补丁链告警；二连后宿主同步完成）。
+- [x] `.gitignore` 误伤面核验：`git ls-files --others --ignored --exclude-standard vendor/hermes-agent` **零命中**（v0.23.0 无新增 export*/d.ts 类被吞文件）。
+- [x] 台账一致性：VENDOR.md 基线 commit = upstream/hermes-agent HEAD = 宿主 ~/.hermes/hermes-agent HEAD = `2bd378ed1`。
+- [x] `release:check` 四模块对账全绿（cockpit=1.0.9-studio.12 **agent-teams=v0.23.0-team.1** ycode=3.17.2 yuan-skill=v2.99.3）。子项 docs:check 在 worktree 红（路由计数 121 vs 122）定谳=**worktree 环境伪象非本批漂移**：vite-node 经 node_modules 软链跨树解析回主检出致真注册链收集不全（直接跑 route-manifest.ts 报跨树 Cannot find module 实证）；main 干净 HEAD 同检查绿；本批改动面不触及路由载体（registries/custom/client/features）。合并后在 main 复跑兑现。
+- [x] 拼合树 pytest runtime/tests：**152 passed / 0 failed**（v0227 批 146 基线＋6 新例；配方=PYTHONPATH=vendor/hermes-agent:runtime）。首跑 13 例失败定谳=裸 python3.14 缺 `psutil`（v0.23.0 上游 kanban_owner_recovery.py 新增 import）＋缺 `python-dotenv`（1 例收集错）——补装二包后全绿，环境限制非行为回归。
+- [x] runtime 宿主部署：dry-run 终态 **清单 62 ｜ 相同 62 ｜ 差异 0 ｜ RESULT complete**；kanban_db.py 一处宿主旧态（`workspace_kind: str = "worktree"` 不属任何现役补丁，且 D5「在途域」依据已随 739/741 合入消失）定向覆盖对齐（.bak 备份在宿主 hermes_cli/）。宿主基线 HEAD 已在 v0.23.0（换血窗口内先行就位）。
+- [ ] `npm test` 全量（合并前门，跑动中回填）。
 
 ## 设计文档影响
 

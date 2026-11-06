@@ -242,3 +242,4 @@
 {"at":"2026-11-06T01:10:51Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"30ca9e0cbf3467c190254321c237945846906685","commit":"42daf7159"}
 {"at":"2026-11-06T05:45:46Z","spec":"docs/superpowers/specs/2026-11-06-release-v1.0.13-overlay.md","receipt":"c40f26ac199e5a0e7874c37e1dded1cc30bc5cf8","commit":"283e3f0e1"}
 {"at":"2026-11-06T06:04:38Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"8c65f3e207b4d83219a14efa2bea314d07be89d0","commit":"b4770a21d"}
+{"at":"2026-11-06T06:10:47Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"f37cf1b62469f34294056e37cac36ec911ea3da5","commit":"6e57ade47"}
