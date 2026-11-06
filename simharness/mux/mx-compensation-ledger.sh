@@ -153,6 +153,22 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
         END { exit found ? 0 : 1 }' "$F" \
         && echo "$ID → $CMD ✓" || { echo "$ID 未找到" >&2; exit 1; }
       ;;
+    waive-open)
+      # 批量豁免（2026-11-06 用户裁决「A. 豁免放行」）：一次给全部 open 笔落 waive+理由，
+      # 用于「代偿类型属架构性代演、本轮不做产品化」的场景；理由必填（审计可追溯）。
+      NOTE="${*:-}"
+      [ -n "$NOTE" ] || { echo "usage: $CMD waive-open <理由>" >&2; exit 2; }
+      [ -f "$F" ] || { echo "台账不存在" >&2; exit 2; }
+      IDS=$(awk -F'\t' 'NR>1 && $6=="open" { print $1 }' "$F")
+      N=0
+      for id in $IDS; do
+        TMP="$F.tmp.$$"
+        awk -F'\t' -v id="$id" -v note="$NOTE" '
+          NR==1 { print; next } $1==id { $6="waive"; $7=note } { print }' OFS='\t' "$F" > "$TMP" && mv "$TMP" "$F"
+        N=$((N+1))
+      done
+      echo "已豁免 $N 笔（waive，理由：${NOTE}）"
+      ;;
     check-clearance)
       # 代偿清偿门：开跑前置检查用。有 open 笔 → 非零退出并逐笔列出。
       if [ ! -f "$F" ]; then

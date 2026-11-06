@@ -668,7 +668,10 @@ else:
 # 按步型必采证据表（步集自 r18_matrix 单一事实源——生成器 hero 统计同表，门禁测试 ⑫）：
 #   对话必采=派发/回执/审批/缺陷/验收对账步；操作必采=建群/看板/IDE 等真 UI 操作步
 #   （每组 ops 须 ≥2 帧=前后帧下限）；效果必采=工件产出闸步；其余 ✅ 步任一位在位即可。
-_R18_DIALOG_STEPS = DIALOG_STEPS
+# O4（2026-11-06 用户裁决「全做」）：声明无对话步（配置/冒烟类无 agent 交互面）——
+# 与生成器 NO_DIALOG_STEPS 同源登记；这些步 r18 缺对话=预期豁免，不 FAIL。
+_NO_DIALOG_STEPS = {2, 4}
+_R18_DIALOG_STEPS = DIALOG_STEPS - _NO_DIALOG_STEPS  # O4（2026-11-06）：声明无对话步（配置/冒烟）豁免
 _R18_OP_STEPS = OP_STEPS
 _R18_EFFECT_STEPS = EFFECT_STEPS
 _R18_SKILL_STEPS = SKILL_STEPS
@@ -900,6 +903,11 @@ for _qm in re.finditer(r'<details class="st-artifact st-qgate".*?</details>', re
 #    13b 分支落地时间线行（干预点四件 D，2026-10-09）：并行度行在则时间线行必在
 #    （同批渲染，禁只报利用率不报推进刻度）。──
 if RUN_ID >= '20261009-v8-run12' and 'id="step18"' in rep:
+    # O2 修复率披露（2026-11-06 用户裁决「全做」渐进式）：记账完成≠修复——
+    # 报告必须同时呈现两项，缺修复率行=口径失真（fail）。数值下限（MX_FIX_RATE_MIN）
+    # 属闸语义变更，本批只强制披露、不拦数值；设阈值即升级为硬拦（下轮裁决）。
+    if '修复率（已修 ÷ 唯一键）' not in rep:
+        fails.append('缺「修复率（已修 ÷ 唯一键）」指标行——记账完成率与修复率必须并列呈现（O2：记账≠修复，只呈记账率=口径失真）')
     if '并行度实测（§5.5）' not in rep:
         fails.append('步 18 缺并行度实测行（§5.5：devimpl 段「活跃 agent·分钟/墙钟分钟」须实测呈现）')
     elif '分支落地时间线' not in rep:
