@@ -1,0 +1,163 @@
+"""记忆自动沉淀 v1（mimo P4 二期 auto-dream/auto-distill 的 hermes 形状）。
+
+Origin：MiMo-Code session/auto-dream.ts（7d/30d 周期 spawn 系统会话整理记忆）。
+hermes 形状重设计（spec 分期说明：一期 FTS 已落 406，二期为本件）：
+
+- **distill v1 = 规则式**（去重 + 陈旧剪枝 + 报告），不调模型——可测、可回退、零成本；
+  LLM 式摘要合并列 v2（等一期 FTS 检索面真实使用反馈后再上，避免闭门造摘要）。
+- 节奏（7d/30d auto-dream）经 hermes 既有 cron 运维面接：cronjob_manage 注册周期任务
+  调 `memory_tool(action='consolidate')` 等价入口（见模块尾部注释），不在本模块自建调度。
+- 纪律：markdown 唯一事实源不变；distill 只做**确定性变换**（合一完全同文副本/剪枝超容
+  项），任何非确定性改写（摘要、改写句）都不做——记忆内容只由写入方决定。
+- 落盘纪律（W1）：写入只经 `store._mutate`（持 _file_lock + _read_raw_checked +
+  _detect_external_drift，见 tools/memory_tool_store）；闭包从锁内重读的最新条目推导保留
+  集，外部新增条目不在删除计划内一律保留，漂移由上游写 .bak 并中止，绝不整体覆写。
+- 判重纪律（W2）：合一键=精确匹配（与上游 load/写路径的 dict.fromkeys 同口径）。大小写
+  敏感文件系统里 /tmp/Report.md 与 /tmp/report.md 是两个文件；归一化（压空白/去大小写）
+  只用于「疑似重复」报告，命中项不落盘删除。
+- 门禁纪律（W3）：合并与容量剪枝都是删除性变更。无人值守（background review）只出报告
+  不落盘；有人值守（有审批权）才应用，其中容量剪枝再经 _apply_write_gate 同款写门禁。
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+import time
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
+
+# 陈旧判定：条目 mtime 超过该天数且存储区超容量时才可剪（容量未满不剪——记忆宁留勿删）。
+DEFAULT_STALE_DAYS = 30.0
+# 容量触发线：字符占用超过该比例才启动陈旧剪枝。
+PRUNE_CAPACITY_RATIO = 0.9
+
+
+def _normalize(text: str) -> str:
+    """归一化仅用于「疑似重复」报告，不参与落盘删除（W2）：压空白/去大小写差异。"""
+    return re.sub(r"\s+", " ", (text or "").strip()).casefold()
+
+
+@dataclass
+class DistillReport:
+    merged: int = 0
+    pruned: int = 0
+    skipped: int = 0
+    entries_before: int = 0
+    entries_after: int = 0
+    detail: List[str] = field(default_factory=list)
+    # target → 待删条目全文：容量剪枝项（过写门禁后按全文精确删除）
+    removals: Dict[str, List[str]] = field(default_factory=dict)
+    # target → 被合一的同文副本全文（dict.fromkeys 口径随落盘自然实现，不单独删条目）
+    collapse: Dict[str, List[str]] = field(default_factory=dict)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "merged": self.merged, "pruned": self.pruned, "skipped": self.skipped,
+            "entries_before": self.entries_before, "entries_after": self.entries_after,
+            "detail": self.detail[:20],
+        }
+
+
+def distill_pass(
+    store: Any,
+    *,
+    stale_days: float = DEFAULT_STALE_DAYS,
+    now: float | None = None,
+) -> DistillReport:
+    """只读规划：对 memory 与 user 两桶按**磁盘原始条目**算出确定性沉淀动作，不落盘。
+
+    规划面是原始盘面（_read_file 不去重、保留同文副本）——合一几个副本、剪哪几条都要看
+    真实落盘状态。删除动作放 report.collapse / report.removals，由 memory_tool 的
+    consolidate 挂接过门禁后调 apply_distill 落盘。stale_days 为 v2 陈旧语义预留，v1
+    剪枝只按容量+最旧写入序。报告逐条留痕，剪了什么一目了然。
+    """
+    now = now if now is not None else time.time()
+    report = DistillReport()
+    for target in ("memory", "user"):
+        raw_entries: List[str] = store._read_file(store._path_for(target))
+        report.entries_before += len(raw_entries)
+        # 1) 同文副本合一：精确匹配只留首条（与上游 dict.fromkeys 同口径，W2）。
+        seen: Dict[str, int] = {}
+        kept: List[str] = []
+        collapse: List[str] = []
+        for e in raw_entries:
+            if e in seen:
+                collapse.append(e)
+                report.merged += 1
+                report.detail.append(f"[{target}] 同文副本合一: {e.strip()[:40]}…")
+                continue
+            seen[e] = 1
+            kept.append(e)
+        # 2) 疑似重复（仅大小写/空白差异）只报告不删（W2）：casefold 归并曾把
+        #    /tmp/Report.md 与 /tmp/report.md 当重复删掉——大小写敏感文件系统里是两个文件。
+        groups: Dict[str, List[str]] = {}
+        for e in kept:
+            groups.setdefault(_normalize(e), []).append(e)
+        for same in groups.values():
+            if len(same) > 1:
+                report.detail.append(
+                    f"[{target}] 疑似重复(仅报告不删): {' | '.join(x.strip()[:20] for x in same)}")
+        # 3) 陈旧剪枝：仅当容量超线。条目陈旧度无独立 mtime（文件面整体加载），
+        #    以存储区最近修改时间为界不可行——v1 以「最旧写入序」近似：超线时按
+        #    写入序从旧到新剪到容量线下（skipped=因未超线未剪）。
+        limit = store._char_limit(target)
+        pruned: List[str] = []
+        if len("".join(kept)) > limit * PRUNE_CAPACITY_RATIO:
+            while kept and len("".join(kept)) > limit * PRUNE_CAPACITY_RATIO:
+                victim = kept.pop(0)
+                pruned.append(victim)
+                report.pruned += 1
+                report.detail.append(f"[{target}] 容量剪枝(最旧序): {victim.strip()[:40]}…")
+        else:
+            report.skipped += len(kept)
+        if collapse:
+            report.collapse[target] = collapse
+        if pruned:
+            report.removals[target] = pruned
+        report.entries_after += len(kept)
+    return report
+
+
+def apply_distill(store: Any, report: DistillReport) -> None:
+    """把已过门禁的报告落盘（W1）：写入走 store._mutate——持 _file_lock、
+    _read_raw_checked、_detect_external_drift（漂移时上游写 .bak 并中止），闭包从锁内
+    重读的最新条目推导保留集：外部新增条目不在删除计划内一律保留。
+
+    同文副本合一不在闭包里删条目：_mutate 读入即 dict.fromkeys 去重（与上游 load/任一
+    写路径同口径），随落盘自然实现——副本没有「删哪一条」的单条目标，按文本删会误删仅
+    存副本（v0.21.5 entry-pinning 回放也钉不住副本）。
+    """
+    for target in ("memory", "user"):
+        drop = set(report.removals.get(target) or [])
+        collapse_planned = bool(report.collapse.get(target))
+        if not drop and not collapse_planned:
+            continue
+
+        def _apply(entries: List[str], limit: int):
+            kept = [e for e in entries if e not in drop]
+            for e in entries:
+                if e in drop:
+                    report.detail.append(f"[{target}] 已剪枝: {e.strip()[:40]}…")
+            if kept == entries and not collapse_planned:
+                return {"success": True, "note": "no change"}  # dict=只读回传，不落盘
+            return kept, f"distill applied: {len(entries) - len(kept)} removed."
+
+        try:
+            result = store._mutate(target, _apply)
+        except Exception as exc:  # noqa: BLE001 - 落盘失败报告不静默
+            report.detail.append(f"[{target}] 落盘失败: {exc}")
+            logger.warning("memory distill persist failed: %s", exc)
+            continue
+        if result.get("success") is False:
+            report.detail.append(f"[{target}] 落盘中止: {result.get('error', '')[:120]}")
+            logger.warning("memory distill persist aborted: %s", result.get("error"))
+
+
+# ── cron 接线说明（运维面，非代码）────────────────────────────────────
+# 7d/30d auto-dream 节奏（mimo 语义）经 hermes 既有 cron 注册，例：
+#   hermes cron add --every 7d --profile <name> \
+#     --prompt "调用 memory 工具 action=consolidate 做周期沉淀，然后报告 merged/pruned 数字"
+# （cron 会话内模型可调 memory 工具；规则式 distill 本身无模型调用，prompt 只做报告壳。）

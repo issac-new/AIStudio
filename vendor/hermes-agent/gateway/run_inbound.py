@@ -245,7 +245,8 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
                 logger.warning("Unauthorized user: %s (%s) on %s", source.user_id, source.user_name, source.platform.value)
             return None
         # The busy path charged this event on arrival; a drained follow-up must not pay twice.
-        if not getattr(event, "_bot_loop_admitted", False) and not self._admit_bot_message_for_source(source):
+        if not getattr(event, "_bot_loop_admitted", False) and not (
+                self._admit_bot_message_for_source(source) and self._admit_bot_chain(event)):
             return None
         return event, source, False
 
@@ -630,10 +631,10 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
                 # The chat's first input, and a command's turn, not committed yet never commit.
                 authority.fence_route(_quick_key)
             return
-        from gateway.session_contract import Principal, SessionRef
+        from gateway.session_contract import SessionActor, SessionRef
         from hermes_state_runtime import RuntimeStoreError, list_session_admissions
         ref = SessionRef(authority.profile_id, sid)
-        actor = Principal('messaging-control', authority.profile_id,
+        actor = SessionActor('messaging-control', authority.profile_id,
                           frozenset({'session:submit', 'session:control'}), 'busy-command')
         rows = await asyncio.to_thread(list_session_admissions, authority.db, session_id=sid)
         # A FIFO paused on a lost (``unknown``) turn is the operator's to resume: its pause notice
@@ -1325,7 +1326,21 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         # passes the "already running" guard and spins up a duplicate agent for the same session.
         _active_session_lease, _limit_message = self._claim_active_session_slot(_quick_key, source)
         if _limit_message is not None:
-            logger.info("Rejecting new active session %s: max_concurrent_sessions reached", _quick_key)
+            # Capacity refusals are operational signals, not chat content: echoed into the
+            # room the "session limit" notice is itself a new room message that re-triggers
+            # every agent's dispatch, and every one of those refusals echoes again — a
+            # self-sustaining notification storm in multi-agent rooms. Hold the rejected
+            # event for a silent retry when a slot frees instead of dropping it, and keep
+            # the refusal in the logs only. Ownership/coordination refusals still reply:
+            # they name an actionable conflict on THIS session and cannot amplify across
+            # agents the same way.
+            from hermes_cli.active_sessions import MAX_CONCURRENT_SESSIONS
+            if getattr(_limit_message, "reason", None) in (None, MAX_CONCURRENT_SESSIONS):
+                logger.info(
+                    "Capacity refusal for %s: queued silently for retry when a slot frees "
+                    "(not echoed to chat)", _quick_key)
+                self._queue_capacity_retry(event, source, _quick_key)
+                return None
             return _limit_message
 
         event, source, is_internal = self._hm_rescue_orphaned_fifo(event, source, is_internal, _quick_key)
@@ -1489,7 +1504,8 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         self, adapter, source: SessionSource, transcripts: list[str], *, metadata=None, log_context: str = "Transcript"
     ) -> None:
         """Send each transcript back as ``🎙️ "…"`` (best-effort; failures are logged, never raised)."""
-        for tx in transcripts:
+        from gateway.bot_peer_notices import automatic_notices_allowed
+        for tx in transcripts if automatic_notices_allowed(source) else ():
             try:
                 await adapter.send(source.chat_id, t("gateway.voice.transcript_echo_short", text=tx), metadata=metadata)
             except Exception as echo_exc:
@@ -1686,7 +1702,8 @@ class GatewayInboundMixin(GatewayInboundHooksMixin, GatewayInboundTranscriptionM
         expanded, refusal = await inbound_references(self, source, session_key, message_text)
         if refusal is None:
             return expanded
-        _adapter = self._delivery_adapter_for(source)
+        from gateway.bot_peer_notices import automatic_notices_allowed
+        _adapter = self._delivery_adapter_for(source) if automatic_notices_allowed(source) else None
         if _adapter:
             await _adapter.send(source.chat_id, refusal)
         return None

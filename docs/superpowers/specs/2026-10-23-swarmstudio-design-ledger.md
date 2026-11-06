@@ -71,10 +71,10 @@
 | 对象 | 核实值 | 版本载体 |
 |---|---|---|
 | hermes-studio 基线 | v1.0.9 | `vendor/VENDOR.md` |
-| hermes-agent 基线 | v0.22.6 | `vendor/VENDOR.md` |
+| hermes-agent 基线 | v0.23.0 | `vendor/VENDOR.md` |
 | zcode 基线谱系 | v3.16.1 系列（包版本 3.17.2 @a9fe401e，2026-11-03 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
 | 驾驶舱模块 | 1.0.9-studio.9 | `RELEASE-NOTES.md` |
-| agent teams 模块 | v0.22.6-team.1 | `team/VERSION` |
+| agent teams 模块 | v0.23.0-team.1 | `team/VERSION` |
 | Ycode 模块 | 3.17.2 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
 | yuan skill 模块 | v2.95.0 | `skills/swarm-yuan/CHANGELOG.md` |

@@ -229,11 +229,11 @@ index 0000000000..f8af4b7064
 +        assert "不可信数据" in s
 +        assert s.split("⟦subagent-output:0⟧", 1)[1].count("⟦subagent-output:1⟧") == 0
 diff --git a/tools/delegate_tool_dispatch.py b/tools/delegate_tool_dispatch.py
-index e66f43e7dc..215a99ea80 100644
+index 1e4ec36558..7581144ffd 100644
 --- a/tools/delegate_tool_dispatch.py
 +++ b/tools/delegate_tool_dispatch.py
-@@ -182,6 +182,43 @@ def _run_children_parallel(batch: _Batch, results: list, *, honor_parent_interru
-         executor.shutdown(wait=not interrupted, cancel_futures=interrupted)
+@@ -206,6 +206,43 @@ def _run_children_parallel(batch: _Batch, results: list, *, honor_parent_interru
+                 _release_unstarted_child(batch, _child_by_index.get(idx))
      results.sort(key=lambda r: r["task_index"])  # match input order
  
 +# ── 子代理结果来源标头（claude-code 2.1.277 概念吸收，矩阵 §3.7 P0）──
@@ -243,7 +243,7 @@ index e66f43e7dc..215a99ea80 100644
 +
 +
 +def _neutralize_marks(text: str) -> str:
-+    return text.replace("⟦subagent-output:", "⟦subagent-output\u200b:").replace("⟦/subagent-output", "⟦\u200b/subagent-output") if isinstance(text, str) else text
++    return text.replace("⟦subagent-output:", "⟦subagent-output​:").replace("⟦/subagent-output", "⟦​/subagent-output") if isinstance(text, str) else text
 +
 +
 +def mark_entry_summaries(payload: dict) -> dict:
@@ -276,7 +276,7 @@ index e66f43e7dc..215a99ea80 100644
  def _execute_and_aggregate(batch: _Batch, *, honor_parent_interrupt: bool = True) -> dict:
      """Run the batch's built children, join, finalize (hooks + cost rollup), return the combined dict. Shared by the
      sync path and the background runner; a background runner receives a per-group unit (a subset of the call's
-@@ -223,7 +260,7 @@ def _execute_and_aggregate(batch: _Batch, *, honor_parent_interrupt: bool = True
+@@ -247,7 +284,7 @@ def _execute_and_aggregate(batch: _Batch, *, honor_parent_interrupt: bool = True
          combined["live_transcripts"] = unit_paths
      if batch.group is not None:
          combined["group"] = batch.group
@@ -285,7 +285,7 @@ index e66f43e7dc..215a99ea80 100644
  
  _SYNC_FALLBACK_NOTES = {
      "no_async": (
-@@ -493,4 +530,4 @@ def _run_batch(batch: _Batch, background: bool) -> str:
+@@ -517,4 +554,4 @@ def _run_batch(batch: _Batch, background: bool) -> str:
      )
      if background and not session_joins_delegation(batch.parent_agent):
          return _dispatch_background(batch)

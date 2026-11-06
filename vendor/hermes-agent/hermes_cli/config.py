@@ -1713,12 +1713,19 @@ def _canonicalize_config(config: dict[str, Any]) -> dict[str, Any]:
 # the iteration budget without an "unlimited" special case, and is unreachable in practice.
 TURN_LIMIT_UNLIMITED = sys.maxsize
 
+# Default cap when nothing configures one (2026-11-05 convergence, AI Native absorption T5):
+# three help texts disagreed (500 / 60 / unlimited) while code defaulted to TURN_LIMIT_UNLIMITED.
+# An unconfigured agent can then loop unbounded (loop-death beats silent truncation as the
+# worse failure); 200 is generous for a single turn. Explicit "none"/"unlimited"/"inf"/0/-1
+# spellings still resolve to TURN_LIMIT_UNLIMITED — opting back into unlimited stays possible.
+TURN_LIMIT_DEFAULT = 200
+
 # Spellings that mean "no limit" (compared lowercased, whitespace-stripped).
 _UNLIMITED_SPELLINGS = frozenset({
     "none", "null", "unlimited", "infinite", "infinity", "inf", "∞", "-1", "0"})
 
 
-def resolve_turn_limit(raw: Any, default: int = TURN_LIMIT_UNLIMITED) -> int:
+def resolve_turn_limit(raw: Any, default: int = TURN_LIMIT_DEFAULT) -> int:
     """Normalize a raw ``agent.max_turns`` value into an int iteration cap (always >= 1)."""
     # bool is a subclass of int; reject explicitly so True/False don't become 1/0.
     if raw is None or isinstance(raw, bool):

@@ -12,12 +12,16 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 ### Version
 
-Current: **v0.22.7-team.1** (base bumped 2026-11-04 with the vendor upgrade to hermes-agent v0.22.7; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.22.6-team.1.
+Current: **v0.23.0-team.1** (base bumped 2026-11-06 with the vendor upgrade to hermes-agent v0.23.0; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.22.7-team.3.
 
-### What changed in this release (v0.22.7-team.1)
+### What changed in this release (v0.23.0-team.1)
+
+- **Base bump only**: hermes-agent base v0.22.7 → v0.23.0 (vendor upgrade 2026-11-06, spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`); extension counter reset to 1. No profile content changes.
+- Previous releases in the 0.22.7 base line: v0.22.7-team.1..team.3 (below).
+
+### What changed in v0.22.7-team.1 (2026-11-04)
 
 - **Base bump only**: hermes-agent base v0.22.6 → v0.22.7 (vendor upgrade 2026-11-04, spec `docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md`); extension counter reset to 1. No profile content changes.
-- Previous releases in the old base line: v0.22.5-team.1..team.8 (below).
 
 ### What changed in v0.22.6-team.1 (2026-11-03)
 

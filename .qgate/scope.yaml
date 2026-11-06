@@ -431,3 +431,18 @@ paths:
   # 评测黄金集批（C 批）
   - docs/superpowers/specs/2026-11-06-eval-golden-set.md
   - custom/server/eval/golden-set.ts
+  # vendor agent v0.23.0 换血批（spec 2026-11-06-vendor-upgrade-agent-v0230）
+  - docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md
+  - patches/400-agent-compact-six-segment-handoff.patch
+  - patches/408-agent-tool-model-overrides.patch
+  - patches/410-agent-source-marks-recap.patch
+  - patches/470-hosted-rooms-collab-event-id.patch
+  - patches/593-agent-per-tool-allowlist.patch
+  - patches/602-agent-session-telemetry.patch
+  - patches/series
+  - .archived-patches/742-agent-v0227-runtime-resync.patch
+  - vendor/VENDOR.md
+  - team/**
+  - README.md
+  - AGENTS.md
+  - RELEASE-MANIFEST.json

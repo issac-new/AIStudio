@@ -383,3 +383,23 @@ def _get_approval_transport_config() -> tuple[str, str | None]:
         # prompt on a built-in surface the operator may not be watching.
         return "config-error", None
     return selected or "builtin", "builtin" if fallback == "builtin" else None
+
+
+def _get_approval_timeout_action() -> str:
+    """PR-2（V8.29 治理轮，run16 实锤）：approvals.timeout_action — 'expire'（缺省，
+    现行语义：到期即不执行+超时告知）| 'escalate'（到期重发待批卡再等一轮，轮满才
+    expire）。驱动缺席期待批令无人应答被静默拒绝、修复链在权限门口饿死，是本开关
+    的立法事由。"""
+    try:
+        v = str(_get_approval_config().get("timeout_action", "expire")).lower().strip()
+        return "escalate" if v in {"escalate", "reask", "remind"} else "expire"
+    except Exception:
+        return "expire"
+
+
+def _get_approval_escalate_rounds() -> int:
+    """PR-2：escalate 模式的重发轮数（缺省 2，夹在 0-10）。"""
+    try:
+        return max(0, min(10, int(_get_approval_config().get("escalate_rounds", 2))))
+    except (ValueError, TypeError):
+        return 2

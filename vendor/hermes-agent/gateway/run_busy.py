@@ -79,6 +79,29 @@ def _tail_has_slot(tail: str, slot: str) -> bool:
     return _strip_slot(tail, slot) is not None
 
 
+def _capacity_retry_anchor(event: Any) -> Any:
+    """Stable identity for a capacity-retry entry ACROSS re-entry round trips.
+
+    The original design keyed the age anchor on ``id(event)``, but a refused
+    message that comes back through ``handle_message`` arrives as a NEW object:
+    every hop minted a fresh ``id()`` → ``first_seen`` reset → MAX_AGE never
+    fired (run11 field evidence: one echo broadcast re-enqueued 300+ times,
+    queue stuck at capacity for hours while zero entries expired). Matrix
+    events carry a stable ``event_id`` — that survives object replacement.
+    Non-event payloads fall back to (sender, body) hashing, then ``id()``.
+    """
+    eid = getattr(event, "event_id", None)
+    if eid:
+        return eid
+    content = getattr(event, "content", None)
+    body = getattr(content, "body", None)
+    if body is None and isinstance(content, dict):
+        body = content.get("body")
+    if body is not None:
+        return ("body", str(getattr(event, "sender", "")), str(body)[:256])
+    return id(event)
+
+
 def _same_chat_key_slots(
     key: str, *, prefix: str, chat_id: str, scope_id: Optional[str],
 ) -> Optional[tuple[str, str]]:
@@ -354,6 +377,111 @@ class GatewayBusySessionMixin:
         from hermes_cli.active_sessions import active_session_limit_message
         return active_session_limit_message(active_count, max_sessions)
 
+    # Capacity-refusal retry (notification-storm root fix): a message that lost the race
+    # for a slot is held and re-dispatched when capacity frees, never echoed back into the
+    # chat (see the claim path in run_inbound) and never silently dropped. Bounded so a
+    # burst cannot pile up unbounded waiters; one poller drains the whole queue.
+    CAPACITY_RETRY_POLL_SEC = 2.0
+    CAPACITY_RETRY_MAX_AGE_SEC = 20 * 60.0
+    CAPACITY_RETRY_MAX_PENDING = 64
+
+    _CAPACITY_SIDECAR_MIN_INTERVAL_S = 2.0
+
+    def _write_capacity_sidecar(self) -> None:
+        """二期容量内省：队列深度写 sidecar（<HERMES_HOME>/runtime/capacity_retry.json，
+        限频 ≥2s）。集群巡检官由此免改 api_server/run.py 即可观测容量泵状态。fail-soft。"""
+        now = time.monotonic()
+        last = getattr(self, "_capacity_sidecar_last", 0.0)
+        if now - last < self._CAPACITY_SIDECAR_MIN_INTERVAL_S:
+            return
+        self._capacity_sidecar_last = now
+        try:
+            from pathlib import Path as _P
+            home = _P(os.environ.get("HERMES_HOME") or _P.home() / ".hermes")
+            d = home / "runtime"
+            d.mkdir(parents=True, exist_ok=True)
+            q = getattr(self, "_capacity_retry_queue", None) or []
+            sm = getattr(self, "_capacity_retry_since", None) or {}
+            (d / "capacity_retry.json").write_text(
+                json.dumps({"ts": time.time(), "depth": len(q), "anchors": len(sm),
+                            "cap": self.CAPACITY_RETRY_MAX_PENDING}), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _queue_capacity_retry(self, event: MessageEvent, source: SessionSource, session_key: str) -> bool:
+        """Hold *event* for a silent retry when a session slot frees; False when the
+        bounded queue is full (then the event is dropped WITH a log line, not silently)."""
+        pending = getattr(self, "_capacity_retry_queue", None)
+        if pending is None:
+            pending = self._capacity_retry_queue = []
+        if len(pending) >= self.CAPACITY_RETRY_MAX_PENDING:
+            logger.warning(
+                "Capacity retry queue full (%d); dropping message for %s",
+                len(pending), session_key)
+            return False
+        now = time.monotonic()
+        # Age anchor + re-refusal backoff keyed on the event identity: a cross-process
+        # refusal (slots held by another gateway process or a CLI exec) comes back
+        # through handle_message and re-enqueues as a NEW entry, so both the age limit
+        # and the retry pacing must survive that round trip — otherwise the pump spins
+        # with zero backoff and MAX_AGE never fires (24h review P1/P2).
+        since_map = getattr(self, "_capacity_retry_since", None)
+        if since_map is None:
+            since_map = self._capacity_retry_since = {}
+        anchor_key = _capacity_retry_anchor(event)
+        first_seen = since_map.get(anchor_key)
+        if first_seen is None:
+            since_map[anchor_key] = now
+            not_before = now
+        else:
+            not_before = now + self.CAPACITY_RETRY_POLL_SEC
+        if len(since_map) > self.CAPACITY_RETRY_MAX_PENDING * 2:
+            # Delivered events never come back; age out their anchors to stay bounded.
+            for k in [k for k, v in since_map.items() if now - v > self.CAPACITY_RETRY_MAX_AGE_SEC]:
+                since_map.pop(k, None)
+        pending.append((first_seen if first_seen is not None else now, event, source, session_key, not_before))
+        self._write_capacity_sidecar()
+        pump = getattr(self, "_capacity_retry_task", None)
+        if pump is None or pump.done():
+            if pump is not None and not pump.cancelled():
+                pump.exception()  # retrieve a dead pump's exception; no orphaned-task warning
+            self._capacity_retry_task = asyncio.create_task(self._capacity_retry_pump())
+        return True
+
+    async def _capacity_retry_pump(self) -> None:
+        """Re-dispatch capacity-rejected events once a slot frees (FIFO, age-bounded)."""
+        queue = getattr(self, "_capacity_retry_queue", None) or []
+        while queue:
+            enqueued_ts, event, source, session_key, not_before = queue[0]
+            now = time.monotonic()
+            if now - enqueued_ts > self.CAPACITY_RETRY_MAX_AGE_SEC:
+                queue.pop(0)
+                since_map = getattr(self, "_capacity_retry_since", None)
+                if since_map is not None:
+                    since_map.pop(_capacity_retry_anchor(event), None)
+                logger.warning(
+                    "Capacity retry for %s expired after %.0fs; dropping",
+                    session_key, self.CAPACITY_RETRY_MAX_AGE_SEC)
+                self._write_capacity_sidecar()
+                continue
+            if now < not_before:
+                await asyncio.sleep(min(self.CAPACITY_RETRY_POLL_SEC, not_before - now))
+                continue
+            if self._active_session_limit_message(session_key) is not None:
+                await asyncio.sleep(self.CAPACITY_RETRY_POLL_SEC)
+                continue
+            queue.pop(0)
+            logger.info("Capacity retry: re-dispatching queued message for %s", session_key)
+            try:
+                adapter = self._delivery_adapter_for(source)
+                if adapter is None:
+                    logger.warning("Capacity retry for %s has no delivery adapter; dropping", session_key)
+                    continue
+                await adapter.handle_message(event)
+                self._write_capacity_sidecar()
+            except Exception:
+                logger.warning("Capacity retry dispatch failed for %s", session_key, exc_info=True)
+
     def _claim_active_session_slot(
         self, session_key: str, source: SessionSource
     ) -> tuple[Any, Optional[str]]:
@@ -616,7 +744,12 @@ class GatewayBusySessionMixin:
         return None if getattr(event, "internal", False) else event.message_id
 
     async def _send_busy_reply(self, event: MessageEvent, adapter, content: str, *, plain_anchor: bool = False) -> None:
-        """Send a busy-path reply anchored to the event (thread metadata included)."""
+        """Send a busy-path reply anchored to the event (thread metadata included). Never to a bot:
+        an ack, redirect or drain notice is a new inbound message for its turn loop (#137027)."""
+        from gateway.bot_peer_notices import automatic_notices_allowed
+        if not automatic_notices_allowed(event.source):
+            logger.debug("Busy-path notice suppressed for bot-authored message in %s", event.source.chat_id)
+            return
         reply_anchor = self._reply_anchor_for_event(event)
         await adapter._send_with_retry(
             chat_id=event.source.chat_id, content=content,
@@ -950,7 +1083,7 @@ class GatewayBusySessionMixin:
             )
             return True  # handled (silently dropped); do not fall through
         # A steered or queued follow-up never reaches _hm_admit_event, so the budget is charged here.
-        if not self._admit_bot_message_for_source(event.source):
+        if not (self._admit_bot_message_for_source(event.source) and self._admit_bot_chain(event)):
             return True
         event._bot_loop_admitted = True
 
@@ -1073,8 +1206,9 @@ class GatewayBusySessionMixin:
         if (sink := active_sink()) is not None:
             sink.notices.append(text)  # a local slash.exec: the ack rides the client's directive
             return
+        from gateway.bot_peer_notices import automatic_notices_allowed
         try:
-            adapter = self._delivery_adapter_for(source)
+            adapter = self._delivery_adapter_for(source) if automatic_notices_allowed(source) else None
             if adapter:
                 await adapter.send(
                     str(source.chat_id), text, metadata=self._thread_metadata_for_source(source)

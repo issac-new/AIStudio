@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import math
 import os
 import shlex
 import sys
@@ -217,6 +218,7 @@ _DELEGATED_CHILD_DENIED_ACTIONS: frozenset[str] = frozenset({
 _DELEGATED_CHILD_DENIED_BOARD_ACTIONS: frozenset[str] = frozenset({
     "create", "new", "rm", "remove", "delete", "switch", "use", "rename",
     "set-default-workdir", "import",
+    "set-project",  # HERMES_CUSTOM[v020]
 })
 
 
@@ -265,14 +267,18 @@ def _require_ids(args: argparse.Namespace) -> tuple[list[str], int]:
 
 def _parse_duration(val) -> Optional[int]:
     """``30s`` / ``5m`` / ``2h`` / ``1d`` or a raw integer → seconds; None for empty input;
-    ValueError on malformed input."""
+    ValueError on malformed input (negative or out-of-range like ``1e999d`` included)."""
     if val is None or val == "":
         return None
     s = str(val).strip().lower()
     try:
-        return int(s)  # bare integer → seconds
+        seconds = int(s)  # bare integer → seconds
     except ValueError:
         pass
+    else:
+        if seconds < 0:
+            raise ValueError(f"malformed duration {val!r} (negative durations are not allowed)")
+        return seconds
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     if not (s and s[-1] in units):
         raise ValueError(f"malformed duration {val!r} (expected 30s, 5m, 2h, 1d, or a number)")
@@ -280,7 +286,14 @@ def _parse_duration(val) -> Optional[int]:
         n = float(s[:-1])
     except ValueError as exc:
         raise ValueError(f"malformed duration {val!r}") from exc
-    return int(n * units[s[-1]])
+    # ``float`` happily yields inf/nan ("infd", "1e999d"), and even a finite
+    # mantissa can overflow to inf mid-multiply ("1e308d" * 86400); ``int()``
+    # then raises OverflowError, which no caller catches. Refuse anything
+    # non-finite or negative before the conversion.
+    seconds = n * units[s[-1]]
+    if not math.isfinite(seconds) or seconds < 0:
+        raise ValueError(f"malformed duration {val!r}")
+    return int(seconds)
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
@@ -356,6 +369,16 @@ def _cmd_create(args: argparse.Namespace) -> int:
         max_runtime = _parse_duration(getattr(args, "max_runtime", None))
     except ValueError as exc:
         return _err(f"kanban: --max-runtime: {exc}", 2)
+    raci_raw = getattr(args, "raci", None)
+    raci = None
+    if raci_raw:
+        try:
+            parsed_raci = json.loads(raci_raw)
+            raci = parsed_raci if isinstance(parsed_raci, dict) else None
+        except (ValueError, TypeError):
+            return _err("kanban: --raci must be a JSON object", 2)
+        if raci is None:
+            return _err("kanban: --raci must be a JSON object", 2)
     max_retries = getattr(args, "max_retries", None)
     if max_retries is not None and max_retries < 1:
         return _err(f"kanban: --max-retries must be >= 1 (got {max_retries}); "
@@ -371,9 +394,11 @@ def _cmd_create(args: argparse.Namespace) -> int:
             max_runtime_seconds=max_runtime, skills=getattr(args, "skills", None) or None,
             max_retries=max_retries, model_override=getattr(args, "model_override", None),
             provider_override=getattr(args, "provider_override", None),
+            reasoning_effort=getattr(args, "reasoning_effort", None),  # HERMES_CUSTOM[v020]
             goal_mode=bool(getattr(args, "goal_mode", False)),
             goal_max_turns=getattr(args, "goal_max_turns", None),
             completion_contract=getattr(args, "completion_contract", None),
+            raci=raci,
             initial_status=getattr(args, "initial_status", "running"),
             creator_task_id=(os.environ.get("HERMES_KANBAN_TASK")
                              if is_dispatcher_owned_worker_context() else None),
@@ -598,6 +623,137 @@ def _cmd_set_model(args: argparse.Namespace) -> int:
     return 0
 
 
+# HERMES_CUSTOM[v020] BEGIN: set-reasoning + estimate handlers
+def _cmd_set_reasoning(args: argparse.Namespace) -> int:
+    effort = args.effort
+    if effort is not None and effort.lower() in {"clear", "-", "null", ""}:
+        effort = None
+    try:
+        with kbc.connect_closing() as conn:
+            ok = kb.set_reasoning_effort(conn, args.task_id, effort)
+    except (ValueError, RuntimeError) as exc:
+        return _err(f"kanban: {exc}", 2)
+    if not ok:
+        return _err(f"no such task: {args.task_id}", 1)
+    if effort:
+        print(f"Set reasoning effort on {args.task_id}: {effort} "
+              "(applies on next dispatch)")
+    else:
+        print(f"Cleared reasoning effort on {args.task_id} "
+              "(worker uses its profile default)")
+    return 0
+
+
+_ESTIMATE_SYSTEM_PROMPT = (
+    "You estimate how much work an autonomous coding agent will spend on a "
+    "kanban task. Given the task title and description, respond with STRICT "
+    "JSON only (no prose, no code fence):\n"
+    '{"est_tokens": <integer total tokens across the whole run>, '
+    '"complexity": "S"|"M"|"L", '
+    '"rationale": "<one short sentence>"}\n'
+    "Base the token figure on a realistic multi-turn agent run (reading files, "
+    "tool calls, edits, retries) — not a single reply. S≈small/localized, "
+    "M≈multi-file, L≈broad or ambiguous. Be honest that this is a rough guess."
+)
+
+
+def _run_estimate(title: str, body: Optional[str]) -> dict:
+    """Mirror of plugins/kanban/dashboard/plugin_api.py::_run_estimate.
+
+    Kept self-contained (no plugin import) to avoid pulling FastAPI into the
+    CLI. Never raises — a bad config / parse / API error becomes
+    ``{"ok": False, "reason": ...}`` so callers can render it inline.
+    """
+    if not (title or "").strip():
+        return {"ok": False, "reason": "a title is required to estimate"}
+    try:
+        from agent.auxiliary_client import call_llm
+    except Exception:
+        return {"ok": False, "reason": "auxiliary client unavailable"}
+
+    def _cap(s, n):
+        s = (s or "").strip()
+        return s if len(s) <= n else s[:n] + "…"
+
+    user_msg = (
+        f"Title: {_cap(title, 400)}\n\n"
+        f"Description:\n{_cap(body, 4000) or '(none)'}"
+    )
+    try:
+        resp = call_llm(
+            task="kanban_estimator",
+            messages=[
+                {"role": "system", "content": _ESTIMATE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.0,
+            max_tokens=300,
+            timeout=60,
+        )
+    except Exception as exc:
+        return {"ok": False, "reason": f"LLM error: {type(exc).__name__}"}
+    try:
+        raw = (resp.choices[0].message.content or "").strip()
+        model = getattr(resp, "model", None)
+    except Exception:
+        raw, model = "", None
+    parsed = None
+    try:
+        import re as _re
+        blob = raw
+        if not blob.lstrip().startswith("{"):
+            m = _re.search(r"\{.*\}", blob, _re.DOTALL)
+            blob = m.group(0) if m else blob
+        obj = json.loads(blob)
+        if isinstance(obj, dict):
+            parsed = obj
+    except Exception:
+        parsed = None
+    if not parsed:
+        return {"ok": False, "reason": "could not parse an estimate from the model"}
+    try:
+        est_tokens = int(parsed.get("est_tokens") or 0)
+    except (TypeError, ValueError):
+        est_tokens = 0
+    complexity = str(parsed.get("complexity") or "").strip().upper()
+    if complexity not in {"S", "M", "L"}:
+        complexity = None
+    rationale = str(parsed.get("rationale") or "").strip() or None
+    return {
+        "ok": True,
+        "est_tokens": est_tokens,
+        "complexity": complexity,
+        "rationale": rationale,
+        "model": model,
+    }
+
+
+def _cmd_estimate(args: argparse.Namespace) -> int:
+    title, body = args.title, args.body
+    if args.task_id:
+        with kbc.connect_closing() as conn:
+            task = kb.get_task(conn, args.task_id)
+        if task is None:
+            return _err(f"no such task: {args.task_id}", 1)
+        title, body = task.title, task.body
+    result = _run_estimate(title or "", body)
+    if getattr(args, "json", False):
+        _print_json(result)
+    elif result.get("ok"):
+        cx = result.get("complexity") or "?"
+        line = f"~{result.get('est_tokens', 0)} tokens · {cx}"
+        if result.get("rationale"):
+            line += f" — {result['rationale']}"
+        print(line)
+    else:
+        print(f"estimate failed: {result.get('reason')}", file=sys.stderr)
+    # Always exit 0 once the estimate ran: a non-OK outcome is carried in the
+    # payload (mirrors the REST endpoint, where ok:false is not an HTTP error)
+    # so CLI callers can render it inline instead of treating it as a failure.
+    return 0
+# HERMES_CUSTOM[v020] END
+
+
 def _cmd_reclaim(args: argparse.Namespace) -> int:
     with kbc.connect_closing() as conn:
         ok = kb.reclaim_task(conn, args.task_id, reason=getattr(args, "reason", None))
@@ -624,6 +780,42 @@ def _rows_by_task(conn, table: str, ids: list[str]) -> dict[str, list]:
     for row in conn.execute(f"SELECT * FROM {table} WHERE task_id IN ({placeholders}) ORDER BY id", tuple(ids)):
         by.setdefault(row["task_id"], []).append(row)
     return by
+
+
+def _cmd_sleeping_workers(args: argparse.Namespace) -> int:
+    """PR-3（V8.29 治理轮）：休眠工作者探针——running 卡 assignee 真做静默超阈清单。
+    只读不唤醒（唤醒走 gateway.wake 既有通道与所有权检查）。"""
+    import contextlib
+    import json as _json
+    from hermes_cli.kanban_sleeping import sleeping_workers
+    conn = None
+    try:
+        from hermes_cli import kanban_db_connect as _kdc
+        conn = _kdc.connect()
+        running = conn.execute(
+            "SELECT id, assignee FROM tasks WHERE status='running'").fetchall()
+        rows = sleeping_workers(
+            [{"id": r[0], "assignee": r[1]} for r in running],
+            idle_sec=getattr(args, "idle_sec", 1800) or 1800)
+        print(_json.dumps({"idle_sec": getattr(args, "idle_sec", 1800), "sleeping": rows},
+                          ensure_ascii=False, indent=1))
+        return 0
+    except Exception as exc:
+        print(_json.dumps({"error": str(exc)}))
+        return 1
+    finally:
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.close()
+
+
+def _cmd_selfcheck(args: argparse.Namespace) -> int:
+    """PR-4（V8.29 治理轮）：看板写路径启动自检——UDF 注册/守卫触发器/裸连接拒绝
+    三面探测，任一失败非零退出（供启动 fail-fast 与 prelaunch 消费）。"""
+    from hermes_cli.kanban_db import write_path_selfcheck
+    report = write_path_selfcheck(board=getattr(args, "board", None))
+    _print_json(report)
+    return 0 if report.get("ok") else 1
 
 
 def _cmd_diagnostics(args: argparse.Namespace) -> int:
@@ -907,6 +1099,27 @@ def _cmd_complete(args: argparse.Namespace) -> int:
     metadata, rc = _parse_metadata_flag(raw_meta)
     if rc:
         return rc
+    # 完成契约回执（内核门输入）：JSON 字面量或 @file；多 id 批量关单禁用（回执是单卡证据）。
+    raw_receipt = getattr(args, "receipt", None)
+    receipt = None
+    if raw_receipt:
+        if len(ids) > 1:
+            return _err("kanban: --receipt is per-task evidence and can't be used with "
+                        "multiple ids. Complete tasks one at a time.", 2)
+        text: Optional[str] = None
+        if raw_receipt.startswith("@"):
+            try:
+                text = Path(raw_receipt[1:]).expanduser().read_text(encoding="utf-8")
+            except OSError as exc:
+                return _err(f"kanban: cannot read --receipt file: {exc}", 2)
+        else:
+            text = raw_receipt
+        try:
+            receipt = json.loads(text)
+        except ValueError as exc:
+            return _err(f"kanban: --receipt is not valid JSON: {exc}", 2)
+        if not isinstance(receipt, dict):
+            return _err("kanban: --receipt must be a JSON object", 2)
     fail_msg: dict[str, str] = {}
     with kbc.connect_closing() as conn:
         def op(tid):
@@ -921,7 +1134,9 @@ def _cmd_complete(args: argparse.Namespace) -> int:
             try:
                 done = kb.complete_task(conn, tid, result=args.result, summary=summary, metadata=metadata,
                                         expected_run_id=_worker_run_id_for(tid),
-                                        force=bool(getattr(args, "force", False)))
+                                        force=bool(getattr(args, "force", False)),
+                                        receipt=receipt,
+                                        workspace=os.environ.get("HERMES_KANBAN_WORKSPACE"))
             except kb.LiveClaimError:
                 fail_msg[tid] = (f"cannot complete {tid}: a live worker is running it. Wait for the "
                                  f"worker, `hermes kanban reclaim {tid}` to release it, or re-run with "
@@ -930,6 +1145,10 @@ def _cmd_complete(args: argparse.Namespace) -> int:
             except kb.EmptyCompletionError as empty_err:
                 fail_msg[tid] = (f"cannot complete {tid}: {empty_err}. Pass --result/--summary "
                                  f"describing what was done (an empty completion is not evidence).")
+                return False
+            except ValueError as contract_err:
+                # 内核完成契约门（complete_task）拒绝：结构化透传给 worker/操作者。
+                fail_msg[tid] = f"cannot complete {tid}: {contract_err}"
                 return False
             if not done:
                 # complete_task returns bare False for a dependency refusal too;
@@ -1321,6 +1540,7 @@ _HANDLERS = {
     "init": _cmd_init, "create": _cmd_create, "swarm": _cmd_swarm,
     "list": _cmd_list, "ls": _cmd_list, "show": _cmd_show,
     "assign": _cmd_assign, "set-model": _cmd_set_model,
+    "set-reasoning": _cmd_set_reasoning, "estimate": _cmd_estimate,  # HERMES_CUSTOM[v020]
     "reclaim": _cmd_reclaim, "reassign": _cmd_reassign,
     "diagnostics": _cmd_diagnostics, "diag": _cmd_diagnostics,
     "link": _cmd_link, "unlink": _cmd_unlink, "claim": _cmd_claim,

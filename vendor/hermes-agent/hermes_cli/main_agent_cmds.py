@@ -57,12 +57,63 @@ def _cmd_memory_reset(args):
     print(f"  Files were in: {display_hermes_home()}/memories/\n")
 
 
+def _cmd_memory_set(args):
+    """``hermes memory set``：内置记忆文件的单写者收口（原子写 + 可选 mtime CAS）。
+
+    上游缺口 R2 的根治面：studio/agent 改记忆三文件（MEMORY.md/USER.md/SOUL.md）
+    一律经本命令写入，杜绝多写者半截文件与静默互覆。退出码：0 成功、3 mtime
+    冲突（--expect-mtime 校验失败）、4 参数/源文件错误。
+    """
+    from datetime import datetime
+    from pathlib import Path
+
+    from hermes_constants import get_hermes_home
+    from utils import atomic_write_text
+
+    home = get_hermes_home()
+    dest = {
+        "memory": home / "memories" / "MEMORY.md",
+        "user": home / "memories" / "USER.md",
+        "soul": home / "SOUL.md",
+    }[args.section]
+    src = Path(args.file)
+    if not src.is_file():
+        print(f"  ✗ source file not found: {src}", file=sys.stderr)
+        raise SystemExit(4)
+    content = src.read_text(encoding="utf-8")
+
+    expect = getattr(args, "expect_mtime", None)
+    if expect:
+        text = str(expect).strip()
+        try:
+            exp_ms = int(round(float(text)))
+        except ValueError:
+            try:
+                exp_ms = int(round(
+                    datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp() * 1000))
+            except Exception:
+                print("  ✗ --expect-mtime must be epoch ms or ISO-8601", file=sys.stderr)
+                raise SystemExit(4)
+        if dest.exists():
+            cur_ms = int(round(dest.stat().st_mtime * 1000))
+            if cur_ms != exp_ms:
+                print(f"  ✗ mtime conflict: {args.section} changed since load "
+                      f"(current mtime ms={cur_ms})", file=sys.stderr)
+                raise SystemExit(3)
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_text(dest, content)
+    print(f"  ✓ wrote {args.section} → {dest}")
+
+
 def cmd_memory(args):
     sub = getattr(args, "memory_command", None)
     if sub == "off":
         _cmd_memory_off()
     elif sub == "reset":
         _cmd_memory_reset(args)
+    elif sub == "set":
+        _cmd_memory_set(args)
     else:
         from hermes_cli.memory_setup import memory_command
         memory_command(args)

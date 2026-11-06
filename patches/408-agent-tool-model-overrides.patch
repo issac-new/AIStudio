@@ -1,11 +1,12 @@
 diff --git a/agent/agent_init.py b/agent/agent_init.py
-index 72d96a38f..ee651b268 100644
+index 241f094c31..df5f988d5f 100644
 --- a/agent/agent_init.py
 +++ b/agent/agent_init.py
-@@ -1035,6 +1035,11 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
+@@ -1035,6 +1035,12 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
+     agent._tool_snapshot_selection = tool_selection_key(enabled_toolsets, disabled_toolsets)  # tools[] freeze gate
      agent.tools = agent_tool_surface(agent, model_tools.get_tool_definitions(
          enabled_toolsets=enabled_toolsets, disabled_toolsets=disabled_toolsets, quiet_mode=agent.quiet_mode) or [])
- 
++
 +    # per-model 工具覆盖（codex 候补吸收）：config.tool_model_overrides 按当前模型
 +    # 套 description/parameters，坏 schema 回退捆绑版告警不拖垮装配。
 +    from agent.tool_model_overrides import apply_model_tool_overrides
@@ -14,9 +15,9 @@ index 72d96a38f..ee651b268 100644
      agent.valid_tool_names = {tool["function"]["name"] for tool in agent.tools} if agent.tools else set()
      # Kanban guidance is session-static for the dispatcher-owned worker only. Profiles may
      # expose kanban_show interactively, and children/cron runs inherit the env var, without
-
 diff --git a/agent/tool_model_overrides.py b/agent/tool_model_overrides.py
 new file mode 100644
+index 0000000000..3b490812ac
 --- /dev/null
 +++ b/agent/tool_model_overrides.py
 @@ -0,0 +1,132 @@
@@ -152,9 +153,9 @@ new file mode 100644
 +    if applied:
 +        logger.info("tool_model_overrides: %d tools overridden for model=%s", applied, model)
 +    return out
-
 diff --git a/tests/agent/test_tool_model_overrides.py b/tests/agent/test_tool_model_overrides.py
 new file mode 100644
+index 0000000000..def582ea10
 --- /dev/null
 +++ b/tests/agent/test_tool_model_overrides.py
 @@ -0,0 +1,97 @@

@@ -44,7 +44,9 @@ def _pin_first():
 # "status" covers dashboard drag-drop and `_set_status_direct()`.
 # ``review_requested`` wakes the origin like a block but is not one;
 # the task is not archived so later review cycles keep notifying.
-TERMINAL_KINDS = ("completed", "blocked", "gave_up", "crashed", "timed_out", "status", "archived", "unblocked", "block_loop_detected", "review_requested", "changes_requested")
+# ``assigned``（732 改派通知）只进 TERMINAL_KINDS（认领+ping），不进
+# _WAKE_KINDS——ping-only，永不唤醒创建者。
+TERMINAL_KINDS = ("completed", "blocked", "gave_up", "crashed", "timed_out", "status", "archived", "unblocked", "block_loop_detected", "review_requested", "changes_requested", "assigned")
 # Kinds that hand a decision back to the origin, which must take a turn.
 # status/archived/unblocked are bookkeeping.
 _WAKE_KINDS = ("completed", "gave_up", "crashed", "timed_out", "blocked", "review_requested", "changes_requested", "block_loop_detected")
@@ -466,6 +468,27 @@ def _fmt_timed_out(ev, n) -> tuple:
     return t("gateway.kanban.ping.timed_out", head=n.head, span=span), None, None
 
 
+def _fmt_assigned(ev, n) -> tuple:
+    """改派通知（732，ping-only：不进 _WAKE_KINDS，不产生 wake）。
+
+    payload 带 ``source`` 键（派单器 ``kanban.default_assignee`` 的默认分派
+    等机器流转）→ (None, None, None) 静默——机器默认分派每 tick 都可能发生，
+    通知会刷屏；只有显式改派（assign_task 写 from/assignee）才 ping，
+    文案含 head 与 from→assignee（照 blocked formatter 的 _payload 取法）。
+    形参名用 ``frm``：``from`` 是 Python 关键字，不能作关键字实参名。"""
+    payload = ev.payload if isinstance(ev.payload, dict) else {}
+    if "source" in payload:
+        return None, None, None
+    frm = _payload(ev, "from")
+    to = _payload(ev, "assignee")
+    move = (
+        t("gateway.kanban.ping.reassign_move", frm=frm, to=to) if frm
+        else t("gateway.kanban.ping.assign_move", to=to) if to
+        else ""
+    )
+    return t("gateway.kanban.ping.assigned", head=n.head, move=move), None, None
+
+
 # archived / unblocked are claimed (so the cursor advances past them) but
 # intentionally silent (no formatter), and excluded from _WAKE_KINDS so they
 # never wake the creator.
@@ -482,6 +505,7 @@ _EVENT_FORMATTERS: dict[str, Callable[[Any, _KanbanNotification], tuple]] = {
     "review_requested": _fmt_review_requested,
     "changes_requested": _fmt_changes_requested,
     "block_loop_detected": _fmt_block_loop_detected,
+    "assigned": _fmt_assigned,
 }
 
 

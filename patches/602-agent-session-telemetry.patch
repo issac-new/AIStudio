@@ -1,10 +1,10 @@
 diff --git a/gateway/run_turn.py b/gateway/run_turn.py
-index 8ca7e00944..331620a0f4 100644
+index aa5db488f3..313934bb5d 100644
 --- a/gateway/run_turn.py
 +++ b/gateway/run_turn.py
-@@ -321,6 +321,10 @@ class GatewayTurnMixin(GatewayTurnPrepareMixin, GatewayTurnHygieneMixin, Gateway
+@@ -305,6 +305,10 @@ class GatewayTurnMixin(GatewayBackgroundMixin, GatewayTurnPrepareMixin, GatewayT
              )
-             if agent_failed_early and not is_context_overflow_failure:
+             if agent_failed_early and not is_context_overflow_failure and automatic_notices_allowed(source):
                  response = self._hmwa_add_failed_turn_notice(response, self._hmwa_failed_turn_notice(agent_result))
 +            # Session telemetry sidecar (602): post-turn health snapshot for the studio
 +            # cluster inspector (D9 watermark / D10 cadence / D11 runaway). Fail-open by design.

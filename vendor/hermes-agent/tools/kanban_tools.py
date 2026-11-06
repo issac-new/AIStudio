@@ -8,11 +8,17 @@ shlex quoting of JSON metadata, structured-JSON failures). Humans use CLI/dashbo
 from __future__ import annotations
 
 import functools
+import hashlib
+import hmac
 import json
 import logging
+import math
 import os
+import re
 import time
+from collections.abc import Mapping
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from agent.redact import redact_sensitive_text
@@ -30,6 +36,190 @@ logger = logging.getLogger(__name__)
 
 KANBAN_LIST_DEFAULT_LIMIT = 50
 KANBAN_LIST_MAX_LIMIT = 200
+
+
+# --- HumanGate decision grants（只读消费者） ---------------------------------
+# 权威写入在 TypeScript HumanGate；这里只读同一 store，绝不让 agent 自批准。
+# 卡 body/workspace/assignee 等任一修订字段后续变化都会改变哈希并使旧 grant 失效。
+def human_gate_store_path() -> Path:
+    override = os.environ.get("HUMAN_GATE_STORE", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    from hermes_constants import get_hermes_home
+
+    return get_hermes_home() / "approvals" / "human-gate.json"
+
+
+def _task_value(task: Any, key: str, default: Any = None) -> Any:
+    if isinstance(task, Mapping):
+        return task.get(key, default)
+    return getattr(task, key, default)
+
+
+def _required_revision_text(task: Any, key: str) -> str:
+    value = _task_value(task, key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"任务修订字段 {key} 必须为非空字符串")
+    return value
+
+
+def _nullable_revision_text(task: Any, key: str) -> Optional[str]:
+    value = _task_value(task, key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"任务修订字段 {key} 必须为字符串或 null")
+    return value
+
+
+def _normalize_decision_board(board: str) -> str:
+    return board.strip().lower() or "default"
+
+
+def decision_tier_for_task(task: Any) -> str:
+    """与 TS 同边界：只认 body 前两行的 routed/tier 标记，不看 APPROVED 文本。"""
+    body = _task_value(task, "body") or ""
+    if not isinstance(body, str):
+        return "T1"
+    marker = "\n".join(body.split("\n")[:2])
+    hit = re.search(r"(?:^|[\s:])tier=(T1|T2|T3)(?=\s|$)", marker, re.IGNORECASE | re.MULTILINE)
+    return hit.group(1).upper() if hit else "T1"
+
+
+def serialize_task_revision(task: Any) -> str:
+    """固定键序 canonical JSON；与 decision-grant.ts 的共享向量逐字一致。"""
+    updated_at = _task_value(task, "updated_at")
+    if updated_at is not None and not isinstance(updated_at, str):
+        if isinstance(updated_at, bool):
+            raise ValueError("任务修订字段 updated_at 必须为整数、字符串或 null")
+        if isinstance(updated_at, float) and updated_at.is_integer():
+            updated_at = int(updated_at)
+        if not isinstance(updated_at, int):
+            raise ValueError("任务修订字段 updated_at 必须为整数、字符串或 null")
+        if updated_at == 0:
+            updated_at = 0
+    payload = {
+        "id": _required_revision_text(task, "id"),
+        "board": _normalize_decision_board(_required_revision_text(task, "board")),
+        "title": _required_revision_text(task, "title"),
+        "body": _nullable_revision_text(task, "body"),
+        "assignee": _nullable_revision_text(task, "assignee"),
+        "status": _nullable_revision_text(task, "status"),
+        "updated_at": updated_at,
+        "workspace_kind": _nullable_revision_text(task, "workspace_kind"),
+        "workspace_path": _nullable_revision_text(task, "workspace_path"),
+        "branch_name": _nullable_revision_text(task, "branch_name"),
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
+def compute_task_revision(task: Any) -> str:
+    return hashlib.sha256(serialize_task_revision(task).encode("utf8")).hexdigest()
+
+
+def _finite_number(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+
+
+def check_decision_grant(
+    grant: Optional[Mapping[str, Any]],
+    task: Any,
+    tier: str,
+    now_ms: Optional[float] = None,
+) -> tuple[bool, str]:
+    """返回 (是否放行, 稳定原因)；T1 不读 store，T2/T3 必须验证授权版本。"""
+    now = int(time.time() * 1000) if now_ms is None else now_ms
+    if tier == "T1":
+        return True, "ok"
+    if tier not in {"T2", "T3"}:
+        return False, "tier_mismatch"
+    if not isinstance(grant, Mapping):
+        return False, "missing_grant"
+    if grant.get("taskId") != _task_value(task, "id"):
+        return False, "task_mismatch"
+    try:
+        board = _normalize_decision_board(_required_revision_text(task, "board"))
+    except (TypeError, ValueError):
+        return False, "revision_unavailable"
+    if grant.get("board") != board:
+        return False, "board_mismatch"
+    if grant.get("tier") != tier:
+        return False, "tier_mismatch"
+    if grant.get("decision") != "approved":
+        return False, "not_approved"
+    actor = grant.get("actor")
+    if not isinstance(actor, str) or not actor.strip():
+        return False, "invalid_actor"
+    issued_at, decided_at = grant.get("issuedAt"), grant.get("decidedAt")
+    if (not _finite_number(issued_at) or not _finite_number(decided_at)
+            or issued_at < 0 or decided_at < 0 or not _finite_number(now)):
+        return False, "invalid_time"
+    expires_at = grant.get("expiresAt")
+    if expires_at is not None:
+        if not _finite_number(expires_at):
+            return False, "invalid_time"
+        if now >= expires_at:
+            return False, "expired"
+    if tier == "T2":
+        choice = grant.get("choice")
+        if not isinstance(choice, str) or not choice.strip():
+            return False, "choice_required"
+    try:
+        actual_revision = compute_task_revision(task)
+    except (TypeError, ValueError):
+        return False, "revision_unavailable"
+    grant_revision = grant.get("taskRevision")
+    if not isinstance(grant_revision, str) or not hmac.compare_digest(grant_revision, actual_revision):
+        return False, "revision_mismatch"
+    return True, "ok"
+
+
+def _read_task_grants() -> list[Mapping[str, Any]]:
+    """只读 HumanGate store；IO/JSON 失败交调用方 fail-closed。"""
+    path = human_gate_store_path()
+    try:
+        raw = path.read_text(encoding="utf8")
+    except FileNotFoundError:
+        return []
+    parsed = json.loads(raw)
+    rows = parsed if isinstance(parsed, list) else parsed.get("requests") if isinstance(parsed, dict) else None
+    if not isinstance(rows, list):
+        raise ValueError("HumanGate store 格式无效")
+    grants = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("HumanGate store 记录格式无效")
+        grant = row.get("grant")
+        if row.get("scope") == "task" and isinstance(grant, dict):
+            grants.append(grant)
+    return grants
+
+
+def authorize_task_execution(
+    task: Any,
+    tier: Optional[str] = None,
+    now_ms: Optional[float] = None,
+) -> tuple[bool, str]:
+    """dispatcher 专用只读入口：任一有效 grant 才放行，否则返回最新拒绝原因。"""
+    actual_tier = tier or decision_tier_for_task(task)
+    if actual_tier == "T1":
+        return True, "ok"
+    try:
+        grants = _read_task_grants()
+    except Exception:
+        logger.warning("HumanGate store 不可读，拒绝关键任务派发", exc_info=True)
+        return False, "store_unreadable"
+    task_id = _task_value(task, "id")
+    candidates = [grant for grant in grants if grant.get("taskId") == task_id]
+    if not candidates:
+        return False, "missing_grant"
+    latest_failure = "missing_grant"
+    for grant in reversed(candidates):
+        allowed, reason = check_decision_grant(grant, task, actual_tier, now_ms)
+        if allowed:
+            return True, "ok"
+        latest_failure = reason
+    return False, latest_failure
 
 
 # --- Gating ---
@@ -746,10 +936,15 @@ def _handle_complete(args: dict, **kw) -> str:
         # actually reachable — see _goal_judge_available for why an unavailable judge fails open.
         task = kb.get_task(conn, tid)
         _goal_gate("kanban_complete", task, tid, (summary or result or "").strip())
+        # DoD 契约门已下沉内核（complete_task，2026-11-01 dod-drill 实锤后）：
+        # 工具层只转发 receipt，任何完成面（工具/CLI/面板）都过同一道门。
         try:
             ok = kb.complete_task(
                 conn, tid, result=result, summary=summary, metadata=metadata,
-                created_cards=created_cards, expected_run_id=_worker_run_id(tid))
+                created_cards=created_cards, expected_run_id=_worker_run_id(tid),
+                receipt=args.get("receipt"),
+                workspace=os.environ.get("HERMES_KANBAN_WORKSPACE")
+                or _task_value(task, "workspace_path"))
         except kb.ArtifactPreservationError as artifact_err:
             # Structured rejection — surface the phantom ids so the worker can retry with a corrected list
             # or drop the field. Audit event already landed in the DB. The task itself was NOT mutated (the
@@ -1099,11 +1294,31 @@ def _handle_create(args: dict, **kw) -> str:
     assignee = args.get("assignee")
     _check(assignee, "assignee is required — name the profile that should execute this "
                      "task (the dispatcher will only spawn tasks with an assignee)")
+    # G2 真伪校验（2026-10-11 产品缺口补齐）：占位值（default/空串/纯符号）能过非空
+    # 校验但无人能领（run14 实锤：三卡烂待办一小时）——拒绝占位值，要求真档案名。
+    import re as _re
+    if not _re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]{1,63}", str(assignee)) or str(assignee).lower() in ("default", "none", "null", "todo"):
+        raise ValueError(
+            f"assignee '{assignee}' is a placeholder, not a real profile name — "
+            "name the executing profile (placeholder cards can never be claimed)"
+        )
     # Workspace sharing is always explicit: omitted fields mean a fresh scratch workspace
     # even for a dispatcher-spawned creator (reusing the parent's path would let a child
     # mutate review evidence or race its checkout). Project identity is the one safe thing
     # to inherit implicitly (the DB turns it into a fresh per-task worktree).
     workspace_kind, workspace_path = args.get("workspace_kind"), args.get("workspace_path")
+    # A "dir" card without a path can never spawn: the dispatcher resolves the
+    # workspace before starting a worker and refuses a pathless dir (run27: five
+    # defect cards burned their whole retry budget to gave_up at spawn time).
+    # Reject at creation with the fix in the message — same shape as the
+    # placeholder-assignee rejection above.
+    if str(workspace_kind if workspace_kind is not None else "").lower() == "dir" \
+            and not str(workspace_path if workspace_path is not None else "").strip():
+        raise ValueError(
+            "workspace_kind='dir' requires workspace_path — an unpathed dir card "
+            "can never spawn a worker. Pass workspace_path, or omit workspace_kind "
+            "to get a fresh per-task worktree."
+        )
     # See #67567. ``project=""`` is an explicit "no project" (no ``or`` collapse, #106342).
     project_id = args["project"] if "project" in args else args.get("project_id")
     project_source_task_id = None
@@ -1134,7 +1349,8 @@ def _handle_create(args: dict, **kw) -> str:
             conn, title=str(title).strip(), body=args.get("body"), assignee=str(assignee),
             parents=tuple(parents), tenant=args.get("tenant") or os.environ.get("HERMES_TENANT"),
             priority=_opt_int(args.get("priority"), 0),
-            workspace_kind=workspace_kind, workspace_path=workspace_path, project_id=project_id,
+            workspace_kind=str(workspace_kind if workspace_kind is not None else "worktree"),
+            workspace_path=workspace_path, project_id=project_id,
             # Board-project inheritance must read the board this call opened, not the
             # session's current board.
             board=args.get("board"),
@@ -1145,6 +1361,7 @@ def _handle_create(args: dict, **kw) -> str:
             model_override=model_override, provider_override=provider_override,
             goal_mode=goal_mode, goal_max_turns=_opt_int(args.get("goal_max_turns")),
             completion_contract=args.get("completion_contract"),
+            raci=(args.get("raci") if isinstance(args.get("raci"), dict) else None),
             initial_status=str(args.get("initial_status") or "running"),
             created_by=_persisted_identity(), session_id=session_id)
         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)

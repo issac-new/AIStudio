@@ -354,7 +354,8 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         sync worker thread; hop onto the gateway loop. Fired-once latch lives on the cached agent."""
         from gateway.run import render_notice_line
         from gateway.warning_notifications import is_diagnostic_notice, render_notification
-        if self._ctx.mute_notification_reply or not self._status_live():
+        from gateway.bot_peer_notices import automatic_notices_allowed
+        if self._ctx.mute_notification_reply or not self._status_live() or not automatic_notices_allowed(self._ctx.source):
             return
         # A usage-window limit line repeats the turn's own reply, which carries the sentence and the
         # switch button (a chat message cannot be cleared, so it would only pile up). The 90% heads-up
@@ -490,6 +491,8 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         agent.notice_clear_callback = self._local_notice_clear_callback_sync if local_viewer_turn(self) else None
         agent.event_callback = ctx._event_callback_sync
         agent.reasoning_config, agent.service_tier = reasoning_config, runner._service_tier
+        _load_daybreak = getattr(runner, "_load_daybreak", None)  # absent on minimal test runners
+        agent.daybreak = callable(_load_daybreak) and _load_daybreak(ctx.source) is True
         self._merge_turn_request_overrides(agent, turn_route)
         from gateway.session_surface import arm_surface_turn
         # auxiliary.voice_chat route (a voice note, or an admission committed as a voice turn) and
@@ -1031,6 +1034,40 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
                     result = agent.run_conversation(api_message, **kwargs)
                 finally:
                     agent._silence_marker_needs_reply = False
+                # run24 复盘批（2026-11-02，chat 恢复第二块）：回合终态失败后在**同一会话、
+                # 同一 agent**里注入一次「从中断处续做」提示再跑——722 只在回合内重试，
+                # 回合一旦结束（流掐断耗尽/传输失败）会话就静止，run24 四现场全靠人工 DM
+                # 唤醒。仅瞬态失败恢复（auth/billing/policy 等确定性失败不重试），预算
+                # HERMES_CHAT_TURN_RECOVERY（缺省 1，0 关，上限 3）；恢复 turn 不重复持久化
+                # 用户原始消息（去掉 persist_* 与 prelude，历史取自上一回合 messages）。
+                try:
+                    from agent.chat_turn_recovery import run_chat_recovery
+                    from agent.recovery_kwargs import filter_recovery_kwargs
+
+                    # 转发白名单抽纯函数（2026-11-02 机制治理批）：这是 recovery 唯一的
+                    # "决策"部分，必须能被无 agent/无 provider 的行为测试直接调用。run25
+                    # 教训：382 条标记断言全绿仍连炸——测"代码在不在"测不出"行为对不对"。
+                    # 白名单本体见 agent/recovery_kwargs.py（含 conversation_history 硬禁：
+                    # kwargs 自带时与 _recover_turn 显式实参撞重复关键字，恢复哑火）。
+                    _rec_kwargs = filter_recovery_kwargs(kwargs)
+
+                    def _recover_turn(nudge):  # noqa: ANN001 — one synthetic continuation
+                        prior = result.get("messages") if isinstance(result, dict) else None
+                        with notification_turn(agent, muted=ctx.mute_notification_reply,
+                                               session_id=ctx.session_id or ""):
+                            return agent.run_conversation(
+                                nudge, conversation_history=prior or agent_history, **_rec_kwargs)
+
+                    _recovered = run_chat_recovery(
+                        _recover_turn,
+                        get_result=lambda: result,
+                        interrupted_fn=lambda: bool(getattr(agent, "_interrupt_requested", False)),
+                        emit=lambda msg: logger.warning("%s", msg),
+                    )
+                    if _recovered:
+                        logger.warning("chat turn recovered after %d attempt(s)", _recovered)
+                except Exception as _rec_exc:  # noqa: BLE001 — recovery must never break a settle path
+                    logger.warning("chat turn recovery skipped: %s", _rec_exc)
             if captured is not None:
                 incoming = max(0, (getattr(agent, 'session_prompt_tokens', 0) or 0) - before[0])
                 outgoing = max(0, (getattr(agent, 'session_completion_tokens', 0) or 0) - before[1])
@@ -1242,7 +1279,10 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         every rebind. session_key propagates via contextvars (_set_session_env / set_current_session_key)
         — never os.environ["HERMES_SESSION_KEY"], which would misroute approvals across sessions.
         """
-        from gateway.run import _current_max_iterations, _normalize_empty_agent_response, _sanitize_gateway_final_response
+        from gateway.run import (
+            _current_max_iterations, _normalize_empty_agent_response, _reload_runtime_env_preserving_config_authority,
+            _sanitize_gateway_final_response,
+        )
         ctx = self._ctx
         runner = self._runner
         # Platform.LOCAL ("local") maps to the "cli" hint key the agent understands.
@@ -1265,7 +1305,15 @@ class TurnRunner(GatewayTurnProgressMixin, GatewaySessionAgentMixin):
         combined_ephemeral = self._combined_ephemeral_prompt()
         if policy and policy.skills_prompt:
             combined_ephemeral = "\n\n".join(p for p in (combined_ephemeral, policy.skills_prompt) if p)
-        max_iterations = policy.max_turns if policy else _current_max_iterations()
+        if policy:
+            # Rotated .env keys reach this turn's config reads (side tasks read config.yaml), as on the
+            # messaging path, where _current_max_iterations() does the same reload; the turn budget
+            # stays the session's own. A bypass session never reads the profile.
+            if not policy.ignore_user_config:
+                _reload_runtime_env_preserving_config_authority()
+            max_iterations = policy.max_turns
+        else:
+            max_iterations = _current_max_iterations()
         from gateway.hosted_room_execution_policy import current_room_execution_policy
         room = current_room_execution_policy()
         if room is not None:

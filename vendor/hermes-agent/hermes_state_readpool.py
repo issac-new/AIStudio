@@ -57,7 +57,7 @@ _FD_HEADROOM_RESERVE = 64
 
 # The fd count is a directory listing; cache it briefly so a read burst isn't a
 # syscall per query (staleness lets through at most the ceiling's worth of opens).
-_FD_USAGE_CACHE_SECONDS = 0.25
+_FD_USAGE_CACHE_SECONDS = 30.0
 
 _process_read_permits = threading.BoundedSemaphore(_READ_POOL_PROCESS_MAX)
 

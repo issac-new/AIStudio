@@ -15,6 +15,7 @@ Tests cover:
 import asyncio
 import hashlib
 import json
+import os
 import time
 import types
 import uuid
@@ -833,7 +834,12 @@ class TestHealthDetailedEndpoint:
         app = _create_app(adapter)
         with patch("gateway.status.read_runtime_status", return_value={
             "gateway_state": "running",
-            "platforms": {"telegram": {"state": "connected"}},
+            "start_time": 123.5,
+            "platforms": {
+                "telegram": {"state": "connected", "writer_pid": os.getpid(), "writer_start_time": 123.5},
+                "old:discord": {"state": "connected", "writer_pid": os.getpid() - 1, "writer_start_time": 99.0},
+            },
+            "served_profiles": ["default", "work"],
             "active_agents": 2,
             "exit_reason": None,
             "updated_at": "2026-04-14T00:00:00Z",
@@ -848,10 +854,19 @@ class TestHealthDetailedEndpoint:
                 assert data["status"] == "ok"
                 assert data["platform"] == "hermes-agent"
                 assert data["gateway_state"] == "running"
-                assert data["platforms"]["telegram"] == {"state": "connected"}
+                # ``platforms`` is the full enriched runtime map (may include stale /
+                # other-profile entries plus the synthetic api_server status).
+                assert data["platforms"]["telegram"]["state"] == "connected"
+                assert data["platforms"]["old:discord"]["state"] == "connected"
                 assert data["platforms"]["api_server"]["metrics"]["metrics_today"]["requests"] == 1
                 assert data["metrics_today"]["tokens"] == 9
                 assert data["last_heartbeat"] is not None
+                # ``loaded_platforms`` only keeps entries stamped by this process.
+                assert data["loaded_platforms"] == {
+                    "telegram": {"state": "connected", "writer_pid": os.getpid(), "writer_start_time": 123.5}
+                }
+                assert "old:discord" not in data["loaded_platforms"]
+                assert data["served_profiles"] == ["default", "work"]
                 assert data["active_agents"] == 2
                 # Derived busy/drainable: this endpoint is served BY the live
                 # gateway, so running + 2 agents ⇒ busy and drainable.

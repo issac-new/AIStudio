@@ -11,7 +11,7 @@ from typing import Dict, List, Any, Set, Optional, Tuple
 _HERMES_CORE_TOOLS = [
     "web_search", "web_extract",
     "terminal", "process_manage",
-    "read_file", "write_file", "patch", "search_files",
+    "read_file", "write_file", "patch", "search_files", "lsp", "obs_recall",
     "vision_analyze", "image_generate",
     "skills_list", "skill_view", "skill_manage",
     "browser_exec",  # THE browser: Python over CDP (browser-harness)
@@ -464,6 +464,12 @@ def session_disabled_toolsets(
     gated += ONESHOT_DISABLED_TOOLSETS if oneshot else ()
     gated = [name for name in gated if name not in (disabled or ())]
     return [*(disabled or ()), *gated] if gated else disabled
+
+
+def tool_selection_key(enabled: Optional[list[str]], disabled: Optional[list[str]]) -> tuple:
+    """The toolset selection a tools[] snapshot was built from, order-free. Recorded next to the registry
+    generation: the tools[] freeze (``tools.mcp_tool_agent``) holds new tools back only while neither moved."""
+    return frozenset(enabled) if enabled is not None else None, frozenset(disabled or ())
 
 
 def agent_tool_drops(agent: Any) -> frozenset:

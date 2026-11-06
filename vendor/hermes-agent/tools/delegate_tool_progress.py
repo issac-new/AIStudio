@@ -153,7 +153,10 @@ _COMPLETION_INSTRUCTIONS = (
     "issuing git/workdir-specific commands.\n\n"
     "Keep your final summary tight: lead with outcomes, prefer bullet points over paragraphs, and don't replay your "
     "whole process. Your response is returned to the parent agent as a summary, and overlong summaries crowd out the "
-    "parent's context window."
+    "parent's context window.\n\n"
+    "Your final message IS the entire handoff (kimi coder 交接话术语义): the parent sees only this summary, "
+    "nothing else. Pack it with everything needed to continue — done (with file:line anchors), left (concrete "
+    "next steps), blocked. A vague closing wastes the whole run."
 )
 _ORCHESTRATOR_BLOCK = (
     "\n## Subagent Spawning (Orchestrator Role)\n"
