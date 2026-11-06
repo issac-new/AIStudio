@@ -254,3 +254,5 @@
 {"at":"2026-11-06T13:33:16Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-restructure.md","receipt":"c7909c7b7fc95e2f94ee3ed4aec90e83ec40e98b","commit":"355aa9ab6"}
 {"at":"2026-11-06T13:42:58Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-stable-name.md","receipt":"05d518b90e4eec4c31c2e74ed8303ee24d0cc277","commit":"30e975f32"}
 {"at":"2026-11-06T14:43:08Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-descaffold.md","receipt":"648b5fb24188af899d8b6b5b796c26a2f53348c6","commit":"5b8562f83"}
+{"at":"2026-11-06T15:11:02Z","spec":"docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md","receipt":"93779753b2e9670b0c61fd392141a3b9b7494666","commit":"1d10c15db"}
+{"at":"2026-11-06T15:11:17Z","spec":"docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md","receipt":"18ec711741a14792dc3fdfe6aa300bbb90a87dba","commit":"c58bf84a5"}

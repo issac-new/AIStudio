@@ -479,3 +479,18 @@ paths:
   - docs/superpowers/specs/2026-11-06-director-dispatch.md
   - simharness/mux/mx-scenario-lib.sh
   - simharness/tests/director-dispatch.test.ts
+  # 执行单元责任台账第一增量（spec 2026-11-06-workunit-responsibility-ledger）
+  - docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md
+  - custom/server/agentidentity/**
+  - custom/server/governance/governance-controller.ts
+  - custom/server/governance/__tests__/**
+  - custom/client/governance/components/WorkUnitLedgerSection.vue
+  - custom/client/governance/components/JudgmentRecordsSection.vue
+  - custom/client/governance/components/SixQuestionsSection.vue
+  - custom/client/governance/i18n.ts
+  - custom/client/governance/__tests__/**
+  - custom/client/ia2/views/gov/GovRegistryRulesView.vue
+  - custom/client/ia2/views/gov/GovHarnessView.vue
+  - scripts/maintenance/hrgov-seed.mjs
+  - .qgate/gates/hrgov.workunit-contract.yaml
+  - docs/DESIGN.md
