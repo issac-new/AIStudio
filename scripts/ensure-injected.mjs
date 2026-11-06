@@ -26,8 +26,11 @@ try {
   console.warn(`[ensure-injected] 钩子安装跳过：${e instanceof Error ? e.message : String(e)}`);
 }
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
-const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
-const patchDir = resolve(overlayRoot, 'patches');
+// 补丁目录 seam（P1 Task 5；cognition P0 重构携旧基线曾丢失，本批恢复）：与 inject.mjs 同源双 env。
+const patchDir = process.env.OVERLAY_PATCH_DIR?.trim()
+  ? resolve(process.env.OVERLAY_PATCH_DIR.trim())
+  : resolve(overlayRoot, 'patches');
+const patchSeriesFile = resolve(patchDir, 'series');
 // 三棵树同根解析（AGENTS.md 规则 9）：与 inject.mjs 共用，避免差量补套打进另一棵树。
 const roots = resolveUpstreamRoots(overlayRoot);
 const upstream = roots.studio;
@@ -107,13 +110,17 @@ function cockpitRouteInjected() {
 }
 
 const manifestApplied = readManifestApplied();
-const zcodeSeriesFile = resolve(overlayRoot, 'zcode-patches', 'series');
+const zcodeSeriesFile = resolve(process.env.OVERLAY_ZCODE_PATCH_DIR?.trim()
+  ? resolve(process.env.OVERLAY_ZCODE_PATCH_DIR.trim())
+  : resolve(overlayRoot, 'zcode-patches'), 'series');
 
 // 脏树=已注入只是整体判断；补丁新增的文件可能被外部删除而树仍是脏的。
 // 逐个核对声明的新增文件，缺哪个就按文件粒度从原补丁补放（git apply --include）。
 // 2026-10-19 实录：node-backend.js 被删后树仍脏，旧自愈直接 return，CUA 测试长期红。
 function healMissingZcodeFiles(series) {
-  const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
+  const zcodePatchDir = process.env.OVERLAY_ZCODE_PATCH_DIR?.trim()
+  ? resolve(process.env.OVERLAY_ZCODE_PATCH_DIR.trim())
+  : resolve(overlayRoot, 'zcode-patches');
   for (const p of series) {
     const patchPath = resolve(zcodePatchDir, p);
     if (!existsSync(patchPath)) continue;
@@ -177,7 +184,9 @@ function healZcodePatches() {
     return;
   }
   console.warn(`[ensure-injected] zcode 树干净但 series 有 ${series.length} 条补丁,重放自愈:`);
-  const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
+  const zcodePatchDir = process.env.OVERLAY_ZCODE_PATCH_DIR?.trim()
+  ? resolve(process.env.OVERLAY_ZCODE_PATCH_DIR.trim())
+  : resolve(overlayRoot, 'zcode-patches');
   for (const p of series) {
     const patchPath = resolve(zcodePatchDir, p);
     if (!existsSync(patchPath)) {

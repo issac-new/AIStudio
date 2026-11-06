@@ -244,3 +244,4 @@
 {"at":"2026-11-06T06:04:38Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"8c65f3e207b4d83219a14efa2bea314d07be89d0","commit":"b4770a21d"}
 {"at":"2026-11-06T06:10:47Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"f37cf1b62469f34294056e37cac36ec911ea3da5","commit":"6e57ade47"}
 {"at":"2026-11-06T06:22:10Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"3be89810ea073676e8bb0b124a1f646341fd0332","commit":"91664a5d7"}
+{"at":"2026-11-06T06:38:30Z","spec":"docs/superpowers/specs/2026-11-06-inject-seam-restore.md","receipt":"e0f176a6623f30986c9c6f6ec569db314ff46ab5","commit":"4e3228ab4"}
