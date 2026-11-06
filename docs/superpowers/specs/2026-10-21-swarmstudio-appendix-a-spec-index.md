@@ -571,6 +571,7 @@
 | 2026-11-05-run27-retro-root-cause | run27 全程复盘根治批 | 失败指纹时间戳归一化（同因秒败硬停可触发）/驱动静默心跳 900s/G5 FAIL 判词重入消费（翻绿分派先行）/探测三态分型（fetch failed 全败=基座不可达 exit 2 不冻结）/patch 755 readpool fd 计数 0.25s→30s（GIL 热点两连崩根治） |
 | 2026-11-06-run27-steps-ledger-keys | run27 步 21 台账键注册修正（查14c 真未触发误伤） | STEPS_META 步 21 并入实发键（破空渲染 FAIL＋消未注册 WARN 双效属实）；查14c 判据语义修订挂晨间批 |
 | 2026-11-06-run27-design-gap-rootfix | run27 全面复盘：设计偏离四类结构缺陷根治 | 清偿门 fail-open→fail-closed（锚校验＋最近轮兜底）/帧与硬闸问题单去重（343→90）/报告三修（摘要帧分级、记账率+修复率双指标、净额双行渲染）；设计优化 O1-O7 待裁 |
+| 2026-11-06-run27-design-optimizations | run27 设计优化批 O1-O6（用户裁决豁免＋全做） | 94 笔代偿 waive-open＋清偿门解锁/拍后即验（零变化帧 .invalid 隔离）＋17 步 none-repo 重分类＋repo 产物证据型/指标留档 jsonl/修复率披露断言/无对话步声明豁免/口径时点标注/缺陷契约强化（fei 复测签名＋30 迭代分片）；O7 挂账下轮 |
 
 ### 角色/排除（非 spec 文档）
 

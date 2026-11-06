@@ -139,6 +139,13 @@ if '--print-paths' not in sys.argv:
 #     "effect":{"text","evidence":[{"label","anchor"}]}}}}
 # 载荷文件缺失=本轮未采集（渲染诚实「未采集」章，审计器查 8 打回）。
 R18F = EVID / 'r18-steps.json'
+# O4 证据豁免显式化（2026-11-06 用户裁决「全做」）：这些步无 agent 对话（配置/冒烟类），
+# r18 缺对话非缺陷——显式声明后报告渲染「声明无对话」、审计器据此豁免（不再靠
+# 「看起来合理」默判）。新增缺对话步须在此登记并给理由。
+NO_DIALOG_STEPS = {
+    2,  # 每用户配置初始化：脚本化配置（creds/kanban 板），无 agent 交互面
+    4,  # 环境冒烟：通道在线探测（API 真值），无 agent 交互面
+}
 # 路径契约自证（自动检查测试用）：--print-paths 只打印解析结果不读 state 不出报告。
 if '--print-paths' in sys.argv:
     print(f'OUT={OUT}')
@@ -3296,7 +3303,7 @@ def issues_stats():
             f' · 表外词 {len(nonstd)} · 待处置 {len(open_k)}')
     if nonstd:
         stat += '（表外词=DISP 首词非三态分桶词——台账卫生缺陷，§4.3-28；收尾链补记三态 DISP 行后归桶）'
-    note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
+    note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑；口径时点=本报告生成时刻，复盘文档若引用事件流计数须标注其冻结时点——G6 与 report 段之间 DISP 归桶仍在推进，O5），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
             '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。配对/分桶判定=治理服务 run-metrics（快照取件）。')
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
@@ -4742,6 +4749,36 @@ def _net_pair_table() -> str:
     return f'''<table style="margin-top:8px"><tr><th>口径</th><th>六闸</th><th>问题单</th><th>组织派发与提醒</th></tr>
     <tr><td><b>含代偿</b></td><td>{gate_gross}/6</td><td>{n_issue_keys} 键（记账 {n_resolved}）</td><td>脚本预写派发 {n_proxy} 条 · 代为提醒 {n_nudge} 次 · 卡代操作 {n_card} 张</td></tr>
     <tr><td><b>净额</b>（判据满足面）</td><td>{gate_net}/6{gate_net_note}</td><td>已修 {n_fixed}/{n_issue_keys}（观察/延后不计修复）</td><td>组织自派发在案 0 条（全部为脚本代演）</td></tr></table>'''
+
+
+# ── O1 指标留档（2026-11-06 用户裁决「全做」）────────────────────────────
+# 每轮报告生成后把核心指标追加到仓内 docs/governance/run-metrics.jsonl——
+# run 产物可清、指标不灭：跨轮对照与证伪判据（「并行度连续两轮低于基线」类）从此
+# 可测。fail-open（留档失败不阻断报告，记 stderr）。
+try:
+    _REPO_GOV = Path(__file__).resolve().parents[2] / 'docs' / 'governance'
+    _REPO_GOV.mkdir(parents=True, exist_ok=True)
+    _st, _rd = state.get('run_started_at', ''), state.get('report_done', '')
+    _dur = (int(_rd) - int(_st)) if _st.isdigit() and _rd.isdigit() else None
+    _mrow = {
+        'run_id': RUN_ID, 'at': __import__('datetime').datetime.now().isoformat(timespec='seconds'),
+        'posture': _posture_value() if '_posture_value' in globals() else None,
+        'duration_s': _dur,
+        'gates': {g: state.get(k) for g, k in [('G1', 'g1_frozen'), ('G2', 'g2_arch_pass'),
+                   ('G3', 'g3_code_pass'), ('G4', 'g4_pass'), ('G5', 'g5_ready'), ('G6', 'retro_done')]},
+        'issues': {'keys': n_issue_keys, 'fixed': n_fixed if 'n_fixed' in globals() else None,
+                   'open': n_issue_open, 'nonstd': n_nonstd},
+        'compensation': {'open': sum(1 for r in _ledger_rows() if r["status"] == "open"),
+                         'waived': sum(1 for r in _ledger_rows() if r["status"] == "waive"),
+                         'total': len(_ledger_rows())},
+        'frames': {'fv_ok': sum(1 for r in _FRAME_VERIFY.values() if r.get('ok')),
+                   'fv_bad': sum(1 for r in _FRAME_VERIFY.values() if not r.get('ok')),
+                   'zero_change_steps': len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME})},
+    }
+    with (_REPO_GOV / 'run-metrics.jsonl').open('a', encoding='utf-8') as _mf:
+        _mf.write(json.dumps(_mrow, ensure_ascii=False) + '\n')
+except Exception as _me:
+    print(f'[metrics] 指标留档失败（不阻断）：{_me}', file=sys.stderr)
 
 
 # 第 9 章结论块实测统计（同块曾硬编码「16 个问题」——run10 的计数渲进任何一轮都是假值）。

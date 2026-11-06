@@ -1179,6 +1179,32 @@ capture_step() { # <step> <url> [action] [user]
   local _plan_line _plan_url
   _plan_line="$(grep -m1 "^${step}|" "$SCRIPT_DIR/mux/capture-plan.env" 2>/dev/null || true)"
   _plan_url="$(printf '%s' "$_plan_line" | cut -d'|' -f2 | sed 's/[[:space:]].*$//')"
+  # 产物证据型（2026-11-06 四态语法）：repo 步不拍截图（所拍页面无该步承载——拍出来
+  # 必是零变化/内容不符的冒充帧），采集产物清单落 evidence/repo-shots/<step>.md：
+  # 中央仓该步时间窗提交＋state 键终值。报告按 r18 op entry 呈现产物证据指针。
+  if [[ "$_plan_url" == repo* ]]; then
+    local _rs_dir="$EVID_DIR/repo-shots" _rs="$_rs_dir/${step}.md"
+    mkdir -p "$_rs_dir"
+    {
+      echo "# 产物证据：${step}"
+      echo
+      echo "- 采集时间：$(date '+%F %T')"
+      echo "- 分类理由：${_plan_line#*|*|}"
+      echo
+      echo "## 中央仓提交（本轮时间窗）"
+      git -C "${DIRECTOR_CLONE:-$SIM_ROOT/central/aipaydev}" log --since="@$(sget run_started_at)" \
+        --pretty='- %h %ad %s' --date=short origin/main 2>/dev/null | head -20 || echo '-（中央仓不可读）'
+      echo
+      echo "## state 终值（本步相关键）"
+      grep -E "^${step%%_done}=|^capture_ok_${step}=" "$STATE" 2>/dev/null || echo "-（无直接键）"
+    } > "$_rs" 2>/dev/null || true
+    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
+      --step-key "$step" --title "步 ${step} 产物证据（repo 型，无界面拍摄位）" \
+      --entry "产物证据=${_rs#*$EVID_DIR/}（git 提交窗+state 终值；分类=${_plan_url}）" >/dev/null 2>&1 || true
+    note "[帧采集] 步 ${step} repo 型产物证据已采集（${_rs#*$EVID_DIR/}——不拍截图）"
+    sset "capture_ok_${step}" 1
+    return 0
+  fi
   if [[ "$_plan_url" == file:* ]]; then
     local _rel="${_plan_url#file:}" _src _dst
     _src="${DIRECTOR_CLONE:-}/$_rel"
@@ -1246,6 +1272,22 @@ PYM
               "$EVID_DIR/screenshots/steps/${step}-op1-after.png"; do
       [[ -f "$_f" ]] && _frames="${_frames:+$_frames }$(basename "$_f")"
     done
+    # 拍后即验（2026-11-06 用户红线「截图务必准确，不要冒充」）：前后帧 md5 相同＝
+    # 该步在所拍页面上无可见变化——帧不得入证据池（报告不得按实拍呈现），隔离为
+    # .invalid 并显式记单；capture_ok 不置位（重放可换拍摄位重拍）。run27 实锤 19 步
+    # 零变化帧全部按「实拍」入了报告证据池。
+    local _b="$EVID_DIR/screenshots/steps/${step}-op1-before.png" \
+          _a="$EVID_DIR/screenshots/steps/${step}-op1-after.png"
+    if [[ -f "$_b" && -f "$_a" ]] \
+       && [[ "$(md5 -q "$_b" 2>/dev/null)" == "$(md5 -q "$_a" 2>/dev/null)" ]]; then
+      mv "$_b" "${_b}.invalid" 2>/dev/null || true
+      mv "$_a" "${_a}.invalid" 2>/dev/null || true
+      rm -f "$EVID_DIR/screenshots/steps/${step}-op1-action.png" 2>/dev/null || true
+      sset "capture_ok_${step}" 0
+      echo "ISSUE|frame-zero-change-voided|step-${step}|拍后即验：前后帧 md5 相同，帧已隔离为 .invalid 不入证据池（该步在所拍页面无可见变化——须换拍摄位/页签或改 none/repo 分类，见 capture-plan.env）" >> "$EVID_DIR/issues.log"
+      note "[帧采集] 步 ${step} 前后零变化——帧隔离 .invalid 不入证据池（记单；分类见 capture-plan.env）"
+      return 0
+    fi
     if [[ -n "$_frames" ]]; then
       if ! python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
           --step-key "$step" --title "步 ${step} 操作前后帧（capture_step 自动记录）" \
