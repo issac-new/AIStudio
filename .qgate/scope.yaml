@@ -374,3 +374,5 @@ paths:
   - docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md
   - docs/governance/run-metrics.jsonl
   - simharness/var-templates/run27-frame-quarantine.py
+  # AI-Friendly CLI 契约批
+  - docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md

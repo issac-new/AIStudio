@@ -12,23 +12,65 @@
 //   --out     证据输出目录（默认 $SIM_ROOT/runs/current/evidence 或 ./capability-probes）
 //   --token   可选 Bearer token（服务启用鉴权时）
 //   --profile userenv 组探测的 profile 名（缺省 default；SIM 与测试夹具均有该档）
-// 退出码：0=十四组全绿；1=有探测失败（写 capability-probes.json 后仍退出 1，供门禁判红）。
+//   --format  human|json（默认 human；json 模式 stdout 只出结果信封）
+//   --inspect-config 只报告基址/输出/凭据来源，不跑探测
+// 退出码（契约）：0=十四组全绿；1=有探测失败；2=全量 fetch failed＝基座不可达（环境态）；3=用法错误。
 //
 // 纪律：脚本只读/只算，不写业务数据；acceptance 探测会在临时目录里造两个文件（探针自带清理）。
 // 状态机类端点（projectworkflow complete/pause）只打「不落库的拒绝分支」——成功路径会写
 // projects-state.json 且 completed 是终态无 reopen，探测造项目=留永久脏态（spec 2026-11-04 D3）。
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import {
+  buildResult,
+  configInspect,
+  emitResult,
+  fail,
+  parseArgv,
+  redactSecrets,
+} from '../../scripts/lib/cli-contract.mjs'
 
-const args = process.argv.slice(2)
-const argOf = (name, fallback) => {
-  const i = args.indexOf(name)
-  return i >= 0 && args[i + 1] ? args[i + 1] : fallback
+const rawArgs = process.argv.slice(2)
+const requestedFormat = (() => {
+  const eq = rawArgs.find((a) => a.startsWith('--format='))
+  if (eq) return eq.slice('--format='.length)
+  const i = rawArgs.indexOf('--format')
+  if (i >= 0 && rawArgs[i + 1]) return rawArgs[i + 1]
+  return rawArgs.includes('--json') ? 'json' : 'human'
+})()
+
+let cli
+try {
+  cli = parseArgv(rawArgs, {
+    options: ['--base', '--out', '--token', '--profile'],
+    flags: ['--inspect-config'],
+    legacyJson: true,
+  })
+} catch (error) {
+  fail(error, { format: requestedFormat })
 }
+const argOf = (name, fallback) => cli.values[name.slice(2)] ?? fallback
 const BASE = argOf('--base', process.env.MX_PROBE_BASE || 'http://127.0.0.1:8686').replace(/\/$/, '')
 const OUT = resolve(argOf('--out', process.env.MX_PROBE_OUT || join(process.cwd(), 'capability-probes')))
 const TOKEN = argOf('--token', process.env.MX_PROBE_TOKEN || '')
 const PROFILE = argOf('--profile', process.env.MX_PROBE_PROFILE || 'default')
+
+if (cli.values['inspect-config']) {
+  const inspect = configInspect([
+    { source: 'cli:--base', value: cli.values.base },
+    { source: 'env:MX_PROBE_BASE', value: process.env.MX_PROBE_BASE },
+    { source: 'default', value: 'http://127.0.0.1:8686' },
+  ])
+  emitResult({
+    format: cli.format,
+    result: buildResult({
+      summary: { base: BASE, out: OUT, profile: PROFILE, tokenSet: Boolean(TOKEN) },
+      data: { baseResolution: inspect },
+    }),
+    human: () => `base=${BASE} out=${OUT} profile=${PROFILE} token=${TOKEN ? '已设置' : '未设置'}`,
+  })
+  process.exit(0)
+}
 
 const headers = { 'content-type': 'application/json', ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}) }
 
@@ -488,7 +530,37 @@ if (unreachable) report.note = '全量 fetch failed＝基座不可达（非能�
 mkdirSync(OUT, { recursive: true })
 const outFile = join(OUT, 'capability-probes.json')
 writeFileSync(outFile, JSON.stringify(report, null, 2))
-console.log(`[mx-capability-probes] ${report.passed}/${report.total} passed → ${outFile}`)
-for (const f of failed) console.error(`  ✗ [${f.group}] ${f.name}: ${f.detail}`)
+
+const summary = {
+  base: BASE,
+  total: report.total,
+  passed: report.passed,
+  failed: report.failed,
+  byGroup,
+}
+const error = unreachable
+  ? {
+      category: 'upstream_unavailable',
+      reason: `全量 ${report.failed} 组探测 fetch failed＝基座（网关/studio）不可达`,
+      remediation: '启动网关与 studio 后重跑；这是环境态，不判能力失效',
+    }
+  : failed.length > 0
+    ? {
+        category: 'gate_failed',
+        reason: `${report.failed}/${report.total} 组探测失败（负例转绿=能力失效）`,
+        remediation: '先修能力再重跑；失败明细见 stderr 与 capability-probes.json',
+      }
+    : undefined
+emitResult({
+  format: cli.format,
+  result: buildResult({
+    status: error ? 'failed' : 'ok',
+    summary,
+    artifacts: { report: outFile },
+    error,
+  }),
+  human: () => `[mx-capability-probes] ${report.passed}/${report.total} passed → ${outFile}`,
+})
+for (const f of failed) console.error(`  ✗ [${f.group}] ${f.name}: ${redactSecrets(String(f.detail ?? ''))}`)
 if (unreachable) console.error('[mx-capability-probes] 全量 fetch failed＝基座不可达（环境态 exit 2，不判能力失效）')
 process.exit(failed.length === 0 ? 0 : unreachable ? 2 : 1)

@@ -1,0 +1,30 @@
+{
+  "contract_version": 1,
+  "formats": ["human", "json"],
+  "events_format": "ndjson",
+  "statuses": ["ok", "completed_with_errors", "failed"],
+  "exit_codes": {
+    "ok": 0,
+    "business_failure": 1,
+    "environment": 2,
+    "usage": 3,
+    "partial": 4
+  },
+  "error_categories": [
+    "usage",
+    "config",
+    "auth_required",
+    "environment",
+    "upstream_unavailable",
+    "timeout",
+    "partial_failure",
+    "gate_failed",
+    "internal"
+  ],
+  "event_names": ["started", "progress", "heartbeat", "retry", "item_failed", "completed"],
+  "envelope_fields": ["schema_version", "status", "summary", "artifacts", "error", "data"],
+  "streams": {
+    "result": "stdout",
+    "diagnostics": "stderr"
+  }
+}

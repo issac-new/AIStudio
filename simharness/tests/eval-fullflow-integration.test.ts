@@ -20,12 +20,15 @@ describe('V8.45 评测接线结构', () => {
     }
   })
 
-  it('驱动 source 评测库并挂 G4 子门（FAIL 不置 g4_pass）', () => {
+  it('驱动 source 评测库并挂 G4 子门（只有 0/4 算验证过；环境失败不再放行）', () => {
     const sh = read('aipay-scenario.sh')
     expect(sh).toContain('source "$SCRIPT_DIR/mux/mx-eval-lib.sh"')
     expect(sh).toContain('eval_flow || _eval_rc=$?')
-    // 2026-11-04 §5.11 扩组批：置位条件并入新能力探测 rc（探测失败同拦 G4）
-    expect(sh).toContain('if (( _eval_rc != 1 && _cap_rc == 0 )); then')
+    // 2026-11-06 CLI 契约批：GAP=4，环境/用法=2/3 一律不置 g4_pass（旧 `_eval_rc != 1`
+    // 把建集/发起失败也放行，是 fail-open）。
+    expect(sh).toContain('if (( _eval_gate_ok == 1 && _cap_rc == 0 )); then')
+    expect(sh).toContain('4) note "[G4] 评测子门 GAP（缺口已记录，放行并如实呈现）"; _eval_gate_ok=1 ;;')
+    expect(sh).toContain('2) note "[G4] 评测环境/前置不满足（rc=2，g4_pass 不置位）" ;;')
     expect(sh).toContain('sset g4_eval_blocked 1')
     expect(sh).toContain('sset g4_capability_blocked 1')
     // 探测生产方接线（上轮立法无生产方的根治）：testpass 步自动全量探测
@@ -170,7 +173,7 @@ describe('V8.45 评测子门判据（融合批三：判定正本=产品 e2e-verd
     }
   })
 
-  it('FAIL/GAP 判定件 → 退出码 1/2（映射面不动）；判定项原文透传', () => {
+  it('FAIL/GAP 判定件 → 退出码 1/4（2026-11-06 契约：GAP=partial，不再与环境失败共用 2）；判定项原文透传', () => {
     const dir = mkdtempSync(join(tmpdir(), 'mx-eval-map-'))
     try {
       writeFixture(dir, () => undefined)
@@ -181,7 +184,7 @@ describe('V8.45 评测子门判据（融合批三：判定正本=产品 e2e-verd
 
       writeVerdict(dir, { verdict: 'gap', gaps: ['能力维度覆盖 0/7（评测任务未显式标注 dimension）', '红队运行缺席（安全证据不可得）'] })
       r = runSummary(dir)
-      expect(r.status).toBe(2)
+      expect(r.status).toBe(4)
       expect(r.out.gaps.join()).toContain('能力维度覆盖 0/7')
       expect(r.out.gaps.join()).toContain('红队运行缺席')
     } finally {

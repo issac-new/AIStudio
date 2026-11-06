@@ -4,11 +4,20 @@
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 123,
+    "scripts": 124,
     "ledgers": 6,
     "npmScripts": 49
   },
   "changes": [
+    {
+      "at": "2026-11-06",
+      "delta": "+2 scripts / -1 script / +1 npm script 0",
+      "reason": "AI-Friendly CLI 契约（微信三篇调研 A 批）：scripts/lib/cli-contract.mjs（契约库）+ scripts/lib/cli-contract-lint.mjs（静态棘轮，挂 governance-lint --cli-contract）；配对退役 regen-473.mjs（0.7.26 一次性 locale 重生成，已执行且零调用方引用，git 历史留档）＋ mx-eval-summary.py 两个死参数删除（降级）",
+      "pairedRemovals": [
+        "scripts/maintenance/regen-473.mjs 退役（一次性重生成已执行，引用扫描零命中）",
+        "mx-eval-summary.py --max-unknown/--max-redteam-fp 死参数删除（声明后从未读取）"
+      ]
+    },
     {
       "at": "2026-11-05",
       "delta": "+0 门/钩子/脚本（managedsettings 域模块＋role-tool-matrix 治理正本 yaml＋默认策略包 json，均不在计数类目）",
@@ -136,6 +145,12 @@
       "owner": "loop",
       "reviewBy": "2026-12-20",
       "retireWhen": "四族终止词表统一为单一枚举后"
+    },
+    {
+      "id": "cli-contract",
+      "owner": "quality",
+      "reviewBy": "2026-12-20",
+      "retireWhen": "契约基线清零（全部入口迁移完成）且 --cli-contract 并入 pre-push 常规检查后，检查器降级为单测断言"
     }
   ]
 }

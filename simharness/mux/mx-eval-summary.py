@@ -3,9 +3,13 @@
 
 输入：evidence/evals/ 下的 metric-registry.json / eval-run.json / eval-set.json /
       evaluators.json / redteam-run.json / redteam-runs.json / nine-layers.json
-输出：eval-summary.json（报告与 EvalOps 卡的唯一读数源）+ stdout 判定行。
+输出：eval-summary.json（报告与 EvalOps 卡的唯一读数源）+ stdout 判定行或结果信封。
 
-退出码：0=PASS，2=GAP（缺口，非阻断），1=FAIL（阻断 G4）。
+退出码（AI-Friendly CLI 契约，spec 2026-11-06-ai-friendly-cli-contract.md）：
+  0=PASS；4=GAP（completed_with_errors，非阻断）；1=FAIL（阻断 G4）；2=环境/前置不满足；3=用法。
+  2026-11-06 前 GAP 用 2，与「建集/发起失败」共用退出码，导致 G4 在环境失败时也置位
+  （fail-open）；本批把 GAP 改为 4，调用方按 0/4 放行、其余阻断。
+
 判据单一事实源（融合批三起）=产品 custom/server/eval/e2e-verdict.ts
 （POST /api/hermes/eval/e2e-verdict，V8.45 §5.3 G4-E 判据逐条移植）——本脚本
 只组装读数与合并判定件（--verdict-file，governance-client gov_eval_verdict
@@ -16,6 +20,9 @@ import datetime
 import json
 import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mx_cli_contract as cc  # noqa: E402
 
 
 def load(d, name):
@@ -34,15 +41,32 @@ def num(v, default=None):
 
 
 def main():
-    ap = argparse.ArgumentParser()
+    ap = cc.ContractArgumentParser(
+        description="全流程评测摘要组装器（判定正本=产品 /api/hermes/eval/e2e-verdict）")
     ap.add_argument("--dir", required=True)
-    ap.add_argument("--max-unknown", type=float, default=0.10)
-    ap.add_argument("--max-redteam-fp", type=float, default=0.20)
     ap.add_argument("--out", required=True)
     ap.add_argument("--verdict-file", default=None, help="产品判定件 verdict.json（缺省取 env MX_EVAL_VERDICT_JSON）")
+    cc.add_common_args(ap)
     a = ap.parse_args()
+    cc.validate_common(a)
     if not a.verdict_file:
         a.verdict_file = os.environ.get("MX_EVAL_VERDICT_JSON")
+
+    if a.inspect_config:
+        verdict_source = "cli:--verdict-file" if a.verdict_file else "absent（FAIL fail-closed）"
+        cc.emit_result(a.format, cc.build_result(
+            summary={"dir": a.dir, "out": a.out, "format": a.format},
+            artifacts={"verdict": a.verdict_file or ""},
+            data={
+                "verdictResolution": cc.config_inspect([
+                    {"source": "cli:--verdict-file", "value": a.verdict_file},
+                    {"source": "env:MX_EVAL_VERDICT_JSON", "value": os.environ.get("MX_EVAL_VERDICT_JSON")},
+                    {"source": "absent", "value": None},
+                ]),
+                "thresholds": "GAP/FAIL 阈值由产品侧 EVAL_MAX_UNKNOWN / EVAL_REDTEAM_FP_MAX 读取；本脚本不再接受阈值参数（旧参数从未被读取，2026-11-06 删除）",
+            },
+        ), f"dir={a.dir} out={a.out} verdict={verdict_source}")
+        return 0
 
     registry = load(a.dir, "metric-registry.json") or {}
     run_body = load(a.dir, "eval-run.json") or {}
@@ -187,8 +211,35 @@ def main():
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    print(vline)
-    return 1 if verdict == "fail" else (2 if verdict == "gap" else 0)
+    # 判定件三态 → 契约状态/退出码：PASS=ok/0；GAP=completed_with_errors/4（非阻断）；
+    # FAIL=failed/1（阻断 G4）。GAP 不再与「环境/前置失败」共用 2，调用方按 0/4 放行。
+    if verdict == "fail":
+        cc.emit_result(a.format, cc.build_result(
+            status="failed",
+            summary={"verdict": verdict, "line": vline, "fails": len(fails), "gaps": len(gaps)},
+            artifacts={"summary": a.out, "verdict": a.verdict_file or ""},
+            data={"fails": fails, "gaps": gaps},
+            error={
+                "category": "gate_failed",
+                "reason": vline,
+                "remediation": f"查看 {a.out} 的 fails/gaps，修复后重跑 G4；判定件缺席时先跑 gov_eval_verdict",
+            },
+        ), vline)
+        return cc.EXIT["business_failure"]
+    if verdict == "gap":
+        cc.emit_result(a.format, cc.build_result(
+            status="completed_with_errors",
+            summary={"verdict": verdict, "line": vline, "fails": len(fails), "gaps": len(gaps)},
+            artifacts={"summary": a.out, "verdict": a.verdict_file or ""},
+            data={"fails": fails, "gaps": gaps},
+        ), vline)
+        return cc.EXIT["partial"]
+    cc.emit_result(a.format, cc.build_result(
+        status="ok",
+        summary={"verdict": verdict, "line": vline},
+        artifacts={"summary": a.out, "verdict": a.verdict_file or ""},
+    ), vline)
+    return cc.EXIT["ok"]
 
 
 if __name__ == "__main__":
