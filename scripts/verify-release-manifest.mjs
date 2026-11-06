@@ -152,6 +152,27 @@ for (const key of REQUIRED_MODULES) {
   }
 }
 
+// ── 二次开发资产对账（2026-11-06 复盘 P0-2）：series 引用完整 + runtime 清单在场 ──
+{
+  const series = readCarrier('patches/series')
+    .split('\n')
+    .map(l => l.replace(/#.*$/, '').trim())
+    .filter(l => l.length > 0)
+  const missing = series.filter(p => !existsSync(resolve(ROOT, 'patches', p)))
+  if (missing.length > 0) {
+    fail('cockpit', `patches/series 引用缺失补丁 ${missing.length} 条：${missing.slice(0, 5).join(', ')}`)
+  }
+  let runtime
+  try { runtime = JSON.parse(readCarrier('runtime-manifest.json')) } catch (e) { fail('cockpit', `runtime-manifest.json 不可解析：${e.message}`) }
+  if (runtime) {
+    const files = runtime.files
+    if (!Array.isArray(files) || files.length === 0) fail('cockpit', 'runtime-manifest.json 缺 files 清单或为空')
+    else if (!files.every(f => f && typeof f.source === 'string' && typeof f.dest === 'string')) {
+      fail('cockpit', 'runtime-manifest.json 的 files 条目须含 source/dest')
+    }
+  }
+}
+
 // ── 驾驶舱：推演仅仓内裁定必须在 notes 声明（防静默改回随包） ──
 {
   const notes = String(manifest.modules?.cockpit?.notes ?? '')
