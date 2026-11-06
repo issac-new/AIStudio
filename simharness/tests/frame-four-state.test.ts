@@ -7,6 +7,8 @@ import { join, resolve } from 'node:path'
 // ①拍后即验：前后帧 md5 相同 → .invalid 隔离不入证据池、capture_ok 不置位
 // ②capture-plan 四态重分类：run27 实测 19 个零变化步已逐一定 none/repo/ui
 // ③repo 型：产物证据采集（不拍截图）
+// ④⑤第二批（帧采集准确性根治，2026-11-06）：帧模型二态化＋EFFECTIVE_ACTION 执行
+// bug＋探针帧出池＋审计单帧口径＋隔离帧诚实呈现（spec 2026-11-06-frame-capture-accuracy）
 const HARNESS = resolve(__dirname, '..')
 const FIX = join(HARNESS, 'tests', 'fixtures', 'frame-four-state')
 
@@ -101,5 +103,67 @@ describe('③ repo 型产物证据（不拍截图）', () => {
     const iFile = lib.indexOf('if [[ "$_plan_url" == file:* ]]')
     expect(iRepo).toBeGreaterThan(0)
     expect(iRepo).toBeLessThan(iFile)
+  })
+})
+
+// ④ 帧模型二态化＋探针出池＋审计口径（2026-11-06 用户红线「截图务必准确，不要冒充」
+// 第二批：run27 实录 19 步零变化双帧全入证据池——根因=无动作步孪生双帧伪模型＋
+// EFFECTIVE_ACTION 解析 bug（规划动作从未执行）＋探针帧入池＋审计 ≥2 帧反向激励）。
+describe('④ 帧模型二态化（无动作步单帧，动作真实执行）', () => {
+  const shooter = readFileSync(join(HARNESS, 'mux', 'r18-frames.mjs'), 'utf8')
+
+  it('规划动作真实执行：解析 EFFECTIVE_ACTION 而非 CLI ACTION（旧 bug：规划第 4 列从未跑过）', () => {
+    expect(shooter).toContain("const [kind, rest] = EFFECTIVE_ACTION.split(':')")
+    // 不得再出现对裸 CLI ACTION 的解析（负向后顾防 EFFECTIVE_ACTION 子串误配）
+    expect(shooter.match(/(?<![A-Z_])ACTION\.split/g)).toBeNull()
+  })
+
+  it('无动作步=完成态单帧：不再产孪生 before（同页两拍必同 md5，按操作前后注册即伪证据）', () => {
+    expect(shooter).toContain('完成态单帧')
+    // before 帧只在 EFFECTIVE_ACTION 分支内拍摄（源序：EFFECTIVE_ACTION 声明先于 before 截图）
+    const iEff = shooter.indexOf('const EFFECTIVE_ACTION = PLAN_ACTION || ACTION')
+    const iBefore = shooter.indexOf('await page.screenshot({ path: `${OUT}/${pre}-before.png` })')
+    expect(iEff).toBeGreaterThan(0)
+    expect(iBefore).toBeGreaterThan(iEff)
+  })
+
+  it('注册标题随帧形态：单帧步不再冒称「操作前后帧」', () => {
+    const lib = readFileSync(join(HARNESS, 'mux', 'mx-scenario-lib.sh'), 'utf8')
+    expect(lib).toContain('完成态实拍（capture_step 自动记录，无动作单帧）')
+  })
+})
+
+describe('⑤ 探针帧出证据池＋审计单帧口径＋隔离帧诚实呈现', () => {
+  it('预检探针帧拍后移出 steps/ 证据池（run27 的 19 个零变化步含 1 个探针）', () => {
+    const sc = readFileSync(join(HARNESS, 'aipay-scenario.sh'), 'utf8')
+    expect(sc).toMatch(/capture-precheck-op1-\*\.png[\s\S]{0,80}\$EVID_DIR\/screenshots\//)
+  })
+
+  it('审计查8 期望帧数按注册帧形态二态（操作对 ≥2／完成态 ≥1）——旧「一律 ≥2」是孪生帧生产强制力', () => {
+    const audit = readFileSync(join(HARNESS, 'mux', 'mx-report-audit.py'), 'utf8')
+    expect(audit).toContain("_ops_expect += 2 if any(re.search(r'-(?:before|action)\\.png$', _f) for _f in _of) else 1")
+    expect(audit).not.toContain('_fr < 2 * o_cnt')
+    expect(audit).toContain('完成态 ≥1 帧')
+  })
+
+  it('frame-zero-change-voided 与 frame-capture-failed 同通道降级配对（查3＋A5d④ 双点）', () => {
+    const audit = readFileSync(join(HARNESS, 'mux', 'mx-report-audit.py'), 'utf8')
+    expect(audit).toContain("_FRAME_DEGRADE_FAMILIES = {'frame-capture-failed', 'frame-zero-change-voided'}")
+    // 双点都用常量（不各写一份字面量）
+    const uses = audit.match(/_p\[1\] in _FRAME_DEGRADE_FAMILIES/g) || []
+    expect(uses.length).toBe(2)
+  })
+
+  it('生成器：隔离步入诚实注（摘要不得回落「全部实拍」）且不判「冒配」', () => {
+    const gen = readFileSync(join(HARNESS, 'mux', 'mx-report-gen.py'), 'utf8')
+    expect(gen).toContain('_FRAME_VOIDED')
+    expect(gen).toContain('零变化已隔离')
+    expect(gen).toContain('p.split(\'-op\')[0] not in _FRAME_VOIDED')
+  })
+
+  it('frame-verify：隔离帧跳过（不产「缺帧」偏差行）＋探针期望词条目移除', () => {
+    const fv = readFileSync(join(HARNESS, 'mux', 'frame-verify.py'), 'utf8')
+    expect(fv).toContain('-op1-before.png.invalid')
+    expect(fv).not.toContain("'capture-precheck'")
   })
 })

@@ -160,13 +160,17 @@ def _attest_read():
 _attest_read()
 
 # issues.log 预解析（查3 降级配对用；与 A3/A5d 段同源解析）
+# 降级凭证族单一事实源（2026-11-06 帧采集准确性根治收口）：frame-zero-change-voided
+# （零变化帧隔离）与 frame-capture-failed 同通道配对——隔离步 ✅ 无帧属已声明降级，
+# 不二罚。A5d④ 段复用本常量，两处不各写一份。
+_FRAME_DEGRADE_FAMILIES = {'frame-capture-failed', 'frame-zero-change-voided'}
 _ilog = EVID / 'issues.log'
 _fc_pre = set(); _r18_pre = False
 if _ilog.exists():
     for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
         _p = _l.split('|', 3)
         if len(_p) >= 4 and _p[0] == 'ISSUE':
-            if _p[1] == 'frame-capture-failed':
+            if _p[1] in _FRAME_DEGRADE_FAMILIES:
                 _fc_pre.add(_p[2])
             elif _p[1] == 'r18-collection-missing':
                 _r18_pre = True
@@ -524,7 +528,7 @@ if RUN_ID >= '20261010-v8-run13':
         for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
             _p = _l.split('|', 3)
             if len(_p) >= 4 and _p[0] == 'ISSUE':
-                if _p[1] == 'frame-capture-failed':
+                if _p[1] in _FRAME_DEGRADE_FAMILIES:
                     _fc_step_keys.add(_p[2])            # 形如 step-devimpl_done
                 elif _p[1] == 'r18-collection-missing':
                     _has_r18_degrade = True
@@ -765,13 +769,19 @@ for blk in blocks:
             # 拥有帧、r18 挂接侧让位——同一帧只嵌一处，条带嵌与 r18 嵌同权计入，避免按 r18-shot
             # 类名一刀切把「条带先嵌」形态误判零帧；run21 实锤：步条先嵌 ops 帧→r18 让位→
             # r18-shot 计 0→误 FAIL，而帧在报告内真实在位）。缺文件仍走「帧缺失」兄弟检查。
+            # 期望帧数按注册帧形态二态（2026-11-06 帧模型二态化）：注册帧含 -before/-action
+            # =操作对（≥2：操作前+系统响应）；仅 -after=完成态单帧（≥1）——旧口径一律 ≥2
+            # 正是孪生零变化帧的生产强制力（run27 实锤 19 步）。
             _ops_frames: list = []
+            _ops_expect = 0
             for _og in (((_r18_payloads.get(str(n)) or _r18_payloads.get(n) or {}).get('ops')) or []):
-                _ops_frames += [str(_f) for _f in (_og.get('frames') or [])]
+                _of = [str(_f) for _f in (_og.get('frames') or [])]
+                _ops_frames += _of
+                _ops_expect += 2 if any(re.search(r'-(?:before|action)\.png$', _f) for _f in _of) else 1
             _fr = sum(1 for _fn in _ops_frames
                       if re.search(rf'screenshots/steps/{re.escape(_fn if _fn.endswith(".png") else _fn + ".png")}"', blk))
-            if _fr < 2 * o_cnt:
-                _r18_rep(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）{_r18_suffix}')
+            if _fr < _ops_expect:
+                _r18_rep(f'R18 步 {n} 操作序列帧数不足（每组 ops 期望：操作对 ≥2 帧／完成态 ≥1 帧，当前渲染 {_fr} 帧/期望 ≥{_ops_expect}）{_r18_suffix}')
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）{_r18_suffix}')
     if n in _R18_SKILL_STEPS:
