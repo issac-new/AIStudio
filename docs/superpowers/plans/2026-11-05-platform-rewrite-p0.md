@@ -111,7 +111,7 @@ git commit -m "feat(platform): 身份绑定与 profile 授权契约"
 **Files:**
 - Create: `custom/server/platform/identity/matrix-login.ts`
 - Create: `custom/server/platform/identity/__tests__/matrix-login.test.ts`
-- Create: `patches/755-platform-matrix-zero-provisioning.patch`（原拟 751→752 连续让号，实际落 755）
+- Create: `patches/757-platform-matrix-zero-provisioning.patch`（原拟 751→752 连续让号，实际落 755）
 - Modify: `patches/series`
 - Patch targets: `vendor/hermes-studio/packages/server/src/modules/studio/controllers/auth.ts`、`repositories/users-store.ts`、`middleware/auth.ts`
 - Modify: `custom/client/loop/__tests__/matrix-login-session.test.ts`
@@ -184,7 +184,7 @@ Expected: pending、冲突、激活后成功、旧空授权 JWT 拒绝均 PASS�
 - [ ] **Step 5: 提交**
 
 ```bash
-git add custom/server/platform/identity custom/client/loop/__tests__ patches/755-platform-matrix-zero-provisioning.patch patches/series
+git add custom/server/platform/identity custom/client/loop/__tests__ patches/757-platform-matrix-zero-provisioning.patch patches/series
 git commit -m "feat(platform): Matrix 零权限供应与来源绑定"
 ```
 
@@ -195,7 +195,7 @@ git commit -m "feat(platform): Matrix 零权限供应与来源绑定"
 - Create: `custom/server/platform/authz/route-guard.ts`
 - Create: `registries/server/platform-route-policy.ts`
 - Create: `custom/server/platform/__tests__/route-policy.test.ts`
-- Create: `patches/756-platform-route-authz.patch`（原拟 753，让号落 756）
+- Create: `patches/758-platform-route-authz.patch`（原拟 753，让号落 756）
 - Modify: `custom/server/userenv/controller.ts`
 - Modify: `custom/server/autonomyladder/autonomy-ladder-controller.ts`
 - Modify: `custom/server/permmodes/session-mode-controller.ts`
@@ -268,7 +268,7 @@ Expected: 全部 PASS，拒绝路径无文件、审批或引擎副作用。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add custom/server/platform custom/server/userenv custom/server/autonomyladder custom/server/permmodes custom/server/approval-inbox registries/server/platform-route-policy.ts patches/756-platform-route-authz.patch patches/series package.json
+git add custom/server/platform custom/server/userenv custom/server/autonomyladder custom/server/permmodes custom/server/approval-inbox registries/server/platform-route-policy.ts patches/758-platform-route-authz.patch patches/series package.json
 git commit -m "fix(platform): 统一 profile 与管理授权边界"
 ```
 
