@@ -240,3 +240,4 @@
 {"at":"2026-11-05T17:50:17Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"1e6c949c38ce7f4b130b5249f1c98a36a13f26af","commit":"568384e44"}
 {"at":"2026-11-06T00:24:46Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"89813208b80e4224aaf89c66fafc292cb8b3b996","commit":"78e6aceea"}
 {"at":"2026-11-06T01:10:51Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"30ca9e0cbf3467c190254321c237945846906685","commit":"42daf7159"}
+{"at":"2026-11-06T05:45:46Z","spec":"docs/superpowers/specs/2026-11-06-release-v1.0.13-overlay.md","receipt":"c40f26ac199e5a0e7874c37e1dded1cc30bc5cf8","commit":"283e3f0e1"}

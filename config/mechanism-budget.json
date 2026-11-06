@@ -1,12 +1,12 @@
 {
-  "recordedAt": "2026-11-05",
+  "recordedAt": "2026-11-06",
   "limits": {
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 123,
+    "scripts": 134,
     "ledgers": 6,
-    "npmScripts": 49
+    "npmScripts": 52
   },
   "changes": [
     {
@@ -53,6 +53,14 @@
         "删除 build-dmg/build/serve-server/ensure-injected 四处内联上游根解析副本（4 份重复实现降为 1 份共享函数）",
         "删除 build-dmg 缺省回落兄弟 upstream 的必坏路径（单仓检出修复）",
         "修订 RELEASE-MANIFEST buildCommand 与机制预算 changes 的不实声明（文档/台账与实现对齐）"
+      ]
+    },
+    {
+      "at": "2026-11-06",
+      "delta": "scripts 123→134 / npmScripts 49→52（补账抬位）",
+      "reason": "平台重写 P1 批二（Task 6-10：scripts/platform/ 统一根/资源/产物身份/发布门/验收 11 件＋docs:check/docs:sync/release:gate 三个 npm script）与 AI-Friendly CLI 契约批（scripts/lib/cli-contract*.mjs 2 件）合入时未同步本预算册，governance-lint --budget 在 v1.0.13 发布轮实测超限（134>123、52>49）。本轮如实抬位至实测值补账；配对说明＝platform/ 新结构按设计收敛旧内联实现（build-dmg/build/serve-server 内联根解析副本已随 cognition P0 批删除），无独立退役动作",
+      "pairedRemovals": [
+        "cognition P0 批已删 4 处内联上游根解析副本与 build-dmg 必坏回落（0aee3bf），platform/* 与其共享收敛目标，不重复计退役"
       ]
     }
   ],

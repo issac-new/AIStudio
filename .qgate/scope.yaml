@@ -392,6 +392,26 @@ paths:
   - config/mechanism-budget.json
   - custom/client/ia2/views/FeatureDisabledView.vue
   - custom/client/__tests__/feature-disabled-copy.test.ts
+  # v1.0.13 发布轮
+  - docs/superpowers/specs/2026-11-06-release-v1.0.13-overlay.md
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
+  - package.json
+  - package-lock.json
+  - team/VERSION
+  - team/version.json
+  - skills/swarm-yuan/CHANGELOG.md
+  - docs/manuals/aistudio-training-and-user-guide.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - config/mechanism-budget.json
+  # 判词可用性分型与弃权回执（微信三篇 D 批，发版轮收编）
+  - docs/superpowers/specs/2026-11-06-verdict-availability-receipt.md
+  - simharness/mux/governance-client.sh
+  - simharness/mux/mx-scenario-lib.sh
+  - simharness/tests/decision-receipts.test.ts
+  - docs/reports/2026-11-06-verifiable-self-improving-agent-research.md
   # 2026-11-05/06 平台重写 P1 批二（Task 6-10 mega 批：统一根/资源/产物身份/发布门/验收，spec 2026-11-05-platform-rewrite-design）
   - docs/superpowers/specs/2026-11-05-platform-rewrite-design.md
   - docs/superpowers/plans/2026-11-05-platform-rewrite-p1.md
