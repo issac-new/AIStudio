@@ -146,12 +146,29 @@ describe('⑤ 探针帧出证据池＋审计单帧口径＋隔离帧诚实呈现
     expect(audit).toContain('完成态 ≥1 帧')
   })
 
-  it('frame-zero-change-voided 与 frame-capture-failed 同通道降级配对（查3＋A5d④ 双点）', () => {
+  it('frame-zero-change-voided 与 frame-capture-failed 同通道降级配对（查3＋A5d④＋R18 降级步构建三点）', () => {
     const audit = readFileSync(join(HARNESS, 'mux', 'mx-report-audit.py'), 'utf8')
     expect(audit).toContain("_FRAME_DEGRADE_FAMILIES = {'frame-capture-failed', 'frame-zero-change-voided'}")
-    // 双点都用常量（不各写一份字面量）
-    const uses = audit.match(/_p\[1\] in _FRAME_DEGRADE_FAMILIES/g) || []
-    expect(uses.length).toBe(2)
+    // 三点都用常量（不各写一份字面量；run27 实录第三点漏改致步 8/25 凭证在案仍 FAIL）
+    const uses = audit.match(/_p1?8?\[1\] in _FRAME_DEGRADE_FAMILIES/g) || []
+    expect(uses.length).toBe(3)
+  })
+
+  it('查9 承载红线认四态分类：none/repo 声明步与零变化隔离步=合规 WARN，未声明零帧才 FAIL', () => {
+    const audit = readFileSync(join(HARNESS, 'mux', 'mx-report-audit.py'), 'utf8')
+    expect(audit).toContain('_plan4_cls')
+    expect(audit).toContain('四态声明 none/repo——该步无 UI 承载面')
+    expect(audit).toContain('frame-zero-change-voided 在案：帧曾实拍、前后零变化已隔离')
+    // 别名表键面完整性：26 步的 *_done 状态键全覆盖（dispatch_done/report_done 曾缺，
+    // 查9 四态判定与 R18 降级映射对步 9/26 永远落空）
+    const m = audit.match(/_STAGE_ALIAS_STEPS = \{([\s\S]*?)\}/)
+    expect(m).toBeTruthy()
+    for (const k of ['smoke_done', 'appinit_done', 'people_done', 'room_done', 'dispatch_done', 'dispatch_marker',
+      'register_done', 'analysis_done', 'triage_done', 'anexec_done', 'review_done', 'close_done', 'plan_done',
+      'devimpl_done', 'defect_done', 'testpass_done', 'ready_done', 'ready_inbox', 'release_done', 'uat_done',
+      'workmgr_done', 'audit_done', 'retro_done', 'ide_done', 'report_done', 'g1_frozen', 'g2_arch_pass']) {
+      expect(m![1], `${k} 应在别名表`).toContain(`'${k}'`)
+    }
   })
 
   it('生成器：隔离步入诚实注（摘要不得回落「全部实拍」）且不判「冒配」', () => {
