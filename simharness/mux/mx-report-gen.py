@@ -3025,6 +3025,55 @@ def _four_properties_html():
                 + H.escape(str(e)) + '（不影响其余章节）</p>')
 
 
+
+def workunit_evidence_html():
+    """执行单元与署名记录（2026-11-06 第一增量）：读 evidence/workunit-six-questions.json。
+    缺席=「未采集」如实呈现，不伪造六问答案；unknown 带 gap。"""
+    f = EVID / 'workunit-six-questions.json'
+    if not f.exists():
+        return ('<h3 style="font-size:13px;margin:14px 0 6px">证据十：执行单元与署名记录（2026-11-06）</h3>'
+                '<p class="stat-note">未采集（evidence/workunit-six-questions.json 缺席）——'
+                '驱动未接 mx-workunit-lib.sh 或六问端点不可达；按缺席呈现，不伪造答案。</p>')
+    try:
+        snap = json.loads(f.read_text(encoding='utf-8', errors='replace'))
+    except Exception as ex:
+        return ('<h3 style="font-size:13px;margin:14px 0 6px">证据十：执行单元与署名记录（2026-11-06）</h3>'
+                f'<p class="stat-note">快照不可解析：{H.escape(str(ex))}</p>')
+    answers = snap.get('answers') or []
+    if not answers:
+        return ('<h3 style="font-size:13px;margin:14px 0 6px">证据十：执行单元与署名记录（2026-11-06）</h3>'
+                '<p class="stat-note">未采集（快照无 answers——端点缺席时落占位）。</p>')
+    badge = {'yes': '#15803d', 'no': '#b91c1c', 'unknown': '#6b7280'}
+    rows = []
+    for a in answers:
+        ans = str(a.get('answer') or 'unknown')
+        gap = a.get('gap')
+        if gap:
+            gap_html = f'<div class="stat-note" style="color:#b45309">缺口：{H.escape(str(gap))}</div>'
+        elif ans == 'unknown':
+            gap_html = '<div class="stat-note" style="color:#b91c1c">缺口：口径缺口未说明</div>'
+        else:
+            gap_html = ''
+        ev = a.get('evidence') or []
+        ev_html = ''
+        if ev:
+            ev_txt = '；'.join(f"{e.get('source')}.{e.get('ref')}={e.get('value')}" for e in ev)
+            ev_html = f'<div class="stat-note">{H.escape(ev_txt)}</div>'
+        rows.append(f'<tr><td>{H.escape(str(a.get("question") or a.get("id") or ""))}</td>'
+                    f'<td><b style="color:{badge.get(ans, "#6b7280")}">{H.escape(ans)}</b></td>'
+                    f'<td>{gap_html}{ev_html}</td></tr>')
+    body = ''.join(rows)
+    note = '' if snap.get('collected', True) else ('<p class="stat-note" style="color:#b45309">'
+             '本轮六问端点缺席，快照为占位——答案按未采集处理。</p>')
+    return ('<h3 style="font-size:13px;margin:14px 0 6px">证据十：执行单元与署名记录（2026-11-06）</h3>'
+            '<p class="stat-note">六问只回答「记录够不够」，不给人或执行单元排序；unknown 不是通过。'
+            '署名记录只收 human-entry，不从遥测派生。</p>' + note +
+            '<div class="govgrid"><table>'
+            '<tr><th>问题</th><th>回答</th><th>缺口 / 证据</th></tr>' + body +
+            '</table></div>'
+            '<p class="stat-note">判据源=evidence/workunit-six-questions.json（驱动经 mx-workunit-lib.sh 落档）'
+            ' + /api/autonomygov/six-questions。</p>')
+
 def closure_evidence_html():
     """治理结果证据（V8.46，2026-10-19）：读 evidence/governance-closure/ 与评测处置链。
 
@@ -6008,6 +6057,8 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   {eval_summary_html()}
 
   {closure_evidence_html()}
+
+  {workunit_evidence_html()}
 
   <h2 class="section-hd" id="artifact-panorama">第 6 章 · 交付物全景矩阵（缺什么一目了然）</h2>
   <p class="stat-note">各步交付物实物自中央仓实读渲染嵌入（见各步「📦 交付物实物与模版核对」折叠块，单件截断 5000 字符、全文按路径@锚反查），模版核对=逐项字段命中 ✓/缺（红）。{art_stat}。</p>

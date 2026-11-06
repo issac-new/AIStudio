@@ -52,7 +52,7 @@ import {
 import { readDispatchLedger } from './dispatch-ledger'
 import { collectBoardStatus } from './board-status'
 import { underWebUi } from '../lib/paths'
-import { fail, ok } from '../lib/http'
+import { bodyOf, fail, ok } from '../lib/http'
 
 const router = new Router({ prefix: '/api/governance' })
 
@@ -738,7 +738,12 @@ router.post('/matrix-offboard', async (ctx) => {
 import {
   listIdentities, registerIdentity, updateIdentity, addCredential, revokeCredential,
   delegate, revokeDelegation, activeDelegationChain, listEvents,
+  getCardView, transitionIdentity, updateResponsibilityCard,
 } from '../agentidentity/agent-identity'
+import { appendJudgment, listJudgments, type JudgmentKind } from '../agentidentity/judgments'
+import { activatePerson, listPeople, upsertPerson } from '../agentidentity/people'
+import type { ResponsibilityCard } from '../agentidentity/responsibility'
+import type { TransitionInput } from '../agentidentity/lifecycle'
 
 function govActorOf(ctx: { state?: { user?: { username?: string } } }): string {
   return ctx.state?.user?.username ?? 'anonymous'
@@ -814,6 +819,122 @@ router.post('/agent-identity/:id/delegation/:did/revoke', async (ctx) => {
 
 router.get('/agent-identity/:id/chain', async (ctx) => {
   ctx.body = { ok: true, ...activeDelegationChain(String(ctx.params.id ?? '')) }
+})
+
+// ── 执行单元责任台账（2026-11-06 第一增量）──
+// 责任卡、五阶段迁移、人署名记录、自然人名单。判定全在 agentidentity 域纯函数；
+// 本层只做 IO 与错误信封。署名记录只有 human-entry 写入路径，不提供遥测入口。
+
+function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
+  const cost = (b.costBudget ?? {}) as Record<string, unknown>
+  const sign = b.businessOwnerSign as Record<string, unknown> | undefined
+  const ev = b.admissionEvidence as Record<string, unknown> | undefined
+  const strs = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : [])
+  return {
+    deliveryStandard: String(b.deliveryStandard ?? ''),
+    riskTier: String(b.riskTier ?? '') as ResponsibilityCard['riskTier'],
+    primaryOwner: String(b.primaryOwner ?? ''),
+    ...(b.reviewer ? { reviewer: String(b.reviewer) } : {}),
+    escalation: strs(b.escalation),
+    pauseConditions: strs(b.pauseConditions),
+    takerOver: String(b.takerOver ?? ''),
+    testCaseVersion: String(b.testCaseVersion ?? ''),
+    costBudget: { limit: Number(cost.limit ?? 0), unit: String(cost.unit ?? '') },
+    maintainer: String(b.maintainer ?? ''),
+    deploymentLocation: String(b.deploymentLocation ?? ''),
+    ...(sign && typeof sign === 'object'
+      ? { businessOwnerSign: { signedBy: String(sign.signedBy ?? ''), signedAt: Number(sign.signedAt ?? 0), ...(sign.note ? { note: String(sign.note) } : {}) } }
+      : {}),
+    ...(ev && typeof ev === 'object'
+      ? {
+          admissionEvidence: {
+            representativeTasks: strs(ev.representativeTasks),
+            edgeCases: strs(ev.edgeCases),
+            dataPermissionReview: strs(ev.dataPermissionReview),
+            recordedAt: Number(ev.recordedAt ?? 0),
+          },
+        }
+      : {}),
+  }
+}
+
+router.get('/agent-identity/:id/card', async (ctx) => {
+  const view = getCardView(String(ctx.params.id ?? ''))
+  if (!view) { fail(ctx, 404, '身份不存在', { code: 'not-found' }); return }
+  ok(ctx, { view })
+})
+
+router.put('/agent-identity/:id/card', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const res = updateResponsibilityCard(String(ctx.params.id ?? ''), cardFromBody(bodyOf(ctx)), govActorOf(ctx as never))
+  if (!res.ok) { fail(ctx, 400, '责任卡校验未通过', { code: 'invalid-card', problems: res.problems }); return }
+  ok(ctx, { identity: res.identity })
+})
+
+router.post('/agent-identity/:id/transition', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const b = bodyOf(ctx)
+  const exit = b.exit as Record<string, unknown> | undefined
+  const input: TransitionInput = {
+    to: String(b.to ?? '') as TransitionInput['to'],
+    by: String(b.by ?? ''),
+    reason: String(b.reason ?? ''),
+    evidenceRefs: Array.isArray(b.evidenceRefs) ? b.evidenceRefs.map(String) : [],
+    ...(exit && typeof exit === 'object'
+      ? {
+          exit: {
+            kind: String(exit.kind ?? 'pause') as 'pause' | 'revoke' | 'decommission',
+            items: Array.isArray(exit.items) ? exit.items.map(String) : [],
+            ...(exit.confirmedBy ? { confirmedBy: String(exit.confirmedBy) } : {}),
+          },
+        }
+      : {}),
+  }
+  const res = transitionIdentity(String(ctx.params.id ?? ''), input, govActorOf(ctx as never))
+  if (!res.ok) { fail(ctx, 400, '状态迁移未通过', { code: 'invalid-transition', problems: res.problems }); return }
+  ok(ctx, { identity: res.identity })
+})
+
+router.get('/agent-identity/:id/judgments', async (ctx) => {
+  ok(ctx, { records: listJudgments(String(ctx.params.id ?? '')) })
+})
+
+router.post('/agent-identity/:id/judgments', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const b = bodyOf(ctx)
+  const res = appendJudgment({
+    unitId: String(ctx.params.id ?? ''),
+    kind: String(b.kind ?? '') as JudgmentKind,
+    subjectRef: String(b.subjectRef ?? ''),
+    rationale: String(b.rationale ?? ''),
+    evidenceRefs: Array.isArray(b.evidenceRefs) ? b.evidenceRefs.map(String) : [],
+  }, String(b.signedBy ?? ''), listPeople())
+  if (!res.ok) { fail(ctx, 400, '署名记录未通过', { code: 'invalid-judgment', problems: res.problems }); return }
+  ok(ctx, { record: res.record })
+})
+
+router.get('/people', async (ctx) => {
+  ok(ctx, { people: listPeople() })
+})
+
+router.post('/people', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const b = bodyOf(ctx)
+  const res = upsertPerson({
+    ...(b.id ? { id: String(b.id) } : {}),
+    name: String(b.name ?? ''),
+    emails: Array.isArray(b.emails) ? b.emails.map(String) : [],
+    source: b.source === 'git' ? 'git' : 'manual',
+  }, govActorOf(ctx as never))
+  if (!res.ok) { fail(ctx, 400, '自然人登记未通过', { code: 'invalid-person', problems: res.problems }); return }
+  ok(ctx, { person: res.person })
+})
+
+router.post('/people/:id/activate', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const res = activatePerson(String(ctx.params.id ?? ''), govActorOf(ctx as never))
+  if (!res.ok) { fail(ctx, 404, '自然人不存在', { code: 'not-found', problems: res.problems }); return }
+  ok(ctx, { person: res.person })
 })
 
 

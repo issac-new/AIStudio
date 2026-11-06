@@ -1,0 +1,71 @@
+# 执行单元责任台账契约门（2026-11-06 执行单元责任台账批，spec 2026-11-06-workunit-responsibility-ledger）。
+#
+# 为什么是"契约在位"而不是"运行时数据合格"：责任台账/判定记录/人员与生命周期
+# 是运行时状态，仓内门禁读不到也不该读。本门只核仓内可验证的那一半——
+# agentidentity 四域判定面与守门测试在位、六问链路（autonomygov/six-questions）
+# 不被删空、spec 保留「批准前六问」与署名纪律、判定只收 human-entry
+# （遥测不得写入）、生命周期五阶段保留 changing 态（不得删态）。
+# 运行时判定由域内纯函数 + 端点负责，其证据在域测试里。
+#
+# 档位：advisory（与 .qgate/qgate.yaml 声明的起步纪律一致），稳定后切 block。
+apiVersion: qgate/v1alpha1
+kind: Gate
+metadata:
+  id: hrgov.workunit-contract
+  version: 0.1.0-overlay
+  description: 执行单元责任台账契约在位（advisory 起步）：agentidentity 四域与六问链路在位，判定只收 human-entry，生命周期五阶段不删态。
+spec:
+  domain: L4
+  claims:
+    - hrgov.workunit-contract
+  appliesWhen:
+    changed:
+      any:
+        - "custom/server/agentidentity/**"
+        - "custom/server/autonomygov/**"
+        - "custom/client/governance/components/WorkUnit*"
+        - "custom/client/governance/components/Judgment*"
+        - "custom/client/governance/components/SixQuestions*"
+        - "simharness/mux/mx-workunit-lib.sh"
+        - "docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md"
+  triggers: [task_close]
+  executors:
+    - id: workunit-contract-files
+      type: files
+      # 四域判定面与守门测试必须在位（缺一个即说明这一域被删空而门还在）；
+      # identity-card 是台账对外的只读投影，一并纳入；六问链路同理。
+      require:
+        - "custom/server/agentidentity/responsibility.ts"
+        - "custom/server/agentidentity/__tests__/responsibility.test.ts"
+        - "custom/server/agentidentity/lifecycle.ts"
+        - "custom/server/agentidentity/__tests__/lifecycle.test.ts"
+        - "custom/server/agentidentity/judgments.ts"
+        - "custom/server/agentidentity/__tests__/judgments.test.ts"
+        - "custom/server/agentidentity/people.ts"
+        - "custom/server/agentidentity/__tests__/people.test.ts"
+        - "custom/server/agentidentity/__tests__/identity-card.test.ts"
+        - "custom/server/autonomygov/six-questions.ts"
+        - "custom/server/autonomygov/__tests__/six-questions.test.ts"
+      mustContain:
+        # spec 是决策事实源：六问与署名纪律不得被静默删除
+        - file: "docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md"
+          markers:
+            - "批准前六问"
+            - "署名"
+            - "六问"
+        # 判定记录只收 human-entry：遥测写入端点不得出现（取证前提）
+        - file: "custom/server/agentidentity/judgments.ts"
+          markers:
+            - "human-entry"
+        # 生命周期五阶段不得删态：changing 是追加修正案的合法源态
+        - file: "custom/server/agentidentity/lifecycle.ts"
+          markers:
+            - "changing"
+      evidenceType: files-check-result
+  evidence:
+    required: [files-check-result]
+  policy:
+    failure: warn
+    inconclusive: warn
+    allowWaiver: true
+    maxAgeHours: 24

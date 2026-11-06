@@ -17,10 +17,16 @@ claims:
     statement: 自治/假设/度量三域判定面与守门测试在位，且 spec 模板保留批准前六问。
     domain: L4
     criticality: medium
+  # 2026-11-06 执行单元责任台账第一增量：契约门（advisory 档，gates/hrgov.workunit-contract.yaml）
+  - id: hrgov.workunit-contract
+    statement: 责任卡/生命周期/署名/自然人四判定面与守门测试在位；署名只收 human-entry。
+    domain: L4
+    criticality: medium
 # 档位后强制启用（round-2，控制席裁决 2026-11-06、台账待追认）：orgscale claim 已在
 # 上声明，唯一覆盖门 governance.orgscale 属 L4、被 vibe-fast 域级禁用——不覆盖则
 # claim 恒孤儿、release:gate 严格报告恒红（2026-11-06 真跑实锤）。仅复活这一门，
-# 不动档位其余裁剪面。
+# 不动档位其余裁剪面。hrgov 门同理由显式启用。
 enableGates:
   - governance.orgscale
+  - hrgov.workunit-contract
 overrides: {}

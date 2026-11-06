@@ -8,9 +8,13 @@ import Router from '@koa/router'
 import type { Context } from 'koa'
 import { appendGovEvent } from '../govbus/event-log'
 import { bodyOf, fail, ok } from '../lib/http'
-import { listRosterGaps } from '../agentidentity/agent-identity'
+import { listRosterGaps, listIdentities } from '../agentidentity/agent-identity'
+import { listJudgments } from '../agentidentity/judgments'
+import { listPeople } from '../agentidentity/people'
 import { listDecisions } from '../decisiongraph/semantica-client'
 import { stageRatios } from '../decisiongraph/stage-ratios'
+import { listRuns as listEvalRuns } from '../eval/store'
+import { sixQuestions } from './six-questions'
 import { assess, ratioReport, tierFromAl, validateEntryInput } from './rules'
 import { dualSignSatisfied, highRiskOptions } from './dualsign'
 import {
@@ -126,6 +130,23 @@ autonomyGovRoutes.get('/gaps', (ctx) => {
     warnings: assessments.filter((a) => a.verdict === 'warn'),
     fakeAi: assessments.filter((a) => a.fakeAi),
     dualSign: { classes: highRiskOptions(), recentGaps: listDualSignGaps(50) },
+  })
+})
+
+/** 六问完成判据（2026-11-06 第一增量）：跨域只读聚合，unknown 必带 gap；不出排序与评分。 */
+autonomyGovRoutes.get('/six-questions', async (ctx) => {
+  let decisions: Awaited<ReturnType<typeof listDecisions>>['decisions'] = []
+  try {
+    decisions = (await listDecisions(200)).decisions
+  } catch { /* semantica 缺席=无决策面，q1 按 unknown 报 */ }
+  ok(ctx, {
+    answers: sixQuestions({
+      decisions,
+      identities: listIdentities(),
+      people: listPeople(),
+      judgments: listJudgments(),
+      evalRuns: listEvalRuns(),
+    }),
   })
 })
 

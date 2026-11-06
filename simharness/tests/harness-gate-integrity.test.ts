@@ -1514,7 +1514,7 @@ describe('⑰ run15 复盘收口件（V8.17：ERR trap/三态 DISP/查 9 红线/
   it('prelaunch ⑪：叙事注册机制化（上轮已注册硬查+骨架兜底在位）', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑪ 叙事注册与骨架兜底')
-    expect(pre).toContain('prelaunch 三十五项')  // 2026-11-02 run24 驱动面批⑤：加 ⑩d 工作区 origin 单一性；此前三十三项=V8.46 治理闭环 ㉔-㉚
+    expect(pre).toContain('prelaunch 三十六项')  // 2026-11-06 责任台账批：加 ㉝ 四面在位；2026-11-02 run24 驱动面批⑤ 加 ⑩d；此前三十三项=V8.46 治理闭环 ㉔-㉚
     expect(pre).toContain('⑫ 账号板供给在位')
   })
 
@@ -1652,7 +1652,7 @@ describe('㉗ 模型波动支撑面接线绊线（2026-11-01 方案×程序同�
 // ② 复测预启动（新 [LEAD-MERGE] 合入即令增量复测，sha 幂等）
 // ③ early-start 预备步（G5 熔断等待期派 UAT 矩阵/发布说明/复盘度量草稿）
 // ④ 跨域依赖看护（fix/* 未合入即催域 lead，600s 分支级节流）
-// ⑤ 工作区 origin 单一性（prelaunch ⑩d，计数随机制治理批到三十五项）
+// ⑤ 工作区 origin 单一性（prelaunch ⑩d，计数随责任台账批到三十六项）
 // ⑥ G5 风暴去重（issue_once）+ 闭包快照 --out *.json 按文件写
 describe('㉘ run24 复盘驱动面批（驱动面六件，2026-11-02）', () => {
   const read = (f: string) => execFileSync('bash', ['-c', `cat "${f}"`], { encoding: 'utf8' })
@@ -1840,7 +1840,7 @@ echo "owners=$(grep -oE 'DISPATCH\\|[a-z]+' "$AIPAY_SIM_ROOT/prep.log" | cut -d'
   it('⑤ 工作区 origin 单一性：prelaunch ⑩d 在位且计数同步；mx-setup 建 bare/归 origin', () => {
     const pre = read(join(MX, 'mx-prelaunch-check.sh'))
     expect(pre).toContain('⑩d 各工作区 origin 单一性')
-    expect(pre).toContain('prelaunch 三十五项')
+    expect(pre).toContain('prelaunch 三十六项')
     expect(pre).toContain("_bare='$SR/central-origin.git'")
     const setup = read(join(MX, 'mx-setup.sh'))
     expect(setup).toContain('CENTRAL_BARE="${MX_CENTRAL_BARE:-$SIM_ROOT/central-origin.git}"')
