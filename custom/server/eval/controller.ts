@@ -94,6 +94,7 @@ router.get('/outcome-verifiers', analysisHandlers.getOutcomeVerifiers)
 router.get('/behavior-signals', analysisHandlers.getBehaviorSignals)
 router.get('/runs/:id/business-summary', analysisHandlers.getRunsIdBusinessSummary)
 router.post('/e2e-verdict', analysisHandlers.postE2eVerdict)
+router.post('/gate-check', analysisHandlers.postGateCheck)
 
 // 红队路由挂在同一前缀下（/api/hermes/eval/redteam/*），零新增 patch。
 mountRedteam(router)

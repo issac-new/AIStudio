@@ -21,7 +21,10 @@ function grepCount(pattern: string, paths: string[]): number {
     // result-contract.ts 同理（2026-11-04 W2 批）：validateResultEnvelope 纯函数的
     // 统一失败出口 {ok:false,problems}，非 HTTP 面（同 lib/http/error-envelope 理据）。
     // 统一失败信封出口，信封构造必然出现失败字面量；执法与业务代码照常计数。
-    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts', ':(exclude)custom/server/toolcontract/error-envelope.ts', ':(exclude)custom/server/result-contract/result-contract.ts'], { cwd: ROOT, encoding: 'utf8' })
+    // golden-gate.ts（2026-11-06 G4 黄金集门检批）同理：GoldenGateResult 是 eval 域内部
+    // Result 联合（与 runner ReplayRunResult/store CreateSetResult 同族——它们的 ok:false
+    // 属历史存量基线），非 HTTP 响应面；HTTP 出口在 routes/analysis.ts 走 created/fail。
+    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts', ':(exclude)custom/server/toolcontract/error-envelope.ts', ':(exclude)custom/server/result-contract/result-contract.ts', ':(exclude)custom/server/eval/golden-gate.ts'], { cwd: ROOT, encoding: 'utf8' })
     return out.split('\n').filter(Boolean).length
   } catch {
     return 0
