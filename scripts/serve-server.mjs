@@ -10,11 +10,12 @@
 //   默认模式下 @types/node 丢失(TS2591)、custom/server 内同目录的 .d.ts 模块
 //   声明(如 proper-lockfile.d.ts)不拾取(TS7016);v0.7.22 起 custom/server
 //   新增 loop/store/local-store.ts 首次把该缺项暴露为启动失败。
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { existsSync, lstatSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { resolve } from 'path';
-import { resolveUpstreamRoots } from './inject.mjs';
+// 上游根解析单一事实源（P1 Task 6）：env > 仓内 vendor > 旧兄弟 upstream（realpath）。
+import { resolveUpstreamRoots } from './platform/lib/upstream-root.mjs';
 
 const args = process.argv.slice(2);
 let port = process.env.PORT || '8647';
@@ -48,9 +49,8 @@ const ncwkRoot = (() => {
     if (resolve(d, '..') === d) return vendorHit;
   }
 })();
-// 上游根单一事实源（AGENTS.md 规则 9）：与 inject.mjs 共用，避免服务与注入对
-// 「上游在哪」给出不同答案。上方 ncwkRoot 是工作区祖先锚，语义不同，保留。
-const upstream = resolveUpstreamRoots(overlayRoot).studio;
+// 上游根（P1 Task 6 收敛到平台解析器）：env ＞ 仓内 vendor/ ＞ 旧布局 ../upstream/。
+const upstream = resolveUpstreamRoots(overlayRoot).hermesStudioRoot;
 
 process.env.TS_NODE_PROJECT = 'packages/server/tsconfig.json';
 process.env.TS_NODE_FILES = '1';
@@ -114,6 +114,19 @@ if (!process.env.GOVERNANCE_REPO?.trim()) {
   } else {
     process.env.GOVERNANCE_REPO = ncwkRoot ? resolve(ncwkRoot, 'governance') : resolve(overlayRoot, '..', 'governance');
   }
+}
+
+// 注入前置（P1 Task 6）：起服前显式 ensure（npm run serve 无 pre 生命周期钩子，
+// 此前依赖调用方自觉 inject——未注入树起服=运行面与注入态分裂）。ensure 非零
+//（未注入/last-failed/不可接受 partial/v1 迁移态 exit 3）一律拒绝起服。
+// OVERLAY_ENSURE_CMD 为测试/沙箱 seam（整条命令串，缺省真 ensure）。
+const ensureCmd = process.env.OVERLAY_ENSURE_CMD?.trim()
+  || `node ${resolve(overlayRoot, 'scripts', 'ensure-injected.mjs')}`;
+const ensureRun = spawnSync(ensureCmd, { shell: true, stdio: 'inherit' });
+if (ensureRun.status !== 0) {
+  console.error(`[serve-server] ensure-injected 未通过（exit=${ensureRun.status}），拒绝起服——注入态不可验证或未收口。`);
+  console.error('[serve-server] 处置：npm run clean && npm run inject 后重试；v1 清单（exit=3）按迁移指引重建。');
+  process.exit(ensureRun.status ?? 1);
 }
 
 console.log(`[serve-server] PORT=${port}`);

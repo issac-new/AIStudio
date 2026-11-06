@@ -176,7 +176,8 @@ describe('多裁判多数决（EVAL_JUDGE_MODELS）', () => {
     const byId = new Map(r.verdicts.map((v) => [v.assertionId, v]))
     expect(byId.get('a1')).toMatchObject({ value: 'yes' })
     expect(byId.get('a2')).toMatchObject({ value: 'no' })
-    expect(r.judgeMeta.models).toBeUndefined()
+    // C 批（dc31560c5）起 models 恒记——单模型运行换裁判后可追溯；旧「多模型才记」断言随之退役
+    expect(r.judgeMeta.models).toEqual([cfg.judgeModel])
     expect(seenModels).toEqual([cfg.judgeModel])
   })
 
