@@ -466,3 +466,12 @@ paths:
   - scripts/__tests__/deploy-patch-touched.test.ts
   - patches/759-agent-runaway-file-edit-thrash.patch
   - patches/series
+  # G4 黄金集门检（spec 2026-11-06-eval-golden-gate）
+  - docs/superpowers/specs/2026-11-06-eval-golden-gate.md
+  - custom/server/eval/golden-set.ts
+  - custom/server/eval/golden-gate.ts
+  - custom/server/eval/routes/analysis.ts
+  - custom/server/eval/controller.ts
+  - custom/server/eval/__tests__/golden-gate.test.ts
+  - simharness/mux/mx-eval-lib.sh
+  - package.json

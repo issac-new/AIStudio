@@ -24,7 +24,7 @@ import {
 import { calibrateSet, type CalibrationSample } from '../set-calibration'
 import { judgeAttempt } from '../judge'
 import { publicSetView, publicTaskView } from '../rubric-visibility'
-import { fail, ok } from '../../lib/http'
+import { created, fail } from '../../lib/http'
 import { countRuns as countRedteamRuns } from '../../redteam/store'
 import { loadEvalConfig } from '../types'
 import { synthesizeProbesForTask } from '../synthesize'
@@ -453,6 +453,31 @@ const r = computeE2eVerdict({
 ctx.body = { ok: true, ...r, line: e2eVerdictLine(r) }
 }
 
+// ── G4 黄金集门检（spec 2026-11-06-eval-golden-gate）──
+// 无必填请求体：黄金集与材料均为仓内资产（D4——调用方传不进材料，防绕过单一事实源）。
+// 首轮观察态：mismatch 记缺口不阻断；judge 真跑（活体 LLM）成本约 30 例×2 轮。
+export async function postGateCheck(ctx: Context) {
+  const { goldenGateCheck } = await import('../golden-gate')
+  try {
+    const result = await goldenGateCheck()
+    if (!result.ok) {
+      fail(ctx, 400, result.problems ?? ['黄金集门检失败'])
+      return
+    }
+    const { buckets, mismatch } = result
+    created(ctx, {
+      semantics: result.semantics,
+      runId: result.runId,
+      buckets,
+      mismatch,
+      // 判据语义随响应披露：观察态（未校准不阻断）；校准批收敛后此字段升级为 'blocking'
+      gateMode: 'observational',
+    })
+  } catch (e) {
+    fail(ctx, 500, [`黄金集门检异常：${e instanceof Error ? e.message : String(e)}`])
+  }
+}
+
 export const analysisHandlers = {
   getRunsIdAgreement,
   getRunsIdReleaseHold,
@@ -472,4 +497,5 @@ export const analysisHandlers = {
   getBehaviorSignals,
   getRunsIdBusinessSummary,
   postE2eVerdict,
+  postGateCheck,
 }

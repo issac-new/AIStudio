@@ -247,3 +247,5 @@
 {"at":"2026-11-06T06:38:30Z","spec":"docs/superpowers/specs/2026-11-06-inject-seam-restore.md","receipt":"e0f176a6623f30986c9c6f6ec569db314ff46ab5","commit":"4e3228ab4"}
 {"at":"2026-11-06T07:01:05Z","spec":"docs/superpowers/specs/2026-11-06-platform-wiring-restore.md","receipt":"b39cdb6cbb6fd2cae47cf68883db97ddebaa5125","commit":"ba492bd13"}
 {"at":"2026-11-06T07:28:03Z","spec":"docs/superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md","receipt":"ae58a29b5b2e18208796afa37a17fca0a3283257","commit":"9b4ad890f"}
+{"at":"2026-11-06T09:19:01Z","spec":"docs/superpowers/specs/2026-11-06-eval-golden-gate.md","receipt":"1ee39ae0227385680ae8ac2b44c3d4648fce7965","commit":"03bc31be7"}
+{"at":"2026-11-06T09:35:27Z","spec":"docs/superpowers/specs/2026-11-06-eval-golden-gate.md","receipt":"769be05006a945b91c0f93c730b6e9ae00c1b579","commit":"f3f5b477d"}

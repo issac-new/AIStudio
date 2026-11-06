@@ -262,6 +262,36 @@ eval_remediation_flow() { # <runId>：失败样本→处置单→同卷复评→
   [[ "$open" -eq 0 ]] && return 0 || return 2
 }
 
+# G4 黄金集门检（spec 2026-11-06-eval-golden-gate）：裁判 P2P 底座读数——黄金集 30 例
+# 模范材料判分全应 PASS。首轮观察态：mismatch 记缺口不阻断（未校准裁判误杀属预期，
+# Rubric Loop 校准批收敛后升硬判据）；端点不可达/运行失败并入 eval-gate-gap 族（缺口）。
+eval_golden_gate() {
+  local d out rc
+  d=$(eval_dir)
+  mkdir -p "$d"
+  if ! out=$(eval_api POST /api/hermes/eval/gate-check '{}' 2>&1); then
+    issue_once golden-gate-unreachable "$RFD_ID" "黄金集门检端点不可达（资产判分通道未跑成=缺口）"
+    return 4
+  fi
+  printf '%s\n' "$out" > "$d/golden-gate.json"
+  rc=$(jq -r '.ok // false' "$d/golden-gate.json" 2>/dev/null || echo false)
+  if [[ "$rc" != "true" ]]; then
+    issue_once golden-gate-failed "$RFD_ID" "黄金集门检运行失败：$(printf '%s' "$out" | head -c 200)"
+    return 4
+  fi
+  local mm p a adv
+  mm=$(jq -r '.mismatch | length' "$d/golden-gate.json" 2>/dev/null || echo '?')
+  p=$(jq -r '.buckets.positive // "?"' "$d/golden-gate.json")
+  a=$(jq -r '.buckets.ambiguous // "?"' "$d/golden-gate.json")
+  adv=$(jq -r '.buckets.adversarial // "?"' "$d/golden-gate.json")
+  sset golden_gate_buckets "${p}/${a}/${adv}"
+  if [[ "$mm" != "0" ]]; then
+    issue_once golden-gate-mismatch "$RFD_ID" "黄金集门检 ${mm} 例误杀（桶 ${p}/${a}/${adv}，观察态不阻断；明细 evidence/evals/golden-gate.json）"
+  fi
+  note "[评测] 黄金集门检：桶 ${p}/${a}/${adv}｜误杀 ${mm}（P2P 观察态）"
+  return 0
+}
+
 eval_flow() { # 步 20 主流程：建集→运行→红队→采集→线上证据→判定→处置
   local set_id run_id rt_id rc out
   set_id=$(eval_ensure_set) || { issue_once eval-set-failed "$RFD_ID" "全流程评测集建立失败"; return 2; }
@@ -278,6 +308,7 @@ eval_flow() { # 步 20 主流程：建集→运行→红队→采集→线上证
   # 处置链（V8.46）：失败样本→处置单→同卷复评→机械关闭。不改评测判据；
   # 未关项记问题单并在报告证据九如实呈现（处置链未闭合≠评测门禁改写）。
   eval_remediation_flow "$run_id" >/dev/null 2>&1 || issue_once eval-remediation-open "$RFD_ID" "处置链存在未关闭项（详见 evidence/evals/remediations.json）"
+  eval_golden_gate >/dev/null 2>&1 || true   # 黄金集门检（观察态叠加子门，读数与缺口自行落档不影响主判定）
   case "$rc" in
     0) sset_once g4_eval_pass "$(date +%s)"; return 0 ;;
     4) sset g4_eval_gap 1; issue_once eval-gate-gap "$RFD_ID" "$out"; return 4 ;;
