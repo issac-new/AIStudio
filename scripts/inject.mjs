@@ -53,7 +53,11 @@ const upstreamRoot = roots.root;
 const hermesStudioRoot = roots.studio;
 const hermesAgentRoot = roots.agent;
 const zcodeRoot = roots.zcode;
-const zcodePatchDir = resolve(overlayRoot, 'zcode-patches');
+// 补丁目录 seam（P1 Task 5，24385a3b0；cognition P0 重构携旧基线曾丢失，本批恢复）：
+// OVERLAY_PATCH_DIR/OVERLAY_ZCODE_PATCH_DIR 供 e2e 测试以临时补丁集驱动真实 CLI；缺省=仓内正本。
+const zcodePatchDir = process.env.OVERLAY_ZCODE_PATCH_DIR?.trim()
+  ? resolve(process.env.OVERLAY_ZCODE_PATCH_DIR.trim())
+  : resolve(overlayRoot, 'zcode-patches');
 const zcodeSeriesFile = resolve(zcodePatchDir, 'series');
 const upstreamNodeModules = resolve(hermesStudioRoot, 'node_modules');
 const overlayNodeModules = resolve(overlayRoot, 'node_modules');
@@ -61,8 +65,10 @@ const overlayNodeModules = resolve(overlayRoot, 'node_modules');
 // 故需把 overlay/custom/server 链接到上游 packages/server/src/custom。
 const upstreamServerCustom = resolve(hermesStudioRoot, 'packages/server/src/custom');
 const overlayServerCustom = resolve(overlayRoot, 'custom/server');
-const patchSeriesFile = resolve(overlayRoot, 'patches', 'series');
-const patchDir = resolve(overlayRoot, 'patches');
+const patchDir = process.env.OVERLAY_PATCH_DIR?.trim()
+  ? resolve(process.env.OVERLAY_PATCH_DIR.trim())
+  : resolve(overlayRoot, 'patches');
+const patchSeriesFile = resolve(patchDir, 'series');
 const manifestPath = resolve(overlayRoot, '.overlay-injected.json');
 // 派生状态输出目录：默认仓根；测试/沙箱可经 OVERLAY_STATE_OUT 重定向。
 // 背景（2026-10-28）：inject-absent-tree 测试以临时树作 OVERLAY_UPSTREAM_ROOT 跑真实 inject，
