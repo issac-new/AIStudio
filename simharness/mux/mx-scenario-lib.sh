@@ -1298,8 +1298,13 @@ PYM
       return 0
     fi
     if [[ -n "$_frames" ]]; then
+      # 注册标题随帧形态（2026-11-06 帧模型二态化）：无 before 帧=完成态单帧（射手
+      # 对无动作步只拍 after），不再冒称「操作前后帧」；有动作步保持前后语义。
+      local _title="步 ${step} 操作前后帧（capture_step 自动记录）"
+      [[ -f "$EVID_DIR/screenshots/steps/${step}-op1-before.png" ]] \
+        || _title="步 ${step} 完成态实拍（capture_step 自动记录，无动作单帧）"
       if ! python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
-          --step-key "$step" --title "步 ${step} 操作前后帧（capture_step 自动记录）" \
+          --step-key "$step" --title "$_title" \
           --entry "url=${url} user=${user}" --frames $_frames >/dev/null 2>&1; then
         note "[帧采集] 步 ${step} R18 op 载荷记录失败（记录不阻断）"
         echo "ISSUE|r18-op-register-failed|step-${step}|capture_step 拍摄成功但 r18-collect op 记录失败（帧在盘、载荷缺——收尾链按帧名补记录）" >> "$EVID_DIR/issues.log"

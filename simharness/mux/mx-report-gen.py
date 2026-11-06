@@ -95,6 +95,16 @@ try:
                 _FRAME_PAIR_SAME.update(_names)
 except Exception:
     pass
+# 零变化已隔离步（2026-11-06 帧采集准确性根治）：盘上 *-op1-before.png.invalid 在案＝
+# 该步零变化帧已隔离退出证据池（O3 拍后即验 / run27 复盘补隔离）。摘要诚实注与
+# 「注册缺文件」判定据此排除隔离步——隔离≠冒配（帧真实拍过，因零变化退出证据池）。
+_FRAME_VOIDED = set()
+try:
+    if STEPS_DIR.is_dir():
+        for _f in STEPS_DIR.glob('*-op1-before.png.invalid'):
+            _FRAME_VOIDED.add(_f.name.split('-op')[0])
+except Exception:
+    pass
 
 
 def frame_badge(pre: str) -> str:
@@ -4773,7 +4783,8 @@ try:
                          'total': len(_ledger_rows())},
         'frames': {'fv_ok': sum(1 for r in _FRAME_VERIFY.values() if r.get('ok')),
                    'fv_bad': sum(1 for r in _FRAME_VERIFY.values() if not r.get('ok')),
-                   'zero_change_steps': len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME})},
+                   'zero_change_steps': len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME}),
+                   'voided_steps': len(_FRAME_VOIDED)},
     }
     with (_REPO_GOV / 'run-metrics.jsonl').open('a', encoding='utf-8') as _mf:
         _mf.write(json.dumps(_mrow, ensure_ascii=False) + '\n')
@@ -4836,7 +4847,11 @@ ui_imgs = total_imgs  # 证据图=界面上帝视角实拍（自动挂接帧同�
 _disk_pngs = {p.stem for p in STEPS_DIR.glob('*.png')} if STEPS_DIR.exists() else set()
 _registered = {pre for _, _, _, m in STEPS for pre, _, _ in m.get('imgs', [])}
 _unreferenced = sorted(_disk_pngs - set(_effective))
-_missing_ref = sorted(p for p in _registered if not (STEPS_DIR / f'{p}.png').exists())
+# 已隔离步（_FRAME_VOIDED）不判「冒配」：帧真实拍过、因零变化退出证据池——判冒配
+# 是错误语义（2026-11-06 帧采集准确性根治，run27 复盘补隔离后注册帧成片缺席属预期）。
+_missing_ref = sorted(p for p in _registered
+                      if not (STEPS_DIR / f'{p}.png').exists()
+                      and p.split('-op')[0] not in _FRAME_VOIDED)
 if _unreferenced:
     print(f'[mx-report-gen] WARN 盘上未引用帧 {len(_unreferenced)} 张（漏配，如实列出）: {", ".join(_unreferenced)}')
 if _missing_ref:
@@ -4848,9 +4863,20 @@ _reshoot = any('补拍' in cap for _, _, _, m in STEPS for _, cap, _ in m.get('i
 _n_fv_bad = sum(1 for _r in _FRAME_VERIFY.values() if not _r.get('ok'))
 _n_fv_ok = sum(1 for _r in _FRAME_VERIFY.values() if _r.get('ok'))
 _n_same_frame_steps = len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME})
-if _n_fv_bad or _n_same_frame_steps:
-    _img_honest_note = (f' · 实拍可核验 {_n_fv_ok} 步 / 内容不符 {_n_fv_bad} 步 / 前后零变化 {_n_same_frame_steps} 步'
-                        '（逐帧徽章标注，摘要不按「全部实拍」呈现）')
+# 零变化已隔离步入注（2026-11-06 帧采集准确性根治）：隔离后 _FRAME_PAIR_SAME 归零，
+# 若不计隔离数摘要会回落「全部实拍」——隔离步的证据态必须留在摘要上（不冒充）。
+_n_voided = len(_FRAME_VOIDED)
+_note_segs = []
+if _n_fv_ok:
+    _note_segs.append(f'实拍可核验 {_n_fv_ok} 步')
+if _n_fv_bad:
+    _note_segs.append(f'内容不符 {_n_fv_bad} 步')
+if _n_same_frame_steps:
+    _note_segs.append(f'前后零变化 {_n_same_frame_steps} 步')
+if _n_voided:
+    _note_segs.append(f'零变化已隔离 {_n_voided} 步（不入证据池·问题单在案）')
+if _note_segs:
+    _img_honest_note = ' · ' + ' / '.join(_note_segs) + '（逐帧徽章标注，摘要不按「全部实拍」呈现）'
 elif _reshoot:
     _img_honest_note = ' · 全部实拍（收尾后补拍，非当轮实时帧——采集链未挂驱动，记入问题清单 r18-collection-missing）'
 else:

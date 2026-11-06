@@ -277,19 +277,24 @@ if (EXPECT.length) {
     } catch {}
   }
 }
-await page.screenshot({ path: `${OUT}/${pre}-before.png` })
-console.log(`shot: ${pre}-before`)
-
+// 帧模型二态化（2026-11-06 用户红线「截图务必准确，不要冒充」）：无动作步不再产
+// 孪生 before/after 双帧——步完成态页面静态，两帧必然字节相同却按「操作前后」注册
+// 即伪证据（run27 实锤 19 步零变化全入证据池）。二态：
+//   有动作（规划第 4 列或 --action）= before + action + after 三帧，动作真实执行
+//     （此前 EFFECTIVE_ACTION 算出后仍解析 CLI ACTION——规划动作从未执行过，本批修复）；
+//   无动作 = 完成态单帧 after（页面真实呈现该步产物，本身就是准确证据）。
 const EFFECTIVE_ACTION = PLAN_ACTION || ACTION
 if (EFFECTIVE_ACTION) {
-  const [kind, rest] = ACTION.split(':')
+  await page.screenshot({ path: `${OUT}/${pre}-before.png` })
+  console.log(`shot: ${pre}-before`)
+  const [kind, rest] = EFFECTIVE_ACTION.split(':')
   try {
     if (kind === 'click') {
       await page.locator(rest).first().click()
     } else if (kind === 'key') {
       await page.keyboard.press(rest)
     } else {
-      console.error(`--action 仅支持 click:<sel> / key:<key>，收到 ${ACTION}`)
+      console.error(`--action 仅支持 click:<sel> / key:<key>，收到 ${EFFECTIVE_ACTION}`)
     }
     await page.waitForTimeout(ACTION_WAIT)
     await page.screenshot({ path: `${OUT}/${pre}-action.png` })
@@ -302,11 +307,10 @@ if (EFFECTIVE_ACTION) {
 await writeMeta(pre)
   console.log(`shot: ${pre}-after`)
 } else {
-  await page.waitForTimeout(SETTLE)
   await page.screenshot({ path: `${OUT}/${pre}-after.png` })
   await writeMeta(pre)
-  console.log(`shot: ${pre}-after（无 --action：before/after 两帧）`)
+  console.log(`shot: ${pre}-after（无动作：完成态单帧）`)
 }
 
 await browser.close()
-console.log(`\n下一步登记：r18-collect.py --run ${RUN} op --step ${STEP} --title '…' --entry '…' --frames ${pre}-before.png ${pre}${ACTION ? '-action.png' : ''} ${pre}-after.png`)
+console.log(`\n下一步登记：r18-collect.py --run ${RUN} op --step ${STEP} --title '…' --entry '…' --frames ${EFFECTIVE_ACTION ? `${pre}-before.png ${pre}-action.png ${pre}-after.png` : `${pre}-after.png`}`)

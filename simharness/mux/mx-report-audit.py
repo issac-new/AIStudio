@@ -160,13 +160,17 @@ def _attest_read():
 _attest_read()
 
 # issues.log 预解析（查3 降级配对用；与 A3/A5d 段同源解析）
+# 降级凭证族单一事实源（2026-11-06 帧采集准确性根治收口）：frame-zero-change-voided
+# （零变化帧隔离）与 frame-capture-failed 同通道配对——隔离步 ✅ 无帧属已声明降级，
+# 不二罚。A5d④ 段复用本常量，两处不各写一份。
+_FRAME_DEGRADE_FAMILIES = {'frame-capture-failed', 'frame-zero-change-voided'}
 _ilog = EVID / 'issues.log'
 _fc_pre = set(); _r18_pre = False
 if _ilog.exists():
     for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
         _p = _l.split('|', 3)
         if len(_p) >= 4 and _p[0] == 'ISSUE':
-            if _p[1] == 'frame-capture-failed':
+            if _p[1] in _FRAME_DEGRADE_FAMILIES:
                 _fc_pre.add(_p[2])
             elif _p[1] == 'r18-collection-missing':
                 _r18_pre = True
@@ -524,7 +528,7 @@ if RUN_ID >= '20261010-v8-run13':
         for _l in _ilog.read_text(encoding='utf-8', errors='replace').splitlines():
             _p = _l.split('|', 3)
             if len(_p) >= 4 and _p[0] == 'ISSUE':
-                if _p[1] == 'frame-capture-failed':
+                if _p[1] in _FRAME_DEGRADE_FAMILIES:
                     _fc_step_keys.add(_p[2])            # 形如 step-devimpl_done
                 elif _p[1] == 'r18-collection-missing':
                     _has_r18_degrade = True
@@ -707,7 +711,8 @@ for _l18 in _ilines_r18:
 _STAGE_ALIAS_STEPS = {'smoke': (1, 2, 3, 4), 'smoke_done': (1, 2, 3, 4),
                       'appinit': (5,), 'appinit_done': (5,), 'people': (6,), 'people_done': (6,),
                       'g1_frozen': (7,), 'room': (8,), 'room_done': (8,),
-                      'dispatch': (9,), 'dispatch_marker': (9,), 'register': (10,), 'register_done': (10,),
+                      'dispatch': (9,), 'dispatch_done': (9,), 'dispatch_marker': (9,),
+                      'register': (10,), 'register_done': (10,),
                       'analysis': (11,), 'analysis_done': (11,), 'triage': (12,), 'triage_done': (12,),
                       'anexec': (13,), 'anexec_done': (13,), 'review': (14,), 'review_done': (14,),
                       'g2_arch_pass': (15,), 'close': (16,), 'close_done': (16,), 'plan': (17,), 'plan_done': (17,),
@@ -716,10 +721,15 @@ _STAGE_ALIAS_STEPS = {'smoke': (1, 2, 3, 4), 'smoke_done': (1, 2, 3, 4),
                       'ready_inbox': (20,),   # run23 复盘批：步 20 第二拍摄位（审批收件箱队列帧）
                       'release': (20,), 'release_done': (20,), 'uat': (21,), 'uat_done': (21,),
                       'workmgr': (22,), 'workmgr_done': (22,), 'audit': (23,), 'audit_done': (23,),
-                      'retro': (24,), 'retro_done': (24,), 'ide': (25,), 'ide_done': (25,), 'report': (26,)}
+                      'retro': (24,), 'retro_done': (24,), 'ide': (25,), 'ide_done': (25,),
+                      'report': (26,), 'report_done': (26,)}
+# dispatch_done/report_done 补全（2026-11-06 帧采集准确性根治实录：别名表缺这两键，
+# 查9 四态判定与 R18 降级映射对步 9/26 永远落空——键面完整性由守门测试断言）。
 for _l18 in _ilines_r18:
     _p18 = _l18.split('|', 3)
-    if len(_p18) >= 4 and _p18[0] == 'ISSUE' and _p18[1] == 'frame-capture-failed':
+    # 降级族=查3 预解析同源常量（2026-11-06 帧采集准确性根治：第三处硬编码收编——
+    # 此前漏改本点，run27 隔离步 8/25 凭证在案仍整批 FAIL，违反「凭证在案即黄标不二罚」）
+    if len(_p18) >= 4 and _p18[0] == 'ISSUE' and _p18[1] in _FRAME_DEGRADE_FAMILIES:
         _r18_degraded_steps.update(_STAGE_ALIAS_STEPS.get(_p18[2].removeprefix('step-'), ()))
         for _n18 in _p18[2].removeprefix('step-').split(';'):
             if _n18.isdigit():
@@ -765,13 +775,19 @@ for blk in blocks:
             # 拥有帧、r18 挂接侧让位——同一帧只嵌一处，条带嵌与 r18 嵌同权计入，避免按 r18-shot
             # 类名一刀切把「条带先嵌」形态误判零帧；run21 实锤：步条先嵌 ops 帧→r18 让位→
             # r18-shot 计 0→误 FAIL，而帧在报告内真实在位）。缺文件仍走「帧缺失」兄弟检查。
+            # 期望帧数按注册帧形态二态（2026-11-06 帧模型二态化）：注册帧含 -before/-action
+            # =操作对（≥2：操作前+系统响应）；仅 -after=完成态单帧（≥1）——旧口径一律 ≥2
+            # 正是孪生零变化帧的生产强制力（run27 实锤 19 步）。
             _ops_frames: list = []
+            _ops_expect = 0
             for _og in (((_r18_payloads.get(str(n)) or _r18_payloads.get(n) or {}).get('ops')) or []):
-                _ops_frames += [str(_f) for _f in (_og.get('frames') or [])]
+                _of = [str(_f) for _f in (_og.get('frames') or [])]
+                _ops_frames += _of
+                _ops_expect += 2 if any(re.search(r'-(?:before|action)\.png$', _f) for _f in _of) else 1
             _fr = sum(1 for _fn in _ops_frames
                       if re.search(rf'screenshots/steps/{re.escape(_fn if _fn.endswith(".png") else _fn + ".png")}"', blk))
-            if _fr < 2 * o_cnt:
-                _r18_rep(f'R18 步 {n} 操作序列帧数不足（每组 ops 须 ≥2 帧=操作前+系统响应，当前渲染 {_fr} 帧/{o_cnt} 组）{_r18_suffix}')
+            if _fr < _ops_expect:
+                _r18_rep(f'R18 步 {n} 操作序列帧数不足（每组 ops 期望：操作对 ≥2 帧／完成态 ≥1 帧，当前渲染 {_fr} 帧/期望 ≥{_ops_expect}）{_r18_suffix}')
     if n in _R18_EFFECT_STEPS and e_cnt == 0:
         _r18_rep(f'R18 步 {n} 缺「环节效果」实证（工件产出闸步必采——collect effect）{_r18_suffix}')
     if n in _R18_SKILL_STEPS:
@@ -844,6 +860,32 @@ if not _surface_steps:
     warns.append('方案 §2.5 承载范围清单未解析到步号——查 9 空转（解析锚失效即验收缺陷，须修复解析或正本）')
 _issues_txt9 = _ilog.read_text(encoding='utf-8') if _ilog.exists() else ''
 _degraded9 = 'product-surface-degraded' in _issues_txt9
+# 四态分类进查9（2026-11-06 帧采集准确性根治）：步的拍摄位在 capture-plan.env 声明为
+# none/repo（无 UI 承载，真值在 state/API/git 产物）=已声明态——零 UI 帧是设计而非
+# 未声明红线；ui 位步的帧被零变化隔离（frame-zero-change-voided 在案）=该轮合规降级。
+# 单一事实源=capture-plan.env（与生成器 _CAPTURE_PLAN、射手覆盖同文件同语法）。
+_plan4_cls = {}
+try:
+    from pathlib import Path as _P9
+    for _l9 in (_P9(__file__).resolve().parent / 'capture-plan.env').read_text(encoding='utf-8', errors='replace').split('\n'):
+        _t9 = _l9.strip()
+        if not _t9 or _t9.startswith('#'):
+            continue
+        _c9 = _t9.split('|')
+        if len(_c9) >= 2:
+            _u9 = _c9[1].strip()
+            if _u9 == 'none' or _u9.startswith('repo'):
+                _plan4_cls[_c9[0].strip()] = ('none' if _u9 == 'none' else 'repo')
+except Exception:
+    _plan4_cls = {}
+_STEP9_KEYS: dict = {}
+for _k9, _nums9 in _STAGE_ALIAS_STEPS.items():
+    if '_' in _k9:  # 只收状态键形态（smoke_done），短名（smoke）冗余
+        for _n9 in _nums9:
+            _STEP9_KEYS.setdefault(_n9, []).append(_k9)
+_voided_keys9 = {_p9[2].removeprefix('step-') for _p9 in
+                 (l9.split('|', 3) for l9 in _issues_txt9.splitlines())
+                 if len(_p9) >= 4 and _p9[0] == 'ISSUE' and _p9[1] == 'frame-zero-change-voided'}
 for blk in blocks:
     n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
     if not n_s:
@@ -852,7 +894,16 @@ for blk in blocks:
     if n not in _surface_steps or '<span class="no">⬜</span>' in blk[:400]:
         continue
     if len(re.findall(r'class="shot', blk)) == 0:
-        if _degraded9:
+        _cls9 = {_plan4_cls.get(k9) for k9 in _STEP9_KEYS.get(n, ())}
+        if 'none' in _cls9 or 'repo' in _cls9:
+            warns.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧'
+                         f'（四态声明 none/repo——该步无 UI 承载面，真值在 state/API/git 产物；'
+                         f'capture-plan.env 单一事实源，2026-11-06 帧采集准确性根治）')
+        elif any(k9 in _voided_keys9 for k9 in _STEP9_KEYS.get(n, ())):
+            warns.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧'
+                         f'（frame-zero-change-voided 在案：帧曾实拍、前后零变化已隔离——该拍摄位'
+                         f'无可见承载，须换拍摄位或改四态分类，禁回补孪生帧）')
+        elif _degraded9:
             warns.append(f'承载范围符合性：步 {n} 在 §2.5 有产品承载范围承诺但报告零 UI 实拍帧'
                          f'（product-surface-degraded 降级在案——合规降级维持 WARN）')
         else:

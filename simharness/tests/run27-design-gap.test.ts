@@ -83,7 +83,12 @@ describe('② 问题单去重', () => {
 describe('③ 报告诚信面（mx-report-gen.py）', () => {
   const gen = readFileSync(join(HARNESS, 'mux', 'mx-report-gen.py'), 'utf8')
   it('摘要按帧核验态分级，不再裸称「全部实拍」', () => {
-    expect(gen).toContain('实拍可核验 {_n_fv_ok} 步 / 内容不符 {_n_fv_bad} 步 / 前后零变化 {_n_same_frame_steps} 步')
+    // 2026-11-06 帧采集准确性根治批改分段组装（隔离步入注后 _FRAME_PAIR_SAME 归零，
+    // 单一固定串会让摘要回落「全部实拍」）；断言语义不变：三态分段＋隔离态在注。
+    expect(gen).toContain("_note_segs.append(f'实拍可核验 {_n_fv_ok} 步')")
+    expect(gen).toContain("_note_segs.append(f'内容不符 {_n_fv_bad} 步')")
+    expect(gen).toContain("_note_segs.append(f'前后零变化 {_n_same_frame_steps} 步')")
+    expect(gen).toContain("_note_segs.append(f'零变化已隔离 {_n_voided} 步（不入证据池·问题单在案）')")
   })
   it('记账完成率 + 修复率双指标（记账≠修复）', () => {
     expect(gen).toContain('记账完成率（DISP 分桶）')

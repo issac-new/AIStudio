@@ -127,9 +127,14 @@ if [[ -z "$(sget capture_preflight_ok)" ]]; then
   # 拍出「未开始/还没有」空态帧被判内容不符。等待「流程总览/运行」字样出现再拍——
   # 预检语义=链路健康（能拍到有物页面），空态帧让预检形同虚设。
   if node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step capture-precheck --k 1 --url "/app" --user fanfan --expect "流程总览" >/dev/null 2>&1; then
+    # 探针帧出证据池（2026-11-06 帧采集准确性根治）：预检探针不是步骤证据，帧留在
+    # steps/ 会被同图/零变化盘点计为一个「步」（run27 实录 19 个零变化步中 1 个即
+    # 探针）。移至 screenshots/ 父目录：保留可查（失败归因）、不入证据池。
+    mv "$EVID_DIR"/screenshots/steps/capture-precheck-op1-*.png "$EVID_DIR/screenshots/" 2>/dev/null || true
     sset capture_preflight_ok 1
     note "[预检] 采集链健康 ✓（playwright 试拍 1 帧成功——实时帧链路在位，§4.3-25a）"
   else
+    mv "$EVID_DIR"/screenshots/steps/capture-precheck-op1-*.png "$EVID_DIR/screenshots/" 2>/dev/null || true
     echo "ISSUE|capture-preflight-failed|director|采集链开跑预检失败（r18-frames 试拍 rc≠0：playwright 依赖或浏览器链路坏——run14 全补拍事故的同族根因）" >> "$EVID_DIR/issues.log"
     note "[FAIL] 采集链开跑预检失败——实时帧链路不可用，拒绝带病开跑（修复指引：simharness npm install（playwright 已在 devDependencies）；浏览器 channel 检查）"
     if [[ -n "$(sget capture_preflight_failed)" ]]; then

@@ -38,7 +38,6 @@ SIM_ROOT = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-
 # N13 语义判据（2026-11-04）：面包屑＝页面身份，关键词命中可能只是侧栏字样的假阳性。
 # 有 crumb 的键必须同时命中面包屑（去空白后比对），确保「拍的是这一步该在的页面」。
 _FRAME_TAB = {
- 'capture-precheck':'流程总览',
  'smoke_done':'账号','appinit_done':'文档评审','people_done':'组织','login_done':'账号',
  'g1_frozen':'质量门 G1','dispatch_done':'任务分解','register_done':'任务分解',
  'analysis_done':'G2 系统分析','anexec_done':'G2 系统分析','review_done':'G2 系统分析',
@@ -48,9 +47,11 @@ _FRAME_TAB = {
  'workmgr_done':'交付健康','audit_done':'审计与变更','deliver_gate':'交付案例',
  'retro_done':'度量检查',
 }
+# capture-precheck 词条移除（2026-11-06 帧采集准确性根治）：预检探针帧已出 steps/
+# 证据池（aipay-scenario.sh 预检块拍后移至 screenshots/ 父目录）——探针非步骤证据，
+# 健康信号=预检 rc＋--expect 内容等待（采集程序修订批 ④），不再按步骤键核验。
+# 同批（采集程序修订 ⑤）17 个 none/repo 步已移出期望表（无采集方=恒缺帧假红）。
 EXPECT = {
-    # 启动自检帧（开跑前采集链自检，非 26 步之一）：证明登录态与总览已装载。
-    'capture-precheck': {'want': [], 'title': '启动自检帧（登录/总览装载，页面身份=流程总览）'},
     'register_done': {'want': ['任务', '看板', '分解'], 'title': '③分析设计·任务分解'},
     'anexec_done':   {'want': ['分析', '系统分析', '四路'], 'title': '③分析设计·系统分析'},
     'review_done':   {'want': ['分析', '设计', '评审'], 'title': '③分析设计'},
@@ -149,6 +150,10 @@ def main() -> int:
             if not frame.exists():
                 frame = steps_dir / f'{key}-op1-before.png'
             if not frame.exists():
+                # 零变化隔离帧（2026-11-06 帧采集准确性根治）：.invalid 在案=该步帧已
+                # 退出证据池（拍后即验/复盘补隔离）——无内容可核，跳过不产「缺帧」偏差行。
+                if (steps_dir / f'{key}-op1-before.png.invalid').exists():
+                    continue
                 rows.append({'key': key, 'ok': False, 'why': '缺帧', 'title': exp['title']})
                 bad += 1
                 continue
