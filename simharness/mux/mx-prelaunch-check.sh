@@ -1,5 +1,5 @@
 #!/bin/bash
-# mx-prelaunch-check.sh — 开跑前三十五项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31）；⑩d=2026-11-02 run24 复盘驱动面批⑤ 工作区 origin 单一性；㉛=2026-11-02 机制治理批 烧机测试在位与自检）。
+# mx-prelaunch-check.sh — 开跑前三十六项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31）；⑩d=2026-11-02 run24 复盘驱动面批⑤ 工作区 origin 单一性；㉛=2026-11-02 机制治理批 烧机测试在位与自检；㉝=2026-11-06 执行单元责任台账四面在位）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
 LC_ALL=C
@@ -217,5 +217,13 @@ else
   echo "  ⚠️ ㉜ runtime-verify 探针（不阻断）：CLI=$([[ -x "$_RTV_CLI" ]] && echo 在位 || echo 缺席)、端点 HTTP=${_RTV_HTTP:-不可达}；本轮 18b 走声明态降级"
 fi
 
+# ㉝ 执行单元责任台账接线（2026-11-06 第一增量，spec 2026-11-06-workunit-responsibility-ledger）：
+#    四面在位=域判定面（responsibility/lifecycle/judgments/people）+ 治理路由 + 六问端点 +
+#    推演接线（mx-workunit-lib.sh 与场景脚本 G1/G2/G5/报告四处调用）。缺任一即拦截——
+#    台账件缺席会让六问报表静默回退，run 中途才发现已晚。
+ck "㉝ 执行单元责任台账四面在位" \
+  "test -f '$OV/custom/server/agentidentity/responsibility.ts' && test -f '$OV/custom/server/agentidentity/lifecycle.ts' && test -f '$OV/custom/server/agentidentity/judgments.ts' && test -f '$OV/custom/server/agentidentity/people.ts' && grep -q \"agent-identity/:id/card\" '$OV/custom/server/governance/governance-controller.ts' && grep -q 'six-questions' '$OV/custom/server/autonomygov/controller.ts' && test -f '$HERE/mux/mx-workunit-lib.sh' && grep -q 'mx-workunit-lib.sh' '$HERE/aipay-scenario.sh' && grep -q 'workunit_six_snapshot' '$HERE/aipay-scenario.sh' && grep -q 'workunit_evidence_html' '$HERE/mux/mx-report-gen.py' && grep -q '查21' '$HERE/mux/mx-report-audit.py'" \
+  "责任台账接线不全：域文件/路由/六问端点/推演库/场景调用/报告节/审计查21 至少缺一——署名与六问会静默缺席，修复后再跑"
+
 echo "=== 结果：${PASS} 过 / ${FAIL} 败 ==="
-[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十五项）" || { echo "有红项——修复后再跑"; exit 1; }
+[ "$FAIL" -eq 0 ] && echo "全绿——可开跑（prelaunch 三十六项）" || { echo "有红项——修复后再跑"; exit 1; }

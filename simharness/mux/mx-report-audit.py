@@ -1328,6 +1328,32 @@ if RUN_ID >= '20261104':
             warns.append('查20 有 zero-delivery 问题单但无逐卡分类落盘（zero-delivery.json 缺席）——'
                          '产品巡检器未产出，报告按总数呈现；须查 cluster-inspector 接线')
 
+# ── 查 21（2026-11-06 执行单元责任台账）：六问快照与「证据十」节对账 ──
+# 三条判定：①快照缺席=FAIL（接线缺口，不许空渲染）；②快照在场但报告缺「证据十」
+# =FAIL（报告未消费）；③unknown 无 gap 文案=FAIL（口径缺口必须可见——研究文档 6.2）。
+# 历史轮豁免：run id < 20261106 只 WARN 不 FAIL（重生成旧报告不整批翻红）。
+_wu_new = RUN_ID >= '20261106'
+_wu_f = EVID / 'workunit-six-questions.json'
+if not _wu_f.exists():
+    (fails if _wu_new else warns).append(
+        '查21 六问快照缺席（evidence/workunit-six-questions.json）——'
+        '驱动未接 mx-workunit-lib.sh 或端点不可达；缺席须在报告按「未采集」呈现，不得伪造答案'
+    )
+else:
+    try:
+        _wu21 = json.loads(_wu_f.read_text(encoding='utf-8', errors='replace'))
+        _wu_answers = _wu21.get('answers') or []
+        if _wu_answers and '证据十' not in rep:
+            (fails if _wu_new else warns).append(
+                '查21 六问快照在场但报告缺「证据十：执行单元与署名记录」——报告未消费六问读数')
+        _wu_nogap = [str(a.get('id')) for a in _wu_answers
+                     if a.get('answer') == 'unknown' and not (a.get('gap') or '').strip()]
+        if _wu_nogap:
+            fails.append(f'查21 六问 unknown 无缺口文案：{_wu_nogap}——unknown 必须写明缺口，'
+                         '这是研究文档 6.2 的完成判据纪律')
+    except Exception as _e21:
+        fails.append(f'查21 六问快照不可解析：{_e21}')
+
 # ── 汇总 ──
 # 工具版本锚：审计结论绑定工具版本——镜像树落后一代曾在同一份
 # 报告上产出全错结果（标题逐字 0/26 假 FAIL）。输出自带 git 锚，结论不可复现时先对版本。

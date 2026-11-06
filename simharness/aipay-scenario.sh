@@ -56,6 +56,9 @@ trap 'rc=$?; if [ "${BASH_SUBSHELL:-0}" -eq 0 ]; then _em="[mux $(date +%H:%M:%S
 # product-surface-degraded 降级（§5.6 采集纪律⑩，禁静默关旗标跑全程）；映射与断言见
 # docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md 实测记录）
 source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
+# 执行单元责任台账接线（2026-11-06 第一增量）：G1/G2/G5/报告段四处共用署名与六问动作。
+# 全 fail-soft：身份册/端点缺席记问题单继续跑，不拖垮主链（spec 2026-11-06-workunit-responsibility-ledger §10）。
+source "$SCRIPT_DIR/mux/mx-workunit-lib.sh"
 if ! dlv_enabled; then
   echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：§5.6 采集纪律⑩ 降级口径记录，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
 fi
@@ -444,6 +447,11 @@ if step_reached reqgate; then
       --ev "freeze_doc=$(freeze_doc)" --ev "gate=g1_frozen" >/dev/null 2>&1 \
       || echo "ISSUE|r18-collect-failed|step7|环节效果采集失败（r18-collect effect）——报告审计环将缺该步" >> "$EVID_DIR/issues.log"
     r18_guard 7
+    # 执行单元署名（G1 冻结验收，spec §2.10 表）：acceptance 类，写依据不写结论；
+    # fanfan 单元保障幂等（无则建 registered 草案）；失败走 _wu_issue 不中止。
+    _wu_fanfan_id="$(workunit_ensure_unit "aipaydev-fanfan")"
+    workunit_record "$_wu_fanfan_id" acceptance "g1-frozen:${RFD_ID}" \
+      "G1 冻结四要素（验收标准/Scope-Out/影响面/涉敏）判读全过，冻结单 $(freeze_doc) 已入 origin/main，以同基线供设计与安全评审" "p-operator"
     dlv_gate_try G1 pass "需求冻结四要素过（AC/Scope-Out/影响面/涉敏）"
   fi
 fi
@@ -1179,6 +1187,16 @@ if [ "$(posture)" = "strict" ]; then
         fi
         if ! kanban_card_body_contains arch "${RFD_ID} 架构治理评审" '历史偏差'; then
           issue_once g2-history-check-missing arch-agent "G2 复审 PASS 但评审卡 ${AGID} body 缺历史偏差检索结论（§5.3 G2⑤）——记问题单，不阻断闸"
+        fi
+        # 执行单元署名（G2 过闸验收，spec §2.10 表）：arch 单元 acceptance；历史偏差
+        # 检索缺结论按打回语义记 rejection（验证投入面留痕），判定独立于闸键。
+        _wu_arch_id="$(workunit_ensure_unit "aipaydev-arch")"
+        if kanban_card_body_contains arch "${RFD_ID} 架构治理评审" '历史偏差'; then
+          workunit_record "$_wu_arch_id" acceptance "g2-arch-pass:${RFD_ID}" \
+            "架构评审判词含历史偏差检索结论且判词锚引用本轮修订对象，五项评审与安全评审共用 G1 冻结基线，同意过闸" "p-operator"
+        else
+          workunit_record "$_wu_arch_id" rejection "g2-arch-history-gap:${RFD_ID}" \
+            "评审卡缺历史偏差检索结论，按验证投入留痕记打回：要求 arch 补检索结论后重报，闸键维持不阻断" "p-operator"
         fi
       else
         # 判词锚守卫（2026-11-05 run27 根治）：判词未引用本轮修订锚＝评审人读旧稿的
@@ -2213,6 +2231,10 @@ if [ "$(posture)" = "strict" ]; then
       if wait_truth "G5 strict 真实 HumanGate（card ${RGID}）" "${MX_G5_HUMANGATE_WAIT:-900}" g5_humangate_decided; then
         sset_once g5_ready "$(date +%s)"
         note "[G5] strict：真实 HumanGate 批准在案（card ${RGID}，approved.events 可反查）"
+        # 执行单元署名（G5 准出，spec §2.10 表）：真实人工批准记 escalation（升级处置）
+        _wu_fanfan_g5="$(workunit_ensure_unit "aipaydev-fanfan")"
+        workunit_record "$_wu_fanfan_g5" escalation "g5-humangate:${RGID}" \
+          "发布准出走真实 HumanGate 人工批准通道（card ${RGID}，approved.events 可反查），人工判断已发生并留痕" "p-operator"
       else
         echo "ISSUE|g5-humangate-timeout|${RGID}|strict 姿态 ${MX_G5_HUMANGATE_WAIT:-900}s 内无真实 HumanGate 批准——g5_ready 不置（等待人工，不代批）" >> "$EVID_DIR/issues.log"
         note "[G5] strict：真实 HumanGate 未决——g5_ready 保持未置（人工批准后重跑 ready 步收口）"
@@ -3351,6 +3373,9 @@ PYD
   fi
   # V8.45：评测摘要必须在报告生成前落档（报告第 9 章证据八的唯一读数源）
   evalops_snapshot >/dev/null 2>&1 || true
+  # 执行单元六问快照（2026-11-06 第一增量）：报告「证据十」唯一读数源；端点缺席落占位，
+  # 审计查21 按缺席 FAIL（不许空渲染）。
+  workunit_six_snapshot "$EVID_DIR/workunit-six-questions.json"
   python3 "$SCRIPT_DIR/mux/mx-report-gen.py" ${RUN_ID:+--run "$RUN_ID"} || fail "报告生成失败"
   # run25 复盘（步 26 载荷鸡生蛋）：原采集位在 report_done 落键之后、审计之后——审计
   # 查「步 26 载荷」时现场永远不存在，只能靠降级登记。前移到首次审计之前并改用
