@@ -253,3 +253,4 @@
 {"at":"2026-11-06T11:19:45Z","spec":"docs/superpowers/specs/2026-11-06-director-dispatch.md","receipt":"177d7a47a8c2b875db8012fae644bafca6726a1f","commit":"c3360d0a5"}
 {"at":"2026-11-06T13:33:16Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-restructure.md","receipt":"c7909c7b7fc95e2f94ee3ed4aec90e83ec40e98b","commit":"355aa9ab6"}
 {"at":"2026-11-06T13:42:58Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-stable-name.md","receipt":"05d518b90e4eec4c31c2e74ed8303ee24d0cc277","commit":"30e975f32"}
+{"at":"2026-11-06T14:43:08Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-descaffold.md","receipt":"648b5fb24188af899d8b6b5b796c26a2f53348c6","commit":"5b8562f83"}

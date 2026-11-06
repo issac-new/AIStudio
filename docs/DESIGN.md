@@ -1,24 +1,6 @@
 # AIStudio 终态设计文档
 
-> 文档地位：AIStudio 唯一整合设计正本。
-> 位置：`docs/DESIGN.md`（2026-11-06 起固定文件名，不带日期——文件名即「终稿」标识；
-> 原名 `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md`，该路径现为指针）。
-> 核实日：2026-11-06；版本线：`1.0.13-overlay`。
-> 读者：产品、架构、研发、测试、安全与运维人员。
-> 范围：稳定理念、产品结构、架构契约、核心机制与工程边界。
-> 证据：实施决策归带日期的 spec，运行结果归测试与推演档案。
-> 结构：第 1—6 章按「理念→设计→架构→实现→工程实施→使用」排列；附表 A—C 提供需求追踪、术语与事实源。
-
-事实按以下顺序裁决：
-
-1. 当前代码、配置、测试和真实运行证据决定实际行为。
-2. 已冻结的需求与有效 spec 决定设计意图和验收口径。
-3. 本文汇总稳定设计，不覆盖上述事实源。
-4. 组件内部实现由对应专题文档和 ADR 提供证据，正文按统一主题组织。
-5. 旧设计稿只用于理解决策来路，不再指导新的实现。
-
-“终态”指文档结构已经归一，不代表所有能力已在所有环境验证。
-无法核实的状态必须写成未验证，不得写成已交付。
+> AIStudio 唯一整合设计正本。
 
 ## 1、理念
 
@@ -79,6 +61,9 @@ AIStudio 是一套由人指挥 AI 团队交付软件的工作系统。
 - 推演结论只适用于实际验证过的流程与环境，不等同于生产交付结论。
 - 未验证的能力只能标为未验证，不能作为已交付能力对外承诺。
 
+已否决的方向不再重开：第二套任务真值、全系统唯一中央网关、模型自评放行、
+推演数据写入日常、整体移植外部框架、没有执行载体的设计。
+
 ### 1.5 设计原则与公理
 
 设计原则覆盖判断权、结构、执行和演化四组关系，任一组都不能替代另一组。
@@ -134,16 +119,18 @@ hermes 的设计公理与 AIStudio 的工程原则按同一语义合并，不并
 目标态与当前实现必须分开陈述。
 自动执行范围以真实授权和验证证据为准，不能由理念反推能力已经存在。
 
-### 1.7 文档与事实边界
+### 1.7 事实优先级
 
-本文回答三个问题：系统为什么这样设计，各部分如何协作，
-哪些边界不能越过。它不承载逐轮变更史，也不滚动播报测试总数。
-轮次过程归 git 历史与带日期的 spec，本文只保留影响当前结构的结论。
+事实按以下顺序裁决：
 
-稳定数字与版本基线归《设计事实与容量基线》；
-单份变更的实现细节与决策来路归对应 spec；
-运行结果以当次测试输出和推演证据为准。
-三者与本正本的关系见附表 C。
+1. 当前代码、配置、测试和真实运行证据决定实际行为。
+2. 已冻结的需求与有效 spec 决定设计意图和验收口径。
+3. 本设计汇总稳定结构，不覆盖前两类事实源。
+4. 组件内部实现由对应专题文档和 ADR 提供证据，正文按统一主题组织。
+5. 旧设计稿只用于理解决策来路，不再指导新的实现。
+
+“终态”指结构已经归一，不代表所有能力已在所有环境验证。
+无法核实的状态必须写成未验证，不得写成已交付。
 
 ## 2、设计
 
@@ -229,7 +216,7 @@ Ycode 插件可以默认内置启用，但实际执行仍受会话环境、
 ### 2.5 全流程推演
 
 推演以独立运行根执行完整交付流程。
-主链包含 26 个步骤和六道质量门，判据由全流程推演方案定义。
+主链包含 26 个步骤和六道质量门。
 运行总览在同一上下文中呈现产品服务、gateway、驱动、监督器、
 派发器和休眠工作者的健康状态。异常必须直接可见，不靠人翻日志。
 
@@ -514,7 +501,7 @@ CLI、gateway、ACP 和 cron 等入口复用同一套会话能力，
 
 一次调用依次经过入口解析、提示词装配、提供方解析、模型与工具调用、
 上下文处理和结果持久化。平台、记忆和上下文引擎通过插件扩展，
-但不能绕过授权与工具边界。上游内部模块详见附表 C 的架构事实源。
+但不能绕过授权与工具边界。
 
 ### 3.4 agent teams 的组织与治理
 
@@ -587,7 +574,7 @@ worker 的能力边界由可用工具、可加载技能、资料密级和角色�
 七类机制共同支撑这个组织：S1 调度与编排，S2 组织与能力边界，
 S3 治理与验收，S4 成本工程，S5 知识资产治理，S6 韧性安全垫，
 S7 领域能力。模型、MCP、技能和知识库的供应链约束横切全部机制。
-S1—S7 是集群内部的工作分类，本文第 4 章按交付顺序重排，不逐节沿用编号。
+S1—S7 是集群内部的工作分类，第 4 章按交付顺序重排，不逐节沿用编号。
 第 3.9 节定义其数据与治理契约。
 
 ### 3.5 Matrix、Ycode 与 swarm-yuan 的协作位置
@@ -600,7 +587,6 @@ S1—S7 是集群内部的工作分类，本文第 4 章按交付顺序重排，
 
 Matrix 对端过滤只能屏蔽已经确认的 bot。
 MXID 本身不能判断人或 bot，人类账号不得屏蔽，入口过滤只是辅助。
-详细决策见附表 C 的 Matrix 对端台账。
 
 产品面读取运行面模型时，通过 AgentBridge、hermes CLI 子进程或引擎 WebSocket 桥接，
 只读不复制。任务、审批和消息的写操作回到对应权威接口，
@@ -1102,7 +1088,7 @@ L3 spec-first 检查、L4 状态机守卫。
 `SPEC_REBIND=1` 才能重绑。未合入的草稿可自由迭代，每次重绑。这让"评审过的决策记录
 被静默改写"从不可见变为可拦（默认 warn，可置 block）。
 团队采纳了 DeepSeek Harness 的防御性编程、可逆效果和可追溯审计，
-同时否决 Cordis 整体移植，理由与后果见附表 C 的对应 ADR。
+同时否决 Cordis 整体移植。
 
 ### 4.8 评测、记忆与经验回流
 
@@ -1189,7 +1175,7 @@ loop-graph 以图定义阶段、依赖和并行关系，以事件日志记录实
 未登记或未经批准的记忆不得作为事实注入新任务。
 决策知识采用 CANDIDATE→owner review→OFFICIAL 流转，
 废弃内容标为 DEPRECATED，不能静默消失。
-本文不把长期记忆从写入到受控注入的完整链路列为已验证能力。
+长期记忆从写入到受控注入的完整链路未验证。
 
 经验回流先登记真实问题，合并同族条目，避免重复建账。
 修复完成后记录方法、验证结果和适用范围；
@@ -1478,7 +1464,6 @@ simharness 随驾驶舱源码发布，但不因此进入桌面安装包。
 ### 6.1 最小使用路径
 
 日常评估从浏览器开始。
-完整命令和排障见[《AIStudio 使用指南》](USAGE.md)。
 
 ```bash
 npm run inject
@@ -1548,7 +1533,7 @@ npm run serve
 能力状态使用“已验证”“未验证”“不可用”和“存在反证”等明确词语。
 验证结论必须带时间、环境和证据入口。
 没有真实模型、第二名会签人或多机环境时，相应结论保持未验证。
-动态测试结果以当次命令输出为准，不在本文累计维护。
+动态测试结果以当次命令输出为准，不累计成常设数字。
 
 ### 6.4 实现边界与开放问题
 
@@ -1572,7 +1557,7 @@ npm run serve
 | 图运行联动 | 图引擎、事件日志与卡片派发已接线，真实多轮运行未复验 | 以真实 run 证据核对 |
 | 主动性执行 | 两轴判定与页签已接线，执法门默认关闭 | 显式开启后的拦截与豁免审计 |
 | 桌面安装 | 未逐平台构建和安装验收 | mac/win 分别构建、安装、启动核对 |
-| 运行面新增模块 | 未逐项纳入本文，避免把未验证实现写成稳定契约 | 以代码、测试和专题文档为准 |
+| 运行面新增模块 | 未逐项列为稳定契约，避免把未验证实现写死 | 以代码、测试和专题文档为准 |
 | 任务模型读投影（2026-11-04 W3/W4） | taskmodel v1 只读派生（kanban-task-fast 详情→schemaVersion/userGoal/inputRefs/artifactRefs/runs/conversation）；W4 起补丁 750 在 run 开启（claim CAS）时写 input_manifest（body sha256+附件行清单）入 task_runs.metadata，读侧 inputVersions 据实为 true | 读投影 fail-soft（缺字段 null 不猜）；宿主运行时未部署补丁 750 前，旧 runtime 认领的 run 仍无 manifest（inputVersions=false 是真实读数——生效三层：仓内已合、部署与网关重启归运维面） |
 | 执行记录关联面（2026-11-04 W3/W4） | ExecutionRecord v2 增可选 traceId/stepId/workflowVersion/promptVersion/inputRef/outputRef/retryCount/approvalId；/api/harness/execution-join 四源归并（记录/审计/批单/结果投影）；W4 起 traceId 兜底=sessionId（otel 同口径，只兜底不覆盖显式值）、run-manifest 落账置 ambient 关联（promptVersion=promptHash 生产者） | v1 旧档缺字段=未知不猜；单源缺席 available:false 不得 500；显式关联不得被兜底覆盖 |
 | 平台身份核心（2026-11-06 平台重写 P0） | Matrix 任意 IdP＋零权限建号：新身份 disabled＋空 profiles 不签 JWT/不存 session；已有账号 origin+MXID 联合绑定（冲突 409）；统一认证四通道拒普通 admin 空授权；路由政策注册表（6 受管 Router）启动双向对账+未登记写面默认 403 | 跨 IdP 认领/pending 得 token/空授权访问/跨 profile 读写四负例守门；harness/eval/orchestrator 写面按后续节奏扩登记（`registries/server/platform-route-policy.ts` 头注边界） |
@@ -1594,33 +1579,6 @@ npm run serve
 处理顺序是先修可机械闭合的边界，包括 SIM 写入口、技能先行检查和补丁失败语义；
 再补环境验证，包括真实 ACP、桌面双平台、多机与双账号；
 最后做性能和体验优化。这个顺序不替代各条目的验收要求。
-
-### 6.5 文档维护
-
-本文是唯一整合设计正本。
-hermes、swarm-yuan 和全流程推演保留各自的专题事实源与 ADR。
-总体设计在本文归一，组件内部细节以对应专题文档为证据。
-专题 spec 记录单项变更与决策，不再复制完整系统章节。
-旧设计正本保留历史原文，由现行导航标明其档案角色。
-设计决策台账只增不改。修正以新记录并标注替代关系，不回写历史结论。
-已经否决的方向不在正文重开辩论：第二套任务真值、全系统唯一中央网关、
-模型自评放行、推演数据写入日常、整体移植外部框架、没有执行载体的设计。
-历史否决及其适用范围见外部附件 D。
-用户决策全表保留在历史证据库，
-能力层决策史保留在外部附件 C 与设计演化史。
-正文只保留影响当前结构的决策。
-
-触及本文或数字总账的变更，必须在 spec 声明设计文档影响，
-并在同一批变更中兑现。纯内部变更可以声明无影响，但要给出理由。
-维护时更新稳定结构和有效约束，不追加轮次流水。
-
-数字总账只保存稳定参数、参考部署和带核实日的版本基线。
-补丁数、路由数、spec 数和测试数由对应工具或当次输出给出，
-不再形成第二份滚动统计。
-
-正文引用本文时用「节号」（如 §4.6），不引用行号：行号随每次编辑漂移，
-节号在结构稳定期内可核对。代码与测试的引用仍用 `file:line`，
-它们随代码变化，行号语义正确。
 
 ## 附表 A：需求追踪
 
@@ -1656,13 +1614,7 @@ hermes、swarm-yuan 和全流程推演保留各自的专题事实源与 ADR。
 | N7 | 审计与数据留存满足适用规范 | 4.4、4.6、3.9 |
 | N8 | 每条需求可自动验证或走查 | 6.3 |
 
-正文中的稳定参数（覆盖率门槛、介入点数量、复核周期、
-同主题技能上限等）以《设计事实与容量基线》和对应契约为准；
-具体清单不在正文重复。
-
-需求全文与冻结依据见
-[《SwarmStudio 需求分析》](superpowers/specs/2026-10-16-swarmstudio-requirements-analysis.md)。
-新增需求先变更需求基线，再变更实现和本文，不能倒序补写。
+新增需求先变更需求基线，再变更实现。
 
 ## 附表 B：术语
 
@@ -1708,47 +1660,6 @@ hermes、swarm-yuan 和全流程推演保留各自的专题事实源与 ADR。
 | 代偿 | 由程序或其他主体代替规定角色完成的动作，需单独记账 |
 | pristine | 未叠加本仓补丁的上游基线状态 |
 
-本文中，“运行”指系统、进程或其持续过程，“执行”指任务或动作。
+“运行”指系统、进程或其持续过程，“执行”指任务或动作。
 “设置”指人使用的配置界面，“配置”指具体参数及其取值。
 这些词承担不同语义，不作机械互换。
-
-## 附表 C：事实源与决策凭证
-
-本文附表用 A—C。外部索引附件用 A—D，引用时写全名。
-
-| 内容 | 权威位置 |
-|---|---|
-| 使用与排障 | [AIStudio 使用指南](USAGE.md) |
-| 冻结需求 | [需求分析](superpowers/specs/2026-10-16-swarmstudio-requirements-analysis.md) |
-| 推演步骤与质量门 | [全流程推演方案](superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md) |
-| 稳定数字与版本 | [设计事实与容量基线](superpowers/specs/2026-10-23-swarmstudio-design-ledger.md) |
-| 上游版本与升级 | [vendor 基线台账](../vendor/VENDOR.md) |
-| 技术组件调研与版本核对 | [组件台账终态单文件](../team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md) |
-| 发布模块与版本 | [发布清单](../RELEASE-MANIFEST.json) |
-| 命令行契约 | [cli-contract.json](../config/cli-contract.json) |
-| 黄金集材料 | [golden-set.ts](../custom/server/eval/golden-set.ts) |
-| 跨轮指标档 | [run-metrics.jsonl](governance/run-metrics.jsonl) |
-| 单项目设计、规格与决策 | [spec 全量索引（外部附件 A）](superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) |
-| 实施计划与研究复盘 | [计划与研究索引（外部附件 B）](superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md) |
-| swarm-yuan 方法与决策 | [能力语料索引（外部附件 C）](superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md) |
-| 历史教训与工作规则 | [教训与规则索引（外部附件 D）](superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md) |
-| swarm-yuan 当前实现 | [技能本体](../skills/swarm-yuan/README.md) |
-| hermes 集群设计 | [Hermes Agent 集群设计文档](../team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md) |
-| hermes 上游内部架构 | [Hermes Agent Architecture](../vendor/hermes-agent/website/docs/developer-guide/architecture.md) |
-| 决策知识流转 | [候选知识库规则](../team/profiles/_shared/knowledge/candidate/README.md) |
-| DeepSeek Harness 精选融合 | [OFFICIAL ADR](../team/profiles/_shared/knowledge/candidate/2026-08-13-deepseek-harness-fusion.md) |
-| prepareNextTurn 观察项 | [CANDIDATE 观察记录](../team/profiles/_shared/knowledge/candidate/2026-08-24-pi-prepare-next-turn-observation.md) |
-| Matrix 对端过滤原则 | [OFFICIAL 台账](../team/profiles/_shared/knowledge/candidate/matrix-peers.md) |
-| 决策分层 | [decision-tiers.yaml](../runtime/hermes-records/decisions/registries/decision-tiers.yaml) |
-| 模型阶段路由 | [model-routing.yaml](../runtime/hermes-records/decisions/registries/model-routing.yaml) |
-| 领域与岗位归属 | [team/shared/domain-registry.yaml](../team/shared/domain-registry.yaml)、[team/shared/owner-registry.yaml](../team/shared/owner-registry.yaml)（权威在本仓 `team/shared/`；`runtime/hermes-records/decisions/registries/` 下是 2026-09-17 脱敏镜像，缺 owner 字段，仅作记录副本） |
-| 能力与可靠性数据 | [capability-graph.yaml](../runtime/hermes-records/decisions/registries/capability-graph.yaml) |
-| 运行面记录映射 | [runtime 同步副本与源位置说明](../runtime/hermes-records/MANIFEST.md) |
-| 历史用户决策与演进 | [SwarmStudio 完整设计历史证据库](superpowers/specs/2026-10-21-swarmstudio-complete-design.md) |
-| 旧架构与文档治理决策 | [NCWK 设计历史档案](superpowers/specs/2026-10-21-ncwk-design-spec.md) |
-
-历史设计稿不再作为实现依据。
-其保留价值是还原需求、决策和否决理由。
-注册表中的可靠性是历史运行聚合，只用于辅助派单，
-本文不把这些动态数值固化为岗位能力结论。
-当前行为与历史文字冲突时，按卷首的事实裁决顺序核实并修订本文。
