@@ -160,6 +160,13 @@ def main():
             "id": run.get("id"),
             "setHash": set_hash,
             "anchorDrift": anchor_drift,
+            # 规模与裁判披露（2026-11-06 C 批）：run27 类「3 题×2 纯 S0、efficiency 全 null」
+            # 从此在摘要自曝——N 题×k 样本=判分次数、efficiency 覆盖数、裁判指纹（换裁判可判不可比）。
+            "taskCount": (ev_set.get("tasks") and len(ev_set["tasks"])) or run.get("taskCount"),
+            "k": run.get("k"),
+            "attempts": len(run.get("attempts") or []),
+            "attemptsWithEfficiency": sum(1 for a in (run.get("attempts") or []) if a.get("efficiency")),
+            "judgeFingerprint": run.get("judgeFingerprint"),
             "passAt1": agg.get("passAt1"),
             "passAtK": agg.get("passAtK"),
             "unknownRatio": agg.get("unknownRatio"),

@@ -268,6 +268,11 @@ export interface EvalSet {
   /** 最近一次校准结果；setHash 与 contentHash 不符即失效（改题后必须重校准）。 */
   calibration?: import('./set-calibration').SetCalibration
   /**
+   * 黄金集标志（2026-11-06 C 批）：建集时校验 10/10/10 配比（正向/模糊复杂/越权异常，
+   * 校验器=golden-set.ts assertGoldenRatio）。缺省 false＝普通集不受配比约束。
+   */
+  golden?: boolean
+  /**
    * 集级澄清事实（2026-10-30）：随 run 起跑冻结进 EvalRun.clarifications。
    * 注意：contentFingerprint 只覆盖 tasks（向后兼容，改此字段不改变 setHash）；
    * 校准侧用 clarificationsHash 单独判失效。
@@ -557,6 +562,11 @@ export interface EvalRun {
   note?: string
   /** 起跑时冻结的澄清事实快照（2026-10-30）：事后改集不改变本运行的解释口径。 */
   clarifications?: EvalClarification[]
+  /**
+   * 裁判指纹（2026-11-06 C 批）：起跑时从 loadEvalConfig() 冻结——换裁判模型/阈值后，
+   * 历史读数与新一轮的不可比可机械判定（此前 judgeMeta 只在多模型时才记模型名）。
+   */
+  judgeFingerprint?: { models: string[]; backend: string; tauYes: number; tauNo: number }
 }
 
 /** 处置单：评测失败样本的修复追踪，关闭由同卷复评结果机械决定。 */
