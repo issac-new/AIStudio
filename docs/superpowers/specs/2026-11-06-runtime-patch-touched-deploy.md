@@ -29,7 +29,7 @@
 - [x] 守门测试 **10/10**（纯函数三形态/夹具树/真仓断言 601·470·759 锚点/接线源码级/预检死锁防回归）；实现中实测定谳：git 删除文件头 b 侧仍是文件名（/dev/null 只在 +++ 行），段式解析修正。
 - [x] dry-run 三语义：未注入检出（触碰跳过 47/待收口 46）仍 **complete 不卡 inject 预检**；独立 --apply 触**降级哨兵**（源缺失>0 跳过整个触碰面防 pristine 覆盖宿主接线）＋警示；完整链路（先注入后部署）哨兵放行。
 - [x] worktree 全链 inject：**469 applied（90+759 agent／370 studio／8 zcode）、759 direct、出口 deploy 清单 62＋触碰 94｜相同 155｜收口 1（shutdown_watchdog.py，恰为 N-2 途中人工还原件——机制自动收口实证）｜RESULT complete**；宿主接线面经此链全对齐注入态。
-- [ ] 全量 `npm test` 合并前门（跑动中回填）。
+- [x] 全量 `npm test`（合并前门）：8523 passed / 5 failed——5 例定谳＝2 例本批漏登记（新 spec 未进 A.1/design 索引，守门当场拦下，补登记后定向复验 34/34）＋3 例 route-manifest（worktree vite-node 跨树解析伪象，main 上绿，前批已定谳同型）。
 
 ### 收编 759（变更 5）
 
