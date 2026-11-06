@@ -39,7 +39,7 @@ Matrix/API/页面消息
   → Ycode 编码引擎与任务工作区
 ```
 
-团队 orchestrator 负责路由和分解，dispatcher 负责认领，worker 负责执行，ACP 是编码委托通道。`team/README_zh.md:104-127`、`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §3.6、§4.2`。当前团队配置开启 gateway 内 dispatcher，60 秒一拍，总并发 8、单 profile 并发 3，陈超时 14400 秒；这些值以目标 profile 的实际配置为准。`team/config.yaml:429-441`。
+团队 orchestrator 负责路由和分解，dispatcher 负责认领，worker 负责执行，ACP 是编码委托通道。`team/README_zh.md:104-127`、`docs/DESIGN.md §3.6、§4.2`。当前团队配置开启 gateway 内 dispatcher，60 秒一拍，总并发 8、单 profile 并发 3，陈超时 14400 秒；这些值以目标 profile 的实际配置为准。`team/config.yaml:429-441`。
 
 **链 B：Studio @mention 链。**
 
@@ -50,7 +50,7 @@ Matrix/API/页面消息
   → 会话与命令投影
 ```
 
-该链有独立的目标解析、pending 槽、去重和 outcome，不要再写一个 Router 抢占同一工作区。`custom/server/zcode/mention-dispatch.ts:1-20,69-110,128-167`。设计正本明确列出 `mention-dispatch` 与 kanban dispatcher 两条派发链，第三条会互相抢占。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §3.6`。
+该链有独立的目标解析、pending 槽、去重和 outcome，不要再写一个 Router 抢占同一工作区。`custom/server/zcode/mention-dispatch.ts:1-20,69-110,128-167`。设计正本明确列出 `mention-dispatch` 与 kanban dispatcher 两条派发链，第三条会互相抢占。`docs/DESIGN.md §3.6`。
 
 轻量直接回复是链 A 的分支，不是第三条链。Ycode 的 `:3030` WebSocket 服务与 ACP stdio `app-server` 是两种接入形态，也不是两个任务真值。Ycode 安装与 ACP 调用形状见 `scripts/zcode-engine.mjs:99-105`，Studio WebSocket 握手见 `custom/server/zcode/engine-bridge.ts:127-165`。
 
@@ -66,7 +66,7 @@ Matrix/API/页面消息
 
 ### 2.3 gateway 的部署边界
 
-目标拓扑是每个运行节点一个 gateway 复用多个 profile，不是全网唯一中央网关；多节点通过受控 peer API、Matrix 和 Git 制品协作。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.2`。当前团队配置也开启 `multiplex_profiles`。`team/config.yaml:464-475`。
+目标拓扑是每个运行节点一个 gateway 复用多个 profile，不是全网唯一中央网关；多节点通过受控 peer API、Matrix 和 Git 制品协作。`docs/DESIGN.md §4.2`。当前团队配置也开启 `multiplex_profiles`。`team/config.yaml:464-475`。
 
 同一机器只应有一个内嵌 dispatcher 持有单例锁。锁不可用时回到配置控制，因此运维仍须主动避免多个 gateway 同时开启 dispatcher。`runtime/gateway/kanban_watchers_common.py:148-173`。
 
@@ -318,9 +318,9 @@ npm run serve
 | kanban 任务、尝试和事件 | `${HERMES_HOME}/kanban.db`；命名板在 `${HERMES_HOME}/kanban/boards/<slug>/kanban.db` | orchestrator 只读事件并保存自己的游标，不能拿 orchestrator DB 当任务正本 | `custom/server/orchestrator/kanban-bridge.ts:40-61,68-108` |
 | 新 orchestrator | `${HERMES_HOME}/orchestrator/orchestrator.sqlite`，可用 `ORCHESTRATOR_DB` 覆盖 | 单写者是 Studio 进程；保存 Trigger、Decision、Mandate、Assignment 和游标，不复制 kanban 状态机 | `custom/server/orchestrator/store.ts:1-5,22-126` |
 | 组织、邀请和治理注册表 | `GOVERNANCE_REPO` 中的 Markdown 与 Git commit | 保存即提交。写错仓时不能用 UI 再改一次掩盖，先停写并核对仓库历史 | `custom/server/governance/registry-admin.ts:16-61` |
-| Matrix 账号与消息 | 外部 Synapse 及其房间 | chat bridge state 只保存 since、已投递 id 和已见事件 id，不是消息正本 | `custom/server/matrix/chat-bridge.ts:178-213`、`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §3.4` |
+| Matrix 账号与消息 | 外部 Synapse 及其房间 | chat bridge state 只保存 since、已投递 id 和已见事件 id，不是消息正本 | `custom/server/matrix/chat-bridge.ts:178-213`、`docs/DESIGN.md §3.4` |
 | Loop / Graph | `HERMES_LOOP_DIR` 优先，否则可写 cwd 的 `.loop`，不可写时回落 `${HERMES_WEB_UI_HOME}/loop` | Windows 只读安装目录会触发回落；备份前核对日志中的实际路径 | `custom/server/loop/paths.ts:1-10,34-49` |
-| Ycode 工作区与证据 | 任务绑定的工作区和 ACP 回执 | `zcode` provider 名称不能证明实际引擎身份；还要核对 `engine_bin` 与版本日志 | `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.3` |
+| Ycode 工作区与证据 | 任务绑定的工作区和 ACP 回执 | `zcode` provider 名称不能证明实际引擎身份；还要核对 `engine_bin` 与版本日志 | `docs/DESIGN.md §4.3` |
 
 ### 7.2 保留期的真实含义
 
@@ -365,7 +365,7 @@ CHAT_BRIDGE_ROOMS='!matrix-room:server=<Studio 群聊 roomId>'
 
 状态默认写 `${HERMES_HOME}/chat-bridge-state.json`，保存 since token 和去重 id。重置该文件是【写】，会造成重放或重复投递风险，不能当普通缓存清理。`custom/server/matrix/chat-bridge.ts:178-213`。
 
-新 orchestrator 的 Matrix 摘要只投 `platform=matrix` 且有订阅的房间；E2EE 房不在支持范围。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §3.6`。因此，房间能收发 m.text 不等于全链 E2EE，也不能用聊天回执替代任务状态。
+新 orchestrator 的 Matrix 摘要只投 `platform=matrix` 且有订阅的房间；E2EE 房不在支持范围。`docs/DESIGN.md §3.6`。因此，房间能收发 m.text 不等于全链 E2EE，也不能用聊天回执替代任务状态。
 
 ## 10. SIM 与生产怎样隔离
 
@@ -378,7 +378,7 @@ CHAT_BRIDGE_ROOMS='!matrix-room:server=<Studio 群聊 roomId>'
 
 ### 10.2 当前隔离仍有缺口
 
-设计要求 SIM 任务在日常入口只读，但当前只有观察端点和部分前端守卫，批量操作与注意力入口尚未全部排除 SIM 任务。不能宣称已经闭合隔离，也不要在 SIM 中使用真实敏感数据。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.10、§6.4`。
+设计要求 SIM 任务在日常入口只读，但当前只有观察端点和部分前端守卫，批量操作与注意力入口尚未全部排除 SIM 任务。不能宣称已经闭合隔离，也不要在 SIM 中使用真实敏感数据。`docs/DESIGN.md §4.10、§6.4`。
 
 不要在活轮次内注入或换装。部署窗口脚本要求 `report_done=1` 且驱动、监督进程都退场后才允许动作。`simharness/mux/deploy-window-runbook.sh:48-70`。其中针对独立 product-dist 的 `OVERLAY_ALLOW_LIVE_CLEAN=1` 是特定推演部署例外，不是生产通用做法。
 

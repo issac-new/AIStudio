@@ -2,21 +2,21 @@
 
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
-- 快照基线：`355aa9ab6`。
+- 快照基线：`30e975f32`。
 - 当前版本：`1.0.13-overlay`。
 - 核实日期：2026-11-06。
-- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 591 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
+- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 593 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
 
-先读[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)确定文档角色，再读[《AIStudio 终态设计文档》](../superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)理解稳定结构。不要从文件名中的“正本”“终态”“完整”判断当前效力，旧稿会保留当时的自述，角色以现行导航为准。`docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md:3-4,40-56`
+先读[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)确定文档角色，再读[《AIStudio 终态设计文档》](../DESIGN.md)理解稳定结构。终稿的标识是文件名本身：`docs/DESIGN.md`（固定名、不带日期）；`specs/` 下的同名旧文件只是旧址指针。其余带日期的 spec 是变更档案，不是设计稿；旧稿保留当时的自述，角色以现行导航为准。`docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md:3-4,40-56`
 
 ### 1.1 正本、附件与历史档案各承担什么职责
 
 | 文档或目录 | 当前角色 | 讲师与维护者怎样使用 |
 |---|---|---|
 | [设计文档导航](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md) | 角色导航，不保存第二份设计事实 | 先查现行、附件、历史三种角色；品牌冲突也按此处 AIStudio／SwarmStudio／NCWK 的层级处理 |
-| [AIStudio 终态设计文档](../superpowers/specs/2026-10-23-swarmstudio-integrated-design.md) | 唯一整合设计正本 | 讲理念、产品、架构、核心机制和工程边界；不把它当作逐轮变更史或测试总数账本 |
+| [AIStudio 终态设计文档](../DESIGN.md) | 唯一整合设计正本（固定文件名 `docs/DESIGN.md`） | 讲理念、产品、架构、核心机制和工程边界；不把它当作逐轮变更史或测试总数账本 |
 | [全流程推演方案](../superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md) | 推演步骤、质量门、责任和运行判据的专题事实源 | 讲 26 步推演及其实施细节时使用；总体协作的 15 个编号消息不在这里展开 |
 | [设计事实与容量基线](../superpowers/specs/2026-10-23-swarmstudio-design-ledger.md) | 数字附录，不是独立正本 | 查稳定参数与推演参考编制；版本表以核实日为准，当前值仍回到版本载体核对 |
 | [附录 A](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) | specs 根目录的逐份人工摘要与角色分类 | 查单份文档主旨；计数随批次滚动，不能替代文件系统盘点 |
@@ -42,9 +42,9 @@
 4. 组件内部实现由专题文档和 ADR 提供证据。
 5. 旧设计稿只用于理解来路。
 
-无法核实就写“未验证”，不能把“终态”解释为所有环境均已交付。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md 卷首「事实裁决顺序」`
+无法核实就写“未验证”，不能把“终态”解释为所有环境均已交付。`docs/DESIGN.md 卷首「事实裁决顺序」`
 
-版本与发布还要加两条专用规则：模块、整体包、产物和安装方式以 `RELEASE-MANIFEST.json` 及各自版本载体为准；上游钉版以 `vendor/VENDOR.md` 的当前表格为准。数字总账是正本的汇总附录，不能反过来覆盖这些载体。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §5.5`；`vendor/VENDOR.md:5-15`
+版本与发布还要加两条专用规则：模块、整体包、产物和安装方式以 `RELEASE-MANIFEST.json` 及各自版本载体为准；上游钉版以 `vendor/VENDOR.md` 的当前表格为准。数字总账是正本的汇总附录，不能反过来覆盖这些载体。`docs/DESIGN.md §5.5`；`vendor/VENDOR.md:5-15`
 
 ### 1.3 推荐阅读顺序是什么
 
@@ -57,13 +57,13 @@
 5. 按课程主题读全流程推演方案、G5/UAT、HumanGate、主动性、工具策略等专题 spec，并回读本导读第 4 章的当前差异。
 6. 最后查 `RELEASE-MANIFEST.json`、`vendor/VENDOR.md` 和机械索引，核对当前版本与文件覆盖；附录 B-D 只按需追溯历史。
 
-角色重点与正本 §6.2 一致：主管与产品读第 1—2 章与 §3.9；架构与研发读第 3—5 章；测试与安全读 §2.5、§4.4、§4.9；运维与审计读 §3.9、§4.5—4.6、第 6 章。讲师另需读培训手册的环境依赖和完成判据，不能把页面打开或模拟审批当成功能验证。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §6.2`；`docs/manuals/aistudio-training-and-user-guide.md:13-50,832-903`
+角色重点与正本 §6.2 一致：主管与产品读第 1—2 章与 §3.9；架构与研发读第 3—5 章；测试与安全读 §2.5、§4.4、§4.9；运维与审计读 §3.9、§4.5—4.6、第 6 章。讲师另需读培训手册的环境依赖和完成判据，不能把页面打开或模拟审批当成功能验证。`docs/DESIGN.md §6.2`；`docs/manuals/aistudio-training-and-user-guide.md:13-50,832-903`
 
 ## 2. 稳定设计机制应该怎样讲
 
 ### 2.1 五组件与三模式分别解决什么问题
 
-五个运行时组件是 AIStudio 驾驶舱、Matrix、hermes agent、Ycode 和 swarm-yuan。驾驶舱承接人的全景与审批，Matrix 传递协作消息，hermes agent 运行智能体团队，Ycode 执行任务导向编码，swarm-yuan 从目标仓库生成项目技能。它们服务分布式需求分析、研发协作、实施交付和测试验证四条主线。Matrix 是外部基础设施，不是本项目的独立发布模块，因此“五组件”不等于“五个发布包”。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §1.1、§3.5`
+五个运行时组件是 AIStudio 驾驶舱、Matrix、hermes agent、Ycode 和 swarm-yuan。驾驶舱承接人的全景与审批，Matrix 传递协作消息，hermes agent 运行智能体团队，Ycode 执行任务导向编码，swarm-yuan 从目标仓库生成项目技能。它们服务分布式需求分析、研发协作、实施交付和测试验证四条主线。Matrix 是外部基础设施，不是本项目的独立发布模块，因此“五组件”不等于“五个发布包”。`docs/DESIGN.md §1.1、§3.5`
 
 | 工作模式 | 入口 | 核心用途 | 必须讲清的边界 |
 |---|---|---|---|
@@ -71,27 +71,27 @@
 | IDE 工作区 | `/app/ide` | 围绕任务编码、审查、运行命令和查看变更 | 任务锚不是聊天锚；电脑操作默认关闭，插件存在不等于获得授权 |
 | 全流程推演 | `/app/sim` | 在独立运行根演练完整交付并保存证据 | 设计目标是隔离，但当前批量操作和注意力入口尚未完全排除 SIM 任务 |
 
-模式切换改变工作视图，不改变对象真值；跨日常与推演链接必须标明目标环境。当前不能把推演称为已经完全隔离的安全沙箱。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §2.1、§2.4、§4.10`
+模式切换改变工作视图，不改变对象真值；跨日常与推演链接必须标明目标环境。当前不能把推演称为已经完全隔离的安全沙箱。`docs/DESIGN.md §2.1、§2.4、§4.10`
 
 ### 2.2 “15 步”与“26 步”是不是矛盾
 
 不是。它们描述两个层级。
 
-总体协作顺序图有 15 个编号消息：第 1—6 步形成并下发任务，第 7—12 步提供技能并汇聚证据，第 13—15 步完成独立复审、状态回流和治理升级。Matrix 位于可选协作分支，跳过可选分支时编号不重排，也不是所有任务都必须经过 Matrix。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §3.1`
+总体协作顺序图有 15 个编号消息：第 1—6 步形成并下发任务，第 7—12 步提供技能并汇聚证据，第 13—15 步完成独立复审、状态回流和治理升级。Matrix 位于可选协作分支，跳过可选分支时编号不重排，也不是所有任务都必须经过 Matrix。`docs/DESIGN.md §3.1`
 
-全流程推演主链另有 26 个步骤和六道质量门，由全流程推演方案定义。导演 run 与 26 步 run 分流，不能混用轮次。授课时应说“15 个总体协作消息”和“26 个推演步骤”，不要简称为两个互相竞争的“总流程”。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §2.5`；`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:13-20`
+全流程推演主链另有 26 个步骤和六道质量门，由全流程推演方案定义。导演 run 与 26 步 run 分流，不能混用轮次。授课时应说“15 个总体协作消息”和“26 个推演步骤”，不要简称为两个互相竞争的“总流程”。`docs/DESIGN.md §2.5`；`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:13-20`
 
 ### 2.3 看板、G5 与 UAT 各用什么状态机
 
 **看板状态。** 当前默认工作流有八列，另有归档状态：`triage`、`todo`、`scheduled`、`ready`、`running`、`blocked`、`review`、`done`，以及 `archived`。`scheduled` 表示等待时间而非等待人，不可派发；`running` 由内核认领进入，`review` 和 `scheduled` 不是普通拖拽目标。手工迁移还要经过依赖、完成证据等动词门禁，不能只看状态名推断可执行。`runtime/hermes_cli/kanban_workflow.py:27-28,110-142`；`runtime/hermes_cli/kanban_db.py:4259-4285`
 
-正本 §4.2 的概念表未列 `scheduled`，这是已确认的正本缺项，详见第 4 章。授课和界面讲解应采用当前默认工作流的完整集合，同时说明各板可以配置列门，机制存在不等于每块板都已启用。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.2`
+正本 §4.2 的概念表未列 `scheduled`，这是已确认的正本缺项，详见第 4 章。授课和界面讲解应采用当前默认工作流的完整集合，同时说明各板可以配置列门，机制存在不等于每块板都已启用。`docs/DESIGN.md §4.2`
 
 **G5 发布门。** SIM 的 G5 采用 `draft → pending → approved → released` 主路径，`submit`、`approve`、`reject`、`release` 是动作，`rejected` 是另一终态。新记录追加到 `evidence/release-gate.jsonl`，非法迁移返回 409，同态重复动作幂等返回；旧台账允许直接批准及改判兼容读取。批准必须带证据锚，驳回必须写理由；启用鉴权后，批准、驳回和发布只开放给 `super_admin` 或 `release` 角色。`custom/server/governance/lifecycle/release-state.ts:17-19,49-58,75-101,139-191`；`custom/server/simcenter/simcenter-controller.ts:943-1019`
 
 **UAT。** UAT 按验收标准逐条判定，不是一次整包按钮。每条 AC 有 `pending`、`pass`、`conditional`、`reject`；记录采用 append-only，最新判定胜出，历史完整保留。`conditional` 必须写说明，并二选一携带 `acknowledged:true`（真人认可）或 `pending:true`（机器评估待认可），两者互斥；`reject` 必须写理由并阻断该 AC。`custom/server/governance/lifecycle/uat-state.ts:6-15,69-111,114-151`
 
-看板 `done`、UAT 通过和 G5 批准是三件不同事实。任务完成不替代用户验收，用户验收也不替代发布授权；发布类任务还要经过实施后观察窗。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.2、§4.5`
+看板 `done`、UAT 通过和 G5 批准是三件不同事实。任务完成不替代用户验收，用户验收也不替代发布授权；发布类任务还要经过实施后观察窗。`docs/DESIGN.md §4.2、§4.5`
 
 ### 2.4 G1—G6 与 UAT 在交付链中怎样衔接
 
@@ -104,7 +104,7 @@
 | G5 发布准出 | 发布证据、人工授权和回滚条件 | 三条取证线只取证，终判走单一出口 |
 | G6 复盘 | 问题、行动项与经验回到治理系统 | 报告写完不等于经验已进入下一轮准入 |
 
-质量门失败的准出只有“登记修复单、完成真修复、复审通过”这一条出口。非准出检查项可以按规则豁免，准出门失败、证据不足或存在反证不得豁免。G5 与 UAT 使用独立 append-only 台账，不修改 run-state 闸键；每轮证据只能属于该轮。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §2.5、§4.4`
+质量门失败的准出只有“登记修复单、完成真修复、复审通过”这一条出口。非准出检查项可以按规则豁免，准出门失败、证据不足或存在反证不得豁免。G5 与 UAT 使用独立 append-only 台账，不修改 run-state 闸键；每轮证据只能属于该轮。`docs/DESIGN.md §2.5、§4.4`
 
 UAT 不是 G5 的同义状态。G5 关注是否获准发布，UAT 关注验收标准是否被用户接受；二者可以相互提供证据，但不能互相代替。
 
@@ -135,7 +135,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 | exercised | 94 | 真实用过并留下本轮结果 |
 | outcome-supported | 100 | 有后续结果支撑，可以支持效果结论 |
 
-退出码、阈值和证据档位回答不同问题，不能互相替代。零用例是空跑，不确定不是通过，未执行不是零问题。证据自评不高于 74 分不得交付；只有自产自验时，即使达到 exercised，也要补独立来源。研发完成声明还必须同时携带提交号与任务卡号，报告文字不能替代双凭证。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.4`
+退出码、阈值和证据档位回答不同问题，不能互相替代。零用例是空跑，不确定不是通过，未执行不是零问题。证据自评不高于 74 分不得交付；只有自产自验时，即使达到 exercised，也要补独立来源。研发完成声明还必须同时携带提交号与任务卡号，报告文字不能替代双凭证。`docs/DESIGN.md §4.4`
 
 ### 2.7 主动性为什么不能只看“自治等级”
 
@@ -145,21 +145,21 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 2. 主动性两轴决定能否越过指令继续行动。横轴是 L1 指令、L2 时间规则、L3 事件触发、L4 目标差距、L5 推断目标；纵轴是告知、建议、起草待确认、可逆执行、不可逆对外执行。L5 只能告知，L4 没有目标与验收契约只能起草。
 3. 失败代价按能否撤回、影响到谁、结果能否验证压低执行上限。高风险动作还要叠加 staged 提案与人工确认。
 
-三者取最严，高自主性不能绕过 T3，低风险 T1 也不能绕过目标未确认。长期目标默认超过 7 天未复核时压回起草，目标漂移不能由单次审批豁免。当前主动性执法门默认关闭，页面能演算不等于执行链已拦截。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.8、§6.4`
+三者取最严，高自主性不能绕过 T3，低风险 T1 也不能绕过目标未确认。长期目标默认超过 7 天未复核时压回起草，目标漂移不能由单次审批豁免。当前主动性执法门默认关闭，页面能演算不等于执行链已拦截。`docs/DESIGN.md §4.8、§6.4`
 
 ### 2.8 部署与发布怎样保持单一事实源
 
-运行拓扑的目标与默认收敛形态是每个运行节点一个 hermes gateway，复用该节点多个 profile。多机通过受控 peer API、Matrix 和 Git 制品协作，不设全网唯一中央网关，也不允许产品功能绕过本机 gateway 另起执行链。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.2`
+运行拓扑的目标与默认收敛形态是每个运行节点一个 hermes gateway，复用该节点多个 profile。多机通过受控 peer API、Matrix 和 Git 制品协作，不设全网唯一中央网关，也不允许产品功能绕过本机 gateway 另起执行链。`docs/DESIGN.md §4.2`
 
-代码改造分两类：A 类只新增 `custom/`、注册表或配置；B 类改变上游行为，必须进入补丁序列。`vendor/` 的 git 跟踪内容保持 pristine，注入后的脏态是构建结果，不是新基线。hermes-studio 补丁应用失败会中止，hermes-agent 与 Ycode 补丁应用失败可以告警跳过，series 登记文件缺失仍会中止；`appliedPatches` 清单不是逐补丁成功凭证。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §5.1`；`vendor/VENDOR.md:1-15`
+代码改造分两类：A 类只新增 `custom/`、注册表或配置；B 类改变上游行为，必须进入补丁序列。`vendor/` 的 git 跟踪内容保持 pristine，注入后的脏态是构建结果，不是新基线。hermes-studio 补丁应用失败会中止，hermes-agent 与 Ycode 补丁应用失败可以告警跳过，series 登记文件缺失仍会中止；`appliedPatches` 清单不是逐补丁成功凭证。`docs/DESIGN.md §5.1`；`vendor/VENDOR.md:1-15`
 
-交付部署按四步走：检查准入资料和回滚，技术评审与运维评审独立投票，按批准路径实施，进入观察窗并完成机械复验与回访。发布动作不等于任务可以立即收口。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.5`
+交付部署按四步走：检查准入资料和回滚，技术评审与运维评审独立投票，按批准路径实施，进入观察窗并完成机械复验与回访。发布动作不等于任务可以立即收口。`docs/DESIGN.md §4.5`
 
-日常开发与走查以浏览器 Web 版为主，Electron 是可选发布能力。单仓桌面构建须显式设置 `OVERLAY_UPSTREAM_ROOT` 指向仓内 `vendor/`，mac arm64 与 win x64 分别构建、安装和启动验收；未做逐平台验收就保持未验证。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §5.5、§6.1`
+日常开发与走查以浏览器 Web 版为主，Electron 是可选发布能力。单仓桌面构建须显式设置 `OVERLAY_UPSTREAM_ROOT` 指向仓内 `vendor/`，mac arm64 与 win x64 分别构建、安装和启动验收；未做逐平台验收就保持未验证。`docs/DESIGN.md §5.5、§6.1`
 
 ### 2.9 安全边界应该怎样讲才不夸大
 
-严格策略覆盖的高风险执行面采用 fail-closed：权限缺失、策略加载失败、路径越界或必要配置缺席时拒绝。当前工具执法总闸和 strict 均为显式配置，默认仍存在观察与 fail-open 区域，因此不能说“全系统默认失败即关闭”。只读聚合采用 fail-soft，但必须明确源缺席和受影响范围，不能把缺源显示成零待办。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.9、§4.10`
+严格策略覆盖的高风险执行面采用 fail-closed：权限缺失、策略加载失败、路径越界或必要配置缺席时拒绝。当前工具执法总闸和 strict 均为显式配置，默认仍存在观察与 fail-open 区域，因此不能说“全系统默认失败即关闭”。只读聚合采用 fail-soft，但必须明确源缺席和受影响范围，不能把缺源显示成零待办。`docs/DESIGN.md §4.9、§4.10`
 
 其余必讲边界如下：
 
@@ -170,7 +170,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 - 紧急处置必须留下 `[BREAK-GLASS]` 记录，不能拿紧急通道当作常设绕行路径。
 - SIM 批量操作和注意力入口的隔离缺口尚未闭合，不能用“独立运行根”替代全入口审查。
 
-`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §2.4、§2.6、§4.4、§4.9、§4.10、§6.4`
+`docs/DESIGN.md §2.4、§2.6、§4.4、§4.9、§4.10、§6.4`
 
 ## 3. 当前版本与两件发布资产怎样核对
 
@@ -211,7 +211,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 - 日常 UAT 面板只把 review 任务列为待判，动作回到任务卡或审批系统，不写推演 UAT 台账。`custom/client/ia2/views/stage/DailyUatPanel.vue:1-2,19-45`
 - SIM G5/UAT 才按 run 读写 `runs/<run>/evidence/release-gate.jsonl` 与 `uat-verdicts.jsonl`，并套用上述状态机与权限。`custom/server/simcenter/simcenter-controller.ts:752-883,886-1019`
 
-因此，不能用 SIM 的 G5/UAT 状态机截图证明日常任务已经验收，也不能把日常 `done` 当成 SIM UAT 或 G5 通过。正本把 G5 与 UAT 独立 append-only 作为稳定契约是对的，但讲解时必须补上日常与 SIM 两条产品入口的差别。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §2.5`
+因此，不能用 SIM 的 G5/UAT 状态机截图证明日常任务已经验收，也不能把日常 `done` 当成 SIM UAT 或 G5 通过。正本把 G5 与 UAT 独立 append-only 作为稳定契约是对的，但讲解时必须补上日常与 SIM 两条产品入口的差别。`docs/DESIGN.md §2.5`
 
 ### 4.2 UAT 专题 spec 是否覆盖当前全部条件通过语义
 
@@ -219,7 +219,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 ### 4.3 看板状态表少了什么
 
-正本 §4.2 列了 triage、todo、ready、running、review、blocked、done／archived，漏掉 `scheduled`。当前默认工作流明确把 `scheduled` 放在 todo 与 ready 之间，且它不可派发，unblock 时才重新计算就绪状态。培训材料若只按正本表格讲，会让学员漏掉“等待时间”与“等待人”的区别。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §4.2`；`runtime/hermes_cli/kanban_workflow.py:114-142`；`runtime/hermes_cli/kanban_db.py:3951-3981,4259-4285`
+正本 §4.2 列了 triage、todo、ready、running、review、blocked、done／archived，漏掉 `scheduled`。当前默认工作流明确把 `scheduled` 放在 todo 与 ready 之间，且它不可派发，unblock 时才重新计算就绪状态。培训材料若只按正本表格讲，会让学员漏掉“等待时间”与“等待人”的区别。`docs/DESIGN.md §4.2`；`runtime/hermes_cli/kanban_workflow.py:114-142`；`runtime/hermes_cli/kanban_db.py:3951-3981,4259-4285`
 
 ### 4.4 HumanGate 严格模式是否默认拒绝自批并限制角色
 
@@ -232,14 +232,14 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 2026-11-06 结构重排批已把三处旧值修齐，当前不再需要主动避开：
 
 1. 数字总账 §C 全表随载体对齐（hermes-studio v1.0.9／hermes-agent v0.23.0／zcode 3.17.2／驾驶舱 studio.12／agent teams v0.23.0-team.1／yuan v2.99.3／整体包 1.0.13-overlay），核实日 2026-11-06。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:67-90`
-2. 整合正本 §5.4 已把 2026-10-31 起的升级长注记收敛为「升级规则＋当前基线表」，历史来路归 git 与对应 spec；当前钉版以 `vendor/VENDOR.md` 为准。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §5.4`；`vendor/VENDOR.md:7,13`
+2. 整合正本 §5.4 已把 2026-10-31 起的升级长注记收敛为「升级规则＋当前基线表」，历史来路归 git 与对应 spec；当前钉版以 `vendor/VENDOR.md` 为准。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,13`
 3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要已更正为 hermes-studio v1.0.9。维护时应保留这项修正，不要从旧报告把旧值复制回来。`RELEASE-MANIFEST.json:45,134`；`vendor/VENDOR.md:7-13`
 
 历史报告与历史 spec 中仍会出现成文时点的旧值（v0.8.0、studio.1、team.1、v2.95.0、1.0.0-overlay、zcode 3.17.1）。识别规则是：版本一律以当前载体与 VENDOR 表格为准，文档里的版本只代表其成文时点，不能当作现行值。
 
 ### 4.6 发布文字的历史口径怎样处理
 
-整合正本 §5.5 已写入当前口径：默认 `release:packages` 只打整体包，`--all-modules` 才是 4+1 逃生通道；对外只发整体包与 yuan everything 两件主资产，GitHub 与 ModelScope 双通道。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §5.5`；`scripts/make-release-packages.mjs:38-50`
+整合正本 §5.5 已写入当前口径：默认 `release:packages` 只打整体包，`--all-modules` 才是 4+1 逃生通道；对外只发整体包与 yuan everything 两件主资产，GitHub 与 ModelScope 双通道。`docs/DESIGN.md §5.5`；`scripts/make-release-packages.mjs:38-50`
 
 `RELEASE-NOTES.md` 的历史条目保留其成文时的口径（含“只在本机构建留存”的早期说法），当前口径以发布清单与正本 §5.5 为准；维护时不要从历史条目恢复 local-only 或四模块包上传。`RELEASE-NOTES.md:40-45`；`RELEASE-MANIFEST.json:131-132`
 
@@ -247,7 +247,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 多数差异来自日期和分母，不应直接判为错误：
 
-- 当前工作树根目录实际 592 份，附录 A 的 A.1 当前收 583 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 592；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-11`
+- 当前工作树根目录实际 593 份，附录 A 的 A.1 当前收 584 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 593；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-11`
 - 附录 B 的 55＋32 是 2026-10-23 历史计划与研究索引，不是 specs 根目录总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md:1-6,66-68`
 - 附录 C.1 收 57 份方法论，C.2 的 51 是补入前的历史快照；当前数字应读 `facts.conf`，不能拿 51 当现行总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md:70-72,166-180`
 - 附录 D.1 的 43 是运行与方案复盘根因条数，文件头的 21 是推演轮次数，两者不是同一分母。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md:1-5`
@@ -256,11 +256,11 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 ### 4.8 哪些开放边界不能被讲成已交付
 
-正本 §6.4 仍明确列出：SIM 批量与注意力入口未完全只读，ACP 编码前技能装载与真实回合未完整验证，桌面双平台未逐平台验收，长期记忆全链未验证，真实长任务与断点恢复未复验，真实多轮图运行未复验，主动性执法默认关闭，性能首载与聚合时延未在当前版本复测。另有四项 2026-11-06 新增边界：总监派发待 run28 首跑、黄金集门检活体判分未跑、帧二态待下一轮采集核验、跨轮指标需累计两轮后才启用判据。讲师应把这些作为环境依赖或待验证项，不用既有测试数量替代目标环境证据。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §6.4`
+正本 §6.4 仍明确列出：SIM 批量与注意力入口未完全只读，ACP 编码前技能装载与真实回合未完整验证，桌面双平台未逐平台验收，长期记忆全链未验证，真实长任务与断点恢复未复验，真实多轮图运行未复验，主动性执法默认关闭，性能首载与聚合时延未在当前版本复测。另有四项 2026-11-06 新增边界：总监派发待 run28 首跑、黄金集门检活体判分未跑、帧二态待下一轮采集核验、跨轮指标需累计两轮后才启用判据。讲师应把这些作为环境依赖或待验证项，不用既有测试数量替代目标环境证据。`docs/DESIGN.md §6.4`
 
 ## 5. 文档维护者怎样守住后续一致性
 
-1. **先判角色再改文档。** 稳定结构改整合正本，单项变更写带日期 spec，历史档案不改写来路。新 spec 必须包含“变更、决策记录、验证、设计文档影响”四段；触及正本或数字总账时声明 `DESIGN_SYNC: touched` 并同批兑现。`docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md §6.5`
+1. **先判角色再改文档。** 稳定结构改整合正本，单项变更写带日期 spec，历史档案不改写来路。新 spec 必须包含“变更、决策记录、验证、设计文档影响”四段；触及正本或数字总账时声明 `DESIGN_SYNC: touched` 并同批兑现。`docs/DESIGN.md §6.5`
 2. **当前行为先回读实现。** 状态、权限、默认开关和路由必须给当前 `file:line`，旧 spec 只用于解释设计意图。发现正本滞后时，不用新文档悄悄覆盖，应在对应 spec 记录差异并修订正本。
 3. **版本先看载体。** 更新版本时先改版本载体，再核对发布清单、发布说明与总账；基线以 VENDOR 表格为准，不能复制旧摘要。
 4. **文件覆盖按文件系统验收。** 新增、删除或移动 spec 后，同时更新附录 A 的人工摘要和机械索引的链接与计数。机械索引只证明“收进了”，不证明“仍现行”。
