@@ -126,21 +126,21 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.jr { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color, #333); border-radius: 8px; }
+.jr { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color, var(--border-color)); border-radius: 8px; }
 .jr__bar { display: flex; align-items: center; justify-content: space-between; }
 .jr__title { margin: 0; font-size: 13.5px; }
-.jr__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, #888); }
-.jr__err { color: #e06c75; margin: 0; font-size: 12px; }
+.jr__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, var(--text-muted)); }
+.jr__err { color: var(--error); margin: 0; font-size: 12px; }
 .jr__form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .jr__wide { grid-column: 1 / -1; }
 .jr__form label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; }
 .jr__btn { align-self: flex-start; grid-column: 1 / -1; }
 .jr__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.jr__table th, .jr__table td { border-bottom: 1px solid var(--border-color, #333); padding: 4px 6px; text-align: left; }
-.jr__kind { border-radius: 8px; padding: 0 8px; font-size: 11px; background: #424242; color: #fff; }
-.jr__kind--override, .jr__kind--rejection { background: #8e2424; }
-.jr__kind--escalation, .jr__kind--pause { background: #b26a00; }
-.jr__kind--acceptance { background: #2e7d32; }
+.jr__table th, .jr__table td { border-bottom: 1px solid var(--border-color, var(--border-color)); padding: 4px 6px; text-align: left; }
+.jr__kind { border-radius: 8px; padding: 0 8px; font-size: 11px; background: var(--text-secondary); color: var(--bg-primary); }
+.jr__kind--override, .jr__kind--rejection { background: var(--error); }
+.jr__kind--escalation, .jr__kind--pause { background: var(--warning); }
+.jr__kind--acceptance { background: var(--success); }
 .jr__rat { max-width: 360px; }
-.jr__empty { color: var(--text-muted, #888); font-size: 12px; }
+.jr__empty { color: var(--text-muted, var(--text-muted)); font-size: 12px; }
 </style>

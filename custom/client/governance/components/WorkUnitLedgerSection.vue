@@ -236,29 +236,29 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.wu { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color, #333); border-radius: 8px; }
+.wu { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color, var(--border-color)); border-radius: 8px; }
 .wu__bar { display: flex; align-items: center; justify-content: space-between; }
 .wu__title { margin: 0; font-size: 13.5px; }
-.wu__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, #888); }
-.wu__err { color: #e06c75; margin: 0; font-size: 12px; }
-.wu__ok { color: #67c23a; margin: 0; font-size: 12px; }
+.wu__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, var(--text-muted)); }
+.wu__err { color: var(--error); margin: 0; font-size: 12px; }
+.wu__ok { color: var(--success); margin: 0; font-size: 12px; }
 .wu__people { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11.5px; }
-.wu__chip { border: 1px solid var(--border-color, #444); border-radius: 10px; padding: 1px 8px; }
+.wu__chip { border: 1px solid var(--border-color, var(--border-color)); border-radius: 10px; padding: 1px 8px; }
 .wu__chip--off { opacity: 0.55; }
 .wu__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.wu__table th, .wu__table td { border-bottom: 1px solid var(--border-color, #333); padding: 4px 6px; text-align: left; vertical-align: top; }
+.wu__table th, .wu__table td { border-bottom: 1px solid var(--border-color, var(--border-color)); padding: 4px 6px; text-align: left; vertical-align: top; }
 .wu__stage { border-radius: 8px; padding: 0 8px; font-size: 11px; }
-.wu__stage--running { background: #2e7d32; color: #fff; }
-.wu__stage--admitted { background: #1565c0; color: #fff; }
-.wu__stage--changing { background: #b26a00; color: #fff; }
-.wu__stage--retired { background: #616161; color: #fff; }
-.wu__stage--registered { background: #424242; color: #fff; }
-.wu__gaps { margin: 0; padding-left: 14px; color: #e6a23c; font-size: 11.5px; }
-.wu__ok-inline { color: #67c23a; }
-.wu__form, .wu__trans { display: flex; flex-direction: column; gap: 6px; border-top: 1px dashed var(--border-color, #333); padding-top: 8px; }
+.wu__stage--running { background: var(--success); color: var(--bg-primary); }
+.wu__stage--admitted { background: var(--accent-info); color: var(--bg-primary); }
+.wu__stage--changing { background: var(--warning); color: var(--bg-primary); }
+.wu__stage--retired { background: var(--text-muted); color: var(--bg-primary); }
+.wu__stage--registered { background: var(--text-secondary); color: var(--bg-primary); }
+.wu__gaps { margin: 0; padding-left: 14px; color: var(--warning); font-size: 11.5px; }
+.wu__ok-inline { color: var(--success); }
+.wu__form, .wu__trans { display: flex; flex-direction: column; gap: 6px; border-top: 1px dashed var(--border-color, var(--border-color)); padding-top: 8px; }
 .wu__form label, .wu__trans label { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; }
 .wu__btn { align-self: flex-start; }
-.wu__link { background: none; border: none; color: var(--primary-color, #409eff); cursor: pointer; padding: 0; font-size: 11.5px; }
-.wu__empty { color: var(--text-muted, #888); font-size: 12px; }
+.wu__link { background: none; border: none; color: var(--primary-color, var(--accent-primary)); cursor: pointer; padding: 0; font-size: 11.5px; }
+.wu__empty { color: var(--text-muted, var(--text-muted)); font-size: 12px; }
 .wu__units { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; }
 </style>

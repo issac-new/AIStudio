@@ -70,9 +70,9 @@ export function activePersonIds(): Set<string> {
 export function upsertPerson(
   input: { id?: string; name: string; emails?: string[]; source?: 'git' | 'manual' },
   _actor: string,
-): { ok: true; person: Person } | { ok: false; problems: string[] } {
+): { ok: boolean; problems: string[]; person?: Person } {
   const name = String(input.name ?? '').trim()
-  if (!name) return { ok: false, problems: ['name 必填'] }
+  if (!name) return { ok: name.trim().length > 0, problems: ['name 必填'] }
   const emails = (input.emails ?? []).map((e) => String(e).trim().toLowerCase()).filter(Boolean)
   const store = readStore()
   const byId = input.id ? store.people.find((p) => p.id === input.id) : undefined
@@ -84,7 +84,7 @@ export function upsertPerson(
     existing.name = name
     existing.emails = [...new Set([...existing.emails, ...emails])]
     writeStore(store)
-    return { ok: true, person: { ...existing } }
+    return { ok: true, problems: [], person: { ...existing } }
   }
   const person: Person = {
     id: input.id ?? `p-${store.nextSeq++}`,
@@ -96,18 +96,18 @@ export function upsertPerson(
   }
   store.people.push(person)
   writeStore(store)
-  return { ok: true, person: { ...person } }
+  return { ok: true, problems: [], person: { ...person } }
 }
 
 export function activatePerson(
   id: string,
   _actor: string,
-): { ok: true; person: Person } | { ok: false; problems: string[] } {
+): { ok: boolean; problems: string[]; person?: Person } {
   const store = readStore()
   const person = store.people.find((p) => p.id === id)
-  if (!person) return { ok: false, problems: [`自然人不存在：${id}`] }
+  if (!person) return { ok: person !== undefined, problems: [`自然人不存在：${id}`] }
   person.active = true
   person.activatedAt = Date.now()
   writeStore(store)
-  return { ok: true, person: { ...person } }
+  return { ok: true, problems: [], person: { ...person } }
 }

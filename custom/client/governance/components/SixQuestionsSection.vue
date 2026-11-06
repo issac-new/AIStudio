@@ -68,19 +68,19 @@ onMounted(() => void refresh())
 </template>
 
 <style scoped lang="scss">
-.sq { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color, #333); border-radius: 8px; }
+.sq { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color, var(--border-color)); border-radius: 8px; }
 .sq__bar { display: flex; align-items: center; justify-content: space-between; }
 .sq__title { margin: 0; font-size: 13.5px; }
-.sq__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, #888); }
-.sq__err { color: #e06c75; margin: 0; font-size: 12px; }
-.sq__card { border: 1px solid var(--border-color, #333); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.sq__sub { margin: 0; font-size: 11.5px; color: var(--text-muted, var(--text-muted)); }
+.sq__err { color: var(--error); margin: 0; font-size: 12px; }
+.sq__card { border: 1px solid var(--border-color, var(--border-color)); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
 .sq__head { display: flex; align-items: center; gap: 8px; }
-.sq__badge { border-radius: 8px; padding: 0 10px; font-size: 11px; color: #fff; background: #616161; flex-shrink: 0; }
-.sq__badge--yes { background: #2e7d32; }
-.sq__badge--no { background: #8e2424; }
-.sq__badge--unknown { background: #616161; }
+.sq__badge { border-radius: 8px; padding: 0 10px; font-size: 11px; color: var(--bg-primary); background: var(--text-muted); flex-shrink: 0; }
+.sq__badge--yes { background: var(--success); }
+.sq__badge--no { background: var(--error); }
+.sq__badge--unknown { background: var(--text-muted); }
 .sq__q { font-size: 12.5px; }
-.sq__gap { font-size: 11.5px; color: #e6a23c; }
-.sq__gap--missing { color: #e06c75; }
-.sq__evid { margin: 0; padding-left: 16px; font-size: 11px; color: var(--text-muted, #888); list-style: disc; }
+.sq__gap { font-size: 11.5px; color: var(--warning); }
+.sq__gap--missing { color: var(--error); }
+.sq__evid { margin: 0; padding-left: 16px; font-size: 11px; color: var(--text-muted, var(--text-muted)); list-style: disc; }
 </style>

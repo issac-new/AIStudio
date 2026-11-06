@@ -494,13 +494,13 @@ export function updateResponsibilityCard(
   id: string,
   card: ResponsibilityCard,
   actor: string,
-): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
+): { ok: boolean; problems: string[]; identity?: AgentIdentity } {
   const people = listPeople()
   const problems = validateCard(card, people)
-  if (problems.length) return { ok: false, problems }
+  if (problems.length) return { ok: problems.length === 0, problems }
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
-  if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
+  if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
   const prevOwner = identity.responsibilityCard?.primaryOwner
   identity.responsibilityCard = card
   const lc = normalizeLifecycle(identity.lifecycle)
@@ -516,19 +516,19 @@ export function updateResponsibilityCard(
   identity.updatedAt = Date.now()
   writeStore(store)
   appendEvent({ actor, action: 'update', targetId: id, detail: 'responsibility-card' })
-  return { ok: true, identity: { ...identity } }
+  return { ok: true, problems: [], identity: { ...identity } }
 }
 
 export function transitionIdentity(
   id: string,
   input: TransitionInput,
   actor: string,
-): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
+): { ok: boolean; problems: string[]; identity?: AgentIdentity } {
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
-  if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
+  if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
   const verdict = canTransition(identity, input, listPeople())
-  if (verdict.problems.length > 0) return { ok: false, problems: verdict.problems }
+  if (verdict.problems.length > 0) return { ok: verdict.problems.length === 0, problems: verdict.problems }
   const lc = normalizeLifecycle(identity.lifecycle)
   const from = lc.stage
   lc.history.push({
@@ -541,7 +541,7 @@ export function transitionIdentity(
   identity.updatedAt = Date.now()
   writeStore(store)
   appendEvent({ actor, action: 'update', targetId: id, detail: `lifecycle:${from}->${input.to}` })
-  return { ok: true, identity: { ...identity } }
+  return { ok: true, problems: [], identity: { ...identity } }
 }
 
 export function getCardView(id: string): {

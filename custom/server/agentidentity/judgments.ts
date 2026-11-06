@@ -56,7 +56,7 @@ export function appendJudgment(
   input: JudgmentInput,
   signedBy: string,
   people: Person[],
-): { ok: true; record: JudgmentRecord } | { ok: false; problems: string[] } {
+): { ok: boolean; problems: string[]; record?: JudgmentRecord } {
   const problems: string[] = []
   if (!input.unitId?.trim()) problems.push('unitId 必填')
   if (!KINDS.includes(input.kind)) problems.push('kind 非法')
@@ -66,7 +66,7 @@ export function appendJudgment(
   }
   const signer = people.find((p) => p.id === signedBy)
   if (!signer || !signer.active) problems.push('signedBy 必须是在岗自然人')
-  if (problems.length) return { ok: false, problems }
+  if (problems.length) return { ok: problems.length === 0, problems }
 
   const record: JudgmentRecord = {
     id: `j-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -80,5 +80,5 @@ export function appendJudgment(
     source: 'human-entry',
   }
   appendJsonl(filePath(), record)
-  return { ok: true, record }
+  return { ok: true, problems: [], record }
 }
