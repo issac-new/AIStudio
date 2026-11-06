@@ -2,10 +2,9 @@
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
-- 快照基线：`83d192db2`；核实日：2026-11-05；版本线：`1.0.12-overlay`（vivo Harness 吸收 W1-W4 发布批）。
-- 快照基线：`83d192db2`；核实日：2026-11-05；版本线：`1.0.12-overlay`（vivo Harness 吸收 W1-W4 发布批）。
-- 当前工作树根目录：**581 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**579 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 128 份；合计 581 份。
+- 快照基线：`355aa9ab6`；核实日：2026-11-06；版本线：`1.0.13-overlay`（结构重排与事实刷新批）。
+- 当前工作树根目录：**592 份 Markdown**（HEAD 全量跟踪）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 139 份；合计 592 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -478,7 +477,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（128 份）
+## 2026-11（139 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -603,25 +602,22 @@
 - [2026-11-06-ai-friendly-cli-contract.md](../superpowers/specs/2026-11-06-ai-friendly-cli-contract.md)
 - [2026-11-06-cognition-review-p0-landing.md](../superpowers/specs/2026-11-06-cognition-review-p0-landing.md)
 - [2026-11-06-decision-receipts.md](../superpowers/specs/2026-11-06-decision-receipts.md)
+- [2026-11-06-design-doc-restructure.md](../superpowers/specs/2026-11-06-design-doc-restructure.md)
+- [2026-11-06-director-dispatch.md](../superpowers/specs/2026-11-06-director-dispatch.md)
+- [2026-11-06-eval-golden-gate.md](../superpowers/specs/2026-11-06-eval-golden-gate.md)
 - [2026-11-06-eval-golden-set.md](../superpowers/specs/2026-11-06-eval-golden-set.md)
 - [2026-11-06-frame-capture-accuracy.md](../superpowers/specs/2026-11-06-frame-capture-accuracy.md)
 - [2026-11-06-frame-program-revision.md](../superpowers/specs/2026-11-06-frame-program-revision.md)
+- [2026-11-06-inject-seam-restore.md](../superpowers/specs/2026-11-06-inject-seam-restore.md)
+- [2026-11-06-platform-wiring-restore.md](../superpowers/specs/2026-11-06-platform-wiring-restore.md)
 - [2026-11-06-release-v1.0.13-overlay.md](../superpowers/specs/2026-11-06-release-v1.0.13-overlay.md)
-- [2026-11-06-inject-seam-restore.md](../superpowers/specs/2026-11-06-inject-seam-restore.md)
-- [2026-11-06-runtime-v0230-regen.md](../superpowers/specs/2026-11-06-runtime-v0230-regen.md)
-- [2026-11-06-platform-wiring-restore.md](../superpowers/specs/2026-11-06-platform-wiring-restore.md)
-- [2026-11-06-runtime-v0230-regen.md](../superpowers/specs/2026-11-06-runtime-v0230-regen.md)
-- [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
-- [2026-11-06-platform-wiring-restore.md](../superpowers/specs/2026-11-06-platform-wiring-restore.md)
-- [2026-11-06-inject-seam-restore.md](../superpowers/specs/2026-11-06-inject-seam-restore.md)
-- [2026-11-06-vendor-upgrade-agent-v0230.md](../superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md)
-- [2026-11-06-runtime-patch-touched-deploy.md](../superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md)
-- [2026-11-06-eval-golden-gate.md](../superpowers/specs/2026-11-06-eval-golden-gate.md)
-- [2026-11-06-director-dispatch.md](../superpowers/specs/2026-11-06-director-dispatch.md)
 - [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
 - [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
-- [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
 - [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
+- [2026-11-06-runtime-patch-touched-deploy.md](../superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md)
+- [2026-11-06-runtime-v0230-regen.md](../superpowers/specs/2026-11-06-runtime-v0230-regen.md)
+- [2026-11-06-vendor-upgrade-agent-v0230.md](../superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md)
+- [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
 
 ## archive（2 份，不计入上述根目录）
 
@@ -633,33 +629,3 @@
 ## 维护口径
 
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
-- [2026-11-04-sim-capability-refresh-round2.md](../superpowers/specs/2026-11-04-sim-capability-refresh-round2.md)
-- [2026-11-04-userenv-route-mount.md](../superpowers/specs/2026-11-04-userenv-route-mount.md)
-- [2026-11-04-regression-tooling-r26.md](../superpowers/specs/2026-11-04-regression-tooling-r26.md)
-- [2026-11-04-release-v1.0.11-overlay.md](../superpowers/specs/2026-11-04-release-v1.0.11-overlay.md)
-- [2026-11-05-teardown-void-type-fix.md](../superpowers/specs/2026-11-05-teardown-void-type-fix.md)
-- [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
-- [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
-- [2026-11-06-run27-optimizations-pending-batch.md](../superpowers/specs/2026-11-06-run27-optimizations-pending-batch.md)
-- [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
-- [2026-11-06-frame-program-revision.md](../superpowers/specs/2026-11-06-frame-program-revision.md)
-- [2026-11-06-frame-capture-accuracy.md](../superpowers/specs/2026-11-06-frame-capture-accuracy.md)
-- [2026-11-06-cognition-review-p0-landing.md](../superpowers/specs/2026-11-06-cognition-review-p0-landing.md)
-- [2026-11-06-release-v1.0.13-overlay.md](../superpowers/specs/2026-11-06-release-v1.0.13-overlay.md)
-- [2026-11-06-vendor-upgrade-agent-v0230.md](../superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md)
-- [2026-11-06-runtime-patch-touched-deploy.md](../superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md)
-- [2026-11-06-eval-golden-gate.md](../superpowers/specs/2026-11-06-eval-golden-gate.md)
-- [2026-11-06-director-dispatch.md](../superpowers/specs/2026-11-06-director-dispatch.md)
-- [2026-11-05-frame-expect-dash-keys-fix.md](../superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md)
-- [2026-11-05-release-v1.0.12-overlay.md](../superpowers/specs/2026-11-05-release-v1.0.12-overlay.md)
-- [2026-11-05-review-anchor-pin.md](../superpowers/specs/2026-11-05-review-anchor-pin.md)
-- [2026-11-05-org-governance-autonomy-scale.md](../superpowers/specs/2026-11-05-org-governance-autonomy-scale.md)
-- [2026-11-05-org-governance-premise-log.md](../superpowers/specs/2026-11-05-org-governance-premise-log.md)
-- [2026-11-05-org-governance-metric-discipline.md](../superpowers/specs/2026-11-05-org-governance-metric-discipline.md)
-- [2026-11-05-org-governance-thin-items.md](../superpowers/specs/2026-11-05-org-governance-thin-items.md)
-- [2026-11-05-org-governance-closeout.md](../superpowers/specs/2026-11-05-org-governance-closeout.md)
-- [2026-11-05-nvme-mount-guards.md](../superpowers/specs/2026-11-05-nvme-mount-guards.md)
-- [2026-11-05-sim-direct-llm-channel.md](../superpowers/specs/2026-11-05-sim-direct-llm-channel.md)
-- [2026-11-05-g4-probe-profile-fix.md](../superpowers/specs/2026-11-05-g4-probe-profile-fix.md)
-- [2026-11-05-run27-retro-root-cause.md](../superpowers/specs/2026-11-05-run27-retro-root-cause.md)
-- [2026-11-05-platform-rewrite-design.md](../superpowers/specs/2026-11-05-platform-rewrite-design.md)

@@ -1,7 +1,7 @@
 # AIStudio 设计事实与容量基线
 
 > 本文是《AIStudio 终态设计文档》的数字附录，不是独立设计正本。
-> 核实日：2026-11-01（RSI 全量执行后设计文档同步批）。
+> 核实日：2026-11-06（整合正本结构重排与事实刷新批）。
 > 口径：区分稳定设计参数、参考部署和版本快照。
 > 用途：防止同一数字在多处定义，不滚动记录开发轮次。
 
@@ -34,6 +34,7 @@
 | 主张回执判定 | 3 类未验证 | 无引用／解析不到／跨任务引用；空主张不判通过（`2026-11-03-claim-receipts-and-dispatch-capacity.md`） |
 | 派单并发准入 | 缺省不拦 | `ZCODE_MAX_CONCURRENT_RUNS` 未配（=0）即放行；饱和按 `ZCODE_CAPACITY_POLICY=reject|queue`；排队截止 `ZCODE_CAPACITY_QUEUE_TIMEOUT_MS` |
 | 验收断言家族 | 6 | `file_exists/file_readable/file_min_bytes/file_contains/command_ok/test_passed`；不可判定落 unchecked 且整体不放行（`2026-11-03-acceptance-checks.md`） |
+| 命令行退出码 | 5 态 | 0 成功／1 业务结论为负／2 环境或前置不满足／3 用法错误／4 部分成功；错误对象固定 `category`＋`reason`＋`remediation` 三字段；词表正本 `config/cli-contract.json`（`2026-11-06-ai-friendly-cli-contract.md`） |
 | 交接回合口径 | 认领起、终态止 | `claimed`→`completed/gave_up/crashed/reclaimed/archived`；运行中不进分母；`reclaimed` 只关上一回合（`2026-11-03-handoff-quality-ledger.md`） |
 | 探测并发缺省 | 2（上限 8，另按单元数与预算超支二次收敛） | 调度面 `probeConcurrency`：>1 时按有界池并行「题×样本」，预算按在途估值预扣，并发下证据只认 stream-json（`2026-11-03-harmony-multiobjective.md`） |
 | 断点推断缺省阈值 | 边界 3 分／间歇 20 分／节奏钳 5-120 分 | 看板生命周期事件推断断点：状态边界或长间歇判为断点，否则按事件间隔中位数推测下一断点；缺证据判非断点（`2026-11-03-proactive-intervention-governance.md`） |
@@ -73,19 +74,19 @@
 | hermes-studio 基线 | v1.0.9 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.23.0 | `vendor/VENDOR.md` |
 | zcode 基线谱系 | v3.16.1 系列（包版本 3.17.2 @a9fe401e，2026-11-03 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
-| 驾驶舱模块 | 1.0.9-studio.9 | `RELEASE-NOTES.md` |
+| 驾驶舱模块 | 1.0.9-studio.12 | `RELEASE-NOTES.md` |
 | agent teams 模块 | v0.23.0-team.1 | `team/VERSION` |
 | Ycode 模块 | 3.17.2 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
-| yuan skill 模块 | v2.95.0 | `skills/swarm-yuan/CHANGELOG.md` |
-| 整体源码包 | 1.0.0-overlay | 仓根 `package.json` 与发布清单 |
-| 平台重写批次（2026-11-05~06） | P0 身份/执行/证据＋P1 注入/交付/发布门＋P2 推演/文档三域核心；补丁 755/756 两枚平台载体；分文未升模块版本号（随下个发布轮进位） | `docs/superpowers/specs/2026-11-05-platform-rewrite-design.md` 及其三段「实施验证」小节 |
+| yuan skill 模块 | v2.99.3 | `skills/swarm-yuan/CHANGELOG.md` |
+| 整体源码包 | 1.0.13-overlay | 仓根 `package.json` 与发布清单 |
+| 平台重写批次（2026-11-05~06） | P0 身份/执行/证据＋P1 注入/交付/发布门＋P2 推演/文档三域核心；补丁 757/758 两枚平台载体（原拟 755/756，让号后落 757/758；755 为 readpool 批占用）；分文未升模块版本号（随下个发布轮进位） | `docs/superpowers/specs/2026-11-05-platform-rewrite-design.md` 及其三段「实施验证」小节 |
 
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 不得把其中任意一个字段单独改写成另外两个字段。
 2026-11-01 核对：hermes-studio 已升级至 v0.8.0（44 处补丁冲突处置完毕，全量与构建绿）；hermes-agent 最新稳定仍 v0.22.5（本表即当前钉版）；zcode 已同步 3.17.1（8/8 补丁，引擎构建绿）。本表所记即当前钉版，不以「上游最新」替代基线。
 2026-11-03 台账刷新批核对：全表六行随载体真值对齐（studio v1.0.9／agent v0.22.6／zcode 3.17.2 @a9fe401e／cockpit studio.9／teams team.1 底座段随 v0.22.6 归 1／yuan v2.99.1）——前三行此前随各自升级批进位，本批补 zcode 同步并清偿 §C 滞留的模块行旧值；各值以载体文件为准。
-2026-11-06 v0.23.0 换血批核对：agent 行随基线升 v0.23.0（2bd378ed1，6 补丁重生成＋742 退役，clean+inject 零告警幂等二连）、teams 行随底座升级归 v0.23.0-team.1（spec 2026-11-06-vendor-upgrade-agent-v0230）；cockpit 行 studio.12 系 v1.0.13 发布批域、本批不越界。各值以载体文件为准。
+2026-11-06 v0.23.0 换血批核对：agent 行随基线升 v0.23.0（2bd378ed1，6 补丁重生成＋742 退役，clean+inject 零告警幂等二连）、teams 行随底座升级归 v0.23.0-team.1（spec 2026-11-06-vendor-upgrade-agent-v0230）。2026-11-06 结构重排批核对：驾驶舱行随 v1.0.13 发布批归 studio.12、yuan skill 行归 v2.99.3、整体源码包行归 1.0.13-overlay，三行旧值（studio.9／v2.95.0／1.0.0-overlay）同批清偿；平台批次行补丁号校正为 757/758（原拟 755/756，让号后落位）。各值以载体文件为准。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。
 桌面安装身份与产物名中的 SwarmStudio 属于兼容标识，
 不改变主产品 AIStudio 的命名。

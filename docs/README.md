@@ -13,7 +13,7 @@
 | 部署、配置与运维检查 | [管理员运维参考](manuals/aistudio-operations-reference.md) |
 | 设计事实源与冲突裁决 | [设计文档导读](manuals/aistudio-design-document-guide.md) |
 | 全部 spec 可点击索引 | [设计文档全量索引](manuals/aistudio-design-document-index.md) |
-| 最新推演方案与真实报告案例 | [run25 全流程推演案例](manuals/aistudio-run25-simulation-case.md) |
+| 推演方案与真实报告案例（已归档的完整轮） | [run25 全流程推演案例](manuals/aistudio-run25-simulation-case.md) |
 | 交互拓扑培训与一键启动 | [交互培训页](manuals/aistudio-interactive-training.html)；`npm run training` |
 | Windows x64 排查 | [windows-x64-setup.md](windows-x64-setup.md) |
 | 一页看懂产品（离线单文件） | [intro.html](intro.html) |
