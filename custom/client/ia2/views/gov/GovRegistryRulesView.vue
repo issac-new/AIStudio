@@ -11,6 +11,9 @@ import AgentIdentitySection from '@/custom/governance/components/AgentIdentitySe
 import AutonomyLadderSection from '@/custom/governance/components/AutonomyLadderSection.vue'
 import ProactivitySection from '@/custom/governance/components/ProactivitySection.vue'
 import ToolPolicySection from '@/custom/governance/components/ToolPolicySection.vue'
+// 2026-11-06 执行单元责任台账第一增量：责任台账 + 人署名记录（判定在服务端，缺口如实显示）
+import WorkUnitLedgerSection from '@/custom/governance/components/WorkUnitLedgerSection.vue'
+import JudgmentRecordsSection from '@/custom/governance/components/JudgmentRecordsSection.vue'
 // A0 三中心拆分：标题键 tabGovRegistry 已迁 i18n-gov-tabs（⑥治理页签过渡事实源）
 import { useGovTabsText } from '../../i18n-gov-tabs'
 
@@ -22,7 +25,7 @@ const tabText = useGovTabsText()
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovRegistry }}</h2>
-        <p class="gov-view__sub">能力台账 · 状态本体 · 规则闸 · 运行态 · 工具策略 · 自治阶梯 · 主动性两轴</p>
+        <p class="gov-view__sub">能力台账 · 状态本体 · 规则闸 · 运行态 · 工具策略 · 自治阶梯 · 主动性两轴 · 责任台账 · 署名记录</p>
       </div>
     </header>
     <div class="gov-view__body">
@@ -32,6 +35,8 @@ const tabText = useGovTabsText()
       <RuntimeSection />
       <ToolPolicySection />
       <AgentIdentitySection />
+      <WorkUnitLedgerSection />
+      <JudgmentRecordsSection />
       <AutonomyLadderSection />
       <ProactivitySection />
     </div>
