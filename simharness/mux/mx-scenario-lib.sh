@@ -2439,7 +2439,9 @@ _mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 证据行数+in
 gate_blocked() { # <gate-key> <step-name>：硬闸检查——闸门 state 键未落即拒入后续步骤
   local key="$1" step="$2"
   [[ -n "$(sget "$key")" ]] && return 0
-  echo "ISSUE|gate-bypass-blocked|${step}|硬闸 $(basename "$key") 未过，${step} 不得执行（V3 §3 治理总纲）" >> "$EVID_DIR/issues.log"
+  # 去重（run27 复盘根治）：硬闸未过是「同一事实」每轮重进都成立——run27 实录同一步
+  # 25 条同文单（25 次驱动重进），掩盖真信号。issue_once 按 (key,step) 幂等。
+  issue_once gate-bypass-blocked "$step" "硬闸 $(basename "$key") 未过，${step} 不得执行（V3 §3 治理总纲）"
   fail "硬闸未过：${step} 前置闸门（${key}）未冻结，中止（见方案 V3 闭环治理）"
 }
 

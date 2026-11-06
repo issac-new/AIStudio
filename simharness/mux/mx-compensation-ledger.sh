@@ -46,7 +46,20 @@ _mx_led_run_id() {
   local root ln
   root="$(_mx_led_sim_root)"
   ln=$(readlink "$root/var/current-state.env" 2>/dev/null || true)
-  [ -n "$ln" ] && basename "$(dirname "$ln")" || echo ""
+  # 锚必须指向 runs/<id>/state.env 才算轮次（run27 实锤：var/current-state.env 指向
+  # SIM 根 state.env 时旧逻辑取到 basename=sim 根目录名 → runs/ncwk-sim-mux 不存在 →
+  # 假「零代偿轮」）。不匹配则落到下一级兜底。
+  case "$ln" in
+    */runs/*/state.env) basename "$(dirname "$ln")"; return ;;
+  esac
+  # fail-closed 兜底（run27 复盘根治）：锚文件缺位时旧逻辑返回空 → _mx_led_file 返回
+  # 非零 → check-clearance 打印「无台账=零代偿轮」exit 0＝**治理门静默放行**（run27
+  # 实录：94 笔 open 代偿在案而 prelaunch ⑯ 恒绿）。改为取最近一轮带台账的 run dir；
+  # 一个都没有＝真·首轮，才允许「零代偿轮」放行。
+  local latest=""
+  latest=$(ls -dt "$root"/runs/*/evidence/compensation-ledger.tsv 2>/dev/null | head -1 || true)
+  if [ -n "$latest" ]; then basename "$(dirname "$(dirname "$latest")")"; return; fi
+  echo ""
 }
 _mx_led_file() {
   local rid root
@@ -142,7 +155,14 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       ;;
     check-clearance)
       # 代偿清偿门：开跑前置检查用。有 open 笔 → 非零退出并逐笔列出。
-      if [ ! -f "$F" ]; then echo "清偿门 ✓（无台账=零代偿轮）"; exit 0; fi
+      if [ ! -f "$F" ]; then
+        # 只有「全仓无任何轮台账」才算真·首轮零代偿；锚缺位但有历史台账=解析失败，fail-closed
+        if ls "$(_mx_led_sim_root)"/runs/*/evidence/compensation-ledger.tsv >/dev/null 2>&1; then
+          echo "清偿门 ✗：代偿台账路径解析失败（run=$(_mx_led_run_id) 为空）——不得按零代偿放行；用 --run <RUN_ID> 指定轮次"
+          exit 2
+        fi
+        echo "清偿门 ✓（全仓无任何轮台账=真首轮，零代偿）"; exit 0
+      fi
       OPEN=$(awk -F'\t' 'NR>1 && $6=="open"' "$F" | wc -l | tr -d ' ')
       if [ "$OPEN" = "0" ]; then echo "清偿门 ✓（$(_mx_led_run_id) 无 open 代偿）"; exit 0; fi
       echo "清偿门 ✗：$OPEN 笔 open 代偿未清偿（根治合入产品或显式 waive 后方可开下一轮）："

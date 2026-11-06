@@ -3230,9 +3230,27 @@ PAYSPECS
       python3 - "$EVID_DIR/frame-verify.json" "$EVID_DIR/issues.log" <<'PYF'
 import json, sys
 rows = json.load(open(sys.argv[1], encoding='utf-8'))
-log = open(sys.argv[2], 'a', encoding='utf-8')
+# 去重（run27 复盘根治）：报告段每轮重跑/驱动重启都会重扫同一批帧——同 (key,subject)
+# 已记过则跳过，否则 8 步 × 9 轮 = 64 条同文单淹没真信号（run27 实测 343 行→去重 90）。
+def _seen(path):
+    s = set()
+    try:
+        for line in open(path, encoding='utf-8', errors='replace'):
+            f = line.rstrip('\n').split('|')
+            if len(f) >= 3 and f[0] == 'ISSUE':
+                s.add((f[1], f[2]))
+    except FileNotFoundError:
+        pass
+    return s
+logp = sys.argv[2]
+seen = _seen(logp)
+log = open(logp, 'a', encoding='utf-8')
 bad = [r for r in rows if not r.get('ok')]
 for r in bad:
+    key = ('frame-content-mismatch', f"step-{r['key']}")
+    if key in seen:
+        continue
+    seen.add(key)
     log.write(f"ISSUE|frame-content-mismatch|step-{r['key']}|帧内容与步骤不符（期望「{r.get('title','')}」）：{r.get('why','')}——该帧不得按实拍证据呈现\n")
 if bad:
     print(f'[帧核验] 偏差 {len(bad)}/{len(rows)} 帧（已落 frame-content-mismatch）')
@@ -3254,15 +3272,33 @@ h = collections.defaultdict(list)
 for f in os.listdir(d):
     if f.endswith('.png'):
         h[hashlib.md5(open(os.path.join(d, f), 'rb').read()).hexdigest()].append(f)
+# 去重（run27 复盘根治，同上）：同 (key,subject) 只记一次，避免每轮重扫重复灌账。
+seen = set()
+try:
+    for line in open(logp, encoding='utf-8', errors='replace'):
+        f2 = line.rstrip('\n').split('|')
+        if len(f2) >= 3 and f2[0] == 'ISSUE':
+            seen.add((f2[1], f2[2]))
+except FileNotFoundError:
+    pass
 log = open(logp, 'a', encoding='utf-8')
 for key, files in h.items():
     steps = {f.split('-op')[0] for f in files}
+    k = None
     if len(steps) > 1:
-        log.write('ISSUE|frame-duplicate-across-steps|' + ','.join(sorted(steps)) +
-                  '|同一张图被多个步骤复用（' + ','.join(sorted(files)) + '）——重复填充，不得按各自实拍呈现\n')
+        k = 'frame-duplicate-across-steps'
+        subj = ','.join(sorted(steps))
+        body = ('ISSUE|' + k + '|' + subj + '|同一张图被多个步骤复用（' + ','.join(sorted(files)) + '）——重复填充，不得按各自实拍呈现\n')
     elif len(files) > 1 and any('-op1-before' in f for f in files) and any('-op1-after' in f for f in files):
-        log.write('ISSUE|frame-no-visible-change|' + ','.join(sorted(steps)) +
-                  '|操作前后两帧完全相同（' + key[:8] + '）——该步无可视变化，报告按「无可见变化」标注\n')
+        k = 'frame-no-visible-change'
+        subj = ','.join(sorted(steps))
+        body = ('ISSUE|' + k + '|' + subj + '|操作前后两帧完全相同（' + key[:8] + '）——该步无可视变化，报告按「无可见变化」标注\n')
+    else:
+        continue
+    if (k, subj) in seen:
+        continue
+    seen.add((k, subj))
+    log.write(body)
 PYD
   # 融合批六：报告生成前刷新治理指标快照（归桶件已追加 DISP 行，快照须含终态台账
   # ——issues_stats/R5 配对取件正源；快照过期=报告配对缺归桶行）
