@@ -123,7 +123,10 @@ fi
 # 全部收尾补拍（实时帧=0），跑完才知道。预检=开跑时试拍 1 帧：失败即拒绝开跑，
 # 修复后再来；两连败直接正常退出（防监督器自愈环空转）。幂等：预检通过键持久化。
 if [[ -z "$(sget capture_preflight_ok)" ]]; then
-  if node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step capture-precheck --k 1 --url "/app" --user fanfan >/dev/null 2>&1; then
+  # 预检帧加内容等待（run27 复盘修订 2026-11-06）：此前裸拍 /app，冷启动装载未完
+  # 拍出「未开始/还没有」空态帧被判内容不符。等待「流程总览/运行」字样出现再拍——
+  # 预检语义=链路健康（能拍到有物页面），空态帧让预检形同虚设。
+  if node "$SCRIPT_DIR/mux/r18-frames.mjs" --run "$RUN_ID" --step capture-precheck --k 1 --url "/app" --user fanfan --expect "流程总览" >/dev/null 2>&1; then
     sset capture_preflight_ok 1
     note "[预检] 采集链健康 ✓（playwright 试拍 1 帧成功——实时帧链路在位，§4.3-25a）"
   else
@@ -1598,6 +1601,7 @@ DEVSPECS
   # issues（不阻断 devimpl——G3⑦ 按 V8.17 红线②降级凭证族，与 testlog 缺席同处置）。
   if repo_has docs/evidence/DEV-MP-runtime-proof.json      && [[ "$(git -C "$DIRECTOR_CLONE" show origin/main:docs/evidence/DEV-MP-runtime-proof.json 2>/dev/null | jq -r '.launchOk // empty' 2>/dev/null)" == "true" ]]; then
     note "[18b] runtime-proof 在位且 launchOk=true（目标运行时验证面过——微信开发者工具真实首帧）"
+    capture_step "mp_runtime_proof" "file:docs/evidence/DEV-MP-runtime-proof.png"  # 2026-11-06 修订：期望键此前无拍摄调用=契约缺口
   else
     echo "ISSUE|runtime-proof-missing|DEV-MP|18b 目标运行时验证面缺席：origin/main 无本轮 launchOk=true 的 runtime-proof（方案 §2.5 步18b/技能纪律 8；fail-soft 不阻断，G3⑦ 声明态降级）" >> "$EVID_DIR/issues.log"
   fi
@@ -3342,6 +3346,10 @@ PYD
   # 查「步 26 载荷」时现场永远不存在，只能靠降级登记。前移到首次审计之前并改用
   # report_done 键（r18-collect 映射 26），载荷在审计时刻真实在位。
   capture_step "report_done" "/app/sim"
+  # 报告查看面帧（run27 复盘修订 2026-11-06）：frame-verify 期望表有 report_view 键
+  # （步 26 查看面深链）但此前无任何拍摄调用＝期望-采集契约缺口，run27 恒缺帧。
+  # 报告 HTML 落盘后拍（深链定位本轮 run，与 report_done 导演台帧同 URL 不同时点）。
+  capture_step "report_view" "/app/sim?run=${RUN_ID}"
   note "[报告] HTML 推演报告已生成：$EVID_DIR/simulation-report.html（方案对齐 26 步 · 逐步截屏自动挂接 steps/）"
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②

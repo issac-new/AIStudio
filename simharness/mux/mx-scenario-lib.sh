@@ -1228,11 +1228,20 @@ PYM
     note "[帧采集] 步 ${step} 文件域帧源缺席（${_rel}）——记单不阻断"
     return 0
   fi
-  # 已降级步不重拍（run19 壳页复读根治）：frame-capture-failed|step-<键> 在案的步，
-  # 断点续跑重放期重拍只会产出新的壳页帧回填帧池（采集链登录态漂移未根治前），
-  # 隔离区清完又被写回=结构性红线永不过闸。采集端修复后移除该记录即恢复拍摄。
+  # 已降级步有限重试（run27 复盘修订 2026-11-06）：原「一败永禁」（run19 壳页复读
+  # 根治）在环境性失败上过杀——testpass/eval 在网关停摆窗失败一次，恢复后三轮重放
+  # 全被跳过，缺帧永不补。修订：降级在案时若网关已恢复健康（8801 可达）且本步未
+  # 重试过（frame-retried-<step> 键），清降级标记重拍一次；网关不健康或已重试过才
+  # 维持跳过。重试再失败会重新记 frame-capture-failed（下轮网关恢复也不再重试——
+  # 每步至多一次环境恢复重试，防循环）。
   if grep -q "frame-capture-failed|step-${step}|" "$EVID_DIR/issues.log" 2>/dev/null; then
-    return 0
+    if [[ "$(sget "frame-retried-${step}")" != "1" ]] \
+       && curl -sf -m 2 "http://127.0.0.1:${GW_PORT:-8801}/health" >/dev/null 2>&1; then
+      sset "frame-retried-${step}" 1
+      note "[帧采集] 步 ${step} 降级后网关已恢复——清降级标记重拍一次（run27 修订：环境性失败不永禁）"
+    else
+      return 0
+    fi
   fi
   # 键归一（-→_）：与 frame-verify.py --dump-expect 导出端对齐——连字符步键
   # （如 capture-precheck）在 bash 里既不能被 source 赋值也不能被 ${!} 反查，
