@@ -6,6 +6,7 @@
 
 | 用途 | 文档 |
 |---|---|
+| 唯一设计正本（终稿） | [DESIGN.md](DESIGN.md)（文件名固定不带日期；specs 下同名路径为旧址指针） |
 | 上手与日常使用 | [USAGE.md](USAGE.md) |
 | 六团队独立交付路径 | [产品交付团队培训手册](manuals/aistudio-training-and-user-guide.md) |
 | swarm-yuan 研发核心技能 | [swarm-yuan 研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md) |
@@ -17,7 +18,6 @@
 | 交互拓扑培训与一键启动 | [交互培训页](manuals/aistudio-interactive-training.html)；`npm run training` |
 | Windows x64 排查 | [windows-x64-setup.md](windows-x64-setup.md) |
 | 一页看懂产品（离线单文件） | [intro.html](intro.html) |
-| 唯一设计正本 | [2026-10-23-swarmstudio-integrated-design.md](superpowers/specs/2026-10-23-swarmstudio-integrated-design.md) |
 | 设计事实与容量基线（数字总账） | [2026-10-23-swarmstudio-design-ledger.md](superpowers/specs/2026-10-23-swarmstudio-design-ledger.md) |
 | 文档导航（正本、附件、历史档案入口） | [2026-10-21-ncwk-unified-product-design.md](superpowers/specs/2026-10-21-ncwk-unified-product-design.md) |
 | 历史 spec 全量索引 | [2026-10-21-swarmstudio-appendix-a-spec-index.md](superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) |

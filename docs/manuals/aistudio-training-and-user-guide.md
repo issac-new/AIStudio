@@ -1028,7 +1028,7 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 - [设计文档全量索引](aistudio-design-document-index.md)：全部根目录 spec 与 archive spec 的可点击快照。
 - [run25 全流程推演案例](aistudio-run25-simulation-case.md)：最新方案与真实报告完整对照。
 - [交互拓扑培训](aistudio-interactive-training.html)：六团队各两幕共 12 幕，使用模拟数据讲系统结构。
-- [AIStudio 终态设计文档](../superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：稳定产品与架构依据。
+- [AIStudio 终态设计文档](../DESIGN.md)：稳定产品与架构依据。
 - [全流程推演方案](../superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步、六闸和最终验收依据。
 - [发布清单](../../RELEASE-MANIFEST.json)：当前模块版本与两件发布资产政策。
 
