@@ -279,6 +279,28 @@ function projectionError(kind: string, error: unknown): string {
   return `${kind} projection failed: ${error instanceof Error ? error.message : String(error)}`
 }
 
+/**
+ * 批准前任务版本复核（B 批）：重取看板任务并重算 revision，与批准单建单时的版本比对。
+ * - mismatch：任务已变更——签发旧版本 grant 前拦截（409）。
+ * - unavailable：任务不可达——不阻断人裁（不可达≠过期），消费侧 revision_mismatch 兜底。
+ * - ok / skipped：一致，或非任务类批准单（无可比对象）。
+ */
+export async function recheckTaskRevision(
+  ctx: { get?: (key: string) => string },
+  pending: Pick<HumanGateRequest, 'scope' | 'taskId' | 'board' | 'taskRevision'>,
+): Promise<{ outcome: 'ok' | 'mismatch' | 'unavailable' | 'skipped'; actualRevision?: string }> {
+  if (pending.scope !== 'task' || !pending.taskId || !pending.board || !pending.taskRevision) {
+    return { outcome: 'skipped' }
+  }
+  const task = await fetchTaskDetailForGrant(ctx, pending.taskId, pending.board)
+  if (!task) return { outcome: 'unavailable' }
+  let actualRevision = ''
+  try { actualRevision = computeTaskRevision(task) } catch { return { outcome: 'unavailable' } }
+  if (!actualRevision) return { outcome: 'unavailable' }
+  if (actualRevision !== pending.taskRevision) return { outcome: 'mismatch', actualRevision }
+  return { outcome: 'ok', actualRevision }
+}
+
 export function decide(
   id: string,
   decision: 'approve' | 'reject',
@@ -481,10 +503,40 @@ humanGateRouter.post('/:id/decide', async ctx => {
   if (decision !== 'approve' && decision !== 'reject') {
     ctx.status = 400; ctx.body = { ok: false, detail: 'decision 须为 approve|reject' }; return
   }
+  // 批准前版本复核（2026-11-06 B 批，spec 2026-11-06-decision-receipts.md）：任务类
+  // 批准签发 grant 前重取看板任务并重算 revision，与建单时不符即 409——此前建单时的
+  // 版本被原样签发，批准期间卡被改只能等执行侧 checkDecisionGrant 才拒。fail-soft：
+  // 任务不可达不阻断人裁（不可达≠过期），消费侧 revision_mismatch 仍是终兜底；本侧
+  // 只拦「已知的过期」。复核不可达时审计日志留一行（不装作复核过了）。
+  const decideId = String(ctx.params.id ?? '')
+  const pending = listHumanGateRequests().find(r => r.id === decideId)
+  if (pending && pending.status === 'pending' && pending.scope === 'task'
+    && decision === 'approve' && pending.taskId && pending.board) {
+    const recheck = await recheckTaskRevision(ctx, pending)
+    if (recheck.outcome === 'mismatch') {
+      ctx.status = 409
+      ctx.body = {
+        ok: false, code: 'revision_mismatch',
+        detail: '批准期间任务已变更（建单 revision≠当前），拒绝签发旧版本 grant——请刷新任务后重新发起批准单',
+      }
+      return
+    }
+    if (recheck.outcome === 'unavailable') {
+      try {
+        appendApprovalLog({
+          id: `hgate-recheck-${decideId}-${Date.now()}`,
+          actor: actor.username, targetKind: 'kanban', targetId: pending.taskId,
+          targetTitle: 'HumanGate 决策侧复核不可达（放行，消费侧兜底）',
+          decision: 'recheck_unavailable', note: pending.title,
+          strength: 'delegated', policyVersion: approvalPolicyVersion(process.env),
+        })
+      } catch { /* 审计失败可见但不阻断人裁 */ }
+    }
+  }
   let req: HumanGateRequest | null
   try {
     req = decide(
-      String(ctx.params.id ?? ''), decision, actor.username,
+      decideId, decision, actor.username,
       typeof body.note === 'string' ? body.note.slice(0, 500) : undefined,
       typeof body.choice === 'string' ? body.choice : undefined,
       // 角色随认证主体传入：白名单未配置时不校验，配置后按角色拒绝（spec D5/D6）。

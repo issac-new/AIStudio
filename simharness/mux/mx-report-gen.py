@@ -4746,6 +4746,16 @@ def _net_pair_table() -> str:
     n_proxy = by.get('dispatch-preset', 0)
     n_nudge = by.get('nudge', 0) + by.get('sleep-wakeup', 0)
     n_card = by.get('card-backfill', 0) + by.get('card-walk-done', 0)
+    # 组织自派发实算（2026-11-06 B 批）：strict 姿态 dispatch_in_room 落的独立台账，
+    # 替换此前硬编码「在案 0 条」——净额口径必须实算，零条时保留「全部为脚本代演」标注。
+    global n_selfdisp
+    n_selfdisp = 0
+    try:
+        n_selfdisp = sum(1 for l in (EVID / 'self-dispatch.jsonl').read_text(
+            encoding='utf-8', errors='replace').splitlines() if l.strip())
+    except Exception:
+        pass
+    selfdisp_note = '' if n_selfdisp else '（全部为脚本代演）'
     # G5 代批（director-proxy）是否在案：issues.log 里 g5-humangate-proxy 行
     _g5proxy = False
     try:
@@ -4757,8 +4767,8 @@ def _net_pair_table() -> str:
     gate_net = gate_gross - (1 if (_g5proxy and gate_gross) else 0)
     gate_net_note = '（G5 由 director-proxy 代批，净额不计「过」）' if _g5proxy else ''
     return f'''<table style="margin-top:8px"><tr><th>口径</th><th>六闸</th><th>问题单</th><th>组织派发与提醒</th></tr>
-    <tr><td><b>含代偿</b></td><td>{gate_gross}/6</td><td>{n_issue_keys} 键（记账 {n_resolved}）</td><td>脚本预写派发 {n_proxy} 条 · 代为提醒 {n_nudge} 次 · 卡代操作 {n_card} 张</td></tr>
-    <tr><td><b>净额</b>（判据满足面）</td><td>{gate_net}/6{gate_net_note}</td><td>已修 {n_fixed}/{n_issue_keys}（观察/延后不计修复）</td><td>组织自派发在案 0 条（全部为脚本代演）</td></tr></table>'''
+    <tr><td><b>含代偿</b></td><td>{gate_gross}/6</td><td>{n_issue_keys} 键（记账 {n_resolved}）</td><td>脚本预写派发 {n_proxy} 条 · 代为提醒 {n_nudge} 次 · 卡代操作 {n_card} 张 · 自主派发 {n_selfdisp} 条</td></tr>
+    <tr><td><b>净额</b>（判据满足面）</td><td>{gate_net}/6{gate_net_note}</td><td>已修 {n_fixed}/{n_issue_keys}（观察/延后不计修复）</td><td>组织自派发在案 {n_selfdisp} 条{selfdisp_note}</td></tr></table>'''
 
 
 # ── O1 指标留档（2026-11-06 用户裁决「全做」）────────────────────────────
@@ -4781,6 +4791,8 @@ try:
         'compensation': {'open': sum(1 for r in _ledger_rows() if r["status"] == "open"),
                          'waived': sum(1 for r in _ledger_rows() if r["status"] == "waive"),
                          'total': len(_ledger_rows())},
+        # 自派发实数（B 批）：净额口径跨轮对照——0=纯脚本代演，>0=组织自派发在案
+        'selfDispatch': n_selfdisp if 'n_selfdisp' in globals() else 0,
         'frames': {'fv_ok': sum(1 for r in _FRAME_VERIFY.values() if r.get('ok')),
                    'fv_bad': sum(1 for r in _FRAME_VERIFY.values() if not r.get('ok')),
                    'zero_change_steps': len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME}),

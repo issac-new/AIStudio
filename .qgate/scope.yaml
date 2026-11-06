@@ -389,3 +389,6 @@ paths:
   - custom/server/decisiongraph/semantica-bridge.py
   # release:gate 全量走树暴露的缺口（2026-11-06）：zcode 树注入态与另两棵 vendor 树同标准声明
   - vendor/zcode/**
+  - docs/superpowers/specs/2026-11-06-decision-receipts.md
+  # 决策回执批（B 批）
+  - custom/server/approval-inbox/human-gate.ts

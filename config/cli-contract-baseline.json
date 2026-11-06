@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T01:49:20.437Z",
+  "generatedAt": "2026-11-06T03:58:51.508Z",
   "entries": {
     "scripts/board-staleness-watchdog.mjs": [
       "no-contract",
@@ -69,6 +69,17 @@
     "scripts/make-release-packages.mjs": [
       "no-contract",
       "no-error-envelope",
+      "stdout-log"
+    ],
+    "scripts/platform/docs/sync-training-docs.mjs": [
+      "no-contract",
+      "no-format",
+      "stdout-log"
+    ],
+    "scripts/platform/release/release-gate.mjs": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
       "stdout-log"
     ],
     "scripts/qgate-health.mjs": [
@@ -272,6 +283,12 @@
       "stdout-log"
     ],
     "simharness/mux/mx-log-sanitize.py": [
+      "no-contract",
+      "no-error-envelope",
+      "no-format",
+      "stdout-log"
+    ],
+    "simharness/mux/mx-mechanism-receipt.py": [
       "no-contract",
       "no-error-envelope",
       "no-format",

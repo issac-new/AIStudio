@@ -171,8 +171,12 @@ source "$MX_SCRIPT_DIR/mx-node.sh"
 # ops=运维管理（ITIL/发布执行）/ audit=合规及审计管理；需求分析师=bella、
 # 系统分析师=fanfan-sys-analyst+AN-* 执行者、项目管理=fanfan、系统架构=arch。
 
-# ── 日志/凭据（沿用 V1 约定）────────────────────────────
-log()  { echo "[mux $(date +%H:%M:%S)] $*"; }
+# ── 日志/凭据 ────────────────────────────────────────────
+# log 走 stderr（2026-11-06 B 批，A 批挂账 3 清偿）：全部日志收集点（烧机
+# mx-burn-test.sh、监督器心跳 mx-recovery-lib.sh）均为 `>> log 2>&1`，stderr 同样
+# 入档、日志内容零变化；stdout 留给最终结果（CLI 契约 stdout 净度项）。全仓已核
+# 无 `$(log …)` 命令替换消费者。note()（mx-scenario-lib.sh）有 $() 捕获消费者，不动。
+log()  { printf '[mux %s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 fail() { echo "[mux FAIL $(date +%H:%M:%S)] $*" >&2; exit 1; }
 
 # V8.28 修根因（run20 G2 闸 deadlock 实锤，22:24 触发）：原 fail 退出让 supervisor 30s
@@ -181,7 +185,7 @@ fail() { echo "[mux FAIL $(date +%H:%M:%S)] $*" >&2; exit 1; }
 # 14 项 fail 调用点将逐步切换。fail() 保留为强错误出口（preflight 类硬错必须退）。
 issue_to_run() { # <type> <subject> <description> → 写 issues.log
   echo "ISSUE|$1|$2|$3" >> "${EVID_DIR:-/Users/cuishi/lab/ncwk-sim-mux/runs/_in_progress}/issues.log" 2>/dev/null || echo "ISSUE|$1|$2|$3" >> /tmp/issue-$$.log
-  echo "[mux FAIL-CONT $(date +%H:%M:%S)] $1/$2 已记 issue，run 继续推进（不退出，G6 复盘处理）"
+  printf '[mux FAIL-CONT %s] %s/%s 已记 issue，run 继续推进（不退出，G6 复盘处理）\n' "$(date +%H:%M:%S)" "$1" "$2" >&2
 }
 fail_to_continue() { # <type> <subject> <description> → 记录 + log + 不退出
   issue_to_run "$1" "$2" "$3"
