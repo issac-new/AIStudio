@@ -76,22 +76,6 @@ logger = logging.getLogger(__name__)
 _pairing_tool_call_id = coalesce_tool_call_id  # canonical id used by the persisted assistant message
 
 
-def _tool_audit_append(tool_name: str, is_error: bool, duration: float) -> None:
-    """Append-only tool call audit ledger: one JSON line per call to
-    <HERMES_HOME>/state/tool-audit.jsonl (ts/tool/ok/dur_ms only — never args,
-    args may carry secrets). Fail-soft: auditing must never break execution."""
-    try:
-        from hermes_constants import get_hermes_home
-
-        f = Path(get_hermes_home()) / "state" / "tool-audit.jsonl"
-        f.parent.mkdir(parents=True, exist_ok=True)
-        with f.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps({"ts": int(time.time() * 1000), "tool": tool_name,
-                                 "ok": (not is_error), "dur_ms": int(duration * 1000)}) + "\n")
-    except Exception:
-        pass
-
-
 def _tc_name(tool_call: Any) -> str:
     return getattr(getattr(tool_call, "function", None), "name", "") or "tool"
 
@@ -211,51 +195,6 @@ def _resolve_concurrent_tool_timeout() -> float | None:
         "tools.concurrent_batch",
         default=_DEFAULT_CONCURRENT_TOOL_TIMEOUT_S,
         env_var="HERMES_CONCURRENT_TOOL_TIMEOUT_S",
-    )
-
-
-def _fail_cascade_enabled() -> bool:
-    """Sequential fail-cascade (MiMo-Code gate semantics): when a write/barrier-class
-    (sequential) call fails, skip every remaining call in the same model response
-    with an explicit cancellation marker instead of executing a stale half-plan
-    (classic case: edit fails -> the batched ``git commit`` still ran).
-    Only _CASCADE_BARRIER_TOOLS failures trigger it — a read tool's failure (empty
-    observation, safety denial) never cancels the rest of the response.
-    Parallel (read-only, non-conflicting) runs never cascade a sibling's failure.
-    ``HERMES_TOOL_FAIL_CASCADE=0`` restores the pre-cascade behavior."""
-    raw = os.environ.get("HERMES_TOOL_FAIL_CASCADE", "1").strip().lower()
-    return raw not in {"0", "false", "off", "no"}
-
-
-# 只有写/障碍类调用失败才置级联跳过：失败会留下半执行状态或让后续调用的
-# 前提失效（patch 失败 → 批内 git commit 照跑，提交半成品）。名单与
-# tool_executor 上下文里明确改状态的三类一致（状态变更 checkpoint 同界）：
-# 写文件 write_file/patch、跑命令 terminal。
-# 读类工具（read_file、search_files、lsp 等）失败只是空观测或安全拒绝
-# （"File not found"/"Access denied"），仅记展示、绝不取消后续调用。
-_CASCADE_BARRIER_TOOLS = frozenset({"write_file", "patch", "terminal"})
-
-
-_CASCADE_SKIP_CONTENT = (
-    "[Tool execution cancelled — {name} was skipped because an earlier tool call "
-    "in this response failed; re-plan before retrying]"
-)
-
-
-def _cascade_skip_remaining(agent, messages, remaining, effective_task_id) -> bool:
-    """Append one cascade marker per unstarted call and raise the turn-wide flag so
-    later segments / approval groups drain too; False when the flush failed."""
-    agent._tool_fail_cascade_active = True
-    agent._vprint(
-        f"{agent.log_prefix}⚡ Fail-cascade: skipping {len(remaining)} remaining tool call(s) "
-        "after an earlier failure in this response",
-        force=True,
-    )
-    return _append_skipped_tool_results(
-        agent, messages, remaining, effective_task_id,
-        content=_CASCADE_SKIP_CONTENT,
-        hook_error_type="tool_fail_cascade",
-        flush_stage="cascade-cancelled tool result",
     )
 
 
@@ -525,12 +464,6 @@ class _ManagedToolResult:
     blocked: bool
     dispatched: bool
     data_use: frozenset[str] = frozenset()
-    # Set by _publish_sequential_result: the model-visible (post-transform) result
-    # was classified as an error by _detect_tool_failure — a DISPLAY heuristic that
-    # also flags benign empty observations ("File not found") and safety denials
-    # ("Access denied"). Fail-cascade consumes it only for _CASCADE_BARRIER_TOOLS
-    # failures; read-tool failures stay display-only.
-    failed: bool = False
 
 
 class _ToolTimeoutResult(str):
@@ -1163,7 +1096,6 @@ def _commit_tool_result(
             function_result = agent._append_guardrail_observation(
                 function_name, function_args, function_result, failed=is_error, tool_call_id=tool_call_id,
             )
-        _tool_audit_append(function_name, is_error, tool_duration)
         if is_error:
             logger.warning("Tool %s returned error (%.2fs): %s", function_name, tool_duration, error_preview(function_result))
         elif success_log_chars is not None:
@@ -1190,17 +1122,6 @@ def _commit_tool_result(
             persisted_result, function_name, tool_call_id, get_active_env(effective_task_id), budget,
         )
     else:
-        # Evidence-Preserving Reducer (SoL-Pi mechanism, fail-closed opt-in): runs
-        # BEFORE spillover so the verified receipt — not the raw log — is what enters
-        # context; it archives the original itself, and ANY failure returns the input
-        # unchanged, so an unavailable reducer costs tokens, never correctness.
-        try:
-            from tools.evidence_reducer import maybe_reduce_observation
-            persisted_result = maybe_reduce_observation(
-                content=persisted_result, tool_name=function_name, tool_call_id=tool_call_id,
-                session_id=getattr(agent, "session_id", None))
-        except Exception as _reduce_err:  # noqa: BLE001 — reduction is never load-bearing
-            logging.debug("evidence reducer unavailable: %s", _reduce_err)
         persisted_result = maybe_persist_tool_result(
             content=persisted_result,
             tool_name=function_name,
@@ -1466,7 +1387,6 @@ class _ConcurrentBatch:
             logger.info(
                 "tool %s completed (%.2fs, %d chars)", ref.name, duration, result_chars
             )
-        _tool_audit_append(ref.name, is_error, duration)
         return _ToolOutcome(ref, result, duration, is_error, blocked, data_use)
 
     def run_worker(self, index: int, start_order: int) -> None:
@@ -1909,7 +1829,6 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
     # Multimodal dict results (_multimodal=True) are not sliceable as strings.
     _result_len = len(function_result) if isinstance(function_result, str) else len(str(function_result))
     _is_error_result, _ = _detect_tool_failure(ref.name, function_result)
-    managed.failed = _is_error_result
     committed = _commit_tool_result(
         agent, messages, ref, function_result,
         budget=budget, tool_duration=tool_duration, is_error=_is_error_result, blocked=managed.blocked,
@@ -1938,23 +1857,11 @@ def _publish_sequential_result(agent, messages: list, ref: _ToolCallRef, managed
 def execute_tool_calls_sequential(agent, assistant_message, messages: list, effective_task_id: str, api_call_count: int = 0, *, finalize: bool = True) -> None:
     from types import SimpleNamespace
     from agent.terminal_approval_batch import terminal_approval_batch, terminal_approval_runs
-    groups = list(terminal_approval_runs(agent, assistant_message.tool_calls))
-    agent._tool_fail_cascade_active = False
-    for g_idx, calls in enumerate(groups):
+    for calls in terminal_approval_runs(agent, assistant_message.tool_calls):
         with terminal_approval_batch(agent, calls, messages, effective_task_id):
             _execute_tool_calls_sequential(agent, SimpleNamespace(tool_calls=calls), messages, effective_task_id, api_call_count, finalize=False)
         if getattr(agent, "_incremental_persistence_failed", False):
             return
-        if getattr(agent, "_tool_fail_cascade_active", False) and g_idx + 1 < len(groups):
-            remaining = [tc for later in groups[g_idx + 1:] for tc in later]
-            if not _append_skipped_tool_results(
-                agent, messages, remaining, effective_task_id,
-                content=_CASCADE_SKIP_CONTENT,
-                hook_error_type="tool_fail_cascade",
-                flush_stage="cascade-cancelled tool result",
-            ):
-                return
-            break
     if finalize:
         _finalize_tool_batch(agent, messages, effective_task_id, len(assistant_message.tool_calls), _budget_for_agent(agent))
 
@@ -1987,10 +1894,6 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
         if pc.parse_error is not None:
             if not _append_invalid_arguments_result(agent, messages, ref, pc.parse_error):
                 return
-            if _fail_cascade_enabled() and ref.name in _CASCADE_BARRIER_TOOLS and i < len(tool_calls):
-                if not _cascade_skip_remaining(agent, messages, tool_calls[i:], effective_task_id):
-                    return
-                break
             continue
 
         tool_start_time = time.time()
@@ -2003,26 +1906,9 @@ def _execute_tool_calls_sequential(agent, assistant_message, messages: list, eff
             display_index=i,
             tool_start_time=tool_start_time,
         )
-        # runaway-guard 步进观测（吸收 minimax 六信号，第一批 #6）：sequential/segmented
-        # 默认路径全覆盖；并发批为只读并行面，窗口跨轮在 sequential 轮仍可捕获。守卫
-        # 自身故障零影响执行链。
-        try:
-            from agent.runaway_guard import observe_tool_step
-            observe_tool_step(agent, ref.name, managed.args, managed.result)
-        except Exception:  # noqa: BLE001
-            pass
         if not _publish_sequential_result(agent, messages, ref, managed, tool_duration=tool_duration, index=i,
                                           budget=_tool_budget, transform_applied=dispatch.transform_applied):
             return
-
-        if (_fail_cascade_enabled() and getattr(managed, "failed", False)
-                and ref.name in _CASCADE_BARRIER_TOOLS):
-            # 置轮级标志：即使本段无剩余调用，分段派发器也要排空后续段。
-            agent._tool_fail_cascade_active = True
-            if i < len(tool_calls):
-                if not _cascade_skip_remaining(agent, messages, tool_calls[i:], effective_task_id):
-                    return
-                break
 
         if agent._interrupt_requested and i < len(tool_calls):
             if not _skip_remaining_sequential(
@@ -2051,20 +1937,9 @@ def execute_tool_calls_segmented(agent, assistant_message, messages: list, effec
         _exec_cwd = Path(_active_env.cwd) if _active_env is not None and _active_env.cwd else None
         segments = _plan_tool_batch_segments(assistant_message.tool_calls, execution_cwd=_exec_cwd)
 
-    agent._tool_fail_cascade_active = False
-    for s_idx, (kind, calls) in enumerate(segments):
+    for kind, calls in segments:
         if getattr(agent, "_incremental_persistence_failed", False):
             return
-        if getattr(agent, "_tool_fail_cascade_active", False):
-            remaining = [tc for later_kind, later in segments[s_idx:] for tc in later]
-            if not _append_skipped_tool_results(
-                agent, messages, remaining, effective_task_id,
-                content=_CASCADE_SKIP_CONTENT,
-                hook_error_type="tool_fail_cascade",
-                flush_stage="cascade-cancelled tool result",
-            ):
-                return
-            break
         segment_message = SimpleNamespace(tool_calls=list(calls))
         run_segment = execute_tool_calls_concurrent if kind == "parallel" else execute_tool_calls_sequential
         run_segment(agent, segment_message, messages, effective_task_id, api_call_count, finalize=False)

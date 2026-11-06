@@ -123,18 +123,6 @@ def _review_input_budget_exhausted(agent: Any) -> bool:
     return isinstance(used, int) and not isinstance(used, bool) and used >= budget
 
 
-def _run_budget_exhausted(agent: Any) -> bool:
-    """True when the configured wall-clock run budget is fully spent (100% hard stop).
-
-    The 80% wrap-up notice only nudges the model; this predicate is the enforceable
-    stop: the generic loop checks it at each iteration boundary (never mid-call), so
-    one hung tool call may overshoot slightly but no NEW call starts after the budget.
-    Unset budget (``run_budget_seconds`` falsy) keeps behaviour unchanged."""
-    budget = getattr(agent, "run_budget_seconds", None)
-    started = getattr(agent, "_run_budget_started_at", None)
-    return bool(budget and started and (time.time() - started) >= float(budget))
-
-
 def _maybe_inject_run_budget_wrapup(agent: Any, messages: list[dict[str, Any]]) -> bool:
     """Inject the one-time wall-clock wrap-up notice when past 80% of budget.
 
@@ -1757,20 +1745,6 @@ def _run_conversation_turn(
     while _prelude_action != "break" and (
         (s.api_call_count < agent.max_iterations and agent.iteration_budget.remaining > 0) or agent._budget_grace_call
     ):
-        # Wall-clock hard stop (agent.run_budget_seconds): the loop only reaches this top
-        # between iterations, so stopping here never cuts an in-flight tool call. The 80%
-        # wrap-up notice is advice; this boundary check is the enforceable stop
-        # (exit reason wall_clock_exhausted — no post-budget summary call is made).
-        if _run_budget_exhausted(agent):
-            s._turn_exit_reason = "wall_clock_exhausted"
-            agent._emit_diagnostic_status(
-                "⏱️ Run budget exhausted (wall clock) — stopping at iteration boundary"
-            )
-            if not agent.quiet_mode:
-                agent._safe_print(
-                    "\n⏱️  Run budget exhausted (wall clock) — stopping this turn.", diagnostic=True,
-                )
-            break
         if _run_phase(begin_iteration, agent, s).action == "break":
             break
         _run_phase(prepare_iteration, agent, s)
@@ -1804,13 +1778,6 @@ def _run_conversation_turn(
                 return _ri.result
             if _ri.action == "continue":
                 continue
-            # ngram 防循环（mimo max-mode 原语，P6）：文本侧每 assistant 消息观测一次，
-            # 只发信号不打断；守卫自身故障零影响主循环。
-            try:
-                from agent.runaway_guard import observe_text_step
-                observe_text_step(agent, s.assistant_message)
-            except Exception:  # noqa: BLE001
-                pass
             _v = _run_phase(
                 run_tool_round if s.assistant_message.tool_calls else finish_text_response, agent, s
             )
@@ -1830,54 +1797,6 @@ def _run_conversation_turn(
         # future input can move to a clean session (#98722).
         result.update(error=_COMPRESSION_TIMEOUT_FINAL_RESPONSE, partial=True, compression_exhausted=True)
     return result
-
-
-def _profile_usage_watch(agent) -> None:
-    """Usage anomaly watch: statistics surface + warnings only — never blocks a turn
-    (user ruling 2026-10-10: no quota enforcement). Soft reference line in
-    HERMES_HOME/usage-warn.txt (plain integer). Crossing 50/80/95% appends one line
-    per band to <home>/state/usage-anomalies.jsonl and warns; idempotent within a
-    band. Absent/invalid line or unavailable DB = no judgment at all."""
-    try:
-        import json as _json
-        import time as _time
-        from pathlib import Path as _P
-
-        from hermes_constants import get_hermes_home
-
-        home = _P(get_hermes_home())
-        try:
-            line_val = int((home / "usage-warn.txt").read_text(encoding="utf-8").strip())
-        except (OSError, ValueError):
-            return
-        if line_val <= 0:
-            return
-        db = getattr(agent, "_get_session_db_for_recall", lambda: None)()
-        if db is None:
-            return
-        used = int(db.usage_totals().get("tokens", 0))
-        pct = used * 100.0 / line_val
-        band = 3 if pct >= 95 else 2 if pct >= 80 else 1 if pct >= 50 else 0
-        if band == 0:
-            return
-        af = home / "state" / "usage-anomalies.jsonl"
-        last_band = None
-        try:
-            lines = af.read_text(encoding="utf-8").strip().splitlines()
-            if lines:
-                last_band = _json.loads(lines[-1]).get("band")
-        except Exception:
-            last_band = None
-        if last_band == band:
-            return
-        af.parent.mkdir(parents=True, exist_ok=True)
-        with af.open("a", encoding="utf-8") as fh:
-            fh.write(_json.dumps({"ts": int(_time.time() * 1000), "band": band,
-                                  "used": used, "line": line_val, "pct": round(pct, 1)}) + "\n")
-        logger.warning("Usage anomaly band %d: %s / %s tokens (%.1f%%) — warn only, not a quota",
-                       band, used, line_val, pct)  # 同档只记一次（含日志），跨档再记
-    except Exception:
-        return
 
 
 def run_conversation(
@@ -1911,11 +1830,6 @@ def run_conversation(
 
     # Steer / redirect / interrupt set this mid-turn; the result reports whether the turn ran untouched.
     agent._turn_user_intervened = False
-    # Per-profile usage anomaly watch (2026-10-10 用户裁定：统计+预警，不限额不阻断)：
-    # 可选 HERMES_HOME/usage-warn.txt 为软参考线（纯整数）；越过 50/80/95% 各记一条
-    # 预警到 state/usage-anomalies.jsonl 并 logger.warning（同档幂等只记一次）。
-    # 无参考线文件=不作任何判定——累计用量统计由 state DB（usage_totals）原生承载。
-    _profile_usage_watch(agent)
     # Images attached natively to this user turn stay visible to vision_analyze for the turn, so
     # it does not embed the same pixels a second time into the same request (#76411).
     with native_turn_images(user_message):
@@ -1938,13 +1852,6 @@ def run_conversation(
                 prelude=prelude,
             )
         finally:
-            # G4 回合结束遥测（2026-10-11 产品缺口补齐）：回合结束即入审计台账——
-            # 零交付收场（末轮短句无工具调用）由此可观测（run14 六小时停摆的可观测根因）。
-            try:
-                from agent.tool_executor import _tool_audit_append as _ta
-                _ta('turn.ended', False, 0.0)
-            except Exception:
-                pass
             end_voice_turn_route(agent)
     settle_held_final(agent, result)
     result = export_current_turn_boundary(agent, result, user_message)

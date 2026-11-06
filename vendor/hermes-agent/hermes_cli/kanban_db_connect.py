@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import logging
-import os
 import random
 import re
 import secrets
@@ -81,13 +79,6 @@ def _sqlite_connect(path: Path) -> sqlite3.Connection:
         with contextlib.suppress(Exception):
             conn.close()
         raise
-    # 看板写闸接线（607 收编补全）：凡经本助手的连接一律注册 sanctioned-writer UDF——
-    # 旧板上残留的 kanban_guard_* 触发器在 WHEN 子句引用该函数，未注册的连接首个写
-    # 即 "no such function: kanban_write_sanctioned"（2026-10-22 升级轮 aiteam/[已移除] 等
-    # 四板 500 实锤）。委托子进程上下文由 guard_fn 判 0 拒写，fail-closed 语义不变。
-    # UDF 常量 GUARDRAIL_UDF_NAME（= "kanban_write_sanctioned"）与注册实现
-    # register_write_sanction_udf 定义于 kanban_db.py（上游 10-23 收编 UDF 层后的定义位）。
-    _kb.register_write_sanction_udf(conn)
     return conn
 
 
@@ -785,15 +776,6 @@ def connect(db_path: Optional[Path] = None, *, board: Optional[str] = None) -> s
             # threads can't race the ALTER TABLE pass with stale PRAGMA snapshots.
             if resolved not in _INITIALIZED_PATHS:
                 conn.executescript(_kb.SCHEMA_SQL)
-                # >>> swarm:kanban-guardrail-envgate >>>
-                # Opt-in deployment gate (t_d37428d2, restored 2026-10-23 after
-                # upstream moved _init_if_needed out of kanban_db.py and the old
-                # hunk lost its anchor): arm the sanctioned-writer triggers on
-                # first init when HERMES_KANBAN_WRITE_GUARDRAIL=1. Guardrail-regress
-                # P6 verifies both the =1 and =0 sides.
-                if os.environ.get("HERMES_KANBAN_WRITE_GUARDRAIL") == "1":
-                    _kb.install_guardrail_triggers(conn)
-                # <<< swarm:kanban-guardrail-envgate <<<
                 _migrate_add_optional_columns(conn)
                 _INITIALIZED_PATHS.add(resolved)
 
@@ -848,7 +830,7 @@ _BASE_TASK_COLUMNS = (
     ("created_by", "created_by TEXT"),
     ("started_at", "started_at INTEGER"),
     ("completed_at", "completed_at INTEGER"),
-    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'dir'"),
+    ("workspace_kind", "workspace_kind TEXT NOT NULL DEFAULT 'scratch'"),
     ("workspace_path", "workspace_path TEXT"),
     ("claim_lock", "claim_lock TEXT"),
     ("claim_expires", "claim_expires INTEGER"),
@@ -888,8 +870,6 @@ _LATER_TASK_COLUMNS = (
     ("current_step_key", "current_step_key TEXT"),
     # JSON array of skill names the dispatcher force-loads via --skills.
     ("skills", "skills TEXT"),
-    # HERMES_CUSTOM[raci] structured RACI JSON column.
-    ("raci", "raci TEXT"),
     # Per-task override for the consecutive-failure circuit breaker; NULL =
     # ``kanban.failure_limit`` config, then ``DEFAULT_FAILURE_LIMIT``.
     ("max_retries", "max_retries INTEGER"),
@@ -906,10 +886,6 @@ _LATER_TASK_COLUMNS = (
     ("block_recurrences", "block_recurrences INTEGER NOT NULL DEFAULT 0"),
     # Spawn-time start fingerprint of worker_pid (PID-reuse guard; NULL = legacy row).
     ("worker_started_at", "worker_started_at INTEGER"),
-    # HERMES_CUSTOM[estimate]（团队并行二期）：人日估算 + 来源 JSON；
-    # NULL days = 未评估（派发重排保守计 1 人日）。
-    ("estimate_days", "estimate_days REAL"),
-    ("estimate_meta", "estimate_meta TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (
@@ -974,20 +950,6 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON tasks(assignee, status)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_tenant ON tasks(tenant)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_idempotency ON tasks(idempotency_key)")
-    # 幂等下沉（模型波动加固 D，2026-10-31）：跨进程唯一键。partial index 让归档卡
-    # 不挡同键重建；历史库若有并发插入留下的重复键，建索引失败只告警、保留非唯一
-    # 索引——不静默删数据，也不假装唯一性已成立。
-    try:
-        conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_idempotency_unique "
-            "ON tasks(idempotency_key) "
-            "WHERE idempotency_key IS NOT NULL AND status != 'archived'"
-        )
-    except sqlite3.IntegrityError:
-        logging.getLogger(__name__).warning(
-            "kanban: duplicate idempotency_key rows exist; unique index skipped "
-            "(existing non-unique index kept). Dedupe the board to enable cross-process idempotency."
-        )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_session_id ON tasks(session_id)")
 
     # task_events.run_id back-fills as NULL for historical events (they predate

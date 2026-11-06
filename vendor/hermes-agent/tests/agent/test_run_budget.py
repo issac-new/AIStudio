@@ -374,28 +374,3 @@ def test_gemini_long_decode_scales_implicit_stale_timeout_by_hops(monkeypatch, t
     assert agent._compute_non_stream_stale_timeout(long_decode) == 600.0 * 8
     monkeypatch.setenv("HERMES_API_CALL_STALE_TIMEOUT", "120")
     assert agent._compute_non_stream_stale_timeout(long_decode) == 120.0
-
-# ── wall-clock hard stop predicate (2026-11-05 AI Native absorption T5) ────
-
-def test_run_budget_exhausted_false_when_unset():
-    """No budget (or no running turn clock) keeps loop behaviour unchanged."""
-    from agent.conversation_loop import _run_budget_exhausted
-    assert _run_budget_exhausted(_StubAgent(budget=None, started=time.time())) is False
-    assert _run_budget_exhausted(_StubAgent(budget=900, started=None)) is False
-
-def test_run_budget_exhausted_false_before_deadline():
-    from agent.conversation_loop import _run_budget_exhausted
-    agent = _StubAgent(budget=900, started=time.time() - 100)  # 11% elapsed
-    assert _run_budget_exhausted(agent) is False
-
-def test_run_budget_exhausted_true_at_and_past_deadline():
-    """At 100% the loop top stops the turn (wall_clock_exhausted) — the
-    enforceable stop the 80% wrap-up notice only nudges toward."""
-    from agent.conversation_loop import _run_budget_exhausted
-    assert _run_budget_exhausted(_StubAgent(budget=900, started=time.time() - 900)) is True
-    assert _run_budget_exhausted(_StubAgent(budget=900, started=time.time() - 5_000)) is True
-
-def test_run_budget_exhausted_accepts_float_budget():
-    from agent.conversation_loop import _run_budget_exhausted
-    assert _run_budget_exhausted(_StubAgent(budget=0.5, started=time.time() - 1)) is True
-    assert _run_budget_exhausted(_StubAgent(budget=0.5, started=time.time())) is False

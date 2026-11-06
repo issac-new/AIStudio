@@ -425,11 +425,6 @@ class GoalState:
     max_turns: int = DEFAULT_MAX_TURNS
     created_at: float = 0.0
     last_turn_at: float = 0.0
-    # overlay patch 499（goalbudget-server）：token/墙钟预算（缺省 0=不限）。
-    token_budget: int = 0
-    token_used: int = 0
-    wall_clock_budget_sec: float = 0.0
-    goal_started_at: float = 0.0
     last_verdict: Optional[str] = None        # "done" | "blocked" | "continue" | "wait" | "skipped"
     last_reason: Optional[str] = None
     paused_reason: Optional[str] = None       # why we auto-paused (budget, etc.)
@@ -465,9 +460,7 @@ class GoalState:
         data = json.loads(raw)
         raw_subgoals = data.get("subgoals") or []
         ints = {k: int(data.get(k) or 0) for k in ("turns_used", "consecutive_parse_failures", "consecutive_transport_failures", "waiting_on_delegations")}
-        floats = {k: float(data.get(k) or 0.0) for k in ("created_at", "last_turn_at", "waiting_until", "waiting_since", "wall_clock_budget_sec", "goal_started_at")}
-        # overlay patch 499：token/墙钟预算字段（旧档缺省 0=不限，兼容不炸）。
-        ints_budget = {k: int(data.get(k) or 0) for k in ("token_budget", "token_used")}
+        floats = {k: float(data.get(k) or 0.0) for k in ("created_at", "last_turn_at", "waiting_until", "waiting_since")}
         return cls(
             goal=data.get("goal", ""),
             status=data.get("status", "active"),
@@ -659,60 +652,6 @@ def load_goal(session_id: str) -> Optional[GoalState]:
     except Exception as exc:
         logger.warning("GoalManager: could not parse stored goal for %s: %s", session_id, exc)
         return None
-
-
-_ALIGNMENT_LEDGER_FILENAME = "alignment.json"
-
-
-def _alignment_ledger_upsert(session_id: str, goal: str, contract: Optional[GoalContract]) -> None:
-    """Fail-soft registration of a persistent goal into the studio proactivity alignment ledger.
-
-    Single-machine shared file (~/.hermes-web-ui/proactivity/alignment.json) — the two-axis
-    enforcement's goal-drift line reads the same facts. Contract facts ride along: a goal
-    carrying a completion contract registers acceptanceCriteria=True (the L4 upgrade
-    evidence). HERMES_GOAL_ALIGNMENT_OFF=1 disables; any failure is swallowed — registration
-    must never break the goal lifecycle (overlay patch 696, 2026-10-26).
-    """
-    try:
-        if not session_id or os.environ.get("HERMES_GOAL_ALIGNMENT_OFF") == "1":
-            return
-        env_dir = os.environ.get("HERMES_GOAL_ALIGNMENT_DIR")
-        base = Path(env_dir).expanduser() if env_dir else Path.home() / ".hermes-web-ui" / "proactivity"
-        goal_id = f"hermes-goal:{session_id}"[:120]
-        summary = (goal or "").strip()[:200] or "(untitled goal)"
-        has_contract = bool(contract is not None and not contract.is_empty())
-        entries: list[dict[str, Any]] = []
-        path = base / _ALIGNMENT_LEDGER_FILENAME
-        if path.exists():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                raw = data.get("entries") if isinstance(data, dict) else None
-                if isinstance(raw, list):
-                    entries = [e for e in raw if isinstance(e, dict) and isinstance(e.get("goalId"), str)]
-            except Exception:
-                entries = []  # corrupt ledger: start empty here; quarantine is the server side's policy
-        contract_facts = {"goalExplicit": True, "acceptanceCriteria": has_contract}
-        found = False
-        for item in entries:
-            if item.get("goalId") == goal_id:
-                item["goalSummary"] = summary
-                item["contract"] = contract_facts
-                found = True
-                break
-        if not found:
-            entries.append({
-                "goalId": goal_id,
-                "goalSummary": summary,
-                "createdAt": time.time(),
-                "confirmations": [],
-                "contract": contract_facts,
-            })
-        base.mkdir(parents=True, exist_ok=True)
-        tmp = base / f".alignment.tmp-{os.getpid()}-{int(time.time() * 1000)}"
-        tmp.write_text(json.dumps({"entries": entries}, ensure_ascii=False, indent=2), encoding="utf-8")
-        os.replace(tmp, path)
-    except Exception as exc:
-        logger.debug("GoalManager: alignment ledger upsert failed (fail-soft): %s", exc)
 
 
 def save_goal(session_id: str, state: GoalState) -> None:
@@ -1080,30 +1019,6 @@ def last_user_message_from_db(session_id: Optional[str]) -> Any:
         return ""
 
 
-def _user_message_preempts(state: "GoalState", session_id: Optional[str]) -> bool:
-    """GOAL-05 让位（overlay patch 498，multica §3.1 语义：用户消息 > 自治目标）。
-
-    自治续轮前查 SessionDB：最后用户消息 ``timestamp`` 晚于 ``state.last_turn_at``
-    （上一自治轮开始时刻）即用户在自治轮期间插话 → 自治让位（用户消息驱动下一轮，
-    continuation 不抢跑）。fail-open：读取失败/时间缺省一律不拦（turn 预算仍是兜底）。
-    """
-    if not session_id or state.last_turn_at <= 0:
-        return False
-    try:
-        db = _get_session_db()
-        if db is None:
-            return False
-        rows = db.get_messages(str(session_id), limit=20, latest=True)
-        for msg in reversed(rows or []):
-            if isinstance(msg, dict) and msg.get("role") == "user":
-                ts = float(msg.get("timestamp") or 0)
-                # agent SessionDB timestamp 秒级与 time.time() 同域；缺省 0 不触发。
-                return ts > state.last_turn_at
-        return False
-    except Exception:
-        return False
-
-
 def gather_background_processes(task_id: Optional[str] = None, *, owner_task_id: Optional[str] = None) -> list[dict[str, Any]]:
     """Fail-safe snapshot of RUNNING ``process_registry`` sessions for the judge; ``[]`` on any error
     so the loop degrades to its pre-wait-barrier behavior.
@@ -1208,11 +1123,6 @@ class GoalManager:
         if s is None or s.status == "cleared":
             return "No active goal. Set one with /goal <text>."
         turns = f"{s.turns_used}/{s.max_turns} turns"
-        # overlay patch 499：预算维度展示（0=不限不显）。
-        if s.token_budget > 0:
-            turns += f" · {s.token_used}/{s.token_budget} tok"
-        if s.wall_clock_budget_sec > 0 and s.goal_started_at > 0:
-            turns += f" · {int(time.time() - s.goal_started_at)}/{int(s.wall_clock_budget_sec)}s"
         sub = f", {len(s.subgoals)} subgoal{'s' if len(s.subgoals) != 1 else ''}" if s.subgoals else ""
         con = ", contract" if self.has_contract() else ""
         gat = f", {len(s.gates)} gate{'s' if len(s.gates) != 1 else ''}" if s.gates else ""
@@ -1268,7 +1178,6 @@ class GoalManager:
             max_turns=int(max_turns) if max_turns else self.default_max_turns,
             contract=contract if contract is not None else GoalContract(),
         )
-        _alignment_ledger_upsert(self.session_id, goal, self._state.contract)
         return self._save()
 
     def set_contract(self, contract: GoalContract) -> Optional[GoalState]:
@@ -1276,7 +1185,6 @@ class GoalManager:
         if self._state is None:
             return None
         self._state.contract = contract or GoalContract()
-        _alignment_ledger_upsert(self.session_id, self._state.goal, self._state.contract)
         return self._save()
 
     def pause(self, reason: str = "user-paused") -> Optional[GoalState]:
@@ -1577,9 +1485,7 @@ class GoalManager:
         self, last_response: str, *, user_initiated: bool = True,
         background_processes: Optional[list[dict[str, Any]]] = None,
         active_delegations: int = 0,
-        last_usage_tokens: int = 0,
     ) -> dict[str, Any]:
-        # overlay patch 499：调用方传上轮 usage（CLI/gateway 有 usage 面时传；缺省不累计）。
         """Run gates + judge and update state. Return a decision dict (``status``, ``should_continue``,
         ``continuation_prompt``, ``verdict``, ``reason``, ``message``). Both real user prompts and our
         own continuations increment ``turns_used`` — both consume model budget."""
@@ -1591,34 +1497,8 @@ class GoalManager:
         if self.is_waiting():
             return self._waiting_decision(state)
 
-        # GOAL-05 让位（overlay patch 498）：用户在自治轮期间插话 → 暂停让位，
-        # 用户消息驱动下一轮（自治 continuation 不抢跑）。
-        if _user_message_preempts(state, self.session_id):
-            self._pause_state("user-preempted")
-            return _decision(
-                "paused", False, None, "preempted", "user message during autonomous turn",
-                "用户消息插话——自治目标让位（GOAL-05）；发送你的消息继续",
-            )
-
-        # overlay patch 499（goalbudget-server）：墙钟触顶（token 由调用方累加，
-        # evaluate_after_turn(last_usage_tokens=...) 传入；缺省 0 不启用）。
-        if state.wall_clock_budget_sec > 0 and state.goal_started_at > 0:
-            elapsed = time.time() - state.goal_started_at
-            if elapsed >= state.wall_clock_budget_sec:
-                self._pause_state("wall-clock-budget")
-                return _decision("paused", False, None, "budget", "wall clock budget exhausted",
-                                 f"墙钟预算触顶（{int(elapsed)}s/{int(state.wall_clock_budget_sec)}s）")
-        if state.token_budget > 0 and state.token_used >= state.token_budget:
-            self._pause_state("token-budget")
-            return _decision("paused", False, None, "budget", "token budget exhausted",
-                             f"token 预算触顶（{state.token_used}/{state.token_budget}）")
-
         state.turns_used += 1
         state.last_turn_at = time.time()
-        if last_usage_tokens > 0:
-            state.token_used += int(last_usage_tokens)
-        if state.goal_started_at <= 0:
-            state.goal_started_at = state.created_at or time.time()
 
         # Gates run BEFORE the judge: a failing gate is deterministic evidence the goal is not done,
         # so the judge is skipped and the gate's output drives the next turn (same turn budget).

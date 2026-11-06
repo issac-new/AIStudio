@@ -61,9 +61,8 @@ DEFAULT_CONFIG = {
         "storage": "hermes-home",
     },
     "agent": {
-        # Turn cap. null/unset = TURN_LIMIT_DEFAULT (200; bounded-by-default since 2026-11-05 —
-        # unconfigured agents previously looped unbounded). Positive int caps; explicit
-        # "none"/"unlimited"/"inf"/0/-1 still mean unlimited (resolve_turn_limit).
+        # Turn cap. null = unlimited (default; caps caused silent mid-task truncation). Positive int
+        # caps; "none"/"unlimited"/"inf"/0/-1 also mean unlimited (resolve_turn_limit).
         "max_turns": None,
         # Optional one-time model-visible checkpoint warning before a finite turn cap is exhausted.
         # null = off; set a ratio strictly between 0 and 1 (for example, 0.75).

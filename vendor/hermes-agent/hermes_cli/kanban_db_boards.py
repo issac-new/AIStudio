@@ -93,7 +93,9 @@ def write_board_metadata(
         meta["created_at"] = int(time.time())
     path = board_metadata_path(slug)
     path.parent.mkdir(parents=True, exist_ok=True)
-    _kb._atomic_write_text(path, json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
+    path.write_text(
+        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
+    )
     meta["db_path"] = str(_kb.kanban_db_path(slug))
     return meta
 

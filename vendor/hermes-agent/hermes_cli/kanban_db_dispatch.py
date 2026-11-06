@@ -8,7 +8,6 @@ late-bound via ``_kb`` (import-cycle breaking) so monkeypatching
 from __future__ import annotations
 
 import contextlib
-import json
 import os
 import re
 import signal
@@ -21,14 +20,12 @@ from dataclasses import field
 from pathlib import Path
 from typing import Any
 from typing import Callable
-from typing import Optional
 from typing import Iterable
 from typing import Iterator
 from typing import Mapping
 from typing import Optional
 from typing import TYPE_CHECKING
 
-from hermes_cli.kanban_projects_pause import paused_project_ids
 from hermes_cli.quiet_single_query import KANBAN_WORKER_EXIT_TRAILER
 
 if TYPE_CHECKING:
@@ -126,11 +123,6 @@ class DispatchResult:
     on multi-lane setups, NOT operator-actionable; tracked apart so health
     telemetry can tell "stuck" from "correctly idle"."""
     skipped_per_profile_capped: list[tuple[str, str, int]] = field(default_factory=list)
-    skipped_board_capped: list[tuple[str, int, int]] = field(default_factory=list)
-    """``(task_id, current_board_running, board_cap)`` deferred because the
-    board is at ``kanban.board_concurrency`` (routa KanbanSessionQueue 语义：
-    每 board 会话并发闸默认 1，超限排队等下轮 tick/生命周期 drain——
-    矩阵 §3.5 routa 行 P1)。"""
     """``(task_id, assignee, current_running_count)`` deferred because the
     assignee is at ``kanban.max_in_progress_per_profile``. Picked up on a later
     tick; separate bucket so dashboards show "profile busy" vs "stuck"."""
@@ -146,9 +138,6 @@ class DispatchResult:
     """``(task_id, reason)`` skipped by the respawn guard: ``"blocker_auth"``
     (quota/auth error — also auto-blocked), ``"recent_success"`` (completed run
     within guard window), ``"active_pr"`` (GitHub PR URL in a recent comment)."""
-    needs_decision: list[tuple[str, str]] = field(default_factory=list)
-    """``(task_id, reason)`` refused before claim/spawn because a T2/T3 HumanGate
-    grant is missing, expired, incomplete, unreadable, or bound to another task revision."""
     rate_limited: list[str] = field(default_factory=list)
     """Task ids whose workers bailed on a provider rate-limit / quota wall
     (EX_TEMPFAIL sentinel exit) and were released to ``ready`` WITHOUT counting
@@ -156,24 +145,10 @@ class DispatchResult:
     skipped_locked: bool = False
     """True when another process held the board's dispatch lock: this tick did
     no DB writes; the lock holder is making progress on the same board."""
-    budget_capped: Optional[tuple[int, int]] = None
-    """overlay[478] ``(running, cap)`` when _tick_spawn_budget refused the whole
-    tick on a concurrency cap (max_spawn or max_in_progress): busy, not stuck.
-    Telemetry gap fixed 2026-09-28 — describe_suppression previously invisible."""
     memory_pressure: Optional[str] = None
     """Memory pressure that restricted this tick: ``"critical"`` (no new
     workers), ``"elevated"`` (at most one), ``None`` (no restriction).
     Reclaim/promotion bookkeeping still ran; deferred tasks stay queued."""
-    paused_project_filtered: int = 0
-    """overlay[732] 本 tick 因项目暂停（projects-state.json 中 status=paused 的项目）
-    被滤出 ready/review 选卡面的行数：只拦机器派单，不 block 卡、不动在飞
-    worker；项目恢复 active 后下一 tick 自动回到选卡面。"""
-
-
-# [609] blocker_auth 阻塞退场参数：近窗秒数与最少拦截次数（60s tick × 阈值≈退场时延；
-# 12 次×60s≈12 分钟持续拦截才退场，瞬时抖动不误伤）。
-_BLOCKER_AUTH_DEGRADE_SEC = 3600
-_BLOCKER_AUTH_DEGRADE_MIN = 12
 
 
 def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
@@ -193,22 +168,10 @@ def describe_suppression(results: Iterable[Optional[DispatchResult]]) -> str:
             continue
         for _task_id, reason in res.respawn_guarded:
             counts[reason] = counts.get(reason, 0) + 1
-        for _task_id, reason in res.needs_decision:
-            key = f"needs_decision({reason})"
-            counts[key] = counts.get(key, 0) + 1
         if res.rate_limited:
             counts["rate_limited"] = counts.get("rate_limited", 0) + len(res.rate_limited)
         if res.skipped_locked:
             counts["skipped_locked"] = counts.get("skipped_locked", 0) + 1
-        if res.budget_capped:
-            r, c = res.budget_capped
-            counts[f"concurrency_capped({r}/{c})"] = counts.get(f"concurrency_capped({r}/{c})", 0) + 1
-        if res.skipped_per_profile_capped:
-            counts["per_profile_capped"] = counts.get("per_profile_capped", 0) + len(res.skipped_per_profile_capped)
-        # overlay[732] 项目暂停滤出的行数并入抑制摘要——零 spawn 时能看出
-        # 「卡被项目暂停按住」而非「派单器卡死」（照 478 budget_capped 样式）。
-        if res.paused_project_filtered:
-            counts["project_paused"] = counts.get("project_paused", 0) + res.paused_project_filtered
         if res.memory_pressure:
             pressure = res.memory_pressure
     parts = [f"{k}={v}" for k, v in sorted(counts.items())]
@@ -1728,74 +1691,10 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
     return bool(to) and "from" in data and data["from"] != to
 
 
-def _board_json_unreadable(board: str) -> bool:
-    """``board.json`` exists but cannot be read (corrupt / not a JSON object) →
-    True; readable or file absent → False. ``read_board_metadata`` never raises
-    (a bad file degrades to a synthesized dict without ``profiles``), so telling
-    "corrupt" from "unconfigured" needs a probe of the raw file."""
-    import json
-    try:
-        path = _kb.board_metadata_path(board)
-        if not path.is_file():
-            return False
-        return not isinstance(json.loads(path.read_text(encoding="utf-8")), dict)
-    except (OSError, ValueError):
-        return True  # 在但读不动：按损坏处理（fail-closed）
-
-
-def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optional[frozenset]:
-    """HERMES_CUSTOM[board-team-fence]: per-board team allowlist from the board's
-    ``board.json`` team key. Accepts ``profiles`` (fence contract) and
-    ``profile_scope`` (board lifecycle UI / board.json writer). ``None`` = key
-    absent (no fence, upstream behavior). A present value is fail-closed: an empty
-    list or unreadable board.json claims nothing — a corrupt/misconfigured board
-    must never widen this dispatcher's claim scope.
-
-    ``read_board_metadata`` swallows every read error, so the ``except`` below is
-    only a last resort; the corrupt case is settled by probing the raw file via
-    :func:`_board_json_unreadable`: 存在但读不出 → ``frozenset()`` fail-closed
-    并 log；文件不存在或合法空配置（无团队键）→ ``None`` 无围栏。"""
-    if not board:
-        return None
-    try:
-        meta = _kb.read_board_metadata(board)
-    except Exception as exc:
-        _kb._log.warning(
-            "kanban: cannot read board.json team for %r (%s) — claiming no cards on it",
-            board, exc,
-        )
-        return frozenset()
-    raw = None
-    if isinstance(meta, dict):
-        from hermes_cli.board_team_keys import team_raw
-        raw = team_raw(meta)
-    if raw is None:
-        if _board_json_unreadable(board):
-            _kb._log.warning(
-                "kanban: board.json for %r is unreadable — claiming no cards on it", board,
-            )
-            return frozenset()
-        return None
-    names = [str(n) for n in raw] if isinstance(raw, (list, tuple)) else str(raw).split(",")
-    allowed = set()
-    for n in names:
-        try:
-            allowed.add(normalize_profile_name(n))
-        except ValueError:
-            continue
-    return frozenset(allowed)
-
-
-def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], bool]]:
+def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
     """``hermes_cli.profiles.profile_exists``, or ``None`` when it cannot be
     imported (local import avoids a cycle; callers fall back to trusting the
     assignee).
-
-    HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
-    list in its ``board.json``, the predicate additionally requires the assignee
-    to be on that board's team (fail-closed) — a card can only be claimed by the
-    agent team mounted on its board. Health probes pass no board and stay
-    unfenced (historic fail-open telemetry).
 
     When ``kanban.dispatch_profiles`` is set (#110995) the returned predicate
     additionally requires the assignee to be listed, fail-closed — so a card
@@ -1807,8 +1706,7 @@ def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], 
     except Exception:
         return None
     allowlist = _dispatch_profile_allowlist(normalize_profile_name)
-    team = _board_team_allowlist(normalize_profile_name, board)
-    if allowlist is None and team is None:
+    if allowlist is None:
         return profile_exists
 
     def _gated(name: str) -> bool:
@@ -1816,11 +1714,7 @@ def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], 
             canon = normalize_profile_name(name)
         except ValueError:
             return False
-        if allowlist is not None and canon not in allowlist:
-            return False
-        if team is not None and canon not in team:
-            return False
-        return bool(profile_exists(name))
+        return canon in allowlist and bool(profile_exists(name))
 
     return _gated
 
@@ -1896,20 +1790,12 @@ def dispatch_profile_allowlist_summary() -> str:
 
 def _has_spawnable(conn: sqlite3.Connection, status: str) -> bool:
     rows = conn.execute(
-        "SELECT DISTINCT assignee, project_id FROM tasks "
+        "SELECT DISTINCT assignee FROM tasks "
         "WHERE status = ? AND assignee IS NOT NULL AND claim_lock IS NULL",
         (status,),
     ).fetchall()
     if not rows:
         return False
-    # overlay[732] 项目暂停只拦机器派单：paused 项目的行先剔除，再判 profile
-    # 存在。无暂停集时与旧的 DISTINCT assignee 行为等价——多出的 project_id
-    # 维度只会让同一 assignee 重复出现，不改变 any() 语义。
-    paused_projects = paused_project_ids()
-    if paused_projects:
-        rows = [row for row in rows if row["project_id"] not in paused_projects]
-        if not rows:
-            return False
     profile_exists = _profile_exists_fn()
     if profile_exists is None:
         # Can't introspect — assume spawnable, preserve legacy behavior.
@@ -2163,34 +2049,6 @@ def _call_spawn_fn(spawn_fn, task: Task, workspace: str, board: Optional[str]) -
         return spawn_fn(task, workspace)
 
 
-def _decision_row_value(row: sqlite3.Row, key: str) -> Any:
-    try:
-        return row[key]
-    except (IndexError, KeyError):
-        return None
-
-
-def _authorize_decision_row(row: sqlite3.Row, board: Optional[str]) -> tuple[str, bool, str]:
-    """Compute the revision from the current DB row, never from worker-supplied text."""
-    from tools.kanban_tools import authorize_task_execution, decision_tier_for_task
-
-    task = {
-        "id": _decision_row_value(row, "id"),
-        "board": _kb._slug_or_default(board),
-        "title": _decision_row_value(row, "title"),
-        "body": _decision_row_value(row, "body"),
-        "assignee": _decision_row_value(row, "assignee"),
-        "status": _decision_row_value(row, "status"),
-        "updated_at": _decision_row_value(row, "updated_at"),
-        "workspace_kind": _decision_row_value(row, "workspace_kind"),
-        "workspace_path": _decision_row_value(row, "workspace_path"),
-        "branch_name": _decision_row_value(row, "branch_name"),
-    }
-    tier = decision_tier_for_task(task)
-    allowed, reason = authorize_task_execution(task, tier)
-    return tier, allowed, reason
-
-
 def _dispatch_lane_task(
     conn: sqlite3.Connection,
     row: sqlite3.Row,
@@ -2205,8 +2063,6 @@ def _dispatch_lane_task(
     spawn_fn,
     per_profile_cap: Optional[int],
     per_profile_running: dict[str, int],
-    board_cap: Optional[int] = None,
-    board_running: dict[str, int] | None = None,
 ) -> bool:
     """Guard, claim, resolve the workspace and spawn one ready/review row.
     Returns True when a spawn slot was consumed (real or ``dry_run``); every
@@ -2217,7 +2073,7 @@ def _dispatch_lane_task(
     # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
     # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
     # it by assigning a profile, and health telemetry suppresses "stuck" for it.
-    profile_exists = _profile_exists_fn(board)  # HERMES_CUSTOM[board-team-fence]: 板级 team 围栏
+    profile_exists = _profile_exists_fn()
     if profile_exists is not None and not profile_exists(assignee):
         result.skipped_nonspawnable.append(task_id)
         # Per-task diagnostic so ``show``/``tail`` name the missing profile instead of leaving
@@ -2241,13 +2097,6 @@ def _dispatch_lane_task(
         if current >= per_profile_cap:
             result.skipped_per_profile_capped.append((task_id, assignee, current))
             return False
-    # Board-level cap (routa KanbanSessionQueue 语义，默认 1）：每 board 会话
-    # 并发闸——同板 fan-out 不吞满全部 worker 槽，超限排队下轮 tick drain。
-    if board_cap is not None and board_running is not None:
-        bcurrent = board_running.get(board, 0)  # board=None=默认板，同样有闸（routa 每 board 语义）
-        if bcurrent >= board_cap:
-            result.skipped_board_capped.append((task_id, bcurrent, board_cap))
-            return False
     guard_reason = check_respawn_guard(conn, task_id, lane=lane)
     if guard_reason is not None:
         result.respawn_guarded.append((task_id, guard_reason))
@@ -2261,46 +2110,6 @@ def _dispatch_lane_task(
         if not dry_run:
             with _kb.write_txn(conn):
                 _kb._append_event(conn, task_id, "respawn_guarded", {"reason": guard_reason})
-                # [609] blocker_auth 阻塞退场：auth/quota 类守卫拦截不会自愈（凭据缺失/
-                # 配额墙），只记事件会让卡永远停在 ready——派发器健康环「ready 非空但
-                # 0 spawn」告警整夜刷屏（run15 实锤 161 ticks）。近窗内同因拦截达阈值
-                # 即自动 block（needs_input 粘滞，recompute_ready 不会再提回 ready），
-                # 人工修复凭据后 unblock 即恢复。仅 blocker_auth（infrastructure/
-                # rate_limit 冷却是可自愈态不退场）。
-                if guard_reason == "blocker_auth":
-                    _recent = conn.execute(
-                        "SELECT COUNT(*) FROM task_events "
-                        "WHERE task_id = ? AND kind = 'respawn_guarded' "
-                        "AND payload LIKE '%blocker_auth%' "
-                        "AND created_at > ?",
-                        (task_id, int(time.time()) - _BLOCKER_AUTH_DEGRADE_SEC),
-                    ).fetchone()[0]
-                    if _recent >= _BLOCKER_AUTH_DEGRADE_MIN:
-                        if _kb.block_task(
-                            conn, task_id,
-                            reason="auto-block[609]: blocker_auth 持续拦截（respawn guard "
-                                   f"近 {_BLOCKER_AUTH_DEGRADE_SEC}s 内 {_recent} 次）——"
-                                   "凭据/配额需人工处置，unblock 后恢复派发",
-                            kind="needs_input",
-                        ):
-                            result.auto_blocked.append(task_id)
-        return False
-
-    # HumanGate 执行硬门：T1 直通；T2/T3 在 claim/workspace/spawn 之前验证同一
-    # 持久化 grant 与当前任务修订。拒绝只产生可见 needs_decision，不消耗重试预算。
-    decision_row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
-    if decision_row is None:
-        return False
-    tier, decision_allowed, decision_reason = _authorize_decision_row(decision_row, board)
-    if not decision_allowed:
-        result.needs_decision.append((task_id, decision_reason))
-        if not dry_run:
-            with _kb.write_txn(conn):
-                _kb._append_event(conn, task_id, "needs_decision", {
-                    "tier": tier,
-                    "reason": decision_reason,
-                    "board": _kb._slug_or_default(board),
-                })
         return False
 
     def _count_spawn(name: str) -> None:
@@ -2308,8 +2117,6 @@ def _dispatch_lane_task(
         # ticks re-query from the DB.
         if per_profile_cap is not None and name:
             per_profile_running[name] = per_profile_running.get(name, 0) + 1
-        if board_cap is not None and board_running is not None:
-            board_running[board] = board_running.get(board, 0) + 1
 
     if dry_run:
         result.spawned.append((task_id, assignee, ""))
@@ -2487,65 +2294,12 @@ def _tick_spawn_budget(
 
 
 def _lane_rows(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
-    """Unclaimed rows of one lane in dispatch order (``priority`` rides along
-    for the ready-lane workload reorder's tier grouping; ``project_id`` 随行
-    带出供 732 项目暂停过滤——消费方按键取列，多一列向后兼容）。"""
+    """Unclaimed rows of one lane in dispatch order."""
     return conn.execute(
-        "SELECT id, assignee, priority, project_id FROM tasks "
+        "SELECT id, assignee FROM tasks "
         f"WHERE status = '{status}' AND claim_lock IS NULL "
         "ORDER BY priority DESC, created_at ASC"
     ).fetchall()
-
-
-# HERMES_CUSTOM[estimate]: 未评估 running 卡的保守在途负载（人日）。
-_UNESTIMATED_WORKLOAD_DAYS = 1.0
-
-
-def _reorder_ready_by_workload(
-    conn: sqlite3.Connection, rows: list[sqlite3.Row],
-) -> tuple[list[sqlite3.Row], bool]:
-    """HERMES_CUSTOM[estimate]（团队并行二期）：ready 同优先级层内轻载先行。
-
-    在途负载 = assignee 全部 running 卡的 ``estimate_days`` 之和（未评估保守
-    计 1 人日）；unassigned 层内垫底；等负载保持 created_at 到达序。层间
-    ``priority DESC`` 语义不变——重排永不打穿优先级层。返回 (新序, 是否换序)。"""
-    if not rows:
-        return list(rows), False
-    loads: dict[str, float] = {}
-    for r in conn.execute(
-        "SELECT assignee, estimate_days FROM tasks WHERE status = 'running'"
-    ):
-        key = r["assignee"] or ""
-        days = r["estimate_days"]
-        loads[key] = loads.get(key, 0.0) + (
-            float(days) if days is not None else _UNESTIMATED_WORKLOAD_DAYS
-        )
-
-    def tier_key(row: sqlite3.Row) -> tuple[int, float]:
-        # unassigned 垫底（负载位失效）；assigned 按在途负载升序。
-        if row["assignee"] is None:
-            return (1, 0.0)
-        return (0, loads.get(row["assignee"], 0.0))
-
-    reordered: list[sqlite3.Row] = []
-    tier: list[sqlite3.Row] = []
-
-    def _flush_tier() -> None:
-        nonlocal tier
-        if tier:
-            # sorted 稳定：等负载保持 SQL 序（created_at ASC）。
-            reordered.extend(sorted(tier, key=tier_key))
-            tier = []
-
-    prev_priority: Optional[int] = None
-    for row in rows:  # 输入已按 priority DESC, created_at ASC
-        if prev_priority is not None and row["priority"] != prev_priority:
-            _flush_tier()
-        prev_priority = row["priority"]
-        tier.append(row)
-    _flush_tier()
-    changed = [r["id"] for r in reordered] != [r["id"] for r in rows]
-    return reordered, changed
 
 
 def _any_spawnable_review(
@@ -2554,7 +2308,6 @@ def _any_spawnable_review(
     *,
     per_profile_cap: Optional[int] = None,
     per_profile_running: Optional[dict[str, int]] = None,
-    board: Optional[str] = None,
 ) -> bool:
     """Mirror review dispatch gates before reserving ready-lane capacity.
 
@@ -2566,7 +2319,7 @@ def _any_spawnable_review(
     """
     if not review_rows:
         return False
-    profile_exists = _profile_exists_fn(board)
+    profile_exists = _profile_exists_fn()
     running = per_profile_running or {}
     for row in review_rows:
         assignee = row["assignee"]
@@ -2581,25 +2334,7 @@ def _any_spawnable_review(
     return False
 
 
-def _resolve_board_concurrency(board: Optional[str]) -> Optional[int]:
-    """``kanban.board_concurrency``（routa KanbanSessionQueue 默认 1）；未配=默认 1；
-    显式 0/负数=不设闸（None）。整数解析失败回默认 1（fail-safe 排队语义）。"""
-    try:
-        from hermes_cli.config_effective import load_user_config_effective
-        kanban = (load_user_config_effective(fail_closed=True) or {}).get("kanban", {})
-        v = kanban.get("board_concurrency")
-    except Exception:
-        return 1
-    if v is None:
-        return 1
-    try:
-        n = int(v)
-    except (TypeError, ValueError):
-        return 1
-    return None if n <= 0 else n
-
-
-def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[str] = None) -> Optional[str]:
+def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
     """``kanban.default_assignee`` when it names a real profile this home may
     claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
     gate). Otherwise ``None`` so an unassigned shared-board card is never
@@ -2608,7 +2343,7 @@ def _resolve_default_assignee(default_assignee: Optional[str], board: Optional[s
     as nonspawnable."""
     name = (default_assignee or "").strip() or None
     if name:
-        profile_exists = _profile_exists_fn(board)
+        profile_exists = _profile_exists_fn()
         if profile_exists is not None and not profile_exists(name):
             return None
     return name
@@ -2646,31 +2381,12 @@ def _dispatch_once_locked(
         conn, result, max_spawn=max_spawn, max_in_progress=max_in_progress, board=board,
     )
     if not may_spawn:
-        # overlay[478] 记录拒绝门（running, cap 择最小命中者）——否则 stuck 告警
-        # 零后缀，满载忙被误报卡死（B2 遥信盲区，2026-09-28 实锤 N=600+）。
-        running_now = count_running_tasks(conn)
-        cap_hit = min(
-            c for c in (max_spawn, max_in_progress) if c is not None
-        ) if (max_spawn is not None or max_in_progress is not None) else running_now
-        result.budget_capped = (running_now, cap_hit)
         return result
 
     ready_rows = _lane_rows(conn, "ready")
-    # HERMES_CUSTOM[estimate] 二期：同优先级层内按在途工作量轻载先行
-    # （语义详见 _reorder_ready_by_workload docstring）。
-    ready_rows, _workload_reordered = _reorder_ready_by_workload(conn, ready_rows)
     # Review rows are enumerated up front so the budget split can see whether
     # review work exists at all.
     review_rows = _lane_rows(conn, "review") if review_dispatch_enabled() else []
-    # overlay[732] 项目暂停拦机器派单：paused 项目的卡不进本 tick 选卡面——
-    # 只滤派单，不 block 卡、不动在飞 worker；恢复 active 后自动回到选卡面。
-    # 行集为空或无暂停集时零开销（与现状逐字节等价）。
-    paused_projects = paused_project_ids()
-    if paused_projects and (ready_rows or review_rows):
-        _before_rows = len(ready_rows) + len(review_rows)
-        ready_rows = [r for r in ready_rows if r["project_id"] not in paused_projects]
-        review_rows = [r for r in review_rows if r["project_id"] not in paused_projects]
-        result.paused_project_filtered = _before_rows - len(ready_rows) - len(review_rows)
     # Per-profile cap. Deferred tasks go to skipped_per_profile_capped, not
     # skipped_unassigned — "busy, retry later" differs from "needs routing".
     # Resolved BEFORE the review reservation so the reservation can see which
@@ -2699,26 +2415,14 @@ def _dispatch_once_locked(
     if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
         conn, review_rows,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
-        board=board,
     ):
         ready_budget = max(spawn_budget - 1, 0)
-    # Board-level running count（routa 每 board 并发闸）：本 tick 按板计数；
-    # cap 读 kanban.board_concurrency（默认 1，routa 语义），None=不设闸。
-    board_cap = _resolve_board_concurrency(board)
-    board_running: dict[str, int] = {}
-    if board_cap is not None:
-        # 0.21.7 起每 board 独立 sqlite（conn 即板库），直接数本库 running。
-        rowc = conn.execute(
-            "SELECT COUNT(*) FROM tasks WHERE status = 'running'",
-        ).fetchone()
-        board_running[board] = int(rowc[0]) if rowc else 0
     lane_kwargs: dict[str, Any] = dict(
         dry_run=dry_run, ttl_seconds=ttl_seconds, board=board,
         failure_limit=failure_limit, spawn_fn=spawn_fn,
         per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
-        board_cap=board_cap, board_running=board_running,
     )
-    default_assignee = _resolve_default_assignee(default_assignee, board)
+    default_assignee = _resolve_default_assignee(default_assignee)
     spawned = 0
     for row in ready_rows:
         if ready_budget is not None and spawned >= ready_budget:
@@ -3106,19 +2810,6 @@ def _default_spawn(task: Task, workspace: str, *, board: Optional[str] = None) -
         env["HERMES_TENANT"] = task.tenant
     env["HERMES_KANBAN_TASK"] = task.id
     env["HERMES_KANBAN_WORKSPACE"] = workspace
-    # DoD 契约（模型波动加固 A）：把卡面 AC/dod 块固化为 env 并锁源哈希。
-    # worker 进程内改卡面不会改变这里；完成工具按 env 校验回执。
-    try:
-        from completion_contract import derive_contract
-
-        _dod_contract = derive_contract(getattr(task, "body", "") or "")
-        if _dod_contract.get("mode") != "off":
-            env["HERMES_KANBAN_DOD_CONTRACT"] = json.dumps(
-                _dod_contract, ensure_ascii=False, separators=(",", ":"))
-            if _dod_contract.get("sourceSha256"):
-                env["HERMES_KANBAN_DOD_SOURCE_SHA256"] = _dod_contract["sourceSha256"]
-    except Exception as exc:  # noqa: BLE001 - 部署缺模块/派生异常不应阻断派发；完成门随之缺省
-        _kb._log.warning("kanban worker: completion contract derivation failed (%s)", exc)
     # Tag the session `kanban` so session-browsing surfaces filter it out by
     # source instead of rendering one sidebar row per attempt.
     env["HERMES_SESSION_SOURCE"] = "kanban"

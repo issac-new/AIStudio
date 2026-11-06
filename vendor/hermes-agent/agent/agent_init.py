@@ -1035,12 +1035,6 @@ def _load_tools(agent, enabled_toolsets, disabled_toolsets):
     agent._tool_snapshot_selection = tool_selection_key(enabled_toolsets, disabled_toolsets)  # tools[] freeze gate
     agent.tools = agent_tool_surface(agent, model_tools.get_tool_definitions(
         enabled_toolsets=enabled_toolsets, disabled_toolsets=disabled_toolsets, quiet_mode=agent.quiet_mode) or [])
-
-    # per-model 工具覆盖（codex 候补吸收）：config.tool_model_overrides 按当前模型
-    # 套 description/parameters，坏 schema 回退捆绑版告警不拖垮装配。
-    from agent.tool_model_overrides import apply_model_tool_overrides
-    agent.tools = apply_model_tool_overrides(agent.tools or [], getattr(agent, "model", None))
-
     agent.valid_tool_names = {tool["function"]["name"] for tool in agent.tools} if agent.tools else set()
     # Kanban guidance is session-static for the dispatcher-owned worker only. Profiles may
     # expose kanban_show interactively, and children/cron runs inherit the env var, without
@@ -1296,12 +1290,6 @@ def _apply_agent_section(agent, _agent_cfg):
     _agent_section = _cfg_dict(_agent_cfg, "agent")
     agent.budget_warning_ratio = normalize_budget_warning_ratio(
         _agent_section.get("budget_warning_ratio")
-    )
-    # Rule heartbeat interval (601): None = default 12 iterations, 0 = off, <3 clamps to 3.
-    # Resolved per call in agent/rule_heartbeat.py; never cache-busting.
-    from agent.rule_heartbeat import parse_heartbeat_config
-    agent.rule_heartbeat_interval = parse_heartbeat_config(
-        _agent_section.get("rule_heartbeat_interval")
     )
     # Both: "auto" (model-list match), true, false, or list of model substrings; independent
     # of each other (gates in agent/system_prompt.py).

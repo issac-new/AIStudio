@@ -28,17 +28,13 @@ from gateway.kanban_watchers_notifier import _KanbanNotification, _notifier_coll
 from gateway.kanban_watchers_dispatcher import (
     _KanbanDispatcher,
     _log_spawn_results,
-    _refusal_hint,
     _resolve_dispatcher_settings,
-    _spawn_refusal_reasons,
 )
 
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 _VIDEO_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".3gp"}
 _GC_INTERVAL_SECONDS = 3600.0
 _HEALTH_WINDOW = 6
-# 723：拒绝原因聚合的打印节奏（stuck 期间），与 stuck 警告同一量级。
-_REFUSAL_WARN_INTERVAL_SECONDS = 300
 
 
 class GatewayKanbanWatchersMixin:
@@ -282,12 +278,6 @@ class GatewayKanbanWatchersMixin:
         # broken PATH, missing venv, or credential loss.
         bad_ticks = 0
         last_warn_at = 0
-        # 723：stuck 期间的拒绝原因聚合（每 tick 累加、每 300s 打一行、恢复即清零）。
-        # 与 bad_ticks 同源同条件，只统计「ready 非空但 0 spawn」这一种 tick。
-        refusal_counts: dict[str, int] = {}
-        refusal_ticks = 0
-        refusal_hint_emitted = False
-        last_refusal_warn_at = 0
         results: Optional[list] = None
         dispatcher = _KanbanDispatcher(_kb, settings)
 
@@ -308,10 +298,6 @@ class GatewayKanbanWatchersMixin:
                 # dispatch while paused; running workers finish naturally.
                 if not _kanban_dispatch_allowed():
                     bad_ticks = 0
-                    # 723：暂停期间不再累计拒绝原因（stuck 计数同样清零）。
-                    refusal_counts.clear()
-                    refusal_ticks = 0
-                    refusal_hint_emitted = False
                 else:
                     # Re-read the auto-decompose toggle live so disabling it
                     # takes effect on the next tick, not on restart.
@@ -323,63 +309,17 @@ class GatewayKanbanWatchersMixin:
                     any_spawned = _log_spawn_results(results)
                     ready_pending = await _to_thread_process_service(dispatcher.ready_nonempty)
                     bad_ticks = bad_ticks + 1 if ready_pending and not any_spawned else 0
-                    # 723：把这一 tick 的拒绝原因并进聚合。桶全空说明拒在逐卡循环之前
-                    # （max_spawn/max_in_progress 预算）或 claim/spawn 腿失败——记 unattributed。
-                    if ready_pending and not any_spawned:
-                        refusal_ticks += 1
-                        per_tick = _spawn_refusal_reasons(results) or {"unattributed": 1}
-                        for _reason, _count in per_tick.items():
-                            refusal_counts[_reason] = refusal_counts.get(_reason, 0) + _count
-                    else:
-                        refusal_counts.clear()
-                        refusal_ticks = 0
-                        refusal_hint_emitted = False
                 now = int(time.time())
                 if bad_ticks >= _HEALTH_WINDOW and now - last_warn_at >= 300:
                     held = _kbd.describe_suppression(res for _slug, res in (results or []))
-                    # 730（2026-11-04 run26 复盘）：同一句「stuck」混了两类现场——
-                    # (a) 容量占满（per-profile cap 拒＝健康饱和）；(b) 真卡死（责任人
-                    # 失联/守卫拦截）。run26 值守按提示去查 venv/PATH 走错方向，真因是
-                    # 一名 agent 会话楔死。容量型改独立措辞，非容量型把拒绝原因并进告警，
-                    # 让告警自带现场，不再把排查成本转嫁给值守人。
-                    _capacity_only = bool(refusal_counts) and set(refusal_counts) <= {
-                        "skipped_per_profile_capped", "max_in_progress",
-                    }
-                    if _capacity_only:
-                        logger.warning(
-                            "kanban dispatcher: capacity-saturated for %d ticks "
-                            "(ready work waiting on the in-flight cap, not a stall); "
-                            "refusals=%s",
-                            bad_ticks, dict(sorted(refusal_counts.items())),
-                        )
-                    else:
-                        logger.warning(
-                            "kanban dispatcher stuck: ready queue non-empty for "
-                            "%d consecutive ticks but 0 workers spawned.%s refusals=%s "
-                            "Check profile health (venv, PATH, credentials) and "
-                            "`hermes kanban list --status ready`.",
-                            bad_ticks,
-                            f" Last tick held back: {held}." if held else "",
-                            dict(sorted(refusal_counts.items())),
-                        )
-                    last_warn_at = now
-                # 723：拒绝原因显形（每 300s 一行；每段 stuck 的首次额外给 actionable hint）。
-                if refusal_ticks and now - last_refusal_warn_at >= _REFUSAL_WARN_INTERVAL_SECONDS:
                     logger.warning(
-                        "kanban dispatcher: spawn refusals by reason=%s "
-                        "(aggregated over %d stuck ticks)",
-                        dict(sorted(refusal_counts.items())), refusal_ticks,
+                        "kanban dispatcher stuck: ready queue non-empty for "
+                        "%d consecutive ticks but 0 workers spawned.%s Check "
+                        "profile health (venv, PATH, credentials) and "
+                        "`hermes kanban list --status ready`.",
+                        bad_ticks, f" Last tick held back: {held}." if held else "",
                     )
-                    if not refusal_hint_emitted:
-                        _hint = await _to_thread_process_service(
-                            _refusal_hint, _kb, settings, results,
-                        )
-                        if _hint:
-                            logger.warning("kanban dispatcher: refusal hint: %s", _hint)
-                        refusal_hint_emitted = True
-                    refusal_counts.clear()
-                    refusal_ticks = 0
-                    last_refusal_warn_at = now
+                    last_warn_at = now
             except asyncio.CancelledError:
                 logger.debug("kanban dispatcher: cancelled")
                 self._release_kanban_dispatcher_lock()

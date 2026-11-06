@@ -238,7 +238,7 @@ class AIAgent(
         base_url: str | None = None, api_key: str | None = None, provider: str | None = None, api_mode: str | None = None,
         acp_command: str | None = None, acp_args: list[str] | None = None, command: str | None = None, args: list[str] | None = None,
         model: str = "",
-        max_iterations: int = 200,  # bounded by default (TURN_LIMIT_DEFAULT; explicit "unlimited" spellings lift it)
+        max_iterations: int = sys.maxsize,  # unlimited tool-calling iterations by default (shared with subagents)
         tool_delay: float | None = None,  # deprecated: accepted for compatibility, ignored
         enabled_toolsets: list[str] | None = None, disabled_toolsets: list[str] | None = None,
         save_trajectories: bool = False, verbose_logging: bool = False, quiet_mode: bool = False,
