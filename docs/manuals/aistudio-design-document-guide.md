@@ -5,7 +5,7 @@
 - 快照基线：`30e975f32`。
 - 当前版本：`1.0.13-overlay`。
 - 核实日期：2026-11-06。
-- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 593 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
+- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 594 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
 
@@ -34,7 +34,7 @@
 
 ### 1.2 事实冲突按什么顺序裁决
 
-整合正本卷首给出的顺序是：
+整合正本 §1.7 给出的顺序是：
 
 1. 当前代码、配置、测试和真实运行证据决定实际行为。
 2. 已冻结需求与有效 spec 决定设计意图和验收口径。
@@ -42,7 +42,7 @@
 4. 组件内部实现由专题文档和 ADR 提供证据。
 5. 旧设计稿只用于理解来路。
 
-无法核实就写“未验证”，不能把“终态”解释为所有环境均已交付。`docs/DESIGN.md 卷首「事实裁决顺序」`
+无法核实就写“未验证”，不能把“终态”解释为所有环境均已交付。`docs/DESIGN.md §1.7`
 
 版本与发布还要加两条专用规则：模块、整体包、产物和安装方式以 `RELEASE-MANIFEST.json` 及各自版本载体为准；上游钉版以 `vendor/VENDOR.md` 的当前表格为准。数字总账是正本的汇总附录，不能反过来覆盖这些载体。`docs/DESIGN.md §5.5`；`vendor/VENDOR.md:5-15`
 
@@ -247,7 +247,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 多数差异来自日期和分母，不应直接判为错误：
 
-- 当前工作树根目录实际 593 份，附录 A 的 A.1 当前收 584 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 593；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-11`
+- 当前工作树根目录实际 594 份，附录 A 的 A.1 当前收 585 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 594；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-11`
 - 附录 B 的 55＋32 是 2026-10-23 历史计划与研究索引，不是 specs 根目录总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md:1-6,66-68`
 - 附录 C.1 收 57 份方法论，C.2 的 51 是补入前的历史快照；当前数字应读 `facts.conf`，不能拿 51 当现行总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md:70-72,166-180`
 - 附录 D.1 的 43 是运行与方案复盘根因条数，文件头的 21 是推演轮次数，两者不是同一分母。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md:1-5`
@@ -260,7 +260,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 ## 5. 文档维护者怎样守住后续一致性
 
-1. **先判角色再改文档。** 稳定结构改整合正本，单项变更写带日期 spec，历史档案不改写来路。新 spec 必须包含“变更、决策记录、验证、设计文档影响”四段；触及正本或数字总账时声明 `DESIGN_SYNC: touched` 并同批兑现。`docs/DESIGN.md §6.5`
+1. **先判角色再改文档。** 稳定结构改整合正本，单项变更写带日期 spec，历史档案不改写来路。新 spec 必须包含“变更、决策记录、验证、设计文档影响”四段；触及正本或数字总账时声明 `DESIGN_SYNC: touched` 并同批兑现。
 2. **当前行为先回读实现。** 状态、权限、默认开关和路由必须给当前 `file:line`，旧 spec 只用于解释设计意图。发现正本滞后时，不用新文档悄悄覆盖，应在对应 spec 记录差异并修订正本。
 3. **版本先看载体。** 更新版本时先改版本载体，再核对发布清单、发布说明与总账；基线以 VENDOR 表格为准，不能复制旧摘要。
 4. **文件覆盖按文件系统验收。** 新增、删除或移动 spec 后，同时更新附录 A 的人工摘要和机械索引的链接与计数。机械索引只证明“收进了”，不证明“仍现行”。
