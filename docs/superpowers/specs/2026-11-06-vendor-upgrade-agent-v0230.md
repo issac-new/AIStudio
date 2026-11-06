@@ -39,7 +39,7 @@
 - [x] `release:check` 四模块对账全绿（cockpit=1.0.9-studio.12 **agent-teams=v0.23.0-team.1** ycode=3.17.2 yuan-skill=v2.99.3）。子项 docs:check 在 worktree 红（路由计数 121 vs 122）定谳=**worktree 环境伪象非本批漂移**：vite-node 经 node_modules 软链跨树解析回主检出致真注册链收集不全（直接跑 route-manifest.ts 报跨树 Cannot find module 实证）；main 干净 HEAD 同检查绿；本批改动面不触及路由载体（registries/custom/client/features）。合并后在 main 复跑兑现。
 - [x] 拼合树 pytest runtime/tests：**152 passed / 0 failed**（v0227 批 146 基线＋6 新例；配方=PYTHONPATH=vendor/hermes-agent:runtime）。首跑 13 例失败定谳=裸 python3.14 缺 `psutil`（v0.23.0 上游 kanban_owner_recovery.py 新增 import）＋缺 `python-dotenv`（1 例收集错）——补装二包后全绿，环境限制非行为回归。
 - [x] runtime 宿主部署：dry-run 终态 **清单 62 ｜ 相同 62 ｜ 差异 0 ｜ RESULT complete**；kanban_db.py 一处宿主旧态（`workspace_kind: str = "worktree"` 不属任何现役补丁，且 D5「在途域」依据已随 739/741 合入消失）定向覆盖对齐（.bak 备份在宿主 hermes_cli/）。宿主基线 HEAD 已在 v0.23.0（换血窗口内先行就位）。
-- [ ] `npm test` 全量（合并前门，跑动中回填）。
+- [x] `npm test` 全量：**8491 passed / 27 failed / 11 skipped**（1114 文件，299s）＋1 vitest-worker RPC 超时（负载型）。27 例红**定谳 pre-existing 非本批引入**： cognition P0 批（283e3f0e1，origin/main 已含）验证窗仅 7 文件 44 例未跑全量，其 inject.mjs/ensure-injected.mjs 重构遗留三族债——①源码级断言族（`isHermesAgentPatchPath(` 在 ensure-injected.mjs:68 真实调用残留，P0 测试已禁止该形态＝P0 未收完的尾巴）；②真跑主链族（inject-clean-v2/inject-executor/delta-guard/absent-tree/serve-server/zcode-guard/verify-dist-runtime，对仓态与环境双敏感，主检出 283e3f0e1 干净态同 9 文件复跑 26 红＝本批基点前已红）；③vite-node 真注册链族（route-manifest/eval-gaps，worktree 跨树 node_modules 解析伪象同 docs:check 根因）。**按边界纪律列清单待批不本批顺修**（cognition 域清偿批处置）；本批改动面行为已由预演 90/90＋幂等二连零告警＋pytest 152/0＋release:check 全绿四方覆盖。合并后在 main 完整复跑终验（见收口）。
 
 ## 设计文档影响
 
