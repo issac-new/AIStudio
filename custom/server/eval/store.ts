@@ -12,6 +12,7 @@ import type {
   EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
 } from './types'
 import { loadEvalConfig } from './types'
+import { assertGoldenRatio } from './golden-set'
 import { coverageOfSets, isEvalDimensionTag } from './coverage'
 import { dimensionForRedteamTaskId } from './redteam-seed'
 import { dimensionForEnterpriseTaskId } from './enterprise-seed'
@@ -248,6 +249,8 @@ export interface CreateSetInput {
   name: string
   track: string
   module?: string
+  /** 黄金集标志（2026-11-06 C 批）：true 时强制 10/10/10 配比校验。 */
+  golden?: boolean
   tasks: unknown[]
 }
 
@@ -285,6 +288,9 @@ export function createSet(
   if (input?.track !== 'process' && input?.module) problems.push('module 仅 Process 轨可填')
   if (!Array.isArray(input?.tasks) || input.tasks.length === 0) problems.push('tasks 至少 1 条')
   else input.tasks.forEach((t, i) => validateTask(t, i, problems))
+  // 黄金集配比校验（2026-11-06 C 批）：golden=true 时 10/10/10 是机制不是口头约定；
+  // 校验器与守门测试同源（golden-set.ts assertGoldenRatio），错配比在建集口即拒。
+  if (input?.golden === true) problems.push(...assertGoldenRatio(input.tasks as EvalTask[]))
   const store = readStore()
   if (!problems.length && store.sets.some((s) => s.name === name)) problems.push(`同名评测集已存在：${name}`)
   if (problems.length) return { ok: false, problems }
@@ -299,6 +305,7 @@ export function createSet(
     revision: 1,
     createdAt: Date.now(),
     createdBy,
+    ...(input?.golden === true ? { golden: true } : {}),
     tasks: input.tasks as EvalTask[],
   }
   set.contentHash = contentFingerprint(set)

@@ -392,3 +392,6 @@ paths:
   - docs/superpowers/specs/2026-11-06-decision-receipts.md
   # 决策回执批（B 批）
   - custom/server/approval-inbox/human-gate.ts
+  # 评测黄金集批（C 批）
+  - docs/superpowers/specs/2026-11-06-eval-golden-set.md
+  - custom/server/eval/golden-set.ts

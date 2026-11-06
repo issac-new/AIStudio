@@ -407,6 +407,13 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
     evidenceMode,
     attempts,
     aggregates: {} as EvalRun['aggregates'],
+    // 裁判指纹（2026-11-06 C 批）：起跑时冻结——换裁判模型/阈值后跨 run 不可比可机械判定
+    judgeFingerprint: {
+      models: config.judgeModels,
+      backend: config.judgeBaseUrl,
+      tauYes: config.tauYes,
+      tauNo: config.tauNo,
+    },
     createdAt: now(),
     ...(input.actor ? { createdBy: input.actor } : {}),
     ...(input.note ? { note: input.note } : {}),

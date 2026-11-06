@@ -677,7 +677,8 @@ export async function judgeAttempt(
       latencyMs,
       cached,
       online,
-      ...(config.judgeModels.length > 1 ? { models: config.judgeModels } : {}),
+      // 2026-11-06 C 批：模型名单模型也写——此前多模型才记，单模型运行换裁判后不可追溯
+      models: config.judgeModels,
       ...(referenceLeak ? { referenceLeak } : {}),
       ...(outputStability ? { outputStability } : {}),
     },

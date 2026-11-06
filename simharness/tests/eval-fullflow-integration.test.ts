@@ -106,7 +106,7 @@ const base = {
       liveEvidence: { qpsProbe: { targetQps: 10, achievedQps: 10, errorRate: 0, p99ToP50: 1 } },
     },
   },
-  set: { set: { id: 'eset-1', contentHash: 'abc123', revision: 1 } },
+  set: { set: { id: 'eset-1', contentHash: 'abc123', revision: 1, tasks: [{ id: 't1' }, { id: 't2' }, { id: 't3' }] } },
   evaluators: {
     audit: {
       bySource: { s0: 6, s1: 0, 's0+s1': 0, human: 0 },
@@ -168,6 +168,9 @@ describe('V8.45 评测子门判据（融合批三：判定正本=产品 e2e-verd
       expect(r.stdout).toContain('EVAL-GATE-PASS')
       expect(r.out.verdict).toBe('pass')
       expect(r.out.run.passAt1).toBe(1)
+      // C 批披露：规模与裁判指纹进摘要（run27 类「3 题纯 S0」从此自曝）
+      expect(r.out.run.taskCount).toBeGreaterThanOrEqual(1)
+      expect(typeof r.out.run.attempts).toBe('number')
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
