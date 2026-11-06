@@ -364,3 +364,6 @@ paths:
   - docs/superpowers/specs/2026-11-06-run27-steps-ledger-keys.md
   # run27 全面复盘根治批（8a879ea）
   - docs/superpowers/specs/2026-11-06-run27-design-gap-rootfix.md
+  # run27 设计优化批（c36496d）
+  - docs/superpowers/specs/2026-11-06-run27-design-optimizations.md
+  - simharness/tests/frame-four-state.test.ts
