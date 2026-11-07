@@ -9,6 +9,7 @@ export interface ChatAgentAvatar {
 
 interface ChatAgentSessionIdentity {
   id?: string
+  title?: string | null
   source?: string
   agent?: string
   codingAgentId?: string
@@ -59,11 +60,21 @@ const AGENT_AVATARS = {
   antigravity: { label: 'Antigravity', src: deploymentUrl('/coding-agents/antigravity.png') },
 } as const satisfies Record<string, ChatAgentAvatar>
 
+export function personTaskAgentAvatar(task: { selection_json: string }): ChatAgentAvatar {
+  try {
+    const selection = JSON.parse(task.selection_json || '{}')
+    return chatSessionAgentAvatar({ agent: selection?.runtime || 'ekko-agent' })
+  } catch { return chatSessionAgentAvatar({ agent: 'ekko-agent' }) }
+}
+
 export function chatSessionAgentAvatar(session?: ChatAgentSessionIdentity | null): ChatAgentAvatar {
   if (!session) return AGENT_AVATARS['ekko-agent']
   const botType = session.botType || session.bot_type || (session.id?.startsWith('person-main-') ? DEFAULT_PERSON_BOT_TYPE : '')
   const bot = personBot(botType)
-  if (bot) return { label: personBotLabel(bot), src: deploymentUrl(bot.avatar) }
+  if (bot) {
+    const customName = session.id?.startsWith('person-main-') ? session.title?.trim() : ''
+    return { label: customName || personBotLabel(bot), src: deploymentUrl(bot.avatar) }
+  }
   const runtime = String(session?.codingAgentId || session?.agent || '').trim().toLowerCase()
   if (runtime === 'hermes') return AGENT_AVATARS.hermes
   if (runtime === 'ekko-agent' || runtime === 'ekko_agent' || runtime === 'ekko') return AGENT_AVATARS['ekko-agent']

@@ -508,3 +508,15 @@ paths:
   - scripts/__tests__/overlay-pristine-replay.test.ts
   - docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md
   - docs/README.md
+  # 2026-11-07 组件与调研栈版本更新批（feat/vendor-studio-v0817, spec 2026-11-07-vendor-upgrade-studio-v0817）
+  - docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md
+  - vendor/hermes-studio/**
+  - vendor/VENDOR.md
+  - README.md
+  - AGENTS.md
+  - RELEASE-MANIFEST.json
+  - docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md

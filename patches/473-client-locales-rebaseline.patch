@@ -1,7 +1,7 @@
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
-@@ -250,170 +250,206 @@ export default {
+@@ -250,170 +250,206 @@
        "unavailable": "Unable to complete the operation. Check the Studio connection and try again."
      }
    },
@@ -55,10 +55,6 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 -    "removeConfirm": "Remove {name} from future launches?",
 -    "conflict": "Configuration changed elsewhere. Your draft is preserved; compare with the latest version before reloading.",
 -    "missingDependency": "Install DSH and pnpm before managing packages.",
--  },
--  announcements: {"later": "Later", "details": "View details", "gotIt": "Got it"},
--  taskPlan: {"title": "Task plan", "progress": "{completed}/{total} completed", "pending": "Not completed", "in_progress": "In progress", "completed": "Completed", "running": "Running", "ended": "Run ended; unfinished steps remain", "interrupted": "Interrupted; unfinished steps remain", "failed": "Run failed; unfinished steps remain"},
--  agentAutoUpdate: { label: 'Automatic updates' },
 +    configurationTab: 'Plugin configuration',
 +    listTab: 'Plugin list',
 +    webPackages: 'Installed Web plugins',
@@ -86,7 +82,10 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    removeConfirm: 'Remove {name} from future launches?',
 +    conflict: 'Configuration changed elsewhere. Your draft is preserved; compare with the latest version before reloading.',
 +    missingDependency: 'Install DSH and pnpm before managing packages.'
-+  },
+   },
+-  announcements: {"later": "Later", "details": "View details", "gotIt": "Got it"},
+-  taskPlan: {"title": "Task plan", "progress": "{completed}/{total} completed", "pending": "Not completed", "in_progress": "In progress", "completed": "Completed", "running": "Running", "ended": "Run ended; unfinished steps remain", "interrupted": "Interrupted; unfinished steps remain", "failed": "Run failed; unfinished steps remain"},
+-  agentAutoUpdate: { label: 'Automatic updates' },
 +  announcements: {
 +    later: 'Later',
 +    details: 'View details',
@@ -367,7 +366,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    socialMessages: socialMessagesEn,
    browser: {
-@@ -444,7 +480,7 @@ export default {
+@@ -444,7 +480,7 @@
      remoteOwnerConnecting: 'Connecting',
  
  
@@ -376,7 +375,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      back: 'Back', forward: 'Forward', reload: 'Reload', stop: 'Stop', addressPlaceholder: 'Search or enter an address',
      undoAnnotation: 'Undo last', deleteAnnotation: 'Delete annotation {index}',
      selectElement: 'Select element', selectRegion: 'Select region', annotationPlaceholder: 'Describe what the Agent should inspect or change…', selectionData: 'Browser selection data', annotationAdded: 'Screenshot added to the chat composer', annotationCount: '{count} annotation(s)', annotationLabel: 'Annotation {index}', clearAnnotations: 'Clear annotations', finishAnnotation: 'Done',
-@@ -456,7 +492,7 @@ export default {
+@@ -456,7 +492,7 @@
    },
    // Login
    login: {
@@ -385,7 +384,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      description: 'Enter your username and password to continue.',
      placeholder: 'Access token',
      submit: 'Login',
-@@ -500,8 +536,17 @@ export default {
+@@ -500,8 +536,17 @@
      defaultCredentialMessage: 'This account is still using the default username or password. To prevent unauthorized access, update the username and password as soon as possible.',
      defaultCredentialAction: 'Update now',
      defaultCredentialLater: 'Remind me later',
@@ -404,7 +403,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    users: {
      title: 'Account Management',
      description: 'Create users, assign roles, and control which profiles regular admins can access.',
-@@ -522,15 +567,18 @@ export default {
+@@ -522,15 +567,18 @@
      disable: 'Disable',
      roles: {
        superAdmin: 'Super Admin',
@@ -414,8 +413,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      status: {
        active: 'Active',
 -      disabled: 'Disabled',
+-    },
 +      disabled: 'Disabled'
-     },
++    },
 +    matrixUserIdPlaceholder: "{'@'}user:matrix.example.com",
 +    matrixUserId: 'Matrix User ID',
 +    displayName: 'Display Name',
@@ -427,7 +427,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    common: {
      close: 'Close',
      loading: 'Loading...',
-@@ -561,9 +609,12 @@ export default {
+@@ -561,9 +609,12 @@
      collapse: 'Collapse',
      start: 'Start',
      stop: 'Stop',
@@ -442,7 +442,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    mcp: {
      title: 'MCP Servers',
      loadFailed: 'Failed to load MCP servers',
-@@ -588,8 +639,8 @@ export default {
+@@ -588,8 +639,8 @@
      updateFailed: 'Failed to update server',
      saveFailed: 'Save failed',
      serverRemoved: 'Removed "{name}"',
@@ -453,16 +453,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      connectedStatus: 'Connected',
      disconnectedStatus: 'Disconnected',
      disabledStatus: 'Disabled',
-@@ -632,14 +683,14 @@ export default {
-     toolsSelectAll: 'Select all',
-     toolsClearSelection: 'Clear selection',
-     toolsExcludeAll: 'Exclude all',
--    toolsClearExcluded: 'Clear excluded',
-+    toolsClearExcluded: 'Clear excluded'
-   },
- 
-   // Sidebar
-   apiRelay: {
+@@ -642,7 +693,7 @@
+     campaignLabel: "Double 11",
      title: "API Relay",
      headline: "Leading AI models, one gateway",
 -    description: "APIKEY.FAN is Ekko Studio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
@@ -470,7 +462,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "View now",
      apiCompatible: "Official API compatibility",
-@@ -665,22 +716,22 @@ export default {
+@@ -668,22 +719,22 @@
    },
  
    sidebar: {
@@ -505,7 +497,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      history: 'History',
      jobs: 'Jobs',
      kanban: 'Kanban',
-@@ -719,9 +770,9 @@ export default {
+@@ -722,9 +773,9 @@
      groupMonitoring: 'Monitoring',
      groupMonitoringShort: 'Mon',
      groupTools: 'Tools',
@@ -518,7 +510,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      theme: 'Theme',
      settings: 'Settings',
      connected: 'Connected',
-@@ -743,8 +794,1634 @@ export default {
+@@ -746,8 +797,1634 @@
      dockerUpdateTitle: 'Docker Update',
      dockerUpdateGuide: 'In Docker environment, please pull the latest image and recreate the container to upgrade:',
      dockerUpdateNote: 'Your data will persist after the container is recreated.',
@@ -526,7 +518,8 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    matrixChat: 'Matrix Chat',
 +    ideWorkspace: 'IDE Workspace',
 +    systemGroup: 'System'
-+  },
+   },
+-
 +  ide: {
 +    tools: {
 +      title: 'Tools timeline',
@@ -2149,12 +2142,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      alarmHead: 'Breakers & stalls',
 +      alarmEmpty: 'No breaker/stall alarms in the last 7 days'
 +    }
-   },
--
++  },
    agentManager: {
      title: 'Agent Manager',
      subtitle: 'Discover and manage the Agents available on this device.',
-@@ -758,7 +2435,7 @@ export default {
+@@ -761,7 +2438,7 @@
      agentVersion: 'Hermes Agent version',
      path: 'Path',
      userCli: 'Hermes CLI',
@@ -2163,7 +2155,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      readOnly: 'Read only',
      noUserCli: 'No available Hermes CLI was detected',
      unknownVersion: 'Unknown version',
-@@ -767,9 +2444,8 @@ export default {
+@@ -770,9 +2447,8 @@
      ekkoDescription: 'Ekko ships with Studio and does not need separate installation, updates, or removal.',
      version: 'Version',
      codingAgentDescription: 'Studio can install, check for updates, and remove this Agent.',
@@ -2174,7 +2166,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      updateToVersion: 'Update to {version}',
      deleteConfirm: 'Remove {name}?',
      installOperation: 'installation',
-@@ -781,14 +2457,15 @@ export default {
+@@ -784,14 +2460,15 @@
      aiHelpGeneralPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to the Agent and problem. Help me diagnose or manage Agent installation, updates, or removal on this device. Inspect the actual installation source, every resolved executable path, the Node/npm environment, and the applicable package-manager prefix. Ask which Agent and symptom I need help with if context is missing. Preserve user configuration, authentication, and conversation data, and ask for confirmation before making destructive changes.',
      aiHelpPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.',
      legacyDataMigrationTitle: 'Legacy Hermes data found',
@@ -2192,7 +2184,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
  
    runtimeVersions: {
-@@ -807,8 +2484,8 @@ export default {
+@@ -810,8 +2487,8 @@
      dataDirectoryEnvMacos: 'macOS (Desktop / terminal)',
      dataDirectoryEnvLinux: 'Linux (login environment)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -2203,7 +2195,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'Platform',
      currentWebUi: 'Current Web UI',
-@@ -817,10 +2494,10 @@ export default {
+@@ -820,10 +2497,10 @@
      chooseRuntimeDirectory: 'Choose directory',
      resetRuntimeDirectory: 'Use system default',
      runtimeDirectoryHint: 'The current Runtime is copied and verified before local services start on the next restart. Old storage is retained, and future Runtime downloads are stored here.',
@@ -2216,7 +2208,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      active: 'Active',
      installed: 'Installed',
      download: 'Download',
-@@ -839,7 +2516,7 @@ export default {
+@@ -842,7 +2519,7 @@
      remoteLoadFailed: 'Failed to load remote versions',
      downloadTasks: 'Download tasks',
      downloadStarted: 'Download started',
@@ -2225,7 +2217,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime ready',
      restartPromptContent: 'Hermes Runtime {version} has been installed. Restart now to use it?',
      restartLater: 'Later',
-@@ -849,7 +2526,7 @@ export default {
+@@ -852,7 +2529,7 @@
        queued: 'Queued',
        running: 'Running',
        completed: 'Completed',
@@ -2234,7 +2226,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      jobStageStatus: {
        queued: 'Queued',
-@@ -859,7 +2536,7 @@ export default {
+@@ -862,7 +2539,7 @@
        extract: 'Extracting',
        install: 'Installing',
        completed: 'Completed',
@@ -2243,7 +2235,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      jobStage: {
        queued: 'Queued',
-@@ -873,10 +2550,9 @@ export default {
+@@ -876,10 +2553,9 @@
        extractWebUi: 'Extracting Web UI archive',
        installWebUi: 'Installing Web UI',
        completed: 'Completed',
@@ -2256,7 +2248,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    mcuDevices: {
      title: 'Little Box',
      subtitle: 'Manage Little Box voice interaction devices and connections',
-@@ -916,14 +2592,14 @@ export default {
+@@ -919,14 +2595,14 @@
      deleted: 'MCU device deleted',
      deleteFailed: 'Failed to delete MCU device',
      loadFailed: 'Failed to load MCU devices',
@@ -2273,7 +2265,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      app: {
        subtitle: 'Connect the App to your devices',
-@@ -931,9 +2607,9 @@ export default {
+@@ -934,9 +2610,9 @@
        viewList: 'List',
        viewDownload: 'Download',
        viewMessages: 'Message Push',
@@ -2285,7 +2277,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        downloadScan: 'Scan with your phone',
        downloadScanHint: 'Android download available now',
        available: 'Available',
-@@ -972,19 +2648,19 @@ export default {
+@@ -975,19 +2651,19 @@
          internal: 'Internal testing',
          public_beta: 'Public beta',
          paid: 'Paid',
@@ -2308,7 +2300,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        deviceName: 'Device name',
        deviceBrand: 'Device brand',
-@@ -995,13 +2671,13 @@ export default {
+@@ -998,13 +2674,13 @@
        authorizedUser: 'Authorizing user',
        connectionTypes: {
          lan: 'LAN',
@@ -2326,14 +2318,16 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        online: 'Online',
        offline: 'Offline',
        active: 'Active',
-@@ -1012,10 +2688,79 @@ export default {
+@@ -1015,10 +2691,79 @@
        deleted: 'App connection deleted',
        deleteFailed: 'Failed to delete App connection',
        empty: 'No connected Apps',
 -      loadFailed: 'Failed to load connected Apps',
+-    },
 +      loadFailed: 'Failed to load connected Apps'
 +    }
-+  },
+   },
+-
 +  devices: {
 +    title: 'Devices',
 +    subtitle: 'Manage connected devices, pairing requests, and remote access',
@@ -2390,7 +2384,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      approved: 'Approved',
 +      rejected: 'Rejected',
 +      blocked: 'Blocked'
-     },
++    },
 +    outboundStatus: {
 +      none: 'Unpaired',
 +      pending: 'Requested',
@@ -2403,12 +2397,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      desktop: 'Desktop',
 +      custom: 'Custom'
 +    }
-   },
--
++  },
    performance: {
      title: 'Performance',
      subtitle: 'Inspect system resources, bridge broker, workers, and active sessions',
-@@ -1043,9 +2788,8 @@ export default {
+@@ -1046,9 +2791,8 @@
      status: 'Status',
      noWorkers: 'No workers',
      sessionsByProfile: 'Sessions by Profile',
@@ -2419,7 +2412,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    journey: {
      title: 'Learning Journey',
      play: 'Play journey',
-@@ -1075,21 +2819,28 @@ export default {
+@@ -1078,21 +2822,28 @@
      useCount: 'Use count',
      createdBy: 'Created by',
      timestamp: 'Time',
@@ -2457,7 +2450,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    realtimeVoice: {
      title: 'Realtime Voice',
      mode: 'Voice mode',
-@@ -1112,7 +2863,15 @@ export default {
+@@ -1115,7 +2866,15 @@
      finishTurn: 'Finish turn',
      speak: 'Start speaking',
      end: 'End',
@@ -2474,7 +2467,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      hint: {
        idle: 'Tap the center to begin a voice turn',
        paused: 'Turn the microphone back on when you are ready',
-@@ -1121,11 +2880,9 @@ export default {
+@@ -1124,11 +2883,9 @@
        processing: 'Converting your voice into text',
        thinking: 'Your message was sent to the current conversation',
        speaking: 'You can interrupt at any time',
@@ -2488,7 +2481,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    chat: {
      selectMessages: "Select messages",
      messagesSelected: "{count} selected",
-@@ -1181,7 +2938,7 @@ export default {
+@@ -1184,7 +2941,7 @@
        systemUnavailable: "System screenshots are currently unavailable",
        systemWaiting: "Choose a screenshot in the system dialog",
        timedOut: "Screenshot timed out. Please try again.",
@@ -2497,7 +2490,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        sourceUnavailable: "The screen could not be captured. Check your screen recording permissions and try again.",
        failed: "Could not capture the screenshot. Please try again.",
      },
-@@ -1198,6 +2955,19 @@ export default {
+@@ -1201,6 +2958,19 @@
      runUsageEstimatedSpeed: "Est. speed",
      runUsageEstimatedSpeedHint: "Output tokens / (run time − tool time). Overlapping tools count once. Includes startup and network overhead; not measured model speed.",
  
@@ -2517,7 +2510,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      contextRemaining: 'remaining',
      contextClickToEdit: 'Click to edit context length',
      contextEditTitle: 'Edit Context Length',
-@@ -1224,7 +2994,7 @@ export default {
+@@ -1227,7 +2997,7 @@
      slashCommandArgs: {
        message: '<message>',
        title: '<title>',
@@ -2526,7 +2519,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      slashCommands: {
        usage: 'Calculate current session usage',
-@@ -1254,7 +3024,7 @@ export default {
+@@ -1257,7 +3027,7 @@
        reloadMcp: 'Reload MCP servers',
        reloadSkills: 'Reload skill commands',
        bundles: 'Browse skill bundles',
@@ -2535,7 +2528,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1269,7 +3039,7 @@ export default {
+@@ -1272,7 +3042,7 @@
        deleteFailed: 'Failed to delete bundle',
        deleted: 'Bundle deleted',
        noBundles: 'No bundles yet. Create one to combine multiple skills.',
@@ -2544,7 +2537,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      bundleCreator: {
        title: 'Create Skill Bundle',
-@@ -1285,7 +3055,7 @@ export default {
+@@ -1288,7 +3058,7 @@
        skillsRequired: 'Select at least one skill',
        skillsLoadFailed: 'Failed to load skills',
        createFailed: 'Failed to create bundle',
@@ -2553,7 +2546,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      attachFiles: 'Attach files',
      reasoningEffort: {
-@@ -1303,8 +3073,8 @@ export default {
+@@ -1306,8 +3076,8 @@
          high: 'High',
          max: 'Max',
          xhigh: 'Extra high',
@@ -2564,19 +2557,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      autoPlaySpeech: 'Auto-play voice',
      voiceInput: {
-@@ -1320,17 +3090,17 @@ export default {
-         capturing: 'Capturing',
-         transcribing: 'Transcribing',
-         sending: 'Adding to input',
--        error: 'Error',
-+        error: 'Error'
-       },
-       browserSpeechUnsupported: 'Browser speech recognition is not supported in this browser.',
-       browserSpeechFailed: 'Browser speech recognition failed.',
-       browserSpeechFailedWithReason: 'Browser speech recognition failed: {error}.',
-       microphoneUnsupported: 'Microphone capture is not supported in this browser.',
--      microphoneRecordingFailed: 'Microphone recording failed.',
-+      microphoneRecordingFailed: 'Microphone recording failed.'
+@@ -1334,7 +3104,7 @@
      },
      showToolCalls: 'Show tool calls',
      pushEnabled: 'Enable push',
@@ -2585,7 +2566,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      hideToolCalls: 'Hide tool calls',
      messageQueue: 'Message queue',
      removeQueuedMessage: 'Remove queued message',
-@@ -1359,7 +3129,7 @@ export default {
+@@ -1363,7 +3133,7 @@
      searchTitle: 'Search Sessions',
      searchSubtitle: 'Search by title or message content',
      searchScope: 'Search scope: Web UI local session database only. Read-only Hermes history sessions are not included.',
@@ -2594,7 +2575,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      searchPlaceholder: 'Search sessions...',
      searchEmpty: 'Recent sessions',
      searchRecent: 'Recent session',
-@@ -1414,9 +3184,7 @@ export default {
+@@ -1418,9 +3188,7 @@
      newCliChat: 'New CLI',
      deleteSession: 'Delete this session?',
      sessionDeleted: 'Session deleted',
@@ -2605,7 +2586,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      toggleBatchMode: 'Batch selection',
      selectAll: 'Select all',
      confirmBatchDelete: 'Delete {count} selected sessions?',
-@@ -1522,11 +3290,20 @@ export default {
+@@ -1526,11 +3294,20 @@
      resumeSpeech: 'Resume',
      stopSpeech: 'Stop',
      speechNotSupported: 'Voice playback not supported in this browser',
@@ -2629,7 +2610,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      title: 'Workflow',
      profile: 'Profile',
      namePlaceholder: 'Workflow name',
-@@ -1534,7 +3311,7 @@ export default {
+@@ -1538,7 +3315,7 @@
      workspace: {
        title: 'Select Workspace',
        select: 'Select workspace',
@@ -2638,7 +2619,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      actions: {
        newWorkflow: 'New Workflow',
-@@ -1560,99 +3337,356 @@ export default {
+@@ -1564,99 +3341,356 @@
        imported: 'Workflow imported',
        exported: 'Workflow exported',
        importFailed: 'Workflow import failed',
@@ -2985,7 +2966,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
          in: 'Value must be a JSON array; matches when the array contains the actual value.',
 -        not_in: 'Value must be a JSON array; matches when the array does not contain the actual value.',
 +        not_in: 'Value must be a JSON array; matches when the array does not contain the actual value.'
-+      },
+       },
+-      value: 'Value', invalidConditionValue: 'Condition value must be valid JSON', conditionValuePlaceholder: 'JSON: "text", 42, true, ["a"]',
+-      valueType: 'Value type', valueTypes: { string: 'String', number: 'Number', boolean: 'Boolean', null: 'Null', array: 'Array', object: 'Object' },
 +      value: 'Value',
 +      invalidConditionValue: 'Condition value must be valid JSON',
 +      conditionValuePlaceholder: 'JSON: "text", 42, true, ["a"]',
@@ -2997,9 +2980,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +        null: 'Null',
 +        array: 'Array',
 +        object: 'Object'
-       },
--      value: 'Value', invalidConditionValue: 'Condition value must be valid JSON', conditionValuePlaceholder: 'JSON: "text", 42, true, ["a"]',
--      valueType: 'Value type', valueTypes: { string: 'String', number: 'Number', boolean: 'Boolean', null: 'Null', array: 'Array', object: 'Object' },
++      },
        valueTypeHelp: 'Choose how Value is parsed and validated. This editing aid is inferred from the saved JSON value and is not stored separately.',
 -      conditionValuePlaceholders: { string: 'Text, for example APPROVED', number: 'Number, for example 42', boolean: 'true or false', null: 'null', array: 'JSON array, for example ["a", 2]', object: 'JSON object, for example {\'{\'}"status":"ready"{\'}\'}' },
 -      invalidValueTypes: { string: 'Value must be text.', number: 'Value must be a valid number.', boolean: 'Value must be true or false.', null: 'Value must be null.', array: 'Value must be a valid array.', object: 'Value must be a valid object.' },
@@ -3048,7 +3029,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        jsonFieldOperatorHelp: {
          equals: 'Reads the value at {path}. Matches only when that field value exactly equals “{value}”; it never compares the field name.',
-@@ -1660,14 +3694,18 @@ export default {
+@@ -1664,14 +3698,18 @@
          contains: 'Reads the value at {path} and checks whether that field value contains “{value}”; it never searches the field name.',
          not_contains: 'Reads the value at {path}. Matches only when that field value does not contain “{value}”; it never searches the field name.',
          exists: 'Matches when the JSON field at {path} exists. It does not compare the field value.',
@@ -3072,7 +3053,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      batch: {
        toggle: 'Batch selection',
-@@ -1675,7 +3713,7 @@ export default {
+@@ -1679,7 +3717,7 @@
        confirmDelete: 'Delete {count} selected workflows?',
        deleteSuccess: 'Deleted {count} workflows',
        deletePartial: '{failed} workflows failed to delete',
@@ -3081,7 +3062,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      validation: {
        nodesRequired: 'Add at least one node',
-@@ -1688,7 +3726,7 @@ export default {
+@@ -1692,7 +3730,7 @@
        invalidConnectionDirection: 'Connections must go from the right output to the left input',
        orphanNode: 'Node {node} is not connected to the workflow',
        disconnectedFlow: 'The workflow cannot be split into multiple disconnected flows',
@@ -3090,7 +3071,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      node: {
        title: 'Node name',
-@@ -1704,7 +3742,7 @@ export default {
+@@ -1708,7 +3746,7 @@
        joinAnyHelp: 'Runs once when the first incoming route is taken; skips only if every route is decided and none matches. Example: continue after either reviewer approves.',
        promptPlaceholder: 'Describe what this agent should do...',
        skillsPlaceholder: 'Skills, press Enter to add',
@@ -3099,7 +3080,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      status: {
        idle: 'Idle',
-@@ -1715,7 +3753,7 @@ export default {
+@@ -1719,7 +3757,7 @@
        skipped: 'Skipped',
        failed: 'Failed',
        approval_rejected: 'Approval rejected',
@@ -3108,7 +3089,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      runs: {
        title: 'Run Records',
-@@ -1732,26 +3770,26 @@ export default {
+@@ -1736,26 +3774,26 @@
        stopRequested: 'Stop requested',
        stopFailed: 'Failed to stop run',
        delete: 'Delete record',
@@ -3140,7 +3121,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      initialNodes: {
        node1: 'Node 1',
-@@ -1759,7 +3797,7 @@ export default {
+@@ -1763,7 +3801,7 @@
        node3: 'Node 3',
        plan: 'Plan',
        execute: 'Execute',
@@ -3149,7 +3130,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      initialPrompts: {
        node1: 'Enter this node input.',
-@@ -1767,12 +3805,11 @@ export default {
+@@ -1771,12 +3809,11 @@
        node3: 'Enter this node input.',
        plan: 'Break the request into actionable steps.',
        execute: 'Run the implementation steps and produce artifacts.',
@@ -3164,7 +3145,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    kanban: {
      title: 'Kanban Board',
      createTask: 'New Task',
-@@ -1789,6 +3826,22 @@ export default {
+@@ -1793,6 +3830,22 @@
        archived: 'Board archived',
        archiveConfirm: 'Archive the current board?',
        defaultArchiveUnavailable: 'The default board cannot be archived',
@@ -3187,7 +3168,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      columns: {
        triage: 'Triage',
-@@ -1799,7 +3852,7 @@ export default {
+@@ -1803,7 +3856,7 @@
        blocked: 'Blocked',
        review: 'Review',
        done: 'Done',
@@ -3196,7 +3177,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      form: {
        title: 'Title',
-@@ -1831,20 +3884,29 @@ export default {
+@@ -1835,20 +3888,29 @@
        maxRetriesPlaceholder: 'Number of retries',
        goalMaxTurns: 'Goal max turns',
        goalMaxTurnsPlaceholder: 'Maximum turns',
@@ -3229,7 +3210,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      detail: {
        status: 'Status',
-@@ -1867,7 +3929,7 @@ export default {
+@@ -1871,7 +3933,7 @@
        noLog: 'No log found for this task.',
        addComment: 'Add Comment',
        commentPlaceholder: 'Write a task comment...',
@@ -3238,7 +3219,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      action: {
        title: 'Actions',
-@@ -1876,7 +3938,6 @@ export default {
+@@ -1880,7 +3942,6 @@
        block: 'Block',
        blockReason: 'Reason for blocking',
        unblock: 'Unblock',
@@ -3246,7 +3227,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        archiveConfirm: 'Archive this completed task?',
        assign: 'Assign',
        assignTo: 'Assign to...',
-@@ -1887,6 +3948,11 @@ export default {
+@@ -1891,6 +3952,11 @@
        specify: 'Specify',
        loadLog: 'Load Log',
        loadDiagnostics: 'Load Diagnostics',
@@ -3258,7 +3239,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      message: {
        taskCreated: 'Task created',
-@@ -1901,15 +3967,202 @@ export default {
+@@ -1905,15 +3971,202 @@
        taskReassigned: 'Task reassigned',
        taskSpecified: 'Task specified',
        loadFailed: 'Failed to load task',
@@ -3290,6 +3271,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      stats: {
        total: 'Total',
 -      tasks: 'Tasks',
+-    },
 +      tasks: 'Tasks'
 +    },
 +    noAttachments: 'No attachments',
@@ -3322,7 +3304,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      completeConfirm: 'Complete {count} tasks?',
 +      archiveConfirm: 'Archive {count} tasks?',
 +      reclaimFirst: 'Reclaim first'
-     },
++    },
 +    selectAllVisible: 'Select all',
 +    columnSubtitles: {
 +      triage: 'Raw ideas — a specifier will flesh out the spec',
@@ -3451,21 +3433,21 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +      informed: 'Informed'
 +    },
 +    mineOnly: 'Needs my action'
-+  },
+   },
+-
+-  // Jobs
+-  scheduleBuilder: { time: 'Time', hour: 'Hour', minute: 'Minute', weekday: 'Day of week', monthDay: 'Day of month' },
 +  scheduleBuilder: {
 +    time: 'Time',
 +    hour: 'Hour',
 +    minute: 'Minute',
 +    weekday: 'Day of week',
 +    monthDay: 'Day of month'
-   },
--
--  // Jobs
--  scheduleBuilder: { time: 'Time', hour: 'Hour', minute: 'Minute', weekday: 'Day of week', monthDay: 'Day of month' },
++  },
    jobs: {
      title: 'Scheduled Jobs',
      createJob: 'Create Job',
-@@ -1970,7 +4223,7 @@ export default {
+@@ -1974,7 +4227,7 @@
        running: 'Running',
        paused: 'Paused',
        disabled: 'Disabled',
@@ -3474,7 +3456,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      info: {
        model: 'Model',
-@@ -1979,7 +4232,7 @@ export default {
+@@ -1983,7 +4236,7 @@
        lastRun: 'Last Run',
        nextRun: 'Next Run',
        deliver: 'Deliver',
@@ -3483,7 +3465,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      action: {
        pause: 'Pause',
-@@ -1987,24 +4240,21 @@ export default {
+@@ -1991,24 +4244,21 @@
        resume: 'Resume',
        resumeJob: 'Resume job',
        runNow: 'Run Now',
@@ -3512,7 +3494,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      searchPlaceholder: 'Search skills...',
      noMatch: 'No skills match your search',
-@@ -2029,7 +4279,7 @@ export default {
+@@ -2033,7 +4283,7 @@
        builtin: 'Builtin',
        hub: 'Hub',
        local: 'Local',
@@ -3521,7 +3503,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      delete: 'Delete',
      deleteConfirm: 'Delete skill "{name}"? This cannot be undone.',
-@@ -2052,7 +4302,7 @@ export default {
+@@ -2056,7 +4306,7 @@
      importFailed: 'Failed to import skill',
      path: {
        local: 'Local',
@@ -3530,7 +3512,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      externalDirs: {
        manage: 'External dirs',
-@@ -2066,7 +4316,7 @@ export default {
+@@ -2070,7 +4320,7 @@
        saveSuccess: 'External dirs saved',
        saveFailed: 'Save failed',
        loadFailed: 'Failed to load external dirs',
@@ -3539,7 +3521,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      pathCopied: 'Path copied',
      pathCopyFailed: 'Failed to copy path',
-@@ -2098,9 +4348,8 @@ export default {
+@@ -2102,9 +4352,8 @@
      writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
      writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
      writeApprovalRemoveFile: 'This approval removes {file} from skill {skill}.',
@@ -3550,7 +3532,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    plugins: {
      title: 'Plugins',
      refresh: 'Refresh',
-@@ -2126,28 +4375,28 @@ export default {
+@@ -2130,28 +4379,28 @@
        active: 'Enabled / auto',
        inactive: 'Inactive',
        disabled: 'Disabled',
@@ -3586,7 +3568,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      table: {
        plugin: 'Plugin',
-@@ -2156,21 +4405,20 @@ export default {
+@@ -2160,21 +4409,20 @@
        kind: 'Kind',
        capabilities: 'Capabilities',
        path: 'Path / entrypoint',
@@ -3612,7 +3594,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    petdex: {
      title: 'Petdex Pets',
      subtitle: 'Browse the public petdex catalog used by Hermes desktop pets.',
-@@ -2190,11 +4438,9 @@ export default {
+@@ -2194,11 +4442,9 @@
        total: 'Catalog total',
        visible: 'Matching',
        kinds: 'Kinds',
@@ -3626,7 +3608,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    memory: {
      title: 'Memory',
      refresh: 'Refresh',
-@@ -2207,10 +4453,8 @@ export default {
+@@ -2211,10 +4457,8 @@
      profilePlaceholder: 'Write your profile...',
      soul: 'Soul',
      noSoul: 'No soul configuration yet.',
@@ -3638,7 +3620,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    models: {
      importTitle: "Import provider",
      importNotice: "Review the address, model and target Profile. Confirming saves the API key to Studio and selects this model as the Profile default. Nothing is imported before confirmation.",
-@@ -2366,7 +4610,7 @@ export default {
+@@ -2370,7 +4614,7 @@
      customBadge: 'CUSTOM',
      previewBadge: 'PREVIEW',
      disabledBadge: 'UNAVAILABLE',
@@ -3647,7 +3629,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      customModelPlaceholder: 'Unlisted model ID',
      customModelHint: 'For provider-supported models not returned by the API; not a display rename. Press Enter to load.',
      removeCustomModel: 'Remove this unlisted model',
-@@ -2503,17 +4747,15 @@ export default {
+@@ -2507,17 +4751,15 @@
      enterBaseUrl: 'Please enter Base URL first',
      unexpectedFormat: 'Unexpected response format',
      foundModels: 'Found {count} models',
@@ -3667,7 +3649,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    profiles: {
      title: 'Profiles',
-@@ -2578,7 +4820,7 @@ export default {
+@@ -2582,7 +4824,7 @@
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Default avatar restored',
@@ -3676,7 +3658,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      runtime: {
        activeProfile: 'Active: {name}',
-@@ -2655,7 +4897,7 @@ export default {
+@@ -2659,7 +4901,7 @@
      preview: 'Preview',
      previewTitle: 'Your workspace, your atmosphere',
      previewText: 'Text and selection colors update throughout the interface.',
@@ -3685,7 +3667,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    settings: {
      title: 'Settings',
-@@ -2675,6 +4917,7 @@ export default {
+@@ -2679,6 +4921,7 @@
        apiServer: 'API Server',
        models: 'Models',
        voice: 'Voice',
@@ -3693,7 +3675,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      webhooks: {
        title: 'Webhooks',
-@@ -2700,12 +4943,15 @@ export default {
+@@ -2704,12 +4947,15 @@
          receivedAt: 'Received at',
          event: 'Event',
          eventId: 'Event ID',
@@ -3711,7 +3693,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
          runQueued: 'Run queued',
          runStarted: 'Run started',
          toolStarted: 'Tool started',
-@@ -2716,11 +4962,11 @@ export default {
+@@ -2720,11 +4966,11 @@
          clarificationRequested: 'Clarification requested',
          clarificationResolved: 'Clarification resolved',
          completed: 'Run completed',
@@ -3725,7 +3707,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        runtime: {
          idle: 'Idle',
-@@ -2728,7 +4974,7 @@ export default {
+@@ -2732,7 +4978,7 @@
          retrying: 'Retrying',
          success: 'Delivered',
          failed: 'Failed',
@@ -3734,7 +3716,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        actions: {
          add: 'Add Webhook',
-@@ -2738,7 +4984,7 @@ export default {
+@@ -2742,7 +4988,7 @@
          disable: 'Disable',
          refresh: 'Refresh',
          clear: 'Clear',
@@ -3743,7 +3725,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        form: {
          name: 'Name',
-@@ -2759,7 +5005,7 @@ export default {
+@@ -2763,7 +5009,7 @@
          includeUserContentHint: 'User messages may contain sensitive information. This is disabled by default and does not include system prompts, reasoning, tool arguments, or tool results.',
          allowPrivateNetwork: 'Allow private or local network addresses',
          allowPrivateNetworkHint: 'Only enable this for trusted internal endpoints. DNS is checked again for every delivery.',
@@ -3752,7 +3734,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        },
        messages: {
          required: 'Name and URL are required',
-@@ -2774,8 +5020,8 @@ export default {
+@@ -2778,8 +5024,8 @@
          localTestFailed: 'Failed to create the local test receiver',
          inboxLoadFailed: 'Failed to load local test events',
          inboxCleared: 'Local test events cleared',
@@ -3763,7 +3745,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      models: {
        apiKey: 'API Key',
-@@ -2783,7 +5029,7 @@ export default {
+@@ -2787,7 +5033,7 @@
        save: 'Save',
        saved: 'Saved',
        saveFailed: 'Save failed',
@@ -3772,7 +3754,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      display: {
        streaming: 'Stream Responses',
-@@ -2809,7 +5055,7 @@ export default {
+@@ -2813,7 +5059,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -3781,7 +3763,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'Show a system notification when AI finishes',
        notifyOnCompleteMacHint: 'On macOS, allow browser notifications in System Settings.',
        notifyOnCompleteDenied: 'Notification permission was denied',
-@@ -2831,7 +5077,7 @@ export default {
+@@ -2835,7 +5081,7 @@
        chatInputHeightHint: 'Default desktop chat input height in pixels. Mobile keeps auto height.',
        linkOpenTarget: 'Open web links in',
        linkOpenTargetHint: 'Choose where links from messages and Markdown previews open.',
@@ -3790,7 +3772,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'Default browser',
      },
      agent: {
-@@ -2845,7 +5091,7 @@ export default {
+@@ -2849,7 +5095,7 @@
        toolEnforcementHint: 'Control tool call execution mode',
        auto: 'Auto',
        always: 'Always',
@@ -3799,7 +3781,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      gatewayAutoStart: {
        title: 'Gateway Auto-Start',
-@@ -2865,7 +5111,7 @@ export default {
+@@ -2869,7 +5115,7 @@
        includeHint: 'Comma-separated profile names. In include mode, an empty list starts none.',
        exclude: 'Excluded profiles',
        excludeHint: 'Comma-separated profile names to skip after the include/all policy is applied.',
@@ -3808,7 +3790,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      proxy: {
        title: 'Gateway Proxy',
-@@ -2878,7 +5124,7 @@ export default {
+@@ -2882,7 +5128,7 @@
        allProxyHint: 'Fallback proxy used when a protocol-specific proxy is not set.',
        noProxy: 'NO_PROXY',
        noProxyHint: 'Comma-separated hosts or domains that should bypass the proxy.',
@@ -3817,7 +3799,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      memory: {
        enabled: 'Enable Memory',
-@@ -2888,7 +5134,7 @@ export default {
+@@ -2892,7 +5138,7 @@
        charLimit: 'Memory Char Limit',
        charLimitHint: 'Max characters for MEMORY.md',
        userCharLimit: 'User Profile Char Limit',
@@ -3826,7 +3808,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      compression: {
        enabled: 'Enable Compression',
-@@ -2900,7 +5146,7 @@ export default {
+@@ -2904,7 +5150,7 @@
        protectLastN: 'Protect Recent Messages',
        protectLastNHint: 'Keep this many latest messages uncompressed',
        protectFirstN: 'Protect First Messages',
@@ -3835,7 +3817,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      session: {
        mode: 'Reset Mode',
-@@ -2949,12 +5195,12 @@ export default {
+@@ -2953,12 +5199,12 @@
        writeApprovalRequestedOldString: 'Requested old_string',
        writeApprovalCurrentReadFailed: 'The current {file} could not be read as UTF-8 text.',
        writeApprovalDeleteSkill: 'This approval deletes skill {skill}.',
@@ -3850,7 +3832,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      apiServer: {
        enable: 'Enable',
-@@ -2966,7 +5212,7 @@ export default {
+@@ -2970,7 +5216,7 @@
        key: 'Key',
        keyHint: 'API access key',
        cors: 'CORS Origins',
@@ -3859,7 +3841,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      lockedIps: {
        title: 'Locked IPs',
-@@ -2980,8 +5226,8 @@ export default {
+@@ -2984,8 +5230,8 @@
        type: {
          password: 'Password',
          token: 'API token',
@@ -3870,7 +3852,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      userAvatar: {
        title: 'User Avatar',
-@@ -2994,7 +5240,7 @@ export default {
+@@ -2998,7 +5244,7 @@
        saveSuccess: 'Avatar saved',
        saveFailed: 'Failed to save avatar',
        resetSuccess: 'Avatar reset to default',
@@ -3879,7 +3861,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      },
      voice: {
        activeTtsApi: 'Active TTS API',
-@@ -3029,10 +5275,10 @@ export default {
+@@ -3033,10 +5279,10 @@
          failed: 'Download failed',
        },
        hermesConfigTitle: 'Hermes Agent configuration',
@@ -3892,7 +3874,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        providerSpeed: 'Speed',
        providerSampleRate: 'Sample rate',
        providerBitRate: 'Bit rate',
-@@ -3046,7 +5292,7 @@ export default {
+@@ -3050,7 +5296,7 @@
        optionDisabled: 'Disabled',
        nativeProvider: 'Hermes native provider',
        selectNativeProvider: 'Select a Hermes native provider',
@@ -3901,7 +3883,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
-@@ -3203,27 +5449,16 @@ export default {
+@@ -3207,27 +5453,16 @@
        sttTestEmpty: 'No audio was captured for the STT test.',
        sttTestSucceeded: 'STT test succeeded.',
        sttTestFailed: 'STT test failed: {error} — {hint}',
@@ -3929,7 +3911,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        sttFailureHintGeneric: 'Check API key, model, and provider account access, then retry.',
        sttTestRecordFailed: 'Could not start microphone recording: {error}',
        sttTestTranscript: 'Transcript: {text}',
-@@ -3233,13 +5468,9 @@ export default {
+@@ -3237,13 +5472,9 @@
        providerOpenai: 'OpenAI TTS',
        providerCustom: 'Custom Endpoint (OpenAI-compatible)',
        providerEdge: 'Edge TTS (Free, no API Key)',
@@ -3943,7 +3925,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        openaiKey: 'API Key',
        openaiKeyHint: 'Your OpenAI API key with TTS access',
        openaiUrl: 'API Base URL',
-@@ -3248,8 +5479,6 @@ export default {
+@@ -3252,8 +5483,6 @@
        openaiModelHint: 'tts-1 (faster) / tts-1-hd (higher quality)',
        openaiVoice: 'Voice',
        openaiVoiceHint: 'Voice to use for synthesis',
@@ -3952,7 +3934,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        customHint: 'Use any OpenAI-compatible TTS API — works with GPT-SoVITS, CosyVoice, etc.',
        customUrl: 'API URL',
        customUrlHint: 'Base URL of your TTS service',
-@@ -3257,7 +5486,6 @@ export default {
+@@ -3261,7 +5490,6 @@
        customApiKey: 'API Key (Optional)',
        customApiKeyHint: 'Some custom endpoints require authentication',
        customApiKeyPlaceholder: 'Leave blank if not needed',
@@ -3960,7 +3942,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        edgeHint: 'Powered by Microsoft Edge TTS (node-edge-tts).',
        edgeUrl: 'Adapter URL',
        edgeUrlHint: 'Address of your Edge TTS adapter, e.g. http://127.0.0.1:9882',
-@@ -3268,8 +5496,6 @@ export default {
+@@ -3272,8 +5500,6 @@
        edgeRateHint: 'Adjust speech speed (0.5x ~ 2.0x)',
        edgePitch: 'Pitch',
        edgePitchHint: 'Adjust speech pitch (-20 ~ +20 Hz)',
@@ -3969,7 +3951,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        testTitle: 'Test Voice',
        testText: 'Test Text',
        testTextPlaceholder: 'Enter text to test...',
-@@ -3277,8 +5503,6 @@ export default {
+@@ -3281,8 +5507,6 @@
        testButton: 'Test',
        testButtonPlaying: 'Playing...',
        testFailed: 'Test failed: {error}',
@@ -3978,13 +3960,14 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
        providerMimo: 'MiMo TTS',
        mimoHint: 'Xiaomi MiMo TTS — supports preset voices, voice design, and voice clone modes',
        mimoApiKey: 'API Key',
-@@ -3307,41 +5531,51 @@ export default {
+@@ -3311,41 +5535,51 @@
        mimoCloneAudioClear: 'Clear',
        mimoStylePrompt: 'Style Prompt',
        mimoStylePromptHint: 'Optional — describe the speaking style in natural language',
 -      mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace',
+-    },
 +      mimoStylePromptPlaceholder: 'e.g., Bright and bouncy tone, fast pace'
-     },
++    },
 +    matrixIdentity: {
 +      title: 'Matrix Identity',
 +      userId: 'Matrix User ID',
@@ -4061,7 +4044,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    codingAgents: {
      nativeUsage: "Usage: input {inputTokens}, output {outputTokens}, cache read {cacheReadTokens}, cache write {cacheWriteTokens}, total {totalTokens} tokens.",
      nativeUsageUnknown: "Usage: unknown. No native token usage has been reported for this session.",
-@@ -3416,31 +5650,29 @@ export default {
+@@ -3420,31 +5654,29 @@
      launchConfigDir: "Launch config directory",
      launchCommand: "Launch command",
      table: {
@@ -4111,7 +4094,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    platform: {
      requireMention: "Require {'@'}Mention",
      requireMentionGroup: "Require {'@'}mention in groups to respond",
-@@ -3521,7 +5753,6 @@ export default {
+@@ -3525,7 +5757,6 @@
      qrFetching: 'Fetching QR code...',
      qrScanHint: 'Scan with WeChat to login',
      qrScanedHint: 'Scaned, please confirm on phone...',
@@ -4119,7 +4102,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ Open Platform Bot App ID',
      qqAppSecret: 'App Secret',
-@@ -3530,17 +5761,13 @@ export default {
+@@ -3534,17 +5765,13 @@
      qqMarkdownHint: 'Enable Markdown formatted messages (some clients may not support)',
      qqSandbox: 'Sandbox Mode',
      qqSandboxHint: 'Enable sandbox environment (for testing)',
@@ -4139,7 +4122,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    terminal: {
      sessions: 'Sessions',
      newTab: 'New Terminal',
-@@ -3550,10 +5777,8 @@ export default {
+@@ -3554,10 +5781,8 @@
      noSessions: 'No terminal sessions',
      connectionFailed: 'Terminal service connection failed',
      connectionClosed: 'Terminal connection closed',
@@ -4149,9 +4132,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 -
 -  // Group Chat
    groupChat: {
-     messageAlreadySummarized: "Already summarized; cannot delete",
-     messageSummaryBoundaryUnknown: "Summary boundary unavailable; deletion disabled",
-@@ -3563,10 +5788,18 @@ export default {
+     migrationNoticeTitle: "Group chat is being retired",
+     migrationNoticeMessage: "The group chat feature will be retired soon. We recommend reviewing your existing group tasks, Agent settings, and important context, and moving this work to Bot to continue there.",
+@@ -3570,10 +5795,18 @@
      routingSuggested: 'JEV suggests {agent}',
      routingUseSuggestion: 'Assign',
      routingAutoQueued: 'JEV assigned {agent}',
@@ -4174,7 +4157,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      agentPreset: 'Agent preset',
      agentPresets: 'Agent presets',
      agentPresetPlaceholder: 'Select a preset',
-@@ -3686,7 +5919,12 @@ export default {
+@@ -3693,7 +5926,12 @@
      allAgents: 'All Agents',
      addAgent: 'Add Agent',
      agentType: 'Agent',
@@ -4188,7 +4171,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      selectProfile: 'Select a profile',
      agentAdded: 'Agent added',
      selectRoomFirst: 'Please select a room first',
-@@ -3770,7 +6008,12 @@ export default {
+@@ -3777,7 +6015,12 @@
      summaryConfigurationOwnerRequired: 'This room has no summarizer yet. Ask a room administrator to configure it before sending messages.',
      saveSummaryConfig: 'Save summary settings',
      currentSummary: 'Current Summary',
@@ -4202,7 +4185,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      summaryUpdatedAt: 'Last updated',
      summarizedTurns: 'Summarized effective utterances',
      summaryAnchor: 'Summary anchor',
-@@ -3782,10 +6025,8 @@ export default {
+@@ -3789,10 +6032,8 @@
      saveSummary: 'Save summary',
      summaryUpdated: 'Summary updated',
      summaryNever: 'Never',
@@ -4214,7 +4197,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    usage: {
      origin: {
        label: "Usage category",
-@@ -3863,7 +6104,20 @@ export default {
+@@ -3870,7 +6111,20 @@
      cacheHitRate: 'Cache Hit Rate',
      modelBreakdown: 'Model Breakdown',
      agentBreakdown: 'Agent Breakdown',
@@ -4236,7 +4219,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      dailyTrend: 'Daily Usage',
      date: 'Date',
      tokens: 'Tokens',
-@@ -3872,7 +6126,7 @@ export default {
+@@ -3879,7 +6133,7 @@
      cacheWrite: 'Cache Write',
      sessions: 'Sessions',
      cost: 'Cost',
@@ -4245,7 +4228,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    },
    skillsUsage: {
      title: 'Skills Usage',
-@@ -3893,10 +6147,8 @@ export default {
+@@ -3900,10 +6154,8 @@
      lastUsed: 'Last Used',
      noData: 'No skill usage data',
      loadFailed: 'Failed to load skill usage',
@@ -4257,7 +4240,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    files: {
      title: 'Files',
      fileTree: 'File Tree',
-@@ -3964,8 +6216,8 @@ export default {
+@@ -3971,8 +6223,8 @@
      zoom: 'Zoom',
      pdfPageLimit: 'Preview is limited to the first {count} pages.',
      tableTruncated: 'The preview was truncated to keep the interface responsive. Download the file to inspect all rows and columns.',
@@ -4267,9 +4250,9 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
    download: {
      downloading: 'Downloading...',
      downloadFailed: 'Download failed',
-@@ -4044,4 +6296,815 @@ export default {
-     new_0_7_37_10: "Added Windows ARM64 desktop installer build support (#3428)",
-     new_0_7_37_11: "Fixed TOS 7 clean installation, portal paths and service restart policies, reducing reliance on the host environment and pre-created users (#3413, #3431)",
+@@ -4012,4 +6264,815 @@
+     new_0_8_15_6: "Refresh the English and Chinese README screenshots with the running UI’s new-chat Agent carousel, visual workflow and complete Agent Manager; remove outdated example images (#3661)",
+     new_0_8_15_7: "Store development and CI task reports and test output outside repository worktrees, with directory commands and read-only location checks; update coverage, browser reports and upload paths without automatically deleting files (#3657)",
    },
 +  loopScenes: {
 +    manage: {
@@ -5083,10 +5066,11 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
 +    }
 +  },
  }
+
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
-@@ -250,170 +250,206 @@ export default {
+@@ -250,170 +250,206 @@
        "unavailable": "操作未完成，请检查与 Studio 的连接后重试。"
      }
    },
@@ -5140,10 +5124,6 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 -    "removeConfirm": "从后续启动中卸载 {name}？",
 -    "conflict": "配置已被其他操作修改。草稿已保留，请对比最新版本后重新加载。",
 -    "missingDependency": "请先安装 DSH 和 pnpm。",
--  },
--  announcements: {"later": "稍后", "details": "查看详情", "gotIt": "知道了"},
--  taskPlan: {"title": "任务计划", "progress": "{completed}/{total} 已完成", "pending": "未完成", "in_progress": "进行中", "completed": "已完成", "running": "执行中", "ended": "本次运行已结束，剩余步骤未完成", "interrupted": "已中断，剩余步骤未完成", "failed": "运行失败，剩余步骤未完成"},
--  agentAutoUpdate: { label: '自动更新' },
 +    configurationTab: '插件配置',
 +    listTab: '插件列表',
 +    webPackages: '已安装的 Web 插件',
@@ -5171,7 +5151,10 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    removeConfirm: '从后续启动中卸载 {name}？',
 +    conflict: '配置已被其他操作修改。草稿已保留，请对比最新版本后重新加载。',
 +    missingDependency: '请先安装 DSH 和 pnpm。'
-+  },
+   },
+-  announcements: {"later": "稍后", "details": "查看详情", "gotIt": "知道了"},
+-  taskPlan: {"title": "任务计划", "progress": "{completed}/{total} 已完成", "pending": "未完成", "in_progress": "进行中", "completed": "已完成", "running": "执行中", "ended": "本次运行已结束，剩余步骤未完成", "interrupted": "已中断，剩余步骤未完成", "failed": "运行失败，剩余步骤未完成"},
+-  agentAutoUpdate: { label: '自动更新' },
 +  announcements: {
 +    later: '稍后',
 +    details: '查看详情',
@@ -5452,7 +5435,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
    socialMessages: socialMessagesZh,
    browser: {
-@@ -444,7 +480,7 @@ export default {
+@@ -444,7 +480,7 @@
      remoteOwnerConnecting: '正在连接',
  
  
@@ -5461,7 +5444,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      back: '后退', forward: '前进', reload: '刷新', stop: '停止', addressPlaceholder: '搜索或输入网址',
      undoAnnotation: '撤销上一个', deleteAnnotation: '删除标注 {index}',
      selectElement: '选择元素', selectRegion: '框选区域', annotationPlaceholder: '描述希望 Agent 检查或修改的内容…', selectionData: '浏览器选区数据', annotationAdded: '截图已添加到对话输入框', annotationCount: '已标注 {count} 处', annotationLabel: '标注 {index}', clearAnnotations: '清除标注', finishAnnotation: '完成',
-@@ -456,7 +492,7 @@ export default {
+@@ -456,7 +492,7 @@
    },
    // 登录
    login: {
@@ -5470,7 +5453,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      description: '输入用户名和密码以继续。',
      placeholder: '访问令牌',
      submit: '登录',
-@@ -500,8 +536,17 @@ export default {
+@@ -500,8 +536,17 @@
      defaultCredentialMessage: '当前登录账户仍在使用默认用户名或默认密码。为了避免未授权访问，请尽快进入当前账户修改用户名和密码。',
      defaultCredentialAction: '去修改',
      defaultCredentialLater: '稍后提醒',
@@ -5489,7 +5472,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    users: {
      title: '账户管理',
      description: '创建用户、分配角色，并控制普通管理员可访问的配置。',
-@@ -522,15 +567,18 @@ export default {
+@@ -522,15 +567,18 @@
      disable: '禁用',
      roles: {
        superAdmin: '超级管理员',
@@ -5499,8 +5482,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      status: {
        active: '启用',
 -      disabled: '禁用',
+-    },
 +      disabled: '禁用'
-     },
++    },
 +    matrixUserIdPlaceholder: "{'@'}user:matrix.example.com",
 +    matrixUserId: 'Matrix 用户 ID',
 +    displayName: '显示名称',
@@ -5512,7 +5496,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    common: {
      close: '关闭',
      loading: '加载中...',
-@@ -561,10 +609,12 @@ export default {
+@@ -561,10 +609,12 @@
      collapse: '收起',
      start: '启动',
      stop: '停止',
@@ -5528,7 +5512,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    mcp: {
      title: 'MCP 服务器',
      loadFailed: '加载 MCP 服务器失败',
-@@ -589,8 +639,8 @@ export default {
+@@ -589,8 +639,8 @@
      updateFailed: '更新服务器失败',
      saveFailed: '保存失败',
      serverRemoved: '已移除 "{name}"',
@@ -5539,15 +5523,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      connectedStatus: '已连接',
      disconnectedStatus: '未连接',
      disabledStatus: '已禁用',
-@@ -633,13 +683,13 @@ export default {
-     toolsSelectAll: '全选',
-     toolsClearSelection: '取消全选',
-     toolsExcludeAll: '全部排除',
--    toolsClearExcluded: '清空排除',
-+    toolsClearExcluded: '清空排除'
-   },
- 
-   apiRelay: {
+@@ -642,7 +692,7 @@
+     campaignLabel: "双十一",
      title: "API 中转",
      headline: "一站接入主流 AI 模型",
 -    description: "APIKEY.FAN 是 Ekko Studio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
@@ -5555,21 +5532,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      zhipu: "智谱",
      viewNow: "立即查看",
      apiCompatible: "官方 API 兼容",
-@@ -665,22 +715,22 @@ export default {
-   },
+@@ -669,21 +719,21 @@
  
    sidebar: {
-+    desktopUpdatePreparing: '正在准备更新',
-+    desktopUpdateStopping: '正在停止下载…',
-+    desktopUpdateReady: '更新已就绪',
-+    desktopUpdateFailed: '下载失败',
-+    desktopUpdateInstalling: '正在重启更新…',
-+    desktopUpdateInstall: '重启更新',
-+    desktopUpdateActionFailed: '操作失败，请重试。',
-+    desktopUpdateStop: '停止下载',
-+    desktopUpdateStopped: '下载已停止',
-+    desktopUpdateRetry: '重新下载',
-+    desktopUpdateDownloading: '正在下载更新',
      resize: '调整侧边栏宽度',
 -    desktopUpdatePreparing: "正在准备更新",
 -    desktopUpdateStopping: "正在停止下载…",
@@ -5582,15 +5547,26 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 -    desktopUpdateStopped: "下载已停止",
 -    desktopUpdateRetry: "重新下载",
 -    desktopUpdateDownloading: "正在下载更新",
++    desktopUpdatePreparing: '正在准备更新',
++    desktopUpdateStopping: '正在停止下载…',
++    desktopUpdateReady: '更新已就绪',
++    desktopUpdateFailed: '下载失败',
++    desktopUpdateInstalling: '正在重启更新…',
++    desktopUpdateInstall: '重启更新',
++    desktopUpdateActionFailed: '操作失败，请重试。',
++    desktopUpdateStop: '停止下载',
++    desktopUpdateStopped: '下载已停止',
++    desktopUpdateRetry: '重新下载',
++    desktopUpdateDownloading: '正在下载更新',
      chat: '对话',
      backToChat: '返回',
      search: '搜索',
--    apiRelay: '饲料',
+-    apiRelay: '中转站',
 +    apiRelay: 'API 中继（外链）',
      history: '历史',
      jobs: '任务',
      kanban: '看板',
-@@ -719,9 +769,9 @@ export default {
+@@ -722,9 +772,9 @@
      groupMonitoring: '监控',
      groupMonitoringShort: '监控',
      groupTools: '工具',
@@ -5603,7 +5579,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      theme: '主题',
      settings: '设置',
      connected: '已连接',
-@@ -743,8 +793,1634 @@ export default {
+@@ -746,8 +796,1634 @@
      dockerUpdateTitle: 'Docker 升级',
      dockerUpdateGuide: '当前运行在 Docker 环境中，请拉取最新镜像并重建容器来升级：',
      dockerUpdateNote: '数据会持续保留，重建容器不会丢失数据。',
@@ -5611,7 +5587,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +    matrixChat: 'Matrix 聊天',
 +    ideWorkspace: 'IDE 工作台',
 +    systemGroup: '系统'
-+  },
+   },
+-
 +  ide: {
 +    tools: {
 +      title: '工具时间线',
@@ -7234,12 +7211,11 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      alarmHead: '熔断与停滞',
 +      alarmEmpty: '近 7 天无熔断/停滞告警'
 +    }
-   },
--
++  },
    agentManager: {
      title: 'Agent 管理',
      subtitle: '统一发现和管理这台设备上的 Agent。',
-@@ -767,7 +2443,6 @@ export default {
+@@ -770,7 +2446,6 @@
      ekkoDescription: 'Ekko 随 Studio 提供，无需单独安装、升级或删除。',
      version: '版本',
      codingAgentDescription: '可由 Studio 安装、检查更新和删除。',
@@ -7247,7 +7223,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      cursorDescription: '请从 https://cursor.com/install 安装 Cursor CLI（`agent`），然后刷新。Studio 不会用 npm 安装。',
      cursorNoManagedConfig: '启动不会改写 ~/.cursor/mcp.json。托管服务写在本次会话的运行时副本里。',
      updateToVersion: '更新到 {version}',
-@@ -781,14 +2456,15 @@ export default {
+@@ -784,14 +2459,15 @@
      aiHelpGeneralPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据 Agent 和问题类型选择合适的 reference。帮我排查或管理这台设备上的 Agent 安装、更新或删除问题。请检查实际安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。如果上下文不足，请先询问我要处理的 Agent 和具体症状。不要删除用户配置、认证信息或会话数据，任何破坏性修改都必须再次征得用户确认。',
      aiHelpPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。',
      legacyDataMigrationTitle: '发现旧版 Hermes 数据',
@@ -7265,7 +7241,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
  
    runtimeVersions: {
-@@ -807,8 +2483,8 @@ export default {
+@@ -810,8 +2486,8 @@
      dataDirectoryEnvMacos: 'macOS（桌面端 / 终端）',
      dataDirectoryEnvLinux: 'Linux（登录环境）',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -7276,7 +7252,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: '平台',
      currentWebUi: '当前 Web UI',
-@@ -817,10 +2493,10 @@ export default {
+@@ -820,10 +2496,10 @@
      chooseRuntimeDirectory: '选择目录',
      resetRuntimeDirectory: '恢复系统默认',
      runtimeDirectoryHint: '下次重启时会在本地服务启动前复制并校验当前 Runtime，旧目录会保留；后续 Runtime 下载也会保存在这里。',
@@ -7289,7 +7265,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      active: '已启用',
      installed: '已安装',
      download: '下载',
-@@ -839,7 +2515,7 @@ export default {
+@@ -842,7 +2518,7 @@
      remoteLoadFailed: '远程版本加载失败',
      downloadTasks: '下载任务',
      downloadStarted: '已开始下载',
@@ -7298,7 +7274,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime 已就绪',
      restartPromptContent: 'Hermes Runtime {version} 已安装完成，是否立即重启并使用该版本？',
      restartLater: '稍后',
-@@ -849,7 +2525,7 @@ export default {
+@@ -852,7 +2528,7 @@
        queued: '排队中',
        running: '下载中',
        completed: '已完成',
@@ -7307,7 +7283,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      jobStageStatus: {
        queued: '排队中',
-@@ -859,7 +2535,7 @@ export default {
+@@ -862,7 +2538,7 @@
        extract: '解压中',
        install: '安装中',
        completed: '已完成',
@@ -7316,7 +7292,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      jobStage: {
        queued: '排队中',
-@@ -873,10 +2549,9 @@ export default {
+@@ -876,10 +2552,9 @@
        extractWebUi: '正在解压 Web UI 压缩包',
        installWebUi: '正在安装 Web UI',
        completed: '已完成',
@@ -7329,7 +7305,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    mcuDevices: {
      title: '小方盒',
      subtitle: '管理小方盒语音交互设备及其连接',
-@@ -916,14 +2591,14 @@ export default {
+@@ -919,14 +2594,14 @@
      deleted: 'MCU 设备已删除',
      deleteFailed: '删除 MCU 设备失败',
      loadFailed: '加载 MCU 设备失败',
@@ -7346,7 +7322,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      app: {
        subtitle: '让 App 连接你的设备',
-@@ -931,9 +2606,9 @@ export default {
+@@ -934,9 +2609,9 @@
        viewList: '列表',
        viewDownload: '下载',
        viewMessages: '消息推送',
@@ -7358,7 +7334,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        downloadScan: '手机扫码下载',
        downloadScanHint: '当前提供 Android 安装包',
        available: '可下载',
-@@ -972,19 +2647,19 @@ export default {
+@@ -975,19 +2650,19 @@
          internal: '内测',
          public_beta: '公测',
          paid: '收费',
@@ -7381,7 +7357,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        deviceName: '设备名称',
        deviceBrand: '设备品牌',
-@@ -995,13 +2670,13 @@ export default {
+@@ -998,13 +2673,13 @@
        authorizedUser: '授权用户',
        connectionTypes: {
          lan: '局域网',
@@ -7399,14 +7375,16 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        online: '在线',
        offline: '离线',
        active: '有效',
-@@ -1012,10 +2687,79 @@ export default {
+@@ -1015,10 +2690,79 @@
        deleted: 'App 连接已删除',
        deleteFailed: '删除 App 连接失败',
        empty: '暂无已连接 App',
 -      loadFailed: '加载已连接 App 失败',
+-    },
 +      loadFailed: '加载已连接 App 失败'
 +    }
-+  },
+   },
+-
 +  devices: {
 +    title: '设备',
 +    subtitle: '管理已连接设备、配对请求及远程访问',
@@ -7470,18 +7448,17 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      approved: '已配对',
 +      rejected: '已拒绝',
 +      blocked: '被拉黑'
-     },
++    },
 +    endpoint: {
 +      web: 'Web 端',
 +      desktop: '桌面端',
 +      custom: '自定义'
 +    }
-   },
--
++  },
    performance: {
      title: '性能监控',
      subtitle: '查看系统资源、Bridge Broker、Workers 和活跃会话',
-@@ -1043,9 +2787,8 @@ export default {
+@@ -1046,9 +2790,8 @@
      status: '状态',
      noWorkers: '暂无 Worker',
      sessionsByProfile: '按 Profile 统计会话',
@@ -7492,7 +7469,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    journey: {
      title: '学习轨迹',
      play: '播放学习轨迹',
-@@ -1075,21 +2818,28 @@ export default {
+@@ -1078,21 +2821,28 @@
      useCount: '使用次数',
      createdBy: '创建来源',
      timestamp: '时间',
@@ -7530,7 +7507,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    realtimeVoice: {
      title: '实时语音',
      mode: '语音模式',
-@@ -1112,7 +2862,15 @@ export default {
+@@ -1115,7 +2865,15 @@
      finishTurn: '结束本轮',
      speak: '开始说话',
      end: '结束',
@@ -7547,7 +7524,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      hint: {
        idle: '轻触中央区域开始一轮语音',
        paused: '准备好后重新打开麦克风',
-@@ -1121,11 +2879,9 @@ export default {
+@@ -1124,11 +2882,9 @@
        processing: '正在将你的语音转换为文字',
        thinking: '消息已发送到当前对话',
        speaking: '你可以随时打断回答',
@@ -7561,7 +7538,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    chat: {
      selectMessages: "多选消息",
      messagesSelected: "已选 {count} 条",
-@@ -1181,7 +2937,7 @@ export default {
+@@ -1184,7 +2940,7 @@
        systemUnavailable: "系统截图当前不可用",
        systemWaiting: "请在系统界面选择截图区域",
        timedOut: "截图等待超时，请重试。",
@@ -7570,7 +7547,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        sourceUnavailable: "无法获取屏幕画面，请检查屏幕录制权限后重试。",
        failed: "截屏失败，请重试。",
      },
-@@ -1198,6 +2954,19 @@ export default {
+@@ -1201,6 +2957,19 @@
      runUsageEstimatedSpeed: "估算速度",
      runUsageEstimatedSpeedHint: "输出 token /（本轮耗时 − 工具占用时间）。并行工具重叠时间只扣一次；仍包含启动、网络等开销，非实测模型速度。",
  
@@ -7590,7 +7567,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      contextRemaining: '剩余',
      contextClickToEdit: '点击编辑上下文长度',
      contextEditTitle: '编辑上下文长度',
-@@ -1224,7 +2993,7 @@ export default {
+@@ -1227,7 +2996,7 @@
      slashCommandArgs: {
        message: '<消息>',
        title: '<标题>',
@@ -7599,7 +7576,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      slashCommands: {
        usage: '计算当前会话用量',
-@@ -1254,7 +3023,7 @@ export default {
+@@ -1257,7 +3026,7 @@
        reloadMcp: '重载 MCP 服务器',
        reloadSkills: '重载技能命令',
        bundles: '查看 Skill Bundle',
@@ -7608,7 +7585,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      bundlePicker: {
        title: 'Skill Bundles',
-@@ -1269,7 +3038,7 @@ export default {
+@@ -1272,7 +3041,7 @@
        deleteFailed: '删除 Bundle 失败',
        deleted: 'Bundle 已删除',
        noBundles: '还没有 Bundle，可创建一个来组合多个 Skills。',
@@ -7617,7 +7594,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      bundleCreator: {
        title: '创建 Skill Bundle',
-@@ -1285,7 +3054,7 @@ export default {
+@@ -1288,7 +3057,7 @@
        skillsRequired: '请至少选择一个 Skill',
        skillsLoadFailed: '加载 Skills 失败',
        createFailed: '创建 Bundle 失败',
@@ -7626,7 +7603,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      attachFiles: '添加附件',
      reasoningEffort: {
-@@ -1303,8 +3072,8 @@ export default {
+@@ -1306,8 +3075,8 @@
          high: '高',
          max: 'Max',
          xhigh: '超高',
@@ -7637,19 +7614,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      autoPlaySpeech: '自动播放语音',
      voiceInput: {
-@@ -1320,17 +3089,17 @@ export default {
-         capturing: '正在聆听',
-         transcribing: '正在转写',
-         sending: '正在插入输入框',
--        error: '错误',
-+        error: '错误'
-       },
-       browserSpeechUnsupported: '当前浏览器不支持内置语音识别。',
-       browserSpeechFailed: '浏览器语音识别失败。',
-       browserSpeechFailedWithReason: '浏览器语音识别失败：{error}。',
-       microphoneUnsupported: '当前浏览器不支持麦克风录音。',
--      microphoneRecordingFailed: '麦克风录音失败。',
-+      microphoneRecordingFailed: '麦克风录音失败。'
+@@ -1334,7 +3103,7 @@
      },
      showToolCalls: '显示工具调用',
      pushEnabled: '是否推送',
@@ -7658,7 +7623,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      hideToolCalls: '隐藏工具调用',
      messageQueue: '消息队列',
      removeQueuedMessage: '移除队列消息',
-@@ -1359,7 +3128,7 @@ export default {
+@@ -1363,7 +3132,7 @@
      searchTitle: '搜索会话',
      searchSubtitle: '按标题或消息内容搜索',
      searchScope: '搜索范围：仅 Web UI 本地会话库；不包含只读 Hermes 历史会话。',
@@ -7667,7 +7632,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      searchPlaceholder: '搜索会话...',
      searchEmpty: '最近会话',
      searchRecent: '最近会话',
-@@ -1414,9 +3183,7 @@ export default {
+@@ -1418,9 +3187,7 @@
      newCliChat: '新建 CLI',
      deleteSession: '确定删除此会话？',
      sessionDeleted: '会话已删除',
@@ -7678,7 +7643,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      toggleBatchMode: '批量选择',
      selectAll: '全选',
      confirmBatchDelete: '确定删除选中的 {count} 个会话？',
-@@ -1522,11 +3289,20 @@ export default {
+@@ -1526,11 +3293,20 @@
      resumeSpeech: '继续',
      stopSpeech: '停止',
      speechNotSupported: '此浏览器不支持语音播放',
@@ -7702,7 +7667,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      title: '工作流',
      profile: '配置',
      namePlaceholder: '工作流名称',
-@@ -1534,7 +3310,7 @@ export default {
+@@ -1538,7 +3314,7 @@
      workspace: {
        title: '选择工作区',
        select: '选择工作区',
@@ -7711,7 +7676,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      actions: {
        newWorkflow: '新建工作流',
-@@ -1560,145 +3336,356 @@ export default {
+@@ -1564,145 +3340,356 @@
        imported: 'Workflow 导入成功',
        exported: 'Workflow 导出成功',
        importFailed: 'Workflow 导入失败',
@@ -7830,7 +7795,6 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 -        weekly: "每周",
 -        monthly: "每月",
 -        custom: "自定义 Cron 表达式（高级）",
--      },
 +        everyMinute: '每分钟',
 +        every5Minutes: '每 5 分钟',
 +        every30Minutes: '每 30 分钟',
@@ -7840,15 +7804,8 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        monthly: '每月',
 +        custom: '自定义 Cron 表达式（高级）'
 +      }
-     },
-     evidence: {
--      historyPage: '运行历史', detailsPage: '运行详情', backToRuns: '返回运行历史', resultStatus: '状态', duration: '耗时', budgetLabel: '预算', actualExecution: '实际执行', otherJudgments: '其他判断', loopEvents: '循环事件', evaluatedNotExecuted: '已判断，未执行',
--      ariaLabel: 'Workflow 执行详情', title: '执行详情', count: '{count} 条',
--      intro: '展示本次执行的路径选择、循环轮次和异常节点。', empty: '暂无执行详情', loadFailed: '读取持久化执行详情失败',
--      summaryTitle: '运行结论', blockedAt: '卡在 {gate}', actualPath: '实际执行路径', noActualPath: '本次未采用任何路径', pathChecks: '路径判断', selectedPaths: '已采用路径', otherPaths: '其他判断与事件', selectedCount: '已采用 {count} 条', otherCount: '未采用 {count} 条', eventCount: '事件 {count} 条', showOtherPaths: '查看其他详情（{count}）', hideOtherPaths: '收起其他详情', runDetails: '运行详情', actualPathSteps: '实际路径步骤', nodeBudgetDetails: '时间预算详情',
--      condition: '条件', conditionMatched: '已匹配', conditionNotMatched: '未匹配', sourceOutcome: '节点结果', sourceReturned: '正常返回', sourceFailed: '执行失败', sourceSkippedStatus: '未执行',
--      checkedData: '检查的数据', entireReplyText: '完整回复文本', errorText: '错误文本', jsonFieldValue: '单个 JSON 字段值', advancedPathValue: '高级路径的值', comparison: '比较方式', textToFind: '要查找的文字', expectedFieldValue: '期望的字段值', parsedBusinessDecision: '解析出的业务结论', failedGateLabel: '失败环节（failed_gate 字段的值）', failedGateValue: '失败环节（failed_gate 字段的值）：{gate}', decisions: { blocked: '已阻塞', released: '已发布', verified: '已验证', skipped: '无需处理' },
--      node: '异常节点', edge: '执行路径', loop: '循环', unknownNode: '未知节点', pathTitle: '{source} → {target}', loopPass: '循环第 {count} 轮', exceptionalNode: '该节点未正常完成。',
++    },
++    evidence: {
 +      historyPage: '运行历史',
 +      detailsPage: '运行详情',
 +      backToRuns: '返回运行历史',
@@ -7903,7 +7860,16 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        released: '已发布',
 +        verified: '已验证',
 +        skipped: '无需处理'
-+      },
+       },
+-    },
+-    evidence: {
+-      historyPage: '运行历史', detailsPage: '运行详情', backToRuns: '返回运行历史', resultStatus: '状态', duration: '耗时', budgetLabel: '预算', actualExecution: '实际执行', otherJudgments: '其他判断', loopEvents: '循环事件', evaluatedNotExecuted: '已判断，未执行',
+-      ariaLabel: 'Workflow 执行详情', title: '执行详情', count: '{count} 条',
+-      intro: '展示本次执行的路径选择、循环轮次和异常节点。', empty: '暂无执行详情', loadFailed: '读取持久化执行详情失败',
+-      summaryTitle: '运行结论', blockedAt: '卡在 {gate}', actualPath: '实际执行路径', noActualPath: '本次未采用任何路径', pathChecks: '路径判断', selectedPaths: '已采用路径', otherPaths: '其他判断与事件', selectedCount: '已采用 {count} 条', otherCount: '未采用 {count} 条', eventCount: '事件 {count} 条', showOtherPaths: '查看其他详情（{count}）', hideOtherPaths: '收起其他详情', runDetails: '运行详情', actualPathSteps: '实际路径步骤', nodeBudgetDetails: '时间预算详情',
+-      condition: '条件', conditionMatched: '已匹配', conditionNotMatched: '未匹配', sourceOutcome: '节点结果', sourceReturned: '正常返回', sourceFailed: '执行失败', sourceSkippedStatus: '未执行',
+-      checkedData: '检查的数据', entireReplyText: '完整回复文本', errorText: '错误文本', jsonFieldValue: '单个 JSON 字段值', advancedPathValue: '高级路径的值', comparison: '比较方式', textToFind: '要查找的文字', expectedFieldValue: '期望的字段值', parsedBusinessDecision: '解析出的业务结论', failedGateLabel: '失败环节（failed_gate 字段的值）', failedGateValue: '失败环节（failed_gate 字段的值）：{gate}', decisions: { blocked: '已阻塞', released: '已发布', verified: '已验证', skipped: '无需处理' },
+-      node: '异常节点', edge: '执行路径', loop: '循环', unknownNode: '未知节点', pathTitle: '{source} → {target}', loopPass: '循环第 {count} 轮', exceptionalNode: '该节点未正常完成。',
 +      node: '异常节点',
 +      edge: '执行路径',
 +      loop: '循环',
@@ -8102,7 +8068,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
          in: '“值”必须是 JSON 数组；数组包含实际值时匹配。',
 -        not_in: '“值”必须是 JSON 数组；数组不包含实际值时匹配。',
 +        not_in: '“值”必须是 JSON 数组；数组不包含实际值时匹配。'
-+      },
+       },
+-      value: '值', invalidConditionValue: '条件值必须是有效的 JSON', conditionValuePlaceholder: 'JSON："文本"、42、true、["a"]',
+-      valueType: '值类型', valueTypes: { string: '字符串', number: '数字', boolean: '布尔值', null: '空值', array: '数组', object: '对象' },
 +      value: '值',
 +      invalidConditionValue: '条件值必须是有效的 JSON',
 +      conditionValuePlaceholder: 'JSON："文本"、42、true、["a"]',
@@ -8114,9 +8082,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +        null: '空值',
 +        array: '数组',
 +        object: '对象'
-       },
--      value: '值', invalidConditionValue: '条件值必须是有效的 JSON', conditionValuePlaceholder: 'JSON："文本"、42、true、["a"]',
--      valueType: '值类型', valueTypes: { string: '字符串', number: '数字', boolean: '布尔值', null: '空值', array: '数组', object: '对象' },
++      },
        valueTypeHelp: '选择“值”的解析和校验类型。系统会从已保存的 JSON 值自动识别；该类型只辅助编辑，不会单独保存。',
 -      conditionValuePlaceholders: { string: '文本，例如 APPROVED', number: '数字，例如 42', boolean: 'true 或 false', null: 'null', array: 'JSON 数组，例如 ["a", 2]', object: 'JSON 对象，例如 {\'{\'}"status":"ready"{\'}\'}' },
 -      invalidValueTypes: { string: '值必须是字符串。', number: '值必须是有效数字。', boolean: '值必须是 true 或 false。', null: '值必须是 null。', array: '值必须是有效数组。', object: '值必须是有效对象。' },
@@ -8165,7 +8131,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        jsonFieldOperatorHelp: {
          equals: '读取 {path} 对应的字段 value。只有该字段值与“{value}”完全相同时才匹配；不会比较字段名。',
-@@ -1706,14 +3693,18 @@ export default {
+@@ -1710,14 +3697,18 @@
          contains: '读取 {path} 对应的字段 value，并检查这个值是否包含“{value}”；不会搜索字段名。',
          not_contains: '读取 {path} 对应的字段 value。只有这个值不包含“{value}”时才匹配；不会搜索字段名。',
          exists: '{path} 对应的 JSON 字段存在时匹配，不比较字段 value。',
@@ -8189,7 +8155,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      batch: {
        toggle: '批量选择',
-@@ -1721,7 +3712,7 @@ export default {
+@@ -1725,7 +3716,7 @@
        confirmDelete: '确定删除选中的 {count} 个工作流？',
        deleteSuccess: '已删除 {count} 个工作流',
        deletePartial: '{failed} 个工作流删除失败',
@@ -8198,7 +8164,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      validation: {
        nodesRequired: '请至少添加一个节点',
-@@ -1734,7 +3725,7 @@ export default {
+@@ -1738,7 +3729,7 @@
        invalidConnectionDirection: '连接线只能从右侧输出连接到左侧输入',
        orphanNode: '节点 {node} 没有连接到流程',
        disconnectedFlow: '流程不能拆成多条互不连接的链路',
@@ -8207,7 +8173,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      node: {
        title: '节点名称',
-@@ -1750,7 +3741,7 @@ export default {
+@@ -1754,7 +3745,7 @@
        joinAnyHelp: '任一入线生效就执行一次；只有全部都不匹配才跳过。示例：任一审核人批准后继续。',
        promptPlaceholder: '描述这个 Agent 要做什么...',
        skillsPlaceholder: '技能，按 Enter 添加',
@@ -8216,7 +8182,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      status: {
        idle: '空闲',
-@@ -1761,7 +3752,7 @@ export default {
+@@ -1765,7 +3756,7 @@
        skipped: '已跳过',
        failed: '失败',
        approval_rejected: '审批拒绝',
@@ -8225,7 +8191,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      runs: {
        title: '执行记录',
-@@ -1778,26 +3769,26 @@ export default {
+@@ -1782,26 +3773,26 @@
        stopRequested: '已请求停止执行',
        stopFailed: '停止执行失败',
        delete: '删除记录',
@@ -8257,7 +8223,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      initialNodes: {
        node1: '节点 1',
-@@ -1805,7 +3796,7 @@ export default {
+@@ -1809,7 +3800,7 @@
        node3: '节点 3',
        plan: '规划',
        execute: '执行',
@@ -8266,7 +8232,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      initialPrompts: {
        node1: '输入这个节点的内容。',
-@@ -1813,12 +3804,11 @@ export default {
+@@ -1817,12 +3808,11 @@
        node3: '输入这个节点的内容。',
        plan: '把需求拆成可执行步骤。',
        execute: '执行实现步骤并产出结果。',
@@ -8281,7 +8247,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    kanban: {
      title: '看板',
      createTask: '新建任务',
-@@ -1835,6 +3825,22 @@ export default {
+@@ -1839,6 +3829,22 @@
        archived: '看板已归档',
        archiveConfirm: '确定归档当前看板？',
        defaultArchiveUnavailable: '默认看板不能归档',
@@ -8304,7 +8270,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      columns: {
        triage: '待分拣',
-@@ -1845,7 +3851,7 @@ export default {
+@@ -1849,7 +3855,7 @@
        blocked: '阻塞',
        review: '待审查',
        done: '已完成',
@@ -8313,7 +8279,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      form: {
        title: '标题',
-@@ -1877,20 +3883,29 @@ export default {
+@@ -1881,20 +3887,29 @@
        maxRetriesPlaceholder: '重试次数',
        goalMaxTurns: '目标最大轮次',
        goalMaxTurnsPlaceholder: '最大轮次',
@@ -8346,7 +8312,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      detail: {
        status: '状态',
-@@ -1913,7 +3928,7 @@ export default {
+@@ -1917,7 +3932,7 @@
        noLog: '未找到该任务的日志。',
        addComment: '添加评论',
        commentPlaceholder: '输入任务评论...',
@@ -8355,7 +8321,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      action: {
        title: '操作',
-@@ -1922,7 +3937,6 @@ export default {
+@@ -1926,7 +3941,6 @@
        block: '阻塞',
        blockReason: '阻塞原因',
        unblock: '解除阻塞',
@@ -8363,7 +8329,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        archiveConfirm: '确定归档这个已完成任务？',
        assign: '分配',
        assignTo: '分配给...',
-@@ -1933,6 +3947,11 @@ export default {
+@@ -1937,6 +3951,11 @@
        specify: '细化',
        loadLog: '加载日志',
        loadDiagnostics: '加载诊断',
@@ -8375,7 +8341,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      message: {
        taskCreated: '任务已创建',
-@@ -1947,15 +3966,202 @@ export default {
+@@ -1951,15 +3970,202 @@
        taskReassigned: '任务已重新分配',
        taskSpecified: '任务已细化',
        loadFailed: '加载任务失败',
@@ -8404,6 +8370,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      stats: {
        total: '总计',
 -      tasks: '任务数',
+-    },
 +      tasks: '任务数'
 +    },
 +    workerLog: 'worker 日志',
@@ -8492,7 +8459,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      save: '保存',
 +      autoGenerateTitle: '根据该 profile 的技能与近期使用自动生成描述',
 +      generating: '生成中…'
-     },
++    },
 +    reclaim: {
 +      confirm: '释放当前 worker 的认领？任务将回到 ready 等待重新派发。',
 +      success: '认领已释放——任务回到 ready',
@@ -8568,21 +8535,21 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 +      informed: '知会 I'
 +    },
 +    mineOnly: '等您操作'
-+  },
+   },
+-
+-  // 定时任务
+-  scheduleBuilder: { time: '时间', hour: '小时', minute: '分钟', weekday: '星期', monthDay: '每月日期' },
 +  scheduleBuilder: {
 +    time: '时间',
 +    hour: '小时',
 +    minute: '分钟',
 +    weekday: '星期',
 +    monthDay: '每月日期'
-   },
--
--  // 定时任务
--  scheduleBuilder: { time: '时间', hour: '小时', minute: '分钟', weekday: '星期', monthDay: '每月日期' },
++  },
    jobs: {
      title: '定时任务',
      createJob: '创建任务',
-@@ -2016,7 +4222,7 @@ export default {
+@@ -2020,7 +4226,7 @@
        running: '运行中',
        paused: '已暂停',
        disabled: '已禁用',
@@ -8591,7 +8558,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      info: {
        model: '模型',
-@@ -2025,7 +4231,7 @@ export default {
+@@ -2029,7 +4235,7 @@
        lastRun: '上次运行',
        nextRun: '下次运行',
        deliver: '投递',
@@ -8600,7 +8567,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      action: {
        pause: '暂停',
-@@ -2033,24 +4239,21 @@ export default {
+@@ -2037,24 +4243,21 @@
        resume: '恢复',
        resumeJob: '恢复任务',
        runNow: '立即运行',
@@ -8629,7 +8596,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      searchPlaceholder: '搜索技能...',
      noMatch: '没有匹配的技能',
-@@ -2075,7 +4278,7 @@ export default {
+@@ -2079,7 +4282,7 @@
        builtin: '内置',
        hub: 'Hub 安装',
        local: '本地安装',
@@ -8638,7 +8605,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      delete: '删除',
      deleteConfirm: '确定要删除技能 "{name}" 吗？此操作不可撤销。',
-@@ -2098,7 +4301,7 @@ export default {
+@@ -2102,7 +4305,7 @@
      importFailed: '导入失败',
      path: {
        local: '本地',
@@ -8647,7 +8614,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      externalDirs: {
        manage: '外部目录',
-@@ -2112,7 +4315,7 @@ export default {
+@@ -2116,7 +4319,7 @@
        saveSuccess: '外部目录已保存',
        saveFailed: '保存失败',
        loadFailed: '加载外部目录失败',
@@ -8656,7 +8623,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      pathCopied: '路径已复制',
      pathCopyFailed: '复制路径失败',
-@@ -2144,9 +4347,8 @@ export default {
+@@ -2148,9 +4351,8 @@
      writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
      writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
      writeApprovalRemoveFile: '这次审批会从技能 {skill} 中移除文件 {file}。',
@@ -8667,7 +8634,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    plugins: {
      title: '插件',
      refresh: '刷新',
-@@ -2172,28 +4374,28 @@ export default {
+@@ -2176,28 +4378,28 @@
        active: '已启用 / 自动',
        inactive: '未启用',
        disabled: '已禁用',
@@ -8703,7 +8670,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      table: {
        plugin: '插件',
-@@ -2202,21 +4404,20 @@ export default {
+@@ -2206,21 +4408,20 @@
        kind: '类型',
        capabilities: '能力',
        path: '路径 / 入口',
@@ -8729,7 +8696,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    petdex: {
      title: 'Petdex 宠物',
      subtitle: '浏览 Hermes 桌宠使用的 petdex 公共图库。',
-@@ -2236,11 +4437,9 @@ export default {
+@@ -2240,11 +4441,9 @@
        total: '图库总数',
        visible: '匹配数量',
        kinds: '类型数',
@@ -8743,7 +8710,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    memory: {
      title: '记忆',
      refresh: '刷新',
-@@ -2253,10 +4452,8 @@ export default {
+@@ -2257,10 +4456,8 @@
      profilePlaceholder: '输入用户画像...',
      soul: '灵魂',
      noSoul: '暂无灵魂配置。',
@@ -8755,7 +8722,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    models: {
      importTitle: "导入供应商",
      importNotice: "请核对地址、模型和目标 Profile。确认后将 API Key 保存到 Studio，并将此模型设为该 Profile 的默认模型。确认前不会导入。",
-@@ -2412,7 +4609,7 @@ export default {
+@@ -2416,7 +4613,7 @@
      customBadge: '自定义',
      previewBadge: '预览',
      disabledBadge: '不可用',
@@ -8764,7 +8731,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      customModelPlaceholder: '未列出的模型 ID',
      customModelHint: '仅用于 provider 支持但未返回的模型；不是重命名。按回车加载。',
      removeCustomModel: '移除这个未列出的模型',
-@@ -2549,10 +4746,8 @@ export default {
+@@ -2553,10 +4750,8 @@
      enterBaseUrl: '请先输入 Base URL',
      unexpectedFormat: '响应格式异常',
      foundModels: '找到 {count} 个模型',
@@ -8776,7 +8743,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    profiles: {
      title: '配置',
      create: '创建配置',
-@@ -2616,7 +4811,7 @@ export default {
+@@ -2620,7 +4815,7 @@
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -8785,7 +8752,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      runtime: {
        activeProfile: '当前：{name}',
-@@ -2693,7 +4888,7 @@ export default {
+@@ -2697,7 +4892,7 @@
      preview: '预览',
      previewTitle: '打造属于你的工作空间',
      previewText: '文字和选中颜色会同步应用到整个界面。',
@@ -8794,7 +8761,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
    settings: {
      title: '设置',
-@@ -2713,6 +4908,7 @@ export default {
+@@ -2717,6 +4912,7 @@
        apiServer: 'API 服务器',
        models: '模型',
        voice: '语音',
@@ -8802,7 +8769,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      webhooks: {
        title: 'Webhook',
-@@ -2738,12 +4934,15 @@ export default {
+@@ -2742,12 +4938,15 @@
          receivedAt: '接收时间',
          event: '事件',
          eventId: 'Event ID',
@@ -8820,7 +8787,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
          runQueued: '运行已排队',
          runStarted: '运行已开始',
          toolStarted: '工具已开始',
-@@ -2754,11 +4953,11 @@ export default {
+@@ -2758,11 +4957,11 @@
          clarificationRequested: '请求澄清',
          clarificationResolved: '澄清已处理',
          completed: '运行完成',
@@ -8834,7 +8801,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        runtime: {
          idle: '空闲',
-@@ -2766,7 +4965,7 @@ export default {
+@@ -2770,7 +4969,7 @@
          retrying: '等待重试',
          success: '已送达',
          failed: '投递失败',
@@ -8843,7 +8810,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        actions: {
          add: '添加 Webhook',
-@@ -2776,7 +4975,7 @@ export default {
+@@ -2780,7 +4979,7 @@
          disable: '停用',
          refresh: '刷新',
          clear: '清空',
@@ -8852,7 +8819,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        form: {
          name: '名称',
-@@ -2797,7 +4996,7 @@ export default {
+@@ -2801,7 +5000,7 @@
          includeUserContentHint: '用户消息可能包含敏感信息，默认关闭。系统提示词、推理过程、工具参数和工具结果不会随此开关发送。',
          allowPrivateNetwork: '允许私网或本机地址',
          allowPrivateNetworkHint: '仅对可信的内部接收端开启；每次投递前都会重新检查 DNS。',
@@ -8861,7 +8828,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        },
        messages: {
          required: '名称和 URL 不能为空',
-@@ -2812,8 +5011,8 @@ export default {
+@@ -2816,8 +5015,8 @@
          localTestFailed: '创建本机测试接收器失败',
          inboxLoadFailed: '加载本机测试事件失败',
          inboxCleared: '本机测试事件已清空',
@@ -8872,7 +8839,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      models: {
        apiKey: 'API Key',
-@@ -2821,7 +5020,7 @@ export default {
+@@ -2825,7 +5024,7 @@
        save: '保存',
        saved: '已保存',
        saveFailed: '保存失败',
@@ -8881,7 +8848,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      display: {
        streaming: '流式响应',
-@@ -2840,14 +5039,14 @@ export default {
+@@ -2844,14 +5043,14 @@
        approvalBellHint: '出现新的待处理审批或澄清时播放提示音',
        notifyOnComplete: '完成弹窗通知',
        notifyOnApproval: '审批桌面通知',
@@ -8898,7 +8865,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'AI 回复完成时显示系统通知',
        notifyOnCompleteMacHint: 'macOS 需要在系统设置里允许浏览器通知。',
        notifyOnCompleteDenied: '通知权限已被拒绝',
-@@ -2869,7 +5068,7 @@ export default {
+@@ -2873,7 +5072,7 @@
        chatInputHeightHint: '桌面端聊天输入框默认高度（像素）。移动端保持自动高度。',
        linkOpenTarget: '网页链接打开方式',
        linkOpenTargetHint: '选择消息和 Markdown 预览中的网页链接在哪里打开。',
@@ -8907,7 +8874,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: '默认浏览器',
      },
      agent: {
-@@ -2883,7 +5082,7 @@ export default {
+@@ -2887,7 +5086,7 @@
        toolEnforcementHint: '控制工具调用的执行模式',
        auto: '自动',
        always: '始终',
@@ -8916,7 +8883,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      gatewayAutoStart: {
        title: 'Gateway 自动启动',
-@@ -2903,7 +5102,7 @@ export default {
+@@ -2907,7 +5106,7 @@
        includeHint: '逗号分隔 profile 名。白名单模式下留空表示不自动启动任何 profile。',
        exclude: '排除 profiles',
        excludeHint: '逗号分隔 profile 名；会在白名单/全量策略之后再排除。',
@@ -8925,7 +8892,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      proxy: {
        title: 'Gateway 代理',
-@@ -2916,7 +5115,7 @@ export default {
+@@ -2920,7 +5119,7 @@
        allProxyHint: '未设置协议专用代理时使用的兜底代理。',
        noProxy: 'NO_PROXY',
        noProxyHint: '不走代理的主机或域名，使用逗号分隔。',
@@ -8934,7 +8901,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      memory: {
        enabled: '启用记忆',
-@@ -2926,7 +5125,7 @@ export default {
+@@ -2930,7 +5129,7 @@
        charLimit: '记忆字符上限',
        charLimitHint: 'MEMORY.md 最大字符数',
        userCharLimit: '用户画像字符上限',
@@ -8943,7 +8910,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      compression: {
        enabled: '启用压缩',
-@@ -2938,7 +5137,7 @@ export default {
+@@ -2942,7 +5141,7 @@
        protectLastN: '保护最近消息',
        protectLastNHint: '最近多少条消息不参与压缩',
        protectFirstN: '保护开头消息',
@@ -8952,7 +8919,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      session: {
        mode: '重置模式',
-@@ -2987,12 +5186,12 @@ export default {
+@@ -2991,12 +5190,12 @@
        writeApprovalRequestedOldString: '本次请求匹配的 old_string',
        writeApprovalCurrentReadFailed: '当前文件 {file} 无法按 UTF-8 文本读取。',
        writeApprovalDeleteSkill: '这次审批会删除技能 {skill}。',
@@ -8967,7 +8934,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      apiServer: {
        enable: '启用',
-@@ -3004,7 +5203,7 @@ export default {
+@@ -3008,7 +5207,7 @@
        key: '密钥',
        keyHint: 'API 访问密钥',
        cors: 'CORS 来源',
@@ -8976,7 +8943,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      lockedIps: {
        title: '锁定 IP 管理',
-@@ -3018,8 +5217,8 @@ export default {
+@@ -3022,8 +5221,8 @@
        type: {
          password: '密码',
          token: 'API Token',
@@ -8987,7 +8954,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      userAvatar: {
        title: '用户头像',
-@@ -3032,7 +5231,7 @@ export default {
+@@ -3036,7 +5235,7 @@
        saveSuccess: '头像已保存',
        saveFailed: '保存头像失败',
        resetSuccess: '已恢复默认头像',
@@ -8996,7 +8963,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      },
      voice: {
        activeTtsApi: '当前 TTS API',
-@@ -3067,10 +5266,10 @@ export default {
+@@ -3071,10 +5270,10 @@
          failed: '下载失败',
        },
        hermesConfigTitle: 'Hermes Agent 配置',
@@ -9009,7 +8976,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        providerSpeed: '语速',
        providerSampleRate: '采样率',
        providerBitRate: '比特率',
-@@ -3084,7 +5283,7 @@ export default {
+@@ -3088,7 +5287,7 @@
        optionDisabled: '停用',
        nativeProvider: 'Hermes 原生提供商',
        selectNativeProvider: '选择 Hermes 原生提供商',
@@ -9018,7 +8985,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
-@@ -3241,27 +5440,16 @@ export default {
+@@ -3245,27 +5444,16 @@
        sttTestEmpty: '没有录到可用于 STT 测试的音频。',
        sttTestSucceeded: 'STT 测试成功。',
        sttTestFailed: 'STT 测试失败：{error} —— {hint}',
@@ -9046,7 +9013,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        sttFailureHintGeneric: '请检查 API key、模型和 provider 账号权限后重试。',
        sttTestRecordFailed: '无法开始麦克风录音：{error}',
        sttTestTranscript: '转写结果：{text}',
-@@ -3271,13 +5459,9 @@ export default {
+@@ -3275,13 +5463,9 @@
        providerOpenai: 'OpenAI TTS',
        providerCustom: '自定义端点（兼容 OpenAI）',
        providerEdge: 'Edge TTS（免费，无需 API Key）',
@@ -9060,7 +9027,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        openaiKey: 'API 密钥',
        openaiKeyHint: '具有 TTS 权限的 OpenAI API Key',
        openaiUrl: 'API 基础地址',
-@@ -3286,8 +5470,6 @@ export default {
+@@ -3290,8 +5474,6 @@
        openaiModelHint: 'tts-1（快速）/ tts-1-hd（高音质）',
        openaiVoice: '音色',
        openaiVoiceHint: '用于语音合成的音色',
@@ -9069,7 +9036,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        customHint: '支持任何 OpenAI 兼容的 TTS 服务——可用于 GPT-SoVITS、CosyVoice 等自部署服务。',
        customUrl: 'API 地址',
        customUrlHint: 'TTS 服务的完整基础地址',
-@@ -3295,7 +5477,6 @@ export default {
+@@ -3299,7 +5481,6 @@
        customApiKey: 'API 密钥（可选）',
        customApiKeyHint: '部分自部署服务需要身份验证',
        customApiKeyPlaceholder: '不需要则留空',
@@ -9077,7 +9044,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        edgeHint: '由 Microsoft Edge TTS 驱动（node-edge-tts）。',
        edgeUrl: '适配器地址',
        edgeUrlHint: 'Edge TTS 适配器地址，例如 http://127.0.0.1:9882',
-@@ -3306,8 +5487,6 @@ export default {
+@@ -3310,8 +5491,6 @@
        edgeRateHint: '调整语音速度（0.5～2.0 倍）',
        edgePitch: '音调',
        edgePitchHint: '调整语音音调（-20～+20 Hz）',
@@ -9086,7 +9053,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        testTitle: '试听测试',
        testText: '测试文本',
        testTextPlaceholder: '输入测试文本...',
-@@ -3315,8 +5494,6 @@ export default {
+@@ -3319,8 +5498,6 @@
        testButton: '试听',
        testButtonPlaying: '播放中...',
        testFailed: '测试失败：{error}',
@@ -9095,13 +9062,14 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
        providerMimo: 'MiMo TTS',
        mimoHint: '小米 MiMo TTS，支持预置音色、音色设计、音色复刻三种模式',
        mimoApiKey: 'API Key',
-@@ -3345,41 +5522,51 @@ export default {
+@@ -3349,41 +5526,51 @@
        mimoCloneAudioClear: '清除音频',
        mimoStylePrompt: '风格指令',
        mimoStylePromptHint: '可选，用自然语言描述语音风格',
 -      mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快',
+-    },
 +      mimoStylePromptPlaceholder: '例如：用轻快上扬的语调，语速稍快'
-     },
++    },
 +    matrixIdentity: {
 +      title: 'Matrix 身份',
 +      userId: 'Matrix 用户 ID',
@@ -9178,7 +9146,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    codingAgents: {
      nativeUsage: "用量：输入 {inputTokens}，输出 {outputTokens}，缓存读取 {cacheReadTokens}，缓存写入 {cacheWriteTokens}，合计 {totalTokens} tokens。",
      nativeUsageUnknown: "用量未知：此会话尚未收到原生 Token 用量数据。",
-@@ -3454,31 +5641,29 @@ export default {
+@@ -3458,31 +5645,29 @@
      launchConfigDir: "启动配置目录",
      launchCommand: "启动命令",
      table: {
@@ -9228,7 +9196,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    platform: {
      requireMention: "需要 {'@'}提及",
      requireMentionGroup: "群组中需要 {'@'}机器人 才会响应",
-@@ -3559,7 +5744,6 @@ export default {
+@@ -3563,7 +5748,6 @@
      qrFetching: '正在获取二维码...',
      qrScanHint: '使用微信扫描二维码登录',
      qrScanedHint: '已扫描，请在手机上确认...',
@@ -9236,7 +9204,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      qqAppId: 'App ID',
      qqAppIdHint: 'QQ 开放平台机器人 App ID',
      qqAppSecret: 'App Secret',
-@@ -3568,27 +5752,21 @@ export default {
+@@ -3572,27 +5756,21 @@
      qqMarkdownHint: '启用 Markdown 格式消息（部分客户端可能不支持）',
      qqSandbox: '沙箱模式',
      qqSandboxHint: '启用沙箱环境（测试用）',
@@ -9267,7 +9235,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    terminal: {
      sessions: '会话',
      newTab: '新建终端',
-@@ -3598,10 +5776,8 @@ export default {
+@@ -3602,10 +5780,8 @@
      noSessions: '暂无终端会话',
      connectionFailed: '终端服务连接失败',
      connectionClosed: '终端连接已关闭',
@@ -9277,9 +9245,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
 -
 -  // 群聊
    groupChat: {
-     messageAlreadySummarized: "已被总结，无法删除",
-     messageSummaryBoundaryUnknown: "无法确定总结边界，暂不可删除",
-@@ -3611,10 +5787,18 @@ export default {
+     migrationNoticeTitle: "群聊即将下架",
+     migrationNoticeMessage: "群聊功能即将下架。建议您提前整理现有群聊中的任务、Agent 配置和重要上下文，并将相关业务迁移到 Bot 中继续处理。",
+@@ -3618,10 +5794,18 @@
      routingSuggested: 'JEV 建议交给 {agent}',
      routingUseSuggestion: '分派',
      routingAutoQueued: 'JEV 已分派给 {agent}',
@@ -9302,7 +9270,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      agentPreset: 'Agent 预设',
      agentPresets: 'Agent 预设',
      agentPresetPlaceholder: '选择预设',
-@@ -3734,7 +5918,12 @@ export default {
+@@ -3741,7 +5925,12 @@
      allAgents: '所有 Agent',
      addAgent: '添加智能体',
      agentType: 'Agent 类型',
@@ -9316,7 +9284,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      selectProfile: '选择一个配置',
      agentAdded: '智能体已添加',
      selectRoomFirst: '请先选择一个群组',
-@@ -3818,7 +6007,12 @@ export default {
+@@ -3825,7 +6014,12 @@
      summaryConfigurationOwnerRequired: '该群聊尚未配置总结器，请联系房间管理员完成配置后再发送消息。',
      saveSummaryConfig: '保存总结设置',
      currentSummary: '当前总结',
@@ -9330,7 +9298,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      summaryUpdatedAt: '最后更新',
      summarizedTurns: '已总结有效发言',
      summaryAnchor: '总结锚点',
-@@ -3830,10 +6024,8 @@ export default {
+@@ -3837,10 +6031,8 @@
      saveSummary: '保存总结',
      summaryUpdated: '总结已更新',
      summaryNever: '从未',
@@ -9342,7 +9310,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    usage: {
      origin: {
        label: "用量类别",
-@@ -3911,7 +6103,19 @@ export default {
+@@ -3918,7 +6110,19 @@
      cacheHitRate: '缓存命中率',
      modelBreakdown: '模型分布',
      agentBreakdown: 'Agent 分布',
@@ -9363,7 +9331,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      dailyTrend: '每日用量',
      date: '日期',
      tokens: 'Token',
-@@ -3920,7 +6124,7 @@ export default {
+@@ -3927,7 +6131,7 @@
      cacheWrite: '缓存写入',
      sessions: '会话',
      cost: '费用',
@@ -9372,7 +9340,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    },
    skillsUsage: {
      title: '技能用量',
-@@ -3941,10 +6145,8 @@ export default {
+@@ -3948,10 +6152,8 @@
      lastUsed: '最近',
      noData: '暂无技能用量数据',
      loadFailed: '技能用量加载失败',
@@ -9384,7 +9352,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    files: {
      title: '文件',
      fileTree: '文件树',
-@@ -4012,8 +6214,8 @@ export default {
+@@ -4019,8 +6221,8 @@
      zoom: '缩放',
      pdfPageLimit: '仅预览前 {count} 页。',
      tableTruncated: '为保持界面流畅，表格预览已截断。请下载文件查看全部行列。',
@@ -9394,9 +9362,9 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
    download: {
      downloading: '正在下载...',
      downloadFailed: '下载失败',
-@@ -4092,4 +6294,815 @@ export default {
-     new_0_7_37_10: "新增 Windows ARM64 桌面安装包构建支持 (#3428)",
-     new_0_7_37_11: "修复 TOS 7 全新安装、入口路径和服务重启策略，减少对主机环境及预建用户的依赖 (#3413、#3431)",
+@@ -4060,4 +6262,815 @@
+     new_0_8_15_6: "更新中英文 README 产品截图，展示实际运行界面的新建对话 Agent 轮播、可视化工作流和完整 Agent 管理器，移除过期示例图 (#3661)",
+     new_0_8_15_7: "开发与 CI 的任务报告及测试产物改为存放在仓库 worktree 之外，新增目录管理命令和只读位置检查，并同步覆盖率、浏览器报告及上传路径；检查不会自动删除文件 (#3657)",
    },
 +  matrix: {
 +    options: '选项',

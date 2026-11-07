@@ -3,7 +3,7 @@
   "info": {
     "title": "Ekko Studio API",
     "description": "Ekko Studio API — chat sessions, scheduled jobs, platform channels, model management, skills, memory, logs, file browser, group chat, and terminal.",
-    "version": "0.8.11"
+    "version": "0.8.17"
   },
   "servers": [
     {
@@ -19443,7 +19443,7 @@
           "Person"
         ],
         "summary": "Create conversations",
-        "description": "Create an account-owned, user-named conversation with a generated session ID and a persisted bot_type (defaults to zhezhe). Duplicate BOT names return HTTP 409 with code PERSON_BOT_NAME_EXISTS; concurrent creates are checked in the insertion transaction. Optional model and reasoning_effort apply only to the new conversation. Optional workspace changes the account-shared workspace atomically with creation and requires current expected_revision and idle work. Unknown bot types are rejected. Memory and Agent presets remain shared across the account.",
+        "description": "Create an account-owned, user-named conversation with a generated session ID and a persisted bot_type (defaults to zhezhe). Duplicate BOT names return HTTP 409 with code PERSON_BOT_NAME_EXISTS; concurrent creates are checked in the insertion transaction. Optional model and reasoning_effort apply only to the new conversation. Omitted, null or blank workspace creates an independent default directory using the Ekko single-chat directory manager. A nonblank workspace must be an existing accessible absolute directory. Its real path is persisted only for this Bot; old bindings and account settings are unchanged. Directory provisioning or access failures return HTTP 409 with code WORKSPACE_UNAVAILABLE. Workspace files survive conversation deletion; running an existing Bot never silently changes or recreates its bound directory. Optional expected_revision is checked before creation. Unknown bot types are rejected. Memory and Agent presets remain shared across the account.",
         "operationId": "conversationCreate",
         "security": [
           {
@@ -19503,13 +19503,14 @@
                   },
                   "workspace": {
                     "type": "string",
+                    "nullable": true,
                     "maxLength": 4000,
-                    "description": "Optional account-shared absolute workspace; empty restores the account private workspace. A change requires expected_revision and idle replies, tasks and deliveries, and commits atomically with BOT creation."
+                    "description": "Optional existing absolute directory for this Bot. Omitted, null or blank creates an independent per-session workspace using the Ekko single-chat directory manager. The effective real path is persisted; invalid manual paths and default provisioning failures return WORKSPACE_UNAVAILABLE without creating a Bot. Other Bot bindings and account settings are unchanged."
                   },
                   "expected_revision": {
                     "type": "integer",
                     "minimum": 0,
-                    "description": "Current account settings revision, required when workspace changes."
+                    "description": "Optional current account settings revision; when supplied, stale values return HTTP 409 before creation."
                   }
                 },
                 "required": [
@@ -19615,7 +19616,7 @@
           "Person"
         ],
         "summary": "Create apply",
-        "description": "Create a flow with session_id (creator), title, goal and stages (session_id, goal, return_expectation). Omit group on all stages for serial execution, or set ordered contiguous group numbers from zero on every stage: 0,0,1 runs A and B in parallel then C. Each role appears once per group; the creator may join a first parallel group. The next group receives every previous-group result only after all are saved. No execution preset is required. Stop/resume require flow_id and current expected_revision. Stop cancels all stage turns, deliveries and workers; resume requeues only unfinished branches with a new generation, preserving completed results. Only an assigned live model turn may prepare its branch completion; its stage and generation fence the operation, so peer revision changes do not require retries. The host commits it after saving its final result. Route and creator are immutable.",
+        "description": "Create a flow with session_id (creator), title, goal and stages (session_id, goal, return_expectation). Omit group on all stages for serial execution, or set ordered contiguous group numbers from zero on every stage: 0,0,1 runs A and B in parallel then C. Each role appears once per group; the creator may join a first parallel group. The next group receives every previous-group result only after all are saved. No execution preset is required. Stop/resume require flow_id and current expected_revision. Stop cancels all stage turns, deliveries and workers; resume requeues only unfinished branches with a new generation, preserving completed results. Only an assigned live model turn may prepare its branch completion; its stage and generation fence the operation, so peer revision changes do not require retries. The host commits it after saving its final result. Route and creator are immutable. Optional rounds defaults to 1; 2–1000 repeats that many rounds, while 0 repeats until explicitly stopped. Each round preserves result message references and passes its last group to the next round’s first group. Stop/resume retain the current round. Completion alone does not create an unread notification or wake the creator; save a later recipient stage when a return is requested. If a saved reply omits completion with no outstanding work or decision, the host makes at most two persisted status-only confirmation attempts with the same Bot, without task tools or a second result. Exhaustion, missing input and execution failures block downstream progression and retain original results; explicit resume confirms saved candidates rather than rerunning them. Claims are fenced by stage, generation, original run/message and a durable lease.",
         "operationId": "flowApply",
         "security": [
           {
@@ -19671,6 +19672,13 @@
                     "type": "string",
                     "maxLength": 8000
                   },
+                  "rounds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000,
+                    "default": 1,
+                    "description": "Total rounds; 0 repeats until explicitly stopped. Opt in only when requested."
+                  },
                   "stages": {
                     "type": "array",
                     "minItems": 1,
@@ -19684,6 +19692,11 @@
                         "return_expectation"
                       ],
                       "properties": {
+                        "group": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 12
+                        },
                         "session_id": {
                           "type": "string",
                           "description": "Owning Person conversation ID. Required for new work; continuations preserve the existing task conversation."
@@ -20171,6 +20184,24 @@
                     "maximum": 12,
                     "default": 6,
                     "description": "Account-shared concurrency across all Person BOTs; additional tasks queue."
+                  },
+                  "taskTimeoutMinutes": {
+                    "type": "integer",
+                    "default": 60,
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "enum": [
+                          -1
+                        ]
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 35791
+                      }
+                    ],
+                    "description": "Account-shared wall-clock limit in minutes for each subsequent Person background task run. Defaults to 60 for existing and new accounts; -1 disables the wall-clock timer. Current runs retain their starting limit."
                   }
                 },
                 "required": [
@@ -20238,7 +20269,7 @@
           "Person"
         ],
         "summary": "Create apply",
-        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime.",
+        "description": "Studio user login required. Account isolation is enforced by the server. Mutations use current revisions; task and schedule operations require an idempotency key. Worker question answers are delivered through their original interactive runtime. Optional acceptance is off by default. Configure on create/adopt or configure_acceptance before the first execution. Development finishes while the goal stays open. Newly configured acceptance uses host-owned automatic progression: the host dispatches a linked acceptance task, continues the original developer after a recorded product failure, and reuses the SAME acceptance task and Agent with a fresh execution for re-verification. Existing Bot-driven cycles retain explicit verify and continue: verify uses task_id, expected_revision and idempotency_key. Invalid review evidence can be corrected in the decision or rechecked through the existing acceptance task without rerunning development. Attempt and total-time budgets survive repair rounds. The host blocks unaccepted goal completion in SQLite. Existing legacy executions retain their old receipts. Direct stages, assistant schedules and legacy next_steps do not support direct acceptance. During a Bot acceptance cycle, development follow-up queuing and queue insertion are rejected explicitly. Due worker occurrences treat unsettled acceptance as busy and use the existing skip policy. Verification tasks cannot be independently scheduled or reconfigured. Independent Agents receive readable requirement/checklist briefs and return ordinary written reports without a fixed format. A successful verification execution enters awaiting_review, keeping both goals open. Bot reads the report and records its evidence-backed per-criterion decision with action=record_acceptance on the development task, task_id, expected_revision, expected_execution_id, verification_execution_id, report and idempotency_key. The host checks current identities, deadline and actual evidence before allowing completion. Missing evidence can be corrected in the decision arguments or rechecked using verify; newly configured acceptance automatically dispatches verification, continues the same developer for recorded product defects and re-verifies the repaired result using the same linked task. Missing Bot decisions are retried at most three decision turns per verification attempt, then blocked; overall round and deadline budgets are preserved. Environment blockers, stop and interruption do not retry development. Persisted earlier cycles retain their prior callback contract. Runtime success and report keywords never complete acceptance. reviewer_session_id binds an explicitly named reviewing Bot, independently of verifier_agent_id. Its decision is returned durably to the original developer Bot without a duplicate role flow. Every decision check reconciles issues: unresolved in-scope issues normalize passed into failed and trigger repair; non-blocking labels do not waive defects. Resolved/out_of_scope requires a reason. Versioned decision receipts preserve historical validated results and fence stale return callbacks.",
         "operationId": "taskApply",
         "security": [
           {
@@ -20276,7 +20307,10 @@
                       "start",
                       "stop",
                       "close",
-                      "reopen"
+                      "reopen",
+                      "configure_acceptance",
+                      "verify",
+                      "record_acceptance"
                     ]
                   },
                   "idempotency_key": {
@@ -20312,6 +20346,175 @@
                   "start": {
                     "type": "boolean",
                     "default": true
+                  },
+                  "acceptance": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "enabled"
+                    ],
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "criteria": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "verifier_agent_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "reviewer_session_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100,
+                        "description": "Optional named reviewing Bot conversation. Its linked review task and decision callback belong to this Bot; decisions return to the original developer Bot for repair/reporting. Worker preset identity does not replace Bot identity."
+                      },
+                      "max_attempts": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5,
+                        "default": 3
+                      },
+                      "timeout_minutes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 120,
+                        "default": 30
+                      }
+                    }
+                  },
+                  "verification_execution_id": {
+                    "type": "string",
+                    "description": "record_acceptance: exact current finished verification execution."
+                  },
+                  "report": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "verdict",
+                      "summary",
+                      "checks"
+                    ],
+                    "description": "Bot decision tool arguments after reading an ordinary verifier report; never a required Agent response format.",
+                    "properties": {
+                      "verdict": {
+                        "type": "string",
+                        "enum": [
+                          "passed",
+                          "failed",
+                          "blocked"
+                        ]
+                      },
+                      "summary": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "checks": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "criterion_id",
+                            "status",
+                            "findings",
+                            "evidence",
+                            "issues"
+                          ],
+                          "properties": {
+                            "criterion_id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "passed",
+                                "failed",
+                                "blocked"
+                              ]
+                            },
+                            "findings": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            },
+                            "evidence": {
+                              "type": "array",
+                              "maxItems": 10,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "path",
+                                  "description"
+                                ],
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 4000
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2000
+                                  }
+                                }
+                              }
+                            },
+                            "issues": {
+                              "type": "array",
+                              "maxItems": 20,
+                              "description": "Explicit product issue reconciliation. Unresolved in-scope defects require repair even when non-blocking. Resolved/out_of_scope needs a concrete reason.",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "description",
+                                  "disposition",
+                                  "reason"
+                                ],
+                                "properties": {
+                                  "description": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2000
+                                  },
+                                  "disposition": {
+                                    "type": "string",
+                                    "enum": [
+                                      "repair",
+                                      "resolved",
+                                      "out_of_scope"
+                                    ]
+                                  },
+                                  "reason": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2000
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -20401,7 +20604,7 @@
           "Person"
         ],
         "summary": "Get chat",
-        "description": "Open the selected account-owned execution conversation. Each fresh task start and scheduled occurrence has an independent session. Returns recent executions, task and session metadata for standard socket resume. It stays excluded from ordinary session lists. Read-only history is permitted to its owner; direct run, abort and other session mutations remain forbidden.",
+        "description": "Open the selected account-owned execution conversation. Each fresh task start and scheduled occurrence has an independent session. Returns recent conversation entries, task and session metadata for standard socket resume. Corrections reuse the original conversation, preserving its messages and native session identity. It stays excluded from ordinary session lists. Read-only history is permitted to its owner; direct run, abort and other session mutations remain forbidden. Enabled tasks also return acceptance with immutable snapshot, state/reason/deadline and ordered attempts containing actual verifier session/run IDs, ordinary report text, Bot decision/actor receipt, errors and host-computed evidence path/size/SHA-256. Statuses include pending, developing, awaiting_dispatch, verification_pending, awaiting_review, repair_required, passed, failed, blocked and interrupted. No independent verification is claimed when the native run identity or evidence is missing.",
         "operationId": "taskChat",
         "security": [
           {
@@ -20442,8 +20645,8 @@
         "tags": [
           "Person"
         ],
-        "summary": "Create chat",
-        "description": "Continue a non-closed task in the conversation selected by execution_id, or the current execution when omitted. Background schedules start fresh conversations; follow-ups retain the selected conversation. Running work queues follow-ups durably in FIFO order; completed tasks reopen. Stopping, stale revisions and a full queue return 409. Results return to the task-owning Person conversation, including cross-conversation instructions.",
+        "summary": "Send a natural-language task follow-up",
+        "description": "The server compares this user input with the saved goal and conversation. Compatible additions queue normally; a replacement instruction updates the goal and title, invalidates obsolete pending work/results, and waits for confirmed termination before continuing. No intent/mode parameter is needed. Rejected or unclear classification never silently starts replacement work; retry with the same idempotency key. Observed revision and execution checks remain authoritative. Corrections stop the current execution, then send the latest complete requirements in the SAME task conversation after native termination. Earlier execution links retain historical receipts in this same conversation; fresh task controls target the current execution. A separate obsolete conversation remains readable but cannot receive new work. An explicit stop-only instruction uses the existing stop operation without creating a replacement.",
         "operationId": "taskContinue",
         "security": [
           {

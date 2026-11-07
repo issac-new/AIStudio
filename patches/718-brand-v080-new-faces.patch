@@ -1,15 +1,3 @@
-diff --git a/packages/desktop/tests/update-test-build.test.cjs b/packages/desktop/tests/update-test-build.test.cjs
---- a/packages/desktop/tests/update-test-build.test.cjs
-+++ b/packages/desktop/tests/update-test-build.test.cjs
-@@ -85,7 +85,7 @@
-   const mac = target.startsWith('darwin')
-   const linux = target.startsWith('linux')
-   const manifestName = linux ? (target.endsWith('arm64') ? 'latest-linux-arm64.yml' : 'latest-linux.yml') : mac ? 'latest-mac.yml' : target === 'win32-arm64' ? 'latest-arm64.yml' : 'latest.yml'
--  const resources = join(output, mac ? `${target.endsWith('arm64') ? 'mac-arm64' : 'mac'}/Ekko Studio.app/Contents/Resources`
-+  const resources = join(output, mac ? `${target.endsWith('arm64') ? 'mac-arm64' : 'mac'}/AIStudio.app/Contents/Resources`
-     : linux ? `${target.endsWith('arm64') ? 'linux-arm64-unpacked' : 'linux-unpacked'}/resources` : target === 'win32-arm64' ? 'win-arm64-unpacked/resources' : 'win-unpacked/resources')
-   const source = join(output, 'package-source')
-   await mkdir(source)
 diff --git a/packages/desktop/scripts/publish-update-test.mjs b/packages/desktop/scripts/publish-update-test.mjs
 --- a/packages/desktop/scripts/publish-update-test.mjs
 +++ b/packages/desktop/scripts/publish-update-test.mjs
@@ -22,6 +10,7 @@ diff --git a/packages/desktop/scripts/publish-update-test.mjs b/packages/desktop
        draft: true, prerelease: true, make_latest: 'false' }),
      assets: id => JSON.parse(run(['api', `${apiRoot}/releases/${id}/assets?per_page=100`, '--paginate', '--slurp'])).flat(),
      download: id => run(['api', `${apiRoot}/releases/assets/${id}`, '-H', 'Accept: application/octet-stream']),
+
 diff --git a/packages/desktop/scripts/build-update-test.mjs b/packages/desktop/scripts/build-update-test.mjs
 --- a/packages/desktop/scripts/build-update-test.mjs
 +++ b/packages/desktop/scripts/build-update-test.mjs
@@ -36,17 +25,19 @@ diff --git a/packages/desktop/scripts/build-update-test.mjs b/packages/desktop/s
    'win32-x64': { platform: 'win32', args: ['--win', 'nsis', '--x64'], resources: 'win-unpacked/resources', manifest: 'latest.yml' },
    'win32-arm64': { platform: 'win32', args: ['--win', 'nsis', '--arm64'], resources: 'win-arm64-unpacked/resources', manifest: 'latest-arm64.yml' },
    'linux-x64': { platform: 'linux', args: ['--linux', 'AppImage', '--x64'], resources: 'linux-unpacked/resources', manifest: 'latest-linux.yml' },
+
 diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/installer.nsh
 --- a/packages/desktop/build/installer.nsh
 +++ b/packages/desktop/build/installer.nsh
-@@ -1,5 +1,5 @@
+@@ -1,6 +1,6 @@
  !macro stopStudioExecutable EXE_NAME LABEL
    IfFileExists "$INSTDIR\${EXE_NAME}" 0 studioStopDone_${LABEL}
 -    DetailPrint "Stopping Ekko Studio..."
 +    DetailPrint "Stopping AIStudio..."
      InitPluginsDir
      FileOpen $0 "$PLUGINSDIR\stop-hermes-studio.ps1" w
-@@ -106,7 +106,7 @@
+     FileWrite $0 "$$ErrorActionPreference = 'SilentlyContinue'$\r$\n"
+@@ -114,7 +114,7 @@
  
  !macro stopHermesStudioProcesses
    ; Close either installed product name when upgrading across the rename.
@@ -55,6 +46,7 @@ diff --git a/packages/desktop/build/installer.nsh b/packages/desktop/build/insta
    !insertmacro stopStudioExecutable "Hermes Studio.exe" hermes
  !macroend
  
+
 diff --git a/packages/desktop/src/main/screenshot-windows.ts b/packages/desktop/src/main/screenshot-windows.ts
 --- a/packages/desktop/src/main/screenshot-windows.ts
 +++ b/packages/desktop/src/main/screenshot-windows.ts
@@ -67,6 +59,7 @@ diff --git a/packages/desktop/src/main/screenshot-windows.ts b/packages/desktop/
        useContentSize: true, autoHideMenuBar: true, backgroundColor: '#181b22',
        webPreferences: webPreferences(),
      })
+
 diff --git a/packages/desktop/src/main/native-device-html.ts b/packages/desktop/src/main/native-device-html.ts
 --- a/packages/desktop/src/main/native-device-html.ts
 +++ b/packages/desktop/src/main/native-device-html.ts
@@ -79,6 +72,7 @@ diff --git a/packages/desktop/src/main/native-device-html.ts b/packages/desktop/
      </button><nav id="device-menu" role="menu" hidden></nav>` : kind === 'manager' ? `
      <main class="manager-shell">
        <header class="manager-header"><span class="hero-icon">${icons.monitor}</span><div><p class="eyebrow">STUDIO</p><h1 id="title"></h1><p id="description" class="muted"></p></div></header>
+
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
@@ -91,7 +85,7 @@ diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/inde
          }
        },
      },
-@@ -1776,7 +1776,7 @@
+@@ -1783,7 +1783,7 @@
    try { installationCoordinator.register(app.getVersion()) } catch (error) {
      if (!(error instanceof Error) || error.message !== 'DESKTOP_INSTALLATION_IN_PROGRESS') throw error
      await app.whenReady()
@@ -100,6 +94,7 @@ diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/inde
        message: t('update.interrupted'), buttons: [t('common.cancel'), t('update.recoverInterrupted')], defaultId: 0, cancelId: 0 })
      if (choice.response !== 1) { app.quit(); return }
      installationCoordinator.recoverInterruptedInstall()
+
 diff --git a/packages/desktop/src/main/login-item-settings.ts b/packages/desktop/src/main/login-item-settings.ts
 --- a/packages/desktop/src/main/login-item-settings.ts
 +++ b/packages/desktop/src/main/login-item-settings.ts
@@ -112,6 +107,7 @@ diff --git a/packages/desktop/src/main/login-item-settings.ts b/packages/desktop
      `Exec=${command}`,
      'Terminal=false',
      'StartupNotify=false',
+
 diff --git a/packages/server/src/modules/studio/public/runs/prompt.ts b/packages/server/src/modules/studio/public/runs/prompt.ts
 --- a/packages/server/src/modules/studio/public/runs/prompt.ts
 +++ b/packages/server/src/modules/studio/public/runs/prompt.ts
@@ -124,6 +120,7 @@ diff --git a/packages/server/src/modules/studio/public/runs/prompt.ts b/packages
  ];
  
  export function studioMcpUsageGuidelines(capabilities?: StudioMcpCapabilities): string {
+
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
@@ -136,6 +133,7 @@ diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/s
   * Body: { token, id, account, password, url? }.
   */
  export async function microcontrollerLogin(ctx: Context) {
+
 diff --git a/packages/ekko-agent/docs/computer-use.md b/packages/ekko-agent/docs/computer-use.md
 --- a/packages/ekko-agent/docs/computer-use.md
 +++ b/packages/ekko-agent/docs/computer-use.md
@@ -148,6 +146,7 @@ diff --git a/packages/ekko-agent/docs/computer-use.md b/packages/ekko-agent/docs
  save your work and reopen the app. These OS grants are separate from tool approvals.
  The guide is hidden in browsers, older desktop bridges, remote-server mode, Windows,
  and Linux; it never reports those environments as authorized based on local Mac grants.
+
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
@@ -195,8 +194,8 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      description: '輸入使用者名稱和密碼以繼續。',
      placeholder: '存取權杖',
      submit: '登入',
-@@ -639,7 +639,7 @@
-   apiRelay: {
+@@ -642,7 +642,7 @@
+     campaignLabel: "雙十一",
      title: "API 中轉",
      headline: "一站接入主流 AI 模型",
 -    description: "APIKEY.FAN 是 Ekko Studio 的合作中轉服務，統一接入 Claude、ChatGPT、Grok、Gemini、智譜、Kimi、DeepSeek 和 MiniMax，相容官方 API 與 SDK。",
@@ -204,7 +203,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      zhipu: "智譜",
      viewNow: "立即查看",
      apiCompatible: "相容官方 API",
-@@ -781,13 +781,13 @@
+@@ -784,13 +784,13 @@
      aiHelpGeneralPrompt: '請使用 `hermes-studio-installation` Skill，並遵循 Skill 自己的路由說明，依 Agent 和問題類型選擇合適的 reference。協助我排查或管理這台裝置上的 Agent 安裝、更新或刪除問題。請檢查實際安裝來源、所有實際命中的可執行檔路徑、Node/npm 環境及對應的套件管理器前綴。如果上下文不足，請先詢問我要處理的 Agent 和具體症狀。不要刪除使用者設定、認證資訊或對話資料，任何破壞性修改都必須再次取得使用者確認。',
      aiHelpPrompt: '請使用 `hermes-studio-installation` Skill，並遵循 Skill 自己的路由說明，依這次 Agent 和問題類型選擇合適的 reference，排查這次 Agents 頁面操作失敗。\n\nAgent：{name}\nAgent ID：{id}\n操作類型：{operation}\n可執行命令：{command}\nnpm 套件：{package}\n原始錯誤：\n{error}\n\n請檢查安裝來源、所有實際命中的可執行檔路徑、Node/npm 環境及對應的套件管理器前綴。不要刪除使用者設定、認證資訊或對話資料。先說明根因，任何破壞性修改都必須再次取得使用者確認。',
      legacyDataMigrationTitle: '發現舊版 Hermes 資料',
@@ -220,7 +219,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      legacyDataMigrationFailed: '舊版 Hermes 資料遷移失敗：{error}',
    },
  
-@@ -807,8 +807,8 @@
+@@ -810,8 +810,8 @@
      dataDirectoryEnvMacos: 'macOS（桌面端 / 終端機）',
      dataDirectoryEnvLinux: 'Linux（登入環境）',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -231,7 +230,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      webUiTitle: 'Web UI',
      platform: '平台',
      currentWebUi: '目前 Web UI',
-@@ -817,10 +817,10 @@
+@@ -820,10 +820,10 @@
      chooseRuntimeDirectory: '選擇目錄',
      resetRuntimeDirectory: '恢復系統預設',
      runtimeDirectoryHint: '下次重新啟動時會在本機服務啟動前複製並驗證目前 Runtime，舊目錄會保留；後續 Runtime 下載也會儲存在這裡。',
@@ -244,7 +243,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      active: '已啟用',
      installed: '已安裝',
      download: '下載',
-@@ -839,7 +839,7 @@
+@@ -842,7 +842,7 @@
      remoteLoadFailed: '遠端版本載入失敗',
      downloadTasks: '下載任務',
      downloadStarted: '已開始下載',
@@ -253,7 +252,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      restartPromptTitle: 'Runtime 已就緒',
      restartPromptContent: 'Hermes Runtime {version} 已安裝完成，是否立即重新啟動並使用此版本？',
      restartLater: '稍後',
-@@ -932,9 +932,9 @@
+@@ -935,9 +935,9 @@
        viewList: '列表',
        viewDownload: '下載',
        viewMessages: '訊息推送',
@@ -265,7 +264,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
        downloadScan: '用手機掃碼下載',
        downloadScanHint: '目前提供 Android 安裝包',
        available: '可下載',
-@@ -970,7 +970,7 @@
+@@ -973,7 +973,7 @@
        accessFailures: {
          tokenExpired: 'Token 已失效',
          paidAccountRequired: '目前帳號不是付費帳號，無法使用此功能',
@@ -274,7 +273,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
          appAccessExpired: '目前內部測試或公開測試資格已過期，無法使用雲端連線',
          required: 'App 未攜帶存取授權簽章',
          invalid: 'App 存取授權簽章無效',
-@@ -1174,7 +1174,7 @@
+@@ -1177,7 +1177,7 @@
        systemUnavailable: "系統截圖目前無法使用",
        systemWaiting: "請在系統介面選擇截圖區域",
        timedOut: "截圖等候逾時，請重試。",
@@ -283,7 +282,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
        sourceUnavailable: "無法取得螢幕畫面，請檢查螢幕錄製權限後重試。",
        failed: "擷取失敗，請重試。",
      },
-@@ -1321,7 +1321,7 @@
+@@ -1325,7 +1325,7 @@
      },
      showToolCalls: '顯示工具呼叫',
      pushEnabled: '是否推送',
@@ -292,7 +291,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      hideToolCalls: '隱藏工具呼叫',
      messageQueue: '訊息佇列',
      removeQueuedMessage: '移除佇列訊息',
-@@ -2747,14 +2747,14 @@
+@@ -2751,14 +2751,14 @@
        approvalBellHint: '出現新的待處理審批或澄清時播放提示音',
        notifyOnComplete: '完成彈窗通知',
        notifyOnApproval: '審批桌面通知',
@@ -309,7 +308,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
        notifyOnCompleteHint: 'AI 回覆完成時顯示系統通知',
        notifyOnCompleteMacHint: 'macOS 需要在系統設定中允許瀏覽器通知。',
        notifyOnCompleteDenied: '通知權限已被拒絕',
-@@ -2776,7 +2776,7 @@
+@@ -2780,7 +2780,7 @@
        chatInputHeightHint: '桌面端聊天輸入框預設高度（像素）。行動端保持自動高度。',
        linkOpenTarget: '網頁連結開啟方式',
        linkOpenTargetHint: '選擇訊息與 Markdown 預覽中的網頁連結要在哪裡開啟。',
@@ -318,7 +317,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
        linkOpenTargetDefaultBrowser: '預設瀏覽器',
      },
      agent: {
-@@ -2967,10 +2967,10 @@
+@@ -2971,10 +2971,10 @@
          extract: '正在解壓縮模型……', validate: '正在驗證模型……', install: '正在安裝模型……', completed: '模型已可用', failed: '下載失敗',
        },
        hermesConfigTitle: 'Hermes Agent 設定',
@@ -331,7 +330,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
        providerSpeed: '語速',
        providerSampleRate: '取樣率',
        providerBitRate: '位元率',
-@@ -2984,7 +2984,7 @@
+@@ -2988,7 +2988,7 @@
        optionDisabled: '停用',
        nativeProvider: 'Hermes 原生提供商',
        selectNativeProvider: '選擇 Hermes 原生提供商',
@@ -340,6 +339,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
@@ -387,8 +387,8 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      description: 'Geben Sie Benutzername und Passwort ein, um fortzufahren.',
      placeholder: 'Zugangs-Token',
      submit: 'Anmelden',
-@@ -651,7 +651,7 @@
-   apiRelay: {
+@@ -654,7 +654,7 @@
+     campaignLabel: "Double 11",
      title: "API-Relay",
      headline: "Führende KI-Modelle über ein Gateway",
 -    description: "APIKEY.FAN ist das API-Gateway von Ekko Studios Partner. Es bietet einheitlichen Zugriff auf Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek und MiniMax und ist mit offiziellen APIs und SDKs kompatibel.",
@@ -396,7 +396,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "Jetzt ansehen",
      apiCompatible: "Mit offiziellen APIs kompatibel",
-@@ -793,13 +793,13 @@
+@@ -796,13 +796,13 @@
      aiHelpGeneralPrompt: 'Verwende den Skill `hermes-studio-installation` und folge seinen Routing-Anweisungen, um die passende Referenz für Agent und Problem auszuwählen. Hilf mir bei Installation, Updates oder Entfernung von Agents auf diesem Gerät. Prüfe die tatsächliche Installationsquelle, alle aufgelösten Programmpfade, die Node/npm-Umgebung und passende Paketmanager-Präfixe. Frage bei fehlendem Kontext zuerst nach Agent und Symptom. Erhalte Benutzerkonfiguration, Authentifizierung und Unterhaltungsdaten und frage vor destruktiven Änderungen erneut nach Bestätigung.',
      aiHelpPrompt: 'Verwende den Skill `hermes-studio-installation` und folge seinen Routing-Anweisungen, um die passende Referenz für diesen Agent und dieses Problem auszuwählen. Untersuche diesen Fehler auf der Agents-Seite.\n\nAgent: {name}\nAgent-ID: {id}\nVorgang: {operation}\nBefehl: {command}\nnpm-Paket: {package}\nUrsprünglicher Fehler:\n{error}\n\nPrüfe Installationsquelle, alle aufgelösten Programmpfade, die Node/npm-Umgebung und passende Paketmanager-Präfixe. Erhalte Benutzerkonfiguration, Authentifizierung und Unterhaltungsdaten. Erkläre zuerst die Ursache und frage vor destruktiven Änderungen erneut nach Bestätigung.',
      legacyDataMigrationTitle: 'Alte Hermes-Daten gefunden',
@@ -412,7 +412,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: 'Migration der alten Hermes-Daten fehlgeschlagen: {error}',
    },
  
-@@ -819,8 +819,8 @@
+@@ -822,8 +822,8 @@
      dataDirectoryEnvMacos: 'macOS (Desktop / Terminal)',
      dataDirectoryEnvLinux: 'Linux (Anmeldeumgebung)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -423,7 +423,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'Plattform',
      currentWebUi: 'Aktuelles Web UI',
-@@ -829,10 +829,10 @@
+@@ -832,10 +832,10 @@
      chooseRuntimeDirectory: 'Verzeichnis auswählen',
      resetRuntimeDirectory: 'Systemstandard verwenden',
      runtimeDirectoryHint: 'Die aktuelle Runtime wird beim nächsten Neustart vor den lokalen Diensten kopiert und geprüft. Der alte Speicher bleibt erhalten; künftige Runtime-Downloads landen ebenfalls hier.',
@@ -436,7 +436,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      active: 'Aktiv',
      installed: 'Installiert',
      download: 'Herunterladen',
-@@ -851,7 +851,7 @@
+@@ -854,7 +854,7 @@
      remoteLoadFailed: 'Remote-Versionen konnten nicht geladen werden',
      downloadTasks: 'Download-Aufgaben',
      downloadStarted: 'Download gestartet',
@@ -445,7 +445,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime bereit',
      restartPromptContent: 'Hermes Runtime {version} wurde installiert. Jetzt neu starten, um sie zu verwenden?',
      restartLater: 'Später',
-@@ -944,9 +944,9 @@
+@@ -947,9 +947,9 @@
        viewList: 'Liste',
        viewDownload: 'Download',
        viewMessages: 'Nachrichtenversand',
@@ -457,7 +457,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
        downloadScan: 'Mit dem Smartphone scannen',
        downloadScanHint: 'Android-Download ist verfügbar',
        available: 'Verfügbar',
-@@ -982,7 +982,7 @@
+@@ -985,7 +985,7 @@
        accessFailures: {
          tokenExpired: 'Token ist abgelaufen',
          paidAccountRequired: 'Das aktuelle Konto ist nicht kostenpflichtig und kann diese Funktion nicht verwenden',
@@ -466,7 +466,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
          appAccessExpired: 'Der Zugriff auf den internen Test oder die öffentliche Beta ist abgelaufen',
          required: 'Die App hat keine Zugriffsberechtigung übermittelt',
          invalid: 'Die App-Zugriffsberechtigung ist ungültig',
-@@ -1160,7 +1160,7 @@
+@@ -1163,7 +1163,7 @@
        systemUnavailable: "System-Screenshots sind derzeit nicht verfügbar",
        systemWaiting: "Wählen Sie einen Screenshot im Systemdialog",
        timedOut: "Zeitüberschreitung beim Screenshot. Bitte erneut versuchen.",
@@ -475,7 +475,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
        sourceUnavailable: "Bildschirmaufnahme fehlgeschlagen. Prüfen Sie die Berechtigungen und versuchen Sie es erneut.",
        failed: "Screenshot fehlgeschlagen. Bitte versuchen Sie es erneut.",
      },
-@@ -1282,7 +1282,7 @@
+@@ -1285,7 +1285,7 @@
      },
      showToolCalls: 'Tool-Aufrufe anzeigen',
      pushEnabled: 'Push aktivieren',
@@ -484,7 +484,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      hideToolCalls: 'Tool-Aufrufe ausblenden',
      messageQueue: 'Nachrichtenwarteschlange',
      removeQueuedMessage: 'Nachricht aus Warteschlange entfernen',
-@@ -2301,7 +2301,7 @@
+@@ -2305,7 +2305,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -493,7 +493,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'Systembenachrichtigung anzeigen, wenn die KI fertig ist',
        notifyOnCompleteMacHint: 'Unter macOS Browserbenachrichtigungen in den Systemeinstellungen erlauben.',
        notifyOnCompleteDenied: 'Benachrichtigungsberechtigung wurde verweigert',
-@@ -2323,7 +2323,7 @@
+@@ -2327,7 +2327,7 @@
        chatInputHeightHint: 'Standardhöhe der Chat-Eingabe auf dem Desktop in Pixeln. Mobil bleibt die Höhe automatisch.',
        linkOpenTarget: 'Weblinks öffnen in',
        linkOpenTargetHint: 'Wählen Sie, wo Links aus Nachrichten und Markdown-Vorschauen geöffnet werden.',
@@ -502,7 +502,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'Standardbrowser',
      },
      agent: {
-@@ -2486,10 +2486,10 @@
+@@ -2490,10 +2490,10 @@
          extract: 'Modell wird entpackt…', validate: 'Modell wird validiert…', install: 'Modell wird installiert…', completed: 'Modell ist bereit', failed: 'Download fehlgeschlagen',
        },
        hermesConfigTitle: 'Hermes-Agent-Konfiguration',
@@ -515,7 +515,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
        providerSpeed: 'Geschwindigkeit',
        providerSampleRate: 'Abtastrate',
        providerBitRate: 'Bitrate',
-@@ -2503,7 +2503,7 @@
+@@ -2507,7 +2507,7 @@
        optionDisabled: 'Deaktiviert',
        nativeProvider: 'Nativer Hermes-Anbieter',
        selectNativeProvider: 'Nativen Hermes-Anbieter waehlen',
@@ -524,6 +524,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
@@ -571,8 +572,8 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      description: 'أدخل اسم المستخدم وكلمة المرور للمتابعة.',
      placeholder: 'رمز الوصول',
      submit: 'تسجيل الدخول',
-@@ -639,7 +639,7 @@
-   apiRelay: {
+@@ -642,7 +642,7 @@
+     campaignLabel: "الحادي عشر المزدوج",
      title: "بوابة API",
      headline: "نماذج الذكاء الاصطناعي الرائدة عبر بوابة واحدة",
 -    description: "APIKEY.FAN هي بوابة API الشريكة لـ Ekko Studio. توفر وصولًا موحدًا إلى Claude وChatGPT وGrok وGemini وZhipu وKimi وDeepSeek وMiniMax، وهي متوافقة مع واجهات API وحزم SDK الرسمية.",
@@ -580,7 +581,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "عرض الآن",
      apiCompatible: "متوافقة مع واجهات API الرسمية",
-@@ -781,13 +781,13 @@
+@@ -784,13 +784,13 @@
      aiHelpGeneralPrompt: 'استخدم Skill باسم `hermes-studio-installation` واتبع تعليمات التوجيه الخاصة به لاختيار المرجع المناسب للـ Agent والمشكلة. ساعدني في تشخيص أو إدارة تثبيت Agents أو تحديثها أو إزالتها على هذا الجهاز. افحص مصدر التثبيت الفعلي وكل مسارات الملفات التنفيذية التي تم حلها وبيئة Node/npm وبادئات مدير الحزم المناسبة. إذا كان السياق غير كافٍ، فاسأل أولاً عن Agent والعرض المطلوب حله. حافظ على إعدادات المستخدم وبيانات المصادقة والمحادثات واطلب التأكيد قبل أي تغييرات مدمرة.',
      aiHelpPrompt: 'استخدم Skill باسم `hermes-studio-installation` واتبع تعليمات التوجيه الخاصة به لاختيار المرجع المناسب لهذا الـ Agent والمشكلة. شخّص هذا الفشل في صفحة Agents.\n\nAgent: {name}\nمعرّف Agent: {id}\nالعملية: {operation}\nالأمر التنفيذي: {command}\nحزمة npm: {package}\nالخطأ الأصلي:\n{error}\n\nافحص مصدر التثبيت وكل مسارات الملفات التنفيذية التي تم حلها وبيئة Node/npm وبادئات مدير الحزم المناسبة. حافظ على إعدادات المستخدم وبيانات المصادقة والمحادثات. اشرح السبب الجذري أولاً واطلب التأكيد قبل أي تغييرات مدمرة.',
      legacyDataMigrationTitle: 'تم العثور على بيانات Hermes قديمة',
@@ -596,7 +597,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: 'فشل نقل بيانات Hermes القديمة: {error}',
    },
  
-@@ -807,8 +807,8 @@
+@@ -810,8 +810,8 @@
      dataDirectoryEnvMacos: 'macOS (سطح المكتب / الطرفية)',
      dataDirectoryEnvLinux: 'Linux (بيئة تسجيل الدخول)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -607,7 +608,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      webUiTitle: 'واجهة الويب',
      platform: 'المنصة',
      currentWebUi: 'واجهة الويب الحالية',
-@@ -817,10 +817,10 @@
+@@ -820,10 +820,10 @@
      chooseRuntimeDirectory: 'اختر مجلدًا',
      resetRuntimeDirectory: 'استخدام الافتراضي للنظام',
      runtimeDirectoryHint: 'يتم نسخ Runtime الحالي والتحقق منه قبل بدء الخدمات المحلية في التشغيل التالي. ويُحتفظ بالتخزين القديم، وتُخزَّن تنزيلات Runtime المستقبلية هنا.',
@@ -620,7 +621,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      active: 'نشط',
      installed: 'مثبّت',
      download: 'تنزيل',
-@@ -839,7 +839,7 @@
+@@ -842,7 +842,7 @@
      remoteLoadFailed: 'تعذّر تحميل الإصدارات البعيدة',
      downloadTasks: 'مهام التنزيل',
      downloadStarted: 'بدأ التنزيل',
@@ -629,7 +630,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime جاهز',
      restartPromptContent: 'تم تثبيت Hermes Runtime {version}. هل تريد إعادة التشغيل الآن لاستخدامه؟',
      restartLater: 'لاحقًا',
-@@ -932,9 +932,9 @@
+@@ -935,9 +935,9 @@
        viewList: 'القائمة',
        viewDownload: 'تنزيل',
        viewMessages: 'إرسال الرسائل',
@@ -641,7 +642,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
        downloadScan: 'امسح بهاتفك',
        downloadScanHint: 'تنزيل Android متاح الآن',
        available: 'متاح',
-@@ -970,7 +970,7 @@
+@@ -973,7 +973,7 @@
        accessFailures: {
          tokenExpired: 'انتهت صلاحية الرمز المميز',
          paidAccountRequired: 'الحساب الحالي غير مدفوع ولا يمكنه استخدام هذه الميزة',
@@ -650,7 +651,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
          appAccessExpired: 'انتهت صلاحية الوصول للاختبار الداخلي أو الإصدار التجريبي العام',
          required: 'لم يقدّم التطبيق استحقاق وصول',
          invalid: 'استحقاق وصول التطبيق غير صالح',
-@@ -1174,7 +1174,7 @@
+@@ -1177,7 +1177,7 @@
        systemUnavailable: "لقطات النظام غير متاحة حاليًا",
        systemWaiting: "اختر منطقة الالتقاط في نافذة النظام",
        timedOut: "انتهت مهلة الالتقاط. حاول مرة أخرى.",
@@ -659,7 +660,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
        sourceUnavailable: "تعذر التقاط الشاشة. تحقق من أذونات تسجيل الشاشة وحاول مجددًا.",
        failed: "تعذر التقاط الشاشة. حاول مجددًا.",
      },
-@@ -1323,7 +1323,7 @@
+@@ -1327,7 +1327,7 @@
      },
      showToolCalls: 'إظهار نداءات الأدوات',
      pushEnabled: 'تفعيل الإرسال',
@@ -668,7 +669,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      hideToolCalls: 'إخفاء نداءات الأدوات',
      messageQueue: 'طابور الرسائل',
      removeQueuedMessage: 'إزالة الرسالة من الطابور',
-@@ -2804,7 +2804,7 @@
+@@ -2808,7 +2808,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -677,7 +678,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'إظهار إشعار من النظام عند انتهاء الذكاء الاصطناعي',
        notifyOnCompleteMacHint: 'على macOS، اسمح بإشعارات المتصفح من إعدادات النظام.',
        notifyOnCompleteDenied: 'تم رفض إذن الإشعارات',
-@@ -2826,7 +2826,7 @@
+@@ -2830,7 +2830,7 @@
        chatInputHeightHint: 'ارتفاع حقل إدخال المحادثة الافتراضي على سطح المكتب بالبكسل. يبقى الارتفاع تلقائياً على الجوال.',
        linkOpenTarget: 'فتح روابط الويب في',
        linkOpenTargetHint: 'اختر مكان فتح الروابط من الرسائل ومعاينات Markdown.',
@@ -686,7 +687,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'المتصفح الافتراضي',
      },
      agent: {
-@@ -3017,10 +3017,10 @@
+@@ -3021,10 +3021,10 @@
          extract: 'جارٍ فك ضغط النموذج…', validate: 'جارٍ التحقق من النموذج…', install: 'جارٍ تثبيت النموذج…', completed: 'النموذج جاهز', failed: 'فشل التنزيل',
        },
        hermesConfigTitle: 'إعدادات Hermes Agent',
@@ -699,7 +700,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
        providerSpeed: 'السرعة',
        providerSampleRate: 'معدل العيّنات',
        providerBitRate: 'معدل البِت',
-@@ -3034,7 +3034,7 @@
+@@ -3038,7 +3038,7 @@
        optionDisabled: 'مُعطّل',
        nativeProvider: 'مزوّد Hermes الأصلي',
        selectNativeProvider: 'اختر مزوّد Hermes أصلي',
@@ -708,6 +709,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
@@ -755,8 +757,8 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      description: 'Introduce tu nombre de usuario y contrasena para continuar.',
      placeholder: 'Token de acceso',
      submit: 'Iniciar sesion',
-@@ -651,7 +651,7 @@
-   apiRelay: {
+@@ -654,7 +654,7 @@
+     campaignLabel: "Doble 11",
      title: "Relay de API",
      headline: "Los principales modelos de IA en una sola puerta de enlace",
 -    description: "APIKEY.FAN es la puerta de enlace de API asociada de Ekko Studio. Ofrece acceso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek y MiniMax, y es compatible con las API y los SDK oficiales.",
@@ -764,7 +766,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "Ver ahora",
      apiCompatible: "Compatible con las API oficiales",
-@@ -793,13 +793,13 @@
+@@ -796,13 +796,13 @@
      aiHelpGeneralPrompt: 'Usa el Skill `hermes-studio-installation` y sigue sus instrucciones de enrutamiento para elegir la referencia adecuada según el Agent y el problema. Ayúdame a diagnosticar o gestionar la instalación, actualización o eliminación de Agents en este dispositivo. Comprueba el origen real de instalación, todas las rutas de ejecutables resueltas, el entorno Node/npm y los prefijos del gestor de paquetes aplicables. Si falta contexto, pregunta primero qué Agent y síntoma debo resolver. Conserva la configuración, autenticación y conversaciones del usuario y solicita confirmación antes de cualquier cambio destructivo.',
      aiHelpPrompt: 'Usa el Skill `hermes-studio-installation` y sigue sus instrucciones de enrutamiento para elegir la referencia adecuada para este Agent y problema. Diagnostica este fallo de la página Agents.\n\nAgent: {name}\nID del Agent: {id}\nOperación: {operation}\nEjecutable: {command}\nPaquete npm: {package}\nError original:\n{error}\n\nComprueba el origen de instalación, todas las rutas de ejecutables resueltas, el entorno Node/npm y los prefijos del gestor de paquetes aplicables. Conserva la configuración, autenticación y conversaciones del usuario. Explica primero la causa y solicita confirmación antes de cualquier cambio destructivo.',
      legacyDataMigrationTitle: 'Se encontraron datos antiguos de Hermes',
@@ -780,7 +782,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: 'Error al migrar los datos antiguos de Hermes: {error}',
    },
  
-@@ -819,8 +819,8 @@
+@@ -822,8 +822,8 @@
      dataDirectoryEnvMacos: 'macOS (escritorio / terminal)',
      dataDirectoryEnvLinux: 'Linux (entorno de inicio de sesión)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -791,7 +793,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'Plataforma',
      currentWebUi: 'Web UI actual',
-@@ -829,10 +829,10 @@
+@@ -832,10 +832,10 @@
      chooseRuntimeDirectory: 'Elegir directorio',
      resetRuntimeDirectory: 'Usar valor del sistema',
      runtimeDirectoryHint: 'El Runtime actual se copiará y verificará antes de iniciar los servicios locales en el próximo reinicio. El almacenamiento anterior se conserva y las futuras descargas de Runtime se guardan aquí.',
@@ -804,7 +806,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      active: 'Activa',
      installed: 'Instalada',
      download: 'Descargar',
-@@ -851,7 +851,7 @@
+@@ -854,7 +854,7 @@
      remoteLoadFailed: 'No se pudieron cargar las versiones remotas',
      downloadTasks: 'Tareas de descarga',
      downloadStarted: 'Descarga iniciada',
@@ -813,7 +815,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime listo',
      restartPromptContent: 'Hermes Runtime {version} se ha instalado. ¿Reiniciar ahora para usarlo?',
      restartLater: 'Más tarde',
-@@ -944,9 +944,9 @@
+@@ -947,9 +947,9 @@
        viewList: 'Lista',
        viewDownload: 'Descargar',
        viewMessages: 'Envío de mensajes',
@@ -825,7 +827,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
        downloadScan: 'Escanea con tu teléfono',
        downloadScanHint: 'La descarga para Android ya está disponible',
        available: 'Disponible',
-@@ -982,7 +982,7 @@
+@@ -985,7 +985,7 @@
        accessFailures: {
          tokenExpired: 'El token ha caducado',
          paidAccountRequired: 'La cuenta actual no es de pago y no puede usar esta función',
@@ -834,7 +836,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
          appAccessExpired: 'El acceso a la prueba interna o beta pública ha caducado',
          required: 'La App no proporcionó una autorización de acceso',
          invalid: 'La autorización de acceso de la App no es válida',
-@@ -1160,7 +1160,7 @@
+@@ -1163,7 +1163,7 @@
        systemUnavailable: "Las capturas del sistema no están disponibles",
        systemWaiting: "Elige una captura en el diálogo del sistema",
        timedOut: "Se agotó el tiempo de captura. Inténtalo de nuevo.",
@@ -843,7 +845,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
        sourceUnavailable: "No se pudo capturar la pantalla. Revisa los permisos e inténtalo de nuevo.",
        failed: "No se pudo capturar la pantalla. Inténtalo de nuevo.",
      },
-@@ -1282,7 +1282,7 @@
+@@ -1285,7 +1285,7 @@
      },
      showToolCalls: 'Mostrar llamadas de herramientas',
      pushEnabled: 'Activar envío',
@@ -852,7 +854,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      hideToolCalls: 'Ocultar llamadas de herramientas',
      messageQueue: 'Cola de mensajes',
      removeQueuedMessage: 'Quitar mensaje de la cola',
-@@ -2301,7 +2301,7 @@
+@@ -2305,7 +2305,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -861,7 +863,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'Mostrar una notificacion del sistema cuando la IA termina',
        notifyOnCompleteMacHint: 'En macOS, permite las notificaciones del navegador en Ajustes del Sistema.',
        notifyOnCompleteDenied: 'Permiso de notificacion denegado',
-@@ -2323,7 +2323,7 @@
+@@ -2327,7 +2327,7 @@
        chatInputHeightHint: 'Altura predeterminada de la entrada del chat en escritorio, en píxeles. En móvil se mantiene automática.',
        linkOpenTarget: 'Abrir enlaces web en',
        linkOpenTargetHint: 'Elige dónde se abren los enlaces de mensajes y vistas previas de Markdown.',
@@ -870,7 +872,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'Navegador predeterminado',
      },
      agent: {
-@@ -2486,10 +2486,10 @@
+@@ -2490,10 +2490,10 @@
          extract: 'Extrayendo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'El modelo está listo', failed: 'Descarga fallida',
        },
        hermesConfigTitle: 'Configuracion de Hermes Agent',
@@ -883,7 +885,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
        providerSpeed: 'Velocidad',
        providerSampleRate: 'Frecuencia de muestreo',
        providerBitRate: 'Tasa de bits',
-@@ -2503,7 +2503,7 @@
+@@ -2507,7 +2507,7 @@
        optionDisabled: 'Desactivado',
        nativeProvider: 'Proveedor nativo de Hermes',
        selectNativeProvider: 'Seleccionar proveedor nativo de Hermes',
@@ -892,10 +894,11 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/locales/tr.ts
 --- a/packages/client/src/i18n/locales/tr.ts
 +++ b/packages/client/src/i18n/locales/tr.ts
-@@ -134,12 +134,12 @@
+@@ -139,12 +139,12 @@
    },
    computerUsePermissions: {
      "promptTitle": "Bilgisayar denetimi izin gerektiriyor",
@@ -910,7 +913,7 @@ diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/l
      "complete": "Her iki sistem izni de etkin.",
      "refresh": "Tekrar denetle",
      "checking": "Denetleniyor…",
-@@ -152,8 +152,8 @@
+@@ -157,8 +157,8 @@
      "accessibilityHint": "Diğer uygulamalarda tıklamak, yazmak ve denetimleri okumak için kullanılır.",
      "screenRecordingHint": "Ekko’nun ekranı görebilmesi için uygulama pencerelerini yakalar.",
      "authorize": "İzin ver",
@@ -921,7 +924,7 @@ diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/l
      "checkFailed": "İzinler okunamadı. Tekrar denetleyin.",
      "openFailed": "İzin ayarları açılamadı. Sistem Ayarları → Gizlilik ve Güvenlik bölümünü elle açın."
    },
-@@ -400,7 +400,7 @@
+@@ -366,7 +366,7 @@
  
      title: 'Tarayıcı',
      settings: 'Tarayıcı ayarları',
@@ -930,7 +933,7 @@ diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/l
      newTab: 'Yeni sekme',
      back: 'Geri',
      forward: 'İleri',
-@@ -448,7 +448,7 @@
+@@ -414,7 +414,7 @@
    },
  
    login: {
@@ -939,6 +942,7 @@ diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/l
      description: 'Devam etmek için kullanıcı adınızı ve parolanızı girin.',
      placeholder: 'Erişim belirteci',
      submit: 'Giriş yap',
+
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
@@ -968,6 +972,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      "checkFailed": "Could not read permissions. Try checking again.",
      "openFailed": "Could not open authorization. Open System Settings → Privacy & Security manually."
    },
+
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
@@ -997,6 +1002,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      "checkFailed": "暂时无法读取权限，请重新检测。",
      "openFailed": "无法打开授权设置，请手动前往「系统设置 → 隐私与安全性」。"
    },
+
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
@@ -1044,8 +1050,8 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      description: 'Entrez votre nom d\'utilisateur et votre mot de passe pour continuer.',
      placeholder: 'Jeton d\'acces',
      submit: 'Connexion',
-@@ -651,7 +651,7 @@
-   apiRelay: {
+@@ -654,7 +654,7 @@
+     campaignLabel: "Double 11",
      title: "Relais API",
      headline: "Les principaux modèles IA, une seule passerelle",
 -    description: "APIKEY.FAN est la passerelle API partenaire d’Ekko Studio. Elle offre un accès unifié à Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek et MiniMax, et est compatible avec les API et SDK officiels.",
@@ -1053,7 +1059,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "Voir maintenant",
      apiCompatible: "Compatible avec les API officielles",
-@@ -793,13 +793,13 @@
+@@ -796,13 +796,13 @@
      aiHelpGeneralPrompt: 'Utilisez le Skill `hermes-studio-installation` et suivez ses instructions de routage pour choisir la référence adaptée à l’Agent et au problème. Aidez-moi à diagnostiquer ou gérer l’installation, la mise à jour ou la suppression d’Agents sur cet appareil. Vérifiez la source d’installation réelle, tous les chemins d’exécutables résolus, l’environnement Node/npm et les préfixes de gestionnaire de paquets applicables. Si le contexte manque, demandez d’abord quel Agent et quel symptôme traiter. Préservez la configuration, l’authentification et les conversations de l’utilisateur et demandez confirmation avant toute modification destructive.',
      aiHelpPrompt: 'Utilisez le Skill `hermes-studio-installation` et suivez ses instructions de routage pour choisir la référence adaptée à cet Agent et à ce problème. Diagnostiquez cet échec de la page Agents.\n\nAgent : {name}\nID Agent : {id}\nOpération : {operation}\nExécutable : {command}\nPaquet npm : {package}\nErreur d’origine :\n{error}\n\nVérifiez la source d’installation, tous les chemins d’exécutables résolus, l’environnement Node/npm et les préfixes de gestionnaire de paquets applicables. Préservez la configuration, l’authentification et les conversations de l’utilisateur. Expliquez d’abord la cause et demandez confirmation avant toute modification destructive.',
      legacyDataMigrationTitle: 'Anciennes données Hermes détectées',
@@ -1069,7 +1075,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: 'Échec de la migration des anciennes données Hermes : {error}',
    },
  
-@@ -819,8 +819,8 @@
+@@ -822,8 +822,8 @@
      dataDirectoryEnvMacos: 'macOS (bureau / terminal)',
      dataDirectoryEnvLinux: 'Linux (environnement de connexion)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -1080,7 +1086,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'Plateforme',
      currentWebUi: 'Web UI actuel',
-@@ -829,10 +829,10 @@
+@@ -832,10 +832,10 @@
      chooseRuntimeDirectory: 'Choisir un répertoire',
      resetRuntimeDirectory: 'Utiliser le dossier système',
      runtimeDirectoryHint: 'Le Runtime actuel sera copié et vérifié avant les services locaux au prochain redémarrage. L’ancien stockage est conservé et les prochains téléchargements de Runtime seront enregistrés ici.',
@@ -1093,7 +1099,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      active: 'Active',
      installed: 'Installée',
      download: 'Télécharger',
-@@ -851,7 +851,7 @@
+@@ -854,7 +854,7 @@
      remoteLoadFailed: 'Impossible de charger les versions distantes',
      downloadTasks: 'Tâches de téléchargement',
      downloadStarted: 'Téléchargement démarré',
@@ -1102,7 +1108,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime prêt',
      restartPromptContent: 'Hermes Runtime {version} a été installé. Redémarrer maintenant pour l’utiliser ?',
      restartLater: 'Plus tard',
-@@ -944,9 +944,9 @@
+@@ -947,9 +947,9 @@
        viewList: 'Liste',
        viewDownload: 'Télécharger',
        viewMessages: 'Envoi de messages',
@@ -1114,7 +1120,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
        downloadScan: 'Scanner avec votre téléphone',
        downloadScanHint: 'Le téléchargement Android est disponible',
        available: 'Disponible',
-@@ -982,7 +982,7 @@
+@@ -985,7 +985,7 @@
        accessFailures: {
          tokenExpired: 'Le jeton a expiré',
          paidAccountRequired: 'Le compte actuel n’est pas payant et ne peut pas utiliser cette fonctionnalité',
@@ -1123,7 +1129,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
          appAccessExpired: 'L’accès au test interne ou à la bêta publique a expiré',
          required: 'L’App n’a fourni aucune autorisation d’accès',
          invalid: 'L’autorisation d’accès de l’App est invalide',
-@@ -1160,7 +1160,7 @@
+@@ -1163,7 +1163,7 @@
        systemUnavailable: "Les captures système sont actuellement indisponibles",
        systemWaiting: "Choisissez une capture dans la boîte de dialogue système",
        timedOut: "Le délai de capture a expiré. Réessayez.",
@@ -1132,7 +1138,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
        sourceUnavailable: "Impossible de capturer l’écran. Vérifiez les autorisations et réessayez.",
        failed: "Impossible de capturer l’écran. Veuillez réessayer.",
      },
-@@ -1282,7 +1282,7 @@
+@@ -1285,7 +1285,7 @@
      },
      showToolCalls: 'Afficher les appels d’outils',
      pushEnabled: 'Activer l’envoi',
@@ -1141,7 +1147,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      hideToolCalls: 'Masquer les appels d’outils',
      messageQueue: 'File de messages',
      removeQueuedMessage: 'Retirer le message de la file',
-@@ -2301,7 +2301,7 @@
+@@ -2305,7 +2305,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1150,7 +1156,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'Afficher une notification systeme lorsque l\'IA a termine',
        notifyOnCompleteMacHint: 'Sur macOS, autorisez les notifications du navigateur dans Reglages Systeme.',
        notifyOnCompleteDenied: 'Autorisation de notification refusee',
-@@ -2323,7 +2323,7 @@
+@@ -2327,7 +2327,7 @@
        chatInputHeightHint: 'Hauteur par défaut de la zone de saisie sur ordinateur, en pixels. Le mobile reste automatique.',
        linkOpenTarget: 'Ouvrir les liens web dans',
        linkOpenTargetHint: 'Choisissez où ouvrir les liens des messages et des aperçus Markdown.',
@@ -1159,7 +1165,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'Navigateur par défaut',
      },
      agent: {
-@@ -2486,10 +2486,10 @@
+@@ -2490,10 +2490,10 @@
          extract: 'Extraction du modèle…', validate: 'Validation du modèle…', install: 'Installation du modèle…', completed: 'Le modèle est prêt', failed: 'Échec du téléchargement',
        },
        hermesConfigTitle: 'Configuration de Hermes Agent',
@@ -1172,7 +1178,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
        providerSpeed: 'Vitesse',
        providerSampleRate: 'Frequence d’echantillonnage',
        providerBitRate: 'Debit binaire',
-@@ -2503,7 +2503,7 @@
+@@ -2507,7 +2507,7 @@
        optionDisabled: 'Desactive',
        nativeProvider: 'Fournisseur natif Hermes',
        selectNativeProvider: 'Choisir un fournisseur natif Hermes',
@@ -1181,6 +1187,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
@@ -1228,8 +1235,8 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      description: 'Введите имя пользователя и пароль для продолжения.',
      placeholder: 'Токен доступа',
      submit: 'Войти',
-@@ -565,7 +565,7 @@
-   apiRelay: {
+@@ -568,7 +568,7 @@
+     campaignLabel: "Двойная 11",
      title: "API-реле",
      headline: "Ведущие модели ИИ через единый шлюз",
 -    description: "APIKEY.FAN — партнёрский API-шлюз Ekko Studio. Он предоставляет единый доступ к Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek и MiniMax и совместим с официальными API и SDK.",
@@ -1237,7 +1244,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "Посмотреть",
      apiCompatible: "Совместимость с официальными API",
-@@ -703,13 +703,13 @@
+@@ -706,13 +706,13 @@
      aiHelpGeneralPrompt: 'Используй Skill `hermes-studio-installation` и следуй его правилам маршрутизации, чтобы выбрать подходящий reference для Agent и проблемы. Помоги мне диагностировать или выполнить установку, обновление либо удаление Agents на этом устройстве. Проверь фактический источник установки, все найденные пути исполняемых файлов, окружение Node/npm и применимые префиксы менеджера пакетов. Если контекста недостаточно, сначала спроси, какой Agent и симптом нужно разобрать. Сохрани пользовательские настройки, данные аутентификации и разговоров и запроси подтверждение перед любыми разрушительными изменениями.',
      aiHelpPrompt: 'Используй Skill `hermes-studio-installation` и следуй его правилам маршрутизации, чтобы выбрать подходящий reference для этого Agent и проблемы. Диагностируй этот сбой на странице Agents.\n\nAgent: {name}\nID Agent: {id}\nОперация: {operation}\nКоманда: {command}\nПакет npm: {package}\nИсходная ошибка:\n{error}\n\nПроверь источник установки, все найденные пути исполняемого файла, окружение Node/npm и применимые префиксы менеджера пакетов. Сохрани пользовательские настройки, данные аутентификации и разговоров. Сначала объясни первопричину и запроси подтверждение перед любыми разрушительными изменениями.',
      legacyDataMigrationTitle: 'Найдены прежние данные Hermes',
@@ -1253,7 +1260,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: 'Не удалось перенести прежние данные Hermes: {error}',
    },
  
-@@ -729,8 +729,8 @@
+@@ -732,8 +732,8 @@
      dataDirectoryEnvMacos: 'macOS (настольное приложение / терминал)',
      dataDirectoryEnvLinux: 'Linux (среда входа)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -1264,7 +1271,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'Платформа',
      currentWebUi: 'Текущий Web UI',
-@@ -739,10 +739,10 @@
+@@ -742,10 +742,10 @@
      chooseRuntimeDirectory: 'Выбрать каталог',
      resetRuntimeDirectory: 'Системный каталог',
      runtimeDirectoryHint: 'При следующем перезапуске текущий Runtime будет скопирован и проверен до запуска локальных сервисов. Старое хранилище сохранится, а будущие загрузки Runtime будут помещаться сюда.',
@@ -1277,7 +1284,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      active: 'Активна',
      installed: 'Установлена',
      download: 'Скачать',
-@@ -761,7 +761,7 @@
+@@ -764,7 +764,7 @@
      remoteLoadFailed: 'Не удалось загрузить удаленные версии',
      downloadTasks: 'Задачи загрузки',
      downloadStarted: 'Загрузка начата',
@@ -1286,7 +1293,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime готов',
      restartPromptContent: 'Hermes Runtime {version} установлен. Перезапустить сейчас, чтобы использовать его?',
      restartLater: 'Позже',
-@@ -871,9 +871,9 @@
+@@ -874,9 +874,9 @@
        viewList: 'Список',
        viewDownload: 'Скачать',
        viewMessages: 'Отправка сообщений',
@@ -1298,7 +1305,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
        downloadScan: 'Сканировать телефоном',
        downloadScanHint: 'Версия для Android доступна',
        available: 'Доступно',
-@@ -909,7 +909,7 @@
+@@ -912,7 +912,7 @@
        accessFailures: {
          tokenExpired: 'Срок действия токена истёк',
          paidAccountRequired: 'Текущая учётная запись не является платной и не может использовать эту функцию',
@@ -1307,7 +1314,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
          appAccessExpired: 'Срок доступа к внутреннему тестированию или публичной бета-версии истёк',
          required: 'App не предоставило разрешение на доступ',
          invalid: 'Разрешение на доступ App недействительно',
-@@ -1087,7 +1087,7 @@
+@@ -1090,7 +1090,7 @@
        systemUnavailable: "Системные снимки экрана сейчас недоступны",
        systemWaiting: "Выберите область снимка в системном окне",
        timedOut: "Время ожидания снимка истекло. Повторите попытку.",
@@ -1316,7 +1323,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
        sourceUnavailable: "Не удалось захватить экран. Проверьте разрешения и повторите попытку.",
        failed: "Не удалось сделать снимок. Повторите попытку.",
      },
-@@ -1223,7 +1223,7 @@
+@@ -1227,7 +1227,7 @@
      },
      showToolCalls: 'Показать вызовы инструментов',
      pushEnabled: 'Включить отправку',
@@ -1325,7 +1332,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      hideToolCalls: 'Скрыть вызовы инструментов',
      messageQueue: 'Очередь сообщений',
      removeQueuedMessage: 'Удалить сообщение из очереди',
-@@ -2576,7 +2576,7 @@
+@@ -2580,7 +2580,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1334,7 +1341,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'Показывать системное уведомление по окончании ответа AI',
        notifyOnCompleteMacHint: 'В macOS разрешите уведомления браузера в системных настройках.',
        notifyOnCompleteDenied: 'Разрешение на уведомления отклонено',
-@@ -2598,7 +2598,7 @@
+@@ -2602,7 +2602,7 @@
        chatInputHeightHint: 'Высота поля ввода чата на рабочем столе в пикселях. На мобильных остается авто.',
        linkOpenTarget: 'Открывать веб-ссылки в',
        linkOpenTargetHint: 'Выберите, где открывать ссылки из сообщений и предпросмотров Markdown.',
@@ -1343,7 +1350,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'Браузер по умолчанию',
      },
      agent: {
-@@ -2789,10 +2789,10 @@
+@@ -2793,10 +2793,10 @@
          extract: 'Распаковка модели…', validate: 'Проверка модели…', install: 'Установка модели…', completed: 'Модель готова', failed: 'Ошибка загрузки',
        },
        hermesConfigTitle: 'Конфигурация Hermes Agent',
@@ -1356,7 +1363,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
        providerSpeed: 'Скорость',
        providerSampleRate: 'Частота дискретизации',
        providerBitRate: 'Битрейт',
-@@ -2806,7 +2806,7 @@
+@@ -2810,7 +2810,7 @@
        optionDisabled: 'Выключено',
        nativeProvider: 'Нативный провайдер Hermes',
        selectNativeProvider: 'Выбрать нативный провайдер Hermes',
@@ -1365,6 +1372,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
@@ -1412,8 +1420,8 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      description: 'Insira seu nome de usuário e senha para continuar.',
      placeholder: 'Token de acesso',
      submit: 'Entrar',
-@@ -651,7 +651,7 @@
-   apiRelay: {
+@@ -654,7 +654,7 @@
+     campaignLabel: "Double 11",
      title: "Relay de API",
      headline: "Os principais modelos de IA em um só gateway",
 -    description: "APIKEY.FAN é o gateway de API parceiro do Ekko Studio. Oferece acesso unificado a Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek e MiniMax e é compatível com as APIs e os SDKs oficiais.",
@@ -1421,7 +1429,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "Ver agora",
      apiCompatible: "Compatível com as APIs oficiais",
-@@ -793,13 +793,13 @@
+@@ -796,13 +796,13 @@
      aiHelpGeneralPrompt: 'Use o Skill `hermes-studio-installation` e siga suas instruções de roteamento para escolher a referência adequada ao Agent e ao problema. Ajude-me a diagnosticar ou gerenciar a instalação, atualização ou remoção de Agents neste dispositivo. Verifique a origem real da instalação, todos os caminhos de executáveis resolvidos, o ambiente Node/npm e os prefixos aplicáveis do gerenciador de pacotes. Se faltar contexto, pergunte primeiro qual Agent e sintoma devo resolver. Preserve configurações, autenticação e conversas do usuário e peça confirmação antes de alterações destrutivas.',
      aiHelpPrompt: 'Use o Skill `hermes-studio-installation` e siga suas instruções de roteamento para escolher a referência adequada a este Agent e problema. Diagnostique esta falha da página Agents.\n\nAgent: {name}\nID do Agent: {id}\nOperação: {operation}\nExecutável: {command}\nPacote npm: {package}\nErro original:\n{error}\n\nVerifique a origem da instalação, todos os caminhos de executáveis resolvidos, o ambiente Node/npm e os prefixos aplicáveis do gerenciador de pacotes. Preserve configurações, autenticação e conversas do usuário. Explique primeiro a causa e peça confirmação antes de alterações destrutivas.',
      legacyDataMigrationTitle: 'Dados antigos do Hermes encontrados',
@@ -1437,7 +1445,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: 'Falha ao migrar os dados antigos do Hermes: {error}',
    },
  
-@@ -819,8 +819,8 @@
+@@ -822,8 +822,8 @@
      dataDirectoryEnvMacos: 'macOS (desktop / terminal)',
      dataDirectoryEnvLinux: 'Linux (ambiente de login)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -1448,7 +1456,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'Plataforma',
      currentWebUi: 'Web UI atual',
-@@ -829,10 +829,10 @@
+@@ -832,10 +832,10 @@
      chooseRuntimeDirectory: 'Escolher diretório',
      resetRuntimeDirectory: 'Usar padrão do sistema',
      runtimeDirectoryHint: 'O Runtime atual será copiado e verificado antes dos serviços locais na próxima reinicialização. O armazenamento anterior será mantido e futuros downloads do Runtime serão salvos aqui.',
@@ -1461,7 +1469,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      active: 'Ativa',
      installed: 'Instalada',
      download: 'Baixar',
-@@ -851,7 +851,7 @@
+@@ -854,7 +854,7 @@
      remoteLoadFailed: 'Falha ao carregar versões remotas',
      downloadTasks: 'Tarefas de download',
      downloadStarted: 'Download iniciado',
@@ -1470,7 +1478,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime pronto',
      restartPromptContent: 'O Hermes Runtime {version} foi instalado. Reiniciar agora para usá-lo?',
      restartLater: 'Mais tarde',
-@@ -944,9 +944,9 @@
+@@ -947,9 +947,9 @@
        viewList: 'Lista',
        viewDownload: 'Download',
        viewMessages: 'Envio de mensagens',
@@ -1482,7 +1490,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
        downloadScan: 'Escaneie com o celular',
        downloadScanHint: 'Download para Android disponível',
        available: 'Disponível',
-@@ -982,7 +982,7 @@
+@@ -985,7 +985,7 @@
        accessFailures: {
          tokenExpired: 'O token expirou',
          paidAccountRequired: 'A conta atual não é paga e não pode usar este recurso',
@@ -1491,7 +1499,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
          appAccessExpired: 'O acesso ao teste interno ou à beta pública expirou',
          required: 'O App não forneceu uma autorização de acesso',
          invalid: 'A autorização de acesso do App é inválida',
-@@ -1160,7 +1160,7 @@
+@@ -1163,7 +1163,7 @@
        systemUnavailable: "As capturas do sistema estão indisponíveis",
        systemWaiting: "Escolha uma captura na janela do sistema",
        timedOut: "O tempo da captura expirou. Tente novamente.",
@@ -1500,7 +1508,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
        sourceUnavailable: "Não foi possível capturar a tela. Verifique as permissões e tente novamente.",
        failed: "Não foi possível capturar a tela. Tente novamente.",
      },
-@@ -1282,7 +1282,7 @@
+@@ -1285,7 +1285,7 @@
      },
      showToolCalls: 'Mostrar chamadas de ferramentas',
      pushEnabled: 'Ativar envio',
@@ -1509,7 +1517,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      hideToolCalls: 'Ocultar chamadas de ferramentas',
      messageQueue: 'Fila de mensagens',
      removeQueuedMessage: 'Remover mensagem da fila',
-@@ -2301,7 +2301,7 @@
+@@ -2305,7 +2305,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1518,7 +1526,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'Mostrar notificação do sistema quando a IA terminar',
        notifyOnCompleteMacHint: 'No macOS, permita notificações do navegador nos Ajustes do Sistema.',
        notifyOnCompleteDenied: 'Permissão de notificação negada',
-@@ -2323,7 +2323,7 @@
+@@ -2327,7 +2327,7 @@
        chatInputHeightHint: 'Altura padrão da entrada do chat no desktop, em pixels. No celular permanece automática.',
        linkOpenTarget: 'Abrir links da web em',
        linkOpenTargetHint: 'Escolha onde abrir links de mensagens e prévias de Markdown.',
@@ -1527,7 +1535,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: 'Navegador padrão',
      },
      agent: {
-@@ -2486,10 +2486,10 @@
+@@ -2490,10 +2490,10 @@
          extract: 'Extraindo modelo…', validate: 'Validando modelo…', install: 'Instalando modelo…', completed: 'Modelo pronto', failed: 'Falha no download',
        },
        hermesConfigTitle: 'Configuracao do Hermes Agent',
@@ -1540,7 +1548,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
        providerSpeed: 'Velocidade',
        providerSampleRate: 'Taxa de amostragem',
        providerBitRate: 'Taxa de bits',
-@@ -2503,7 +2503,7 @@
+@@ -2507,7 +2507,7 @@
        optionDisabled: 'Desativado',
        nativeProvider: 'Provedor nativo Hermes',
        selectNativeProvider: 'Selecionar provedor nativo Hermes',
@@ -1549,6 +1557,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
@@ -1596,8 +1605,8 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      description: '계속하려면 사용자 이름과 비밀번호를 입력하세요.',
      placeholder: '액세스 토큰',
      submit: '로그인',
-@@ -651,7 +651,7 @@
-   apiRelay: {
+@@ -654,7 +654,7 @@
+     campaignLabel: "더블 일레븐",
      title: "API 릴레이",
      headline: "주요 AI 모델을 하나의 게이트웨이로",
 -    description: "APIKEY.FAN은 Ekko Studio의 제휴 API 게이트웨이입니다. Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, MiniMax에 통합 API로 접근할 수 있으며, 공식 API 및 SDK와 호환됩니다.",
@@ -1605,7 +1614,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "지금 보기",
      apiCompatible: "공식 API 호환",
-@@ -799,7 +799,7 @@
+@@ -802,7 +802,7 @@
      legacyDataMigrationWarning: '확인 후 Studio가 다시 시작되며, 로컬 서비스 시작 전에 같은 이름의 파일을 이전 복사본으로 덮어씁니다. 현재 디렉터리에만 있는 파일은 유지됩니다. 이 질문은 한 번만 표시됩니다.',
      legacyDataMigrationPositive: '이전 데이터 이전',
      legacyDataMigrationNegative: '이전하지 않음',
@@ -1614,7 +1623,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: '이전 Hermes 데이터 이전 실패: {error}',
    },
  
-@@ -819,8 +819,8 @@
+@@ -822,8 +822,8 @@
      dataDirectoryEnvMacos: 'macOS(데스크톱 / 터미널)',
      dataDirectoryEnvLinux: 'Linux(로그인 환경)',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -1625,7 +1634,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: '플랫폼',
      currentWebUi: '현재 Web UI',
-@@ -829,10 +829,10 @@
+@@ -832,10 +832,10 @@
      chooseRuntimeDirectory: '디렉터리 선택',
      resetRuntimeDirectory: '시스템 기본값 사용',
      runtimeDirectoryHint: '다음 재시작 시 로컬 서비스 시작 전에 현재 Runtime을 복사하고 검증합니다. 이전 저장소는 유지되며 이후 Runtime 다운로드도 여기에 저장됩니다.',
@@ -1638,7 +1647,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      active: '활성',
      installed: '설치됨',
      download: '다운로드',
-@@ -851,7 +851,7 @@
+@@ -854,7 +854,7 @@
      remoteLoadFailed: '원격 버전을 불러오지 못했습니다',
      downloadTasks: '다운로드 작업',
      downloadStarted: '다운로드를 시작했습니다',
@@ -1647,7 +1656,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime 준비 완료',
      restartPromptContent: 'Hermes Runtime {version} 설치가 완료되었습니다. 지금 다시 시작하여 사용하시겠습니까?',
      restartLater: '나중에',
-@@ -944,9 +944,9 @@
+@@ -947,9 +947,9 @@
        viewList: '목록',
        viewDownload: '다운로드',
        viewMessages: '메시지 전송',
@@ -1659,7 +1668,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
        downloadScan: '휴대폰으로 스캔',
        downloadScanHint: 'Android 다운로드 가능',
        available: '다운로드 가능',
-@@ -982,7 +982,7 @@
+@@ -985,7 +985,7 @@
        accessFailures: {
          tokenExpired: '토큰이 만료되었습니다',
          paidAccountRequired: '현재 계정은 유료 계정이 아니므로 이 기능을 사용할 수 없습니다',
@@ -1668,7 +1677,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
          appAccessExpired: '내부 테스트 또는 공개 베타 이용 기간이 만료되었습니다',
          required: 'App에서 접근 권한을 제공하지 않았습니다',
          invalid: 'App 접근 권한이 유효하지 않습니다',
-@@ -1160,7 +1160,7 @@
+@@ -1163,7 +1163,7 @@
        systemUnavailable: "현재 시스템 스크린샷을 사용할 수 없습니다",
        systemWaiting: "시스템 창에서 캡처 영역을 선택하세요",
        timedOut: "스크린샷 시간이 초과되었습니다. 다시 시도하세요.",
@@ -1677,7 +1686,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
        sourceUnavailable: "화면을 캡처하지 못했습니다. 화면 기록 권한을 확인하고 다시 시도하세요.",
        failed: "캡처하지 못했습니다. 다시 시도하세요.",
      },
-@@ -1282,7 +1282,7 @@
+@@ -1285,7 +1285,7 @@
      },
      showToolCalls: '도구 호출 표시',
      pushEnabled: '푸시 사용',
@@ -1686,7 +1695,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      hideToolCalls: '도구 호출 숨기기',
      messageQueue: '메시지 대기열',
      removeQueuedMessage: '대기열 메시지 제거',
-@@ -2301,7 +2301,7 @@
+@@ -2305,7 +2305,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1695,7 +1704,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'AI 응답 완료 시 시스템 알림 표시',
        notifyOnCompleteMacHint: 'macOS 에서는 시스템 설정에서 브라우저 알림을 허용해야 합니다.',
        notifyOnCompleteDenied: '알림 권한이 거부되었습니다',
-@@ -2323,7 +2323,7 @@
+@@ -2327,7 +2327,7 @@
        chatInputHeightHint: '데스크톱 채팅 입력창 기본 높이(px). 모바일은 자동 높이를 유지합니다.',
        linkOpenTarget: '웹 링크 열기 위치',
        linkOpenTargetHint: '메시지와 Markdown 미리보기의 링크를 열 위치를 선택합니다.',
@@ -1704,7 +1713,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: '기본 브라우저',
      },
      agent: {
-@@ -2486,10 +2486,10 @@
+@@ -2490,10 +2490,10 @@
          extract: '모델 압축 해제 중…', validate: '모델 검증 중…', install: '모델 설치 중…', completed: '모델 사용 가능', failed: '다운로드 실패',
        },
        hermesConfigTitle: 'Hermes Agent 설정',
@@ -1717,7 +1726,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
        providerSpeed: '속도',
        providerSampleRate: '샘플 레이트',
        providerBitRate: '비트 레이트',
-@@ -2503,7 +2503,7 @@
+@@ -2507,7 +2507,7 @@
        optionDisabled: '사용 안 함',
        nativeProvider: 'Hermes 네이티브 제공자',
        selectNativeProvider: 'Hermes 네이티브 제공자 선택',
@@ -1726,6 +1735,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
@@ -1773,8 +1783,8 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      description: 'ユーザー名とパスワードを入力して続行してください。',
      placeholder: 'アクセストークン',
      submit: 'ログイン',
-@@ -651,7 +651,7 @@
-   apiRelay: {
+@@ -654,7 +654,7 @@
+     campaignLabel: "ダブルイレブン",
      title: "APIリレー",
      headline: "主要なAIモデルを一つの窓口で",
 -    description: "APIKEY.FANはEkko Studioの提携APIゲートウェイです。Claude、ChatGPT、Grok、Gemini、Zhipu、Kimi、DeepSeek、MiniMaxに統一APIで接続でき、公式APIとSDKに対応しています。",
@@ -1782,7 +1792,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      zhipu: "Zhipu",
      viewNow: "今すぐ見る",
      apiCompatible: "公式API互換",
-@@ -799,7 +799,7 @@
+@@ -802,7 +802,7 @@
      legacyDataMigrationWarning: '確認後に Studio が再起動し、ローカルサービスの開始前に同名ファイルを以前のデータで上書きします。現在のディレクトリにのみあるファイルは保持されます。この確認は一度だけ表示されます。',
      legacyDataMigrationPositive: '以前のデータを移行',
      legacyDataMigrationNegative: '移行しない',
@@ -1791,7 +1801,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      legacyDataMigrationFailed: '以前の Hermes データの移行に失敗しました：{error}',
    },
  
-@@ -819,8 +819,8 @@
+@@ -822,8 +822,8 @@
      dataDirectoryEnvMacos: 'macOS（デスクトップ / ターミナル）',
      dataDirectoryEnvLinux: 'Linux（ログイン環境）',
      dataDirectoryEnvDocker: 'Docker Compose',
@@ -1802,7 +1812,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      webUiTitle: 'Web UI',
      platform: 'プラットフォーム',
      currentWebUi: '現在の Web UI',
-@@ -829,10 +829,10 @@
+@@ -832,10 +832,10 @@
      chooseRuntimeDirectory: 'ディレクトリを選択',
      resetRuntimeDirectory: 'システム既定に戻す',
      runtimeDirectoryHint: '次回再起動時にローカルサービスの起動前に現在の Runtime をコピーして検証します。元の保存先は保持され、今後の Runtime ダウンロードもここに保存されます。',
@@ -1815,7 +1825,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      active: '有効',
      installed: 'インストール済み',
      download: 'ダウンロード',
-@@ -851,7 +851,7 @@
+@@ -854,7 +854,7 @@
      remoteLoadFailed: 'リモートバージョンの読み込みに失敗しました',
      downloadTasks: 'ダウンロードタスク',
      downloadStarted: 'ダウンロードを開始しました',
@@ -1824,7 +1834,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      restartPromptTitle: 'Runtime の準備が完了しました',
      restartPromptContent: 'Hermes Runtime {version} がインストールされました。今すぐ再起動して使用しますか？',
      restartLater: '後で',
-@@ -944,9 +944,9 @@
+@@ -947,9 +947,9 @@
        viewList: '一覧',
        viewDownload: 'ダウンロード',
        viewMessages: 'メッセージ送信',
@@ -1836,7 +1846,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
        downloadScan: 'スマートフォンでスキャン',
        downloadScanHint: 'Android 版をダウンロードできます',
        available: 'ダウンロード可能',
-@@ -982,7 +982,7 @@
+@@ -985,7 +985,7 @@
        accessFailures: {
          tokenExpired: 'トークンの有効期限が切れています',
          paidAccountRequired: '現在のアカウントは有料アカウントではないため、この機能を利用できません',
@@ -1845,7 +1855,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
          appAccessExpired: '内部テストまたはパブリックベータの利用期限が切れています',
          required: 'App からアクセス権限が送信されていません',
          invalid: 'App のアクセス権限が無効です',
-@@ -1160,7 +1160,7 @@
+@@ -1163,7 +1163,7 @@
        systemUnavailable: "現在システムのスクリーンショットを利用できません",
        systemWaiting: "システム画面で撮影範囲を選択してください",
        timedOut: "撮影がタイムアウトしました。再試行してください。",
@@ -1854,7 +1864,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
        sourceUnavailable: "画面を取得できません。画面収録の権限を確認して再試行してください。",
        failed: "キャプチャに失敗しました。もう一度お試しください。",
      },
-@@ -1282,7 +1282,7 @@
+@@ -1285,7 +1285,7 @@
      },
      showToolCalls: 'ツール呼び出しを表示',
      pushEnabled: 'プッシュ通知を有効化',
@@ -1863,7 +1873,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      hideToolCalls: 'ツール呼び出しを非表示',
      messageQueue: 'メッセージキュー',
      removeQueuedMessage: 'キューのメッセージを削除',
-@@ -2301,7 +2301,7 @@
+@@ -2305,7 +2305,7 @@
        notifyOnApprovalTestFailed: 'Failed to send approval notification',
        approvalNotificationTitle: 'Approval required',
        approvalNotificationClarifyTitle: 'Clarification required',
@@ -1872,7 +1882,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
        notifyOnCompleteHint: 'AI の応答完了時にシステム通知を表示',
        notifyOnCompleteMacHint: 'macOS ではシステム設定でブラウザ通知を許可してください。',
        notifyOnCompleteDenied: '通知権限が拒否されました',
-@@ -2323,7 +2323,7 @@
+@@ -2327,7 +2327,7 @@
        chatInputHeightHint: 'デスクトップでの既定の入力欄高さ（px）。モバイルでは自動高さを維持します。',
        linkOpenTarget: 'Web リンクを開く場所',
        linkOpenTargetHint: 'メッセージと Markdown プレビュー内のリンクを開く場所を選択します。',
@@ -1881,7 +1891,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
        linkOpenTargetDefaultBrowser: '既定のブラウザ',
      },
      agent: {
-@@ -2486,10 +2486,10 @@
+@@ -2490,10 +2490,10 @@
          extract: 'モデルを展開中…', validate: 'モデルを検証中…', install: 'モデルをインストール中…', completed: 'モデルを利用できます', failed: 'ダウンロード失敗',
        },
        hermesConfigTitle: 'Hermes Agent 設定',
@@ -1894,7 +1904,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
        providerSpeed: '速度',
        providerSampleRate: 'サンプルレート',
        providerBitRate: 'ビットレート',
-@@ -2503,7 +2503,7 @@
+@@ -2507,7 +2507,7 @@
        optionDisabled: '無効',
        nativeProvider: 'Hermes ネイティブプロバイダー',
        selectNativeProvider: 'Hermes ネイティブプロバイダーを選択',
@@ -1903,6 +1913,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
        presetElevenLabsTtsLabel: 'ElevenLabs TTS',
        presetGeminiTtsLabel: 'Gemini TTS',
        presetXaiTtsLabel: 'xAI TTS',
+
 diff --git a/packages/mcu/m5stack-stackchan/docs/ROADMAP.md b/packages/mcu/m5stack-stackchan/docs/ROADMAP.md
 --- a/packages/mcu/m5stack-stackchan/docs/ROADMAP.md
 +++ b/packages/mcu/m5stack-stackchan/docs/ROADMAP.md
@@ -1924,6 +1935,7 @@ diff --git a/packages/mcu/m5stack-stackchan/docs/ROADMAP.md b/packages/mcu/m5sta
      Studio <-->|识别、推理、合成、工具| Services[Agent / STT / TTS / 任务服务]
      Agent[后续 Studio 专用 Agent] -->|MCP tools| MCP[Studio 侧设备 MCP]
      MCP <-->|统一设备控制服务| Studio
+
 diff --git a/packages/mcu/m5stack-stackchan/README.md b/packages/mcu/m5stack-stackchan/README.md
 --- a/packages/mcu/m5stack-stackchan/README.md
 +++ b/packages/mcu/m5stack-stackchan/README.md
@@ -1935,6 +1947,7 @@ diff --git a/packages/mcu/m5stack-stackchan/README.md b/packages/mcu/m5stack-sta
  This board project lives directly under `packages/mcu/`, alongside the existing
  `esp32-c3/` and `esp32-s3/` projects.
  
+
 diff --git a/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md b/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md
 --- a/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md
 +++ b/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md
@@ -1947,6 +1960,7 @@ diff --git a/packages/mcu/esp32-s3/m5stack-cardputer-adv/README.md b/packages/mc
  
  **仅适用于已安装本项目双固件布局的 M5Stack Cardputer-Adv；这是局域网开发预览版，不支持远程，也不是新机首刷包。**
  
+
 diff --git a/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json b/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json
 --- a/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json
 +++ b/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json
@@ -1957,6 +1971,7 @@ diff --git a/packages/mcu/esp32-s3/m5stack-cardputer-adv/manifest.json b/package
    "firmwareVersion": "cardputer-adv-v9.0.0-dev.10-ram-lan",
    "version": "v9.0.0-dev.10-lan",
    "releaseStage": "development-preview",
+
 diff --git a/packages/mcu/esp32-s3/README.md b/packages/mcu/esp32-s3/README.md
 --- a/packages/mcu/esp32-s3/README.md
 +++ b/packages/mcu/esp32-s3/README.md
@@ -1968,6 +1983,7 @@ diff --git a/packages/mcu/esp32-s3/README.md b/packages/mcu/esp32-s3/README.md
 +| [M5Stack Cardputer-Adv](m5stack-cardputer-adv/README.md) | AIStudio LAN development preview | Existing project dual-firmware layout only; application update at `0x10000` |
  
  Read the board-specific layout, checksum, source and validation notes before flashing. These images are separate from the ESP32-C3 `v1`/`v2` firmware and are not registered with Studio's C3 OTA endpoints.
+
 diff --git a/packages/mcu/esp32-c3/v1/README.md b/packages/mcu/esp32-c3/v1/README.md
 --- a/packages/mcu/esp32-c3/v1/README.md
 +++ b/packages/mcu/esp32-c3/v1/README.md
@@ -1983,6 +1999,7 @@ diff --git a/packages/mcu/esp32-c3/v1/README.md b/packages/mcu/esp32-c3/v1/READM
  4. Select the target Wi-Fi SSID from the scanned list, or enter it manually,
     then enter the password and save.
  5. The setup page connects once, shows the router-assigned IP, opens that IP,
+
 diff --git a/packages/mcu/esp32-c3/v1/manifest.json b/packages/mcu/esp32-c3/v1/manifest.json
 --- a/packages/mcu/esp32-c3/v1/manifest.json
 +++ b/packages/mcu/esp32-c3/v1/manifest.json
@@ -2002,6 +2019,7 @@ diff --git a/packages/mcu/esp32-c3/v1/manifest.json b/packages/mcu/esp32-c3/v1/m
      "Pre-AP Wi-Fi network scan dropdown",
      "Manual Wi-Fi SSID fallback",
      "Provisioning success page with LAN IP redirect",
+
 diff --git a/packages/mcu/esp32-c3/v2/manifest.json b/packages/mcu/esp32-c3/v2/manifest.json
 --- a/packages/mcu/esp32-c3/v2/manifest.json
 +++ b/packages/mcu/esp32-c3/v2/manifest.json

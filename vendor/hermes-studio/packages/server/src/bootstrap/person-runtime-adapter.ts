@@ -1,4 +1,5 @@
 import { createPersonAgent } from './person-chat-agent'
+import { createPersonDefaultWorkspace } from './person-workspace'
 import { AgentRuntime, AgentToolRegistry } from '../../../ekko-agent/src'
 import { personBudgetedClient } from './person-model-context'
 import { configurePersonRuntime } from '../modules/studio/public/person-runtime'
@@ -10,6 +11,7 @@ import { executePersonTask, stopPersonTask } from './person-task-runtime'
 import { getAvailableModelConfigForProfile } from '../modules/hermes/controllers/models'
 
 configurePersonRuntime({
+  createDefaultWorkspace: createPersonDefaultWorkspace,
   modelConfig: getAvailableModelConfigForProfile,
   chatAgent: createPersonAgent,
   async model(input) {
@@ -30,6 +32,7 @@ configurePersonRuntime({
     const runtime = new AgentRuntime({ modelClient: guarded, tools: registry, skillsEnabled: false, backgroundDelegationEnabled: false,
       systemPrompt: input.systemPrompt, maxSteps: input.maxSteps, maxModelRetries: 1, modelDefaults: { maxTokens: 2048 } })
     const result = await runtime.run({ messages: input.messages, signal: input.signal, memoryEnabled: false, skillReviewEnabled: false,
+      ...(input.workspace ? { toolContext: { cwd: input.workspace, workspaceRoot: input.workspace } } : {}),
       ephemeralContext: true, reasoningEffort: input.reasoningEffort, onEvent: input.onEvent })
     return result.output.content
   },
@@ -39,10 +42,10 @@ configurePersonRuntime({
     return { status: catalog?.status || 'unsupported', models: catalog?.models.filter(m => !m.hidden).map(m => ({ id: m.id, name: m.name, isDefault: m.isDefault, reasoningEffort: m.reasoningEffort, reasoningEfforts: m.reasoningEfforts })) || [] }
   },
   execute: executePersonTask,
-  async interruptForInsertion(sessionId, expectedRunId) {
+  async interruptForInsertion(sessionId, expectedRunId, expectedRunMarker) {
     const server = getChatRunServer()
     if (!server) throw new Error('Chat runtime unavailable')
-    return server.interruptTaskRun(sessionId, expectedRunId)
+    return server.interruptTaskRun(sessionId, expectedRunId, expectedRunMarker)
   },
   async deliver(input) {
     const server = getChatRunServer()

@@ -259,3 +259,5 @@
 {"at":"2026-11-06T15:14:45Z","spec":"docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md","receipt":"b12d1afe217d6f0f7f4d8b7c1e7d51ebdc920474","commit":"886b76364"}
 {"at":"2026-11-06T22:21:11Z","spec":"docs/superpowers/specs/2026-11-07-sim-config-schema-align.md","receipt":"7f1d0bb3f91c56a5ffceb13661c2224343d4fef3","commit":"efebda426"}
 {"at":"2026-11-07T00:13:28Z","spec":"docs/superpowers/specs/2026-11-07-zcode-patches-pristine-replay.md","receipt":"d3fd82950b995cb63a3b45acfcf9d6b0cb43b66d","commit":"4f4eff9b8"}
+{"at":"2026-11-07T00:21:38Z","spec":"docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md","receipt":"138408fa753fcbcfa20cfd8e5bc1c770b47119d4","commit":"fc3ecbcca"}
+{"at":"2026-11-07T01:01:54Z","spec":"docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md","receipt":"0557c4dba815f71b68e697897c79025a9ec629a0","commit":"e2df2ddd3"}

@@ -113,7 +113,7 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 
 | 基线 | 用途 | 版本 |
 |---|---|---|
-| [hermes-studio](https://github.com/EKKOLearnAI/ekko-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v1.0.9 |
+| [hermes-studio](https://github.com/EKKOLearnAI/ekko-studio) | 桌面应用主体（Vue 前端 + Koa 后端 + Electron 壳），注入目标 | v0.8.17 |
 | [hermes-agent](https://github.com/NousResearch/hermes-agent) | Agent 运行时（Python，单网关多路复用） | v0.23.0 |
 | zcode（Ycode 引擎底座） | IDE 编码引擎，`zcode-patches/` 注入 | 包版本 3.17.2（v3.16.1 谱系） |
 | [element-web](https://github.com/element-hq/element-web) | Matrix 客户端参考实现（无构建依赖，不入仓） | 本机构建 v1.12.33 |

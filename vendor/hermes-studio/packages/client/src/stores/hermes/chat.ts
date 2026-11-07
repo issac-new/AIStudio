@@ -394,24 +394,7 @@ export interface MessageReference {
   senderId?: string
 }
 
-export interface ParsedMessageReference {
-  content: string
-  reply: string
-}
-
-export function parseMessageReference(content: string): ParsedMessageReference | null {
-  if (!content.startsWith('<quoted_message')) return null
-  const openEnd = content.indexOf('>\n')
-  if (openEnd === -1) return null
-  const closeMarker = '\n</quoted_message>'
-  const closeStart = content.indexOf(closeMarker, openEnd + 2)
-  if (closeStart === -1) return null
-
-  return {
-    content: content.slice(openEnd + 2, closeStart).trim(),
-    reply: content.slice(closeStart + closeMarker.length).trim(),
-  }
-}
+export { parseMessageReference } from '@/utils/content-blocks'
 
 export function formatReferencedContentForDisplay(content: string): string {
   return content
@@ -920,7 +903,7 @@ function mapHermesMessages(msgs: HermesMessage[], taskPlans: unknown[] = [], pre
   // needed to name later tool result rows when resuming persisted history.
   const filteredMsgs = msgs.filter(m => {
     if (m.role === 'assistant') {
-      return (m.tool_calls?.length || 0) > 0 || runtimePayloadText((m as any).content).trim() !== '' || !!m.run_usage
+      return (m.tool_calls?.length || 0) > 0 || runtimePayloadText((m as any).content).trim() !== '' || !!m.run_usage || !!m.person_task_return
     }
     return true
   })
@@ -2358,10 +2341,12 @@ function createChatState(scopedSessionId?: string) {
     const target = sessions.value.find(s => s.id === sessionId)
     if (!target || (!searchSelection && target.isLoadingOlderMessages) || !target.hasMoreBefore) return false
     const offset = target.loadedMessageCount || 0
-    if (!searchSelection && offset >= LIVE_CHAT_MAX_LOADED_MESSAGES) return false
+    const personMain = sessionId.startsWith('person-main-')
+    const budgetCount = personMain ? target.messages.length : offset
+    if (!searchSelection && budgetCount >= LIVE_CHAT_MAX_LOADED_MESSAGES) return false
     const limit = searchSelection
       ? LIVE_CHAT_MESSAGE_PAGE_SIZE
-      : Math.min(LIVE_CHAT_MESSAGE_PAGE_SIZE, LIVE_CHAT_MAX_LOADED_MESSAGES - offset)
+      : Math.min(LIVE_CHAT_MESSAGE_PAGE_SIZE, LIVE_CHAT_MAX_LOADED_MESSAGES - budgetCount)
     const loadToken = {}
     const previousMessages = target.messages
     olderMessageLoads.set(target, loadToken)
@@ -2385,7 +2370,7 @@ function createChatState(scopedSessionId?: string) {
       target.messageTotal = page.total
       target.messageCount = page.total
       target.hasMoreBefore = page.hasMore
-      return olderMessages.length > 0
+      return olderMessages.length > 0 || personMain
     } catch (err) {
       console.error('Failed to load older session messages:', err)
       return false
@@ -4607,11 +4592,13 @@ function createChatState(scopedSessionId?: string) {
               // signal but not required, since some providers/local models
               // legitimately omit usage.
               const queueInsertionInterruption = isQueueInsertionInterruption(evt)
+              const waitingForTasks = evt.stop_reason === 'waiting_for_tasks'
               const swallowedError =
                 !runProducedAssistantText &&
                 !runHadToolActivity &&
                 finalOutputTrimmed === '' &&
-                !queueInsertionInterruption
+                !queueInsertionInterruption &&
+                !waitingForTasks
               if (swallowedError) {
                 addMessage(sid, {
                   id: uid(),
@@ -4619,7 +4606,7 @@ function createChatState(scopedSessionId?: string) {
                   content: 'Error: Agent returned no output. The model call may have failed (e.g. invalid API key, model not supported by provider, or context exceeded). Check the hermes-agent logs for details.',
                   timestamp: Date.now(),
                 })
-              } else {
+              } else if (!waitingForTasks) {
                 playCompletionBellIfEnabled()
                 showCompletionNotificationIfEnabled(sid, completedAssistantMessageId)
               }
@@ -5262,10 +5249,12 @@ function createChatState(scopedSessionId?: string) {
             }
           }
           const queueInsertionInterruption = isQueueInsertionInterruption(evt)
+          const waitingForTasks = evt.stop_reason === 'waiting_for_tasks'
           const swallowedError = !runProducedAssistantText
             && !runHadToolActivity
             && finalOutputTrimmed === ''
             && !queueInsertionInterruption
+            && !waitingForTasks
           if (swallowedError) {
             addMessage(sid, {
               id: uid(),
@@ -5273,7 +5262,7 @@ function createChatState(scopedSessionId?: string) {
               content: 'Error: Agent returned no output. The model call may have failed (e.g. invalid API key, model not supported by provider, or context exceeded). Check the hermes-agent logs for details.',
               timestamp: Date.now(),
             })
-          } else {
+          } else if (!waitingForTasks) {
             playCompletionBellIfEnabled()
             showCompletionNotificationIfEnabled(sid, completedAssistantMessageId)
           }

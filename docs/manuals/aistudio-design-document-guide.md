@@ -186,7 +186,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 这些值可直接在 `RELEASE-MANIFEST.json:18,47-66,68-101,109-115` 与 `RELEASE-NOTES.md:44-46` 对账。驾驶舱在 v1.0.13 轮随内容变化声明前进到 studio.12，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
 
-上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v1.0.9、`dad736a93`；hermes-agent 为 v0.23.0、`2bd378ed1`；zcode 包版本为 3.17.2、`a9fe401e`。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
+上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.17、`35a7158a1`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.0、`2bd378ed1`；zcode 包版本为 3.17.2、`a9fe401e`。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
 
 ### 3.2 每版只发哪两件资产
 

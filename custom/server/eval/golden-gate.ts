@@ -43,7 +43,7 @@ export async function goldenGateCheck(
   let setId = existing?.id
   if (!setId) {
     const created = createSet(buildGoldenSetInput(), 'golden-gate')
-    if (!created.ok) return { ok: false, problems: created.problems, semantics: 'p2p' }
+    if (!created.ok) return { ok: false, problems: 'problems' in created ? created.problems : ['黄金集创建失败'], semantics: 'p2p' }
     setId = created.set.id
   }
   const set = getSet(setId)
@@ -66,7 +66,7 @@ export async function goldenGateCheck(
       ...(deps?.now ? { now: deps.now } : {}),
     },
   )
-  if (!result.ok) return { ok: false, problems: result.problems, semantics: 'p2p' }
+  if (!result.ok) return { ok: false, problems: 'problems' in result ? result.problems : ['重放执行失败'], semantics: 'p2p' }
 
   const run: EvalRun = result.run
   const buckets: GoldenGateBuckets = { positive: 0, ambiguous: 0, adversarial: 0 }

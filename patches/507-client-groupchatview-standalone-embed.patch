@@ -1,8 +1,7 @@
 diff --git a/packages/client/src/views/hermes/GroupChatView.vue b/packages/client/src/views/hermes/GroupChatView.vue
-index 1547e2e8b..d8df8cc42 100644
 --- a/packages/client/src/views/hermes/GroupChatView.vue
 +++ b/packages/client/src/views/hermes/GroupChatView.vue
-@@ -24,6 +24,9 @@ const routeRoomId = computed(() => {
+@@ -25,6 +25,9 @@
      return typeof value === 'string' && value.trim() ? value : null
  })
  
@@ -12,7 +11,7 @@ index 1547e2e8b..d8df8cc42 100644
  const routeProfile = computed(() => {
      const value = route.query?.profile
      return typeof value === 'string' && value.trim() ? value : null
-@@ -48,7 +51,8 @@ async function syncRouteRoom() {
+@@ -49,7 +52,8 @@
      }
  
      if (!store.rooms.some(room => room.id === roomId)) {
@@ -22,7 +21,7 @@ index 1547e2e8b..d8df8cc42 100644
          return
      }
  
-@@ -99,12 +103,15 @@ watch([routeRoomId, routeProfile], async () => {
+@@ -100,13 +104,16 @@
  </script>
  
  <template>
@@ -30,6 +29,7 @@ index 1547e2e8b..d8df8cc42 100644
 -        <GroupChatPanel />
 +    <PageLoading :show="pageLoading" initial-only class="group-chat-view" :class="{ 'group-chat-view--standalone': isStandaloneEmbed }">
 +        <GroupChatPanel :standalone="isStandaloneEmbed" />
+         <GroupChatMigrationNotice />
      </PageLoading>
  </template>
  

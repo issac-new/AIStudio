@@ -624,6 +624,7 @@
 - [2026-11-06-workunit-responsibility-ledger.md](../superpowers/specs/2026-11-06-workunit-responsibility-ledger.md)
 - [2026-11-07-sim-config-schema-align.md](../superpowers/specs/2026-11-07-sim-config-schema-align.md)
 - [2026-11-07-zcode-patches-pristine-replay.md](../superpowers/specs/2026-11-07-zcode-patches-pristine-replay.md)
+- [2026-11-07-vendor-upgrade-studio-v0817.md](../superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md)
 
 ## archive（2 份，不计入上述根目录）
 

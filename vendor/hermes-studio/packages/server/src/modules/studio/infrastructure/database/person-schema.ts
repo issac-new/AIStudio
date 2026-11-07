@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
+import { initPersonAcceptanceTables } from './person-acceptance-schema'
 import { initPersonContextTables } from './person-context-schema'
 import { initPersonStageTables } from './person-stage-schema'
 
@@ -75,6 +76,12 @@ export function initPersonTables(db: DatabaseSync): void {
     CREATE TABLE IF NOT EXISTS person_task_origins (
       task_id TEXT PRIMARY KEY, owner_user_id INTEGER NOT NULL, origin_json TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS person_task_redirects (
+      task_id TEXT PRIMARY KEY, owner_user_id INTEGER NOT NULL, requirements_revision INTEGER NOT NULL,
+      execution_id TEXT NOT NULL DEFAULT '', state TEXT NOT NULL,
+      error TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_person_redirect_state ON person_task_redirects(state);
     CREATE TABLE IF NOT EXISTS person_deliveries (
       execution_id TEXT PRIMARY KEY, owner_user_id INTEGER NOT NULL, origin_json TEXT NOT NULL,
       state TEXT NOT NULL DEFAULT 'waiting', updated_at INTEGER NOT NULL, error TEXT NOT NULL DEFAULT ''
@@ -86,6 +93,9 @@ export function initPersonTables(db: DatabaseSync): void {
       PRIMARY KEY(session_id, assistant_message_id)
     );
   `)
+  if (!db.prepare('PRAGMA table_info(person_task_returns)').all().some(column => column.name === 'development_execution_id')) {
+    db.exec('ALTER TABLE person_task_returns ADD COLUMN development_execution_id TEXT')
+  }
   const executionColumns = db.prepare('PRAGMA table_info(person_executions)').all()
   for (const [name, definition] of Object.entries({
     queue_priority: 'INTEGER NOT NULL DEFAULT 0',
@@ -95,6 +105,7 @@ export function initPersonTables(db: DatabaseSync): void {
   })) {
     if (!executionColumns.some(column => column.name === name)) db.exec(`ALTER TABLE person_executions ADD COLUMN ${name} ${definition}`)
   }
+  initPersonAcceptanceTables(db)
   initPersonContextTables(db)
   initPersonStageTables(db)
   // Discard account-wide model choices; never copy them into conversations.
@@ -112,7 +123,7 @@ export function initPersonTables(db: DatabaseSync): void {
       db.prepare('DELETE FROM person_occurrences WHERE schedule_id IN (SELECT id FROM person_schedules WHERE task_id=?)').run(task.id)
       for (const table of ['person_task_returns', 'person_deliveries', 'person_events'])
         db.prepare(`DELETE FROM ${table} WHERE execution_id IN (SELECT id FROM person_executions WHERE task_id=?)`).run(task.id)
-      for (const table of ['person_interactions', 'person_schedules', 'person_task_origins', 'person_executions'])
+      for (const table of ['person_interactions', 'person_schedules', 'person_task_origins', 'person_task_redirects', 'person_executions'])
         db.prepare(`DELETE FROM ${table} WHERE task_id=?`).run(task.id)
       for (const worker of workers) {
         for (const table of ['messages', 'task_plans', 'chat_compression_snapshots', 'run_usage', 'session_uploads', 'workspace_run_change_files', 'workspace_run_changes']) {
