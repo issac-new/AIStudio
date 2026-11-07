@@ -461,7 +461,7 @@ export async function postGateCheck(ctx: Context) {
   try {
     const result = await goldenGateCheck()
     if (!result.ok) {
-      fail(ctx, 400, result.problems ?? ['黄金集门检失败'])
+      fail(ctx, 400, (result.problems ?? ['黄金集门检失败']).join('；'))
       return
     }
     const { buckets, mismatch } = result
@@ -474,7 +474,7 @@ export async function postGateCheck(ctx: Context) {
       gateMode: 'observational',
     })
   } catch (e) {
-    fail(ctx, 500, [`黄金集门检异常：${e instanceof Error ? e.message : String(e)}`])
+    fail(ctx, 500, `黄金集门检异常：${e instanceof Error ? e.message : String(e)}`)
   }
 }
 
