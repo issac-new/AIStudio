@@ -12,6 +12,7 @@
 6. **`simharness/mux/mx-scenario-lib.sh` 熔断 check 文案带服务端轮数**（vitest 红 2，治理服务重构期起 pre-existing）：note 链 stderr-only 系刻意设计（mx-lib「无 $() 捕获消费者」注释＋专项绊线测试钉住原实现），守门测试断言「累计 2 轮未过」自判定正本移服务端后漂移。正解=check 阻断时从服务响应取 `state.failRounds` 并入 fail 文案（值守/审计从 fail 行直达轮次；响应无轮数保持原文案），测试 stub 对齐真实服务契约（block 响应带 state）。
 7. **清偿门指定轮无台账文案三层分**（vitest 红 1，随本批第 2 条演进）：仓里另有轮台账=「该轮零代偿轮」（不跨轮连坐）；全仓无任何台账=「真首轮」（run27 根治语义保留）；run id 为空+有台账=fail-closed 拒（前置分支）。两夹具（posture runNEVER 型 / vitest 锚定轮+空仓型）分别命中相异文案、同 rc0 放行。
 8. **`simharness/mux/mx-prelaunch-check.sh` ⑲⑳㉑㉕ 生效 dist 判据由 BSD grep 换 rg**（19 处）。studio 0.8.17 批 vite 产物为 22MB 级 minified 单行文件，本机 BSD grep（GNU compatible 2.6.0-FreeBSD）`-r --exclude-dir` 组合对其静默失明（单文件直查命中、递归+排除目录形态必漏；python 直读确认标记在文件、bash -c 隔离复现定谳 grep 行为），四项恒红＝判据工具缺陷而非构建缺件。rg 15.x 无长行限制；rg 缺席环境报红=装 ripgrep（fail-closed，不误绿）。
+9. **`simharness/mux/mx-prelaunch-check.sh` ④ 判据豁免 `.swarm-yuan/merge-invariants.jsonl`**：merge-invariants.mjs 每次 merge 后自动追加检查记录（post-merge 台账），不豁免则 merge 后 ④ 恒红死循环（本轮 5 次 merge 实证）；豁免性质同 vendor 注入态=自动化持续写入面，其余已跟踪面仍零容忍。
 
 ### 随批收口（非代码变更）
 

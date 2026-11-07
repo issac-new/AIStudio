@@ -41,7 +41,10 @@ ck "③ V8.8/V8.9 新接线在位" "grep -q 'uc_dispatched' '$HERE/aipay-scenari
 #    pre-commit 自动撤出），从判据排除；其余已跟踪面须零未提交改动。
 #    pathspec 用 top 魔术前缀锚仓库根，$HERE 子目录下相对解析不失位；
 #    旧布局（simharness 独立仓）无顶层 vendor，豁免面自然为空、语义不变。）
-ck "④ 工作区干净（单仓；vendor 注入态豁免）" "[ -z \"\$(git -C '$HERE' status --porcelain --untracked-files=no -- ':(top,exclude)vendor' | head -1)\" ]" "提交或暂存未提交改动（vendor/** 注入态除外）"
+# ④ 豁免面追加 .swarm-yuan/merge-invariants.jsonl（2026-11-07 run28 批）：merge-invariants.mjs
+#    每次 merge 后自动追加检查记录（post-merge 台账），豁免性质同 vendor 注入态——自动化
+#    持续写入面，不豁免则 merge 后本项恒红死循环。其余已跟踪面仍须零未提交改动。
+ck "④ 工作区干净（单仓；vendor 注入态＋merge 台账豁免）" "[ -z \"\$(git -C '$HERE' status --porcelain --untracked-files=no -- ':(top,exclude)vendor' ':(top,exclude).swarm-yuan/merge-invariants.jsonl' | head -1)\" ]" "提交或暂存未提交改动（vendor/** 注入态与 merge 自动台账除外）"
 
 # ⑤ 网关+studio 健康
 ck "⑤ 服务健康（8801+8802，studio 带 OBS_SIM_ROOT）" "curl -sf -m 5 http://127.0.0.1:8801/health >/dev/null && curl -sf -m 5 http://127.0.0.1:8802/health/ready >/dev/null && _pid=\$(lsof -nP -tiTCP:8802 -sTCP:LISTEN | head -1) && ps eww -p \"\$_pid\" | grep -q 'OBS_SIM_ROOT='" "bash mux/mx-up.sh 拉起；若 studio 已在跑但无 OBS_SIM_ROOT（推演端点会 503），先 bash mux/mx-down.sh 再 mx-up"
