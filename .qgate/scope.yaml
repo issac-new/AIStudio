@@ -532,3 +532,6 @@ paths:
   - team/skills/devops/security-tool-landscape-tracking/SKILL.md
   - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md
   - docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md
+  # 2026-11-07 Ponytail v5 + Headroom 吸收批（feat/ponytail-headroom-absorption）
+  - docs/superpowers/specs/2026-11-07-ponytail-headroom-absorption.md
+  - skills/swarm-yuan/tests/gate-fixtures/adr/compliant-shortcut/**
