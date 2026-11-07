@@ -1554,7 +1554,7 @@ sequenceDiagram
 | G1 冻结后 | 步 7 | acceptance | 需求冻结单的验收结论与依据（判断质量） |
 | G2 过闸后 | 步 15 | acceptance / rejection | 架构评审判词：通过记 acceptance，打回记 rejection+理由（验证投入） |
 | G5 准出 | 步 21 | override / escalation | HumanGate 批准记 escalation（升级处置）；改判/推翻记 override+依据（例外处置） |
-| 报告前 | 步 23 | capability | 复盘沉淀的规则/用例维护（组织能力贡献） |
+| 报告前 | 步 23 | capability | 复盘产出的规则/用例维护（组织能力贡献） |
 
 署名只收 human-entry（推演中由驱动代人类账号通道提交，生产形态由真人提交）；理由 ≥20 字写依据不写结论。**推演侧不建评分**：署名记录只证明判断发生，不折算任何绩效。
 

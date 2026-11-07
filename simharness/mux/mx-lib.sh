@@ -1686,6 +1686,21 @@ if not url:
                 key = key or (p.get("api_key") or "")
                 name = name or (p.get("model") or "")
                 break
+# providers 顶层第三态（2026-11-07 run28 开跑实测）：SIM 直连批（2026-11-05）把 profile
+# 改写为 model.provider: <裸名> + 顶层 providers.<名>{api,api_key,default_model,transport}；
+# 只认前两态会让直连形态 url 解析空 → 13 profile 全员 unreachable 假红（烧机秒败实录）。
+if not url:
+    prov = (m.get("provider") or "").strip()
+    if prov.startswith("custom:"):
+        prov = prov[len("custom:"):]
+    tp = (cfg.get("providers") or {}).get(prov)
+    if isinstance(tp, dict):
+        url = (tp.get("base_url") or tp.get("api") or "").rstrip("/")
+        key = key or (tp.get("api_key") or "")
+        if not name:
+            name = tp.get("default_model") or ""
+            if not name and isinstance(tp.get("models"), dict) and tp["models"]:
+                name = next(iter(tp["models"]))
 if not url or not name:
     print("unreachable"); raise SystemExit
 # 通道模式对齐（2026-10-01 run6 实锤）：sim agent 实际按 anthropic_messages 格式调

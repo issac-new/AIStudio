@@ -132,7 +132,12 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   F=""
   case "$CMD" in
     catalog) ;;
-    *) F="$(_mx_led_file)" || { echo "need --run <RUN_ID>（或存在 var/current-state.env 锚）" >&2; exit 2; } ;;
+    # 只读命令 F 解析失败置空，交 case 内容错分支裁决（2026-11-07 run28 回归修复：
+    # 「全仓无台账=真首轮」放行分支在 check-clearance case 内，主入口一刀切 exit 2
+    # 使其永不可达——posture-ledger.test.sh「无台账→rc0」红即此。fail-closed 语义
+    # （有历史台账但锚缺位=拒）仍由 check-clearance 分支自身持有；写命令在各自
+    # 分支 [ -f "$F" ] 拒绝，误操作防线不变。
+    *) F="$(_mx_led_file 2>/dev/null)" || F="" ;;
   esac
 
   case "$CMD" in
@@ -197,14 +202,20 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
       ;;
     check-clearance)
       # 代偿清偿门：开跑前置检查用。有 open 笔 → 非零退出并逐笔列出。
-      if [ ! -f "$F" ]; then
-        # 只有「全仓无任何轮台账」才算真·首轮零代偿；锚缺位但有历史台账=解析失败，fail-closed
+      # 语义分层（2026-11-07 run28 回归修复，posture-ledger「无台账→rc0」恢复）：
+      #   ① run id 解析失败（无锚无 --run，兜底链亦无果）+ 仓内有历史台账 → fail-closed
+      #      拒（run27 根治语义保留——不得按零代偿放行）；全仓无台账=真·首轮 → 放行。
+      #   ② run id 已定（锚或 --run）但该轮无台账 → 该轮零代偿，放行（显式指定不存在轮
+      #      不得误拒；跨轮债务走 var/clearance 投影，由各轮自身门核，不跨轮连坐）。
+      _rid="$(_mx_led_run_id 2>/dev/null)"
+      if [ -z "$_rid" ]; then
         if ls "$(_mx_led_sim_root)"/runs/*/evidence/compensation-ledger.tsv >/dev/null 2>&1; then
-          echo "清偿门 ✗：代偿台账路径解析失败（run=$(_mx_led_run_id) 为空）——不得按零代偿放行；用 --run <RUN_ID> 指定轮次"
+          echo "清偿门 ✗：轮次解析失败（run id 为空）且仓内有历史台账——不得按零代偿放行；用 --run <RUN_ID> 指定轮次"
           exit 2
         fi
         echo "清偿门 ✓（全仓无任何轮台账=真首轮，零代偿）"; exit 0
       fi
+      if [ ! -f "$F" ]; then echo "清偿门 ✓（$_rid 无台账=零代偿轮）"; exit 0; fi
       OPEN=$(awk -F'\t' 'NR>1 && $6=="open"' "$F" | wc -l | tr -d ' ')
       if [ "$OPEN" = "0" ]; then echo "清偿门 ✓（$(_mx_led_run_id) 无 open 代偿）"; exit 0; fi
       echo "清偿门 ✗：$OPEN 笔 open 代偿未清偿（根治合入产品或显式 waive 后方可开下一轮）："

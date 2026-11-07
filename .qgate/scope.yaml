@@ -535,3 +535,4 @@ paths:
   # 2026-11-07 Ponytail v5 + Headroom 吸收批（feat/ponytail-headroom-absorption；夹具面已由 skills/swarm-yuan/** 覆盖，中文文件名会走 git quotepath 转义形致 glob 不匹配，夹具 ADR 改用 ASCII 名）
   - docs/superpowers/specs/2026-11-07-ponytail-headroom-absorption.md
   - docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md
+  - docs/superpowers/specs/2026-11-07-run28-prelaunch-fixes.md

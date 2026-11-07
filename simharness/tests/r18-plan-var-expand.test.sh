@@ -51,9 +51,11 @@ grep -q "expandPlanVars(PLAN_URL)" "$HERE/mux/r18-frames.mjs" && grep -q "from '
   && echo "PASS ⑤ 射手接线在位（r18-frames 调共享实现）" \
   || { echo "FAIL ⑤ r18-frames.mjs 未接 expandPlanVars 共享实现"; fails=$((fails+1)); }
 
-grep -q 'devimpl_done|/app/ide?task=${IDE_TASK:-' "$HERE/mux/capture-plan.env" \
+# ⑥ 对齐 run27 帧四态重分类（2026-11-06 用户裁决：截图不冒充）：devimpl_done=repo
+#   产物证据型（不再拍 IDE 页）；IDE 参数化防线收窄到仅存的真实拍摄位 ide_done。
+grep -q 'devimpl_done|repo|' "$HERE/mux/capture-plan.env" \
   && grep -q 'ide_done|/app/ide?task=${IDE_TASK:-' "$HERE/mux/capture-plan.env" \
-  && echo "PASS ⑥ capture-plan.env IDE 两行参数化在位" \
-  || { echo "FAIL ⑥ capture-plan.env IDE 拍摄位未参数化"; fails=$((fails+1)); }
+  && echo "PASS ⑥ capture-plan.env devimpl repo 型 + IDE 拍摄位参数化在位" \
+  || { echo "FAIL ⑥ capture-plan.env 形态不符（devimpl_done 应 repo 型、ide_done 应参数化）"; fails=$((fails+1)); }
 
 [ "$fails" -eq 0 ] && echo "r18-plan-var-expand: ALL-PASS" || { echo "r18-plan-var-expand: ${fails} FAIL"; exit 1; }
