@@ -101,12 +101,12 @@ describe('② 硬闸打回熔断（融合批二：判定与持久化正本=治�
     const root = sandbox()
     const out = sh(`
 gov_lc_breaker_trip() { printf 'TRIP|%s|%s|%s\\n' "$1" "$2" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; echo '{"state":{"failRounds":2}}'; }
-gov_lc_breaker_check() { printf 'CHECK|%s|%s\\n' "$1" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; return 1; }
+gov_lc_breaker_check() { printf 'CHECK|%s|%s\\n' "$1" "$3" >> "$AIPAY_SIM_ROOT/gov-calls.txt"; echo '{"state":{"failRounds":2}}'; return 1; }
 mx_gate_breaker_trip g5 "G5 发布准出" 1
 ( mx_gate_breaker_check g5 "G5 发布准出" ) 2>&1 | tail -1 || true
 cat "$AIPAY_SIM_ROOT/gov-calls.txt"`, root)
     expect(out).toContain('累计 2 轮未过')
-    expect(out).toContain('打回熔断（治理服务判定阻断）')
+    expect(out).toContain('打回熔断（治理服务判定阻断')  // 2026-11-07 起文案并入服务端轮数，右括号位置不定
     expect(out).toContain('TRIP|G5|1|')
     expect(out).toContain('CHECK|G5|G5 发布准出')
   })

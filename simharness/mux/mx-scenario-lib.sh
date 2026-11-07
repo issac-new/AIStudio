@@ -85,7 +85,10 @@ issue_once() { # issue_once <type> <subject> <desc>
 # 临时物清理（Z6）：$STATE.tmp 是 sset 的中转文件，mv 前被中断会残留。重定义 mx_cleanup
 # 即扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按最新定义执行（bash 单 EXIT trap）。
 mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp"; }
-note() { log "$*" | tee -a "$SCEN_LOG"; }
+# note fail-soft（2026-11-07 run28 批）：SCEN_LOG 缺席（守门测试 sandbox/独立 source 场景）
+# 时 tee -a 空路径报错退出、stdout 转发随 pipe 丢失——trip 轮数文案被吞即此（harness-gate
+# ② 红）。缺席退纯 log 输出，生产行为不变（驱动恒设 SCEN_LOG）。
+note() { if [ -n "${SCEN_LOG:-}" ]; then log "$*" | tee -a "$SCEN_LOG"; else log "$*"; fi; }
 
 # 场景步执行器（2026-10-27 mixed-motive 首跑实锤补齐：场景骨架此前引用 step() 但
 # 该助手从未存在——首跑才暴露）。幂等：sset step_ok_<key> 在案即跳过（重放安全）；
@@ -2566,13 +2569,21 @@ mx_gate_breaker_trip() { # <gate-key> <label> <unpassed-rounds>：记 N 轮未�
 }
 
 mx_gate_breaker_check() { # <gate-key> <label>：≥2 轮未过则拒绝；复位=证据变化或人工复议
-  local gate
+  local gate resp rounds
   gate=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
   # 熔断等待段 tick（run24 复盘批③）：判定前先给「等待期可并行预做」的件一次派发机会
   # （early-start 预备步）。幂等键自守，重复进入=零动作；判定本身零改动。
   declare -F mx_prep_early_start_tick >/dev/null 2>&1 && mx_prep_early_start_tick || true
-  gov_lc_breaker_check "$gate" "$(_mx_gate_evidence_sig "$2")" "$2" \
-    || fail "${2} 打回熔断（治理服务判定阻断）。证据变化后自动复位；人工复议须同时给 GATE_BREAKER_OVERRIDE=1 与 GATE_BREAKER_REASON。"
+  # 阻断文案带服务端轮数（2026-11-07 run28 批）：值守/审计从 fail 行直达轮次，不必翻
+  # note 日志（note 链 stderr-only 系刻意设计，守门测试断言自治理服务重构起漂移）；
+  # 响应无 state.failRounds 时保持原文案，信息不丢。
+  resp=$(gov_lc_breaker_check "$gate" "$(_mx_gate_evidence_sig "$2")" "$2") \
+    || { rounds=$(printf '%s' "$resp" | jq -r '.state.failRounds // empty' 2>/dev/null)
+         if [ -n "$rounds" ]; then
+           fail "${2} 打回熔断（治理服务判定阻断，累计 ${rounds} 轮未过）。证据变化后自动复位；人工复议须同时给 GATE_BREAKER_OVERRIDE=1 与 GATE_BREAKER_REASON。"
+         else
+           fail "${2} 打回熔断（治理服务判定阻断）。证据变化后自动复位；人工复议须同时给 GATE_BREAKER_OVERRIDE=1 与 GATE_BREAKER_REASON。"
+         fi; }
 }
 
 _mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 证据行数+integration tip+评审卡面哈希
