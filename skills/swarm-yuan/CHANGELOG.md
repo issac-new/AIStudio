@@ -26,6 +26,9 @@ R143 运行时刷新＋吸收＋JVM 全栈回归轮（第九轮同型例行）�
 - **吸收三档**（决策 46 两问筛选）：agent-skills-methodology 十二节「验证只认真实退出码」（`|| true`/管道/`;` 不算验证+tainted 防作弊+模型自述永不采信）；review-methodology「判级以结构化字段为准」增量（Severity 字段定级/fix-check 不充当 pass/CI 审计交付声明须真合并 PR/manual_only）；claude-code-capabilities v2.1.311-319 节（拒绝优于提示/写边界全模式兜底/数据丢失防护/不可核查即拒绝）。
 - **R143-D1 `--verify-completeness` 决策账本检查误杀 legacy 项目**（trade-forge 再生成实抓）：字段全量 schema（type/ai_suggestion/user_action）检查 2026-10-28（e642c4d0d）才引入，此前写入的历史记录被全账本回溯套新 schema→再生成必红。根治=SCHEMA_EPOCH=2026-10-28 版本化边界 grandfathering（ts 早于边界仅校 JSON 合法性＋UserChallenge:incomplete 全时域判据保留；ts 不可解析保守豁免）；账本 append-only 不回改历史。test-r143-decisions-grandfathering 六断言锁（legacy 豁免/边界后缺字段仍红/incomplete 全时域/边界后 UserChallenge 三要素/合格零报）。
 - 随物化同步五锚面：facts.conf FACT_DIAGRAM_DESIGN_VERSION=2.6.142、test-r122 三断言＋第五锚面（diagram-production-methodology 基线行）、capability-map 版本行、mattpocock methodology 两处基线行、dist.tsv 四行字节锚。
+- **build-compendium.sh LC_ALL=C 加固（darwin 27.x awk 20200816 实测缺陷）**：macOS awk 在 CJK locale 对多字节串做 collation 等价比较（「卷一/卷二」不同标题判等）→ 重灌六卷全部错灌 README；字节比较语义统一后重灌+check 双绿（CI=ubuntu 不受影响；本机复现证据=不同字面量比较双双为真）。
+- **存量债四件随批清偿**（v2.99.3 后他批埋、本轮 sweep 首炸）：① gen-e2e GATE_ENFORCE_DENY 断言锁死旧 10 门禁值（出厂默认已扩 13）→改前缀包含；② 产物 SKILL.md 预算 11392→**11520 第八次登记**（gen-e2e 实测 11458B 超 66B——生成器侧随发文件功能性增量，R72/R98/R138 先例；doc-numbers 四断言全改 facts 派生+三用户面同步）；③ core10-sequence 基线缺「降标守卫」段头（核心 11→12 门禁时未随）→补齐 cli_ab 0 diff；④ test-r133 comet/graphify spec 硬编码（R124-D1 同族复发）→offline-manifest 动态派生。
+- **references 洗词**：新增三档吸收节含禁用自造词（假绿/假红→虚报通过/虚报失败）与裸轮次标记（R143→日期锚）——test-r68 十七断言全绿。
 ### 回归实录（trade-forge 十框架，详见 R143 档 §五）
 - 全新生成链：10/10 框架检测→真值回填（新架构为底逐槽合并；实录=precheck.conf 整拷旧版会吞新生成尾链覆盖层、旧 active SKILL.md 破坏 draft 续传判定）→verify --strict 零占位→mark-active 三关（SKILL 11064B≤11392B——旧 15874B 系激活后自成长膨胀，再生成按现预算收敛）。
 - 任务 A order-edit 全链：带分片键 UPDATE 物理直查实证+终态 409 双层+金额三处同源；后端 56/56（RED=7 编译红）＋前端 29/29＋build rc 0＋--all-full fail 0；merge --no-ff。
