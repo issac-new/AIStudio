@@ -1183,7 +1183,11 @@ capture_step() { # <step> <url> [action] [user]
   # 必是零变化/内容不符的冒充帧），采集产物清单落 evidence/repo-shots/<step>.md：
   # 中央仓该步时间窗提交＋state 键终值。报告按 r18 op entry 呈现产物证据指针。
   if [[ "$_plan_url" == repo* ]]; then
-    local _rs_dir="$EVID_DIR/repo-shots" _rs="$_rs_dir/${step}.md"
+    # 声明与赋值分离（2026-11-07 烧机实录）：bash 3.2 下 local 多赋值同语句内引用
+    # 前缀变量（local a=x b=$a），$a 在词展开期取值（先于赋值执行）——本作用域无 a
+    # 且 set -u → unbound variable 击杀驱动（burn-20261107-155648 步 10→11 实锤）。
+    local _rs_dir _rs
+    _rs_dir="$EVID_DIR/repo-shots" _rs="${_rs_dir}/${step}.md"
     mkdir -p "$_rs_dir"
     {
       echo "# 产物证据：${step}"
@@ -1883,8 +1887,8 @@ raci_dispatch_seen() { # <user1> <user2> <room> → 0=窗口内出现双向派�
       '[.[] | select(.type=="m.room.message")
         | (.content.body//"") as $b
         | ((.content["m.mentions"] // {}) | (.user_ids // [])) as $m
-        | select((($b | contains($u1)) or ($m | any(.; startswith($u1))))
-             and (($b | contains($u2)) or ($m | any(.; startswith($u2)))))] | length > 0'
+        | select((($b | contains($u1)) or ($m | any(.; ((. // "") | tostring | startswith($u1)))))
+             and (($b | contains($u2)) or ($m | any(.; ((. // "") | tostring | startswith($u2))))))] | length > 0'
 }
 
 verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造假
