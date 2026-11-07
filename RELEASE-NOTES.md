@@ -50,6 +50,7 @@
 本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
 
 ## 版本
+AIStudio 驾驶舱 **0.8.17-studio.1**（2026-11-07 vendor 升级批：hermes-studio 基线 v1.0.9→**v0.8.17**（35a7158a1，谱系前进 53 提交；tag 命名回归 0.8.x 线非降级——v1.0.9 的 package.json 本就是 0.8.11；上游清空 1140 旧测试致本仓 8 枚测试补丁退役＋7 枚剥段＋8 枚漂移重锚，clean+inject 461 枚全绿零告警）；**声明前进、cockpit 包不重发**（两包口径=只发 full＋yuan everything，模块包不重发）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序（**底座换血扩展序归 1**，v0.23.0-team.1 先例），真源=本文件版本节首行）
 AIStudio 驾驶舱 **1.0.9-studio.12**（2026-11-06 v1.0.13-overlay 发布轮：微信三篇调研 A/B/C 批（CLI 契约/决策回执/评测黄金集）＋AI Native 五篇吸收九件＋run27 全流程收口与根治链（SIM 直连 LLM/复盘四类根治/O1-O6 豁免与拍后即验/帧采集准确性根治）＋平台重写 P1 批二＋cognition 复盘 P0 落地（根解析收敛/inject --check/退役机检/开关语义标注）；**声明前进、cockpit 包不重发**（两包口径=只发 full＋yuan everything，模块包不重发）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **1.0.9-studio.11**（2026-11-05 v1.0.12-overlay 发布轮：vivo Harness 吸收 W1-W4＋生产链交互级全量走查＋build:full 类型门解封三修＋frame-expect 连字符键归一根治；新增增量补丁通道首件 v1.0.10→v1.0.12；**声明前进、cockpit 包不重发**（两包口径=只发 full＋yuan everything＋增量补丁，模块包不重发）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
 AIStudio 驾驶舱 **1.0.9-studio.10**（2026-11-04 v1.0.11-overlay 发布轮：vendor hermes-agent 两级换血 v0.22.7＋AgentTeams 吸收批一~四＋IDE/驾驶舱缺陷批＋run26 复盘根治＋推演工装两轮＋主动式 AI/交接质量吸收批＋Windows 回归 P1 修复批＋userenv 挂载清偿＋培训手册全量批；**声明前进、cockpit 包不重发**（两包口径=只发 full＋yuan everything，模块包不重发）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序，真源=本文件版本节首行）
