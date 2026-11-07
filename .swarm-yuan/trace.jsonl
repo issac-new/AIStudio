@@ -1203,3 +1203,13 @@
 {"ts":"2026-11-07T04:09:21Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/fce2e.mBG6LT/skill/.claude/skills/demo-java"}
 {"ts":"2026-11-07T04:09:23Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/fce2e.mBG6LT/skill/.claude/skills/demo-java"}
 {"ts":"2026-11-07T04:09:29Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/tmp/metrics-assert.ure6Ho/skill"}
+{"ts":"2026-11-07T04:25:00Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/positive/m-dev"}
+{"ts":"2026-11-07T04:25:05Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/positive/m-dev"}
+{"ts":"2026-11-07T04:25:09Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/missing-rm/m-dev"}
+{"ts":"2026-11-07T04:25:13Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/missing-rm/m-dev"}
+{"ts":"2026-11-07T04:25:16Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/bad-json/m-dev"}
+{"ts":"2026-11-07T04:25:21Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/bad-json/m-dev"}
+{"ts":"2026-11-07T04:27:42Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/incomplete/m-dev"}
+{"ts":"2026-11-07T04:27:47Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/incomplete/m-dev"}
+{"ts":"2026-11-07T04:27:50Z","node":"生成","actor":"generate-skill","tool":"create","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/no-workflow/m-dev"}
+{"ts":"2026-11-07T04:27:55Z","node":"生成","actor":"generate-skill","tool":"inject-frameworks","status":"started","note":"/var/folders/gv/0c0qtz0x66s6vghh2pwf12b40000gn/T/activation-contract.BOGWd7/no-workflow/m-dev"}
