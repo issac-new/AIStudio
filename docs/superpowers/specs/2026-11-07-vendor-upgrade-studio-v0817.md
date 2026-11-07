@@ -17,9 +17,9 @@
 |---|---|---|---|
 | D1 | studio 升 v0.8.17（tag 数字回落≠降级） | ancestry 实测 53 提交前进；v1.0.9 tag 内 package.json=0.8.11，上游版本轴本就是 0.8.x | 停留 v1.0.9（否决：放弃 6 个上游修复版） |
 | D2 | hermes-agent 维持 v0.23.0，main +216 不追 | 钉版策略=稳定 tag（VENDOR.md 口径＋2026-11-03 spec D2 先例） | 追 main（否决：canary 流，回归窗口不可控） |
-| D3 | zcode-acp-server 0.43.2 不升（npm latest 0.82.1） | coding-delegate 按 0.43.2 实测 schema 钉版（`runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py:201`），0.43→0.82 跨协议面 | 直升（否决：破 delegate 协议假设，需独立迁移批） |
-| D4 | npm 风险面 8 项挂账待裁不盲升 | n8n 1.119→2.46（工作流基础设施大版本）/claude-mem 12→15（记忆库迁移）/oh-my-opencode 3→5/echarts 5→6（图表主版本）/zcode-acp-server（D3）/ollama（在跑 LLM 服务）/node@22（核心运行时）/openjdk@11（消费者不明）——修好新不得弄坏旧 | 全升（否决：可能击穿在跑服务） |
-| D5 | REA BYO 缺失三件（tshark/wabt/frida）待裁 | 技能面无引用缺口在 REA pcap/wasm/instrument 三面；brew 安装各数分钟 | 本批直装（否决：扩能力非升版本，等用户点头） |
+| D3 | zcode-acp-server 0.43.2 不升（npm latest 0.82.1） | coding-delegate 按 0.43.2 实测 schema 钉版（`runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py:201`），0.43→0.82 跨协议面 | 直升（否决：破 delegate 协议假设，需独立迁移批）**→ 2026-11-07 用户令「完成未做」撤销本决策：已升 0.82.1 并真机冒烟全绿（握手/会话/工具流/end_turn/实物落盘，24s），delegate 双形态 sessionUpdate 解析天然兼容，脚本注记同批更新；属授权修订非主干漂移** |
+| D4 | npm 风险面 8 项挂账待裁不盲升 | n8n 1.119→2.46（工作流基础设施大版本）/claude-mem 12→15（记忆库迁移）/oh-my-opencode 3→5/echarts 5→6（图表主版本）/zcode-acp-server（D3）/ollama（在跑 LLM 服务）/node@22（核心运行时）/openjdk@11（消费者不明）——修好新不得弄坏旧 | 全升（否决：可能击穿在跑服务）**→ 2026-11-07 用户令「完成未做」全数执行：n8n 2.46.6/claude-mem 15.11.0（双前缀）/oh-my-opencode 5.1.62/echarts 6.1.0/npm@local 12.2.2/ollama 0.40.14（服务未运行无需重启）/node@22 22.23.4_2/openjdk@11 11.0.33，二进制逐项回读可用；属授权修订非主干漂移** |
+| D5 | REA BYO 缺失三件（tshark/wabt/frida）待裁 | 技能面无引用缺口在 REA pcap/wasm/instrument 三面；brew 安装各数分钟 | 本批直装（否决：扩能力非升版本，等用户点头）**→ 2026-11-07 用户令「完成未做」已装：tshark/capinfos 4.6.9（brew wireshark CLI 版）＋wabt 1.0.42（恰与 REA 验证版本精确一致）＋frida-tools 17.26.1（frida CLI 软链 /opt/homebrew/bin）；属授权修订非主干漂移** |
 | D6 | 官方插件不逐个「更新」 | 市场对账定谳=应用自带面（变更 4）；市场通道唯一相交项已对齐 | 手动下载塞缓存（否决：无更新源） |
 | D7 | superpowers 7.0.2 走缓存落位＋换指 | installed_plugins.json 钉 installPath 生效版本（v109 C 面配方先例） | 仅刷新缓存（否决：不换指不生效） |
 
