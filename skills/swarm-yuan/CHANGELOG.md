@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+## [v2.99.4] - 2026-11-07
+
+Ponytail v5 + Headroom 源码级调研吸收批。**门禁 59 / 变量 204 均未变**：捷径台账挂既有 `check_adr` 面，不新开门禁；`UNIVERSAL_FILES` 预算 618496B 未上调（实测 ≈605542B）。
+
+### Added
+
+- **`shortcut:` 捷径台账机检（`check_adr` §5）**：扫注释前缀（`#` / `//` / `/*`）后的 `shortcut:` 标记，已登记的妥协不罚；标记体缺逗号（即缺"何时升级"）计 `no-trigger` 并 warn——这种会静默腐烂成永久债。扫描面 `ts,js,tsx,jsx,py,go,rs,java,cs,php,rb,kt,swift`（不含 `sh`：门禁源自身是 shell 且须字面写出该模式串，纳入即自伤，已知限制见 R143）。
+- **目标技能侧下沉**：`references/template-spec.md` 的 dev-guide §7 拼装原则与节点表 ⑤ 行写入 `shortcut: <上限>, <何时升级>` 约定，被生成的项目自带该纪律。
+- **fixture `tests/gate-fixtures/adr/compliant-shortcut/`**：断言"3 处命中 / 1 处 no-trigger"两条输出；已做变异检查（no-trigger 判据改恒假后 `expect-output` 变红）。
+- **`[estimated]` / `measured` 两态估算**（`references/rsi-evidence-methodology.md` §四）：反事实量不得给点值，`estimated` 须带 95% 区间与标签，`measured` 须留出对照臂并披露比例/样本量/判据。
+- **回复收尾披露**（`references/controlled-language-methodology.md`）：每条面向人的回复末尾给"跳过了什么 / 什么没查 + 必须知道的风险"。
+- **调研档 `docs/research/R143-ponytail-headroom-absorption.md`**：两仓源码结构与基准方法学留档（仓库档案，不随分发）。
+
+### Changed
+
+- **审查检索半径收敛（修内部矛盾）**：`references/review-methodology.md` 的 Strict Focus 节改写为"检索半径=变更影响面（调用方/消费者/测试/夹具/配置/导出）× 落点=变更行"。原规则读作"只看 diff"，与"改前 grep 全部调用方"直接冲突；上游原文限定的是行级评论的**挂载位置**，不是检索半径。跨文件发现与 diff 内发现同权。
+- **去静默丢弃**：删两处 `静默丢弃`（严重度表 `Low` 档、AUTO-FIX/ASK 表"可能是误报"），改为成立性前置——"无具体案例即不成立"，成立后分 Must fix / Should fix / Nice to have 三档，每条四段（What this is / Problem / Fix / If we skip it），意见收口带 `Verdict:` / `Lean:` / `Not checked:`。
+- **`references/lazy-generation-methodology.md` 版本与数字刷新**：v4.9.0 → v5.3.3；基准数字换 2026-10-07 口径（LOC −53% / 输出 token −45% / 成本 −26% / 耗时 −41%，成对臂、几何均值 + 95% bootstrap、符号检验），并补方法学段（隔离宿主 CLAUDE.md 与仓库上下文、禁用 Bash 只测产出、盲评判官自检）。旧文引的 −54%/−22%/−20%/−27% 与"日期选择器 404→23 行"属被上游 issue #126 否定的基线伪影那一代口径。永不裁剪项由四类扩到五类（补"用户明确要求的东西"），新增"懒的是解法不是改动本身"与"捷径要留账"两节。
+- `references/template-spec.md` 两处审查门描述同步为三档分级 + 四段式 + `Not checked`；`--adr` 一节由"三件事"扩为"四件事"（补捷径台账）。
+- `README.md` 能力表懒生成行随批进位；`assets/registry/dist.tsv` 四档字节锚刷新。
+
+### Fixed
+
+- 修掉一处**文档自相矛盾**（审查面）与一处**被上游自己否定的数字仍在服役**（v4.9 基准口径）——同批两处均在 spec 决策记录里留了取舍理由。
+
 ## [v2.99.3] - 2026-11-06
 
 口径一致性专项（生成器仓）。门禁 59 / 变量 204 / 框架 81 / 运行时 15 均未变：本轮无新增门禁、无预算上调；随 AIStudio v1.0.13-overlay 发布轮进位 v2.99.3（facts.conf 真值对齐/防漂移断言派生化/渲染纪律收口本体变更）。

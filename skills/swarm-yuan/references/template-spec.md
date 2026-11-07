@@ -261,7 +261,7 @@ ECC 的 `agent.yaml` 是**导出 surface**（portability layer），不是**auth
 | ② | 探查（设计 spec 前的仓库探查） | 组件库清单全量穷举 + 实体字段/数据模型变更边集三查（relations-query --field/--entity） |
 | ③ | 设计 spec | ★测试左移（§19）+ ★运维左移（§21）+ ★文档左移（§20.4 设计文档影响声明——DESIGN_SYNC_REQUIRED=1 时 touched/none）+ SPEC_REQUIRED 前置门 |
 | ④ | 实施 plan | ★变更左移（§20） |
-| ⑤ | 编码实现 | ★分支开发（feature 分支自 origin/main 起，禁主干直开发）+ ★测试左移（TDD/BDD，test 与 impl 同分支提交） |
+| ⑤ | 编码实现 | ★分支开发（feature 分支自 origin/main 起，禁主干直开发）+ ★测试左移（TDD/BDD，test 与 impl 同分支提交）+ ★捷径留账（有意简化留 `shortcut: <上限>, <何时升级>`） |
 | ⑥ | 测试验证 | ★分支测试（门禁序列在分支执行全绿才可合入，主干不做"合后再测"）+ ★运维左移（metrics/日志/trace 埋点验证）+ check_test 第二层（覆盖率/断言/负向/可选变异）+ --api 接口测试覆盖 + **质量门禁序列**（fail-fast 串行：build→test→api→contract→reuse→consistency→layer/link-depth→docs-pack→security→deps，映射 precheck 既有 flag 不新增门禁） |
 | ⑦ | 独立审查 | check_review 门禁（review-record 留痕核验，独立 code review 非自检）+ 设计文档影响声明合理性背书（none 声明是否真无产品/架构面影响） |
 | ⑧ | 合入 main | ★主干合并准入=⑥⑦分支测试全绿（gate-runs.jsonl 留痕）+ ★变更左移（回滚预案 + 迁移兼容）+ ★文档左移（设计文档随批——touched 声明的 DESIGN_DOCS 修订须在变更集内，L2 pre-commit 机械核验）+ 合入序列（fetch origin → 本地 main ff-only 快进 → worktree 分支 rebase → merge --no-ff → push；多人协作防本地 main 滞后，2026-10-26 立法） |
@@ -395,6 +395,7 @@ verify-`<project>/`、`.swarm-yuan/out-of-scope/`、`principles/` 三件产物�
  - **禁止侵入式重构**：不修改既有稳定单元的签名/行为，只通过组合/扩展复用
  - **禁止破坏性改造**：不改只读骨架/第三方依赖/框架核心，只通过项目允许的机制（patch/overlay/插件）接入
  - 每个新增文件须标注：复用了哪些既有单元（引用特征卡第 11 项的路径/签名）
+ - **★捷径要留账（懒生成的记账面）**：每个有意为之的简化在代码注释里留 `shortcut: <上限>, <何时升级>`——上限写清这个简化在什么范围内成立，何时升级写清什么条件出现必须回来重做；两段缺一不可。只写上限不写触发条件的会静默腐烂成永久债（`--adr` 机检计 `no-trigger` 并 warn；捷径本身不罚）。
 - **★编排约束（dev-guide.md §8 必须含，从 exploration-guide §D.3 + 特征卡第 15 项承接）**：
  - **按 §D.0 项目形态选择约束类别**——只推导项目实际存在的约束
  - 前端约束：导入方向/跨模块边界/注册顺序/feature-gate/路由挂载/状态所有权/测试边界
@@ -544,7 +545,7 @@ bash precheck.sh --shift-left # ★左移检查：测试设计段+变更影响�
 | §2 业务规则案例及数据 | 关键业务规则 + 案例数据 + 预期结果 | `--consistency` |
 | §3 数据勾稽核对（无多漏错重） | 无遗漏、无多余、记录正确、勾稽正确、一致性、幂等性 | `--consistency` |
 | §4 UI展示核对 | 展示正确、敏感信息脱敏、请求响应日志已记录 | `--sensitive` |
-| ★代码审查 | 5 维度（正确性/安全/性能/可维护/测试覆盖）+ 两遍清单 + AUTO-FIX/ASK + 严重度分级 | `--review` |
+| ★代码审查 | 5 维度（正确性/安全/性能/可维护/测试覆盖）+ 两遍清单 + AUTO-FIX/ASK + 三档分级（Must/Should/Nice，无具体案例即不成立）+ 四段式发现 + `Not checked` 收口 | `--review` |
 | ★复用合规 | 拼装式开发（**硬门禁**）：校验 spec §5.5 复用约束段 + 4 checkbox 全勾；新增单元名 vs reference-manual §4/5/6 稳定单元名重名检测（重复造轮子→fail）；导出单元数异常 warn | `--reuse` |
 | ★版本锁定 | 检测 package.json/pyproject.toml/go.mod 等依赖版本是否被变更（对比基线），未经用户确认的版本升级 = 违规 | `--deps` |
 | ★安全检查 | 检测 OWASP Top 10 常见安全模式：SQL 拼接/命令注入/eval/v-html/路径穿越/硬编码密钥/弱哈希/禁用 TLS/CORS */调试模式 | `--security` |
@@ -576,7 +577,7 @@ bash precheck.sh --shift-left # ★左移检查：测试设计段+变更影响�
 - `--layer` 是**硬门禁**：配置 LAYER_DEFS（层名=目录glob）+ LAYER_ORDER（依赖顺序，上层→下层）+ DOMAIN_LAYER + DOMAIN_FORBIDDEN_IMPORTS + AGGREGATE_DIR。做四件事：(1) 解析相对 import，断言仅允许上层依赖下层，倒置/穿透 fail；(2) 领域层不得 import 框架/ORM/IO（react/express/sequelize/prisma 等），违反 fail；(3) 循环依赖检测（madge，未装则 warn）；(4) 聚合间不得直接 import 其他聚合目录的对象（只引用 ID），违反 fail。防范 DDD 层穿透/领域污染/贫血模型被框架绑死/聚合边界破坏
 - `--stable-diff` 是**硬门禁**：配置 STABLE_GLOBS（稳定层文件 glob，如 src/domain/** src/repositories/**）。git diff（vs main）检测稳定层文件改动，必须在 spec MODIFIED 段声明该文件 + 理由 + 迁移路径，否则 fail。防范"顺手改稳定单元签名/破坏聚合根/改 Repository 接口"
 - `--link-depth` 配置 MAX_LINK_DEPTH（建议 6-8）。优先用 graphify 最长路径，降级 madge 依赖树深度，再降级为纯转发函数统计（>5 warn）。超阈值 warn（不 fail，因深度可能是合理的）。防范"适配层堆叠/调用链膨胀/Repository 查询泄漏"
-- `--adr` 配置 ADR_DIR（架构决策记录目录）+ TECH_DEBT_FILE（技术债登记）。做三件事：(1) ADR_DIR 不存在 fail；(2) git diff 新增第三方依赖若未在 ADR 文件中出现则 warn（技术选型应有决策记录）；(3) 代码中 TODO/FIXME/HACK 数量提示在技术债文件登记。防范 TOGAF "架构决策无文档/技术债无登记"
+- `--adr` 配置 ADR_DIR（架构决策记录目录）+ TECH_DEBT_FILE（技术债登记）。做四件事：(1) ADR_DIR 不存在 fail；(2) git diff 新增第三方依赖若未在 ADR 文件中出现则 warn（技术选型应有决策记录）；(3) 代码中 TODO/FIXME/HACK 数量提示在技术债文件登记；(4) 捷径台账：扫注释前缀后的 `shortcut:` 标记，已登记的妥协不罚，缺"何时升级"（无逗号）的计 `no-trigger` 并 warn（会静默腐烂）。防范 TOGAF "架构决策无文档/技术债无登记" + 未记账的捷径
 - `--contract` 配置 CONTRACT_DIR（接口契约目录）+ ACL_DIR（防腐层目录）+ CONTEXT_DIRS（限界上下文目录列表）。做两件事：(1) 契约文件必须含 version 字段（缺则 fail）；(2) 跨上下文 import 解析到其他上下文目录 = 绕过 ACL → fail。防范 TOGAF "接口无版本/遗留系统无防腐层"
 - `--consistency-cross` 配置 GLOSSARY_FILE（业务术语表）+ SOR_FILE（数据所有权表）。warn 级：(1) 术语表代码标识符在代码中 grep 不到 → 命名漂移 warn；(2) SoR 表存在性校验。防范 TOGAF "BDAT 命名不一致/数据所有权模糊"
 - `--impact` 硬门禁：spec 必须含"影响范围/impact/消费方/stakeholder"任一关键字段（缺则 fail）；git diff 改动文件用 grep 反查消费方，>3 则 warn 提示回归范围。防范 TOGAF "变更无影响分析/评审后不遵从"
@@ -747,7 +748,7 @@ bash precheck.sh --shift-left # ★左移检查：测试设计段+变更影响�
 · **Spec-driven（OpenSpec）**：workflow 节点②③用 proposal→spec(delta)→design→tasks 模式；spec/plan 模板用 OpenSpec 格式（delta ADDED/MODIFIED + SHALL/MUST + Scenario WHEN/THEN；tasks `- [ ]` checkbox）
 · **Subagent-driven（superpowers）**：workflow 节点⑤引用 subagent-orchestration.md（orchestrator + 每任务新 subagent + 两阶段审查 + progress ledger + 文件交接）；**复杂变更用 Dynamic Workflows 并行扇出 + 交叉验证（降级：Task(subagent) 手动并行）**
 · **State machine（comet）**：scripts/state-machine.sh 实现阶段状态持久化 + 阶段转换硬门禁；workflow 状态控制段引用它
-· **Review（gstack/OCR）**：check 段含 5 审查维度 + 两遍清单 + AUTO-FIX/ASK + 严重度分级；precheck.sh --review；引用 review-methodology.md
+· **Review（gstack/OCR）**：check 段含 5 审查维度 + 两遍清单 + AUTO-FIX/ASK + 三档分级 + 四段式发现；precheck.sh --review；引用 review-methodology.md
 · **Code-graph（GitNexus/graphify）**：references/code-graph-tools.md 引用工具命令（只引用不复制）；探查阶段先用图谱索引；组件依赖链路从图谱读
 · **Phase-loop + capability（gsd-core）**：引用 gsd-patterns.md；check 用 goal-backward 对抗验证（任务完成≠目标达成，FORCE 立场，BLOCKER/WARNING 分类）；门禁分 4 类（pre-flight/revision/escalation/abort）；workflow 可选 wave 并行；**若装了 gsd-core 则调用 `/gsd-execute-phase`/`/gsd-verify`/`gsd-tools` 运行时引擎，若未装则降级为 state-machine.sh + subagent 手动编排**
 · **Memory persistence（claude-mem）**：引用 memory-persistence.md；状态控制段说明跨会话记忆方案（state-machine.sh 管阶段 + progress ledger 管任务 + claude-mem 若装则管跨会话知识）；3 层渐进式检索

@@ -68,7 +68,7 @@ references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-
 references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-agents	28769
 references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16653
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
-references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	60429
+references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	62137
 references/gsd-patterns.md	target	standard	copy	ref	yes	yes	gsd-patterns	35189
 references/memory-persistence.md	target	standard	copy	refd	yes	yes	memory-persistence	40776
 references/security-spec.md	target	lite	copy	ref	yes	yes	security-spec	19531
@@ -79,7 +79,7 @@ references/domain-knowledge.md	target	standard	copy	ref	yes	yes	domain-knowledge
 references/business-ontology-methodology.md	target	standard	copy	ref	yes	yes	business-ontology-methodology	19279
 references/fibo-financial-ontology.md	target	standard	copy	ref	yes	yes	fibo-financial-ontology	34769
 references/cost-estimation-methodology.md	target	standard	copy	ref	yes	yes	cost-estimation-methodology	16241
-references/lazy-generation-methodology.md	target	standard	copy	ref	yes	yes	lazy-generation-methodology	4540
+references/lazy-generation-methodology.md	target	standard	copy	ref	yes	yes	lazy-generation-methodology	7616
 references/clean-code-metrics-methodology.md	target	standard	copy	ref	yes	yes	clean-code-metrics-methodology	4539
 references/claude-code-capabilities.md	target	standard	distill	refd	yes	yes	claude-code-capabilities	93960
 references/standards-compliance.md	target	compliance	copy	ref	yes	yes	standards-compliance	45691
@@ -92,13 +92,13 @@ references/ai-process-records.md	target	standard	copy	ref	yes	yes	ai-process-rec
 references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	21532
 references/codex-methodology.md	target	standard	distill	refd	yes	yes	codex-methodology	39306
 references/mea-loop-methodology.md	target	standard	copy	ref	yes	yes	mea-loop-methodology	13598
-references/rsi-evidence-methodology.md	target	standard	copy	ref	yes	yes	rsi-evidence-methodology	9284
+references/rsi-evidence-methodology.md	target	standard	copy	ref	yes	yes	rsi-evidence-methodology	10452
 references/togaf-metamodel-methodology.md	target	standard	copy	ref	yes	yes	togaf-metamodel-methodology	6404
 references/cordis-composability-methodology.md	target	standard	copy	ref	yes	yes	cordis-composability-methodology	7970
 references/frontend-design-methodology.md	target	standard	copy	ref	yes	yes	frontend-design-methodology	24311
 references/codex-security-methodology.md	target	standard	distill	refd	yes	yes	codex-security-methodology	29503
 references/mcp-governance.md	target	standard	copy	ref	yes	yes	mcp-governance	7303
-references/controlled-language-methodology.md	target	lite	copy	ref	yes	yes	controlled-language-methodology	4684
+references/controlled-language-methodology.md	target	lite	copy	ref	yes	yes	controlled-language-methodology	5317
 references/crypto-spec.md	target	compliance	copy	ref	yes	yes	crypto-spec	4838
 references/bugfix-runbook.md	target	standard	copy	ref	yes	yes	bugfix-runbook	4942
 references/remote-debug-jvm.md	target	standard	copy	ref	yes	yes	remote-debug-jvm	4324

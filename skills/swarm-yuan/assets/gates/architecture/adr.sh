@@ -77,6 +77,22 @@ check_adr() {
     fi
   fi
 
+  # ---- 5. 捷径标记台账（R143 Ponytail v5 吸收）----
+  # 约定形态：注释里的 `shortcut: <上限>, <何时升级>`。有标记=已登记的妥协，不罚；
+  # 标记体没有逗号=没写升级触发条件（no-trigger），这种会静默腐烂成永久债，warn。
+  # 扫描面不含 sh：本门禁自身是 shell 且须字面写出该模式串，纳入即自伤（已知限制，R143 登记）。
+  local sc_hits="" sc_total=0 sc_notrigger=0
+  sc_hits=$(_scan_src '(^|[[:space:]])(#|//|/\*)[[:space:]]*shortcut:' \
+    'ts,js,tsx,jsx,py,go,rs,java,cs,php,rb,kt,swift' 'node_modules\|\.patch' \
+    "${WRITABLE_DIRS[@]+"${WRITABLE_DIRS[@]}"}" || true)
+  if [[ -n "$sc_hits" ]]; then
+    sc_total=$(printf '%s\n' "$sc_hits" | wc -l | xargs || true)
+    sc_notrigger=$(printf '%s\n' "$sc_hits" | grep -vE 'shortcut:[[:space:]]*[^,，]*[,，]' | wc -l | xargs || true)
+    if [[ "${sc_notrigger:-0}" -gt 0 ]]; then
+      warn "代码中有 ${sc_total} 处 shortcut 捷径标记（已登记的妥协，非违规）；其中 ${sc_notrigger} 处 no-trigger（未写升级触发条件，会静默腐烂）——补全为 'shortcut: <上限>, <何时升级>'"
+    fi
+  fi
+
   if [[ $found -eq 0 ]]; then
     pass "架构决策记录检查通过（${adr_count} 个 ADR）"
   fi
