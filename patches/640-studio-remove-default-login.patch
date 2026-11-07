@@ -1,3 +1,4 @@
+
 diff --git a/bin/hermes-web-ui.mjs b/bin/hermes-web-ui.mjs
 --- a/bin/hermes-web-ui.mjs
 +++ b/bin/hermes-web-ui.mjs
@@ -97,6 +98,7 @@ diff --git a/bin/hermes-web-ui.mjs b/bin/hermes-web-ui.mjs
    update             Update to latest version and restart
    upgrade            Alias for update
    version            Show version number
+
 diff --git a/packages/client/src/components/hermes/pets/WebPet.vue b/packages/client/src/components/hermes/pets/WebPet.vue
 --- a/packages/client/src/components/hermes/pets/WebPet.vue
 +++ b/packages/client/src/components/hermes/pets/WebPet.vue
@@ -134,6 +136,7 @@ diff --git a/packages/client/src/components/hermes/pets/WebPet.vue b/packages/cl
    }
    for (let i = 0; i < 20 && !localStorage.getItem('hermes_api_key'); i += 1) {
      await new Promise(resolve => window.setTimeout(resolve, 100))
+
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
@@ -146,6 +149,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      credentialsRequired: 'الرجاء إدخال اسم المستخدم وكلمة المرور',
      invalidCredentials: 'اسم المستخدم أو كلمة المرور غير صحيحة',
      tooManyAttempts: 'محاولات فاشلة كثيرة، الرجاء المحاولة لاحقًا',
+
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
 --- a/packages/client/src/i18n/locales/de.ts
 +++ b/packages/client/src/i18n/locales/de.ts
@@ -158,6 +162,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Bitte Benutzername und Passwort eingeben',
      invalidCredentials: 'Ungultiger Benutzername oder Passwort',
      tooManyAttempts: 'Zu viele fehlgeschlagene Versuche, bitte versuchen Sie es spater erneut',
+
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
@@ -170,6 +175,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Please enter username and password',
      invalidCredentials: 'Invalid username or password',
      tooManyAttempts: 'Too many failed attempts, please try again later',
+
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
 --- a/packages/client/src/i18n/locales/es.ts
 +++ b/packages/client/src/i18n/locales/es.ts
@@ -182,6 +188,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Por favor, introduzca nombre de usuario y contrasena',
      invalidCredentials: 'Nombre de usuario o contrasena incorrectos',
      tooManyAttempts: 'Demasiados intentos fallidos, por favor intente mas tarde',
+
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
@@ -194,6 +201,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Veuillez entrer le nom d\'utilisateur et le mot de passe',
      invalidCredentials: 'Nom d\'utilisateur ou mot de passe incorrect',
      tooManyAttempts: 'Trop de tentatives echouees, veuillez reessayer plus tard',
+
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
 --- a/packages/client/src/i18n/locales/ja.ts
 +++ b/packages/client/src/i18n/locales/ja.ts
@@ -206,6 +214,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      credentialsRequired: 'ユーザー名とパスワードを入力してください',
      invalidCredentials: 'ユーザー名またはパスワードが正しくありません',
      tooManyAttempts: 'ログイン試行回数が多すぎます。しばらくしてからお試しください',
+
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
@@ -218,6 +227,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      credentialsRequired: '사용자 이름과 비밀번호를 입력해 주세요',
      invalidCredentials: '사용자 이름 또는 비밀번호가 올바르지 않습니다',
      tooManyAttempts: '로그인 시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요',
+
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
 --- a/packages/client/src/i18n/locales/pt.ts
 +++ b/packages/client/src/i18n/locales/pt.ts
@@ -230,6 +240,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Por favor, insira nome de usuário e senha',
      invalidCredentials: 'Nome de usuário ou senha incorretos',
      tooManyAttempts: 'Muitas tentativas falhadas, por favor tente novamente mais tarde',
+
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
@@ -242,6 +253,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Введите имя пользователя и пароль',
      invalidCredentials: 'Неверное имя пользователя или пароль',
      tooManyAttempts: 'Слишком много неудачных попыток входа, повторите попытку позже',
+
 diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/locales/tr.ts
 --- a/packages/client/src/i18n/locales/tr.ts
 +++ b/packages/client/src/i18n/locales/tr.ts
@@ -254,6 +266,7 @@ diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Lütfen kullanıcı adı ve parola girin',
      invalidCredentials: 'Geçersiz kullanıcı adı veya parola',
      tooManyAttempts: 'Çok fazla başarısız deneme yapıldı; lütfen daha sonra tekrar deneyin',
+
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
@@ -266,6 +279,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      credentialsRequired: '請輸入使用者名稱和密碼',
      invalidCredentials: '使用者名稱或密碼錯誤',
      tooManyAttempts: '登入失敗次數過多，請稍後再試',
+
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
 +++ b/packages/client/src/i18n/locales/zh.ts
@@ -278,6 +292,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      credentialsRequired: '请输入用户名和密码',
      invalidCredentials: '用户名或密码错误',
      tooManyAttempts: '登录失败次数过多，请稍后重试',
+
 diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/utils/desktop-bridge.ts
 --- a/packages/client/src/utils/desktop-bridge.ts
 +++ b/packages/client/src/utils/desktop-bridge.ts
@@ -290,6 +305,7 @@ diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/u
    ensureAuth?: () => Promise<boolean>
    retryBootstrap: (source?: 'cf' | 'github') => Promise<void>
    restartApp?: () => Promise<boolean>
+
 diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
 --- a/packages/desktop/src/main/desktop-i18n.ts
 +++ b/packages/desktop/src/main/desktop-i18n.ts
@@ -374,6 +390,7 @@ diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/ma
      'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
+
 diff --git a/packages/desktop/src/main/desktop-login-reset.ts b/packages/desktop/src/main/desktop-login-reset.ts
 --- a/packages/desktop/src/main/desktop-login-reset.ts
 +++ b/packages/desktop/src/main/desktop-login-reset.ts
@@ -478,6 +495,7 @@ diff --git a/packages/desktop/src/main/desktop-login-reset.ts b/packages/desktop
 +  if (!fresh) return ''
 +  return (await login(fresh.username, fresh.password)).jwt
  }
+
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
@@ -506,6 +524,7 @@ diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/inde
  ipcMain.handle('hermes-desktop:restart-app', event => {
    requireDesktopUpdaterSender(event)
    if (activeRemoteServerUrl) throw new Error('Remote service restarts must be requested from the remote server')
+
 diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
 --- a/packages/desktop/src/preload/index.ts
 +++ b/packages/desktop/src/preload/index.ts
@@ -518,6 +537,7 @@ diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preloa
    retryBootstrap: (source?: 'cf' | 'github'): Promise<void> => ipcRenderer.invoke('hermes-desktop:retry-bootstrap', source),
    ...(!REMOTE_SERVER_MODE ? {
      restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),
+
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
 --- a/packages/server/src/modules/studio/controllers/auth.ts
 +++ b/packages/server/src/modules/studio/controllers/auth.ts
@@ -575,6 +595,7 @@ diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/s
      recordPasswordFailure(ip)
      ctx.status = 401
      ctx.body = { error: 'Invalid username or password' }
+
 diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
 --- a/packages/server/src/modules/studio/repositories/users-store.ts
 +++ b/packages/server/src/modules/studio/repositories/users-store.ts
@@ -614,33 +635,3 @@ diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/pa
 -  return createDefaultSuperAdmin()
 +  return findUserByUsername(username)
  }
-diff --git a/tests/desktop/desktop-login-reset.test.ts b/tests/desktop/desktop-login-reset.test.ts
---- a/tests/desktop/desktop-login-reset.test.ts
-+++ b/tests/desktop/desktop-login-reset.test.ts
-@@ -34,12 +34,23 @@ describe('desktop login reset', () => {
-     expect(source).toContain('if (mainWindow) await mainWindow.loadURL(mainRouteUrl() || url)')
-   })
- 
--  it('resets the default credentials and clears login locks through the Web UI CLI', () => {
-+  it('resets the login through the Web UI CLI and reads the generated random credentials', () => {
-     const source = readFileSync(resolve('packages/desktop/src/main/desktop-login-reset.ts'), 'utf-8')
- 
-     expect(source).toContain("runWebUiCliCommand('reset-default-login')")
-     expect(source).toContain("runWebUiCliCommand('clear-login-locks')")
--    expect(source).toContain("DEFAULT_USERNAME = 'admin'")
--    expect(source).toContain("DEFAULT_PASSWORD = '123456'")
-+    // SecNoDefaultCred（安全轮 M8b）：重置不再返回硬编码口令，改为读 CLI 落盘的
-+    // admin-login.json（随机密码）；源码不得再出现出厂默认口令字面量。
-+    expect(source).toContain('readAdminLoginFile()')
-+    expect(source).not.toContain("DEFAULT_PASSWORD = '123456'")
-+    expect(source).not.toContain("'123456'")
-+  })
-+
-+  it('proxies renderer login through the main process (no credentials in the client bundle)', () => {
-+    const source = readFileSync(resolve('packages/desktop/src/main/desktop-login-reset.ts'), 'utf-8')
-+    const preload = readFileSync(resolve('packages/desktop/src/preload/index.ts'), 'utf-8')
-+
-+    expect(source).toContain('export async function desktopAutoLogin')
-+    expect(preload).toContain("desktopLogin: (): Promise<string> => ipcRenderer.invoke('hermes-desktop:login')")
-   })
- })

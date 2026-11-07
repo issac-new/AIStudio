@@ -1,8 +1,9 @@
+diff --git a/packages/client/src/components/hermes/chat/MarkdownRenderer.vue b/packages/client/src/components/hermes/chat/MarkdownRenderer.vue
 --- a/packages/client/src/components/hermes/chat/MarkdownRenderer.vue
 +++ b/packages/client/src/components/hermes/chat/MarkdownRenderer.vue
-@@ -23,6 +23,11 @@
- import { openUrlInDesktopBrowser } from '@/utils/desktop-browser'
- import ImagePreviewOverlay from './ImagePreviewOverlay.vue'
+@@ -27,6 +27,11 @@
+ 
+ const personWorkspaceContext = inject(personWorkspacePreviewContext, null)
  
 +// 本地媒体只渲染占位属性（data-local-media + 透明 gif），由宿主容器或全局
 +// 重写器（overlay entry 安装）用 Authorization fetch 换成 blob URL——API key
@@ -12,16 +13,16 @@
  const LATEX_FENCE_LANGS = new Set(['latex', 'tex', 'math', 'katex'])
  function getFenceLanguage(info: string): string {
    return info.trim().split(/\s+/)[0]?.toLowerCase() ?? ''
-@@ -60,6 +65,8 @@
+@@ -63,6 +68,8 @@
+     strict: 'ignore',
    })}</div>`
  }
- 
-+const ideDeferLocalMedia = inject<boolean>('ideDeferLocalMedia', true)
 +
++const ideDeferLocalMedia = inject<boolean>('ideDeferLocalMedia', true)
+ 
  const props = withDefaults(defineProps<{
      content: string
-     mentionNames?: string[]
-@@ -280,6 +287,12 @@
+@@ -288,6 +295,12 @@
        try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep literal paths. */ }
        return `src="${md.utils.escapeHtml(props.resolveImageUrl(normalizeLocalFilePath(decodedPath)))}"`
      }
@@ -34,7 +35,7 @@
      const downloadUrl = getDownloadUrl(normalizeLocalFilePath(path))
      return `src=${quote}${downloadUrl}${quote}`
    })
-@@ -299,8 +312,11 @@
+@@ -307,8 +320,11 @@
      // downloadable document, so keep the player instead of opening source view.
      if (hasExtension(path, VIDEO_EXTENSIONS)) {
        const downloadUrl = getDownloadUrl(path)
@@ -47,7 +48,7 @@
          <div class="markdown-video-footer">
            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
              <polygon points="5 3 19 12 5 21 5 3"/>
-@@ -313,8 +329,11 @@
+@@ -321,8 +337,11 @@
      // Audio files: render as inline audio player
      if (hasExtension(path, AUDIO_EXTENSIONS)) {
        const downloadUrl = getDownloadUrl(path)

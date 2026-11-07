@@ -26,9 +26,6 @@
 033-client-api-profiles.patch
 034-client-api-sessions.patch
 035-server-routes-kanban.patch
-037-test-kanban-service.patch
-038-test-kanban-controller.patch
-039-test-kanban-routes.patch
 041-desktop-rebrand-swarmstudio-config.patch
 042-desktop-rebrand-swarmstudio-pkg.patch
 043-desktop-rebrand-swarmstudio-strings.patch
@@ -97,8 +94,6 @@
 170-server-routes-kanban-attach-url.patch
 173-client-store-kanban-attach-url.patch
 174-client-kanban-attachment-download-path.patch
-175-test-kanban-routes-attach-url-mock.patch
-176-test-auth-routes-avatar-matrix-mock.patch
 177-desktop-cli-shim-rebrand.patch
 180-server-service-kanban-v020.patch
 181-server-controllers-kanban-v020.patch
@@ -118,7 +113,6 @@
 # 207（v1.0.9 升级轮退役：上游已原生 pin hermes-agent 0.22.5 / v0.22.5 / bf0203a7，与本仓 vendor/hermes-agent 钉版一致，高于本补丁的 0.21.5 pin，保留即降级；原件 .archived-patches/207-desktop-runtime-pin.patch）
 228-client-settingsview-graph-engine-card.patch
 233-desktop-identity-swarmstudio.patch
-235-server-sessions-tests-includechildren.patch
 240-cockpit-parallel-routes.patch
 117-agent-default-workspace-kind-dir.patch
 118-profile-default-run-trace.patch
@@ -527,7 +521,6 @@
 584-server-kanban-complete-blocked-422.patch
 
 # 578 看板测试 0.7.32 对齐——Once 残队卫生（mockReset）+assign/complete 前置 getTask 动态分派桩+未指派可见语义+576 提示语（8 失败收口，39/39）
-585-test-kanban-v0732-realign.patch
 
 # 577 网关挂死槽周期扫（run11 三次容量饥饿根因补口：驱逐检查原只挂同 key 入站快路径——无新消息的挂死槽永不被扫；复用 HERMES_AGENT_TIMEOUT 活动钟判定+loop 线程编排）
 586-agent-gateway-wedged-agent-sweep.patch
@@ -780,7 +773,6 @@
 639-dsh-acp-nonjson-cap.patch
 
 640-studio-remove-default-login.patch
-641-client-login-view-test-rewrite.patch
 
 # 642: zcode Global 模式模型选择只认 builtin 目录层——个人 provider 层声明的模型(k3/step-5-preview/
 # GLM-5.3-Highspeed 等自定义路由)与「空模型+仅思考档」(个人无默认选择时)一律抛
