@@ -1,5 +1,4 @@
-import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { codingAgentWorkingDirectory } from '../runtime/workspace'
 import type { CodingAgentImageInput } from '../../protocol/types'
 import type { ManagedCodingAgentRun } from '../runtime/run-manager'
 import type { OpenCodeTurnHost } from './turn-host'
@@ -39,23 +38,32 @@ export function startOpenCodeTurn(
   })
 
   if (run.launch.promptFile) updateManagedPromptFileSync(run.launch.promptFile, systemPrompt)
+  const workingDir = codingAgentWorkingDirectory(run.launch)
+  const hasDirArg = run.launch.args.includes('--dir')
   const args = [
     'run',
     '--format', 'json',
     '--agent', 'build',
     '--auto',
     '--thinking',
+    ...(!hasDirArg && workingDir ? ['--dir', workingDir] : []),
     ...run.launch.args,
     ...(run.launch.agentNativeSessionId && run.nativeResumeReady
       ? ['--session', run.launch.agentNativeSessionId]
       : []),
     ...images.flatMap(image => ['--file', image.path]),
   ]
+  const env: NodeJS.ProcessEnv = run.launch.mode === 'global'
+    ? { ...process.env, ...(run.launch.env || {}) }
+    : isolatedCodingAgentChildEnv(run.launch.env)
+  delete env.PWD
+  delete env.OLDPWD
+  if (workingDir) {
+    env.PWD = workingDir
+  }
   const child = host.spawn(run.launch.command, args, {
-    cwd: existsSync(run.launch.workspaceDir) ? run.launch.workspaceDir : homedir(),
-    env: run.launch.mode === 'global'
-      ? { ...process.env, ...(run.launch.env || {}) }
-      : isolatedCodingAgentChildEnv(run.launch.env),
+    cwd: workingDir,
+    env,
     pipeStdin: true,
   })
   run.currentChild = child

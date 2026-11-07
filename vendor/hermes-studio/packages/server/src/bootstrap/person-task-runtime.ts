@@ -2,6 +2,7 @@ import type { PersonRuntimePort } from '../modules/studio/public/person-runtime'
 import { getChatRunServer } from '../modules/studio/public/chat-run'
 import { logger } from '../modules/studio/public/logging'
 import { codingAgentRunManager } from '../modules/coding-agents/services/runtime/run-manager'
+import { requireExistingWorkspaceDirectory } from '../modules/studio/public/workspace-manager'
 
 const starting = new Map<string, Promise<void>>()
 const stopping = new Map<string, Promise<void>>()
@@ -26,6 +27,7 @@ export const executePersonTask: PersonRuntimePort['execute'] = async input => {
   const server = getChatRunServer()
   if (!server) throw new Error('Chat runtime unavailable')
   if (input.signal.aborted) throw new Error('Cancelled')
+  const workspace = requireExistingWorkspaceDirectory(input.workspace)
   let ready!: () => void
   const startup = new Promise<void>(resolve => { ready = resolve })
   starting.set(input.sessionId, startup)
@@ -34,18 +36,22 @@ export const executePersonTask: PersonRuntimePort['execute'] = async input => {
   try {
     const s = input.selection
     const existing = codingAgentRunManager.getRunInfo(input.sessionId)
-    if (existing && existing.workspaceDir !== input.workspace) codingAgentRunManager.stop(input.sessionId, { reportClosed: false })
-    const result = await server.runAndWait({ session_id: input.sessionId, input: input.prompt, display_input: input.displayInput, profile: s.profile, workspace: input.workspace || undefined,
+    if (existing && existing.workspaceDir !== workspace) codingAgentRunManager.stop(input.sessionId, { reportClosed: false })
+    const result = await server.runAndWait({ session_id: input.sessionId, input: input.prompt, display_input: input.displayInput, profile: s.profile, workspace,
       provider: s.provider || undefined, model: s.model, apiMode: s.apiMode, mode: s.mode, reasoning_effort: s.reasoningEffort,
       source: s.runtime === 'hermes' ? 'api_server' : s.runtime === 'ekko' ? 'builtin_agent' : 'coding_agent',
       ...(s.runtime !== 'hermes' ? { coding_agent_id: (s.runtime === 'ekko' ? 'ekko-agent' : s.runtime) as any } : {}),
       memory_write_policy: 'explicit-only', memory_recall_scopes: [], memory_write_scopes: [],
-      instructions: 'This is a task delegated by Person. Tool execution approvals are handled automatically for this task. Ask clarifying questions normally: Person coordinates answers. Work only on the supplied goal and scope. Persist the deliverable or report and verification evidence as files in the supplied workspace and report their paths. Do not claim completion without checking results.',
-    }, { profile: s.profile, user: input.user, timeoutMs: 60 * 60_000, approvalChoice: 'once', onEvent: (event: string, payload: Record<string, unknown>) => {
+      instructions: (input.purpose === 'verification' ? 'You are an independent acceptance Agent in a fresh conversation. Verify the supplied requirements yourself, persist check evidence, and write a clear report in the language of the original request. Explain the conclusion, findings for each criterion, concrete defects and evidence paths. Report missing input/environment explicitly. Bot reads your report and records the acceptance decision. Do not repair the deliverable or change task status.'
+        : input.purpose === 'development' ? 'You are the development Agent. Implement the supplied product brief and repair specific defects when asked. Deliver runnable artifacts, file paths, startup instructions and known limitations. Development build checks are allowed. Do not perform independent acceptance, final browser/screenshot reviews or return an acceptance verdict; a separate verifier owns those procedures. Tool execution approvals are handled automatically. Ask clarifying questions normally: Person coordinates answers.'
+        : 'This is a task delegated by Person. Tool execution approvals are handled automatically for this task. Ask clarifying questions normally: Person coordinates answers. Work only on the supplied goal and scope. Persist the deliverable or report and verification evidence as files in the supplied workspace and report their paths. Do not claim completion without checking results.')
+        + '\nFor a goal with multiple features, preserve every supplied requirement and constraint in a checklist, work through dependencies, and verify each item. Report unmet items and blockers explicitly; do not present partial completion as full completion.'
+        + (s.runtime === 'ekko' ? '' : `\nEffective workspace: ${workspace}\nThe host selected this directory. If it becomes unavailable, stop and report the error; never switch to another directory.`),
+    }, { profile: s.profile, user: input.user, ...(input.taskTimeoutMinutes === -1 ? {} : { timeoutMs: input.taskTimeoutMinutes * 60_000 }), approvalChoice: 'once', onEvent: (event: string, payload: Record<string, unknown>) => {
       if (event === 'run.started') ready()
       input.onEvent(event, payload)
     } })
-    if (result.interrupted) await server.waitForRunTermination(input.sessionId)
+    if (result.interrupted || input.waitForTermination) await server.waitForRunTermination(input.sessionId)
     return result
   } finally {
     ready()

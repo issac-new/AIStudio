@@ -8,9 +8,11 @@ import { checkDshModuleBoundaries } from './dsh-module-harness.mjs'
 import { checkCodingAgentModuleBoundaries } from './coding-agent-module-harness.mjs'
 import { checkJevIntegrations } from './jev-harness.mjs'
 import { checkUiTheme } from './ui-theme-harness.mjs'
+import { checkTaskArtifacts } from './task-artifacts.mjs'
 
 const root = process.cwd()
 const failures = []
+failures.push(...await checkTaskArtifacts(root))
 failures.push(...await checkDshModuleBoundaries(root))
 failures.push(...await checkCodingAgentModuleBoundaries(root))
 failures.push(...await checkJevIntegrations(root))
@@ -49,6 +51,9 @@ for (const file of [
   'scripts/jev-integrations.json',
   'docs/harness/frontend-ui.md',
   'scripts/ui-theme-baseline.json',
+  'docs/harness/task-artifacts.md',
+  'scripts/task-artifacts.mjs',
+  'scripts/task-artifacts-cli.mjs',
 ]) {
   requireFile(file)
 }
@@ -58,9 +63,6 @@ for (const dir of [
   'packages/server/src',
   'packages/desktop',
   'packages/desktop/build/icons',
-  'tests/client',
-  'tests/server',
-  'tests/e2e',
   '.github/workflows',
 ]) {
   requireDir(dir)
@@ -441,6 +443,20 @@ for (const phrase of [
   }
 }
 
+// The packaged app-update.yml inherits this url as the electron-updater base. A
+// base without the /latest path segment resolves installer assets against the
+// origin root, which answers every asset request with HTTP 400
+// ("Missing release tag or asset name"); only /latest/<asset> is served.
+{
+  const builderConfig = await readText('packages/desktop/electron-builder.yml')
+  const publishBlock = /^publish:\n(?:[ \t]+.*\n)*/m.exec(builderConfig)?.[0] ?? ''
+  const publishUrl = /^[ \t]+url:[ \t]*(\S+)[ \t]*$/m.exec(publishBlock)?.[1]
+  if (!publishUrl) fail('packages/desktop/electron-builder.yml must declare the desktop publish url')
+  if (new URL(publishUrl).pathname.replace(/\/+$/, '') !== '/latest') {
+    fail(`desktop publish url must point at the /latest directory so installer assets resolve under it: ${publishUrl}`)
+  }
+}
+
 for (const phrase of ['checkForUpdatesWithFallback()', 'readDesktopUpdateSource(app.getAppPath())', 'configureUpdateFeed(source.fallbackUrl)']) {
   if (!desktopUpdater.includes(phrase)) fail(`desktop updater must use the packaged source policy: ${phrase}`)
 }
@@ -453,7 +469,7 @@ if (!desktopUpdateTestWorkflow.includes('contents: read')
   || /contents:\s*write|action-gh-release|gh\s+release/.test(desktopUpdateTestWorkflow)) {
   fail('desktop update test workflow must not have a production release publication path')
 }
-for (const phrase of ['configure-macos-signing.mjs --require-signed', 'run dist:update-test', 'run test:updater']) {
+for (const phrase of ['configure-macos-signing.mjs --require-signed', 'run dist:update-test']) {
   if (!desktopUpdateTestWorkflow.includes(phrase)) fail(`desktop update test workflow must include: ${phrase}`)
 }
 

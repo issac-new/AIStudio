@@ -10,13 +10,14 @@ import { isGlobalOnlyCodingAgent } from '@/utils/agent-catalog'
 import { canScopedCodingAgentUseProvider } from '@/utils/codingAgentProviders'
 import { agentReasoningEffortOptions, agentReasoningEffortValue, modelReasoningEfforts } from '@/utils/model-reasoning-effort'
 import ScopedModelSelector from '@/components/hermes/models/ScopedModelSelector.vue'
+import { clientUuid } from '@/utils/secure-uuid'
 import PersonPanelIcon from './PersonPanelIcon.vue'
 import { chatSessionAgentAvatar } from '@/utils/chat-agent-avatar'
 import NativeCodingAgentModelFields from '@/components/hermes/models/NativeCodingAgentModelFields.vue'
 
 const props = defineProps<{ agents: PersonAgentPreset[]; saving: boolean; saveError?: string }>()
 const emit = defineEmits<{ save: [agents: PersonAgentPreset[]] }>()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const draft = ref<PersonAgentPreset[]>([])
 const groups = ref<Array<AvailableModelGroup & { profile: string }>>([])
 const resourceProfiles = ref<string[]>([])
@@ -45,14 +46,14 @@ function efforts(agent: PersonAgentPreset) {
   return agentReasoningEffortOptions([{ label: t('chat.reasoningEffort.options.none'), value: '' }, ...modelReasoningEfforts(groupsFor(agent), agent.selection.provider, agent.selection.model)
     .map(value => ({ label: t(`chat.reasoningEffort.options.${value}`), value }))])
 }
-function resetModel(agent: PersonAgentPreset) { agent.selection.provider = ''; agent.selection.model = ''; agent.selection.reasoningEffort = '' }
+function resetModel(agent: PersonAgentPreset) { agent.selection.provider = ''; agent.selection.model = ''; agent.selection.apiMode = undefined; agent.selection.reasoningEffort = '' }
 function changeRuntime(agent: PersonAgentPreset, runtime: string) {
   agent.selection.runtime = runtime
   agent.selection.mode = isGlobalOnlyCodingAgent(runtime) ? 'global' : 'scoped'
   resetModel(agent)
 }
 function add() {
-  editingId.value = crypto.randomUUID()
+  editingId.value = clientUuid()
   draft.value.push({ id: editingId.value, name: '', description: '', selection: { runtime: '', mode: 'scoped',
     profile: profiles.value[0]?.value || '', provider: '', model: '', reasoningEffort: '' } })
 }
@@ -63,6 +64,12 @@ function cancelEdit() {
   editingId.value = null
 }
 function avatar(runtime: string) { return chatSessionAgentAvatar({ agent: runtime }) }
+function reasoningLabel(agent: PersonAgentPreset) {
+  const value = agent.selection.reasoningEffort?.trim()
+  if (!value) return t('chat.reasoningEffort.defaultLabel')
+  const key = `chat.reasoningEffort.options.${value}`
+  return te(key) ? t(key) : value
+}
 function save() {
   if (valid.value && !props.saving && !error.value) emit('save', draft.value.map(agent => ({ ...agent,
     selection: { ...agent.selection, reasoningEffort: agent.selection.mode === 'global' ? agent.selection.reasoningEffort
@@ -104,6 +111,7 @@ onMounted(async () => {
         </label>
         <template v-if="editingAgent.selection.mode === 'scoped'">
           <label>{{ t('person.chooseModel') }}<ScopedModelSelector :provider="editingAgent.selection.provider" :model="editingAgent.selection.model" :groups="groupsFor(editingAgent)" :disabled="saving || !editingAgent.selection.runtime"
+            :select-protocol="editingAgent.selection.runtime !== 'hermes'" :api-mode="editingAgent.selection.apiMode"
             @select="Object.assign(editingAgent.selection, $event, { reasoningEffort: '' })" /></label>
           <label>{{ t('chat.reasoningEffort.tooltip') }}<NSelect :value="agentReasoningEffortValue(editingAgent.selection.reasoningEffort, efforts(editingAgent))" @update:value="editingAgent.selection.reasoningEffort = $event" :options="efforts(editingAgent)" :disabled="saving || !editingAgent.selection.model" :aria-label="t('chat.reasoningEffort.tooltip')" /></label>
         </template>
@@ -122,6 +130,7 @@ onMounted(async () => {
             <div class="agent-identity"><img class="agent-avatar" :src="avatar(agent.selection.runtime).src" alt="" /><div><h3 :title="agent.name">{{ agent.name }}</h3><span class="tile-meta agent-runtime-label" :title="avatar(agent.selection.runtime).label">{{ avatar(agent.selection.runtime).label }}</span></div></div>
             <p class="agent-description">{{ agent.description }}</p>
             <div class="agent-model"><span class="tile-meta">{{ t('person.chooseModel') }}</span><span>{{ agent.selection.model || t('codingAgents.nativeModelDefault') }}</span></div>
+            <div class="agent-reasoning"><span class="tile-meta">{{ t('chat.reasoningEffort.tooltip') }}</span><span>{{ reasoningLabel(agent) }}</span></div>
             <footer class="tile-footer"><span class="tile-meta">{{ agent.selection.profile }}</span><div class="tile-actions"><NButton quaternary size="small" :disabled="saving" @click="draft.splice(index, 1)">{{ t('common.delete') }}</NButton><NButton secondary size="small" :disabled="saving" @click="editingId = agent.id">{{ t('common.edit') }}</NButton></div></footer>
           </article>
         </div>
@@ -141,7 +150,9 @@ onMounted(async () => {
 .editor-heading h3 { flex: 1; }
 .agent-avatar { width: 44px; height: 44px; flex-shrink: 0; object-fit: contain; border-radius: var(--radius-component, 10px); }
 .agent-description { color: $text-secondary; font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; margin: 22px 0; }
-.agent-model { display: flex; flex-direction: column; gap: 5px; margin: auto 0 22px; font-size: 13px; overflow-wrap: anywhere; }
+.agent-model, .agent-reasoning { display: flex; flex-direction: column; gap: 5px; font-size: 13px; overflow-wrap: anywhere; }
+.agent-model { margin: auto 0 14px; }
+.agent-reasoning { margin: 0 0 22px; }
 .runtime-picker { border: 0; padding: 0; margin: 0 0 24px; min-width: 0; }
 .runtime-picker legend { font-size: 12px; color: $text-secondary; margin-bottom: 10px; }
 .runtime-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; }

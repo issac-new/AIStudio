@@ -8,10 +8,12 @@ import { personBudgetedClient } from './person-model-context'
 import { estimatePersonContext } from '../modules/studio/services/person/context-estimate'
 import { getPersonJevRuntimeConfig } from '../modules/studio/public/jev'
 import { logger } from '../modules/studio/public/logging'
+import { createPersonTaskWait } from '../modules/studio/services/person/task-wait'
 
 export function createPersonAgent(options: PersonChatAgentOptions) {
   let originMessages: PersonTaskOrigin['messages'] = []
   let currentUserInput = false
+  let taskWait: ReturnType<typeof createPersonTaskWait> | undefined
   const registry = new AgentToolRegistry()
   for (const tool of options.tools) registry.register({ definition: { name: tool.name, description: tool.description, parameters: tool.parameters }, async execute(args, context = {}) {
     options.beforeRequest?.()
@@ -25,10 +27,11 @@ export function createPersonAgent(options: PersonChatAgentOptions) {
           instruction: 'Only an actual user response supplies a decision. An empty response is not approval.' }
       : await tool.execute(args, context.sessionId ? { sessionId: context.sessionId, runId: context.runId || '', messages: originMessages,
         ...(options.stage ? { stage:options.stage } : {}),
-        ...(options.returnExecutionId ? { returnExecutionId: options.returnExecutionId } : {}),
+        ...(options.returnExecutionId ? { returnExecutionId: options.returnExecutionId, acceptanceReturnId: options.acceptanceReturnId } : {}),
         ...(memoryRequest ? { memoryRequest } : {}) } : undefined)
     const content = JSON.stringify(value)
     if (content.length > 18000) throw new Error('Tool result too large; request a smaller page')
+    taskWait?.observe(tool.name,args,value)
     return { ok: !(value && typeof value === 'object' && 'ok' in value && value.ok === false), content }
   } })
   const runtime = new AgentRuntime({ tools: registry, systemPrompt: options.systemPrompt,
@@ -67,7 +70,9 @@ export function createPersonAgent(options: PersonChatAgentOptions) {
       if (callbackWrite && (!Array.isArray(args.operations) || args.operations.some(operation => !['create', 'update', 'supersede'].includes(String(operation?.operation))))) {
         return { ok: false, content: 'Task result permission only allows saving memory, not deleting or expiring it.' }
       }
-      return tool.execute(args, context)
+      const result = await tool.execute(args, context)
+      taskWait?.observe(name,args,result)
+      return result
     } })
   }
   const isolated = (input: AgentRuntimeRunInput, onPrepared?: (request: ModelRequest) => void): AgentRuntimeRunInput => ({ ...input,
@@ -80,7 +85,8 @@ export function createPersonAgent(options: PersonChatAgentOptions) {
       recallScopes: options.memory.identity.recallScopes, writeScopes: options.memory.identity.writeScopes,
       defaultWriteScope: options.memory.identity.defaultWriteScope,
     } : undefined,
-    toolContext: options.memory ? { ...input.toolContext, sessionId: options.memory.identity.sessionId, profileId: options.memory.identity.profileId } : input.toolContext,
+    toolContext: { ...input.toolContext, cwd: options.workspace, workspaceRoot: options.workspace, workspaceId: options.workspace,
+      ...(options.memory ? { sessionId: options.memory.identity.sessionId, profileId: options.memory.identity.profileId } : {}) },
     skillReviewEnabled: false, backgroundDelegationEnabled: false,
     ephemeralContext: true, contextKey: undefined,
   })
@@ -106,16 +112,23 @@ export function createPersonAgent(options: PersonChatAgentOptions) {
       originMessages = structuredClone(messages) as PersonTaskOrigin['messages']
       let latest: AgentRuntimeContextEstimate | undefined
       let runId = '', step = 0
-      const result = await runtime.run(isolated({ ...input, messages, onEvent: event => {
-        if ('runId' in event) runId = event.runId
-        if ('step' in event) step = event.step
-        // The runtime estimates before the provider wrapper selects/compacts messages.
-        if (event.type !== 'context.estimated') return input.onEvent?.(event)
-      } }, request => {
-        latest = estimatePersonContext(request)
-        input.onEvent?.({ type: 'context.estimated', runId, step, estimate: latest })
-      }))
-      return { ...result, contextEstimate: latest || result.contextEstimate }
+      taskWait = options.taskWaitState ? createPersonTaskWait(options.taskWaitState) : undefined
+      try {
+        const result = await runtime.run(isolated({ ...input, messages,
+          onToolBatchComplete: () => taskWait?.finishBatch()
+            ? { finalReply: 'Background work or a result callback is pending. Write your normal brief reply to the user in their language, acknowledging only the work actually dispatched or continued and any verified progress. Preserve relevant findings already obtained. Explain that the remaining result will be reported when it returns; do not claim the overall task is complete. Do not call tools, poll, invent results or describe internal routing. This reply ends only the current turn, not the task or collaboration stage.',
+                finishReason: 'waiting_for_tasks' } : undefined,
+          onEvent: event => {
+            if ('runId' in event) runId = event.runId
+            if ('step' in event) step = event.step
+            // The runtime estimates before the provider wrapper selects/compacts messages.
+            if (event.type !== 'context.estimated') return input.onEvent?.(event)
+          } }, request => {
+            latest = estimatePersonContext(request)
+            input.onEvent?.({ type: 'context.estimated', runId, step, estimate: latest })
+          }))
+        return { ...result, contextEstimate: latest || result.contextEstimate }
+      } finally { taskWait = undefined }
     },
   }
 }
