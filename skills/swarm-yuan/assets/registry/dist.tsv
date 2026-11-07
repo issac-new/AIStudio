@@ -69,6 +69,7 @@ references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-ag
 references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16653
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
 references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	64015
+references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	62300
 references/gsd-patterns.md	target	standard	copy	ref	yes	yes	gsd-patterns	35189
 references/memory-persistence.md	target	standard	copy	refd	yes	yes	memory-persistence	40776
 references/security-spec.md	target	lite	copy	ref	yes	yes	security-spec	19531
@@ -86,10 +87,10 @@ references/standards-compliance.md	target	compliance	copy	ref	yes	yes	standards-
 references/cwe-database.md	target	compliance	copy	ref	yes	yes	cwe-database	10559
 references/security-certification-profiles.md	target	compliance	copy	ref	yes	yes	security-certification-profiles	14502
 references/knowledge-lifecycle-methodology.md	target	standard	copy	ref	yes	yes	knowledge-lifecycle-methodology	11502
-references/mattpocock-skills-methodology.md	target	standard	copy	ref	yes	yes	mattpocock-skills-methodology	16535
+references/mattpocock-skills-methodology.md	target	standard	copy	ref	yes	yes	mattpocock-skills-methodology	16547
 references/decision-governance.md	target	standard	copy	ref	yes	yes	decision-governance	14002
 references/ai-process-records.md	target	standard	copy	ref	yes	yes	ai-process-records	8195
-references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	23108
+references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	23122
 references/codex-methodology.md	target	standard	distill	refd	yes	yes	codex-methodology	39306
 references/mea-loop-methodology.md	target	standard	copy	ref	yes	yes	mea-loop-methodology	13598
 references/rsi-evidence-methodology.md	target	standard	copy	ref	yes	yes	rsi-evidence-methodology	10452

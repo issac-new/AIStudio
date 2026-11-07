@@ -17,6 +17,10 @@
 #   bash build-compendium.sh --help
 set -uo pipefail
 SWARM_YUAN_HOME="${SWARM_YUAN_HOME:-$(cd "$(dirname "$0")/.." && pwd)}"
+# R143：macOS awk（20200816，darwin 27.x 实测）在 CJK locale 下对多字节串做 collation 等价比较——
+# 「卷一/卷二」等不同标题判等→重灌错卷（LC_ALL=C 字节比较即正确；CI=ubuntu 不受影响）。
+# 本脚本标题匹配/卷比对全程 ASCII 锚+字节语义，统一 LC_ALL=C。
+export LC_ALL=C
 SWARM_YUAN_SOURCE_ROOT="${SWARM_YUAN_SOURCE_ROOT:-$(cd "${SWARM_YUAN_HOME}/../.." && pwd)}"
 BASE="$SWARM_YUAN_HOME"
 ROOT="$SWARM_YUAN_SOURCE_ROOT"

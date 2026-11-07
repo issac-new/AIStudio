@@ -72,13 +72,18 @@ if [[ -d "$BD" ]]; then
   ( cd "$BD" && PATH="$SB:$PATH" bash install-offline.sh --claude --with-npm --with-pip ) >"$T/inst.log" 2>&1
   _rc=$?
   _npm_specs=$(grep -c 'install -g ' "$SB/npm.log" 2>/dev/null || echo 0)
-  if [[ $_rc -eq 0 && "$_npm_specs" -eq 9 ]] && grep -q 'install -g @rpamis/comet@0.5.0' "$SB/npm.log" 2>/dev/null; then
-    ok "态3a npm 走源：9 条 spec 全部 npm i -g（含 @rpamis/comet@0.5.0）"
+  # R143：spec 版本从 offline-manifest.conf 动态派生（R124-D1 同族复发根治——清单升版即失配）
+  _comet_spec=$(grep '^comet|npm|' "$M" | cut -d'|' -f3)
+  _graphify_spec=$(grep '^graphify|pip|' "$M" | cut -d'|' -f3)
+  _npm_expect=$(grep -c '^|*[^#]*|npm|' "$M" 2>/dev/null || echo 0)
+  _npm_expect=$(grep -cE '^[a-z-]+\|npm\|' "$M")
+  if [[ $_rc -eq 0 && "$_npm_specs" -eq "$_npm_expect" ]] && grep -q "install -g ${_comet_spec}" "$SB/npm.log" 2>/dev/null; then
+    ok "态3a npm 走源：${_npm_expect} 条 spec 全部 npm i -g（含 ${_comet_spec}）"
   else
     bad "态3a npm 走源异常 rc=$_rc 条数=${_npm_specs}：$(tail -3 "$T/inst.log" | tr '\n' ' ')"
   fi
-  if grep -q 'pip install graphifyy==0.9.95' "$SB/py.log" 2>/dev/null; then
-    ok "态3b pip 走源：graphifyy==0.9.95 经 python3 -m pip install"
+  if grep -q "pip install ${_graphify_spec}" "$SB/py.log" 2>/dev/null; then
+    ok "态3b pip 走源：${_graphify_spec} 经 python3 -m pip install"
   else
     bad "态3b pip 走源未命中：$(cat "$SB/py.log" 2>/dev/null | tr '\n' ' ')"
   fi

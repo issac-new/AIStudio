@@ -365,7 +365,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 3 | 冷启动到读项目代码动作数 | ≤3 步 | mark-active 后新会话到首个读码动作 |
 | 4 | 门禁可达率 | 100% | 默认执行序列可触达 / facts.conf 对账 |
 | 5 | 组件库清单预算 | 32KiB 硬顶 | self-check 断言 |
-| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11392B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
+| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11520B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
 | 7 | 上下文预算体积（references 拷贝） | ≤FACT_ARTIFACT_BYTES_BUDGET（当前值见附录 A，例外逐例登记于 docs/budget-exception-ledger.md） | self-check 断言 |
 | 8 | 结构性：反向引用数 | 0 | self-check G19 |
 | 9 | 连接性：孤儿资产数 | 0 | self-check G18 |

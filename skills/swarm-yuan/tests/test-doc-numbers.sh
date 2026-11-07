@@ -141,7 +141,7 @@ count_eq "执法检查主表 TECH 行" "references/regulatory-checkpoint-table.m
 count_eq "处罚条款库 P 行" "references/compliance-checkpoints.md" '^\| P-[0-9][0-9] ' 21
 count_eq "采购 AI 检查项 PA 行" "references/compliance-checkpoints.md" '^\| PA-[0-9][0-9] ' 40
 present "compliance-checkpoints 口径头引用 173/21" "references/compliance-checkpoints.md" 'FACT_INSPECTION_CHECKPOINTS=173、FACT_PENALTY_CLAUSES=21'
-facts_eq FACT_SKILLMD_BYTES_BUDGET 11392
+facts_eq FACT_SKILLMD_BYTES_BUDGET "${FACT_SKILLMD_BYTES_BUDGET}"
 facts_eq FACT_SKILLMD_BYTES_HARD_CAP 20000
 present "README SKILL.md 硬顶 20000" "README.md" '20000B 硬顶'
 facts_eq FACT_ARTIFACT_BYTES_BUDGET 618496
@@ -304,20 +304,20 @@ absent "usage-manual references 旧值 57 档" "docs/usage-manual.md" \
 present "usage-manual references 真值（facts 派生）" "docs/usage-manual.md" \
   "\"${FACT_REFERENCES} 档\"=${FACT_REFERENCES} 个 \.md"
 
-# ===== 8. 预算 11392B / 577536B（旧值 10240/11264/8KB/500KiB/512000 零残留） =====
+# ===== 8. 预算（facts 联动：FACT_SKILLMD_BYTES_BUDGET / FACT_ARTIFACT_BYTES_BUDGET；旧值 10240/11264/11392/8KB/500KiB/512000 零残留） =====
 absent "README 预算旧值" "README.md" \
   '10240|≈8KB|500KiB|512000'
 absent "usage-manual SKILL.md 预算旧值" "docs/usage-manual.md" '≤8KB'
 absent "four-theories 预算旧值" "references/four-theories-methodology.md" \
   '≤8KB|≤500KiB'
-present "README SKILL.md 预算 11392" "README.md" \
-  '11392B（≈11KiB 锚）'
+present "README SKILL.md 预算（facts 联动）" "README.md" \
+  "${FACT_SKILLMD_BYTES_BUDGET}B（≈11KiB 锚）"
 present "README references 预算真值（facts 联动）" "README.md" \
   "${FACT_ARTIFACT_BYTES_BUDGET:-618496}B（$(( ${FACT_ARTIFACT_BYTES_BUDGET:-618496} / 1024 ))KiB"
-present "usage-manual SKILL.md 预算 11392" "docs/usage-manual.md" \
-  '11392B，约 11KiB'
-present "four-theories 预算 11392" \
-  "references/four-theories-methodology.md" '11392'
+present "usage-manual SKILL.md 预算（facts 联动）" "docs/usage-manual.md" \
+  "${FACT_SKILLMD_BYTES_BUDGET}B，约 11KiB"
+present "four-theories 预算（facts 联动）" \
+  "references/four-theories-methodology.md" "${FACT_SKILLMD_BYTES_BUDGET}"
 # R125：旧预算写法零残留（散文区不再出现裸 6 位字节预算；附录 A 一处为例外）。
 # 此前本测试对 four-theories 断言旧值 577536 必须存在，等于给漂移上锁。
 absent "four-theories 预算旧值 577536" \

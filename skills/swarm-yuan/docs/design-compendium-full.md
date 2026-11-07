@@ -547,7 +547,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 3 | 冷启动到读项目代码动作数 | ≤3 步 | mark-active 后新会话到首个读码动作 |
 | 4 | 门禁可达率 | 100% | 默认执行序列可触达 / facts.conf 对账 |
 | 5 | 组件库清单预算 | 32KiB 硬顶 | self-check 断言 |
-| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11392B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
+| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11520B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
 | 7 | 上下文预算体积（references 拷贝） | ≤FACT_ARTIFACT_BYTES_BUDGET（当前值见附录 A，例外逐例登记于 docs/budget-exception-ledger.md） | self-check 断言 |
 | 8 | 结构性：反向引用数 | 0 | self-check G19 |
 | 9 | 连接性：孤儿资产数 | 0 | self-check G18 |
@@ -3502,28 +3502,28 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 <!-- >>> registry:runtimes >>> (generated from assets/registry/runtimes.tsv; do not edit) -->
 | 名称 | 仓库 | 许可证 | 当前基线 | 接入 | 证据 | 机器标记 |
 |---|---|---|---|---|---|---|
-| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.95 | deep | M1 | baseline_status=synced |
+| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.103 | deep | M1 | baseline_status=synced |
 | GitNexus | abhigyanpatwari/GitNexus | PolyForm Noncommercial 1.0.0 | npm 1.6.12 | deep | M1 | baseline_status=license-risk |
-| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.0.2 | deep | M1 | baseline_status=watch |
-| ocr | alibaba/open-code-review | Apache-2.0 | v1.13.3 | deep | M1 | baseline_status=synced |
-| openspec | Fission-AI/OpenSpec | MIT | v1.15.0 | cli | M1 | baseline_status=synced |
-| comet | rpamis/comet | MIT | 0.5.0 | cli | M1 | baseline_status=synced |
-| gsd-core | open-gsd/gsd-core | MIT | v1.18.0 | cli | M1 | baseline_status=synced |
-| codex-security | openai/codex-security | Apache-2.0 | npm-v0.6.0 | cli | M1 | baseline_status=synced |
-| mattpocock-skills | mattpocock/skills | MIT | v1.3.1 | cli | M1 | baseline_status=synced |
-| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.120 | cli | M1 | baseline_status=synced |
-| superpowers | obra/superpowers | MIT | v7.0.1 | method | M1 | baseline_status=synced |
-| gstack | garrytan/gstack | MIT | v1.91.188 tip 1e3ee83c4 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.62.0 | method | M1 | baseline_status=synced |
+| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.11.0 | deep | M1 | baseline_status=watch |
+| ocr | alibaba/open-code-review | Apache-2.0 | v1.13.6 | deep | M1 | baseline_status=synced |
+| openspec | Fission-AI/OpenSpec | MIT | v1.16.1 | cli | M1 | baseline_status=synced |
+| comet | rpamis/comet | MIT | 0.5.2 | cli | M1 | baseline_status=synced |
+| gsd-core | open-gsd/gsd-core | MIT | v1.20.1 | cli | M1 | baseline_status=synced |
+| codex-security | openai/codex-security | Apache-2.0 | npm-v0.8.3 | cli | M1 | baseline_status=synced |
+| mattpocock-skills | mattpocock/skills | MIT | v1.3.2 | cli | M1 | baseline_status=synced |
+| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.142 | cli | M1 | baseline_status=synced |
+| superpowers | obra/superpowers | MIT | v7.0.2 | method | M1 | baseline_status=synced |
+| gstack | garrytan/gstack | MIT | v1.96.0.0 tip 6666b729 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.72.2 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
-| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.7.0 | method | M1 | baseline_status=synced |
-| dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.1-rc.3 | source | M0 | baseline_status=synced |
+| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.0 | method | M1 | baseline_status=synced |
+| dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.2-rc.1 | source | M0 | baseline_status=synced |
 | pua | tanweai/pua | MIT | v3.5.1 | source | M0 | baseline_status=synced |
-| semantica | semantica-agi/semantica | MIT | main 22109ee0 | source | M0 | baseline_status=synced |
-| pi | earendil-works/pi | MIT | v1.4.0 | source | M0 | baseline_status=synced |
+| semantica | semantica-agi/semantica | MIT | main c0ec77be | source | M0 | baseline_status=synced |
+| pi | earendil-works/pi | MIT | v1.5.0 | source | M0 | baseline_status=synced |
 | codegraph | colbymchenry/codegraph | MIT | 未定 | none | M0 | baseline_status=watch |
-| claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.310 | host | M3 | baseline_status=synced |
-| codex-cli | openai/codex | Apache-2.0 | rust-v0.164.0 | host | M3 | baseline_status=synced |
+| claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.319 | host | M3 | baseline_status=synced |
+| codex-cli | openai/codex | Apache-2.0 | rust-v0.167.0 | host | M3 | baseline_status=synced |
 <!-- <<< registry:runtimes <<< -->
 
 列口径：`接入` = deep / cli / method / source / none / host；`证据` = M0–M4 五级记分；`机器标记` 供 `check_upstream_baseline` 与自检漂移检测消费。当前基线为最近一次核验后钉定的引用版本；tag 与 tip 的差异、逐版本变更说明一律进变更记录。
@@ -4028,7 +4028,7 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 
 | 易混对 | 辨析 |
 |--------|------|
-| **生成器 vs 目标技能** | 生成器 = swarm-yuan 本身（造规则包的）；目标技能 = 生成物（某项目专属的规则包，"生成物"是同义通称，多用于预算/厚薄语境）。两者各有一份 `SKILL.md` 和 `scripts/`——生成器的 SKILL.md 是生成器的入口说明书；目标技能的 SKILL.md 是目标技能的入口说明书（≤11392B，约 11KiB，另有 20000B 硬顶——宿主压缩后重挂载技能在 20000 字符处截断，超线内容整会话消失，管的是**后者**）。 |
+| **生成器 vs 目标技能** | 生成器 = swarm-yuan 本身（造规则包的）；目标技能 = 生成物（某项目专属的规则包，"生成物"是同义通称，多用于预算/厚薄语境）。两者各有一份 `SKILL.md` 和 `scripts/`——生成器的 SKILL.md 是生成器的入口说明书；目标技能的 SKILL.md 是目标技能的入口说明书（≤11520B，约 11KiB，另有 20000B 硬顶——宿主压缩后重挂载技能在 20000 字符处截断，超线内容整会话消失，管的是**后者**）。 |
 | **"自检"一词三义** | ①生成器自检 = 生成器仓库的 `scripts/self-check.sh`（生成流程 Step 1，检查生成器健康）；②目标技能门禁运行 = 目标技能的 `scripts/precheck.sh`（执法检查，日常"提交前自检"指的是它）；③conf 诊断 = 目标技能的 `precheck.sh --doctor`（配置 lint，不判门禁）。三者是三份不同脚本/模式，分属两体。 |
 | **.swarm-yuan/ 目录 vs swarm-yuan 仓库** | `.swarm-yuan/`（带点）是**目标技能在目标项目根**落下的运行时数据目录（四本账等）；`swarm-yuan/`（不带点）是生成器仓库/目录。同名是历史沿用，一指数据一指代码。 |
 | **门禁家族 vs 严格度 vs 执行序列** | 见 §4「门禁分层」。家族=归哪个套餐管；严格度=会不会阻断；执行序列=怎么触发。三轴正交，互不推出。 |
@@ -4207,7 +4207,7 @@ FACT_RUNTIMES_DEEP=4          # 深度接线（GitNexus/graphify/claude-mem/ocr�
 FACT_RUNTIMES_CLI=6           # CLI 接线（OpenSpec/comet/gsd-core/codex-security/mattpocock-skills/diagram-design——后两项为仓内物化型，非 command -v 型）
 FACT_RUNTIMES_METHOD=5        # 方法论引用（superpowers/gstack/ECC/Ruflo/impeccable）
 FACT_MATTPPOCOCK_SKILLS=27    # mattpocock 物化技能数（runtime/mattpocock-skills/：engineering 20 + productivity 7；self-check 对账上游刷新漂移）
-FACT_DIAGRAM_DESIGN_VERSION=2.6.120  # diagram-design 物化基线（runtime/diagram-design/MANIFEST.md；R124 刷新同步，R140 零差异升锚，R141 mermaid_extract fragment digest 刷新）
+FACT_DIAGRAM_DESIGN_VERSION=2.6.142  # diagram-design 物化基线（runtime/diagram-design/MANIFEST.md；R124 刷新同步，R140 零差异升锚，R141 mermaid digest 刷新，R143 全量物化刷新 21 文件+verify-geometry 迁 scripts/ 随迁）
 FACT_DIAGRAM_DESIGN_TYPES=45  # 上游图表类型数（SKILL.md §3 选择表；描述词与类型表同步由上游 verify-docs-sync 守）
 
 # ===== 领域知识 =====
@@ -4370,7 +4370,7 @@ FACT_VERSION_ORACLE_RULE=1              # 版本 oracle 单源规则存在标志
 FACT_STABLE_PROPAGATE=1                 # 1=启用标记沿调用链传播（决策 28）；0=关闭（仅直接改稳定单元 fail）
 FACT_STABLE_PROPAGATE_HOPS=1            # 传播跳数（默认 1，仅 1 跳下游邻域；0=禁用传播段）
 FACT_ARTIFACT_BYTES_BUDGET=618496   # 税制断言：UNIVERSAL_FILES 拷贝体积预算（Codex catalog 2%/10k-token 预算的 bash 对应物）。决策 38/26.2：预算是恒等式——新增须等额删除或逐例登记（登记理由链台账：swarm-yuan/docs/budget-exception-ledger.md，累计 33 次登记自本行行尾注释迁出）；self-check check_complexity_budget 对账真值；R125 起分发面经 distill-references.sh 净化，预算不再随运行时刷新轮上涨
-FACT_SKILLMD_BYTES_BUDGET=11392     # 生成物 SKILL.md 正文预算（≈8KB→11KB 锚，Codex MAX_SKILL_PROMPT_BYTES 同源）。第六次登记 10752→11264（2026-10-12，两轮并行合并取覆盖值）：成因=run14 交付形态 DoD 轮（2ce9fa9）生成器交付形态段入产物 SKILL.md——运行时刷新轮实测 10954B 超 202B（登记 11008）、回归轮实测 11003B 超 251B（登记 11264），同一功能性增量的两次独立测量；该 DoD 轮未跑 gen-e2e 即合入，回归轮连同 CI 诚实性缺陷一并根治；第七次登记 11264→11392（2026-10-22，R138 产物侧运行库轮）：assets/lib/files.sh 入分发清单（dist.tsv 95 行），产物 SKILL.md 按需读取索引区 +1 行，gen-e2e 实测 11296B 超 32B——R72/R98 同款先例（随发文件入清单区的功能性增量非注记膨胀）。不构成先例。R72 全量回归轮（2026-09-29）R98 记忆后端适配轮（2026-10-09）第五次登记 10240→10752：gen-e2e 实测 10273B 超 33B，成因=按需读取索引表 +1 行（memory-backends.sh 随发条目，记忆后端契约单一事实源——R72 同款先例：随发文件入清单区的功能性增量非注记膨胀）；不构成先例。
+FACT_SKILLMD_BYTES_BUDGET=11520     # 生成物 SKILL.md 正文预算（≈8KB→11KB 锚，Codex MAX_SKILL_PROMPT_BYTES 同源）。第八次登记 11392→11520（2026-11-07，R143）：v2.99.3 后生成器侧批（行为评测脚本/降标守卫/门禁数 56→59 等）随发文件与索引行增重，gen-e2e 实测 11458B 超 66B——R72/R98/R138 同款先例（随发文件入清单区的功能性增量非注记膨胀）；不构成注记膨胀先例。第六次登记 10752→11264（2026-10-12，两轮并行合并取覆盖值）：成因=run14 交付形态 DoD 轮（2ce9fa9）生成器交付形态段入产物 SKILL.md——运行时刷新轮实测 10954B 超 202B（登记 11008）、回归轮实测 11003B 超 251B（登记 11264），同一功能性增量的两次独立测量；该 DoD 轮未跑 gen-e2e 即合入，回归轮连同 CI 诚实性缺陷一并根治；第七次登记 11264→11392（2026-10-22，R138 产物侧运行库轮）：assets/lib/files.sh 入分发清单（dist.tsv 95 行），产物 SKILL.md 按需读取索引区 +1 行，gen-e2e 实测 11296B 超 32B——R72/R98 同款先例（随发文件入清单区的功能性增量非注记膨胀）。不构成先例。R72 全量回归轮（2026-09-29）R98 记忆后端适配轮（2026-10-09）第五次登记 10240→10752：gen-e2e 实测 10273B 超 33B，成因=按需读取索引表 +1 行（memory-backends.sh 随发条目，记忆后端契约单一事实源——R72 同款先例：随发文件入清单区的功能性增量非注记膨胀）；不构成先例。
 FACT_SKILLMD_BYTES_HARD_CAP=20000    # 生成物 SKILL.md 硬顶（R140 物化 superpowers 7.0.1 防线：宿主压缩后重挂载技能在 20000 字符处截断、其后内容整会话消失；预算可按先例再登记上调，硬顶锚宿主行为不可越——两档防线，超线须裁正文或移入 references/ 按需读；消费者=tests/e2e/run-gen-e2e.sh §7.6b）
 FACT_MAP_BYTES_BUDGET=32768       # audit-2026-08-25：生成物地图预算（≤32KiB；载体=生成物 references/reference-manual.md 的两列地图表，锚点=gen-e2e §7.7 对骨架实测）
 FACT_CLI_AB_ENHANCED_GATES=--reuse,--review,--diagram,--skill-supply-chain,--method-size
@@ -4434,7 +4434,7 @@ unset _facts_dir
 | code-graph-tools | GitNexus/graphify/codegraph 调研（A） | 生成流程 Step 3 图谱优先【生成器侧】 | 图谱工具选型（目标技能不随之分发：选型是生成期决策） |
 | togaf-metamodel-methodology | TOGAF BDAT（B） | §D.0.6 四层视角 | 架构类变更探查 |
 | frontend-design-methodology | pbakaus/impeccable（B） | 生成流程 Step 7 + 开发工作流 ⑤ 前端 | 前端设计任务 |
-| diagram-production-methodology | cathrynlavery/diagram-design v2.6.120（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账） | 生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布 | 需要可发布架构/流程/时序/状态/ER/依赖/部署图 |
+| diagram-production-methodology | cathrynlavery/diagram-design v2.6.142（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账） | 生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布 | 需要可发布架构/流程/时序/状态/ER/依赖/部署图 |
 
 ### 族② 拼装与知识消费（开发工作流 ②⑤）
 
