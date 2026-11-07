@@ -9,7 +9,7 @@
 3. **`simharness/tests/r18-plan-var-expand.test.sh` ⑥ 断言对齐 run27 帧重分类**。run27 帧四态红线批（`2026-11-06-run27-design-optimizations.md`，用户裁决）把 `capture-plan.env` 的 `devimpl_done` 重分类为 `repo` 产物证据型（不再拍 IDE 页），但守门测试⑥仍要求 devimpl_done 行带 `/app/ide?task=${IDE_TASK:-` 拍摄位 → 假红。断言改为：devimpl_done 断 repo 型 + ide_done 断参数化（参数化防线语义不变，run23 陈旧任务号复发防线只关 IDE 拍摄位本身）。
 4. **清偿门语义分层补齐（`check-clearance` case 内）**。夹具揭示第二层回归：run27 根治批的 fail-closed 分支条件「F 不存在 + 仓内有历史台账」会把**显式指定的无台账轮**误拒（posture 夹具 `--run runNEVER` 实证 rc2）。分层修正：run id 已定（锚或 --run）而该轮无台账=该轮零代偿，放行（跨轮债务走 var/clearance 投影由各轮自身门核，不跨轮连坐）；run id 解析失败且仓内有历史台账才 fail-closed（run27 根治语义原样保留）。
 5. **jargon 门 6 处存量 HARD 违规随批改人话**（mx-report-gen.py「实算」×2、mx-report-audit.py「收口/守门/收编」、mux-v8-fullflow-plan.md「沉淀」；主树同红定谳 pre-existing，因 prelaunch ① 要求门禁套件全绿而 gate 读提交态，未清则恒红）。
-6. **`simharness/mux/mx-scenario-lib.sh` 熔断 check 文案带服务端轮数＋note fail-soft**（vitest 红 2，治理服务重构期起 pre-existing）：note 链 stderr-only 系刻意设计（mx-lib「无 $() 捕获消费者」注释），守门测试断言「累计 2 轮未过」自判定正本移服务端后漂移。正解=check 阻断时从服务响应取 `state.failRounds` 并入 fail 文案（值守/审计从 fail 行直达轮次；响应无轮数保持原文案），测试 stub 对齐真实服务契约（block 响应带 state）；附带 note() 在 SCEN_LOG 缺席场景退纯 log 输出（防 tee 空路径吞转发，生产行为不变）。
+6. **`simharness/mux/mx-scenario-lib.sh` 熔断 check 文案带服务端轮数**（vitest 红 2，治理服务重构期起 pre-existing）：note 链 stderr-only 系刻意设计（mx-lib「无 $() 捕获消费者」注释＋专项绊线测试钉住原实现），守门测试断言「累计 2 轮未过」自判定正本移服务端后漂移。正解=check 阻断时从服务响应取 `state.failRounds` 并入 fail 文案（值守/审计从 fail 行直达轮次；响应无轮数保持原文案），测试 stub 对齐真实服务契约（block 响应带 state）。
 7. **清偿门指定轮无台账文案三层分**（vitest 红 1，随本批第 2 条演进）：仓里另有轮台账=「该轮零代偿轮」（不跨轮连坐）；全仓无任何台账=「真首轮」（run27 根治语义保留）；run id 为空+有台账=fail-closed 拒（前置分支）。两夹具（posture runNEVER 型 / vitest 锚定轮+空仓型）分别命中相异文案、同 rc0 放行。
 
 ### 随批收口（非代码变更）
