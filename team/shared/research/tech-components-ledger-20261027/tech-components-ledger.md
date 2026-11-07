@@ -24,6 +24,7 @@
 - **必吸收项已全部落地（2026-10-28 13:38 收口，卡 t_87adf8cb/t_f304f7b4 done）**：semantica-runtime 两条 0.7.0 地雷规避+锚点刷新；prompt-injection-guard 反 padding 三关+八分类；skill-fleet-consistency-audit 第五层 unattended 分类；security-domain-delegation v1.4.0 两节（scope-as-code 四字段+out-of-scope 优先+max_requests 熔断 / sanitizeSlug 防穿越红线）；pay-orchestrator STANDARDS-MATRIX 4 处刷新（auth-capture 第四 scheme/§42 upfront 已实现/§43 SDK spendControls 纵深/双周 SOP rev-list>50 触发器）。agent-skills/Autopt 无必吸收项（结论性收口）。
 - 修正记录：x402 原汇总误归 🟡，10-28 复测 ≥100c 封顶升 🔴；Cybermes commits 面波动（since 10-19=0）但 tags v3.5.0 在顶且当日 push，按版本轴维持 🔴；10-31 复测代码零漂移，转 🟡 吸收决策期。
 - 管线终态（10-28）：hexstrike T1/T2/T3 全 done（T3 四落地物=skill evidence-governed-execution v1.0.0+pentest-methodology-fusion v2.0.0+4 hack profile 接线+skill-catalog 登记）；🔴 delta 六卡全 done。
+- **2026-11-07 全量核对批注（46 条当日实测，spec `2026-11-07-vendor-upgrade-studio-v0817`）**：持平 26／有更新 16／无版本轴 3／未能核对 1（Graph-Engineering 仓 404）。要点：Ghidra 转 🟢（wrapper 实测已绑 12.2+JDK25，§4.2 旧记录订正）；DSH 本机已升 0.2.2-rc.1＋dsh-tui 0.19.0（上游 next=0.2.2-rc.1/alpha=0.2.2-alpha.3）；有更新待盘点=OpenExecutive v0.6.9、AgentENV v0.2.5、ARL-Next v1.4.5、pi-harness v1.5.0、addyosmani/agent-skills 0.6.15（打破 10-13 静默）、REAP 11-05 新 push、ATT&CK v20.1（技能面仍引 v20.0，数据更新挂账）、semantica main 245c 仍未发版（钉 v0.7.0 口径不变）、HelixHarness +4c、harness2 +18c、x402 main ≈1497c（Link 分页口径，增量异常宜 compare 复核）；openagentontology 过 11-05 定日线且 11-07 仍零 push（92 天）→ 按 §一.3 应转 RETIRED（待执行）；运行时基线三树=studio v0.8.17（本批升级）／agent v0.23.0／zcode 3.17.2@a9fe401e 持平；REAGent 6.8.0=npm latest 持平；仓名勘误=hexstrike-ai（0x4m4）、REA-Prompts（JoasASantos）。
 
 ## 三、分域总表
 
@@ -32,7 +33,7 @@
 | 组件 | 基线（上次调研） | 上游现况（实测） | 判级/差异 | 处置与去向 |
 |------|------------------|------------------|-----------|------------|
 | REA MCP（rea-agents） | 6.4.0（10-12 部署，170 工具） | 6.8.0（npm 10-25；本机 `rea --version`=6.8.0） | 🟢 已升级到位 | 10-27 升级+冒烟通过（能力差异见 §4.1） |
-| Ghidra | 12.1.4（10-14 部署） | 12.2（10-22 发布，1193c） | 🟡 待换绑 | 缺口登记：需 JDK 25（已确认在位）+ wrapper JAVA_HOME 换绑，未静默动（见 §4.2） |
+| Ghidra | 12.2（wrapper 实测已绑 `ghidra_12.2_PUBLIC`+JDK25，2026-11-07 订正） | 12.2（10-22 发布，revision 8ca9077 与本机一致=最新） | 🟢 已换绑 | 旧记录（12.1.4+temurin-21 待换绑）系台账滞后，§4.2 已订正 |
 | HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03，13116★（10-31 静默 89 天） | 🟢 上游停滞 | RETIRED 2026-10-28（用户显式裁决豁免 85 天线；T1/T2 卡已收口，T3 融合卡 t_58855791 照常跑完） |
 | CyberStrikeAI (AIPentest) | 调研立项（10-22） | v1.7.24（10-16）+ 10-23 durable async runs 提交 | 🟡 release 密集 | T2 卡 t_20ad092c 在跑，源码深读按最新 HEAD（自动覆盖 10-23 增量） |
 | Autopt (shiyeshu) | 06c834e（08-18，fixture 已落地 G9） | 43c 两段式架构演进（10-28 delta 实测；10-31 未再动） | 🟡 delta 已完成 | G9 fixture 复跑全绿 70 passed（独立仿真与上游解耦）；fixture 的 Deputy 硬否决模型与上游有界谏言语义有差异，见 delta §5 |
@@ -50,7 +51,7 @@
 | OpenExecutive (SenteLabsAI) | main@30319d9（10-18 delta） | v0.6.8（10-30）；30319d9 后 124c，v0.6.6→v0.6.8 28c | 🔴 高活跃，10-18 报告版本表已过期 | 优先增量卡；10-31 新版本需重跑 delta |
 | mattpocock/skills | 2026-08-24 main@6654f6b（09-02 融合轮） | v1.3.2（10-29）；v1.3.1 后 51c | 🔴 增量已盘点，10-29 又发一版 | delta 完成：implement-spec/pr/retro 新三件、GLOSSARY 改名、devops-rd 旧产物已迁不受影响；市集三件套依赖 dsh plugin-market 线，与此线无关（勘误 #6）；v1.3.2 增量待补 |
 | addyosmani/agent-skills | 0.6.13（10-18 delta） | tag 顶仍 0.6.13，10-13 后零 push（10-31 静默 18 天；404 澄清：mattpocock/agent-skills 不存在） | 🟢 静默 | 观察线（未到退役线） |
-| DSH (@deepseek-ai/dsh) | v0.2.1-rc.2（10-18 delta） | latest=next=0.2.1-rc.5，alpha=0.2.2-alpha.2 | 🟡 next 通道 3 个 rc 未盘点（npm 面已装 0.17.0 是 dsh-tui 线） | 轻跟 next 通道 |
+| DSH (@deepseek-ai/dsh) | 0.2.2-rc.1（2026-11-07 本机已升；dsh-tui 0.19.0 同批） | latest=next=0.2.2-rc.1，alpha=0.2.2-alpha.3 | 🟢 已对齐 latest | 轻跟 next 通道；旧行「v0.2.1-rc.2/已装 0.17.0」为 10-18 快照，本机实际装过 0.1.1-rc.2+0.10.0（10-18 行与实测不符系 dsh 与 dsh-tui 两线混淆，11-07 实测订正） |
 | better-harness (QoderAI) | 0.6.4 深读（10 月初） | v0.7.0-alpha2（09-12）+ 10-20 push；基线后 67c | 🟡 跨 minor | 轻跟 |
 | pi-harness (earendil-works/pi) | 源码级深读（快照非 pin） | v1.4.0（10-21）；基线后 248c | 🟡 无在役依赖 | 按需跟 |
 | LongHorizon-Harness (lh-harness) | v0.1.7 / a1dd9306（10-18） | PyPI 0.1.8（upload_time 2026-10-21，10-31 复核修正） | 🟢 仅 1 patch | 无动作 |
@@ -108,9 +109,9 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 
 本机验证（10-27）：`rea --version`=6.8.0；`environment-serve`/`inspect-erlang-beam`/`inspect-gpu-code-objects`/`inspect-il2cpp-metadata` --help 在位；4 profile mcp_servers.rea.enabled=true，wrapper 引用不变。10-31 复测 npm `rea-agents` 仍 6.8.0。
 
-### 4.2 Ghidra 12.1.4 → 12.2（待用户裁决）
+### 4.2 Ghidra 12.1.4 → 12.2（已完成换绑，2026-11-07 台账订正）
 
-发布 10-22，项目数据全兼容。硬前提 JDK 25（本机 jdk-25.jdk 已在位，仅 wrapper JAVA_HOME=temurin-21 未换绑）。Server/BSim TLS 强制化（单机分析面不受影响）。升级动作 = 下载 12.2 + wrapper 换绑 jdk-25 + `rea doctor` 复验；REA 6.8 CHANGELOG 未见 Ghidra 12.2 门槛条目，兼容性以 REA 上游支持矩阵为准。10-31 复核：本机 wrapper 仍指 `ghidra_12.1.4_PUBLIC` + `temurin-21`，未动。
+发布 10-22，项目数据全兼容。硬前提 JDK 25（本机 jdk-25.jdk 已在位，仅 wrapper JAVA_HOME=temurin-21 未换绑）。Server/BSim TLS 强制化（单机分析面不受影响）。升级动作 = 下载 12.2 + wrapper 换绑 jdk-25 + `rea doctor` 复验；REA 6.8 CHANGELOG 未见 Ghidra 12.2 门槛条目，兼容性以 REA 上游支持矩阵为准。10-31 复核：本机 wrapper 仍指 `ghidra_12.1.4_PUBLIC` + `temurin-21`，未动。**2026-11-07 实测订正：`~/lab/tools/rea-mcp-wrapper.sh` 已 `GHIDRA_INSTALL_DIR=ghidra_12.2_PUBLIC` + `JAVA_HOME=jdk-25.jdk`，与 12.2 最新 release revision 8ca9077 一致，本节缺口关闭。**
 
 ### 4.3 ATT&CK v19.2 → v20.0
 
@@ -123,9 +124,9 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 | hermes-studio 0.7.39 → v0.8.0 升级 | ✅ 已完成（2026-10-31 升级批） | spec `2026-10-31-studio-v080-upgrade.md`：pristine 换血＋44 失败件重生成（150/517 退役归档、266/197/528/623 迁位）＋esp32→mcu 品牌迁移；全量重放零失败 |
 | zcode 上游 main v3.17.1 线同步 | ✅ 已完成（2026-10-31 同步批） | spec `2026-10-31-zcode-3171-sync.md`：pristine 换血＋8 补丁全重放（002/006 重生成）；引擎构建绿 |
 | DeepInfer / deepseek-recipe 调研未收口（无 VERDICT） | 欠账 | 两仓 0 落后、快照新鲜，只欠裁决文档；目录 `~/.hermes/shared/research/20261026-deepseek-infer-recipe/`；按需派卡 |
-| Ghidra 12.2 升级（JDK 25 换绑） | 缺口未动 | 需用户裁决后执行（涉 wrapper 变更） |
-| REAP 上游高频更新无自动同步 | 已知（10-26 登记） | 低优先；内容零漂移，机制面无增量 |
-| openagentontology 临线 | 观察中 | 2026-11-05 复查 pushed_at |
+| Ghidra 12.2 升级（JDK 25 换绑） | ✅ 已完成（2026-11-07 实测订正） | wrapper 已绑 12.2+jdk-25（此前某轮已完成，台账 10-31 记录滞后）；12.2=上游最新 |
+| REAP 上游高频更新无自动同步 | 已知（10-26 登记） | 低优先；11-07 实测 11-05 有新 push（快照后漂移待比对），机制面无增量 |
+| openagentontology 临线 | 已触发 RETIRED 条件 | 11-07 实测：过 11-05 定日线且零 push 满 92 天，按 §一.3 应转 RETIRED（转表动作待执行） |
 | HexStrikeAI 退役触发 | 已执行（2026-10-28） | T1/T2 done，本表已改 RETIRED；T3 融合卡照常收口；用户显式裁决豁免 85 天线（§一.3 的 90 天规则在个案上由用户裁决） |
 | 组件台账计数无自动化守门 | 新增（2026-10-31） | 本轮修复 36/35/6-8-18 三套口径矛盾后，仍无测试解析台账行数；建议下轮加一个机械核对（§三行数=§二合计=§七.3 总数） |
 

@@ -4,7 +4,7 @@
 
 ## 变更
 
-1. **hermes-studio 基线 v1.0.9（`dad736a93`）→ v0.8.17（`35a7158a1`）**：谱系前进 53 提交/1354 文件（大头=tests 面 1100 文件重写＋二进制截图删除，−267K 行由此而来；依赖零变化——package-lock 仅 2 行差、package.json 只动 scripts 段，主检出 node_modules 免重装）。tag 命名说明：v1.0.9 tag 的 package.json 本就是 0.8.11，上游此后回归 0.8.x 线连发 v0.8.12~v0.8.17，**ancestry 为前进非降级**（`git rev-list --count v1.0.9..v0.8.17`=53）。执行=vendor-sync 整树换血＋VENDOR_SYNC=1 基线先行提交＋inject 重放修补。
+1. **hermes-studio 基线 v1.0.9（`dad736a93`）→ v0.8.17（`35a7158a1`）**：谱系前进 53 提交/1354 文件（大头=tests 面 1100 文件重写＋二进制截图删除，−267K 行由此而来；依赖零变化——package-lock 仅 2 行差、package.json 只动 scripts 段，主检出 node_modules 免重装）。tag 命名说明：v1.0.9 tag 的 package.json 本就是 0.8.11，上游此后回归 0.8.x 线连发 v0.8.12~v0.8.17，**ancestry 为前进非降级**（`git rev-list --count v1.0.9..v0.8.17`=53）。执行=vendor-sync 整树换血＋VENDOR_SYNC=1 基线先行提交＋inject 重放修补。**重放修复明细（357 枚 studio 补丁全链通过）**：8 枚纯测试补丁退役（037/038/039/175/176/235/585/641，目标被上游 081b9393f 整删）；7 枚混合补丁剥除已删测试段（322/323/329/640/642/690/718）；上下文漂移重锚 8 枚（000 vitest 配置、042 版本行 0.8.11→0.8.17 校准、110 登出按钮四段重锚、393 mimo 大补丁快照重生成（上游 import 重排）、473 locale rebaseline 语义重锚（品牌行落地＋尾逗号对跳过＋overlay i18n 段 811 行尾插）、507 standalone 三段、660/690/718 GNU patch fuzz＋快照重生成）。
 2. **全组件面盘点对账（2026-11-07 实测，均免动）**：hermes-agent 最新稳定 tag 仍 v0.23.0（main +216 canary 不追，稳定 tag 口径）；zcode origin/main 与钉版 `a9fe401e` 同 commit；exa 3.4.3=npm latest；semantica 最新 tag 仍 v0.7.0（main +217c 不追，D1 口径）；pua main 仍 `e6e6cd2`；REA MCP 6.8.0=npm latest；Ghidra wrapper 已绑 12.2＋JDK25=上游最新（revision 8ca9077 一致）；element-web v1.12.33=最新稳定（studio 侧无 pin，ELEMENT_WEB_DIR failsoft 引用）。
 3. **本机运行时升级（不入库面，v109 批 B/C 面先例）**：superpowers 插件 6.2.0→**7.0.2**（obra/superpowers v7.0.2 缓存落位＋installed_plugins.json 备份换指，sha `22f0b463`，新会话生效）；npm 双前缀安全面 **30 包升级**（/usr/local 15 包：openspec 1.16/qwen-code 0.26.9/agent-browser 0.41.2/mmdc 12.2/cdxgen 12.9.1/depcruise 18.7/canvas 3.2.3/antv 图表三件套等；/opt/homebrew 15 包：dsh 0.2.2-rc.1/dsh-tui 0.19.0/gemini 0.67/codex 0.167/codex-security 0.8.3/playwright-cli 0.1.23/agently-cli 1.0.18/agent-desktop 1.2.0/comet 0.5.1/promptfoo 0.125.1/sharp 0.35.5 等；二进制逐个回读验证通过，sharp/canvas 原生绑定 require ok）；brew poppler →26.11.0（pdftoppm，pdf 技能面）。
 4. **官方插件市场定谳**：CDN 市场（cdn-zcode.z.ai，52 项）与缓存仅 tencent-meeting-cli 相交且已对齐（0.1.3）；其余 20 个缓存插件（browser-use/documents/pdf/android-emulator 等）为 ZCode 应用自带面，随应用升级、无独立市场通道。
@@ -26,8 +26,8 @@
 ## 验证
 
 - 盘点面（已毕，2026-11-07 实测）：上游五面 git ls-remote/npm view/WebFetch 核对（结论表见变更 2）；npm 双前缀 `npm outdated -g` 对账＋升级后二进制逐个回读（30/30 可用，qwen bin 名=qwen 0.26.9）；官方插件市场 marketplace.json 拉取对账；SKILL.md 全量扫描 368 个、被引用且在装第三方命令 21 个清单化。
-- studio 基线门（执行中，本节随批回填）：vendor-sync 1345 文件与上游 `git diff --stat v1.0.9..v0.8.17` 吻合；VENDOR_SYNC=1 基线提交前 pristine 抽验（git show :vendor/… 对 upstream archive md5）；inject 重放 studio 面补丁零 WARN；worktree 全量 `npm test`（N-4 建链前置）；`npm run release:check`；`npm run typecheck:harness`。
-- 台账门：docs-ssot-guard（spec 三处登记）；merge-invariants --check。
+- **studio 基线门（已毕，2026-11-07 实测）**：vendor-sync 1345 文件与上游 `git diff --stat v1.0.9..v0.8.17`（1354 文件）吻合（差=gitignored 面）；VENDOR_SYNC=1 基线提交前 pristine 抽验 3/3（git show index vs upstream archive md5）；**clean+inject 全量重放 status=complete、461 枚 applied、零 WARN/零 FAILED/零 SKIP**（=v0230 批 469−退役 8，studio 362＋agent 91＋zcode 8）；`npm run release:check` 四模块对账全绿（cockpit=1.0.9-studio.12/agent-teams=v0.23.0-team.1/ycode=3.17.2/yuan-skill=v2.99.3，docs:check 121 路由一致）；`npm run typecheck:harness` rc=0（顺手修 pre-existing 红：golden-gate.ts 两处 Result 联合 `.problems` 访问改 `'problems' in x` 收窄，主树同错定谳=fc3ecbcca 既有非本批引入）；worktree 全量 `npm test`（manifest complete 在位，pretest noop，无 N-4 建链需求）。
+- 台账门：docs-ssot-guard（spec 三处登记，附录 A 计数 588→589）；merge-invariants --check（pre-push 面）。
 
 ## 设计文档影响
 
