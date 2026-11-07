@@ -198,7 +198,8 @@ def resolve_engine_bin_env():
 def compact_update(update: dict) -> str:
     """session/update → 一行摘要（工具调用标题是 diff 评审的主证据）。
 
-    实测 schema（zcode-acp-server 0.43.2）：params.update.sessionUpdate 是类型
+    实测 schema（zcode-acp-server 0.43.2，2026-11-07 复测 0.82.1 同构兼容）：
+    params.update.sessionUpdate 是类型
     字符串（tool_call/agent_message_chunk/usage_update/...），负载是同级键；
     kind 归一优先取该字符串，再退 type/kind（tool_call 事件的工具类别 edit/execute）。
     """

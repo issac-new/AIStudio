@@ -86,7 +86,7 @@
 | 组件 | 基线 | 上游现况 | 判级 | 处置 |
 |------|------|----------|------|------|
 | FIBO (edmcouncil) | fibo-01..03 系列深读 | master_2026Q3，10-27 push（3c，4 天） | 🟢 标准本体稳定 | 无动作 |
-| openagentontology (CWNApps) | v0.2.0 复刻报告（p1-2a） | 08-07 后静默（10-31 静默 85 天，v0.2.0...main 7c） | 🟢 临线观察至 2026-11-05，届时仍静默即 RETIRED | 定日复查 |
+| openagentontology (CWNApps) | v0.2.0 复刻报告（p1-2a） | **RETIRED（2026-11-07 执行）**：过 11-05 定日线实测仍零 push（静默满 92 天，v0.2.0...main 7c 未动） | ⬛ RETIRED | 定日复查线关闭；复刻报告留档 |
 | os-taxonomy | v1.0.0（本地快照型） | — | 🟢 | 无动作 |
 
 ### 3.6 工具链域（5 条，本机部署组件）
@@ -126,7 +126,7 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 | DeepInfer / deepseek-recipe 调研未收口（无 VERDICT） | 欠账 | 两仓 0 落后、快照新鲜，只欠裁决文档；目录 `~/.hermes/shared/research/20261026-deepseek-infer-recipe/`；按需派卡 |
 | Ghidra 12.2 升级（JDK 25 换绑） | ✅ 已完成（2026-11-07 实测订正） | wrapper 已绑 12.2+jdk-25（此前某轮已完成，台账 10-31 记录滞后）；12.2=上游最新 |
 | REAP 上游高频更新无自动同步 | 已知（10-26 登记） | 低优先；11-07 实测 11-05 有新 push（快照后漂移待比对），机制面无增量 |
-| openagentontology 临线 | 已触发 RETIRED 条件 | 11-07 实测：过 11-05 定日线且零 push 满 92 天，按 §一.3 应转 RETIRED（转表动作待执行） |
+| openagentontology 临线 | ✅ RETIRED 已执行（2026-11-07） | §3.5 行同批转 ⬛；ATT&CK v20.1 企业域 STIX-diff 零差量（15/706 全同）同批入 security-tool-landscape-tracking 技能注记 |
 | HexStrikeAI 退役触发 | 已执行（2026-10-28） | T1/T2 done，本表已改 RETIRED；T3 融合卡照常收口；用户显式裁决豁免 85 天线（§一.3 的 90 天规则在个案上由用户裁决） |
 | 组件台账计数无自动化守门 | 新增（2026-10-31） | 本轮修复 36/35/6-8-18 三套口径矛盾后，仍无测试解析台账行数；建议下轮加一个机械核对（§三行数=§二合计=§七.3 总数） |
 

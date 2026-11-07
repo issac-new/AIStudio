@@ -527,3 +527,8 @@ paths:
   - custom/server/eval/golden-gate.ts
   - .swarm-yuan/gate-deny.jsonl
   - .swarm-yuan/spec-receipts.jsonl
+  # 2026-11-07 风险清单收口批（feat/risk-closeout-20261107, 用户令「完成未做」）
+  - runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py
+  - team/skills/devops/security-tool-landscape-tracking/SKILL.md
+  - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md
+  - docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md

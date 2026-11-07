@@ -87,7 +87,7 @@ zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 2026-11-01 核对：hermes-studio 已升级至 v0.8.0（44 处补丁冲突处置完毕，全量与构建绿）；hermes-agent 最新稳定仍 v0.22.5（本表即当前钉版）；zcode 已同步 3.17.1（8/8 补丁，引擎构建绿）。本表所记即当前钉版，不以「上游最新」替代基线。
 2026-11-03 台账刷新批核对：全表六行随载体真值对齐（studio v1.0.9／agent v0.22.6／zcode 3.17.2 @a9fe401e／cockpit studio.9／teams team.1 底座段随 v0.22.6 归 1／yuan v2.99.1）——前三行此前随各自升级批进位，本批补 zcode 同步并清偿 §C 滞留的模块行旧值；各值以载体文件为准。
 2026-11-06 v0.23.0 换血批核对：agent 行随基线升 v0.23.0（2bd378ed1，6 补丁重生成＋742 退役，clean+inject 零告警幂等二连）、teams 行随底座升级归 v0.23.0-team.1（spec 2026-11-06-vendor-upgrade-agent-v0230）。2026-11-06 结构重排批核对：驾驶舱行随 v1.0.13 发布批归 studio.12、yuan skill 行归 v2.99.3、整体源码包行归 1.0.13-overlay，三行旧值（studio.9／v2.95.0／1.0.0-overlay）同批清偿；平台批次行补丁号校正为 757/758（原拟 755/756，让号后落位）。各值以载体文件为准。
-2026-11-07 版本更新批核对：studio 行随基线升 v0.8.17（35a7158a1，v1.0.9 谱系前进 53 提交、tag 命名回归 0.8.x 线非降级，spec 2026-11-07-vendor-upgrade-studio-v0817）、驾驶舱行随底座换血归 0.8.17-studio.1（扩展序归 1，包不重发）；agent/zcode 行持平（v0.23.0 稳定 tag 口径／a9fe401e=main 同步）。
+2026-11-07 版本更新批核对：studio 行随基线升 v0.8.17（35a7158a1，v1.0.9 谱系前进 53 提交、tag 命名回归 0.8.x 线非降级，spec 2026-11-07-vendor-upgrade-studio-v0817）、驾驶舱行随底座换血归 0.8.17-studio.1（扩展序归 1，包不重发）；agent/zcode 行持平（v0.23.0 稳定 tag 口径／a9fe401e=main 同步）。同日风险清单收口（用户令「完成未做」）：zcode-acp-server 引擎面升 0.82.1（coding-delegate 真机冒烟全绿、注记更新，本机 npm 面不入库）；组件台账 openagentontology 转 RETIRED＋ATT&CK v20.1 企业域 STIX-diff 零差量刷新。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。
 桌面安装身份与产物名中的 SwarmStudio 属于兼容标识，
 不改变主产品 AIStudio 的命名。

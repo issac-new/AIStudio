@@ -98,6 +98,12 @@ Completion, Steal Application Specific Passwords. Prompt injection now has
 official ATT&CK technique IDs — cite v20.0 in red-team reports (llm-redteam
 锚点). Version list + release dates at `attack.mitre.org/resources/versions/`.
 
+**Refreshed 2026-11-07**: ATT&CK **v20.1** is current (attack-stix-data,
+released 2026-11-05). v20.0→v20.1 enterprise-domain STIX-diff verified:
+**zero delta** — 15 tactics / 706 techniques identical, no adds/removes;
+v20.1 is a data-maintenance release (non-enterprise domains/corrections).
+Reports citing v20.0 need no technique re-baselining; cite v20.1 going forward.
+
 ### OWASP / PTES
 
 - **OWASP WSTG**: current stable = **v4.2** (web + PDF). Repo updates edge
