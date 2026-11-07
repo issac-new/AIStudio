@@ -9,28 +9,28 @@
 <!-- >>> registry:runtimes >>> (generated from assets/registry/runtimes.tsv; do not edit) -->
 | 名称 | 仓库 | 许可证 | 当前基线 | 接入 | 证据 | 机器标记 |
 |---|---|---|---|---|---|---|
-| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.95 | deep | M1 | baseline_status=synced |
+| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.103 | deep | M1 | baseline_status=synced |
 | GitNexus | abhigyanpatwari/GitNexus | PolyForm Noncommercial 1.0.0 | npm 1.6.12 | deep | M1 | baseline_status=license-risk |
-| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.0.2 | deep | M1 | baseline_status=watch |
-| ocr | alibaba/open-code-review | Apache-2.0 | v1.13.3 | deep | M1 | baseline_status=synced |
-| openspec | Fission-AI/OpenSpec | MIT | v1.15.0 | cli | M1 | baseline_status=synced |
-| comet | rpamis/comet | MIT | 0.5.0 | cli | M1 | baseline_status=synced |
-| gsd-core | open-gsd/gsd-core | MIT | v1.18.0 | cli | M1 | baseline_status=synced |
-| codex-security | openai/codex-security | Apache-2.0 | npm-v0.6.0 | cli | M1 | baseline_status=synced |
-| mattpocock-skills | mattpocock/skills | MIT | v1.3.1 | cli | M1 | baseline_status=synced |
-| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.120 | cli | M1 | baseline_status=synced |
-| superpowers | obra/superpowers | MIT | v7.0.1 | method | M1 | baseline_status=synced |
-| gstack | garrytan/gstack | MIT | v1.91.188 tip 1e3ee83c4 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.62.0 | method | M1 | baseline_status=synced |
+| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.11.0 | deep | M1 | baseline_status=watch |
+| ocr | alibaba/open-code-review | Apache-2.0 | v1.13.6 | deep | M1 | baseline_status=synced |
+| openspec | Fission-AI/OpenSpec | MIT | v1.16.1 | cli | M1 | baseline_status=synced |
+| comet | rpamis/comet | MIT | 0.5.2 | cli | M1 | baseline_status=synced |
+| gsd-core | open-gsd/gsd-core | MIT | v1.20.1 | cli | M1 | baseline_status=synced |
+| codex-security | openai/codex-security | Apache-2.0 | npm-v0.8.3 | cli | M1 | baseline_status=synced |
+| mattpocock-skills | mattpocock/skills | MIT | v1.3.2 | cli | M1 | baseline_status=synced |
+| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.142 | cli | M1 | baseline_status=synced |
+| superpowers | obra/superpowers | MIT | v7.0.2 | method | M1 | baseline_status=synced |
+| gstack | garrytan/gstack | MIT | v1.96.0.0 tip 6666b729 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.72.2 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
-| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.7.0 | method | M1 | baseline_status=synced |
-| dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.1-rc.3 | source | M0 | baseline_status=synced |
+| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.0 | method | M1 | baseline_status=synced |
+| dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.2-rc.1 | source | M0 | baseline_status=synced |
 | pua | tanweai/pua | MIT | v3.5.1 | source | M0 | baseline_status=synced |
-| semantica | semantica-agi/semantica | MIT | main 22109ee0 | source | M0 | baseline_status=synced |
-| pi | earendil-works/pi | MIT | v1.4.0 | source | M0 | baseline_status=synced |
+| semantica | semantica-agi/semantica | MIT | main c0ec77be | source | M0 | baseline_status=synced |
+| pi | earendil-works/pi | MIT | v1.5.0 | source | M0 | baseline_status=synced |
 | codegraph | colbymchenry/codegraph | MIT | 未定 | none | M0 | baseline_status=watch |
-| claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.310 | host | M3 | baseline_status=synced |
-| codex-cli | openai/codex | Apache-2.0 | rust-v0.164.0 | host | M3 | baseline_status=synced |
+| claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.319 | host | M3 | baseline_status=synced |
+| codex-cli | openai/codex | Apache-2.0 | rust-v0.167.0 | host | M3 | baseline_status=synced |
 <!-- <<< registry:runtimes <<< -->
 
 列口径：`接入` = deep / cli / method / source / none / host；`证据` = M0–M4 五级记分；`机器标记` 供 `check_upstream_baseline` 与自检漂移检测消费。当前基线为最近一次核验后钉定的引用版本；tag 与 tip 的差异、逐版本变更说明一律进变更记录。

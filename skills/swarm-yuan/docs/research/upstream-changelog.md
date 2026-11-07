@@ -287,3 +287,19 @@
 宿主克隆面记档（research/ 仓，2026-10-25 晨同步）：**dsh-TUI v0.16.1→v0.17.0**（10-24 发布，R141 后真移动）；dsh-context main +73→5742e67（10-25 01:44）；minimax-code 缓存 v0.5.1-27（9-23 停更）快进至 da22f11（v0.6.5+5 线，10-21，对齐 R141 已观察态）；multica 缓存 v0.5.2-4（9-24 停更）快进至 3de79cbea（+253，0.7.0 workflow GA 线，10-24，对齐 R141 已观察态）；deepseek-harness 缓存 rc.3→master tip 22ddee3792（tag 是 master 祖先）；kimi-code main 7ccac2b45 持平/npm 2.3.1；codex main +91（stable 0.164.0 不变）；claude-code main +2 未发版；zcode main 3c5b2276 持平（**同步口径改为依上游 main 变更判移动，2026-10-25 用户裁定，不看版本 tag**）。异常记档：routa=本地分叉线（本地领先 4083 提交，上游仅 +4，不盲升待裁决）；codex 缓存有 1 个来路不明的本地提交（"## New Features"，Cargo.toml 版本号 1 行）保持未动。
 
 **2026-10-25 R142 补记（用户裁决「待裁决都需要同步上游」，两清）**：routa 已同步——仓内实为双线（本地 `main`=上游跟踪分支落后 4，detached HEAD 钉的 v0.19.0 才是 4083 提交分叉线；初判把两线混读），`main` 快进至 origin/main tip `9dc7b7be`，分叉线以本地 tag v0.19.0 保留可达零丢失；codex「来路不明提交」**误报更正**——6aaac69480（celia@openai.com）即上游 rust-v0.164.0 发版提交本身，本地/远端 tag 一致且剥壳正指向该提交，缓存本就精确钉上游稳定 tag，零动作。教训入册：detached HEAD 与分支线的领先数分开核；判「本地私货」前先核提交作者与 tag 落点。
+
+---
+
+## 2026-11-07 R143 刷新（18 移动 / 4 零移动）
+
+> 完整差异、吸收三档与克隆面记档见 `docs/research/R143-runtime-refresh.md`。本窗 13 天，22 行中 18 行移动（历轮最高）。
+
+- **claude-code 2.1.319**（+8 patch，安全大版本）：`denyInsteadOfPrompting`（提示直接改拒绝并继续回合）/`blockWritesOutsideWorkingDirectories`（全权限模式写边界）/Bash 环境变量前缀权限绕过修复/sed auto 模式跳权限修复/worktree 沙箱逃逸修复/auto mode 服务器不可核查即拒绝不回落内置分类器/只读超大文件后整体覆盖=数据丢失防护/PostToolUse hooks 打断后仍跑。
+- **codex-cli rust-v0.167.0**（3 minor）：托管命令检查点要求全新人工批准/PreToolUse 钩子先于 Guardian 策略检查/状态变更类多代理调用经 Guardian 审查/共享 MCP 连接按会话租约/网络审批提示随请求结束自动关闭。
+- **ruflo 3.72.2**（10 minor）：**验证结果学习环（v3.64）**——回合结局唯一裁决=测试/构建/typecheck/lint 退出状态，`|| true`/管道/`;` verify nothing、模型自述永不采信；防作弊（v3.65 tainted turns）；上下文委派引文须匹配 SHA-256 快照整行；SSRF/ReDoS/符号链接逃逸安全补丁贯穿八版。
+- **gstack v1.96.0.0**（tag 通道恢复，基线后 +498 提交）：finding 以 Severity 结构化字段定级不被正文措辞骗/fix-check 永不充当 pass/manual_only 防自然语言误触发合并重写/changelog fragments 定期折叠发布制。
+- **deepseek-harness dsh-v0.2.2-rc.1**（master +1914）：CUA 操控 helper 权限面成最大战场/apply_patch 全面转正（默认开+applyPatchGuard 无观察守卫）/会话性能 Statistics 视图/desktop 发布工程强化。
+- **claude-mem 15.11.0**：15.7 修隐性花费（My Work 刷新被拒整批切 agent 致偷跑 ephemeral exec 烧账号）。
+- **openspec 1.16.1**（Node≥22.12 破坏性门槛；validate 缺步骤告警 --strict 失败；闭合标题等价）。**codex-security 0.8.3**（--validate 二次校验；五导入源；严重度跨尝试保留）。**gsd-core 1.20.1**（review-lane 上限；修 queued fix-forward 绕红）。**comet 0.5.2**（编辑不阻塞独立审查走 edit-review observe；Shape 须对原始请求给对齐结论）。**graphify 0.9.103**（弱置信证据进 also_seen 不静默丢；大小写撞号修复）。**ocr 1.13.6**（模板扩面+C#/Starlark 规则）。**impeccable cli-v4.8.0**（finding→行级 annotation）。**mattpocock v1.3.2**（物化：清单不变 10 文件纪律强化）。**diagram-design 2.6.142**（物化：21 文件；verify-geometry 迁 scripts/ 且 ATTR_RE）。**superpowers 7.0.2**（brainstorming 提问纪律盲测 8/8；SessionStart 零子进程）。**pi 1.5.0**（pi-schema 校验迁移；chord/durable 两子系统；MCP OAuth 强制 http/https）。**semantica tip c0ec77be**（provenance fail-closed；vector-store 修复）。
+- 零移动 4 行：GitNexus（license-risk）/ECC（tag 持平，tip +1285 记档：CI 审计交付声明须真合并 PR）/pua/codegraph。
+- 宿主克隆面记档：8 仓升级（claude-code/codex/deepseek-harness/dsh-context v0.82.1/dsh-TUI v0.19.0/kimi-code/minimax-code/multica）；3 仓零移动（fibo 无 Q4 tag 维持、element-web v1.12.33、routa）。

@@ -8,8 +8,8 @@
 | 项 | 值 |
 |---|---|
 | 上游仓库 | https://github.com/cathrynlavery/diagram-design （Cathryn Lavery，MIT，LICENSE 副本在本目录） |
-| 物化基线 | main `0b9b10cab`（2026-10-24，plugin version 2.6.120；2.6.119→2.6.120 取用范围一处字节差异：skills/.../scripts/mermaid_extract.py fragment digest 区域摘要（alt/else、par/and、critical/option 关键词+unlabeled 显式），gates/verify-geometry.py 零变化） |
-| 物化日期 | 2026-10-20（R124 运行时例行刷新轮；R140 零差异升锚；R141 mermaid digest 刷新） |
+| 物化基线 | main `e57eda610`（2026-11-06，plugin version 2.6.142；2.6.120→2.6.142 取用范围 21 文件实质差异：SKILL.md、box-plot 三示例新增、references 九档（import-*/layout-budget/primitives-core/style-guide/type-dp-integration/type-line/type-scatter）、scripts 四件（drawio/excalidraw/mermaid_extract/self_check）；上游仓库级 verify-geometry.py 迁 gates/→scripts/ 且属性提取改 ATTR_RE 正则（单引号/无引号属性值可提取），随迁刷新） |
+| 物化日期 | 2026-10-20（R124 运行时例行刷新轮；R140 零差异升锚；R141 mermaid digest 刷新；R143 2.6.142 全量物化刷新） |
 | 范围 | `skills/diagram-design/` 整目录（SKILL.md + 45 个 type-*.md + 共享 references + assets 模板/示例 + scripts 提取/导出/自检） |
 | 附加吸收 | `gates/verify-geometry.py`（上游仓库级几何门禁，原样拷贝；用于标签遮罩遮挡与连接线规则的辅助检查） |
 

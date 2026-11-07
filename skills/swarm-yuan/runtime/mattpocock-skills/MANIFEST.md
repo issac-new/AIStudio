@@ -8,8 +8,8 @@
 | 项 | 值 |
 |---|---|
 | 上游仓库 | https://github.com/mattpocock/skills （Matt Pocock，MIT，LICENSE 副本在本目录） |
-| 物化基线 | main `49dd158`（2026-10-09，v1.3 未出 tag 线上态） |
-| 物化日期 | 2026-10-15（R114 运行时整合轮） |
+| 物化基线 | tag `v1.3.2` `d1478fc`（2026-10-29） |
+| 物化日期 | 2026-10-15（R114 运行时整合轮；R143 v1.3.2 刷新：20+7 技能清单不变，10 文件内容差异——code-review/codebase-design/implement-spec/improve-codebase-architecture/research/setup-matt-pocock-skills 三件/wayfinder/grilling） |
 | 范围 | engineering 20 技能 + productivity 7 技能（整目录含附属文件与 agents/openai.yaml，忠实镜像） |
 
 ## 不取清单与理由
