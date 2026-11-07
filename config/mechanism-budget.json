@@ -4,11 +4,19 @@
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 134,
+    "scripts": 136,
     "ledgers": 6,
     "npmScripts": 52
   },
   "changes": [
+    {
+      "at": "2026-11-07",
+      "delta": "+2 脚本（补账登记：scripts/maintenance/hrgov-seed.mjs（3295a16d4 hrgov 种子批）＋scripts/platform/deploy/patch-touched.mjs（f3696d98e N-1 派生根治批）——两批合入时漏登预算，R143 收口批对账补记）",
+      "reason": "预算对账补账非本轮新增机制；两脚本各自的 sunset/配对责任归属原批（hrgov-seed=种子一次性工具候选降级归档；patch-touched=deploy 派生链常驻由 N-1 spec 承载）",
+      "pairedRemovals": [
+        "补账性质：本轮零新增脚本；配对减项随原批挂账——hrgov-seed 跑完种子轮后归档 scripts/maintenance/ 为首项"
+      ]
+    },
     {
       "at": "2026-11-05",
       "delta": "+0 门/钩子/脚本（managedsettings 域模块＋role-tool-matrix 治理正本 yaml＋默认策略包 json，均不在计数类目）",

@@ -5,7 +5,7 @@
 > 来源：[mattpocock/skills](https://github.com/mattpocock/skills)（Matt Pocock，MIT）。机制基线：v1.2.3 tag `6acc160`（2026-08-06）→ main `5beb35b04`（2026-10-19）→ **本轮刷新 main `4ae2317`（2026-10-31，见 §九）**。
 > 形态：25 技能集合（engineering 17 + productivity 8），按**谁能触发**双轴分层——user-invoked 编排技能（仅人显式触发，`disable-model-invocation: true`）调用 model-invoked 纪律技能（人与模型都可触达，可复用原语）；user-invoked 不得互相调用。Claude Code 官方插件市场 + skills.sh 可编辑拷贝双渠道分发。
 > 纪律：只吸收机制，装配叙事不纳入；不调上游安装链。守决策 27：不新增 `check_*`，门禁数 56 不变。
-> 双层定位：本文档=方法论层（机制改写进九节点）；`runtime/mattpocock-skills/`=CLI 层运行时（上游原语全文物化，engineering 20 + productivity 7 共 27 技能，基线 main `49dd158` 2026-10-09，MANIFEST 登记来源与刷新）——读原文执行不悬空，为 15 个外部运行时中 CLI 层第 5 项（物化型守卫判定可用性）。
+> 双层定位：本文档=方法论层（机制改写进九节点）；`runtime/mattpocock-skills/`=CLI 层运行时（上游原语全文物化，engineering 20 + productivity 7 共 27 技能，基线 tag `v1.3.2` `d1478fc` 2026-10-29（2026-11-07 刷新），MANIFEST 登记来源与刷新）——读原文执行不悬空，为 15 个外部运行时中 CLI 层第 5 项（物化型守卫判定可用性）。
 > 适用场景：开发工作流 节点①（§一）、节点② spec（§二）、节点③ plan（§三）、fix 类任务（§四）；编排与上下文两条增量分别落 `subagent-orchestration.md` / `memory-persistence.md`（见 §五指针）。
 
 ## 一、结构化访谈协议（grilling：设计树与前沿）——节点① 需求理解
@@ -68,7 +68,7 @@
 ## 七、来源溯源
 
 - 仓库：mattpocock/skills（MIT）。引用基线 v1.2.3（tag 6acc160，2026-08-06；`package.json` 与 `.claude-plugin/plugin.json` 双实核 1.2.3）；main d81f3a1（2026-09-29）合 release/v1.3 未出 tag，三新技能按 main 线评估：implement-spec 落 subagent-orchestration；pr / retro 见 §五吸收边界。
-- 运行时物化基线（2026-10-15）：main `49dd158`（2026-10-09）→ `runtime/mattpocock-skills/` 整目录镜像 27 技能（较机制评估期新增：domain-modeling/codebase-design/research/prototype/triage/wayfinder/retro/wizard/teach/wait-what/writing-for-agents/to-questionnaire/handoff/grill-me 全原语可达；misc 与 in-progress 不取，理由见 MANIFEST）。
+- 运行时物化基线（2026-10-15；2026-11-07 刷新至 v1.3.2）：tag `v1.3.2` `d1478fc`（2026-10-29）→ `runtime/mattpocock-skills/` 整目录镜像 27 技能（较机制评估期新增：domain-modeling/codebase-design/research/prototype/triage/wayfinder/retro/wizard/teach/wait-what/writing-for-agents/to-questionnaire/handoff/grill-me 全原语可达；misc 与 in-progress 不取，理由见 MANIFEST）。
 
 ## 八、记忆沉淀：带日期与提交引用的 wiki（main 5beb35b04）
 > 来源：mattpocock/skills main `5beb35b04`（2026-10-19，“chief-of-staff: keep memory in a dated, commit-cited wiki” #1304）。该技能位于上游 `skills/in-progress/`，按既有物化边界**不纳入 runtime 镜像**（MANIFEST 不取清单），只吸收方法层。

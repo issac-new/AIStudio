@@ -77,8 +77,10 @@ grep -q 'fail-gate-hook' "${SKILL_DIR}/hooks/hooks.json" 2>/dev/null \
   && ok "hooks.json 挂接 fail-gate-hook.sh" || bad "hooks.json 未挂接 fail-gate-hook.sh"
 # field-feedback 2026-08-26：GATE_ENFORCE_DENY 出厂默认从空改核心 10 门禁（流程强制根因修复）——
 # 断言同步：不再是"默认空"，而是"默认含核心门禁清单"；空串=显式关闭的逃生门仍保留。
-grep -q '^GATE_ENFORCE_DENY="scope,sensitive,security,build,test,branch,consistency,review,reuse,deps"' "${SKILL_DIR}/scripts/precheck.conf" 2>/dev/null \
-  && ok "precheck.conf 含 GATE_ENFORCE_DENY 出厂默认（核心 10 门禁捕获面，field-feedback）" \
+# R143：出厂默认扩为 13 门禁（v2.99.0 后批补 floor_guard/skill_docs/skill_routing 进默认捕获面）——
+# 断言改前缀包含（核心 10 门禁序不动、尾部允许扩展），不再锁死全值。
+grep -q 'GATE_ENFORCE_DENY="scope,sensitive,security,build,test,branch,consistency,review,reuse,deps' "${SKILL_DIR}/scripts/precheck.conf" 2>/dev/null \
+  && ok "precheck.conf 含 GATE_ENFORCE_DENY 出厂默认（核心 10 门禁序+扩展尾部）" \
   || bad "precheck.conf 缺 GATE_ENFORCE_DENY 出厂默认行"
 # WP-R2-3：GATE_AI_JUDGMENT 入 conf 模板（Q2H-A 开关可发现性——此前只在 gates-advisory.sh 内部，用户无从发现）
 grep -q '^GATE_AI_JUDGMENT=' "${SKILL_DIR}/scripts/precheck.conf" 2>/dev/null \

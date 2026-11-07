@@ -226,6 +226,16 @@ Bug report arrives
 - 一手材料（2026-11-03 浅克隆实读）：`docs/skill-anatomy.md`（模板纪律）/ `scripts/lib/skill-lint.js`（结构门禁实现）/ `scripts/run-evals.js`（Tier 2 词法路由实现）/ `evals/README.md`（三档口径与实测记录）/ `skills/doubt-driven-development/SKILL.md` / `skills/interview-me/SKILL.md` / `skills/constraint-driven-development/references/floor-guard.md` / `commands/build.toml` / `agents/` 四个 persona / `docs/agents.md`
 - 关键数字复核（2026-11-03 实测）：25 个 SKILL.md 合计 7,335 行，最大 400 行，无超过 500 行；Rationalizations 24/25 覆盖、169 条、中位 6；description 上限 1024 字符；本地 `references/` 仅 3 个技能（763 行），根 `references/` 7 份共享清单（1,412 行）
 
+## 十二、验证只认真实退出码（ruflo v3.64/v3.65）
+
+> 来源 ruvnet/ruflo v3.64.0 "verified-outcome learning loop"（ADR-502）与 v3.65.0 防作弊学习；与本仓实录坑（npm test 管道吞 exit code、`X && echo ok` 不构成验证）同构收口。
+
+- **回合/任务的验证结论唯一裁决=验证命令的退出状态**：test/build/typecheck/lint 在该回合最后一次编辑之后真实运行且退出码为凭；`|| true`、管道吞码、`;` 链不算验证——形态上是验证，语义上什么都没证明。审查「已验证」宣称时核验证命令的构造：出口码是否被改写、是否在管道非末位、失败是否仍可达 0。
+- **模型自述永不采信**：模型说"测试通过了"不是验证——必须有命令、退出码与输出锚点（本仓结论无锚点不成立红线同源）。
+- **tainted 防作弊**：改过测试本身、改过验证器配置、收窄检查范围的回合，其"绿灯"标 tainted 不进经验池/不作为完成依据；可选在干净 worktree 轮换重验。修复任务的证据面尤其核对——修测试来让测试通过=把验证器变成同谋。
+- **未验证如实计数**：未验证结局存中性（reward 0）不冒充成功也不诬为失败——"未跑"与"跑了没过"是两种事实。与本仓「未跑即不通过与操作语义分区判定」（review-methodology）互为镜像：一个治虚报通过、一个治虚报失败。
+- **doctor 报告结果是否真到达消费端**：验证产物写了≠下游读到了——验证链贯通性本身要可诊断。
+
 ## 骨架级模式两条
 
 > 来源 openspec `f2812f6` / graphify `3454890`

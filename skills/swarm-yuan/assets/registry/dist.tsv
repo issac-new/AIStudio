@@ -68,7 +68,7 @@ references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-
 references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-agents	28769
 references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16653
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
-references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	62137
+references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	64008
 references/gsd-patterns.md	target	standard	copy	ref	yes	yes	gsd-patterns	35189
 references/memory-persistence.md	target	standard	copy	refd	yes	yes	memory-persistence	40776
 references/security-spec.md	target	lite	copy	ref	yes	yes	security-spec	19531
@@ -81,15 +81,15 @@ references/fibo-financial-ontology.md	target	standard	copy	ref	yes	yes	fibo-fina
 references/cost-estimation-methodology.md	target	standard	copy	ref	yes	yes	cost-estimation-methodology	16241
 references/lazy-generation-methodology.md	target	standard	copy	ref	yes	yes	lazy-generation-methodology	7616
 references/clean-code-metrics-methodology.md	target	standard	copy	ref	yes	yes	clean-code-metrics-methodology	4539
-references/claude-code-capabilities.md	target	standard	distill	refd	yes	yes	claude-code-capabilities	93960
+references/claude-code-capabilities.md	target	standard	distill	refd	yes	yes	claude-code-capabilities	96336
 references/standards-compliance.md	target	compliance	copy	ref	yes	yes	standards-compliance	45691
 references/cwe-database.md	target	compliance	copy	ref	yes	yes	cwe-database	10559
 references/security-certification-profiles.md	target	compliance	copy	ref	yes	yes	security-certification-profiles	14502
 references/knowledge-lifecycle-methodology.md	target	standard	copy	ref	yes	yes	knowledge-lifecycle-methodology	11502
-references/mattpocock-skills-methodology.md	target	standard	copy	ref	yes	yes	mattpocock-skills-methodology	16478
+references/mattpocock-skills-methodology.md	target	standard	copy	ref	yes	yes	mattpocock-skills-methodology	16547
 references/decision-governance.md	target	standard	copy	ref	yes	yes	decision-governance	14002
 references/ai-process-records.md	target	standard	copy	ref	yes	yes	ai-process-records	8195
-references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	21532
+references/agent-skills-methodology.md	target	standard	copy	ref	yes	yes	agent-skills-methodology	23122
 references/codex-methodology.md	target	standard	distill	refd	yes	yes	codex-methodology	39306
 references/mea-loop-methodology.md	target	standard	copy	ref	yes	yes	mea-loop-methodology	13598
 references/rsi-evidence-methodology.md	target	standard	copy	ref	yes	yes	rsi-evidence-methodology	10452
