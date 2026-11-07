@@ -215,7 +215,15 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
         fi
         echo "清偿门 ✓（全仓无任何轮台账=真首轮，零代偿）"; exit 0
       fi
-      if [ ! -f "$F" ]; then echo "清偿门 ✓（$_rid 无台账=零代偿轮）"; exit 0; fi
+      if [ ! -f "$F" ]; then
+        # 指定轮无台账的两种态（2026-11-07 分层补齐）：仓里另有轮台账=该轮零代偿
+        # （历史轮债务走各自轮门与 var/clearance 投影，不跨轮连坐）；全仓无任何
+        # 台账=真·首轮（run27 根治批语义保留：run id 为空已在上段 fail-closed）。
+        if ls "$(_mx_led_sim_root)"/runs/*/evidence/compensation-ledger.tsv >/dev/null 2>&1; then
+          echo "清偿门 ✓（$_rid 无台账=零代偿轮）"; exit 0
+        fi
+        echo "清偿门 ✓（全仓无任何轮台账=真首轮，零代偿）"; exit 0
+      fi
       OPEN=$(awk -F'\t' 'NR>1 && $6=="open"' "$F" | wc -l | tr -d ' ')
       if [ "$OPEN" = "0" ]; then echo "清偿门 ✓（$(_mx_led_run_id) 无 open 代偿）"; exit 0; fi
       echo "清偿门 ✗：$OPEN 笔 open 代偿未清偿（根治合入产品或显式 waive 后方可开下一轮）："
