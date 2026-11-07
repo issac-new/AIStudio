@@ -53,21 +53,40 @@
 | 清晰的拼写错误/死代码 | AUTO-FIX |
 | 合理但依赖上下文的风格/性能 | ASK |
 | 架构层面的重构 | ASK |
-| 可能是误报 | 丢弃（silent discard） |
+| 可能是误报 | 不作发现（见下节成立性前置） |
 
-## 严重度分级（open-code-review 模式）
+## 立档前置：无具体案例即不成立（Ponytail v5）
 
-| 级别 | 含义 | 处置 |
+**先判成立，再判档位。** 每条发现必须能说出"这个输入／这个场景 → 这个错误结果"。说不出具体案例就不是发现——不必先降级再丢弃。静默丢弃隐去不确定性，与「fail-soft 不造假：不猜数、缺席可查」反向。
+
+| 档位 | 含义 | 处置 |
 |------|------|------|
-| **High** | 明显 bug/安全/清晰错误 | 必须修复 |
-| **Medium** | 合理但依赖上下文的风格/性能 | 评估后修复 |
-| **Low** | 可能误报 | 静默丢弃 |
+| **Must fix** | bug、安全、数据丢失、预期负载下崩 | 必须修复 |
+| **Should fix** | 高风险无测试、真实变慢、重复、职责混杂、该不存在的代码 | 评估后修复 |
+| **Nice to have** | 小提速、更短写法 | 可选 |
 
-## 严格聚焦规则（open-code-review Strict Focus）
+已登记的捷径不是发现：带 `shortcut: <上限>, <何时升级>` 注释的妥协是决策，除非预期负载已越过该上限（台账机检见 `check_adr` §5）。
 
-> "Context tools are for understanding purposes only. Findings from other files must NOT become the subject of your comments. If you discover a potential issue in another file while gathering context, ignore it — your task is limited to the current diffs."
+每条发现四段，缺一段即不完整：
 
-审查只针对**变更文件**（diff 中 `+` 行）。用上下文工具理解周边代码，但不在其他文件提评论。
+1. **What this is** —— 这段代码在做什么（一两句；读者可能没见过这段代码）
+2. **Problem** —— 具体在什么输入／场景下怎么错
+3. **Fix** —— 最小修法；能删代码的修法优先
+4. **If we skip it** —— 不修的后果
+
+意见收口三行：`Verdict:`（放行，或先修哪几条）＋ `Lean: -N 行可达`（有精简发现时）＋ **`Not checked:`（哪些面没查或查不了，一行）**。一条都没查到也要给 `Not checked`。
+
+## 影响面检索 × 变更行落点（Strict Focus 收敛）
+
+> 上游 open-code-review 原文限定的是**评论主体**："Findings from other files must NOT become the **subject of your comments** … your task is limited to the current diffs."——它约束行级评论挂在哪一行，不约束检索半径。
+
+两件事分开：
+
+- **检索半径 = 变更影响面**：被改函数的调用方、被改签名／返回值的消费者、测试、夹具、配置、导出面一律入查。调用方清单没查完，不算审完（改 A 漏改 B 是本仓既有缺陷类型）。
+- **落点 = 变更行**：每条发现锚在触发的 diff 行；跨文件证据以 `file:line` 引在正文里，不另开第二条评论。
+- 跨文件发现的档位与 diff 内发现同权，不得因"在别的文件"降级或丢弃。
+
+依据：Ponytail v5 成对臂基准跨 diff 问题检出 100%（无技能臂 78%）；本仓 `bugfix-runbook` 的根因修复纪律同向——先 grep 全部调用方，在共享代码里修一次。
 
 ## Specialist 并行审查（gstack 模式）
 

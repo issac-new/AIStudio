@@ -500,7 +500,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 方法论五件（superpowers / gstack / Ruflo / ECC / impeccable） | AI 按工作流节点引用模式 | references/subagent-orchestration.md |
 | 外部方法论文档与能力档（capability-map 登记 52 档） | 蒸馏为 references 方法论，全带"何时读我"路由头 | references/ 同名文件。逐档整合清单（来源/证据分级/消费节点/触发）见 references/capability-map.md，self-check 做双向一致性校验 |
 | 功能点估算（NESMA GB/T 42588-2023，人民银行科技司 2025-07 培训吸收） | spec §25 选填节（feature 档推荐）+ 方法论随技能分发到目标技能侧 | references/cost-estimation-methodology.md + assets/spec-template.md §25 |
-| 懒生成（七层复用阶梯 + 懒≠偷工。来源：DietrichGebert/ponytail） | ⑤编码"先查再写"下探决策程序 + 方法论随技能分发到目标技能侧 | references/lazy-generation-methodology.md |
+| 懒生成（七层复用阶梯 + 懒≠偷工 + 捷径台账。来源：DietrichGebert/ponytail v5.3.3） | ⑤编码"先查再写"下探决策程序 + `shortcut: <上限>, <何时升级>` 债务标记（`--adr` 机检 `no-trigger`，门禁数不变）+ 方法论随技能分发到目标技能侧 | references/lazy-generation-methodology.md |
 | 行业法规映射 8 档 | conf + 法规依据文档配对，真实加载 | assets/industry-profiles/ + references/industry-profile-*.md |
 | 标准族（OWASP / STRIDE / CWE / GB/T / ISO 42001 / ISO 29148 / EARS） | 门禁条款机器可读映射 + spec 句式遵循标准 | assets/standards-map.conf + references/standards-compliance.md |
 | Palantir 本体论工程 | 标记沿调用链传播的设计参考 | docs/design-evolution.md 决策 28 |
