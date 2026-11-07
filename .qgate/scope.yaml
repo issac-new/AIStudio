@@ -502,5 +502,9 @@ paths:
   - docs/superpowers/specs/2026-11-06-design-doc-restructure.md
   - docs/superpowers/specs/2026-11-06-design-doc-stable-name.md
   - docs/superpowers/specs/2026-11-07-sim-config-schema-align.md
+  - docs/superpowers/specs/2026-11-07-zcode-patches-pristine-replay.md
+  # 2026-11-07 zcode 补丁 pristine 重放批（feat/zcode-patches-3172-replay, spec 同名）
+  - zcode-patches/002-import-session-rpc.patch
+  - scripts/__tests__/overlay-pristine-replay.test.ts
   - docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md
   - docs/README.md

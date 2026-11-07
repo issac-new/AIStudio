@@ -1,7 +1,8 @@
 diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/services/src/zcode-agent/zcodeAgentService.ts
+index 15dfd51ca..77b86e682 100644
 --- a/packages/services/src/zcode-agent/zcodeAgentService.ts
 +++ b/packages/services/src/zcode-agent/zcodeAgentService.ts
-@@ -201,6 +201,7 @@
+@@ -201,6 +201,7 @@ import {
    mergeAutomationMutationToolDenylist,
    mergeOffPeakMutationToolDenylist,
  } from "#src/zcode-agent/automationToolPolicy.js";
@@ -9,7 +10,7 @@ diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/s
  import { ZCODE_AGENT_RUNTIME_UNAVAILABLE_CODE } from "./zcodeAgent.js";
  import type {
    ZCodeProtocolRequestId,
-@@ -6983,6 +6984,54 @@
+@@ -7030,6 +7031,54 @@ export function createZCodeAgentService(
        }
      },
  
@@ -65,9 +66,10 @@ diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/s
      // 分页发生在存储层（JournalStorePort.listEvents 带 afterSequence/limit），这里不切片；
      // 在 RPC 层切等于每翻一页把整条 journal 读进内存。
 diff --git a/packages/shared/src/validation.ts b/packages/shared/src/validation.ts
+index 75bf3c6a1..832184eaf 100644
 --- a/packages/shared/src/validation.ts
 +++ b/packages/shared/src/validation.ts
-@@ -1218,7 +1218,7 @@
+@@ -1218,7 +1218,7 @@ export const hostLogResponseSchema = z.object({
  
  export { zcodeProviderSchema };
  
@@ -77,9 +79,10 @@ diff --git a/packages/shared/src/validation.ts b/packages/shared/src/validation.
  export const hostAgentProcessSpawnedResponseSchema = z.object({
    type: z.literal("agent-process-spawned"),
 diff --git a/packages/shared/src/zcode-protocol-v4/transport.ts b/packages/shared/src/zcode-protocol-v4/transport.ts
+index ec7b88f69..8700fda8b 100644
 --- a/packages/shared/src/zcode-protocol-v4/transport.ts
 +++ b/packages/shared/src/zcode-protocol-v4/transport.ts
-@@ -363,6 +363,9 @@
+@@ -363,6 +363,9 @@ export const V4_METHODS = {
    conversationFileRewindPreview: "v4/conversation/fileRewindPreview",
    // workflow run 的事件日志分页（详情页审计面）：只读、无状态、超时重发安全。
    // 新方法天然偏斜安全——旧桌面根本不会调用它。
@@ -89,7 +92,7 @@ diff --git a/packages/shared/src/zcode-protocol-v4/transport.ts b/packages/share
    conversationWorkflowRunEvents: "v4/conversation/workflowRunEvents",
    conversationWorkflowRuns: "v4/conversation/workflowRuns",
    // workflow run 的用户面产物。三条同族：
-@@ -748,6 +751,33 @@
+@@ -748,6 +751,33 @@ export type V4ConversationWorkflowRunsResult = z.infer<
    typeof v4ConversationWorkflowRunsResultSchema
  >;
  
