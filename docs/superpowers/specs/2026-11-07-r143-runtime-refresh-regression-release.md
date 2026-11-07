@@ -47,10 +47,10 @@
 
 ## 验证
 
-- 刷新面：`registry-render.sh --check` 注册表一致性通过；`self-check.sh --check-only` 无 ✗ 无新 drift；offline-manifest 对账 test-r118 绿。
-- 回归面：生成链 verify-completeness --strict 零占位＋mark-active 三关；两任务后端 mvn test 全绿＋前端 vitest＋vite build rc 0＋`--all-full` fail 0；实抓缺陷 bats 锁测试绿。
-- 全量面：`SWEEP_JOBS=2 bash skills/swarm-yuan/tests/run-sweep.sh` 全绿（与 CI 同命令）；AIStudio 根 `npm test` 全量绿（合并前）。
-- 发版面：`release:check` 四模块对账全绿；三资产上传后下载回验 SHA256。
+- 刷新面（已回填实测）：`registry-render.sh --check` 注册表一致性通过（22 行↔runtimes.tsv/面积 5556B）；`self-check.sh --check-only` 无 ✗ 无 drift（后台全程跑完 rc=0）；offline-manifest 对账 test-r118 PASS；doc-numbers 254/0；test-r122 36/0（五锚面随物化同步）。
+- 回归面（已回填实测）：生成链 verify-completeness --strict 零占位＋mark-active 三关（全维度 1.00/预算 11064B≤11392B）；任务 A 后端 **56/56**（RED=7 编译红）＋前端 **29/29**（RED=2）＋vite build rc 0＋--all-full fail 0；任务 B 双注入三层咬合实证+还原态全绿；master 末态 --all-full **fail 0**（warn 26/advisory 4）；实抓 R143-D1 根治+六断言锁（test-r143-decisions-grandfathering PASS）。
+- 全量面：`SWEEP_JOBS=2 bash skills/swarm-yuan/tests/run-sweep.sh` 全绿（与 CI 同命令，发版前跑）；AIStudio 根 `npm test` 全量绿（合并前）。
+- 发版面：`release:check` 对账全绿；三资产上传后下载回验 SHA256。
 
 ## 设计文档影响
 
@@ -58,10 +58,24 @@
 
 ## 任务卡（七项）
 
-- **完成条件**：R143 档+基线 17 行+吸收三档落位；trade-forge 全新生成 active＋两任务九节点闭环＋实抓缺陷修复带锁；run-sweep 全绿；v2.100.0 CHANGELOG；v1.0.13-overlay 三资产发版回验。
-- **输入与来源**：runtimes.tsv/R142 档（基线）；npm view/PyPI json/GitHub releases+tags/克隆面 git log（查新实测 2026-11-07）；trade-forge 仓（样例）；四路调研子代理报告（主会话抽验 ruflo v3.64 原文/claude-code 2.1.319 键名/tag SHA 四项全中）。
-- **工作流边界**：改动面=skills/swarm-yuan/**＋docs/superpowers/specs/本 spec＋RELEASE-NOTES.md＋.qgate/scope.yaml＋docs/manuals/aistudio-design-document-index.md；不触 vendor/、patches/、custom/；trade-forge 仓外改动不入本仓提交。
-- **工具与副作用**：gh api/npm view/curl PyPI（只读查新）；克隆面 git fetch+checkout（仓外）；make-offline-bundle.sh（产物不入库）；gh release 上传（对外发布，发版前征用户确认点=无——用户指令已明示发版）。
-- **结果与证据**：R143 档含逐行判定表与查新证据命令；回归段含测试计数/门禁计数/RED-GREEN 实录锚；发版段含 release 资产 URL+SHA256SUMS 回验输出。
-- **异常与恢复**：查新通道失败（npm/gh 限流）→ 延时重试三次后如实标「未采集」；生成链红→ 按缺陷实抓流程处置不在生成物上手改；发版资产上传 408/DNS → gh 三重回试配方（仓内实录）；v1.0.13 tag 若被他会话抢先→ 停手报用户裁决。
-- **验收反例**：以下任一即不合格——基线表某行未实测仅凭子代理报告；生成物存在占位符（--strict 红）；回归任务未走独立审查；缺陷修复无 bats 锁；发版资产未回验；CHANGELOG 数字与 facts.conf 真值漂移。
+### 完成条件
+
+R143 档+基线 17 行+吸收三档落位；trade-forge 全新生成 active＋两任务九节点闭环＋实抓缺陷修复带锁；run-sweep 全绿；v2.100.0 CHANGELOG；v1.0.13-overlay 三资产发版回验。
+### 输入与来源
+
+runtimes.tsv/R142 档（基线）；npm view/PyPI json/GitHub releases+tags/克隆面 git log（查新实测 2026-11-07）；trade-forge 仓（样例）；四路调研子代理报告（主会话抽验 ruflo v3.64 原文/claude-code 2.1.319 键名/tag SHA 四项全中）。
+### 工作流边界
+
+改动面=skills/swarm-yuan/**＋docs/superpowers/specs/本 spec＋RELEASE-NOTES.md＋.qgate/scope.yaml＋docs/manuals/aistudio-design-document-index.md；不触 vendor/、patches/、custom/；trade-forge 仓外改动不入本仓提交。
+### 工具与副作用
+
+gh api/npm view/curl PyPI（只读查新）；克隆面 git fetch+checkout（仓外）；make-offline-bundle.sh（产物不入库）；gh release 上传（对外发布，发版前征用户确认点=无——用户指令已明示发版）。
+### 结果与证据
+
+R143 档含逐行判定表与查新证据命令；回归段含测试计数/门禁计数/RED-GREEN 实录锚；发版段含 release 资产 URL+SHA256SUMS 回验输出。
+### 异常与恢复
+
+查新通道失败（npm/gh 限流）→ 延时重试三次后如实标「未采集」；生成链红→ 按缺陷实抓流程处置不在生成物上手改；发版资产上传 408/DNS → gh 三重回试配方（仓内实录）；v1.0.13 tag 若被他会话抢先→ 停手报用户裁决。
+### 验收反例
+
+以下任一即不合格——基线表某行未实测仅凭子代理报告；生成物存在占位符（--strict 红）；回归任务未走独立审查；缺陷修复无 bats 锁；发版资产未回验；CHANGELOG 数字与 facts.conf 真值漂移。

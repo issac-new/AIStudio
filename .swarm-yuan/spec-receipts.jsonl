@@ -264,3 +264,5 @@
 {"at":"2026-11-07T01:27:08Z","spec":"docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md","receipt":"79c879ad4201c5af4a22e8be30a3eda14c30b7dc","commit":"4b1fff6a1"}
 {"at":"2026-11-07T01:49:29Z","spec":"docs/superpowers/specs/2026-11-07-ponytail-headroom-absorption.md","receipt":"9ac5f9f5b2dfdbbf2b733a0c62871281b131bad2","commit":"c433c33ab"}
 {"at":"2026-11-07T01:54:53Z","spec":"docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md","receipt":"9efd1df6a98bd062263040969733711ba6c7637a","commit":"c433c33ab"}
+{"at":"2026-11-07T02:44:58Z","spec":"docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md","receipt":"623d468d6091c69f9e341ec646ece7ba33cc7c0e","commit":"9207c29c8"}
+{"at":"2026-11-07T02:45:22Z","spec":"docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md","receipt":"2188c761e6b9d54ee2ac2bb32aa160048bbe0edf","commit":"cb0f64755"}

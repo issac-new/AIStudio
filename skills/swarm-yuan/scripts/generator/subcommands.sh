@@ -306,8 +306,29 @@ _vc_check_decisions() {  # $1=skill_dir $2=strict（--strict 或空）→ stdout
   if [[ -f "$dec_file" ]]; then
     if command -v python3 >/dev/null 2>&1; then
       local py_out
+      # R143-D1 grandfathering：字段全量 schema（type/ai_suggestion/user_action）自 e642c4d0d
+      # （2026-10-28）才进本核验；此前写入的历史记录按当时的写入面豁免全量字段检查
+      # （账本 append-only 不回改），仅保留 JSON 合法性与 UserChallenge:incomplete 两条
+      # 全时域判据。ts 无法解析的记录视为历史（保守豁免，不因格式演化误杀）。
       py_out=$(python3 -c '
 import sys, json
+from datetime import datetime, timezone
+SCHEMA_EPOCH = "2026-10-28T00:00:00+00:00"  # 检查引入边界（e642c4d0d 合入日），勿随版本前移
+def _ts(obj):
+    raw = obj.get("ts")
+    if not isinstance(raw, str):
+        return None
+    try:
+        t = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return t
+    except ValueError:
+        return None
+try:
+    epoch = datetime.fromisoformat(SCHEMA_EPOCH)
+except ValueError:
+    epoch = None
 for i, line in enumerate(sys.stdin, 1):
     line = line.strip()
     if not line: continue
@@ -320,11 +341,14 @@ for i, line in enumerate(sys.stdin, 1):
         print("%d: 决策记录必须是JSON对象" % i)
         continue
     typ = obj.get("type")
-    if not typ or not (obj.get("ai_suggestion") or obj.get("suggestion")) or not obj.get("user_action"):
-        print("%d: 决策记录缺 type/ai_suggestion/user_action 非空字段" % i)
+    ts = _ts(obj)
+    legacy = epoch is None or ts is None or ts < epoch
+    if not legacy:
+        if not typ or not (obj.get("ai_suggestion") or obj.get("suggestion")) or not obj.get("user_action"):
+            print("%d: 决策记录缺 type/ai_suggestion/user_action 非空字段" % i)
     if typ == "UserChallenge:incomplete":
         print("%d: UserChallenge:incomplete 不得作为完整决策激活" % i)
-    elif typ == "UserChallenge":
+    elif typ == "UserChallenge" and not legacy:
         for k in ("alternatives", "missing_context", "cost_if_wrong"):
             if not obj.get(k):
                 print("%d: UserChallenge 缺 %s" % (i, k))

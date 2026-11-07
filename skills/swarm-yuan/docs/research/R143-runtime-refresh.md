@@ -49,7 +49,30 @@
 
 本轮无 routa 型双线异常、无误报入册。gstack 通道口径变化见决策 D1：R142「git tag 通道为空以 package.json 为准」→ v1.96.0.0 起 tag 通道恢复且为 stable 折叠发布线，基线取 release tag（package.json 已前移 1.97.0 记档不追，与 R142 前「版本前缀滞后」反向同族——两头都不盲从，取发布语义）。
 
-## 五、验证与本轮整合债
+## 五、JVM 全栈回归实录（trade-forge 十框架，2026-11-07）
+
+### 5.1 全新生成链
+
+框架检测 10/10（spring-boot/spring-batch/mybatis/dubbo/rocketmq/sharding/vue/element/jest-vitest/druid）；删旧技能（v2.94 时代态）→全新生成→**真值回填走「新架构为底＋旧值逐槽合并」**：precheck.conf 六槽位（BASE_BRANCH/WRITABLE/COVERAGE_MIN=80/SCAN/CONSISTENCY）+arch.conf 64 框架变量逐个回填+patch.conf/snippets/tunnel 整文件携入（覆盖层设计即为此）+references 八件+SKILL.md；首轮回填踩坑实录=**precheck.conf 整拷旧版会吞掉新生成尾链 source 结构（patch/industry 覆盖层）且旧 SKILL.md（active 态）破坏 draft 断点续传判定**——重生成+分层合并后 `--verify-completeness --strict` 零占位、`--mark-active` 三关过（全维度 1.00/预算 SKILL 11064B≤11392B——旧 SKILL.md 15874B 系激活后自成长膨胀产物，再生成须按现预算收敛：删五层导航冗余节+紧凑自成长+折叠状态保存，-4810B）。
+
+### 5.2 实抓缺陷与定谳（生成器面 1 根治 + 观察项）
+
+| 编号 | 现象 | 定谳 | 处置 |
+|---|---|---|---|
+| R143-D1 | 再生成 `--verify-completeness --strict` 对项目侧账本 32-34 行（D-140-01/02/03，2026-10-24）报「缺 type/ai_suggestion/user_action」——字段全量 schema 检查 2026-10-28（e642c4d0d）才引入，历史记录无此字段 | **缺陷（检查器无版本化边界）**：新 schema 全账本回溯误杀 legacy 项目再生成 | **根治**：SCHEMA_EPOCH=2026-10-28 边界 grandfathering（ts 早于边界的记录仅校 JSON 合法性+UserChallenge:incomplete 全时域判据；ts 不可解析保守豁免）；test-r143-decisions-grandfathering 六断言锁（legacy 豁免/边界后仍红/incomplete 全时域/合格零报） |
+| 观察1 | 账本 verify-chain 永久红（32-34 行无链字段且 ts 回填早于 30-31 行） | **数据债非产品缺陷**：R140 会话带外写入（时间戳回填+未过链写入器）；反篡改设计（链中旧格式=FAIL）由 test-trace-reliability 明锁 | 追加修复决策留痕（Taste/one-way）+永久接受断裂段；三行内容经 R140/R141 消费有效 |
+| 观察2 | 宿主默认 JDK 27 下 Mockito/Byte Buddy 报 "Java 27 (71) not supported"→ApplicationContext failure threshold 连锁 | **环境前提**（R141-X3 同族复验） | JAVA_HOME=jdk17 前缀入 framework-knowledge 规律登记（环境前提条目） |
+| 观察3 | `precheck.sh framework`（无杠）静默按未知参数跑核心序列而非 check_framework | 调用形态注意项（`--framework` 旗标才对）；非静默失败不升级为缺陷 | 回归实录记录正确形态 |
+
+### 5.3 典型研发工作两项（九节点全流程）
+
+**任务 A（feature：order-edit 订单编辑全链，feat/order-edit→master merge c69668b→bf80e2e）**：Mapper `updateEditableFields`（WHERE 带分片键；**物理直查实证=原节点值变更+其余三节点零污染**）+Service（CLOSED→409 双层/unknown→404/行数≠1 防御）+PUT 端点+前端编辑对话框（非终态条件渲染/金额约束与 create 三处同源）。RED 实录=后端 7 处编译红→**56/56** 绿、前端 2 红→**29/29**+vite build rc 0；spec 决策 3+§5.5 复用 5 单元+§19 矩阵+验收反例；⑦独立审查（三方对账表+review-record 三要素）；门禁 `--all-full` **fail 0**（warn 27/advisory 9）。测试范式实录两条：el-dialog 内容经 Teleport 挂 body（wrapper.find 不穿透，DOMWrapper+body 查询适配）、el-input attrs 落内层 input 本体（descendant 选择器失效）。
+
+**任务 B（fix：diagnostic-loop 诊断回路，merge 53268a9）**：双注入三层咬合实证——注入①CAS 退化（updateStatusIfCurrent 删 status 条件）→MapperTest stale-snapshot 负例精确红（1/23；ServiceTest 14 绿=分层正确）；注入②分片键丢失（WHERE 改 order_no）→fw_sharding_key_in_dml 静态红+check_test 红+gate_spec_first_missing 红（无 spec 的 mapper 改动被 L3 拦=第三层）。还原态全绿；**零生产代码变更**；注入矩阵作为后续轮咬合力对照基线。
+
+**收口态**：master 末态 `--all-full` **fail 0**（warn 26/advisory 4；4 门禁=生成器自证面按设计披露跳过）；指纹基线落盘（skel_cksum 2352485634）；reference-manual §6 接口清单 6→7（PUT edit 入册）。
+
+## 六、验证与本轮整合债
 
 - `registry-render.sh --write-upstream-baseline` 重渲状态表块 → `--check` **注册表一致性通过**（22 行↔runtimes.tsv 逐行一致/面积 5556B≤40KB/无逐轮历史头注）。
 - src-pins gstack→6666b729、superpowers→22f0b463（ECC 不动）；offline-manifest 九行追平＋R143 复扫注释；物化两目录 MANIFEST 基线行更新、verify-geometry.py py 语法校验过。
