@@ -1,11 +1,20 @@
 {
-  "evidenceId": "release-gate/1794026885145",
-  "status": "failed",
-  "commit": "fb9601ca26c5d25ae76bf7a77683e5582652324c",
-  "startedAt": 1794026885145,
-  "endedAt": 1794027001515,
-  "failedStep": "gate-basic-check",
-  "bundleIdentity": null,
+  "evidenceId": "release-gate/1794033350592",
+  "status": "complete",
+  "commit": "45e4191493bfc2ad90859b8163a03a65f6e47a3d",
+  "startedAt": 1794033350592,
+  "endedAt": 1794034038749,
+  "failedStep": null,
+  "bundleIdentity": {
+    "bundleId": "6d0b3b5aef6edc7151c274a23349f53a14200bc780125fe3f8596c894536da42",
+    "file": "/Users/cuishi/lab/AIStudio/vendor/hermes-studio/dist/server/bundle-identity.txt",
+    "generatedAtMs": 1794034037970.3896,
+    "patchCount": 461,
+    "assetCount": 19,
+    "patchDigestsSha": "12f22acc4f4a6510dc7615054ff6bd1b1b0d5ae6aabe29f4df47bf7a68e8bf57",
+    "runtimeManifestDigest": "c847becc4e274803d2e7c5324a51aaa8394a72aecc21b7b93aa66134ab659901",
+    "recomputedMatch": true
+  },
   "steps": [
     {
       "id": "qgate-build",
@@ -13,17 +22,134 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794026885253,
-      "endedAt": 1794026886422
+      "startedAt": 1794033350689,
+      "endedAt": 1794033351765
     },
     {
       "id": "gate-basic-check",
       "label": "全量测试门（真 npm test + JUnit 复析）",
-      "status": "fail",
-      "exitCode": 1,
-      "failure": "exit=1",
-      "startedAt": 1794026886598,
-      "endedAt": 1794027001326
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033351928,
+      "endedAt": 1794033869804
+    },
+    {
+      "id": "gate-harness-eval",
+      "label": "评测门（test:eval 七维回归）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033869971,
+      "endedAt": 1794033873190
+    },
+    {
+      "id": "gate-L0.convention-alignment",
+      "label": "启用门 L0.convention-alignment（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033873334,
+      "endedAt": 1794033875178
+    },
+    {
+      "id": "gate-L1.symbol-grounding",
+      "label": "启用门 L1.symbol-grounding（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033875321,
+      "endedAt": 1794033877932
+    },
+    {
+      "id": "gate-L0.acceptance-coverage",
+      "label": "启用门 L0.acceptance-coverage（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033878085,
+      "endedAt": 1794033879873
+    },
+    {
+      "id": "gate-L0.registers",
+      "label": "启用门 L0.registers（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033880024,
+      "endedAt": 1794033881813
+    },
+    {
+      "id": "gate-L0.requirement-trace",
+      "label": "启用门 L0.requirement-trace（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033881964,
+      "endedAt": 1794033883811
+    },
+    {
+      "id": "gate-L0.scope-check",
+      "label": "启用门 L0.scope-check（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033883960,
+      "endedAt": 1794033885824
+    },
+    {
+      "id": "gate-governance.orgscale",
+      "label": "启用门 governance.orgscale（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033885968,
+      "endedAt": 1794033927722
+    },
+    {
+      "id": "gate-hrgov.workunit-contract",
+      "label": "启用门 hrgov.workunit-contract（--require-pass --no-cache）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033927881,
+      "endedAt": 1794033989511
+    },
+    {
+      "id": "typecheck-harness",
+      "label": "服务端类型门（typecheck:harness）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033989674,
+      "endedAt": 1794033992252
+    },
+    {
+      "id": "typecheck-client",
+      "label": "客户端类型棘轮门（typecheck:client:ratchet ≤ 基线）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794033992399,
+      "endedAt": 1794034014603
+    },
+    {
+      "id": "build-full",
+      "label": "完整构建（build:full：server tsc + verify-dist --server）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794034014765,
+      "endedAt": 1794034038048
+    },
+    {
+      "id": "release-report",
+      "label": "严格证据报告（--require-pass --no-cache --since gate 起点）",
+      "status": "pass",
+      "exitCode": 0,
+      "failure": null,
+      "startedAt": 1794034038192,
+      "endedAt": 1794034038309
     }
   ]
 }

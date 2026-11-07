@@ -160,7 +160,7 @@ def _attest_read():
 _attest_read()
 
 # issues.log 预解析（查3 降级配对用；与 A3/A5d 段同源解析）
-# 降级凭证族单一事实源（2026-11-06 帧采集准确性根治收口）：frame-zero-change-voided
+# 降级凭证族单一事实源（2026-11-06 帧采集准确性根治批次）：frame-zero-change-voided
 # （零变化帧隔离）与 frame-capture-failed 同通道配对——隔离步 ✅ 无帧属已声明降级，
 # 不二罚。A5d④ 段复用本常量，两处不各写一份。
 _FRAME_DEGRADE_FAMILIES = {'frame-capture-failed', 'frame-zero-change-voided'}
@@ -724,10 +724,10 @@ _STAGE_ALIAS_STEPS = {'smoke': (1, 2, 3, 4), 'smoke_done': (1, 2, 3, 4),
                       'retro': (24,), 'retro_done': (24,), 'ide': (25,), 'ide_done': (25,),
                       'report': (26,), 'report_done': (26,)}
 # dispatch_done/report_done 补全（2026-11-06 帧采集准确性根治实录：别名表缺这两键，
-# 查9 四态判定与 R18 降级映射对步 9/26 永远落空——键面完整性由守门测试断言）。
+# 查9 四态判定与 R18 降级映射对步 9/26 永远落空——键面完整性由自动化测试断言）。
 for _l18 in _ilines_r18:
     _p18 = _l18.split('|', 3)
-    # 降级族=查3 预解析同源常量（2026-11-06 帧采集准确性根治：第三处硬编码收编——
+    # 降级族=查3 预解析同源常量（2026-11-06 帧采集准确性根治：第三处硬编码统一——
     # 此前漏改本点，run27 隔离步 8/25 凭证在案仍整批 FAIL，违反「凭证在案即黄标不二罚」）
     if len(_p18) >= 4 and _p18[0] == 'ISSUE' and _p18[1] in _FRAME_DEGRADE_FAMILIES:
         _r18_degraded_steps.update(_STAGE_ALIAS_STEPS.get(_p18[2].removeprefix('step-'), ()))

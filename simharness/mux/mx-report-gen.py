@@ -4796,8 +4796,8 @@ def _net_pair_table() -> str:
     n_proxy = by.get('dispatch-preset', 0)
     n_nudge = by.get('nudge', 0) + by.get('sleep-wakeup', 0)
     n_card = by.get('card-backfill', 0) + by.get('card-walk-done', 0)
-    # 组织自派发实算（2026-11-06 B 批）：strict 姿态 dispatch_in_room 落的独立台账，
-    # 替换此前硬编码「在案 0 条」——净额口径必须实算，零条时保留「全部为脚本代演」标注。
+    # 组织自派发实际统计（2026-11-06 B 批）：strict 姿态 dispatch_in_room 落的独立台账，
+    # 替换此前硬编码「在案 0 条」——净额口径必须实际统计，零条时保留「全部为脚本代演」标注。
     global n_selfdisp
     n_selfdisp = 0
     try:
