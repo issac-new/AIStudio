@@ -1,20 +1,11 @@
 {
-  "evidenceId": "release-gate/1793925735320",
-  "status": "complete",
-  "commit": "2ddd678615e3aaf6af08e94ee0d1d811ab4801d5",
-  "startedAt": 1793925735320,
-  "endedAt": 1793925994771,
-  "failedStep": null,
-  "bundleIdentity": {
-    "bundleId": "95fbc2f6304c44fb37d081b4fbdc917c8426b2474d72016ca4a914ec99e50543",
-    "file": "/Users/cuishi/lab/AIStudio/.claude/worktrees/platform-rewrite/vendor/hermes-studio/dist/server/bundle-identity.txt",
-    "generatedAtMs": 1793925993705.8257,
-    "patchCount": 468,
-    "assetCount": 19,
-    "patchDigestsSha": "5525913b828fa2551a86fd50d366bd06c12189fd42f9ea152c1ed3b4cc8984f0",
-    "runtimeManifestDigest": "c847becc4e274803d2e7c5324a51aaa8394a72aecc21b7b93aa66134ab659901",
-    "recomputedMatch": true
-  },
+  "evidenceId": "release-gate/1794026885145",
+  "status": "failed",
+  "commit": "fb9601ca26c5d25ae76bf7a77683e5582652324c",
+  "startedAt": 1794026885145,
+  "endedAt": 1794027001515,
+  "failedStep": "gate-basic-check",
+  "bundleIdentity": null,
   "steps": [
     {
       "id": "qgate-build",
@@ -22,125 +13,17 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1793925735498,
-      "endedAt": 1793925736803
+      "startedAt": 1794026885253,
+      "endedAt": 1794026886422
     },
     {
       "id": "gate-basic-check",
       "label": "全量测试门（真 npm test + JUnit 复析）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925737002,
-      "endedAt": 1793925901623
-    },
-    {
-      "id": "gate-harness-eval",
-      "label": "评测门（test:eval 七维回归）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925901993,
-      "endedAt": 1793925908880
-    },
-    {
-      "id": "gate-L0.convention-alignment",
-      "label": "启用门 L0.convention-alignment（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925909071,
-      "endedAt": 1793925910911
-    },
-    {
-      "id": "gate-L1.symbol-grounding",
-      "label": "启用门 L1.symbol-grounding（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925911079,
-      "endedAt": 1793925914274
-    },
-    {
-      "id": "gate-L0.acceptance-coverage",
-      "label": "启用门 L0.acceptance-coverage（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925914464,
-      "endedAt": 1793925916279
-    },
-    {
-      "id": "gate-L0.registers",
-      "label": "启用门 L0.registers（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925916450,
-      "endedAt": 1793925918271
-    },
-    {
-      "id": "gate-L0.requirement-trace",
-      "label": "启用门 L0.requirement-trace（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925918500,
-      "endedAt": 1793925920339
-    },
-    {
-      "id": "gate-L0.scope-check",
-      "label": "启用门 L0.scope-check（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925920528,
-      "endedAt": 1793925922509
-    },
-    {
-      "id": "gate-governance.orgscale",
-      "label": "启用门 governance.orgscale（--require-pass --no-cache）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925922683,
-      "endedAt": 1793925930896
-    },
-    {
-      "id": "typecheck-harness",
-      "label": "服务端类型门（typecheck:harness）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925931100,
-      "endedAt": 1793925934840
-    },
-    {
-      "id": "typecheck-client",
-      "label": "客户端类型棘轮门（typecheck:client:ratchet ≤ 基线）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925935013,
-      "endedAt": 1793925964144
-    },
-    {
-      "id": "build-full",
-      "label": "完整构建（build:full：server tsc + verify-dist --server）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925964387,
-      "endedAt": 1793925993834
-    },
-    {
-      "id": "release-report",
-      "label": "严格证据报告（--require-pass --no-cache --since gate 起点）",
-      "status": "pass",
-      "exitCode": 0,
-      "failure": null,
-      "startedAt": 1793925994042,
-      "endedAt": 1793925994219
+      "status": "fail",
+      "exitCode": 1,
+      "failure": "exit=1",
+      "startedAt": 1794026886598,
+      "endedAt": 1794027001326
     }
   ]
 }
