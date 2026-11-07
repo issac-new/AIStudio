@@ -1,4 +1,9 @@
 #!/bin/bash
+# dist 判据实现说明（2026-11-07 run28 批）：⑲⑳㉑㉕ 的生效 dist 标记扫描由 BSD grep -r
+#   --exclude-dir 换 rg——studio 0.8.17 批 vite 产物为 22MB 级 minified 单行文件，本机
+#   BSD grep（GNU compatible 2.6.0-FreeBSD）-r+--exclude-dir 组合对其静默失明（单文件
+#   直查可中、递归+排除目录形态必漏，bash -c 隔离复现定谳），四项恒红即此。rg 15.x 无
+#   长行限制；rg 缺席环境判据报红=装 ripgrep（fail-closed 方向，不误绿）。
 # mx-prelaunch-check.sh — 开跑前三十六项核验（一条命令收口；run15 前置 P3-8 起，⑩/⑪=run15 复盘补；⑭=2026-10-13 评测门禁三方同步；⑮=2026-10-13 run19 write_file 蛇足行守门；⑲=2026-10-17 V8.37 产品 IA 版本检查，2026-10-18 V8.44 扩为左栏/阶段页签/全流程推演/检索四组；⑳=2026-10-18 V8.42 Harness 运行底座编入检查；㉑=2026-10-18 V8.44 IDE 任务工作区端点；㉒=阶段页签与重定向矩阵；㉓=2026-10-19 V8.45 评测接线（隔离库/G4 子门/报告消费）；㉔-㉚=2026-10-19 V8.46 治理闭环（G6 键统一/闭环端点/证据九/评测处置链/发布门与 UAT 台账/R18 修正/阶段页签 31）；⑩d=2026-11-02 run24 复盘驱动面批⑤ 工作区 origin 单一性；㉛=2026-11-02 机制治理批 烧机测试在位与自检；㉝=2026-11-06 执行单元责任台账四面在位）。
 # 全绿才建议开跑；任一 FAIL 给出修复指引。幂等可重跑。
 set -u
@@ -143,17 +148,17 @@ ck "⑱ 报告真值三件套（判据源+三侧接线+守门测试）" "python3
 # ⑲ 产品 IA 版本（纪律 75：生效 studio dist 必须含日常三组+页脚系统设置、阶段页签、
 #     全流程推演与检索标记，防 V8.44 前旧 dist 上轮——旧 UI 拍出的帧与方案 §2.5 新锚
 #     全部错位。生效面判定与 mx-lib 一致：product-dist 有 server 目录用之，否则回落 upstream dist）。
-ck "⑲ 产品 IA 版本（左栏+阶段页签+全流程推演+检索在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'stage/setup' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia2.journey' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'ia-side-nav' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git '五步进度' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git '全流程推演' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'global-search-dialog' \"\$_d\" 2>/dev/null" "生效 dist 不含左侧栏/阶段页签/全流程推演/检索标记——是 V8.44 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
+ck "⑲ 产品 IA 版本（左栏+阶段页签+全流程推演+检索在生效 dist）" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; rg -q --glob '!node_modules/**' --glob '!.git/**' 'stage/setup' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'ia2.journey' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'ia-side-nav' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' '五步进度' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' '全流程推演' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'global-search-dialog' \"\$_d\" 2>/dev/null" "生效 dist 不含左侧栏/阶段页签/全流程推演/检索标记——是 V8.44 前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
 
 # ⑳ Harness 运行底座编入生效 dist（V8.42）：九层体检/过程质量/恢复判定/执法决策/
 #    运行清单/预算六个新端点必须出现在生效构建里——旧 dist 起跑会让证据面整段缺席，
 #    报告第 9 章「Harness 运行面」无数据可引。判据与⑲同源：product-dist 优先，回落 upstream dist。
-ck "⑳ Harness 运行底座编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'nine-layers' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'process-quality' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'resume-plan' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'policy-decisions' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'run-manifests' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'budget-status' \"\$_d\" 2>/dev/null" "生效 dist 不含 Harness 运行底座端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）——是旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
+ck "⑳ Harness 运行底座编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; rg -q --glob '!node_modules/**' --glob '!.git/**' 'nine-layers' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'process-quality' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'resume-plan' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'policy-decisions' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'run-manifests' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'budget-status' \"\$_d\" 2>/dev/null" "生效 dist 不含 Harness 运行底座端点（nine-layers/process-quality/resume-plan/policy-decisions/run-manifests/budget-status）——是旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照（mux/mx-setup.sh 供给），再重跑本检查"
 
 # ㉑ IDE 任务工作区端点编入生效 dist（V8.44）：步 18/25 的任务简报依赖
 #     GET /api/ide/task-workspace?task=&board=；旧 dist 会让「任务工作区/任务会话」
 #     两块整段缺席，报告图注与操作路径对不上。判据与⑲同源。
-ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'task-workspace' \"\$_d\" 2>/dev/null" "生效 dist 不含 /api/ide/task-workspace——是任务工作区批前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑本检查"
+ck "㉑ IDE 任务工作区端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; rg -q --glob '!node_modules/**' --glob '!.git/**' 'task-workspace' \"\$_d\" 2>/dev/null" "生效 dist 不含 /api/ide/task-workspace——是任务工作区批前旧构建：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑本检查"
 
 # ㉒ 阶段页签与重定向矩阵在位（V8.44）：六阶段页签化后，旧 /app/gov/* 深链必须
 #     redirect 到阶段页（书签/通知零断链）；页签注册表缺位会让 ?tab= 全部回落默认签。
@@ -172,7 +177,7 @@ ck "㉔ G6 闸键统一（retro_done@步24）" "grep -q \"id: 'G6', key: 'retro_
 
 # ㉕ 治理结果端点编入生效 dist（V8.46）：评审治理/观测信号/告警/改进实验/发布门/UAT
 #    台账六类端点必须在生效构建里——旧 dist 会让证据九整段缺席。
-ck "㉕ 治理结果端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; grep -rq --exclude-dir=node_modules --exclude-dir=.git 'release-gate' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'uat-verdict' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-signals' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'obs-alerts' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'reviewgov' \"\$_d\" 2>/dev/null && grep -rq --exclude-dir=node_modules --exclude-dir=.git 'workbench' \"\$_d\" 2>/dev/null" "生效 dist 不含治理结果端点：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑"
+ck "㉕ 治理结果端点编入生效 dist" "_d='$SR/product-dist'; [ -d \"\$_d/server\" ] || _d='$HERE/../upstream/hermes-studio/dist'; rg -q --glob '!node_modules/**' --glob '!.git/**' 'release-gate' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'uat-verdict' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'obs-signals' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'obs-alerts' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'reviewgov' \"\$_d\" 2>/dev/null && rg -q --glob '!node_modules/**' --glob '!.git/**' 'workbench' \"\$_d\" 2>/dev/null" "生效 dist 不含治理结果端点：cd overlay && npm run inject && npm run build 后刷新 SIM 快照，再重跑"
 
 # ㉖ 治理结果快照与证据九接线（V8.46）：采集脚本在位+驱动调用+报告消费+审计查16。
 ck "㉖ 治理结果快照与证据九接线" "bash -n '$HERE/mux/mx-closure-snapshot.sh' && grep -q 'mx-closure-snapshot.sh' '$HERE/aipay-scenario.sh' && grep -q '证据九：治理结果可反查' '$HERE/mux/mx-report-gen.py' && grep -q '查 16：治理结果证据九' '$HERE/mux/mx-report-audit.py'" "治理结果快照件不齐：检查 mx-closure-snapshot.sh/驱动步24/报告生成器/审计器四处"
