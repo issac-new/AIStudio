@@ -595,6 +595,7 @@
 | 2026-11-07-sim-config-schema-align | SIM config schema 对齐（v52 盖章步） | mx-setup 新增 4d 步：对 root＋全部 profile config 调产品 migrate_config 幂等盖章（legacy custom_providers→providers map＋_config_version）；三键白名单护栏违例回滚单份、fail-soft 不阻断；存量 42 份已活体迁移实证 |
 | 2026-11-07-zcode-patches-pristine-replay | zcode 补丁 002 pristine 重生成＋系列重放守门 | 3.17.2 同步批零重生成致 002 基线漂移（fresh 树 inject 断链、main 增量跳过未暴露、CI 不跑 inject 三重盲区）；按 diff(pristine→注入态) 重切＋临时 worktree 真管线重放守门（manifest complete 断言） |
 | 2026-11-07-vendor-upgrade-studio-v0817 | 组件与调研栈第三方运行时版本更新批 | studio 基线 v1.0.9→v0.8.17（ancestry 前进 53 提交，tag 命名回归 0.8.x 线；依赖零变化）；全组件面盘点对账（agent/zcode/exa/semantica/pua/REA/Ghidra/element-web 八面持平）；superpowers 7.0.2 落位＋npm 双前缀 30 包＋poppler；官方插件=应用自带面定谳；台账 Ghidra/DSH 订正；风险面 8 项挂账待裁（n8n/claude-mem/echarts/zcode-acp-server 等） |
+| 2026-11-07-ponytail-headroom-absorption | Ponytail v5＋Headroom 源码级吸收批（yuan v2.99.4） | 审查面 Strict Focus 收敛（检索半径=影响面×落点=变更行，删静默丢弃，三档+四段式+Not checked）；shortcut: 捷径台账挂 check_adr §5（no-trigger warn，门禁 59 不变）＋fixture 变异检查；estimated/measured 两态估算；lazy-generation 基准 v4.9→v5.3.3 纠错；R143 调研档；环境坑=awk 中文 locale 假红（LC_ALL=C 定谳）＋qgate scope quotepath 转义形致夹具改 ASCII 名 |
 
 ### 角色/排除（非 spec 文档）
 
