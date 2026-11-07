@@ -68,8 +68,7 @@ references/subagent-orchestration.md	target	standard	copy	refd	yes	yes	subagent-
 references/governance-agents.md	target	compliance	copy	ref	yes	yes	governance-agents	28769
 references/task-methodology-router.md	target	standard	copy	ref	yes	yes	task-methodology-router	16653
 references/canary-monitoring.md	target	standard	copy	ref	yes	yes	canary-monitoring	1725
-references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	64015
-references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	62300
+references/review-methodology.md	target	standard	copy	refd	yes	yes	review-methodology	64008
 references/gsd-patterns.md	target	standard	copy	ref	yes	yes	gsd-patterns	35189
 references/memory-persistence.md	target	standard	copy	refd	yes	yes	memory-persistence	40776
 references/security-spec.md	target	lite	copy	ref	yes	yes	security-spec	19531

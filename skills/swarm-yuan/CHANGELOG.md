@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [v2.100.0] - 2026-11-07
+R143 运行时刷新＋吸收＋JVM 全栈回归轮（第九轮同型例行）。基线 18/22 行移动（历轮最高）；门禁 59 / 变量 204 / 框架 81 / 运行时 15 均不变：本轮无新增门禁、无预算上调。
+- **R143 研究档与基线推进**（`docs/research/R143-runtime-refresh.md`＋`upstream-changelog.md` R143 节）：claude-code 2.1.319（安全大版本：denyInsteadOfPrompting/blockWritesOutsideWorkingDirectories/Bash 环境变量前缀权限绕过修复）/codex-cli 0.167.0（托管命令检查点全新人工批准、PreToolUse 先于 Guardian）/ruflo 3.72.2（10 minor：v3.64 验证结果学习环、v3.65 tainted 防作弊、上下文委派引文 SHA-256 锚）/gstack v1.96.0.0（tag 通道恢复；finding 以 Severity 字段定级、fix-check 永不充当 pass、manual_only）/dsh 0.2.2-rc.1（CUA 权限面+apply_patch 转正）/claude-mem 15.11.0/openspec 1.16.1/codex-security 0.8.3/gsd-core 1.20.1/comet 0.5.2/graphify 0.9.103/ocr 1.13.6/impeccable 4.8.0/superpowers 7.0.2/pi 1.5.0/mattpocock v1.3.2/diagram 2.6.142/semantica tip；src-pins gstack 6666b729/superpowers 22f0b463；offline-manifest 九行追平＋R143 复扫注释。
+- **物化两档刷新**：mattpocock-skills v1.3.2（20+7 清单不变、10 文件纪律强化——diagnosing-bugs「先证突变真落地再信红灯」等）；diagram-design 2.6.142（取用范围 21 文件；上游 verify-geometry.py 迁 gates/→scripts/ 且属性提取改 ATTR_RE 正则——单引号/无引号属性值可提取，随迁刷新）。
+- **吸收三档**（决策 46 两问筛选）：agent-skills-methodology 十二节「验证只认真实退出码」（`|| true`/管道/`;` 不算验证+tainted 防作弊+模型自述永不采信）；review-methodology「判级以结构化字段为准」增量（Severity 字段定级/fix-check 不充当 pass/CI 审计交付声明须真合并 PR/manual_only）；claude-code-capabilities v2.1.311-319 节（拒绝优于提示/写边界全模式兜底/数据丢失防护/不可核查即拒绝）。
+- **R143-D1 `--verify-completeness` 决策账本检查误杀 legacy 项目**（trade-forge 再生成实抓）：字段全量 schema（type/ai_suggestion/user_action）检查 2026-10-28（e642c4d0d）才引入，此前写入的历史记录被全账本回溯套新 schema→再生成必红。根治=SCHEMA_EPOCH=2026-10-28 版本化边界 grandfathering（ts 早于边界仅校 JSON 合法性＋UserChallenge:incomplete 全时域判据保留；ts 不可解析保守豁免）；账本 append-only 不回改历史。test-r143-decisions-grandfathering 六断言锁（legacy 豁免/边界后缺字段仍红/incomplete 全时域/边界后 UserChallenge 三要素/合格零报）。
+- 随物化同步五锚面：facts.conf FACT_DIAGRAM_DESIGN_VERSION=2.6.142、test-r122 三断言＋第五锚面（diagram-production-methodology 基线行）、capability-map 版本行、mattpocock methodology 两处基线行、dist.tsv 四行字节锚。
+- **build-compendium.sh LC_ALL=C 加固（darwin 27.x awk 20200816 实测缺陷）**：macOS awk 在 CJK locale 对多字节串做 collation 等价比较（「卷一/卷二」不同标题判等）→ 重灌六卷全部错灌 README；字节比较语义统一后重灌+check 双绿（CI=ubuntu 不受影响；本机复现证据=不同字面量比较双双为真）。
+- **存量债四件随批清偿**（v2.99.3 后他批埋、本轮 sweep 首炸）：① gen-e2e GATE_ENFORCE_DENY 断言锁死旧 10 门禁值（出厂默认已扩 13）→改前缀包含；② 产物 SKILL.md 预算 11392→**11520 第八次登记**（gen-e2e 实测 11458B 超 66B——生成器侧随发文件功能性增量，R72/R98/R138 先例；doc-numbers 四断言全改 facts 派生+三用户面同步）；③ core10-sequence 基线缺「降标守卫」段头（核心 11→12 门禁时未随）→补齐 cli_ab 0 diff；④ test-r133 comet/graphify spec 硬编码（R124-D1 同族复发）→offline-manifest 动态派生。
+- **references 洗词**：新增三档吸收节含禁用自造词（假绿/假红→虚报通过/虚报失败）与裸轮次标记（R143→日期锚）——test-r68 十七断言全绿。
+### 回归实录（trade-forge 十框架，详见 R143 档 §五）
+- 全新生成链：10/10 框架检测→真值回填（新架构为底逐槽合并；实录=precheck.conf 整拷旧版会吞新生成尾链覆盖层、旧 active SKILL.md 破坏 draft 续传判定）→verify --strict 零占位→mark-active 三关（SKILL 11064B≤11392B——旧 15874B 系激活后自成长膨胀，再生成按现预算收敛）。
+- 任务 A order-edit 全链：带分片键 UPDATE 物理直查实证+终态 409 双层+金额三处同源；后端 56/56（RED=7 编译红）＋前端 29/29＋build rc 0＋--all-full fail 0；merge --no-ff。
+- 任务 B 诊断回路：双注入三层咬合（CAS 退化→MapperTest 负例精确红；分片键丢失→fw_sharding_key_in_dml+check_test+spec-first 三层红）；还原态全绿零生产代码变更。
+- 观察项定谳三条：账本 verify-chain 永久红=R140 带外写入数据债（反篡改设计 test 明锁不改）；JDK 27/ByteBuddy=R141-X3 同族环境前提（JDK17 前缀入 framework-knowledge）；`precheck.sh framework` 无杠形态≠`--framework` 旗标。
+
 ## [v2.99.4] - 2026-11-07
 Ponytail v5 + Headroom 源码级调研吸收批。**门禁 59 / 变量 204 均未变**：捷径台账挂既有 `check_adr` 面，不新开门禁；`UNIVERSAL_FILES` 预算 618496B 未上调（实测 ≈605542B）。
 ### Added
@@ -19,22 +35,6 @@ Ponytail v5 + Headroom 源码级调研吸收批。**门禁 59 / 变量 204 均�
 - `README.md` 能力表懒生成行随批进位；`assets/registry/dist.tsv` 四档字节锚刷新。
 ### Fixed
 - 修掉一处**文档自相矛盾**（审查面）与一处**被上游自己否定的数字仍在服役**（v4.9 基准口径）——同批两处均在 spec 决策记录里留了取舍理由。
-## [v2.100.0] - 2026-11-07
-R143 运行时刷新＋吸收＋JVM 全栈回归轮（第九轮同型例行）。基线 18/22 行移动（历轮最高）；门禁 59 / 变量 204 / 框架 81 / 运行时 15 均不变：本轮无新增门禁、无预算上调。
-- **R143 研究档与基线推进**（`docs/research/R143-runtime-refresh.md`＋`upstream-changelog.md` R143 节）：claude-code 2.1.319（安全大版本：denyInsteadOfPrompting/blockWritesOutsideWorkingDirectories/Bash 环境变量前缀权限绕过修复）/codex-cli 0.167.0（托管命令检查点全新人工批准、PreToolUse 先于 Guardian）/ruflo 3.72.2（10 minor：v3.64 验证结果学习环、v3.65 tainted 防作弊、上下文委派引文 SHA-256 锚）/gstack v1.96.0.0（tag 通道恢复；finding 以 Severity 字段定级、fix-check 永不充当 pass、manual_only）/dsh 0.2.2-rc.1（CUA 权限面+apply_patch 转正）/claude-mem 15.11.0/openspec 1.16.1/codex-security 0.8.3/gsd-core 1.20.1/comet 0.5.2/graphify 0.9.103/ocr 1.13.6/impeccable 4.8.0/superpowers 7.0.2/pi 1.5.0/mattpocock v1.3.2/diagram 2.6.142/semantica tip；src-pins gstack 6666b729/superpowers 22f0b463；offline-manifest 九行追平＋R143 复扫注释。
-- **物化两档刷新**：mattpocock-skills v1.3.2（20+7 清单不变、10 文件纪律强化——diagnosing-bugs「先证突变真落地再信红灯」等）；diagram-design 2.6.142（取用范围 21 文件；上游 verify-geometry.py 迁 gates/→scripts/ 且属性提取改 ATTR_RE 正则——单引号/无引号属性值可提取，随迁刷新）。
-- **吸收三档**（决策 46 两问筛选）：agent-skills-methodology 十二节「验证只认真实退出码」（`|| true`/管道/`;` 不算验证+tainted 防作弊+模型自述永不采信）；review-methodology「判级以结构化字段为准」增量（Severity 字段定级/fix-check 不充当 pass/CI 审计交付声明须真合并 PR/manual_only）；claude-code-capabilities v2.1.311-319 节（拒绝优于提示/写边界全模式兜底/数据丢失防护/不可核查即拒绝）。
-- **R143-D1 `--verify-completeness` 决策账本检查误杀 legacy 项目**（trade-forge 再生成实抓）：字段全量 schema（type/ai_suggestion/user_action）检查 2026-10-28（e642c4d0d）才引入，此前写入的历史记录被全账本回溯套新 schema→再生成必红。根治=SCHEMA_EPOCH=2026-10-28 版本化边界 grandfathering（ts 早于边界仅校 JSON 合法性＋UserChallenge:incomplete 全时域判据保留；ts 不可解析保守豁免）；账本 append-only 不回改历史。test-r143-decisions-grandfathering 六断言锁（legacy 豁免/边界后缺字段仍红/incomplete 全时域/边界后 UserChallenge 三要素/合格零报）。
-- 随物化同步五锚面：facts.conf FACT_DIAGRAM_DESIGN_VERSION=2.6.142、test-r122 三断言＋第五锚面（diagram-production-methodology 基线行）、capability-map 版本行、mattpocock methodology 两处基线行、dist.tsv 四行字节锚。
-- **build-compendium.sh LC_ALL=C 加固（darwin 27.x awk 20200816 实测缺陷）**：macOS awk 在 CJK locale 对多字节串做 collation 等价比较（「卷一/卷二」不同标题判等）→ 重灌六卷全部错灌 README；字节比较语义统一后重灌+check 双绿（CI=ubuntu 不受影响；本机复现证据=不同字面量比较双双为真）。
-- **存量债四件随批清偿**（v2.99.3 后他批埋、本轮 sweep 首炸）：① gen-e2e GATE_ENFORCE_DENY 断言锁死旧 10 门禁值（出厂默认已扩 13）→改前缀包含；② 产物 SKILL.md 预算 11392→**11520 第八次登记**（gen-e2e 实测 11458B 超 66B——生成器侧随发文件功能性增量，R72/R98/R138 先例；doc-numbers 四断言全改 facts 派生+三用户面同步）；③ core10-sequence 基线缺「降标守卫」段头（核心 11→12 门禁时未随）→补齐 cli_ab 0 diff；④ test-r133 comet/graphify spec 硬编码（R124-D1 同族复发）→offline-manifest 动态派生。
-- **references 洗词**：新增三档吸收节含禁用自造词（假绿/假红→虚报通过/虚报失败）与裸轮次标记（R143→日期锚）——test-r68 十七断言全绿。
-### 回归实录（trade-forge 十框架，详见 R143 档 §五）
-- 全新生成链：10/10 框架检测→真值回填（新架构为底逐槽合并；实录=precheck.conf 整拷旧版会吞新生成尾链覆盖层、旧 active SKILL.md 破坏 draft 续传判定）→verify --strict 零占位→mark-active 三关（SKILL 11064B≤11392B——旧 15874B 系激活后自成长膨胀，再生成按现预算收敛）。
-- 任务 A order-edit 全链：带分片键 UPDATE 物理直查实证+终态 409 双层+金额三处同源；后端 56/56（RED=7 编译红）＋前端 29/29＋build rc 0＋--all-full fail 0；merge --no-ff。
-- 任务 B 诊断回路：双注入三层咬合（CAS 退化→MapperTest 负例精确红；分片键丢失→fw_sharding_key_in_dml+check_test+spec-first 三层红）；还原态全绿零生产代码变更。
-- 观察项定谳三条：账本 verify-chain 永久红=R140 带外写入数据债（反篡改设计 test 明锁不改）；JDK 27/ByteBuddy=R141-X3 同族环境前提（JDK17 前缀入 framework-knowledge）；`precheck.sh framework` 无杠形态≠`--framework` 旗标。
-
 ## [v2.99.3] - 2026-11-06
 
 口径一致性专项（生成器仓）。门禁 59 / 变量 204 / 框架 81 / 运行时 15 均未变：本轮无新增门禁、无预算上调；随 AIStudio v1.0.13-overlay 发布轮进位 v2.99.3（facts.conf 真值对齐/防漂移断言派生化/渲染纪律收口本体变更）。
