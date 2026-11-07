@@ -3071,7 +3071,7 @@ def workunit_evidence_html():
             '<div class="govgrid"><table>'
             '<tr><th>问题</th><th>回答</th><th>缺口 / 证据</th></tr>' + body +
             '</table></div>'
-            '<p class="stat-note">判据源=evidence/workunit-six-questions.json（驱动经 mx-workunit-lib.sh 落档）'
+            '<p class="stat-note">判据源=evidence/workunit-six-questions.json（驱动经 mx-workunit-lib.sh 写入）'
             ' + /api/autonomygov/six-questions。</p>')
 
 def closure_evidence_html():
