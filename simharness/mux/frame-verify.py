@@ -85,8 +85,17 @@ EXPECT = {
 # 命中（侧栏/页签字样）下被判通过。页面态与步骤不符＝证据不实，必须显形。
 # 只收「整页未推进/列表空」的明确措辞；不收裸「暂无」——顶栏「暂无阻塞、待审或待分类任务」
 # 是健康态，会被误判（run26 复核时 26 帧全红即此坑）。
+# 「暂无任务」入表（2026-11-08 run28 帧独立审计）：泳道空态措辞——register_done 帧
+# 四泳道全「暂无任务」（0 tasks）却在侧栏词命中下判 ✓，弱承载帧须显形。
 EMPTY_MARKERS = ['还没有任务工作区', '暂无可选任务', '未选择对象', '暂无数据', '没有找到',
-                 '未开始', '还没有']
+                 '未开始', '还没有', '暂无任务']
+# 报错态噪声（2026-11-08 run28 帧独立审计根治）：期望词命中只证「页面 chrome 有词」，
+# 核心区报错的帧照样过验——run28 实锤：anexec/review/ready 帧内「API Error 403: 需要
+# 平台超级管理员权限」、ide 帧深链「不存在或当前账号无权访问」均被判 ✓已核验。
+# 与 EMPTY_MARKERS 同纪律：只收明确措辞，不收裸「403」——十六进制任务号/提交哈希可
+# 含该子串（误报教训同 run26 裸「暂无」）；norm 已去空白，「API Error」按 APIError 匹配；
+# 「加载失败」风险自担（审计帧把报错当数据行呈现时以复审为准）。
+ERROR_MARKERS = ['APIError', '加载失败', '需要平台超级管理员权限', '无权访问']
 
 
 def ocr(path: Path, tmp: Path) -> str:
@@ -109,6 +118,16 @@ def ocr(path: Path, tmp: Path) -> str:
 
 def norm(t: str) -> str:
     return re.sub(r'\s+', '', t)
+
+
+def verdict(text: str, exp: dict) -> tuple:
+    """纯判定（2026-11-08 抽函数供守门测试行为断言）：期望词命中 + 空白态/报错态
+    否定词 → (ok, hit, empties, errors)。词面安全边界见两组词表注释。"""
+    hit = [w for w in exp['want'] if w in text]
+    empties = [m for m in EMPTY_MARKERS if m in text]
+    errors = [m for m in ERROR_MARKERS if m in text]
+    ok = (bool(hit) or not exp['want']) and not empties and not errors
+    return ok, hit, empties, errors
 
 
 def main() -> int:
@@ -158,9 +177,7 @@ def main() -> int:
                 bad += 1
                 continue
             text = norm(ocr(frame, tmp))
-            hit = [w for w in exp['want'] if w in text]
-            empties = [m for m in EMPTY_MARKERS if m in text]
-            ok = (bool(hit) or not exp['want']) and not empties
+            ok, hit, empties, errors = verdict(text, exp)
             why = ''
             _tab = _FRAME_TAB.get(key)
             if _tab:
@@ -181,6 +198,8 @@ def main() -> int:
                 why = '未命中期望词 ' + '/'.join(exp['want'])
             if empties:
                 why = (why + '；' if why else '') + '空白态：' + '/'.join(empties)
+            if errors:
+                why = (why + '；' if why else '') + '报错态：' + '/'.join(errors)
             rows.append({'key': key, 'ok': ok, 'title': exp['title'], 'hit': hit, 'why': why,
                          'frame': frame.name})
             if not ok:

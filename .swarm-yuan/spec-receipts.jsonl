@@ -271,3 +271,4 @@
 {"at":"2026-11-08T00:02:00Z","spec":"docs/superpowers/specs/2026-11-07-run28-burn-fixes.md","receipt":"8b860bcb05f5f2e00a9c8613739be1fa189c100f","commit":"1c26ed468"}
 {"at":"2026-11-08T00:06:12Z","spec":"docs/superpowers/specs/2026-11-08-n283-p1-director.md","receipt":"3eb031191954bd19f4aac2f8774c5a4682d59c60","commit":"5665e2fac"}
 {"at":"2026-11-08T11:54:40Z","spec":"docs/superpowers/specs/2026-11-08-n283-p1-director.md","receipt":"1bb7c1c9af383ae64440c25827f80410ae214305","commit":"9adeadb9f"}
+{"at":"2026-11-08T11:57:49Z","spec":"docs/superpowers/specs/2026-11-08-frame-verify-error-markers.md","receipt":"7cc4e0c287ec973934adc170132655a587e7a735","commit":"9adeadb9f"}

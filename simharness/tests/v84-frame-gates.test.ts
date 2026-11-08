@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, expect } from 'vitest'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // V8.4 证据纪律守门（2026-10-10 接线轮）：审计器帧四断言（①图注=画面描述 A5g /
@@ -169,5 +169,51 @@ describe('frame-expect 导出可 source（连字符键归一）', () => {
     const sourced = spawnSync('bash', ['-c', `set -eu; source '${envFile}'`], { encoding: 'utf8' })
     expect(sourced.status).toBe(0)
     expect(sourced.stderr).toBe('')
+  })
+})
+
+// 报错态否定词守门（2026-11-08 run28 帧独立审计根治）：期望词命中只证「页面 chrome
+// 有词」，核心区报错（403 超管横幅／深链无权）的帧曾全被判 ✓已核验。本组经 verdict
+// 纯函数做行为断言＋词面安全断言（防 run26 裸「暂无」式误报回归）。
+describe('frame-verify 报错态判定（ERROR_MARKERS）', () => {
+  it('verdict：报错态/空白态命中即不通过，健康页与十六进制 403 不误伤', () => {
+    const py = `
+import importlib.util, json
+spec = importlib.util.spec_from_file_location('fv', ${JSON.stringify(join(HARNESS, 'mux', 'frame-verify.py'))})
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+cases = [
+  ('加载失败：API Error 403: 需要平台超级管理员权限', {'want': ['分析', '评审']}, False, 'errors'),
+  ('任务 t_x 不存在或当前账号无权访问（深链 ？task= 未命中）', {'want': ['工作区', '任务']}, False, 'errors'),
+  ('泳道「暂无任务」四列全空 0 tasks', {'want': ['任务', '看板']}, False, 'empties'),
+  ('已排期任务 2 计划窗口就绪 fanfan', {'want': ['排期', '计划']}, True, ''),
+  ('十六进制任务号 t403ab 全绿无异常', {'want': ['任务']}, True, ''),
+]
+out = []
+for text, exp, want_ok, bucket in cases:
+    ok, hit, empties, errors = m.verdict(m.norm(text), exp)
+    out.append({'ok': ok, 'want_ok': want_ok, 'bucket': (errors and 'errors') or (empties and 'empties') or '', 'expect_bucket': bucket})
+print(json.dumps(out))
+`
+    const r = spawnSync('python3', ['-c', py], { encoding: 'utf8' })
+    expect(r.status).toBe(0)
+    const rows = JSON.parse(r.stdout)
+    expect(rows).toHaveLength(5)
+    for (const row of rows) {
+      expect(row.ok).toBe(row.want_ok)
+      expect(row.bucket).toBe(row.expect_bucket)
+    }
+  })
+
+  it('词面安全：ERROR_MARKERS 无裸数字码、EMPTY_MARKERS 无裸「暂无」', () => {
+    const src = readFileSync(join(HARNESS, 'mux', 'frame-verify.py'), 'utf8')
+    const errM = src.match(/ERROR_MARKERS = \[(.*?)\]/s)?.[1] ?? ''
+    const empM = src.match(/EMPTY_MARKERS = \[(.*?)\]/s)?.[1] ?? ''
+    for (const tok of errM.split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)) {
+      expect(/^\d+$/.test(tok), `裸数字码会误伤十六进制任务号：${tok}`).toBe(false)
+      expect(tok.length).toBeGreaterThan(1)
+    }
+    for (const tok of empM.split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)) {
+      expect(tok, `裸「暂无」误报（run26 26 帧全红教训）`).not.toBe('暂无')
+    }
   })
 })

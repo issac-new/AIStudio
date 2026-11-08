@@ -478,7 +478,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（151 份）
+## 2026-11（152 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -630,6 +630,7 @@
 - [2026-11-07-run28-burn-fixes.md](../superpowers/specs/2026-11-07-run28-burn-fixes.md)
 - [2026-11-08-run28-closeout.md](../superpowers/specs/2026-11-08-run28-closeout.md)
 - [2026-11-08-n283-p1-director.md](../superpowers/specs/2026-11-08-n283-p1-director.md)
+- [2026-11-08-frame-verify-error-markers.md](../superpowers/specs/2026-11-08-frame-verify-error-markers.md)
 - [2026-11-07-ponytail-headroom-absorption.md](../superpowers/specs/2026-11-07-ponytail-headroom-absorption.md)
 
 ## archive（2 份，不计入上述根目录）
