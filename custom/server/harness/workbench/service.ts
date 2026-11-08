@@ -26,6 +26,7 @@ import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
 import { listComponents, librarySummary, recordComponent, selectDonors } from './component-library'
+import { currentProvenance } from '../../lib/provenance'
 import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normalizeSchedulePolicy, DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL } from './schedule-policy'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
@@ -1017,7 +1018,7 @@ export async function promoteProposal(
         delta: probe?.contrast?.passAt1Delta ?? null,
         ...(verificationTierOf(p0) ? { verificationTier: verificationTierOf(p0) } : {}),
       },
-      { actor: String(opts.actor ?? 'operator') },
+      { actor: String(opts.actor ?? 'operator'), provenance: currentProvenance() },
     )
   } catch {
     /* 组件库写入失败不影响晋级结果（fail-soft） */

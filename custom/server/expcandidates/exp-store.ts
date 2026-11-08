@@ -7,6 +7,17 @@ import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
+import { validateReflectionStatement } from './reflection-guard'
+
+/** 反思守卫拒收（审核批准时触发；控制器映射 422，允许先改陈述再批）。 */
+export class ReflectionGuardError extends Error {
+  readonly reasons: string[]
+  constructor(reasons: string[]) {
+    super(`反思守卫拒收：${reasons.join('；')}`)
+    this.name = 'ReflectionGuardError'
+    this.reasons = reasons
+  }
+}
 
 export function storeDir(): string {
   const env = process.env.EXP_STORE?.trim()
@@ -48,7 +59,17 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
   const store = readExpStore()
   const idx = store.candidates.findIndex((c) => c.id === id)
   if (idx < 0) throw new Error(`候选不存在：${id}`)
-  store.candidates[idx] = { ...store.candidates[idx], status, updatedAt: new Date().toISOString() }
+  const next: ExpCandidate = { ...store.candidates[idx], status, updatedAt: new Date().toISOString() }
+  // 反思守卫（EvoTeam 吸收）：批准是人工决策点，在此时拒收泛泛/过窄/自相矛盾的陈述；
+  // 提取期不拦（保留证据），拒绝/回退状态不触发守卫。
+  if (status === 'approved') {
+    const existing = store.candidates
+      .filter((c) => c.id !== id && c.status === 'approved')
+      .map((c) => c.statement)
+    const guard = validateReflectionStatement(next.statement, existing)
+    if (!guard.ok) throw new ReflectionGuardError(guard.reasons)
+  }
+  store.candidates[idx] = next
   writeExpStore(store)
   return store.candidates[idx]
 }

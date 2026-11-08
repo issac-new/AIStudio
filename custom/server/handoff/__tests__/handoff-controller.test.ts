@@ -165,3 +165,35 @@ describe('POST /claims/verify', () => {
     expect(noClaims.status).toBe(400)
   })
 })
+
+describe('交接规则端点（EvoTeam 吸收）', () => {
+  const post = (path: string, body: unknown) => fetch(`${base}${path}`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  })
+
+  it('GET /rules 读仓内正本；POST /rules/select 命中契约并渲染中文标签', async () => {
+    const lib = await (await fetch(`${base}/rules`)).json() as { ok: boolean; available: boolean; families: unknown[] }
+    expect(lib.ok).toBe(true)
+    expect(lib.available).toBe(true)
+    expect(lib.families.length).toBeGreaterThanOrEqual(1)
+
+    const res = await post('/rules/select', { from: 'in_progress', to: 'review' })
+    expect(res.status).toBe(200)
+    const body = await res.json() as { selection: { rule: { ruleId: string } | null }; line: string | null }
+    expect(body.selection.rule?.ruleId).toBe('in-progress-to-review-evidence')
+    expect(body.line).toContain('改动文件清单')
+  })
+
+  it('conformance：缺证据报 missing；无 to → 400；未知规则 → 404', async () => {
+    const conf = await post('/rules/conformance', {
+      ruleId: 'in-progress-to-review-evidence',
+      presentEvidence: ['changed_files'],
+    })
+    const confBody = await conf.json() as { conformance: { ok: boolean; missing: string[] } }
+    expect(confBody.conformance.ok).toBe(false)
+    expect(confBody.conformance.missing).toContain('repro_command')
+
+    expect((await post('/rules/select', { from: 'in_progress' })).status).toBe(400)
+    expect((await post('/rules/conformance', { ruleId: 'nope' })).status).toBe(404)
+  })
+})

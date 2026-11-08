@@ -4,6 +4,7 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { fail as httpFail, ok } from '../../lib/http'
+import { crossModelRetestNeeded } from '../../lib/provenance'
 import { collectSurfaces } from './surface-registry'
 import {
   ServiceError, addExperience, attachBaseline, autoProbeRunning, calibrateNoise, composeProposal,
@@ -255,15 +256,13 @@ router.post('/proposals/:id/surface-applied', async (ctx) => {
 router.get('/library', async (ctx) => {
   try {
     const q = ctx.query as Record<string, string | undefined>
-    ok(ctx, {
-      summary: componentLibrary().summary,
-      components: componentLibrary().list({
-        ...(q.kind ? { kind: q.kind } : {}),
-        ...(q.surfaceKey ? { surfaceKey: q.surfaceKey } : {}),
-        latestOnly: q.latestOnly === '1',
-        ...(q.limit ? { limit: Number(q.limit) } : {}),
-      }),
-    })
+    const components = componentLibrary().list({
+      ...(q.kind ? { kind: q.kind } : {}),
+      ...(q.surfaceKey ? { surfaceKey: q.surfaceKey } : {}),
+      latestOnly: q.latestOnly === '1',
+      ...(q.limit ? { limit: Number(q.limit) } : {}),
+    }).map((entry) => ({ ...entry, crossModelRetest: crossModelRetestNeeded(entry.provenance) }))
+    ok(ctx, { summary: componentLibrary().summary, components })
   } catch (e) {
     fail(ctx, e)
   }

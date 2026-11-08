@@ -21,6 +21,7 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
+import { handoffRuleLineFor } from '../handoff/handoff-rules'
 import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
 import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/fewshot-rerank'
@@ -114,7 +115,7 @@ function contractFooter(): string {
   ].join('')
 }
 
-export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null, rerankLine?: string | null): string {
+export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null, rerankLine?: string | null, handoffLine?: string | null): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
   // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
@@ -154,6 +155,7 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     ...(rerankLine ? [rerankLine] : []),
     ...(precedentLine ? [precedentLine] : []),
     ...(semantic ? [semantic] : []),
+    ...(handoffLine ? [handoffLine] : []),
     contractFooter(),
   ].join('\n')
 }
@@ -201,6 +203,12 @@ export async function dispatchColumnTransition(
   // B4 在途键：并发重入的同键派发合并（进程内；跨进程靠台账窗口）
   const inflight = new Set<string>()
   for (const trigger of triggers) {
+    // 团队作用域交接规则（EvoTeam 吸收，2026-11-08）：按 (来源列, 目标列) 取一条
+    // 建议规则；无命中/表坏/开关关 → null 不占行。只对目标列的 entry 触发注入，
+    // 来源列的 exit 触发不重复（否则同一次流转会在两处贴契约）。
+    const handoffLine = trigger.column === params.to
+      ? handoffRuleLineFor(params.from, trigger.column)
+      : null
     delegation.push(...delegationCompleteness(trigger.steps))
     // 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：列流转即任务生命
     // 周期跃迁（source=kanban，sourceKey=taskId）。映射不上的自定义列名不登记只
@@ -227,7 +235,7 @@ export async function dispatchColumnTransition(
       }
       inflight.add(idemKey)
       let stepOutcomes: MentionOutcome[]
-      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle, rerankLine)}`
+      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle, rerankLine, handoffLine)}`
       try {
         stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
       } finally {

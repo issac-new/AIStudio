@@ -34,6 +34,8 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | `trust/` | 长程任务可信执行（主张三态审计/完成态双准入/工作区完整性栅栏/原子断点，fail-closed） |
 | `orchestrator/` | 编排域：Trigger/Thread/订阅/Decision/Mandate/准入表/策略版本/看板事件桥/语义评估（gateway 会话）/汇总（window + 静默规则）/评估轮（patch 719 挂载 `/api/orchestrator/*`）；只做事件→授权→工单引用，不复制 kanban 与 loop 的状态机 |
 | `userenv/` | profile 环境变量读写面（N01：`~/.hermes/profiles/<name>/.env` 直读直写/敏感值掩码回显/原子替换+备份/审计 jsonl；挂载补丁待后续批） |
+| `team-library/` | 团队库读模型与建议选择（EvoTeam 吸收，2026-11-08）：家族＝四维身份＋候选名单＋版本史＋成败证据；只出 reuse/cold_start 建议，不接管派单（`/api/harness/team-library/*`） |
+| `handoff/` | 交接契约族：质量账本（只读）/验收断言/主张回执/阶段键/团队作用域交接规则（`handoff-rules.ts` 建议注入，不阻断派发） |
 
 ## 测试约定
 

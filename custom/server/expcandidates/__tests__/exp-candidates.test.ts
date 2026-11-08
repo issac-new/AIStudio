@@ -106,7 +106,8 @@ describe('store 幂等与审核', () => {
     // 直接用纯提取入库验证幂等：手工构造两轮指纹相同
     const { writeExpStore } = await import('../exp-store')
     const store = readExpStore()
-    const c = { id: 'exp-001', type: 'sop' as const, statement: 's', fingerprint: 'sop:a>b', evidence: [], status: 'candidate' as const, createdAt: 't', updatedAt: 't', injectedRuns: [] }
+    // 陈述须过反思守卫（EvoTeam 吸收批）：批准是人工决策点，泛泛/过短会被 422 拒收。
+    const c = { id: 'exp-001', type: 'sop' as const, statement: '同类任务先备齐改动证据再提交，避免重复返工', fingerprint: 'sop:a>b', evidence: [], status: 'candidate' as const, createdAt: 't', updatedAt: 't', injectedRuns: [] }
     store.candidates.push(c)
     store.nextSeq = 2
     writeExpStore(store)

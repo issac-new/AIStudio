@@ -1,0 +1,72 @@
+version: 1
+updated: '2026-11-08'
+# 团队库（EvoTeam 吸收，spec 2026-11-08-team-library-evolution）
+#
+# 团队身份只看四维：工作类型 / 改动或排查范围 / 必需专业角色 / 验证策略。
+# 业务域、仓库名、文件名、主题都不构成建队理由——同一协作模式可跨域复用。
+# candidate_roster 是候选名单：派单方按任务从中招募，不是固定全员上场。
+# evidence 只记任务 id 与成败，不记任务内容；版本变化必须留 version_history。
+families:
+  - family_id: impl-independent-verify
+    description: 跨文件实现与独立验证：先冻结改动面与验收，再由实现者改码、独立验证者复跑证据后给结论
+    identity:
+      work_type: implementation
+      change_scope: cross-file
+      required_roles: [implementer, verifier]
+      verification_strategy: independent-rerun
+    keywords: [实现, 修改, 重构, 修复, 跨文件, 测试, 验证, implement, refactor, fix, verify]
+    candidate_roster: [orchestrator, worker-coder, worker-tester]
+    handoff_family_id: hf-delivery
+    version: 1
+    status: active
+    evidence:
+      task_ids: []
+      successful: []
+      failed: []
+    version_history:
+      - version: 1
+        changed_at: '2026-11-08'
+        reason: 种子：由列编排 todo→in_progress→review→verify 的既有协作模式抽象
+        members: [orchestrator, worker-coder, worker-tester]
+
+  - family_id: incident-root-cause
+    description: 故障排查与根因根治：先复现并定位，再修复与回归，最后把根因写成机制改进而不是口头结论
+    identity:
+      work_type: troubleshooting
+      change_scope: service-or-pipeline
+      required_roles: [incident-commander, fixer, verifier]
+      verification_strategy: reproduce-then-regress
+    keywords: [故障, 排障, 根因, 复现, 回归, 事故, incident, root-cause, reproduce, regress]
+    candidate_roster: [ops-incident-commander, ops-devops, ops-sre, ops-eval]
+    version: 1
+    status: active
+    evidence:
+      task_ids: []
+      successful: []
+      failed: []
+    version_history:
+      - version: 1
+        changed_at: '2026-11-08'
+        reason: 种子：由运维域事件响应与复盘的既有协作模式抽象
+        members: [ops-incident-commander, ops-devops, ops-sre, ops-eval]
+
+  - family_id: research-synthesis
+    description: 资料调研与综述：多源检索、交叉核验、结论分级引用，区分决定性发现与参考信息
+    identity:
+      work_type: research
+      change_scope: multi-source
+      required_roles: [researcher, synthesizer, verifier]
+      verification_strategy: cross-source-citation
+    keywords: [调研, 研究, 综述, 检索, 对比, 论文, 引用, research, survey, compare, citation]
+    candidate_roster: [orchestrator, worker-researcher, worker-tester]
+    version: 1
+    status: active
+    evidence:
+      task_ids: []
+      successful: []
+      failed: []
+    version_history:
+      - version: 1
+        changed_at: '2026-11-08'
+        reason: 种子：由调研吸收轮的既有协作模式抽象
+        members: [orchestrator, worker-researcher, worker-tester]

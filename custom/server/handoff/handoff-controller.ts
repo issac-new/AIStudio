@@ -6,10 +6,11 @@ import Router from '@koa/router'
 
 import { readAllBoards } from '../delivery/boards-reader'
 import { resolveKanbanHome } from '../delivery/kanban-home'
-import { fail as httpFail, ok } from '../lib/http'
+import { fail as httpFail, ok, bodyOf } from '../lib/http'
 import { checkAcceptance, parseCriterion, probeArtifacts, type AcceptanceEvidence } from './acceptance'
 import { verifyClaims, receiptFactsOf, type ClaimInput } from './claims'
 import { computeHandoffQuality, mergeBoardsForHandoff } from './handoff-quality'
+import { checkHandoffConformance, loadHandoffRules, renderHandoffRuleLine, selectHandoffRule } from './handoff-rules'
 
 export const handoffRoutes = new Router()
 
@@ -106,4 +107,73 @@ handoffRoutes.post('/claims/verify', async (ctx) => {
   }
   const report = verifyClaims(taskId, claims, receiptFactsOf(records))
   ok(ctx, { report, knownReceipts: records.length })
+})
+
+/**
+ * 团队作用域交接规则（EvoTeam 吸收，2026-11-08）：
+ *   GET  /rules                                    规则库读模型（available:false 给原因）
+ *   POST /rules/select { from?, to, trigger?, familyId? }  选一条适用规则（NONE=null）
+ *   POST /rules/conformance { ruleId, familyId?, presentEvidence[] }  回执侧缺项检查
+ * 建议面：不阻断派发、不判失败；缺证据只报 missing。
+ */
+handoffRoutes.get('/rules', (ctx) => {
+  const report = loadHandoffRules()
+  ok(ctx, report.available
+    ? { available: true, source: report.source, updated: report.updated, families: report.families }
+    : { available: false, reason: report.reason, source: report.source })
+})
+
+handoffRoutes.post('/rules/select', (ctx) => {
+  const body = bodyOf<{ from?: unknown; to?: unknown; trigger?: unknown; familyId?: unknown }>(ctx)
+  const to = typeof body.to === 'string' ? body.to.trim() : ''
+  if (!to) {
+    httpFail(ctx, 400, 'to 必填（目标列/角色）', { code: 'no_target' })
+    return
+  }
+  const report = loadHandoffRules()
+  if (!report.available) {
+    ok(ctx, { available: false, reason: report.reason, source: report.source, selection: null, line: null })
+    return
+  }
+  const selection = selectHandoffRule(report.families, {
+    from: typeof body.from === 'string' ? body.from : null,
+    to,
+    trigger: typeof body.trigger === 'string' ? body.trigger : null,
+    familyId: typeof body.familyId === 'string' ? body.familyId : null,
+  })
+  ok(ctx, {
+    available: true,
+    source: report.source,
+    selection,
+    line: selection.rule ? renderHandoffRuleLine(selection.rule) : null,
+  })
+})
+
+handoffRoutes.post('/rules/conformance', (ctx) => {
+  const body = bodyOf<{ ruleId?: unknown; familyId?: unknown; presentEvidence?: unknown }>(ctx)
+  const ruleId = typeof body.ruleId === 'string' ? body.ruleId.trim() : ''
+  if (!ruleId) {
+    httpFail(ctx, 400, 'ruleId 必填', { code: 'no_rule' })
+    return
+  }
+  const report = loadHandoffRules()
+  if (!report.available) {
+    ok(ctx, { available: false, reason: report.reason, source: report.source, conformance: null })
+    return
+  }
+  const familyId = typeof body.familyId === 'string' ? body.familyId.trim() : ''
+  const families = familyId ? report.families.filter((f) => f.familyId === familyId) : report.families
+  const matches = families.flatMap((f) => f.rules).filter((r) => r.ruleId === ruleId)
+  if (matches.length === 0) {
+    httpFail(ctx, 404, `规则不存在：${ruleId}${familyId ? `（家族 ${familyId}）` : ''}`, { code: 'rule_not_found' })
+    return
+  }
+  if (matches.length > 1) {
+    httpFail(ctx, 409, `ruleId 跨家族重复（${matches.length} 条），请指定 familyId`, { code: 'ambiguous_rule' })
+    return
+  }
+  const present = Array.isArray(body.presentEvidence)
+    ? body.presentEvidence.filter((x): x is string => typeof x === 'string')
+    : []
+  ok(ctx, { available: true, source: report.source, conformance: checkHandoffConformance(matches[0], present) })
 })

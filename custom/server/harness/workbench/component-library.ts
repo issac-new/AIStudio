@@ -20,6 +20,7 @@ import { dirname, join, resolve } from 'node:path'
 
 import { atomicWriteJson } from '../../lib/fs-store'
 import { underWebUi } from '../../lib/paths'
+import type { ArtifactProvenance } from '../../lib/provenance'
 import type { Proposal, SurfaceKey, Variant } from './types'
 
 export interface ComponentEvidence {
@@ -51,6 +52,8 @@ export interface ComponentEntry {
   label?: string
   /** 入库时的任务域（W3，2026-11-05）：跨域 donor 才是可迁移经验。旧条目缺席按 general。 */
   domain?: string | null
+  /** 产出侧 provenance（EvoTeam 吸收，2026-11-08）：模型/执行者/时刻；旧条目缺席=未知。 */
+  provenance?: ArtifactProvenance
 }
 
 export interface ComponentLibrary {
@@ -124,7 +127,7 @@ export function recordComponent(
   proposal: Proposal,
   variant: Variant,
   evidence: ComponentEvidence,
-  opts: { actor?: string; at?: string } = {},
+  opts: { actor?: string; at?: string; provenance?: ArtifactProvenance } = {},
 ): RecordResult {
   const content = String(variant.content ?? '')
   const files = variant.files ?? []
@@ -147,6 +150,7 @@ export function recordComponent(
     promotedBy: String(opts.actor ?? 'operator'),
     ...(variant.label ? { label: variant.label } : {}),
     domain: proposal.domain ?? 'general',
+    ...(opts.provenance ? { provenance: opts.provenance } : {}),
   }
   lib.entries.push(entry)
   writeLibrary(lib)

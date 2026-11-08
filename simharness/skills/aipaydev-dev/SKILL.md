@@ -41,6 +41,8 @@ status: draft
 5. **问题沉淀**（使用中随时，不等项目变化）：解决的新问题（新复用解法/新约束/新坑）三选一沉淀——`inventory-update` 入清单 / recipes.md 加配方或注意事项 / `gate-rules.sh --persist` 入规则——并 `bash scripts/trace-log.sh --decision` 留痕（问题→方案→沉淀物）。
 
 红线：① 指纹只感知结构变化；语义变化（约束失效/接口语义变更）靠 AI 编码中发现即更新清单，不等 refresh。② 清单先完整生成再原子替换，条目骤降 >50% 视为失败保留旧清单（last-good）。
+
+**轮间教训（lessons.md）**：`references/lessons.md` 由 `simharness/mux/mx-retro-sink.sh` 在 G6 复盘后自动追加（改进项/教训/根因行，指纹去重），随 `install_skills` 分发；使用本技能前先读该文件，把历史轮次的教训当约束而不是参考。
 ## 按需读取引用索引（自动生成，勿手改——由 generate-skill.sh 依据 profile 档生成）
 
 | 文件 | 用途 |
