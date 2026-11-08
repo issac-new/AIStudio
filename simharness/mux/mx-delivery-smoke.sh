@@ -18,7 +18,14 @@ CASE_ID="dlv-$(date +%Y%m%d-%H%M%S)"
 TS="$(date +%Y%m%d-%H%M%S)"
 OUT="$EVID_DIR/delivery-smoke/$TS"; mkdir -p "$OUT"
 SCEN_LOG="$OUT/smoke.log"; touch "$SCEN_LOG"
-note() { log "$*" | tee -a "$SCEN_LOG"; }
+# note 双写审计（2026-11-08 run28 复盘批 N29-1 同源修正）：log() 只写 stderr，
+# `log | tee` 的 tee 收空 stdin；此处直接追加 smoke.log，不写 stdout。
+note() {
+  local _line
+  _line="[mux $(date +%H:%M:%S)] $*"
+  printf '%s\n' "$_line" >&2
+  [[ -n "${SCEN_LOG:-}" ]] && printf '%s\n' "$_line" >> "$SCEN_LOG" 2>/dev/null || true
+}
 
 REPO="$OUT/central-repo.git"
 WORK="$OUT/central"
