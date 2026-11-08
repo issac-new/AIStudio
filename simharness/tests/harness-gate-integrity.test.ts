@@ -593,9 +593,9 @@ from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, DELIVE
 ${code}`], { encoding: 'utf-8' })
   }
 
-  it('矩阵常量=对话 9/11/17/19/21 + 操作 8/10/25 + 效果 7/20/24 + skill 13（生成≥3/调用≥2）+ delivery 门禁灯 23（≥1）+ 产品成效 2 项（run14 起，§5.6），分母=15', () => {
+  it('矩阵常量=对话 9/11/17/19/21 + 操作 25（N28-5 四态收敛：8/10 转 none 型消息流承载）+ 效果 7/20/24 + skill 13（生成≥3/调用≥2）+ delivery 门禁灯 23（≥1）+ 产品成效 2 项（run14 起，§5.6），分母=13（N28-5 收敛后）', () => {
     const out = py('print(sorted(DIALOG_STEPS), sorted(OP_STEPS), sorted(EFFECT_STEPS), sorted(SKILL_STEPS), sorted(DELIVERY_STEPS), SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, STEP_TOTAL, PRODUCT_OUTCOME_TOTAL, TOTAL)')
-    expect(out).toContain('[9, 11, 17, 19, 21] [8, 10, 25] [7, 20, 24] [13] [23] 3 2 1 13 2 15')
+    expect(out).toContain('[9, 11, 17, 19, 21] [25] [7, 20, 24] [13] [23] 3 2 1 11 2 13')  // N28-5：OP 收敛后分母 15→13
   })
 
   it('产品成效两项（run13 复盘 B6/F17）：exec=幂等执行输出件≥1、frames=下单流程帧≥2；记单降级只免 frames 项', () => {
@@ -625,7 +625,7 @@ print('eval-full:', m, t)`)
     expect(out).toContain('full: True True False')
     expect(out).toContain('degraded-ticket: True False True')
     // evaluate_full：步 13 项全缺 + exec 达标 + frames 记单降级 = 2/15
-    expect(out).toContain('eval-full: 2 15')
+    expect(out).toContain('eval-full: 2 13')
   })
 
   it('空载荷=0/15；步绑定达标载荷=13/15（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
@@ -639,8 +639,8 @@ m, t, _ = evaluate(good, frame_exists=lambda n: True)
 print(f'{m}/{t}')
 m0, t0, _ = evaluate({}, frame_exists=lambda n: True)
 print(f'{m0}/{t0}')`)
-    expect(out).toContain('13/15')
-    expect(out).toContain('0/15')
+    expect(out).toContain('11/13')
+    expect(out).toContain('0/13')
   })
 
   it('对话缺/单帧/帧文件缺失/效果无锚/skill 帧不足 → 对应项不计入；达标路径不受邻步影响', () => {
@@ -658,8 +658,8 @@ _, _, detail = evaluate({str(k): v for k, v in cases.items()},
                         frame_exists=lambda n: not n.startswith('10-'))
 print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     expect(out).toContain('9:False')
-    expect(out).toContain('8:False')
-    expect(out).toContain('10:False')
+    expect(out).toContain('13:False')
+    expect(out).toContain('9:False')
     expect(out).toContain('7:False')
     expect(out).toContain('11:True')
     expect(out).toContain('13:False')

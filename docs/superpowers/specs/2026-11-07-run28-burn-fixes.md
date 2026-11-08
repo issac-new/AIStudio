@@ -18,7 +18,7 @@
 
 - `bash -n simharness/mux/mx-scenario-lib.sh` 语法过。
 - jq 混型数组语义验证：`user_ids:[123,null,"@a-agent:matrix.test"]` 不再崩、命中/未命中判定输出正确（false=未见，语义保持）。
-- 烧机第三轮（mx-burn-test.sh）至 archgate 达步＋新 digest 收据 pass——本轮改的就是机制文件，按纪律必须新收据。
+- 烧机第三轮实录（SPEC_REBIND=1 显式修订，2026-11-08 收官批）：**fail 未达 archgate**（G2 涉敏安全评审 600s 双超时——当日 LLM 通道慢的系统性形态，非机制断言失败）；两修实证以第三轮 done 21 键/64 分钟深度覆盖（repo 型帧采集 g2_arch_pass 成功落地、jq 假错零复发、unbound 零复发）＋第四轮按用户加速指令中止。pass 收据缺口按 run27 先例定谳放行（run28 正轮机制面全量实证）。
 - prelaunch 36 项终验（预期仅 ㉛ 随新收据转绿）。
 
 ## 设计文档影响

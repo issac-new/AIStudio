@@ -12,6 +12,10 @@
   HARD：任何语境出现即违规（自造词/已被点名禁止的词）
   SOFT：语境敏感词，命中输出 WARN 不拦退出码（人工判断）
 新增词：被用户新点名的词直接加进 HARD；这是活文档。
+加词即回扫纪律（N28-4，run28 收官批）：向 HARD/任何档新增词后，当日必须跑一次
+  bash simharness/tests/jargon-source-gate.test.sh（读提交态全量扫机制文件清单）
+清存量至绿——run28 实录：「落档」后加进词表但未回扫，mx-report-gen.py 存量携带到
+A10 报告审计才暴露（jargon 双检查本同源此文件，缺的只是加词后的存量回扫动作）。
 """
 import sys
 import re

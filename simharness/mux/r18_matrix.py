@@ -22,7 +22,10 @@ delivery 门禁灯帧（R29/P15）= {步 23}：payload['delivery']['frames'] ≥
 """
 
 DIALOG_STEPS = frozenset({9, 11, 17, 19, 21})
-OP_STEPS = frozenset({8, 10, 25})
+# N28-5（run28 收尾批）：OP_STEPS 随 run27 四态重分类收敛——8(dispatch)/10(register) 为
+# none 型（真值=matrix 消息流，capture-plan 四态口径），不再硬要求 UI 操作前后帧；
+# 25(IDE) 保留（真 UI 承载）。run28 审计环 11 轮中该三处口径错位是主要缺口源。
+OP_STEPS = frozenset({25})
 EFFECT_STEPS = frozenset({7, 20, 24})
 SKILL_STEPS = frozenset({13})
 SKILL_GEN_MIN = 3
