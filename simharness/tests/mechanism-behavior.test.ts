@@ -328,7 +328,9 @@ echo "REVIVES:$(grep -c 'wait-revive' "$EVID_DIR/issues.log" 2>/dev/null || echo
     const missing = join(evid, 'missing.json')
     writeFileSync(missing, JSON.stringify({ steps: { '7': { ops: [] } } }), 'utf8')
     const full = join(evid, 'full.json')
-    writeFileSync(full, JSON.stringify({ steps: { '7': { effect: [{ text: 'x', evidence: ['a'] }] } } }), 'utf8')
+    // 合法形状（run28 复盘批）：effect 是 {text, evidence:[{label,anchor}]}，不是数组；
+    // 旧夹具用数组会被 r18_matrix.step_ok 判未达标（此前 AttributeError 被 2>/dev/null 吞掉=假绿）。
+    writeFileSync(full, JSON.stringify({ steps: { '7': { effect: { text: 'x', evidence: [{ label: 'a', anchor: 'b' }] } } } }), 'utf8')
     const run = (payload: string) => bash(`
 set -u
 note() { :; }

@@ -107,12 +107,36 @@ def load_facts(run_dir: Path) -> dict:
         try:
             d = json.loads(rp.read_text(encoding="utf-8", errors="replace"))
             steps = d.get("steps", {}) if isinstance(d, dict) else {}
+            if not isinstance(steps, dict):
+                steps = {}
         except Exception as e:  # 数据损坏如实记录
             f["r18_error"] = str(e)
     f["steps"] = steps
     f["step_count"] = len(steps)
     f["dialog_count"] = sum(1 for s in steps.values() if isinstance(s, dict) and s.get("dialogs"))
-    f["frame_count"] = sum(len(s.get("frames", [])) for s in steps.values() if isinstance(s, dict))
+
+    def _frame_count(step) -> int:
+        """帧数按生产者契约统计：ops[].frames + delivery.frames + skill.gen/invoke。
+
+        此前的 steps[n].frames 不是 r18-collect 产出的字段，真实载荷恒计 0。
+        """
+        if not isinstance(step, dict):
+            return 0
+        total = 0
+        for op in step.get("ops") or []:
+            if isinstance(op, dict) and isinstance(op.get("frames"), list):
+                total += len(op["frames"])
+        dlv = step.get("delivery")
+        if isinstance(dlv, dict) and isinstance(dlv.get("frames"), list):
+            total += len(dlv["frames"])
+        sk = step.get("skill")
+        if isinstance(sk, dict):
+            for bucket in ("gen", "invoke"):
+                if isinstance(sk.get(bucket), list):
+                    total += len(sk[bucket])
+        return total
+
+    f["frame_count"] = sum(_frame_count(s) for s in steps.values())
     f["sources"]["r18"] = "evidence/r18-steps.json"
 
     # scenario.log：审批/派发/缺陷计数（真实工作量代理指标）

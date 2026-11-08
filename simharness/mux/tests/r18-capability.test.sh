@@ -93,9 +93,12 @@ echo "PASS ①生成器：对话全文/前后帧/效果/诚实缺席/覆盖位 �
 AUD=$(AIPAY_SIM_ROOT="$FX" python3 "$HERE/mx-report-audit.py" --run "$RUN" 2>&1 || true)
 must_fail() { echo "$AUD" | grep -qF "$1" || { echo "FAIL 审计应打回：$1"; echo "$AUD"; exit 1; }; }
 must_fail "R18 步 11 缺「对话全文」"       # 对话必采步 done 且无载荷 → 打回
-must_fail "R18 步 8 缺「操作前后帧」"      # 操作必采步
 must_fail "R18 步 7 缺「环节效果」"        # 效果必采步
 must_fail "R18 步 5 载荷全缺"              # 其余 done 步任一位在位即可（17/21 属对话必采集走上一类文案）
+# N28-5a（run28 收尾批）：8/10 转 none 型（真值=matrix 消息流），不得再要求操作前后帧
+if echo "$AUD" | grep -q 'R18 步 8 缺「操作前后帧」'; then
+  echo "FAIL N28-5a 回归：步 8 不应再按操作步打回"; echo "$AUD"; exit 1
+fi
 if echo "$AUD" | grep -qE "R18 步 (9|25) "; then
   echo "FAIL 审计误打回已采步 9/25"; echo "$AUD"; exit 1
 fi
@@ -114,5 +117,25 @@ assert len(d['steps']['26']['ops']) == 1, 'op 未合并'
 assert d['steps']['9']['dialogs'][0]['anchor'] == '$FIXANCHOR', '既有载荷被改写'
 print('PASS ③采集器：op/effect 合并、既有载荷不动')
 PY
+
+# ── ④ validate 子命令（2026-11-08 run28 复盘批）─────────
+# 坏形状（effect.evidence 字符串元素）exit 1 并列出步/路径；恢复好形状 exit 0。
+# run28 实锤：坏形状一路带到报告生成才 AttributeError，写入/审计两端都需要单一校验源。
+cp "$EV/r18-steps.json" "$EV/r18-steps.json.good"
+python3 - "$EV/r18-steps.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p, encoding='utf-8'))
+d['steps']['7'] = {'effect': {'text': '坏形状夹具', 'evidence': ['commit=abc']}}
+json.dump(d, open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+PY
+_rc=0
+_out=$(AIPAY_SIM_ROOT="$FX" python3 "$HERE/r18-collect.py" --run "$RUN" validate 2>&1) || _rc=$?
+[ "$_rc" -eq 1 ] || { echo "FAIL validate 坏形状 rc=$_rc（期望 1）"; echo "$_out"; exit 1; }
+echo "$_out" | grep -q '"step": "7"' || { echo "FAIL validate 输出未定位步 7"; echo "$_out"; exit 1; }
+echo "$_out" | grep -q 'effect.evidence\[0\]' || { echo "FAIL validate 输出未给出路径"; echo "$_out"; exit 1; }
+mv "$EV/r18-steps.json.good" "$EV/r18-steps.json"
+AIPAY_SIM_ROOT="$FX" python3 "$HERE/r18-collect.py" --run "$RUN" validate >/dev/null
+echo "PASS ④validate：坏形状定位到步/路径，好形状通过"
 
 echo "== R18 配套能力端到端 全部通过 =="

@@ -198,14 +198,23 @@ if SNAP.exists():
                 state[k.strip()] = v.strip()
 
 # ── R18 载荷加载（缺失/坏 JSON=空载荷，渲染诚实缺席、审计打回；不让生成器崩）──
+# 形状校验单一事实源=r18_matrix.schema_errors：run28 实锤 effect.evidence 字符串数组
+# 一路带到 r18_block 才 AttributeError（06:30:24 报告生成失败）——加载点即校验告警，
+# 渲染侧一律走 as_dict/as_list 安全访问，坏形状显示为可见缺口而非崩溃。
 R18 = {}
 R18_FILE_OK = R18F.exists()
 if R18F.exists():
     try:
         _r18raw = json.loads(R18F.read_text(encoding='utf-8', errors='replace'))
-        R18 = _r18raw.get('steps', {}) if isinstance(_r18raw, dict) else {}
+        R18 = r18_matrix.as_dict(_r18raw.get('steps')) if isinstance(_r18raw, dict) else {}
     except (json.JSONDecodeError, OSError) as e:
         print(f'[mx-report-gen] WARN r18-steps.json 解析失败按空载荷处理：{e}', file=sys.stderr)
+    _r18_schema = r18_matrix.schema_errors(R18)
+    for _step, _path, _expected, _got in _r18_schema[:20]:
+        print(f'[mx-report-gen] WARN R18 schema 步 {_step} {_path}：期望 {_expected}，实为 {_got}'
+              f'（r18-collect validate 可定位；坏形状按未达标渲染）', file=sys.stderr)
+    if len(_r18_schema) > 20:
+        print(f'[mx-report-gen] WARN R18 schema 另有 {len(_r18_schema) - 20} 处未列', file=sys.stderr)
 
 # ── 方案原文解析（双格式，V8.2 配套①）──
 # V8.2 四段式：标题行 `**步 N｜标题**`，四段 **这步做什么**/**交付物及质量判据**/
@@ -2475,6 +2484,7 @@ def md_inline(text: str) -> str:
     return _md_tags(s)
 
 def _r18_msg_html(m):
+    m = r18_matrix.as_dict(m)
     sender = H.escape(str(m.get('sender', '?')))
     ts = H.escape(str(m.get('ts', '')))
     body = str(m.get('body', '')).strip()
@@ -2484,15 +2494,18 @@ def _r18_msg_html(m):
 
 def _r18_frame_tags(frames, step, view=''):
     out = []
-    for f in frames:
+    for f in r18_matrix.as_list(frames):
         # dict 帧形态 {file, caption}（2026-10-22 run22 收尾链立法）：caption 覆盖
         # 自动图注——补拍标注/V8.4③ 合规降级的机器可判载体（audit _cap_of 读报告
-        # figcaption）；字符串形态兼容不破。
+        # figcaption）；字符串形态兼容不破。非字符串/无 file 的坏元素跳过并显式占位。
         _cap_override = ''
         if isinstance(f, dict):
             _cap_override = str(f.get('caption', '')).strip()
             f = f.get('file', '')
-        name = str(f)
+        name = r18_matrix.frame_name(f)
+        if not name:
+            out.append('<p class="no-evidence">帧引用形状非法（期望字符串文件名或 {file, caption}）——r18-collect validate 定位</p>')
+            continue
         if not name.endswith('.png'):
             name += '.png'
         p = STEPS_DIR / name
@@ -2672,10 +2685,10 @@ def step_evidence_supplement(n: int) -> str:
             arts.append(f'{name}：{state_txt} {aref or rel}@{asha or "?"}')
     if arts:
         rows.append('<div class="sup-row"><b>交付物实物</b>：' + H.escape('；'.join(arts[:6])) + '</div>')
-    payload = R18.get(str(n)) or R18.get(n) or {}
-    dlg = payload.get('dialogs') or []
+    payload = r18_matrix.as_dict(R18.get(str(n)) or R18.get(n))
+    dlg = [d for d in r18_matrix.as_list(payload.get('dialogs')) if isinstance(d, dict)]
     if dlg:
-        msgs = dlg[0].get('messages') or []
+        msgs = [m for m in r18_matrix.as_list(dlg[0].get('messages')) if isinstance(m, dict)]
         lines = [str(m.get('body') or '') for m in msgs if m.get('body')]
         if lines:
             ex = ' ／ '.join(x.replace('\n', ' ')[:90] for x in lines[-3:])
@@ -2688,19 +2701,36 @@ def step_evidence_supplement(n: int) -> str:
 
 
 def r18_block(n: int) -> str:
-    """步骤 n 的 R18 载荷渲染。载荷空 → 诚实「未采集」章（审计查 8 按线打回）。"""
-    payload = R18.get(str(n)) or R18.get(n) or {}
-    dialogs = payload.get('dialogs') or []
-    ops = payload.get('ops') or []
-    effect = payload.get('effect') or {}
-    skill = payload.get('skill') or {}
-    sk_gen = skill.get('gen') or []
-    sk_invoke = skill.get('invoke') or []
+    """步骤 n 的 R18 载荷渲染。载荷空 → 诚实「未采集」章（审计查 8 按线打回）。
+
+    形状非法一律按未达标渲染并在块内显式呈现（run28 实锤：effect.evidence 字符串
+    元素直接 AttributeError 击穿报告生成；坏形状不得让生成器崩，也不得冒充已采集）。
+    """
+    _raw = R18.get(str(n)) if str(n) in R18 else R18.get(n)
+    _schema = [err for err in r18_matrix.schema_errors({str(n): _raw}) if err[0] == str(n)] if _raw is not None else []
+    payload = r18_matrix.as_dict(_raw)
+    dialogs = [d for d in r18_matrix.as_list(payload.get('dialogs')) if isinstance(d, dict)]
+    ops = [o for o in r18_matrix.as_list(payload.get('ops')) if isinstance(o, dict)]
+    effect = r18_matrix.as_dict(payload.get('effect'))
+    skill = r18_matrix.as_dict(payload.get('skill'))
+    sk_gen = r18_matrix.as_list(skill.get('gen'))
+    sk_invoke = r18_matrix.as_list(skill.get('invoke'))
     sk_cnt = len(sk_gen) + len(sk_invoke)
-    dlv = payload.get('delivery') or {}
-    dlv_frames = dlv.get('frames') or []
+    dlv = r18_matrix.as_dict(payload.get('delivery'))
+    dlv_frames = r18_matrix.as_list(dlv.get('frames'))
     counts = f'd:{len(dialogs)};o:{len(ops)};e:{1 if effect else 0};s:{sk_cnt};v:{len(dlv_frames)}'
+    _schema_html = ''
+    if _schema:
+        _items = '；'.join(f'{path} 期望 {expected}，实为 {got}'
+                           for _step, path, expected, got in _schema[:6])
+        if len(_schema) > 6:
+            _items += f'；另有 {len(_schema) - 6} 处'
+        _schema_html = (f'<p class="no-evidence">R18 载荷形状非法：{H.escape(_items)}'
+                        f'——r18-collect validate 可定位；坏形状按未达标计，不冒充已采集。</p>')
     if not (dialogs or ops or effect or sk_cnt or dlv_frames):
+        if _schema:
+            return (f'<details class="st-r18 r18-empty"><summary>全量呈现（载荷形状非法·采集缺口）</summary>'
+                    f'<div class="r18-body" data-r18="{counts}">{_schema_html}</div></details>')
         # §5.5 空态禁渲染（2026-10-07 修复）：非必采步零载荷不渲染零信息行；
         # 必采步缺口保留可见性并挂记入问题清单键（空态在报告头计数并逐项对应问题单编号）。
         _must = (r18_matrix.DIALOG_STEPS | r18_matrix.OP_STEPS | r18_matrix.EFFECT_STEPS
@@ -2716,7 +2746,7 @@ def r18_block(n: int) -> str:
              + (f' · skill {sk_cnt}' if n in r18_matrix.SKILL_STEPS or sk_cnt else '')
              + (f' · 门禁灯 {len(dlv_frames)}' if n in r18_matrix.DELIVERY_STEPS or dlv_frames else '')
              + f'）</summary>',
-             f'<div class="r18-body" data-r18="{counts}">']
+             f'<div class="r18-body" data-r18="{counts}">{_schema_html}']
     for d in dialogs:
         anchor = str(d.get('anchor', ''))
         room = str(d.get('room', ''))
@@ -2727,7 +2757,7 @@ def r18_block(n: int) -> str:
                      + '</div>' + ''.join(_r18_msg_html(m) for m in (d.get('messages') or []))
                      + '</div>')
     for op in ops:
-        _fr = op.get('frames') or []
+        _fr = r18_matrix.as_list(op.get('frames'))
         _tags = _r18_frame_tags(_fr, n, view=str(op.get('title') or ''))
         # 孤儿帧自动补挂（run22 复盘根治⑤）：op 注册帧渲染为空（注册缺席/帧键错位）但盘上
         # 存在步键前缀帧（r18 采集链真产物）——按步键扫盘补挂，诚实标注来源；步块 imgs 侧的
@@ -2759,7 +2789,11 @@ def r18_block(n: int) -> str:
     if effect:
         parts.append('<div class="r18-sec r18-effect"><div class="r18-sec-hd"><b>环节效果</b></div>'
                      f'<p class="r18-effect-text">{md_bold(str(effect.get("text", "")))}</p>')
-        for ev in (effect.get('evidence') or []):
+        for ev in r18_matrix.as_list(effect.get('evidence')):
+            if not isinstance(ev, dict):
+                parts.append('<div class="r18-ev no-evidence">证据项形状非法（期望 {label, anchor}，'
+                             '实为 ' + H.escape(type(ev).__name__) + '）——r18-collect validate 定位</div>')
+                continue
             parts.append(f'<div class="r18-ev">◦ {H.escape(str(ev.get("label", "")))}：'
                          f'<code>{H.escape(str(ev.get("anchor", "")))}</code></div>')
         parts.append('</div>')
@@ -4903,10 +4937,13 @@ for _n, _t, _g, _m in STEPS:
 # 并入引用集——ops 帧随 r18-steps.json 注册即渲染进报告（步 8/10/25「帧走 r18 ops 通道」
 # 先例），此前 _effective 只算步块 imgs 面，7 张 ops 帧被误报「盘上未引用」污染值守信号
 # （deliver_gate/report_view 存量误报+本批补拍三键）。
-for _sn, _sv in (R18 or {}).items():
-    for _op in ((_sv or {}).get('ops') if isinstance(_sv, dict) else None) or []:
-        for _fr in (_op.get('frames') or []):
-            _pre = _fr[:-4] if _fr.endswith('.png') else _fr
+for _sn, _sv in r18_matrix.as_dict(R18).items():
+    for _op in r18_matrix.as_list(r18_matrix.as_dict(_sv).get('ops')):
+        for _fr in r18_matrix.as_list(r18_matrix.as_dict(_op).get('frames')):
+            _name = r18_matrix.frame_name(_fr)
+            if not _name:
+                continue
+            _pre = _name[:-4] if _name.endswith('.png') else _name
             _effective.setdefault(_pre, f'r18:{_sn}')
 total_imgs = sum(1 for pre in _effective if (STEPS_DIR / f'{pre}.png').exists())
 unique_imgs = len({pre for pre in _effective if (STEPS_DIR / f'{pre}.png').exists()})
@@ -5218,10 +5255,10 @@ for start, end, pname, pdesc, c1, c2 in PHASES:
         # 必采步 R18 载荷缺口的步级警示（§5.5 空态条款：步块可见+报告头计数+记入问题清单编号）
         _r18_must = (r18_matrix.DIALOG_STEPS | r18_matrix.OP_STEPS | r18_matrix.EFFECT_STEPS
                      | r18_matrix.SKILL_STEPS | r18_matrix.DELIVERY_STEPS)
-        if n in _r18_must and done and not (R18.get(str(n)) or R18.get(n)):
+        if n in _r18_must and done and not r18_matrix.as_dict(R18.get(str(n)) or R18.get(n)):
             # 仅当轮执行步挂未采集徽章；沿用步（done=False 夹具态）按 V8.4④ 显示「不在本轮执行范围」声明态
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">R18 未采集·记入问题清单在案</span>'
-        elif done and not (R18.get(str(n)) or R18.get(n)) and n < 26:
+        elif done and not r18_matrix.as_dict(R18.get(str(n)) or R18.get(n)) and n < 26:
             # V8.17 §5.5 三红线（run15 复盘 F2）：非必采步的载荷全缺也挂黄标（审计契约=完成步任一载荷
             # 在位即可；run15 实测 9 步全缺静默呈现为「正常步」——降级在案≠达标，须可见）
             status += '<span class="gmark" style="background:#fef3c7;color:#b45309">载荷全缺（降级在案）</span>'
