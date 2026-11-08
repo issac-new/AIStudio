@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [v2.100.1] - 2026-11-08
+EvoTeam 收尾批（随 AIStudio v1.0.14-overlay 发布轮进位）。门禁 59 / 变量 / 框架 / 运行时档位均不变：本轮无新增门禁、无预算上调。
+- **lessons 保留面登记**：generate-skill.sh PROJECT_SPECIFIC_FILES 只读保留 case 补 references/lessons.md——实测 `--upgrade` 本不触碰该文件，登记为防「重写策略重构」的单一事实源（D8 定谳：RESUME=1 整体跳过 SKILL.md，重写之忧实测证伪）。
+- **夹具守门 test-lessons-preserve.sh**：create→手改→upgrade 三段字节级保留断言，锁 D8 定谳不被未来重构静默推翻。
+- 随批：附录 A 600→601；scope 同批声明；security 面让位移交留痕（他会话复盘批并行根治同域，decisions.jsonl 2026-11-08T22:45/23:10 在案）。
+
 ## [v2.100.0] - 2026-11-07
 R143 运行时刷新＋吸收＋JVM 全栈回归轮（第九轮同型例行）。基线 18/22 行移动（历轮最高）；门禁 59 / 变量 204 / 框架 81 / 运行时 15 均不变：本轮无新增门禁、无预算上调。
 - **R143 研究档与基线推进**（`docs/research/R143-runtime-refresh.md`＋`upstream-changelog.md` R143 节）：claude-code 2.1.319（安全大版本：denyInsteadOfPrompting/blockWritesOutsideWorkingDirectories/Bash 环境变量前缀权限绕过修复）/codex-cli 0.167.0（托管命令检查点全新人工批准、PreToolUse 先于 Guardian）/ruflo 3.72.2（10 minor：v3.64 验证结果学习环、v3.65 tainted 防作弊、上下文委派引文 SHA-256 锚）/gstack v1.96.0.0（tag 通道恢复；finding 以 Severity 字段定级、fix-check 永不充当 pass、manual_only）/dsh 0.2.2-rc.1（CUA 权限面+apply_patch 转正）/claude-mem 15.11.0/openspec 1.16.1/codex-security 0.8.3/gsd-core 1.20.1/comet 0.5.2/graphify 0.9.103/ocr 1.13.6/impeccable 4.8.0/superpowers 7.0.2/pi 1.5.0/mattpocock v1.3.2/diagram 2.6.142/semantica tip；src-pins gstack 6666b729/superpowers 22f0b463；offline-manifest 九行追平＋R143 复扫注释。

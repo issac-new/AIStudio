@@ -3,7 +3,7 @@
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
 - 快照基线：`30e975f32`。
-- 当前版本：`1.0.13-overlay`。
+- 当前版本：`1.0.14-overlay`。
 - 核实日期：2026-11-06。
 - 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 594 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
@@ -178,7 +178,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 | 对象 | 当前值 | 权威载体 |
 |---|---|---|
-| 整体源码包 | `1.0.13-overlay`，tag `v1.0.13-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
+| 整体源码包 | `1.0.14-overlay`，tag `v1.0.14-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
 | 驾驶舱模块声明 | `1.0.9-studio.12` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.23.0-team.1` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `3.17.2` | `vendor/zcode/package.json` |
@@ -192,8 +192,8 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 当前两件主资产是：
 
-1. `aistudio-full-1.0.13-overlay-src.tar.gz`。
-2. `swarm-yuan-offline-v1.0.13-overlay-everything.zip`。
+1. `aistudio-full-1.0.14-overlay-src.tar.gz`。
+2. `swarm-yuan-offline-v1.0.14-overlay-everything.zip`。
 
 两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产；ModelScope 的 `aistudio/` 只替换 full 包，仓根放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:104-134`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
 
@@ -231,7 +231,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 2026-11-06 结构重排批已把三处旧值修齐，当前不再需要主动避开：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v1.0.9／hermes-agent v0.23.0／zcode 3.17.2／驾驶舱 studio.12／agent teams v0.23.0-team.1／yuan v2.99.3／整体包 1.0.13-overlay），核实日 2026-11-06。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:67-90`
+1. 数字总账 §C 全表随载体对齐（hermes-studio v1.0.9／hermes-agent v0.23.0／zcode 3.17.2／驾驶舱 studio.12／agent teams v0.23.0-team.1／yuan v2.99.3／整体包 1.0.14-overlay），核实日 2026-11-06。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:67-90`
 2. 整合正本 §5.4 已把 2026-10-31 起的升级长注记收敛为「升级规则＋当前基线表」，历史来路归 git 与对应 spec；当前钉版以 `vendor/VENDOR.md` 为准。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,13`
 3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要已更正为 hermes-studio v1.0.9。维护时应保留这项修正，不要从旧报告把旧值复制回来。`RELEASE-MANIFEST.json:45,134`；`vendor/VENDOR.md:7-13`
 

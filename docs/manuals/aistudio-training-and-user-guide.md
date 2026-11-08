@@ -2,7 +2,7 @@
 
 本手册面向产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控六支团队。它帮助每支团队完成各自可检查的工作交付，并让需求、代码、测试、发布、运行和审计证据能够跨团队对账。它不讲“怎样把所有按钮点一遍”，只讲各团队怎样对结果负责。
 
-- 适用版本：AIStudio 1.0.13-overlay。
+- 适用版本：AIStudio 1.0.14-overlay。
 - 读者：产品需求分析团队、项目管理团队、研发团队、测试团队、运维监控团队、安全合规及审计内控团队。
 - 使用形态：浏览器 Web 版；桌面端差异不展开。
 - 核实日期：2026-11-03。
@@ -1039,9 +1039,9 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 
 本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。
 
-- 适用版本：AIStudio 1.0.13-overlay（package.json）
+- 适用版本：AIStudio 1.0.14-overlay（package.json）
 - 路由计数：routes=121（page 80 / redirect 41）；stageTabs=37；visitStates=158
-- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.17-studio.1 · agent-teams v0.23.0-team.1 · ycode 3.17.2 · yuan-skill v2.100.0
+- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.17-studio.2 · agent-teams v0.23.0-team.2 · ycode 3.17.2 · yuan-skill v2.100.1
 - 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
 
 全量路由清单（行序=注册链输出序；redirect 类不可直访）：

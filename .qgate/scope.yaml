@@ -577,3 +577,17 @@ paths:
   - custom/server/kanban/__tests__/handoff-observability.test.ts
   - custom/server/handoff/handoff-rules.ts
   - docs/superpowers/specs/2026-11-08-team-library-evolution.md
+  # 2026-11-08 v1.0.14 发布轮（spec 2026-11-08-release-v1.0.14-overlay）
+  - docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md
+  - RELEASE-NOTES.md
+  - RELEASE-MANIFEST.json
+  - package.json
+  - package-lock.json
+  - team/VERSION
+  - team/version.json
+  - skills/swarm-yuan/CHANGELOG.md
+  - docs/manuals/aistudio-training-and-user-guide.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - .gitignore

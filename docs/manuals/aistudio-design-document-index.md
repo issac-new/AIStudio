@@ -2,7 +2,7 @@
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
-- 快照基线：`5b8562f83`；核实日：2026-11-06；版本线：`1.0.13-overlay`（正本去脚手架批）。
+- 快照基线：`5b8562f83`；核实日：2026-11-06；版本线：`1.0.14-overlay`（正本去脚手架批）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
 <<<<<<< HEAD
 - 当前工作树根目录：**611 份 Markdown**（HEAD 全量跟踪；2026-11-08 SQL 标识符批＋1）；`archive/` 直接根：**2 份 Markdown**。
@@ -619,6 +619,7 @@
 - [2026-11-06-inject-seam-restore.md](../superpowers/specs/2026-11-06-inject-seam-restore.md)
 - [2026-11-06-platform-wiring-restore.md](../superpowers/specs/2026-11-06-platform-wiring-restore.md)
 - [2026-11-06-release-v1.0.13-overlay.md](../superpowers/specs/2026-11-06-release-v1.0.13-overlay.md)
+- [2026-11-08-release-v1.0.14-overlay.md](../superpowers/specs/2026-11-08-release-v1.0.14-overlay.md)
 - [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
 - [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
 - [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
