@@ -1,6 +1,6 @@
 import { describe, it, beforeAll, expect } from 'vitest'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
 // V8.4 证据纪律守门（2026-10-10 接线轮）：审计器帧四断言（①图注=画面描述 A5g /
@@ -114,6 +114,23 @@ describe('V8.4 帧四断言（审计器）', () => {
     expect(out).toContain('V8.4③ 帧晚于所属步落盘且无补拍标注')
     expect(out).toContain('release_done-op1-before')
     expect(out).toContain('带补拍标注的窗外/晚拍帧 1 张')
+  })
+
+  it('坏 R18 形状不崩溃：审计跑完并写缺口侧柜（run28 复盘批）', () => {
+    buildRun('20261010-v8-run13schema',
+      '<body><main class="main"></main></body>',
+      '',
+      { 7: { effect: { text: '工件入仓', evidence: ['commit=abc'] } }, 9: { dialogs: 'bad' } })
+    const r = runAudit('20261010-v8-run13schema')
+    const out = r.stdout + r.stderr
+    expect(out).not.toContain('Traceback')
+    expect(r.status).toBe(1)   // 坏形状必须判 FAIL，但不是崩溃
+    const findings = JSON.parse(readFileSync(
+      join(FIX, 'runs', '20261010-v8-run13schema', 'evidence', 'report-audit-findings.json'), 'utf8'))
+    const text = (findings.fails as string[]).join('\n')
+    expect(text).toContain('R18 载荷形状非法')
+    expect(text).toContain('步 7 effect.evidence[0]')
+    expect(text).toContain('步 9 dialogs')
   })
 })
 

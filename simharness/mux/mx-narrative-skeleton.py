@@ -52,7 +52,10 @@ r18 = {}
 r18f = RUN_DIR / 'evidence' / 'r18-steps.json'
 if r18f.exists():
     try:
-        r18 = json.loads(r18f.read_text(encoding='utf-8')).get('steps', {})
+        _r18raw = json.loads(r18f.read_text(encoding='utf-8'))
+        r18 = _r18raw.get('steps', {}) if isinstance(_r18raw, dict) else {}
+        if not isinstance(r18, dict):
+            r18 = {}
     except (json.JSONDecodeError, OSError):
         pass
 
@@ -109,7 +112,8 @@ for n in range(1, 27):
     keys = STEP_KEYS[n]
     ts = next((state.get(k) for k in keys if state.get(k)), '')
     imgs = frames.get(n, [])
-    pay = r18.get(str(n)) or {}
+    pay = r18.get(str(n))
+    pay = pay if isinstance(pay, dict) else {}
     loads = []
     if pay.get('dialogs'):
         loads.append(f"对话×{len(pay['dialogs'])}")
@@ -117,10 +121,10 @@ for n in range(1, 27):
         loads.append(f"操作×{len(pay['ops'])}")
     if pay.get('effect'):
         loads.append('效果✓')
-    if pay.get('skill'):
+    if isinstance(pay.get('skill'), dict):
         sk = pay['skill']
         loads.append(f"skill×{len(sk.get('gen') or []) + len(sk.get('invoke') or [])}")
-    if pay.get('delivery'):
+    if isinstance(pay.get('delivery'), dict):
         loads.append(f"门禁灯×{len(pay['delivery'].get('frames') or [])}")
     imgs_repr = '[' + ', '.join(f"('{i}', 'TODO 图注', 'ui')" for i in imgs) + ']'
     print(f'    {n}: dict(keys={keys!r}, ts_override={ts!r},')

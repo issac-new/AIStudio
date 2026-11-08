@@ -27,6 +27,7 @@ import re
 import sys
 from pathlib import Path
 
+import r18_matrix  # 形状校验单一事实源（schema_errors/as_dict/as_list）
 from r18_matrix import DIALOG_STEPS, DELIVERY_STEPS, EFFECT_STEPS, OP_STEPS, SKILL_STEPS, step_ok, product_outcome_status  # 必采证据表单一事实源（与生成器 hero 统计同表）
 
 SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
@@ -691,16 +692,41 @@ _r18_degraded_steps = set()
 # 凭证步列表两种形态都收：`|step-5|` 单步与 `|step-5;6;7|` 分号多步（壳页帧隔离
 # 清账 arm 的注册形态）。run19 实锤：分号列表一条都解析不进降级集合——凭证在案
 # 却整批 FAIL，违反「凭证在案即黄标，不二罚」（本文件 614 行注释自述原则）。
+_r18_unknown_cred = []   # 步号未知的降级凭证（step-?），汇总 WARN
+
+
+def _r18_subject_steps(subject: str):
+    """凭证主体步号归一：step-5 / step5 / step-5;6 三种历史形态。
+
+    step-? 或空主体=采集失败时步号未知——返回 None，由调用方记 WARN，
+    不得冒充具体步降级（run28 实锤 issues.log 存在 step-? 形态）。
+    """
+    s = subject.strip()
+    if s.startswith('step-'):
+        s = s[5:]
+    elif s.startswith('step'):
+        s = s[4:]
+    if s in ('', '?'):
+        return None
+    steps = {int(part) for part in re.split(r'[;,]', s) if part.isdigit()}
+    return steps or None
+
+
 def _r18_collect_cred_steps(_line18):
     _p18c = _line18.split('|', 3)
+    # 处置行（DISP）与登记行（ISSUE）同权：标准处置流程的结论行也是凭证
+    # （run28 实锤 67 条 DISP 完全不参与 R18 降级，帧缺口在处置后仍 FAIL）。
     _is_cred18 = 'r18-collection-missing' in _line18 or (
-        len(_p18c) >= 4 and _p18c[0] == 'ISSUE' and _p18c[1] == 'r18-payload-deref')
+        len(_p18c) >= 4 and _p18c[0] in ('ISSUE', 'DISP') and _p18c[1] == 'r18-payload-deref')
     if not _is_cred18:
         return
-    for _m18s in re.finditer(r'step-([\d;]+)', _line18):
-        for _n18 in _m18s.group(1).split(';'):
-            if _n18.isdigit():
-                _r18_degraded_steps.add(int(_n18))
+    _nums = _r18_subject_steps(_p18c[2]) if len(_p18c) >= 4 else None
+    if _nums is None:
+        _nums = {int(x) for x in re.findall(r'step-(\d+)', _line18)}
+    if _nums:
+        _r18_degraded_steps.update(_nums)
+    else:
+        _r18_unknown_cred.append(_line18)
 for _l18 in _ilines_r18:
     _r18_collect_cred_steps(_l18)
 # V8.17 红线②口径兑现（run16 复盘，fix/run16-report-truth）：非必采完成步「载荷全缺」的
@@ -728,12 +754,21 @@ _STAGE_ALIAS_STEPS = {'smoke': (1, 2, 3, 4), 'smoke_done': (1, 2, 3, 4),
 for _l18 in _ilines_r18:
     _p18 = _l18.split('|', 3)
     # 降级族=查3 预解析同源常量（2026-11-06 帧采集准确性根治：第三处硬编码统一——
-    # 此前漏改本点，run27 隔离步 8/25 凭证在案仍整批 FAIL，违反「凭证在案即黄标不二罚」）
-    if len(_p18) >= 4 and _p18[0] == 'ISSUE' and _p18[1] in _FRAME_DEGRADE_FAMILIES:
-        _r18_degraded_steps.update(_STAGE_ALIAS_STEPS.get(_p18[2].removeprefix('step-'), ()))
-        for _n18 in _p18[2].removeprefix('step-').split(';'):
-            if _n18.isdigit():
-                _r18_degraded_steps.add(int(_n18))
+    # 此前漏改本点，run27 隔离步 8/25 凭证在案仍整批 FAIL，违反「凭证在案即黄标不二罚」）。
+    # 2026-11-08 run28 复盘批：ISSUE/DISP 同权；主体支持 step-5 / step5 / step-? 三形态。
+    if len(_p18) >= 4 and _p18[0] in ('ISSUE', 'DISP') and _p18[1] in _FRAME_DEGRADE_FAMILIES:
+        _subj18 = _p18[2]
+        _alias18 = _STAGE_ALIAS_STEPS.get(_subj18.removeprefix('step-'), ())
+        _nums18 = _r18_subject_steps(_subj18)
+        if _nums18:
+            _r18_degraded_steps.update(_nums18)
+        if _alias18:
+            _r18_degraded_steps.update(_alias18)
+        if not _nums18 and not _alias18:
+            _r18_unknown_cred.append(_l18)
+if _r18_unknown_cred:
+    warns.append(f'R18 降级凭证步号未知（{len(_r18_unknown_cred)} 条，主体形如 step-?）——'
+                 f'无法折算到具体步，缺口按未降级计；须按 r18-collect-failed 契约补记 step-<n>')
 if _r18_missing_file:
     if _r18_degraded:
         warns.append('R18 载荷文件缺失（evidence/r18-steps.json 不存在）——已登记 r18-collection-missing 按纪律 40⑩ 降级；帧类缺口不可补采（§4.3 第 21 条），run11 采集链已挂驱动')
@@ -741,9 +776,17 @@ if _r18_missing_file:
         fails.append('R18 载荷文件缺失：evidence/r18-steps.json 不存在——V7.2 起为验收线（r18-collect.py 采集）；缺口须登记 r18-collection-missing 方可降级')
 else:
     try:
-        _r18_payloads = json.loads(R18F.read_text(encoding='utf-8')).get('steps', {}) or {}
-    except json.JSONDecodeError as e:
-        fails.append(f'R18 载荷文件解析失败（r18-steps.json 坏 JSON）：{e}')
+        _r18_raw = json.loads(R18F.read_text(encoding='utf-8'))
+        if not isinstance(_r18_raw, dict):
+            raise ValueError(f'顶层须为对象，实为 {type(_r18_raw).__name__}')
+        _r18_payloads = {str(k): v for k, v in r18_matrix.as_dict(_r18_raw.get('steps')).items()}
+        # 形状预检（单一事实源=r18_matrix.schema_errors）：一次列全，不靠第一处
+        # 属性访问抛异常才发现（run28 审计链因 AttributeError 整轮中止多次）。
+        for _step18, _path18, _exp18, _got18 in r18_matrix.schema_errors(_r18_payloads)[:50]:
+            fails.append(f'R18 载荷形状非法（步 {_step18} {_path18}：期望 {_exp18}，实为 {_got18}）'
+                         f'——r18-collect --run {RUN_ID} validate 定位并按契约修正')
+    except (json.JSONDecodeError, ValueError) as e:
+        fails.append(f'R18 载荷文件解析失败（r18-steps.json）：{e}')
 for blk in blocks:
     n_s = block_field(blk, r'<span class="st-num">(\d+)</span>')
     if not n_s:
@@ -778,10 +821,12 @@ for blk in blocks:
             # 期望帧数按注册帧形态二态（2026-11-06 帧模型二态化）：注册帧含 -before/-action
             # =操作对（≥2：操作前+系统响应）；仅 -after=完成态单帧（≥1）——旧口径一律 ≥2
             # 正是孪生零变化帧的生产强制力（run27 实锤 19 步）。
+            _ops_payload = r18_matrix.as_dict(_r18_payloads.get(str(n)) or _r18_payloads.get(n))
             _ops_frames: list = []
             _ops_expect = 0
-            for _og in (((_r18_payloads.get(str(n)) or _r18_payloads.get(n) or {}).get('ops')) or []):
-                _of = [str(_f) for _f in (_og.get('frames') or [])]
+            for _og in r18_matrix.as_list(_ops_payload.get('ops')):
+                _of = [f for f in (r18_matrix.frame_name(_f)
+                                   for _f in r18_matrix.as_list(r18_matrix.as_dict(_og).get('frames'))) if f]
                 _ops_frames += _of
                 _ops_expect += 2 if any(re.search(r'-(?:before|action)\.png$', _f) for _f in _of) else 1
             _fr = sum(1 for _fn in _ops_frames
@@ -793,14 +838,14 @@ for blk in blocks:
     if n in _R18_SKILL_STEPS:
         # §5.6 必采证据表：步级承载范围承诺入必采证据表——skill 过程帧 gen≥3+invoke≥2，
         # 载荷侧实测（r18-steps.json × 帧文件在位），与 hero 统计同矩阵同口径
-        if not step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
+        if not step_ok(n, r18_matrix.as_dict(_r18_payloads.get(str(n)) or _r18_payloads.get(n)),
                        frame_exists=lambda name: (steps_dir / name).exists()):
             _r18_rep(f'R18 步 {n} skill 过程帧未达标（§5.6 必采证据表：xxx-dev 生成 ≥3 帧+开发调用 ≥2 帧——r18-collect.py skill 登记+帧实拍）{_r18_suffix}')
     if n in _R18_DELIVERY_STEPS:
         # R29（P15）：delivery 门禁灯帧 ≥1（MX_DELIVERY=1 全程开启+面板实拍+r18-collect
         # deliver 登记）；产品面未就绪按§5.6 采集纪律⑩ 登记降级（P15/delivery-protocol 键命中即降
         # WARN），禁静默关旗标跑全程
-        _dlv_ok = step_ok(n, _r18_payloads.get(str(n)) or _r18_payloads.get(n),
+        _dlv_ok = step_ok(n, r18_matrix.as_dict(_r18_payloads.get(str(n)) or _r18_payloads.get(n)),
                           frame_exists=lambda name: (steps_dir / name).exists())
         _ilines = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines() if (EVID / 'issues.log').exists() else []
         _degraded = any(('P15' in l) or ('delivery-protocol' in l) or ('r18-collection-missing' in l) for l in _ilines)
@@ -819,8 +864,7 @@ for blk in blocks:
         # 同段任一步有载荷即视为该段已覆盖（不假全过：兄弟步也一样空才报）。
         _alias_src = next((steps for _k, steps in _STAGE_ALIAS_STEPS.items() if n in steps), ())
         _alias_hit = any(
-            isinstance(_r18_payloads.get(str(_s)) or _r18_payloads.get(_s), dict)
-            and any(_r18_payloads.get(str(_s)) or _r18_payloads.get(_s) or {})
+            bool(r18_matrix.as_dict(_r18_payloads.get(str(_s)) or _r18_payloads.get(_s)))
             for _s in _alias_src if _s != n
         )
         if not _alias_hit:
@@ -1342,7 +1386,8 @@ if not _wu_f.exists():
 else:
     try:
         _wu21 = json.loads(_wu_f.read_text(encoding='utf-8', errors='replace'))
-        _wu_answers = _wu21.get('answers') or []
+        _wu_answers = [a for a in ((_wu21.get('answers') if isinstance(_wu21, dict) else None) or [])
+                       if isinstance(a, dict)]
         if _wu_answers and '证据十' not in rep:
             (fails if _wu_new else warns).append(
                 '查21 六问快照在场但报告缺「证据十：执行单元与署名记录」——报告未消费六问读数')
@@ -1366,9 +1411,27 @@ except Exception:
 print(f'报告：{REPORT}')
 print(f'审计工具版本锚：{_tool_ver}（结论绑定工具版本，复现先对版本——镜像树漂移会产出全错结果）')
 print(f'步块：{len(blocks)}；图：{len(pngs)} 张 PNG，唯一 md5 {len(md5)} 组')
-print(f'标题逐字：{26 - len(title_mismatch)}/{len(plan_steps)}；缺图：✅步 {done_no_img or "无「}，⬜步 {pending_no_img or 」无"}')
+print(f'标题逐字：{26 - len(title_mismatch)}/{len(plan_steps)}；缺图：✅步 {done_no_img or "无"}，⬜步 {pending_no_img or "无"}')
 for w in warns:
     print('WARN', w)
+# ── 缺口侧柜（2026-11-08 run28 复盘批）──
+# 审计环 18 次重入的收敛成本主要在「一轮只看到一处缺口」。侧柜把全部 fails/warns
+# 一次落盘，值守/修复方可按文件批量处置；报告仍以 stdout 的 FAIL 段为权威。
+try:
+    _findings = {
+        'run': RUN_ID,
+        'generated_at': int(__import__('time').time()),
+        'tool_version': _tool_ver,
+        'report': str(REPORT),
+        'fail_count': len(fails),
+        'warn_count': len(warns),
+        'fails': fails,
+        'warns': warns,
+    }
+    (EVID / 'report-audit-findings.json').write_text(
+        json.dumps(_findings, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+except OSError as _e_find:
+    print(f'[audit] WARN 缺口侧柜写入失败（不阻断审计）：{_e_find}', file=sys.stderr)
 if fails:
     print('\n== FAIL ==')
     for f in fails:

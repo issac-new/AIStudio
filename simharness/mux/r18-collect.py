@@ -35,6 +35,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+from r18_matrix import as_dict, schema_errors
+
 SIM = Path(os.environ.get('AIPAY_SIM_ROOT', '/Users/cuishi/lab/ncwk-sim-mux'))
 HS = os.environ.get('MX_HOMESERVER', 'http://127.0.0.1:8008')
 
@@ -71,12 +73,28 @@ def load_payload(run: str) -> dict:
             data = json.loads(f.read_text(encoding='utf-8'))
         except json.JSONDecodeError as e:
             die(f'r18-steps.json 已存在但解析失败（拒写不覆盖，人工处置）：{e}')
+        if not isinstance(data, dict):
+            die(f'r18-steps.json 顶层须为对象（实为 {type(data).__name__}）——'
+                f'先跑 r18-collect --run {run} validate 定位，再按契约修正')
+        if 'steps' in data and not isinstance(data['steps'], dict):
+            die(f'r18-steps.json 的 steps 须为对象（实为 {type(data["steps"]).__name__}）——'
+                f'先跑 r18-collect --run {run} validate 定位')
+        data.setdefault('_schema', 1)
         data.setdefault('steps', {})
         return data
     return {'_schema': 1, 'steps': {}}
 
 
 def save_payload(run: str, data: dict):
+    # 形状告警不阻断写入：人工补录/历史载荷允许存在，但必须在写入点可见
+    # （run28 实锤 effect.evidence 字符串数组一路带到报告生成才崩）。
+    errors = schema_errors(as_dict(data).get('steps') if isinstance(data, dict) else {})
+    for step, path, expected, got in errors[:20]:
+        print(f'[r18-collect] WARN schema 步 {step} {path}：期望 {expected}，实为 {got}',
+              file=sys.stderr)
+    if len(errors) > 20:
+        print(f'[r18-collect] WARN schema 另有 {len(errors) - 20} 处未列（共 {len(errors)} 处）',
+              file=sys.stderr)
     f = SIM / 'runs' / run / 'evidence' / 'r18-steps.json'
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -167,7 +185,8 @@ def main():
                      help='状态键（capture_step 自动登记用；规范映射解析步号，未知键报错）')
     p_o.add_argument('--title', required=True)
     p_o.add_argument('--entry', required=True, help='操作入口：路由/菜单路径/点击序列+登录身份')
-    p_o.add_argument('--frames', nargs='+', required=True, help='帧文件名（r18-frames.mjs 产物）')
+    p_o.add_argument('--frames', nargs='+', default=[],
+                     help='帧文件名（r18-frames.mjs 产物；repo 型产物证据可不传——无界面拍摄位）')
     p_o.add_argument('--note', default='')
     p_e = sub.add_parser('effect')
     p_e.add_argument('--step', type=int, required=True)
@@ -184,15 +203,31 @@ def main():
     p_d.add_argument('--note', default='')
     p_s = sub.add_parser('show')
     p_s.add_argument('--step', type=int)
+    sub.add_parser('validate', help='校验 r18-steps.json 形状（单一事实源=r18_matrix.schema_errors）')
     a = ap.parse_args()
 
+    if a.mode == 'validate':
+        f = SIM / 'runs' / a.run / 'evidence' / 'r18-steps.json'
+        if not f.exists():
+            print(json.dumps({'ok': False, 'errors': [{'step': '-', 'path': 'file',
+                                                       'expected': 'exists', 'got': 'missing'}]},
+                             ensure_ascii=False, indent=2))
+            sys.exit(2)
+        data = load_payload(a.run)
+        errors = [{'step': step, 'path': path, 'expected': expected, 'got': got}
+                  for step, path, expected, got in schema_errors(data.get('steps'))]
+        print(json.dumps({'ok': not errors, 'file': str(f), 'errors': errors},
+                         ensure_ascii=False, indent=2))
+        sys.exit(0 if not errors else 1)
+
     data = load_payload(a.run)
-    steps = data['steps']
+    steps = as_dict(data.get('steps'))
     if a.mode == 'show':
         if a.step:
-            print(json.dumps(steps.get(str(a.step), {}), ensure_ascii=False, indent=2))
+            print(json.dumps(as_dict(steps.get(str(a.step))), ensure_ascii=False, indent=2))
         else:
-            cov = [k for k, v in steps.items() if v.get('dialogs') or v.get('ops') or v.get('effect')]
+            cov = [k for k, v in steps.items()
+                   if isinstance(v, dict) and (v.get('dialogs') or v.get('ops') or v.get('effect'))]
             print(json.dumps({'coverage': f'{len(cov)}/26', 'steps': sorted(cov, key=int)},
                              ensure_ascii=False))
         return
@@ -202,26 +237,51 @@ def main():
         if a.step_key not in STEP_KEY_TO_NUM:
             die(f'--step-key {a.step_key!r} 不在规范映射（先补 STEP_KEY_TO_NUM 再用——防错挂步）')
         a.step = STEP_KEY_TO_NUM[a.step_key]
-    entry = steps.setdefault(str(a.step), {})
+    entry = steps.get(str(a.step))
+    if entry is None:
+        entry = {}
+        steps[str(a.step)] = entry
+    if not isinstance(entry, dict):
+        die(f'step {a.step} 载荷非对象（实为 {type(entry).__name__}）——'
+            f'先跑 r18-collect --run {a.run} validate 定位，再人工修正该步')
     if a.mode == 'dialog':
         msgs = fetch_dialog(a.room, a.anchor, a.user, a.limit)
         if not msgs:
             _issue(a.run, a.step, '对话收集成功但 0 条消息（锚上下文空——anchor 指向/房间成员资格/时机核验；F2 空载荷记单）')
+        dl = entry.get('dialogs')
+        if dl is not None and not isinstance(dl, list):
+            die(f'step {a.step} 的 dialogs 非数组（实为 {type(dl).__name__}）——先 validate 定位')
         dl = entry.setdefault('dialogs', [])
-        if any(d.get('anchor') == a.anchor for d in dl):
+        if any(isinstance(d, dict) and d.get('anchor') == a.anchor for d in dl):
             die(f'step {a.step} 已登记同锚对话（{a.anchor}）——幂等拒重，show 核对')
         dl.append({'title': a.title, 'room': a.room, 'anchor': a.anchor, 'messages': msgs})
         print(f'[r18-collect] step {a.step} 对话入载荷：{len(msgs)} 条消息（全文未截断）')
     elif a.mode == 'op':
-        # 帧级去重（重启重放幂等）：同帧名已在任何 op 条目=跳过，全重复=零新增静默
-        _known = {f for o in entry.get('ops', []) for f in o.get('frames', [])}
+        # 帧级去重（重启重放幂等）：同帧名已在任何 op 条目=跳过，全重复=零新增静默。
+        # repo 型产物证据没有界面拍摄位，允许 0 帧登记（此前 --frames 必填导致该分支
+        # 静默失败，run28 repo 型步载荷全靠人工补录）。
+        ops = entry.get('ops')
+        if ops is not None and not isinstance(ops, list):
+            die(f'step {a.step} 的 ops 非数组（实为 {type(ops).__name__}）——先 validate 定位')
+        ops = [op for op in (ops or []) if isinstance(op, dict)]
+        _known = {f for op in ops for f in (op.get('frames') or []) if isinstance(f, str)}
         _new = [f for f in a.frames if f not in _known]
-        if _new:
+        if not a.frames:
+            if any(op.get('entry') == a.entry for op in ops):
+                print(f'[r18-collect] step {a.step} 同入口产物证据已在案（幂等跳过）')
+            else:
+                entry.setdefault('ops', []).append(
+                    {'title': a.title, 'entry': a.entry, 'frames': [], 'note': a.note,
+                     'ts': int(time.time())})
+                print(f'[r18-collect] step {a.step} 产物证据入载荷：0 帧（repo 型，无界面拍摄位）')
+        elif _new:
             entry.setdefault('ops', []).append(
                 {'title': a.title, 'entry': a.entry, 'frames': _new, 'note': a.note,
                  'ts': int(time.time())})  # V8.4 §5.5 帧③时刻窗锚：采集时刻即真值（审计对 run 窗口核验）
-        print(f'[r18-collect] step {a.step} 操作序列入载荷：{len(_new)} 帧'
-              f'（去重后；共 {len(a.frames)} 传入）')
+            print(f'[r18-collect] step {a.step} 操作序列入载荷：{len(_new)} 帧'
+                  f'（去重后；共 {len(a.frames)} 传入）')
+        else:
+            print(f'[r18-collect] step {a.step} 操作序列零新增（0 帧入载荷；{len(a.frames)} 帧全部已在案）')
     elif a.mode == 'effect':
         entry['effect'] = {'text': a.text,
                            'evidence': [dict(zip(('label', 'anchor'), ev.split('=', 1))) for ev in a.ev]}
@@ -229,9 +289,17 @@ def main():
     elif a.mode == 'skill':
         if not a.gen and not a.invoke:
             die('skill 登记须至少带一帧（--gen 生成过程 / --invoke 开发调用）')
-        sk = entry.setdefault('skill', {'gen': [], 'invoke': []})
+        sk = entry.get('skill')
+        if sk is None:
+            sk = {'gen': [], 'invoke': []}
+            entry['skill'] = sk
+        if not isinstance(sk, dict):
+            die(f'step {a.step} 的 skill 非对象（实为 {type(sk).__name__}）——先 validate 定位')
         sk['ts'] = int(time.time())  # V8.4 帧③时刻窗锚（同 op）
         for bucket, frames in (('gen', a.gen), ('invoke', a.invoke)):
+            lst = sk.get(bucket)
+            if lst is not None and not isinstance(lst, list):
+                die(f'step {a.step} 的 skill.{bucket} 非数组（实为 {type(lst).__name__}）——先 validate 定位')
             lst = sk.setdefault(bucket, [])
             for f in frames:
                 if f not in lst:
@@ -241,8 +309,16 @@ def main():
         print(f'[r18-collect] step {a.step} skill 过程帧入载荷：gen {len(sk.get("gen") or [])} 帧 / invoke {len(sk.get("invoke") or [])} 帧'
               f'（§5.6 必采矩阵 达标线 gen≥{3} invoke≥{2}）')
     elif a.mode == 'deliver':
-        dlv = entry.setdefault('delivery', {'frames': []})
+        dlv = entry.get('delivery')
+        if dlv is None:
+            dlv = {'frames': []}
+            entry['delivery'] = dlv
+        if not isinstance(dlv, dict):
+            die(f'step {a.step} 的 delivery 非对象（实为 {type(dlv).__name__}）——先 validate 定位')
         dlv['ts'] = int(time.time())  # V8.4 帧③时刻窗锚（同 op）
+        frames = dlv.get('frames')
+        if frames is not None and not isinstance(frames, list):
+            die(f'step {a.step} 的 delivery.frames 非数组（实为 {type(frames).__name__}）——先 validate 定位')
         lst = dlv.setdefault('frames', [])
         for f in a.frame:
             if f not in lst:

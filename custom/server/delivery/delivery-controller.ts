@@ -226,23 +226,48 @@ router.get('/maturity', ctx => {
 // 清账批增补（spec 2026-10-24-swarm-eval-followup-batch.md）：
 //   intentDialogs——r18-steps.json dialogs（步 9 任务书/步 11 RACI 派发）→ 全文保真度口径
 //   compare——消融 run 对比 → 实验性 LOO criticality（D10；角色清单取消融 run 台账 ablation-skip）
+type IntentDialogRow = { title: string; messages: Array<{ sender: string; body: string }> }
+
+// 单条对话归一：生产者契约是步骤级 {title, room, anchor, messages:[{sender, ts, body}]}；
+// 历史载荷把 dialogs 挂在 ops[] 下且 title 在 op 上，由调用方补 title。
+function intentDialogRowOf(dialog: unknown): IntentDialogRow | null {
+  if (!dialog || typeof dialog !== 'object') return null
+  const row = dialog as { title?: unknown; messages?: unknown; body?: unknown; sender?: unknown }
+  let messages = (Array.isArray(row.messages) ? row.messages : []).flatMap(m => {
+    const msg = m as { sender?: unknown; body?: unknown }
+    return typeof msg?.body === 'string' ? [{ sender: String(msg.sender ?? ''), body: msg.body }] : []
+  })
+  // 旧载荷的 ops[].dialogs 直接是消息数组（{sender, body}），没有 messages 容器
+  if (!messages.length && typeof row.body === 'string') {
+    messages = [{ sender: String(row.sender ?? ''), body: row.body }]
+  }
+  if (!messages.length) return null
+  return { title: String(row.title ?? ''), messages }
+}
+
 function extractIntentDialogs(r18Text: string | null): { taskBook: string; dispatches: string[] } | null {
   if (r18Text == null) return null
   let parsed: unknown
   try { parsed = JSON.parse(r18Text) } catch { return null }
-  const steps = (parsed as { steps?: Record<string, { ops?: Array<{ title?: unknown; dialogs?: unknown }> }> }).steps
+  const steps = (parsed as { steps?: Record<string, unknown> }).steps
   if (!steps || typeof steps !== 'object') return null
-  const bodiesByTitle: Array<{ title: string; messages: Array<{ sender: string; body: string }> }> = []
+  const bodiesByTitle: IntentDialogRow[] = []
   for (const stepVal of Object.values(steps)) {
-    for (const op of stepVal?.ops ?? []) {
-      const dl = op?.dialogs
-      if (!Array.isArray(dl) || !dl.length) continue
-      const title = String(op?.title ?? '')
-      const messages = (Array.isArray(dl) ? dl : []).flatMap(m => {
-        const row = m as { sender?: unknown; body?: unknown }
-        return typeof row?.body === 'string' ? [{ sender: String(row.sender ?? ''), body: row.body }] : []
-      })
-      bodiesByTitle.push({ title, messages })
+    if (!stepVal || typeof stepVal !== 'object') continue
+    const step = stepVal as { dialogs?: unknown; ops?: unknown }
+    // 生产者契约（r18-collect.py dialog）：步骤级 dialogs（run28 实测形状）
+    for (const d of Array.isArray(step.dialogs) ? step.dialogs : []) {
+      const row = intentDialogRowOf(d)
+      if (row) bodiesByTitle.push(row)
+    }
+    // 兼容旧载荷：ops[].dialogs，title 取 op.title（历史轮次人工补录形态）
+    for (const op of Array.isArray(step.ops) ? step.ops : []) {
+      if (!op || typeof op !== 'object') continue
+      const opRow = op as { title?: unknown; dialogs?: unknown }
+      for (const d of Array.isArray(opRow.dialogs) ? opRow.dialogs : []) {
+        const row = intentDialogRowOf(d)
+        if (row) bodiesByTitle.push({ title: row.title || String(opRow.title ?? ''), messages: row.messages })
+      }
     }
   }
   const taskBook = bodiesByTitle.filter(d => d.title.includes('任务书')).flatMap(d => d.messages.map(m => m.body)).join('\n')

@@ -589,7 +589,7 @@ describe('⑫ 必采矩阵单一事实源（正本 §5.5+§5.6 必采矩阵：he
   function py(code: string): string {
     return execFileSync('python3', ['-c', `
 import sys; sys.path.insert(0, ${JSON.stringify(MX)})
-from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, DELIVERY_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL, STEP_TOTAL, PRODUCT_OUTCOME_TOTAL, evaluate, evaluate_full, step_ok, product_outcome_status
+from r18_matrix import DIALOG_STEPS, OP_STEPS, EFFECT_STEPS, SKILL_STEPS, DELIVERY_STEPS, SKILL_GEN_MIN, SKILL_INVOKE_MIN, DELIVERY_MIN, TOTAL, STEP_TOTAL, PRODUCT_OUTCOME_TOTAL, evaluate, evaluate_full, step_ok, product_outcome_status, schema_errors, as_dict, as_list, frame_name
 ${code}`], { encoding: 'utf-8' })
   }
 
@@ -628,7 +628,7 @@ print('eval-full:', m, t)`)
     expect(out).toContain('eval-full: 2 13')
   })
 
-  it('空载荷=0/15；步绑定达标载荷=13/15（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
+  it('空载荷=0/13；步绑定达标载荷=11/13（操作每组≥2 实帧、效果带可反查锚、skill 帧达标）', () => {
     const out = py(`
 good = {str(n): {'dialogs': [{'title': 'd'}]} for n in DIALOG_STEPS}
 good.update({str(n): {'ops': [{'frames': [f'{n}-op1-before.png', f'{n}-op1-after.png']}]} for n in OP_STEPS})
@@ -664,6 +664,34 @@ print(' '.join(f'{n}:{ok}' for n, ok in detail if n in cases))`)
     expect(out).toContain('11:True')
     expect(out).toContain('13:False')
     expect(out).toContain('23:False')
+  })
+
+  it('R18 形状校验单一事实源：坏形状一次列全，step_ok/evaluate 不抛异常（run28 报告崩溃根治）', () => {
+    const out = py(`
+bad = {
+  '7': {'effect': {'text': '工件入仓', 'evidence': ['commit=a1b2c3d']}},
+  '9': {'dialogs': 'not-a-list'},
+  '20': {'ops': [{'frames': 3}]},
+  '25': [1, 2],
+}
+errs = schema_errors(bad)
+print('errs', len(errs), '|', ';'.join(sorted(f'{s}:{p}:{e}<{g}>' for s, p, e, g in errs)))
+print('ok7', step_ok(7, bad['7']))
+print('ok9', step_ok(9, bad['9']))
+print('ok25', step_ok(25, bad['25']))
+print('ev', evaluate(bad, frame_exists=lambda n: True)[0])
+print('valid', schema_errors({'7': {'effect': {'text': 'x', 'evidence': [{'label': 'c', 'anchor': 'abc'}]}}}))
+`)
+    expect(out).toContain('errs 4 |')
+    expect(out).toContain('7:effect.evidence[0]:object<str>')
+    expect(out).toContain('9:dialogs:array<str>')
+    expect(out).toContain('20:ops[0].frames:array<int>')
+    expect(out).toContain('25:steps[n]:object<list>')
+    expect(out).toContain('ok7 False')
+    expect(out).toContain('ok9 False')
+    expect(out).toContain('ok25 False')
+    expect(out).toContain('ev 0')
+    expect(out).toContain('valid []')
   })
 
   it('绊线：生成器 hero 统计与审计器查 8 共用 r18_matrix，禁回退硬编码/任一位在位即计', () => {
