@@ -37,7 +37,7 @@ function callerOf(ctx: Context): ApprovalCaller | null {
   return user ?? null
 }
 
-/** 可见规则集（X2 读归属）：本人 + 无主 + super_admin 全量。GET /rules、decide 回包与 DELETE 下标同源。 */
+/** 可见规则集（X2 读归属）：本人、无主、super_admin 全量三类并集。GET /rules、decide 回包与删除下标同源。 */
 function visibleRulesOf(rules: readonly ApprovalRule[], caller: ApprovalCaller | null): ApprovalRule[] {
   return rules.filter((r) => ruleVisibleTo(caller, r))
 }
