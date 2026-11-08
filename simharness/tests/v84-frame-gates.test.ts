@@ -184,7 +184,8 @@ m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 cases = [
   ('加载失败：API Error 403: 需要平台超级管理员权限', {'want': ['分析', '评审']}, False, 'errors'),
   ('任务 t_x 不存在或当前账号无权访问（深链 ？task= 未命中）', {'want': ['工作区', '任务']}, False, 'errors'),
-  ('泳道「暂无任务」四列全空 0 tasks', {'want': ['任务', '看板']}, False, 'empties'),
+  ('看板头 0 tasks 四泳道占位全空', {'want': ['任务', '看板']}, False, 'empties'),
+  ('7 tasks 待办1已调度1就绪5 空泳道印「暂无任务」占位', {'want': ['任务', '看板']}, True, ''),
   ('已排期任务 2 计划窗口就绪 fanfan', {'want': ['排期', '计划']}, True, ''),
   ('十六进制任务号 t403ab 全绿无异常', {'want': ['任务']}, True, ''),
 ]
@@ -197,7 +198,7 @@ print(json.dumps(out))
     const r = spawnSync('python3', ['-c', py], { encoding: 'utf8' })
     expect(r.status).toBe(0)
     const rows = JSON.parse(r.stdout)
-    expect(rows).toHaveLength(5)
+    expect(rows).toHaveLength(6)
     for (const row of rows) {
       expect(row.ok).toBe(row.want_ok)
       expect(row.bucket).toBe(row.expect_bucket)
@@ -214,6 +215,7 @@ print(json.dumps(out))
     }
     for (const tok of empM.split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)) {
       expect(tok, `裸「暂无」误报（run26 26 帧全红教训）`).not.toBe('暂无')
+      expect(tok, `泳道占位词是列级信号，整板空看「0tasks」计数器（补拍轮 register/defect 误伤实锤）`).not.toBe('暂无任务')
     }
   })
 })
