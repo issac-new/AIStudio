@@ -84,6 +84,33 @@ PY
 }
 _mx_diag_suppress || log "诊断抑制收敛告警（S3：No home channel 噪音可能复发——profiles config.yaml 手工补 display.suppress_warning_notifications=true）"
 
+# ── P1 收敛（run28 收尾批）：wei 总监职能词 ──────────────
+# O7 对照轮实测：wei-agent 派发超时率 92%（11 超时/1 成功），根因=profile system_prompt
+# 空（D5 决策「P0 不动提示词」预期的空缺面，run28 数据立证 P1 必要）。每次 mx-up 幂等
+# 收敛：wei 主 profile 的 agent.system_prompt 补总监职能词（已在位则跳过）。
+_mx_p1_director_prompt() {
+  local _cfg="${HERMES_ROOT}/profiles/wei/config.yaml" _kw="总监派发职权"
+  [ -f "$_cfg" ] || return 0
+  grep -q "$_kw" "$_cfg" && return 0
+  python3 - "$_cfg" <<'PYIN' 2>/dev/null || return 0
+import sys, yaml
+p = sys.argv[1]
+cfg = yaml.safe_load(open(p, encoding='utf8')) or {}
+a = cfg.get('agent') or {}
+sp = a.get('system_prompt') or ''
+if '总监' not in sp:
+    a['system_prompt'] = (sp + '
+' if sp else '') + (
+        '【总监派发职权】你是团队负责人（总监）。收到「需求草稿移交」或团队等待派发的消息时：'
+        '1）立即自主拆分为具体任务书（对象+验收行+双凭证要求），向对应职能 agent 派发，不要等待或转交；'
+        '2）8 分钟内必须产出任务书并派发（超时窗有限）；3）无法决断时给出兜底拆分并如实标注不确定项。')
+    cfg['agent'] = a
+    yaml.safe_dump(cfg, open(p, 'w', encoding='utf8'), allow_unicode=True, sort_keys=False)
+    print('p1-director-prompt converged')
+PYIN
+}
+_mx_p1_director_prompt || log "P1 总监职能词收敛告警（wei config.yaml 手工补 agent.system_prompt）"
+
 # ── host 共存检查（G5 证据面）────────────────────────────
 host_health=$(curl -sf "$HOST_ORCH_HEALTH" -m 3 || true)
 if [[ -n "$host_health" ]]; then
