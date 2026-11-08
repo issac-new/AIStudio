@@ -81,14 +81,23 @@ function getDb(): SqliteDb {
 }
 
 /** 旧 JSON 一次性迁移进 SQLite（原文件改名 .migrated 保留）。 */
+// SQL 标识符形状守卫（2026-11-08 SQL 白名单化批同款，对齐 qgate persistence assertIdent）：
+// SQLite 标识符无法参数化，调用面表名/列名虽为本文件字面量（proposals/experiences/
+// champions/updated_at/promoted_at），经参数传递后静态扫描不可判——形状白名单把注入
+// 面收敛为「合法标识符字符集」，拒绝引号/分号/空格等一切逃逸字符，违例即抛不静默。
+function assertIdent(name: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error(`非法 SQL 标识符: ${name}`)
+  return name
+}
+
 function migrateJsonOnce(db: SqliteDb): void {
   const jsonFile = join(storeDir(), 'workbench.json')
   if (!existsSync(jsonFile)) return
   try {
-    const raw = JSON.parse(readFileSync(jsonFile, 'utf8')) as Partial<WorkbenchStore>
+    const raw = JSON.parse(readFileSync(jsonFile, 'utf-8')) as Partial<WorkbenchStore>
     // 列名固定 updated_at/promoted_at；tsKey 是 JSON 字段名（列名≠字段名——R11 落地实测抓出）
     const put = (table: string, rows: Array<Record<string, unknown>>, tsKey: string, col: string) => {
-      const stmt = db.prepare(`INSERT OR REPLACE INTO ${table} (id, ${col}, json) VALUES (?, ?, ?)`)
+      const stmt = db.prepare(`INSERT OR REPLACE INTO ${assertIdent(table)} (id, ${assertIdent(col)}, json) VALUES (?, ?, ?)`)
       for (const r of rows) stmt.run(String(r.id), String(r[tsKey] ?? ''), JSON.stringify(r))
     }
     put('proposals', (raw.proposals ?? []) as unknown[] as Array<Record<string, unknown>>, 'updatedAt', 'updated_at')

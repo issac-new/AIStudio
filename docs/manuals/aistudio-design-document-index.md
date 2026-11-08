@@ -633,6 +633,7 @@
 - [2026-11-08-deny-hygiene.md](../superpowers/specs/2026-11-08-deny-hygiene.md)
 - [2026-11-08-sql-ident-whitelist.md](../superpowers/specs/2026-11-08-sql-ident-whitelist.md)
 - [2026-11-08-frame-verify-error-markers.md](../superpowers/specs/2026-11-08-frame-verify-error-markers.md)
+- [2026-11-08-gate-restore-batch.md](../superpowers/specs/2026-11-08-gate-restore-batch.md)
 - [2026-11-07-ponytail-headroom-absorption.md](../superpowers/specs/2026-11-07-ponytail-headroom-absorption.md)
 
 ## archive（2 份，不计入上述根目录）

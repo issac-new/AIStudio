@@ -3197,6 +3197,21 @@ if step_reached ide && [[ -z "$(sget ide_done)" ]]; then
     echo "ISSUE|ide-brief|client|任务接入 IDE 自动简报生成功能未见（步骤 20 要求）" >> "$EVID_DIR/issues.log"
     note "[观察] IDE 任务简报自动生成功能未见（记问题单）"
   fi
+  # IDE_TASK 按轮注入（2026-11-08 run28 补拍轮实锤）：capture-plan 的 ide 拍摄位默认
+  # 任务号 t_af224933 系历史轮残留——跨轮失效后深链落「任务不存在/无权访问」错帧。
+  # 拍摄前实测解析 fanfan 主卡（fanfan-pm-plan 板首卡 id）注入；解析失败回落默认值并
+  # 记问题单（深链错帧可归因，不静默）。
+  if [[ -z "${IDE_TASK:-}" ]]; then
+    _ide_jwt=$(jwt_of fanfan 2>/dev/null | tail -1)
+    _ide_task=$(studio GET "/api/hermes/kanban?board=fanfan-pm-plan" "${_ide_jwt}" 2>/dev/null \
+      | jq -r '[.. | objects | select(.id? != null) | select(.id | startswith("t_")) | .id][0] // empty' 2>/dev/null)
+    if [[ -n "${_ide_task}" ]]; then
+      export IDE_TASK="${_ide_task}"
+      note "[ide] IDE_TASK 按轮注入=${_ide_task}（fanfan-pm-plan 首卡）"
+    else
+      echo "ISSUE|ide-task-resolve-fail|drivers|IDE_TASK 当轮解析失败（fanfan-pm-plan 板无可解析任务卡）——ide 深链拍摄位回落历史默认值，跨轮失效风险" >> "$EVID_DIR/issues.log"
+    fi
+  fi
   capture_step "ide_done" "/app/ide"
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" op --step 25 --title "任务跳转 IDE 工作台" --entry "/app/ide → IDE 工作区" --frames ide_done-op1-before.png ide_done-op1-after.png >/dev/null 2>&1 || true
 
