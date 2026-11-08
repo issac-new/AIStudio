@@ -1327,3 +1327,11 @@
 {"ts":"2026-11-07T07:33:11Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
 {"ts":"2026-11-07T07:33:11Z","node":"门禁","actor":"","tool":"check_test","status":"started","note":""}
 {"ts":"2026-11-07T07:33:11Z","node":"门禁","actor":"","tool":"check_test","status":"warn","note":""}
+{"ts":"2026-11-08T00:09:18Z","node":"门禁","actor":"","tool":"check_branch","status":"started","note":""}
+{"ts":"2026-11-08T00:09:18Z","node":"门禁","actor":"","tool":"check_branch","status":"fail","note":""}
+{"ts":"2026-11-08T00:09:19Z","node":"门禁","actor":"","tool":"check_deps","status":"started","note":""}
+{"ts":"2026-11-08T00:09:21Z","node":"门禁","actor":"","tool":"check_deps","status":"fail","note":""}
+{"ts":"2026-11-08T00:09:22Z","node":"门禁","actor":"","tool":"check_sensitive","status":"started","note":""}
+{"ts":"2026-11-08T00:09:33Z","node":"门禁","actor":"","tool":"check_sensitive","status":"fail","note":""}
+{"ts":"2026-11-08T00:09:33Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-11-08T00:14:16Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
