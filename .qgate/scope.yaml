@@ -543,3 +543,4 @@ paths:
   - docs/superpowers/specs/2026-11-08-deny-hygiene.md
   - .gitleaks.toml  # DENY 卫生批（2026-11-08）：gitleaks allowlist 登记制（spec 2026-11-08-deny-hygiene）
   - docs/superpowers/specs/2026-11-08-sql-ident-whitelist.md
+  - docs/superpowers/specs/2026-11-08-gate-restore-batch.md
