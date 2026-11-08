@@ -109,6 +109,22 @@
       "treeHash": "65090612010d3aaead9ba5b8a49a05ceb873b312",
       "createdAt": "2026-11-05",
       "note": "v1.0.12-overlay 发布轮实际打包 commit（tag 指向）；后续发布轮按同形态追加，不得改写历史批次。"
+    },
+    {
+      "id": "v1.0.13-overlay",
+      "tag": "v1.0.13-overlay",
+      "commit": "45e4191493bfc2ad90859b8163a03a65f6e47a3d",
+      "treeHash": "d018a748e6e946b9f93f00ae65e0337186467424",
+      "createdAt": "2026-11-07",
+      "note": "v1.0.13 发布轮实际打包 commit（tag 实指）；终态行 2026-11-09 v1.0.14 轮补账——v1.0.13 发布中止批曾回退 cognition 整批，载体留用（spec 2026-11-06-release-v1.0.13 决策记录）。"
+    },
+    {
+      "id": "v1.0.14-overlay",
+      "tag": "v1.0.14-overlay",
+      "commit": "4f10460bb821d6293c7aa456dba469c0142d4fa7",
+      "treeHash": "438ce0246ca2148d8ed35927ceadf6c2c3f196aa",
+      "createdAt": "2026-11-09",
+      "note": "v1.0.14 发布轮实际打包 commit（tag 指向＝发布批 4f10460）；GitHub Release 三资产＋ModelScope 双件同窗发布。"
     }
   ],
   "packaging": {
