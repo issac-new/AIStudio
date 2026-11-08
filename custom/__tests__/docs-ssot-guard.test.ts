@@ -25,7 +25,12 @@ function splitTableRow(line: string): string[] {
   if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) {
     throw new Error(`Markdown 表格行必须以 | 起止：${line}`)
   }
-  return trimmed.slice(1, -1).split('|').map((cell) => cell.trim())
+  // 单元格内转义管道 \| 是合法 Markdown（2026-11-08 存量红根治：run28-burn-fixes
+  // 附录行含「\| tostring」，裸切 | 误判 4 列三测全红）。按未转义管道切、还原转义符。
+  return trimmed
+    .slice(1, -1)
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim().replace(/\\\|/g, '|'))
 }
 
 function parseFileTable(lines: string[], lineOffset: number): TableRow[] {
@@ -123,6 +128,22 @@ describe('specs 文档单一事实源守门', () => {
 ## A.2 历史快照
 `
     expect(() => parseAppendix(malformed)).toThrow(/列数错误：表头 3 列，数据行 2 列/)
+  })
+
+  it('解析器接受单元格内转义管道 \\|（2026-11-08 存量红根治回归锁）', () => {
+    const doc = `# 附录 A：测试索引（1 份文档）
+## A.1 逐份索引
+| 文件名 | 主旨 | 结论要点 |
+|---|---|---|
+| 2026-11-07-run28-burn-fixes | 烧机两修 | jq 崩归一 (. // "") \\| tostring |
+### 角色/排除（非 spec 文档）
+| 文件名 | 角色/排除 | 说明 |
+|---|---|---|
+## A.2 历史快照
+`
+    const parsed = parseAppendix(doc)
+    expect(parsed.a1Rows).toHaveLength(1)
+    expect(parsed.a1Rows[0].cells[2]).toContain('(. // "") | tostring')
   })
 
   it.each([
