@@ -541,3 +541,4 @@ paths:
   - docs/superpowers/specs/2026-11-08-n283-p1-director.md
   - docs/superpowers/specs/2026-11-08-frame-verify-error-markers.md
   - docs/superpowers/specs/2026-11-08-deny-hygiene.md
+  - .gitleaks.toml  # DENY 卫生批（2026-11-08）：gitleaks allowlist 登记制（spec 2026-11-08-deny-hygiene）
