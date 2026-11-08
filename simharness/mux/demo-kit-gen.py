@@ -159,11 +159,14 @@ def main():
     scen = SIM_ROOT.parent / 'aipay-scenario.sh'  # 不读源码——金句从 r18/消息留档取
     if r18_ok and isinstance(r18, dict):
         steps = r18.get('steps', r18)
+        if not isinstance(steps, dict):
+            steps = {}
         for step_key in sorted(steps, key=lambda x: int(x) if str(x).isdigit() else 999):
             payload = steps[step_key]
             if not isinstance(payload, dict):
                 continue
-            for dlg in (payload.get('dialogs') or [])[:1]:
+            _dialogs = payload.get('dialogs')
+            for dlg in (_dialogs if isinstance(_dialogs, list) else [])[:1]:
                 title = dlg.get('title', '') if isinstance(dlg, dict) else str(dlg)
                 anchor = dlg.get('anchor', '') if isinstance(dlg, dict) else ''
                 if title:

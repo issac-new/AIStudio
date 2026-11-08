@@ -137,7 +137,7 @@ dispatch_in_room "fanfan" "【任务】测试需求：完成某功能并回执" 
 })
 
 describe('③ mx-lib log()/issue_to_run 走 stderr（A 批挂账 3 清偿）', () => {
-  it('log 与 FAIL-CONT 进度行均不出现在 stdout；note() 保持 stdout（$() 捕获消费者）', () => {
+  it('log 与 FAIL-CONT 进度行均不出现在 stdout；note() 不写 stdout（$() 捕获消费者）', () => {
     const out = bash(`
 set -u
 ${extract('mx-lib.sh', 'log')}
@@ -161,9 +161,31 @@ log "stderr 侧验证" >&2
     expect(r.stderr).toContain('stderr 侧验证')
   })
 
-  it('源码级：note() 未被改动（保持 stdout+tee 双写）', () => {
+  it('源码级：note() 不写 stdout（$() 捕获契约），stderr 与 SCEN_LOG 双写', () => {
     const src = readFileSync(join(MX, 'mx-scenario-lib.sh'), 'utf8')
-    expect(src).toContain('note() { log "$*" | tee -a "$SCEN_LOG"; }')
+    expect(src).toContain('note() {')
+    expect(src).not.toContain('note() { log "$*" | tee')  // run28 N29-1：tee 收空 stdin，证据文件全空
+    const evid = tempDir('note-')
+    const slog = join(evid, 'scenario.log')
+    const out = bash(`
+set -u
+SCEN_LOG=${JSON.stringify(slog)}
+mkdir -p ${JSON.stringify(evid)}
+${extract('mx-scenario-lib.sh', 'note')}
+echo "--stdout--"
+note "进度行测试"
+echo "--end--"
+captured="$(note "捕获测试")"
+echo "captured=[$captured]"
+`)
+    // stdout 不得出现 [mux 行，$() 捕获必须为空（dispatch_in_room 依赖该契约）
+    expect(out.split('\n').filter(l => l.startsWith('[mux'))).toEqual([])
+    expect(out).toContain('captured=[]')
+    // 证据文件必须落行（run28 前该文件全轮零行）
+    const log = readFileSync(slog, 'utf8')
+    expect(log).toContain('[mux')
+    expect(log).toContain('进度行测试')
+    expect(log).toContain('捕获测试')
   })
 })
 

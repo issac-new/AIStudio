@@ -445,7 +445,7 @@ if step_reached reqgate; then
     python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 7 \
       --text "G1 需求冻结环节效果：$(freeze_doc) 已入 origin/main；四要素判读全过（验收标准/Scope-Out/影响面/涉敏），后续设计评审与安全评审共用同一冻结基线" \
       --ev "freeze_doc=$(freeze_doc)" --ev "gate=g1_frozen" >/dev/null 2>&1 \
-      || echo "ISSUE|r18-collect-failed|step7|环节效果采集失败（r18-collect effect）——报告审计环将缺该步" >> "$EVID_DIR/issues.log"
+      || echo "ISSUE|r18-collect-failed|step-7|环节效果采集失败（r18-collect effect）——报告审计环将缺该步" >> "$EVID_DIR/issues.log"
     r18_guard 7
     # 执行单元署名（G1 冻结验收，spec §2.10 表）：acceptance 类，写依据不写结论；
     # fanfan 单元保障幂等（无则建 registered 草案）；失败走 _wu_issue 不中止。

@@ -275,7 +275,9 @@ describe('群体协作读数 · 端点（夹具端到端）', () => {
     writeFileSync(join(evidenceDir, 'r18-steps.json'), JSON.stringify({
       _schema: 1,
       steps: {
-        '9': { ops: [{ title: '步 9 需求派发任务书全文（fanfan→fanfan-agent）', dialogs: [{ sender: 'fanfan', body: '支付收银台：支持微信与支付宝双渠道收单，商户多端接入，任务拆分与 RACI 如下' }] }] },
+        // 生产者契约（r18-collect.py dialog）：步骤级 dialogs（run28 实测形状）
+        '9': { dialogs: [{ title: '步 9 需求派发任务书全文（fanfan→fanfan-agent）', room: '!x:matrix.test', anchor: '$a', messages: [{ sender: 'fanfan', body: '支付收银台：支持微信与支付宝双渠道收单，商户多端接入，任务拆分与 RACI 如下' }] }] },
+        // 兼容旧载荷：ops[].dialogs（历史轮次人工补录形态，title 在 op 上）
         '11': { ops: [{ title: '步 11 系分拆分与 RACI 派发对话（fanfan-agent）', dialogs: [
           { sender: 'fanfan-agent', body: '执行任务 AN-PAYCORE（csw-pay-core 支付核心系分）：支持微信与支付宝双渠道收单' },
           { sender: 'fanfan-agent', body: '执行任务 AN-MP（csw-cashier-mp 小程序收银台前端）：商户多端接入' },

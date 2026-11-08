@@ -85,7 +85,19 @@ issue_once() { # issue_once <type> <subject> <desc>
 # 临时物清理（Z6）：$STATE.tmp 是 sset 的中转文件，mv 前被中断会残留。重定义 mx_cleanup
 # 即扩展清理面——EXIT trap 只在 mx-lib 挂一次，退出时按最新定义执行（bash 单 EXIT trap）。
 mx_cleanup() { rm -f "/tmp/mx-api.$$" "$STATE.tmp" "$STATE.rfd.tmp"; }
-note() { log "$*" | tee -a "$SCEN_LOG"; }
+# 过程证据落盘（2026-11-08 run28 复盘批 N29-1）：log() 自 2026-11-06 起只写 stderr，
+# `log "$*" | tee -a "$SCEN_LOG"` 的 tee 收到空 stdin——scenario.log 全轮零行（run28
+# 实锤仅 2 行人工补抄，闸计时/熔断日志复位/报告时间线全部无输入）。此处直接双写
+# stderr 与证据文件；不写 stdout：dispatch_in_room 的 $() 捕获契约
+# （aipay-scenario.sh:1265/1849/2637）依赖 stdout 干净。
+note() {
+  local _line
+  _line="[mux $(date +%H:%M:%S)] $*"
+  printf '%s\n' "$_line" >&2
+  if [[ -n "${SCEN_LOG:-}" ]]; then
+    printf '%s\n' "$_line" >> "$SCEN_LOG" 2>/dev/null || true
+  fi
+}
 
 # 场景步执行器（2026-10-27 mixed-motive 首跑实锤补齐：场景骨架此前引用 step() 但
 # 该助手从未存在——首跑才暴露）。幂等：sset step_ok_<key> 在案即跳过（重放安全）；
@@ -583,11 +595,11 @@ r18_dialog_step() { # <script-dir> <step> <marker|空> <title>
     _anchor="$(mx_messages "$_tok" "$_room" 20 2>/dev/null | jq -r '[.[].event_id][-1] // empty' 2>/dev/null || true)"
   fi
   if [[ -z "$_anchor" || -z "$_room" ]]; then
-    echo "ISSUE|r18-collect-failed|step${_st}|对话全文采集无锚（marker 与房间均不可用）——报告审计环将缺该步" >> "${EVID_DIR}/issues.log"
+    echo "ISSUE|r18-collect-failed|step-${_st}|对话全文采集无锚（marker 与房间均不可用）——报告审计环将缺该步" >> "${EVID_DIR}/issues.log"
     return 0
   fi
   if ! python3 "$_sd/mux/r18-collect.py" --run "${RUN_ID}" dialog --step "$_st" --room "$_room" --anchor "$_anchor" --title "$_ti" --user fanfan >/dev/null 2>&1; then
-    echo "ISSUE|r18-collect-failed|step${_st}|对话全文采集失败（anchor=${_anchor}）——报告审计环将缺该步" >> "${EVID_DIR}/issues.log"
+    echo "ISSUE|r18-collect-failed|step-${_st}|对话全文采集失败（anchor=${_anchor}）——报告审计环将缺该步" >> "${EVID_DIR}/issues.log"
   fi
   return 0
 }
@@ -613,7 +625,7 @@ print('' if ok is not False else 'missing')
 PY
 )"
   if [[ -n "$_miss" ]]; then
-    echo "ISSUE|r18-required-missing|step${_st}|必采证据未达标（r18_matrix.step_ok=false）——已在步内登记，勿等报告审计环发现" >> "${EVID_DIR}/issues.log"
+    echo "ISSUE|r18-required-missing|step-${_st}|必采证据未达标（r18_matrix.step_ok=false）——已在步内登记，勿等报告审计环发现" >> "${EVID_DIR}/issues.log"
     note "[采集] 步 ${_st} 必采证据未达标——已登记 r18-required-missing（r18_guard）"
   fi
   return 0
@@ -1202,15 +1214,23 @@ capture_step() { # <step> <url> [action] [user]
       echo "## state 终值（本步相关键）"
       grep -E "^${step%%_done}=|^capture_ok_${step}=" "$STATE" 2>/dev/null || echo "-（无直接键）"
     } > "$_rs" 2>/dev/null || true
-    python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
+    if ! python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "$RUN_ID" op \
       --step-key "$step" --title "步 ${step} 产物证据（repo 型，无界面拍摄位）" \
-      --entry "产物证据=${_rs#*$EVID_DIR/}（git 提交窗+state 终值；分类=${_plan_url}）" >/dev/null 2>&1 || true
+      --entry "产物证据=${_rs#*$EVID_DIR/}（git 提交窗+state 终值；分类=${_plan_url}）" >/dev/null 2>&1; then
+      echo "ISSUE|r18-op-register-failed|step-${step}|repo 型产物证据登记失败（r18-collect op 0 帧形态；产物文件在盘）——收尾链按 entry 补登记" >> "$EVID_DIR/issues.log"
+      note "[帧采集] 步 ${step} repo 型产物证据登记失败（记单不阻断）"
+    fi
     note "[帧采集] 步 ${step} repo 型产物证据已采集（${_rs#*$EVID_DIR/}——不拍截图）"
     sset "capture_ok_${step}" 1
     return 0
   fi
   if [[ "$_plan_url" == file:* ]]; then
     local _rel="${_plan_url#file:}" _src _dst
+    if [[ -z "$_rel" ]]; then
+      echo "ISSUE|frame-file-empty-path|step-${step}|capture-plan 的 file: 前缀后为空——配置错误（期望 file:<repo-relative-path>），非产物缺席" >> "$EVID_DIR/issues.log"
+      note "[帧采集] 步 ${step} 文件域帧路径为空——记单不阻断（修 capture-plan.env）"
+      return 0
+    fi
     _src="${DIRECTOR_CLONE:-}/$_rel"
     if [[ -f "$_src" ]]; then
       for _ph in before after; do
@@ -1350,6 +1370,28 @@ dev_progress_ping() {
     fi
     line="$line $b=$n$mark"
   done
+  # 动态分支面（2026-11-08 run28 复盘批 N29-6）：固定六路之外的交付/测试分支
+  # （feat/T03-*、test/*）此前完全不可见——lin 的 T03 本地提交在锚上显示 0 并
+  # 误判 STALE 一小时。判据=tip 不早于本轮开跑（与 branch_fresh 同源）；
+  # 固定六路与 wt/t_*（下一段单独计数）不重复列。
+  if [[ -n "$rs" ]]; then
+    local _extras
+    _extras=$(git -C "$DIRECTOR_CLONE" for-each-ref \
+        --format='%(refname:short) %(committerdate:unix)' \
+        'refs/remotes/origin/feat/*' 'refs/remotes/origin/test/*' 2>/dev/null \
+      | while read -r _ref _ct; do
+          [[ -n "$_ct" && "$_ct" -ge "$rs" ]] || continue
+          _short="${_ref#origin/}"
+          _known=0
+          for _k in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-MP DEV-CHWX DEV-CHALI; do
+            [[ "$_short" == "feat/$_k" ]] && { _known=1; break; }
+          done
+          if [[ "$_known" = 1 ]]; then continue; fi
+          _cnt=$(git -C "$DIRECTOR_CLONE" rev-list --count "origin/main..$_ref" 2>/dev/null || echo 0)
+          printf '%s=%s ' "$_short" "$_cnt"
+        done)
+    if [[ -n "$_extras" ]]; then line="$line ｜新分支：$_extras"; fi
+  fi
   # 工作区分支在途计数（run14 18:5x 用户纠偏实锤：同 agent 多工作区并发开发是设计
   # 形态——进行中提交全在 wt/t_*，只数 feat/DEV-* 交付分支会把活跃并发误读成「零
   # 进展」）。wt/t_*@任务 → 计数+末笔摘要，与交付分支计数并列呈现。
@@ -2565,7 +2607,10 @@ mx_gate_breaker_trip() { # <gate-key> <label> <unpassed-rounds>：记 N 轮未�
   local gate resp rounds
   gate=$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')
   resp=$(gov_lc_breaker_trip "$gate" "${3:-1}" "$(_mx_gate_evidence_sig "$2")") || true
-  rounds=$(printf '%s' "$resp" | jq -r '.state.failRounds // "?"' 2>/dev/null)
+  # jq 解析失败/响应空时 `// "?"` 不生效（空输入 jq 无输出）——显式回落，
+  # 避免 run28「累计  轮未过」空轮数（N29-8）。
+  rounds=$(printf '%s' "$resp" | jq -r '.state.failRounds // "?"' 2>/dev/null || true)
+  [[ -n "$rounds" ]] || rounds='?'
   note "[熔断] ${2} 累计 ${rounds} 轮未过（阈值 2；治理服务 gate=${gate}）"
 }
 

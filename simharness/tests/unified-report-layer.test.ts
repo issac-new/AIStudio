@@ -32,7 +32,8 @@ beforeAll(() => {
     _schema: 1,
     steps: {
       '11': { dialogs: [{ title: '步11 fixture 对话', room: '!x:matrix.test', anchor: '$a', messages: [] }] },
-      '18': { frames: ['a.png', 'b.png'] },
+      // 生产者契约：帧挂在 ops[].frames（steps[n].frames 不是 r18-collect 产出字段）
+      '18': { ops: [{ title: '步18 fixture 操作', frames: ['a.png', 'b.png'] }] },
     },
   }), 'utf8')
   // scenario.log：计数代理指标
