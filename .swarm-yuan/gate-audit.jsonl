@@ -17,3 +17,7 @@ p='/tmp/r28fix/runs/20261107-v8-run28/evidence/r18-steps.json'
 d=json.load(open(p,encoding='utf-8'))
 d['steps']['7']={'effect':{'text':'坏形状夹具','evidence':['commit=abc','gate=g1_frozen']}}
 json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,inden","gates":"rules.d"}
+{"ts":"2026-11-08T14:46:49Z","handler":"fail-gate-hook:edit","tool":"Edit","decision":"deny","reason":"gates-unresolved","target":"/Users/cuishi/.zcode/cli/memories/projects/aistudio-a5936c959ea077fa/run28-frame-audit-20261108.md","gates":"gate_security"}
+{"ts":"2026-11-08T15:01:53Z","handler":"fail-gate-hook:edit","tool":"Edit","decision":"deny","reason":"gates-unresolved","target":"/Users/cuishi/lab/AIStudio/.claude/worktrees/feat-evoteam-followup/docs/superpowers/specs/2026-11-08-evoteam-followup.md","gates":"gate_security"}
+{"ts":"2026-11-08T15:04:35Z","handler":"fail-gate-hook:edit","tool":"Edit","decision":"deny","reason":"gates-unresolved","target":"/Users/cuishi/lab/AIStudio/.claude/worktrees/feat-evoteam-followup/docs/superpowers/specs/2026-11-08-evoteam-followup.md","gates":"gate_security"}
+{"ts":"2026-11-08T15:13:56Z","handler":"fail-gate-hook:edit","tool":"Edit","decision":"deny","reason":"gates-unresolved","target":"/Users/cuishi/.zcode/cli/memories/projects/aistudio-a5936c959ea077fa/memory/evoteam-absorption-batch-20261108.md","gates":"gate_security"}

@@ -1416,3 +1416,10 @@
 {"ts":"2026-11-08T13:11:43Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
 {"ts":"2026-11-08T13:14:48Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
 {"ts":"2026-11-08T13:19:28Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-11-08T14:49:37Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-11-08T14:49:37Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-11-08T14:57:35Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-11-08T15:27:21Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-11-08T15:29:46Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
+{"ts":"2026-11-08T15:30:30Z","node":"门禁","actor":"","tool":"check_security","status":"started","note":""}
+{"ts":"2026-11-08T15:32:54Z","node":"门禁","actor":"","tool":"check_security","status":"fail","note":""}
