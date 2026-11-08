@@ -4,10 +4,10 @@
 
 ## 变更
 
-1. **`custom/server/harness/workbench/store.ts` SQL 标识符形状守卫**：新增 `assertIdent()`（与 qgate persistence 同款 `^[A-Za-z_][A-Za-z0-9_]*$`），migrate/read/write 三处 `db.prepare` 的 `${table}`/`${col}` 插值点全守卫——调用面虽为本文件字面量，经参数传递后静态不可判，形状白名单把注入面收敛为合法标识符字符集（属主 D1 决策同款）。
+1. **`custom/server/harness/workbench/store.ts` SQL 标识符形状守卫**：新增 `assertIdent()`（与 qgate persistence 同款 `^[A-Za-z_][A-Za-z0-9_]*$`），migrate/read/write 全部四处 `db.prepare` 插值点全守卫（首批仅落 migrate 一处，同日补全 read/load、write/wipe、write/put 三处——spec 声明三处全守卫的兑现闭环）——调用面虽为本文件字面量，经参数传递后静态不可判，形状白名单把注入面收敛为合法标识符字符集（属主 D1 决策同款）。
 2. **`simharness/mux/capture-plan.env` 三键拍摄账号正式切 admin**：anexec_done/review_done/ready_done 三面板（文档评审/待裁决/发布审批）路由面属平台超管，fanfan 视角恒 403——run28 补拍轮实证（原帧内容区报错 + admin 补拍即完整）。临时切号补拍的过渡态转正。
 3. **`simharness/aipay-scenario.sh` IDE_TASK 按轮注入**：ide 步拍摄前解析 fanfan-pm-plan 板首卡 id 注入 `IDE_TASK`（r18-plan-vars 既有展开通道）；解析失败记 `ide-task-resolve-fail` 问题单不静默——根治 run28「默认任务号跨轮失效→深链错帧」。
-4. **门侧登记（生成物 conf，不入仓）**：`SQL_INJECTION_WHITELIST` 三条（persistence 守卫行＋orchestrator 两行纯参数化算术撞正则）＋`EVAL_WHITELIST` 语料片段＋sensitive 豁免核对——命中降 warn 披露；正本留 `.swarm-yuan/decisions.jsonl` 2026-11-08T22:40 行（conf 重渲染洗掉可按此回填）。
+4. **门侧登记（precheck.patch.conf 用户覆盖层，追加式、升级保留，不入仓）**：`SQL_INJECTION_WHITELIST` 三条（persistence 守卫行＋orchestrator 两行纯参数化算术撞正则）＋`EVAL_WHITELIST` 语料片段＋hermes-records evals 夹具两条（run_probes/manifest 的 docstring-JSON 文案）；core conf 首试声明被 arch 层后 source 覆盖——分层真相=patch.conf 才是登记正位。`runtime/plugins/kanban/dashboard/plugin_api.py` docstring 按 d636895ab approval 注释同族先例改写（"one UPDATE +" 加号撞拼接正则）——命中降 warn 披露；正本留 `.swarm-yuan/decisions.jsonl` 2026-11-08T22:40 行（conf 重渲染洗掉可按此回填）。
 5. **GATE_ENFORCE_DENY 回挂 sensitive,deps**（用户裁决 C 的收尾）；security 维持摘除——属主明示「存量按族分批裁决后恢复」。
 
 ## 决策记录
