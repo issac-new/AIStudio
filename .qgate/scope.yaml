@@ -554,6 +554,7 @@ paths:
   - custom/server/handoff/handoff-rules.ts
   - custom/server/handoff/handoff-controller.ts
   - custom/server/handoff/__tests__/handoff-rules.test.ts
+  - custom/server/handoff/__tests__/handoff-controller.test.ts  # EvoTeam 批补声明：规则端点测试随批改（先例 7277a1ecf）
   - custom/server/kanban/column-dispatch.ts
   - custom/server/expcandidates/**
   - custom/server/lib/provenance.ts
