@@ -123,7 +123,7 @@ function sqliteRead(): WorkbenchStore {
     const n = Number((r.id.match(/-(\d+)$/) ?? [])[1])
     return Number.isFinite(n) ? Math.max(m, n) : m
   }, 0)
-  const load = (table: string) => (db.prepare(`SELECT json FROM ${table}`).all() as Array<{ json: string }>).map((r) => JSON.parse(r.json))
+  const load = (table: string) => (db.prepare(`SELECT json FROM ${assertIdent(table)}`).all() as Array<{ json: string }>).map((r) => JSON.parse(r.json))
   return {
     version: 1,
     nextSeq: Math.max(1, maxSeq + 1),
@@ -138,10 +138,10 @@ function sqliteWrite(store: WorkbenchStore): void {
   // DatabaseSync（Node 24.22）无 .transaction()——显式 BEGIN/COMMIT，异常回滚
   db.exec('BEGIN')
   try {
-    const wipe = (table: string) => db.prepare(`DELETE FROM ${table}`).run()
+    const wipe = (table: string) => db.prepare(`DELETE FROM ${assertIdent(table)}`).run()
     wipe('proposals'); wipe('experiences'); wipe('champions')
     const put = (table: string, tsKey: string, col: string, rows: Array<Record<string, unknown>>) => {
-      const stmt = db.prepare(`INSERT INTO ${table} (id, ${col}, json) VALUES (?, ?, ?)`)
+      const stmt = db.prepare(`INSERT INTO ${assertIdent(table)} (id, ${assertIdent(col)}, json) VALUES (?, ?, ?)`)
       for (const r of rows) stmt.run(String(r.id), String(r[tsKey] ?? ''), JSON.stringify(r))
     }
     put('proposals', 'updatedAt', 'updated_at', store.proposals as unknown[] as Array<Record<string, unknown>>)
