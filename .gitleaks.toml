@@ -1,0 +1,16 @@
+# gitleaks allowlist（2026-11-08 DENY 卫生批）：generic-api-key 对 TS 对象键名的误报豁免
+# ——run28 收尾批 sensitive 门实测：检出的「密钥」均为业务键名字符串（ia2.* 遥测键/
+# 评测指标键/红队语料 id），非凭证。精确值豁免（fingerprint 式），不按文件放宽。
+[extend]
+useDefault = true
+
+[allowlist]
+description = "TS 业务键名误报（generic-api-key）——精确值清单，新增误报须逐值登记"
+regexTarget = "match"
+regexes = [
+  '''ia2\.att\.sub[A-Za-z]+''',
+  '''ia2\.notify\.sub[A-Za-z]+''',
+  '''ia2_notify_prefs''',
+  '''waitP95Seconds''',
+  '''A7_prompt_leak''',
+]
