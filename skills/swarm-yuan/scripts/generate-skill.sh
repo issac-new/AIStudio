@@ -187,7 +187,10 @@ UNIVERSAL_FILES=(
 # 项目特定文件（upgrade 保留不覆盖、不备份）
 # R21-A：+references/recipes.md（任务配方：§A 业务功能清单 + §B 五要素配方，生成器出骨架、AI 填充、成长链单条更新）
 # R21-D：+references/relations.jsonl（机器可读关系边集：relations-extract.sh 自动 import 边 + AI 语义边）
-PROJECT_SPECIFIC_FILES=("SKILL.md" "references/workflow.md" "references/codebase.md" "references/dev-guide.md" "references/release.md" "references/reference-manual.md" "references/recipes.md" "references/relations.jsonl")
+# EvoTeam 批（2026-11-08）：+references/lessons.md（轮间教训——mx-retro-sink 每轮追加的项目
+# 内容，模板无此文件；实测 upgrade 本就不触碰 UNIVERSAL_FILES 外路径，此处显式登记是
+# 防将来 SKILL/文件重写策略重构时静默丢失的单一事实源，夹具守门 test-lessons-preserve.sh）
+PROJECT_SPECIFIC_FILES=("SKILL.md" "references/workflow.md" "references/codebase.md" "references/dev-guide.md" "references/release.md" "references/reference-manual.md" "references/recipes.md" "references/relations.jsonl" "references/lessons.md")
 
 # 用户可填充模板（随 UNIVERSAL_FILES 分发但 AI 会填入项目内容——Step 7 填充对象）
 # R21-A 缺陷修复：此类文件 upgrade 时若已非占位骨架（不含「（填入」标记）则跳过覆盖，
@@ -1461,8 +1464,9 @@ _validate_generator_writes() {
       [[ $(_profile_rank "$tier") -gt $(_profile_rank "$PROFILE") ]] && continue
     else
       # 已有项目知识只读保留；SKILL.md 元数据、配置、注入产物会更新。
+      # references/lessons.md 同保留族（EvoTeam 批登记，与 PROJECT_SPECIFIC_FILES 同源）。
       case "$path" in
-        references/workflow.md|references/codebase.md|references/dev-guide.md|references/release.md|references/reference-manual.md|references/recipes.md|references/relations.jsonl|settings.local.json|.mcp.json|hooks/hooks.json|commands/*)
+        references/workflow.md|references/codebase.md|references/dev-guide.md|references/release.md|references/reference-manual.md|references/recipes.md|references/relations.jsonl|references/lessons.md|settings.local.json|.mcp.json|hooks/hooks.json|commands/*)
           [[ -f "$dir/$path" ]] && continue ;;
       esac
     fi

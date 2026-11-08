@@ -227,7 +227,6 @@
 {"at":"2026-11-06T01:13:03Z","spec":"docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md","receipt":"077fa519bc97eb8cf9cb56bc8bf85560945d841b","commit":"08183ab02"}
 {"at":"2026-11-06T02:00:45Z","spec":"docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md","receipt":"b8812cbc23159c043e8021e8f28b71664a12eacb","commit":"66cd3bb43"}
 {"at":"2026-11-05T04:53:33Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"a07e46f44e678733e7c9244ccdebcd74609ce910","commit":"32bf92b02"}
-
 {"at":"2026-11-05T12:52:45Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"99045b37b4196a8a0bb9b5ebdf0d0aa46875090b","commit":"e8186dba6"}
 {"at":"2026-11-05T13:15:29Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"7109211fbe6ccdcfafe0f58341b1fd347b66f688","commit":"2f99b4624"}
 {"at":"2026-11-05T14:47:16Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"38589e1491776c45ebbf4fb382f63dd3013acaad","commit":"5887bf865"}
@@ -278,3 +277,5 @@
 {"at":"2026-11-08T13:59:57Z","spec":"docs/superpowers/specs/2026-11-08-team-library-evolution.md","receipt":"05fbad57c714b0fd84addbe91f33eedfec3da4f1","commit":"b135730b7"}
 {"at":"2026-11-08T14:18:29Z","spec":"docs/superpowers/specs/2026-11-08-gate-restore-batch.md","receipt":"35173af942f4bf823c3a734e1ea6e5945ec8be17","commit":"dc6874f03"}
 {"at":"2026-11-08T14:17:39Z","spec":"docs/superpowers/specs/2026-11-08-run28-retro-rootfix.md","receipt":"bc481ff546b1e8441c1d28c45a33567df721d06c","commit":"9adeadb9f"}
+{"at":"2026-11-08T14:44:43Z","spec":"docs/superpowers/specs/2026-11-08-evoteam-followup.md","receipt":"bc2f0ef1b74dff6cdd7e60f58a8cf73da90ecde5","commit":"27cccee6a"}
+{"at":"2026-11-08T15:06:35Z","spec":"docs/superpowers/specs/2026-11-08-evoteam-followup.md","receipt":"ec13d11b989049f47054632266354572db5f3005","commit":"5d0f1ee26"}

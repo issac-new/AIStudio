@@ -12,13 +12,12 @@ router.get('/', async (ctx) => {
 })
 
 router.post('/extract', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as { days?: number }
+  const body = bodyOf<{ days?: number }>(ctx)
   try {
     const result = await runExtraction({ days: Number(body.days) || undefined })
-    ctx.body = { ok: true, ...result }
+    ok(ctx, { ...result })
   } catch (e) {
-    ctx.status = 500
-    ctx.body = { ok: false, problems: [String((e as Error).message || e)] }
+    fail(ctx, 500, String((e as Error).message || e), { code: 'extract_failed' })
   }
 })
 

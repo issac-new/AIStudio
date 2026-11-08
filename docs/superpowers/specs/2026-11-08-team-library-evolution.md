@@ -25,7 +25,7 @@
 | D5 | 规则作用域用 `(from,to)` 列/角色对，不绑定 agent 实例 | 同一角色在不同部署由不同 profile 承担；绑实例会让规则不可移植（论文跨 backbone 迁移的同类前提） |
 | D6 | 经验作用域复用约束卡口径 `columns/specialists`，不新造 team_family 字段 | 派单现场只拿得到列与 specialist；引入 team_family 需要跨模块解析团队库，先保留可判定的最小作用域 |
 | D7 | 反思守卫在「审核批准」时硬拦（422），提取时不拦 | 提取期拦截会丢失证据；批准是人工决策点，守卫在此提供确定性判据并可先改陈述再批 |
-| D8 | retro-sink 用 `MX_RETRO_SINK_TARGET` 指向导演克隆并二次 `repo_commit_main`，不改其单路径签名 | 改签名影响其他调用方；二次提交换来链路闭合且不动既有入口。技能 SKILL.md 的 lessons 入口当前为手加行，生成器 `UNIVERSAL_FILES` 未登记该文件——技能下次 `--upgrade` 可能重写该行，留给技能刷新批补登记（本 spec 留痕） |
+| D8 | retro-sink 用 `MX_RETRO_SINK_TARGET` 指向导演克隆并二次 `repo_commit_main`，不改其单路径签名 | 改签名影响其他调用方；二次提交换来链路闭合且不动既有入口。〔2026-11-08 收尾批 SPEC_REBIND 定谳〕原「--upgrade 可能重写 lessons 入口行」之忧经夹具实测证伪：upgrade 走 RESUME=1，SKILL.md 整体跳过重写、UNIVERSAL_FILES 外文件不被模板触碰；防御性登记（PROJECT_SPECIFIC_FILES＋守门测试 test-lessons-preserve.sh）随收尾批落地（spec 2026-11-08-evoteam-followup） |
 | D9 | 本批不新增门禁/脚本/账本，机制预算零增量 | `config/mechanism-budget.json` 的 gates/scripts/ledgers 计数字段无变化；新增仅为服务端模块与配置表 |
 
 ## 验证

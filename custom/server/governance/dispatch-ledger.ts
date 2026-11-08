@@ -35,6 +35,10 @@ export interface DispatchLedgerEntry {
   workspaceId?: string
   /** 关联看板任务卡（进度可感知链）：mention 入参透传，进度聚合按此键关联引擎 run。 */
   taskId?: string
+  /** 命中的交接规则 `<familyId>/<ruleId>`（EvoTeam 批 P5 可观测面）：该 step 派单注入了
+   * 交接契约行才落值；缺席=NONE/未启用。命中率按 column 条目聚合（jq 面：
+   * 有 handoffRule 行数 ÷ column=目标列 行数）。 */
+  handoffRule?: string
   detail?: string
 }
 
