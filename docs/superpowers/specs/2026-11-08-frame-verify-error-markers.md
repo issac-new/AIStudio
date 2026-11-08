@@ -24,11 +24,14 @@ run28 报告帧独立审计根治批。审计实锤（2026-11-08 上午，三层
 3. **report_view 挂账销账走补记 DISP**：append-only 台账不改写原行，追加「已修」行注明首跑缺帧→05:31 补挂→复验 ok 的时序事实。
 4. **run28 修订不手改生成物**：HTML 由 mx-report-gen 从 evidence＋快照重生成；配对正本在治理服务，补记后必刷快照（run27 铁律：否则净额计数不实）。
 5. 用户裁决记录：2026-11-08 用户令「按建议修复」，本 spec 承载审计四条建议全部（判据根治／假引用更正／销账／帧内异常显形经重核验自动达成）。
+6. **空白态词面粒度修正（同日补拍轮）**：首版把泳道占位词「暂无任务」收入 EMPTY_MARKERS，补拍轮实证误伤——有 7/18 张卡的看板，空泳道照样印「暂无任务」占位框（列级信号≠整板空）；整板空的页级信号＝看板头计数器「0 tasks」（norm 后 0tasks）。改为收 0tasks、移除暂无任务，守门测试加「占位词禁入」断言（同 run26 裸「暂无」教训谱系）。
+7. **补拍事实留痕**：anexec/review/ready 三键按临时切 admin 账号补拍（该三面板路由面为平台超管，fanfan 视角恒 403＝拍摄位规划账号缺陷，长期修正挂待裁）；register/defect 补拍帧含任务卡（7/18 tasks），defect 帧卡片在 900px 视口折叠线下方以计数器承载；ide 补拍用 fanfan 主卡 t_23758b58（原深链任务号跨轮失效）；原偏差帧全部保留为 *.orig-mismatch 不冒充消失。
 
 ## 验证
 
 - 守门测试：`cd simharness && npx vitest run tests/v84-frame-gates.test.ts tests/frame-four-state.test.ts tests/capture-plan-registry-coverage.test.ts`——新增行为断言（verdict 四例：403 报错／深链无权／泳道空态／健康页）＋词面安全断言（ERROR_MARKERS 无裸数字码、EMPTY_MARKERS 无裸「暂无」）。
 - run28 实测重跑：`python3 simharness/mux/frame-verify.py --run 20261107-v8-run28` 预期新增翻红 5 键（register/anexec/review/ready/ide），既有 3 失败键维持，其余 6 键维持通过。
+- 补拍轮实测（同日）：7 键补拍后复验 13/14 过（唯 mp_runtime_proof 维持缺帧——中央仓 origin/main 无 DEV-MP-runtime-proof.png，文件域真值缺席，维持降级不造假）；泳道占位词误伤两例（register 7 tasks/defect 18 tasks）由决策 6 粒度修正消除。
 - 重生成报告 grep 验证：5 帧 ⚠徽章带「报错态／空白态」措辞、2 条已修 DISP 渲染、摘要分级计数随新核验态更新。
 
 ## 设计文档影响
