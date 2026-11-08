@@ -566,3 +566,5 @@ paths:
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - .swarm-yuan/decisions.jsonl
   - docs/superpowers/specs/2026-11-08-run28-retro-rootfix.md
+  - custom/server/delivery/delivery-controller.ts  # run28 复盘批（spec 2026-11-08-run28-retro-rootfix）：交付读数读步骤级 dialogs
+  - custom/server/delivery/__tests__/swarm-collab.test.ts  # 同上：夹具对齐生产者契约
