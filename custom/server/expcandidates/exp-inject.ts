@@ -33,11 +33,42 @@ export function injectionRunLabel(): string {
   return process.env.EXPERIENCE_INJECT_RUN?.trim() || `adhoc-${new Date().toISOString().slice(0, 10)}`
 }
 
-/** 可注入候选：approved 态；v1 不按 target 过滤（经验陈述自含适用面），封顶 3。 */
-export function selectableExperiences(candidates: ExpCandidate[]): ExpCandidate[] {
+/** 作用域过滤条件（派单现场可判定的两维）。 */
+export interface ExperienceScopeFilter {
+  column?: string
+  specialist?: string
+}
+
+/** 经验是否落在当前派单作用域内：无 scope=全局；scope 限定而当前维度缺席→排除（不猜）。 */
+export function experienceInScope(candidate: ExpCandidate, filter?: ExperienceScopeFilter): boolean {
+  if (!filter) return true
+  const scope = candidate.scope
+  if (!scope) return true
+  if (Array.isArray(scope.columns) && scope.columns.length > 0) {
+    if (!filter.column || !scope.columns.includes(filter.column)) return false
+  }
+  if (Array.isArray(scope.specialists) && scope.specialists.length > 0) {
+    if (!filter.specialist || !scope.specialists.includes(filter.specialist)) return false
+  }
+  return true
+}
+
+/** 作用域具体度：带 scope 的候选优先于全局候选（更具体的作用域更可能是当前语境的正解）。 */
+function scopeSpecificity(candidate: ExpCandidate): number {
+  const scope = candidate.scope
+  if (!scope) return 0
+  return (Array.isArray(scope.columns) && scope.columns.length > 0 ? 1 : 0)
+    + (Array.isArray(scope.specialists) && scope.specialists.length > 0 ? 1 : 0)
+}
+
+/** 可注入候选：approved 态；按作用域过滤（无 scope 视为全局）；作用域更具体者优先，封顶 3。 */
+export function selectableExperiences(candidates: ExpCandidate[], filter?: ExperienceScopeFilter): ExpCandidate[] {
   return [...candidates]
     .filter((c) => c.status === 'approved')
-    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt) || a.id.localeCompare(b.id))
+    .filter((c) => experienceInScope(c, filter))
+    .sort((a, b) => scopeSpecificity(b) - scopeSpecificity(a)
+      || a.updatedAt.localeCompare(b.updatedAt)
+      || a.id.localeCompare(b.id))
     .slice(0, MAX_EXP_INJECT)
 }
 
@@ -49,12 +80,17 @@ export function experienceBriefLine(candidates: ExpCandidate[]): string | null {
 }
 
 /** 派单侧读取面（column-dispatch 消费）：默认关/无 approved/存储异常→空行。
- * query（可选）=当前任务语境；提供且 fewshot 通道选通时按相似度追加飞轮教训行。 */
-export function experienceLinesForDispatch(_target: DispatchTarget, query?: string): string[] {
+ * query（可选）=当前任务语境；提供且 fewshot 通道选通时按相似度追加飞轮教训行。
+ * 作用域（2026-11-08 EvoTeam 吸收）：按派单列/specialist 过滤带 scope 的经验；
+ * 无 scope 的存量候选按全局处理。 */
+export function experienceLinesForDispatch(target: DispatchTarget, query?: string): string[] {
   const lines: string[] = []
   try {
     if (injectionEnabled()) {
-      const selected = selectableExperiences(listCandidates())
+      const selected = selectableExperiences(listCandidates(), {
+        ...(target.column ? { column: target.column } : {}),
+        ...(target.specialist ? { specialist: target.specialist } : {}),
+      })
       if (selected.length) {
         recordInjection(selected.map((c) => c.id), injectionRunLabel())
         const line = experienceBriefLine(selected)

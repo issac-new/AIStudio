@@ -139,3 +139,19 @@ describe('查询与概览', () => {
     expect(s.names.find((n) => n.name === 'dedupe.md')?.latestVersion).toBe(2)
   })
 })
+
+describe('provenance 与跨模型复测（EvoTeam 吸收）', () => {
+  it('入库带 provenance；跨模型判定三态（同模型 false / 异模型 true / 缺值 null）', async () => {
+    const { crossModelRetestNeeded } = await import('../../../lib/provenance')
+    recordComponent(proposal(), variant('v1', 'd1'), ev(), {
+      provenance: { model: 'model-a', executor: 'host-1', at: '2026-11-08T00:00:00Z' },
+    })
+    const entry = readLibrary().entries[0]
+    expect(entry.provenance?.model).toBe('model-a')
+    expect(entry.provenance?.executor).toBe('host-1')
+    expect(crossModelRetestNeeded(entry.provenance, 'model-a')).toBe(false)
+    expect(crossModelRetestNeeded(entry.provenance, 'model-b')).toBe(true)
+    expect(crossModelRetestNeeded(entry.provenance, '')).toBeNull()
+    expect(crossModelRetestNeeded(undefined, 'model-b')).toBeNull()
+  })
+})

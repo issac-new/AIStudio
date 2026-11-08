@@ -3154,6 +3154,17 @@ if step_reached retro && [[ -z "$(sget retro_done)" ]]; then
     note "[观察] 复盘推送失败"
   fi
   MEM_OK=1
+  # 轮间教训沉淀（EvoTeam 吸收 P3，2026-11-08）：此前 mx-retro-sink.sh 无调用者、
+  # 目标 lessons.md 不存在——复盘结论到不了下一轮。目标指到导演克隆的仓库副本，
+  # 沉淀后单独入 origin/main；失败只记问题单不阻断复盘（fail-soft）。
+  if MX_RETRO_SINK_TARGET="$DIRECTOR_CLONE/simharness/skills/aipaydev-dev/references/lessons.md" \
+      bash "$SCRIPT_DIR/mux/mx-retro-sink.sh" "$RETRO" >>"$EVID_DIR/retro-sink.log" 2>&1; then
+    note "[G6] 轮间教训已沉淀（lessons.md，随 install_skills 分发下轮生效）"
+    repo_commit_main "simharness/skills/aipaydev-dev/references/lessons.md" "director (G6)" "director@aipaydev.local" "chore(retro): ${RFD_ID} 轮间教训沉淀（mx-retro-sink 回写）" \
+      || echo "ISSUE|retro-sink-push|director|教训文件入仓失败（本地已写，下轮 install_skills 前需补推）" >> "$EVID_DIR/issues.log"
+  else
+    echo "ISSUE|retro-sink|director|轮间教训沉淀失败（复盘仍入仓，教训未回流）" >> "$EVID_DIR/issues.log"
+  fi
   curl -sf -m 3 "$HINDSIGHT_API_URL/health" >/dev/null || MEM_OK=0
   fam_bank=$(jq -r .bank_id "$HERMES_ROOT/profiles/fanfan/hindsight/config.json" 2>/dev/null || echo missing)
   [[ "$fam_bank" == hermes-* ]] || MEM_OK=0

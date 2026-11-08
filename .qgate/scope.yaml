@@ -543,3 +543,21 @@ paths:
   - docs/superpowers/specs/2026-11-08-deny-hygiene.md
   - .gitleaks.toml  # DENY 卫生批（2026-11-08）：gitleaks allowlist 登记制（spec 2026-11-08-deny-hygiene）
   - docs/superpowers/specs/2026-11-08-sql-ident-whitelist.md
+  # 2026-11-08 团队库与团队作用域交接规则（EvoTeam 吸收批，spec 2026-11-08-team-library-evolution）
+  - docs/superpowers/specs/2026-11-08-team-library-evolution.md
+  - team/shared/team-library.yaml
+  - team/shared/handoff-rules.yaml
+  - custom/server/team-library/**
+  - custom/server/handoff/handoff-rules.ts
+  - custom/server/handoff/handoff-controller.ts
+  - custom/server/handoff/__tests__/handoff-rules.test.ts
+  - custom/server/kanban/column-dispatch.ts
+  - custom/server/expcandidates/**
+  - custom/server/lib/provenance.ts
+  - custom/server/harness/workbench/__tests__/component-library.test.ts
+  - custom/server/AGENTS.md
+  - simharness/skills/aipaydev-dev/references/lessons.md
+  - simharness/skills/aipaydev-dev/SKILL.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - .swarm-yuan/decisions.jsonl

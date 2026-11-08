@@ -1,0 +1,44 @@
+version: 1
+updated: '2026-11-08'
+# 团队作用域交接规则（EvoTeam 吸收，spec 2026-11-08-team-library-evolution）
+#
+# 规则作用域＝(from,to) 列/角色对；from/to 不同名、同一对可有多条不同 trigger 的规则。
+# 注入语义＝建议：派单简报附一条命中规则，不阻断派发、不判失败；缺证据照常继续。
+# required_evidence 是可判定的键（机器对账用），渲染时附中文标签。
+# 版本变化保留 version，退役用 status: retired（不删除历史）。
+families:
+  - family_id: hf-delivery
+    description: 交付列流转的交接契约族（待办→实现→评审→复测）
+    rules:
+      - rule_id: todo-to-in-progress-scope
+        from: todo
+        to: in_progress
+        trigger: 任务从待办进入实现
+        instruction: 交接必须说明本次改动面与验收口径；没有验收口径不进入实现
+        required_evidence: [scope, acceptance_criteria]
+        verification: 接收方先复述改动面与验收口径，不一致先澄清再动手
+        fallback: 缺项退回待办补齐，不进入实现
+        version: 1
+        status: active
+
+      - rule_id: in-progress-to-review-evidence
+        from: in_progress
+        to: review
+        trigger: 实现完成进入评审
+        instruction: 交接必须带改动文件清单、复现命令与未验证项；无证据的完成声明不成立
+        required_evidence: [changed_files, repro_command, not_verified]
+        verification: 评审方先核对三项证据，再给 verdict；缺证据不进入结论
+        fallback: 缺项退回实现方补齐，不进入评审结论
+        version: 1
+        status: active
+
+      - rule_id: review-to-verify-regression
+        from: review
+        to: verify
+        trigger: 评审通过进入复测
+        instruction: 交接必须带评审判词、测试证据与残余风险；口头“已通过”不构成证据
+        required_evidence: [review_verdict, test_evidence, residual_risks]
+        verification: 复测方按评审判词逐项复跑，复跑结果与证据对不上即退回
+        fallback: 缺项退回评审方补齐，不进入复测
+        version: 1
+        status: active
