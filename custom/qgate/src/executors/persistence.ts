@@ -153,7 +153,17 @@ export async function runPersistenceExecutor(
       e.summary = `sqlite open failed: ${(err as Error).message}`
       return [e]
     }
-    const setup = strList(scenario.setup) ?? []
+    // 标识符形状守卫（2026-11-08 security 门白名单化批）：表名/列名插值仅放行
+// [A-Za-z_][A-Za-z0-9_]* 形态——SQLite 标识符无法参数化，形状白名单是注入面的
+// 确定性收敛（拒绝引号/分号/空格等一切逃逸字符）；违例即抛，不静默跳过。
+function assertIdent(name: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Error(`unsafe sql identifier: ${JSON.stringify(name)}`)
+  }
+  return name
+}
+
+const setup = strList(scenario.setup) ?? []
     for (const sql of setup) db!.exec(sql)
 
     const tables = strList(scenario.snapshot) ?? []
@@ -161,7 +171,7 @@ export async function runPersistenceExecutor(
       const out: Record<string, unknown[]> = {}
       for (const t of tables) {
         try {
-          out[t] = db!.prepare(`SELECT * FROM "${t}"`).all() as unknown[]
+          out[t] = db!.prepare(`SELECT * FROM "${assertIdent(t)}"`).all() as unknown[]
         } catch {
           out[t] = []
         }
@@ -218,10 +228,10 @@ export async function runPersistenceExecutor(
     if (isRecord(persistence)) {
       for (const [name, target] of Object.entries(persistence)) {
         if (!isRecord(target)) { diffOk = false; diffs[name] = 'invalid target'; continue }
-        const table = String(target.table ?? name)
+        const table = assertIdent(String(target.table ?? name))
         const where = isRecord(target.where) ? target.where : {}
         const fields = isRecord(target.fields) ? target.fields : {}
-        const whereKeys = Object.keys(where)
+        const whereKeys = Object.keys(where).map(assertIdent)
         const rows = (whereKeys.length
           ? db!.prepare(`SELECT * FROM "${table}" WHERE ${whereKeys.map((k) => `"${k}" = ?`).join(' AND ')}`).all(...whereKeys.map((k) => where[k] as string | number | bigint | null))
           : db!.prepare(`SELECT * FROM "${table}"`).all()) as Record<string, unknown>[]

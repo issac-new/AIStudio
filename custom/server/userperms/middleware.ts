@@ -76,13 +76,14 @@ function defaultBeforeReader(kind: AuditedEndpointKind, key: string): UserBefore
     if (!existsSync(dbPath)) return null
     db = new DatabaseSync(dbPath, { readOnly: true })
     // 锚点 vendor schemas.ts USERS_SCHEMA/USER_PROFILES_SCHEMA（users/user_profiles 两表）
-    const by =
-      kind === 'local-update' ? 'id' :
-      kind === 'local-create' ? 'username' :
-      'matrix_user_id'
-    const row = db.prepare(
-      `SELECT id, username, role FROM users WHERE ${by} = ? LIMIT 1`,
-    ).get(kind === 'local-update' ? Number(key) : key) as
+    // 显式三分支 SQL（2026-11-08 security 门白名单化批）：列名消插值——静态可判。
+    const row = (
+      kind === 'local-update'
+        ? db.prepare('SELECT id, username, role FROM users WHERE id = ? LIMIT 1').get(Number(key))
+        : kind === 'local-create'
+          ? db.prepare('SELECT id, username, role FROM users WHERE username = ? LIMIT 1').get(key)
+          : db.prepare('SELECT id, username, role FROM users WHERE matrix_user_id = ? LIMIT 1').get(key)
+    ) as
       | { id: number; username: string; role: string }
       | undefined
     if (!row) return null
