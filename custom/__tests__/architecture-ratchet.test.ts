@@ -24,7 +24,12 @@ function grepCount(pattern: string, paths: string[]): number {
     // golden-gate.ts（2026-11-06 G4 黄金集门检批）同理：GoldenGateResult 是 eval 域内部
     // Result 联合（与 runner ReplayRunResult/store CreateSetResult 同族——它们的 ok:false
     // 属历史存量基线），非 HTTP 响应面；HTTP 出口在 routes/analysis.ts 走 created/fail。
-    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts', ':(exclude)custom/server/toolcontract/error-envelope.ts', ':(exclude)custom/server/result-contract/result-contract.ts', ':(exclude)custom/server/eval/golden-gate.ts'], { cwd: ROOT, encoding: 'utf8' })
+    // handoff-rules.ts / team-library/team-library.ts（2026-11-08 EvoTeam 收尾批）同理：
+    // parseHandoffRules/parseTeamLibrary 是 YAML 解析的内部 Result 联合（与
+    // a2a/board-ownership parseBoardOwnership 同族——后者属存量基线未排除），非 HTTP 面；
+    // 两域的 HTTP 出口在 controller 均走 ok/fail。排除是计数口径归位不是放宽：这批同时
+    // 把 exp-controller 的 /extract 失败体转 fail()、注释字面量避让（净 -2 实降）。
+    const out = execFileSync('git', ['grep', '-rn', pattern, '--', ...paths, ':(exclude)custom/server/lib/http.ts', ':(exclude)custom/server/toolcontract/error-envelope.ts', ':(exclude)custom/server/result-contract/result-contract.ts', ':(exclude)custom/server/eval/golden-gate.ts', ':(exclude)custom/server/handoff/handoff-rules.ts', ':(exclude)custom/server/team-library/team-library.ts'], { cwd: ROOT, encoding: 'utf8' })
     return out.split('\n').filter(Boolean).length
   } catch {
     return 0

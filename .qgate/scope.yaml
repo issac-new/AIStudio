@@ -568,3 +568,12 @@ paths:
   - docs/superpowers/specs/2026-11-08-run28-retro-rootfix.md
   - custom/server/delivery/delivery-controller.ts  # run28 复盘批（spec 2026-11-08-run28-retro-rootfix）：交付读数读步骤级 dialogs
   - custom/server/delivery/__tests__/swarm-collab.test.ts  # 同上：夹具对齐生产者契约
+  # 2026-11-08 EvoTeam 收尾批（未做项清偿，spec 2026-11-08-evoteam-followup）
+  - docs/superpowers/specs/2026-11-08-evoteam-followup.md
+  - skills/swarm-yuan/scripts/generate-skill.sh
+  - skills/swarm-yuan/tests/test-lessons-preserve.sh
+  - custom/server/governance/dispatch-ledger.ts
+  - custom/server/kanban/column-dispatch.ts
+  - custom/server/kanban/__tests__/handoff-observability.test.ts
+  - custom/server/handoff/handoff-rules.ts
+  - docs/superpowers/specs/2026-11-08-team-library-evolution.md

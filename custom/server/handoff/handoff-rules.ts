@@ -271,18 +271,42 @@ export function checkHandoffConformance(rule: HandoffRule, present: string[]): H
   return { ok: missing.length === 0, ruleId: rule.ruleId, missing }
 }
 
+/** 派单注入选择结果（可观测面）：line=null 即 NONE；reason 透出未命中/歧义/关闭原因。 */
+export interface HandoffRuleDispatchSelection {
+  line: string | null
+  familyId: string | null
+  ruleId: string | null
+  version: number | null
+  reason: string
+}
+
 /**
- * 派单注入入口（column-dispatch 消费）：默认开，HANDOFF_RULES_INJECT=0 关闭；
- * 存储缺席/坏表/无命中 → null（不占行，不阻断派发）。
+ * 派单注入入口（column-dispatch 消费，选择＋渲染两层）：默认开，
+ * HANDOFF_RULES_INJECT=0 关闭；存储缺席/坏表/无命中 → line:null（不占行，不阻断派发）。
+ * reason 始终给出可读原因（命中规则名 / NONE / 跨族歧义 / 开关关闭 / 表缺席），
+ * 供派发结果面与台账观测命中率（EvoTeam 批 P5）。
  */
-export function handoffRuleLineFor(from: string | null, to: string, trigger?: string | null): string | null {
-  if (process.env.HANDOFF_RULES_INJECT === '0') return null
+export function selectHandoffRuleForDispatch(from: string | null, to: string, trigger?: string | null): HandoffRuleDispatchSelection {
+  const none = (reason: string): HandoffRuleDispatchSelection => ({ line: null, familyId: null, ruleId: null, version: null, reason })
+  if (process.env.HANDOFF_RULES_INJECT === '0') return none('注入开关关闭（HANDOFF_RULES_INJECT=0）')
   try {
     const report = loadHandoffRules()
-    if (!report.available) return null
+    if (!report.available) return none(`规则表缺席（${report.reason ?? 'unknown'}）`)
     const selected = selectHandoffRule(report.families, { from, to, trigger })
-    return selected.rule ? renderHandoffRuleLine(selected.rule) : null
-  } catch {
-    return null
+    if (!selected.rule) return none(selected.reason)
+    return {
+      line: renderHandoffRuleLine(selected.rule),
+      familyId: selected.rule.familyId,
+      ruleId: selected.rule.ruleId,
+      version: selected.rule.version,
+      reason: selected.reason,
+    }
+  } catch (e) {
+    return none(`规则通道异常（${e instanceof Error ? e.message : String(e)}）`)
   }
+}
+
+/** 兼容薄壳：只要渲染行的旧调用面（行为与拆分前一致）。 */
+export function handoffRuleLineFor(from: string | null, to: string, trigger?: string | null): string | null {
+  return selectHandoffRuleForDispatch(from, to, trigger).line
 }

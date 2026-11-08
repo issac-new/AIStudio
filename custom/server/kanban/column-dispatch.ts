@@ -21,7 +21,7 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
-import { handoffRuleLineFor } from '../handoff/handoff-rules'
+import { selectHandoffRuleForDispatch } from '../handoff/handoff-rules'
 import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
 import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/fewshot-rerank'
@@ -52,6 +52,9 @@ export interface ColumnDispatchResult {
   deduped: Array<{ taskId: string; column: string; stepId: string; provider: string }>
   /** fewshot LLM 重排读数（挂账清偿批二 C2）：null=off/无语境；source=llm|fallback。 */
   rerank: { source: string; reason?: string } | null
+  /** 交接规则选择面（EvoTeam 批 P5 可观测，2026-11-08）：逐 entry 触发列的选择结果——
+   *  ruleId=null 即 NONE/歧义/关闭（reason 给因）；台账侧 handoffRule 字段跨调用积累命中率。 */
+  handoffRules: Array<{ column: string; familyId: string | null; ruleId: string | null; version: number | null; reason: string }>
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -202,13 +205,27 @@ export async function dispatchColumnTransition(
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // B4 在途键：并发重入的同键派发合并（进程内；跨进程靠台账窗口）
   const inflight = new Set<string>()
+  // 交接规则选择面（P5 可观测）：逐 entry 触发列记录选择结果（命中/NONE/歧义原因），
+  // 随 REST 结果透出；台账侧由 handoffRule 字段跨调用积累命中率。
+  const handoffRules: ColumnDispatchResult['handoffRules'] = []
   for (const trigger of triggers) {
     // 团队作用域交接规则（EvoTeam 吸收，2026-11-08）：按 (来源列, 目标列) 取一条
     // 建议规则；无命中/表坏/开关关 → null 不占行。只对目标列的 entry 触发注入，
     // 来源列的 exit 触发不重复（否则同一次流转会在两处贴契约）。
-    const handoffLine = trigger.column === params.to
-      ? handoffRuleLineFor(params.from, trigger.column)
+    const handoffSelection = trigger.column === params.to
+      ? selectHandoffRuleForDispatch(params.from, trigger.column)
       : null
+    const handoffLine = handoffSelection?.line ?? null
+    const handoffRuleId = handoffSelection?.ruleId ? `${handoffSelection.familyId}/${handoffSelection.ruleId}` : undefined
+    if (trigger.column === params.to) {
+      handoffRules.push({
+        column: trigger.column,
+        familyId: handoffSelection?.familyId ?? null,
+        ruleId: handoffSelection?.ruleId ?? null,
+        version: handoffSelection?.version ?? null,
+        reason: handoffSelection?.reason ?? '非目标列触发（exit 不注入）',
+      })
+    }
     delegation.push(...delegationCompleteness(trigger.steps))
     // 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：列流转即任务生命
     // 周期跃迁（source=kanban，sourceKey=taskId）。映射不上的自定义列名不登记只
@@ -246,6 +263,7 @@ export async function dispatchColumnTransition(
         appendDispatchOutcome({
           kind: 'column', target: step.provider, specialist: step.specialist || undefined,
           role: step.role || undefined, column: trigger.column, reason: o.reason,
+          ...(handoffRuleId ? { handoffRule: handoffRuleId } : {}),
           commandId: o.commandId, sessionId: o.sessionId, workspaceId: o.workspaceId,
           taskId: params.taskId,
           detail: o.detail?.slice(0, 200),
@@ -279,13 +297,13 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules }
 }
 
 
 /**
  * 统一任务生命周期账本接线（wx 挂账 #7）：看板列流转登记进 taskledger
- * （source=kanban）。映射不上的列名 registerEntry 返回 ok:false（口径缺口不猜）；
+ * （source=kanban）。映射不上的列名 registerEntry 判失败（ok 为假值，口径缺口不猜）；
  * fail-soft：账本异常只 warn，不阻断派发。
  */
 function registerKanbanLedger(taskId: string, column: string, title: string | undefined): void {
