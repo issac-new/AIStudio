@@ -4848,8 +4848,15 @@ try:
                    'zero_change_steps': len({_n.split('-op')[0] for _n in _FRAME_PAIR_SAME}),
                    'voided_steps': len(_FRAME_VOIDED)},
     }
-    with (_REPO_GOV / 'run-metrics.jsonl').open('a', encoding='utf-8') as _mf:
-        _mf.write(json.dumps(_mrow, ensure_ascii=False) + '\n')
+    # N28-1（run28 收尾批）：净环境/断锚下 RUN_ID 可能回落远古轮名（run28 实录：写 20261002-v5-run7
+    # 脏行）——写入前锚校验：RUN_ID 须匹配当年轮命名形态；不匹配则跳过+stderr 告警（fail-open 不阻断报告）。
+    import re as _re_m
+    if RUN_ID and _re_m.fullmatch(r'(20\d{6}-v\d+-run\d+|burn-\d{8}-\d+|burn-pre-run\d+-r\d+)', str(RUN_ID)):
+        with (_REPO_GOV / 'run-metrics.jsonl').open('a', encoding='utf-8') as _mf:
+            _mf.write(json.dumps(_mrow, ensure_ascii=False) + '\n')
+    else:
+        import sys as _sys_m
+        print(f'[metrics-skip] RUN_ID={RUN_ID!r} 未过锚校验（非当年轮命名形态）——不写台账', file=_sys_m.stderr)
 except Exception as _me:
     print(f'[metrics] 指标留档失败（不阻断）：{_me}', file=sys.stderr)
 

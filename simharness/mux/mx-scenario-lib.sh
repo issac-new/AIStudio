@@ -2600,14 +2600,19 @@ _mx_gate_evidence_sig() { # <label> →证据签名=scenario.log 证据行数+in
   # 修订证据全部落 origin/main（fanfan 概设 v1.1 落 main 后熔断器全盲 35min 不复位）。
   # 签名并入 main tip：pre-integration 闸以 main 为复位证据，integration 建支后两 tip 并存。
   extra="${extra} mtip:$(git -C "$repo" rev-parse --short origin/main 2>/dev/null || echo -)"
-  if [[ "$label" == *G5* ]]; then
-    local rgid db
-    rgid=$(sget card_g5_ready 2>/dev/null || true)
-    if [[ -n "${rgid:-}" ]]; then
-      db="$SIM_ROOT/hermes/kanban/boards/fanfan-review/kanban.db"
-      extra="${extra} card:$(sqlite3 "$db" "SELECT body FROM tasks WHERE id='${rgid}';" 2>/dev/null | shasum | cut -c1-12)"
-    fi
-  fi
+  case "$label" in
+    *G5*|*G2*)
+      # N28-2（run28 收官批）：复位证据卡面哈希从仅 G5 扩到 G2——run28 实录 arch 判词落卡
+      # 但 G2 签名只含 itip/mtip 致熔断永等；评审卡 owner 落判词即证据变化，走评审卡的闸同权。
+      local rgid db
+      if [[ "$label" == *G5* ]]; then rgid=$(sget card_g5_ready 2>/dev/null || true)
+      else rgid=$(sget card_arch_g2 2>/dev/null || true); fi
+      if [[ -n "${rgid:-}" ]]; then
+        db="$SIM_ROOT/hermes/kanban/boards/fanfan-review/kanban.db"
+        extra="${extra} card:$(sqlite3 "$db" "SELECT body FROM tasks WHERE id='${rgid}';" 2>/dev/null | shasum | cut -c1-12)"
+      fi
+      ;;
+  esac
   echo "${c:-0}:${extra}"
 }
 
