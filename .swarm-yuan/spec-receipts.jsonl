@@ -281,3 +281,4 @@
 {"at":"2026-11-08T15:06:35Z","spec":"docs/superpowers/specs/2026-11-08-evoteam-followup.md","receipt":"ec13d11b989049f47054632266354572db5f3005","commit":"5d0f1ee26"}
 {"at":"2026-11-09T08:19:46Z","spec":"docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md","receipt":"427355b19ef1b51ff07e51ba94d1fa6921549a76","commit":"5e68bb2b6"}
 {"at":"2026-11-09T09:36:40Z","spec":"docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md","receipt":"a5748d3132030cd85f5c5f27f7802c918caddb0a","commit":"1a717a07f"}
+{"at":"2026-11-09T09:42:21Z","spec":"docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md","receipt":"a04dc586b1c85f6be3902f72dd19c9024438681c","commit":"9da83e927"}
