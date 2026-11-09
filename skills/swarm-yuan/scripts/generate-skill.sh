@@ -1147,7 +1147,7 @@ esac
 PROJECT_DIR="${2:?Usage: generate-skill.sh [--upgrade] [--profile lite|standard|compliance] <skill-name> <project-dir> [target-dir]}"
 PROJECT_DIR="$(_win_path_to_posix "$PROJECT_DIR")"
 if [[ -z "${3:-}" ]]; then
-  TARGET_DIR=$(detect_skill_dir "$PROJECT_DIR")
+  TARGET_DIR=$(detect_skill_dir "$PROJECT_DIR" "$SKILL_NAME")
   RUNTIME_NAME=$(detect_runtime_name "$PROJECT_DIR")
   echo "检测到运行环境: ${RUNTIME_NAME}"
   echo "目标 skill 目录: ${TARGET_DIR}"
@@ -1174,10 +1174,11 @@ fi
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 mkdir -p "$TARGET_DIR"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-# 2026-10-29 起 detect_skill_dir 默认落 .agents/skills——随发模板内 .claude/skills 字面量
-# 与实际落盘位置不一致（挂载点定位/豁免正则等）。复用复制后 sed 通道自动推导重写：
-# 未显式设置且 TARGET_DIR 是项目内非 .claude/skills 的 */skills 目录时，按相对目录名
-# 统一改写；显式 SKILLS_PATH_REWRITE 永远优先；项目外自定义目录不推导（保持旧行为）。
+# 2026-10-29 起 detect_skill_dir 默认落 .agents/skills、2026-11-09 起再统一家级 ~/.agents/skills
+# ——随发模板内 .claude/skills 字面量与实际落盘位置可能不一致（挂载点定位/豁免正则等）。
+# 复用复制后 sed 通道自动推导重写：未显式设置且 TARGET_DIR 是项目内非 .claude/skills 的
+# */skills 目录时，按相对目录名统一改写；显式 SKILLS_PATH_REWRITE 永远优先；项目外目录
+# （含家级 ~/.agents/skills）不推导（家级部署靠模板多根探测兜底，与存量家级安装同构）。
 if [[ -z "${SKILLS_PATH_REWRITE:-}" && "$TARGET_DIR" == "$PROJECT_DIR"/* && "$TARGET_DIR" != *.claude/skills ]]; then
   _rel_target="${TARGET_DIR#"$PROJECT_DIR"/}"
   case "$_rel_target" in

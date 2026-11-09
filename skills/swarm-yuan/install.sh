@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# install.sh — swarm-yuan 安装脚本（自动检测运行环境，安装到对应 skill 默认目录）
+# install.sh — swarm-yuan 安装脚本（默认统一安装 ~/.agents/skills，跨工具通用单副本）
 # 用法:
-#   bash install.sh                    # 自动检测环境 + 安装（未检测到宿主时默认 ~/.agents/skills/）
+#   bash install.sh                    # 默认装 ~/.agents/skills/（2026-11-09 用户裁定统一；检测到的宿主仅披露，不分流）
 #   bash install.sh --agents           # 强制安装到 ~/.agents/skills/（跨工具通用技能目录，zcode 原生发现根）
 #   bash install.sh --claude           # 强制安装到 ~/.claude/skills/
 #   bash install.sh --cursor           # 强制安装到 ~/.cursor/skills/
@@ -244,11 +244,27 @@ _skills_dir_key() {  # $1=key → rc 0=skills-dir 型（跳过原生规则） 1=
   return 1
 }
 
+# 2026-11-09：默认根统一 ~/.agents/skills 后，agents 目标需向「原生读 ~/.agents/skills 的
+# 宿主」交叉渲染规则面（当前 zcode；后续宿主原生支持时在此扩充，空格分隔多宿主）——否则
+# zcode 会话的 AGENTS.md 集成块缺失或指向已卸载旧路径。hermes/dsh/ccswitch 维持纯
+# skills-dir 零渲染（无原生规则面）。user 级「只写宿主已装的」守卫（R126）自动兜住未装宿主。
+_agents_native_tools='zcode'
+
 render_native_rules() {
   local name="$1" dest="$2" key
   key="$(tool_key_of "$name")"
   [[ -n "$key" ]] || return 0
-  _skills_dir_key "$key" && return 0
+  if _skills_dir_key "$key"; then
+    if [[ "$key" == "agents" && -n "$_agents_native_tools" ]]; then
+      local gen="$SRC_DIR/scripts/generate-skill.sh"
+      if [[ -f "$gen" ]]; then
+        if ! bash "$gen" --render-tools "$dest" "" "$_agents_native_tools" </dev/null; then
+          echo "  ⚠ ${name} 交叉渲染（${_agents_native_tools}）返回非 0（仅警告，不影响安装主流程）"
+        fi
+      fi
+    fi
+    return 0
+  fi
   local gen="$SRC_DIR/scripts/generate-skill.sh"
   [[ -f "$gen" ]] || { echo "  ⚠ 未找到 ${gen}，跳过原生规则渲染"; return 0; }
   if ! bash "$gen" --render-tools "$dest" "" "$key" </dev/null; then
@@ -265,7 +281,15 @@ unrender_native_rules() {  # <name> <dest> → rc 0=干净 1=有注销失败
   local name="$1" dest="$2" key
   key="$(tool_key_of "$name")"
   [[ -n "$key" ]] || return 0
-  _skills_dir_key "$key" && return 0
+  if _skills_dir_key "$key"; then
+    if [[ "$key" == "agents" && -n "$_agents_native_tools" ]]; then
+      if ! ta_unrender_tools "$dest" "" "$_agents_native_tools"; then
+        echo "  ⚠ ${name} 交叉注销（${_agents_native_tools}）返回非 0（技能目录仍按流程存档）"
+        return 1
+      fi
+    fi
+    return 0
+  fi
   if ! ta_unrender_tools "$dest" "" "$key"; then
     echo "  ⚠ ${name} 原生规则注销返回非 0（技能目录仍按流程存档）"
     return 1
@@ -701,68 +725,22 @@ case "$MODE" in
     exit 0
     ;;
   auto|"")
-    echo "=== 自动检测运行环境 ==="
+    # 2026-11-09 用户裁定：默认安装统一 ~/.agents/skills（跨工具通用单副本；zcode 原生发现根）。
+    # 检测到的宿主仅披露＋分流提示，不再按宿主分流安装目标；多宿主交互菜单随之退役——
+    # auto 分支零交互，R118 ④（非交互 EOF）与 ⑫（非法选择）的失效面一并消失。
+    echo '=== 自动检测运行环境 ==='
     found="$(detect_runtimes)"
-    if [[ -z "$found" ]]; then
-      echo "  未检测到已安装的 AI 工具，默认安装到 ~/.agents/skills/"
-      install_to "Agents 通用" "$HOME/.agents/skills" ""
+    if [[ -n "$found" ]]; then
+      echo '  检测到宿主（默认不装各家目录，统一 ~/.agents/skills）：'
+      printf '%s\n' "$found" | while IFS=$'\t' read -r name dir _; do
+        echo '    - '${name}'（'${dir}'）'
+      done
+      echo '  提示：zcode 等原生读 ~/.agents/skills 的宿主装后即见；'
+      echo '        需要装进每个宿主原生目录用 --all，单个宿主用 --claude/--zcode 等显式旗标'
     else
-      count=$(echo "$found" | wc -l | xargs)
-      if [[ "$count" -eq 1 ]]; then
-        echo "$found" | while IFS=$'\t' read -r name dir cmd; do
-          install_to "$name" "$dir" "$cmd"
-        done
-      else
-        echo "  检测到多个运行环境："
-        i=1
-        echo "$found" | while IFS=$'\t' read -r name dir _; do
-          echo "    ${i}) ${name} (${dir})"
-          i=$((i+1))
-        done
-        echo "    a) 全部安装"
-        echo ""
-        # R118 ④：非交互 stdin（CI/管道/</dev/null）下 read 会 EOF，旧实现被 set -e 直接
-        # 终止为 rc=1 且无任何解释。改为明确报错并给出可执行替代（--all / 单个目标）。
-        if [[ ! -t 0 ]]; then
-          echo "ERROR: 检测到多个运行环境，但 stdin 不是交互终端，无法选择安装目标。" >&2
-          echo "  请显式指定：bash install.sh --all（全部安装），或 --agents/--claude/--cursor/--codex/--zcode/--hermes/--dsh/--ccswitch 等单个目标。" >&2
-          echo "  仅查看环境：bash install.sh --list" >&2
-          exit 2
-        fi
-        if ! read -rp "选择安装目标 [1-${count}/a]: " choice; then
-          echo "ERROR: 读取选择失败（stdin 已关闭）——未安装任何目标；请用 --all 或单个目标参数。" >&2
-          exit 2
-        fi
-        # R118 ⑫：非法选择（0/99/非数字/空）旧实现会跳过安装却仍打印“安装完成”，
-        # 这里显式校验并报错退出（rc=1），绝不输出成功字样。
-        case "$choice" in
-          a|A)
-            printf '%s\n' "$found" | install_all_found
-            ;;
-          *)
-            case "$choice" in
-              ''|*[!0-9]*)
-                echo "ERROR: 无效选择 '${choice}'（有效值：1-${count} 或 a）——未安装任何目标。" >&2
-                exit 1
-                ;;
-            esac
-            choice_num=$((10#${choice}))
-            if [[ "$choice_num" -lt 1 || "$choice_num" -gt "$count" ]]; then
-              echo "ERROR: 无效选择 '${choice}'（有效范围 1-${count} 或 a）——未安装任何目标。" >&2
-              exit 1
-            fi
-            i=1
-            echo "$found" | while IFS=$'\t' read -r name dir cmd; do
-              if [[ "$i" -eq "$choice_num" ]]; then
-                install_to "$name" "$dir" "$cmd"
-                break
-              fi
-              i=$((i+1))
-            done
-            ;;
-        esac
-      fi
+      echo '  未检测到已安装的 AI 工具'
     fi
+    install_to 'Agents 通用' "$HOME/.agents/skills" ''
     ;;
   *)
     echo "Usage: bash install.sh [--agents|--claude|--cursor|--codex|--opencode|--windsurf|--gemini|--kimi|--zcode|--hermes|--dsh|--ccswitch|--all|--list|--version]"

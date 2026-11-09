@@ -135,7 +135,14 @@ printf '%s' "$body" | grep -q "Devin CLI 面（.devin/hooks.v1.json），Windsur
 
 # ===== ⑤ kimi 产品更替 =====
 grep -q 'kimi-code' install.sh && ok "5a install.sh 检测/安装面向 kimi-code" || bad "5a kimi-code 未入 install"
-grep -q '"$HOME/.kimi-code"|"$HOME/.kimi"' assets/tool-adapters/common.sh 2>/dev/null || grep -q '"$HOME/.kimi-code"' assets/tool-adapters/common.sh && ok "5b ta_is_user_level 含 ~/.kimi-code" || bad "5b 缺 kimi-code home"
+# 2026-11-09 起 ta_is_user_level 改经 ta_home_norm 归一化 HOME 比对（枚举形态 "${_h}/<dir>"），
+# 双断言锁行为而非字面量：kimi-code 判 user 级 + ~/.agents 家级根判 user 级（本轮新增默认根）。
+( export HOME="$TMP"; mkdir -p "$TMP"
+  . "$BASE/assets/tool-adapters/common.sh"
+  if ta_is_user_level "$TMP/.kimi-code"; then echo KIMI_OK; else echo KIMI_BAD; fi
+  if ta_is_user_level "$TMP/.agents"; then echo AGENTS_OK; else echo AGENTS_BAD; fi
+) > "$TMP/u5.out" 2>/dev/null
+grep -q KIMI_OK "$TMP/u5.out" && grep -q AGENTS_OK "$TMP/u5.out" && ok "5b ta_is_user_level 含 ~/.kimi-code 与 ~/.agents（HOME 归一化比对）" || bad "5b user 级枚举缺件: $(tr '\n' ' ' < "$TMP/u5.out")"
 # 5c ~/.kimi-code 缺失时 hooks 跳过披露（不建文件不报错）
 ( export HOME="$TMP/nohome"; mkdir -p "$TMP/nohome"
   export TA_DIR="$BASE/assets/tool-adapters" TA_SKILL_NAME="demo-skill" TA_BODY="$TMP/body.md"

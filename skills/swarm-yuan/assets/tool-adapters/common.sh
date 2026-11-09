@@ -69,10 +69,21 @@ ta_write_enforce_of() {  # $1=tool → stdout "hook"|"rendered"|空（表值 1 �
   esac
 }
 
-# ---- 用户级工具 home 判定（与 install.sh detect_runtimes 的 8 目录一一对应）----
+# ---- 用户级工具 home 判定（与 install.sh detect_runtimes 的宿主目录对应）----
+# 2026-11-09 补 ~/.agents：默认安装根统一家级后，~/.agents/skills/<name> 的 tool_home
+# 必须判 user 级，否则 render-tools 会把渲染块写错目标文件（项目级路径）。
+# 2026-11-09 判定加固：skill_dir 经 cd+pwd 绝对化会归一路径（如 TMPDIR 尾斜杠产生的
+# `T//` 双斜杠被折叠），而 $HOME 原串不折叠——原串比对在该形态下失配（实测：测试环境
+# TMPDIR 尾斜杠致家级技能误判 project 级）。比对前 cd+pwd 归一 HOME；HOME 不可达回退原串。
+ta_home_norm() {  # → 归一化 $HOME（cd+pwd；回退原串）
+  local _h
+  _h="$(cd "$HOME" 2>/dev/null && pwd || true)"
+  printf '%s' "${_h:-$HOME}"
+}
 ta_is_user_level() {  # $1=tool_home
+  local _h; _h="$(ta_home_norm)"
   case "$1" in
-    "$HOME/.claude"|"$HOME/.cursor"|"$HOME/.codex"|"$HOME/.gemini"|"$HOME/.kimi"|"$HOME/.kimi-code"|"$HOME/.zcode"|"$HOME/.config/opencode"|"$HOME/.codeium/windsurf") return 0 ;;
+    "${_h}/.agents"|"${_h}/.claude"|"${_h}/.cursor"|"${_h}/.codex"|"${_h}/.gemini"|"${_h}/.kimi"|"${_h}/.kimi-code"|"${_h}/.zcode"|"${_h}/.config/opencode"|"${_h}/.codeium/windsurf") return 0 ;;
     *) return 1 ;;
   esac
 }

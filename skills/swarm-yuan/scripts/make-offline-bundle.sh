@@ -265,7 +265,7 @@ for _c in "$HERE"/swarm-yuan "$HERE"/Swarm-yuan; do
 done
 [[ -z "$SKILL_DIR" ]] && { echo "✗ 未找到技能目录（$HERE/swarm-yuan）" >&2; exit 1; }
 
-# 一键默认（用户指令）：无任何旗标 = 三平台（zcode/hermes/dsh）+ 运行时走源 + github 源码 + 知识入驻。
+# 一键默认（用户指令）：无任何旗标 = 检出宿主装全部（--all）/ 空检测回落通用 ~/.agents/skills + 运行时走源 + github 源码 + 知识入驻。
 # 各段对缺失内容自动跳过（novendor→走源；无源码包/知识→披露跳过），显式旗标仍可指定单宿主。
 WITH_NPM=1; WITH_PIP=1; WITH_GH=1; WITH_KNOW=1; WANT_ALL=0; HOSTS="" DEFAULT_HOSTS=1
 while [[ $# -gt 0 ]]; do
@@ -332,8 +332,8 @@ echo "=== ① 安装技能本体 ==="
 if [[ "$WANT_ALL" -eq 1 ]]; then
   install_one --all
 elif [[ -z "$HOSTS" && "$DEFAULT_HOSTS" -eq 1 ]]; then
-  # R139：一键默认空检测回落通用安装（~/.claude/skills）——旧实现无脑 --all，空检测时
-  # install.sh 直接 exit 1，技能本体一行没装就整包中止，与「诚实降级」承诺相悖。
+  # R139：一键默认空检测回落通用安装（install.sh auto → ~/.agents/skills）——旧实现无脑
+  # --all，空检测时 install.sh 直接 exit 1，技能本体一行没装就整包中止，与「诚实降级」承诺相悖。
   # （--all 显式旗标仍保持空检测即失败的严格语义，不放宽。）
   if bash "$SKILL_DIR/install.sh" --list </dev/null 2>/dev/null | grep -q '✅'; then
     echo "（一键默认（Windows .bat / macOS / Linux 同构）：自动检测本机全部已装 AI 工具安装；运行时走 npm/pip 源 + github 源码 + 知识资产自动装载——单宿主 --agents/--claude/--zcode/--hermes/--dsh/--ccswitch 等，或 --minimal 只装本体）"
@@ -491,7 +491,7 @@ if [[ "$WITH_KNOW" -eq 1 ]]; then
   echo "=== ⑤ vendor-knowledge 知识资产入驻已装技能目录 ==="
   _kn=0
   if [[ -d "$SKILL_DIR/vendor-knowledge" ]]; then
-    for _d in "$HOME/.claude/skills/swarm-yuan" "$HOME/.zcode/skills/swarm-yuan" "$HOME/.codex/skills/swarm-yuan" \
+    for _d in "$HOME/.agents/skills/swarm-yuan" "$HOME/.claude/skills/swarm-yuan" "$HOME/.zcode/skills/swarm-yuan" "$HOME/.codex/skills/swarm-yuan" \
               "$HOME/.cursor/skills/swarm-yuan" "$HOME/.codeium/windsurf/skills/swarm-yuan" "$HOME/.config/opencode/skills/swarm-yuan" \
               "$HOME/.gemini/skills/swarm-yuan" "$HOME/.kimi-code/skills/swarm-yuan" "$HOME/.kimi/skills/swarm-yuan" \
               "$HOME/.hermes/skills/swarm-yuan" "$HOME/.dsh/skills/swarm-yuan" "$HOME/.cc-switch/skills/swarm-yuan"; do

@@ -132,10 +132,10 @@
 ## swarm-yuan（swarm-yuan 生成技能）
 
 - 用途：元技能生成器：为任意代码仓库生成项目专属开发技能（六段目录：SKILL.md + workflow + references + assets + 门禁配置 + scripts）。生成流程 Step 1-13：探查（组件库清单 + 调用链 + 关系边集 + 任务配方）→ 特征卡 → 骨架 → 填充 → 门禁与 hooks → 验证审查 → 激活；目标技能按开发工作流九节点运行（需求 → 探查 → spec → plan → 编码 → 测试 → 审查 → 合入 → 发布；研发四阶段＝分支开发→分支测试→主干合并→主干回归——⑤-⑦ 在分支、⑨ 发布前主干全量回归）；项目变化由指纹感知并局部更新技能。何时用：用户说'为某项目生成开发技能'、'create a dev skill'。数字口径以 assets/facts.conf 为准。
-- 技能本体：~/.zcode/skills/swarm-yuan/SKILL.md（九节点工作流 + references/ 项目知识库）
-- 质量门禁：bash ~/.zcode/skills/swarm-yuan/assets/precheck.sh --all（门禁配置：~/.zcode/skills/swarm-yuan/assets/precheck.conf）
+- 技能本体：~/.agents/skills/swarm-yuan/SKILL.md（九节点工作流 + references/ 项目知识库）
+- 质量门禁：bash ~/.agents/skills/swarm-yuan/assets/precheck.sh --all（门禁配置：~/.agents/skills/swarm-yuan/assets/precheck.conf）
 - 激活框架门禁：未配置
-- 流程状态机：bash ~/.zcode/skills/swarm-yuan/assets/state-machine.sh status
+- 流程状态机：bash ~/.agents/skills/swarm-yuan/assets/state-machine.sh status
 - 写时拦截：ZCode 已接 spec-first deny（宿主 hooks，L1，活体实证）；git pre-commit（L2）与门禁 spec-first（L3）纵深兜底
 
 > 本规则由 swarm-yuan generate-skill.sh --render-tools 从 SKILL.md + precheck.conf 派生；改动请重跑渲染，勿手改。
