@@ -600,6 +600,9 @@ paths:
   - skills/swarm-yuan/scripts/offline-manifest.conf
   - skills/swarm-yuan/CHANGELOG.md
   - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md
+  # 2026-11-09 swarm-yuan 技能根统一 ~/.agents/skills（feat/swarm-yuan-agents-root；skills/swarm-yuan/** 与 scripts/offline-template/** 已覆盖，此处登记 spec 与收口件）
+  - docs/superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - docs/manuals/aistudio-design-document-index.md
 
   - docs/superpowers/specs/2026-11-09-ledger-judgment-followup.md

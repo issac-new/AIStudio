@@ -143,13 +143,15 @@ else
 fi
 
 # ============================================================
-# ④ 多运行时 + 非交互 stdin
+# ④ 多运行时 + 非交互 stdin（2026-11-09 起 auto 统一装 ~/.agents/skills，菜单退役）
 # ============================================================
-echo "[4] 非交互 stdin（多运行时）"
+echo "[4] 非交互 stdin（多运行时，auto 统一家级）"
 FH4="$(newhome 4)"; mkdir -p "$FH4/.claude/skills" "$FH4/.codex/skills"
 out4="$(HOME="$FH4" bash "$INSTALL" </dev/null 2>&1)"; rc4=$?
-if [[ $rc4 -ne 0 && "$out4" == *"--all"* && ! -e "$FH4/.claude/skills/swarm-yuan" ]]; then
-  ok "4a 非交互多运行时明确报错并提示 --all（rc=${rc4}）"
+if [[ $rc4 -eq 0 && -f "$FH4/.agents/skills/swarm-yuan/SKILL.md" \
+      && ! -e "$FH4/.claude/skills/swarm-yuan" && ! -e "$FH4/.codex/skills/swarm-yuan" \
+      && "$out4" != *"选择安装目标"* ]]; then
+  ok "4a 非交互多运行时统一装 ~/.agents/skills 不分流、零交互（rc=${rc4}）"
 else
   bad "4a 非交互行为不符（rc=${rc4}）"
 fi
@@ -353,28 +355,19 @@ else
 fi
 
 # ============================================================
-# ⑫ 非法交互选择（0/99）报错退出且不打印“安装完成”
+# ⑫ auto 零交互（2026-11-09 菜单退役）：tty 下也不询问，统一装家级
 # ============================================================
-echo "[12] 非法交互选择"
+echo "[12] auto 零交互（tty 下无菜单）"
 FH12="$(newhome 12)"; mkdir -p "$FH12/.claude/skills" "$FH12/.codex/skills"
-for badchoice in 0 99; do
-  outfile="$TMP/pty-$badchoice.out"
-  HOME="$FH12" python3 "$TMP/ptyrun.py" "${badchoice}"$'\n' "$outfile" "选择安装目标" bash "$INSTALL" >/dev/null 2>&1; rc12=$?
-  if [[ $rc12 -ne 0 ]] && ! tr -d '\r' < "$outfile" | grep -q '安装完成' \
-     && [[ ! -e "$FH12/.claude/skills/swarm-yuan" ]]; then
-    ok "12-${badchoice} 无效选择报错退出（rc=${rc12}）且无「安装完成」"
-  else
-    bad "12-${badchoice} 无效选择仍走成功路径（rc=${rc12}）"
-  fi
-done
-outfile="$TMP/pty-valid.out"
-HOME="$FH12" python3 "$TMP/ptyrun.py" '1'$'\n' "$outfile" "选择安装目标" bash "$INSTALL" >/dev/null 2>&1; rc12v=$?
-if [[ $rc12v -eq 0 && -f "$FH12/.claude/skills/swarm-yuan/SKILL.md" \
-      && ! -e "$FH12/.codex/skills/swarm-yuan" ]] \
+outfile="$TMP/pty-auto.out"
+HOME="$FH12" python3 "$TMP/ptyrun.py" '99'$'\n' "$outfile" "选择安装目标" bash "$INSTALL" >/dev/null 2>&1; rc12=$?
+if [[ $rc12 -eq 0 && -f "$FH12/.agents/skills/swarm-yuan/SKILL.md" \
+      && ! -e "$FH12/.claude/skills/swarm-yuan" && ! -e "$FH12/.codex/skills/swarm-yuan" ]] \
+   && ! tr -d '\r' < "$outfile" | grep -q '选择安装目标' \
    && tr -d '\r' < "$outfile" | grep -q '安装完成'; then
-  ok "12c 合法选择 1 正常安装并输出「安装完成」"
+  ok "12a tty 下 auto 不弹菜单、统一装 ~/.agents/skills 且输出「安装完成」（rc=${rc12}）"
 else
-  bad "12c 合法选择路径被破坏（rc=${rc12v}）"
+  bad "12a auto 在 tty 下行为不符（rc=${rc12}）"
 fi
 
 # ============================================================

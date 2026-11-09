@@ -24,8 +24,11 @@ cd Swarm-yuan/swarm-yuan
 bash install.sh
 ```
 
+默认（无参数，2026-11-09 起）统一安装到 `~/.agents/skills/`——跨工具通用单副本，zcode 原生发现根装后即见；检测到的宿主仅披露不分流，需要装进各家原生目录用 `--all` 或单宿主旗标。安装到 `~/.agents/skills/` 时自动向原生读该根的宿主（当前 zcode）交叉渲染规则面（AGENTS.md 集成块）。
+
 | 选项 | 安装到 |
 |------|--------|
+| `--agents` | `~/.agents/skills/`（默认；跨工具通用技能目录） |
 | `--claude` | `~/.claude/skills/` |
 | `--codex` | `~/.codex/skills/` |
 | `--cursor` | `~/.cursor/skills/` |
@@ -38,7 +41,7 @@ bash install.sh
 | `--list` | 仅列出检测到的环境 |
 | `--uninstall --<目标>` | 从对应环境卸载（如 `--uninstall --claude`，`--uninstall --all` 卸载所有已检测环境）。技能目录存档为 `<目录>.uninstalled.<UTC时间戳>`，渲染期写入的宿主配置（hooks 条目/标记块/插件注册）一并注销，用户自有配置保留；幂等可重复执行 |
 
-环境检测判据：宿主家目录存在（如 `~/.cursor`）或宿主 CLI 在 PATH（如 `command -v cursor`），二者满足其一即视为已安装；安装目标始终是各自 `skills/` 子目录。
+环境检测判据：宿主家目录存在（如 `~/.cursor`）或宿主 CLI 在 PATH（如 `command -v cursor`），二者满足其一即视为已安装。检测到的宿主默认不分流安装（统一 `~/.agents/skills/`），`--all`/单宿主旗标才写各自 `skills/` 子目录。
 
 ---
 
@@ -399,7 +402,7 @@ bash scripts/generate-skill.sh --render-tools <skill-dir> [project-root] [tool]
 或直接运行：
 
 ```bash
-bash ~/.claude/skills/swarm-yuan/scripts/generate-skill.sh --upgrade my-project-dev /path/to/project
+bash ~/.agents/skills/swarm-yuan/scripts/generate-skill.sh --upgrade my-project-dev /path/to/project
 ```
 
 默认继承原 profile。升级先核验项目状态机（`.swarm-yuan/state.yaml`）：任务停在中间阶段（design/build/verify/operate）即以退出码 2 拒绝升级，并点名在途任务与解除路径；仅注册（open）与已归档（archive）放行，确认接受任务前后工具链版本斜切时设 `SWARM_YUAN_UPGRADE_ALLOW_INFLIGHT=1` 显式豁免。通过后在临时副本完成，成功后发布并把完整原件存到 `.upgrade-backup-*`；失败保留原技能。项目正文与已有配置保持，缺失配置项由生成器补齐。

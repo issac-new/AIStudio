@@ -976,28 +976,39 @@ if [[ "${1:-}" == "--refresh" ]]; then
 fi
 
 # ---- 检测运行环境 ----
-# 默认目标：项目内 .agents/skills/（跨工具通用技能目录，zcode 原生发现根；2026-10-29 起，原 .claude/skills）。
-# 历史行为（2026-07-21 前）：项目内无 .claude/skills 时 fallback 到 $HOME/.claude/skills 全局目录，
-# 导致 generate-skill.sh <name> <project> 把骨架生成到用户全局 skills 目录、项目目录内却什么都没有，
-# 与 README/SKILL.md 宣称的"为某项目生成开发技能"不符。改为默认在项目内创建（当时选 .claude/skills，
-# 2026-10-29 先改 .agent/skills、同日用户裁定校正为 .agents/skills）。
-# 全局安装走 install.sh；用户仍可用第 3 参数 target-dir 显式指定任意目录。
+# 默认目标：~/.agents/skills/（家级，跨工具通用技能目录，zcode 原生发现根；2026-11-09 用户裁定统一，
+# 自身安装 install.sh auto 同口径）。口径沿革：2026-07-21 前项目内无 .claude/skills 时误落
+# $HOME/.claude/skills 全局目录；2026-07-21 改项目内 .claude/skills；2026-10-29 用户裁定改项目内
+# .agents/skills；2026-11-09 再统一为家级 ~/.agents/skills（生成技能随人不随仓，跨工具单副本）。
+# 存量兼容：项目内已有 skills 目录（任意受支持运行时）仍复用最前；家级 legacy ~/.zcode/skills/<name>
+# 命中时原位续命（upgrade 不失联）并打印迁移建议。用户仍可用第 3 参数 target-dir 显式指定任意目录。
 detect_skill_dir() {
-  local project="$1"
+  local project="$1" name="${2:-}"
   # 1) 项目内已有 skills 目录（任意受支持运行时）→ 优先复用；.agents/skills 探测最前
   #    （默认路径优先），单目录存量项目不受影响（无 .agents/skills 时命中既有目录）。
   local rt
   for rt in .agents/skills .claude/skills .codex/skills .cursor/skills .codeium/windsurf/skills .config/opencode/skills .gemini/skills .kimi/skills .zcode/skills; do
     if [[ -d "$project/$rt" ]]; then echo "$project/$rt"; return; fi
   done
-  # 2) 项目内无 skills 目录 → 默认在项目内创建 .agents/skills/
-  echo "$project/.agents/skills"
+  # 2) 家级正位：~/.agents/skills/<name> 已存在 → 命中（create/upgrade 家级原位；家级根下
+  #    其他技能的存在不构成重定向依据，只认 <name> 本身）。
+  if [[ -n "$name" && -d "$HOME/.agents/skills/$name" ]]; then
+    echo "$HOME/.agents/skills"; return
+  fi
+  # 3) 家级 legacy：~/.zcode/skills/<name> 已存在（2026-11-09 前的显式 target-dir 家级安装形态）
+  #    → 原位续命防升级失联，同时给迁移建议（迁移是显式动作，不静默搬）。
+  if [[ -n "$name" && -d "$HOME/.zcode/skills/$name" ]]; then
+    echo "  ⚠ 检测到 legacy 家级安装 ~/.zcode/skills/${name}——原位续命；建议迁移：mv ~/.zcode/skills/${name} ~/.agents/skills/ 后再升级" >&2
+    echo "$HOME/.zcode/skills"; return
+  fi
+  # 4) 项目内无 skills 目录且家级无既有安装 → 默认家级 ~/.agents/skills（2026-11-09 新默认）
+  echo "$HOME/.agents/skills"
 }
 
 detect_runtime_name() {
   local project="$1"
   # 仅按项目内已有的 skills 目录判定运行时；不再因 $HOME 下有全局 skills 目录就误报。
-  if [[ -d "$project/.agents/skills" ]]; then echo "Agents 通用"
+  if [[ -d "$project/.agents/skills" ]]; then echo "Agents 通用（项目内）"
   elif [[ -d "$project/.claude/skills" ]]; then echo "Claude Code"
   elif [[ -d "$project/.codex/skills" ]]; then echo "Codex"
   elif [[ -d "$project/.cursor/skills" ]]; then echo "Cursor"
@@ -1006,7 +1017,7 @@ detect_runtime_name() {
   elif [[ -d "$project/.gemini/skills" ]]; then echo "Gemini CLI"
   elif [[ -d "$project/.kimi/skills" ]]; then echo "Kimi"
   elif [[ -d "$project/.zcode/skills" ]]; then echo "ZCode"
-  else echo "通用（将在项目内创建 .agents/skills/）"
+  else echo "Agents 通用（将装到 ~/.agents/skills/ 家级）"
   fi
 }
 

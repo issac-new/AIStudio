@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+技能根统一 ~/.agents/skills 批（2026-11-09 用户裁定：自身安装与生成技能默认落位统一家级，跨工具单副本）。门禁数与预算均不变：本轮无新增门禁、无预算上调。
+- **install.sh auto 统一**：无参数默认一律装 `~/.agents/skills/`（检测到的宿主仅披露不分流；多宿主交互菜单退役，auto 零交互）；`--all`/单宿主旗标显式通道不变。
+- **agents→zcode 交叉渲染/注销**：装/卸 `~/.agents/skills/` 时自动向原生读该根的宿主（当前 zcode，`_agents_native_tools` 单一事实源）渲染/注销 AGENTS.md 集成块——否则统一默认后 zcode 会话集成块缺失或指向已卸载旧路径。
+- **generate-skill.sh detect_skill_dir 四级探测**：项目内既有 skills 目录复用（不变）→ 家级 `~/.agents/skills/<name>` 正位 → 家级 legacy `~/.zcode/skills/<name>` 原位续命＋迁移建议 → 兜底家级 `~/.agents/skills`（新默认，原项目内 `.agents/skills`）。
+- **ta_is_user_level 补 `~/.agents`＋HOME 归一化加固**：家级 `.agents` 判 user 级（否则渲染块写错目标文件）；`ta_home_norm`（cd+pwd）修 `$HOME` 原串与绝对化路径形态不一致（TMPDIR 尾斜杠 `T//` 实测）导致的误判 project 级——存量潜伏缺陷，新默认使其成为关键路径。
+- **测试**：test-default-skill-dir 重写为 14 断言（家级默认/不推导重写/存量复用/家级与 legacy 命中/交叉渲染/卸载注销/auto 不分流），生成与安装断言全部伪造 HOME 隔离；test-r118 ④⑫段随 auto 零交互语义更新（tty 下不弹菜单断言）。
+- 随批：make-offline-bundle 注释漂移两处修正＋知识入驻枚举补 `~/.agents/skills/swarm-yuan`（置首）；offline-template zcode AGENTS.md 预置块路径随新默认；SKILL.md/usage-manual 口径同步。
 
 ## [v2.100.2] - 2026-11-09
 R144 运行时刷新轮（第十轮同型例行，2 天小窗点名型；随 AIStudio 台账刷新批同窗）。门禁 59 / 变量 / 框架 / 运行时档位均不变：本轮无新增门禁、无预算上调、无吸收档。
