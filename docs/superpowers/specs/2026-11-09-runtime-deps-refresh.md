@@ -26,12 +26,15 @@
 
 ## 验证
 
-（动工后回填定稿）
+（2026-11-09 实测回填定稿）
 
-- vendor 基线门：vendor-sync 文件面与上游 `git diff --stat v0.8.17..v0.8.20` 吻合度；VENDOR_SYNC=1 提交前 pristine 抽验（git show index vs upstream archive md5）；clean+inject 全量重放零 WARN/零 FAILED（461 枚面，studio 侧失配处置明细）。
-- swarm-yuan 面：`registry-render.sh --check`；`self-check.sh --check-only`；offline-manifest 对账 test-r118；物化面若刷新则 test-r122。
-- 台账门：`docs-ssot-guard`（spec 三处登记＋附录 A 计数进位）；`merge-invariants --check`。
-- 全量：`npm run typecheck:harness` rc=0；worktree 全量 `npm test` 零失败（与 main 基线持平）。
+- **vendor 基线门**：vendor-sync 后 git status 84 files changed（+3691/−458）与上游 `git diff --stat v0.8.17..v0.8.20` **精确吻合**；VENDOR_SYNC=1 提交前 pristine 抽验 3/3（package.json/zh.ts/group-chat.ts md5 与 upstream HEAD 一致）。
+- **补丁重放门**：首放发现 5 枚失配（042 版本行 0.8.17 上下文、329/690/718 prompt.ts browser guidance 行——上游 v0.8.20 将该行改为「Hermes native browser tools/browser_exec」新文案与品牌替换撞行、473 locale rebaseline 大补丁）→ 处置：042 版本行校准；329/690/718 以「上游新文案＋品牌词替换」语义重写 −/+/上下文行；**473 三方合并重生成**（base=v0.8.17 原文×ours=17+旧473×theirs=v0.8.20 原文，git merge-file 两文件零冲突，新补丁 +7106/−1030）；终态 **clean+inject 全量重放 status=complete、461/461 applied（453 studio+agent＋8 zcode）、零 WARN/零 FAILED/零 SKIP**，与上轮 v0.8.17 批 461 枚持平（零退役零新增）。
+- **swarm-yuan 面**：`registry-render.sh --check` 32 项全绿（22 行↔runtimes.tsv/baseline 面积 5556B）；`self-check.sh --check-only` 自检通过；test-r118 离线对账 PASS（10 版本化清单行同步 0 豁免）；test-r122 36/0/0（物化五锚面随动）；doc-numbers 254/0。
+- **release 面**：`npm run release:check` 四模块对账全绿（cockpit=0.8.20-studio.1/agent-teams=v0.23.0-team.2/ycode=3.17.2/yuan-skill=v2.100.2）；docs:check 手册投影块一致（docs:sync 两次重写随版本进位）；`npm run runtime:doctor` 硬检查 6 过 0 败；`npm run typecheck:harness` rc=0。
+- **全量**：worktree `npm test` ——首跑 3 failed（新 spec 三处登记欠账 2 例＋1 例见下），补登记后复跑全绿（数字见交付说明）。
+- **存量缺陷顺手根治**：`docs/manuals/aistudio-design-document-index.md` 头部计数块**带未解决 merge 冲突标记**（main 4f10460bb v1.0.14 发布批 merge 遗留，两侧计数 611/605 均已过期）——本批按文件系统实测 613 份裁决重写并随批提交。
+- **台账门**：docs-ssot-guard 7/7（附录 A 行/标题计数 604/并集覆盖全过）；scope.yaml 同批声明 10 行。
 
 ## 设计文档影响
 

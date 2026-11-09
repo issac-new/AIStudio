@@ -591,3 +591,13 @@ paths:
   - docs/manuals/aistudio-design-document-index.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - .gitignore
+  - docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md
+  - skills/swarm-yuan/assets/registry/runtimes.tsv
+  - skills/swarm-yuan/runtime/diagram-design/**
+  - skills/swarm-yuan/docs/research/R144-runtime-refresh.md
+  - skills/swarm-yuan/docs/research/upstream-changelog.md
+  - skills/swarm-yuan/scripts/src-pins.conf
+  - skills/swarm-yuan/scripts/offline-manifest.conf
+  - skills/swarm-yuan/CHANGELOG.md
+  - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md
+  - docs/manuals/aistudio-design-document-index.md

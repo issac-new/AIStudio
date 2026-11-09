@@ -303,3 +303,14 @@
 - **openspec 1.16.1**（Node≥22.12 破坏性门槛；validate 缺步骤告警 --strict 失败；闭合标题等价）。**codex-security 0.8.3**（--validate 二次校验；五导入源；严重度跨尝试保留）。**gsd-core 1.20.1**（review-lane 上限；修 queued fix-forward 绕红）。**comet 0.5.2**（编辑不阻塞独立审查走 edit-review observe；Shape 须对原始请求给对齐结论）。**graphify 0.9.103**（弱置信证据进 also_seen 不静默丢；大小写撞号修复）。**ocr 1.13.6**（模板扩面+C#/Starlark 规则）。**impeccable cli-v4.8.0**（finding→行级 annotation）。**mattpocock v1.3.2**（物化：清单不变 10 文件纪律强化）。**diagram-design 2.6.142**（物化：21 文件；verify-geometry 迁 scripts/ 且 ATTR_RE）。**superpowers 7.0.2**（brainstorming 提问纪律盲测 8/8；SessionStart 零子进程）。**pi 1.5.0**（pi-schema 校验迁移；chord/durable 两子系统；MCP OAuth 强制 http/https）。**semantica tip c0ec77be**（provenance fail-closed；vector-store 修复）。
 - 零移动 4 行：GitNexus（license-risk）/ECC（tag 持平，tip +1285 记档：CI 审计交付声明须真合并 PR）/pua/codegraph。
 - 宿主克隆面记档：8 仓升级（claude-code/codex/deepseek-harness/dsh-context v0.82.1/dsh-TUI v0.19.0/kimi-code/minimax-code/multica）；3 仓零移动（fibo 无 Q4 tag 维持、element-web v1.12.33、routa）。
+
+## 2026-11-09 R144 刷新（6 移动 / 16 零移动）
+
+> R143 后 2 天小窗点名刷新型。完整差异见 `docs/research/R144-runtime-refresh.md`；vendor studio v0.8.20 换血与全仓台账批见 AIStudio 仓 spec `2026-11-09-runtime-deps-refresh.md`。本轮无吸收档（2 天窗口无机制层增量，ruflo 供应链自锁/gstack autoplan gate 记同构不吸收）。
+
+- **claude-mem v15.12.1**（三连发；15.12.1 两 critical：macOS 12 系统 SQLite 3.37 `RETURNING` 读法致 observations 每写必败改 `.all()`；CMEM Pro OAuth 首步卡死修复）。
+- **ruflo v3.74.1**（**供应链自锁：3.74.0 tarball 携带 3.63.4 陈旧 helpers 且锁死，3.74.1 重发＋发布脚本拒绝 helpers 与 commit 不一致**；@metaharness/darwin 转 regular 依赖进程内调用）。
+- **gstack v1.98.0.0**（v1.97/v1.98 两连发；v1.98 opt-in `/autoplan` gate 管线跑完前按住会话；src-pins 随 tag 9100930、tip 350d4196 记档）。
+- **graphify v0.9.104**（PyPI）/ **impeccable cli-v4.8.1** / **semantica tip 39cf7216**（钉 v0.7.0 口径不变，main 252c 未发版）。
+- **diagram-design v2.6.148 物化刷新**（e57eda610→6a7f19fcc 12 提交：references 五档/scripts 两件/arc-diagram 三示例；类型数 45 持平；五锚面同步）。
+- 零移动 15 行＋GitNexus（license-risk）/codegraph（未接线）。
