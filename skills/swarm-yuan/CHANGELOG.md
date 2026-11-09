@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [v2.100.2] - 2026-11-09
+R144 运行时刷新轮（第十轮同型例行，2 天小窗点名型；随 AIStudio 台账刷新批同窗）。门禁 59 / 变量 / 框架 / 运行时档位均不变：本轮无新增门禁、无预算上调、无吸收档。
+- **R144 研究档与基线推进**（`docs/research/R144-runtime-refresh.md`＋`upstream-changelog.md` R144 节）：claude-mem 15.12.1（observations 每写必败修）/ruflo 3.74.1（供应链自锁——发布脚本拒绝 helpers 与 commit 不一致）/gstack v1.98.0.0（autoplan gate）/graphify 0.9.104/impeccable 4.8.1/semantica tip 记档（钉 v0.7.0 口径不变）；src-pins gstack 9100930；offline-manifest claude-mem/graphify 两行进位＋R144 复扫注释。
+- **diagram-design v2.6.148 物化刷新**：12 提交（references 五档/scripts 两件/arc-diagram 三示例，类型数 45 持平）；五锚面同步（MANIFEST/facts/runtimes/capability-map/methodology 档头＋test-r122 基线断言 36/0/0）。
+
 ## [v2.100.1] - 2026-11-08
 EvoTeam 收尾批（随 AIStudio v1.0.14-overlay 发布轮进位）。门禁 59 / 变量 / 框架 / 运行时档位均不变：本轮无新增门禁、无预算上调。
 - **lessons 保留面登记**：generate-skill.sh PROJECT_SPECIFIC_FILES 只读保留 case 补 references/lessons.md——实测 `--upgrade` 本不触碰该文件，登记为防「重写策略重构」的单一事实源（D8 定谳：RESUME=1 整体跳过 SKILL.md，重写之忧实测证伪）。

@@ -38,8 +38,8 @@ echo "① 运行时物化完整性"
 [ -f "$RT/MANIFEST.md" ] && ok "MANIFEST.md 存在" || bad "MANIFEST.md 缺失"
 grep -q 'cathrynlavery/diagram-design' "$RT/MANIFEST.md" 2>/dev/null \
   && ok "MANIFEST 登记上游仓库" || bad "MANIFEST 未登记上游仓库"
-grep -q 'e57eda610' "$RT/MANIFEST.md" 2>/dev/null \
-  && ok "MANIFEST 登记物化基线 e57eda610" || bad "MANIFEST 缺物化基线 e57eda610"
+grep -q '6a7f19fcc' "$RT/MANIFEST.md" 2>/dev/null \
+  && ok "MANIFEST 登记物化基线 6a7f19fcc" || bad "MANIFEST 缺物化基线 6a7f19fcc"
 grep -q 'MIT' "$RT/MANIFEST.md" 2>/dev/null \
   && ok "MANIFEST 登记 MIT 许可" || bad "MANIFEST 未登记 MIT 许可"
 grep -q 'MIT License' "$RT/LICENSE" 2>/dev/null && grep -q 'Cathryn Lavery' "$RT/LICENSE" 2>/dev/null \
@@ -190,13 +190,13 @@ _ref_true="$(find "$BASE/references" -maxdepth 1 -type f -name '*.md' | wc -l | 
 [[ -n "$_ref_decl" && "$_ref_decl" == "$_ref_true" ]] \
   && ok "facts FACT_REFERENCES=${_ref_decl} == references/*.md 实存" \
   || bad "FACT_REFERENCES 与实存篇数不符（声明=${_ref_decl} 实存=${_ref_true}）"
-grep -q '^FACT_DIAGRAM_DESIGN_VERSION=2.6.142' "$BASE/assets/facts.conf" \
-  && ok "facts FACT_DIAGRAM_DESIGN_VERSION=2.6.142" || bad "FACT_DIAGRAM_DESIGN_VERSION 漂移"
+grep -q '^FACT_DIAGRAM_DESIGN_VERSION=2.6.148' "$BASE/assets/facts.conf" \
+  && ok "facts FACT_DIAGRAM_DESIGN_VERSION=2.6.148" || bad "FACT_DIAGRAM_DESIGN_VERSION 漂移"
 
 # R141 第五锚面：diagram-production-methodology.md 头部物化基线行须与 facts 对账
 # （R141 实抓漏同步：四处已改此档漏改，test-doc-numbers 对其豁免、机器测不出——补锁）
-grep -q "plugin 2\.6\.142" "$BASE/references/diagram-production-methodology.md" \
-  && ok "methodology 物化基线行 2.6.142 与 facts 对账" \
+grep -q "plugin 2\.6\.148" "$BASE/references/diagram-production-methodology.md" \
+  && ok "methodology 物化基线行 2.6.148 与 facts 对账" \
   || bad "diagram-production-methodology.md 物化基线行漂移（第五锚面）"
 grep -q '^FACT_DIAGRAM_DESIGN_TYPES=45' "$BASE/assets/facts.conf" \
   && ok "facts FACT_DIAGRAM_DESIGN_TYPES=45" || bad "FACT_DIAGRAM_DESIGN_TYPES 漂移"

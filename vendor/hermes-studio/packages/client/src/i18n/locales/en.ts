@@ -5,6 +5,7 @@ import { themeAppearanceMessages } from '../theme-appearance-locales'
 import { socialMessagesEn } from '../social-messages'
 
 export default {
+  dshVersions: {"compatibility": "ACP adapter {revision} · tested: 0.2.1-rc.5 / 0.2.2-rc.1", "verified": "Verified installation: {version}", "pinned": "Pinned version: {version}", "version": "Exact npm version (e.g. 0.2.2-rc.1)", "pin": "Install and pin", "latest": "Check and use latest", "restore": "Restore {version}"},
   person: personMessages['en'],
   sessionTasks: {
       "title": "Tasks",
@@ -3989,27 +3990,20 @@ export default {
 
   // Changelog
   changelog: {
-    new_0_8_17_1: "Fix missing Bot replies and false ‘Agent returned no output’ errors after background dispatch. Generate, stream and save a normal reply before waiting, even at the step limit; results still return automatically while tasks and collaboration stages remain active (#3699)",
-    new_0_8_17_2: "Do not send completion bells, notifications or App completion pushes while waiting for background tasks, for both direct sends and resumed chats. Preserve polling guards and callback deduplication; empty provider replies or forbidden tool calls still fail explicitly (#3699)",
-    new_0_8_17_3: "Show custom personal Bot names in message headers. Renaming updates existing messages and new replies and persists after reload; unnamed Bots use localized preset names, while avatars and animations retain the selected Bot appearance (#3700)",
-    new_0_8_16_1: "Add a one-time group chat retirement notice recommending Bot. Acknowledgement is saved locally and synced across same-origin tabs; no retirement date or automatic data migration is provided (#3693)",
-    new_0_8_16_2: "Yield Bot turns through the host while background tasks run, avoiding repeated polling that exhausts model steps. Deliver results without a browser connection and recover interrupted, stopped-before-start and restart-pending terminal callbacks (#3690)",
-    new_0_8_16_3: "Append manual follow-ups directly to the original task without a coordinator-model decision. Include the current instructions and attachments in result and related acceptance callbacks so Bots interpret results against the latest request (#3691)",
-    new_0_8_16_4: "Improve multi-round Bot collaboration, bounded stage-completion confirmation and stopped-state recovery while preserving original results. Let current collaborators continue unfinished tasks with completed peers, routes, rounds and stale-callback guards preserved (#3675, #3680)",
-    new_0_8_16_5: "Show only the active worker in the activity capsule during independent acceptance. On approval, show both development and verification cards, each opening its own execution, consistently in live messages and reloaded history (#3682)",
-    new_0_8_16_6: "Preserve panels, widths, tool tabs and per-Bot Agent selection across conversation switches; retain explicit workspace visibility. Correct panel order, task Agent identity and browser positioning, and guard against stale content reads (#3676)",
-    new_0_8_16_7: "Use the enabled server-side local or cloud STT configuration for desktop voice input, with setup guidance when missing. Allow retry after failure, preserve final text on stop, prevent duplicate or stale insertion, and dismiss idle hints by clicking outside (#3688)",
-    new_0_8_16_8: "Decode queued text and attachments, show attachment filenames in previews and keep attachment-only previews meaningful. Render attachments once when both native attachments and serialized content are present (#3668)",
-    new_0_8_16_9: "Update extension-management prompts to list Agents and ask for a target before installing, removing or configuring Skills, MCP or Plugins when unspecified. Cancellation and timeout do not choose a target; ordinary queries and existing extension use are unaffected (#3683)",
-    new_0_8_16_10: "Fix OpenCode child processes inheriting stale PWD and OLDPWD that misdirect relative paths; align the working directory, PWD and --dir argument (#3684)",
-    new_0_8_16_11: "Point the packaged desktop update source at /latest so relative installer URLs resolve correctly, and guard the configuration against regression (#3677)",
-    new_0_8_16_12: "Add Bot collaboration regression checks preserving existing flows: no extra creator reports or old report-queue replay, one delivery to explicit recipients and side-effect-free status reads. This PR adds tests only (#3678)",
-    new_0_8_15_1: "Fix new workflow nodes disappearing after Agent selection or title edits by preventing stale dimensions from overwriting canvas state; use the same boundary for connection-created nodes and undo (#3670)",
-    new_0_8_15_2: "Show schedules for every BOT in the account without the 50-item cutoff, with owner avatars and names, goal previews and full instructions, expressions, timezones, state and next-run details; preserve ownership and worker task labels when editing across BOTs (#3663)",
-    new_0_8_15_3: "Preserve known tool-call identity when OpenAI-compatible stream continuations send an empty id or function name, preventing false invalid_tool_call errors while retaining argument concatenation and missing-identity validation (#3647)",
-    new_0_8_15_4: "Stop showing the incomplete-handoff warning when group-chat routing selects no target Agent; retain the existing warning rules for selected Agents (#3626)",
-    new_0_8_15_5: "Keep only the latest three frontend changelog versions and remove older entries from all 12 languages (#3662)",
-    new_0_8_15_6: "Refresh the English and Chinese README screenshots with the running UI’s new-chat Agent carousel, visual workflow and complete Agent Manager; remove outdated example images (#3661)",
-    new_0_8_15_7: "Store development and CI task reports and test output outside repository worktrees, with directory commands and read-only location checks; update coverage, browser reports and upload paths without automatically deleting files (#3657)",
+    new_0_8_20_1: "Index pending Person delivery counts by origin session to reduce full table scans on large datasets; tolerate malformed legacy JSON without rewriting history (#3723)",
+    new_0_8_20_2: "Combine Ekko OpenAI Chat system instructions into one leading system message in their original order for strict chat templates, preserving regular messages, tools, images and reasoning (#3728)",
+    new_0_8_20_3: "Stage exact DSH releases in separate directories and check runtime composition, dependencies and ACP initialization before activation. Failed upgrades preserve the current installation and pin; a working existing CLI can be retained for recovery (#3730)",
+    new_0_8_20_4: "Add exact DSH version installation and pinning, explicit latest selection, revalidated rollback, and adapter/verified-version details to Agent Manager. Automatic updates honor version pins (#3730)",
+    new_0_8_20_5: "Update the DSH ACP adapter to revision 5 for the verified 0.2.1-rc.5 and 0.2.2-rc.1 shapes, retaining native setup, preset selection and restoration, permission policy and turn persistence. Reject activation when critical capabilities are missing (#3730)",
+    new_0_8_20_6: "Preserve global group Agent model and reasoning settings across creation, edits and restarts. Previously erased selections must be set again (#3730)",
+    new_0_8_20_7: "Fall back to private run copies when Antigravity native configuration or skill links fail with EPERM, ENOTSUP or EINVAL, preserving native settings. Copies are run snapshots and do not automatically sync later credential changes (#3730)",
+    new_0_8_19_1: "Fix authorized providers such as Codex, Nous, xAI, and Qwen disappearing from the model list, while preserving Copilot activation and credential requirements (#3720)",
+    new_0_8_18_1: "Add Pin and Unpin for Person conversations. Pinned conversations appear first, with recent activity ordering within each group; database persistence preserves the state after refresh (#3704)",
+    new_0_8_18_2: "Prevent realtime speech replay after reply completion, tool events, reconnects or message rebuilds on refresh. Preserve turn progress and sentence boundaries, exclude older history, and allow identical text in later turns (#3708)",
+    new_0_8_18_3: "Give wide-screen sidebars and main content one rounded outer outline without curved gaps at their seam. Cover regular and Agent settings sidebars while preserving regional radii, explicit zero, wallpaper clipping and RTL mirroring (#3709)",
+    new_0_8_18_4: "Improve Hermes 0.23 browser compatibility: prepare pinned Chromium through the upstream package manager, use relative payload manifests and recheck after packaging relocation. Retain legacy browser paths, initialize the lazy-loaded MCP SDK, and tailor browser guidance to the tools offered by the current runtime (#3712)",
+    new_0_8_18_5: "Improve GitHub Copilot plugin preparation and credential persistence; list models only with credentials readable by the target runtime profile. Bind login to its initiating profile and respect disabled automatic installation and user-disabled plugins during startup migration (#3712)",
+    new_0_8_18_6: "Update runtime build defaults to Python 3.14.7 and Node.js 26.13.0, reject mismatched cached interpreters and support Node version overrides. The default Hermes remains 0.22.5; this release does not switch it to 0.23 automatically (#3712)",
+    new_0_8_18_7: "Add focused tests for realtime speech, conversation pinning, Copilot and runtime builds. Pin E2E to Ubuntu 24.04 supported by the current Playwright, and allow Hermes source version overrides in Windows ARM64 runtime validation (#3704, #3708, #3712)",
   },
 }

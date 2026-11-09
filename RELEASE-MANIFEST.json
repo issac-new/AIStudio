@@ -15,7 +15,7 @@
         "runtime/roster/",
         "vendor/hermes-studio/"
       ],
-      "version": "0.8.17-studio.2",
+      "version": "0.8.20-studio.1",
       "versionCarrier": "RELEASE-NOTES.md",
       "buildCommand": "npm run build:dmg（缺省解析仓内 vendor/，可用 OVERLAY_UPSTREAM_ROOT 显式指向隔离构建树；产物 DMG/zip，desktop 管理独立 hermes runtime）",
       "artifacts": "vendor/hermes-studio/packages/desktop/release/",
@@ -42,7 +42,7 @@
         "RELEASE-NOTES.md",
         "RELEASE-MANIFEST.json"
       ],
-      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26），源码包含 simharness。runtime/pricing 与 runtime/roster 是 build.mjs 强制拷贝进 dist/server/runtime 的资源树，故本模块须自带（与 agent-teams 模块重复声明是有意的：两包都要能独立构建）。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。2.x 版本线已于 2026-10-27 补记收线，现行线为 0.8.17-studio.N（2026-11-07 底座换血批起，扩展序随底座换血归 1；此前 1.0.9-studio.N 线为 2026-11-02~06）。"
+      "notes": "simharness/ 推演程序仅仓内运行、不随安装包（DMG）分发（用户裁定 2026-10-26），源码包含 simharness。runtime/pricing 与 runtime/roster 是 build.mjs 强制拷贝进 dist/server/runtime 的资源树，故本模块须自带（与 agent-teams 模块重复声明是有意的：两包都要能独立构建）。standalone 注意：patches/series 含 hermes-agent 路由补丁，独立源码包内 npm run inject 需搭配 agent-teams 源码包（或直接用整体包）——如实注记。2.x 版本线已于 2026-10-27 补记收线，现行线为 0.8.20-studio.N（2026-11-09 底座换血批起，扩展序随底座换血归 1；此前 0.8.17-studio.N 线为 2026-11-07~08、1.0.9-studio.N 线为 2026-11-02~06）。"
     },
     "agent-teams": {
       "name": "agent teams（多 profile 智能体团队）",
@@ -90,7 +90,7 @@
       "includes": [
         "skills/swarm-yuan/"
       ],
-      "version": "v2.100.1",
+      "version": "v2.100.2",
       "versionCarrier": "skills/swarm-yuan/CHANGELOG.md",
       "buildCommand": "bash skills/swarm-yuan/scripts/make-offline-bundle.sh（脚本在 skills/swarm-yuan/scripts/；三档：novendor 5M / 全量 ~52M / everything ~71M）",
       "artifacts": "skills/swarm-yuan/dist/swarm-yuan-offline-<ver>.zip（SHA256SUMS 随包）＋本清单源码包 aistudio-yuan-skill-<ver>-src.tar.gz",
@@ -157,5 +157,5 @@
     "checksums": "SHA256SUMS（随 dist/release/ 目录）",
     "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道=Github Release 与 ModelScope（aistudio/ 只换 full＋仓根 everything zip＋SHA256SUMS-v<版本>.txt，旧版本保留）。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端也不打包——make-release-packages 默认只打整体包，--all-modules 显式打 4+1 全量（逃生通道）。"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.8.17（2026-11-07 升级批） / hermes-agent v0.23.0 / zcode 包版本 3.17.2、基线谱系 v3.16.1 系列 @a9fe401e（2026-11-03 同步批）。模块大版本对齐基准，与产品扩展序不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.8.20（2026-11-09 升级批） / hermes-agent v0.23.0 / zcode 包版本 3.17.2、基线谱系 v3.16.1 系列 @a9fe401e（2026-11-03 同步批）。模块大版本对齐基准，与产品扩展序不互推）"
 }

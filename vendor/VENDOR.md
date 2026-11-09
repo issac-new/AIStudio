@@ -4,7 +4,7 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 
 | 树 | commit | 版本 | upstream remote | 提取方式 |
 |---|---|---|---|---|
-| hermes-studio | `35a7158a1` | v0.8.17（**tag 命名说明**：上游 v1.0.9 的 package.json 本就是 0.8.11，此后回归 0.8.x 线连发 v0.8.12~v0.8.17；v1.0.9→v0.8.17 谱系前进 53 提交非降级，台账以 git ancestry 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
+| hermes-studio | `cedaceaef` | v0.8.20（**tag 命名说明**：上游 v1.0.9 的 package.json 本就是 0.8.11，此后回归 0.8.x 线连发 v0.8.12~v0.8.20；v1.0.9→v0.8.20 谱系前进 63 提交非降级，台账以 git ancestry 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
 | hermes-agent | `2bd378ed1` | v0.23.0 | https://github.com/NousResearch/hermes-agent.git | 同上 |
 | zcode | `a9fe401e` | 包版本 3.17.2（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
 
@@ -22,6 +22,8 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 > 2026-11-06 升级批（spec `2026-11-06-vendor-upgrade-agent-v0230.md`）：hermes-agent 基线升 **v0.23.0**（`2bd378ed1`，上游 2026-11-05 发布；v0.22.7→v0.23.0 为 808 提交/1223 文件）。agent 面 91 枚补丁新基线落位：**6 枚手解重生成**（400 脱敏段并集 EPISTEMIC_STANCE_RULE/408 空行漂移/410 并行尾块漂移/470 上游吸收主体仅存 collab_event_id/593 追加位/602 条件漂移）＋**742 退役**（5 文件目标内容全被上游吸收，helpers 段与上游逐字一致保留即重复定义；207 先例；原件 .archived-patches/）；净 90 枚 clean+inject 零 WARN。`.gitignore` 误伤面核验：零命中。team 载体链进位 v0.23.0-team.1（扩展序归 1）＋requirements range 提界 <0.24（原上界 <0.23 不覆盖 0.23.0）。
 
 > 2026-11-07 升级批（spec `2026-11-07-vendor-upgrade-studio-v0817.md`）：hermes-studio 基线升 **v0.8.17**（`35a7158a1`，上游 2026-11-05 发布；v1.0.9→v0.8.17 为 53 提交/1354 文件，主题=Person 任务流/群聊迁移公告/opencode 子进程环境；**上游 081b9393f「清空旧测试并精简 CI」删除 1140 个旧测试文件（−268K 行），本仓测试面补丁大面积孤儿化**；依赖零变化——lock 仅 2 行差，主检出 node_modules 免重装）。studio 面补丁处置：**8 枚纯测试补丁退役**（037/038/039/175/176/235/585/641，目标文件被上游整删，原件 .archived-patches/）＋**7 枚混合补丁剥除已删测试段**（322/323/329/640/642/690/718）＋失配补丁重锚（000/110 上下文校准等，见 spec）。hermes-agent 维持 v0.23.0（无新稳定 tag，main +216 canary 不追）；zcode 维持 `a9fe401e`（main 同步）。
+
+> 2026-11-09 升级批（spec `2026-11-09-runtime-deps-refresh.md`）：hermes-studio 基线升 **v0.8.20**（`cedaceaef`，上游 2026-11-07~09 连发 v0.8.18/v0.8.19/v0.8.20 三 tag；v0.8.17→v0.8.20 为 10 提交/84 文件 +3691/−458，主题=Person 会话置顶/Hermes 0.23 运行时兼容收尾/系统指令并入聊天信封/DSH 升级守卫与 Antigravity 配置/authorized providers 恢复/实时语音重放防护；vendor-sync 文件面与上游 diff 精确吻合、pristine 抽验 3/3）。studio 面补丁失配处置见 spec 验证段。hermes-agent 维持 v0.23.0（无新稳定 tag，canary 流不追）；zcode 维持 `a9fe401e`（main 同点）；exa-mcp-server 3.4.3=npm latest。
 
 ## zcode 基线差一提交说明（2026-10-24 实测记录）
 

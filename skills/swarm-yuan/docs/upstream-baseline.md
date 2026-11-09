@@ -9,24 +9,24 @@
 <!-- >>> registry:runtimes >>> (generated from assets/registry/runtimes.tsv; do not edit) -->
 | 名称 | 仓库 | 许可证 | 当前基线 | 接入 | 证据 | 机器标记 |
 |---|---|---|---|---|---|---|
-| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.103 | deep | M1 | baseline_status=synced |
+| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.104 | deep | M1 | baseline_status=synced |
 | GitNexus | abhigyanpatwari/GitNexus | PolyForm Noncommercial 1.0.0 | npm 1.6.12 | deep | M1 | baseline_status=license-risk |
-| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.11.0 | deep | M1 | baseline_status=watch |
+| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.12.1 | deep | M1 | baseline_status=watch |
 | ocr | alibaba/open-code-review | Apache-2.0 | v1.13.6 | deep | M1 | baseline_status=synced |
 | openspec | Fission-AI/OpenSpec | MIT | v1.16.1 | cli | M1 | baseline_status=synced |
 | comet | rpamis/comet | MIT | 0.5.2 | cli | M1 | baseline_status=synced |
 | gsd-core | open-gsd/gsd-core | MIT | v1.20.1 | cli | M1 | baseline_status=synced |
 | codex-security | openai/codex-security | Apache-2.0 | npm-v0.8.3 | cli | M1 | baseline_status=synced |
 | mattpocock-skills | mattpocock/skills | MIT | v1.3.2 | cli | M1 | baseline_status=synced |
-| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.142 | cli | M1 | baseline_status=synced |
+| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.148 | cli | M1 | baseline_status=synced |
 | superpowers | obra/superpowers | MIT | v7.0.2 | method | M1 | baseline_status=synced |
-| gstack | garrytan/gstack | MIT | v1.96.0.0 tip 6666b729 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.72.2 | method | M1 | baseline_status=synced |
+| gstack | garrytan/gstack | MIT | v1.98.0.0 tip 350d4196 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.74.1 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
-| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.0 | method | M1 | baseline_status=synced |
+| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.1 | method | M1 | baseline_status=synced |
 | dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.2-rc.1 | source | M0 | baseline_status=synced |
 | pua | tanweai/pua | MIT | v3.5.1 | source | M0 | baseline_status=synced |
-| semantica | semantica-agi/semantica | MIT | main c0ec77be | source | M0 | baseline_status=synced |
+| semantica | semantica-agi/semantica | MIT | main 39cf7216 | source | M0 | baseline_status=synced |
 | pi | earendil-works/pi | MIT | v1.5.0 | source | M0 | baseline_status=synced |
 | codegraph | colbymchenry/codegraph | MIT | 未定 | none | M0 | baseline_status=watch |
 | claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.319 | host | M3 | baseline_status=synced |
