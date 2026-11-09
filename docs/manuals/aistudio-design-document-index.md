@@ -4,8 +4,8 @@
 
 - 快照基线：`5b8562f83`；核实日：2026-11-06；版本线：`1.0.14-overlay`（正本去脚手架批）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
-- 当前工作树根目录：**613 份 Markdown**（HEAD 全量跟踪；2026-11-08 SQL 标识符批＋N28-3/P1 批两批并计后 612，2026-11-09 台账刷新批＋1；v1.0.14 发布批 merge 曾留冲突标记，本批按文件系统实测根治）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 160 份；合计 613 份。
+- 当前工作树根目录：**614 份 Markdown**（HEAD 全量跟踪；2026-11-09 台账刷新批 612→613＋裁决执行批 613→614；v1.0.14 发布批 merge 冲突标记已根治）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 161 份；合计 614 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -615,6 +615,7 @@
 - [2026-11-06-platform-wiring-restore.md](../superpowers/specs/2026-11-06-platform-wiring-restore.md)
 - [2026-11-06-release-v1.0.13-overlay.md](../superpowers/specs/2026-11-06-release-v1.0.13-overlay.md)
 - [2026-11-09-runtime-deps-refresh.md](../superpowers/specs/2026-11-09-runtime-deps-refresh.md)
+- [2026-11-09-ledger-judgment-followup.md](../superpowers/specs/2026-11-09-ledger-judgment-followup.md)
 - [2026-11-08-release-v1.0.14-overlay.md](../superpowers/specs/2026-11-08-release-v1.0.14-overlay.md)
 - [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
 - [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
