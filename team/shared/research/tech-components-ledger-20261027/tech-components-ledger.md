@@ -26,6 +26,7 @@
 - 管线终态（10-28）：hexstrike T1/T2/T3 全 done（T3 四落地物=skill evidence-governed-execution v1.0.0+pentest-methodology-fusion v2.0.0+4 hack profile 接线+skill-catalog 登记）；🔴 delta 六卡全 done。
 - **2026-11-07 全量核对批注（46 条当日实测，spec `2026-11-07-vendor-upgrade-studio-v0817`）**：持平 26／有更新 16／无版本轴 3／未能核对 1（Graph-Engineering 仓 404）。要点：Ghidra 转 🟢（wrapper 实测已绑 12.2+JDK25，§4.2 旧记录订正）；DSH 本机已升 0.2.2-rc.1＋dsh-tui 0.19.0（上游 next=0.2.2-rc.1/alpha=0.2.2-alpha.3）；有更新待盘点=OpenExecutive v0.6.9、AgentENV v0.2.5、ARL-Next v1.4.5、pi-harness v1.5.0、addyosmani/agent-skills 0.6.15（打破 10-13 静默）、REAP 11-05 新 push、ATT&CK v20.1（技能面仍引 v20.0，数据更新挂账）、semantica main 245c 仍未发版（钉 v0.7.0 口径不变）、HelixHarness +4c、harness2 +18c、x402 main ≈1497c（Link 分页口径，增量异常宜 compare 复核）；openagentontology 过 11-05 定日线且 11-07 仍零 push（92 天）→ 按 §一.3 应转 RETIRED（待执行）；运行时基线三树=studio v0.8.17（本批升级）／agent v0.23.0／zcode 3.17.2@a9fe401e 持平；REAGent 6.8.0=npm latest 持平；仓名勘误=hexstrike-ai（0x4m4）、REA-Prompts（JoasASantos）。
 - **2026-11-09 点名刷新批注（§一.2 触发，32 点位当日实测=点名 26＋补测 6，spec `2026-11-09-runtime-deps-refresh`）**：🔴 3 条全维持——semantica（v0.7.0...main **252c**、11-09 当日仍 push）、OpenExecutive（已发 **v0.7.0 跨 minor**（11-07 17:42），30319d9...main 210c，10-18/10-31 两轮 delta 版本表过期，重跑 delta 待用户裁决）、mattpocock（v1.3.2 后仅 3c，「v1.3.2 增量待补」欠账关闭）。**判级建议升 🔴 2 条（交用户裁决）**：better-harness（v0.6.4...main 359c，10-31 记 67c 的口径端点建议派卡前复核）、pi-harness（tag 顶 v1.5.0 跨 minor，v1.4.0...main 634c）。🟡 维持 6 条（CyberStrikeAI v1.7.24 release 面持平／Autopt 43c 持平静默 17 天／Cybermes v3.5.0 identical／AgentENV v0.2.5 论文型／x402 343c／A2A rc 未推进）。**x402 挂账证伪关闭**：11-07 的「≈1497c」系 Link 分页口径异常，compare 复核真实 343c（since 10-31 +48c）。**openagentontology RETIRED 复核通过**：11-09 实测 pushed_at=2026-08-07 静默 **94 天**>90、v0.2.0...main 7c 未动，无复活，11-07 判定执行定谳，定日复查线关闭。**Graph-Engineering 正名锚定 `DEEP-JLU/Awesome-Graph-Engineering`**（description 与综述线吻合、399★、10-30 仍收 PR；基线 sha a2de779 对该仓 compare 404 疑历史重写，增量不猜数留待下轮；10-31「仓 404 未定名」欠账可销）。仓名正名勘误：ACP=agentic-commerce-protocol/agentic-commerce-protocol、HexStrikeAI=0x4m4/hexstrike-ai（小写）、Startlux-Decision=StartLuxLabs/StartLux-Decision（slux npm 已 Unpublished 佐证关停）。补测 🟢 线（点名面外、用户质询后补齐）：lh-harness PyPI 0.1.8 持平／rea-agents npm 6.8.0 持平／FIBO 10-27 后零 push 持平／element-web 稳定 v1.12.33 持平（tag 面出 v1.12.34-rc.1 记档）／deepseek-recipe 快照 0 落后持平／**DeepInfer +1c 漂移**（5537415→a679bb86，11-03 push，快照型微增量记档不追）。ATT&CK v20.1 挂账维持（无 v20.2；技能面主引用句 v20.0 属文档句刷新欠账）。运行时基线三树=**studio v0.8.20（本批升级，上游三 tag 连发 10 提交）**／agent v0.23.0（canary 流不追）／zcode a9fe401e（main 同点）。
+- **2026-11-09 裁决执行批注（同日晚，用户令「完成未做」，spec `2026-11-09-ledger-judgment-followup`）**：①better-harness/pi-harness 判级正式升 🔴（§3.2 两行随批改判，均观察线无本机依赖不派吸收卡）；②OpenExecutive v0.7.0 delta 重跑收口（报告落外置盘 `research/openexec-delta-20261109/`——五主题/五面同构/结论性，§3.2 行基线进 v0.7.0）；③ATT&CK 技能面 v20.0 指引句刷新为 v20.1（security-tool-landscape-tracking SKILL.md 主体段，11-07 挂账清偿）。
 
 ## 三、分域总表
 
@@ -49,12 +50,12 @@
 | 组件 | 基线 | 上游现况 | 判级/差异 | 处置 |
 |------|------|----------|-----------|------|
 | semantica (semantica-agi) | v0.7.0 / 2a9afec（09-23 源码分析） | v0.7.0 未发版，main 217c（v0.7.0...main；feat 20/fix 121/security 14） | 🔴 大增量；本机有 semantica-runtime 常驻技能 | 最优先增量卡（运行时组件，过期风险实存）；10-28 delta 已收口，10-31 增量继续涨 |
-| OpenExecutive (SenteLabsAI) | main@30319d9（10-18 delta） | v0.6.8（10-30）；30319d9 后 124c，v0.6.6→v0.6.8 28c | 🔴 高活跃，10-18 报告版本表已过期 | 优先增量卡；10-31 新版本需重跑 delta |
+| OpenExecutive (SenteLabsAI) | v0.7.0（11-09 delta 收口） | **v0.7.0 跨 minor**（11-07）；v0.6.8→v0.7.0 66c/300 文件，30319d9...main 210c | 🔴 高活跃，跨 minor | **delta 已收口（11-09，用户令「完成未做」）**：报告落外置盘 `research/openexec-delta-20261109/`——v0.7.0 五主题（Memory 重做 8 条=带来源可审计可撤销事实库/Approvals 每通道单门/claim check 后重写而非追加更正/卡片四型问询/同名歧义防误）＋v0.6.9（长 turn Stop+I'll finish/Drive 域外共享先问/步数用尽诚实降级）；机制层与本仓五面同构无必吸收增量，结论性收口 |
 | mattpocock/skills | 2026-08-24 main@6654f6b（09-02 融合轮） | v1.3.2（10-29）；v1.3.1 后 51c | 🔴 增量已盘点，10-29 又发一版 | delta 完成：implement-spec/pr/retro 新三件、GLOSSARY 改名、devops-rd 旧产物已迁不受影响；市集三件套依赖 dsh plugin-market 线，与此线无关（勘误 #6）；v1.3.2 增量待补 |
 | addyosmani/agent-skills | 0.6.13（10-18 delta） | tag 顶仍 0.6.13，10-13 后零 push（10-31 静默 18 天；404 澄清：mattpocock/agent-skills 不存在） | 🟢 静默 | 观察线（未到退役线） |
 | DSH (@deepseek-ai/dsh) | 0.2.2-rc.1（2026-11-07 本机已升；dsh-tui 0.19.0 同批） | latest=next=0.2.2-rc.1，alpha=0.2.2-alpha.3 | 🟢 已对齐 latest | 轻跟 next 通道；旧行「v0.2.1-rc.2/已装 0.17.0」为 10-18 快照，本机实际装过 0.1.1-rc.2+0.10.0（10-18 行与实测不符系 dsh 与 dsh-tui 两线混淆，11-07 实测订正） |
-| better-harness (QoderAI) | 0.6.4 深读（10 月初） | v0.7.0-alpha2（09-12）+ 10-20 push；基线后 67c | 🟡 跨 minor | 轻跟 |
-| pi-harness (earendil-works/pi) | 源码级深读（快照非 pin） | v1.4.0（10-21）；基线后 248c | 🟡 无在役依赖 | 按需跟 |
+| better-harness (QoderAI) | 0.6.4 深读（10 月初） | v0.7.0-alpha2（09-12）；v0.6.4...main **359c**（11-09 实测；10-31 记 67c 系口径端点差异）、pushed 11-07 | 🔴 大增量（**11-09 用户裁决升档**，「完成未做」令） | 观察线（无本机依赖，不派吸收卡） |
+| pi-harness (earendil-works/pi) | 源码级深读（快照非 pin） | **v1.5.0 跨 minor**（11-08 push）；v1.4.0...main **634c** | 🔴 跨 minor＋大增量（**11-09 用户裁决升档**）；runtimes.tsv source 行 v1.5.0 已登记（R143） | 无在役依赖，按需跟 |
 | LongHorizon-Harness (lh-harness) | v0.1.7 / a1dd9306（10-18） | PyPI 0.1.8（upload_time 2026-10-21，10-31 复核修正） | 🟢 仅 1 patch | 无动作 |
 | HarnessEval-W (MirroS-Lab) | 深读+蓝军复核 | 末 push 09-07（10-31 静默 54 天，未到线） | 🟢 | 无动作 |
 | Startlux-Decision (laya 线) | v1.1 模型+影子评测（10-17/19） | laya v0.4.15 | 🟢 已裁决退役（slux 关停，决策线非静默原因），仅留评测判例 | 无动作 |
@@ -173,6 +174,7 @@ curl -s https://pypi.org/pypi/lh-harness/json | jq -r '.info.version, .releases[
 
 ## 八、变更日志
 
+- 2026-11-09 裁决执行批（同日晚）：判级升档 better-harness/pi-harness 落表（用户令「完成未做」）；OpenExecutive v0.7.0 delta 收口（外置盘 openexec-delta-20261109/）；ATT- 2026-11-09 台账刷新批：点名刷新 32 点位CK v20.1 句刷新。spec `2026-11-09-ledger-judgment-followup.md`。
 - 2026-11-09 台账刷新批：点名刷新 32 点位（26＋补测 6）；openagentontology RETIRED 复核通过（94 天定谳）；x402 1497c 异常证伪（343c）挂账关闭；Graph-Engineering 正名锚定；DeepInfer +1c 漂移记档；判级建议升 🔴 2 条（better-harness/pi-harness）与 OpenExecutive v0.7.0 delta 重跑待用户裁决。spec `2026-11-09-runtime-deps-refresh.md`。
 
 - 2026-11-03 运行时台账刷新批：zcode 基线 → a9fe401e（v3.17.2，+1 提交/203 文件，8 补丁重放零失败零重生成，幂等二连验证过；upstream/zcode 缓存树同步治理）；exa-mcp-server 3.4.1→3.4.3（npm latest 实测）；semantica v0.7.0／pua e6e6cd2／hermes-agent v0.22.6／ekko-studio v1.0.9 上游核对均无更新。spec `2026-11-03-runtime-deps-refresh.md`。

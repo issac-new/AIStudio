@@ -601,3 +601,6 @@ paths:
   - skills/swarm-yuan/CHANGELOG.md
   - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md
   - docs/manuals/aistudio-design-document-index.md
+
+  - docs/superpowers/specs/2026-11-09-ledger-judgment-followup.md
+  - team/skills/devops/security-tool-landscape-tracking/SKILL.md
