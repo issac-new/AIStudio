@@ -96,11 +96,11 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
             :class="{ 'is-off': !t.available }"
             :data-testid="`ide-devtools-${t.key}`"
             :disabled="!t.available || busy === t.key"
-            :title="t.available ? `打开 ${t.labelZh}` : `${t.labelZh} 未安装`"
-            @click="launch(t.key)"
+            :title="t.available ? `打开 ${t.labelZh}${root ? `（工作区：${root}）` : ''}` : `${t.labelZh} 未安装`"
+            @click="launch(t.key, root || undefined)"
           >{{ t.labelZh }}</button>
         </div>
-        <p class="ide-devtools__hint">工具列表由服务端按本机安装情况探测。</p>
+        <p class="ide-devtools__hint">工具列表由服务端按本机安装情况探测；选中看板任务后以任务工作区启动。</p>
       </template>
     </div>
   </span>

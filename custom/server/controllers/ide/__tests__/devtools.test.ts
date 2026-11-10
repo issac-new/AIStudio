@@ -5,7 +5,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import {
   TOOL_DEFS, ZCODE_CLI_DIST, applescriptEscape, buildLaunchPlan, resolveZcodeCli, shapeCliSessions,
   toolAvailableOnDarwin, validateCwd, type ToolKey,
@@ -24,9 +24,9 @@ describe('buildLaunchPlan — 白名单与平台分支（纯函数）', () => {
     expect(TOOL_DEFS.map(d => d.key)).toEqual(['zcode', 'deepseek-harness'])
   })
 
-  it('darwin：zcode / deepseek-harness 走 open -a 应用直启（不带 cwd）', () => {
+  it('darwin：zcode / deepseek-harness 走 open -a 应用直启（带 cwd 即附目录参）', () => {
     expect(buildLaunchPlan('zcode', '/tmp/proj', 'darwin'))
-      .toEqual({ file: 'open', args: ['-a', 'ZCode'] })
+      .toEqual({ file: 'open', args: ['-a', 'ZCode', resolve('/tmp/proj')] })
     expect(buildLaunchPlan('deepseek-harness', null, 'darwin'))
       .toEqual({ file: 'open', args: ['-a', 'DeepSeek Harness'] })
   })
@@ -90,5 +90,24 @@ describe('validateCwd / shapeCliSessions（纯函数）', () => {
       { id: 's1', title: '（未命名会话）', directory: '/w', timeUpdated: 5, timeCreated: 1 },
       { id: 's2', title: '（未命名会话）', directory: '', timeUpdated: 0, timeCreated: 0 },
     ])
+  })
+})
+
+// ── 任务工作区带入（2026-11-10 spec 2026-11-10-ide-devtools-task-cwd）──
+describe('buildLaunchPlan — APP 键携带 cwd', () => {
+  it('darwin zcode/DSH 带 cwd → open -a <App> <dir>（无 cwd 行为不变）', () => {
+    expect(buildLaunchPlan('zcode', '/ws/task-42', 'darwin'))
+      .toEqual({ file: 'open', args: ['-a', 'ZCode', resolve('/ws/task-42')] })
+    expect(buildLaunchPlan('deepseek-harness', '/ws/task-42', 'darwin'))
+      .toEqual({ file: 'open', args: ['-a', 'DeepSeek Harness', resolve('/ws/task-42')] })
+    expect(buildLaunchPlan('zcode', null, 'darwin'))
+      .toEqual({ file: 'open', args: ['-a', 'ZCode'] })
+  })
+
+  it('win32 zcode 带 cwd → start "" /d <dir> zcode（工作目录确定性生效）', () => {
+    const plan = buildLaunchPlan('zcode', 'D:\\ws\\task-42', 'win32')
+    expect(plan?.file).toBe('cmd')
+    expect(plan?.args).toEqual(['/c', 'start', '', '/d', resolve('D:\\ws\\task-42'), 'zcode'])
+    expect(buildLaunchPlan('zcode', null, 'win32')).toEqual({ file: 'cmd', args: ['/c', 'start', '', 'zcode'] })
   })
 })

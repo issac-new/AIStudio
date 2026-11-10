@@ -36,6 +36,10 @@ paths:
   - package.json
   - .swarm-yuan/gate-audit.jsonl
   - .swarm-yuan/gate-deny.jsonl
+  - docs/superpowers/specs/2026-11-10-ide-devtools-task-cwd.md
+  - custom/client/ide/components/IdeDevTools.vue
+  - custom/client/ide/__tests__/devtools-ui.test.ts
+  - custom/server/controllers/ide/__tests__/devtools.test.ts
   - custom/server/executioncontract/mode-policy.ts
   - custom/server/approval-ledger/coding-entry.ts
   - custom/__tests__/execution-mode-policy.test.ts
