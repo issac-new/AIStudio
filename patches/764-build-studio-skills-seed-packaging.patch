@@ -1,0 +1,55 @@
+diff --git a/packages/desktop/electron-builder.yml b/packages/desktop/electron-builder.yml
+index 6d2a1f2..3930004 100644
+--- a/packages/desktop/electron-builder.yml
++++ b/packages/desktop/electron-builder.yml
+@@ -51,7 +51,7 @@ extraResources:
+       - "dist/**"
+       - "!packages/desktop/**"
+       # Exclude repository-root development files without dropping nested
+-      # runtime assets such as dist/ekko-skills/*/scripts/**.
++      # runtime assets such as dist/studio-skills/*/scripts/**.
+       - "!.git/**"
+       - "!.github/**"
+       - "!docs/**"
+diff --git a/packages/desktop/scripts/verify-packaged-webui.mjs b/packages/desktop/scripts/verify-packaged-webui.mjs
+index 1feeb3c..824e073 100644
+--- a/packages/desktop/scripts/verify-packaged-webui.mjs
++++ b/packages/desktop/scripts/verify-packaged-webui.mjs
+@@ -137,12 +137,12 @@ export default async function verifyPackagedWebUi(context) {
+     join(webUiRoot, 'package.json'),
+     join(webUiRoot, 'bin', 'hermes-web-ui.mjs'),
+     join(webUiRoot, 'dist', 'server', 'index.js'),
+-    join(webUiRoot, 'dist', 'ekko-skills', 'THIRD_PARTY_NOTICES.md'),
++    join(webUiRoot, 'dist', 'studio-skills', 'THIRD_PARTY_NOTICES.md'),
+     ...EKKO_BUILTIN_SKILLS.map(skill => (
+-      join(webUiRoot, 'dist', 'ekko-skills', skill, 'SKILL.md')
++      join(webUiRoot, 'dist', 'studio-skills', skill, 'SKILL.md')
+     )),
+     ...EKKO_REQUIRED_SKILL_FILES.map(parts => (
+-      join(webUiRoot, 'dist', 'ekko-skills', ...parts)
++      join(webUiRoot, 'dist', 'studio-skills', ...parts)
+     )),
+     join(nodePtyRoot, 'package.json'),
+     join(webUiRoot, 'node_modules', 'socket.io', 'package.json'),
+diff --git a/scripts/build-server.mjs b/scripts/build-server.mjs
+index a3e44cd..dc57afa 100644
+--- a/scripts/build-server.mjs
++++ b/scripts/build-server.mjs
+@@ -80,11 +80,14 @@ cpSync(
+   { recursive: true },
+ )
+ 
+-const ekkoSkillsOutDir = resolve(rootDir, 'dist/ekko-skills')
+-rmSync(ekkoSkillsOutDir, { recursive: true, force: true })
++// Studio Skills shared-root seed origin (spec 2026-11-10-ekko-hermes-skill-store-unification):
++// packaged as dist/studio-skills and seeded once into the machine-wide shared
++// root at startup — replaces the retired per-profile dist/ekko-skills copies.
++const studioSkillsOutDir = resolve(rootDir, 'dist/studio-skills')
++rmSync(studioSkillsOutDir, { recursive: true, force: true })
+ cpSync(
+   resolve(rootDir, 'packages/ekko-agent/skills'),
+-  ekkoSkillsOutDir,
++  studioSkillsOutDir,
+   { recursive: true },
+ )
+ 

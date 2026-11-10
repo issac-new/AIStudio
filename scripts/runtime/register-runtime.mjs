@@ -12,6 +12,10 @@
 //      与本地技能重名时本地优先 —— 更新一律在 overlay 侧做,注册一次即可)。
 //   1b. 本仓技能集 → `skills.external_dirs` 追加 overlay/runtime/hermes-skills
 //      （coding-delegate 等；同样只读挂载，不复制第二份）。
+//   1c. studio-skills 共享根（原 ekko 内置 22 技能正本收编）→ `skills.external_dirs`
+//      追加部署位 <runtime-manifest target>/studio-skills（spec 2026-11-10-
+//      ekko-hermes-skill-store-unification）。注意：这里注册部署位而非仓内路径——
+//      ekko 侧（补丁 762）只认部署位，发布版 App 机器无仓路径，两侧必须同路径。
 //   2. semantica → 不自动安装(安装=git clone+venv+pip,分钟级,留给
 //      `hermes mcp install semantica` 或 studio MCP 浏览器触发)。本脚本只
 //      报告 mcp_servers.semantica 是否已配置。
@@ -28,6 +32,13 @@ const overlayRoot = resolve(import.meta.dirname, '..', '..');
 export const PUA_SKILLS_DIR = resolve(overlayRoot, 'runtime', 'pua', 'skills');
 // 本仓自有的技能目录（coding-delegate 等）：以只读 external_dir 挂载，避免复制出第二真值。
 export const RUNTIME_SKILLS_DIR = resolve(overlayRoot, 'runtime', 'hermes-skills');
+// studio-skills 共享根的部署位（正本=runtime/studio-skills，经 runtime-manifest 部署）。
+// 从 manifest target 推导，不另立第二份路径定义。
+export function studioSkillsDeployDir(manifestJson) {
+  const target = String(manifestJson?.target ?? '~/.hermes/hermes-agent');
+  const expanded = target.replace(/^~(?=\/|$)/, process.env.HOME || '');
+  return resolve(expanded, 'studio-skills');
+}
 
 /** 计算 config.yaml 文本应发生的注册变更(纯函数)。
  *  返回 { changed, nextText, alreadyRegistered, registeredPath }。
@@ -90,9 +101,14 @@ function main() {
   }
 
   let configText = existsSync(configPath) ? readFileSync(configPath, 'utf8') : null;
+  const manifestPath = resolve(overlayRoot, 'runtime-manifest.json');
+  const studioDir = studioSkillsDeployDir(
+    existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {},
+  );
   const targets = [
     { label: 'pua', dir: PUA_SKILLS_DIR },
     { label: 'runtime-hermes-skills', dir: RUNTIME_SKILLS_DIR },
+    { label: 'studio-skills', dir: studioDir },
   ];
   for (const target of targets) {
     if (!existsSync(target.dir)) {

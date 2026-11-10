@@ -636,8 +636,6 @@ paths:
 
   # 2026-11-10 IDE 工具面板收窄（fix/ide-devtools-trim；spec 正本＋两处登记清单＋触碰面）
   - docs/superpowers/specs/2026-11-10-ide-devtools-trim.md
-  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
-  - docs/manuals/aistudio-design-document-index.md
   - custom/server/controllers/ide/__tests__/devtools.test.ts
   - custom/client/ide/components/IdeDevTools.vue
 
@@ -648,3 +646,16 @@ paths:
 
   # 2026-11-10 v0.23.1 合入收口实录（含设计文档三处修订）
   - docs/superpowers/specs/2026-11-10-vendor-agent-v0231-merge-closeout.md
+  # 2026-11-10 ekko/hermes 技能存储合一（feat/ekko-hermes-skill-store-unification；spec＋A 类＋补丁＋迁移脚本）
+  - docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md
+  - runtime/studio-skills/**
+  - runtime-manifest.json
+  - scripts/runtime/register-runtime.mjs
+  - scripts/maintenance/ekko-skill-store-migration.mjs
+  - team/shared/generate-configs.py
+  - custom/__tests__/ekko-skill-store-unification.test.ts
+  - patches/760-ekko-skill-store-unified-directories.patch
+  - patches/761-ekko-skill-sidecar-tools-skills.patch
+  - patches/762-ekko-external-skill-dirs-registration.patch
+  - patches/763-ekko-skill-import-crud-roots.patch
+  - patches/764-build-drop-ekko-skills-bundle.patch
