@@ -1,8 +1,38 @@
-diff --git a/vendor/hermes-agent/tests/test_approval_ledger.py b/vendor/hermes-agent/tests/test_approval_ledger.py
+diff --git a/tools/approval.py b/tools/approval.py
+index d8d6b718e..c4e57adeb 100644
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -1417,3 +1417,25 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
+ 
+ # Load permanent allowlist from config on module import
+ load_permanent_allowlist()
++
++
++# 统一审批账本（P0b-2，2026-11-10）：在守卫公共出口写终态，嵌套守卫由
++# approval_ledger 的 depth 只记最外层。不得把同一裁决在 Bridge 回调再写一遍。
++def _approval_ledger_mode() -> str:
++    if _yolo_active() or approval_context._get_approval_mode() == "off":
++        return "yolo"
++    current = approval_context._get_approval_mode()
++    if current in ("plan", "build", "guarded", "yolo"):
++        return current
++    if current == "smart":
++        return "guarded"
++    return "build"
++
++
++from tools.approval_ledger import ledgered_guard as _ledgered_guard
++
++_run_approval_gate = _ledgered_guard(tool="approval_gate", mode=_approval_ledger_mode)(_run_approval_gate)
++check_all_command_guards = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_all_command_guards)
++check_execute_code_guard = _ledgered_guard(tool="execute_code", mode=_approval_ledger_mode)(check_execute_code_guard)
++check_dangerous_command = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_dangerous_command)
++
+diff --git a/tests/tools/test_approval_ledger.py b/tests/test_approval_ledger.py
 new file mode 100644
 index 000000000..277488c1f
 --- /dev/null
-+++ b/vendor/hermes-agent/tests/test_approval_ledger.py
++++ b/tests/test_approval_ledger.py
 @@ -0,0 +1,115 @@
 +"""统一审批账本（P0b-2）：真实守卫出口与记录语义。"""
 +import json
@@ -119,41 +149,11 @@ index 000000000..277488c1f
 +    assert len(records) == 1
 +    assert records[0]["entryPoint"] == "hermes-agent-bridge"
 +    assert records[0]["sessionId"] == "ledger-test"
-diff --git a/vendor/hermes-agent/tools/approval.py b/vendor/hermes-agent/tools/approval.py
-index d8d6b718e..c4e57adeb 100644
---- a/vendor/hermes-agent/tools/approval.py
-+++ b/vendor/hermes-agent/tools/approval.py
-@@ -1417,3 +1417,25 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
- 
- # Load permanent allowlist from config on module import
- load_permanent_allowlist()
-+
-+
-+# 统一审批账本（P0b-2，2026-11-10）：在守卫公共出口写终态，嵌套守卫由
-+# approval_ledger 的 depth 只记最外层。不得把同一裁决在 Bridge 回调再写一遍。
-+def _approval_ledger_mode() -> str:
-+    if _yolo_active() or approval_context._get_approval_mode() == "off":
-+        return "yolo"
-+    current = approval_context._get_approval_mode()
-+    if current in ("plan", "build", "guarded", "yolo"):
-+        return current
-+    if current == "smart":
-+        return "guarded"
-+    return "build"
-+
-+
-+from tools.approval_ledger import ledgered_guard as _ledgered_guard
-+
-+_run_approval_gate = _ledgered_guard(tool="approval_gate", mode=_approval_ledger_mode)(_run_approval_gate)
-+check_all_command_guards = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_all_command_guards)
-+check_execute_code_guard = _ledgered_guard(tool="execute_code", mode=_approval_ledger_mode)(check_execute_code_guard)
-+check_dangerous_command = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_dangerous_command)
-+
-diff --git a/vendor/hermes-agent/tools/approval_ledger.py b/vendor/hermes-agent/tools/approval_ledger.py
+diff --git a/tools/approval_ledger.py b/tools/approval_ledger.py
 new file mode 100644
 index 000000000..47a501cae
 --- /dev/null
-+++ b/vendor/hermes-agent/tools/approval_ledger.py
++++ b/tools/approval_ledger.py
 @@ -0,0 +1,128 @@
 +"""统一审批账本的 Hermes 写入面（P0b-2）。
 +
