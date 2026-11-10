@@ -151,3 +151,21 @@ export function riskClassForTool(tool: string): ToolRiskClass {
   if (wildcard) return wildcard.riskClass
   return 'shell'
 }
+
+/**
+ * 旧词表→四挡归一（唯一归一点）：permmodes 七档（readonly/plan/default/acceptEdits/
+ * dontAsk/auto/bypassPermissions，cc 吸收词表）与 ZCode legacy 别名（acceptEdits/full-auto
+ * 等）都归到四挡；未识别值归 yolo 不可取——返回 'legacy' 由调用方如实入账（宁记真不猜档）。
+ */
+export function fourModeOf(mode: string | null | undefined): ModeId | 'legacy' {
+  switch (mode) {
+    case 'readonly': case 'plan': case 'read-only': case 'read_only': return 'plan'
+    case 'default': return 'build'
+    case 'acceptEdits': case 'auto_edit': case 'auto-edit': case 'autoEdit':
+    case 'accept_edits': case 'accept-edits': case 'dontAsk': return 'guarded'
+    case 'auto': case 'bypassPermissions': case 'full-auto': case 'full_auto':
+    case 'full-access': case 'full_access': case 'agent-full-access': case 'agent_full_access': return 'yolo'
+    case 'build': case 'guarded': case 'yolo': return mode
+    default: return 'legacy'
+  }
+}
