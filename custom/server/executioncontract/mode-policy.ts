@@ -50,7 +50,17 @@ export function zcodeNativeMode(mode: string | null | undefined): ModeId {
   }
 }
 
-/** Hermes 审批结果（Python 守卫字典形状）→ 账本记录形态；与 approval_ledger.py
+/** DSH 布尔权限推导：四挡在场时非 yolo 一律不自动放行（DSH ACP 的
+ *  permissionRequired=true → 权限请求 reject_once，人工面留待 P2 承接实现）；
+ *  未配置档=现状原样（approvalRequired 透传，缺省 undefined 不改变既有默认）。 */
+export function dshPermissionRequired(
+  permissionMode: ModeId | undefined, approvalRequired: boolean | undefined,
+): boolean | undefined {
+  if (permissionMode === undefined) return approvalRequired
+  return permissionMode !== 'yolo'
+}
+
+/** Hermes 守卫审批结果（Python 字典形状）→ 账本记录形态；与 approval_ledger.py
  *  的键语义逐条对齐（user_approved/user_consent/pre_approved 外的 approved 均为
  *  策略放行）。无判定键时返回 null（不产记录）。 */
 export function decidedByForResult(

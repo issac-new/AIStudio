@@ -1,0 +1,742 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-11-10",
+  "sourceOfTruth": {
+    "spec": "docs/superpowers/specs/2026-11-10-execution-kernel-unification.md",
+    "section": "§12.3"
+  },
+  "statusEnum": [
+    "source-confirmed",
+    "implemented",
+    "not-collected",
+    "waived"
+  ],
+  "rules": "waived 须用户签字（approvedBy）；not-collected=未采集，不得当已承接；退役判据=承接结清→入口改投→等价产物对照→签字。",
+  "faceAbsorption": {
+    "code-intelligence-lsp": {
+      "status": "not-collected"
+    },
+    "multi-file-edit-patch": {
+      "status": "implemented",
+      "evidence": [
+        "vendor/hermes-agent/tools/file_tools_write_guards.py"
+      ],
+      "absorbedBy": "hermes-tools"
+    },
+    "terminal-process": {
+      "status": "implemented",
+      "evidence": [
+        "vendor/hermes-agent/tools/terminal_tool.py"
+      ],
+      "absorbedBy": "hermes-tools"
+    },
+    "git-worktree": {
+      "status": "implemented",
+      "evidence": [
+        "vendor/hermes-agent/tools/subagent_worktree.py"
+      ],
+      "absorbedBy": "hermes-tools"
+    },
+    "checkpoint-rewind": {
+      "status": "implemented",
+      "evidence": [
+        "vendor/hermes-agent/tools/checkpoint_manager.py",
+        "vendor/hermes-agent/hermes_state_rewind.py"
+      ],
+      "absorbedBy": "hermes-tools"
+    },
+    "image-input": {
+      "status": "not-collected"
+    },
+    "mcp-client": {
+      "status": "not-collected"
+    },
+    "session-resume": {
+      "status": "not-collected"
+    },
+    "plan-mode": {
+      "status": "not-collected"
+    },
+    "project-rules-files": {
+      "status": "not-collected"
+    }
+  },
+  "backends": [
+    {
+      "id": "qwen",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "kimi",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "codebuddy",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "qoder",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "copilot",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "antigravity",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "claude-code",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "codex",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "pi",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "grok",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "opencode",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "mimo",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    },
+    {
+      "id": "cursor",
+      "faces": {
+        "code-intelligence-lsp": {
+          "status": "not-collected"
+        },
+        "multi-file-edit-patch": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/file_tools_write_guards.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "terminal-process": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/terminal_tool.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "git-worktree": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/subagent_worktree.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "checkpoint-rewind": {
+          "status": "implemented",
+          "evidence": [
+            "vendor/hermes-agent/tools/checkpoint_manager.py",
+            "vendor/hermes-agent/hermes_state_rewind.py"
+          ],
+          "absorbedBy": "hermes-tools"
+        },
+        "image-input": {
+          "status": "not-collected"
+        },
+        "mcp-client": {
+          "status": "not-collected"
+        },
+        "session-resume": {
+          "status": "not-collected"
+        },
+        "plan-mode": {
+          "status": "not-collected"
+        },
+        "project-rules-files": {
+          "status": "not-collected"
+        }
+      }
+    }
+  ]
+}

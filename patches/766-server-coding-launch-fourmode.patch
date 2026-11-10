@@ -1,0 +1,88 @@
+diff --git a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts
+index 09fa774af..d7077c866 100644
+--- a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts
++++ b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts
+@@ -1,3 +1,5 @@
++// overlay[four-mode]（P1 Task 4）：DSH 布尔权限推导（经 src/custom 符号链接解析）
++import { dshPermissionRequired } from '../../../custom/executioncontract/mode-policy'
+ import type { ChildProcess } from 'node:child_process'
+ import type { ManagedCodingAgentRun } from '../runtime/run-manager'
+ import type { CodingAgentImageInput } from '../../protocol/types'
+@@ -50,7 +52,9 @@ export function startDshChatTurn(run: ManagedCodingAgentRun, input: string, syst
+   })
+   run.currentChild = child
+   const turn = new DshAcpTurn(child, {
+-    permissionRequired: run.launch.approvalRequired,
++    // overlay[four-mode]（P1 Task 4）：四挡在场时非 yolo 一律不自动放行（reject_once）；
++    // 未配置档=现状 approvalRequired 透传。
++    permissionRequired: dshPermissionRequired(run.launch.permissionMode, run.launch.approvalRequired),
+     usage: event => {
+       // Scoped calls are already owned by the provider proxy ledger.
+       if (run.launch.mode !== 'global' || !event || typeof event.requestId !== 'string' || !event.requestId) return
+diff --git a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/index.ts b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/index.ts
+index 24efcb44c..1503a6b51 100644
+--- a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/index.ts
++++ b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/index.ts
+@@ -1,8 +1,13 @@
+ import { lowestReasoningEffort } from '../../../../../shared/reasoning-effort'
+ import { studioModelReasoningEffort } from '../../studio/public/model-reasoning-effort'
++// overlay[approval-ledger]（P0b-2）：编码任务启动免审记录（经 src/custom 符号链接解析）
++import { codingLaunchApprovalRecord } from '../../../custom/approval-ledger/coding-entry'
++import { synthesizeExempted } from '../../../custom/approval-ledger/ledger-store'
++import { sessionModeOf } from '../../../custom/permmodes/session-mode-store'
++import { zcodeNativeMode } from '../../../custom/executioncontract/mode-policy'
+ import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
+ import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
+-import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, openCodeRuntimeEnv, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID } from './opencode/config'
++import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, parseOpenCodeConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID, OPENCODE_SHARED_CONFIG_DIRS } from './opencode/config'
+ import { prepareOpenCodeBaseConfig } from './opencode/runtime-config'
+ import { prepareZcodeGlobalModel } from './zcode/runtime-config'
+ import { NATIVE_CODING_AGENTS, prepareNativeScopedRuntime, nativeScopedUsesChatCompletions, checkNativeCodingAgentEnvironment, checkNativeCodingAgentPlatform } from './registry/native-agents'
+@@ -3912,6 +4135,7 @@ async function startCodingAgentRunInternal(
+   const persistedProvider = isNativeCodingAgent(id) || id === 'cursor' || id === 'antigravity'
+     ? String(launch.provider || 'global').trim() || 'global'
+     : String(resolvedInput.provider || launch.provider || '').trim() || launch.provider
++  const sessionMode = sessionModeOf(launch.profile)
+   const started = codingAgentRunManager.start({
+     agentSessionId,
+     agentId: launch.agentId,
+@@ -3933,6 +4157,9 @@ async function startCodingAgentRunInternal(
+     nativeMcpServers: launch.nativeMcpServers,
+     state,
+     reasoningEffort: launch.reasoningEffort,
++    // overlay[four-mode]（P1 Task 4）：会话档（per-profile）经 zcodeNativeMode 归一四挡；
++    // 未配置=undefined → chat-turn 回落现状二值（默认 yolo 不变）。
++    permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined,
+     agentPreset,
+     studioMcpTokenFile: input.studioMcpTokenFile,
+     sessionSource: sessionSource === 'global_agent' || sessionSource === 'workflow' || sessionSource === 'group_chat'
+diff --git a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+index 3c8223971..8663baa91 100644
+--- a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
++++ b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/runtime/run-manager.ts
+@@ -118,6 +122,8 @@ export interface CodingAgentRunLaunch {
+   sessionSource?: 'global_agent' | 'workflow' | 'group_chat'
+   reasoningEffort?: string
+   approvalRequired?: boolean
++  // overlay[four-mode]（P1 Task 4）：四挡原生档（build|guarded|plan|yolo）；未配置=undefined 走现状二值。
++  permissionMode?: 'build' | 'guarded' | 'plan' | 'yolo'
+   studioMcpTokenFile?: string
+   nativeSystemPrompt?: string
+   nativeMcpServers?: Record<string, any>
+diff --git a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
+index 9e2056531..95ec05b04 100644
+--- a/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
++++ b/vendor/hermes-studio/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
+@@ -12,7 +16,11 @@ const WINDOWS_PROMPT_BRIDGE = "let input='';process.stdin.setEncoding('utf8');pr
+ 
+ export function startZcodeChatTurn(definition: { name: string }, run: ManagedCodingAgentRun, input: string, systemPrompt: string, host: NativeTurnHost, images: CodingAgentImageInput[] = []) {
+   const bridge = process.platform === 'win32' && run.launch.command === process.execPath && /\.cjs$/i.test(run.launch.args[0] || '')
+-  const baseArgs = [...run.launch.args, '--output-format', 'stream-json', '--mode', run.launch.approvalRequired ? 'plan' : 'yolo',
++  // overlay[cua-gate]：闸门 env 合并进本次 spawn（不改 launch 持久面，per-turn 生效）
++  run.launch.env = { ...run.launch.env, ...cuaEnvForSession(run.launch.sessionId) }
++  // overlay[four-mode]（P1 Task 4，2026-11-10 执行内核统一批）：--mode 优先消费四挡
++  // permissionMode（会话档经 zcodeNativeMode 归一）；未配置=现状二值 plan|yolo，默认行为不变。
++  const baseArgs = [...run.launch.args, '--output-format', 'stream-json', '--mode', run.launch.permissionMode ?? (run.launch.approvalRequired ? 'plan' : 'yolo'),
+     ...(run.nativeResumeReady && run.launch.agentNativeSessionId ? ['--resume', run.launch.agentNativeSessionId] : []),
+     ...images.flatMap(image => ['--attach', image.path])]
+   let prepared: ReturnType<typeof prepareZcodePrompt> | undefined

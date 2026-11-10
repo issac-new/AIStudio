@@ -454,7 +454,6 @@
 # 552=usage.costStates/pricing 词条回填（473 rebaseline 误删；changelog 8 键归 550）。
 # 553=UX 复盘术语澄清：饲料→API 中继（外链）/工作流双义拆分/AGENTS→智能体。
 
-
 # 554: root vue-tsc 门禁既有债清偿——App.vue 悬空 usesPageSidebar(0.7.29 模板已弃用)/kanban 死 safeStorage 对(上游 0.7.28 收编调用点后遗留)/readSetting 泛型调用于 any 型 @/custom 环境声明(TS2347)
 # 554: A-H 复盘轮——dev 下口令提醒 localStorage 跨会话/语言偏好按账户分键/IDE 工具时间线等 locale 词条（473 追加承载）
 554-client-ux-ah-round.patch
@@ -696,7 +695,6 @@
 # 的前置）。/api/expcandidates extract/list/curate。
 627-server-expcandidates-routes.patch
 
-
 # [419/617 移尾说明 2026-10-14] 两补丁原位上下文被后继补丁（612 系 board 参数改签名等）
 # 重构而断裂——历史上靠树中手工应用残留隐性生效（run19 即此态）。2026-10-14 阿里轮
 # inject 解阻时暴露，按累积基线再生（全量态 A→B/B→C 快照差分）并移至序列尾部；
@@ -746,7 +744,6 @@
 # call 行）。只读不唤醒（唤醒走 gateway.wake 既有通道）；harness sleep-wakeup
 # 代偿的退役路径。
 635-agent-sleeping-workers-probe.patch
-
 
 # [636] PR-5/6/7 组织回路面挂载（V8.29 治理轮收尾批）：autosched 排期产品源
 # （POST /api/hermes/autosched/schedule，PR-7 dispatch-preset 退役路径）+ orgloop
@@ -967,7 +964,6 @@
 # 出页签条，全隐藏统一 connections-empty 空态，superadmin 不再例外），且
 # normalizeTab 在 extras 关闭时归一 remote（app/mcu 深链与缺省不落隐藏页签）。
 702-client-connections-tab-normalize.patch
-
 
 # 703（2026-10-27 产品一致性 Task 5，原批内 701 与 main 侧 locale-member-names 撞号改 703）：
 # kanban 聚合面状态三键（overviewStale/overviewError/overviewPartial，zh/en 成对）——
@@ -1212,10 +1208,11 @@
 # Hermes 审批守卫终态统一写账；嵌套守卫去重、人工/免审/拒绝同 schema、fail-soft。
 763-agent-unified-approval-ledger.patch
 
-<<<<<<< HEAD
 764-build-studio-skills-seed-packaging.patch
-=======
 # 765（2026-11-10 执行内核统一 P0b-2 Task 2，spec 2026-11-10-execution-kernel-p0b2-p1）：
 # 编码任务启动成功门合成免审记录（IDE/群聊/工作流共用唯一合成点；先例=736）。
 765-server-coding-launch-approval-ledger.patch
->>>>>>> 9dae4f8 (feat(approval-ledger): P0b-2 Task 2——编码任务启动成功门免审记录（补丁 765，IDE/群聊/工作流唯一合成点）)
+
+# 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
+# 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导；run-manager 类型；启动侧会话档归一注入。
+766-server-coding-launch-fourmode.patch
