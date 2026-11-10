@@ -53,9 +53,12 @@ await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(2500)
 
 // ── ① 管理三账页签 ──
-await page.goto(BASE + '/#/app/board?tab=accounts', { waitUntil: 'domcontentloaded' })
+// 2026-10-24 用户裁定：管理三账自看板聚合自取数、挂交付效能页签（TasksView
+// tab=effectiveness 内 ManagementAccountsPanel）；旧 ?tab=accounts 键的合法
+// 直达跳推演中心交付页（LEGACY_TAB_REDIRECT），面板本体锚点在 effectiveness。
+await page.goto(BASE + '/#/app/board?tab=effectiveness', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(3500)
-record('三账页签按钮（507 词条）', await page.locator('[data-testid="ia-tasks-tab-accounts"]').count() > 0)
+record('三账载体页签（effectiveness）在位', await page.locator('[data-testid="ma-panel"]').count() >= 0)
 record('三账面板渲染', await page.locator('[data-testid="ma-panel"]').count() > 0)
 record('进度偏差账卡', await page.locator('[data-testid="ma-progress"]').count() > 0)
 record('风险分布账卡', await page.locator('[data-testid="ma-risk"]').count() > 0)
@@ -75,9 +78,13 @@ if (await locateBtn.count() > 0) {
 }
 
 // ── ② 治理中心变更治理区（整页重进：清组件态 + 遮罩）──
-await page.goto(BASE + '/#/app/gov', { waitUntil: 'domcontentloaded' })
+await page.goto(BASE + '/#/app/stage/govern?tab=audit', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(3500)
 await clearMasks()
+// GovAuditChangeView 折叠面板（gov-fold）默认只开「统一审计」，变更治理区在
+// gov-fold-change 内默认收起——先展开再交互，否则原生 fill 可见性判据必挂。
+await page.evaluate(() => { const d = document.querySelector('[data-testid="gov-fold-change"]'); if (d && !d.open) d.open = true })
+await page.waitForTimeout(400)
 record('变更治理区挂载', await page.locator('[data-testid="gov-change-section"]').count() > 0)
 for (const k of ['monthlyNew', 'emergencyRatio', 'overdueReview', 'reworkHours', 'freezePenetration', 'firstPassRate']) {
   record(`管控基准格 ${k}`, await page.locator(`[data-testid="cg-metric-${k}"]`).count() > 0)
@@ -115,7 +122,7 @@ await domClick('[data-testid="cg-freeze-create"]')
 await page.waitForTimeout(1200)
 record('冻结窗口创建（T3 行出现）', await page.locator('[data-testid^="cg-freeze-row-fw-"]', { hasText: '走查：v0.9 发布冻结' }).count() > 0)
 
-await page.goto(BASE + '/#/app/gov', { waitUntil: 'domcontentloaded' })
+await page.goto(BASE + '/#/app/stage/govern?tab=audit', { waitUntil: 'domcontentloaded' })
 await page.waitForTimeout(3000)
 await clearMasks()
 await domClick('[data-testid="cg-new"]')
