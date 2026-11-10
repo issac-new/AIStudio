@@ -38,6 +38,7 @@ import {
 import { normalizeToolOutcome } from '../toolcontract/error-envelope'
 import { IdempotencyStore } from '../toolcontract/idempotency-store'
 import { underWebUi } from '../lib/paths'
+import { synthesizeExempted } from '../approval-ledger/ledger-store'
 
 export interface ToolExecAuditEntry {
   ts: number
@@ -358,6 +359,18 @@ const auditHook = {
       retryCount: correlation.retryCount,
       approvalId: correlation.approvalId,
     })
+
+    // P0b 统一审批账本（2026-11-10 执行内核统一批 §6/§8）：Ekko 工具瀑布合成点——
+    // 真会执行的调用 postExecute 必达（瀑布首个 allow:false 在 pre 短路），故 ok 调用
+    // =按策略放行 → 记 approval.exempted（用户裁决：保留自动放行但留免审记录）。
+    // Ekko 尚未接四挡（P1 接线），mode 暂记 legacy；fail-soft 不阻断工具链。
+    if (!failed) {
+      synthesizeExempted({
+        tool: name, mode: 'legacy',
+        sessionId: context?.sessionId ?? '', profile: context?.profileId ?? '',
+        entryPoint: 'ekko-tool-waterfall', decided: 'auto',
+      })
+    }
   },
 }
 

@@ -34,6 +34,8 @@ paths:
   - patches/series
   - team/config.yaml
   - package.json
+  - .swarm-yuan/gate-audit.jsonl
+  - .swarm-yuan/gate-deny.jsonl
   - docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md
   - docs/superpowers/specs/2026-11-01-chat-turn-recovery-design.md
   - custom/server/governance/lifecycle/verdict.ts
@@ -494,6 +496,18 @@ paths:
   - scripts/maintenance/hrgov-seed.mjs
   - .qgate/gates/hrgov.workunit-contract.yaml
   - docs/DESIGN.md
+  - custom/server/AGENTS.md
+  - custom/server/toolpipeline/tool-hooks.ts
+  - custom/server/zcode/mention-dispatch.ts
+  - custom/server/controllers/ide/devtools.ts
+  - team/profiles/worker-coder/plugins/acp-client/__init__.py
+  - runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py
+  - package.json
+  - config/execution-contract.json
+  - custom/server/executioncontract/index.ts
+  - custom/server/approval-ledger/ledger-store.ts
+  - custom/__tests__/execution-contract.test.ts
+  - custom/__tests__/approval-ledger.test.ts
   # 责任台账批补登：实施计划文件（plans/ 首次入面，此前 scope 只列 specs）
   - docs/superpowers/plans/2026-11-06-workunit-responsibility-ledger.md
   # 代登记解堵（2026-11-06）：设计正本三批已在本地 main 未推，其 spec 路径漏登 scope；
@@ -607,3 +621,9 @@ paths:
 
   - docs/superpowers/specs/2026-11-09-ledger-judgment-followup.md
   - team/skills/devops/security-tool-landscape-tracking/SKILL.md
+
+  # 2026-11-10 执行内核统一（feat/execution-kernel-unification；spec 正本＋两处登记清单）
+  - docs/superpowers/specs/2026-11-10-execution-kernel-unification.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/DESIGN.md

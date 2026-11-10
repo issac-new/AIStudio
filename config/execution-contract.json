@@ -1,0 +1,87 @@
+{
+  "$schema": "./execution-contract.schema.md",
+  "version": "1.0.0",
+  "sourceOfTruth": {
+    "spec": "docs/superpowers/specs/2026-11-10-execution-kernel-unification.md",
+    "modeCatalogUpstream": "vendor/zcode/packages/shared/src/zcode-agent-model-state.ts",
+    "note": "四挡目录逐字对齐上游 ZCODE_AGENT_MODE_OPTIONS；上游目录变更时本契约须同步重锚（守门测试断言四个 id 与 edit 遗留映射在位）"
+  },
+  "modes": {
+    "canonical": [
+      { "id": "build", "name": "Ask before changes", "description": "Ask before each file changes.", "approvalBehavior": "per_change_pending" },
+      { "id": "guarded", "name": "Autonomous mode", "description": "Ask when there's risk", "approvalBehavior": "risk_evaluated" },
+      { "id": "plan", "name": "Plan mode", "description": "Inspect the code and present a plan before editing.", "approvalBehavior": "readonly_no_write" },
+      { "id": "yolo", "name": "Full access", "description": "Edit and run commands with fewer confirmations.", "approvalBehavior": "exempted_record" }
+    ],
+    "legacyHidden": [
+      { "id": "edit", "mapsTo": null, "note": "菜单已隐藏但历史值必须保留；投影不得把 edit 降为 build（上游注释原文约束）" }
+    ],
+    "legacyAliases": {
+      "read-only": "plan",
+      "read_only": "plan",
+      "auto_edit": "acceptEdits",
+      "auto-edit": "acceptEdits",
+      "autoEdit": "acceptEdits",
+      "accept_edits": "acceptEdits",
+      "accept-edits": "acceptEdits",
+      "full-auto": "yolo",
+      "full_auto": "yolo",
+      "agent-full-access": "bypassPermissions",
+      "agent_full_access": "bypassPermissions",
+      "full-access": "bypassPermissions",
+      "full_access": "bypassPermissions"
+    }
+  },
+  "codingBackends": {
+    "whitelist": [
+      { "appId": "ycode", "registryId": "zcode", "binary": "vendor fork (zcode-patches/001-009)" },
+      { "appId": "zcode", "registryId": "zcode", "binary": "official CLI (PATH / ZCode.app / ~/.hermes/ycode/zcode.cjs)" },
+      { "appId": "deepseek-harness", "registryId": "dsh", "binary": "@deepseek-ai/dsh" }
+    ],
+    "retired": ["qwen", "kimi", "codebuddy", "qoder", "copilot", "antigravity", "claude-code", "codex", "pi", "grok", "opencode", "mimo", "cursor"],
+    "retirementGate": "承接清单结清→入口改投→等价产物对照→用户签字（spec §12.3）"
+  },
+  "approvalLedger": {
+    "recordTypes": ["approval.pending", "approval.resolved", "approval.exempted"],
+    "requiredFields": ["recordType", "tool", "riskClass", "mode", "policyId", "policyVersion", "sessionId", "profile", "entryPoint", "decidedBy", "ts"],
+    "decidedByEnum": ["user", "policy:auto", "policy:risk-evaluated", "policy:readonly"],
+    "exemptedPolicyIdDefault": "four-mode-yolo",
+    "sameSchemaRule": "手工审批与免审同账同构，只差 decidedBy（spec §8）"
+  },
+  "toolRiskClasses": {
+    "enum": ["readonly", "write_file", "shell", "network", "credential", "git_write", "destructive", "computer_use", "mcp_external"],
+    "defaults": [
+      { "match": ["read_file", "grep", "glob", "ls", "skill_view"], "riskClass": "readonly" },
+      { "match": ["write_file", "edit_file", "apply_patch"], "riskClass": "write_file" },
+      { "match": ["terminal_exec", "bash", "code_exec"], "riskClass": "shell" },
+      { "match": ["web_fetch", "web_search"], "riskClass": "network" },
+      { "match": ["credential_read", "secret_read"], "riskClass": "credential" },
+      { "match": ["git_push", "git_commit_to_protected"], "riskClass": "git_write" },
+      { "match": ["rm_rf_like", "force_push", "db_rebuild"], "riskClass": "destructive" },
+      { "match": ["computer_use", "cua"], "riskClass": "computer_use" },
+      { "match": ["mcp:*"], "riskClass": "mcp_external", "note": "通配兜底：未登记 MCP 工具一律按外部级评" }
+    ],
+    "unregisteredRule": "未登记工具默认 shell 级评（宁高勿低）；登记表只许收敛不许放宽"
+  },
+  "sessionIdentityMap": {
+    "idKinds": ["studio_session", "hermes_session", "zcode_native_session", "ekko_session", "acp_lazy_session"],
+    "canonicalOwner": "hermes_session",
+    "bidirectionalRule": "每条映射必须可逆且持久（spec §9.2 回滚依赖）；映射表是 P0a 定 schema，写路径 P0b 起",
+    "retiredStores": ["zcode:~/.zcode/cli/db/db.sqlite(只读)", "ekko:.ekko/ekko.db(只读)"]
+  },
+  "eventSemantics": {
+    "unifiedEvents": [
+      { "name": "run.started", "sources": { "hermes": "bridge run create", "ekko": "AgentRuntimeEvent run start", "zcode": "stream-json system/init" } },
+      { "name": "run.completed", "sources": { "hermes": "RunRecord status=completed", "ekko": "AgentRuntimeEvent run end", "zcode": "stream-json result" } },
+      { "name": "run.failed", "sources": { "hermes": "RunRecord status=failed", "ekko": "AgentRuntimeEvent run error", "zcode": "stream-json result projection.status in [error,failed]" } },
+      { "name": "message.delta", "sources": { "hermes": "stream output delta", "ekko": "text delta event", "zcode": "stream-json assistant message delta" } },
+      { "name": "tool.started", "sources": { "hermes": "tool-call persisted", "ekko": "tool execute begin", "zcode": "tool call begin" } },
+      { "name": "tool.finished", "sources": { "hermes": "tool result batch", "ekko": "tool execute end", "zcode": "tool call end" } },
+      { "name": "approval.requested", "sources": { "hermes": "approval queue block", "ekko": "approval.requested (ekko/services/approvals.ts)", "zcode": "session/request_permission" } },
+      { "name": "approval.resolved", "sources": { "hermes": "queue response", "ekko": "pending broker resolve", "zcode": "permission response" } },
+      { "name": "approval.exempted", "sources": { "hermes": "policy allow + yolo", "ekko": "policy allow", "zcode": "mode=yolo 无请求时入口层合成（spec §6 P0b 唯一合成点）" } },
+      { "name": "usage.reported", "sources": { "hermes": "turn usage", "ekko": "run usage event", "zcode": "result usage" } }
+    ],
+    "projectionRule": "Studio 投影按本表实现；三总线的原生事件名只作 sources 参考，不得直接外泄到统一事件流"
+  }
+}

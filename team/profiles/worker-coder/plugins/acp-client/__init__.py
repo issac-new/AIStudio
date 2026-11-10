@@ -36,6 +36,36 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# ── 统一审批账本（2026-11-10 执行内核统一批 P0b，spec 2026-11-10-§6/§8）──
+# auto_approve 放行属策略免审：append-only 记一条 approval.exempted。
+# fail-soft：账本路径缺失/不可写时静默跳过（观测面不阻断委托链）。
+
+
+def _approval_ledger_append(record: Dict[str, Any]) -> None:
+    try:
+        base = os.environ.get("HERMES_APPROVAL_LEDGER_DIR", "").strip()
+        if not base:
+            webui = os.environ.get("HERMES_WEB_UI_HOME", "").strip()
+            if not webui:
+                return
+            base = str(Path(webui) / "approval-ledger")
+        p = Path(base)
+        p.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "recordType": "approval.exempted", "riskClass": "shell",
+            "policyId": "four-mode-yolo", "policyVersion": "1.0.0",
+            "entryPoint": "hermes-acp-send", "decidedBy": "policy:auto",
+        }
+        rec.update(record)
+        import datetime
+        import uuid as _uuid
+        rec.setdefault("ts", datetime.datetime.now(datetime.timezone.utc).isoformat())
+        rec.setdefault("recordId", str(_uuid.uuid4()))
+        with open(p / "approval-ledger.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
 MAX_RESPONSE_CHARS = 120_000
 MAX_THOUGHT_CHARS = 12_000
 MAX_TERMINAL_BUFFER_BYTES = 262_144
@@ -631,6 +661,12 @@ class ACPClient:
                     "optionId": oid,
                 }
             }
+        })
+        # auto_approve 放行=策略免审（P0b 统一审批账本）；mode 词表未接四挡前如实记 legacy。
+        _approval_ledger_append({
+            "tool": f"acp_permission:{oid}", "mode": "legacy",
+            "sessionId": str(params.get("sessionId", "")),
+            "profile": os.environ.get("HERMES_PROFILE", ""),
         })
 
     def _do_fs_read(self, mid: int, params: dict):

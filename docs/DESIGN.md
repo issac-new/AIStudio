@@ -582,7 +582,7 @@ S1—S7 是集群内部的工作分类，第 4 章按交付顺序重排，不逐
 | 组件 | 在交付链中的位置 | 不承担的职责 |
 |---|---|---|
 | Matrix | 传递协作消息、房间事件和跨机回执 | 不替代看板任务真值或本地会话存储 |
-| Ycode | 在任务工作区执行编码并产生实现与测试证据 | 不决定任务是否获准发布 |
+| Ycode | 在任务工作区执行编码并产生实现与测试证据（编码后端白名单之首，与 Zcode、DeepSeek Harness 共用四挡权限契约） | 不决定任务是否获准发布，不持有会话/审批/事件所有权 |
 | swarm-yuan | 把仓库事实转成项目技能、门禁和验证器 | 不调用产品服务，不代替人作业务决策 |
 
 Matrix 对端过滤只能屏蔽已经确认的 bot。
@@ -780,6 +780,14 @@ sequenceDiagram
 远端智能体通过受控 peer 协议或 Matrix 事件进入。
 多节点通过 peer API、Matrix 和 git 制品协同，不设全网唯一中央网关。
 任何产品功能不得另起一条绕过本机 gateway 的智能体执行链。
+
+执行面统一契约（2026-11-10 裁决，spec 见 `superpowers/specs/2026-11-10-execution-kernel-unification.md`）：
+Hermes `AIAgent` 是唯一会话/审批/记忆/事件所有者；通用对话内核只此一个（Ekko 运行时退役）。
+编码后端白名单只保留三个可选 app——Ycode（仓内分叉）、Zcode（官方 CLI）、DeepSeek Harness，
+其余具名后端承接结清后逐家退役。权限统一为 ZCode 四挡（build/guarded/plan/yolo），
+单一事实源=`zcode-agent-model-state.ts` 的模式目录；`edit` 保留历史映射不删。
+本机执行准入由 Hermes 审批链合流裁决（含 yolo 挡免审记录）；跨机 HumanGate 裁决保持独立，不并入单机库。
+活会话事实源=Hermes `state.db`，Studio 侧为可重建投影。
 
 一次重型任务经过五个阶段：唯一入口接收，orchestrator 分解，
 dispatcher 按名册派发，worker 隔离执行，独立验证收口。

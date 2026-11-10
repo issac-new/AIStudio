@@ -19,6 +19,8 @@
 // commandEnvelopeSchema（commandId uuid v7 风格客户端生成、createSession 时
 // sessionId=null、sendText payload={text,...}）。
 import { sessionModeOf } from '../permmodes/session-mode-store'
+import { synthesizeExempted } from '../approval-ledger/ledger-store'
+import { fourModeOf } from '../executioncontract/index'
 import { ENGINE_MODE_MAP } from '../permmodes/permission-modes'
 import { randomUUID } from 'crypto'
 import { appendEvidence } from '../evidence/evidence-store'
@@ -449,6 +451,14 @@ export class MentionDispatchService {
     this.pending.set(key, { sessionId, since: this.now(), coalesced: [] })
     if (plan.squad) this.recordSquadPlaceholder(plan.squad, params.workspacePath, sessionId)
     this.recordLaneSession(params.taskId, sessionId, commandId)
+    // P0b 统一审批账本（2026-11-10 执行内核统一批 §6/§8）：@zcode 派发入口合成免审记录。
+    // 会话档未配置时引擎默认 yolo（chat-turn 同口径）；档位经 fourModeOf 归一到四挡词表。
+    // fail-soft：账本失败不阻断派发（账本是观测面不是执法面）。
+    synthesizeExempted({
+      tool: 'zcode_dispatch', mode: fourModeOf(sessionModeOf(resolveRunsFor(token))),
+      sessionId, profile: resolveRunsFor(token), entryPoint: 'zcode-mention-dispatch',
+      decided: 'auto', detail: { taskId: params.taskId, commandId },
+    })
     return emit({ ...envelope, reason: 'queued', sessionId, commandId, detail: wrapDetail('run 已派发（createSession+sendText）') })
   }
 
