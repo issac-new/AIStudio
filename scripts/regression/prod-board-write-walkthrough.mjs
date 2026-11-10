@@ -36,6 +36,13 @@ try {
     const el = document.querySelector('#app')
     return Boolean(el?.__vue_app__) && !(document.body?.innerText || '').includes('AIStudio 加载中')
   }, undefined, { timeout: 60000 }).catch(() => {})
+  // 遮罩清理（2026-11-10 交互轮工装债）：空 Profile（未配大模型）环境首屏弹
+  // 「未配置大模型」引导模态，n-modal-mask 拦原生点击——E4 建卡点击静默失效。
+  // 与其他走查脚本同款 Escape×3 清障后再交互（有 provider 的环境此步为 no-op）。
+  for (let i = 0; i < 3 && await page.locator('.n-modal-mask').count(); i++) {
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(400)
+  }
 
   // E4 行内建卡（?new=1 深链自动收窄唯一板；triage 列=原始想法不自动派发）
   await page.goto(BASE + '/#/app/board?new=1', { waitUntil: 'domcontentloaded' })
