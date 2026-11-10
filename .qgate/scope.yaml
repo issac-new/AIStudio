@@ -627,3 +627,9 @@ paths:
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - docs/manuals/aistudio-design-document-index.md
   - docs/DESIGN.md
+
+  # 2026-11-10 记忆统一（feat/memory-unification-hindsight；spec 正本＋登记清单＋DESIGN_SYNC）
+  - docs/superpowers/specs/2026-11-10-memory-unification-hindsight.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/DESIGN.md

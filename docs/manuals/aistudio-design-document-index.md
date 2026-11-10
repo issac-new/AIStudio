@@ -643,6 +643,7 @@
 - [2026-11-08-team-library-evolution.md](../superpowers/specs/2026-11-08-team-library-evolution.md)
 - [2026-11-09-swarm-yuan-agents-skills-root.md](../superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md)
 - [2026-11-10-execution-kernel-unification.md](../superpowers/specs/2026-11-10-execution-kernel-unification.md)
+- [2026-11-10-memory-unification-hindsight.md](../superpowers/specs/2026-11-10-memory-unification-hindsight.md)
 ## archive（2 份，不计入上述根目录）
 
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
