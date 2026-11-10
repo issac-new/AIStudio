@@ -170,7 +170,11 @@ async function docMeta(entry: typeof GOVERNANCE_DOCS[number]) {
       const refs = entry.ref ? [entry.ref] : ['HEAD', 'origin/main']
       let best = ''
       for (const ref of refs) {
-        const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', p])).trim()
+        // 单 ref 失败隔离（2026-11-10 走查定谳）：治理仓默认分支为 master 时
+        // origin/main 引用缺席，git log 以 fatal bad revision reject——不隔离会把
+        // 已命中的 HEAD 结果一并炸掉，工件被误判 exists:false（PUT 刚提交完
+        // 读回却"不在仓"的读写矛盾）。缺席的 ref 记空串继续，取较新者语义不变。
+        const out = (await git(['log', '-1', '--format=%h %cI', ref, '--', p]).catch(() => '')).trim()
         if (out && (!best || out.split(' ').slice(1).join(' ') > best.split(' ').slice(1).join(' '))) best = out
       }
       if (best) {
@@ -231,7 +235,15 @@ router.get('/doc', async (ctx) => {
   if (!entry.ref && existsSync(abs)) {
     markdown = await readFile(abs, 'utf-8')
   } else {
-    markdown = await git(['show', `${entry.ref || 'origin/main'}:${entry.path}`])
+    const primaryRef = entry.ref || 'origin/main'
+    try {
+      markdown = await git(['show', `${primaryRef}:${entry.path}`])
+    } catch (e) {
+      if (entry.ref) throw e
+      // origin/main 缺席（master 默认分支仓/本地克隆）时回退 HEAD——docMeta 已
+      // 判定工件在库（HEAD 命中），读取不得再因远程引用缺席而 500。
+      markdown = await git(['show', `HEAD:${entry.path}`])
+    }
   }
   ctx.body = {
     ok: true,
