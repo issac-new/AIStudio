@@ -494,6 +494,13 @@ paths:
   - scripts/maintenance/hrgov-seed.mjs
   - .qgate/gates/hrgov.workunit-contract.yaml
   - docs/DESIGN.md
+  - custom/server/AGENTS.md
+  - custom/server/toolpipeline/tool-hooks.ts
+  - custom/server/zcode/mention-dispatch.ts
+  - custom/server/controllers/ide/devtools.ts
+  - team/profiles/worker-coder/plugins/acp-client/__init__.py
+  - runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py
+  - package.json
   - config/execution-contract.json
   - custom/server/executioncontract/index.ts
   - custom/server/approval-ledger/ledger-store.ts
