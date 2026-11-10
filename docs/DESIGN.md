@@ -788,6 +788,9 @@ Hermes `AIAgent` 是唯一会话/审批/记忆/事件所有者；通用对话内
 单一事实源=`zcode-agent-model-state.ts` 的模式目录；`edit` 保留历史映射不删。
 本机执行准入由 Hermes 审批链合流裁决（含 yolo 挡免审记录）；跨机 HumanGate 裁决保持独立，不并入单机库。
 活会话事实源=Hermes `state.db`，Studio 侧为可重建投影。
+长期记忆统一在 Hermes MemoryProvider 链上、唯一 provider=Hindsight（local_external 单守护，
+spec 见 `superpowers/specs/2026-11-10-memory-unification-hindsight.md`）；Ekko 双记忆面
+（runtime 记忆与 Person 每账号记忆）随 P3 退役，存量一次性迁入 Hindsight bank。
 
 一次重型任务经过五个阶段：唯一入口接收，orchestrator 分解，
 dispatcher 按名册派发，worker 隔离执行，独立验证收口。
@@ -1193,6 +1196,9 @@ loop-graph 以图定义阶段、依赖和并行关系，以事件日志记录实
 
 记忆分三层：个人随身笔记、团队长期记忆（Hindsight）和会话库。
 团队长期记忆按团队隔离，跨团队不共享原始内容。
+团队长期记忆即唯一长期记忆通道：Hermes MemoryProvider 链上唯一 provider=Hindsight
+（local_external 单守护，bank 按机器与 profile 分区）；Ekko 双记忆面（runtime 记忆与
+Person 每账号记忆）随执行内核统一 P3 退役，存量一次性迁入（2026-11-10 记忆统一批）。
 记忆写入要登记来源、写入主体、保留周期、授权范围和隔离边界；
 未登记或未经批准的记忆不得作为事实注入新任务。
 决策知识采用 CANDIDATE→owner review→OFFICIAL 流转，
@@ -1574,7 +1580,7 @@ npm run serve
 | 性能基线 | 首载与聚合时延未在当前版本复测 | 以本轮实测为准，不沿用旧秒数 |
 | 外部集成 | 分享房、真实 Matrix 双账号、多机和第二名会签人未在本轮复验 | 在目标环境实测后再宣称 |
 | 真实 ACP 回合 | 技能生成与发现已验证；装载、编码前调用和真实 ACP 回合未验证 | 以 Skill 调用日志和真实回合补证 |
-| 长期记忆 | 写入、保留和受控注入的全链未验证 | 保持目标契约，不宣称已生效 |
+| 长期记忆 | 写入、保留和受控注入的全链未验证；统一口径已立（Hindsight 唯一 provider），Ekko 存量迁移与随 P3 退役未执行 | 保持目标契约，不宣称已生效；迁移按记忆统一批 M1/M2 补证 |
 | 长程可信执行 | 三态审计、双准入、完整性栅栏和断点已有实现与测试，真实长任务全链未复验 | 真实长任务和断点恢复证据 |
 | 图运行联动 | 图引擎、事件日志与卡片派发已接线，真实多轮运行未复验 | 以真实 run 证据核对 |
 | 主动性执行 | 两轴判定与页签已接线，执法门默认关闭 | 显式开启后的拦截与豁免审计 |
