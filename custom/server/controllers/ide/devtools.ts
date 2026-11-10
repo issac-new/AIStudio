@@ -20,6 +20,7 @@ import { existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { Context } from 'koa'
+import { synthesizeExempted } from '../../approval-ledger/ledger-store'
 
 // ── 白名单与纯函数层（测试锚点）──────────────────────────────────────────────
 
@@ -246,6 +247,15 @@ export function handleDevtoolsLaunch(ctx: Context, deps: DevtoolsDeps & { readBo
     })
     try {
       exec(plan.file, plan.args)
+      // P0b 统一审批账本（2026-11-10 执行内核统一批 §6/§8）：DevTools 直启入口合成免审记录。
+      // 直启即放行（用户裁决口径），mode=legacy（本入口无四挡 UI）；fail-soft 不阻断启动。
+      if (tool === 'zcode' || tool === 'terminal-zcode') {
+        synthesizeExempted({
+          tool: `devtools_launch:${tool}`, mode: 'legacy',
+          sessionId: '', profile: '', entryPoint: 'ide-devtools-launch', decided: 'auto',
+          detail: cwdRaw ? { cwd: cwdRaw } : undefined,
+        })
+      }
       ctx.body = { ok: true, tool }
     } catch (e) {
       ctx.status = 500
