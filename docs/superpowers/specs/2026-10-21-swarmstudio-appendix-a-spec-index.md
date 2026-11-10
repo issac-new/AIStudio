@@ -628,7 +628,7 @@
 | 2026-11-10-page-walkthrough-import-meta-fix | 全页面走查轮：serve 链 import.meta TS1343 修复 | 158 站×300 判定点三轮走查；唯一产品缺陷=执行内核统一批 P0a 的 executioncontract/index.ts:100 用 import.meta.url，server tsconfig module=commonjs 下 ts-node 首次编译 TS1343、npm run serve 起不来；按 simrun/supervisor.ts:61 先例改 __dirname 双运行时口径，custom/server 运行态 import.meta 清零；其余 14 defect 全定性环境态（kanban/plugins 冷启动竞态、matrix 404 configured:false 设计内、state.db 缺席种子后 200、runtime-caps 409 fail-closed 成文） |
 | 2026-11-10-vendor-upgrade-agent-v0231 | vendor agent v0.23.1 换血批 | 基线 3b4215785（2604 提交/2781 文件，史上最大单版差量）；agent 面 91/91 direct（612/722 两枚手解重生成，741/750 系级联假阳性）；换血面与上游 diff 精确吻合；runtime 12 交集件重灌；载体链进位 v0.23.1-team.1；宿主部署面挂账（他会话在途热修域） |
 | 2026-11-10-vendor-agent-v0231-merge-closeout | v0.23.1 换血批合入收口实录 | pre-commit 钩子 merge commit 误伤 pristine 基线（vendor 面撤出成空）→显式提交 3f9089c00 清偿；台账漏入补齐；投影块 121↔122 摇摆归位真值 121；并发登记并集解＋计数 610/619；终态 origin/main ad5b400bf 全绿 |
-| 2026-11-11-run29-prelude | run29 开跑前刷新批：方案 §5.12 立法＋基线刷新＋值守立项 | N28/N29 全量吸收进方案正本（note() 双写/R18 载荷契约/审计单遍收敛/step-<n>/OP_STEPS={25}/熔断签名扩面/metrics 锚校验/进度锚动态枚举/加词回扫/基线口径）；不扩 §5.11 探测组（记忆=守护进程面、内核=记账面、身份聊天负例属 fail-soft 非拒绝型，以编制三方对账覆盖）；RFD-001＋standard 续用（单轮单变量）；dist 供给实锤=build 只建 client、server 须 build:full（81 提交缺口）；值守 20 分钟档收官即删 |
+| 2026-11-11-run29-prelude | run29 开跑前刷新批：方案 §5.12 立法＋基线刷新＋值守立项 | N28/N29 全量吸收进方案正本（note() 双写/R18 载荷契约/审计单遍收敛/step-<n>/OP_STEPS={25}/熔断签名扩面/metrics 锚校验/进度锚动态枚举/加词回扫/基线口径）；不扩 §5.11 探测组（记忆=守护进程面、内核=记账面、身份聊天负例属 fail-soft 非拒绝型，以编制三方对账覆盖）；RFD-001＋standard 续用（单轮单变量）；dist 供给实锤=build 只建 client、server 须 build:full（81 提交缺口）；值守 20 分钟档推演完成后即删 |
 ### 角色/排除（非 spec 文档）
 
 以下文件保留在 specs 根目录，但不是 A.1 的专题设计、规格或决策文档；排除是角色分类，不是删除或按日期作废。
