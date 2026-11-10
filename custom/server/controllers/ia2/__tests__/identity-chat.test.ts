@@ -64,7 +64,9 @@ describe('身份清单（identities）', () => {
     const mw = (mod as unknown as { identityChatNativeRoutes: () => (c: unknown, n: () => Promise<void>) => Promise<void> }).identityChatNativeRoutes()
     const ctx = { method: 'GET', path: '/api/ia2/identities', set: vi.fn(), status: 0, body: null }
     await mw(ctx, async () => {})
-    expect(ctx.status).toBe(0)
+    // K19 清偿后成功路径经 lib/http ok() 显式置 200（旧断言 0＝未设态的实现怪癖，
+    // 真 koa 下两者行为等同 200）
+    expect(ctx.status).toBe(200)
     const body = ctx.body as { identities: Array<{ id: string; online: boolean }> }
     expect(body.identities.map(i => i.id)).toEqual(['data-arch', 'orchestrator', 'worker-coder'])
     expect(body.identities.every(i => !i.online)).toBe(true)

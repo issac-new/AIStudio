@@ -26,6 +26,10 @@ import { readGatewayMatrixEnv } from '../../matrix/gateway-env'
 import { loadMatrixSession } from '../../matrix/session-store'
 import { matrixSendMessage } from '../../matrix/raci-matrix'
 import { readRegistry } from '../../governance/registry-admin'
+// K19 清偿（v1.0.15 发布轮）：响应出口统一走 lib/http（ok/fail），本地 Ctx 与
+// Koa Context 在 lib/http 触碰面（status/body/set）结构兼容，经窄转型接入。
+import { ok as httpOk, fail as httpFail } from '../../lib/http'
+import type { Context as KoaContext } from 'koa'
 
 // 注：真进程 koa-router 新增路由不生效（routes.ts 404 缺陷注释同源，engine-models
 // 先例）——出口用原生中间件精确匹配（identityChatNativeRoutes），router 定义退役。
@@ -41,6 +45,9 @@ type Ctx = {
   set(k: string, v: string): void
 }
 type Next = () => Promise<void>
+
+/** 本地 Ctx → lib/http 的 Koa Context（结构兼容窄转型，见文件头注释）。 */
+const asKoa = (ctx: Ctx): KoaContext => ctx as unknown as KoaContext
 
 const BOT_CHAT_TITLE = 'Bot Chat'
 /** 与 peer.py DM_TIMEOUT_S 同量级；超时≠失败——turn 已入队，客户端转轮询。 */
@@ -217,29 +224,27 @@ async function ensureDmRoom(account: { homeserverUrl: string; accessToken: strin
 async function handleMatrixChat(ctx: Ctx, peerId: string): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   const message = String((ctx.request?.body as { message?: unknown })?.message ?? '').trim()
-  if (!message) { ctx.status = 400; ctx.body = { ok: false, error: 'message 必填' }; return }
+  if (!message) { httpFail(asKoa(ctx), 400, 'message 必填'); return }
   const account = resolveMatrixAccount()
-  if (!account) { ctx.status = 409; ctx.body = { ok: false, error: 'Matrix 通道未配置（orchestrator .env / matrix-session.json 两路均缺席）' }; return }
+  if (!account) { httpFail(asKoa(ctx), 409, 'Matrix 通道未配置（orchestrator .env / matrix-session.json 两路均缺席）'); return }
   try {
     const roomId = await ensureDmRoom(account, peerId)
     await matrixSendMessage(account, roomId, message)
-    ctx.body = {
-      ok: true,
+    httpOk(asKoa(ctx), {
       sessionId: roomId,
       queued: true,
       reply: '',
       note: '已通过 Matrix DM 发送；对端回复经 messages 轮询拉取',
-    }
+    })
   } catch (err) {
-    ctx.status = 502
-    ctx.body = { ok: false, error: (err as Error).message.slice(0, 300) }
+    httpFail(asKoa(ctx), 502, (err as Error).message.slice(0, 300))
   }
 }
 
 async function handleMatrixMessages(ctx: Ctx, peerId: string): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   const account = resolveMatrixAccount()
-  if (!account) { ctx.status = 409; ctx.body = { ok: false, error: 'Matrix 通道未配置' }; return }
+  if (!account) { httpFail(asKoa(ctx), 409, 'Matrix 通道未配置'); return }
   try {
     const roomId = await ensureDmRoom(account, peerId)
     const data = await matrixGet<{ chunk?: Array<{ type?: string; sender?: string; content?: { msgtype?: string; body?: string }; origin_server_ts?: number }> }>(
@@ -252,10 +257,9 @@ async function handleMatrixMessages(ctx: Ctx, peerId: string): Promise<void> {
         content: String(ev.content?.body ?? ''),
         at: typeof ev.origin_server_ts === 'number' ? ev.origin_server_ts : null,
       }))
-    ctx.body = { sessionId: roomId, messages }
+    httpOk(asKoa(ctx), { sessionId: roomId, messages })
   } catch (err) {
-    ctx.status = 502
-    ctx.body = { ok: false, error: (err as Error).message.slice(0, 300) }
+    httpFail(asKoa(ctx), 502, (err as Error).message.slice(0, 300))
   }
 }
 
@@ -281,8 +285,7 @@ async function handleIdentities(ctx: Ctx, deps?: ProfileAccessDeps): Promise<voi
         if (info?.state === 'connected') online.set(profile, true)
       }
     } catch { /* 网关不在 → 全部离线态 */ }
-    ctx.body = {
-      ok: true,
+    httpOk(asKoa(ctx), {
       identities: [
         ...served
           .filter(profile => canUserAccessProfile(ctx.state?.user, profile, deps))
@@ -297,10 +300,9 @@ async function handleIdentities(ctx: Ctx, deps?: ProfileAccessDeps): Promise<voi
         ...(await listMatrixIdentities()).map(m => ({ ...m, online: false })),
       ],
       gatewayBase: gatewayBase(),
-    }
+    })
   } catch (err) {
-    ctx.status = 502
-    ctx.body = { ok: false, identities: [], error: `网关不可达：${(err as Error).message.slice(0, 120)}` }
+    httpFail(asKoa(ctx), 502, `网关不可达：${(err as Error).message.slice(0, 120)}`, { extra: { identities: [] } })
   }
 }
 
@@ -311,25 +313,24 @@ async function handleMessages(ctx: Ctx, profile: string): Promise<void> {
     const data = (await gatewayJson(`${profileBase(profile)}/api/sessions/${encodeURIComponent(sid)}/messages`)) as
       | { messages?: Array<Record<string, unknown>> }
       | null
-    ctx.body = {
-      ok: true,
+    httpOk(asKoa(ctx), {
       sessionId: sid,
       messages: (data?.messages ?? []).map((m) => ({
         role: typeof m.role === 'string' ? m.role : 'unknown',
         content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? ''),
         at: typeof m.created_at === 'number' ? m.created_at : null,
       })),
-    }
+    })
   } catch (err) {
-    ctx.status = (err as { status?: number }).status ?? 502
-    ctx.body = { ok: false, error: (err as Error).message.slice(0, 300), hint: botChatHint(err) }
+    const hint = botChatHint(err)
+    httpFail(asKoa(ctx), (err as { status?: number }).status ?? 502, (err as Error).message.slice(0, 300), { extra: hint ? { hint } : {} })
   }
 }
 
 async function handleChat(ctx: Ctx, profile: string): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   const message = String((ctx.request?.body as { message?: unknown })?.message ?? '').trim()
-  if (!message) { ctx.status = 400; ctx.body = { ok: false, error: 'message 必填' }; return }
+  if (!message) { httpFail(asKoa(ctx), 400, 'message 必填'); return }
   try {
     const sid = String((ctx.request?.body as { sid?: unknown })?.sid ?? '') || (await ensureBotChat(profile))
     try {
@@ -339,23 +340,22 @@ async function handleChat(ctx: Ctx, profile: string): Promise<void> {
         timeoutMs: CHAT_TIMEOUT_MS,
       })) as { object?: string; message?: { content?: string }; status?: string } | null
       const queued = result?.object === 'hermes.session.chat.queued'
-      ctx.body = {
-        ok: true,
+      httpOk(asKoa(ctx), {
         sessionId: sid,
         queued,
         reply: queued ? '' : (result?.message?.content ?? ''),
-      }
+      })
     } catch (err) {
       // 超时（AbortError）：消息已入队（peer.py 同语义——不重发），转客户端轮询
       if ((err as Error).name === 'AbortError') {
-        ctx.body = { ok: true, sessionId: sid, queued: true, reply: '', note: 'turn 仍在运行：消息已进入该身份的 Bot Chat，稍后自动拉取回复' }
+        httpOk(asKoa(ctx), { sessionId: sid, queued: true, reply: '', note: 'turn 仍在运行：消息已进入该身份的 Bot Chat，稍后自动拉取回复' })
         return
       }
       throw err
     }
   } catch (err) {
-    ctx.status = (err as { status?: number }).status ?? 502
-    ctx.body = { ok: false, error: (err as Error).message.slice(0, 300), hint: botChatHint(err) }
+    const hint = botChatHint(err)
+    httpFail(asKoa(ctx), (err as { status?: number }).status ?? 502, (err as Error).message.slice(0, 300), { extra: hint ? { hint } : {} })
   }
 }
 
@@ -369,8 +369,7 @@ function botChatHint(err: unknown): string | undefined {
 function allowIdentity(ctx: Ctx, profile: string, deps?: ProfileAccessDeps): boolean {
   if (canUserAccessProfile(ctx.state?.user, profile, deps)) return true
   ctx.set('Cache-Control', 'no-store')
-  ctx.status = 403
-  ctx.body = { ok: false, error: 'profile not available for this user' }
+  httpFail(asKoa(ctx), 403, 'profile not available for this user')
   return false
 }
 

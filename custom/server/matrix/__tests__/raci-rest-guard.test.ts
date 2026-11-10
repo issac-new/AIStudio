@@ -57,6 +57,9 @@ const ALLOWED_CONSUMERS = [
   // 桥接与身份面是合法 REST 消费者（本单测成文时两文件恰被 cbd7b3e7 误删缺席）
   'server/matrix/chat-bridge.ts', // v14 P2B：matrix 房间 ↔ hermes 群聊双向桥（sync 通道）
   'server/matrix/agent-identity.ts', // v14 P2A：agent 身份解析（displayname/徽章）
+  // 批2清偿（v1.0.15 发布轮）：统一身份聊天的 Matrix DM 发送面——经 raci-matrix
+  // 的 matrixSendMessage 直发（同族先例=chat-bridge/agent-identity，身份+DM 通道）
+  'server/controllers/ia2/identity-chat.ts',
 ]
 // ① URL 字面量断言白名单（与函数级断言并存）：直连地址仅包装实现与管理面可出现。
 const URL_ALLOWED = [
@@ -70,6 +73,9 @@ const URL_ALLOWED = [
   // humansim 发送面（2026-10-16 补录，B10 统筹批）：人类角色模拟的消息直发通道
   // （账号 token 文件+审计 ndjson 留痕）——管理面语义，非任务协作消息
   'server/humansim/humansim-controller.ts',
+  // 批2清偿（v1.0.15 发布轮，同 ALLOWED_CONSUMERS）：账号级 DM 通道——m.direct
+  // account_data 读/建房/回写与 DM 房 messages 轮询（对端真人，无同步回复语义）
+  'server/controllers/ia2/identity-chat.ts',
 ]
 // ③ 协议事件类型字面量唯一源。
 const PROTOCOL_SOURCE = 'server/matrix/task-protocol.ts'

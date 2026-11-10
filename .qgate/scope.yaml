@@ -729,3 +729,6 @@ paths:
   - skills/swarm-yuan/assets/precheck.sh
   - team/README.md
   - team/README_zh.md
+
+  # 2026-11-11 v1.0.15 发布轮守门清偿：identity-chat 响应出口走 lib/http（K19 归位）＋raci REST 白名单登记（批2 遗留）
+  - custom/server/matrix/__tests__/raci-rest-guard.test.ts
