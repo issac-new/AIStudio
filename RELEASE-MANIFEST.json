@@ -81,9 +81,9 @@
         "vendor/zcode/",
         "zcode-patches/"
       ],
-      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.17.2）；基线 commit a9fe401e（v3.17.2 线，2026-11-03 同步批）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 8：002-009；字段 2026-10-28 由 carrierPattern 更名，语义不变）。",
+      "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.17.2）；基线 commit a9fe401e（v3.17.2 线，2026-11-03 同步批）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 9：002-010；字段 2026-10-28 由 carrierPattern 更名，语义不变）。",
       "baselineCommit": "a9fe401e",
-      "activePatchCount": "8"
+      "activePatchCount": "9"
     },
     "yuan-skill": {
       "name": "yuan skill（swarm-yuan 项目技能生成器）",
