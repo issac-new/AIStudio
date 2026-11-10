@@ -640,3 +640,8 @@ paths:
   - docs/manuals/aistudio-design-document-index.md
   - custom/server/controllers/ide/__tests__/devtools.test.ts
   - custom/client/ide/components/IdeDevTools.vue
+
+  # 2026-11-10 vendor agent v0.23.1 升级（feat/vendor-agent-v0231；spec 正本＋612 regen＋docs:sync 投影块；vendor/hermes-agent/**、runtime/**、team/**、载体链均已在册）
+  - docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md
+  - patches/612-agent-observation-pack-recall.patch
+  - docs/manuals/aistudio-training-and-user-guide.md

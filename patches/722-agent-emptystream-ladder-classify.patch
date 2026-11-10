@@ -1,11 +1,11 @@
 diff --git a/agent/error_classifier.py b/agent/error_classifier.py
-index 128d4d252..a722845ab 100644
+index 9b87325..ecfbb20 100644
 --- a/agent/error_classifier.py
 +++ b/agent/error_classifier.py
-@@ -1033,6 +1033,13 @@ def classify_api_error(
-         anonymous=is_anonymous_request(provider, api_key),
-     )
-     verdict = next((v for v in (stage(c) for stage in _STAGES) if v is not None), _V_UNKNOWN)
+@@ -1143,6 +1143,13 @@ def classify_api_error(
+     extra = _shape_context(c, verdict, hooked=stage in (_plugin_verdict, _profile_verdict))
+     if extra:
+         verdict = {**verdict, "error_context": {**(verdict.get("error_context") or {}), **extra}}
 +    # run24 根治（2026-11-01，用户令「根治」）：EmptyStreamError=流式响应被上游掐断
 +    # （terminal incomplete 物理重试耗尽后抛出，707 补丁族），自我声明 retryable——
 +    # 显式归类 timeout（传输流断语义），否则落入 unknown 不在自动恢复梯子资格清单

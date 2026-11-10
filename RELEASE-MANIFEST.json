@@ -51,7 +51,7 @@
         "runtime/",
         "vendor/hermes-agent/"
       ],
-      "version": "v0.23.0-team.2",
+      "version": "v0.23.1-team.1",
       "versionCarrier": "team/VERSION",
       "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
       "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
