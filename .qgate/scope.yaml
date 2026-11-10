@@ -607,3 +607,9 @@ paths:
 
   - docs/superpowers/specs/2026-11-09-ledger-judgment-followup.md
   - team/skills/devops/security-tool-landscape-tracking/SKILL.md
+
+  # 2026-11-10 执行内核统一（feat/execution-kernel-unification；spec 正本＋两处登记清单）
+  - docs/superpowers/specs/2026-11-10-execution-kernel-unification.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/DESIGN.md

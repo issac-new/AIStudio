@@ -612,7 +612,7 @@
 | 2026-11-09-runtime-deps-refresh | 第三方组件及 skill 运行时台账刷新批 | hermes-studio 基线 v0.8.17→v0.8.20（上游三 tag 连发 10 提交；5 枚失配补丁重锚——042 版本行/329/690,718 prompt.ts 新文案/473 locale rebaseline 三方合并重生成；clean+inject 461/461 零告警）；swarm-yuan R144：runtimes.tsv 6 行进位（claude-mem 15.12.1/ruflo 3.74.1/gstack v1.98.0.0/graphify 0.9.104/impeccable 4.8.1/semantica tip）＋diagram-design v2.6.148 物化刷新（五锚面）＋yuan v2.100.2；技术台账点名 32 点位（openagentontology RETIRED 定谳/x402 异常证伪/Graph-Engineering 正名；判级升档 2 条待用户裁决）；cockpit 0.8.20-studio.1 声明前进包不重发，非发布轮 |
 | 2026-11-08-release-v1.0.14-overlay | v1.0.14 发布轮（run28 全流程收官/security 存量治理三口/复盘根治批 A-B/EvoTeam 吸收批，窗口 53 提交） | fullPackage 1.0.13→1.0.14＋cockpit studio.2（声明前进，包不重发）＋agent-teams team.2＋yuan v2.100.1＋ycode 不动；收口随批=删已合入分支/SIM mx-setup 同步指纹全同/宿主 plugin_api 模板领先 --force 回灌/gate_security flag 按先例留档（46 存量同族已挂账）；GitHub＋ModelScope 双通道 |
 | 2026-11-09-swarm-yuan-agents-skills-root | swarm-yuan 技能根统一 ~/.agents/skills（用户裁定） | install.sh auto 统一家级（宿主仅披露不分流）＋agents→zcode 交叉渲染/注销（`_agents_native_tools`）；detect_skill_dir 四级探测（项目内复用→家级正位→legacy ~/.zcode 续命→家级兜底）；ta_is_user_level 补 ~/.agents＋HOME 归一化（TMPDIR 尾斜杠 `T//` 误判根治）；test-default-skill-dir 14 断言重写＋r118 ④⑫/r103 5b 随批；离线通道三处随批（注释漂移/知识入驻枚举/预置块路径） |
-
+| 2026-11-10-execution-kernel-unification | 执行内核统一：Hermes 单内核＋三 app 白名单＋四挡权限（用户裁决） | 现状定谳=3 类内核/15 具名后端/8 入口/4 处事实源分裂；终态=Hermes AIAgent 唯一会话/审批/记忆/事件所有者（Ekko 退役），编码 app 白名单 3 个（Ycode/Zcode/DSH，注册表 2 项，其余 13 项承接结清后退役）；权限统一 ZCode 四挡 build/guarded/plan/yolo（单一事实源=zcode-agent-model-state.ts，edit 保留历史映射）；免审记录含 policyVersion 与手工审批同账；六阶段 P0a→P4 先立骨架后拆入口；5 条不变量按运行期断言＋入口矩阵守门；E4 不推翻（本机准入合流，跨机 HumanGate 独立） |
 ### 角色/排除（非 spec 文档）
 
 以下文件保留在 specs 根目录，但不是 A.1 的专题设计、规格或决策文档；排除是角色分类，不是删除或按日期作废。
