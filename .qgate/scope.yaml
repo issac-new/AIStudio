@@ -663,3 +663,8 @@ paths:
   # 2026-11-10 全页面走查轮：serve 链 import.meta TS1343 修复（fix/page-walkthrough-20261110）
   - docs/superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md
   - custom/server/executioncontract/index.ts
+
+  # 2026-11-10 全页面交互级排查轮（fix/func-walkthrough-20261110；spec＋走查工装）
+  - docs/superpowers/specs/2026-11-10-interaction-walkthrough-round.md
+  - scripts/regression/change-gov-walkthrough.mjs
+  - scripts/regression/prod-board-write-walkthrough.mjs
