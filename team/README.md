@@ -20,6 +20,7 @@ Current: **v0.23.1-team.1** (base bumped 2026-11-10 with the vendor upgrade to h
 - Previous releases in the 0.23.0 base line: v0.23.0-team.1..team.2 (below).
 
 ### What changed in v0.23.0-team.1 (2026-11-06)
+The current AIStudio **1.0.14-overlay** distribution carries agent teams **v0.23.1-team.1**, hermes-agent upstream **0.23.1**, yuan **v2.100.2**, and Ycode **3.17.2**. These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
 
 - **Base bump only**: hermes-agent base v0.22.7 → v0.23.0 (vendor upgrade 2026-11-06, spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`); extension counter reset to 1. No profile content changes.
 

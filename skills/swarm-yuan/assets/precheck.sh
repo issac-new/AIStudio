@@ -2,8 +2,8 @@
 # precheck.sh — 通用质量门禁检查脚本模板（由 swarm-yuan 生成器按项目定制）
 # 对应材料 check 段 4 项：§1 测试 §2 业务规则 §3 数据勾稽(无多漏错重) §4 UI脱敏日志
 # 用法:
-#   bash precheck.sh                  # 核心 11 门禁（--all）
-#   bash precheck.sh --all-full       # 标准 29 门禁（核心 11 + 架构 18）
+#   bash precheck.sh                  # 核心 12 门禁（--all）
+#   bash precheck.sh --all-full       # 标准 32 门禁（核心 12 + 架构 20）
 #   bash precheck.sh --compliance-suite  # 合规 19 门禁套件（强监管交付按需；未配置静默跳过）
 #   bash precheck.sh --branch         # 分支规范
 #   bash precheck.sh --scope          # 改动范围（可改 vs 只读）
@@ -681,7 +681,7 @@ skip_if_unconfigured() {
 }
 
 # ===== 门禁注册表（--all/--all-full 执行序列 + 单门禁 flag 清单）=====
-# 核心门禁（适用所有项目）：分支/范围/spec-first/构建/敏感/一致性/审查/复用/依赖/安全/测试
+# 核心门禁（--all 执行序列，共 12；含 spec-first 与 floor-guard）
 ALL_GATES_CORE=(check_branch check_scope check_spec_first check_build check_sensitive check_consistency check_review check_reuse check_deps check_security check_floor_guard check_test)
 # 合规门禁（标准合规族 + P1 安全门禁族深化 + P3 长期清单 rtm/release-sign，仅 --compliance-suite/单门禁执行；未配置的静默跳过）
 ALL_GATES_COMPLIANCE=(check_compliance check_docs_pack check_sbom check_privacy check_authz check_requirements check_crypto check_rtm check_dengbao check_pia check_sast_deep check_oss_eval check_quality_model check_test_evidence check_review_record check_metrics check_release_sign check_cert_audit check_cwe_audit)
@@ -1884,7 +1884,7 @@ case "$MODE" in
     for _gate in "${ALL_GATES_CORE[@]}"; do _gate_exec "$_gate" 1; done
     ;;
   --all-full)
-    # 标准门禁 29（核心 11 + 架构 18）；合规 19 拆出为 --compliance-suite 按需执行
+    # 标准门禁 32（核心 12 + 架构 20）；合规 19 拆出为 --compliance-suite 按需执行
     _COVERING_RUN=1
     for _gate in "${ALL_GATES_STANDARD[@]}"; do _gate_exec "$_gate" 1; done
     ;;

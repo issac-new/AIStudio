@@ -2,7 +2,7 @@
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
 
-- 快照基线：`5b8562f83`；核实日：2026-11-06；版本线：`1.0.14-overlay`（正本去脚手架批）。
+- 快照基线：`5e68bb2b6`；核实日：2026-11-09；版本线：`1.0.14-overlay`（培训课件与相关文档刷新批）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
 - 当前工作树根目录：**627 份 Markdown**（HEAD 全量跟踪；2026-11-10 ＋记忆统一 1＋IDE 工具面板收窄 1＋vendor agent v0.23.1 升级 1＋v0231 合入收口实录 1＋ekko-hermes 技能存储合一 1；2026-11-09 三批同窗并计——台账刷新批、裁决执行批、技能根统一批各＋1；run28 复盘批 A 遗留 merge 冲突标记已按文件系统实测根治）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 174 份；合计 627 份。
@@ -617,43 +617,6 @@
 - [2026-11-09-runtime-deps-refresh.md](../superpowers/specs/2026-11-09-runtime-deps-refresh.md)
 - [2026-11-09-ledger-judgment-followup.md](../superpowers/specs/2026-11-09-ledger-judgment-followup.md)
 - [2026-11-08-release-v1.0.14-overlay.md](../superpowers/specs/2026-11-08-release-v1.0.14-overlay.md)
-- [2026-11-06-run27-design-gap-rootfix.md](../superpowers/specs/2026-11-06-run27-design-gap-rootfix.md)
-- [2026-11-06-run27-design-optimizations.md](../superpowers/specs/2026-11-06-run27-design-optimizations.md)
-- [2026-11-06-run27-steps-ledger-keys.md](../superpowers/specs/2026-11-06-run27-steps-ledger-keys.md)
-- [2026-11-06-runtime-patch-touched-deploy.md](../superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md)
-- [2026-11-06-runtime-v0230-regen.md](../superpowers/specs/2026-11-06-runtime-v0230-regen.md)
-- [2026-11-06-vendor-upgrade-agent-v0230.md](../superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md)
-- [2026-11-06-verdict-availability-receipt.md](../superpowers/specs/2026-11-06-verdict-availability-receipt.md)
-- [2026-11-06-workunit-responsibility-ledger.md](../superpowers/specs/2026-11-06-workunit-responsibility-ledger.md)
-- [2026-11-07-ponytail-headroom-absorption.md](../superpowers/specs/2026-11-07-ponytail-headroom-absorption.md)
-- [2026-11-07-r143-runtime-refresh-regression-release.md](../superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md)
-- [2026-11-07-run28-burn-fixes.md](../superpowers/specs/2026-11-07-run28-burn-fixes.md)
-- [2026-11-07-run28-prelaunch-fixes.md](../superpowers/specs/2026-11-07-run28-prelaunch-fixes.md)
-- [2026-11-07-sim-config-schema-align.md](../superpowers/specs/2026-11-07-sim-config-schema-align.md)
-- [2026-11-07-vendor-upgrade-studio-v0817.md](../superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md)
-- [2026-11-07-zcode-patches-pristine-replay.md](../superpowers/specs/2026-11-07-zcode-patches-pristine-replay.md)
-- [2026-11-08-deny-hygiene.md](../superpowers/specs/2026-11-08-deny-hygiene.md)
-- [2026-11-08-evoteam-followup.md](../superpowers/specs/2026-11-08-evoteam-followup.md)
-- [2026-11-08-frame-verify-error-markers.md](../superpowers/specs/2026-11-08-frame-verify-error-markers.md)
-- [2026-11-08-gate-restore-batch.md](../superpowers/specs/2026-11-08-gate-restore-batch.md)
-- [2026-11-08-n283-p1-director.md](../superpowers/specs/2026-11-08-n283-p1-director.md)
-- [2026-11-08-run28-closeout.md](../superpowers/specs/2026-11-08-run28-closeout.md)
-- [2026-11-08-run28-retro-rootfix.md](../superpowers/specs/2026-11-08-run28-retro-rootfix.md)
-- [2026-11-08-sql-ident-whitelist.md](../superpowers/specs/2026-11-08-sql-ident-whitelist.md)
-- [2026-11-08-team-library-evolution.md](../superpowers/specs/2026-11-08-team-library-evolution.md)
-- [2026-11-09-swarm-yuan-agents-skills-root.md](../superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md)
-- [2026-11-10-execution-kernel-unification.md](../superpowers/specs/2026-11-10-execution-kernel-unification.md)
-- [2026-11-10-memory-unification-hindsight.md](../superpowers/specs/2026-11-10-memory-unification-hindsight.md)
-- [2026-11-10-ide-devtools-trim.md](../superpowers/specs/2026-11-10-ide-devtools-trim.md)
-- [2026-11-10-vendor-upgrade-agent-v0231.md](../superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md)
-- [2026-11-10-zcode-openfile-workspace.md](../superpowers/specs/2026-11-10-zcode-openfile-workspace.md)
-- [2026-11-10-governance-docmeta-ref-isolation.md](../superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md)
-- [2026-11-10-ide-devtools-task-cwd.md](../superpowers/specs/2026-11-10-ide-devtools-task-cwd.md)
-- [2026-11-10-vendor-agent-v0231-merge-closeout.md](../superpowers/specs/2026-11-10-vendor-agent-v0231-merge-closeout.md)
-- [2026-11-10-ekko-hermes-skill-store-unification.md](../superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md)
-- [2026-11-10-execution-kernel-p0b2-p1.md](../superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md)
-- [2026-11-10-page-walkthrough-import-meta-fix.md](../superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md)
-- [2026-11-10-interaction-walkthrough-round.md](../superpowers/specs/2026-11-10-interaction-walkthrough-round.md)
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
 

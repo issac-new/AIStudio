@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="swarm-yuan v2.100.1 技术指南：生成器与目标技能边界、Step 1-13、strict 激活、状态机、spec-first、precheck、ACP 证据与 R134 离线包边界。">
+  <title>swarm-yuan Skill 技术指南 · v2.100.1</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --paper: #ffffff;
+      --ink: #17212b;
+      --muted: #596876;
+      --line: #d9e0e6;
+      --line-strong: #bcc8d2;
+      --navy: #15334b;
+      --navy-2: #214d6c;
+      --accent: #087f5b;
+      --accent-soft: #e9f6f0;
+      --warn: #92510a;
+      --warn-soft: #fff6e5;
+      --danger: #a13535;
+      --danger-soft: #fff0ef;
+      --code-bg: #f0f3f5;
+      --shadow: 0 10px 30px rgba(23, 33, 43, .06);
+      --radius: 8px;
+      --content: 980px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    a { color: var(--navy-2); text-underline-offset: 3px; }
+    a:hover { color: var(--accent); }
+    a:focus-visible, summary:focus-visible {
+      outline: 3px solid rgba(8, 127, 91, .32);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+    .skip-link {
+      position: absolute;
+      left: 16px;
+      top: -80px;
+      z-index: 10;
+      padding: 8px 14px;
+      background: var(--paper);
+      color: var(--navy);
+      border: 2px solid var(--accent);
+    }
+    .skip-link:focus { top: 12px; }
+    .hero {
+      background: var(--navy);
+      color: #fff;
+      border-bottom: 5px solid var(--accent);
+    }
+    .hero-inner, .footer-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 42px 42px 36px;
+    }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: #a9dfd0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: clamp(30px, 4vw, 48px); line-height: 1.2; letter-spacing: -.02em; }
+    .hero .lead { max-width: 850px; margin: 18px 0 0; color: #dce8ef; font-size: 18px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 20px; color: #bfd0dc; font-size: 14px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+    .button {
+      display: inline-block;
+      padding: 9px 15px;
+      border: 1px solid #7fa3b8;
+      border-radius: 5px;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 650;
+    }
+    .button.primary { background: var(--accent); border-color: var(--accent); }
+    .button:hover { background: #fff; color: var(--navy); }
+    .layout {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px 42px 64px;
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 30px;
+      align-items: start;
+    }
+    .toc {
+      position: sticky;
+      top: 20px;
+      padding: 18px 0;
+      border-top: 3px solid var(--navy);
+      border-bottom: 1px solid var(--line-strong);
+      font-size: 14px;
+    }
+    .toc strong { display: block; margin-bottom: 8px; color: var(--navy); }
+    .toc ol { margin: 0; padding: 0; list-style: none; }
+    .toc li { margin: 0; }
+    .toc a { display: block; padding: 5px 8px; color: var(--muted); text-decoration: none; border-left: 2px solid transparent; }
+    .toc a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+    main { min-width: 0; max-width: var(--content); }
+    section {
+      margin: 0 0 24px;
+      padding: 30px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .section-no { display: block; margin-bottom: 4px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+    h2 { margin: 0 0 18px; color: var(--navy); font-size: 25px; line-height: 1.35; }
+    h3 { margin: 28px 0 12px; color: var(--navy); font-size: 19px; line-height: 1.4; }
+    h4 { margin: 20px 0 8px; color: var(--navy); font-size: 16px; }
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 24px; }
+    li + li { margin-top: 6px; }
+    .lede { color: var(--muted); font-size: 17px; }
+    .small { color: var(--muted); font-size: 13px; }
+    .source { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+    .source a { color: var(--muted); }
+    code {
+      padding: 2px 5px;
+      background: var(--code-bg);
+      border-radius: 4px;
+      color: #243b4c;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .88em;
+      overflow-wrap: anywhere;
+    }
+    pre {
+      margin: 14px 0;
+      padding: 18px;
+      overflow: auto;
+      background: #122636;
+      color: #e5eef3;
+      border-radius: 6px;
+      line-height: 1.6;
+      tab-size: 2;
+    }
+    pre code { padding: 0; background: transparent; color: inherit; font-size: 13px; overflow-wrap: normal; }
+    .table-wrap { margin: 16px 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    caption { padding: 10px 14px; background: #edf2f5; color: var(--navy); text-align: left; font-weight: 700; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    th { background: #f4f7f9; color: var(--navy); font-weight: 700; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { min-width: 86px; }
+    .fact-band { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; margin: 18px 0; }
+    .fact { padding: 16px; background: #f8fafb; border-right: 1px solid var(--line); }
+    .fact:last-child { border-right: 0; }
+    .fact b { display: block; color: var(--navy); font-size: 23px; line-height: 1.25; }
+    .fact span { color: var(--muted); font-size: 13px; }
+    .note, .warning, .danger, .success {
+      margin: 16px 0;
+      padding: 14px 16px;
+      border-left: 4px solid var(--navy-2);
+      background: #eef4f8;
+      border-radius: 0 5px 5px 0;
+    }
+    .warning { border-left-color: var(--warn); background: var(--warn-soft); }
+    .danger { border-left-color: var(--danger); background: var(--danger-soft); }
+    .success { border-left-color: var(--accent); background: var(--accent-soft); }
+    .note strong, .warning strong, .danger strong, .success strong { color: var(--navy); }
+    .steps { counter-reset: strict-step; padding: 0; list-style: none; }
+    .steps li {
+      counter-increment: strict-step;
+      position: relative;
+      margin: 0;
+      padding: 0 0 18px 44px;
+      border-left: 1px solid var(--line-strong);
+    }
+    .steps li:last-child { padding-bottom: 0; }
+    .steps li::before {
+      content: counter(strict-step);
+      position: absolute;
+      left: -15px;
+      top: 0;
+      width: 29px;
+      height: 29px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #fff;
+      text-align: center;
+      line-height: 29px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .steps li strong { display: block; color: var(--navy); }
+    .flow { padding: 16px; background: #f3f6f8; border: 1px solid var(--line); border-radius: 6px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; overflow-x: auto; white-space: pre; }
+    details { margin: 14px 0; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfd; }
+    summary { padding: 11px 14px; cursor: pointer; color: var(--navy); font-weight: 700; }
+    details > div { padding: 0 14px 14px; }
+    .checklist { list-style: none; padding: 0; }
+    .checklist li { position: relative; padding-left: 27px; }
+    .checklist li::before { content: "□"; position: absolute; left: 2px; color: var(--accent); font-weight: 800; }
+    .timeline { border-left: 3px solid var(--line-strong); margin-left: 8px; padding-left: 22px; }
+    .timeline article { margin-bottom: 20px; }
+    .timeline time { color: var(--accent); font-size: 13px; font-weight: 800; }
+    .timeline h3 { margin: 2px 0 6px; font-size: 17px; }
+    .footer { background: #e8edf1; border-top: 1px solid var(--line-strong); }
+    .footer-inner { padding-top: 28px; padding-bottom: 28px; color: var(--muted); font-size: 14px; }
+    .footer-inner p { margin: 5px 0; }
+    @media (max-width: 1024px) {
+      .hero-inner, .footer-inner { padding-left: 28px; padding-right: 28px; }
+      .layout { padding: 24px 28px 50px; grid-template-columns: 190px minmax(0, 1fr); gap: 22px; }
+      section { padding: 24px; }
+    }
+    @media (max-width: 768px) {
+      html { scroll-padding-top: 12px; }
+      .hero-inner { padding: 32px 20px 28px; }
+      .layout { display: block; padding: 18px 16px 40px; }
+      .toc { position: static; margin-bottom: 18px; padding: 14px 0; }
+      .toc ol { columns: 2; column-gap: 18px; }
+      .toc a { break-inside: avoid; }
+      section { padding: 21px 18px; margin-bottom: 18px; }
+      .fact-band { grid-template-columns: 1fr; }
+      .fact { border-right: 0; border-bottom: 1px solid var(--line); }
+      .fact:last-child { border-bottom: 0; }
+      h2 { font-size: 22px; }
+      th, td { padding: 9px 10px; }
+      .footer-inner { padding: 24px 20px; }
+    }
+    @media (max-width: 420px) {
+      body { font-size: 15px; }
+      .toc ol { columns: 1; }
+      .hero .lead { font-size: 16px; }
+      .button { width: 100%; text-align: center; }
+      section { padding: 19px 15px; }
+      pre { padding: 13px; }
+    }
+    @media print {
+      body { background: #fff; font-size: 11pt; }
+      .hero { background: #fff; color: #000; border-bottom: 2px solid #000; }
+      .hero .lead, .hero-meta, .eyebrow { color: #333; }
+      .hero-actions, .toc, .skip-link { display: none; }
+      .layout { display: block; padding: 0; }
+      section { box-shadow: none; break-inside: auto; border: 0; border-bottom: 1px solid #aaa; padding: 18px 0; }
+      a { color: #000; }
+      pre { white-space: pre-wrap; word-break: break-word; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">AIStudio · 技术手册 · 2026-11-09</p>
+      <h1>swarm-yuan Skill 技术指南</h1>
+      <p class="lead">面向需要生成、维护和审计项目技能的技术人员。以当前源码解释文件边界、生成与激活顺序、门禁返回码、状态机和 ACP 证据，不用宣传口径代替实现。</p>
+      <div class="hero-meta">
+        <span>当前版本：<strong>v2.100.1</strong></span>
+        <span>事实源：生成器脚本、注册表、配置与历史验证记录</span>
+        <span>页面：内联 CSS · 无 JavaScript · 无外部依赖</span>
+      </div>
+      <div class="hero-actions">
+        <a class="button primary" href="/aistudio-swarm-yuan-developer-guide.md">阅读完整研发指南（Markdown）</a>
+        <a class="button" href="#source-index">查看源码索引</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="本页目录">
+      <strong>本页目录</strong>
+      <ol>
+        <li><a href="#calibration">01 · 先校准数字</a></li>
+        <li><a href="#boundaries">02 · 三类文件边界</a></li>
+        <li><a href="#six-parts">03 · 六段实际职责</a></li>
+        <li><a href="#generation">04 · Step 1-13</a></li>
+        <li><a href="#strict">05 · strict 激活</a></li>
+        <li><a href="#compatibility">06 · 兼容与升级</a></li>
+        <li><a href="#state-machine">07 · 六状态状态机</a></li>
+        <li><a href="#spec-first">08 · L1-L4 拦截</a></li>
+        <li><a href="#precheck">09 · precheck 判读</a></li>
+        <li><a href="#verification">10 · 测试与变异</a></li>
+        <li><a href="#acp">11 · worker 与 ACP 证据</a></li>
+        <li><a href="#r134">12 · R134 离线包</a></li>
+        <li><a href="#acceptance">13 · 交付核对</a></li>
+        <li><a href="#source-index">14 · 源码索引</a></li>
+      </ol>
+    </nav>
+
+    <main id="main">
+      <section id="calibration">
+        <span class="section-no">01 / CALIBRATION</span>
+        <h2>先校准数字：59、53、32 各指什么</h2>
+        <p class="lede">本页对应 yuan <strong>v2.100.1</strong>。数字以 <code>assets/facts.conf</code> 和 precheck 注册数组为准，不沿用过期注释。</p>
+        <div class="fact-band" aria-label="当前关键数字">
+          <div class="fact"><b>59</b><span>check_* 函数总数 = FULL 53 + advisory-only 6</span></div>
+          <div class="fact"><b>32</b><span>--all-full = 32 个 standard 序列成员（核心 12 + 架构 20）</span></div>
+          <div class="fact"><b>204</b><span>配置变量 = core 30 + arch 126 + compliance 48</span></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <caption>门禁注册与执行序列</caption>
+            <thead><tr><th>口径</th><th>当前值</th><th>怎样触发</th><th>不能怎样解释</th></tr></thead>
+            <tbody>
+              <tr><td>check_* 总数</td><td>59</td><td>注册表和三个聚合实现文件</td><td>不等于单次交付必须执行的数量</td></tr>
+              <tr><td>CORE</td><td>12</td><td><code>--all</code></td><td>不是旧文档的 11</td></tr>
+              <tr><td>STANDARD</td><td>32</td><td><code>--all-full</code></td><td>不是 FULL 53，也不是旧值 29</td></tr>
+              <tr><td>COMPLIANCE</td><td>19</td><td><code>--compliance-suite</code></td><td>未配置项可能 SKIPPED</td></tr>
+              <tr><td>FULL</td><td>53</td><td><code>ALL_GATES_FULL</code>，供 <code>--fix-suggest</code> 等路径使用</td><td>不是独立门禁总数，也不是 <code>--all-full</code> 的数量</td></tr>
+              <tr><td>advisory-only</td><td>6</td><td>各自 flag、宿主 hooks 或 loop-hook</td><td>不在三个聚合执行序列里</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>FULL 53 的闭合关系是 standard 32 + compliance 19 + <code>decision_audit/state_phase</code> 2；再加上 6 个 advisory-only，才是 59。</p>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/facts.conf">skills/swarm-yuan/assets/facts.conf:24-46</a>；<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:683-691</a>。版本：<a href="../../RELEASE-MANIFEST.json">RELEASE-MANIFEST.json:88-96</a>。</p>
+      </section>
+
+      <section id="boundaries">
+        <span class="section-no">02 / FILE BOUNDARIES</span>
+        <h2>生成器、目标技能和 .swarm-yuan 运行态是三棵树</h2>
+        <p class="lede">生成器负责“造技能”，目标技能负责“约束一个项目”，项目运行态负责“记录这次研发实际发生什么”。同名文件和同名目录不能互换。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>文件所有权与写入时机</caption>
+            <thead><tr><th>边界</th><th>位置</th><th>谁写</th><th>主要内容</th></tr></thead>
+            <tbody>
+              <tr><td>生成器源码</td><td><code>skills/swarm-yuan/</code></td><td>生成器维护者</td><td><code>scripts/</code> 生成与核验；<code>assets/</code> 门禁和模板；<code>references/</code> 生成期方法论；<code>tests/</code>、<code>verifier/</code> 验证生成器。</td></tr>
+              <tr><td>目标技能</td><td>目标项目技能目录下的 <code>&lt;项目&gt;-dev/</code></td><td>生成器出骨架，AI 填项目事实，升级器刷新通用文件</td><td>自己的 <code>SKILL.md</code>、references、assets、scripts、rules.d 和宿主配置。</td></tr>
+              <tr><td>项目运行态</td><td><code>&lt;项目根&gt;/.swarm-yuan/</code></td><td>状态机、追踪、门禁、探查和恢复脚本</td><td>state、tasks、notes、trace、decisions、gate 证据、指纹和恢复数据。</td></tr>
+              <tr><td>技能生成证据</td><td><code>&lt;目标技能&gt;/.swarm-yuan/</code> 及技能根</td><td>create、inject、upgrade、mark-active</td><td><code>activation-report.json</code>、<code>effects/</code>；技能根另有 <code>skill-manifest.json</code> 和 <code>.swarm-yuan-version</code>。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>两个 .swarm-yuan 目录不能合并理解</h3>
+        <p>项目根的账本正本是 <code>trace.jsonl</code>、<code>decisions.jsonl</code>、<code>state.yaml</code> 等。技能内的 <code>.swarm-yuan/</code> 主要保存激活报告和框架注入效果。严格激活会先查技能内决策账本，再回退项目根及兼容路径；这是激活输入解析，不改变“项目账本正本在项目根”的运行时规则。</p>
+        <div class="note"><strong>入库边界也由项目决定。</strong>运行态不天然等于临时垃圾。AIStudio 有意入库 <code>.swarm-yuan/hooks/</code>、部分基线和收据；不能按目录名统一删除或忽略。</div>
+        <h3>生成落点有注册顺序</h3>
+        <p>无既有技能目录时，默认生成到项目内 <code>.agents/skills/</code>。若已有受支持目录，则优先复用，顺序从 <code>.agents/skills</code> 开始，再到 <code>.claude/skills</code>、<code>.codex/skills</code> 等。第三个位置参数可显式指定目标目录。AIStudio 历史 <code>.claude/skills/aistudio-dev</code> 是项目特例。</p>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/state-machine.sh">assets/state-machine.sh:77-82</a>；<a href="../../skills/swarm-yuan/assets/trace-log.sh">assets/trace-log.sh:123-156</a>；<a href="../../skills/swarm-yuan/scripts/generator/subcommands.sh">scripts/generator/subcommands.sh:293-305,798-885,978-995</a>。</p>
+      </section>
+
+      <section id="six-parts">
+        <span class="section-no">03 / SIX PARTS</span>
+        <h2>六段是逻辑职责，不要按目录名机械猜测</h2>
+        <p class="lede">precheck 同时出现在 check 与 scripts 的叙述中：check 指检查契约，scripts 指可执行载体。宿主接入配置也必须列入实际文件边界。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>目标技能六段的实际文件职责</caption>
+            <thead><tr><th>逻辑段</th><th>实际文件</th><th>职责</th></tr></thead>
+            <tbody>
+              <tr><td>meta</td><td><code>SKILL.md</code>、<code>skill-manifest.json</code>、<code>.swarm-yuan-version</code></td><td>项目铁律、工作流入口、改造分类、命令路由；manifest 和版本文件记录生成身份。</td></tr>
+              <tr><td>workflow</td><td><code>references/workflow.md</code></td><td>九节点的入口、参与方、准入、产出物、状态控制和调用追踪。</td></tr>
+              <tr><td>reference</td><td><code>codebase.md</code>、<code>dev-guide.md</code>、<code>release.md</code>、<code>reference-manual.md</code>、<code>recipes.md</code>、<code>relations.jsonl</code>、<code>framework-knowledge.md</code>、<code>lessons.md</code> 等</td><td>项目结构、组件清单、关系边集、任务配方、框架证据、发布知识和项目经验。</td></tr>
+              <tr><td>assets</td><td>spec/plan/review 模板、branch/env 脚本、数据样例、任务门禁映射、标准映射</td><td>把项目规则转成可填写的任务合同与准备动作。</td></tr>
+              <tr><td>check</td><td><code>scripts/precheck.sh</code>、<code>gates-*.sh</code>、<code>precheck*.conf</code>、<code>gate-enforce-level.conf</code>、<code>rules.d/</code>、reference-manual 检查段</td><td>注册、配置和执行检查。非 lite 还有 hooks.json、commands、settings.local.json、.mcp.json 负责宿主接入。</td></tr>
+              <tr><td>scripts</td><td>state-machine、trace-log、memory、relations、inventory、fingerprint、框架与审计工具</td><td>维护状态、证据和项目知识。目标技能内的 generate-skill.sh 是转发垫片。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>UNIVERSAL_FILES</code> 决定哪些通用文件随技能分发；<code>PROJECT_SPECIFIC_FILES</code> 决定升级时保留哪些项目内容。lite 不含完整 hooks/commands/settings 和完整 workflow；standard 是完整骨架；compliance 增加合规资料。</p>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/scripts/generate-skill.sh">scripts/generate-skill.sh:63-198</a>；<a href="../../skills/swarm-yuan/references/template-spec.md">references/template-spec.md:200-312,461-606</a>。</p>
+      </section>
+
+      <section id="generation">
+        <span class="section-no">04 / GENERATION</span>
+        <h2>Step 1-13：脚本产初稿，AI 对项目事实负责</h2>
+        <p class="lede">只执行 create 得到的是 draft 骨架，不是可交付技能。每一步都有具体脚本、写入位置和完成判据。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>生成步骤、调用与产物</caption>
+            <thead><tr><th>Step</th><th>动作与主要脚本</th><th>产物和完成判据</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td><code>self-check.sh --check-only</code></td><td>检查生成器、运行时与文档一致性；不加该参数可能安装或升级运行时。</td></tr>
+              <tr><td>2</td><td>读取 AGENTS/CLAUDE/记忆；<code>mine-habits.sh</code></td><td>项目根 <code>.swarm-yuan/notes/habits.md</code>；统计初稿须经 AI 审读。</td></tr>
+              <tr><td>3</td><td>结构、规范、代码组织三路探查；<code>trace-log.sh</code></td><td>探查笔记与 <code>trace.jsonl</code>；图谱工具可能建立索引。</td></tr>
+              <tr><td>4</td><td>形态判定、组件和调用链穷举；<code>relations-extract.sh</code>、<code>framework-evidence.sh</code>、<code>--inject-frameworks</code></td><td>reference-manual、relations、framework-knowledge 和 precheck 注入区块；框架规律必须有项目证据。</td></tr>
+              <tr><td>5</td><td>填充 17 项特征卡</td><td>P0 六项先填具体值，激活前所有占位清零。</td></tr>
+              <tr><td>6</td><td><code>generate-skill.sh &lt;name&gt; &lt;project-dir&gt; [target-dir]</code></td><td>目标技能骨架、<code>status: draft</code>、manifest、版本文件；已有 draft 可续传。</td></tr>
+              <tr><td>7</td><td>AI 填充全部项目文件</td><td>SKILL、references、recipes、framework-knowledge 用真实探查结果替换占位。</td></tr>
+              <tr><td>8</td><td>审核 precheck 配置、rules.d、测试容量；Mutation Check</td><td><code>conf-render.sh</code> 初稿经 AI 补语义项；变异门禁后仍能抓出故障，证明夹具断言有效。</td></tr>
+              <tr><td>9</td><td>定制 hooks、commands、settings、MCP、workflow</td><td>宿主配置与项目根 L2 pre-commit；非 Git 或 lite 按实际边界降级。</td></tr>
+              <tr><td>10</td><td>目标技能 <code>precheck.sh --all</code></td><td>真实构建和测试执行；失败修复后重跑，不能只保存预期命令。</td></tr>
+              <tr><td>11</td><td>独立第三方审查；<code>precheck.sh --review</code></td><td><code>references/review-record.md</code> 有 findings、结论和处置。</td></tr>
+              <tr><td>12</td><td><code>memory-writeback.sh</code></td><td>项目知识或已配置记忆后端写回；后端失败不得伪造成功。</td></tr>
+              <tr><td>13</td><td><code>verify_completeness --strict</code>、inventory strict、<code>--mark-active</code></td><td>最终预算、manifest、activation report 完成后，才把 draft 改为 active。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="source">权威步骤：<a href="../../skills/swarm-yuan/SKILL.md">skills/swarm-yuan/SKILL.md:56-82</a>；自动化与 AI 分工：<a href="../../skills/swarm-yuan/references/generation-flow.md">references/generation-flow.md:9-32</a>。</p>
+      </section>
+
+      <section id="strict">
+        <span class="section-no">05 / STRICT ACTIVATION</span>
+        <h2>strict 激活是顺序执行的检查链，不是改状态字</h2>
+        <p class="lede"><code>--mark-active</code> 只有在所有必需检查通过后才写 active。任何必需检查失败都返回 1 并保持 draft。</p>
+        <ol class="steps">
+          <li><strong>读取 SKILL 与当前状态</strong>SKILL.md 不存在直接失败；若不是 draft，报告无需标记并退出 0，不重跑激活检查。</li>
+          <li><strong>check_framework_globs</strong>防止框架已激活但 glob 全空、门禁实际不工作。</li>
+          <li><strong>check_spec_first_wiring</strong>防止 SPEC_REQUIRED=1 但 WRITABLE_DIRS 为空等失效配置。</li>
+          <li><strong>verify_completeness --strict</strong>检查占位符、workflow 要素、项目内容和决策记录。</li>
+          <li><strong>inventory-verify --strict</strong>带 TSV、path-check 和 stability-audit，核验清单计数、形态和登记路径。</li>
+          <li><strong>advisory 关系边集核验，再做最终预算</strong>relations 失锚只提示；预算是必需检查。</li>
+          <li><strong>写 manifest 与 activation-report.json</strong>记录当次激活结果。</li>
+          <li><strong>audit-closure 提示后写 active</strong>open goal 只告警；最后才改 frontmatter 并解锁全量门禁。</li>
+        </ol>
+        <div class="warning"><strong>两种非严格/建议路径不能误写成硬门。</strong>draft 下单独运行 verify_completeness（非 strict）可报告占位并返回 0；relations 和 audit-closure 在激活链中是 advisory。activation report 只证明当次激活通过，不保证后续项目永远全绿。</div>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/scripts/generator/subcommands.sh">scripts/generator/subcommands.sh:384-407,436-519,798-885</a>。</p>
+      </section>
+
+      <section id="compatibility">
+        <span class="section-no">06 / COMPATIBILITY &amp; UPGRADE</span>
+        <h2>历史兼容必须精确到记录和文件，不能泛化成放松 strict</h2>
+
+        <h3>SCHEMA_EPOCH：只豁免边界前的字段 schema</h3>
+        <p>决策校验的 Python 主路径以 <code>2026-10-28T00:00:00+00:00</code> 为边界。它解决“新字段检查回溯误杀旧账本”，不是允许新记录缺字段。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>决策记录的分期校验</caption>
+            <thead><tr><th>记录类型</th><th>实际校验</th></tr></thead>
+            <tbody>
+              <tr><td>所有时期</td><td>逐行必须是合法 JSON 对象；<code>UserChallenge:incomplete</code> 永远不能作为完整决策。</td></tr>
+              <tr><td>边界前，或 ts 缺失/不可解析</td><td>按历史记录处理，不追溯后来新增的完整字段 schema。</td></tr>
+              <tr><td>边界后普通决策</td><td>要求非空 <code>type</code>、<code>ai_suggestion</code>（或 <code>suggestion</code>）和 <code>user_action</code>。</td></tr>
+              <tr><td>边界后 UserChallenge</td><td>除上述字段外，还要求 <code>alternatives</code>、<code>missing_context</code>、<code>cost_if_wrong</code>。</td></tr>
+              <tr><td>strict 总体要求</td><td>仍须至少一条非空决策；其它完整性、清单、预算和激活检查不变。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">边界逻辑位于 Python 主校验路径。无 Python 时仍有旧 grep 降级路径，不能未经测试就宣称两种路径完全同义。</p>
+        <p class="source">源码与回归锁：<a href="../../skills/swarm-yuan/scripts/generator/subcommands.sh">subcommands.sh:290-380</a>；<a href="../../skills/swarm-yuan/tests/test-r143-decisions-grandfathering.sh">test-r143-decisions-grandfathering.sh:32-70</a>。</p>
+
+        <h3>check_adr 的 shortcut 清单：复用旧门，不增加计数</h3>
+        <p>代码注释中的 <code>shortcut: &lt;上限&gt;, &lt;何时升级&gt;</code> 由既有 <code>check_adr</code> 第 5 段扫描。有逗号后的升级条件表示已登记的妥协；缺触发条件按 <code>no-trigger</code> 告警。它没有新增 <code>check_*</code>，所以 59 不变。当前扫描不含 shell 文件，这是实现明示的覆盖边界。</p>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/gates/architecture/adr.sh">assets/gates/architecture/adr.sh:80-99</a>。</p>
+
+        <h3>references/lessons.md：升级保留已有项目内容</h3>
+        <p><code>lessons.md</code> 已登记进 <code>PROJECT_SPECIFIC_FILES</code>。守门测试先 create，再手加 lessons 与 SKILL.md 入口行，连续两次 upgrade 比较 MD5，锁定 lessons 和入口文件的字节级保留与二次升级幂等性。</p>
+        <p class="source">源码与字节锁：<a href="../../skills/swarm-yuan/scripts/generate-skill.sh">generate-skill.sh:187-198</a>；<a href="../../skills/swarm-yuan/tests/test-lessons-preserve.sh">test-lessons-preserve.sh:37-73</a>。</p>
+      </section>
+
+      <section id="state-machine">
+        <span class="section-no">07 / STATE MACHINE</span>
+        <h2>六状态是流程桶，九节点是执行流</h2>
+        <div class="flow">open → design → build → verify → archive → operate
+①②       ③④        ⑤       ⑥⑦         ⑧           ⑨及观察</div>
+        <p>transition 只能前进一级，不能回退或跨级。普通 <code>set phase</code> 和 <code>set created_at</code> 被拒绝；<code>verify_result=pass</code> 前必须先写 <code>verify_evidence</code>。transition 只更新状态和记录决策，不会自动 merge 或 release。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>状态准入与降级</caption>
+            <thead><tr><th>状态</th><th>硬检查</th><th>降级与提示</th></tr></thead>
+            <tbody>
+              <tr><td>open</td><td>初始化 change、phase、build_mode、isolation、pending 和证据空位</td><td>非交互环境重置已有状态须显式 <code>--force</code></td></tr>
+              <tr><td>design</td><td>需要 proposal 或可替代的 SPEC_FILE</td><td>缺 decisions.jsonl 主要告警</td></tr>
+              <tr><td>build</td><td>需要 build_mode/isolation；SPEC_REQUIRED=1 时还需已批准 spec</td><td>判定库缺失会披露并跳过 spec 检查</td></tr>
+              <tr><td>verify</td><td>tasks 存在时不得有未勾项</td><td>tasks 文件不存在会降级跳过</td></tr>
+              <tr><td>archive</td><td><code>verify_result=pass</code></td><td>archive guard 中 verify_evidence 为空只 warn；破窗与 delta spec 归档提示不阻断</td></tr>
+              <tr><td>operate</td><td>没有等价的发布控制器</td><td>verify 状态和 operate-report 主要提示</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warning"><strong>状态机不是安全沙箱。</strong>不使用状态机、直接编辑状态文件或绕开调用链，不是脚本能独立消除的风险。Git 历史、precheck、gate-runs 和独立审查仍需对账。</div>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/state-machine.sh">assets/state-machine.sh:15-18,184-400,675-700</a>。</p>
+      </section>
+
+      <section id="spec-first">
+        <span class="section-no">08 / SPEC-FIRST</span>
+        <h2>L1-L4 共享判据，但触发时机和关联面不同</h2>
+        <p class="lede">“有四层”不等于“任何环境都必然拦得住”。必须逐层核对实际安装、配置和当次调用。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>spec-first 四层的实际行为</caption>
+            <thead><tr><th>层</th><th>实际触发与证据视图</th><th>主要降级或绕过</th></tr></thead>
+            <tbody>
+              <tr><td>L1 写时</td><td>PreToolUse Write/Edit/MultiEdit 触及 WRITABLE_DIRS；查项目是否存在已批准 spec</td><td>宿主未装/未启用、配置未实测、draft、非可写区、开关关闭、库/conf 缺失。Bash 的 rules.d 和推进态命令是相邻拦截面，不混称 spec-first 触发。</td></tr>
+              <tr><td>L2 提交时</td><td>staged 触及可写区；特性分支按 staged ∪ branch 选 spec，正文取 Git index</td><td><code>git commit --no-verify</code>；draft、开关关闭、目录为空、库/conf 缺失会 fail-open。</td></tr>
+              <tr><td>L3 门禁时</td><td><code>--all</code> 或 <code>--spec-first</code>；特性分支按 staged ∪ branch ∪ untracked，正文取 worktree</td><td>不运行就不生效；开关关闭、无目录、无判定库或非 Git 项目会 SKIPPED。</td></tr>
+              <tr><td>L4 流程准入</td><td><code>state-machine.sh guard build</code>，由 <code>transition build</code> 或 auto 进入 build 时执行；查已批准 spec 存在性</td><td>不使用状态机就不触发；SPEC_REQUIRED=0 或判定库缺失会降级。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="note"><strong>“已批准”是机器判据，不是人类签字。</strong>基础判据是 spec 含非占位“决策记录”段。真实人类评审仍要单独留证据。</div>
+        <p>L1 已有 Claude Code、Codex、ZCode 实证；Cursor、Gemini、OpenCode、Kimi-Code、Windsurf/Devin CLI 只有生成配置，尚未实证。生成配置不能写成已验证能力。</p>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/spec-first-lib.sh">assets/spec-first-lib.sh:105-185</a>；<a href="../../skills/swarm-yuan/assets/gates/process/spec-first.sh">assets/gates/process/spec-first.sh:21-58</a>；<a href="../../skills/swarm-yuan/assets/hooks/spec-first-pre-commit.sh">assets/hooks/spec-first-pre-commit.sh:1-18,50-75</a>。</p>
+      </section>
+
+      <section id="precheck">
+        <span class="section-no">09 / PRECHECK</span>
+        <h2>precheck 是累计汇总，不是首个 FAIL 即停</h2>
+        <p class="lede"><code>--all</code>、<code>--all-full</code>、<code>--compliance-suite</code> 按注册数组串行执行，记录失败并继续后续检查，最后统一决定返回码。后续 PASS 不抵消前面的 FAIL。</p>
+        <pre><code>bash scripts/precheck.sh --all                # 核心 12
+bash scripts/precheck.sh --all-full           # standard 32
+bash scripts/precheck.sh --compliance-suite   # 合规 19
+bash scripts/precheck.sh --list-gates
+
+GATE_RUNS_DIR=.swarm-yuan/gate-runs \
+  bash scripts/precheck.sh --all-full</code></pre>
+        <div class="danger"><strong>配置即命令。</strong><code>TEST_CMD</code>、<code>BUILD_CMD</code>、<code>MUTATION_CMD</code> 会作为 shell 命令执行。只能使用受信任配置，不能把不可信仓库配置当成无害数据。</div>
+
+        <h3>返回码必须结合输出判读</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>precheck 返回码与特殊路径</caption>
+            <thead><tr><th>返回码</th><th>当前语义</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>无 FAIL/ERROR；WARN、advisory 和默认 SKIPPED 不阻断。<code>--fix-suggest</code> 即使收集 FAIL 也固定返回 0，只用于建议，不能当验收通过。</td></tr>
+              <tr><td>1</td><td>业务 FAIL 或门禁自身 ERROR 的汇总失败；未知模式、非法 format 等部分 CLI 用法错误也返回 1。</td></tr>
+              <tr><td>2</td><td>既可能表示配置、项目根或门禁实现完整性错误，也可能表示显式 <code>--strict-skip</code> 下无 FAIL 但有 SKIPPED。不能一律解释为“部分跳过”。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>最终汇总分别显示 fail、warn、advisory、skip。skip 不计 warn，也不等于 pass。默认情况下有跳过仍可能返回 0，所以“通过”不等于“全部覆盖”。</p>
+
+        <h3>gate-runs.jsonl 的字段和序号</h3>
+        <p><code>GATE_RUNS_DIR</code> 默认为空，JSONL 落盘默认关闭。<code>--format json</code> 或设置该目录会开启输出捕获，但只有目录非空才写 gate-runs。目录不可创建会告警并关闭落盘。</p>
+        <pre><code>{
+  "ts": "UTC 时间",
+  "run": 1,
+  "gate": "check_test",
+  "status": "pass | fail | error | skip | warn | advisory",
+  "ids": ["从检查输出提取并去重的 ID"],
+  "duration_s": 3
+}</code></pre>
+        <p><code>run</code> 按 JSONL 当前行数递增，是<strong>单门禁记录序号</strong>，不是整套套件共享的批次号。引用 <code>gate-run#N</code> 时，还要结合时间、执行命令和工作区确认它属于当次任务。</p>
+
+        <h3>.gate-fail-flag 的清除权属于覆盖式运行</h3>
+        <p>FAIL/ERROR 会写项目根 <code>.swarm-yuan/.gate-fail-flag</code>，供白名单拦截。只有 <code>--all</code>、<code>--all-full</code>、<code>--compliance-suite</code> 等覆盖式运行全绿才清旧标记；单个门禁变绿不能证明其它失败已修复。</p>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:1255-1321,1338-1467,1879-1898,1969-1975,2031-2087</a>；配置链：<a href="../../skills/swarm-yuan/assets/precheck.conf">assets/precheck.conf:98-119</a>。</p>
+      </section>
+
+      <section id="verification">
+        <span class="section-no">10 / VERIFICATION</span>
+        <h2>门禁绿、测试有效和真实缺陷覆盖是三件事</h2>
+        <p><code>check_test</code> 先运行真实 TEST_CMD，再检查零用例空跑、覆盖率、零断言、断言密度、聚焦测试和负向/边界比例；配置 MUTATION_CMD 后才检查变异分数。负向比例主要按关键词命中的测试文件占比估算，不等于理解业务语义。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>两类变异验证不要混讲</caption>
+            <thead><tr><th>位置</th><th>证明什么</th><th>不能证明什么</th></tr></thead>
+            <tbody>
+              <tr><td>生成器侧 Mutation Check</td><td>故意损坏门禁函数后，violating fixture 仍被检出，证明夹具断言不是空壳</td><td>不证明目标项目业务测试有效</td></tr>
+              <tr><td>项目侧 MUTATION_CMD</td><td>项目自己的变异命令、分数解析和阈值结果</td><td>未配置时不存在这项证据，不能默认声称已做</td></tr>
+              <tr><td>真实项目回归</td><td>真实缺陷和真实工具链下的外部有效性</td><td>fixture 全绿不能替代；既有试验曾漏掉 3 个 P0/P1 bug</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="source">源码：<a href="../../skills/swarm-yuan/assets/gates/quality/test.sh">assets/gates/quality/test.sh:3-90</a>；<a href="../../skills/swarm-yuan/references/generation-flow.md">generation-flow.md:89-99</a>；<a href="../../skills/swarm-yuan/verifier/v2/external-validity.md">verifier/v2/external-validity.md:1-13,47-52</a>。</p>
+      </section>
+
+      <section id="acp">
+        <span class="section-no">11 / WORKER → ACP → ENGINE</span>
+        <h2>worker→ACP→编码引擎：证据必须按层闭合</h2>
+        <p class="lede">provider 名称、ACP 会话、引擎身份、技能调用和业务测试是不同事实。任何一层都不能替下一层签字。</p>
+        <div class="flow">人和 Kanban
+  ↓ 任务、授权、规范 workspace
+Hermes worker-coder
+  ↓ 先读代码与上游文档，准备项目技能，显式 cwd
+ACP / zcode-acp-server
+  ↓ initialize → session/new → session/prompt → session/update
+编码引擎（官方捆绑或 Ycode 分叉，须以身份字段区分）
+  ↓ 技能工具调用、文件改动、命令与测试
+worker 亲自复核 → Kanban handoff / 独立验证</div>
+        <p>worker-coder 要求技能准备先于 ACP 编码，首轮 prompt 带技能绝对路径；ACP 产出后，worker 必须亲自检查文件、语法、类型和测试。</p>
+
+        <h3>当次交付要核对哪些字段</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>证据字段与证明范围</caption>
+            <thead><tr><th>层</th><th>载体与字段</th><th>能证明什么</th></tr></thead>
+            <tbody>
+              <tr><td>任务与上下文</td><td><code>delegate-result.json</code>：taskId、board、taskTitle、taskStatus、assignee、branch、promptSha256、promptChars</td><td>哪张卡、哪份最终任务上下文被装配。</td></tr>
+              <tr><td>会话与工作区</td><td>sessionId、cwd、model</td><td>ACP 会话及请求的工作区；cwd 还要与 Kanban 规范 workspace 对账。</td></tr>
+              <tr><td>引擎身份</td><td>engineBin、engineBinSource；日志中的 engine_bin_source=、engine_bin=</td><td>区分 env、official-bundle、ycode-fork、bridge-default。provider=zcode 本身不证明分叉。</td></tr>
+              <tr><td>回合结果</td><td>exit、stopReason、stage、startedAt、endedAt、usage；runs.jsonl 另有 outcome/reason</td><td>是否成功结束。G3 要求 exit=0 且 stopReason=end_turn，不能只看日志存在。</td></tr>
+              <tr><td>技能装载</td><td>worker 的 yuan_skill handoff、ACP session/update、Skill 工具状态、回答中的技能路径</td><td>路径只证明交付位置；工具调用与输出才证明该次探针实际使用技能。</td></tr>
+              <tr><td>实现质量</td><td>changed_files、tests、diff、构建/类型/测试输出、review-record</td><td>worker 或独立审查是否验证结果；引擎自述完成不算。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="source">字段实现：<a href="../../runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py">runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py:258-323</a>；worker 约束：<a href="../../team/profiles/worker-coder/SOUL.md">team/profiles/worker-coder/SOUL.md:19-38,53-107</a>；G3：<a href="../../simharness/aipay-scenario.sh">simharness/aipay-scenario.sh:1559-1586</a>。</p>
+
+        <h3>真实证据史：有特定实证，但不能外推</h3>
+        <div class="timeline">
+          <article>
+            <time>2026-10-26 → 2026-10-27</time>
+            <h3>真实 ACP / Skill E2E 已有成功记录</h3>
+            <p>早期源码批次曾保留“真实回合未验证”，后续同一 spec 追加协议探针：先因额度 fail-closed，再完成真实模型回合。成功探针观察到 <code>Skill: {"skill":"echo-dev"}</code> 从 pending 到 completed、预期回文、任务 cwd 和 end_turn。</p>
+            <p><strong>证明范围：</strong>那次 echo-dev 探针的技能调用闭环；不是每个生产回合都自动加载技能。</p>
+            <p class="source"><a href="../superpowers/specs/2026-10-26-delegate-task-context.md">2026-10-26-delegate-task-context.md:27-50</a></p>
+          </article>
+          <article>
+            <time>同一探针的身份边界</time>
+            <h3>成功使用 official-bundle，不是 Ycode 分叉实证</h3>
+            <p>该回合的 <code>engine_bin_source=official-bundle</code>。因此不能用 provider=zcode 或“ACP 成功”证明实际引擎是 Ycode 分叉。</p>
+            <p class="source"><a href="../superpowers/specs/2026-10-26-nine-point-reconciliation.md">2026-10-26-nine-point-reconciliation.md:37-47</a></p>
+          </article>
+          <article>
+            <time>2026-11-07</time>
+            <h3>acp-server 0.82.1 真机冒烟是另一层证据</h3>
+            <p>记录包含握手、会话、工具流、end_turn 和实物落盘，约 24 秒完成；驱动注释记录 sessionUpdate 与 0.43.2 实测结构兼容。</p>
+            <p><strong>证明范围：</strong>该版本桥的特定冒烟和协议兼容；不证明每回合技能加载，也不改变引擎身份判据。</p>
+            <p class="source"><a href="../superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md">2026-11-07-vendor-upgrade-studio-v0817.md:20</a>；<a href="../../runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py">zcode-acp-delegate.py:198-204</a></p>
+          </article>
+        </div>
+        <div class="success"><strong>正确结论：</strong>特定真实 ACP/Skill E2E 与 0.82.1 冒烟已有记录；任何新的交付仍须提交当次技能装载、cwd、引擎身份和测试结果。既不能绝对写“真实回合未验证”，也不能写成“所有真实回合已证明”。</div>
+      </section>
+
+      <section id="r134">
+        <span class="section-no">12 / R134 OFFLINE BOUNDARY</span>
+        <h2>everything 不是完全气隙环境的“全内嵌包”</h2>
+        <p class="lede">当前有效口径是 R134，R145“全内嵌”已撤销。everything 与默认档互补，不是互相包含。</p>
+        <pre><code>--everything
+  = --no-vendor
+  + knowledge
+  + docs
+  + GitHub 源码包</code></pre>
+        <div class="table-wrap">
+          <table>
+            <caption>包内与包外边界</caption>
+            <thead><tr><th>包含</th><th>不包含或仍需外部环境</th></tr></thead>
+            <tbody>
+              <tr><td>技能本体、vendor-knowledge 知识资产、仓库 docs、gstack/superpowers/ECC 源码包</td><td>npm/pip 运行时包不内嵌；运行时及其依赖树仍需目标机可访问的镜像源。</td></tr>
+              <tr><td>SHA256SUMS，安装前校验，失败拒绝安装</td><td>Windows 实机尚未验证；现有测试主要用 file:// 本地仓和 npm/bun/install 桩。</td></tr>
+              <tr><td>源装不了的资料尽量内嵌</td><td>完全气隙环境需提前把完整依赖同步到内部镜像，或接受诚实降级。</td></tr>
+              <tr><td>知识资产限本地或内部分发</td><td>含第三方版权材料，公开分发前另做合规核对；gstack 浏览器默认 --no-browser，Chromium 离线不可引导。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warning"><strong>不能作出的承诺：</strong>不能说 everything 在完全断网机器上一定一次装齐所有功能。镜像源可达是 R134 的运行时安装前提。</div>
+        <p class="source">当前实现：<a href="../../skills/swarm-yuan/scripts/make-offline-bundle.sh">make-offline-bundle.sh:36-46</a>；有效决策：<a href="../superpowers/specs/2026-11-03-offline-everything-complete.md">2026-11-03-offline-everything-complete.md:1-14</a>；测试边界：<a href="../../skills/swarm-yuan/tests/test-r134-everything-bundle.sh">test-r134-everything-bundle.sh:1-10,33-72</a>。</p>
+      </section>
+
+      <section id="acceptance">
+        <span class="section-no">13 / ACCEPTANCE</span>
+        <h2>交付核对：每项都要对应当次证据</h2>
+        <ul class="checklist">
+          <li>目标技能通过 strict 激活，不是只有 draft 骨架；activation report 与当前技能目录对应。</li>
+          <li>宿主发现技能和本次实际读取技能分别有证据。</li>
+          <li>探查先查组件、配方和关系边集，没有凭印象重复造轮子。</li>
+          <li>spec、plan、worktree、分支和基线明确；⑤、⑥⑦、⑧、⑨顺序完整。</li>
+          <li>precheck 的 FAIL、ERROR、SKIPPED 分别解释，没有把控件数量、执行序列和通过范围混写。</li>
+          <li>L1-L4 按当前宿主和配置核对，没有把“生成配置”写成“运行实证”。</li>
+          <li>测试有真实输出、负向和边界用例；需要时有变异验证；独立审查有 review-record。</li>
+          <li>ACP cwd、引擎身份、技能调用和当次回合分层对应；provider 名称没有替代 engineBinSource。</li>
+          <li>离线包没有写成完全断网自足；Windows、气隙安装和版权边界已披露。</li>
+        </ul>
+        <p><strong>只有与当前任务相关的每一项都有证据，才能把该次研发交付写成完成。</strong></p>
+        <p>更多操作细节、命令判据和案例见 <a href="aistudio-swarm-yuan-developer-guide.md"><strong>swarm-yuan 完整研发指南（Markdown）</strong></a>。</p>
+      </section>
+
+      <section id="source-index">
+        <span class="section-no">14 / SOURCE INDEX</span>
+        <h2>源码与证据索引</h2>
+        <p class="lede">排障时先读实现，再读历史记录。历史 spec 用来限定证据时间和范围，不覆盖当前代码。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>优先核对的文件</caption>
+            <thead><tr><th>主题</th><th>正本</th></tr></thead>
+            <tbody>
+              <tr><td>版本与数字</td><td><a href="../../RELEASE-MANIFEST.json">RELEASE-MANIFEST.json</a>；<a href="../../skills/swarm-yuan/assets/facts.conf">skills/swarm-yuan/assets/facts.conf</a></td></tr>
+              <tr><td>生成入口</td><td><a href="../../skills/swarm-yuan/scripts/generate-skill.sh">skills/swarm-yuan/scripts/generate-skill.sh</a>；<a href="../../skills/swarm-yuan/scripts/generator/subcommands.sh">scripts/generator/subcommands.sh</a></td></tr>
+              <tr><td>Step 1-13</td><td><a href="../../skills/swarm-yuan/SKILL.md">skills/swarm-yuan/SKILL.md</a>；<a href="../../skills/swarm-yuan/references/generation-flow.md">references/generation-flow.md</a></td></tr>
+              <tr><td>分发与升级保留</td><td><a href="../../skills/swarm-yuan/scripts/generate-skill.sh">generate-skill.sh 的 UNIVERSAL_FILES / PROJECT_SPECIFIC_FILES</a>；<a href="../../skills/swarm-yuan/tests/test-lessons-preserve.sh">test-lessons-preserve.sh</a></td></tr>
+              <tr><td>历史决策兼容</td><td><a href="../../skills/swarm-yuan/scripts/generator/subcommands.sh">subcommands.sh 的 _vc_check_decisions</a>；<a href="../../skills/swarm-yuan/tests/test-r143-decisions-grandfathering.sh">test-r143-decisions-grandfathering.sh</a></td></tr>
+              <tr><td>门禁执行</td><td><a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh</a>；<a href="../../skills/swarm-yuan/assets/precheck.conf">assets/precheck.conf</a></td></tr>
+              <tr><td>状态与四层拦截</td><td><a href="../../skills/swarm-yuan/assets/state-machine.sh">assets/state-machine.sh</a>；<a href="../../skills/swarm-yuan/assets/spec-first-lib.sh">assets/spec-first-lib.sh</a>；<a href="../../skills/swarm-yuan/assets/gates/process/spec-first.sh">assets/gates/process/spec-first.sh</a></td></tr>
+              <tr><td>ADR 与测试</td><td><a href="../../skills/swarm-yuan/assets/gates/architecture/adr.sh">assets/gates/architecture/adr.sh</a>；<a href="../../skills/swarm-yuan/assets/gates/quality/test.sh">assets/gates/quality/test.sh</a></td></tr>
+              <tr><td>ACP 证据</td><td><a href="../../runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py">runtime/.../zcode-acp-delegate.py</a>；<a href="../../team/profiles/worker-coder/SOUL.md">team/profiles/worker-coder/SOUL.md</a></td></tr>
+              <tr><td>真实探针记录</td><td><a href="../superpowers/specs/2026-10-26-delegate-task-context.md">delegate-task-context.md</a>；<a href="../superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md">vendor-upgrade-studio-v0817.md</a></td></tr>
+              <tr><td>R134</td><td><a href="../../skills/swarm-yuan/scripts/make-offline-bundle.sh">make-offline-bundle.sh</a>；<a href="../superpowers/specs/2026-11-03-offline-everything-complete.md">2026-11-03-offline-everything-complete.md</a></td></tr>
+              <tr><td>完整研发指南</td><td><a href="/aistudio-swarm-yuan-developer-guide.md">docs/manuals/aistudio-swarm-yuan-developer-guide.md</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p><strong>swarm-yuan v2.100.1 技术指南</strong> · 核实日期 2026-11-09</p>
+      <p>本页是源码级技术说明，不声称本轮重新执行了安装、生成、激活或真实 ACP 回合。历史实证的证明范围按第 11 节限定。</p>
+      <p><a href="/aistudio-swarm-yuan-developer-guide.md">通过培训启动器打开完整研发指南</a> · <a href="#main">回到正文顶部</a></p>
+    </div>
+  </footer>
+</body>
+</html>

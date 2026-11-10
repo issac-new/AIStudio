@@ -1444,11 +1444,11 @@ Ycode 通过受管构建与安装脚本落到部署位。
 不追逐上游 main 分支漂移。**例外：zcode** 按上游 main 同步、不看版本 tag
 （2026-10-25 用户裁定，见 `vendor/VENDOR.md`）。
 
-当前基线（核实日 2026-11-06）：
+当前基线（核实日 2026-11-09）：
 
 | 树 | 当前钉版 | 载体 |
 |---|---|---|
-| hermes-studio | v1.0.9 | `vendor/VENDOR.md` |
+| hermes-studio | v0.8.17 | `vendor/VENDOR.md` |
 | hermes-agent | v0.23.0 | `vendor/VENDOR.md` |
 | zcode | 包版本 3.17.2（谱系 v3.16.1 系列） | `vendor/zcode/package.json` |
 
@@ -1480,8 +1480,8 @@ simharness 随驾驶舱源码发布，但不因此进入桌面安装包。
 日常验证走浏览器 web 版，不要求安装桌面包。
 桌面 runtime 由安装或首次启动按钉版获取，下载后按可用 SHA256 校验。
 桌面版本升级必须考虑本机缓存，不能复用旧版本号冒充新包。
-单仓构建须显式设置 `OVERLAY_UPSTREAM_ROOT` 指向仓内 `vendor/`，
-并检查实际输出路径；未做逐平台验收就保持未验证。
+单仓构建的上游根按显式 `OVERLAY_UPSTREAM_ROOT`＞仓内 `vendor/`＞旧兄弟 `upstream/` 解析；
+使用隔离构建树时须显式设置该环境变量并检查实际输出路径；未做逐平台验收就保持未验证。
 
 ## 6、使用、验证与维护
 
@@ -1575,7 +1575,7 @@ npm run serve
 | SIM 只读 | 观察端点与部分守卫已存在，批量和注意力入口有缺口 | 所有写入口排除 SIM 任务后才可宣称隔离 |
 | 补丁注入 | agent 与 Ycode 补丁应用失败可跳过，登记文件缺失仍中止；部署侧 manifest 另记逐补丁真实状态 | 检查目标代码，不把 applied 清单当成功凭证 |
 | 工具执法 | 总闸与 strict 均为显式配置 | 区分观察、fail-open 与严格拒绝区域 |
-| 桌面构建 | 默认脚本需显式指向仓内上游根，runtime 独立钉版 | 显式设置根目录，分别验证 Web UI 与 runtime |
+| 桌面构建 | 上游根按显式 `OVERLAY_UPSTREAM_ROOT`＞仓内 `vendor/`＞旧兄弟 `upstream/` 解析，runtime 独立钉版 | 隔离构建时显式设置根目录，分别验证 Web UI 与 runtime |
 | 产品命名 | 主品牌为 AIStudio，桌面工程与产物仍保留 SwarmStudio 标识 | 区分品牌文案与安装、协议兼容标识 |
 | 性能基线 | 首载与聚合时延未在当前版本复测 | 以本轮实测为准，不沿用旧秒数 |
 | 外部集成 | 分享房、真实 Matrix 双账号、多机和第二名会签人未在本轮复验 | 在目标环境实测后再宣称 |
@@ -1592,10 +1592,10 @@ npm run serve
 | 平台执行与证据核心（2026-11-06 P0/P1） | 未知 MCP 硬拒（mcp-unknown）+真实路径沙箱（cwd 解析/canonicalize/悬垂 symlink 检出）+OS 沙箱 attestation（声明可观测化）；EvidenceRecord 九字段+追加式存储；六闸四态（缺完成键=unknown，无 M1 数值成绩） | 未知工具判 read/相对与符号链接越界/空状态首过/类型工具故障退 0 四负例守门；terminal 无证明=unavailable 不可审批放行 |
 | 平台交付核心（2026-11-06 P1） | 注入 manifest v2（逐补丁 sha256/真实状态/严格尾部增量/失败回滚）+部署三态（kept=partial）+统一上游根四入口前置+bundle 身份（build 产 bundleId，release:gate 终检缺席/畸形/过期/复算不符全拦）+release:gate 14 步真跑链（--require-pass/--no-cache/--since，waived/CONDITIONAL/缓存/过期全拦） | failed 混入 applied/deploy kept 报 complete/身份过期过门/任一步非零仍续行四负例守门；release:gate 于本批提交树 14 步全绿 |
 | 平台推演与文档核心（2026-11-06 P2） | SIM_ROOT 单一所有权（owner/driver-lock/resident/clean-lease 四因子判活，link 独占提交，product/bash/relay/sim-launch 四方共守）+烧机收据 digest 真身绑定（最新 fail 覆盖）+clearance 投影跨清场+DISP 末次适用 pairing 同构（泛指不批量解禁）+文档 marker 块生成器（真注册链单一事实源）+催办 routed/sent/received 诚实三态 | 双 owner/旧 pass 盖新 fail/清场删债/伪键回写解禁四反例守门（终审核真）；真烧机与桌面构建未活体=已知开口按 spec 红线不宣称 |
-| 总监派发（2026-11-06 O7） | 机制在位：director 姿态（需求草稿移交＋wait 自主任务书＋超时降级 strict）＋self-dispatch.jsonl 独立台账＋报告净额行实算；缺省零行为不变 | run28 以 `MX_DISPATCH_MODE=director` 首跑，对照净额行与 dispatch-preset 计数；总监哑火率高才给 profile 加职能词 |
-| 黄金集门检（2026-11-06 G4 子门） | 30 例 P2P 材料＋gate-check 端点＋mx-eval-lib 观察态子门；stub judge 真跑覆盖正身逻辑，活体 LLM 判分未跑 | 首次真跑落 `evidence/evals/golden-gate.json` 后按读数决定升硬判据的时点 |
-| 帧证据二态（2026-11-06） | run27 的 19 步零变化帧已隔离出池、8 步内容不符如实分级；射手二态化与审计口径已随批修改 | 下一轮采集按注册帧形态核验；摘要不得出现「全部实拍」，隔离步走降级 |
-| 跨轮指标留档（2026-11-06 O1） | 每轮核心指标追加 `docs/governance/run-metrics.jsonl`，运行产物可清、指标不灭 | 「连续两轮低于基线」一类判据在累计两轮后启用 |
+| 总监派发（2026-11-06 O7，run28 后复核） | director 姿态已完成首跑，记录 14 次自主派发；需求草稿移交、等待自主任务书、超时降级 strict、`self-dispatch.jsonl` 独立台账与报告净额实算均已进入实跑；缺省零行为不变 | 按轮对照自主派发与 `dispatch-preset` 计数，核对自主派发确由组织产出而非脚本代写 |
+| 黄金集门检（2026-11-06 G4 子门，run28 后复核） | 30 例 P2P 材料已在 run28 完成观察态真跑并落 `evidence/evals/golden-gate.json`；实测 14 例误杀，说明判分器尚未校准，当前仍不阻断主门 | 保持观察态并校准误杀；未达到校准判据前不得升为硬门，也不得把本轮主门通过解释为黄金集全过 |
+| 帧证据二态（2026-11-06，run28 后复核） | run28 帧采集与独立核验已完成；报错态与整板空白态判据已修，问题帧翻红、补拍与降级凭证均按真实状态呈现 | 继续按注册帧形态核验，保留报错、空白和缺帧的负面结论；摘要不得写「全部实拍」，隔离与降级步不计入可核验实拍 |
+| 跨轮指标留档（2026-11-06 O1，run28 后复核） | `docs/governance/run-metrics.jsonl` 已有 run27 与 run28 两轮记录，连续两轮判据已具备实际输入 | 按既定指标阈值消费两轮序列；缺轮、断档或指标缺席仍如实标注，不把两轮留档直接写成长期趋势结论 |
 
 这些边界是实现检查项，不是新的设计原则。
 主要代码锚点为 `zcode-acp-delegate.py` 的 `resolve_engine_bin_env`、

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="AIStudio 六团队 A4 横屏培训课件，12 幕动态步骤、完整打印教案与六套拓扑">
+<meta name="description" content="AIStudio 六团队 A4 横屏培训课件，14 幕动态步骤、完整打印教案与六套拓扑">
 <title>AIStudio 交互式培训手册</title>
 <style>
 :root {
@@ -145,35 +145,45 @@ dialog::backdrop { background: rgba(13,23,17,.55); }
 dialog .part-nav { margin-bottom: 14px; flex-wrap: wrap; overflow: visible; }
 dialog .mode-note { color: var(--muted); align-self: center; }
 dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
-#appRoot .topology-panel { display: grid; grid-template-rows: 165mm; }
-.topology-flow-deck { display: grid; grid-template-columns: minmax(0, 1fr) 68mm; grid-template-rows: minmax(0, 1fr); min-height: 0; }
-.topology-canvas { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
-#appRoot .topology-canvas .lesson-more { padding: 1.5mm 3mm; border-top: 1px solid var(--line); background: #f8faf7; }
-#appRoot .topology-canvas .lesson-more-grid { grid-template-columns: 1.6fr 1.5fr .9fr; gap: 4mm; }
-#appRoot .topology-canvas .lesson-inputs { margin: 0; padding: 0; border: 0; }
-.card-step { display: inline-grid; place-items: center; min-width: 16px; height: 16px; margin-right: 5px; border-radius: 50%; background: var(--accent); color: white; font-size: 7pt; }
-.card-flows { margin-top: 1.5mm; padding-top: 1.2mm; border-top: 1px dashed var(--line); }
-.card-flows > span { display: block; margin-bottom: 1mm; color: var(--muted); font-size: 7pt; }
-.card-flows div { display: flex; flex-wrap: wrap; gap: 1mm; }
-.flow-chip { padding: 1px 5px; border: 1px solid #9fc5ad; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 6.8pt; line-height: 1.5; }
-.outcome-group + .outcome-group { margin-top: 1.5mm; padding-top: 1.2mm; border-top: 1px dashed var(--line); }
-.outcome-group h3 { margin: 0 0 .8mm; color: var(--accent); font-size: 7.4pt; font-weight: 750; }
-.outcome-group ul { margin: 0; padding-left: 4mm; font-size: 7.4pt; line-height: 1.3; }
-.dock-proof { margin: 0; padding: 1.2mm 1.6mm; border-radius: 2mm; background: var(--accent-soft); font-size: 7.4pt; line-height: 1.3; }
-#appRoot .topology-svg { height: 100%; }
-.flow-cards { display: flex; flex-direction: column; gap: 2mm; min-height: 0; overflow: auto; padding: 2mm; border-left: 1px solid var(--line); background: #e8eee9; }
-#appRoot .flow-card { flex: 0 0 auto; overflow: visible; padding: 2mm; border: 1px solid #9fc5ad; border-top: 2px solid var(--accent); border-radius: 2mm; background: white; box-shadow: 0 1mm 2mm rgba(21,40,28,.06); }
-#appRoot .flow-card.lesson-example { flex: 1 1 auto; }
-#appRoot .flow-card h2 { font-size: 9pt; margin-bottom: 1mm; }
-#appRoot .flow-card .step-controls { margin-top: 2mm; }
-#appRoot .flow-card li { overflow-wrap: anywhere; }
-#appRoot .flow-card > :last-child, #appRoot .flow-card li:last-child, #appRoot .outcome-group:last-child ul { margin-bottom: 0; }
-#appRoot .lesson-steps ol { padding-left: 5mm; font-size: 8.6pt; line-height: 1.45; }
-#appRoot .lesson-more { padding: 2mm 3mm 0; background: #f8faf7; }
-#appRoot .lesson-more-grid { gap: 3mm; }
-#appRoot .lesson-more h2 { font-size: 8.5pt; }
-#appRoot .lesson-more ul { font-size: 7.5pt; line-height: 1.25; }
-#appRoot .page-footer { align-items: center; height: 6mm; padding-top: 1mm; }
+#appRoot { --manual-accent: #2457a6; --manual-text: #1f2937; --manual-muted: #64748b; --manual-line: #dbe2ea; --manual-soft: #eef4fb; color: var(--manual-text); background: #f5f7fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+#appRoot .manual-topbar { height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 24px; border-bottom: 1px solid var(--manual-line); background: white; }
+#appRoot .manual-brand { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+#appRoot .manual-brand strong { font-size: 17px; color: #173b68; }
+#appRoot .manual-brand span { color: var(--manual-muted); font-size: 12px; }
+#appRoot .manual-brand small { color: #8291a3; font-size: 11px; }
+#appRoot .manual-topbar .stage-actions { display: flex; gap: 6px; }
+#appRoot .manual-topbar button { border: 1px solid var(--manual-line); background: white; color: #334155; border-radius: 5px; padding: 6px 10px; font-size: 12px; }
+#appRoot .manual-topbar button:hover { border-color: var(--manual-accent); color: var(--manual-accent); }
+#appRoot .manual-layout { display: grid; grid-template-columns: 228px minmax(0, 1fr) 292px; height: calc(100vh - 58px); min-height: 0; }
+#appRoot .manual-toc { overflow: auto; padding: 20px 14px; border-right: 1px solid var(--manual-line); background: #fbfcfe; }
+#appRoot .toc-heading { display: flex; justify-content: space-between; align-items: baseline; padding: 0 8px 14px; border-bottom: 1px solid var(--manual-line); }
+#appRoot .toc-heading strong { font-size: 14px; }
+#appRoot .toc-heading span { color: var(--manual-muted); font-size: 11px; }
+#appRoot .manual-document { overflow: auto; min-width: 0; padding: 36px 46px 56px; background: white; }
+#appRoot .manual-document > * { max-width: 880px; margin-left: auto; margin-right: auto; }
+#appRoot .manual-notes { overflow: auto; padding: 24px 20px; border-left: 1px solid var(--manual-line); background: #fbfcfe; }
+#appRoot .document-header { padding-bottom: 24px; border-bottom: 1px solid var(--manual-line); }
+#appRoot .document-kicker { display: flex; align-items: center; gap: 8px; color: var(--manual-accent); font-size: 12px; font-weight: 650; }
+#appRoot .document-header h1 { margin: 12px 0; color: #172b4d; font-size: 28px; line-height: 1.3; letter-spacing: -.02em; }
+#appRoot .coach-summary { margin: 0; color: #526174; font-size: 14px; line-height: 1.8; max-width: none; }
+#appRoot .document-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; color: var(--manual-muted); font-size: 11.5px; }
+#appRoot .manual-section { padding: 28px 0; border-bottom: 1px solid var(--manual-line); }
+#appRoot .manual-section > h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; color: #172b4d; font-size: 20px; }
+#appRoot .manual-section > h2 span { color: var(--manual-accent); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+#appRoot .manual-section h3 { margin: 18px 0 8px; color: #334155; font-size: 14px; }
+#appRoot .manual-section p, #appRoot .manual-section li { font-size: 13.5px; line-height: 1.8; }
+#appRoot .manual-section ul { padding-left: 20px; }
+#appRoot .manual-lead { margin: 0; font-size: 15px !important; line-height: 1.8; }
+#appRoot .principle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; }
+#appRoot .principle-grid h3 { margin-top: 0; }
+#appRoot .manual-note { margin-top: 18px; padding: 12px 16px; border-left: 3px solid #8aa9cf; background: #f6f8fb; }
+#appRoot .manual-note strong { font-size: 12px; color: #405a78; }
+#appRoot .manual-note p { margin: 5px 0 0; }
+#appRoot .dock-proof { margin: 0; font-size: 13px; }
+#appRoot .dock-layer { font-size: 12.5px; line-height: 1.7; }
+#appRoot .section-intro { margin: -6px 0 16px; color: var(--manual-muted); }
+@media (max-width: 1180px) { #appRoot .manual-layout { grid-template-columns: 204px minmax(0, 1fr) 260px; } #appRoot .manual-document { padding: 28px 30px 48px; } #appRoot .manual-brand span, #appRoot .manual-brand small { display: none; } }
+@media (max-width: 900px) { #appRoot .manual-layout { grid-template-columns: 190px minmax(0, 1fr); height: auto; } #appRoot .manual-notes { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--manual-line); } #appRoot .manual-topbar { height: auto; padding: 10px 16px; flex-wrap: wrap; } #appRoot .principle-grid { grid-template-columns: 1fr; } }
 @page { size: A4 landscape; margin: 0; }
 @media print {
   html, body { margin: 0; padding: 0; min-width: 0; background: white; }
@@ -181,79 +191,207 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
   #printRoot { display: block !important; }
   #printRoot .a4-page { width: 297mm; height: 210mm; margin: 0; transform: none !important; box-shadow: none; border: 0; break-after: page; break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   #printRoot .a4-page:last-child { break-after: auto; }
-  #printRoot .a4-page { grid-template-rows: 30mm 96mm 62mm; }
+  #printRoot .a4-page { grid-template-rows: 27mm 87mm 74mm; }
   #printRoot .lesson-main { display: grid; grid-template-columns: 112mm 82mm 75mm; }
-  #printRoot .topology-svg { height: calc(96mm - 10mm); }
-  #printRoot .page-bottom { display: grid; grid-template-rows: 56mm 6mm; }
-  #printRoot .lesson-code pre { font-size: 6.6pt; }
+  #printRoot .topology-svg { height: calc(87mm - 11mm); }
+  #printRoot .page-bottom { display: grid; grid-template-rows: minmax(0, 1fr) 6mm; }
+  #printRoot .lesson-code pre { font-size: 6.2pt; }
+  #printRoot .page-header h1 { font-size: 15pt; }
+  #printRoot .coach-summary { font-size: 8pt; }
+  #printRoot .lesson-example dl { font-size: 7pt; line-height: 1.24; }
+  #printRoot .lesson-example dt { font-size: 7pt; }
+  #printRoot .lesson-more-grid { font-size: 7.2pt; }
+  #printRoot .lesson-more ul { font-size: 7.2pt; line-height: 1.18; }
+  #printRoot .print-dense .lesson-steps ol { font-size: 7pt; line-height: 1.18; }
+  #printRoot .print-dense .lesson-steps .lesson-goal { margin-bottom: 1mm; font-size: 6.4pt; line-height: 1.15; }
+  #printRoot .print-dense .lesson-example dl { font-size: 6.4pt; line-height: 1.15; }
+  #printRoot .print-dense .lesson-example dt { font-size: 6.4pt; }
+  #printRoot .print-dense .lesson-code pre { font-size: 5.8pt; }
   .code-exec-note { display: block; font-style: normal; font-size: 10px; color: #8a6d3b; letter-spacing: .04em; margin: 2px 0 4px; }
   .dock-layer { font-size: 11px; color: #55684f; margin: 0 0 4px; }
   .practice-ref { display: block; font-size: 9pt; color: #65776a; margin-top: 2px; }
+#printRoot .lesson-more { display: grid; }
+  #printRoot .lesson-more-grid { grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+  .case-evidence-print ul { font-size: 6.1pt !important; line-height: 1.22 !important; }
+  .case-evidence-print { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 4mm; padding-bottom: .8mm; margin-bottom: .8mm; border-bottom: .3mm solid var(--line); }
+  .case-evidence-print h2 { margin: 0; white-space: nowrap; }
+  .case-evidence-print ul { margin: 0; padding: 0; list-style: none; font-size: 6.3pt; line-height: 1.26; columns: 2; column-gap: 6mm; }
+  .case-evidence-print li { break-inside: avoid; }
+  .case-evidence-print li + li { margin-top: .4mm; }
+  .case-evidence-print strong { color: var(--accent); }
+.course-phase { grid-column: 1 / -1; }
+.course-phase h3 { margin: 10px 0 6px; color: var(--accent); font-size: 11px; }
+.course-phase-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.case-evidence { max-height: 18mm; overflow: auto; margin-top: 1.5mm; padding-top: 1.2mm; border-top: 1px dashed var(--line); font-size: 7pt; line-height: 1.35; }
+.case-evidence-item + .case-evidence-item { margin-top: 1mm; }
+.case-tag { display: inline-block; margin-right: 4px; color: var(--accent); font-weight: 750; }
   .topology-pulse { display: none; }
 }
+#appRoot .phase-route { display: flex; flex-direction: column; gap: 16px; padding-top: 16px; }
+#appRoot .phase-track { display: flex; flex-direction: column; gap: 4px; }
+#appRoot .phase-label { padding: 0 8px 4px; color: #718096; font-size: 11px; font-weight: 700; }
+#appRoot .phase-scenes { display: flex; flex-direction: column; gap: 3px; }
+#appRoot .directory-scene { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; border: 0; border-radius: 5px; background: transparent; color: #425466; text-align: left; font-size: 12.5px; cursor: pointer; }
+#appRoot .directory-scene:hover { background: #edf2f7; }
+#appRoot .directory-scene[aria-current="step"] { background: var(--manual-soft); color: var(--manual-accent); font-weight: 700; box-shadow: inset 3px 0 var(--manual-accent); }
+#appRoot .directory-scene.is-traversed { color: #66839e; }
+#appRoot .toc-teams { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--manual-line); }
+#appRoot .toc-teams > span { display: block; padding: 0 8px 8px; color: #718096; font-size: 11px; }
+#appRoot .toc-teams .directory-team-list { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 8px; }
+#appRoot .directory-team { padding: 3px 7px; border: 1px solid var(--manual-line); border-radius: 4px; background: white; color: #526174; font-size: 11px; }
+#appRoot .directory-team[aria-current="true"] { border-color: var(--manual-accent); color: var(--manual-accent); }
+#appRoot .diagram-figure { margin: 18px 0; min-width: 0; border: 1px solid var(--manual-line); background: #fbfcfe; }
+#appRoot .diagram-figure figcaption { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 10px 12px; border-bottom: 1px solid var(--manual-line); background: white; }
+#appRoot .diagram-figure figcaption strong { color: #173b68; font-size: 13px; }
+#appRoot .diagram-figure figcaption span { color: var(--manual-muted); font-size: 11px; text-align: right; }
+#appRoot .diagram-figure svg { display: block; width: 100%; height: auto; min-height: 0; }
+#appRoot #architectureSvg { max-height: 560px; }
+#appRoot .diagram-box { fill: white; stroke: #a9b8c9; }
+#appRoot .diagram-box-accent { fill: #eef4fb; stroke: #2457a6; }
+#appRoot .diagram-box-muted { fill: #f4f6f8; stroke: #bdc8d4; }
+#appRoot .diagram-arrow { stroke: #718096; stroke-width: 1.6; fill: none; marker-end: url(#diagramArrow); }
+#appRoot .diagram-label { fill: #243b53; font-size: 14px; font-family: inherit; }
+#appRoot .diagram-small { fill: #64748b; font-size: 11px; font-family: inherit; }
+#appRoot .diagram-title { fill: #173b68; font-size: 15px; font-weight: 700; font-family: inherit; }
+#appRoot .diagram-active { fill: #e7f0fb; stroke: #2457a6; stroke-width: 2; }
+#appRoot .diagram-done { fill: #f0f4f8; stroke: #8da2b8; }
+#appRoot .manual-steps { margin: 0; padding: 0; list-style: none; counter-reset: manual-step; }
+#appRoot .manual-steps li { position: relative; margin: 0; border-left: 2px solid #dbe2ea; }
+#appRoot .manual-steps button { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; width: 100%; padding: 13px 14px; border: 0; background: transparent; color: #2d3a4a; text-align: left; cursor: pointer; }
+#appRoot .manual-steps button:hover { background: #f7f9fc; }
+#appRoot .manual-steps li.is-active { border-left-color: var(--manual-accent); background: var(--manual-soft); }
+#appRoot .manual-steps li.is-done .step-index { color: #718096; }
+#appRoot .manual-steps .step-index { color: var(--manual-accent); font-size: 12px; font-weight: 700; padding-top: 3px; }
+#appRoot .manual-steps .step-title { font-size: 14px; line-height: 1.65; }
+#appRoot .manual-steps li.is-active .step-title { color: #173b68; font-weight: 700; }
+#appRoot .manual-steps .step-state { color: #8291a3; font-size: 11px; white-space: nowrap; padding-top: 4px; }
+#appRoot .case-narrative { margin: 16px 0; }
+#appRoot .case-narrative dt { margin-top: 12px; color: #405a78; font-size: 12px; font-weight: 700; }
+#appRoot .case-narrative dd { margin: 4px 0 0; color: #334155; font-size: 13.5px; line-height: 1.8; }
+#appRoot .example-result { margin: 14px 0; padding: 12px 16px; border-left: 3px solid var(--manual-accent); background: #f4f7fb; }
+#appRoot .example-result strong { color: var(--manual-accent); font-size: 12px; }
+#appRoot .example-result p { margin: 4px 0 0; }
+#appRoot .lesson-code { margin: 16px 0; border: 1px solid #d6dee8; border-radius: 6px; overflow: hidden; }
+#appRoot .lesson-code > span { display: block; padding: 8px 12px; background: #edf1f5; color: #405a78; font-size: 12px; }
+#appRoot .code-exec-note { display: block; padding: 6px 12px 0; color: #8a6d3b; font-size: 11px; font-style: normal; }
+#appRoot .lesson-code pre { margin: 0; padding: 12px; overflow: auto; background: #17202b; color: #e6edf3; font-size: 12px; line-height: 1.65; }
+#appRoot .example-actions { display: flex; gap: 8px; }
+#appRoot .example-actions button, #appRoot .document-pager button, #appRoot .topology-open { padding: 6px 10px; border: 1px solid var(--manual-line); border-radius: 5px; background: white; color: #405a78; font-size: 12px; }
+#appRoot .case-metrics { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 18px; padding: 10px 0; border-top: 1px solid var(--manual-line); border-bottom: 1px solid var(--manual-line); }
+#appRoot .case-metric { display: flex; gap: 6px; align-items: baseline; }
+#appRoot .case-metric strong { color: #173b68; font-size: 14px; }
+#appRoot .case-metric strong em { color: #a14232; font-style: normal; }
+#appRoot .case-metric span { color: var(--manual-muted); font-size: 11px; }
+#appRoot .evidence-attachments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#appRoot .evidence-slip { min-width: 0; padding: 9px 11px; border: 1px solid var(--manual-line); border-radius: 5px; background: white; color: #526174; text-align: left; cursor: pointer; }
+#appRoot .evidence-slip.is-selected { border-color: var(--manual-accent); background: var(--manual-soft); }
+#appRoot .evidence-slip .evidence-id { display: block; color: #2457a6; font-size: 12px; font-weight: 700; }
+#appRoot .evidence-slip .case-tag { display: block; margin: 3px 0; color: #718096; font-size: 11px; }
+#appRoot .evidence-slip small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+#appRoot .evidence-detail { margin: 12px 0 18px; padding: 12px 14px; border: 1px solid var(--manual-line); background: #fafbfd; }
+#appRoot .evidence-detail strong { display: block; color: #173b68; font-size: 13px; }
+#appRoot .evidence-detail span { display: block; margin-top: 4px; color: var(--manual-muted); font-size: 11.5px; }
+#appRoot .evidence-detail p { margin: 8px 0 0; }
+#appRoot .lesson-references { display: flex; flex-direction: column; gap: 6px; }
+#appRoot .lesson-references a { color: var(--manual-accent); font-size: 13px; text-decoration: none; }
+#appRoot .lesson-references a:hover { text-decoration: underline; }
+#appRoot .document-pager { display: flex; align-items: center; justify-content: space-between; padding-top: 24px; }
+#appRoot .document-pager span { color: var(--manual-muted); font-size: 12px; }
+#appRoot .notes-heading { display: flex; gap: 10px; align-items: center; padding-bottom: 18px; border-bottom: 1px solid var(--manual-line); }
+#appRoot .notes-heading small { color: var(--manual-muted); font-size: 11px; }
+#appRoot .notes-heading h2 { margin: 2px 0 0; font-size: 16px; color: #173b68; }
+#appRoot .card-step { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--manual-accent); color: white; font-size: 14px; }
+#appRoot .manual-notes section { padding: 16px 0; border-bottom: 1px solid var(--manual-line); }
+#appRoot .manual-notes h3 { margin: 0 0 7px; color: #526174; font-size: 12px; }
+#appRoot .manual-notes p, #appRoot .manual-notes li { font-size: 12.5px; line-height: 1.7; }
+#appRoot .manual-notes ul { margin: 0; padding-left: 18px; }
+#appRoot .notes-current { margin: 0; color: #2d3a4a; }
+#appRoot #coachFlowLabels { display: flex; flex-wrap: wrap; gap: 5px; }
+#appRoot .flow-chip { padding: 2px 6px; border: 1px solid #c6d4e5; border-radius: 4px; color: #405a78; font-size: 11px; }
+#appRoot .step-dots { display: flex; flex-wrap: wrap; gap: 5px; }
+#appRoot .step-dot { width: 24px; height: 24px; padding: 0; border: 1px solid var(--manual-line); border-radius: 4px; background: white; color: #526174; font-size: 11px; }
+#appRoot .step-dot[aria-current="step"] { border-color: var(--manual-accent); background: var(--manual-accent); color: white; }
+#appRoot .step-dot.is-done { background: #eaf0f7; }
+#appRoot .topology-open { width: 100%; margin-top: 18px; }
+#appRoot .notes-disclaimer { margin-top: 16px; color: #8291a3; font-size: 11px !important; }
+#topologyDialog { width: min(1080px, 94vw); }
+#topologyDialog .topology-svg { width: 100%; height: min(62vh, 560px); }
+.topology-flow.is-traversed { stroke: #8bc7a4; stroke-width: 2; }
+.topology-node.is-traversed { fill: #f0f7f1; stroke: #8bc7a4; }
 </style>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到培训内容</a>
 <div id="appRoot">
-  <main id="main" class="workspace">
-    <div class="a4-viewport" id="a4Viewport">
-      <article class="a4-page" id="a4Page">
-        <header class="page-header">
-          <div>
-            <div class="eyebrow"><span class="scene-number" id="actionNumber">1</span><span id="sceneLabel">六团队协作全景</span></div>
-            <h1 id="coachTitle">产品需求分析｜六团队怎样交接</h1>
-            <p class="coach-summary" id="coachSummary"></p>
-          </div>
-          <nav class="page-side" aria-label="课程导航目录">
-            <div class="directory-line"><div class="directory-team-list" id="directoryTeams" role="group" aria-label="团队目录"></div><div class="directory-scenes" id="directoryScenes" role="group" aria-label="当前团队幕次"></div></div>
-            <div class="navigation-line"><div class="stage-actions" aria-label="播放与课程操作"><button id="prevButton" type="button" title="上一幕">‹</button><button id="playButton" type="button" aria-pressed="false">播放</button><button id="nextButton" type="button" title="下一幕">›</button><button id="speedButton" type="button" title="播放倍速">1×</button><button id="courseMenuButton" type="button">目录</button><button id="helpButton" type="button" aria-label="查看帮助">?</button><button id="resetViewButton" type="button">全部流转</button></div><div class="step-status"><span id="stepText">步骤 1 / 5</span><div class="step-dots" id="stepDots" aria-label="幕内步骤"></div></div></div>
-          </nav>
-        </header>
-        <div class="lesson-main">
-          <section class="topology-panel" id="simStage" aria-label="分层拓扑与运行流转">
-            <div class="topology-flow-deck">
-              <div class="topology-canvas">
-                <svg class="topology-svg" id="topologySvg" role="img" aria-label="AIStudio 六团队协作拓扑与任务证据流转" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg>
-                <section class="lesson-more" id="coachMore">
-                  <div class="lesson-more-grid">
-                    <section><div class="lesson-inputs"><h2>输入条件</h2><ul id="coachInputs"></ul></div></section>
-                    <section><h2>整幕完成判据</h2><p class="dock-proof" id="coachProof"></p></section>
-                    <section><h2>对应手册</h2><p class="dock-layer" id="coachLayer"></p><div id="coachReferences" class="lesson-references"></div></section>
-                  </div>
-                </section>
-              </div>
-              <aside class="flow-cards" aria-label="当前流转信息节点">
-                <section class="lesson-steps flow-card" aria-live="polite">
-                  <h2><span class="card-step" id="cardStep">1</span>当前操作步骤</h2>
-                  <ol id="coachSteps"></ol>
-                  <div class="card-flows"><span>本步流转</span><div id="coachFlowLabels"></div></div>
-                  <div class="step-controls"><button id="prevStepButton" type="button">上一步</button><button id="nextStepButton" type="button">下一步</button></div>
-                </section>
-                <section class="flow-card outcomes-card">
-                  <h2>本步产出与判定</h2>
-                  <div class="outcome-group"><h3>交付物</h3><ul id="coachDeliverables"></ul></div>
-                  <div class="outcome-group"><h3>验收检查</h3><ul id="coachChecks"></ul></div>
-                  <div class="outcome-group"><h3>误操作</h3><ul id="coachPitfalls"></ul></div>
-                </section>
-                <section class="lesson-example flow-card">
-                  <h2 id="exampleTitle"></h2>
-                  <div class="example-result"><strong>应得结果</strong><p id="exampleThen"></p></div>
-                  <div class="example-actions"><button id="exampleToggle" type="button" aria-expanded="false" aria-controls="exampleDetail">展开实例</button><button id="codeToggle" type="button" aria-expanded="false" aria-controls="coachCodeWrap" hidden>查看代码</button></div>
-                  <dl id="exampleDetail" hidden><dt>背景</dt><dd id="exampleGiven"></dd><dt>操作</dt><dd id="exampleWhen"></dd></dl>
-                  <div class="lesson-code" id="coachCodeWrap" hidden><span id="coachCodeLabel"></span><em class="code-exec-note">示例命令仅对照 · 本页不执行</em><pre><code id="coachCode"></code></pre></div>
-                </section>
-              </aside>
-            </div>
-          </section>
-        </div>
-      </article>
-    </div>
+  <header class="manual-topbar">
+    <div class="manual-brand"><strong>AIStudio 技术培训手册</strong><span>原理 · 实操 · 场景演示</span><small>v1.0.14-overlay · run28</small></div>
+    <div class="stage-actions" aria-label="播放与课程操作"><button id="prevButton" type="button" title="上一幕">上一幕</button><button id="playButton" type="button" aria-pressed="false">播放讲解</button><button id="nextButton" type="button" title="下一幕">下一幕</button><button id="speedButton" type="button" title="播放倍速">1×</button><button id="courseMenuButton" type="button">课程目录</button><button id="swarmGuideButton" type="button" title="打开 swarm-yuan 技术说明">swarm-yuan</button><button id="helpButton" type="button" aria-label="查看帮助">帮助</button></div>
+  </header>
+  <main id="main" class="manual-layout">
+    <aside class="manual-toc" aria-label="课程目录">
+      <div class="toc-heading"><strong>课程目录</strong><span>14 幕 · 80 步</span></div>
+      <div class="phase-route" id="directoryScenes" role="group" aria-label="四阶段课程目录"></div>
+      <div class="toc-teams"><span>按团队定位</span><div id="directoryTeams" class="directory-team-list" role="group" aria-label="团队目录"></div></div>
+    </aside>
+    <article class="manual-document" id="simStage" aria-label="技术培训正文">
+      <header class="document-header">
+        <div class="document-kicker"><span class="scene-number" id="actionNumber">1</span><span id="stagePhase">规则与技能 · 第 1 幕 / 14</span></div>
+        <h1 id="coachTitle">产品需求分析｜六团队怎样交接</h1>
+        <p class="coach-summary" id="coachSummary"></p>
+        <div class="document-meta"><span id="sceneLabel">六团队协作全景</span><span id="caseActor">当前角色</span></div>
+      </header>
+      <section class="manual-section" id="principleSection">
+        <h2><span>01</span>原理与结构</h2>
+        <h3>原理说明</h3><p id="manualPrinciple" class="manual-lead"></p><h3>本幕学习目标</h3><p id="manualAction"></p>
+        <figure class="diagram-figure"><figcaption><strong>本幕机制结构</strong><span>从输入到可验收交付</span></figcaption><svg id="structureSvg" role="img" aria-label="本幕结构图" viewBox="0 0 760 330"></svg></figure>
+        <div class="principle-grid"><div><h3>输入条件</h3><ul id="coachInputs"></ul></div><div><h3>整幕完成判据</h3><p class="dock-proof" id="coachProof"></p></div></div>
+        <div class="manual-note"><strong>系统边界与交接</strong><p class="dock-layer" id="coachLayer"></p></div>
+        <figure class="diagram-figure diagram-wide"><figcaption><strong>系统架构与责任链</strong><span>本幕在六团队协作中的位置</span></figcaption><svg id="architectureSvg" role="img" aria-label="本幕系统架构图" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg></figure>
+      </section>
+      <section class="manual-section" id="practiceSection">
+        <h2><span>02</span>实操演示流程</h2>
+        <p class="section-intro">机制与系统位置明确后，沿下图逐步演示；点击任一步，右侧同步显示该步交付、验收与误操作。</p>
+        <figure class="diagram-figure diagram-wide"><figcaption><strong>演示流程</strong><span>先看全链路，再逐步操作</span></figcaption><svg id="flowSvg" role="img" aria-label="本幕实操流程图" viewBox="0 0 1000 250"></svg></figure>
+        <ol id="coachSteps" class="manual-steps"></ol>
+      </section>
+      <section class="manual-section" id="caseSection">
+        <h2><span>03</span>场景案例与讲解</h2>
+        <p class="section-intro">流程形成结果后，用 run28 的真实案例核对结论，再沿交接关系进入下一幕。</p>
+        <h3 id="exampleTitle"></h3>
+        <div class="example-result"><strong>案例结论</strong><p id="exampleThen"></p></div>
+        <dl id="exampleDetail" class="case-narrative"><dt>案例背景</dt><dd id="exampleGiven"></dd><dt>演示操作</dt><dd id="exampleWhen"></dd></dl>
+        <div class="lesson-code" id="coachCodeWrap"><span id="coachCodeLabel"></span><em class="code-exec-note">示例命令仅对照 · 本页不执行</em><pre><code id="coachCode"></code></pre></div>
+        <div class="example-actions"><button id="exampleToggle" type="button" aria-expanded="true" aria-controls="exampleDetail">收起案例</button><button id="codeToggle" type="button" aria-expanded="true" aria-controls="coachCodeWrap">收起代码</button></div>
+        <figure class="diagram-figure"><figcaption><strong>案例交接与证据归属</strong><span>产物如何进入下一幕</span></figcaption><svg id="relationshipSvg" role="img" aria-label="本幕交接与证据关系图" viewBox="0 0 760 330"></svg></figure>
+      </section>
+      <section class="manual-section" id="evidenceSection">
+        <h2><span>04</span>证据、验收与参考</h2>
+        <p class="section-intro">最后回到证据：哪些事实已经观察，哪些仍是缺口，哪些结论可以交付。</p>
+        <div class="case-metrics" id="caseMetrics" aria-label="run28 案例口径"></div>
+        <div class="evidence-attachments" id="caseEvidence" aria-label="证据附件"></div>
+        <div class="evidence-detail" id="evidenceDetail" aria-live="polite"></div>
+        <h3>对应手册与延伸阅读</h3><div id="coachReferences" class="lesson-references"></div>
+      </section>
+      <footer class="document-pager"><button id="prevStepButton" type="button">← 上一步</button><span id="stepText">步骤 1 / 5</span><button id="nextStepButton" type="button">下一步 →</button></footer>
+    </article>
+    <aside class="manual-notes" aria-label="演示说明">
+      <div class="notes-heading"><span class="card-step" id="cardStep">1</span><div><small>当前演示步骤</small><h2>讲解与验收</h2></div></div>
+      <section><h3>本步讲解重点</h3><p id="currentStepText" class="notes-current"></p></section>
+      <section><h3>交付物</h3><ul id="coachDeliverables"></ul></section>
+      <section><h3>验收检查</h3><ul id="coachChecks"></ul></section>
+      <section><h3>常见误操作</h3><ul id="coachPitfalls"></ul></section>
+      <section><h3>本步流转</h3><div id="coachFlowLabels"></div></section>
+      <section><h3>步骤定位</h3><div class="step-dots" id="stepDots" aria-label="幕内步骤"></div></section>
+      <button id="resetViewButton" type="button" class="topology-open">查看本步拓扑与证据流</button>
+      <p class="notes-disclaimer">本手册用于培训讲解，不连接真实任务、审批或生产数据。</p>
+    </aside>
+    <div id="topologyHome" hidden><svg class="topology-svg" id="topologySvg" role="img" aria-label="AIStudio 六团队协作拓扑与任务证据流转" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg></div>
   </main>
 </div>
 <div id="printRoot" hidden></div>
-<dialog id="courseDialog" aria-labelledby="courseDialogTitle"><h2 id="courseDialogTitle">课程目录 · 六团队 12 幕</h2><div class="part-nav" id="partNav"></div><div class="course-dialog-nav" id="courseDialogNav"></div><div class="dialog-actions"><button id="followButton" type="button" aria-pressed="false">开始跟练</button><button id="restartButton" type="button">从头播放</button><button id="nextCoachButton" type="button">下一幕</button><span class="mode-note" id="modeNote">可逐步播放或点击高亮节点</span></div><div class="timeline" id="timeline" aria-label="场景进度"></div><label class="sr-only" for="mobileStep">选择培训场景</label><select class="sr-only" id="mobileStep"></select><div class="dialog-actions"><button id="closeCourseButton" type="button">返回培训</button></div></dialog>
-<dialog id="helpDialog" aria-labelledby="helpTitle"><h2 id="helpTitle">培训页操作</h2><ul><li>每幕的角色、流线与图内信息卡按步骤同步流转；完整教案保留在手册与 12 页打印件中。</li><li>空格播放/暂停，左右键逐步推进或回退，R 切换当前步骤路径/全部流转，? 打开帮助。</li><li>跟练模式点击高亮节点进入下一步，幕末进入下一幕；减少动态效果跟随系统或帮助中的开关。</li><li>打印按钮输出 12 页 A4 横屏完整教案。</li></ul><p>所有界面与数据均为培训模拟，不会修改真实任务、账号、审批或代码。</p><p>完整参考材料：</p><div class="dialog-actions"><a href="/aistudio-training-and-user-guide.md" target="_blank" rel="noopener">六团队培训手册</a><a href="/aistudio-feature-inventory.md" target="_blank" rel="noopener">全量功能清单</a><a href="/aistudio-operations-reference.md" target="_blank" rel="noopener">管理员运维参考</a><a href="/aistudio-design-document-guide.md" target="_blank" rel="noopener">设计文档导读</a><a href="/aistudio-design-document-index.md" target="_blank" rel="noopener">全部规格索引</a><a href="/aistudio-run25-simulation-case.md" target="_blank" rel="noopener">run25 真实推演案例</a><a href="/aistudio-swarm-yuan-developer-guide.md" target="_blank" rel="noopener">swarm-yuan 研发指南</a></div><div class="dialog-actions"><button id="motionButton" type="button" aria-pressed="false">动效</button><button id="fullscreenButton" type="button">全屏 ⛶</button><button id="printButton" type="button">打印 12 页 A4</button><button id="closeHelpButton" type="button">知道了</button></div></dialog>
+<dialog id="topologyDialog" aria-label="六团队拓扑"><div class="topology-canvas"></div><p class="mode-note">亮线=当前步骤路径，浅绿=已走查；点击高亮节点可前进（跟练模式）。</p><div class="dialog-actions"><button id="closeTopologyButton" type="button">关闭拓扑</button></div></dialog>
+<dialog id="courseDialog" aria-labelledby="courseDialogTitle"><h2 id="courseDialogTitle">课程目录 · 六团队 14 幕</h2><div class="part-nav" id="partNav"></div><div class="course-dialog-nav" id="courseDialogNav"></div><div class="dialog-actions"><button id="followButton" type="button" aria-pressed="false">开始跟练</button><button id="restartButton" type="button">从头播放</button><button id="nextCoachButton" type="button">下一幕</button><span class="mode-note" id="modeNote">可逐步播放或点击高亮节点</span></div><div class="timeline" id="timeline" aria-label="场景进度"></div><label class="sr-only" for="mobileStep">选择培训场景</label><select class="sr-only" id="mobileStep"></select><div class="dialog-actions"><button id="closeCourseButton" type="button">返回培训</button></div></dialog>
+<dialog id="helpDialog" aria-labelledby="helpTitle"><h2 id="helpTitle">培训页操作</h2><ul><li>正文按「原理 → 实操 → 案例 → 证据」阅读；点击实操步骤或左右键定位，右侧同步显示讲解重点与验收。</li><li>空格播放/暂停讲解；「查看本步拓扑与证据流」打开拓扑弹窗，R 切换当前步骤路径/全部流转，? 打开帮助。</li><li>跟练模式点击高亮节点进入下一步，幕末进入下一幕；减少动态效果跟随系统或帮助中的开关。</li><li>打印按钮输出 14 页 A4 横屏完整教案。</li></ul><p>所有界面与数据均为培训模拟，不会修改真实任务、账号、审批或代码。</p><p>适用版本：AIStudio 1.0.14-overlay。参考资料请通过本地启动器打开。</p><p>完整参考材料：</p><div class="dialog-actions"><a href="/aistudio-training-and-user-guide.md" target="_blank" rel="noopener">六团队培训手册</a><a href="/aistudio-feature-inventory.md" target="_blank" rel="noopener">全量功能清单</a><a href="/aistudio-operations-reference.md" target="_blank" rel="noopener">管理员运维参考</a><a href="/aistudio-design-document-guide.md" target="_blank" rel="noopener">设计文档导读</a><a href="/aistudio-design-document-index.md" target="_blank" rel="noopener">全部规格索引</a><a href="#scene=project-run28-case" data-scene-link>run28 最新完整推演</a><a href="/aistudio-run25-simulation-case.md" target="_blank" rel="noopener">run25 历史对照</a><a href="#scene=development-swarm-yuan-tech" data-scene-link>swarm-yuan 独立技术说明</a><a href="/aistudio-swarm-yuan-developer-guide.md" target="_blank" rel="noopener">swarm-yuan 完整研发指南</a></div><div class="dialog-actions"><button id="motionButton" type="button" aria-pressed="false">动效</button><button id="fullscreenButton" type="button">全屏 ⛶</button><button id="printButton" type="button">打印 14 页 A4</button><button id="closeHelpButton" type="button">知道了</button></div></dialog>
 <script type="module">
 const PARTS = [
   { id: 'product', name: '产品需求分析', subtitle: 'Spec、AC 与可追溯验收' },
@@ -273,9 +411,45 @@ const node = (id, title, subtitle, x, y, options = {}) => ({
 })
 const edge = (from, to, flow = false, strong = false) => ({ from, to, flow, strong })
 
+const PHASES = [
+  { id: 'rules', name: '规则与技能' },
+  { id: 'execution', name: '执行与验证' },
+  { id: 'governance', name: '治理与复盘' },
+  { id: 'capstone', name: '案例综合验收' },
+]
+
+const RUN28_EVIDENCE = {
+  'case-identity': { runId: '20261107-v8-run28', source: 'state.env + final-report.html', locator: '报告头与RUN目录', snapshot: 'report', status: 'observed', fact: '固定RUN ID、双报告与26步；先建立案例索引，不把步数当验收结论。' },
+  'gross-net': { runId: '20261107-v8-run28', source: 'final-report.html', locator: '推演姿态与代偿净额对账', snapshot: 'report', status: 'observed', fact: '含代偿六闸6/6，净额5/6；G5 director-proxy代批不计净额通过或真人批准。' },
+  'debt-disposition': { runId: '20261107-v8-run28', source: 'final-report.html + compensation-ledger.tsv', locator: '问题单与代偿台账', snapshot: 'report', status: 'observed', fact: 'open 65、65/65有处置、净额已修8/65是不同口径，处置不等于全部修复。' },
+  'g2-review': { runId: '20261107-v8-run28', source: 'final-report.html', locator: 'G2评审与修订记录', snapshot: 'report', status: 'observed', fact: 'G2曾打回并完成，复核AC、设计、任务、测试和UAT追溯，不能用26步替代业务验收。' },
+  'uat-trace': { runId: '20261107-v8-run28', source: 'final-report.html', locator: 'AC与UAT追溯表', snapshot: 'report', status: 'observed', fact: 'AC、UAT和呈现缺项需要独立追溯，报告快照与后续补证分时点阅读。' },
+  'skill-activation-boundary': { runId: '20261107-v8-run28', source: 'activation-report.json（当前任务必需）', locator: 'strict激活与当次技能读取', snapshot: 'unknown', status: 'unknown', fact: 'run28报告完成不证明当前worktree技能已激活；缺当前activation-report或本回合读取证据就记未验证。' },
+  'runtime-log-gap': { runId: '20261107-v8-run28', source: 'scenario.log + final-report.html', locator: '过程日志与采集完整性', snapshot: 'report', status: 'gap', fact: 'scenario.log只有2行383字节且为人工补抄，完整报告不能掩盖自动采集缺口。' },
+  'report-regen': { runId: '20261107-v8-run28', source: 'final-report.html + 复盘记录', locator: '报告生成与审计重入', snapshot: 'follow-up', status: 'observed', fact: '报告生成两次崩溃、审计18次重入；恢复记录与最终报告分时点，不能写成运行零故障。' },
+  'dispatch-autonomy': { runId: '20261107-v8-run28', source: 'final-report.html + self-dispatch.jsonl', locator: '组织自主性与代偿台账', snapshot: 'report', status: 'observed', fact: '自主派发14条；脚本预写48条、卡代操作4张分别记账，不能混成全部自主。' },
+  'dispatch-claim': { runId: '20261107-v8-run28', source: 'self-dispatch.jsonl + Kanban', locator: 'routed与claimed/run', snapshot: 'report', status: 'observed', fact: '自主派发不证明真实claimed/run；必须回读工作区、worker日志和有效执行上下文。' },
+  'skill-live-boundary': { runId: '20261107-v8-run28', source: '当次Skill调用与ACP会话（必需）', locator: '任务级技能装载', snapshot: 'unknown', status: 'unknown', fact: '自主派发14仍不证明Skill实际读取；历史active、宿主发现和ACP回复成功均不能替代本回合证据。' },
+  'commit-tests': { runId: '20261107-v8-run28', source: '真实commit、测试报告与工作区', locator: '提交与自测证据', snapshot: 'report', status: 'observed', fact: '报告汇总10785用例只作反查入口；当前交付仍需同一commit、退出码和原始输出。' },
+  'g4-defects': { runId: '20261107-v8-run28', source: 'final-report.html + G4缺陷记录', locator: 'G4与缺陷报修验', snapshot: 'report', status: 'observed', fact: 'G4曾打回；4个缺陷需要保留原失败、修复新commit和独立复验，不能照抄汇总。' },
+  'g4-evidence': { runId: '20261107-v8-run28', source: 'final-report.html', locator: 'G4-E与独立验证', snapshot: 'report', status: 'gap', fact: 'G4-E=GAP；证据一次通过44/48，G4与独立评审分别取证，不能写成全部通过。' },
+  'golden-observation': { runId: '20261107-v8-run28', source: 'evidence/evals/golden-gate.json', locator: '黄金集观察态', snapshot: 'report', status: 'gap', fact: '黄金集已运行30例但14例误杀，观察态不阻断；不能写黄金集通过，也不能隐藏误杀。' },
+  'g4-eval-gap': { runId: '20261107-v8-run28', source: 'state.env + final-report.html', locator: 'G4-E判定', snapshot: 'report', status: 'gap', fact: 'g4_eval_gap=1，评测处置失败2、未关2；G4-E与技能评估三态分开判读。' },
+  'director-proxy': { runId: '20261107-v8-run28', source: 'final-report.html + HumanGate记录', locator: 'G5批准主体', snapshot: 'report', status: 'observed', fact: 'director-proxy代批不计净额通过或真人批准；必须回查requestedBy、decidedBy、deciderMode、strength和有效期。' },
+  'approval-strength': { runId: '20261107-v8-run28', source: 'HumanGate源store', locator: '批准强度与异人', snapshot: 'report', status: 'observed', fact: '实际批准需要配置生效、主体不同和human/explicit同时满足；proxy、自批 delegated、聊天verdict不能代替。' },
+  'duration': { runId: '20261107-v8-run28', source: 'state.env + run-metrics.jsonl', locator: '终态时长', snapshot: 'report', status: 'observed', fact: 'report_done-run_started_at=44954秒=12h29m14s；旧spec 14h29m是另一历史口径，不能混写。' },
+  'coverage-report': { runId: '20261107-v8-run28', source: 'final-report.html', locator: '报告呈现覆盖', snapshot: 'report', status: 'gap', fact: '报告呈现11/13，缺项进入r18-collection-missing；不能说报告证据13项齐全。' },
+  'coverage-follow-up': { runId: '20261107-v8-run28', source: 'evidence/frame-verify.json', locator: '后续帧核验', snapshot: 'follow-up', status: 'gap', fact: '后续frame-verify为13/14，唯一缺mp_runtime_proof；补证不能回写原报告快照。' },
+}
+
+const caseFact = id => RUN28_EVIDENCE[id].fact
+
 const SCENES = [
   {
-    id: 'product-overview', part: 'product', title: '从需求进入 15 步跨团队协作', short: '六团队协作全景', route: '/app', duration: 9000, layer: 'simulation', practiceRef: '17.3',
+    id: 'product-overview',
+    phase: 'rules', navShort: '案例定向', caseEvidenceIds: ['case-identity', 'gross-net'],
+    handoff: { consumes: [], produces: 'case-index', next: 'product-spec-design' },
+ part: 'product', title: '从需求进入 15 步跨团队协作', short: '六团队协作全景', route: '/app', duration: 9000, layer: 'simulation', practiceRef: '17.3',
     summary: '产品需求分析提供目标、范围、AC 与授权输入；沿主管、Studio、gateway、Kanban、worker/Ycode、独立证据和状态回流理解六团队交接，Matrix 只是可选协作分支。',
     action: '从第 1 步跟踪到第 15 步，指出 3/4 的可选消息、7/9 的技能约束、13 的独立复审和 15 的人工升级。',
     proof: '能说清任务、代码、审批和运行证据各自的权威来源，并能按任务 ID、commit 和证据锚对齐交接双方。',
@@ -296,10 +470,10 @@ const SCENES = [
       { nodeId: 'kanban', flowIds: [14], deliverable: 1, check: 1, pitfall: 0 },
     ],
     example: {
-      title: '订单导出：空结果、失败与取消',
-      given: 'AC-1 两笔订单导出表头+两行 CSV；AC-2 零订单仅表头；AC-3 存储失败不得成功；AC-4 取消后不得继续写文件。',
-      when: '把四项 AC 映射到任务、代码、G4、审批和发布回执，并制造一次测试 commit 不一致。',
-      then: '形成 15 步交接表和五类证据索引；mismatch 被退回，人工裁决有源记录。',
+      title: 'run28 案例定向：先固定对象，再谈完成',
+      given: caseFact('case-identity') + ' ' + caseFact('gross-net'),
+      when: '把双报告、state.env、证据目录、五类权威源和六团队责任写入 case-index，并标明报告与后续补证时点。',
+      then: '形成案例索引；下一幕按同一对象复核 Spec、G1/G2 与 AC 追溯，不把步数完成当综合验收。',
     },
     deliverables: ['15 步跨团队交接表', '任务、代码、测试、审批、运行五类证据索引', '一次 mismatch 退回与人工升级记录'],
     checks: ['Kanban、Git、审批源系统和 RUN 目录均未被页面投影替代', 'Matrix 缺席不阻断任务真值交接', '交接双方能按任务 ID 和 commit 找到同一对象'],
@@ -315,7 +489,10 @@ const SCENES = [
     edges: [edge('studio', 'gateway', true, true), edge('gateway', 'worker', true, true), edge('worker', 'evidence', true, true), edge('evidence', 'human', true, true)],
   },
   {
-    id: 'product-spec-design', part: 'product', title: '冻结 Spec、AC 与 G1/G2 设计', short: 'Spec 与设计冻结', route: '/app/stage/reqs', duration: 8500, layer: 'simulation', practiceRef: '17.3',
+    id: 'product-spec-design',
+    phase: 'rules', navShort: '规格复核', caseEvidenceIds: ['g2-review', 'uat-trace'],
+    handoff: { consumes: [{ scene: 'product-overview', artifact: 'case-index' }], produces: 'spec-review', next: 'development-swarm-yuan-tech' },
+ part: 'product', title: '冻结 Spec、AC 与 G1/G2 设计', short: 'Spec 与设计冻结', route: '/app/stage/reqs', duration: 8500, layer: 'simulation', practiceRef: '17.3',
     summary: 'G1 核对范围、非目标、依赖、影响面、涉敏评估和至少三条可判 AC；G2 核对职责、接口、爆炸半径、备选取舍及 MAET 验证计划。',
     action: '沿需求、验收规则和人工升级路径检查 G1/G2；模拟一次冻结后变更，重新进入评审和冻结。',
     proof: 'G1/G2 记录对应当前对象；AC 能追溯到设计、任务、测试和 UAT，Termination 不缺席，旧批准不被冻结后变更沿用。',
@@ -336,10 +513,10 @@ const SCENES = [
       { nodeId: 'studio', flowIds: [14, 15], deliverable: 1, check: 1, pitfall: 0 },
     ],
     example: {
-      title: 'AC-4：取消订单导出的 Termination',
-      given: '备选 A 后端生成临时文件；备选 B 前端生成 Blob。若需服务端审计选 A，还必须评估临时文件清理和存储失败。',
-      when: 'Given 导出正在运行；When 用户取消；Then 终态为 cancelled，不继续写文件、不返回成功下载凭证。',
-      then: '形成含 MAET 的冻结 spec、G2 备选取舍和 AC 全链追溯矩阵。',
+      title: 'G2 复核对象钉锚：规格与判词必须同版',
+      given: caseFact('g2-review') + ' 当前实现还要求先把锚版文件写入评审人工作区，错配判词不计闸轮而重派。',
+      when: '对照 AC、设计组件、任务、测试和 UAT 逐项追溯；冻结后变更重新评审并生成新锚点，旧批准不能沿用。',
+      then: '形成 spec-review：AC 全链追溯、G2 变更与复审记录、下一轮非目标和复验条件。',
       code: { label: 'AC-4 / Termination', content: 'Given 导出任务正在运行\nWhen 用户点击取消\nThen 任务终态=cancelled\nAnd 不继续写 CSV\nAnd 不返回成功下载凭证' },
     },
     deliverables: ['含 MAET 的冻结 spec 与 G1 记录', '含备选取舍和爆炸半径的 G2 记录', 'AC 全链追溯矩阵'],
@@ -355,261 +532,60 @@ const SCENES = [
     edges: [edge('studio', 'g2', true, true), edge('g2', 'maet', true, true), edge('maet', 'uat', true, true)],
   },
   {
-    id: 'project-dispatch', part: 'project', title: '开工派工先核 RACI、依赖与容量', short: '派工与真实认领', route: '/app/board', duration: 8500, layer: 'simulation', practiceRef: '17.2',
-    summary: '先分类 ready、running、blocked、review，再核对 R/A、parent、工作区、板级/home 围栏及容量；routed 和催办都不是 worker 执行证据。',
-    action: '选择一张 ready 卡，模拟一次 dispatcher；随后核对 claimed、run、worker 日志，并把催办的路由 decision 与真实评论/房间通知分开。',
-    proof: '能解释“谁能领、为何能领、何时能领”；没有把 routed、“催办已路由”或手改 running 当作真实执行，blocked 必须先解除真实原因。',
-    focus: 'dispatcher', target: '触发 dispatcher',
-    inputs: ['一张 ready 和一张 blocked 培训卡，均有 AC、负责人和任务 ID', 'board/home 围栏、实际并发配置及任务评论或培训房间'],
+    id: 'development-swarm-yuan-tech',
+    phase: 'rules', navShort: '技能供给', caseEvidenceIds: ['skill-activation-boundary'],
+    handoff: { consumes: [{ scene: 'product-spec-design', artifact: 'spec-review' }], produces: 'skill-supply', next: 'operations-readiness' },
+ part: 'development', title: 'swarm-yuan 技术机制：从生成器到可验证编码', short: 'swarm-yuan 技术机制', route: '/app/ide', duration: 11000, layer: 'simulation', practiceRef: '17.1',
+    summary: 'swarm-yuan v2.100.1 是项目研发技能生成器。目标技能保存项目知识与工作流，.swarm-yuan 保存运行态；strict 激活、日常状态机、spec-first 和 ACP 会话分别承担不同证明责任。',
+    action: '从文件边界进入生成与激活，再沿状态机、L1-L4、precheck 和 ACP 证据链检查真实研发，而不是只看 active 字样。',
+    proof: '能核查 59 门、204 变量、standard 32 的实际执行面，并分别提供激活、当次技能读取、正确 cwd/引擎身份、测试和独立评审证据。',
+    focus: 'swarm', target: '拆解技术机制',
+    inputs: ['生成器 scripts/、目标技能 SKILL.md/references/、项目 .swarm-yuan 运行态', 'activation-report、gate-runs、ACP 返回与 delegate 日志'],
     steps: [
-      '在 /app/board 分类 ready/running/blocked/review，另记 partial/stale/error 和源缺席。',
-      '对 ready 卡核对结构化 R/A、已完成 parent、worktree、DoD 和 assignee 完整名称。',
-      '核对 board.json profiles/profile_scope、home 级 dispatch_profiles 与真实容量；未配置 board_concurrency 时按默认每板 1 理解。',
-      '只触发一次 dispatcher，分别记录 routed、后续 claimed、running run 和 worker 日志/PID/heartbeat。',
-      '对 blocked 卡保存催办 decision，再经任务评论或真实房间取得接收回复；补齐真实输入后 unblock 并回读实际阶段。',
+      '先区分生成器、<项目>-dev 目标技能和项目 .swarm-yuan 运行态；SKILL.md、references、scripts、state.yaml、gate-runs 各有边界。',
+      '按 Step 1-13 生成 draft，再依次完成框架与 spec-first 接线、verify_completeness、inventory strict、预算、manifest 和 activation-report；失败保持 draft。',
+      '理解 SCHEMA_EPOCH 只兼容历史决策：边界前只校 JSON/incomplete，边界后仍执行完整 schema；shortcut 不新增门禁，lessons.md 升级保留。',
+      '把日常九节点映射到 open/design/build/verify/archive/operate 六状态；transition 只 guard 和更新，不执行测试、merge 或 release。',
+      '分别核对 L1 写时、L2 提交、L3 precheck、L4 build guard；59 门中 --all=12、--all-full=standard 32、compliance=19，配置变量 204=30+126+48。',
+      '最后核对 worker 先准备技能、ACP cwd、实际 Skill 调用、engine_bin_source/engine_bin、RESULT 与 worker 复核；R134 仍需 npm/pip 镜像，不是完全气隙自足。',
     ],
     stepGuide: [
-      { nodeId: 'task', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'task', flowIds: [1, 2], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'fence', flowIds: [2], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'dispatcher', flowIds: [3], deliverable: 0, check: 0, pitfall: 1 },
-      { nodeId: 'blocked', flowIds: [4, 5], deliverable: 1, check: 1, pitfall: 0 },
-    ],
-    example: {
-      title: 'PM-BLOCK-01：已经 routed，但没有 claimed',
-      given: '阻塞原因是缺少培训测试账号；催办 decision=assignee，Matrix 已发送=否，blocked 已解除=否。',
-      when: '用任务评论请求提供账号，要求责任人回复“任务 ID+已接收”；随后检查认领锁、围栏和最近失败事件。',
-      then: '形成“路由 decision／真实通知／接收证据”三栏记录；没有回复前不得登记 running 或解除阻塞。',
-    },
-    deliverables: ['ready 派工核对表及真实 claim/run 证据', '路由、通知、接收证据三栏记录', 'blocked 原因解除和阶段恢复记录'],
-    checks: ['routed 没有被登记成 worker 已启动', '通知有真实接收证据而非本地提示', '未手改 running、未删除依赖或围栏', 'reclaim/reassign 只在日志确认后使用'],
-    pitfalls: ['反复全板 Nudge 或批量 unblock 代替查明原因', '把“催办已路由”当消息已经送达'],
-    references: [{ label: '六团队手册 §8、§17.2', href: '/aistudio-training-and-user-guide.md' }],
-    nodes: [
-      node('task', '任务契约', 'RACI · parent · 工作区', 12, 28, { kicker: 'CONTRACT' }),
-      node('fence', '围栏与容量', 'board/home · 单板/profile', 39, 28, { kicker: 'CAPACITY' }),
-      node('dispatcher', 'dispatcher', '只调度，不是执行者', 39, 73, { kicker: 'DISPATCH' }),
-      node('worker', 'claimed / running', '真实认领与工作信号', 67, 73, { kicker: 'CLAIMED' }),
-      node('blocked', 'blocked', '先补真实输入', 67, 28, { kicker: 'BLOCKED' }),
-    ],
-    edges: [edge('task', 'fence', true, true), edge('fence', 'dispatcher', true, true), edge('dispatcher', 'worker', true, true), edge('blocked', 'task', true)],
-  },
-  {
-    id: 'project-release-retro', part: 'project', title: '质量门、UAT/G5 与 G6 收口', short: '质量门与发布复盘', route: '/app/stage/accept', duration: 8800, layer: 'simulation', practiceRef: '17.2',
-    summary: 'G1—G6 各有当前证据、裁决人和 FAIL 动作；任务 done、UAT、G5、实际发布是不同事实，G6 要把问题转成有 owner、期限和验收判据的行动项。',
-    action: '用发布案例核对测试、当前 commit、回滚、灰度、HumanGate 和 UAT/G5，作放行或冻结决定，再登记一条 G6 行动项。',
-    proof: '日常与 SIM 写面没有混用；实际发布有回执和观察责任；GAP、unknown、零测试未被豁免成 PASS，retro_done 没被 report_done 替代。',
-    focus: 'g5', target: '核对发布与复盘',
-    inputs: ['当前 commit、构建、自测、G4/G4-E、评审、回滚和 HumanGate 材料', 'run25 报告摘录及一条待登记问题单'],
-    steps: [
-      '先标明日常还是 SIM；日常 UAT/G5 与 SIM 的 release-gate/uat-verdicts 台账不得混写。',
-      '按 G1-G6 登记当前证据、裁决人和 FAIL 动作，特别检查零测试、unknown 和反证。',
-      '核对同 commit 构建、依赖、具体回滚、灰度、用户说明和批准；任一 G5 硬项失败即冻结。',
-      '分开形成 UAT 判词与 G5 结论；SIM 严格先 G5 后 UAT，conditional 写说明，pendingAck 不算真人认可。',
-      '作放行或冻结决定；放行后另取真实发布回执、观察负责人和复验结果。',
-      '将问题登记为已修/观察/延后，写 owner、期限和验收判据；分别回读 retro_done 与 report_done。',
-    ],
-    stepGuide: [
-      { nodeId: 'uat', flowIds: [8], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'review', flowIds: [6], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'g5', flowIds: [7], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'uat', flowIds: [8], deliverable: 0, check: 0, pitfall: 1 },
-      { nodeId: 'release', flowIds: [7, 9], deliverable: 1, check: 1, pitfall: 0 },
-      { nodeId: 'retro', flowIds: [10], deliverable: 2, check: 2, pitfall: 1 },
-    ],
-    example: {
-      title: 'run25：全过与缺口并存',
-      given: 'G4-E=GAP，G5=READY-GATE-PASS，UAT=7/7；posture=standard，open compensation=65，呈现覆盖 13/15。',
-      when: '按规则登记 GAP 后决定放行或冻结，并把 run26 MP unit 85 红标为后续新时点。',
-      then: '形成发布决策单、日常/SIM 对照表和一条完整 G6 行动项；不回填历史成绩。',
-    },
-    deliverables: ['放行或冻结的发布决策单', '日常/SIM 写面及 UAT/G5/真实发布对照表', '完整 G6 行动项和 DISP 记录'],
-    checks: ['日常 UAT/G5 没有写 SIM 台账', 'done、UAT、G5、实际发布分别取证', 'GAP 没有豁免成 PASS', '报告快照、补证和新债没有混成同一时点'],
-    pitfalls: ['把 approved 或资产上传直接写成 released 和观察完成', '用 report_done 替代 retro_done'],
-    references: [{ label: 'run25 推演案例 §1-§6', href: '/aistudio-run25-simulation-case.md' }],
-    nodes: [
-      node('g4', '测试与独立评审', '当前 commit 与证据', 12, 28, { kicker: 'VERIFY' }),
-      node('uat', '日常 UAT', '任务/评审级判定', 39, 28, { kicker: 'DAILY UAT' }),
-      node('g5', '日常 G5 / SIM G5', '不同写面与状态机', 67, 28, { kicker: 'G5' }),
-      node('release', '真实发布与观察', '回执 · 观察 · 回滚', 67, 73, { kicker: 'RELEASE' }),
-      node('retro', 'G6 行动项', 'owner · 期限 · 验收', 39, 73, { kicker: 'RETRO' }),
-    ],
-    edges: [edge('g4', 'uat', true), edge('g4', 'g5', true), edge('uat', 'release', true), edge('g5', 'release', true, true), edge('release', 'retro', true, true)],
-  },
-  {
-    id: 'development-swarm', part: 'development', title: 'swarm-yuan 目标技能必须先于编码', short: 'swarm-yuan 技能先行', route: '/app/ide', duration: 9500, layer: 'simulation', practiceRef: '17.1',
-    summary: 'swarm-yuan 是项目技能生成器，不是编码引擎；它生成 <项目>-dev，worker 先准备目标技能，再经 ACP 把任务上下文和 cwd 交给 Ycode。Step 1-13 与日常九节点不能混用。',
-    action: '点击高亮的 swarm-yuan，沿“生成器 → 目标技能 → worker → ACP → Ycode”检查；分别确认 active、宿主发现和本次任务实际读取。',
-    proof: '能拿出当次 Skill 调用、ACP cwd、测试和审查证据；不会把生成骨架、技能被发现或门禁全绿当作本次编码已受约束或业务已正确。',
-    focus: 'swarm', target: '检查项目技能',
-    inputs: ['受信任培训仓库、冻结 spec 和带 worktree 的任务卡', '目标技能 activation、宿主发现、当次调用和 ACP 日志入口'],
-    steps: [
-      '先判断是生成技能还是使用技能；日常开发使用既有 <项目>-dev，不重新运行生成器。',
-      '核对六段目录和 strict activation report；仅生成骨架或手工改状态字不算 active。',
-      '用 --list-gates 查看实际门禁，再经批准执行带 GATE_RUNS_DIR 的 --all-full，记录真实输出。',
-      '在 ACP 编码前取得当次 Skill 调用证据，证明 worker 先准备技能，再组织任务上下文。',
-      '核对 ACP cwd 等于 Kanban worktree，并记录实际 engine_bin 和版本日志；provider=zcode 本身不算身份证据。',
-      '汇总 FAIL 和 SKIPPED；缺 active、实际加载或真实 ACP 回合任一证据时，该链记未验证。',
-    ],
-    stepGuide: [
-      { nodeId: 'swarm', flowIds: [1, 2], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'skill', flowIds: [2], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'precheck', flowIds: [7], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'worker', flowIds: [3, 6], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'spec', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'swarm', flowIds: [2], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'skill', flowIds: [3], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'precheck', flowIds: [7], deliverable: 0, check: 0, pitfall: 1 },
       { nodeId: 'acp', flowIds: [4, 5], deliverable: 1, check: 1, pitfall: 0 },
-      { nodeId: 'evidence', flowIds: [12], deliverable: 2, check: 2, pitfall: 1 },
+      { nodeId: 'evidence', flowIds: [6, 12], deliverable: 2, check: 2, pitfall: 1 },
     ],
     example: {
-      title: 'DEV-SWARM-01：技能是否真的进入编码',
-      given: '目标技能=aistudio-dev（必须重新核当前实例，不能引用历史 active 记录）；engine_bin 以当次日志实值为准。',
-      when: '执行 Skill 调用 → ACP cwd=<任务 worktree> → Ycode 实际版本 → 测试/审查，并列出 precheck FAIL/SKIPPED。',
-      then: '形成三态证据表、ACP/Ycode 回合记录和 gate-runs 判读表；缺任一硬证据就停止完成声明。',
-      code: { label: '受信任目标技能根目录下的检查', content: [
-        'bash scripts/precheck.sh --list-gates',
-        'GATE_RUNS_DIR=.swarm-yuan/gate-runs \\',
-        '  bash scripts/precheck.sh --all-full',
+      title: 'active 之后为什么不能直接宣布业务完成',
+      given: caseFact('skill-activation-boundary') + ' ' + caseFact('skill-live-boundary') + ' strict 激活只证明生成物满足契约，不会替你执行项目测试或证明宿主 hook 生效。',
+      when: '先保存 active、manifest、activation-report，再保存本回合技能读取、ACP cwd、engine_bin_source、真实测试和独立评审；缺一项就标未验证。',
+      then: '形成“生成物激活＋当次加载＋正确 cwd/引擎＋测试＋独立审查＋Kanban/审批回写”的证据闭包。',
+      code: { label: '激活与门禁核验', content: [
+        'bash scripts/generate-skill.sh --verify-completeness --strict "$SKILL_DIR"',
+        'bash scripts/generate-skill.sh --mark-active "$SKILL_DIR"',
+        'GATE_RUNS_DIR=.swarm-yuan/gate-runs bash scripts/precheck.sh --all-full',
       ].join('\n') },
     },
-    deliverables: ['active、宿主发现、实际读取三态证据表', 'ACP cwd、Ycode 身份及真实回合记录', 'gate-runs 索引和 FAIL/SKIPPED 判读表'],
-    checks: ['安装、骨架、strict active、宿主发现、实际读取分别核验', 'Step 1-13 与日常九节点没有混号', 'TEST/BUILD/MUTATION_CMD 来源受信任', '门禁通过没有替代业务测试和独立审查'],
-    pitfalls: ['每个需求重新运行生成器，或拿 draft 骨架直接编码', '把技能被发现、ACP 回复成功或 precheck 全绿当成技能已生效和业务正确'],
-    references: [{ label: 'swarm-yuan 研发指南 §3-§9', href: '/aistudio-swarm-yuan-developer-guide.md' }],
+    deliverables: ['生成器/目标技能/运行态边界图', 'strict 激活与 gate-runs 证据包', 'ACP 当次加载、引擎身份和独立复核记录'],
+    checks: ['59/204/32 没有写成 53 个交付验收门', 'SCHEMA_EPOCH 没有放松边界后的新记录 strict', 'provider=zcode 没有被当作 Ycode 分叉身份证据'],
+    pitfalls: ['把生成目录或 ok:true 当成 active 和业务正确', '把状态机通过或历史 ACP 成功当成当前任务已验证'],
+    references: [{ label: 'swarm-yuan 完整研发指南', href: '/aistudio-swarm-yuan-developer-guide.md' }],
     nodes: [
-      node('swarm', 'swarm-yuan 生成器', 'Step 1-13 · 不是编码引擎', 12, 28, { kicker: 'GENERATOR', color: '#238b5c' }),
-      node('skill', '<项目>-dev 目标技能', '六段目录 · strict active', 39, 28, { kicker: 'TARGET SKILL', color: '#238b5c' }),
-      node('worker', 'Hermes worker', '先准备技能，再组织上下文', 39, 73, { kicker: 'WORKER' }),
-      node('acp', 'ACP', '任务上下文 + cwd', 67, 73, { kicker: 'ACP' }),
-      node('ycode', 'Ycode', '实际读取技能并编码', 67, 28, { kicker: 'YCODE' }),
+      node('spec', '项目事实', '组件 · 关系 · 规范', 12, 28, { kicker: 'FACTS' }),
+      node('swarm', '生成与 strict', 'draft → active', 39, 28, { kicker: 'ACTIVATE' }),
+      node('skill', '目标技能', '知识与工作流', 67, 28, { kicker: 'SKILL' }),
+      node('precheck', '门禁与状态机', 'FAIL · SKIPPED · guard', 39, 73, { kicker: 'VERIFY' }),
+      node('acp', 'ACP 编码链', 'cwd · Skill · engine_bin', 67, 73, { kicker: 'LIVE' }),
     ],
-    edges: [edge('swarm', 'skill', true, true), edge('skill', 'worker', true, true), edge('worker', 'acp', true, true), edge('acp', 'ycode', true, true), edge('skill', 'ycode', true, true)],
+    edges: [edge('spec', 'swarm', true, true), edge('swarm', 'skill', true, true), edge('skill', 'precheck', true), edge('precheck', 'acp', true, true)],
   },
   {
-    id: 'development-delivery', part: 'development', title: 'IDE 交付留下提交、自测与评审锚', short: 'IDE 与可审查交付', route: '/app/ide', duration: 8500, layer: 'simulation', practiceRef: '17.1',
-    summary: '在正确任务、worktree 和分支中按冻结设计编码，保留真实测试输出和窄而完整的 commit；研发完成声明不替代独立评审、状态迁移及后续发布。',
-    action: '核对任务 ID、cwd、分支和 diff，运行目标测试，记录退出码和真实 commit，再交给非实现者评审。',
-    proof: '任务卡号与真实提交号双凭证齐全，测试可复跑，完成总结能指向剩余风险；批准和状态迁移分别回读，分支测试与主干回归不互相替代。',
-    focus: 'commit', target: '形成真实提交',
-    inputs: ['已冻结 spec/AC、正确任务卡和隔离 worktree', '可运行的项目测试配置及一名非实现者评审人'],
-    steps: [
-      '从任务卡进入 IDE，核对任务 ID、cwd、分支、RACI 和会话，确认没有串卡。',
-      '从最新主干建立 feature 分支并记录基线；测试和实现留在同一分支。',
-      '先写或更新测试，再按复用阶梯实现；发现设计不成立时退回 G2，不在代码中扩范围。',
-      '在目标 commit 运行测试与适用门禁，保存命令、退出码和关键输出；再执行 git diff --check。',
-      '检查 diff 只含任务变更，形成真实 commit 和完成总结，由非实现者绑定当前 commit 评审。',
-      '批准后按授权合入，另在 main 执行全量回归；需要 DoD receipt 时提交证据路径、sha256 和 TAP/JUnit 计数。',
-    ],
-    stepGuide: [
-      { nodeId: 'acp', flowIds: [4], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'commit', flowIds: [9], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'test', flowIds: [8], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'test', flowIds: [8], deliverable: 0, check: 0, pitfall: 1 },
-      { nodeId: 'review', flowIds: [9, 10], deliverable: 1, check: 1, pitfall: 0 },
-      { nodeId: 'main', flowIds: [11, 12], deliverable: 2, check: 2, pitfall: 1 },
-    ],
-    example: {
-      title: '订单导出取消：从实现到证据',
-      given: '交付对象为 AC-4；期望取消后无新增 CSV、无成功下载凭证、终态 cancelled。',
-      when: '运行取消路径测试并保存输出，再提交真实 commit 和完成总结，交给非实现者评审。',
-      then: '形成 commit、可审查 diff、自测、review-record；receipt 只重算证据，不替研发复跑测试。',
-      code: { label: '提交前核对', content: 'git rev-parse HEAD\ngit diff --check\nbash scripts/precheck.sh --all' },
-    },
-    deliverables: ['真实 commit 和可审查 diff', '目标 commit 上的自测输出', '非实现者 review-record 与完成总结', '适用时的 receipt、merge commit 和 main 回归记录'],
-    checks: ['测试实跑对象与提交对象一致且不是零用例空跑', '评审 actor 不同于实现者，批准和状态迁移分别回读', '分支测试与 main 回归都完成', '推送与合入有独立授权'],
-    pitfalls: ['用测试文件存在或 Agent 自述代替真实输出', '使用 --no-verify 绕过守门，或派发后改 AC 不恢复原契约'],
-    references: [{ label: '六团队手册 §5、§17.1', href: '/aistudio-training-and-user-guide.md' }],
-    nodes: [
-      node('ide', 'IDE / worktree', '任务 · 分支 · diff', 12, 28, { kicker: 'IDE' }),
-      node('test', '真实自测', '命令 · 退出码 · 输出', 39, 28, { kicker: 'TEST' }),
-      node('commit', '真实 commit', '窄而完整 · 可回滚', 67, 28, { kicker: 'COMMIT' }),
-      node('review', '独立审查', '非实现者 · review-record', 39, 73, { kicker: 'REVIEW' }),
-      node('main', 'main 合入与回归', '分支全绿后再验主干', 67, 73, { kicker: 'MAIN' }),
-    ],
-    edges: [edge('ide', 'test', true, true), edge('test', 'commit', true, true), edge('commit', 'review', true, true), edge('review', 'main', true, true)],
-  },
-  {
-    id: 'testing-g4-review', part: 'testing', title: 'G4 独立测试与独立评审', short: 'G4 与独立评审', route: '/app/stage/build?tab=quality', duration: 8500, layer: 'simulation', practiceRef: '17.4',
-    summary: '研发自测、G4 独立测试、独立代码评审是三件事；测试者基于当前 commit 独立执行 MAET 路径，缺陷完成“报—修—验”，评审另核设计、权限和回滚。',
-    action: '核对实跑 commit 与基线同祖，执行正常、替代、异常和终止路径，建立缺陷闭环，再核对评审 actor 与实现者不同。',
-    proof: '测试报告、缺陷终态和当前 commit 可反查；测试者/评审者与写码者不同，系统存在 verdict 或测试文件存在不等于独立通过。',
-    focus: 'g4', target: '执行独立验证',
-    inputs: ['发布候选 commit、冻结 AC/设计和研发自测材料', '与写码者不同的测试者和代码评审人'],
-    steps: [
-      '核对实跑 commit 与发布基线同祖，记录测试者、评审者和实现者身份。',
-      '按 AC 独立执行 Main、Alternative、Exception、Termination，保留实际输出。',
-      '对每个缺陷建立“报→修→验”，修复后记录新 commit 并独立复验，原失败证据继续保留。',
-      '评审人另查设计符合性、非目标、权限、数据、安全和回滚，不以测试绿替代代码审查。',
-      '作批准或 request_changes；修复后复验，并分别回读审批历史和任务状态。',
-    ],
-    stepGuide: [
-      { nodeId: 'commit', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'g4', flowIds: [1], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'defect', flowIds: [2], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'review', flowIds: [3], deliverable: 0, check: 0, pitfall: 1 },
-      { nodeId: 'review', flowIds: [2, 3], deliverable: 1, check: 1, pitfall: 0 },
-    ],
-    example: {
-      title: 'D-01：取消后仍生成下载凭证',
-      given: 'Termination 路径：取消订单导出后仍生成 CSV 并返回下载凭证。',
-      when: '报=保存原 commit、请求和文件；修=记录修复 commit；验=非写码者在新 commit 重跑取消路径。',
-      then: '确认无文件、无凭证、终态 cancelled；G4 报告与独立评审 actor 都可反查。',
-    },
-    deliverables: ['绑定当前 commit 的 G4 MAET 测试报告', '缺陷报修验闭环记录', '独立代码评审结论及发现项处置'],
-    checks: ['研发自测、G4 和独立代码评审没有互替', 'verdict 绑定当前 commit 且 actor 不是实现者', 'IDE 本地标记、聊天 verdict 或 director-proxy 没有算作真人批准'],
-    pitfalls: ['研发自己重跑一次就同时填写 G4 和独立评审通过', '修复后只口头确认，不在新 commit 复测原缺陷'],
-    references: [{ label: '六团队手册 §6-§7', href: '/aistudio-training-and-user-guide.md' }],
-    nodes: [
-      node('commit', '当前 commit', '与发布基线同祖', 12, 28, { kicker: 'BASELINE' }),
-      node('g4', 'G4 独立测试', 'MAET · 报修验闭环', 39, 28, { kicker: 'G4' }),
-      node('defect', '缺陷闭环', '报 → 修 → 验', 39, 73, { kicker: 'DEFECT' }),
-      node('review', '独立代码评审', 'actor 不同于实现者', 67, 73, { kicker: 'REVIEW' }),
-    ],
-    edges: [edge('commit', 'g4', true, true), edge('g4', 'defect', true, true), edge('defect', 'review', true, true)],
-  },
-  {
-    id: 'testing-eval', part: 'testing', title: 'Eval 同卷复评与 G4-E 判读', short: 'Eval 与同卷复评', route: '/app/eval', duration: 8800, layer: 'simulation', practiceRef: '17.4',
-    summary: 'Eval 是对既有会话或显式证据的离线判分，不是在线重跑 Agent；失败处置需要同卷同版的新证据，G4-E 的 GAP 和技能评估的 CONDITIONAL 都不是 PASS。',
-    action: '保留失败 run，建立处置单，提交 fresh explicit 证据并同卷复评，用 A/B 检查改善和回归；同一页面的“技能评估”检查 spec 第 19 节。',
-    proof: '原失败证据仍保留，原证据复现没有用于关闭处置单；k<2 不作门禁统计，unknown/no_data 不算通过，最近复评通过且无红线才关闭。',
-    focus: 'rerun', target: '同卷复评',
-    inputs: ['固定版本评测集、Rubric 和原始失败 run', '修复后的 fresh explicit 证据及失败处置单'],
-    steps: [
-      '在 /app/eval 选择固定评测集，核对题目、期望行为和 Rubric；明确这是离线判分，不是在线重跑 Agent。',
-      '使用原始失败证据运行，保留 run ID、失败样本、unknown 和红线。',
-      '为失败样本建处置单；k<2 时只作功能练习，不作门禁统计结论。',
-      '修复后提供新证据，用同一评测集、同一版本复评；不得仅用原证据复现关闭处置单。',
-      '用 A/B 同时检查改善和回归，最近复评通过且无红线才关闭。',
-      '分别填写 G4-E 与技能评估：G4-E 按 PASS/GAP/FAIL；技能评估检查 spec 第 19 节，unknown/CONDITIONAL 不叫 PASS。',
-    ],
-    stepGuide: [
-      { nodeId: 'failed', flowIds: [4], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'failed', flowIds: [4, 10], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'remediation', flowIds: [4], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'rerun', flowIds: [5], deliverable: 0, check: 0, pitfall: 1 },
-      { nodeId: 'ab', flowIds: [6, 9], deliverable: 1, check: 1, pitfall: 0 },
-      { nodeId: 'skillgrade', flowIds: [7, 8, 10], deliverable: 2, check: 2, pitfall: 1 },
-    ],
-    example: {
-      title: '最小 S0 评测集：从失败到复评',
-      given: '原证据“已经修复”不命中 OK，建立处置单；新证据“OK；新测试报告=<新证据锚>”。',
-      when: '使用下方 Rubric 原样建集；每题准备 2 个样本，以同卷同版复评并做 A/B。',
-      then: '保留原失败 run 和复评 run；关闭依据是新证据，GAP、CONDITIONAL、unknown 均未写成 PASS。',
-      code: { label: 'S0 评测任务 JSON', content: '[{"id":"t1","problem":"验证修复标记","expectedBehavior":"证据包含 OK","rubric":[{"id":"a1","text":"回复含 OK","expect":"yes","kind":"result","s0":{"kind":"regex","pattern":"OK"}}]}]' },
-    },
-    deliverables: ['原失败 run 与同卷复评 run 的 ID 和报告', '失败处置单和 A/B 改善/回归记录', 'G4-E 三态结论及技能评估独立结论'],
-    checks: ['关闭依据是新证据，不是原失败证据重放', 'GAP、CONDITIONAL、unknown、no_data 均未写成 PASS', '离线 Eval 没有伪造 QPS、P99、TTFT 或生产 SLA', '执行型红队载荷只在已接入沙箱中验证'],
-    pitfalls: ['换评测集或换版本后仍宣称同卷复评通过', '把 S0 正则通过当成业务缺陷已根治'],
-    references: [{ label: '六团队手册 §6.4-6.6', href: '/aistudio-training-and-user-guide.md' }],
-    nodes: [
-      node('failed', '原始失败 run', '历史证据保留', 12, 28, { kicker: 'FAILED RUN' }),
-      node('remediation', '处置单', '失败样本登记', 39, 28, { kicker: 'REMEDIATION' }),
-      node('rerun', '同卷复评', 'fresh explicit 新证据', 67, 28, { kicker: 'RERUN' }),
-      node('ab', 'A/B 对比', '改善与回归同时看', 39, 73, { kicker: 'COMPARE' }),
-      node('g4e', 'G4-E / 技能评估', 'GAP / CONDITIONAL ≠ PASS', 67, 73, { kicker: 'VERDICT' }),
-    ],
-    edges: [edge('failed', 'remediation', true, true), edge('remediation', 'rerun', true, true), edge('rerun', 'ab', true, true), edge('rerun', 'g4e', true, true)],
-  },
-  {
-    id: 'operations-readiness', part: 'operations', title: '部署 readiness 核对真实运行面', short: '服务与 readiness', route: '127.0.0.1 · localhost', duration: 8500, layer: 'simulation', practiceRef: '17.5',
+    id: 'operations-readiness',
+    phase: 'rules', navShort: '运行就绪', caseEvidenceIds: ['runtime-log-gap', 'report-regen'],
+    handoff: { consumes: [{ scene: 'development-swarm-yuan-tech', artifact: 'skill-supply' }], produces: 'readiness', next: 'project-dispatch' },
+ part: 'operations', title: '部署 readiness 核对真实运行面', short: '服务与 readiness', route: '127.0.0.1 · localhost', duration: 8500, layer: 'simulation', practiceRef: '17.5',
     summary: '分别核对 8647 Koa、8649 Web、8650 gateway、3030/ws Ycode，以及实际 cwd、绑定地址、GOVERNANCE_REPO、SIM 独立根和状态目录。',
     action: '沿服务拓扑检查监听和各探针，区分 Web /health/ready、custom 路由、gateway basic health 与 Ycode online:true。',
     proof: 'readiness 记录不含秘密原值，每项健康结论有对应探针或日志；没有把 Web shell ready 当成 Matrix、模型、worker、Ycode 和治理仓全部健康。',
@@ -632,10 +608,10 @@ const SCENES = [
       { nodeId: 'readiness', flowIds: [4, 5], deliverable: 2, check: 2, pitfall: 1 },
     ],
     example: {
-      title: 'Ycode HTTP 200，但 online:false',
-      given: '端点返回 HTTP 200，但 online:false；另一反例 orchestrator available:true。',
-      when: '判定 Ycode WS 未打开，不发起 ACP 培训任务；orchestrator 只证明路由、策略版本和 DB 可读。',
-      then: '形成端口、PID、cwd、绑定和状态目录清单，以及已验证/失败/未验证/必须处置四栏台账。',
+      title: 'run28 有报告，不代表运行与采集链健康',
+      given: caseFact('runtime-log-gap') + ' ' + caseFact('report-regen'),
+      when: '分别核对端口、cwd、绑定、状态目录、探针与采集日志；过程日志缺口和报告重生成分别登记，不把 HTTP 200 写成全链健康。',
+      then: '形成 readiness 包：分服务健康、SIM 隔离、配置来源、采集缺口和开课前必须处置项。',
       code: { label: '分服务探针示例', content: [
         'curl -fsS http://127.0.0.1:8647/health/ready',
         'curl -sS -o /dev/null -w "%{http_code}\\n" \\',
@@ -659,7 +635,327 @@ const SCENES = [
     edges: [edge('web', 'koa', true), edge('koa', 'gateway', true, true), edge('gateway', 'ycode', true, true), edge('readiness', 'koa', true), edge('readiness', 'gateway', true), edge('readiness', 'ycode', true, true)],
   },
   {
-    id: 'operations-release', part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500, layer: 'simulation', practiceRef: '17.5',
+    id: 'project-dispatch',
+    phase: 'execution', navShort: '派工对账', caseEvidenceIds: ['dispatch-autonomy', 'dispatch-claim'],
+    handoff: { consumes: [{ scene: 'operations-readiness', artifact: 'readiness' }, { scene: 'product-spec-design', artifact: 'spec-review' }], produces: 'dispatch-recon', next: 'development-swarm' },
+ part: 'project', title: '开工派工先核 RACI、依赖与容量', short: '派工与真实认领', route: '/app/board', duration: 8500, layer: 'simulation', practiceRef: '17.2',
+    summary: '先在 /app/projects 核对 active/paused/completed，再分类看板任务并核对 RACI、工作区和容量；/app/records 只读复核 coding-run/delegate，routed、催办和记录存在都不是 worker 已执行的全部证据。',
+    action: '选择一张 ready 卡，模拟一次 dispatcher；随后核对 claimed、run、worker 日志，并把催办的路由 decision 与真实评论/房间通知分开。',
+    proof: '能解释“谁能领、为何能领、何时能领”；没有把 routed、“催办已路由”或手改 running 当作真实执行，blocked 必须先解除真实原因。',
+    focus: 'dispatcher', target: '触发 dispatcher',
+    inputs: ['一张 ready 和一张 blocked 培训卡，均有 AC、负责人和任务 ID', 'board/home 围栏、实际并发配置及任务评论或培训房间'],
+    steps: [
+      '在 /app/projects 核对 active/paused/completed：暂停只拦机器派单，不停在飞 worker；completed 当前无 reopen。再到 /app/board 分类 ready/running/blocked/review。',
+      '对 ready 卡核对结构化 R/A、已完成 parent、worktree、DoD 和 assignee 完整名称。',
+      '核对 board.json profiles/profile_scope、home 级 dispatch_profiles 与真实容量；未配置 board_concurrency 时按默认每板 1 理解。',
+      '只触发一次 dispatcher，分别记录 routed、claimed、running run 和 worker 日志；在 /app/records 只读复核 coding-run/delegate，中央索引保留 14 天，缺源写 unknown。',
+      '对 blocked 卡保存催办 decision，再经任务评论或真实房间取得接收回复；补齐真实输入后 unblock 并回读实际阶段。',
+    ],
+    stepGuide: [
+      { nodeId: 'task', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'task', flowIds: [1, 2], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'fence', flowIds: [2], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'dispatcher', flowIds: [3], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'blocked', flowIds: [4, 5], deliverable: 1, check: 1, pitfall: 0 },
+    ],
+    example: {
+      title: 'run28 组织自主性：14／48／4 分别代表什么',
+      given: caseFact('dispatch-autonomy'),
+      when: '从 self-dispatch.jsonl 核对 14 条自主派发，再与脚本预写 48、卡代操作 4 分账；最后回读 Kanban claimed/run 和 worker 日志。',
+      then: '形成 dispatch-recon：RACI、依赖、容量、真实 claim/run、14/48/4 对账和 blocked 解除证据。',
+    },
+    deliverables: ['ready 派工核对表及真实 claim/run 证据', '路由、通知、接收证据三栏记录', 'blocked 原因解除和阶段恢复记录'],
+    checks: ['routed 没有被登记成 worker 已启动', '项目完成遇非 done/archived 任务返回 422，override 必须有 reason 并留痕', '执行记录未被当成重执行入口或完整 PTY 回放', '通知有真实接收证据而非本地提示', '未手改 running、未删除依赖或围栏', 'reclaim/reassign 只在日志确认后使用'],
+    pitfalls: ['反复全板 Nudge 或批量 unblock 代替查明原因', '把“催办已路由”当消息送达，或把执行记录存在当成完整执行链'],
+    references: [{ label: '六团队手册 §8、§17.2', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('task', '任务契约', 'RACI · parent · 工作区', 12, 28, { kicker: 'CONTRACT' }),
+      node('fence', '围栏与容量', 'board/home · 单板/profile', 39, 28, { kicker: 'CAPACITY' }),
+      node('dispatcher', 'dispatcher', '只调度，不是执行者', 39, 73, { kicker: 'DISPATCH' }),
+      node('worker', 'claimed / running', '真实认领与工作信号', 67, 73, { kicker: 'CLAIMED' }),
+      node('blocked', 'blocked', '先补真实输入', 67, 28, { kicker: 'BLOCKED' }),
+    ],
+    edges: [edge('task', 'fence', true, true), edge('fence', 'dispatcher', true, true), edge('dispatcher', 'worker', true, true), edge('blocked', 'task', true)],
+  },
+  {
+    id: 'development-swarm',
+    phase: 'execution', navShort: '技能装载', caseEvidenceIds: ['skill-live-boundary'],
+    handoff: { consumes: [{ scene: 'project-dispatch', artifact: 'dispatch-recon' }, { scene: 'development-swarm-yuan-tech', artifact: 'skill-supply' }], produces: 'skill-live', next: 'development-delivery' },
+ part: 'development', title: 'swarm-yuan 目标技能必须先于编码', short: 'swarm-yuan 技能先行', route: '/app/ide', duration: 9500, layer: 'simulation', practiceRef: '17.1',
+    summary: 'swarm-yuan 是项目技能生成器，不是编码引擎；它生成 <项目>-dev，worker 先准备目标技能，再经 ACP 把任务上下文和 cwd 交给 Ycode。Step 1-13 与日常九节点不能混用。',
+    action: '点击高亮的 swarm-yuan，沿“生成器 → 目标技能 → worker → ACP → Ycode”检查；分别确认 active、宿主发现和本次任务实际读取。',
+    proof: '能拿出当次 Skill 调用、ACP cwd、测试和审查证据；不会把生成骨架、技能被发现或门禁全绿当作本次编码已受约束或业务已正确。',
+    focus: 'swarm', target: '检查项目技能',
+    inputs: ['受信任培训仓库、冻结 spec 和带 worktree 的任务卡', '目标技能 activation、宿主发现、当次调用和 ACP 日志入口'],
+    steps: [
+      '先判断是生成技能还是使用技能；日常开发使用既有 <项目>-dev，不重新运行生成器。',
+      '核对六段目录和 strict activation report；仅生成骨架或手工改状态字不算 active。',
+      '用 --list-gates 查看实际门禁，再经批准执行带 GATE_RUNS_DIR 的 --all-full，记录真实输出。',
+      '在 ACP 编码前取得当次 Skill 调用证据，证明 worker 先准备技能，再组织任务上下文。',
+      '核对 ACP cwd 等于 Kanban worktree，并记录实际 engine_bin 和版本日志；provider=zcode 本身不算身份证据。',
+      '汇总 FAIL 和 SKIPPED；缺 active、实际加载或真实 ACP 回合任一证据时，该链记未验证。',
+    ],
+    stepGuide: [
+      { nodeId: 'swarm', flowIds: [1, 2], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'skill', flowIds: [2], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'precheck', flowIds: [7], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'worker', flowIds: [3, 6], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'acp', flowIds: [4, 5], deliverable: 1, check: 1, pitfall: 0 },
+      { nodeId: 'evidence', flowIds: [12], deliverable: 2, check: 2, pitfall: 1 },
+    ],
+    example: {
+      title: 'run28 任务级技能装载：供给不等于本回合已读',
+      given: caseFact('skill-activation-boundary') + ' ' + caseFact('skill-live-boundary'),
+      when: '取得当次 Skill 调用、ACP cwd、engine_bin_source/engine_bin、真实回合和 gate-runs；再检查实际测试与 worker 复核。',
+      then: '形成 skill-live 包：当次技能读取、正确 cwd、引擎身份、真实回合与门禁判读；缺项标 unknown，不把供给写成已加载。',
+      code: { label: '受信任目标技能根目录下的检查', content: [
+        'bash scripts/precheck.sh --list-gates',
+        'GATE_RUNS_DIR=.swarm-yuan/gate-runs \\',
+        '  bash scripts/precheck.sh --all-full',
+      ].join('\n') },
+    },
+    deliverables: ['active、宿主发现、实际读取三态证据表', 'ACP cwd、Ycode 身份及真实回合记录', 'gate-runs 索引和 FAIL/SKIPPED 判读表'],
+    checks: ['安装、骨架、strict active、宿主发现、实际读取分别核验', 'Step 1-13 与日常九节点没有混号', 'TEST/BUILD/MUTATION_CMD 来源受信任', '门禁通过没有替代业务测试和独立审查'],
+    pitfalls: ['每个需求重新运行生成器，或拿 draft 骨架直接编码', '把技能被发现、ACP 回复成功或 precheck 全绿当成技能已生效和业务正确'],
+    references: [{ label: 'swarm-yuan 研发指南 §3-§9', href: '/aistudio-swarm-yuan-developer-guide.md' }],
+    nodes: [
+      node('swarm', 'swarm-yuan 生成器', 'Step 1-13 · 不是编码引擎', 12, 28, { kicker: 'GENERATOR', color: '#238b5c' }),
+      node('skill', '<项目>-dev 目标技能', '六段目录 · strict active', 39, 28, { kicker: 'TARGET SKILL', color: '#238b5c' }),
+      node('worker', 'Hermes worker', '先准备技能，再组织上下文', 39, 73, { kicker: 'WORKER' }),
+      node('acp', 'ACP', '任务上下文 + cwd', 67, 73, { kicker: 'ACP' }),
+      node('ycode', 'Ycode', '实际读取技能并编码', 67, 28, { kicker: 'YCODE' }),
+    ],
+    edges: [edge('swarm', 'skill', true, true), edge('skill', 'worker', true, true), edge('worker', 'acp', true, true), edge('acp', 'ycode', true, true), edge('skill', 'ycode', true, true)],
+  },
+  {
+    id: 'development-delivery',
+    phase: 'execution', navShort: '真实提交', caseEvidenceIds: ['commit-tests'],
+    handoff: { consumes: [{ scene: 'development-swarm', artifact: 'skill-live' }, { scene: 'product-spec-design', artifact: 'spec-review' }], produces: 'commit-pack', next: 'testing-g4-review' },
+ part: 'development', title: 'IDE 交付留下提交、自测与评审锚', short: 'IDE 与可审查交付', route: '/app/ide', duration: 8500, layer: 'simulation', practiceRef: '17.1',
+    summary: '在正确任务、worktree 和分支中按冻结设计编码，保留真实测试输出和窄而完整的 commit；研发完成声明不替代独立评审、状态迁移及后续发布。',
+    action: '核对任务 ID、cwd、分支和 diff，运行目标测试，记录退出码和真实 commit，再交给非实现者评审。',
+    proof: '任务卡号与真实提交号双凭证齐全，测试可复跑，完成总结能指向剩余风险；批准和状态迁移分别回读，分支测试与主干回归不互相替代。',
+    focus: 'commit', target: '形成真实提交',
+    inputs: ['已冻结 spec/AC、正确任务卡和隔离 worktree', '可运行的项目测试配置及一名非实现者评审人'],
+    steps: [
+      '从任务卡进入 IDE，核对任务 ID、cwd、分支、RACI 和会话，确认没有串卡。',
+      '从最新主干建立 feature 分支并记录基线；测试和实现留在同一分支。',
+      '先写或更新测试，再按复用阶梯实现；发现设计不成立时退回 G2，不在代码中扩范围。',
+      '在目标 commit 运行测试与适用门禁，保存命令、退出码和关键输出；再执行 git diff --check。',
+      '检查 diff 只含任务变更，形成真实 commit 和完成总结，由非实现者绑定当前 commit 评审。',
+      '批准后按授权合入，另在 main 执行全量回归；需要 DoD receipt 时提交证据路径、sha256 和 TAP/JUnit 计数。',
+    ],
+    stepGuide: [
+      { nodeId: 'acp', flowIds: [4], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'commit', flowIds: [9], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'test', flowIds: [8], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'test', flowIds: [8], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'review', flowIds: [9, 10], deliverable: 1, check: 1, pitfall: 0 },
+      { nodeId: 'main', flowIds: [11, 12], deliverable: 2, check: 2, pitfall: 1 },
+    ],
+    example: {
+      title: 'run28 提交包：汇总用例数不能替代当前 commit',
+      given: caseFact('commit-tests'),
+      when: '按任务 ID、worktree、分支和当前 commit 运行测试，保存退出码与原始输出，再由非实现者绑定同一 commit 评审。',
+      then: '形成 commit-pack：窄 diff、自测证据、评审请求和剩余风险；不把报告汇总数写成当前提交已验证。',
+      code: { label: '提交前核对', content: 'git rev-parse HEAD\ngit diff --check\nbash scripts/precheck.sh --all' },
+    },
+    deliverables: ['真实 commit 和可审查 diff', '目标 commit 上的自测输出', '非实现者 review-record 与完成总结', '适用时的 receipt、merge commit 和 main 回归记录'],
+    checks: ['测试实跑对象与提交对象一致且不是零用例空跑', '评审 actor 不同于实现者，批准和状态迁移分别回读', '分支测试与 main 回归都完成', '推送与合入有独立授权'],
+    pitfalls: ['用测试文件存在或 Agent 自述代替真实输出', '使用 --no-verify 绕过守门，或派发后改 AC 不恢复原契约'],
+    references: [{ label: '六团队手册 §5、§17.1', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('ide', 'IDE / worktree', '任务 · 分支 · diff', 12, 28, { kicker: 'IDE' }),
+      node('test', '真实自测', '命令 · 退出码 · 输出', 39, 28, { kicker: 'TEST' }),
+      node('commit', '真实 commit', '窄而完整 · 可回滚', 67, 28, { kicker: 'COMMIT' }),
+      node('review', '独立审查', '非实现者 · review-record', 39, 73, { kicker: 'REVIEW' }),
+      node('main', 'main 合入与回归', '分支全绿后再验主干', 67, 73, { kicker: 'MAIN' }),
+    ],
+    edges: [edge('ide', 'test', true, true), edge('test', 'commit', true, true), edge('commit', 'review', true, true), edge('review', 'main', true, true)],
+  },
+  {
+    id: 'testing-g4-review',
+    phase: 'execution', navShort: '独立验证', caseEvidenceIds: ['g4-defects', 'g4-evidence'],
+    handoff: { consumes: [{ scene: 'development-delivery', artifact: 'commit-pack' }, { scene: 'product-spec-design', artifact: 'spec-review' }], produces: 'g4-pack', next: 'testing-eval' },
+ part: 'testing', title: 'G4 独立测试与独立评审', short: 'G4 与独立评审', route: '/app/stage/build?tab=quality', duration: 8500, layer: 'simulation', practiceRef: '17.4',
+    summary: '研发自测、G4 独立测试、独立代码评审是三件事；测试者基于当前 commit 独立执行 MAET 路径，缺陷完成“报—修—验”，评审另核设计、权限和回滚。',
+    action: '核对实跑 commit 与基线同祖，执行正常、替代、异常和终止路径，建立缺陷闭环，再核对评审 actor 与实现者不同。',
+    proof: '测试报告、缺陷终态和当前 commit 可反查；测试者/评审者与写码者不同，系统存在 verdict 或测试文件存在不等于独立通过。',
+    focus: 'g4', target: '执行独立验证',
+    inputs: ['发布候选 commit、冻结 AC/设计和研发自测材料', '与写码者不同的测试者和代码评审人'],
+    steps: [
+      '核对实跑 commit 与发布基线同祖，记录测试者、评审者和实现者身份。',
+      '按 AC 独立执行 Main、Alternative、Exception、Termination，保留实际输出。',
+      '对每个缺陷建立“报→修→验”，修复后记录新 commit 并独立复验，原失败证据继续保留。',
+      '评审人另查设计符合性、非目标、权限、数据、安全和回滚，不以测试绿替代代码审查。',
+      '作批准或 request_changes；修复后复验，并分别回读审批历史和任务状态。',
+    ],
+    stepGuide: [
+      { nodeId: 'commit', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'g4', flowIds: [1], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'defect', flowIds: [2], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'review', flowIds: [3], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'review', flowIds: [2, 3], deliverable: 1, check: 1, pitfall: 0 },
+    ],
+    example: {
+      title: 'run28 G4：打回、修复与复验必须分开',
+      given: caseFact('g4-defects') + ' ' + caseFact('g4-evidence'),
+      when: '按 AC 独立执行 MAET，保留原失败；修复后记录新 commit，由非实现者复验，并把 G4-E 与独立评审分别判读。',
+      then: '形成 g4-pack：独立测试报告、原失败证据、修复新 commit、独立复验与评审结论。',
+    },
+    deliverables: ['绑定当前 commit 的 G4 MAET 测试报告', '缺陷报修验闭环记录', '独立代码评审结论及发现项处置'],
+    checks: ['研发自测、G4 和独立代码评审没有互替', 'verdict 绑定当前 commit 且 actor 不是实现者', 'IDE 本地标记、聊天 verdict 或 director-proxy 没有算作真人批准'],
+    pitfalls: ['研发自己重跑一次就同时填写 G4 和独立评审通过', '修复后只口头确认，不在新 commit 复测原缺陷'],
+    references: [{ label: '六团队手册 §6-§7', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('commit', '当前 commit', '与发布基线同祖', 12, 28, { kicker: 'BASELINE' }),
+      node('g4', 'G4 独立测试', 'MAET · 报修验闭环', 39, 28, { kicker: 'G4' }),
+      node('defect', '缺陷闭环', '报 → 修 → 验', 39, 73, { kicker: 'DEFECT' }),
+      node('review', '独立代码评审', 'actor 不同于实现者', 67, 73, { kicker: 'REVIEW' }),
+    ],
+    edges: [edge('commit', 'g4', true, true), edge('g4', 'defect', true, true), edge('defect', 'review', true, true)],
+  },
+  {
+    id: 'testing-eval',
+    phase: 'execution', navShort: '复评校准', caseEvidenceIds: ['golden-observation', 'g4-eval-gap'],
+    handoff: { consumes: [{ scene: 'testing-g4-review', artifact: 'g4-pack' }], produces: 'eval-pack', next: 'audit-posture-approval' },
+ part: 'testing', title: 'Eval 同卷复评与 G4-E 判读', short: 'Eval 与同卷复评', route: '/app/eval', duration: 8800, layer: 'simulation', practiceRef: '17.4',
+    summary: 'Eval 是对既有会话或显式证据的离线判分，不是在线重跑 Agent；失败处置需要同卷同版的新证据，G4-E 的 GAP 和技能评估的 CONDITIONAL 都不是 PASS。',
+    action: '保留失败 run，建立处置单，提交 fresh explicit 证据并同卷复评，用 A/B 检查改善和回归；同一页面的“技能评估”检查 spec 第 19 节。',
+    proof: '原失败证据仍保留，原证据复现没有用于关闭处置单；k<2 不作门禁统计，unknown/no_data 不算通过，最近复评通过且无红线才关闭。',
+    focus: 'rerun', target: '同卷复评',
+    inputs: ['固定版本评测集、Rubric 和原始失败 run', '修复后的 fresh explicit 证据及失败处置单'],
+    steps: [
+      '在 /app/eval 选择固定评测集，核对题目、期望行为和 Rubric；明确这是离线判分，不是在线重跑 Agent。',
+      '使用原始失败证据运行，保留 run ID、失败样本、unknown 和红线。',
+      '为失败样本建处置单；k<2 时只作功能练习，不作门禁统计结论。',
+      '修复后提供新证据，用同一评测集、同一版本复评；不得仅用原证据复现关闭处置单。',
+      '用 A/B 同时检查改善和回归，最近复评通过且无红线才关闭。',
+      '分别填写 G4-E 与技能评估：G4-E 按 PASS/GAP/FAIL；故障种子只用于建集与判分，真实模型行为未实跑就写 unknown，CONDITIONAL 不叫 PASS。',
+    ],
+    stepGuide: [
+      { nodeId: 'failed', flowIds: [4], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'failed', flowIds: [4, 10], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'remediation', flowIds: [4], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'rerun', flowIds: [5], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'ab', flowIds: [6, 9], deliverable: 1, check: 1, pitfall: 0 },
+      { nodeId: 'skillgrade', flowIds: [7, 8, 10], deliverable: 2, check: 2, pitfall: 1 },
+    ],
+    example: {
+      title: 'run28 黄金集：14 例误杀为什么不能叫通过',
+      given: caseFact('golden-observation') + ' ' + caseFact('g4-eval-gap'),
+      when: '读取 golden-gate.json，固定 30 例与原始失败 run，登记 14 例误杀；修复后用同卷同版新证据复评并做 A/B，观察态不冒充通过。',
+      then: '形成 eval-pack：原 run、同卷复评、A/B 改善与回归、G4-E/技能评估三态和误杀处置。',
+      code: { label: 'S0 评测任务 JSON', content: '[{"id":"t1","problem":"验证修复标记","expectedBehavior":"证据包含 OK","rubric":[{"id":"a1","text":"回复含 OK","expect":"yes","kind":"result","s0":{"kind":"regex","pattern":"OK"}}]}]' },
+    },
+    deliverables: ['原失败 run 与同卷复评 run 的 ID 和报告', '失败处置单和 A/B 改善/回归记录', 'G4-E 三态结论及技能评估独立结论'],
+    checks: ['关闭依据是新证据，不是原失败证据重放', 'GAP、CONDITIONAL、unknown、no_data 均未写成 PASS', '离线 Eval 没有伪造 QPS、P99、TTFT 或生产 SLA', '执行型红队载荷只在已接入沙箱中验证'],
+    pitfalls: ['换评测集或换版本后仍宣称同卷复评通过', '把 S0 正则通过当成业务缺陷已根治'],
+    references: [{ label: '六团队手册 §6.4-6.6', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('failed', '原始失败 run', '历史证据保留', 12, 28, { kicker: 'FAILED RUN' }),
+      node('remediation', '处置单', '失败样本登记', 39, 28, { kicker: 'REMEDIATION' }),
+      node('rerun', '同卷复评', 'fresh explicit 新证据', 67, 28, { kicker: 'RERUN' }),
+      node('ab', 'A/B 对比', '改善与回归同时看', 39, 73, { kicker: 'COMPARE' }),
+      node('g4e', 'G4-E / 技能评估', 'GAP / CONDITIONAL ≠ PASS', 67, 73, { kicker: 'VERDICT' }),
+    ],
+    edges: [edge('failed', 'remediation', true, true), edge('remediation', 'rerun', true, true), edge('rerun', 'ab', true, true), edge('rerun', 'g4e', true, true)],
+  },
+  {
+    id: 'audit-posture-approval',
+    phase: 'governance', navShort: '有效批准', caseEvidenceIds: ['director-proxy', 'approval-strength'],
+    handoff: { consumes: [{ scene: 'testing-g4-review', artifact: 'g4-pack' }, { scene: 'testing-eval', artifact: 'eval-pack' }], produces: 'approval-pack', next: 'project-release-retro' },
+ part: 'audit', title: '安全姿态、HumanGate 与双人会签', short: '姿态与人工批准', route: '/app/stage/govern?tab=posture', duration: 8800, layer: 'simulation', practiceRef: '17.6',
+    summary: '审计读取实际生效配置而非 expectations 文件；工具执法、strict、HumanGate、组织 RACI 和双人会签是不同判断面，审计从需求和设计阶段就参与。',
+    action: '核对实际角色与开关，回查 HumanGate 的 requestedBy、decidedBy、deciderMode、strength 和有效期，再核验一条 admin 行双人会签。',
+    proof: '需要严格异人时已显式配置并证明主体不同；director-proxy、本地标记和聊天 verdict 不计真人批准，紧急通道没有被当作常规绕过方式。',
+    focus: 'human', target: '核验真实裁决',
+    inputs: ['脱敏培训变更、当前 commit、角色和实际配置快照', '一条低风险 HumanGate 或关键 admin 会签记录及两名治理人员'],
+    steps: [
+      '确认审计范围、版本和攻击面，区分 super_admin/admin、组织 RACI、团队领导和 Matrix 权限。',
+      '从实际进程读取 HERMES_TOOL_ENFORCE、strict、HumanGate 两键和 sandbox；另核 contractGuardHook 已进入工具瀑布，expectations 只作期望对照。',
+      '声明 inputSchema 的非法入参即使未开 HERMES_TOOL_ENFORCE 也 fail-closed；契约未声明或执法器异常 fail-soft，timeoutMs 尚未接执行中止。',
+      '回查 HumanGate 源 store 的 requestedBy、decidedBy、deciderMode、strength 和有效期；严格异人还需显式配置并证明主体不同。',
+      '对关键 admin 行核对另一名在册合格治理人员会签；紧急通道检查 [BREAK-GLASS] 理由和审计记录。',
+      '将每项结论写成通过、缺口或未知并附原始证据；OS sandbox 未接入或不可用不得写成已隔离。',
+    ],
+    stepGuide: [
+      { nodeId: 'posture', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'posture', flowIds: [1], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'posture', flowIds: [1], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'human', flowIds: [2], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'cosign', flowIds: [3], deliverable: 1, check: 1, pitfall: 0 },
+      { nodeId: 'actor', flowIds: [2, 3], deliverable: 2, check: 2, pitfall: 1 },
+    ],
+    example: {
+      title: 'run28 有效批准：director-proxy 为什么不能冒充真人',
+      given: caseFact('director-proxy') + ' ' + caseFact('approval-strength'),
+      when: '回查 HumanGate 源 store 的 requestedBy、decidedBy、deciderMode、strength 与有效期；把 proxy、自批 delegated 和聊天 verdict 分列为不计项。',
+      then: '形成 approval-pack：实际配置生效、严格异人核验、proxy/自批排除和缺口清单，供下一幕作 G5/UAT 裁决。',
+    },
+    deliverables: ['实际安全姿态矩阵及配置来源', 'HumanGate 主体、强度和有效期核验单', 'admin 双人会签或 break-glass 例外记录'],
+    checks: ['配置存在、进程已加载、实际裁决生效分别验证', 'requestedBy != decidedBy 与 human/explicit 同时满足', 'OS sandbox 只覆盖已接入执行面', '安全审计没有替代 G4、代码评审或组织会签'],
+    pitfalls: ['用 expectations、SIM strict 或页面姿态文字推断真实进程已严格执法', '把 director-proxy、自批 delegated 或聊天 verdict 算作独立真人批准'],
+    references: [{ label: '六团队手册 §14、§17.6', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('posture', '实际安全姿态', '角色 · 开关 · 生效配置', 12, 28, { kicker: 'POSTURE' }),
+      node('human', 'HumanGate', 'requestedBy / decidedBy', 39, 28, { kicker: 'HUMANGATE' }),
+      node('cosign', 'admin 双人会签', '组织治理 · 异人', 67, 28, { kicker: 'CO-SIGN' }),
+      node('actor', '裁决主体与强度', 'human / explicit / 有效期', 67, 73, { kicker: 'ACTOR' }),
+      node('proxy', 'director-proxy', '代偿，不计真人批准', 39, 73, { kicker: 'PROXY' }),
+    ],
+    edges: [edge('posture', 'human', true, true), edge('human', 'actor', true, true), edge('cosign', 'actor', true, true), edge('proxy', 'actor', false)],
+  },
+  {
+    id: 'project-release-retro',
+    phase: 'governance', navShort: '裁决开立', caseEvidenceIds: ['gross-net', 'debt-disposition'],
+    handoff: { consumes: [{ scene: 'audit-posture-approval', artifact: 'approval-pack' }], produces: 'release-decision', next: 'operations-release' },
+ part: 'project', title: '质量门、UAT/G5 与 G6 收口', short: '质量门与发布复盘', route: '/app/stage/accept', duration: 8800, layer: 'simulation', practiceRef: '17.2',
+    summary: 'G1—G6 各有当前证据、裁决人和 FAIL 动作；任务 done、UAT、G5、实际发布是不同事实，G6 要把问题转成有 owner、期限和验收判据的行动项。',
+    action: '用发布案例核对测试、当前 commit、回滚、灰度、HumanGate 和 UAT/G5，作放行或冻结决定，再登记一条 G6 行动项。',
+    proof: '日常与 SIM 写面没有混用；实际发布有回执和观察责任；GAP、unknown、零测试未被豁免成 PASS，retro_done 没被 report_done 替代。',
+    focus: 'g5', target: '核对发布与复盘',
+    inputs: ['当前 commit、构建、自测、G4/G4-E、评审、回滚和 HumanGate 材料', 'run28 报告摘录及一条待登记问题单'],
+    steps: [
+      '先标明日常还是 SIM；日常 UAT/G5 与 SIM 的 release-gate/uat-verdicts 台账不得混写。',
+      '按 G1-G6 登记当前证据、裁决人和 FAIL 动作，特别检查零测试、unknown 和反证。',
+      '核对同 commit 构建、依赖、具体回滚、灰度、用户说明和批准；任一 G5 硬项失败即冻结。',
+      '分开形成 UAT 判词与 G5 结论；SIM 严格先 G5 后 UAT，conditional 写说明，pendingAck 不算真人认可。',
+      '作放行或冻结决定；放行后另取真实发布回执、观察负责人和复验结果。',
+      '将问题登记为已修/观察/延后，写 owner、期限和验收判据；分别回读 retro_done 与 report_done。',
+    ],
+    stepGuide: [
+      { nodeId: 'uat', flowIds: [8], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'review', flowIds: [6], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'g5', flowIds: [7], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'uat', flowIds: [8], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'release', flowIds: [7, 9], deliverable: 1, check: 1, pitfall: 0 },
+      { nodeId: 'retro', flowIds: [10], deliverable: 2, check: 2, pitfall: 1 },
+    ],
+    example: {
+      title: 'run28 裁决开立：先决定放行或冻结，再进入运行观察',
+      given: caseFact('gross-net') + ' ' + caseFact('debt-disposition'),
+      when: '并排检查 26 步、含代偿 6/6、净额 5/6、open 65 和已修 8/65；作放行或冻结决定，开立 G6 初始行动项，但不提前宣布 retro_done。',
+      then: '形成 release-decision：日常/SIM 写面、UAT/G5 分离、观察与回滚契约，以及交给运行复核的 owner 和期限。',
+    },
+    deliverables: ['放行或冻结的发布决策单', '日常/SIM 写面及 UAT/G5/真实发布对照表', '完整 G6 行动项和 DISP 记录'],
+    checks: ['日常 UAT/G5 没有写 SIM 台账', 'done、UAT、G5、实际发布分别取证', 'GAP 没有豁免成 PASS', '报告快照、补证和新债没有混成同一时点'],
+    pitfalls: ['把 approved 或资产上传直接写成 released 和观察完成', '用 report_done 替代 retro_done'],
+    references: [{ label: 'run28 最新完整推演案例', href: '/aistudio-run28-simulation-case.md' }, { label: 'run25 历史对照', href: '/aistudio-run25-simulation-case.md' }],
+    nodes: [
+      node('g4', '测试与独立评审', '当前 commit 与证据', 12, 28, { kicker: 'VERIFY' }),
+      node('uat', '日常 UAT', '任务/评审级判定', 39, 28, { kicker: 'DAILY UAT' }),
+      node('g5', '日常 G5 / SIM G5', '不同写面与状态机', 67, 28, { kicker: 'G5' }),
+      node('release', '真实发布与观察', '回执 · 观察 · 回滚', 67, 73, { kicker: 'RELEASE' }),
+      node('retro', 'G6 行动项', 'owner · 期限 · 验收', 39, 73, { kicker: 'RETRO' }),
+    ],
+    edges: [edge('g4', 'uat', true), edge('g4', 'g5', true), edge('uat', 'release', true), edge('g5', 'release', true, true), edge('release', 'retro', true, true)],
+  },
+  {
+    id: 'operations-release',
+    phase: 'governance', navShort: '运行时间线', caseEvidenceIds: ['duration', 'runtime-log-gap', 'report-regen'],
+    handoff: { consumes: [{ scene: 'project-release-retro', artifact: 'release-decision' }, { scene: 'operations-readiness', artifact: 'readiness' }], produces: 'ops-timeline', next: 'audit-evidence-remediation' },
+ part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500, layer: 'simulation', practiceRef: '17.5',
     summary: '恢复先看真实 claim、日志和故障分类，不能手改任务真值；Graph legacy/shadow/on、多 gateway 和进度联邦都有明确边界，发布后仍需观察、复验和必要回滚。',
     action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 分类，再沿发布回执、观察指标、异常和回滚路径走查。',
     proof: '恢复动作有界且没有扩大权限或伪造 running；实际发布有通道回执，观察、负责人和具体回滚命令齐全，异常能够回流处置。',
@@ -682,10 +978,10 @@ const SCENES = [
       { nodeId: 'rollback', flowIds: [10, 11], deliverable: 2, check: 2, pitfall: 1 },
     ],
     example: {
-      title: 'run25 的 56 次 429：恢复有效但容量不是无限',
-      given: '恢复链全部消化 56 次 429，零死锁，但每波等待 5-10 分钟。',
-      when: '记录 rate-limit 分类、有界退避、恢复次数和等待成本；恢复循环连续耗尽即人工升级。',
-      then: '形成恢复记录和发布观察表；上传 full/everything 成功后仍需远端回下载、hash 复核和观察。',
+      title: 'run28 运行时间线：终态时长与恢复事故',
+      given: caseFact('duration') + ' ' + caseFact('report-regen'),
+      when: '用 state.env/run-metrics 复核 44954 秒；记录真实回执或 no_data、观察窗、报告崩溃、审计重入、恢复干预和回滚演练，旧 14h29m 只作历史口径。',
+      then: '形成 ops-timeline：发布回执、观察窗、故障与恢复时间线、回滚或演练记录，以及异常回流；交给独立审计。',
     },
     deliverables: ['停滞分类、干预和新 claim/run 恢复记录', '发布回执、观察窗和异常台账', '具体回滚记录或经批准的回滚演练结果'],
     checks: ['恢复没有手改任务真值、扩大权限或连续盲目 reclaim', 'shadow 成功没有冒充 on 的生产结果', '多 gateway 和进度联邦没有宣传统一调度、HA 或自动 failover', 'everything 仍需要 npm/pip 镜像'],
@@ -701,49 +997,10 @@ const SCENES = [
     edges: [edge('logs', 'recover', true, true), edge('release', 'observe', true, true), edge('observe', 'rollback', true, true), edge('recover', 'observe', true)],
   },
   {
-    id: 'audit-posture-approval', part: 'audit', title: '安全姿态、HumanGate 与双人会签', short: '姿态与人工批准', route: '/app/stage/govern?tab=posture', duration: 8800, layer: 'simulation', practiceRef: '17.6',
-    summary: '审计读取实际生效配置而非 expectations 文件；工具执法、strict、HumanGate、组织 RACI 和双人会签是不同判断面，审计从需求和设计阶段就参与。',
-    action: '核对实际角色与开关，回查 HumanGate 的 requestedBy、decidedBy、deciderMode、strength 和有效期，再核验一条 admin 行双人会签。',
-    proof: '需要严格异人时已显式配置并证明主体不同；director-proxy、本地标记和聊天 verdict 不计真人批准，紧急通道没有被当作常规绕过方式。',
-    focus: 'human', target: '核验真实裁决',
-    inputs: ['脱敏培训变更、当前 commit、角色和实际配置快照', '一条低风险 HumanGate 或关键 admin 会签记录及两名治理人员'],
-    steps: [
-      '确认审计范围、版本和攻击面，区分 super_admin/admin、组织 RACI、团队领导和 Matrix 权限。',
-      '从实际进程读取 HERMES_TOOL_ENFORCE、strict、HumanGate 两键、gates.json 和 sandbox 状态；expectations 只作期望对照。',
-      '核验非 strict 的无配置或异常可能 fail-open，strict 才在相应场景 fail-closed。',
-      '回查 HumanGate 源 store 的 requestedBy、decidedBy、deciderMode、strength 和有效期；严格异人还需显式配置并证明主体不同。',
-      '对关键 admin 行核对另一名在册合格治理人员会签；紧急通道检查 [BREAK-GLASS] 理由和审计记录。',
-      '将每项结论写成通过、缺口或未知并附原始证据；OS sandbox 未接入或不可用不得写成已隔离。',
-    ],
-    stepGuide: [
-      { nodeId: 'posture', flowIds: [1], deliverable: 0, check: 0, pitfall: 0 },
-      { nodeId: 'posture', flowIds: [1], deliverable: 1, check: 1, pitfall: 1 },
-      { nodeId: 'posture', flowIds: [1], deliverable: 2, check: 2, pitfall: 0 },
-      { nodeId: 'human', flowIds: [2], deliverable: 0, check: 0, pitfall: 1 },
-      { nodeId: 'cosign', flowIds: [3], deliverable: 1, check: 1, pitfall: 0 },
-      { nodeId: 'actor', flowIds: [2, 3], deliverable: 2, check: 2, pitfall: 1 },
-    ],
-    example: {
-      title: '严格异人核验与 director-proxy 反例',
-      given: 'requestedBy=trainer.a，decidedBy=trainer.b，deciderMode=human，strength=explicit，REQUIRE_HUMAN_DECIDER=1。',
-      when: '回查 DECIDER_ROLES 实际值和有效期；另看同一主体自批 delegated 或 SIM director-proxy。',
-      then: '只有主体不同且 human/explicit 同时满足才记严格异人批准；自批和 proxy 不计第二名真人。',
-    },
-    deliverables: ['实际安全姿态矩阵及配置来源', 'HumanGate 主体、强度和有效期核验单', 'admin 双人会签或 break-glass 例外记录'],
-    checks: ['配置存在、进程已加载、实际裁决生效分别验证', 'requestedBy != decidedBy 与 human/explicit 同时满足', 'OS sandbox 只覆盖已接入执行面', '安全审计没有替代 G4、代码评审或组织会签'],
-    pitfalls: ['用 expectations、SIM strict 或页面姿态文字推断真实进程已严格执法', '把 director-proxy、自批 delegated 或聊天 verdict 算作独立真人批准'],
-    references: [{ label: '六团队手册 §14、§17.6', href: '/aistudio-training-and-user-guide.md' }],
-    nodes: [
-      node('posture', '实际安全姿态', '角色 · 开关 · 生效配置', 12, 28, { kicker: 'POSTURE' }),
-      node('human', 'HumanGate', 'requestedBy / decidedBy', 39, 28, { kicker: 'HUMANGATE' }),
-      node('cosign', 'admin 双人会签', '组织治理 · 异人', 67, 28, { kicker: 'CO-SIGN' }),
-      node('actor', '裁决主体与强度', 'human / explicit / 有效期', 67, 73, { kicker: 'ACTOR' }),
-      node('proxy', 'director-proxy', '代偿，不计真人批准', 39, 73, { kicker: 'PROXY' }),
-    ],
-    edges: [edge('posture', 'human', true, true), edge('human', 'actor', true, true), edge('cosign', 'actor', true, true), edge('proxy', 'actor', false)],
-  },
-  {
-    id: 'audit-evidence-remediation', part: 'audit', title: '独立审计、整改复验与完成培训', short: '独立审计与整改', route: '/app/stage/govern?tab=secAudit', duration: 9000, layer: 'simulation', practiceRef: '17.6',
+    id: 'audit-evidence-remediation',
+    phase: 'governance', navShort: '审计闭环', caseEvidenceIds: ['coverage-report', 'coverage-follow-up', 'runtime-log-gap'],
+    handoff: { consumes: [{ scene: 'operations-release', artifact: 'ops-timeline' }], produces: 'audit-pack', next: 'project-run28-case' },
+ part: 'audit', title: '独立审计、整改复验与证据闭环', short: '独立审计与整改', route: '/app/stage/govern?tab=secAudit', duration: 9000, layer: 'simulation', practiceRef: '17.6',
     summary: '审计将任务、commit、测试、评审、UAT/G5 和运行证据对齐到同一对象；候选发现由非主张人独立验证，缺口进入整改和复验。',
     action: '检查证据哈希链和源缺席，登记一项有 owner、期限、复验条件的整改，由另一名审计人员复核后完成培训。',
     proof: '审计者与主张人不同，结论有原始证据；未知和缺口没有改写成通过，篡改、历史挤出和锚点悬空没有被混为一谈。',
@@ -766,15 +1023,15 @@ const SCENES = [
       { nodeId: 'verify', flowIds: [8], deliverable: 2, check: 2, pitfall: 1 },
     ],
     example: {
-      title: 'run25 报告与后续台账是否互相矛盾',
-      given: 'G4-E=GAP 且评测处置失败 2、未关 2；报告“无未完成项”与后续 N01-N06 并存；run26 MP unit 85 红。',
-      when: '接受 GAP 为缺口；按不同时点对照“无未完成项”；把 MP 红登记为后续新债而非篡改或历史成绩。',
-      then: '形成 AUD-R25-01 整改卡，owner=评测负责人，复验要求同卷新证据、原失败保留、无红线和独立复核。',
+      title: 'run28 审计闭环：覆盖账本与后续补证',
+      given: caseFact('coverage-report') + ' ' + caseFact('coverage-follow-up') + ' ' + caseFact('runtime-log-gap'),
+      when: '分别审计报告呈现、后续帧核验和过程日志；源缺席、锚点悬空与篡改分类，整改后由非主张人复验，G6 与报告状态分别核验。',
+      then: '形成 audit-pack：覆盖账本、缺项整改、owner/期限/复验条件、独立结论和 G6 闭环；不把后续补证倒填历史快照。',
     },
     deliverables: ['审计运行底稿及候选发现处置表', '同对象证据链和覆盖账本', '整改项、owner、期限及复验记录', '非主张人的独立复核结论'],
     checks: ['审计者与主张人不同，接受结论都有原始证据', '源缺席、warn、GAP 和未知没有被豁免成通过', '审计链只声明有限保留期内的篡改可发现性', '后续修复没有反向改写历史判词'],
     pitfalls: ['把历史挤出、锚点悬空和源缺席一律判成攻击或无问题', '只完成整改文字和自审，没有新证据及第二名审计人员复验'],
-    references: [{ label: 'run25 推演案例 §3、§6', href: '/aistudio-run25-simulation-case.md' }],
+    references: [{ label: 'run28 推演案例与剩余边界', href: '/aistudio-run28-simulation-case.md' }, { label: 'run25 历史审计对照', href: '/aistudio-run25-simulation-case.md' }],
     nodes: [
       node('evidence', '原始证据', '任务 · commit · 测试 · 审批', 12, 28, { kicker: 'EVIDENCE' }),
       node('candidate', '候选发现', '范围 · 方法 · 原始记录', 39, 28, { kicker: 'CANDIDATE' }),
@@ -784,22 +1041,61 @@ const SCENES = [
     ],
     edges: [edge('evidence', 'candidate', true, true), edge('candidate', 'audit', true, true), edge('hash', 'audit', true), edge('candidate', 'remediation', true, true), edge('remediation', 'audit', true, true)],
   },
+  {
+    id: 'project-run28-case',
+    phase: 'capstone', navShort: '综合验收', caseEvidenceIds: ['gross-net', 'debt-disposition', 'dispatch-autonomy', 'coverage-report', 'coverage-follow-up', 'golden-observation', 'duration'],
+    handoff: { consumes: [{ scene: 'product-overview', artifact: 'case-index' }, { scene: 'product-spec-design', artifact: 'spec-review' }, { scene: 'development-swarm-yuan-tech', artifact: 'skill-supply' }, { scene: 'operations-readiness', artifact: 'readiness' }, { scene: 'project-dispatch', artifact: 'dispatch-recon' }, { scene: 'development-swarm', artifact: 'skill-live' }, { scene: 'development-delivery', artifact: 'commit-pack' }, { scene: 'testing-g4-review', artifact: 'g4-pack' }, { scene: 'testing-eval', artifact: 'eval-pack' }, { scene: 'audit-posture-approval', artifact: 'approval-pack' }, { scene: 'project-release-retro', artifact: 'release-decision' }, { scene: 'operations-release', artifact: 'ops-timeline' }, { scene: 'audit-evidence-remediation', artifact: 'audit-pack' }], produces: 'capstone-verdict', next: null },
+    feedsNextCycle: 'product-spec-design',
+ part: 'project', title: 'run28 报告带读：流程完成不等于净额全过', short: 'run28 最新完整案例', route: '/app/stage/govern', duration: 10000, layer: 'simulation', practiceRef: '17.2',
+    summary: 'run28 是当前最新完整轮。阅读时先固定 RUN ID 和双报告，再分别检查含代偿六闸、净额判据、代偿台账、组织自主性和后续帧证据。',
+    action: '沿评审、G5、发布、复盘和证据回流逐步带读 run28，不把 26 步完成写成零缺陷或全部真人批准。',
+    proof: '能同时说清含代偿 6/6 与净额 5/6、open 65 与已修 8/65、11/13 与 13/14，以及 44954 秒和旧 14h29m 的不同口径。',
+    focus: 'g5', target: '带读 run28 证据',
+    inputs: ['run28 的 final-report.html、simulation-report.html 与 state.env', 'frame-verify.json、golden-gate.json 和 run-metrics.jsonl'],
+    steps: [
+      '固定 RUN ID=20261107-v8-run28 和双报告路径，确认 26 步完成；run27 已完成，run29 没有完整报告，不能用轮号替代证据。',
+      '分别读取含代偿六闸 6/6 与净额 5/6：G5 的 director-proxy 代批不计净额通过，也不计真人批准。',
+      '拆开 open 65、65/65 有处置结论和净额已修 8/65；自主派发 14 条不与脚本预写 48 条、卡代操作 4 张混算。',
+      '用 report_done-run_started_at 得 44954 秒即 12h29m14s；旧 spec 的 14h29m 作为另一口径披露，不直接替换。',
+      '区分报告呈现 11/13 与后续 frame-verify 13/14：唯一缺项是 mp_runtime_proof，后续补证不能回写原快照。',
+      '黄金集已运行但出现 14 例误杀，仍是观察态；把剩余证据缺口转成有 owner、期限和复验条件的行动项。',
+    ],
+    stepGuide: [
+      { nodeId: 'review', flowIds: [6], deliverable: 0, check: 0, pitfall: 0 },
+      { nodeId: 'g5', flowIds: [7, 8], deliverable: 1, check: 1, pitfall: 1 },
+      { nodeId: 'retro', flowIds: [10], deliverable: 2, check: 2, pitfall: 0 },
+      { nodeId: 'release', flowIds: [9], deliverable: 0, check: 0, pitfall: 1 },
+      { nodeId: 'review', flowIds: [6], deliverable: 1, check: 1, pitfall: 0 },
+      { nodeId: 'retro', flowIds: [10], deliverable: 2, check: 2, pitfall: 1 },
+    ],
+    example: {
+      title: 'run28 综合验收：六团队使用同一证据链',
+      given: caseFact('case-identity') + ' ' + caseFact('gross-net') + ' ' + caseFact('debt-disposition'),
+      when: '逐幕消费 case-index、spec-review、skill-supply、readiness、dispatch-recon、skill-live、commit-pack、g4-pack、eval-pack、approval-pack、release-decision、ops-timeline 和 audit-pack，再汇总为 capstone-verdict。',
+      then: '形成六团队验收矩阵、含代偿/净额双判词、报告/后续补证双快照、未清偿项及 owner/期限/复验；下一轮从 product-spec-design 回流，而不是自动宣布全过。',
+      code: { label: '终态时长核算', content: [
+        'report_done - run_started_at',
+        '= 1794090918 - 1794045964',
+        '= 44954 秒',
+        '= 12h29m14s',
+      ].join('\n') },
+    },
+    deliverables: ['run28 四栏证据阅读卡', '含代偿与净额对照表', '缺口 owner、期限和复验行动项'],
+    checks: ['G5 代批没有计作净额通过或真人批准', 'open 65、已修 8/65 和 65/65 处置没有混写', '11/13 与 13/14 的分母和时点没有混写'],
+    pitfalls: ['把 26 步或六闸完成写成零缺陷', '把后续 frame-verify 的补证倒填为报告原快照'],
+    references: [{ label: 'run28 完整案例原文', href: '/aistudio-run28-simulation-case.md' }, { label: '六团队手册 run28 章', href: '/aistudio-training-and-user-guide.md' }],
+    nodes: [
+      node('review', '评审证据', '26 步与报告原表', 12, 28, { kicker: 'EVIDENCE' }),
+      node('g5', 'G5 净额', '代批不计净额通过', 39, 28, { kicker: 'NET' }),
+      node('release', '发布与时长', '44954 秒', 67, 28, { kicker: 'DURATION' }),
+      node('retro', '复盘与后续帧', '11/13 · 13/14', 39, 73, { kicker: 'FOLLOW-UP' }),
+    ],
+    edges: [edge('review', 'g5', true, true), edge('g5', 'release', true), edge('release', 'retro', true, true)],
+  },
 ]
 
+
 let topologyActive = false
-const TOPO_ANCHORS = [
-  { x: 600, y: 193 }, { x: 975, y: 315 }, { x: 870, y: 640 },
-  { x: 975, y: 315 }, { x: 590, y: 315 }, { x: 870, y: 640 },
-  { x: 590, y: 315 }, { x: 600, y: 80 }, { x: 600, y: 80 },
-  { x: 600, y: 193 }, { x: 870, y: 640 }, { x: 870, y: 640 },
-]
-const TOPO_NODE_BY_SCENE = ['studio', 'kanban', 'evidence', 'kanban', 'gateway', 'evidence', 'gateway', 'supervisor', 'supervisor', 'studio', 'evidence', 'evidence']
-const TOPO_FLOW_BY_SCENE = [
-  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-  [1, 12, 13, 14, 15], [8, 10, 11, 12, 13, 14], [1, 2, 3, 4, 5, 6],
-  [5, 6, 7, 8, 9], [10, 11, 12, 13, 14, 15], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-  [1, 14, 15], [12, 13, 14, 15], [1, 2, 3, 4, 5, 14, 15], [10, 11, 12, 13, 14], [13, 14, 15],
-]
 const TOPO_FLOWS = [
   { id: 1, kind: 'approval', label: '目标、授权与验收规则', path: 'M580 115 L580 155', x: 420, y: 133 },
   { id: 2, kind: 'task', label: '任务指令与审批', path: 'M600 231 L590 275', x: 612, y: 254 },
@@ -835,7 +1131,7 @@ const TOPO_LAYERS = [
 ]
 
 const TOPO_VIEWS = {
-  product: { layers: TOPO_LAYERS, nodes: TOPO_NODES, flows: TOPO_FLOWS, flowByScene: TOPO_FLOW_BY_SCENE.map((flows, index) => index === 1 ? [1, 2, 12, 13, 14, 15] : flows), activeNode: TOPO_NODE_BY_SCENE.map((node, index) => index === 1 ? 'studio' : node) },
+  product: { layers: TOPO_LAYERS, nodes: TOPO_NODES, flows: TOPO_FLOWS },
   project: {
     layers: [{ label: '派工与认领', y: 50, h: 180 }, { label: '验收与发布', y: 280, h: 180 }, { label: '发布与复盘', y: 510, h: 180 }],
     nodes: [
@@ -862,8 +1158,6 @@ const TOPO_VIEWS = {
       { id: 9, kind: 'approval', label: '实际发布回执', path: 'M1025 400 L1025 470 L440 550', x: 690, y: 470 },
       { id: 10, kind: 'evidence', label: '问题与行动项进入下一轮', path: 'M440 590 L760 590', x: 570, y: 572 },
     ],
-    flowByScene: [[], [], [1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [], [], [], [], [], [], [], []],
-    activeNode: ['', '', 'dispatcher', 'g5', '', '', '', '', '', '', '', ''],
   },
   development: {
     layers: [{ label: '项目技能与任务', y: 50, h: 180 }, { label: 'ACP 编码与守门', y: 280, h: 180 }, { label: '交付与证据回流', y: 510, h: 180 }],
@@ -895,8 +1189,6 @@ const TOPO_VIEWS = {
       { id: 11, kind: 'review', label: '合入与主干回归', path: 'M600 610 L650 610', x: 602, y: 592, labelX: 590, labelY: 680 },
       { id: 12, kind: 'evidence', label: '证据回写 Kanban', path: 'M900 610 L950 610', x: 902, y: 592, labelX: 890, labelY: 680 },
     ],
-    flowByScene: [[], [], [], [], [1, 2, 3, 4, 5, 6, 7, 12], [4, 8, 9, 10, 11, 12], [], [], [], [], [], []],
-    activeNode: ['', '', '', '', 'swarm', 'commit', '', '', '', '', '', ''],
   },
   testing: {
     layers: [{ label: '独立测试与评审', y: 50, h: 180 }, { label: 'Eval 失败与复评', y: 280, h: 180 }, { label: '判定与缺口', y: 510, h: 180 }],
@@ -925,8 +1217,6 @@ const TOPO_VIEWS = {
       { id: 9, kind: 'review', label: '通过且无红线才关闭', path: 'M920 400 L920 550', x: 934, y: 474 },
       { id: 10, kind: 'evidence', label: 'unknown/no_data 进入补证', path: 'M160 400 L160 470 L340 470 L340 550', x: 180, y: 456 },
     ],
-    flowByScene: [[], [], [], [], [], [], [1, 2, 3], [4, 5, 6, 7, 8, 9, 10], [], [], [], []],
-    activeNode: ['', '', '', '', '', '', 'g4', 'rerun', '', '', '', ''],
   },
   operations: {
     layers: [{ label: '服务与探针', y: 50, h: 180 }, { label: '配置与恢复', y: 280, h: 180 }, { label: '发布观察与回滚', y: 510, h: 180 }],
@@ -957,8 +1247,6 @@ const TOPO_VIEWS = {
       { id: 10, kind: 'review', label: '异常触发具体回滚', path: 'M610 590 L690 590', x: 612, y: 572, labelX: 610, labelY: 680 },
       { id: 11, kind: 'evidence', label: '异常回流与独立根隔离', path: 'M940 590 L970 590', x: 942, y: 572, labelX: 940, labelY: 680 },
     ],
-    flowByScene: [[], [], [], [], [], [], [], [], [1, 2, 3, 4, 5], [6, 7, 8, 9, 10, 11], [], []],
-    activeNode: ['', '', '', '', '', '', '', '', 'readiness', 'observe', '', ''],
   },
   audit: {
     layers: [{ label: '姿态与人工批准', y: 50, h: 180 }, { label: '独立审计与证据链', y: 280, h: 180 }, { label: '整改与复验', y: 510, h: 180 }],
@@ -986,8 +1274,6 @@ const TOPO_VIEWS = {
       { id: 8, kind: 'review', label: '整改后独立复验', path: 'M480 590 L550 590', x: 482, y: 572, labelX: 480, labelY: 680 },
       { id: 9, kind: 'evidence', label: 'unknown 进入补证', path: 'M1005 400 L1005 550', x: 1020, y: 474 },
     ],
-    flowByScene: [[], [], [], [], [], [], [], [], [], [], [1, 2, 3], [4, 5, 6, 7, 8, 9]],
-    activeNode: ['', '', '', '', '', '', '', '', '', '', 'human', 'audit'],
   },
 }
 
@@ -1014,16 +1300,20 @@ function svgText(value, x, y, maxWidth, className, fontSize) {
   const lineHeight = className === 'topology-node-title' ? 19 : 15
   return `<text class="${className}" x="${x}" y="${y}">${lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${escapeSvg(line)}</tspan>`).join('')}</text>`
 }
-function topologySvgContent(view, index, showAll, allowMotion, suffix = '', stepFlowIds = null, stepNodeId = null) {
-  const activeFlows = new Set(showAll ? view.flows.map(flow => flow.id) : (stepFlowIds ?? view.flowByScene[index]))
-  const activeNode = stepNodeId ?? view.activeNode[index]
+function topologySvgContent(view, index, showAll, allowMotion, suffix = '', stepFlowIds = null, stepNodeId = null, traversedFlowIds = [], traversedNodeIds = []) {
+  const scene = SCENES[index]
+  const traversedFlows = new Set(traversedFlowIds)
+  const traversedNodes = new Set(traversedNodeIds)
+  const sceneFlowIds = [...new Set(scene.stepGuide.flatMap(guide => guide.flowIds))]
+  const activeFlows = new Set(showAll ? view.flows.map(flow => flow.id) : (stepFlowIds ?? sceneFlowIds))
+  const activeNode = stepNodeId ?? scene.focus
   const normalMarker = `topoArrow${suffix}`
   const activeMarker = `topoArrowActive${suffix}`
   const defs = `<defs><marker id="${normalMarker}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#a0b2a5" /></marker><marker id="${activeMarker}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#238b5c" /></marker></defs>`
   const layers = view.layers.map(layer => `<rect class="topology-layer" x="28" y="${layer.y}" width="1144" height="${layer.h}" rx="12" /><text class="topology-layer-label" x="48" y="${layer.y + 24}">${escapeSvg(layer.label)}</text>`).join('')
   const flowLines = view.flows.map(flow => {
     const active = activeFlows.has(flow.id)
-    return `<path class="topology-flow ${active ? 'is-active' : ''} ${flow.kind === 'collab' ? 'is-optional' : ''}" data-flow-id="${flow.id}" d="${flow.path}" marker-end="url(#${active ? activeMarker : normalMarker})" />`
+    return `<path class="topology-flow ${active ? 'is-active' : ''} ${traversedFlows.has(flow.id) ? 'is-traversed' : ''} ${flow.kind === 'collab' ? 'is-optional' : ''}" data-flow-id="${flow.id}" d="${flow.path}" marker-end="url(#${active ? activeMarker : normalMarker})" />`
   }).join('')
   const flowLabels = view.flows.map(flow => {
     const active = activeFlows.has(flow.id)
@@ -1031,10 +1321,11 @@ function topologySvgContent(view, index, showAll, allowMotion, suffix = '', step
   }).join('')
   const nodes = view.nodes.map(node => {
     const active = node.id === activeNode
+    const traversed = traversedNodes.has(node.id)
     const titleLines = wrapSvgLines(node.title, node.w - 22, 21)
     const titleY = node.y + (titleLines.length > 1 ? 25 : 30)
     const subtitleY = node.y + (titleLines.length > 1 ? 65 : 56)
-    return `<g data-topo-node="${escapeSvg(node.id)}" tabindex="${active ? '0' : '-1'}"><rect class="topology-node ${active ? 'is-active' : ''}" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="10" />${svgText(node.title, node.x + node.w / 2, titleY, node.w - 22, 'topology-node-title', 21)}${svgText(node.sub, node.x + node.w / 2, subtitleY, node.w - 22, 'topology-node-subtitle', 14)}</g>`
+    return `<g data-topo-node="${escapeSvg(node.id)}" tabindex="${active ? '0' : '-1'}"><rect class="topology-node ${active ? 'is-active' : ''} ${traversed ? 'is-traversed' : ''}" x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="10" />${svgText(node.title, node.x + node.w / 2, titleY, node.w - 22, 'topology-node-title', 21)}${svgText(node.sub, node.x + node.w / 2, subtitleY, node.w - 22, 'topology-node-subtitle', 14)}</g>`
   }).join('')
   const pulses = allowMotion ? view.flows.filter(flow => activeFlows.has(flow.id)).map((flow, index) => `<circle class="topology-pulse" r="5"><animateMotion dur="${3.2 + (index % 3) * 0.5}s" begin="${(index % 4) * -0.7}s" repeatCount="indefinite" path="${flow.path}" /></circle>`).join('') : ''
   return defs + layers + flowLines + nodes + flowLabels + pulses
@@ -1043,9 +1334,29 @@ function topologySvgContent(view, index, showAll, allowMotion, suffix = '', step
 function renderTopology() {
   if (!topologyActive) return
   const view = TOPO_VIEWS[SCENES[current].part]
-  $('topologySvg').innerHTML = topologySvgContent(view, current, globalView, motionAllowed, '', SCENES[current].stepGuide[stepIndex].flowIds, SCENES[current].stepGuide[stepIndex].nodeId)
-  $('resetViewButton').textContent = globalView ? '当前步骤路径' : '显示全部流转'
+  const previousGuides = SCENES[current].stepGuide.slice(0, stepIndex)
+  const traversedFlowIds = [...new Set(previousGuides.flatMap(guide => guide.flowIds))]
+  const traversedNodeIds = [...new Set(previousGuides.map(guide => guide.nodeId))]
+  $('topologySvg').innerHTML = topologySvgContent(view, current, globalView, motionAllowed, '', SCENES[current].stepGuide[stepIndex].flowIds, SCENES[current].stepGuide[stepIndex].nodeId, traversedFlowIds, traversedNodeIds)
+  $('architectureSvg').innerHTML = topologySvgContent(view, current, false, false, '-manual-architecture', SCENES[current].stepGuide[stepIndex].flowIds, SCENES[current].stepGuide[stepIndex].nodeId, traversedFlowIds, traversedNodeIds)
   syncFlowAnimation()
+}
+
+const MANUAL_PRINCIPLES = {
+  'product-overview': '六团队协作的本质是“输入—授权—执行—独立验证—状态回流”的责任链，而不是聊天消息接力。AC 约束验收对象，RACI 约束责任人，技能约束执行方式，独立证据约束结论；Matrix 只承担可选通知，不能替代权威任务与审批记录。',
+  'product-spec-design': '规格评审先把需求变成可判定、可追溯的验收条件，再把设计变成可验证、可回滚的实施方案。冻结后的任何变更都会改变原验收对象，因此必须重新走影响分析、评审和冻结，不能只在原任务里追加说明。',
+  'development-swarm-yuan-tech': 'swarm-yuan 分为生成器与目标技能两层：生成器负责从项目事实产出技能，目标技能负责在后续任务中提供流程与门禁。SCHEMA_EPOCH 只解决历史记录兼容，strict 决定激活准入，L1-L4 分别提供写时、提交、推送和运行证据，ACP 则证明当次任务确实携带技能与正确 cwd。',
+  'operations-readiness': 'readiness 是对实际运行面的分层观测，不是端口列表。进程监听、HTTP ready、业务路由、gateway 健康和 Ycode online 各自证明不同事实；只有绑定地址、cwd、状态目录和治理仓同时对齐，才能说明演示环境可复现。',
+  'project-dispatch': '派发链要区分路由决策、任务认领、执行记录和最终回写。routed 只表示系统决定了去向，claimed/run 表示执行开始，worker 日志与提交才支撑完成；催办通知和看板评论也不能互相冒充。',
+  'development-swarm': '技能供应链与编码执行链分开验证：生成器产物必须先被发现并激活，worker 再把它装入任务上下文，ACP 最后将上下文交给编码引擎。engine_bin 与实际读取记录属于身份和加载证据，active 标记本身不覆盖这两层。',
+  'development-delivery': '可审查交付要求任务、工作区、分支、差异、测试和提交指向同一对象。目标测试的退出码证明当次执行结果，独立评审与状态回写属于后续治理动作，不能用研发自述一次替代。',
+  'testing-g4-review': 'G4 用独立执行验证行为，代码评审核查设计、权限、回滚和实现质量，两者证据不能合并。MAET 要求正常、替代、异常、终止路径都被覆盖，缺陷必须在新提交上复验后才算关闭。',
+  'testing-eval': 'Eval 的输入是已保存会话或显式证据，判分结果只覆盖该证据版本。失败后的复评必须保持同一黄金集、同一评分器口径并补充新证据；GAP 表示评测链有缺口，CONDITIONAL 表示条件尚未满足，都不是通过。',
+  'audit-posture-approval': '审批有效性由实际生效配置、决策人、授权强度和有效期共同决定。工具执法、strict、HumanGate 与 RACI 是互补边界；审计读取这些真实状态并独立核验，不能直接采信期望配置或流程自述。',
+  'project-release-retro': '发布裁决把质量门、当前提交、UAT、人工批准、灰度与回滚组合成一个可追溯决定。G6 的价值不在宣布结束，而在把遗留问题转成有责任人、期限和复验判据的下一轮输入。',
+  'operations-release': '故障恢复先分类证据再选择动作，任务真值只能由权威流程回写。发布完成也不是观测终点，还要核对回执、关键指标、异常和回滚条件；legacy/shadow/on 等模式必须按实际配置解释。',
+  'audit-evidence-remediation': '审计闭环要求所有证据指向同一任务与提交，并由非主张人独立复核。哈希链证明证据未变，源缺席必须保持未知；整改单只有满足责任人、期限和复验条件后才可关闭。',
+  'project-run28-case': 'run28 复盘采用“报告快照、后续补证、净额口径”三层阅读法。含代偿六闸说明流程走完，净额判据说明真实通过范围，后续帧与整改台账说明报告之后发生的变化，三者不能相互覆盖。',
 }
 
 const $ = id => document.getElementById(id)
@@ -1057,9 +1368,10 @@ let speed = 1
 let timer = null
 let visited = new Set([0])
 let globalView = false
+let selectedEvidenceId = null
 let stepIndex = 0
-let exampleOpen = false
-let codeOpen = false
+let exampleOpen = true
+let codeOpen = true
 let motionAllowed = !reducedQuery.matches
 
 function syncFlowAnimation() {
@@ -1092,6 +1404,32 @@ function syncExampleDisclosure() {
   $('codeToggle').textContent = codeOpen ? '收起代码' : '查看代码'
   $('coachCodeWrap').hidden = !hasCode || !codeOpen
 }
+function handoffText(scene) {
+  const next = scene.handoff.next ?? scene.feedsNextCycle
+  return `${scene.handoff.produces} → ${next}`
+}
+function caseEvidenceText(scene) {
+  return scene.caseEvidenceIds.map(id => {
+    const evidence = RUN28_EVIDENCE[id]
+    return `${evidence.snapshot}/${evidence.status}: ${evidence.fact}`
+  }).join('；')
+}
+function caseEvidencePrint(scene) {
+  const items = scene.caseEvidenceIds.map(id => {
+    const evidence = RUN28_EVIDENCE[id]
+    return `<li><strong>${escapeSvg(id)}</strong> · ${escapeSvg(evidence.snapshot)}/${escapeSvg(evidence.status)} · ${escapeSvg(evidence.locator)}：${escapeSvg(evidence.fact)}</li>`
+  }).join('')
+  return `<div class="case-evidence-print"><h2>证据附件 ${scene.caseEvidenceIds.length}</h2><ul>${items}</ul></div>`
+}
+function renderEvidenceAttachments(scene) {
+  if (!scene.caseEvidenceIds.includes(selectedEvidenceId)) selectedEvidenceId = scene.caseEvidenceIds[0]
+  $('caseEvidence').innerHTML = scene.caseEvidenceIds.map(id => {
+    const evidence = RUN28_EVIDENCE[id]
+    return `<button class="evidence-slip ${id === selectedEvidenceId ? 'is-selected' : ''}" type="button" data-evidence-id="${id}" aria-pressed="${id === selectedEvidenceId}" title="${escapeSvg(evidence.fact)}"><span class="evidence-id">📎 ${id}</span><span class="case-tag">${evidence.snapshot}/${evidence.status}</span><small>${escapeSvg(evidence.locator)}</small></button>`
+  }).join('')
+  const evidence = RUN28_EVIDENCE[selectedEvidenceId]
+  $('evidenceDetail').innerHTML = `<strong>${escapeSvg(selectedEvidenceId)}</strong><span>${escapeSvg(evidence.runId)} · ${escapeSvg(evidence.source)} · ${escapeSvg(evidence.locator)}</span><p>${escapeSvg(evidence.fact)}</p>`
+}
 function renderCoach(scene) {
   fillList('coachInputs', scene.inputs)
   $('exampleTitle').textContent = scene.example.title
@@ -1107,9 +1445,10 @@ function renderCoach(scene) {
     $('coachCode').textContent = ''
   }
   syncExampleDisclosure()
+  renderEvidenceAttachments(scene)
   // 每幕模拟声明 + 实操对照（P2 Task 3 培训分层：本页=模拟层，实操=手册 17.x）
   $('coachLayer').textContent = scene.layer === 'simulation'
-    ? `本幕为培训模拟（layer=simulation）；实操指引见手册第 ${scene.practiceRef} 节`
+    ? `layer=simulation；${PHASES.find(phase => phase.id === scene.phase).name}｜${handoffText(scene)}；实操见手册第 ${scene.practiceRef} 节`
     : `未知幕层级 ${String(scene.layer)}——培训页只承载 simulation 层`
   $('coachReferences').replaceChildren(...scene.references.map(reference => {
     const link = document.createElement('a')
@@ -1125,8 +1464,8 @@ function renderStep() {
   const guide = scene.stepGuide[stepIndex]
   $('simStage').dataset.step = String(stepIndex + 1)
   $('simStage').dataset.activeNode = guide.nodeId
-  fillList('coachSteps', [scene.steps[stepIndex]])
-  $('coachSteps').start = stepIndex + 1
+  $('coachSteps').innerHTML = scene.steps.map((text, index) => `<li class="${index === stepIndex ? 'is-active' : ''} ${index < stepIndex ? 'is-done' : ''}"><button type="button" data-manual-step="${index}" aria-current="${index === stepIndex ? 'step' : 'false'}"><span class="step-index">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${escapeSvg(text)}</span><span class="step-state">${index === stepIndex ? '正在讲解' : index < stepIndex ? '已讲' : ''}</span></button></li>`).join('')
+  $('currentStepText').textContent = scene.steps[stepIndex]
   fillList('coachDeliverables', [scene.deliverables[guide.deliverable]])
   fillList('coachChecks', [scene.checks[guide.check]])
   fillList('coachPitfalls', [scene.pitfalls[guide.pitfall]])
@@ -1152,48 +1491,104 @@ function renderStep() {
   $('nextStepButton').disabled = atCourseEnd
   $('nextButton').disabled = atCourseEnd
   $('nextCoachButton').disabled = atCourseEnd
+  renderFlowDiagram(scene)
   renderTopology()
 }
-function fitPageToViewport() {
-  const page = $('a4Page')
-  const viewport = $('a4Viewport')
-  const width = page.offsetWidth || 1122
-  const height = page.offsetHeight || 794
-  const scale = Math.min(1.35, Math.max(.65, (window.innerWidth - 64) / width))
-  page.style.transform = `scale(${scale})`
-  viewport.style.width = `${width * scale}px`
-  viewport.style.height = `${height * scale}px`
+function diagramText(text, x, y, maxChars = 14, maxLines = 3, className = 'diagram-label', anchor = 'middle') {
+  const chars = [...String(text)]
+  const lines = []
+  for (let index = 0; index < chars.length && lines.length < maxLines; index += maxChars) lines.push(chars.slice(index, index + maxChars).join(''))
+  if (chars.length > maxChars * maxLines) lines[maxLines - 1] = `${lines[maxLines - 1].slice(0, Math.max(1, maxChars - 1))}…`
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" class="${className}">${lines.map((line, index) => `<tspan x="${x}" dy="${index ? 18 : 0}">${escapeSvg(line)}</tspan>`).join('')}</text>`
+}
+function diagramArrow(id, x1, y1, x2, y2) {
+  return `<path class="diagram-arrow" d="M${x1} ${y1} L${x2} ${y2}" marker-end="url(#${id})" />`
+}
+function diagramDefs(id) {
+  return `<defs><marker id="${id}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096" /></marker></defs>`
+}
+function renderStructureDiagram(scene) {
+  const input = scene.inputs.slice(0, 2).join('；')
+  const output = scene.deliverables.slice(0, 3).join('；')
+  $('structureSvg').innerHTML = `${diagramDefs('structureArrow')}<text x="30" y="30" class="diagram-title">输入</text><text x="270" y="30" class="diagram-title">核心机制</text><text x="570" y="30" class="diagram-title">交付与验收</text><rect class="diagram-box-muted" x="30" y="55" width="170" height="190" rx="8" /><rect class="diagram-box-accent" x="275" y="55" width="210" height="190" rx="8" /><rect class="diagram-box" x="560" y="55" width="170" height="190" rx="8" />${diagramText(input, 115, 95, 10, 6)}${diagramText(MANUAL_PRINCIPLES[scene.id], 380, 82, 13, 6)}${diagramText(output, 645, 95, 10, 6)}${diagramArrow('structureArrow', 200, 150, 270, 150)}${diagramArrow('structureArrow', 485, 150, 555, 150)}<text x="380" y="280" text-anchor="middle" class="diagram-small">验收：${escapeSvg(scene.checks[0])}</text>`
+}
+function renderFlowDiagram(scene) {
+  const count = scene.steps.length
+  const gap = 14
+  const width = Math.min(142, (940 - gap * (count - 1)) / count)
+  const startX = (1000 - (width * count + gap * (count - 1))) / 2
+  const parts = scene.steps.map((text, index) => {
+    const x = startX + index * (width + gap)
+    const stateClass = index === stepIndex ? 'diagram-active' : index < stepIndex ? 'diagram-done' : 'diagram-box'
+    const box = `<rect class="${stateClass}" x="${x}" y="55" width="${width}" height="140" rx="8" />${diagramText(`步骤 ${index + 1}`, x + width / 2, 80, 12, 1, 'diagram-title')}${diagramText(text, x + width / 2, 108, Math.max(7, Math.floor(width / 14)), 4)}`
+    const arrow = index < count - 1 ? diagramArrow('flowArrow', x + width, 125, x + width + gap - 3, 125) : ''
+    return box + arrow
+  }).join('')
+  $('flowSvg').innerHTML = diagramDefs('flowArrow') + parts + `<text x="500" y="230" text-anchor="middle" class="diagram-small">蓝色为当前讲解步骤，灰色为已讲步骤；点击正文步骤可同步定位。</text>`
+}
+function renderRelationshipDiagram(scene) {
+  const previous = scene.handoff.consumes.map(item => `${item.scene}
+${item.artifact}`).join('；')
+  const next = scene.handoff.next ?? scene.feedsNextCycle
+  const evidence = scene.caseEvidenceIds.slice(0, 4).join(' · ')
+  $('relationshipSvg').innerHTML = `${diagramDefs('relationshipArrow')}<text x="30" y="28" class="diagram-title">前序交接</text><text x="285" y="28" class="diagram-title">当前产物</text><text x="560" y="28" class="diagram-title">下一幕</text><rect class="diagram-box-muted" x="30" y="55" width="175" height="105" rx="8" /><rect class="diagram-box-accent" x="285" y="55" width="190" height="105" rx="8" /><rect class="diagram-box" x="555" y="55" width="175" height="105" rx="8" />${diagramText(previous, 117, 86, 12, 3, 'diagram-small')}${diagramText(scene.handoff.produces, 380, 92, 13, 2, 'diagram-title')}${diagramText(next, 642, 92, 12, 2)}${diagramArrow('relationshipArrow', 205, 108, 280, 108)}${diagramArrow('relationshipArrow', 475, 108, 550, 108)}<path class="diagram-arrow" d="M380 160 L380 205" marker-end="url(#relationshipArrow)" /><rect class="diagram-box" x="120" y="210" width="520" height="85" rx="8" /><text x="380" y="237" text-anchor="middle" class="diagram-title">关联证据 ${scene.caseEvidenceIds.length} 条</text>${diagramText(evidence, 380, 263, 34, 2, 'diagram-small')}`
+}
+function renderDiagrams(scene) {
+  renderStructureDiagram(scene)
+  renderRelationshipDiagram(scene)
+  renderFlowDiagram(scene)
+}
+function renderPhaseRoute() {
+  $('directoryScenes').innerHTML = PHASES.map(phase => `<div class="phase-track"><span class="phase-label">${phase.name}</span><div class="phase-scenes">${SCENES.map((scene, index) => ({ scene, index })).filter(entry => entry.scene.phase === phase.id).map(entry => `<button class="directory-scene ${entry.index < current ? 'is-traversed' : ''}" type="button" data-directory-scene="${entry.index}" aria-current="${entry.index === current ? 'step' : 'false'}" title="${entry.scene.short}">${entry.index + 1} · ${entry.scene.navShort}</button>`).join('')}</div></div>`).join('')
+  const metrics = [
+    ['26', '步链'],
+    ['6/6 <em>≠</em> 5/6', '含代偿 / 净额'],
+    ['65 / 8/65', 'open / 已修'],
+    ['11/13｜13/14', '报告｜后续帧'],
+  ]
+  $('caseMetrics').innerHTML = metrics.map(([value, label]) => `<div class="case-metric"><strong>${value}</strong><span>${label}</span></div>`).join('')
 }
 function renderScene() {
   const scene = SCENES[current]
   const part = PARTS.find(item => item.id === scene.part)
-  $('sceneLabel').textContent = scene.short
+  $('sceneLabel').textContent = `${PHASES.find(phase => phase.id === scene.phase).name} · ${scene.short}`
   $('coachTitle').textContent = `${part.name}｜${scene.title}`
   $('coachSummary').textContent = scene.summary
+  $('manualPrinciple').textContent = MANUAL_PRINCIPLES[scene.id]
+  $('manualAction').textContent = scene.action
   $('coachProof').textContent = scene.proof
   $('actionNumber').textContent = String(current + 1)
   $('prevButton').disabled = current === 0
   $('mobileStep').value = String(current)
   document.querySelectorAll('[data-part]').forEach(button => button.setAttribute('aria-current', String(button.dataset.part === scene.part)))
-  const shortSceneNames = ['全景', '冻结', '派工', '发布', '技能', '交付', 'G4', 'Eval', '就绪', '恢复', '审批', '审计']
-  $('directoryScenes').innerHTML = SCENES.map((item, index) => ({ item, index })).filter(entry => entry.item.part === scene.part).map(entry => `<button class="directory-scene" type="button" data-directory-scene="${entry.index}" aria-current="${entry.index === current ? 'step' : 'false'}" title="${entry.item.short}">${entry.index + 1} · ${shortSceneNames[entry.index]}</button>`).join('')
+  $('caseActor').textContent = `${part.name} · ${scene.focus} · ${scene.route}`
+  $('stagePhase').textContent = `${PHASES.find(phase => phase.id === scene.phase).name} · 第 ${current + 1} 幕 / 14 · ${scene.navShort}`
   document.querySelectorAll('[data-timeline]').forEach(button => {
     const index = Number(button.dataset.timeline)
     button.setAttribute('aria-current', index === current ? 'step' : 'false')
     button.classList.toggle('is-visited', visited.has(index))
   })
+  renderPhaseRoute()
+  renderDiagrams(scene)
   renderCoach(scene)
   renderStep()
-  requestAnimationFrame(fitPageToViewport)
+}
+function sceneIndexFromHash() {
+  const match = location.hash.match(/^#scene=([a-z0-9-]+)$/)
+  return match ? SCENES.findIndex(scene => scene.id === match[1]) : -1
+}
+function syncSceneHash() {
+  history.replaceState(null, '', `${location.pathname}${location.search}#scene=${SCENES[current].id}`)
 }
 function goTo(index) {
   current = Math.max(0, Math.min(SCENES.length - 1, index))
   stepIndex = 0
-  exampleOpen = false
-  codeOpen = false
+  exampleOpen = true
+  codeOpen = true
   globalView = false
   visited.add(current)
   renderScene()
+  syncSceneHash()
   schedule()
 }
 function goToStep(index) {
@@ -1258,7 +1653,7 @@ function buildCourseNav() {
     const index = SCENES.findIndex(scene => scene.part === button.dataset.part)
     if (index >= 0) { $('courseDialog').close(); goTo(index) }
   }))
-  $('courseDialogNav').innerHTML = SCENES.map((scene, index) => `<button type="button" data-step="${index}">${String(index + 1).padStart(2, '0')} · ${PARTS.find(part => part.id === scene.part).name} · ${scene.short}</button>`).join('')
+  $('courseDialogNav').innerHTML = PHASES.map(phase => `<section class="course-phase"><h3>${phase.name}</h3><div class="course-phase-grid">${SCENES.map((scene, index) => ({ scene, index })).filter(entry => entry.scene.phase === phase.id).map(entry => `<button type="button" data-step="${entry.index}">${String(entry.index + 1).padStart(2, '0')} · ${PARTS.find(part => part.id === entry.scene.part).name} · ${entry.scene.short}</button>`).join('')}</div></section>`).join('')
   $('courseDialogNav').querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => { $('courseDialog').close(); goTo(Number(button.dataset.step)) }))
   $('mobileStep').innerHTML = SCENES.map((scene, index) => `<option value="${index}">${index + 1} · ${scene.short}</option>`).join('')
   $('mobileStep').addEventListener('change', event => goTo(Number(event.target.value)))
@@ -1274,8 +1669,10 @@ function printReferences(scene) {
 }
 function printPage(scene, index) {
   const part = PARTS.find(item => item.id === scene.part)
+  const densePayload = scene.steps.join('').length + scene.example.given.length + scene.example.when.length + scene.example.then.length + (scene.example.code ? scene.example.code.content.length : 0)
+  const dense = densePayload > 520 ? ' print-dense' : ''
   const code = scene.example.code ? `<div class="lesson-code"><span>${escapeSvg(scene.example.code.label)}</span><em class="code-exec-note">本页不执行</em><pre><code>${escapeSvg(scene.example.code.content)}</code></pre></div>` : ''
-  return `<article class="a4-page" data-scene-id="${scene.id}"><header class="page-header"><div><div class="eyebrow"><span class="scene-number">${index + 1}</span><span>${escapeSvg(scene.short)}</span></div><h1>${escapeSvg(part.name)}｜${escapeSvg(scene.title)}</h1><p class="coach-summary">${escapeSvg(scene.summary)}</p></div><div class="page-route">真实产品入口<code>${escapeSvg(scene.route)}</code><span class="practice-ref">培训模拟 · 实操见手册 §${scene.practiceRef}</span></div></header><div class="lesson-main"><section class="topology-panel"><div class="panel-head"><strong>角色拓扑</strong><span>亮线=本幕路径</span></div><svg class="topology-svg" role="img" aria-label="${escapeSvg(scene.short)}拓扑" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet">${topologySvgContent(TOPO_VIEWS[scene.part], index, false, false, `-${scene.id}`)}</svg></section><section class="lesson-steps"><h2>操作步骤</h2><p class="lesson-goal">${escapeSvg(scene.action)}</p>${printList(scene.steps, true)}</section><section class="lesson-example"><h2>${escapeSvg(scene.example.title)}</h2><dl><dt>背景</dt><dd>${escapeSvg(scene.example.given)}</dd><dt>操作</dt><dd>${escapeSvg(scene.example.when)}</dd><dt>应得结果</dt><dd>${escapeSvg(scene.example.then)}</dd></dl>${code}</section></div><div class="page-bottom"><section class="lesson-more"><div class="lesson-more-grid"><section><div class="lesson-inputs"><h2>输入条件</h2>${printList(scene.inputs)}</div><h2>本幕交付物</h2>${printList(scene.deliverables)}</section><section><h2>验收检查</h2>${printList(scene.checks)}</section><section><h2>常见误操作</h2>${printList(scene.pitfalls)}<div class="proof-box"><h2>整幕完成判据</h2><p>${escapeSvg(scene.proof)}</p></div></section><section><h2>对应手册</h2><div class="lesson-references">${printReferences(scene)}</div></section></div></section><footer class="page-footer"><span>第 ${index + 1} 幕，共 ${SCENES.length} 幕 · ${escapeSvg(scene.target)}</span><span>培训模拟 · 不连接真实数据</span><span>${index + 1} / ${SCENES.length}</span></footer></div></article>`
+  return `<article class="a4-page${dense}" data-scene-id="${scene.id}"><header class="page-header"><div><div class="eyebrow"><span class="scene-number">${index + 1}</span><span>${escapeSvg(PHASES.find(phase => phase.id === scene.phase).name)} · ${escapeSvg(scene.short)}</span></div><h1>${escapeSvg(part.name)}｜${escapeSvg(scene.title)}</h1><p class="coach-summary">${escapeSvg(scene.summary)}</p></div><div class="page-route">真实产品入口<code>${escapeSvg(scene.route)}</code><span class="practice-ref">${escapeSvg(handoffText(scene))} · 实操见手册 §${scene.practiceRef}</span></div></header><div class="lesson-main"><section class="topology-panel"><div class="panel-head"><strong>角色拓扑</strong><span>亮线=本幕路径</span></div><svg class="topology-svg" role="img" aria-label="${escapeSvg(scene.short)}拓扑" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet">${topologySvgContent(TOPO_VIEWS[scene.part], index, false, false, `-${scene.id}`)}</svg></section><section class="lesson-steps"><h2>操作步骤</h2><p class="lesson-goal">${escapeSvg(MANUAL_PRINCIPLES[scene.id])}</p><p class="lesson-goal"><strong>实操目标：</strong>${escapeSvg(scene.action)}</p>${printList(scene.steps, true)}</section><section class="lesson-example"><h2>${escapeSvg(scene.example.title)}</h2><dl><dt>背景</dt><dd>${escapeSvg(scene.example.given)}</dd><dt>操作</dt><dd>${escapeSvg(scene.example.when)}</dd><dt>应得结果</dt><dd>${escapeSvg(scene.example.then)}</dd></dl>${code}</section></div><div class="page-bottom"><section class="lesson-more"><div class="lesson-more-grid">${caseEvidencePrint(scene)}<section><div class="lesson-inputs"><h2>输入条件</h2>${printList(scene.inputs)}</div><h2>本幕交付物</h2>${printList(scene.deliverables)}</section><section><h2>验收检查</h2>${printList(scene.checks)}</section><section><h2>常见误操作</h2>${printList(scene.pitfalls)}<div class="proof-box"><h2>整幕完成判据</h2><p>${escapeSvg(scene.proof)}</p></div></section><section><h2>对应手册</h2><div class="lesson-references">${printReferences(scene)}</div></section></div></section><footer class="page-footer"><span>第 ${index + 1} 幕，共 ${SCENES.length} 幕 · ${escapeSvg(scene.target)}</span><span>培训模拟 · 不连接真实数据</span><span>${index + 1} / ${SCENES.length}</span></footer></div></article>`
 }
 function preparePrint() {
   setPlaying(false)
@@ -1295,14 +1692,32 @@ function bindControls() {
   $('prevStepButton').addEventListener('click', () => goToStep(stepIndex - 1))
   $('nextStepButton').addEventListener('click', advanceStep)
   $('stepDots').addEventListener('click', event => { const button = event.target.closest('[data-guide-step]'); if (button) goToStep(Number(button.dataset.guideStep)) })
+  $('coachSteps').addEventListener('click', event => { const button = event.target.closest('[data-manual-step]'); if (button) goToStep(Number(button.dataset.manualStep)) })
   $('exampleToggle').addEventListener('click', () => { exampleOpen = !exampleOpen; syncExampleDisclosure() })
   $('codeToggle').addEventListener('click', () => { codeOpen = !codeOpen; syncExampleDisclosure() })
   $('playButton').addEventListener('click', () => setPlaying(!playing))
   $('restartButton').addEventListener('click', restart)
   $('speedButton').addEventListener('click', () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1; $('speedButton').textContent = `${speed}×`; schedule() })
-  $('resetViewButton').addEventListener('click', () => { globalView = !globalView; renderTopology() })
+  const openTopologyDialog = () => {
+    const dialog = $('topologyDialog')
+    if (dialog.open) return
+    setPlaying(false)
+    dialog.querySelector('.topology-canvas').appendChild($('topologySvg'))
+    dialog.showModal()
+    initTopologyScene()
+  }
+  $('resetViewButton').addEventListener('click', openTopologyDialog)
+  $('closeTopologyButton').addEventListener('click', () => $('topologyDialog').close())
+  $('topologyDialog').addEventListener('close', () => $('topologyHome').appendChild($('topologySvg')))
   $('followButton').addEventListener('click', () => { followMode = !followMode; $('followButton').textContent = followMode ? '退出跟练' : '开始跟练'; $('followButton').setAttribute('aria-pressed', String(followMode)); if (followMode) setPlaying(false) })
   $('courseMenuButton').addEventListener('click', () => { setPlaying(false); $('courseDialog').showModal() })
+  $('caseEvidence').addEventListener('click', event => {
+    const button = event.target.closest('[data-evidence-id]')
+    if (!button) return
+    selectedEvidenceId = button.dataset.evidenceId
+    renderEvidenceAttachments(SCENES[current])
+  })
+  $('swarmGuideButton').addEventListener('click', () => { setPlaying(false); goTo(SCENES.findIndex(scene => scene.id === 'development-swarm-yuan-tech')) })
   $('closeCourseButton').addEventListener('click', () => $('courseDialog').close())
   $('helpButton').addEventListener('click', () => { setPlaying(false); $('helpDialog').showModal() })
   $('closeHelpButton').addEventListener('click', () => $('helpDialog').close())
@@ -1319,22 +1734,27 @@ function bindControls() {
     else if (event.key === '?') $('helpDialog').showModal()
   })
   document.addEventListener('visibilitychange', () => { if (document.hidden) setPlaying(false); syncFlowAnimation() })
-  window.addEventListener('resize', fitPageToViewport)
   window.addEventListener('beforeprint', preparePrint)
   window.addEventListener('afterprint', clearPrint)
   reducedQuery.addEventListener('change', event => { motionAllowed = !event.matches; if (!motionAllowed) setPlaying(false); renderTopology() })
+  window.addEventListener('hashchange', () => { const index = sceneIndexFromHash(); if (index >= 0) { setPlaying(false); goTo(index) } })
 }
 function init() {
+  const deepSceneIndex = sceneIndexFromHash()
+  if (deepSceneIndex >= 0) {
+    current = deepSceneIndex
+    visited.add(current)
+  }
   buildCourseNav()
   bindControls()
   initTopologyScene()
   renderScene()
-  fitPageToViewport()
+  syncSceneHash()
   const params = new URLSearchParams(location.search)
   motionAllowed = !reducedQuery.matches && params.get('motion') !== '0'
   $('motionButton').textContent = motionAllowed ? '动效' : '静态'
   $('motionButton').setAttribute('aria-pressed', String(!motionAllowed))
-  setPlaying(params.get('autoplay') !== '0' && motionAllowed)
+  setPlaying((deepSceneIndex < 0 || params.get('autoplay') === '1') && params.get('autoplay') !== '0' && motionAllowed)
 }
 init()
 </script>

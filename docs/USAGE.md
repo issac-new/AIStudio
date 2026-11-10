@@ -1,6 +1,6 @@
 # AIStudio 使用指南
 
-本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控团队培训时，使用[《产品交付团队培训手册》](manuals/aistudio-training-and-user-guide.md)；研发核心工具技能另见[《swarm-yuan 研发交付指南》](manuals/aistudio-swarm-yuan-developer-guide.md)；查全部页面用[《全量功能清单》](manuals/aistudio-feature-inventory.md)，部署运维用[《管理员运维参考》](manuals/aistudio-operations-reference.md)，查设计依据用[《设计文档导读》](manuals/aistudio-design-document-guide.md)和[《全量索引》](manuals/aistudio-design-document-index.md)，读懂最新方案与真实推演报告用[《run25 全流程推演案例》](manuals/aistudio-run25-simulation-case.md)。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](DESIGN.md)。
+本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控团队培训时，使用[《产品交付团队培训手册》](manuals/aistudio-training-and-user-guide.md)；研发核心工具技能使用[《swarm-yuan 技术说明》](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)为可选来源）；查全部页面用[《全量功能清单》](manuals/aistudio-feature-inventory.md)，部署运维用[《管理员运维参考》](manuals/aistudio-operations-reference.md)，查设计依据用[《设计文档导读》](manuals/aistudio-design-document-guide.md)和[《全量索引》](manuals/aistudio-design-document-index.md)，读懂当前最新完整轮与真实推演报告用[《run28 案例》](manuals/aistudio-interactive-training.html#scene=project-run28-case)（[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源）。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《14 幕交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](DESIGN.md)。
 
 ## 1、启动（浏览器 web 版）
 
@@ -129,11 +129,11 @@ npm run clean && npm run inject
 
 ## 5、桌面端构建（可选）
 
-日常使用不需要桌面包。当前构建脚本仍保留旧上游目录的缺省解析。
-从单仓构建前，必须显式把 `OVERLAY_UPSTREAM_ROOT` 指向仓内 `vendor/`。
+日常使用不需要桌面包。构建脚本的上游根统一按“显式 `OVERLAY_UPSTREAM_ROOT` ＞ 仓内 `vendor/` ＞ 旧兄弟 `upstream/`”解析；单仓已收录基线，通常不必设置该环境变量。只有需要覆盖默认解析、指定另一棵上游树时才显式设置。
 桌面端管理独立的 hermes runtime，其版本不与 agent teams 模块互推。
 
 ```bash
+# 可选：仅在覆盖默认上游根解析时设置
 export OVERLAY_UPSTREAM_ROOT="<本仓根目录>/vendor"
 npm run build:dmg:mac   # macOS arm64：DMG + zip
 npm run build:dmg:win   # Windows x64：zip + NSIS 安装器（必须在 Windows 主机构建）
@@ -143,6 +143,8 @@ npm run build:dmg:win   # Windows x64：zip + NSIS 安装器（必须在 Windows
 
 ## 6、延伸阅读
 
+- [run28 案例（交互培训专题）](manuals/aistudio-interactive-training.html#scene=project-run28-case)：当前最新完整轮，分列含代偿与净额六闸、自主派发、黄金集观察态、报告呈现与后续帧核验；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源。
+- [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的历史教学材料，不代表当前最新轮。
 - [AIStudio 终态设计文档](DESIGN.md)：理念、产品、设计、实施与验证的唯一正本。
 - [设计文档导航](superpowers/specs/2026-10-21-ncwk-unified-product-design.md)：正本、附件和历史档案入口。
 - [全流程推演方案](superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸的判据与运行规程。

@@ -5,8 +5,8 @@
 - 适用版本：AIStudio 1.0.14-overlay。
 - 读者：产品需求分析团队、项目管理团队、研发团队、测试团队、运维监控团队、安全合规及审计内控团队。
 - 使用形态：浏览器 Web 版；桌面端差异不展开。
-- 核实日期：2026-11-03。
-- 验证范围：已核对当前源码、设计正本和 run25 真实报告，并完成交互培训页的 PC 浏览器走查。未重新执行真实 worker、Matrix、审批或生产发布，正式培训前必须按第 16、17 章预演。
+- 核实日期：2026-11-09。
+- 验证范围：已核对当前源码、设计正本、run28 真实报告和运行证据。未重新执行真实 worker、Matrix、审批或生产发布，也未复验 Windows 实机，正式培训前必须按第 16、17 章预演。
 
 ## 1. 六支团队怎样使用本手册
 
@@ -299,7 +299,7 @@ worker-coder 的规则要求技能准备先于 ACP 编码，编码后再升级�
 
 当前 everything 离线包采用 R134：内嵌技能、知识、docs 和 GitHub 源包，**不内嵌可经 npm/pip 镜像安装的运行时**。它不是完全断网自足包；目标机仍需内部 npm/pip 镜像或提前同步完整依赖。Windows 实机和完全气隙安装必须单独验证。
 
-完整的 Step 1-13、precheck、状态机、hooks、变异验证和安装细节见[《swarm-yuan 研发交付指南》](aistudio-swarm-yuan-developer-guide.md)。
+课程主入口见[《swarm-yuan 技术说明》](aistudio-interactive-training.html#scene=development-swarm-yuan-tech)；完整的 Step 1-13、precheck、状态机、hooks、变异验证和安装细节可查阅[《swarm-yuan 研发交付指南》](aistudio-swarm-yuan-developer-guide.md)（可选来源）。
 
 **本章通过判据**：研发能说明当前目标技能是否 active、是否被本次任务实际读取，并按九节点留下 spec、测试、审查、合入和发布证据；不会把生成骨架或门禁全绿当作交付完成。
 
@@ -613,12 +613,12 @@ standard/demo 的 `director-proxy` 是代偿，不计真人批准。审批历史
 
 发布后执行观察、复验和必要的回滚。记录异常、责任人和问题回流，不能只上传资产就写“发布完成”。
 
-发布资产按当前长期政策只有：
+当前 1.0.14-overlay 发布资产按长期政策只有：
 
-1. `aistudio-full-<ver>-src.tar.gz`。
-2. `swarm-yuan-offline-<ver>-everything.zip`。
+1. `aistudio-full-1.0.14-overlay-src.tar.gz`。
+2. `swarm-yuan-offline-1.0.14-overlay-everything.zip`，版本前不带 `v`。
 
-两件主资产附配套 SHA256SUMS。everything 当前仍需要 pip/npm 镜像安装可源装依赖，不等于完全断网自足。
+两件主资产配套 `SHA256SUMS-v1.0.14-overlay.txt`。everything 采用 R134，仍需要 pip/npm 镜像安装可源装依赖，不等于完全断网自足。
 
 **本章通过判据**：发布决策有真实裁决者与证据，实际发布有回执，观察与回滚责任明确。
 
@@ -738,7 +738,7 @@ Windows 离线安装是 Web 模式，仍需 Node≥23、Python 3.14、Git 和内
 
 - 全局应用角色只有 `super_admin` 和 `admin`；组织 RACI、团队领导和 Matrix 权限是另外的判断面。
 - `HERMES_TOOL_ENFORCE=1` 才开启工具执法；strict 决定无配置或异常是否 fail-closed，默认存在观察和 fail-open 区域。
-- OS 沙箱只覆盖已接入执行面，macOS `sandbox-exec`、Linux `bwrap` 不可用时应 unavailable，不是裸跑。
+- OS 沙箱只覆盖已接入执行面，macOS `sandbox-exec`、Linux `bwrap` 不可用时应 unavailable，不是裸跑；Windows 不在当前后端支持列表中，不能把 Windows 终端描述为已沙箱化。
 - `gates.json` 未配置时不能宣称列门正在执法。
 - `HUMAN_GATE_REQUIRE_HUMAN_DECIDER=1` 才严格拒绝自批，角色白名单也需显式配置。
 - 治理姿态页面要读实际值，不能用 expectations 文件存在代替进程已生效。
@@ -796,44 +796,43 @@ Windows 离线安装是 Web 模式，仍需 Node≥23、Python 3.14、Git 和内
 **本章交付物**：安全姿态记录、独立审计底稿、审批与证据链检查、整改和复验记录。
 **通过判据**：审计者与主张人不同，结论有原始证据，未知和缺口没有被改写成通过。
 
-## 15. run25 真实案例：六闸全过，不等于零缺陷全绿
+## 15. run28 真实案例：含代偿六闸全过，净额只有 5/6
 
-### 15.1 最新完整轮是什么
+### 15.1 最新完整轮与历史边界
 
-最新完整真实轮是 `20261102-v8-run25`，run26 是挂账清偿，不是新的 26 步完整轮。阅读时使用该 RUN 的 `evidence/final-report.html` 作为人读正本，`simulation-report.html` 作为机器档案。
+当前最新完整真实轮是 `20261107-v8-run28`。阅读时使用该 RUN 的 `evidence/final-report.html` 作为人读正本，`simulation-report.html` 作为机器档案。课程主入口见[《run28 案例》](aistudio-interactive-training.html#scene=project-run28-case)；[完整 Markdown 教学对照](aistudio-run28-simulation-case.md)为可选来源。
+
+run25（`20261102-v8-run25`）与 run26 是历史案例：run26 已有 477 分钟、26 步、六闸全过的完整报告，后续挂账清偿与补拍必须分时点阅读，不能改写成“不是完整轮”，也不能再当最新。run27 已完成，但不是最新轮；run29 尚无完整报告，不能写成“最新完成”或引用不存在的成绩。run25/run26 的历史证据入口仍保留在[《run25 全流程推演案例》](aistudio-run25-simulation-case.md)。
 
 ### 15.2 报告中的实际成绩
 
-- 2026-11-02 18:27 开跑，报告于 11-03 05:31:18 生成。
-- PART1 摘要总时长 11 小时 04 分；第 26 步另有 state 净时长 32591 秒，口径不同不相加。
-- 26 步与 G1-G6 状态全部完成。
-- 7 个 DEV 分支、30+ 提交。
-- 476 用例的测试证据全部留存可查，不能改写成“476/476 全绿”。
-- G5 `READY-GATE-PASS`，发布门 `approved→released`。
-- UAT 台账为通过 7、有条件 0、不通过 0。
+- `state.env` 的 `run_started_at=1794045964` 与 `report_done=1794090918` 相差 **44,954 秒，即 12 小时 29 分 14 秒**。部分早期收官 spec 写 14h29m，本手册统一采用状态起止差，不混用或相加。
+- 26 步完成，G1-G6 均留下完成键，**含代偿六闸为 6/6**。
+- G1、G3、G6 首过；G2、G4、G5 经打回后完成，不能讲成“六闸全部首过”。
+- 测试证据覆盖 10,785 用例，治理指标记录 4 个缺陷；证据一次通过率为 44/48，另有 4 起凭证族记录。
+- 发布与 UAT 步骤均完成，但完成状态不替代对代偿、证据缺口和后续新债的审查。
 
 ### 15.3 必须同时展示的反证
 
-- G4-E=GAP，不是 PASS；评测处置链失败 2、已关 0、未关 2。
-- 九层运行体检为覆盖 0、部分 1、缺失 8。
-- 技能专项帧为 0，全量呈现覆盖为 13/15，报告仍有骨架占位。
-- 六域审计中 L1、L2、L3、L5 为 warn。
-- 本轮 posture=standard，代偿台账 open 65 笔，不能把含代偿结论当净额能力。
+- **净额六闸只有 5/6**：G5 由 `director-proxy` 代批，净额口径不计真人批准，不能把含代偿 6/6 当成无代偿能力。
+- 代偿台账有 **65 笔 open**，已修为 8/65；其中脚本预写派发 48 条、卡代操作 4 张。组织自派发在案 14 条与代偿数据要分开阅读。
+- 全量呈现覆盖为 **11/13**，不是 13/13；缺项必须进入补证和下一轮验证，不能用六闸完成键遮盖。
+- 本轮 `scenario.log` 只有 2 行、383 字节，且均为人工补抄段界；R18 非法载荷还导致报告生成两次崩溃和审计多轮重入。这些事实证明“流程跑完”不等于“证据链完整”。
 
-### 15.4 “无未完成项”怎样与后续台账共读
+### 15.4 事故怎样转化为下一轮机制
 
-报告第 0 章写“无未完成项”，后续仍有 N01-N06 待做和 N07-N09 观察。正确读法是分别标注报告生成时、复盘时和清偿时，不把报告自述当作永久事实。
+N28 挂账族已清五件：G2 复位签名卡面、metrics 锚校验、JWT 无 profiles 时按 username 回退、OP_STEPS 并档和“落档”词表分裂。复盘根治批继续修复 `note()` 双写、R18 载荷单一校验源、审计异常隔离与机器可读缺口侧柜、交付读数契约。帧独立审计的 14 帧 MD5 全唯一，但 `ide_done` 深链报错帧和 DISP 假引用 repo-shots 仍作为新发现入账，不能因哈希唯一就宣称内容正确。
 
-run26 补拍和补做后，报告矩阵达到缺件 0，但仍有模板不符 2；MP unit 后续实测 78/163 通过、85 红。这些属于后续清偿与新债，不能回填成 run25 历史成绩。
+| 团队 | 用 run28 必须完成的动作 |
+|---|---|
+| 产品需求分析 | 回查 AC、UAT 判词和呈现缺项，不把完成步数当业务验收 |
+| 项目管理 | 分列含代偿 6/6、净额 5/6 与 open 65，给每笔遗留指定责任人和清账条件 |
+| 研发 | 按真实提交、工作区和测试证据复核交付，拒绝只交报告截图 |
+| 测试 | 复跑失败与异常路径，核验 10,785 用例证据和 4 个缺陷的闭环，而非照抄汇总数字 |
+| 运维监控 | 用状态起止、发布记录和恢复日志复核 12h29m14s 过程，保留故障与干预时间线 |
+| 安全合规及审计内控 | 把 director-proxy 排除在真人批准之外，审查 65 笔代偿、11/13 呈现和空过程日志 |
 
-### 15.5 事故怎样转化为机制
-
-G2 环暴露网络、恢复 kwarg、监督器误催和熔断签名盲区；报告审计 36 轮中，16 轮来自错误重启起点，7 轮来自 PART1 未注册。后续形成补丁 726/729、监督器分流和方案 §5.10 七条：采集映射、审计三分、收尾必核、计数隔离、重启上游、六闸事件、引用清扫。
-
-完整案例与证据入口见[《run25 全流程推演案例》](aistudio-run25-simulation-case.md)。
-
-**研发应回答**：哪一项证据能支持当前交付，哪一项不能。
-**负责人应回答**：哪个缺口仍可放行，哪个缺口必须阻断，后续由谁清偿。
+**本章通过判据**：六支团队都能指出自己应复核的证据和缺口，并能解释为什么 run28 可以记为“含代偿完成”，却不能记为“净额全过、零缺陷”。
 
 ## 16. 生产配置、数据与安全边界
 
@@ -892,7 +891,7 @@ HERMES_WEB_UI_HOME="<培训 Studio 状态目录>" \
 9. 推演隔离仍有缺口，不使用真实敏感数据。
 10. 高风险命令、删除、覆盖和发布必须核对实际对象与影响。
 11. 工具执法需要 `HERMES_TOOL_ENFORCE=1`，strict 另需显式配置；默认存在观察和 fail-open 区域。
-12. OS 沙箱只覆盖已接入执行面，不是所有 Agent 的默认隔离。
+12. OS 沙箱只覆盖已接入执行面，不是所有 Agent 的默认隔离；Windows 不在当前后端支持列表中，不得宣称 Windows 终端已沙箱化。
 13. 需要仅本机访问时显式 `BIND_HOST=127.0.0.1` 或使用受控反向代理。
 14. Matrix 协作不自动等于全链路 E2EE，orchestrator 摘要、chat bridge 和模拟房不能当加密证明。
 15. 多 gateway 与进度联邦不等于统一 active-active、共享高可用数据库或自动 failover。
@@ -902,7 +901,7 @@ HERMES_WEB_UI_HOME="<培训 Studio 状态目录>" \
 
 ### 16.4 发布与离线环境
 
-Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 Node≥23、Python 3.14、Git，包内不得包含真实凭据、状态库、会话和运行日志。registry 继承目标机配置，Windows 实机安装未在本手册编写轮验证。
+Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌面线。目标机需要 Node≥23、Python 3.14、Git for Windows 和内部 npm/pip 镜像；node-pty 还依赖镜像提供 win32 预编译件，Ycode 技能中的部分源码工具仍需在目标机安装依赖。包内不得包含真实凭据、状态库、会话和运行日志，registry 继承目标机配置。R134 everything 不完全断网自足，Windows 实机与完全气隙安装均未在本手册编写轮验证；当前 OS sandbox 也不支持 Windows。
 
 **本章通过判据**：培训环境与生产数据隔离，数据库和治理仓路径明确，所有默认安全姿态都能用实际进程配置和探针证明。
 
@@ -1022,12 +1021,13 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 ### 17.9 参考材料
 
 - [全量功能清单](aistudio-feature-inventory.md)：全部页面、页签、写读边界、特性开关和未接线能力。
-- [swarm-yuan 研发交付指南](aistudio-swarm-yuan-developer-guide.md)：项目技能生成、九节点、precheck、hooks、变异验证、真实 ACP 链和离线安装。
+- [swarm-yuan 技术说明（交互培训专题）](aistudio-interactive-training.html#scene=development-swarm-yuan-tech)：项目技能生成、九节点、precheck、hooks、变异验证、真实 ACP 链和离线安装；[研发交付指南](aistudio-swarm-yuan-developer-guide.md)为可选来源。
 - [管理员运维参考](aistudio-operations-reference.md)：启动注入、端口、凭据、数据、健康检查和故障分类。
 - [设计文档导读](aistudio-design-document-guide.md)：事实源优先级、稳定机制和正本与实现差异。
 - [设计文档全量索引](aistudio-design-document-index.md)：全部根目录 spec 与 archive spec 的可点击快照。
-- [run25 全流程推演案例](aistudio-run25-simulation-case.md)：最新方案与真实报告完整对照。
-- [交互拓扑培训](aistudio-interactive-training.html)：六团队各两幕共 12 幕，使用模拟数据讲系统结构。
+- [run28 案例（交互培训专题）](aistudio-interactive-training.html#scene=project-run28-case)：最新完整轮的真实报告、含代偿与净额对照；[完整 Markdown](aistudio-run28-simulation-case.md)为可选来源。
+- [run25 全流程推演案例](aistudio-run25-simulation-case.md)：run25/run26 历史方案、报告与后续清偿对照。
+- [14 幕交互拓扑培训](aistudio-interactive-training.html)：面向技术人员的培训手册与演示说明。每幕依次讲清原理与结构、结构/架构图融入原理、流程图引出实操、关系图收束案例交接的连贯图解、实操演示流程、run28 场景案例、证据与验收；左侧为四阶段 14 幕目录，右侧同步当前步骤的讲解重点、交付物、验收检查和常见误操作，可打开对应拓扑。案例与示例代码默认展开，打印输出 14 页 A4 横屏完整教案。
 - [AIStudio 终态设计文档](../DESIGN.md)：稳定产品与架构依据。
 - [全流程推演方案](../superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步、六闸和最终验收依据。
 - [发布清单](../../RELEASE-MANIFEST.json)：当前模块版本与两件发布资产政策。
@@ -1040,7 +1040,7 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。
 
 - 适用版本：AIStudio 1.0.14-overlay（package.json）
-- 路由计数：routes=121（page 80 / redirect 41）；stageTabs=37；visitStates=158
+- 路由计数：routes=123（page 82 / redirect 41）；stageTabs=37；visitStates=160
 - 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.20-studio.1 · agent-teams v0.23.1-team.1 · ycode 3.17.2 · yuan-skill v2.100.2
 - 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
 
@@ -1094,6 +1094,7 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 | ia2.loopCanvas | /app/l/:loopId | page |
 | ia2.runDetail | /app/runs/:runId | page |
 | hermes.session | /hermes/session/:sessionId | page |
+| projectDetail | /app/projects/:id | page |
 | matrix.clientRoom | /matrix/room/:roomId | page |
 | share.groupChat | /share/group-chat/:inviteCode? | page |
 | hermes.tasks | /hermes/tasks | redirect |
@@ -1157,6 +1158,7 @@ Windows 离线包是 Web 模式，不是 Electron 桌面线。目标机需要 No
 | ia2.bpa | /app/bpa | page |
 | ia2.ontology | /app/ontology | page |
 | ia2.skillgov | /app/skillgov | page |
+| projects | /app/projects | page |
 | desktop.chat | /desktop-chat/:sessionId | page |
 |  | /ide/:rest(.*) | redirect |
 | hermes.person | /person | page |

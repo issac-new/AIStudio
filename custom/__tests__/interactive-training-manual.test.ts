@@ -17,16 +17,30 @@ afterEach(async () => {
   server = null
 })
 
+type Run28Evidence = {
+  runId: string; source: string; locator: string; snapshot: string; status: string; fact: string
+}
+
 function courseData() {
-  const start = html.indexOf('const PARTS =')
+  const markers = ['const PARTS =', 'const PHASES =', 'const RUN28_EVIDENCE =', 'const MANUAL_PRINCIPLES ='].map(marker => html.indexOf(marker))
+  for (const start of markers) expect(start).toBeGreaterThan(-1)
+  const start = Math.min(...markers)
   const end = html.indexOf('\n\nconst $ =')
-  expect(start).toBeGreaterThan(-1)
   expect(end).toBeGreaterThan(start)
-  return new Function(`${html.slice(start, end)}; return { PARTS, SCENES }`)() as {
+  return new Function(`${html.slice(start, end)}; return { PARTS, PHASES, SCENES, RUN28_EVIDENCE, MANUAL_PRINCIPLES }`)() as {
     PARTS: Array<{ id: string; name: string }>
+    PHASES: Array<{ id: string }>
+    RUN28_EVIDENCE: Record<string, Run28Evidence>
+    MANUAL_PRINCIPLES: Record<string, string>
     SCENES: Array<{
-      id: string; part: string; focus: string; duration: number; proof: string
-      layer: string; practiceRef: string
+      id: string; part: string; phase: string; navShort: string; focus: string; duration: number; summary: string; proof: string
+      layer: string; practiceRef: string; feedsNextCycle?: string
+      handoff: {
+        consumes: Array<{ scene: string; artifact: string }>
+        produces: string
+        next: string | null
+      }
+      caseEvidenceIds: string[]
       nodes: Array<{ id: string }>
       edges: Array<{ from: string; to: string }>
       inputs: string[]
@@ -42,15 +56,35 @@ function courseData() {
 }
 
 describe('AIStudio 交互培训课程契约', () => {
-  it('六团队各 2 幕，场景、焦点和连线完整', () => {
-    const { PARTS, SCENES } = courseData()
+  it('四阶段 14 幕按规定顺序组成复核工作包，场景、焦点和连线完整', () => {
+    const { PARTS, PHASES, SCENES } = courseData()
     expect(PARTS.map(part => part.name)).toEqual(['产品需求分析', '项目管理', '研发', '测试', '运维监控', '安全合规及审计内控'])
-    expect(SCENES).toHaveLength(12)
-    expect(new Set(SCENES.map(scene => scene.id)).size).toBe(12)
+    expect(PHASES.map(phase => phase.id)).toEqual(['rules', 'execution', 'governance', 'capstone'])
+    expect(SCENES.map(scene => scene.id)).toEqual([
+      'product-overview',
+      'product-spec-design',
+      'development-swarm-yuan-tech',
+      'operations-readiness',
+      'project-dispatch',
+      'development-swarm',
+      'development-delivery',
+      'testing-g4-review',
+      'testing-eval',
+      'audit-posture-approval',
+      'project-release-retro',
+      'operations-release',
+      'audit-evidence-remediation',
+      'project-run28-case',
+    ])
+    expect(new Set(SCENES.map(scene => scene.id)).size).toBe(14)
+    const expectedSceneCounts: Record<string, number> = { product: 2, project: 3, development: 3, testing: 2, operations: 2, audit: 2 }
     for (const part of PARTS) {
-      expect(SCENES.filter(scene => scene.part === part.id)).toHaveLength(2)
+      expect(SCENES.filter(scene => scene.part === part.id)).toHaveLength(expectedSceneCounts[part.id])
     }
+    const phaseIds = new Set(PHASES.map(phase => phase.id))
     for (const scene of SCENES) {
+      expect(phaseIds.has(scene.phase), `${scene.id} phase`).toBe(true)
+      expect(scene.navShort.trim().length, `${scene.id} navShort`).toBeGreaterThan(0)
       const ids = new Set(scene.nodes.map(item => item.id))
       expect(ids.size).toBe(scene.nodes.length)
       expect(ids.has(scene.focus)).toBe(true)
@@ -61,17 +95,147 @@ describe('AIStudio 交互培训课程契约', () => {
         expect(ids.has(link.to)).toBe(true)
       }
     }
+    expect(SCENES.at(-1)?.phase).toBe('capstone')
+  })
+
+  it('交接 DAG 的来源均在前面，产物与下一幕沿 14 幕链匹配并回流下一轮', () => {
+    const { SCENES } = courseData()
+    const artifacts = [
+      'case-index',
+      'spec-review',
+      'skill-supply',
+      'readiness',
+      'dispatch-recon',
+      'skill-live',
+      'commit-pack',
+      'g4-pack',
+      'eval-pack',
+      'approval-pack',
+      'release-decision',
+      'ops-timeline',
+      'audit-pack',
+      'capstone-verdict',
+    ]
+    const sceneIndexes = new Map(SCENES.map((scene, index) => [scene.id, index]))
+    SCENES.forEach((scene, index) => {
+      expect(scene.handoff.produces, scene.id).toBe(artifacts[index])
+      expect(scene.handoff.next, scene.id).toBe(SCENES[index + 1]?.id ?? null)
+      if (index === 0) {
+        expect(scene.handoff.consumes, scene.id).toEqual([])
+        return
+      }
+      expect(scene.handoff.consumes.length, scene.id).toBeGreaterThan(0)
+      expect(scene.handoff.consumes, `${scene.id} keeps the main handoff chain`).toContainEqual({
+        scene: SCENES[index - 1].id,
+        artifact: artifacts[index - 1],
+      })
+      for (const consumed of scene.handoff.consumes) {
+        const sourceIndex = sceneIndexes.get(consumed.scene)
+        expect(sourceIndex, `${scene.id} consumes ${consumed.scene}`).toBeDefined()
+        expect(sourceIndex!, `${scene.id} source must precede consumer`).toBeLessThan(index)
+        expect(SCENES[sourceIndex!].handoff.produces, `${scene.id} consumed artifact`).toBe(consumed.artifact)
+      }
+    })
+    const last = SCENES.at(-1)!
+    expect(last.id).toBe('project-run28-case')
+    expect(last.handoff.next).toBeNull()
+    expect(last.feedsNextCycle).toBe('product-spec-design')
+  })
+
+  it('run28 证据登记字段完整，每幕引用均已注册且没有孤儿证据', () => {
+    const { RUN28_EVIDENCE, SCENES } = courseData()
+    const evidenceEntries = Object.entries(RUN28_EVIDENCE)
+    expect(evidenceEntries.length).toBeGreaterThan(0)
+    const evidenceById = new Map<string, Run28Evidence>()
+    for (const [id, evidence] of evidenceEntries) {
+      expect(id.trim().length, 'evidence id').toBeGreaterThan(0)
+      for (const field of ['runId', 'source', 'locator', 'snapshot', 'status', 'fact'] as const) {
+        expect(typeof evidence[field], `evidence ${id} ${field}`).toBe('string')
+        expect(evidence[field].trim().length, `evidence ${id} ${field}`).toBeGreaterThan(0)
+      }
+      expect(evidence.runId, `evidence ${id} runId`).toBe('20261107-v8-run28')
+      expect(evidenceById.has(id), `duplicate evidence ${id}`).toBe(false)
+      evidenceById.set(id, evidence)
+    }
+    const referenced = new Set<string>()
+    for (const scene of SCENES) {
+      expect(scene.caseEvidenceIds.length, scene.id).toBeGreaterThan(0)
+      expect(new Set(scene.caseEvidenceIds).size, `${scene.id} duplicate evidence references`).toBe(scene.caseEvidenceIds.length)
+      for (const id of scene.caseEvidenceIds) {
+        expect(evidenceById.has(id), `${scene.id} references ${id}`).toBe(true)
+        referenced.add(id)
+      }
+    }
+    for (const id of evidenceById.keys()) expect(referenced.has(id), `unreferenced evidence ${id}`).toBe(true)
+  })
+
+  it('技术手册：原理、实操、案例、证据与演示侧栏构成完整课程', () => {
+    const s2 = (text: string) => text.split('id="topologySvg"').length - 1
+    const { PHASES, SCENES, RUN28_EVIDENCE, MANUAL_PRINCIPLES } = courseData()
+    expect(Object.keys(MANUAL_PRINCIPLES).sort()).toEqual(SCENES.map(scene => scene.id).sort())
+    for (const scene of SCENES) expect(MANUAL_PRINCIPLES[scene.id].length, `${scene.id} 原理说明`).toBeGreaterThan(60)
+    // 左侧进度轨由 PHASES 驱动，四阶段把 14 幕完整分组且全部可点导航；横幅带阶段与幕次
+    expect(html).toContain('function renderPhaseRoute')
+    expect(html).toContain('data-directory-scene="${entry.index}"')
+    expect(html).toContain('id="stagePhase"')
+    expect(html).toContain('第 ${current + 1} 幕 / 14')
+    const phaseCounts = PHASES.map(phase => SCENES.filter(scene => scene.phase === phase.id).length)
+    expect(phaseCounts).toEqual([4, 5, 4, 1])
+    // 四组冲突数字原样呈现，且每个核心数字都能回溯到证据 fact，不另造口径
+    const metricsBlock = html.slice(html.indexOf('const metrics = ['), html.indexOf("$('caseMetrics').innerHTML"))
+    expect(metricsBlock.length).toBeGreaterThan(0)
+    for (const token of ['26', '6/6 <em>≠</em> 5/6', '65 / 8/65', '11/13｜13/14', '步链', '含代偿 / 净额', 'open / 已修', '报告｜后续帧']) {
+      expect(metricsBlock, `metrics ${token}`).toContain(token)
+    }
+    const allFacts = Object.values(RUN28_EVIDENCE).map(item => item.fact).join('\n')
+    for (const token of ['26', '6/6', '5/6', '8/65', '11/13', '13/14']) expect(allFacts, `fact trace ${token}`).toContain(token)
+    // 附件签渲染 snapshot/status 原样状态词，observed 不翻译成通过；切步保留、切幕重置
+    expect(html).toContain('function renderEvidenceAttachments')
+    expect(html).toContain('if (!scene.caseEvidenceIds.includes(selectedEvidenceId)) selectedEvidenceId = scene.caseEvidenceIds[0]')
+    const slipTemplate = html.slice(html.indexOf('evidence-slip ${'), html.indexOf('evidence-slip ${') + 420)
+    expect(slipTemplate).toContain('${evidence.snapshot}/${evidence.status}')
+    expect(slipTemplate).not.toContain('通过')
+    // 拓扑只在讲解需要时展开：同一 svg 在隐藏宿主与 dialog 间移动，不复制
+    expect(html).toContain('id="topologyHome"')
+    expect(html).toContain("dialog.querySelector('.topology-canvas').appendChild($('topologySvg'))")
+    expect(html).toContain("$('topologyHome').appendChild($('topologySvg'))")
+    expect(s2(html), 'topologySvg 唯一').toBe(1)
+    expect(html).toContain('id="topologyDialog"')
+    expect(html).toContain('traversedFlowIds = [], traversedNodeIds = []')
+    expect(html).toContain('previousGuides.flatMap(guide => guide.flowIds)')
+    expect(html).toContain('.topology-flow.is-traversed')
+    expect(html).toContain('.topology-node.is-traversed')
+    // 屏幕为技术文档三栏，打印保持三列教案，不复制交互滚动区
+    expect(html).toContain('class="manual-document" id="simStage"')
+    expect(html).toContain('id="manualPrinciple"')
+    expect(html).toContain('function renderDiagrams')
+    for (const id of ['structureSvg', 'flowSvg', 'architectureSvg', 'relationshipSvg']) expect(html).toContain(`id="${id}"`)
+    expect(html).toContain("$('architectureSvg').innerHTML = topologySvgContent")
+    const principleBlock = html.slice(html.indexOf('id="principleSection"'), html.indexOf('id="practiceSection"'))
+    const practiceBlock = html.slice(html.indexOf('id="practiceSection"'), html.indexOf('id="caseSection"'))
+    const caseBlock = html.slice(html.indexOf('id="caseSection"'), html.indexOf('id="evidenceSection"'))
+    expect(principleBlock.indexOf('id="structureSvg"')).toBeLessThan(principleBlock.indexOf('id="architectureSvg"'))
+    expect(principleBlock).toContain('id="manualPrinciple"')
+    expect(practiceBlock.indexOf('id="flowSvg"')).toBeLessThan(practiceBlock.indexOf('id="coachSteps"'))
+    expect(caseBlock).toContain('id="relationshipSvg"')
+    expect(html).toContain('${escapeSvg(MANUAL_PRINCIPLES[scene.id])}')
+    expect(html).toContain('class="manual-notes"')
+    expect(html).toContain('height: calc(100vh - 58px)')
+    expect(html).not.toContain('function fitPageToViewport')
+    expect(html).toContain('#printRoot .lesson-main { display: grid; grid-template-columns: 112mm 82mm 75mm; }')
   })
 
   it('每幕都有可执行教案和不同实例，而不是只有摘要壳', () => {
-    const { SCENES } = courseData()
+    const { SCENES, RUN28_EVIDENCE } = courseData()
     const allowedReferences = new Set([
       '/aistudio-training-and-user-guide.md',
       '/aistudio-feature-inventory.md',
       '/aistudio-operations-reference.md',
       '/aistudio-design-document-guide.md',
       '/aistudio-design-document-index.md',
+      '/aistudio-run28-simulation-case.md',
       '/aistudio-run25-simulation-case.md',
+      '/aistudio-swarm-yuan-guide.html',
       '/aistudio-swarm-yuan-developer-guide.md',
     ])
     const stepSignatures = new Set<string>()
@@ -89,9 +253,12 @@ describe('AIStudio 交互培训课程契约', () => {
       for (const reference of scene.references) expect(allowedReferences.has(reference.href)).toBe(true)
       stepSignatures.add(scene.steps.join('\n'))
       exampleSignatures.add(`${scene.example.given}\n${scene.example.when}\n${scene.example.then}`)
+      const exampleText = `${scene.example.given}\n${scene.example.when}\n${scene.example.then}`
+      const usedEvidence = scene.caseEvidenceIds.some(id => exampleText.includes(RUN28_EVIDENCE[id].fact))
+      expect(usedEvidence, `${scene.id} 实例必须直接消费本幕注册的 run28 证据`).toBe(true)
     }
-    expect(stepSignatures.size).toBe(12)
-    expect(exampleSignatures.size).toBe(12)
+    expect(stepSignatures.size).toBe(14)
+    expect(exampleSignatures.size).toBe(14)
   })
 
   it('离线 HTML 使用 A4 横屏与 SVG 动效，不再携带旧 3D 或 Pretext', () => {
@@ -110,14 +277,14 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(html).not.toContain('transform-style: preserve-3d')
   })
 
-  it('使用五层拓扑、可选 Matrix 分支和证据回流', () => {
+  it('使用五层拓扑、可选 Matrix 分支和证据回流，不再维护场景下标表', () => {
     expect(html).toContain('function initTopologyScene')
     expect(html).toContain('function renderTopology')
     expect(html).toContain('id="topologySvg"')
     expect(html).toContain('协作消息与平台回执（可选）')
     expect(html).toContain('任务真值与状态')
     expect(html).toContain('独立验证与证据库')
-    expect(html).toContain('TOPO_FLOW_BY_SCENE')
+    for (const removed of ['TOPO_ANCHORS', 'TOPO_NODE_BY_SCENE', 'TOPO_FLOW_BY_SCENE']) expect(html).not.toContain(removed)
   })
 
   it('纸张右上角承载导航，三类信息节点在图内同步流转', () => {
@@ -125,12 +292,12 @@ describe('AIStudio 交互培训课程契约', () => {
       expect(html).not.toContain(removed)
     }
     const actions = html.match(/<div class="stage-actions"[\s\S]*?<\/div>/)?.[0] ?? ''
-    for (const id of ['prevButton', 'playButton', 'nextButton', 'speedButton', 'courseMenuButton', 'helpButton']) {
+    for (const id of ['prevButton', 'playButton', 'nextButton', 'speedButton', 'courseMenuButton', 'swarmGuideButton', 'helpButton']) {
       expect(actions).toContain(`id="${id}"`)
     }
     expect(html).toContain('id="partNav"')
-    expect(html).toContain('<nav class="page-side" aria-label="课程导航目录">')
-    expect(html).toContain('id="directoryTeams" role="group"')
+    expect(html).toContain('class="manual-topbar"')
+    expect(html).toContain('id="directoryTeams"')
     expect(html).toContain('id="directoryScenes" role="group"')
     expect(html).toContain('data-directory-scene')
     expect(html).toContain('id="courseDialog"')
@@ -151,13 +318,12 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(html).toContain('id="exampleToggle"')
     expect(html).toContain('id="codeToggle"')
     expect(html).toContain('aria-controls="exampleDetail"')
-    expect(html).toContain('id="coachMore"')
     expect(html).toContain('id="coachDeliverables"')
     expect(html).toContain('id="coachPitfalls"')
     expect(html).toContain('id="coachReferences"')
-    expect(html).toContain('class="a4-page"')
-    const stageStart = html.indexOf('<section class="topology-panel" id="simStage"')
-    const stageEnd = html.indexOf('\n        </div>\n      </article>', stageStart)
+    expect(html).toContain('class="a4-page${dense}"')
+    const stageStart = html.indexOf('<article class="manual-document" id="simStage"')
+    const stageEnd = html.indexOf('\n  </main>', stageStart)
     expect(stageStart).toBeGreaterThan(-1)
     expect(stageEnd).toBeGreaterThan(stageStart)
     const stage = html.slice(stageStart, stageEnd)
@@ -166,55 +332,67 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(appMarkup).not.toContain('id="spatialFocus"')
     expect(appMarkup).not.toContain('class="panel-head"')
     expect(html).toContain('chip.textContent = `${label.id} · ${label.label}`')
-    for (const marker of ['class="lesson-steps flow-card"', 'class="lesson-example flow-card"', 'class="lesson-more" id="coachMore"', 'class="topology-flow-deck"', 'class="flow-cards"']) {
+    for (const marker of ['class="manual-document" id="simStage"', 'id="stagePhase"', 'id="manualPrinciple"', 'class="manual-steps"', 'class="case-narrative"', 'class="evidence-attachments" id="caseEvidence"']) {
       expect(stage).toContain(marker)
     }
     expect(html).toContain('grid-template-rows: 26mm 165mm')
-    expect(html).toContain('grid-template-columns: minmax(0, 1fr) 68mm')
-    expect(html).toContain('#appRoot .topology-panel { display: grid; grid-template-rows: 165mm; }')
     expect(html).toContain('grid-template-columns: 1.15fr 1fr 1.2fr .75fr')
     expect(html).toContain('.lesson-more-grid')
-    expect(html).toContain('section class="lesson-more" id="coachMore"')
     expect(html).toContain('break-after: page')
     expect(html).toContain('break-inside: avoid')
+    expect(html).toContain('打印 14 页 A4')
+    expect(html).toContain("$('printRoot').innerHTML = SCENES.map(printPage).join('')")
     expect(html).toContain('#printRoot .lesson-main { display: grid; grid-template-columns: 112mm 82mm 75mm; }')
-    expect(html).not.toContain('<details')
+    const printTemplate = html.slice(html.indexOf('function printPage'), html.indexOf('function preparePrint'))
+    expect(printTemplate).not.toContain('<details')
   })
 
-  it('12 幕映射到五层拓扑的 15 个协作步骤', () => {
+  it('五层拓扑保留 15 个协作步骤，视图不携带整幕流线或焦点下标数组', () => {
     const start = html.indexOf('let topologyActive = false')
     const end = html.indexOf('\n\nfunction renderTopology', start)
-    const { TOPO_LAYERS, TOPO_FLOWS, TOPO_FLOW_BY_SCENE, TOPO_ANCHORS } = new Function(`${html.slice(start, end)}; return { TOPO_LAYERS, TOPO_FLOWS, TOPO_FLOW_BY_SCENE, TOPO_ANCHORS }`)()
-    expect(TOPO_LAYERS.map((layer: { label: string }) => layer.label)).toEqual(['治理层', '产品交互层', '协作运行层', '执行层', '能力与治理支撑层'])
-    expect(TOPO_FLOWS.map((flow: { id: number }) => flow.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
-    expect(TOPO_FLOW_BY_SCENE).toHaveLength(12)
-    expect(TOPO_FLOW_BY_SCENE[0]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
-    expect(TOPO_ANCHORS).toHaveLength(12)
-    for (const flowIds of TOPO_FLOW_BY_SCENE) {
-      expect(flowIds.length).toBeGreaterThan(0)
-      for (const id of flowIds) expect(TOPO_FLOWS.some((flow: { id: number }) => flow.id === id)).toBe(true)
+    const { TOPO_LAYERS, TOPO_FLOWS, TOPO_VIEWS } = new Function(`${html.slice(start, end)}; return { TOPO_LAYERS, TOPO_FLOWS, TOPO_VIEWS }`)() as {
+      TOPO_LAYERS: Array<{ label: string }>
+      TOPO_FLOWS: Array<{ id: number }>
+      TOPO_VIEWS: Record<string, { flowByScene?: number[][]; activeNode?: string[] }>
+    }
+    expect(TOPO_LAYERS.map(layer => layer.label)).toEqual(['治理层', '产品交互层', '协作运行层', '执行层', '能力与治理支撑层'])
+    expect(TOPO_FLOWS.map(flow => flow.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    for (const [part, view] of Object.entries(TOPO_VIEWS)) {
+      expect(view, part).not.toHaveProperty('flowByScene')
+      expect(view, part).not.toHaveProperty('activeNode')
     }
   })
 
-  it('每幕步骤映射真实流线并覆盖整幕路径，节点与亮线实际相连', () => {
+  it('每幕步骤映射真实流线，整幕亮线等于步骤并集，默认焦点与节点连通', () => {
     const start = html.indexOf('let topologyActive = false')
     const end = html.indexOf('\n\nfunction renderTopology', start)
-    const views = new Function(`${html.slice(start, end)}; return TOPO_VIEWS`)() as Record<string, { nodes: Array<{ id: string; x: number; y: number; w: number; h: number }>; flows: Array<{ id: number; path: string }>; flowByScene: number[][] }>
     const { SCENES } = courseData()
+    type View = { nodes: Array<{ id: string; x: number; y: number; w: number; h: number }>; flows: Array<{ id: number; path: string }> }
+    const { views, topologySvgContent } = new Function('SCENES', `${html.slice(start, end)}; return { views: TOPO_VIEWS, topologySvgContent }`)(SCENES) as {
+      views: Record<string, View>
+      topologySvgContent: (view: View, index: number, showAll: boolean, allowMotion: boolean) => string
+    }
     SCENES.forEach((scene, index) => {
       expect(scene.stepGuide, scene.id).toHaveLength(scene.steps.length)
-      const sceneFlows = views[scene.part].flowByScene[index]
-      const validFlows = new Set(sceneFlows)
-      const validNodes = new Set(views[scene.part].nodes.map(node => node.id))
-      const coveredFlows = new Set<number>()
       const view = views[scene.part]
+      const sceneFlows = [...new Set(scene.stepGuide.flatMap(guide => guide.flowIds))].sort((a, b) => a - b)
+      expect(sceneFlows.length, scene.id).toBeGreaterThan(0)
+      const svg = topologySvgContent(view, index, false, false)
+      const activeFlows = [...svg.matchAll(/<path class="([^"]*)" data-flow-id="(\d+)"/g)]
+        .filter(match => match[1].split(' ').includes('is-active'))
+        .map(match => Number(match[2]))
+        .sort((a, b) => a - b)
+      expect(activeFlows, `${scene.id} derived scene flows`).toEqual(sceneFlows)
+      const focusedNodes = [...svg.matchAll(/<g data-topo-node="([^"]+)" tabindex="(\d)"/g)]
+        .filter(match => match[2] === '0')
+        .map(match => match[1])
+      expect(focusedNodes, `${scene.id} default focus`).toEqual([scene.focus])
+      const validFlows = new Set(view.flows.map(flow => flow.id))
+      const validNodes = new Set(view.nodes.map(node => node.id))
       for (const guide of scene.stepGuide) {
         expect(validNodes.has(guide.nodeId), `${scene.id} node ${guide.nodeId}`).toBe(true)
         expect(guide.flowIds.length, scene.id).toBeGreaterThan(0)
-        for (const id of guide.flowIds) {
-          expect(validFlows.has(id), `${scene.id} flow ${id}`).toBe(true)
-          coveredFlows.add(id)
-        }
+        for (const id of guide.flowIds) expect(validFlows.has(id), `${scene.id} flow ${id}`).toBe(true)
         const node = view.nodes.find(item => item.id === guide.nodeId)!
         const connected = guide.flowIds.some(id => {
           const flow = view.flows.find(item => item.id === id)!
@@ -229,7 +407,6 @@ describe('AIStudio 交互培训课程契约', () => {
         expect(guide.pitfall).toBeGreaterThanOrEqual(0)
         expect(guide.pitfall).toBeLessThan(scene.pitfalls.length)
       }
-      expect([...coveredFlows].sort((a, b) => a - b), scene.id).toEqual([...sceneFlows].sort((a, b) => a - b))
     })
   })
 
@@ -239,37 +416,35 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(html).toContain('.topology-node-subtitle { fill: #65776a; font-size: 14px;')
     expect(html).toContain('grid-template-rows: 26mm 165mm')
     expect(html).toContain('grid-template-columns: 1.15fr 1fr 1.2fr .75fr')
-    expect(html).toContain('grid-template-columns: minmax(0, 1fr) 68mm')
     expect(html).toContain('stepNodeId = null')
-    expect(html).toContain('#printRoot .a4-page { grid-template-rows: 30mm 96mm 62mm; }')
+    expect(html).toContain('#printRoot .a4-page { grid-template-rows: 27mm 87mm 74mm; }')
+    expect(html).toContain('function caseEvidencePrint')
+    expect(html).toContain('class="case-evidence-print"')
     expect(html).toContain('padding: 8mm')
-    expect(html).toContain('Math.min(1.35')
     expect(html).toContain('return defs + layers + flowLines + nodes + flowLabels + pulses')
     expect(html).toContain('#appRoot, dialog, .skip-link { display: none !important; }')
     expect(html).not.toContain('availableHeight')
   })
 
-  it('六团队使用不同拓扑，且每幕激活流与跟练节点一致', () => {
+  it('六团队使用不同拓扑，每幕焦点取 scene.focus 且派生流线非空', () => {
     const start = html.indexOf('let topologyActive = false')
     const end = html.indexOf('\n\nfunction renderTopology', start)
     const views = new Function(`${html.slice(start, end)}; return TOPO_VIEWS`)() as Record<string, {
       nodes: Array<{ id: string; title: string; sub: string }>
       flows: Array<{ label: string }>
-      flowByScene: number[][]
-      activeNode: string[]
     }>
     const { SCENES } = courseData()
     expect(Object.keys(views)).toEqual(['product', 'project', 'development', 'testing', 'operations', 'audit'])
     const signatures = new Set(Object.values(views).map(view => view.nodes.map(node => node.id).join(',')))
     expect(signatures.size).toBe(6)
     for (const [part, view] of Object.entries(views)) {
-      const sceneIndexes = SCENES.map((scene, index) => ({ scene, index })).filter(item => item.scene.part === part).map(item => item.index)
-      expect(sceneIndexes).toHaveLength(2)
+      const scenes = SCENES.filter(scene => scene.part === part)
+      expect(scenes).toHaveLength(({ product: 2, project: 3, development: 3, testing: 2, operations: 2, audit: 2 } as Record<string, number>)[part])
       const nodeIds = new Set(view.nodes.map(node => node.id))
-      for (const index of sceneIndexes) {
-        expect(view.flowByScene[index].length, `${part} scene ${index}`).toBeGreaterThan(0)
-        expect(view.activeNode[index]).toBe(SCENES[index].focus)
-        expect(nodeIds.has(view.activeNode[index])).toBe(true)
+      for (const scene of scenes) {
+        const sceneFlows = new Set(scene.stepGuide.flatMap(guide => guide.flowIds))
+        expect(sceneFlows.size, scene.id).toBeGreaterThan(0)
+        expect(nodeIds.has(scene.focus), `${scene.id} focus ${scene.focus}`).toBe(true)
       }
     }
     expect(views.development.nodes.map(node => node.title).join(' ')).toContain('swarm-yuan')
@@ -293,7 +468,13 @@ describe('AIStudio 交互培训课程契约', () => {
     const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
     const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
     const feature = readFileSync(resolve(root, 'docs/manuals/aistudio-feature-inventory.md'), 'utf8')
+    const operations = readFileSync(resolve(root, 'docs/manuals/aistudio-operations-reference.md'), 'utf8')
+    const designGuide = readFileSync(resolve(root, 'docs/manuals/aistudio-design-document-guide.md'), 'utf8')
+    const manifest = JSON.parse(readFileSync(resolve(root, 'RELEASE-MANIFEST.json'), 'utf8'))
     expect(manual).toContain(`适用版本：AIStudio ${pkg.version}`)
+    expect(operations).toContain(pkg.version)
+    for (const module of Object.values(manifest.modules) as Array<{ version: string }>) expect(designGuide).toContain(module.version)
+    expect(html).toContain(`适用版本：AIStudio ${pkg.version}`)
     for (const tab of ['评测集', '运行记录', '指标治理', '安全红队', 'UI Oracle', '优化建议', '数据飞轮', '技能评估']) {
       expect(feature).toContain(tab)
     }
@@ -303,11 +484,42 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(html).toContain('同一页面的“技能评估”检查 spec 第 19 节')
   })
 
+  it('run28 复核幕与 swarm-yuan 技术页覆盖当前实现和证据边界', () => {
+    const guide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-guide.html'), 'utf8')
+    for (const text of ['swarm-yuan Skill', 'v2.100.1', '59', '204', '32 个 standard', 'SCHEMA_EPOCH', 'shortcut:', 'references/lessons.md', 'check_spec_first_wiring', 'engine_bin_source', 'state-machine.sh guard build']) {
+      expect(guide).toContain(text)
+    }
+    expect(guide).toContain('href="/aistudio-swarm-yuan-developer-guide.md"')
+    const { SCENES } = courseData()
+    const run28 = SCENES.find(scene => scene.id === 'project-run28-case')
+    expect(run28, 'project-run28-case').toBeDefined()
+    expect(run28!.part).toBe('project')
+    expect(run28!.phase).toBe('capstone')
+    expect(run28!.focus).toBe('g5')
+    for (const text of ['20261107-v8-run28', '净额 5/6', 'open 65', '已修 8/65', '自主派发 14', '11/13', '13/14', 'mp_runtime_proof', '44954 秒', '14 例误杀']) {
+      expect(`${run28!.summary}${run28!.steps.join('')}${run28!.example.given}${run28!.example.when}`).toContain(text)
+    }
+    const tech = SCENES.find(scene => scene.id === 'development-swarm-yuan-tech')
+    expect(tech, 'development-swarm-yuan-tech').toBeDefined()
+    expect(tech!.part).toBe('development')
+    expect(tech!.phase).toBe('rules')
+    expect(tech!.focus).toBe('swarm')
+    for (const text of ['v2.100.1', 'SCHEMA_EPOCH', 'shortcut', 'lessons.md', 'standard 32', 'engine_bin_source', 'R134']) {
+      expect(`${tech!.summary}${tech!.steps.join('')}${tech!.example.given}${tech!.example.when}`).toContain(text)
+    }
+    expect(html).toContain("goTo(SCENES.findIndex(scene => scene.id === 'development-swarm-yuan-tech'))")
+    expect(html).toContain('href="#scene=development-swarm-yuan-tech"')
+    expect(html).toContain('href="#scene=project-run28-case"')
+    expect(html).toContain('function sceneIndexFromHash')
+    expect(html).toContain('function syncSceneHash')
+  })
+
   it('六团队手册覆盖独立交付主线、实现边界和所有参考材料', () => {
     const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
     const feature = readFileSync(resolve(root, 'docs/manuals/aistudio-feature-inventory.md'), 'utf8')
-    expect(feature).toContain('默认内容路由 | **79**')
+    expect(feature).toContain('默认内容路由 | **80**')
     expect(feature).toContain('IDE 辅助栏页签 | **23**')
+    for (const route of ['/app/projects', '/app/projects/:id', '/app/records', '/app/records/:kind/:id']) expect(feature).toContain(route)
     for (const text of [
       '## 2. 产品需求分析团队：怎样形成可执行的 Spec 与设计',
       '## 4. 研发团队核心技能：用 swarm-yuan 约束真实交付',
@@ -338,18 +550,34 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(simulationCase).toContain('G4-E=GAP')
     expect(simulationCase).toContain('N01-N06')
     expect(simulationCase).toContain('不是另一次 26 步完整推演')
+    const run28Case = readFileSync(resolve(root, 'docs/manuals/aistudio-run28-simulation-case.md'), 'utf8')
+    expect(manual).toContain('20261107-v8-run28')
+    for (const text of ['26', '净额 5/6', '14 条', '11/13', '12h29m14s', '13/14', 'mp_runtime_proof', 'run29']) expect(run28Case).toContain(text)
+    expect(run28Case).toMatch(/open\s*=?\s*65/)
+    for (const text of ['/app/projects', '/app/records', 'run28 裁决开立：先决定放行或冻结', 'contractGuardHook', '13/14']) expect(html).toContain(text)
     const yuanGuide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'), 'utf8')
-    for (const text of ['Step 1-13', '研发四阶段', 'L4 state-machine build guard', 'R134', '真实 ACP 编码回合']) {
+    for (const text of ['Step 1-13', '研发四阶段', 'L4 state-machine build guard', 'R134', '真实 ACP 编码回合', '59', '204', '`--all-full`=32', 'SCHEMA_EPOCH', 'shortcut:']) {
       expect(yuanGuide).toContain(text)
     }
   })
 
-  it('设计索引机械覆盖全部根目录与 archive spec', () => {
+  it('设计索引唯一覆盖全部 spec，无冲突标记且分组计数一致', () => {
     const index = readFileSync(resolve(root, 'docs/manuals/aistudio-design-document-index.md'), 'utf8')
-    for (const directory of ['docs/superpowers/specs', 'docs/superpowers/specs/archive']) {
-      const files = readdirSync(resolve(root, directory)).filter(file => file.endsWith('.md'))
-      expect(files.length).toBeGreaterThan(0)
-      for (const file of files) expect(index, `${directory}/${file}`).toContain(file)
+    expect(index).not.toMatch(/^(<<<<<<<|=======|>>>>>>>)/m)
+    const rootFiles = readdirSync(resolve(root, 'docs/superpowers/specs')).filter(file => file.endsWith('.md'))
+    const archiveFiles = readdirSync(resolve(root, 'docs/superpowers/specs/archive')).filter(file => file.endsWith('.md')).map(file => `archive/${file}`)
+    const linkPattern = /^- \[([^\]]+\.md)\]\(\.\.\/superpowers\/specs\/([^)]+)\)$/gm
+    const links = [...index.matchAll(linkPattern)]
+    const linkedFiles = links.map(match => match[2])
+    expect(new Set(linkedFiles).size, '索引不允许重复链接').toBe(linkedFiles.length)
+    expect(new Set(linkedFiles)).toEqual(new Set([...rootFiles, ...archiveFiles]))
+    const headers = [...index.matchAll(/^## (2026-\d{2})（(\d+) 份）$/gm)]
+    for (const current of headers) {
+      const sectionEnd = index.indexOf('\n## ', current.index + 1)
+      const section = index.slice(current.index, sectionEnd === -1 ? index.length : sectionEnd)
+      const actualCount = rootFiles.filter(file => file.startsWith(`${current[1]}-`)).length
+      expect(Number(current[2]), `${current[1]} 标题计数`).toBe(actualCount)
+      expect([...section.matchAll(linkPattern)].length, `${current[1]} 分组链接数`).toBe(actualCount)
     }
   })
 
@@ -379,11 +607,16 @@ describe('培训页本地启动器', () => {
     expect(home.headers.get('content-security-policy')).toContain("connect-src 'none'")
     expect(await home.text()).toContain('AIStudio 交互式培训手册')
 
+    const swarmGuide = await fetch(`${base}/aistudio-swarm-yuan-guide.html`)
+    expect(swarmGuide.status).toBe(200)
+    expect(swarmGuide.headers.get('content-type')).toContain('text/html')
+    expect(await swarmGuide.text()).toContain('swarm-yuan Skill')
+
     const manual = await fetch(`${base}/aistudio-training-and-user-guide.md`)
     expect(manual.status).toBe(200)
     expect(await manual.text()).toContain('# AIStudio 产品交付团队培训手册')
 
-    for (const path of ['aistudio-feature-inventory.md', 'aistudio-operations-reference.md', 'aistudio-design-document-guide.md', 'aistudio-design-document-index.md', 'aistudio-run25-simulation-case.md', 'aistudio-swarm-yuan-developer-guide.md']) {
+    for (const path of ['aistudio-feature-inventory.md', 'aistudio-operations-reference.md', 'aistudio-design-document-guide.md', 'aistudio-design-document-index.md', 'aistudio-run28-simulation-case.md', 'aistudio-run25-simulation-case.md', 'aistudio-swarm-yuan-developer-guide.md']) {
       const reference = await fetch(`${base}/${path}`)
       expect(reference.status).toBe(200)
       expect(reference.headers.get('content-type')).toContain('text/plain')

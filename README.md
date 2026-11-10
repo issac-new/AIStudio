@@ -81,7 +81,7 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 
 </details>
 
-## 设计：三层结构与五条契约
+## 设计：三层结构与六条契约
 
 ```
 产品面（人看与操作，Vue + Koa，注入 hermes-studio）
@@ -93,12 +93,14 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 能力层（swarm-yuan 生成的目标技能）
 ```
 
-三层之间只有五条跨域契约：技能供给、能力发现与委托、任务与证据、治理与审批、推演验证。四条边界判据如下（前三条决定「谁拥有什么」，第四条决定「判据只在哪实现」）：
+三层之间只有六条跨域契约：技能供给、能力发现与委托、任务与证据、治理与审批、推演验证、命令行与自动化。四条边界判据如下（前三条决定「谁拥有什么」，第四条决定「判据只在哪实现」）：
 
 - 写入口唯一：任务真值只在 kanban。
 - 读模型不另立真值：派生视图必须能重建。
 - 运行时不反向调用：目标技能不调用产品服务。
 - 治理实现单源：六闸、UAT 判定、评测判据只在产品治理域实现，运行面与技能层只上报证据，不自建第二套判据。
+
+第六条命令行与自动化契约要求 CLI 退出码、错误类别与结果信封同源，stdout 只出结果，见 [docs/DESIGN.md:711-720](docs/DESIGN.md#L711-L720)。
 
 总体设计事实的整合正本是[终态设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)。文档按理念、产品、架构、交付、治理、实施和验证分层组织，组件内部细节以专题文档与 ADR 为证据。
 
@@ -163,12 +165,13 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 - [交互式介绍页](docs/intro.html)：一页看懂 AIStudio 与五件套体系，分屏滚动叙事，离线单文件。
 - [使用指南](docs/USAGE.md)：启动、三种工作模式走法、角色旅程、重启与排障。
 - [六团队培训手册](docs/manuals/aistudio-training-and-user-guide.md)：产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控的独立交付路径。
-- [swarm-yuan 研发交付指南](docs/manuals/aistudio-swarm-yuan-developer-guide.md)：项目技能生成、九节点、precheck、hooks、变异验证与真实 ACP 链。
+- [swarm-yuan 技术说明（交互培训专题）](docs/manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)：项目技能生成、九节点、precheck、hooks、变异验证与真实 ACP 链；[研发交付指南](docs/manuals/aistudio-swarm-yuan-developer-guide.md)为可选来源。
 - [全量功能清单](docs/manuals/aistudio-feature-inventory.md)：全部路由、页签、写读边界、特性开关和未接线能力。
 - [管理员运维参考](docs/manuals/aistudio-operations-reference.md)：启动注入、配置、数据、健康检查与故障分类。
 - [设计文档导读](docs/manuals/aistudio-design-document-guide.md)与[全量索引](docs/manuals/aistudio-design-document-index.md)：设计事实源、阅读顺序、正本与实现差异及全部 spec 链接。
-- [run25 全流程推演案例](docs/manuals/aistudio-run25-simulation-case.md)：最新方案与真实报告对照，覆盖六闸、UAT、GAP、事故、补流和未做项。
-- [交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控各两幕，共 12 幕；`npm run training` 一键启动，以六套独立拓扑展示跨团队协作与角色交付，面向 PC 横屏使用。
+- [run28 案例（交互培训专题）](docs/manuals/aistudio-interactive-training.html#scene=project-run28-case)：当前最新完整轮，覆盖含代偿 6/6 与净额 5/6、自主派发 14 条、黄金集 14 例误杀、报告呈现 11/13 与后续帧核验 13/14；[完整 Markdown](docs/manuals/aistudio-run28-simulation-case.md)为可选来源。
+- [run25 全流程推演案例（历史）](docs/manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的历史档案，保留六闸、UAT、GAP、事故和未做项的判读价值，不代表当前最新轮。
+- [14 幕交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：按“规则与技能→执行与验证→治理与复盘→案例综合验收”组织 run28 复核工作包；每幕有前序交接物、run28 证据和下一步，项目与研发各 3 幕；`npm run training` 一键启动，以六套独立拓扑展示跨团队协作与角色交付，面向 PC 横屏使用。
 - [AIStudio 终态设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施与验证的唯一正本。
 - [Hermes Agent 集群设计文档](team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md)：运行面的组织、机制、治理与决策依据。
 - [Hermes Agent Architecture](vendor/hermes-agent/website/docs/developer-guide/architecture.md)：上游 agent 引擎与 gateway 内部架构。
