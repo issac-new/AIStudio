@@ -746,3 +746,7 @@ paths:
   - skills/swarm-yuan/CHANGELOG.md
   - scripts/offline-template/install/README-windows.md
   - docs/windows-x64-setup.md
+
+  # 2026-11-11 G2 判定第三通道：卡完成摘要（feat/run29-verdict-channel）
+  - docs/superpowers/specs/2026-11-11-g2-completion-summary-channel.md
+  - simharness/mux/mx-scenario-lib.sh

@@ -2157,14 +2157,66 @@ mx_gate_card_text() { # <user> <卡 needle> [since-ms] → 卡 body（空=未命
   # 窗锚边界放宽 60s（run24 实锤 2026-11-01：毫秒锚 1793467850000 vs 秒级卡 created_at
   # 1793467849 差 1 秒被 >= 挡在窗外——卡面源恒失明、relay 对照行不触发；锚回拨是值守
   # 应急，此处放宽 60s 为产品正解：卡建时刻与锚落键时刻存在天然竞态秒差）
+  local _body=""
   if [ -n "${3:-}" ]; then
-    kanban_list "$1" | jq -r --arg n "$2" --argjson s "$(( $3 / 1000 ))" \
+    _body=$(kanban_list "$1" | jq -r --arg n "$2" --argjson s "$(( $3 / 1000 ))" \
       '[.. | objects | select(has("title")) | select((.created_at // 0) >= ($s - 60))
-        | select(((.title // "") + (.body // "")) + ((.result // "")) | contains($n)) | (.body // "")][0] // ""'
+        | select(((.title // "") + (.body // "")) + ((.result // "")) | contains($n)) | (.body // "")][0] // ""')
   else
-    kanban_list "$1" | jq -r --arg n "$2" \
-      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) + ((.result // "")) | contains($n)) | (.body // "")][0] // ""'
+    _body=$(kanban_list "$1" | jq -r --arg n "$2" \
+      '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) + ((.result // "")) | contains($n)) | (.body // "")][0] // ""')
   fi
+  # 第三读取面——卡完成摘要（2026-11-11 run29 烧机实锤）：v0.23.1 agent 评审交付面
+  # 漂移（result=None/无房间回执/无评论，结论只在 task_events 的 completed summary），
+  # 旧两通道全盲致 G2 两轮 600s 超时。summary 由产品 kanban worker 在卡终态同刻落库，
+  # 与 result 同级信任；判词语义仍走 gov_lc_verdict 单源，此处只扩采集面。
+  # 信任面论证与产品侧挂账见 spec 2026-11-11-g2-completion-summary-channel。
+  local _summ
+  _summ=$(mx_card_completion_summaries "$1" "$2" "${3:-}")
+  if [[ -n "$_summ" ]]; then
+    _body="${_body}"$'\n'"$_summ"
+  fi
+  printf '%s' "$_body"
+}
+
+# 卡完成摘要采集：对账号各板直读 task_events（CLI/API 不暴露 events，实测 26 键字段面
+# 无 summary）——取 needle 命中卡（title/body 含 needle）的 completed 事件 summary，
+# 窗锚 completed_at >= since-60s（与卡面通道同规；since 空=不限窗）。
+mx_card_completion_summaries() { # <user> <卡 needle> [since-ms] → summaries 多行拼接（空=无）
+  local u="$1" needle="$2" since="${3:-}" slug db since_s out=""
+  [[ -x "$(command -v python3)" ]] || return 0
+  [[ -n "${since:-}" ]] && since_s=$(( since / 1000 - 60 )) || since_s=0
+  for slug in $(account_boards "$u"); do
+    db="$HERMES_ROOT/kanban/boards/$slug/kanban.db"
+    [[ -f "$db" ]] || continue
+    out+="$(python3 - "$db" "$needle" "$since_s" <<'PY' 2>/dev/null || true
+import sqlite3, sys, json
+db, needle, since_s = sys.argv[1], sys.argv[2], int(sys.argv[3])
+try:
+    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+except Exception:
+    sys.exit(0)
+try:
+    rows = con.execute(
+        "SELECT t.completed_at, e.payload FROM tasks t JOIN task_events e ON e.task_id = t.id "
+        "WHERE e.kind = 'completed' AND t.completed_at >= ? "
+        "AND ((t.title LIKE '%' || ? || '%') OR (t.body LIKE '%' || ? || '%')) "
+        "ORDER BY e.id", (since_s, needle, needle)).fetchall()
+    for comp_at, payload in rows:
+        try:
+            summary = (json.loads(payload) or {}).get("summary") or ""
+        except Exception:
+            summary = ""
+        if summary:
+            print(summary)
+except Exception:
+    pass
+finally:
+    con.close()
+PY
+)"
+  done
+  printf '%s' "$out"
 }
 
 mx_room_gate_verdict() { # <room> <sender-mxid> <gate 前缀> [since-ms] → stdout: PASS|FAIL|空
