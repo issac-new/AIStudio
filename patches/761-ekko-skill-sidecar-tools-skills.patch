@@ -1,0 +1,130 @@
+diff --git a/packages/ekko-agent/src/tools/registry.ts b/packages/ekko-agent/src/tools/registry.ts
+index 82a56ae..6dfdf5d 100644
+--- a/packages/ekko-agent/src/tools/registry.ts
++++ b/packages/ekko-agent/src/tools/registry.ts
+@@ -180,6 +180,8 @@ export interface DefaultToolRegistryOptions {
+   skillDirectory?: string
+   externalSkillDirectories?: EkkoExternalSkillDirectory[]
+   disabledSkillNames?: string[]
++  /** Ekko-owned mutation sidecar (backups/archives) outside the shared skill tree. */
++  skillSidecarDirectory?: string
+   authorizer?: AgentToolAuthorizer
+   executionTimeoutMs?: number
+   codeExec?: (CodeExecToolOptions & { enabled?: boolean }) | false
+@@ -201,6 +203,7 @@ export function createDefaultToolRegistry(options: DefaultToolRegistryOptions =
+     ...createSkillTools(options.skillDirectory, {
+       externalSkillDirectories: options.externalSkillDirectories,
+       disabledSkillNames: options.disabledSkillNames,
++      skillSidecarDirectory: options.skillSidecarDirectory,
+     }),
+   ]) {
+     registry.register(tool)
+diff --git a/packages/ekko-agent/src/tools/skills.ts b/packages/ekko-agent/src/tools/skills.ts
+index 512655e..a43be43 100644
+--- a/packages/ekko-agent/src/tools/skills.ts
++++ b/packages/ekko-agent/src/tools/skills.ts
+@@ -257,10 +257,28 @@ export class SkillViewTool implements AgentTool<SkillViewInput> {
+ }
+ 
+ export class SkillManageTool implements AgentTool<SkillManageInput> {
++  /**
++   * Ekko-owned mutation sidecar (backups, archives). Unified skill store
++   * (spec 2026-11-10-ekko-hermes-skill-store-unification): the profile skill
++   * tree is shared with Hermes, whose recursive scanner only skips its own
++   * exclusion set — backup/archive copies of SKILL.md must live outside the
++   * shared tree or they resurface as ghost skills. Falls back to a sibling
++   * `.ekko-skill-sidecar` directory when no sidecar is provided so the tree
++   * is never polluted, even standalone.
++   */
++  private readonly mutationSidecarRoot: string | undefined
++
+   constructor(
+     private readonly skillDirectory?: string,
+     private readonly tracker = new SkillReadTracker(),
+-  ) {}
++    skillSidecarDirectory?: string,
++  ) {
++    if (skillSidecarDirectory) {
++      this.mutationSidecarRoot = resolve(skillSidecarDirectory)
++    } else if (skillDirectory && configuredSkillDirectory(skillDirectory)) {
++      this.mutationSidecarRoot = join(dirname(resolve(skillDirectory)), '.ekko-skill-sidecar')
++    }
++  }
+ 
+   readonly definition = {
+     name: 'skill_manage',
+@@ -422,7 +440,7 @@ export class SkillManageTool implements AgentTool<SkillManageInput> {
+     }
+     const limit = input.filePath ? MAX_SUPPORT_FILE_CHARS : MAX_SKILL_CONTENT_CHARS
+     if (updated.length > limit) return failure(`Updated skill file exceeds the ${limit} character limit.`)
+-    const backupPath = await backupFile(skill.root, target)
++    const backupPath = await backupFile(this.mutationSidecarRoot ?? skill.root, skill.root, target)
+     await atomicWrite(target, updated)
+     this.tracker.forget(context.runId, target)
+     await touchSkillMetadata(skill.directory)
+@@ -448,7 +466,7 @@ export class SkillManageTool implements AgentTool<SkillManageInput> {
+     const target = join(skill.directory, 'SKILL.md')
+     const current = await this.currentViewedContent(target, skill, context)
+     if (typeof current !== 'string') return current
+-    const backupPath = await backupFile(skill.root, target)
++    const backupPath = await backupFile(this.mutationSidecarRoot ?? skill.root, skill.root, target)
+     await atomicWrite(target, content)
+     this.tracker.forget(context.runId, target)
+     await touchSkillMetadata(skill.directory)
+@@ -476,7 +494,7 @@ export class SkillManageTool implements AgentTool<SkillManageInput> {
+     if (current !== null) {
+       const viewed = await this.currentViewedContent(target, skill, context)
+       if (typeof viewed !== 'string') return viewed
+-      backupPath = await backupFile(skill.root, target)
++      backupPath = await backupFile(this.mutationSidecarRoot ?? skill.root, skill.root, target)
+     }
+     await ensureWritableDirectory(skill.directory, dirname(target))
+     await atomicWrite(target, input.fileContent)
+@@ -499,7 +517,7 @@ export class SkillManageTool implements AgentTool<SkillManageInput> {
+     if (!target) return failure('Support files must stay under references/, templates/, scripts/, or assets/.')
+     const current = await this.currentViewedContent(target, skill, context)
+     if (typeof current !== 'string') return current
+-    const backupPath = await backupFile(skill.root, target)
++    const backupPath = await backupFile(this.mutationSidecarRoot ?? skill.root, skill.root, target)
+     await rm(target)
+     this.tracker.forget(context.runId, target)
+     await touchSkillMetadata(skill.directory)
+@@ -527,7 +545,7 @@ export class SkillManageTool implements AgentTool<SkillManageInput> {
+     const target = join(skill.directory, 'SKILL.md')
+     const current = await this.currentViewedContent(target, skill, context)
+     if (typeof current !== 'string') return current
+-    const archiveRoot = join(root, SKILL_ARCHIVE_DIRECTORY)
++    const archiveRoot = join(this.mutationSidecarRoot ?? root, SKILL_ARCHIVE_DIRECTORY)
+     await mkdir(archiveRoot, { recursive: true })
+     const archivePath = join(archiveRoot, `${timestampSlug()}-${skill.name}-${randomUUID().slice(0, 8)}`)
+     await rename(skill.directory, archivePath)
+@@ -559,6 +577,8 @@ export class SkillManageTool implements AgentTool<SkillManageInput> {
+ export interface CreateSkillToolsOptions {
+   externalSkillDirectories?: EkkoExternalSkillDirectory[]
+   disabledSkillNames?: string[]
++  /** Ekko-owned mutation sidecar (backups/archives) outside the shared tree. */
++  skillSidecarDirectory?: string
+ }
+ 
+ export function createSkillTools(
+@@ -573,7 +593,7 @@ export function createSkillTools(
+     new SkillViewTool(skillDirectory, tracker, externalSkillDirectories, disabledSkillNames),
+   ]
+   if (configuredSkillDirectory(skillDirectory)) {
+-    tools.push(new SkillManageTool(skillDirectory, tracker))
++    tools.push(new SkillManageTool(skillDirectory, tracker, options.skillSidecarDirectory))
+   }
+   return tools
+ }
+@@ -973,8 +993,9 @@ async function withSkillMutationLock<T>(root: string, action: () => Promise<T>):
+   }
+ }
+ 
+-async function backupFile(root: string, target: string): Promise<string> {
+-  const backupDirectory = join(root, SKILL_BACKUP_DIRECTORY, `${timestampSlug()}-${randomUUID().slice(0, 8)}`)
++/** Back up into the mutation sidecar, never inside the shared skill tree. */
++async function backupFile(backupBase: string, root: string, target: string): Promise<string> {
++  const backupDirectory = join(backupBase, SKILL_BACKUP_DIRECTORY, `${timestampSlug()}-${randomUUID().slice(0, 8)}`)
+   const relativeTarget = relative(root, target)
+   const backupPath = join(backupDirectory, relativeTarget)
+   await mkdir(dirname(backupPath), { recursive: true })

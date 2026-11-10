@@ -40,6 +40,10 @@ from pathlib import Path
 HERMES_HOME = Path(os.path.expanduser("~/.hermes"))
 SHARED_DIR = HERMES_HOME / "shared"
 PROFILES_DIR = HERMES_HOME / "profiles"
+# studio-skills 共享根部署位（正本=仓 runtime/studio-skills，经 runtime-manifest 部署；
+# 与 scripts/runtime/register-runtime.mjs 的 studioSkillsDeployDir 同一推导——manifest
+# target ＋ studio-skills，不另立第二份路径定义）。
+STUDIO_SKILLS_DEPLOY_DIR = str(HERMES_HOME / "hermes-agent" / "studio-skills")
 
 
 def _resolve_disabled_skills_by_category(categories):
@@ -395,6 +399,18 @@ def generate_config_yaml(profile_name: str, profile_cfg: dict, existing_cfg: dic
     _apply_skills_curation._existing_cfg = existing_cfg
     _apply_skills_curation(profile_cfg, _resolve_disabled_skills_by_category._skills_dir, cfg, skills_report)
     _apply_skills_curation._skills_report = skills_report
+
+    # studio-skills 共享根注册（spec 2026-11-10-ekko-hermes-skill-store-unification）：
+    # 必须在 _apply_skills_curation 之后注入 —— 该函数的 cfg["skills"] = {...} 是整体
+    # 替换，先注入会被覆盖。external 平面不受 allowlist 收敛（hermes 既有语义：只读
+    # 共享、本地同名优先），与 register-runtime 挂 pua/hermes-skills 同模式；此处为
+    # 正通道（team 部署重写 config.yaml 后不丢），register-runtime 作本机补注通道。
+    skills_sec = cfg.setdefault("skills", {})
+    if not isinstance(skills_sec, dict):
+        skills_sec = cfg["skills"] = {}
+    dirs = skills_sec.setdefault("external_dirs", [])
+    if STUDIO_SKILLS_DEPLOY_DIR not in dirs:
+        dirs.append(STUDIO_SKILLS_DEPLOY_DIR)
 
     # Preserve auto-managed sections from existing config
     for key in PRESERVE_KEYS:

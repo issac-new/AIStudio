@@ -1195,3 +1195,16 @@
 #      宿主直改形态存在（发版批 9b4ad890f 嫁接）未落补丁链，触碰面收口会将其冲掉
 #      （宿主行为变更必须落 patches/ 的仓规执法）；正身=预演仓注入态 vs 模板 diff。
 759-agent-runaway-file-edit-thrash.patch
+
+# 760-764（2026-11-10 技能存储合一，spec 2026-11-10-ekko-hermes-skill-store-unification）：
+#      ekko/hermes profile 技能树收成一份（同树读写，用户裁决）——唯一技能树=
+#      ~/.hermes/profiles/<p>/skills，ekko 读写经注入的 getProfileDir 直指；22 内置
+#      技能正本保 packages/ekko-agent/skills → 打包面改判 dist/studio-skills（原
+#      dist/ekko-skills 52 份逐 profile 拷贝下线）→ 启动时一次性种入共享根
+#      <hermes root>/hermes-agent/studio-skills 并按 profile 注册 external_directories；
+#      ekko 备份/归档落点外移 .ekko/skill-sidecar（防 hermes rglob 扫成幽灵技能）；
+#      一次性迁移器（v3 marker）搬旧树独有技能进 hermes 树（同名 hermes 版胜）后删旧树。
+760-ekko-skill-store-unified-directories.patch
+761-ekko-skill-sidecar-tools-skills.patch
+762-ekko-shared-root-seed-external-registry.patch
+764-build-studio-skills-seed-packaging.patch

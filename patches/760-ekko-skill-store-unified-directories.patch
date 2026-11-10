@@ -1,0 +1,423 @@
+diff --git a/packages/ekko-agent/src/directories.ts b/packages/ekko-agent/src/directories.ts
+index b144e9b..e56ccba 100644
+--- a/packages/ekko-agent/src/directories.ts
++++ b/packages/ekko-agent/src/directories.ts
+@@ -24,6 +24,10 @@ const BUILTIN_SKILL_MANIFEST_OWNER = 'ekko-agent'
+ const BUILTIN_SKILL_HASH_IGNORED_FILENAMES = new Set(['.DS_Store', 'Thumbs.db'])
+ const LEGACY_HERMES_SKILL_CLEANUP_FILENAME = '.ekko-hermes-skill-cleanup-v2.json'
+ const SKILL_RESET_QUARANTINE_PREFIX = '.ekko-skills-reset-'
++// Skill-store unification (spec 2026-11-10-ekko-hermes-skill-store-unification):
++// Ekko reads/writes the Hermes profile skill tree directly; the legacy
++// `.ekko/skills` per-profile copies are migrated once and never rebuilt.
++const SKILL_STORE_UNIFIED_MARKER_FILENAME = '.ekko-skill-store-unified-v3.json'
+ 
+ interface BuiltinSkillManifestEntry {
+   owner?: string
+@@ -47,13 +51,30 @@ export interface EkkoDirectoryLayout {
+ export interface EkkoDirectoryInitializationOptions {
+   /**
+    * Hermes Agent's root data directory. Its presence triggers the one-time
+-   * reset of legacy Ekko skill directories. Hermes Skills are never imported.
++   * migration of the legacy per-profile Ekko skill copies into the Hermes
++   * profile skill tree (spec 2026-11-10-ekko-hermes-skill-store-unification).
+    */
+   hermesRootDirectory?: string
+   /** Host hook used to keep Core startup alive when the optional Skill tree fails. */
+   onSkillError?: (error: unknown) => void
+ }
+ 
++/**
++ * Skill-store unification options. Profile skill trees resolve to the Hermes
++ * side (default → Hermes root, named → `<root>/profiles/<name>`); Ekko never
++ * keeps a second writable copy.
++ */
++export interface EkkoDirectoryManagerOptions {
++  /** Hermes root (e.g. ~/.hermes); used when no explicit resolver is provided. */
++  hermesProfilesRoot?: string
++  /**
++   * Explicit profile-home resolver injected by the host (server passes its own
++   * `getProfileDir`). Takes precedence over `hermesProfilesRoot`; keeps a
++   * single mapping source instead of a second Ekko-owned one.
++   */
++  resolveProfileHome?: (profile: string) => string
++}
++
+ export interface EkkoSkillDirectoryCheck {
+   ok: boolean
+   sourceDirectory?: string
+@@ -81,7 +102,10 @@ export class EkkoDirectoryManager {
+   readonly workspaceDirectory: string
+   private builtinSkills?: EkkoBuiltinSkillSynchronizer
+ 
+-  constructor(baseDirectory: string = homedir()) {
++  constructor(
++    baseDirectory: string = homedir(),
++    private readonly skillStoreOptions: EkkoDirectoryManagerOptions = {},
++  ) {
+     this.baseDirectory = resolve(baseDirectory || homedir())
+     this.rootDirectory = join(this.baseDirectory, '.ekko')
+     this.databasePath = join(this.rootDirectory, 'ekko.db')
+@@ -100,10 +124,11 @@ export class EkkoDirectoryManager {
+     try {
+       this.cleanupSkillResetQuarantines()
+       if (options.hermesRootDirectory) {
+-        skillError = this.resetLegacySkillsDirectory(options.hermesRootDirectory)
+-      } else {
+-        mkdirSync(this.skillsDirectory, { recursive: true })
++        this.skillStoreOptions.hermesProfilesRoot ??= resolve(options.hermesRootDirectory)
++        skillError = this.migrateLegacySkillStore()
+       }
++      // Without a Hermes root (standalone tests) the legacy tree is neither
++      // migrated nor recreated — profile paths resolve to the sidecar area.
+     } catch (error) {
+       skillError = error
+       fatalSkillError = true
+@@ -133,68 +158,106 @@ export class EkkoDirectoryManager {
+     return this.configPath
+   }
+ 
++  /**
++   * Writable profile Skill root. Unified store (spec 2026-11-10): this is the
++   * Hermes profile skill tree, shared read/write with the Hermes kernel —
++   * Ekko never keeps a second copy, and bundled Skills are no longer synced
++   * here (the 22 studio Skills live in the read-only shared root registered
++   * as external directories by the host).
++   */
+   profileSkillsDirectory(profile = 'default'): string {
+     const directory = this.profileSkillsPath(profile)
+     mkdirSync(directory, { recursive: true })
+-    this.builtinSkills?.sync(directory)
+     return directory
+   }
+ 
+   /** Pure path resolution used while Skills are degraded. It performs no I/O. */
+   profileSkillsPath(profile = 'default'): string {
+-    return join(this.skillsDirectory, profileDirectoryName(profile))
++    return join(this.resolveProfileHome(profile), 'skills')
++  }
++
++  /**
++   * Profile home resolution prefers the host-injected resolver (the server
++   * passes its own `getProfileDir`), falls back to the Hermes root
++   * (default → root, named → `<root>/profiles/<name>`), and finally to the
++   * Ekko sidecar area — never to the legacy `.ekko/skills` tree.
++   */
++  private resolveProfileHome(profile = 'default'): string {
++    const resolver = this.skillStoreOptions.resolveProfileHome
++    if (resolver) {
++      try {
++        return resolve(String(resolver(profile)))
++      } catch {
++        // Fall through to the Hermes-root derivation below.
++      }
++    }
++    const root = this.skillStoreOptions.hermesProfilesRoot
++    if (root) {
++      const normalized = profileDirectoryName(profile)
++      return normalized === 'default' ? resolve(root) : join(resolve(root), 'profiles', normalized)
++    }
++    return this.skillSidecarPath(profile)
++  }
++
++  /**
++   * Ekko-owned sidecar area (backups / archive / metadata for the Skill
++   * manager). Kept outside the shared Hermes tree so recursive scanners never
++   * see archived SKILL.md ghosts.
++   */
++  skillSidecarDirectory(profile = 'default'): string {
++    const directory = this.skillSidecarPath(profile)
++    mkdirSync(directory, { recursive: true })
++    return directory
++  }
++
++  skillSidecarPath(profile = 'default'): string {
++    return join(this.rootDirectory, 'skill-sidecar', profileDirectoryName(profile))
+   }
+ 
+   bundledSkillsSourceDirectory(): string | undefined {
+     return this.builtinSkills?.directory
+   }
+ 
++  /**
++   * Read-only shared root for the 22 studio Skills (deployed by the repo's
++   * runtime-manifest under `<hermes root>/hermes-agent/studio-skills`).
++   * Single TS source of truth for this derivation; the standalone
++   * register/maintenance scripts follow the same rule and tests assert all
++   * derivations agree.
++   */
++  static studioSkillsSharedRoot(hermesProfilesRoot: string): string {
++    return join(resolve(hermesProfilesRoot), 'hermes-agent', 'studio-skills')
++  }
++
+   synchronizeProfileSkills(profile = 'default'): string {
+     return this.profileSkillsDirectory(profile)
+   }
+ 
++  /**
++   * Health check for the unified skill store: the shared Hermes profile tree
++   * must exist and stay readable. The studio shared root is registered as an
++   * external directory by the host and is not re-verified here — the Ekko
++   * directory layer must not carry a second copy of its deployment path.
++   */
+   checkProfileSkills(profile = 'default'): EkkoSkillDirectoryCheck {
+     const targetDirectory = this.profileSkillsPath(profile)
+-    const sourceDirectory = this.builtinSkills?.directory
+-    if (!sourceDirectory) {
++    if (!isDirectory(targetDirectory)) {
+       return {
+         ok: false,
+         targetDirectory,
+         bundledSkillCount: 0,
+         missing: [],
+         unreadable: [],
+-        detail: 'Bundled Ekko Skill source directory is unavailable.',
++        detail: 'Unified skill store is unavailable: the Hermes profile skill tree is missing.',
+       }
+     }
+-    const bundled = readdirSync(sourceDirectory, { withFileTypes: true })
+-      .filter(entry => entry.isDirectory() && isFile(join(sourceDirectory, entry.name, 'SKILL.md')))
+-      .map(entry => entry.name)
+-      .sort((left, right) => left.localeCompare(right))
+-    const missing: string[] = []
+-    const unreadable: string[] = []
+-    for (const name of bundled) {
+-      const skillPath = join(targetDirectory, name, 'SKILL.md')
+-      if (!existsSync(skillPath)) {
+-        missing.push(name)
+-        continue
+-      }
+-      try {
+-        readFileSync(skillPath, 'utf8')
+-      } catch {
+-        unreadable.push(name)
+-      }
+-    }
+-    const ok = bundled.length > 0 && isDirectory(targetDirectory) && !missing.length && !unreadable.length
+     return {
+-      ok,
+-      sourceDirectory,
++      ok: true,
+       targetDirectory,
+-      bundledSkillCount: bundled.length,
+-      missing,
+-      unreadable,
+-      detail: ok
+-        ? `All ${bundled.length} bundled Ekko Skills are readable.`
+-        : `Skill directory check failed: bundled=${bundled.length}, missing=${missing.length}, unreadable=${unreadable.length}.`,
++      bundledSkillCount: 0,
++      missing: [],
++      unreadable: [],
++      detail: 'Unified skill store is readable (Hermes profile tree; studio Skills via external directories).',
+     }
+   }
+ 
+@@ -224,10 +287,12 @@ export class EkkoDirectoryManager {
+     return directory
+   }
+ 
+-  /** Discover persisted profiles from every profile-owned directory root. */
++  /** Discover persisted profiles from every profile-owned directory root.
++   * The legacy skills tree no longer backs profile discovery — it is migrated
++   * and deleted under the unified store. */
+   profileNames(): string[] {
+     const profiles = new Set<string>()
+-    for (const root of [this.skillsDirectory, this.logsDirectory, this.workspaceDirectory]) {
++    for (const root of [this.logsDirectory, this.workspaceDirectory]) {
+       let entries
+       try {
+         entries = readdirSync(root, { withFileTypes: true })
+@@ -259,52 +324,89 @@ export class EkkoDirectoryManager {
+     }
+   }
+ 
+-  private resetLegacySkillsDirectory(hermesRootDirectory: string): unknown | undefined {
+-    const cleanupPath = join(this.rootDirectory, LEGACY_HERMES_SKILL_CLEANUP_FILENAME)
+-    if (existsSync(cleanupPath)) {
+-      mkdirSync(this.skillsDirectory, { recursive: true })
++  /**
++   * One-time migration to the unified skill store (v3, spec
++   * 2026-11-10-ekko-hermes-skill-store-unification): skills unique to the
++   * legacy `.ekko/skills/<profile>` copies move into the Hermes profile tree
++   * (same-name collisions keep the Hermes version), then the legacy tree is
++   * quarantined and deleted. Idempotent via the v3 marker; the standalone
++   * maintenance script (scripts/maintenance/ekko-skill-store-migration.mjs)
++   * shares the same marker and rules.
++   */
++  private migrateLegacySkillStore(): unknown | undefined {
++    const markerPath = join(this.rootDirectory, SKILL_STORE_UNIFIED_MARKER_FILENAME)
++    if (existsSync(markerPath)) return undefined
++    if (!existsSync(this.skillsDirectory)) {
++      this.writeSkillStoreMarker(markerPath)
+       return undefined
+     }
+ 
+-    if (!this.builtinSkills) {
+-      throw new Error('Bundled Ekko Skills are unavailable; refusing to reset the existing Skill directory')
+-    }
++    const bundled = this.builtinSkills ? listBundledSkillNames(this.builtinSkills.directory) : []
++    const bundledSet = new Set(bundled.map((name) => name.toLowerCase()))
+     const profiles = new Set(['default', ...this.profileNames()])
++    for (const profile of profiles) {
++      const legacyProfileDirectory = join(this.skillsDirectory, profileDirectoryName(profile))
++      let entries
++      try {
++        entries = readdirSync(legacyProfileDirectory, { withFileTypes: true })
++      } catch {
++        continue
++      }
++      for (const entry of entries) {
++        if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
++        if (bundledSet.has(entry.name.toLowerCase())) continue
++        // A skill Ekko owns that the bundle never shipped: move it into the
++        // shared tree. Same-name collisions keep the Hermes version.
++        const targetDirectory = join(this.profileSkillsPath(profile), entry.name)
++        if (existsSync(targetDirectory)) continue
++        try {
++          mkdirSync(this.profileSkillsPath(profile), { recursive: true })
++          renameSync(join(legacyProfileDirectory, entry.name), targetDirectory)
++        } catch (error) {
++          console.warn(
++            `[ekko-agent] skill-store migration could not move ${entry.name} for profile ${profile}: ` +
++            `${error instanceof Error ? error.message : String(error)}`,
++          )
++        }
++      }
++    }
++
+     const deferredError = this.quarantineSkillsDirectoryForReset()
+     if (deferredError) {
+-      // A Windows process can temporarily deny both deletion and rename. Keep
+-      // Ekko available for this run and retry the full reset next startup; no
+-      // migration marker is written until the old directory is detached.
+-      for (const profile of profiles) this.profileSkillsDirectory(profile)
++      // Windows can temporarily deny both deletion and rename. Retry the full
++      // migration next startup; no marker is written until the old tree is
++      // detached, so already-moved skills are simply skipped (idempotent).
+       return deferredError
+     }
++    this.writeSkillStoreMarker(markerPath)
++    return undefined
++  }
+ 
+-    mkdirSync(this.skillsDirectory, { recursive: true })
+-    for (const profile of profiles) this.profileSkillsDirectory(profile)
++  private writeSkillStoreMarker(markerPath: string): void {
+     const marker = `${JSON.stringify({
+-      version: 2,
+-      hermesRootDirectory: resolve(hermesRootDirectory),
+-      resetSkillsDirectory: true,
++      version: 3,
++      hermesProfilesRoot: this.skillStoreOptions.hermesProfilesRoot
++        ? resolve(this.skillStoreOptions.hermesProfilesRoot)
++        : undefined,
++      skillStore: 'unified',
+     }, null, 2)}\n`
+-    const temporaryCleanupPath = `${cleanupPath}.${randomUUID()}.tmp`
++    const temporaryMarkerPath = `${markerPath}.${randomUUID()}.tmp`
+     try {
+-      writeFileSync(temporaryCleanupPath, marker, { encoding: 'utf8', mode: 0o600 })
+-      renameSync(temporaryCleanupPath, cleanupPath)
++      writeFileSync(temporaryMarkerPath, marker, { encoding: 'utf8', mode: 0o600 })
++      renameSync(temporaryMarkerPath, markerPath)
+     } catch (error) {
+       try {
+-        rmSync(temporaryCleanupPath, { force: true })
++        rmSync(temporaryMarkerPath, { force: true })
+       } catch {
+         // Preserve the marker write failure that caused the cleanup attempt.
+       }
+-      // The marker is only an optimization that prevents repeating this safe,
+-      // idempotent migration. Failure to persist it must not make Ekko
+-      // unavailable when its config/database directories remain usable.
++      // The marker only prevents repeating this idempotent migration; failure
++      // to persist it must not make Ekko unavailable.
+       console.warn(
+-        `[ekko-agent] failed to persist legacy Skill migration marker at ${cleanupPath}: ` +
++        `[ekko-agent] failed to persist skill-store unification marker at ${markerPath}: ` +
+         `${error instanceof Error ? error.message : String(error)}`,
+       )
+     }
+-    return undefined
+   }
+ 
+   /**
+@@ -393,6 +495,18 @@ function isDirectory(path: string): boolean {
+   }
+ }
+ 
++/** Top-level skill directory names shipped by the bundle source (sorted). */
++function listBundledSkillNames(sourceDirectory: string): string[] {
++  try {
++    return readdirSync(sourceDirectory, { withFileTypes: true })
++      .filter(entry => entry.isDirectory() || entry.isSymbolicLink())
++      .map(entry => entry.name)
++      .sort((left, right) => left.localeCompare(right))
++  } catch {
++    return []
++  }
++}
++
+ class EkkoBuiltinSkillSynchronizer {
+   private constructor(private readonly sourceDirectory: string) {}
+ 
+@@ -405,8 +519,9 @@ class EkkoBuiltinSkillSynchronizer {
+     const sourceDirectory = override
+       ? resolve(override)
+       : [
+-          // Production server bundle: dist/server/index.js with dist/ekko-skills.
+-          resolve(__dirname, '../ekko-skills'),
++          // Production server bundle: dist/server/index.js with dist/studio-skills
++          // (shared-root seed origin, spec 2026-11-10-ekko-hermes-skill-store-unification).
++          resolve(__dirname, '../studio-skills'),
+           // Ekko package source/build: src or dist with package/skills.
+           resolve(__dirname, '../skills'),
+           resolve(process.cwd(), 'packages/ekko-agent/skills'),
+diff --git a/packages/ekko-agent/src/setup.ts b/packages/ekko-agent/src/setup.ts
+index 82aa3f3..a2e50cb 100644
+--- a/packages/ekko-agent/src/setup.ts
++++ b/packages/ekko-agent/src/setup.ts
+@@ -1,6 +1,6 @@
+ import { randomUUID } from 'node:crypto'
+ import { chmodSync, copyFileSync } from 'node:fs'
+-import { dirname, join } from 'node:path'
++import { dirname, join, resolve } from 'node:path'
+ import { EkkoDatabaseManager, EkkoDatabaseMigrationError } from './database'
+ import {
+   EkkoDirectoryManager,
+@@ -60,6 +60,12 @@ import {
+ export interface SetupEkkoAgentOptions extends EkkoDirectoryInitializationOptions {
+   baseDirectory?: string
+   profiles?: string[]
++  /**
++   * Host-injected profile-home resolver (the server passes its own
++   * `getProfileDir`). Unified skill store (spec 2026-11-10): profile skill
++   * trees resolve on the Hermes side; Ekko keeps no second copy.
++   */
++  resolveProfileHome?: (profile: string) => string
+   /**
+    * Installation-wide config patch applied to the canonical config before
+    * Profile agents and runtime services are created.
+@@ -159,7 +165,12 @@ export class EkkoAgentSetup {
+       packageRoot: options.packageRoot,
+     })
+     this.diagnostics = new EkkoDiagnosticsRegistry()
+-    this.directories = new EkkoDirectoryManager(dirname(dataDirectory))
++    this.directories = new EkkoDirectoryManager(dirname(dataDirectory), {
++      hermesProfilesRoot: options.hermesRootDirectory
++        ? resolve(options.hermesRootDirectory)
++        : undefined,
++      resolveProfileHome: options.resolveProfileHome,
++    })
+     let startupSkillError: unknown
+     this.layout = this.directories.initialize({
+       hermesRootDirectory: options.hermesRootDirectory,
+@@ -604,6 +615,9 @@ export class EkkoAgentSetup {
+       skillDirectory: skillDirectory ?? profileLayout.skillDirectory,
+       externalSkillDirectories,
+       disabledSkillNames,
++      // Unified store: backups/archives stay in the Ekko sidecar, outside the
++      // shared Hermes profile tree (spec 2026-11-10-ekko-hermes-skill-store-unification).
++      skillSidecarDirectory: this.directories.skillSidecarDirectory(profileLayout.profile),
+       authorizer: (name, input, context) => this.toolApprovals.authorize(name, input, context),
+       executionTimeoutMs: config.tools.executionTimeoutMs,
+       computerUse: config.tools.computerUse,

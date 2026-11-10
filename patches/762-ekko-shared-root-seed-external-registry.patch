@@ -1,0 +1,112 @@
+diff --git a/packages/server/src/modules/ekko/services/manager.ts b/packages/server/src/modules/ekko/services/manager.ts
+index 5637135..10ad2cd 100644
+--- a/packages/server/src/modules/ekko/services/manager.ts
++++ b/packages/server/src/modules/ekko/services/manager.ts
+@@ -1,6 +1,7 @@
+ import {
+   AgentRuntime,
+   EkkoAgentSetup,
++  EkkoDirectoryManager,
+   EkkoFileLogger,
+   MemoryService,
+   setupEkkoAgent,
+@@ -15,10 +16,14 @@ import {
+   type EkkoConfig,
+   type EkkoConfigPatch,
+ } from '../../../../../ekko-agent/src'
++import { cpSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs'
++import { randomUUID } from 'node:crypto'
++import { join } from 'node:path'
+ import { config } from '../../studio/public/config'
+ import { logger } from '../../studio/public/logging'
+ import { getJevRuntimeConfig } from '../../studio/public/jev'
+ import {
++  getProfileDir,
+   getProfilesBaseDir,
+   listProfileNames,
+ } from '../../studio/public/profile-config'
+@@ -262,6 +267,64 @@ function reloadGlobalEkkoSetupAfterRecovery(): boolean {
+   return true
+ }
+ 
++/**
++ * Unified skill store (spec 2026-11-10-ekko-hermes-skill-store-unification):
++ * idempotently register the read-only studio-skills shared root as an
++ * external Skill directory for every known profile. User-added entries are
++ * preserved; profile-local trees win on name collisions (Ekko discovers the
++ * profile root first, externals after).
++ */
++function registerUnifiedSkillExternalDirectories(
++  setup: EkkoAgentSetup,
++  hermesProfilesRoot: string,
++): void {
++  const sharedRoot = EkkoDirectoryManager.studioSkillsSharedRoot(hermesProfilesRoot)
++  seedStudioSkillsSharedRoot(setup, sharedRoot)
++  try {
++    for (const profile of setup.profiles()) {
++      const existing = setup.config.getSkillProfile(profile.profile)?.externalDirectories ?? []
++      if (existing.includes(sharedRoot)) continue
++      setup.config.setSkillExternalDirectories([...existing, sharedRoot], profile.profile)
++    }
++  } catch (error) {
++    // Registration is an enhancement, not a startup gate: a failure here must
++    // not take Ekko down. The Skills view exposes the same setting manually.
++    logger.warn({ sharedRoot, error: error instanceof Error ? error.message : String(error) },
++      '[ekko-agent] unified skill store external-directory registration failed')
++  }
++}
++
++/**
++ * Seed the shared root from the bundled studio Skills. The bundle source is
++ * the single origin (dev trees: the injected vendor package; packaged app:
++ * dist/studio-skills). Seeding copies each skill under `<shared>/studio/`
++ * and is idempotent — the shared root is read-only by contract, so a re-seed
++ * only realigns it with the shipped origin. This replaces the old 52-copy
++ * per-profile synchronization with exactly one copy per machine.
++ */
++function seedStudioSkillsSharedRoot(setup: EkkoAgentSetup, sharedRoot: string): void {
++  const sourceDirectory = setup.directories.bundledSkillsSourceDirectory()
++  if (!sourceDirectory) return
++  try {
++    const studioRoot = join(sharedRoot, 'studio')
++    mkdirSync(studioRoot, { recursive: true })
++    for (const entry of readdirSync(sourceDirectory, { withFileTypes: true })) {
++      if (!entry.isDirectory()) continue
++      const target = join(studioRoot, entry.name)
++      const staging = join(studioRoot, `.${entry.name}.${randomUUID()}.tmp`)
++      rmSync(staging, { recursive: true, force: true })
++      cpSync(join(sourceDirectory, entry.name), staging, { recursive: true })
++      rmSync(target, { recursive: true, force: true })
++      renameSync(staging, target)
++    }
++  } catch (error) {
++    // Seeding is an enhancement, not a startup gate; the Skills view and the
++    // Hermes-side registration degrade to an empty shared root on failure.
++    logger.warn({ sharedRoot, sourceDirectory, error: error instanceof Error ? error.message : String(error) },
++      '[ekko-agent] studio-skills shared root seeding failed')
++  }
++}
++
+ export function setupGlobalEkkoAgent(
+   options: SetupGlobalEkkoAgentOptions = {},
+ ): EkkoAgentSetup {
+@@ -275,13 +338,18 @@ export function setupGlobalEkkoAgent(
+     }
+   }
+   const setupOptions = globalEkkoSetupOptions
++  const hermesProfilesRoot = getProfilesBaseDir()
+   globalEkkoSetup = setupEkkoAgent({
+     baseDirectory: setupOptions.baseDirectory ?? config.appHome,
+-    hermesRootDirectory: getProfilesBaseDir(),
++    hermesRootDirectory: hermesProfilesRoot,
++    // Unified skill store (spec 2026-11-10-ekko-hermes-skill-store-unification):
++    // resolve profile skill trees through the host's own Hermes resolver.
++    resolveProfileHome: getProfileDir,
+     profiles: setupOptions.profiles ?? listProfileNames(),
+     config: setupOptions.config,
+     env: setupOptions.env,
+   })
++  registerUnifiedSkillExternalDirectories(globalEkkoSetup, hermesProfilesRoot)
+   logger.info({
+     dataDirectory: globalEkkoSetup.layout.rootDirectory,
+     configPath: globalEkkoSetup.layout.configPath,
