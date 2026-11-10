@@ -439,7 +439,7 @@ powershell -ExecutionPolicy Bypass -File install\install-windows.ps1
 1. `aistudio-full-<ver>-src.tar.gz`。
 2. `swarm-yuan-offline-<ver>-everything.zip`，附配套 SHA256SUMS。
 
-GitHub Release 与 ModelScope 都只发布 full 与 yuan everything 两件主资产及配套 SHA256SUMS；四模块源码包和 DMG/zip 构建物不再上传，旧远端资产默认保留。当前整体版本为 1.0.14-overlay，四个模块分别为 cockpit 0.8.17-studio.2、agent-teams v0.23.0-team.2、Ycode 3.17.2、yuan v2.100.1。`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`、`RELEASE-MANIFEST.json:18,54,74,93,122-140,157-158`、`RELEASE-NOTES.md:3,48-55`。
+GitHub Release 与 ModelScope 都只发布 full 与 yuan everything 两件主资产及配套 SHA256SUMS；四模块源码包和 DMG/zip 构建物不再上传，旧远端资产默认保留。当前整体版本为 1.0.14-overlay，四个模块分别为 cockpit 0.8.20-studio.1、agent-teams v0.23.1-team.1、Ycode 3.17.2、yuan v2.100.2。`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`、`RELEASE-MANIFEST.json:18,54,74,93,122-140,157-158`、`RELEASE-NOTES.md:3,48-55`。
 
 **【只读】发布对账和 dry-run：**
 

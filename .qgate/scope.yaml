@@ -698,3 +698,30 @@ paths:
   - custom/server/controllers/ia2/__tests__/identity-chat.test.ts
   - custom/client/ia2/identity-chat.ts
   - custom/client/ia2/components/IdentityChatCanvas.vue
+
+  # 2026-11-09 v1.0.14 培训课件与相关文档刷新（docs/training-v1-0-14-refresh；manuals/README/team 多数路径已有既有覆盖，此处登记 spec 与增量脚本）
+  - docs/superpowers/specs/2026-11-09-training-v1.0.14-refresh.md
+  - docs/manuals/aistudio-interactive-training.html
+  - docs/manuals/aistudio-interactive-training.json
+  - docs/manuals/aistudio-run28-simulation-case.md
+  - docs/manuals/aistudio-swarm-yuan-guide.html
+  - docs/manuals/aistudio-swarm-yuan-developer-guide.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/manuals/aistudio-feature-inventory.md
+  - docs/manuals/aistudio-operations-reference.md
+  - docs/manuals/aistudio-training-and-user-guide.md
+  - docs/intro.html
+  - docs/DESIGN.md
+  - docs/README.md
+  - docs/USAGE.md
+  - docs/windows-x64-setup.md
+  - scripts/regression/route-manifest.ts
+  - scripts/regression/route-manifest.test.ts
+  - scripts/start-training-manual.mjs
+  - scripts/offline-template/install/README-windows.md
+  - skills/swarm-yuan/README.md
+  - skills/swarm-yuan/assets/facts.conf
+  - skills/swarm-yuan/assets/precheck.sh
+  - team/README.md
+  - team/README_zh.md
