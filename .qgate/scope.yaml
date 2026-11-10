@@ -34,6 +34,8 @@ paths:
   - patches/series
   - team/config.yaml
   - package.json
+  - .swarm-yuan/gate-audit.jsonl
+  - .swarm-yuan/gate-deny.jsonl
   - docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md
   - docs/superpowers/specs/2026-11-01-chat-turn-recovery-design.md
   - custom/server/governance/lifecycle/verdict.ts
