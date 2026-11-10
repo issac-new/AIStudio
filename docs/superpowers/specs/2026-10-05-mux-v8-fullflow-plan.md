@@ -2958,3 +2958,18 @@ run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露
 5. **重启起点纪律**：报告审计 FAIL 后的断点续跑，`START_STEP` 必须覆盖缺口步的**上游采集位**（缺步 9 帧即从 dispatch 起），不得从缺口下游段起——run25 用 `START_STEP=release` 重启，步 9 采集位永远不进，审计空转 16 轮、25 分钟。
 6. **六闸事件化完备**：G1-G6 每道闸落键时必须派发 delivery gate 事件（`dlv_gate_try` 安全包装：dlv 关闭/无案例房跳过并记 note，缺参不得 exit——run12 缺参击杀驱动实锤）。run25 M3 断言「缺 pass 的门=G2」，交付面板只有 G5 一盏灯亮，即本缺陷。
 7. **方案文档改名/归档后必须全仓清扫引用**：V3 主文归档后，驱动/生成器/库仍引用旧路径 4 处，活跃代码的「方案正本」指向一个不存在的文件（单一事实源实质失效）。改名提交必须同批 `grep` 全仓活跃面（排除 `runtime/hermes-records/research/retired-docs`），把关测试钉住三份活跃文件只引用现行正本。
+
+### 5.12 run28 复盘条款（2026-11-11 立，N28/N29 全量吸收；run29 起生效）
+
+run28（20261107-v8-run28，14h29m 六闸全过，report_done=1794090918）收官后两批根治（N28 收官批 33431afba＋N29 复盘批 A/B 63d856d8c/f95c7f664，均已合入 main）固化为本节条款：
+
+1. **过程证据链双写**：`note()` 只写 stderr＋`evidence/scenario.log`，禁写 stdout——stdout 会污染 `$()` 捕获（派单 marker 落库变整行日志）。空 `scenario.log` 守卫在位：报告「完整过程日志」链接指向空文件属 P0 事故（run28 全轮 2 行 383B 人工补抄实锤）。
+2. **R18 载荷契约单一校验源**：`r18_matrix.schema_errors()` 是 steps 容器/dialogs/`ops[].frames`/`effect.evidence[].{label,anchor}` 的唯一判形源；生成器/审计器/采集器读写两端走安全访问，坏载荷渲染为带步号与期望类型的 schema 错误占位、不崩溃（run28 报告两次 `AttributeError: 'str' object has no attribute 'get'` 实锤）；`r18-collect.py validate` 子命令供手工核形。
+3. **审计单遍收敛**：`mx-report-audit.py` 分区异常隔离＋`report-audit-findings.json` 侧柜一次列全缺口（fails/warns/步号/工具版本锚）——禁「一轮只报一类缺口」的剥洋葱（run28 18 轮重入实锤）。凭证族 ISSUE/DISP 同权识别；`stepN` 旧形态兼容并 WARN。
+4. **降级凭证写作规范**：统一 `step-<n>` 形态（禁 `step13`/`step7`/`step-?`）；repo 型产物证据 0 帧登记合法（`op --frames` 可选），登记失败记 `r18-op-register-failed` 不静默吞。
+5. **操作步四态收敛**：OP_STEPS={25}——dispatch/register 转矩阵真值型（真值=matrix 消息流，capture-plan 四态口径），IDE 步保留真 UI 承载；步分母 15→13（STEP_TOTAL 12→11）。
+6. **熔断复位签名扩面**：评审卡 owner 落判词即证据变化——走评审卡复位的闸（G2/G5）同权复位，卡面哈希入签名（run28 arch 判词落卡但 G2 签名只含 itip/mtip → 熔断永等、值守人工 OVERRIDE 破局实锤）。
+7. **metrics 写入锚校验**：RUN_ID 必须当年轮命名形态（`20\d{6}-v\d+-run\d+|burn-*`），断锚跳写＋stderr 告警（fail-open 不阻断报告；run28 断锚写 20261002-v5-run7 脏行两轮实锤）。
+8. **进度锚动态枚举**：固定六路之外枚举本轮开跑后新鲜的 `origin/{feat,wt,test}/*` 分支——防执行单元在非固定命名分支上干活被判 STALE（run28 lin 的 T03 分支不可见实锤）。
+9. **词表加词即回扫**：`plan-html/jargon-check.py` 词表新增词当日必须跑 `jargon-source-gate.test.sh` 清存量（run28「落档」加词未回扫、A10 报告审计才暴露实锤）。
+10. **基线刷新口径（2026-11-11）**：run29 基线=main 3285fc707 线（v1.0.14 后十批：执行内核统一 P0b2 八入口写账＋四挡启动、记忆统一 Hindsight 唯一 provider、统一身份聊天批1+2（roster 身份源＋账号级 DM）、IDE 工具面板收窄 9→2、治理 docMeta 引用隔离修复、全页面走查 TS1343 修复、vendor agent v0.23.1 换血）。新增产品面验证归属：记忆统一=守护进程面（:8888 hindsight daemon）、执行内核=记账面（八入口写账）——均无 studio HTTP 承载，不入 §5.11 探测组；统一身份聊天属 HTTP 面但负例语义为 fail-soft（roster 缺席回网关身份＋reason，非拒绝型），本轮以 smoke/register 步编制三方对账（roster×org×matrix=15）覆盖，不单列探测组。产品 dist 供给注意：`npm run build` 只建 client，server bundle 须 `npm run build:full`（run29 开跑前实锤：server bundle 停在 81 提交前的 4f10460bb）。

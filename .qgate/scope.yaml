@@ -698,3 +698,8 @@ paths:
   - custom/server/controllers/ia2/__tests__/identity-chat.test.ts
   - custom/client/ia2/identity-chat.ts
   - custom/client/ia2/components/IdentityChatCanvas.vue
+
+  # 2026-11-11 run29 开跑前刷新批：方案 §5.12 立法＋基线刷新＋值守立项（feat/run29-plan-refresh）
+  - docs/superpowers/specs/2026-11-11-run29-prelude.md
+  - docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
