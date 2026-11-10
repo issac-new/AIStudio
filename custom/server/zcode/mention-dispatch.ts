@@ -21,6 +21,7 @@
 import { sessionModeOf } from '../permmodes/session-mode-store'
 import { synthesizeExempted } from '../approval-ledger/ledger-store'
 import { fourModeOf } from '../executioncontract/index'
+import { zcodeNativeMode } from '../executioncontract/mode-policy'
 import { ENGINE_MODE_MAP } from '../permmodes/permission-modes'
 import { randomUUID } from 'crypto'
 import { appendEvidence } from '../evidence/evidence-store'
@@ -414,10 +415,12 @@ export class MentionDispatchService {
     try {
       // v4 会话档穿线（2026-10-08）：执行 agent 的会话权限档在位 → 引擎建会话档位随建生效
       // （七档→六档映射=permission-modes ENGINE_MODE_MAP；未配置不带 config=引擎默认，不装已治理）。
+      // P1（2026-11-10 执行内核统一 Task 3）：引擎档经 zcodeNativeMode 归一为四挡词表
+      // （edit→guarded 受控编辑语义、auto→yolo；不降 build），单一事实源=executioncontract。
       const smode = sessionModeOf(resolveRunsFor(token))
       const created = await this.engine.createSession({
         workspacePath: params.workspacePath,
-        ...(smode ? { config: { mode: ENGINE_MODE_MAP[smode] } } : {}),
+        ...(smode ? { config: { mode: zcodeNativeMode(ENGINE_MODE_MAP[smode]) } } : {}),
       })
       sessionId = created.session.sessionId
     } catch (err) {

@@ -21,6 +21,8 @@ import { callgateHook } from '../callgate/callgate-hook'
 import { contractGuardHook, contractIdempotencyKey } from './contract-guard'
 import { sequenceGuardHook } from './sequence-guard'
 import { skillGuardHook } from '../skillgov/skill-guard-hook'
+import { sessionModeOf } from '../permmodes/session-mode-store'
+import { fourModeOf } from '../executioncontract/index'
 import { reportLostSuspensionsOnBoot } from './enforce-approvals'
 import { getToolCallCorrelation } from './call-correlation'
 import {
@@ -363,10 +365,11 @@ const auditHook = {
     // P0b 统一审批账本（2026-11-10 执行内核统一批 §6/§8）：Ekko 工具瀑布合成点——
     // 真会执行的调用 postExecute 必达（瀑布首个 allow:false 在 pre 短路），故 ok 调用
     // =按策略放行 → 记 approval.exempted（用户裁决：保留自动放行但留免审记录）。
-    // Ekko 尚未接四挡（P1 接线），mode 暂记 legacy；fail-soft 不阻断工具链。
+    // P1（Task 3）：档位经 fourModeOf(sessionModeOf(profile)) 归一四挡——只影响
+    // 账本记录的 mode/decidedBy 字段，不改瀑布执法行为；fail-soft 不阻断工具链。
     if (!failed) {
       synthesizeExempted({
-        tool: name, mode: 'legacy',
+        tool: name, mode: fourModeOf(sessionModeOf(context?.profileId ?? '')),
         sessionId: context?.sessionId ?? '', profile: context?.profileId ?? '',
         entryPoint: 'ekko-tool-waterfall', decided: 'auto',
       })
