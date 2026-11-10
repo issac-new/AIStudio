@@ -37,6 +37,7 @@ Hindsight provider 能力面（对齐 Ekko 场景）：自动 retain 每回合�
 - 映射规则：kind→tags（`ekko:<kind>`）＋origin 标注；状态只迁 active（superseded/expired 是 Ekko 状态机语义，Hindsight observation 层自会合并去重，不迁移避免双写污染）。
 - 判据：dry-run 对账报告（源节点数/状态分布/kind 分布 vs 目标写入条数）→ 执行 → recall 抽查 N 条可命中。
 - 前置核验（实施前复核）：本机 :8888 daemon 存活性与归属（launchd/手工）；两处 DB 实际数据量级。
+- **实施判定（2026-11-10 回填）：空集收口，脚本不建**——前置核验实测源库零数据，详见 §验证实施进度；MD7 随之失效（无脚本可登记机制预算）。
 
 **M2 随父 spec P3 断装配（不新增独立工作）**
 - 父 spec §5 下线清单已含 Ekko `AgentRuntime` 装配点（`chat-run.ts:2070`、群聊映射、工作流／**Person 入口**）——两处 Ekko 记忆面随之不可达。
@@ -67,8 +68,9 @@ Hindsight provider 能力面（对齐 Ekko 场景）：自动 retain 每回合�
 | MD5 | 三项能力降级（类型卡/状态机/JEV 写审）接受，映射规则如 §4 | 统一后检索与去重能力净增；降级面有补救配置口 | 保 JEV 语义在 Hindsight 前置复刻（否决：改 vendor 插件面，维护负担留在钉版基线外） |
 | MD6 | 工作区文件记忆（AGENTS.md/MEMORY.md/memory 目录）不入统一面 | 定位不同：人可编辑的工作区上下文 vs 跨会话自动长期记忆；与 ZCode 家族 MEMORY.md 模式对齐 | 一并迁入（否决：破坏人可读可编辑性，且该面无跨会话召回诉求） |
 | MD7 | M1 迁移脚本入机制预算登记 sunset（迁移验收后退役） | 仓库规则：新增脚本必须配退役条件 | 常驻脚本（否决：一次性工具常驻＝机制通胀） |
+| MD8 | M1 空集收口（2026-11-10 实测改判）：迁移脚本不建、机制预算不登记 | 前置核验实测：4 个源库 memory_nodes 与 memory_messages 全 0 行（证据见实施进度）；为零行数据建一次性脚本＝机制通胀 | 照建脚本迁 0 行（否决：无验收对象，纯机制噪音）；等 P3 连库弃置（否决：核验已做完，判定即收口） |
 
-以上落 `.swarm-yuan/decisions.jsonl` 一条总账（MD2/MD3 属架构级）。
+以上落 `.swarm-yuan/decisions.jsonl` 一条总账（MD2/MD3 属架构级）；MD8 判定随批追加一条。
 
 ## 验证
 
@@ -76,14 +78,23 @@ Hindsight provider 能力面（对齐 Ekko 场景）：自动 retain 每回合�
 `npx vitest run <docs 门禁相关测试>` 绿；`node scripts/governance-lint.mjs` 通过；`node scripts/merge-invariants.mjs --check` 通过；附录 A 标题计数 607→608 同步。
 
 ### 2. M1 迁移
-dry-run 对账报告数字吻合（源库 SELECT 计数 vs 脚本统计 vs 目标 bank 查询计数三方一致）；执行后 `hindsight_recall` 抽查 ≥10 条迁移内容可命中；源 DB 只读未被改动（迁移前后 SHA256 一致）。
+~~dry-run 对账报告数字吻合~~（空集收口，判据不适用）；核验证据见 §5 实施进度。
 
 ### 3. M2 随父 spec P3
-父 spec §6 P3 退出条件全过＋本 spec §3 M2 记忆维度验收项。
+父 spec §6 P3 退出条件全过＋本 spec §3 M2 记忆维度验收项（「迁移已完成」由 M1 空集判定平凡满足——0 行无可迁）。
 
 ### 4. 实施前须复核的锚点
 - 本 spec 现状读数为 2026-11-10 主树源码级静态核对（子代理配额受限，全部由主会话直读完成）。
-- 未采集：SIM fleet 42 profile 的 memory provider 状态（SIM_ROOT 在仓外，M1 开工前抽验是否同样统一，不一致则列差异清单）；`:8888` daemon 归属与存活；两处 Ekko DB 数据量级。
+- ~~未采集~~ 三项已全部采集（2026-11-10，见 §5）。
+
+### 5. 实施进度（随批回填）
+
+- **M0 已落地（2026-11-10，main 70aefd3f7）**：spec＋DESIGN.md 三处＋三处登记＋decisions 总账；门禁 docs-ssot-guard 7/7、taxonomy 6/6、governance-lint 0、merge-invariants pass、pre-push ok=5 fail=0。
+- **M1 已空集收口（2026-11-10，本批回填）**：三项前置核验全部完成，实测证据——
+  1. `:8888` daemon 存活（`GET /version` → api_version 0.8.2，features 含 observations/append 所需能力）；归属＝uv-tool `~/.hermes/uv-tools/hindsight-api-slim`（外部托管单守护，非 launchd、非 per-profile embedded），cwd=`~/.hermes/profiles/orchestrator/hindsight`。
+  2. 源库量级：`~/.hermes-web-ui/.ekko/ekko.db`（136K）＋`person/{1,2,3}/memory.db`（各 104K）共 4 库，`memory_nodes` 与 `memory_messages` **全部 0 行**（SQLite 只读 URI 实测；另有 stray 空文件 `~/.hermes-web-ui/ekko.db` 零表）——Ekko 记忆面接线在位但从未积累数据，无任何可迁移内容。
+  3. SIM fleet：`SIM_ROOT/hermes/profiles` 42/42 config.yaml 全配 `provider: hindsight`，与 team 30/30 同口径，记忆统一覆盖面＝72/72，无差异清单。
+  - 判定：MD8 空集收口，脚本不建、机制预算不登记；M2 的「迁移已完成」由本判定平凡满足。
 
 ## 设计文档影响
 
