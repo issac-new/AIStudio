@@ -627,3 +627,10 @@ paths:
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
   - docs/manuals/aistudio-design-document-index.md
   - docs/DESIGN.md
+
+  # 2026-11-10 IDE 工具面板收窄（fix/ide-devtools-trim；spec 正本＋两处登记清单＋触碰面）
+  - docs/superpowers/specs/2026-11-10-ide-devtools-trim.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - custom/server/controllers/ide/__tests__/devtools.test.ts
+  - custom/client/ide/components/IdeDevTools.vue

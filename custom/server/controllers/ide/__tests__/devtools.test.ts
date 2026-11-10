@@ -1,5 +1,5 @@
 // overlay/custom/server/controllers/ide/__tests__/devtools.test.ts
-// 编程工具启动 + zcode CLI 会话（2026-10-19 用户需求批）守门：
+// 编程工具启动 + zcode CLI 会话（2026-10-19 用户需求批；2026-11-10 白名单收窄）守门：
 //   纯函数：白名单校验/buildLaunchPlan 平台分支与转义/validateCwd/shapeCliSessions
 //   HTTP 面：devtoolsRoutes 中间件三分支（可用性列表/launch 校验/CLI 会话缺席态）
 import { afterAll, describe, expect, it } from 'vitest'
@@ -16,11 +16,19 @@ describe('buildLaunchPlan — 白名单与平台分支（纯函数）', () => {
     expect(buildLaunchPlan('rm -rf' as ToolKey, null, 'darwin')).toBeNull()
   })
 
-  it('darwin：vscode 带目录打开工作区；无目录只开应用', () => {
-    expect(buildLaunchPlan('vscode', '/tmp/proj', 'darwin'))
-      .toEqual({ file: 'open', args: ['-a', 'Visual Studio Code', '/tmp/proj'] })
-    expect(buildLaunchPlan('vscode', null, 'darwin'))
-      .toEqual({ file: 'open', args: ['-a', 'Visual Studio Code'] })
+  it('2026-11-10 收窄守门：退役 key（iterm/vscode/warp/terminal/idea/powershell/cmd）两侧平台均拒绝', () => {
+    for (const removed of ['iterm', 'vscode', 'warp', 'terminal', 'idea', 'powershell', 'cmd'] as ToolKey[]) {
+      expect(buildLaunchPlan(removed, null, 'darwin')).toBeNull()
+      expect(buildLaunchPlan(removed, null, 'win32')).toBeNull()
+    }
+    expect(TOOL_DEFS.map(d => d.key)).toEqual(['zcode', 'deepseek-harness'])
+  })
+
+  it('darwin：zcode / deepseek-harness 走 open -a 应用直启（不带 cwd）', () => {
+    expect(buildLaunchPlan('zcode', '/tmp/proj', 'darwin'))
+      .toEqual({ file: 'open', args: ['-a', 'ZCode'] })
+    expect(buildLaunchPlan('deepseek-harness', null, 'darwin'))
+      .toEqual({ file: 'open', args: ['-a', 'DeepSeek Harness'] })
   })
 
   it('darwin：terminal-zcode 走 osascript，路径与内部引号被转义', () => {
@@ -40,10 +48,12 @@ describe('buildLaunchPlan — 白名单与平台分支（纯函数）', () => {
     expect(script).toContain("cd '/tmp/my dir'")
   })
 
-  it('darwin 不提供 powershell/cmd；win32 提供两者且命令服务端拼装', () => {
-    expect(buildLaunchPlan('powershell', null, 'darwin')).toBeNull()
-    expect(buildLaunchPlan('cmd', null, 'win32')).toEqual({ file: 'cmd', args: ['/c', 'start', 'cmd'] })
-    expect(buildLaunchPlan('powershell', null, 'win32')).toEqual({ file: 'cmd', args: ['/c', 'start', 'powershell'] })
+  it('win32：只留 zcode 与 terminal-zcode；命令服务端拼装', () => {
+    expect(buildLaunchPlan('zcode', null, 'win32')).toEqual({ file: 'cmd', args: ['/c', 'start', '', 'zcode'] })
+    expect(buildLaunchPlan('terminal-zcode', 'C:\\proj', 'win32'))
+      .toEqual({ file: 'cmd', args: ['/c', 'start', 'cmd', '/k', 'cd /d C:\\proj && zcode'] })
+    // deepseek-harness 仅 darwin（win32 安装形态未实核，不造假按钮）
+    expect(buildLaunchPlan('deepseek-harness', null, 'win32')).toBeNull()
   })
 
   it('applescriptEscape：反斜杠与双引号', () => {
@@ -52,18 +62,12 @@ describe('buildLaunchPlan — 白名单与平台分支（纯函数）', () => {
 })
 
 describe('可用性探测（darwin）', () => {
-  it('应用按 /Applications/<app>.app 判定；Terminal 走系统目录', () => {
-    const exists = (p: string) => p === '/Applications/iTerm.app'
-      || p === '/Applications/DeepSeek Harness.app'
-      || p === '/System/Applications/Utilities/Terminal.app'
-    const iterm = TOOL_DEFS.find(d => d.key === 'iterm')!
-    const warp = TOOL_DEFS.find(d => d.key === 'warp')!
-    const terminal = TOOL_DEFS.find(d => d.key === 'terminal')!
+  it('白名单两项均按 /Applications/<app>.app 判定；未安装置灰', () => {
+    const exists = (p: string) => p === '/Applications/ZCode.app'
+    const zcode = TOOL_DEFS.find(d => d.key === 'zcode')!
     const deepseek = TOOL_DEFS.find(d => d.key === 'deepseek-harness')!
-    expect(toolAvailableOnDarwin(iterm, exists)).toBe(true)
-    expect(toolAvailableOnDarwin(warp, exists)).toBe(false)
-    expect(toolAvailableOnDarwin(terminal, exists)).toBe(true)
-    expect(toolAvailableOnDarwin(deepseek, exists)).toBe(true)
+    expect(toolAvailableOnDarwin(zcode, exists)).toBe(true)
+    expect(toolAvailableOnDarwin(deepseek, exists)).toBe(false)
   })
 })
 

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // overlay/custom/client/ide/__tests__/devtools-ui.test.ts
-// IDE 编程工具启动器 + zcode CLI 会话兼容展示（2026-10-19 用户需求批）守门：
+// IDE 编程工具启动器 + zcode CLI 会话兼容展示（2026-10-19 需求批；2026-11-10
+// 白名单收窄只留 zcode 与 DeepSeek Harness）守门：
 // 工具面板渲染/未安装置灰/点击调 launch；CLI 会话行渲染与「终端继续」动线。
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
@@ -9,11 +10,10 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { ref } from 'vue'
 
 vi.mock('../api/devtools', () => ({
+  // 默认态：zcode 可用、DeepSeek Harness 未安装（置灰断言挂它）
   fetchDevtools: vi.fn(async () => [
     { key: 'zcode', labelZh: 'zcode', labelEn: 'zcode', available: true },
-    { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: true },
-    { key: 'vscode', labelZh: 'VS Code', labelEn: 'VS Code', available: true },
-    { key: 'warp', labelZh: 'Warp', labelEn: 'Warp', available: false },
+    { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: false },
   ]),
   launchDevtool: vi.fn(async () => undefined),
   fetchCliSessions: vi.fn(async () => ({
@@ -27,27 +27,36 @@ vi.mock('../api/devtools', () => ({
 vi.mock('../utils/toast', () => ({ showToast: vi.fn() }))
 vi.mock('../composables/useIdeWorkspace', () => ({ useIdeWorkspace: () => ({ root: ref('/Users/x/lab/proj') }) }))
 
-import { launchDevtool, fetchCliSessions } from '../api/devtools'
+import { launchDevtool, fetchDevtools, fetchCliSessions } from '../api/devtools'
 import IdeDevTools from '../components/IdeDevTools.vue'
 import IdeCliSessions from '../components/IdeCliSessions.vue'
 
 const mockedLaunch = vi.mocked(launchDevtool)
+const mockedFetch = vi.mocked(fetchDevtools)
 
 describe('IdeDevTools — 工具启动器', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('打开面板列出探测结果；未安装工具置灰禁用', async () => {
+  it('打开面板列出探测结果（收窄后恰两项）；未安装工具置灰禁用', async () => {
     const w = mount(IdeDevTools)
     await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="ide-devtools-panel"]').exists()).toBe(true)
+    expect(w.findAll('.ide-devtools__tool')).toHaveLength(2)
+    // 退役 key 不再有按钮（防回潮）
+    for (const removed of ['vscode', 'iterm', 'warp', 'idea']) {
+      expect(w.find(`[data-testid="ide-devtools-${removed}"]`).exists()).toBe(false)
+    }
     expect(w.find('[data-testid="ide-devtools-zcode"]').attributes('disabled')).toBeUndefined()
-    expect(w.find('[data-testid="ide-devtools-deepseek-harness"]').attributes('disabled')).toBeUndefined()
-    expect(w.find('[data-testid="ide-devtools-warp"]').attributes('disabled')).toBeDefined()
+    expect(w.find('[data-testid="ide-devtools-deepseek-harness"]').attributes('disabled')).toBeDefined()
     w.unmount()
   })
 
   it('DeepSeek Harness 按钮直接打开本机 app（不带 cwd）', async () => {
+    mockedFetch.mockImplementationOnce(async () => [
+      { key: 'zcode', labelZh: 'zcode', labelEn: 'zcode', available: true },
+      { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: true },
+    ])
     const w = mount(IdeDevTools)
     await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
     await flushPromises()
@@ -56,16 +65,20 @@ describe('IdeDevTools — 工具启动器', () => {
     w.unmount()
   })
 
-  it('在工作区终端运行 zcode：launch 带 cwd；VS Code 打开当前工作区', async () => {
+  it('在工作区终端运行 zcode：launch 带 cwd；zcode 按钮直启不带 cwd', async () => {
+    mockedFetch.mockImplementationOnce(async () => [
+      { key: 'zcode', labelZh: 'zcode', labelEn: 'zcode', available: true },
+      { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: false },
+    ])
     const w = mount(IdeDevTools)
     await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
     await flushPromises()
     await w.find('[data-testid="ide-devtools-terminal-zcode"]').trigger('click')
     expect(mockedLaunch).toHaveBeenCalledWith('terminal-zcode', '/Users/x/lab/proj')
-    // 启动成功面板收起；重开再点 VS Code
+    // 启动成功面板收起；重开再点 zcode 应用按钮
     await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
-    await w.find('[data-testid="ide-devtools-vscode"]').trigger('click')
-    expect(mockedLaunch).toHaveBeenCalledWith('vscode', '/Users/x/lab/proj')
+    await w.find('[data-testid="ide-devtools-zcode"]').trigger('click')
+    expect(mockedLaunch).toHaveBeenCalledWith('zcode', undefined)
     w.unmount()
   })
 })

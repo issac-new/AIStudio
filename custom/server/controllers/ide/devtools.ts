@@ -24,36 +24,26 @@ import { synthesizeExempted } from '../../approval-ledger/ledger-store'
 
 // ── 白名单与纯函数层（测试锚点）──────────────────────────────────────────────
 
-export type ToolKey =
-  | 'zcode' | 'deepseek-harness' | 'vscode' | 'iterm' | 'warp' | 'terminal' | 'idea'
-  | 'powershell' | 'cmd' | 'terminal-zcode'
+export type ToolKey = 'zcode' | 'deepseek-harness' | 'terminal-zcode'
 
 export interface ToolDef {
   key: ToolKey
-  /** macOS 应用名（open -a）；无 = 非应用型或仅 Windows */
+  /** macOS 应用名（open -a） */
   app?: string
   labelZh: string
   labelEn: string
   platforms: Array<'darwin' | 'win32'>
-  /** darwin 探测：/Applications/<app>.app 是否存在（Terminal 走系统目录） */
-  darwinProbe?: (exists: (p: string) => boolean) => boolean
 }
 
+/** 白名单（2026-11-10 用户令收窄）：只保留 zcode 与 DeepSeek Harness；
+ *  vscode/iterm/warp/终端/IDEA/powershell/cmd 一并退役，退役 key 不留透传分支。 */
 export const TOOL_DEFS: readonly ToolDef[] = [
   { key: 'zcode', app: 'ZCode', labelZh: 'zcode', labelEn: 'zcode', platforms: ['darwin', 'win32'] },
   { key: 'deepseek-harness', app: 'DeepSeek Harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', platforms: ['darwin'] },
-  { key: 'vscode', app: 'Visual Studio Code', labelZh: 'VS Code', labelEn: 'VS Code', platforms: ['darwin', 'win32'] },
-  { key: 'iterm', app: 'iTerm', labelZh: 'iTerm', labelEn: 'iTerm', platforms: ['darwin'] },
-  { key: 'warp', app: 'Warp', labelZh: 'Warp', labelEn: 'Warp', platforms: ['darwin'] },
-  { key: 'terminal', labelZh: '终端', labelEn: 'Terminal', platforms: ['darwin', 'win32'], darwinProbe: exists => exists('/System/Applications/Utilities/Terminal.app') },
-  { key: 'idea', app: 'IntelliJ IDEA', labelZh: 'IDEA', labelEn: 'IDEA', platforms: ['darwin', 'win32'] },
-  { key: 'powershell', labelZh: 'PowerShell', labelEn: 'PowerShell', platforms: ['win32'] },
-  { key: 'cmd', labelZh: '命令提示符', labelEn: 'Command Prompt', platforms: ['win32'] },
 ]
 
-/** darwin 应用可用性：优先自定义 probe（Terminal 在系统目录），否则 /Applications。 */
+/** darwin 应用可用性：/Applications/<app>.app 是否存在。 */
 export function toolAvailableOnDarwin(def: ToolDef, exists: (p: string) => boolean): boolean {
-  if (def.darwinProbe) return def.darwinProbe(exists)
   return def.app ? exists(join('/Applications', `${def.app}.app`)) : false
 }
 
@@ -97,9 +87,6 @@ export function buildLaunchPlan(
 
   if (platform === 'darwin') {
     switch (tool) {
-      case 'vscode':
-        // open -a "Visual Studio Code" [folder] —— 传目录即打开该工作区
-        return { file: 'open', args: ['-a', 'Visual Studio Code', ...(cwd ? [cwd] : [])] }
       case 'terminal-zcode': {
         // Terminal 里执行 cd <cwd> && (node <fork CLI> | zcode)——不要求 PATH 安装
         const dir = cwd ?? homedir()
@@ -116,14 +103,9 @@ export function buildLaunchPlan(
     }
   }
 
-  // win32
+  // win32（2026-11-10 收窄：只留 zcode 与 terminal-zcode）
   switch (tool) {
-    case 'powershell': return { file: 'cmd', args: ['/c', 'start', 'powershell'] }
-    case 'cmd': return { file: 'cmd', args: ['/c', 'start', 'cmd'] }
-    case 'vscode': return { file: 'cmd', args: ['/c', 'start', '', 'code'] }
-    case 'idea': return { file: 'cmd', args: ['/c', 'start', '', 'idea'] }
     case 'zcode': return { file: 'cmd', args: ['/c', 'start', '', 'zcode'] }
-    case 'terminal':
     case 'terminal-zcode': {
       const dir = cwd ?? homedir()
       return { file: 'cmd', args: ['/c', 'start', 'cmd', '/k', `cd /d ${dir} && zcode`] }
