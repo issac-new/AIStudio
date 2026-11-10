@@ -1212,4 +1212,10 @@
 # Hermes 审批守卫终态统一写账；嵌套守卫去重、人工/免审/拒绝同 schema、fail-soft。
 763-agent-unified-approval-ledger.patch
 
+<<<<<<< HEAD
 764-build-studio-skills-seed-packaging.patch
+=======
+# 765（2026-11-10 执行内核统一 P0b-2 Task 2，spec 2026-11-10-execution-kernel-p0b2-p1）：
+# 编码任务启动成功门合成免审记录（IDE/群聊/工作流共用唯一合成点；先例=736）。
+765-server-coding-launch-approval-ledger.patch
+>>>>>>> 9dae4f8 (feat(approval-ledger): P0b-2 Task 2——编码任务启动成功门免审记录（补丁 765，IDE/群聊/工作流唯一合成点）)
