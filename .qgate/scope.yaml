@@ -691,3 +691,9 @@ paths:
   - docs/superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md
   - custom/server/governance/governance-controller.ts
   - custom/server/governance/__tests__/governance-controller.test.ts
+
+  # 2026-11-10 统一身份聊天批2（feat/identity-chat-matrix-batch2）
+  - docs/superpowers/specs/2026-11-10-identity-chat-matrix-batch2.md
+  - custom/server/controllers/ia2/identity-chat.ts
+  - custom/client/ia2/identity-chat.ts
+  - custom/client/ia2/components/IdentityChatCanvas.vue
