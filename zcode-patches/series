@@ -68,3 +68,11 @@
 #（skills list 三目录对照）。项目技能推荐落 .agents/skills（三引擎通吃）；本补丁
 # 只补分叉对既有 .claude/skills 资产的兼容，source 复用 agents，优先级排在原生根后。
 009-claude-skills-compat-root.patch
+
+# 010（2026-11-10 执行内核统一后续·open-file 深改，spec 2026-11-10-zcode-openfile-workspace）：
+#      macOS `open -a ZCode <dir>` 的目录参以 open-file 事件到达（不进 argv），上游无
+#      处理被忽略。冷启动并入 startupOpenWorkspaceRequest 随主窗口 bootstrap 打开
+#      （与 --open-workspace argv 同语义）；ready 后与 second-instance 同口径直投
+#      handleOpenWorkspacePath。Finder「打开方式」同链生效。Windows 链路上游已在
+#      （argv＋second-instance），无需补丁。
+010-desktop-open-file-workspace.patch

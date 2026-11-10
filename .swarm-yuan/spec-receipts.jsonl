@@ -298,3 +298,4 @@
 {"at":"2026-11-10T10:23:42Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md","receipt":"11287882ea6679fa094d65888cd78fd1b1140efd","commit":"c078e719e"}
 {"at":"2026-11-10T13:42:00Z","spec":"docs/superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md","receipt":"c69ed9165a14d47789cf8da850551216e9bf117f","commit":"5c771b596"}
 {"at":"2026-11-10T13:59:52Z","spec":"docs/superpowers/specs/2026-11-10-ide-devtools-task-cwd.md","receipt":"ea12f670a3a74ca89c5a016a8f6e2787a567da68","commit":"745376cd3"}
+{"at":"2026-11-10T14:33:51Z","spec":"docs/superpowers/specs/2026-11-10-zcode-openfile-workspace.md","receipt":"5fef27388bfe3e5723696d7ac968ae0427af1c9d","commit":"8a97ffc15"}

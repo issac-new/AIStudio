@@ -3,7 +3,7 @@
 //   纯函数：白名单校验/buildLaunchPlan 平台分支与转义/validateCwd/shapeCliSessions
 //   HTTP 面：devtoolsRoutes 中间件三分支（可用性列表/launch 校验/CLI 会话缺席态）
 import { afterAll, describe, expect, it } from 'vitest'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import {
@@ -109,5 +109,43 @@ describe('buildLaunchPlan — APP 键携带 cwd', () => {
     expect(plan?.file).toBe('cmd')
     expect(plan?.args).toEqual(['/c', 'start', '', '/d', resolve('D:\\ws\\task-42'), 'zcode'])
     expect(buildLaunchPlan('zcode', null, 'win32')).toEqual({ file: 'cmd', args: ['/c', 'start', '', 'zcode'] })
+  })
+})
+
+// ── Windows APP 本体启动＋open-file 深改（2026-11-10 spec 2026-11-10-zcode-openfile-workspace）──
+describe('buildLaunchPlan — win32 zcode APP 本体与回落', () => {
+  const EXE = 'C:\\Users\\x\\AppData\\Local\\Programs\\ZCode\\ZCode.exe'
+  const withExe = { exists: (p: string) => p === EXE, env: { LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' } }
+
+  it('exe 在场＋cwd → 直接启动 APP 本体并附 --open-workspace', () => {
+    const plan = buildLaunchPlan('zcode', 'D:\\ws\\task-7', 'win32', withExe)
+    expect(plan).toEqual({ file: EXE, args: ['--open-workspace', resolve('D:\\ws\\task-7')] })
+  })
+  it('exe 在场无 cwd → 裸 APP 本体', () => {
+    expect(buildLaunchPlan('zcode', null, 'win32', withExe)).toEqual({ file: EXE, args: [] })
+  })
+  it('exe 缺席 → 回落 PATH zcode＋start /d（CLI 不认 --open-workspace，不附加）', () => {
+    const plan = buildLaunchPlan('zcode', 'D:\\ws\\task-7', 'win32', { exists: () => false, env: { LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local' } })
+    expect(plan?.file).toBe('cmd')
+    expect(plan?.args).toEqual(['/c', 'start', '', '/d', resolve('D:\\ws\\task-7'), 'zcode'])
+    expect(plan?.args).not.toContain('--open-workspace')
+  })
+  it('LOCALAPPDATA 缺失视为 exe 缺席（回落不炸）', () => {
+    const plan = buildLaunchPlan('zcode', null, 'win32', { exists: () => false })
+    expect(plan).toEqual({ file: 'cmd', args: ['/c', 'start', '', 'zcode'] })
+  })
+})
+
+describe('zcode-patches 010 内容锁（open-file 深改）', () => {
+  it('补丁存在、series 登记、含 open-file 处理与冷启动并入', () => {
+    const patchPath = resolve(__dirname, '../../../../..', 'zcode-patches/010-desktop-open-file-workspace.patch')
+    expect(existsSync(patchPath), '补丁文件存在').toBe(true)
+    const patch = readFileSync(patchPath, 'utf8')
+    expect(readFileSync(resolve(__dirname, '../../../../..', 'zcode-patches/series'), 'utf8'))
+      .toContain('010-desktop-open-file-workspace.patch')
+    expect(patch).toContain('app.on("open-file"')
+    expect(patch).toContain('startupOpenWorkspaceRequest')
+    expect(patch).toContain('handleOpenWorkspacePath')
+    expect(patch).toContain('process.platform === "darwin"')
   })
 })
