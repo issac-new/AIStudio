@@ -7,7 +7,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { mount, flushPromises } from '@vue/test-utils'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 vi.mock('../api/devtools', () => ({
   // 默认态：zcode 可用、DeepSeek Harness 未安装（置灰断言挂它）
@@ -25,7 +25,8 @@ vi.mock('../api/devtools', () => ({
   })),
 }))
 vi.mock('../utils/toast', () => ({ showToast: vi.fn() }))
-vi.mock('../composables/useIdeWorkspace', () => ({ useIdeWorkspace: () => ({ root: ref('/Users/x/lab/proj') }) }))
+const wsState = vi.hoisted(() => ({ root: '/Users/x/lab/proj' }))
+vi.mock('../composables/useIdeWorkspace', () => ({ useIdeWorkspace: () => ({ root: computed(() => wsState.root || null) }) }))
 
 import { launchDevtool, fetchDevtools, fetchCliSessions } from '../api/devtools'
 import IdeDevTools from '../components/IdeDevTools.vue'
@@ -52,7 +53,7 @@ describe('IdeDevTools — 工具启动器', () => {
     w.unmount()
   })
 
-  it('DeepSeek Harness 按钮直接打开本机 app（不带 cwd）', async () => {
+  it('DeepSeek Harness 按钮打开本机 app 并携带当前工作区（任务选中时=任务工作区）', async () => {
     mockedFetch.mockImplementationOnce(async () => [
       { key: 'zcode', labelZh: 'zcode', labelEn: 'zcode', available: true },
       { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: true },
@@ -61,11 +62,11 @@ describe('IdeDevTools — 工具启动器', () => {
     await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
     await flushPromises()
     await w.find('[data-testid="ide-devtools-deepseek-harness"]').trigger('click')
-    expect(mockedLaunch).toHaveBeenCalledWith('deepseek-harness', undefined)
+    expect(mockedLaunch).toHaveBeenCalledWith('deepseek-harness', '/Users/x/lab/proj')
     w.unmount()
   })
 
-  it('在工作区终端运行 zcode：launch 带 cwd；zcode 按钮直启不带 cwd', async () => {
+  it('zcode APP 键与终端键同源带 cwd；工作区为空时 APP 键不带 cwd', async () => {
     mockedFetch.mockImplementationOnce(async () => [
       { key: 'zcode', labelZh: 'zcode', labelEn: 'zcode', available: true },
       { key: 'deepseek-harness', labelZh: 'DeepSeek Harness', labelEn: 'DeepSeek Harness', available: false },
@@ -78,8 +79,20 @@ describe('IdeDevTools — 工具启动器', () => {
     // 启动成功面板收起；重开再点 zcode 应用按钮
     await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
     await w.find('[data-testid="ide-devtools-zcode"]').trigger('click')
-    expect(mockedLaunch).toHaveBeenCalledWith('zcode', undefined)
+    expect(mockedLaunch).toHaveBeenCalledWith('zcode', '/Users/x/lab/proj')
     w.unmount()
+  })
+
+  it('工作区为空（未选任务/会话/偏好）时 APP 键不带 cwd', async () => {
+    wsState.root = ''
+    try {
+      const w = mount(IdeDevTools)
+      await w.find('[data-testid="ide-devtools-toggle"]').trigger('click')
+      await flushPromises()
+      await w.find('[data-testid="ide-devtools-zcode"]').trigger('click')
+      expect(mockedLaunch).toHaveBeenCalledWith('zcode', undefined)
+      w.unmount()
+    } finally { wsState.root = '/Users/x/lab/proj' }
   })
 })
 

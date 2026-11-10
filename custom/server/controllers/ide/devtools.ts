@@ -98,14 +98,22 @@ export function buildLaunchPlan(
       default: {
         const app = def?.app
         if (!app) return null
-        return { file: 'open', args: ['-a', app] }
+        // 任务工作区带入（2026-11-10 spec ide-devtools-task-cwd）：open -a <App> <dir>
+        // 是 macOS 目录契约——app 侧 open-file 处理在位即以该目录为工作区（ZCode.app
+        // 暂无处理则目录被忽略、app 照常打开，无副作用；确定性生效面=win32 /d 与
+        // terminal-zcode）。无 cwd 行为不变。
+        return { file: 'open', args: cwd ? ['-a', app, resolve(cwd)] : ['-a', app] }
       }
     }
   }
 
   // win32（2026-11-10 收窄：只留 zcode 与 terminal-zcode）
   switch (tool) {
-    case 'zcode': return { file: 'cmd', args: ['/c', 'start', '', 'zcode'] }
+    case 'zcode':
+      // start /d 设进程工作目录（确定性生效，无需 app 配合）；无 cwd 行为不变。
+      return cwd
+        ? { file: 'cmd', args: ['/c', 'start', '', '/d', resolve(cwd), 'zcode'] }
+        : { file: 'cmd', args: ['/c', 'start', '', 'zcode'] }
     case 'terminal-zcode': {
       const dir = cwd ?? homedir()
       return { file: 'cmd', args: ['/c', 'start', 'cmd', '/k', `cd /d ${dir} && zcode`] }
