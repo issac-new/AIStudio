@@ -2961,9 +2961,9 @@ run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露
 
 ### 5.12 run28 复盘条款（2026-11-11 立，N28/N29 全量吸收；run29 起生效）
 
-run28（20261107-v8-run28，14h29m 六闸全过，report_done=1794090918）收官后两批根治（N28 收官批 33431afba＋N29 复盘批 A/B 63d856d8c/f95c7f664，均已合入 main）固化为本节条款：
+run28（20261107-v8-run28，14h29m 六闸全过，report_done=1794090918）结束后的两批根治（N28 收尾批 33431afba＋N29 复盘批 A/B 63d856d8c/f95c7f664，均已合入 main）固化为本节条款：
 
-1. **过程证据链双写**：`note()` 只写 stderr＋`evidence/scenario.log`，禁写 stdout——stdout 会污染 `$()` 捕获（派单 marker 落库变整行日志）。空 `scenario.log` 守卫在位：报告「完整过程日志」链接指向空文件属 P0 事故（run28 全轮 2 行 383B 人工补抄实锤）。
+1. **过程证据链双写**：`note()` 只写 stderr＋`evidence/scenario.log`，禁写 stdout——stdout 会污染 `$()` 捕获（派单 marker 变成整行日志写进看板）。空 `scenario.log` 守卫在位：报告「完整过程日志」链接指向空文件属 P0 事故（run28 全轮 2 行 383B 人工补抄实锤）。
 2. **R18 载荷契约单一校验源**：`r18_matrix.schema_errors()` 是 steps 容器/dialogs/`ops[].frames`/`effect.evidence[].{label,anchor}` 的唯一判形源；生成器/审计器/采集器读写两端走安全访问，坏载荷渲染为带步号与期望类型的 schema 错误占位、不崩溃（run28 报告两次 `AttributeError: 'str' object has no attribute 'get'` 实锤）；`r18-collect.py validate` 子命令供手工核形。
 3. **审计单遍收敛**：`mx-report-audit.py` 分区异常隔离＋`report-audit-findings.json` 侧柜一次列全缺口（fails/warns/步号/工具版本锚）——禁「一轮只报一类缺口」的剥洋葱（run28 18 轮重入实锤）。凭证族 ISSUE/DISP 同权识别；`stepN` 旧形态兼容并 WARN。
 4. **降级凭证写作规范**：统一 `step-<n>` 形态（禁 `step13`/`step7`/`step-?`）；repo 型产物证据 0 帧登记合法（`op --frames` 可选），登记失败记 `r18-op-register-failed` 不静默吞。
