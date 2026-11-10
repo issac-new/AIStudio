@@ -2,7 +2,7 @@
 
 本手册面向产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控六支团队。它帮助每支团队完成各自可检查的工作交付，并让需求、代码、测试、发布、运行和审计证据能够跨团队对账。它不讲“怎样把所有按钮点一遍”，只讲各团队怎样对结果负责。
 
-- 适用版本：AIStudio 1.0.14-overlay。
+- 适用版本：AIStudio 1.0.15-overlay。
 - 读者：产品需求分析团队、项目管理团队、研发团队、测试团队、运维监控团队、安全合规及审计内控团队。
 - 使用形态：浏览器 Web 版；桌面端差异不展开。
 - 核实日期：2026-11-09。
@@ -613,12 +613,12 @@ standard/demo 的 `director-proxy` 是代偿，不计真人批准。审批历史
 
 发布后执行观察、复验和必要的回滚。记录异常、责任人和问题回流，不能只上传资产就写“发布完成”。
 
-当前 1.0.14-overlay 发布资产按长期政策只有：
+当前 1.0.15-overlay 发布资产按长期政策只有：
 
-1. `aistudio-full-1.0.14-overlay-src.tar.gz`。
-2. `swarm-yuan-offline-1.0.14-overlay-everything.zip`，版本前不带 `v`。
+1. `aistudio-full-1.0.15-overlay-src.tar.gz`。
+2. `swarm-yuan-offline-1.0.15-overlay-everything.zip`，版本前不带 `v`。
 
-两件主资产配套 `SHA256SUMS-v1.0.14-overlay.txt`。everything 采用 R134，仍需要 pip/npm 镜像安装可源装依赖，不等于完全断网自足。
+两件主资产配套 `SHA256SUMS-v1.0.15-overlay.txt`。everything 采用 R134，仍需要 pip/npm 镜像安装可源装依赖，不等于完全断网自足。
 
 **本章通过判据**：发布决策有真实裁决者与证据，实际发布有回执，观察与回滚责任明确。
 
@@ -1039,9 +1039,9 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 
 本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。
 
-- 适用版本：AIStudio 1.0.14-overlay（package.json）
+- 适用版本：AIStudio 1.0.15-overlay（package.json）
 - 路由计数：routes=123（page 82 / redirect 41）；stageTabs=37；visitStates=160
-- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.20-studio.1 · agent-teams v0.23.1-team.1 · ycode 3.17.2 · yuan-skill v2.100.2
+- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.20-studio.2 · agent-teams v0.23.1-team.2 · ycode 3.17.2 · yuan-skill v2.100.3
 - 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
 
 全量路由清单（行序=注册链输出序；redirect 类不可直访）：

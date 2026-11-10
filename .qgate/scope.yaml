@@ -732,3 +732,17 @@ paths:
 
   # 2026-11-11 v1.0.15 发布轮守门清偿：identity-chat 响应出口走 lib/http（K19 归位）＋raci REST 白名单登记（批2 遗留）
   - custom/server/matrix/__tests__/raci-rest-guard.test.ts
+
+  # 2026-11-11 v1.0.15-overlay 发布轮（chore/release-v1.0.15）
+  - docs/superpowers/specs/2026-11-11-release-v1.0.15-overlay.md
+  - RELEASE-MANIFEST.json
+  - RELEASE-NOTES.md
+  - package.json
+  - package-lock.json
+  - team/VERSION
+  - team/version.json
+  - team/README.md
+  - team/README_zh.md
+  - skills/swarm-yuan/CHANGELOG.md
+  - scripts/offline-template/install/README-windows.md
+  - docs/windows-x64-setup.md
