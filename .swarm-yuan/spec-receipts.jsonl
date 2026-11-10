@@ -299,3 +299,4 @@
 {"at":"2026-11-10T13:42:00Z","spec":"docs/superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md","receipt":"c69ed9165a14d47789cf8da850551216e9bf117f","commit":"5c771b596"}
 {"at":"2026-11-10T13:59:52Z","spec":"docs/superpowers/specs/2026-11-10-ide-devtools-task-cwd.md","receipt":"ea12f670a3a74ca89c5a016a8f6e2787a567da68","commit":"745376cd3"}
 {"at":"2026-11-10T14:33:51Z","spec":"docs/superpowers/specs/2026-11-10-zcode-openfile-workspace.md","receipt":"5fef27388bfe3e5723696d7ac968ae0427af1c9d","commit":"8a97ffc15"}
+{"at":"2026-11-10T16:07:47Z","spec":"docs/superpowers/specs/2026-11-10-identity-chat-matrix-batch2.md","receipt":"33bf5b5747c2cb7542bac3b66d5b725f570bcbe0","commit":"04d6f04cc"}

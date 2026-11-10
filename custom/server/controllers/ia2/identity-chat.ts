@@ -20,6 +20,12 @@ import { readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { canUserAccessProfile, type ProfileAccessDeps } from '../../services/hermes/profile-access'
 import { underHermes } from '../../lib/paths'
+// 批2（Matrix 远程身份，2026-11-10）：roster 绑定账号经账号级 DM 对话——
+// 凭据与发送原语复用 matrix 域既有件，不另起第二套。
+import { readGatewayMatrixEnv } from '../../matrix/gateway-env'
+import { loadMatrixSession } from '../../matrix/session-store'
+import { matrixSendMessage } from '../../matrix/raci-matrix'
+import { readRegistry } from '../../governance/registry-admin'
 
 // 注：真进程 koa-router 新增路由不生效（routes.ts 404 缺陷注释同源，engine-models
 // 先例）——出口用原生中间件精确匹配（identityChatNativeRoutes），router 定义退役。
@@ -122,6 +128,137 @@ async function ensureBotChat(profile: string): Promise<string> {
  * 在线态取 /health/detailed platforms 键的 <profile>:<platform> 前缀（无前缀
  * 键=default profile）。/health/detailed 不含 served_profiles（实测），目录
  * 才是网关 Cron tick 的同一份 profile 全集。 */
+// ── 批2：Matrix 远程身份（roster 绑定账号 → 账号级 DM 对话）──
+// 身份源=治理仓 roster 注册表（provision 建号正本，git 可回溯）；DM 房=m.direct
+// 映射，缺失即建（is_direct+invite）；发送复用 raci-matrix 事务号直发。对端是
+// 真人/远端集群，无同步回复语义——queued:true＋轮询 messages（与网关身份的
+// Bot Chat 超时转轮询同 UX）。
+
+const MATRIX_USER_RE = /^@[a-zA-Z0-9_.=-]+:.+$/
+
+/** 形态判定：matrix 身份 id 形如 @local:server；网关 profile 名不含 @/: 无歧义。 */
+export function isMatrixIdentityId(id: string): boolean {
+  return MATRIX_USER_RE.test(id)
+}
+
+/** 账号解析（与 /api/matrix/gateway-credentials 凭据链同源）：orchestrator .env
+ *  三元组 → matrix-session.json 回落；两路全缺 null（fail-closed，不猜）。 */
+export function resolveMatrixAccount(): { homeserverUrl: string; accessToken: string; userId: string } | null {
+  const env = readGatewayMatrixEnv()
+  if (env) return { homeserverUrl: env.homeserverUrl, accessToken: env.accessToken, userId: env.userId }
+  const sess = loadMatrixSession()
+  if (sess?.homeserverUrl && sess?.accessToken && sess?.userId) {
+    return { homeserverUrl: sess.homeserverUrl, accessToken: sess.accessToken, userId: sess.userId }
+  }
+  return null
+}
+
+/** roster 表行里的 matrix 账号列（人类号＋AI 助理号都入清单——画布统一聊天对象）。 */
+export async function listMatrixIdentities(): Promise<Array<{ kind: 'matrix'; id: string; label: string }>> {
+  const self = resolveMatrixAccount()?.userId ?? ''
+  const ids = new Set<string>()
+  try {
+    const { markdown } = await readRegistry('roster')
+    for (const line of markdown.split('\n')) {
+      const cells = line.split('|').map(c => c.trim())
+      for (const cell of cells) {
+        if (MATRIX_USER_RE.test(cell) && cell !== self) ids.add(cell)
+      }
+    }
+  } catch { /* 治理仓缺席/roster 未建 → 无 matrix 身份（fail-soft，网关身份照常） */ }
+  return [...ids].sort().map(id => ({
+    kind: 'matrix' as const,
+    id,
+    label: id.replace(/^@/, '').split(':')[0],
+  }))
+}
+
+/** 账号级 Matrix HTTP（GET）；错误上抛由分支面 409/502 归一。 */
+async function matrixGet<T>(account: { homeserverUrl: string; accessToken: string }, path: string, timeoutMs = 8000): Promise<T> {
+  const origin = account.homeserverUrl.replace(/\/+$/, '')
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(`${origin}${path}`, { headers: { Authorization: `Bearer ${account.accessToken}` }, signal: ctrl.signal })
+    const body = await res.text()
+    if (!res.ok) throw new Error(`matrix ${path.split('?')[0]}: HTTP ${res.status} ${body.slice(0, 120)}`)
+    return (body ? JSON.parse(body) : {}) as T
+  } finally { clearTimeout(timer) }
+}
+
+/** m.direct 映射里对端既有的 DM 房（无则建新并回写映射）。 */
+async function ensureDmRoom(account: { homeserverUrl: string; accessToken: string; userId: string }, peerId: string): Promise<string> {
+  const origin = account.homeserverUrl.replace(/\/+$/, '')
+  let direct: Record<string, string[]> = {}
+  try {
+    const data = await matrixGet<{ content?: Record<string, string[]> }>(account, `/_matrix/client/v3/user/${encodeURIComponent(account.userId)}/account_data/m.direct`)
+    direct = data.content ?? {}
+  } catch { /* 无 account_data（从未建过 DM）→ 空映射起建 */ }
+  const existing = direct[peerId]?.[0]
+  if (existing) return existing
+  const res = await fetch(`${origin}/_matrix/client/v3/createRoom`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${account.accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_direct: true, invite: [peerId], preset: 'trusted_private_chat' }),
+  })
+  const body = await res.text()
+  if (!res.ok) throw new Error(`createRoom: HTTP ${res.status} ${body.slice(0, 120)}`)
+  const roomId = (JSON.parse(body) as { room_id: string }).room_id
+  // 回写 m.direct（best-effort：映射写失败不阻断——房已建，下次按房发消息仍可达，
+  // 重开 DM 会再建一间的代价可接受）
+  await fetch(`${origin}/_matrix/client/v3/user/${encodeURIComponent(account.userId)}/account_data/m.direct`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${account.accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: { ...direct, [peerId]: [roomId] } }),
+  }).catch(() => undefined)
+  return roomId
+}
+
+async function handleMatrixChat(ctx: Ctx, peerId: string): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  const message = String((ctx.request?.body as { message?: unknown })?.message ?? '').trim()
+  if (!message) { ctx.status = 400; ctx.body = { ok: false, error: 'message 必填' }; return }
+  const account = resolveMatrixAccount()
+  if (!account) { ctx.status = 409; ctx.body = { ok: false, error: 'Matrix 通道未配置（orchestrator .env / matrix-session.json 两路均缺席）' }; return }
+  try {
+    const roomId = await ensureDmRoom(account, peerId)
+    await matrixSendMessage(account, roomId, message)
+    ctx.body = {
+      ok: true,
+      sessionId: roomId,
+      queued: true,
+      reply: '',
+      note: '已通过 Matrix DM 发送；对端回复经 messages 轮询拉取',
+    }
+  } catch (err) {
+    ctx.status = 502
+    ctx.body = { ok: false, error: (err as Error).message.slice(0, 300) }
+  }
+}
+
+async function handleMatrixMessages(ctx: Ctx, peerId: string): Promise<void> {
+  ctx.set('Cache-Control', 'no-store')
+  const account = resolveMatrixAccount()
+  if (!account) { ctx.status = 409; ctx.body = { ok: false, error: 'Matrix 通道未配置' }; return }
+  try {
+    const roomId = await ensureDmRoom(account, peerId)
+    const data = await matrixGet<{ chunk?: Array<{ type?: string; sender?: string; content?: { msgtype?: string; body?: string }; origin_server_ts?: number }> }>(
+      account, `/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/messages?dir=b&limit=50`)
+    const messages = (data.chunk ?? [])
+      .filter(ev => ev.type === 'm.room.message' && ev.content?.msgtype === 'm.text' && typeof ev.content?.body === 'string')
+      .reverse()
+      .map(ev => ({
+        role: ev.sender === account.userId ? 'user' : 'assistant',
+        content: String(ev.content?.body ?? ''),
+        at: typeof ev.origin_server_ts === 'number' ? ev.origin_server_ts : null,
+      }))
+    ctx.body = { sessionId: roomId, messages }
+  } catch (err) {
+    ctx.status = 502
+    ctx.body = { ok: false, error: (err as Error).message.slice(0, 300) }
+  }
+}
+
 async function handleIdentities(ctx: Ctx, deps?: ProfileAccessDeps): Promise<void> {
   ctx.set('Cache-Control', 'no-store')
   try {
@@ -146,14 +283,19 @@ async function handleIdentities(ctx: Ctx, deps?: ProfileAccessDeps): Promise<voi
     } catch { /* 网关不在 → 全部离线态 */ }
     ctx.body = {
       ok: true,
-      identities: served
-        .filter(profile => canUserAccessProfile(ctx.state?.user, profile, deps))
-        .map((profile) => ({
-          kind: 'gateway' as const,
-          id: profile,
-          label: profile,
-          online: online.get(profile) === true,
-        })),
+      identities: [
+        ...served
+          .filter(profile => canUserAccessProfile(ctx.state?.user, profile, deps))
+          .map((profile) => ({
+            kind: 'gateway' as const,
+            id: profile,
+            label: profile,
+            online: online.get(profile) === true,
+          })),
+        // 批2：roster 绑定的 matrix 身份并入（在线态未知，如实 false——presence
+        // 属演进项，不在本批编造）
+        ...(await listMatrixIdentities()).map(m => ({ ...m, online: false })),
+      ],
       gatewayBase: gatewayBase(),
     }
   } catch (err) {
@@ -243,16 +385,20 @@ export function identityChatNativeRoutes(deps?: ProfileAccessDeps): (ctx: Ctx, n
     }
     const mChat = path.match(/^\/api\/ia2\/identity-chat\/([^/]+)\/chat$/)
     if (method === 'POST' && mChat) {
-      const profile = decodeURIComponent(mChat[1])
-      if (!allowIdentity(ctx, profile, deps)) return
-      await handleChat(ctx, profile)
+      const target = decodeURIComponent(mChat[1])
+      // 批2：matrix 身份（@local:server）不适用网关 profile ACL——端点本身经
+      // JWT 鉴权，roster 身份对全部登录用户可见（与 gateway-credentials 同界）。
+      if (isMatrixIdentityId(target)) { await handleMatrixChat(ctx, target); return }
+      if (!allowIdentity(ctx, target, deps)) return
+      await handleChat(ctx, target)
       return
     }
     const mMsg = path.match(/^\/api\/ia2\/identity-chat\/([^/]+)\/messages$/)
     if (method === 'GET' && mMsg) {
-      const profile = decodeURIComponent(mMsg[1])
-      if (!allowIdentity(ctx, profile, deps)) return
-      await handleMessages(ctx, profile)
+      const target = decodeURIComponent(mMsg[1])
+      if (isMatrixIdentityId(target)) { await handleMatrixMessages(ctx, target); return }
+      if (!allowIdentity(ctx, target, deps)) return
+      await handleMessages(ctx, target)
       return
     }
     await next()

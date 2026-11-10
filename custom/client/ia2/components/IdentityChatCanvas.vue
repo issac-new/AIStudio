@@ -2,10 +2,13 @@
 <!-- 统一身份聊天画布（2026-10-23 五轮用户裁定：「在一个聊天窗口中统一，可以和
      所有身份进行聊天会话」）。身份=本机网关全部 profile（49 个，/api/ia2/
      identities 目录全集+在线态）；会话走网关 peer dm 协议（每身份一个 Bot Chat，
-     服务端 ensure→chat 同步回/超时转轮询）。批2（Matrix 远程身份）预留 kind 扩展。 -->
+     服务端 ensure→chat 同步回/超时转轮询）。批2（2026-11-10 已兑现）：roster 绑定
+     的 Matrix 远程身份以 kind:'matrix' 并入清单，对话走账号级 DM（m.direct 房，
+     回复经 messages 轮询）。 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { fetchIdentities, fetchIdentityMessages, sendToIdentity, type IdentityInfo, type IdentityMessage } from '../identity-chat'
+import { isAiUserId } from '@/custom/matrix-chat/identity/user-kind'
 
 const props = defineProps<{ presetProfile?: string | null }>()
 
@@ -148,6 +151,8 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
           :data-testid="`icc-identity-${i.id}`"
           @click="select(i.id)">
           <span class="icc__dot" :class="i.online ? 'icc__dot--on' : ''" />
+          <span v-if="i.kind === 'matrix'" class="icc__kind-tag" :data-testid="`icc-matrix-badge-${i.id}`"
+            >M·{{ isAiUserId(i.id) ? 'AI' : '人' }}</span>
           <span class="icc__item-name">{{ i.id }}</span>
           <span v-if="i.online" class="icc__on-label">在线</span>
         </button>
