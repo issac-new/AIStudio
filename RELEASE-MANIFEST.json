@@ -125,6 +125,14 @@
       "treeHash": "438ce0246ca2148d8ed35927ceadf6c2c3f196aa",
       "createdAt": "2026-11-09",
       "note": "v1.0.14 发布轮实际打包 commit（tag 指向＝发布批 4f10460）；GitHub Release 三资产＋ModelScope 双件同窗发布。"
+    },
+    {
+      "id": "v1.0.15-overlay",
+      "tag": "v1.0.15-overlay",
+      "commit": "39de89e2ef4445de7732822b3001ed2d967c8565",
+      "treeHash": "020ac9024538a7312a43662a4bb947675ebbad3c",
+      "createdAt": "2026-11-11",
+      "note": "v1.0.15 发布轮实际打包 commit（tag 指向＝basic-check 超时校准批 39de89e2；打包链 release:gate 全过含 junit 全量 8726/0/0）；GitHub Release 三资产＋ModelScope 双件同窗发布（LFS 414MB 3/3 一次推成）。"
     }
   ],
   "packaging": {
