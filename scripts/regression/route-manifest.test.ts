@@ -21,7 +21,16 @@ describe('全功能路由清单生成器', () => {
     expect(names).toEqual(expect.arrayContaining([
       'matrix.client', 'matrix.clientRoom', 'ide.shell',
       'ia2.eval', 'ia2.bpa', 'ia2.ontology', 'ia2.skillgov',
+      'projects', 'projectDetail', 'ia2.records', 'ia2.recordDetail',
     ]))
+    // 与真实 bootstrap 同链：projects 两页是默认能力，不能漏出路由清单；
+    // records 是独立执行记录读面，不与项目工作流混算。
+    expect(manifest.routes.find((r: any) => r.name === 'projects')?.path).toBe('/app/projects')
+    expect(manifest.routes.find((r: any) => r.name === 'projectDetail')?.path).toBe('/app/projects/:id')
+    expect(manifest.routes.find((r: any) => r.name === 'ia2.records')?.path).toBe('/app/records')
+    expect(manifest.routes.find((r: any) => r.name === 'ia2.recordDetail')?.path).toBe('/app/records/:kind/:id')
+    expect(manifest.routes.find((r: any) => r.name === 'hermes.petdex')?.kind).toBe('redirect')
+    expect(manifest.routes.some((r: any) => r.name === 'hermes.history' || r.name === 'hermes.historySession')).toBe(false)
     // 37 个阶段页签=STAGE_TABS 实数（分布 ①6/②4/③4/④5/⑤6/⑥12；第 37 项=⑥proactivity，
     // 2026-10-26 主动性治理页签批）；sim/map 是推演壳层独立页路由，不占阶段页签位
     expect(manifest.stageTabs).toHaveLength(37)

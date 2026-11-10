@@ -8,6 +8,10 @@ import { resolve } from 'node:path'
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
 const DOCUMENTS = new Map([
+  ['/aistudio-swarm-yuan-guide.html', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-swarm-yuan-guide.html'),
+    type: 'text/html; charset=utf-8',
+  }],
   ['/aistudio-interactive-training.html', {
     file: resolve(ROOT, 'docs/manuals/aistudio-interactive-training.html'),
     type: 'text/html; charset=utf-8',
@@ -30,6 +34,10 @@ const DOCUMENTS = new Map([
   }],
   ['/aistudio-design-document-index.md', {
     file: resolve(ROOT, 'docs/manuals/aistudio-design-document-index.md'),
+    type: 'text/plain; charset=utf-8',
+  }],
+  ['/aistudio-run28-simulation-case.md', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-run28-simulation-case.md'),
     type: 'text/plain; charset=utf-8',
   }],
   ['/aistudio-run25-simulation-case.md', {

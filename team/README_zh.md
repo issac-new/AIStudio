@@ -154,7 +154,25 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 ## 版本
 
-**v0.22.5-team.1** — 2026-10-27 版本方案切换（完整底座版本 0.22.5 与 hermes-agent 对齐，`-team.1` 为本仓扩展发布序，真源 [VERSION](VERSION)；下述 v3.3.0 为旧方案最后一版）
+当前版本：**v0.23.0-team.2**；上一版：**v0.23.0-team.1**。版本真源为 [VERSION](VERSION)。
+
+完整三位底座版本跟随 `vendor/VENDOR.md` 的 hermes-agent 基线，`-team.N` 是 AIStudio 团队扩展发布序。因此，**0.23.0 是上游底座版本**，**team.2 是该底座上的第二次团队扩展发布**，不是上游的 `team.2` 版本。
+
+当前 AIStudio **1.0.14-overlay** 配套 agent teams **v0.23.0-team.2**、hermes-agent 上游底座 **0.23.0**、yuan **v2.100.1**、Ycode **3.17.2**。各模块版本独立，yuan 与 Ycode 的版本不计入 team 扩展序。
+
+### 本轮变化（v0.23.0-team.2）
+
+- **新增共享团队库与交接规则**：增加 `team/shared/team-library.yaml` 和 `team/shared/handoff-rules.yaml`，定义可复用团队族以及明确的列/角色交接契约。
+- **仅前进扩展序**：hermes-agent 底座保持 **0.23.0**，只有团队扩展序从 `team.1` 进到 `team.2`；本轮没有升级上游底座。
+
+### v0.23.0-team.1（2026-11-06）
+
+- **仅升级底座**：hermes-agent 从 v0.22.7 升到 v0.23.0（spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`），扩展序归 1；profile 内容无变化。
+- 0.22.7 底座线上的历史版本为 v0.22.7-team.1..team.3。
+
+### 历史版本
+
+**v0.22.5-team.1** — 2026-10-27 版本方案切换（完整底座版本 0.22.5 与当时的 hermes-agent 对齐，`-team.1` 为本仓扩展发布序；下述 v3.3.0 为旧方案最后一版）
 
 **v3.3.0** — 2026-10-14 增量更新
 

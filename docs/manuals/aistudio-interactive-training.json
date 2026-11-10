@@ -1,12 +1,38 @@
 {
   "source_mockup": null,
-  "source_plan": "docs/superpowers/specs/2026-11-03-aistudio-comprehensive-training-manual.md",
+  "source_plan": "docs/superpowers/specs/2026-11-09-training-v1.0.14-refresh.md",
   "mode": "evolve",
   "html_file": "docs/manuals/aistudio-interactive-training.html",
   "pretext_tier": "native-css",
   "framework": "vanilla",
-  "iterations": 25,
-  "date": "2026-11-04",
+  "iterations": 35,
+  "date": "2026-11-09",
   "screen": "aistudio-training",
-  "branch": "docs/aistudio-training-manual"
+  "branch": "docs/training-v1-0-14-refresh",
+  "changelog": [
+    {
+      "date": "2026-11-10",
+      "summary": "取消独立图解拼盘，结构/架构图随原理、流程图随实操、关系图随案例交接，形成连续教学叙事。"
+    },
+    {
+      "date": "2026-11-10",
+      "summary": "手册正文加入结构图、流程图、架构图与关系图，全部由课程数据/交接 DAG/拓扑实时生成并同步当前步骤。"
+    },
+    {
+      "date": "2026-11-10",
+      "summary": "改为面向技术人员的培训手册与演示说明：原理/实操/案例/证据四段正文、14 幕原理说明、步骤讲解与验收侧栏；打印教案同步。"
+    },
+    {
+      "date": "2026-11-10",
+      "summary": "按用户选择改为呈堂画布：一步一屏大标题、证物聚光、冲突数字印章、进度轨、窄叙事条与可放大的拓扑小地图；时间线组件退役。"
+    },
+    {
+      "date": "2026-11-10",
+      "summary": "呈现改版为 run28 时间线大轴：全视口应用界面、闸门/事故锚点挂证据、六团队泳道幕旗标、步骤刻度、四栏案卡；拓扑退入弹窗；打印 14 页教案不变。"
+    },
+    {
+      "date": "2026-11-10",
+      "summary": "呈现升级为 run28 案件复盘工作台：四阶段路线+冲突数字、拓扑走查态、连续调查卷宗、证据附件台；打印证据迁页底通栏条；A4 宽度锁边。"
+    }
+  ]
 }

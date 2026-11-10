@@ -2,10 +2,10 @@
 
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
-- 快照基线：`30e975f32`。
+- 快照基线：`01dc8f806`。
 - 当前版本：`1.0.14-overlay`。
-- 核实日期：2026-11-06。
-- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 594 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
+- 核实日期：2026-11-11。
+- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 631 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
 
@@ -155,7 +155,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 交付部署按四步走：检查准入资料和回滚，技术评审与运维评审独立投票，按批准路径实施，进入观察窗并完成机械复验与回访。发布动作不等于任务可以立即收口。`docs/DESIGN.md §4.5`
 
-日常开发与走查以浏览器 Web 版为主，Electron 是可选发布能力。单仓桌面构建须显式设置 `OVERLAY_UPSTREAM_ROOT` 指向仓内 `vendor/`，mac arm64 与 win x64 分别构建、安装和启动验收；未做逐平台验收就保持未验证。`docs/DESIGN.md §5.5、§6.1`
+日常开发与走查以浏览器 Web 版为主，Electron 是可选发布能力。单仓桌面构建的上游根按显式 `OVERLAY_UPSTREAM_ROOT`＞仓内 `vendor/`＞旧兄弟 `upstream/` 解析；使用隔离构建树时须显式设置该环境变量，mac arm64 与 win x64 分别构建、安装和启动验收，未做逐平台验收就保持未验证。`docs/DESIGN.md §5.5、§6.1`
 
 ### 2.9 安全边界应该怎样讲才不夸大
 
@@ -179,12 +179,12 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 | 对象 | 当前值 | 权威载体 |
 |---|---|---|
 | 整体源码包 | `1.0.14-overlay`，tag `v1.0.14-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
-| 驾驶舱模块声明 | `1.0.9-studio.12` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
-| agent teams | `v0.23.0-team.1` | `team/VERSION`，机器载体 `team/version.json` |
+| 驾驶舱模块声明 | `0.8.20-studio.1` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
+| agent teams | `v0.23.1-team.1` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `3.17.2` | `vendor/zcode/package.json` |
-| yuan skill | `v2.99.3` | `skills/swarm-yuan/CHANGELOG.md` |
+| yuan skill | `v2.100.2` | `skills/swarm-yuan/CHANGELOG.md` |
 
-这些值可直接在 `RELEASE-MANIFEST.json:18,47-66,68-101,109-115` 与 `RELEASE-NOTES.md:44-46` 对账。驾驶舱在 v1.0.13 轮随内容变化声明前进到 studio.12，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
+这些值可直接在 `RELEASE-MANIFEST.json:18,47-101,122-140` 与 `RELEASE-NOTES.md:55` 对账。驾驶舱在 2026-11-09 台账刷新批随 hermes-studio v0.8.20 换血声明前进到 0.8.20-studio.1，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
 
 上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.17、`35a7158a1`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.0、`2bd378ed1`；zcode 包版本为 3.17.2、`a9fe401e`。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
 
@@ -195,7 +195,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 1. `aistudio-full-1.0.14-overlay-src.tar.gz`。
 2. `swarm-yuan-offline-v1.0.14-overlay-everything.zip`。
 
-两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产；ModelScope 的 `aistudio/` 只替换 full 包，仓根放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:104-134`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
+两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件；ModelScope 的 `aistudio/` 只替换 full 包，`swarm-yuan/` 按版本目录放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:130-160`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
 
 默认 `npm run release:packages` 只打整体包；确需本地生成四模块加整体的 4+1 全量时，必须显式使用 `--all-modules`。模块边界和 `packageIncludes` 仍保留，用于发布检查与改动归属，不因上传面收窄而删除。`scripts/make-release-packages.mjs:38-50`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:11-15`
 
@@ -229,11 +229,11 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 ### 4.5 旧版本注记哪些已经不能当作当前值
 
-2026-11-06 结构重排批已把三处旧值修齐，当前不再需要主动避开：
+2026-11-09 培训刷新批已按当前载体重核三处事实：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v1.0.9／hermes-agent v0.23.0／zcode 3.17.2／驾驶舱 studio.12／agent teams v0.23.0-team.1／yuan v2.99.3／整体包 1.0.14-overlay），核实日 2026-11-06。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:67-90`
-2. 整合正本 §5.4 已把 2026-10-31 起的升级长注记收敛为「升级规则＋当前基线表」，历史来路归 git 与对应 spec；当前钉版以 `vendor/VENDOR.md` 为准。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,13`
-3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要已更正为 hermes-studio v1.0.9。维护时应保留这项修正，不要从旧报告把旧值复制回来。`RELEASE-MANIFEST.json:45,134`；`vendor/VENDOR.md:7-13`
+1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.20／hermes-agent v0.23.1／zcode 3.17.2／驾驶舱 0.8.20-studio.1／agent teams v0.23.1-team.1／yuan v2.100.2／整体包 1.0.14-overlay），核实日 2026-11-11；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
+2. 整合正本 §5.4 的当前基线表已归为 hermes-studio v0.8.17；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
+3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已归为 hermes-studio v0.8.17。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json:45,160`；`vendor/VENDOR.md:7,24`
 
 历史报告与历史 spec 中仍会出现成文时点的旧值（v0.8.0、studio.1、team.1、v2.95.0、1.0.0-overlay、zcode 3.17.1）。识别规则是：版本一律以当前载体与 VENDOR 表格为准，文档里的版本只代表其成文时点，不能当作现行值。
 
@@ -247,7 +247,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 多数差异来自日期和分母，不应直接判为错误：
 
-- 当前工作树根目录实际 594 份，附录 A 的 A.1 当前收 585 份专题设计／规格／决策，另有 9 份导航、正本、数字总账、A-D、合并地图与退役指针，合计同为 594；`archive/` 2 份另计。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-11`
+- 当前工作树根目录实际 631 份，附录 A 的 A.1 当前收 621 份专题设计／规格／决策，另有 9 份导航、正本旧址指针、数字总账、A-D、合并地图与退役拼接指针，合计同为 613；`archive/` 2 份另计。月度分组以机械索引生成结果为准，2026-11 当前为 177 份。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-8`
 - 附录 B 的 55＋32 是 2026-10-23 历史计划与研究索引，不是 specs 根目录总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md:1-6,66-68`
 - 附录 C.1 收 57 份方法论，C.2 的 51 是补入前的历史快照；当前数字应读 `facts.conf`，不能拿 51 当现行总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md:70-72,166-180`
 - 附录 D.1 的 43 是运行与方案复盘根因条数，文件头的 21 是推演轮次数，两者不是同一分母。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md:1-5`
@@ -256,7 +256,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 ### 4.8 哪些开放边界不能被讲成已交付
 
-正本 §6.4 仍明确列出：SIM 批量与注意力入口未完全只读，ACP 编码前技能装载与真实回合未完整验证，桌面双平台未逐平台验收，长期记忆全链未验证，真实长任务与断点恢复未复验，真实多轮图运行未复验，主动性执法默认关闭，性能首载与聚合时延未在当前版本复测。另有四项 2026-11-06 新增边界：总监派发待 run28 首跑、黄金集门检活体判分未跑、帧二态待下一轮采集核验、跨轮指标需累计两轮后才启用判据。讲师应把这些作为环境依赖或待验证项，不用既有测试数量替代目标环境证据。`docs/DESIGN.md §6.4`
+正本 §6.4 仍明确列出：SIM 批量与注意力入口未完全只读，ACP 编码前技能装载与真实回合未完整验证，桌面双平台未逐平台验收，长期记忆全链未验证，真实长任务与断点恢复未复验，真实多轮图运行未复验，主动性执法默认关闭，性能首载与聚合时延未在当前版本复测。2026-11-06 新增的四项边界已有 run28 后证据：总监姿态已首跑并记录 14 次自主派发；黄金集观察态已真跑，但 14 例误杀仍是判分器校准缺口，不得写成黄金集全过或已升硬门；帧采集已独立核验并修报错态与整板空白态判据，缺帧和降级仍如实呈现；跨轮指标已有 run27／run28 两轮留档，两轮记录不等于长期趋势结论。讲师应把这些作为当前证据与剩余边界的分界，不用既有测试数量替代目标环境证据。`docs/DESIGN.md §6.4`
 
 ## 5. 文档维护者怎样守住后续一致性
 

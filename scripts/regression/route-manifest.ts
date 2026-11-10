@@ -89,16 +89,19 @@ async function main(): Promise<void> {
     }
 
     const registrations: Array<Promise<void>> = []
-    const [{ registerEval }, { registerBpa }, { registerOntology }, { registerSkillgov }] = await Promise.all([
+    const [{ registerEval }, { registerBpa }, { registerOntology }, { registerSkillgov }, { registerProjects }] = await Promise.all([
       import('../../custom/client/eval'),
       import('../../custom/client/bpa'),
       import('../../custom/client/ontology'),
       import('../../custom/client/skillgov'),
+      import('../../custom/client/projects'),
     ])
     registrations.push(registerEval())
     if (features.bpa) registrations.push(registerBpa())
     if (features.ontology) registrations.push(registerOntology())
     if (features.skillgov) registrations.push(registerSkillgov())
+    // 与 registries/client/bootstrap.ts 同链：项目列表和详情是无开关的默认能力。
+    registrations.push(registerProjects())
     await Promise.all(registrations)
     for (const record of getRegisteredRoutes()) router.addRoute(record)
     if (features.matrixChat) {

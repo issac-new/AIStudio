@@ -2,7 +2,7 @@
 
 > 面向环境管理员、运维人员和讲师预演。本文回答怎样启动、怎样核对、怎样处置故障，不替代学员的页面操作手册。
 >
-> 事实基线：commit `e300df9f8`，整体版本 `1.0.10-overlay`，日期 `2026-11-03`。版本载体见 `package.json:2-6` 与 `RELEASE-MANIFEST.json:109-114`。
+> 事实基线：commit `5e68bb2b6`，整体版本 `1.0.14-overlay`，日期 `2026-11-09`。版本载体见 `package.json:2-6` 与 `RELEASE-MANIFEST.json:18,54,74,93,122-140`。
 >
 > **验证声明**：本文是对当前源码、配置和守门文档的静态核对。所有命令都是可执行示例，**不代表本手册编写时已启动服务、访问真实账号、调用模型、运行 worker、连接 Matrix 或验证 Windows 实机**。示例输出只说明判读方法，不是本次采集结果。
 
@@ -87,7 +87,7 @@ lsof -nP -iTCP:8650 -sTCP:LISTEN
 lsof -nP -iTCP:3030 -sTCP:LISTEN
 ```
 
-Node 必须不低于 23。`package.json:54-56`。Windows 用 `node --version`、`git rev-parse --short=9 HEAD` 和 `netstat -ano | findstr "8647 8649 8650 3030"`；`netstat` 是只读查询，进程终止另属【写】。
+Node 必须不低于 23。`package.json:62-64`。Windows 用 `node --version`、`git rev-parse --short=9 HEAD` 和 `netstat -ano | findstr "8647 8649 8650 3030"`；`netstat` 是只读查询，进程终止另属【写】。
 
 ### 3.2 首次注入与依赖安装
 
@@ -439,7 +439,7 @@ powershell -ExecutionPolicy Bypass -File install\install-windows.ps1
 1. `aistudio-full-<ver>-src.tar.gz`。
 2. `swarm-yuan-offline-<ver>-everything.zip`，附配套 SHA256SUMS。
 
-GitHub Release 与 ModelScope 同口径；四模块源码包和 DMG/zip 构建物不再上传，旧远端资产默认保留。`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`、`RELEASE-MANIFEST.json:104-133`。
+GitHub Release 与 ModelScope 都只发布 full 与 yuan everything 两件主资产及配套 SHA256SUMS；四模块源码包和 DMG/zip 构建物不再上传，旧远端资产默认保留。当前整体版本为 1.0.14-overlay，四个模块分别为 cockpit 0.8.20-studio.1、agent-teams v0.23.1-team.1、Ycode 3.17.2、yuan v2.100.2。`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`、`RELEASE-MANIFEST.json:18,54,74,93,122-140,157-158`、`RELEASE-NOTES.md:3,48-55`。
 
 **【只读】发布对账和 dry-run：**
 
@@ -456,16 +456,16 @@ npm run release:packages -- --dry-run
 ```bash
 cd <本仓根目录>
 npm run release:packages
-SWARM_YUAN_OFFLINE_VER=v1.0.12-overlay \
+SWARM_YUAN_OFFLINE_VER=1.0.14-overlay \
   bash skills/swarm-yuan/scripts/make-offline-bundle.sh --everything
 cd <本仓根目录>/dist
 shasum -a 256 \
-  release/aistudio-full-1.0.12-overlay-src.tar.gz \
-  swarm-yuan-offline-v1.0.12-overlay-everything.zip \
-  > release/SHA256SUMS-v1.0.12-overlay.txt
+  release/aistudio-full-1.0.14-overlay-src.tar.gz \
+  swarm-yuan-offline-1.0.14-overlay-everything.zip \
+  > release/SHA256SUMS-v1.0.14-overlay.txt
 ```
 
-full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-release-packages.mjs:49-94`。最后一段命令为两件资产生成配套校验文件，文件名和双通道布局遵循 `docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:7-9`。yuan 的 everything 当前是 `--no-vendor + knowledge + docs + github-src`：**可经 pip/npm 镜像安装的运行时不内嵌**，所以 everything 不等于完全断网自足。`skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,60-65`、`docs/superpowers/specs/2026-11-03-release-v1.0.10-overlay.md:17-25`。
+full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-release-packages.mjs:49-94`。最后一段命令为两件资产生成配套校验文件，文件名和双通道布局遵循 `docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:7-9`。注意 everything 资产名的版本前**没有 `v`**，SUMS 文件名则使用 `SHA256SUMS-v<版本>.txt`。yuan 的 everything 当前采用 R134：`--no-vendor + knowledge + docs + github-src`，技能本体随包，**可经 pip/npm 镜像安装的运行时不内嵌**，所以 everything 不等于完全断网自足。`skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,53-65`、`docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md:32-36`、`RELEASE-NOTES.md:48-52`。
 
 **【只读】本地校验示例：**
 
@@ -473,10 +473,12 @@ full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-re
 cd <本仓根目录>/dist/release
 shasum -a 256 -c SHA256SUMS
 cd <本仓根目录>/dist
-shasum -a 256 -c release/SHA256SUMS-v1.0.10-overlay.txt
+shasum -a 256 -c release/SHA256SUMS-v1.0.14-overlay.txt
 ```
 
-Windows 用 `Get-FileHash <文件> -Algorithm SHA256` 逐件核对。上传和远端替换属于【外部写】，需要单独发布授权；发布后还要回下载并重新算 hash，不能以本地打包成功代替远端验证。当前发布纪律见 `docs/superpowers/specs/2026-11-03-release-v1.0.10-overlay.md:21-25`。
+Windows 用 `Get-FileHash <文件> -Algorithm SHA256` 逐件核对。上传和远端替换属于【外部写】，需要单独发布授权；发布后还要回下载并重新算 hash，不能以本地打包成功代替远端验证。当前发布纪律见 `docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md:18-32`。
+
+**ModelScope 当前状态不能写成“全量回验完成”。**该通道在 v1.0.12 由用户明确恢复，v1.0.14 继续发布 full 与 everything 双件并保留旧版本；LFS 上传和 SUMS 云端内容回验已完成，但大文件完整下载哈希回验受平台传播延迟与本机传输中断影响，尚未完成。运维报告必须分开登记“已上传”“文件树已登记”“SUMS 已回验”“大文件哈希待复验”，不得沿用早期暂停口径，也不得把上传成功冒充完整验收。`RELEASE-NOTES.md:3,7,48-52`；`docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md:25-32`。
 
 ## 13. 只读健康检查命令与判读
 
