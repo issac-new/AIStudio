@@ -2,7 +2,15 @@ diff --git a/gateway/kanban_watchers_dispatcher.py b/gateway/kanban_watchers_dis
 index c6003a32c4..b5e6368e1e 100644
 --- a/gateway/kanban_watchers_dispatcher.py
 +++ b/gateway/kanban_watchers_dispatcher.py
-@@ -215,7 +215,9 @@ class _KanbanDispatcher:
+@@ -9,6 +9,7 @@ from __future__ import annotations
+ 
+ import contextlib
++import os
+ import sqlite3
+ import time
+ from dataclasses import asdict, dataclass
+ from pathlib import Path
+@@ -215,7 +216,9 @@ class _KanbanDispatcher:
  
      def tick_once(self) -> list[tuple[str, Optional[object]]]:
          """Run one dispatch_once per board. Returns (slug, result) pairs."""
@@ -13,7 +21,7 @@ index c6003a32c4..b5e6368e1e 100644
  
      def ready_nonempty(self) -> bool:
          """Is there a ready+assigned+unclaimed task on ANY board the dispatcher would spawn for?
-@@ -344,3 +346,63 @@ def _log_spawn_results(results: Optional[list]) -> bool:
+@@ -344,3 +347,63 @@ def _log_spawn_results(results: Optional[list]) -> bool:
                  len(res.auto_blocked) if hasattr(res.auto_blocked, "__len__") else 0,
              )
      return any_spawned

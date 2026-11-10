@@ -8,6 +8,7 @@ the singleton lock and the health telemetry; everything that only needs the
 from __future__ import annotations
 
 import contextlib
+import os
 import sqlite3
 import time
 from dataclasses import asdict, dataclass
