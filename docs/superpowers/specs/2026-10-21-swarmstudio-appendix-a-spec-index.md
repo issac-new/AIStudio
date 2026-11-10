@@ -629,6 +629,7 @@
 | 2026-11-11-release-v1.0.15-overlay | v1.0.15-overlay 发布轮（合入培训刷新批＋identity-chat 批2 守门清偿＋八载体进位＋双通道发布） | 基线债定性=批2 未过守门（主树复现同败）当轮清偿不抬阈值；K19 16 处出口走 lib/http＋raci 白名单登记（身份面同族先例）；yuan v2.100.3 收编技能根统一 [Unreleased]；产物=GitHub 三资产＋MS 双件（与 ZCode 配置包并存） |
 | 2026-11-11-run29-prelude | run29 开跑前刷新批：方案 §5.12 立法＋基线刷新＋值守立项 | N28/N29 全量吸收进方案正本（note() 双写/R18 载荷契约/审计单遍收敛/step-<n>/OP_STEPS={25}/熔断签名扩面/metrics 锚校验/进度锚动态枚举/加词回扫/基线口径）；不扩 §5.11 探测组（记忆=守护进程面、内核=记账面、身份聊天负例属 fail-soft 非拒绝型，以编制三方对账覆盖）；RFD-001＋standard 续用（单轮单变量）；dist 供给实锤=build 只建 client、server 须 build:full（81 提交缺口）；值守 20 分钟档推演完成后即删 |
 | 2026-11-11-g2-completion-summary-channel | G2 判定第三通道：卡完成摘要（v0.23.1 agent 交付面漂移根治） | 烧机实证：secops 卡 01:44 完成/结论在 task_events summary（result=None 无房间回执）两通道全盲两轮 600s 超时；mx_gate_card_text 增第三读取面（account_boards 各板直读 completed 事件 summary，窗锚 -60s 同规）；信任面=产品 kanban worker 终态同刻落库与 result 同级；判词语义仍走 gov_lc_verdict 单源；活体回放 burn 卡 PASS＋run28 形态不变；产品侧挂账 N29-14（agent 不写 result/不回房） |
+| 2026-11-11-burn-resume-attempts | 烧机续跑环：单发 rc 判定把设计内 fail-续跑误判机制死 | burn2 实证：唯一 FAIL=G2 判词锚错配（场景设计内「fail 交监督器续跑」，run27 根治件）；烧机改 ≤3 试重试环（每试独立日志/任一试 rc=0 即停/判读取最后一试/attempts 入 reasons）；与真跑监督器断点续跑语义对齐；判词锚纪律不放宽（D4） |
 ### 角色/排除（非 spec 文档）
 
 以下文件保留在 specs 根目录，但不是 A.1 的专题设计、规格或决策文档；排除是角色分类，不是删除或按日期作废。
@@ -673,4 +674,4 @@
 
 否决：音视频/贴纸特效/身份发现/spaces/tower/Tauri/iOS/新一级页；mods/pets/esp32；主会话 append-only/进程沙箱/完整 Mods；Jev-Omni 本地/SAT 策略学习/Hindsight 整体/容器沙箱/L4 决策融合；OWL DL/SPARQL/实例自动摄取/BPMN/运行时 RDF；MCP 投毒扫描/跨会话策略/outcome 校验/kill switch 进程终止；ClickHouse/S3 观测；冠军自动选择；处置单自动分配。
 
-未验证：diagram-export×3、cua×5、tool-waterfall×1、IDE 超时、Matrix 分享房、swarm-yuan 5 家 L1、zcode CUA Windows/Linux 路径、技能供给宿主半写文件、Harness² 四项未移植、FIBO 证券/衍生品/贷款仅只读目录。（agent 0.22.1 补丁 19 件未验项已由 0.22.4 升级轮消化：12 补丁手工移植全绿、镜像 44 文件、宿主网关换血）＋全页面交互级排查轮 1（613→614）＋治理工件 docMeta 引用隔离修复 1（614→615）＋统一身份聊天批2（Matrix 远程身份）1（618→619）＋run29 开跑前刷新批 1（619→620）＋G2 判定第三通道 1（620→621）
+未验证：diagram-export×3、cua×5、tool-waterfall×1、IDE 超时、Matrix 分享房、swarm-yuan 5 家 L1、zcode CUA Windows/Linux 路径、技能供给宿主半写文件、Harness² 四项未移植、FIBO 证券/衍生品/贷款仅只读目录。（agent 0.22.1 补丁 19 件未验项已由 0.22.4 升级轮消化：12 补丁手工移植全绿、镜像 44 文件、宿主网关换血）＋全页面交互级排查轮 1（613→614）＋治理工件 docMeta 引用隔离修复 1（614→615）＋统一身份聊天批2（Matrix 远程身份）1（618→619）＋run29 开跑前刷新批 1（619→620）＋G2 判定第三通道 1（620→621）＋烧机续跑环 1（621→622）
