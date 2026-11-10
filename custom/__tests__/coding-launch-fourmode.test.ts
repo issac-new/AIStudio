@@ -34,7 +34,9 @@ describe('补丁 766 接线锁（四挡启动贯通）', () => {
     expect(p).toContain("permissionRequired: dshPermissionRequired(")
     expect(p).toContain("from '../../../../custom/executioncontract/mode-policy'")
     // 启动侧注入恰两处且分工明确：765 给账本调用、766 给 manager.start——各一枚补丁一处
-    expect((p.split('permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined').length - 1)).toBe(2)
+    const p765 = readFileSync(join(repoRoot, 'patches/765-server-coding-launch-approval-ledger.patch'), 'utf8')
+    expect((p765.split('permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined').length - 1)).toBe(1)
+    expect((p.split('permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined').length - 1)).toBe(1)
   })
 
   it('默认行为不变：未配置会话档不传 permissionMode（回落 yolo/plan 二值）', () => {
