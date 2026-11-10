@@ -1,6 +1,6 @@
 diff --git a/tests/tools/test_observation_pack_recall.py b/tests/tools/test_observation_pack_recall.py
 new file mode 100644
-index 0000000000..d8593205dd
+index 0000000..d859320
 --- /dev/null
 +++ b/tests/tools/test_observation_pack_recall.py
 @@ -0,0 +1,132 @@
@@ -138,7 +138,7 @@ index 0000000000..d8593205dd
 +        assert record_efficiency_event("deep", nested={"a": {"b": {"c": {"d": {"e": "x"}}}}}) is True
 diff --git a/tools/efficiency_ledger.py b/tools/efficiency_ledger.py
 new file mode 100644
-index 0000000000..078dde69d8
+index 0000000..078dde6
 --- /dev/null
 +++ b/tools/efficiency_ledger.py
 @@ -0,0 +1,79 @@
@@ -223,7 +223,7 @@ index 0000000000..078dde69d8
 +        return False
 diff --git a/tools/obs_recall_tool.py b/tools/obs_recall_tool.py
 new file mode 100644
-index 0000000000..cccbe48563
+index 0000000..cccbe48
 --- /dev/null
 +++ b/tools/obs_recall_tool.py
 @@ -0,0 +1,148 @@
@@ -376,7 +376,7 @@ index 0000000000..cccbe48563
 +registry.register(name="obs_recall", toolset="file", schema=OBS_RECALL_SCHEMA,
 +                  handler=_handle_obs_recall, emoji="🗃️", max_result_size_chars=100_000)
 diff --git a/tools/tool_result_storage.py b/tools/tool_result_storage.py
-index 8ccf4dd73c..02d79cf9f4 100644
+index 1eb9e47..5e2892d 100644
 --- a/tools/tool_result_storage.py
 +++ b/tools/tool_result_storage.py
 @@ -22,6 +22,9 @@ from tools.budget_config import DEFAULT_PREVIEW_SIZE_CHARS, BudgetConfig, DEFAUL
@@ -406,10 +406,10 @@ index 8ccf4dd73c..02d79cf9f4 100644
 +    return tail
 +
 +
- def _pageable_text(content: str) -> str:
-     """Rewrite an MCP handler result envelope into the text it wraps, else return *content*.
- 
-@@ -364,22 +380,31 @@ def _write_to_sandbox(content: str, remote_path: str, env) -> bool:
+ def _tool_metadata_block(fields: dict) -> str:
+     metadata = json.dumps(fields, ensure_ascii=False, indent=1, sort_keys=True, default=str)
+     return f"{_TOOL_METADATA_TAG}\n{metadata}\n{_TOOL_METADATA_CLOSING_TAG}"
+@@ -389,22 +405,31 @@ def _write_to_sandbox(content: str, remote_path: str, env) -> bool:
  
  
  def _build_persisted_message(preview: str, has_more: bool, original_size: int,
@@ -446,7 +446,7 @@ index 8ccf4dd73c..02d79cf9f4 100644
          + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
  
  
-@@ -409,11 +434,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
+@@ -434,11 +459,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
      persisted_content = _pageable_text(content)
      filename = _safe_result_filename(tool_use_id)
      preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)

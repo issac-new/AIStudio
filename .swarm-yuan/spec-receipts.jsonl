@@ -289,3 +289,4 @@
 {"at":"2026-11-10T08:26:43Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-unification.md","receipt":"dfeef70f275912401a3925941b7901e7b60799cb","commit":"62c10655b"}
 {"at":"2026-11-10T09:20:23Z","spec":"docs/superpowers/specs/2026-11-10-memory-unification-hindsight.md","receipt":"6cfb9fbc9f614280ffaafefdfc50859ff295aef3","commit":"10c6fd1d6"}
 {"at":"2026-11-10T09:20:24Z","spec":"docs/superpowers/specs/2026-11-10-ide-devtools-trim.md","receipt":"b23e3f1524fa0ed216eb1f4f533916dc12755c8b","commit":"10c6fd1d6"}
+{"at":"2026-11-10T09:45:57Z","spec":"docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md","receipt":"4aa1e3e5d8ab42ade9671a8a59e8a5c824e4fc88","commit":"10c6fd1d6"}
