@@ -750,3 +750,7 @@ paths:
   # 2026-11-11 G2 判定第三通道：卡完成摘要（feat/run29-verdict-channel）
   - docs/superpowers/specs/2026-11-11-g2-completion-summary-channel.md
   - simharness/mux/mx-scenario-lib.sh
+
+  # 2026-11-11 烧机续跑环（feat/run29-burn-resume）
+  - docs/superpowers/specs/2026-11-11-burn-resume-attempts.md
+  - simharness/mux/mx-burn-test.sh

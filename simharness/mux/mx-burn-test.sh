@@ -117,16 +117,36 @@ mkdir -p "$RUN_DIR/evidence" "$SIM/logs" "$HERE/../.qgate/burn" 2>/dev/null || t
 STARTED_AT="$(date +%s)"
 echo "=== 烧机开始 $(date '+%F %T')  RUN_ID=$RUN_ID  UNTIL=$UNTIL  （真 gateway/真 agent，产物落在 $RUN_DIR）==="
 
-# 机制验证的观测面：驱动日志里的这些行是「机制是否被触发/是否打架」的唯一判据
-AIPAY_SIM_ROOT="$SIM" RUN_ID="$RUN_ID" UNTIL_STEP="$UNTIL" LC_ALL=C \
-  bash "$HERE/aipay-scenario.sh" > "$LOG" 2>&1
-DRV_RC=$?
+# 机制验证的观测面：驱动日志里的这些行是「机制是否被触发/是否打架」的唯一判据。
+# 续跑环（2026-11-11 burn2 实证）：场景设计内有「fail 交监督器续跑」路径（G2 判词
+# 锚错配重派即此，aipay-scenario.sh 锚错配分支注释明示）——单发执行会把该路径判成
+# 终局 fail，把 agent 行为 hiccup 放大成机制失败。与真跑监督器语义对齐：最多 3 试，
+# 每试独立日志（最后一试为判读/收据面），任一试 rc=0 即停；幂等依据=场景 state 键跳过。
+# spec：docs/superpowers/specs/2026-11-11-burn-resume-attempts.md
+MAX_ATTEMPTS=3
+ATTEMPT=1
+DRV_RC=1
+while [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ]; do
+  LOG="$SIM/logs/${RUN_ID}-driver-a${ATTEMPT}.log"
+  echo "--- 烧机第 ${ATTEMPT}/${MAX_ATTEMPTS} 试（日志 ${LOG}）---"
+  AIPAY_SIM_ROOT="$SIM" RUN_ID="$RUN_ID" UNTIL_STEP="$UNTIL" LC_ALL=C \
+    bash "$HERE/aipay-scenario.sh" > "$LOG" 2>&1
+  DRV_RC=$?
+  if [ "$DRV_RC" -eq 0 ]; then
+    break
+  fi
+  ATTEMPT=$((ATTEMPT + 1))
+  [ "$ATTEMPT" -le "$MAX_ATTEMPTS" ] && sleep 30
+done
+# 兼容旧消费面：终态日志同步为主日志名（收据/判读/人工查读都指这里）
+cp "$LOG" "$SIM/logs/${RUN_ID}-driver.log"
 FINISHED_AT="$(date +%s)"
 ELAPSED=$((FINISHED_AT - STARTED_AT))
 
-# ── 判读：①驱动退出码 ②无 FAIL 行 ③到达目标步（state.env 有目标步的 *_done 键）
-ST=pass; REASONS=""
-[ "$DRV_RC" -ne 0 ] && { ST=fail; REASONS="driver_rc=$DRV_RC;"; }
+# ── 判读：①驱动退出码（最后一试）②无 FAIL 行 ③到达目标步（state.env 有目标步的 *_done 键）
+ST=pass; REASONS="attempts=${ATTEMPT};"
+[ "$ATTEMPT" -gt 1 ] && echo "（续跑环共 ${ATTEMPT} 试——${RUN_ID}-driver-a*.log 系列，判读取最后一试）"
+[ "$DRV_RC" -ne 0 ] && { ST=fail; REASONS="${REASONS}driver_rc=$DRV_RC;"; }
 # grep -c 零匹配时 exit 1 且已打印 0——`|| echo 0` 会再补一行 0，receipt 里嵌进
 # "0\n0" 使 JSON 破损（burn-20261103-215414 实锤）。空值兜底改后置展开。
 FAIL_LINES="$(grep -cE '^\[mux FAIL |\[ERR\]' "$LOG" 2>/dev/null)"; FAIL_LINES="${FAIL_LINES:-0}"
