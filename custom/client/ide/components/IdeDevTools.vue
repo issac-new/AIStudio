@@ -1,8 +1,7 @@
 <!-- overlay/custom/client/ide/components/IdeDevTools.vue -->
-<!-- 编程工具启动器（2026-10-19 用户需求批；2026-10-21 补 DeepSeek Harness +
-     zcode app-only 终端入口）：IDE 工作区状态栏常驻「工具」入口，弹出白名单工具
-     （zcode/DeepSeek Harness/VS Code/iTerm/Warp/终端/IDEA；Windows 增 PowerShell/
-     cmd）——可用性来自服务端探测，未安装置灰；「在工作区打开终端并运行 zcode」
+<!-- 编程工具启动器（2026-10-19 用户需求批；2026-11-10 用户令收窄：白名单只留
+     zcode 与 DeepSeek Harness）：IDE 工作区状态栏常驻「工具」入口，弹出白名单工具
+     ——可用性来自服务端探测，未安装置灰；「在工作区打开终端并运行 zcode」
      带当前工作区根目录，zcode CLI 走受管 fork 源码树构建产物（无需 PATH 安装；
      ZCode.app 内置 bundle 离开 app 进程跑不起来）。点击即启动本机应用（服务端
      open -a 白名单，无任意命令）。 -->
@@ -69,7 +68,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
       class="ide-devtools__btn"
       :class="{ 'is-open': open }"
       data-testid="ide-devtools-toggle"
-      title="打开本机编程工具（zcode / DeepSeek Harness / VS Code / 终端等）"
+      title="打开本机编程工具（zcode / DeepSeek Harness）"
       @click="toggle"
     >🖥 工具 ▾</button>
 
@@ -98,10 +97,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
             :data-testid="`ide-devtools-${t.key}`"
             :disabled="!t.available || busy === t.key"
             :title="t.available ? `打开 ${t.labelZh}` : `${t.labelZh} 未安装`"
-            @click="launch(t.key, t.key === 'vscode' ? (root || undefined) : undefined)"
+            @click="launch(t.key)"
           >{{ t.labelZh }}</button>
         </div>
-        <p class="ide-devtools__hint">工具列表由服务端按本机安装情况探测；VS Code 会直接打开当前工作区。</p>
+        <p class="ide-devtools__hint">工具列表由服务端按本机安装情况探测。</p>
       </template>
     </div>
   </span>
@@ -138,7 +137,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocPointerDo
 }
 .ide-devtools__launch--primary { border-color: var(--accent-info); color: var(--accent-info); }
 .ide-devtools__cwd { font-size: 10px; color: var(--text-muted); }
-.ide-devtools__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ide-devtools__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .ide-devtools__tool {
   border: 1px solid var(--border-color); border-radius: 6px;
   background: transparent; color: var(--text-primary);
