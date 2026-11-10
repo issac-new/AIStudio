@@ -1207,4 +1207,9 @@
 760-ekko-skill-store-unified-directories.patch
 761-ekko-skill-sidecar-tools-skills.patch
 762-ekko-shared-root-seed-external-registry.patch
+
+# 763（2026-11-10 执行内核统一 P0b-2，spec 2026-11-10-execution-kernel-p0b2-p1）：
+# Hermes 审批守卫终态统一写账；嵌套守卫去重、人工/免审/拒绝同 schema、fail-soft。
+763-agent-unified-approval-ledger.patch
+
 764-build-studio-skills-seed-packaging.patch

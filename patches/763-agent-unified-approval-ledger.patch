@@ -1,0 +1,285 @@
+diff --git a/vendor/hermes-agent/tests/test_approval_ledger.py b/vendor/hermes-agent/tests/test_approval_ledger.py
+new file mode 100644
+index 000000000..277488c1f
+--- /dev/null
++++ b/vendor/hermes-agent/tests/test_approval_ledger.py
+@@ -0,0 +1,115 @@
++"""统一审批账本（P0b-2）：真实守卫出口与记录语义。"""
++import json
++from pathlib import Path
++
++import pytest
++
++from tools import approval
++from tools.approval_ledger import ledgered_guard, record_approval_decision
++
++
++def _records(tmp_path: Path) -> list[dict]:
++    path = tmp_path / "approval-ledger.jsonl"
++    if not path.exists():
++        return []
++    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
++
++
++def test_yolo_allow_is_exempted_without_command_text(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++    record_approval_decision(
++        tool="terminal", result={"approved": True, "message": None},
++        session_id="s1", profile="p1", platform="agent_bridge", mode="yolo",
++    )
++    (record,) = _records(tmp_path)
++    assert record["recordType"] == "approval.exempted"
++    assert record["decidedBy"] == "policy:auto"
++    assert record["mode"] == "yolo"
++    assert record["riskClass"] == "shell"
++    assert record["entryPoint"] == "hermes-agent-bridge"
++    assert record["policyVersion"]
++    assert "command" not in record
++
++
++def test_human_allow_and_deny_are_resolved_with_user_authority(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++    record_approval_decision(
++        tool="terminal", result={"approved": True, "user_approved": True},
++        session_id="s1", profile="p1", platform="agent_bridge", mode="build",
++    )
++    record_approval_decision(
++        tool="terminal", result={"approved": False, "user_consent": False, "outcome": "denied"},
++        session_id="s1", profile="p1", platform="agent_bridge", mode="guarded",
++    )
++    records = _records(tmp_path)
++    assert [r["recordType"] for r in records] == ["approval.resolved", "approval.resolved"]
++    assert [r["decidedBy"] for r in records] == ["user", "user"]
++    assert records[1]["detail"]["outcome"] == "denied"
++
++
++def test_hardline_policy_deny_is_not_mislabeled_human_or_approved(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++    record_approval_decision(
++        tool="terminal", result={"approved": False, "pattern_key": "hardline"},
++        session_id="s1", profile="p1", platform="agent_bridge", mode="yolo",
++    )
++    (record,) = _records(tmp_path)
++    assert record["recordType"] == "approval.resolved"
++    assert record["decidedBy"] == "policy:auto"
++    assert record["mode"] == "yolo"
++    assert record["detail"]["patternKey"] == "hardline"
++
++
++def test_pending_result_is_pending_not_exempted(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++    record_approval_decision(
++        tool="write_file", result={"approval_required": True},
++        session_id="s1", profile="p1", platform="agent_bridge", mode="build",
++    )
++    (record,) = _records(tmp_path)
++    assert record["recordType"] == "approval.pending"
++    assert record["riskClass"] == "write_file"
++    assert record["decidedBy"] == "policy:risk-evaluated"
++
++
++def test_missing_directory_or_write_failure_never_raises(monkeypatch):
++    monkeypatch.delenv("HERMES_APPROVAL_LEDGER_DIR", raising=False)
++    monkeypatch.delenv("HERMES_WEB_UI_HOME", raising=False)
++    record_approval_decision(
++        tool="terminal", result={"approved": True}, session_id="s", profile="p",
++        platform="cli", mode="yolo",
++    )
++
++
++def test_nested_guard_records_only_outermost_result(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++
++    @ledgered_guard(tool="write_file", mode=lambda: "build")
++    def inner():
++        return {"approved": True}
++
++    @ledgered_guard(tool="terminal", mode=lambda: "yolo")
++    def outer():
++        assert inner()["approved"] is True
++        return {"approved": True}
++
++    assert outer()["approved"] is True
++    (record,) = _records(tmp_path)
++    assert record["tool"] == "terminal"
++    assert record["mode"] == "yolo"
++
++
++def test_real_terminal_guard_writes_once_when_session_yolo(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++    monkeypatch.setenv("HERMES_SESSION_KEY", "ledger-test")
++    monkeypatch.setenv("HERMES_SESSION_PLATFORM", "agent_bridge")
++    approval.enable_session_yolo("ledger-test")
++    try:
++        result = approval.check_all_command_guards("echo ledger-test", "local")
++        assert result["approved"] is True
++    finally:
++        approval.disable_session_yolo("ledger-test")
++    records = _records(tmp_path)
++    assert len(records) == 1
++    assert records[0]["entryPoint"] == "hermes-agent-bridge"
++    assert records[0]["sessionId"] == "ledger-test"
+diff --git a/vendor/hermes-agent/tools/approval.py b/vendor/hermes-agent/tools/approval.py
+index d8d6b718e..c4e57adeb 100644
+--- a/vendor/hermes-agent/tools/approval.py
++++ b/vendor/hermes-agent/tools/approval.py
+@@ -1417,3 +1417,25 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
+ 
+ # Load permanent allowlist from config on module import
+ load_permanent_allowlist()
++
++
++# 统一审批账本（P0b-2，2026-11-10）：在守卫公共出口写终态，嵌套守卫由
++# approval_ledger 的 depth 只记最外层。不得把同一裁决在 Bridge 回调再写一遍。
++def _approval_ledger_mode() -> str:
++    if _yolo_active() or approval_context._get_approval_mode() == "off":
++        return "yolo"
++    current = approval_context._get_approval_mode()
++    if current in ("plan", "build", "guarded", "yolo"):
++        return current
++    if current == "smart":
++        return "guarded"
++    return "build"
++
++
++from tools.approval_ledger import ledgered_guard as _ledgered_guard
++
++_run_approval_gate = _ledgered_guard(tool="approval_gate", mode=_approval_ledger_mode)(_run_approval_gate)
++check_all_command_guards = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_all_command_guards)
++check_execute_code_guard = _ledgered_guard(tool="execute_code", mode=_approval_ledger_mode)(check_execute_code_guard)
++check_dangerous_command = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_dangerous_command)
++
+diff --git a/vendor/hermes-agent/tools/approval_ledger.py b/vendor/hermes-agent/tools/approval_ledger.py
+new file mode 100644
+index 000000000..47a501cae
+--- /dev/null
++++ b/vendor/hermes-agent/tools/approval_ledger.py
+@@ -0,0 +1,128 @@
++"""统一审批账本的 Hermes 写入面（P0b-2）。
++
++只记录守卫终态，不改变审批结果，不保存命令/代码原文。所有业务异常均 fail-soft；
++嵌套守卫只由最外层记账，避免终端守卫与通用审批门重复计数。
++"""
++from __future__ import annotations
++
++import contextvars
++import datetime
++import functools
++import json
++import logging
++import os
++import uuid
++from pathlib import Path
++from typing import Any, Callable
++
++logger = logging.getLogger(__name__)
++
++_GUARD_DEPTH: contextvars.ContextVar[int] = contextvars.ContextVar("approval_ledger_guard_depth", default=0)
++
++_RISK_BY_TOOL = {
++    "read_file": "readonly",
++    "write_file": "write_file",
++    "edit_file": "write_file",
++    "terminal": "shell",
++    "execute_code": "shell",
++    "approval_gate": "shell",
++    "computer_use": "computer_use",
++}
++
++
++def _ledger_path() -> Path | None:
++    explicit = os.environ.get("HERMES_APPROVAL_LEDGER_DIR", "").strip()
++    if explicit:
++        return Path(explicit) / "approval-ledger.jsonl"
++    webui_home = os.environ.get("HERMES_WEB_UI_HOME", "").strip()
++    if not webui_home:
++        return None
++    return Path(webui_home) / "approval-ledger" / "approval-ledger.jsonl"
++
++
++def _entry_point(platform: str) -> str:
++    if platform == "agent_bridge":
++        return "hermes-agent-bridge"
++    return f"hermes:{platform or 'cli'}"
++
++
++def record_approval_decision(
++    *, tool: str, result: dict[str, Any], session_id: str, profile: str,
++    platform: str, mode: str,
++) -> None:
++    """把一次守卫终态写入 append-only JSONL；不落命令、代码、原因原文。"""
++    try:
++        path = _ledger_path()
++        if path is None:
++            return
++        approved = result.get("approved")
++        pending = bool(result.get("approval_required") or result.get("pending_approval"))
++        if pending:
++            record_type = "approval.pending"
++            decided_by = "policy:risk-evaluated"
++        elif approved is True and result.get("user_approved") is True:
++            record_type = "approval.resolved"
++            decided_by = "user"
++        elif approved is True:
++            record_type = "approval.exempted"
++            decided_by = "policy:risk-evaluated" if mode == "guarded" else "policy:auto"
++        elif approved is False:
++            record_type = "approval.resolved"
++            decided_by = "user" if result.get("user_consent") is False else "policy:auto"
++        else:
++            return
++        detail: dict[str, Any] = {}
++        if result.get("outcome"):
++            detail["outcome"] = str(result["outcome"])
++        if result.get("pattern_key"):
++            detail["patternKey"] = str(result["pattern_key"])
++        record = {
++            "recordType": record_type,
++            "tool": str(tool),
++            "riskClass": _RISK_BY_TOOL.get(str(tool), "shell"),
++            "mode": mode if mode in {"build", "guarded", "plan", "yolo"} else "legacy",
++            "policyId": f"four-mode-{mode}" if mode in {"build", "guarded", "plan", "yolo"} else "hermes-approval-legacy",
++            "policyVersion": os.environ.get("HERMES_EXECUTION_CONTRACT_VERSION", "1.0.0"),
++            "sessionId": str(session_id or ""),
++            "profile": str(profile or ""),
++            "entryPoint": _entry_point(platform),
++            "decidedBy": decided_by,
++            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
++            "recordId": str(uuid.uuid4()),
++        }
++        if detail:
++            record["detail"] = detail
++        path.parent.mkdir(parents=True, exist_ok=True)
++        with path.open("a", encoding="utf-8") as handle:
++            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
++    except Exception as exc:
++        logger.warning("approval ledger write failed (tool=%s): %s", tool, type(exc).__name__)
++
++
++def ledgered_guard(*, tool: str, mode: Callable[[], str]):
++    """包装审批守卫：嵌套调用只记最外层，业务返回值原样返回。"""
++    def decorate(fn):
++        @functools.wraps(fn)
++        def wrapped(*args, **kwargs):
++            depth = _GUARD_DEPTH.get()
++            token = _GUARD_DEPTH.set(depth + 1)
++            try:
++                result = fn(*args, **kwargs)
++            finally:
++                _GUARD_DEPTH.reset(token)
++            if depth == 0 and isinstance(result, dict):
++                from tools import approval_context
++
++                profile = (os.environ.get("HERMES_PROFILE_NAME") or os.environ.get("HERMES_PROFILE") or "").strip()
++                if not profile:
++                    profile = Path(os.environ.get("HERMES_HOME", "")).name
++                record_approval_decision(
++                    tool=tool, result=result,
++                    session_id=approval_context.get_current_session_key(default=""),
++                    profile=profile,
++                    platform=approval_context._get_session_platform(),
++                    mode=mode(),
++                )
++            return result
++        return wrapped
++    return decorate
