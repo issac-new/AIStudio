@@ -292,7 +292,7 @@ P1/P2 期间 `acp_send(provider=zcode)` 仍是完整 Ycode agent，且可能本�
 ### 4. 实施进度（随批回填）
 
 - **P0a 已落地（2026-11-10，本分支 3 提交）**：契约正本 `config/execution-contract.json`（四表＋白名单＋风险分级）＋`custom/server/executioncontract/` 装载校验＋`fourModeOf` 唯一归一点＋10 断言守门（含与上游四挡目录逐字重锚、edit 不得删、变异探针四枚）。零行为变化达成。
-- **P0b-1 已落地（同日）**：`custom/server/approval-ledger/` 三态同 schema append-only 账本（只记不裁、fail-soft）＋`entryCoverage` I4 取数口。入口接线 4/8：#2/#4-ekko（`tool-hooks` postExecute ok=策略放行落 exempted）、#5（`mention-dispatch` 派发落 exempted，会话档经 `fourModeOf` 归一）、#8（DevTools 直启 zcode 系两键）。**未接线**：#1（Hermes bridge 工具面，Python 侧需补丁）、#3（IDE 编程任务，vendor `chat-turn`/`handle-coding-agent-run` 需 B 类补丁）、#6（`acp-client` 插件 auto_approve 放行）、#7（`coding-delegate` 脚本 session/new）——留 P0b-2，接完前 P0b 退出条件（八入口全见记录）未达成。
+- **P0b-1 已落地（同日）**：`custom/server/approval-ledger/` 三态同 schema append-only 账本（只记不裁、fail-soft）＋`entryCoverage` I4 取数口。入口接线 6/8：#2/#4-ekko（`tool-hooks` postExecute ok=策略放行落 exempted）、#5（`mention-dispatch` 派发落 exempted，会话档经 `fourModeOf` 归一）、#8（DevTools 直启 zcode 系两键）、#6（`acp-client` auto_approve 放行，Python 侧 env 门控路径 fail-soft）、#7（`coding-delegate` session/new 建立即记，无人值守 yolo 设计口径）。**未接线**：#1（Hermes bridge 工具面，Python 侧需补丁）、#3（IDE 编程任务，vendor `chat-turn`/`handle-coding-agent-run` 需 B 类补丁）——留 P0b-2，接完前 P0b 退出条件（八入口全见记录）未达成。
 
 ## 设计文档影响
 
