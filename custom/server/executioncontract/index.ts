@@ -100,15 +100,23 @@ export interface ExecutionContract {
 // commonjs，import.meta 不可用（TS1343，ts-node serve 首次编译即挂）；vitest 的
 // SSR 转换注入的 __dirname 同源码目录。custom/server/executioncontract 三级向上
 // 即仓根，契约正本=仓根/config/execution-contract.json。
-const contractPath = resolve(__dirname, '..', '..', '..', 'config', 'execution-contract.json')
+// HERMES_EXECUTION_CONTRACT_PATH：测试/部署显式覆盖（缺省仓内正本）。
+function currentContractPath(): string {
+  return process.env.HERMES_EXECUTION_CONTRACT_PATH?.trim()
+    || resolve(__dirname, '..', '..', '..', 'config', 'execution-contract.json')
+}
 
 let cached: ExecutionContract | null = null
+let cachedPath = ''
 
-/** 读契约正本（进程内缓存）。P0a 只读不写；文件缺席抛错（fail-closed：契约是执法前提）。 */
+/** 读契约正本（按路径键进程内缓存——env 覆盖切换路径时重读）。P0a 只读不写；
+ * 文件缺席抛错（fail-closed：契约是执法前提；调用方 fail-soft 面自行兜）。 */
 export function loadExecutionContract(): ExecutionContract {
-  if (cached) return cached
+  const contractPath = currentContractPath()
+  if (cached && cachedPath === contractPath) return cached
   const raw = JSON.parse(readFileSync(contractPath, 'utf8')) as ExecutionContract
   cached = validateContract(raw)
+  cachedPath = contractPath
   return cached
 }
 

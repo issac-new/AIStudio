@@ -23,6 +23,9 @@ export function codingLaunchMode(approvalRequired: boolean | undefined): ModeId 
 export interface CodingLaunchApprovalInput {
   codingAgentId: string
   sessionSource: string
+  /** 四挡原生档（终审 C2：已配置会话档时账本必须如实记该档，不得恒 yolo）。 */
+  permissionMode?: ModeId
+  /** 旧二值回落源（permissionMode 缺席时用；launch 无此字段时传 undefined）。 */
   approvalRequired?: boolean
   sessionId: string
   agentSessionId: string
@@ -40,7 +43,7 @@ export function codingLaunchApprovalRecord(input: CodingLaunchApprovalInput): {
 } {
   return {
     tool: `coding_agent_launch:${input.codingAgentId}`,
-    mode: codingLaunchMode(input.approvalRequired),
+    mode: input.permissionMode ?? codingLaunchMode(input.approvalRequired),
     sessionId: input.sessionId,
     profile: '',
     entryPoint: codingLaunchEntryPoint(input.sessionSource),

@@ -1,10 +1,10 @@
 diff --git a/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts b/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts
-index 09fa774..d7077c8 100644
+index 09fa774..ae50335 100644
 --- a/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts
 +++ b/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts
 @@ -1,3 +1,5 @@
-+// overlay[four-mode]（P1 Task 4）：DSH 布尔权限推导（经 src/custom 符号链接解析）
-+import { dshPermissionRequired } from '../../../custom/executioncontract/mode-policy'
++// overlay[four-mode]（P1 Task 4）：DSH 布尔权限推导（经 src/custom 符号链接解析；services/dsh 四级上溯）
++import { dshPermissionRequired } from '../../../../custom/executioncontract/mode-policy'
  import type { ChildProcess } from 'node:child_process'
  import type { ManagedCodingAgentRun } from '../runtime/run-manager'
  import type { CodingAgentImageInput } from '../../protocol/types'
@@ -20,31 +20,14 @@ index 09fa774..d7077c8 100644
        // Scoped calls are already owned by the provider proxy ledger.
        if (run.launch.mode !== 'global' || !event || typeof event.requestId !== 'string' || !event.requestId) return
 diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index 7682baa..d851d06 100644
+index 5fb7564..76d47a6 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -3,6 +3,8 @@ import { studioModelReasoningEffort } from '../../studio/public/model-reasoning-
- // overlay[approval-ledger]（P0b-2）：编码任务启动免审记录（经 src/custom 符号链接解析）
- import { codingLaunchApprovalRecord } from '../../../custom/approval-ledger/coding-entry'
- import { synthesizeExempted } from '../../../custom/approval-ledger/ledger-store'
-+import { sessionModeOf } from '../../../custom/permmodes/session-mode-store'
-+import { zcodeNativeMode } from '../../../custom/executioncontract/mode-policy'
- import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
- import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
- import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, parseOpenCodeConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID, OPENCODE_SHARED_CONFIG_DIRS } from './opencode/config'
-@@ -4133,6 +4135,7 @@ async function startCodingAgentRunInternal(
-   const persistedProvider = isNativeCodingAgent(id) || id === 'cursor' || id === 'antigravity'
-     ? String(launch.provider || 'global').trim() || 'global'
-     : String(resolvedInput.provider || launch.provider || '').trim() || launch.provider
-+  const sessionMode = sessionModeOf(launch.profile)
-   const started = codingAgentRunManager.start({
-     agentSessionId,
-     agentId: launch.agentId,
-@@ -4154,6 +4157,8 @@ async function startCodingAgentRunInternal(
+@@ -4158,6 +4158,8 @@ async function startCodingAgentRunInternal(
      nativeMcpServers: launch.nativeMcpServers,
      state,
      reasoningEffort: launch.reasoningEffort,
-+    // overlay[four-mode]（P1 Task 4）：会话档（per-profile）经 zcodeNativeMode 归一四挡；未配置=undefined → chat-turn 回落现状二值（默认 yolo 不变）。
++    // overlay[four-mode]（P1 Task 4）：会话档经 zcodeNativeMode 归一四挡；未配置=undefined → chat-turn 回落现状二值（默认 yolo 不变）。sessionMode 由补丁 765 定义。
 +    permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined,
      agentPreset,
      studioMcpTokenFile: input.studioMcpTokenFile,
@@ -63,7 +46,7 @@ index d283574..8663baa 100644
    nativeSystemPrompt?: string
    nativeMcpServers?: Record<string, any>
 diff --git a/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts b/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
-index cbda77d..95ec05b 100644
+index cbda77d..98ad44d 100644
 --- a/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
 +++ b/packages/server/src/modules/coding-agents/services/zcode/chat-turn.ts
 @@ -18,7 +18,9 @@ export function startZcodeChatTurn(definition: { name: string }, run: ManagedCod
@@ -71,8 +54,8 @@ index cbda77d..95ec05b 100644
    // overlay[cua-gate]：闸门 env 合并进本次 spawn（不改 launch 持久面，per-turn 生效）
    run.launch.env = { ...run.launch.env, ...cuaEnvForSession(run.launch.sessionId) }
 -  const baseArgs = [...run.launch.args, '--output-format', 'stream-json', '--mode', run.launch.approvalRequired ? 'plan' : 'yolo',
-+  // overlay[four-mode]（P1 Task 4，2026-11-10 执行内核统一批）：--mode 优先消费四挡
-+  // permissionMode（会话档经 zcodeNativeMode 归一）；未配置=现状二值 plan|yolo，默认行为不变。
++  // overlay[four-mode]（P1 Task 4）：--mode 优先消费四挡 permissionMode（会话档经
++  // zcodeNativeMode 归一）；未配置=现状二值 plan|yolo，默认行为不变。
 +  const baseArgs = [...run.launch.args, '--output-format', 'stream-json', '--mode', run.launch.permissionMode ?? (run.launch.approvalRequired ? 'plan' : 'yolo'),
      ...(run.nativeResumeReady && run.launch.agentNativeSessionId ? ['--resume', run.launch.agentNativeSessionId] : []),
      ...images.flatMap(image => ['--attach', image.path])]

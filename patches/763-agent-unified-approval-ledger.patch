@@ -1,8 +1,8 @@
 diff --git a/tools/approval.py b/tools/approval.py
-index d8d6b718e..c4e57adeb 100644
+index d8d6b718e..7be8f6f79 100644
 --- a/tools/approval.py
 +++ b/tools/approval.py
-@@ -1417,3 +1417,25 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
+@@ -1417,3 +1438,25 @@ def check_execute_code_guard(code: str, env_type: str, has_host_access: bool = F
  
  # Load permanent allowlist from config on module import
  load_permanent_allowlist()
@@ -30,10 +30,10 @@ index d8d6b718e..c4e57adeb 100644
 +
 diff --git a/tests/tools/test_approval_ledger.py b/tests/tools/test_approval_ledger.py
 new file mode 100644
-index 000000000..277488c1f
+index 000000000..b4d5c7750
 --- /dev/null
 +++ b/tests/tools/test_approval_ledger.py
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,179 @@
 +"""统一审批账本（P0b-2）：真实守卫出口与记录语义。"""
 +import json
 +from pathlib import Path
@@ -149,12 +149,76 @@ index 000000000..277488c1f
 +    assert len(records) == 1
 +    assert records[0]["entryPoint"] == "hermes-agent-bridge"
 +    assert records[0]["sessionId"] == "ledger-test"
++
++
++class TestReviewFixes:
++    """终审 C3/C4/I1/I2 修复面。"""
++
++    def test_real_action_gate_pending_shape_is_pending(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++        record_approval_decision(
++            tool="approval_gate", result={"status": "approval_required"},
++            session_id="s", profile="p", platform="agent_bridge", mode="build",
++        )
++        (record,) = _records(tmp_path)
++        assert record["recordType"] == "approval.pending"
++
++    def test_real_command_gate_pending_shape_is_pending(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++        record_approval_decision(
++            tool="terminal", result={"status": "pending_approval", "approval_pending": True},
++            session_id="s", profile="p", platform="agent_bridge", mode="build",
++        )
++        (record,) = _records(tmp_path)
++        assert record["recordType"] == "approval.pending"
++
++    def test_timeout_outcome_is_policy_not_user(self, tmp_path, monkeypatch):
++        monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++        record_approval_decision(
++            tool="terminal",
++            result={"approved": False, "user_consent": False, "outcome": "timeout"},
++            session_id="s", profile="p", platform="agent_bridge", mode="guarded",
++        )
++        (record,) = _records(tmp_path)
++        assert record["decidedBy"] == "policy:auto"
++
++    def test_prepared_guard_replay_does_not_double_count(self, tmp_path, monkeypatch):
++        """C4：prepare 与 consume 同一决策 dict——第二跳不得再记。"""
++        monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++
++        @ledgered_guard(tool="terminal", mode=lambda: "yolo")
++        def guard():
++            return {"approved": True}
++
++        first = guard()
++        second = guard.__wrapped__()
++        second_again = guard.__wrapped__.__wrapped__() if hasattr(guard.__wrapped__(), "__wrapped__") else second
++        # 模拟 consume 命中：同一 dict 再过守卫语义（由 record 侧的 _ledger_recorded 标记拦截）
++        record_approval_decision(
++            tool="terminal", result=first, session_id="s", profile="p",
++            platform="agent_bridge", mode="yolo",
++        )
++        assert len(_records(tmp_path)) == 1
++
++    def test_mode_eval_exception_does_not_replace_guard_result(self, tmp_path, monkeypatch):
++        """I1：mode/会话取值抛错时守卫结果原样返回且不记错账。"""
++        monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
++
++        def boom():
++            raise RuntimeError("session lookup exploded")
++
++        @ledgered_guard(tool="terminal", mode=boom)
++        def guard():
++            return {"approved": True}
++
++        assert guard() == {"approved": True}
++        assert _records(tmp_path) == []
 diff --git a/tools/approval_ledger.py b/tools/approval_ledger.py
 new file mode 100644
-index 000000000..47a501cae
+index 000000000..3d849c785
 --- /dev/null
 +++ b/tools/approval_ledger.py
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,148 @@
 +"""统一审批账本的 Hermes 写入面（P0b-2）。
 +
 +只记录守卫终态，不改变审批结果，不保存命令/代码原文。所有业务异常均 fail-soft；
@@ -209,11 +273,19 @@ index 000000000..47a501cae
 +) -> None:
 +    """把一次守卫终态写入 append-only JSONL；不落命令、代码、原因原文。"""
 +    try:
++        # 终审 C4：terminal_approval_batch 的 prepare/consume 两跳共用同一决策 dict——
++        # 首记后打标，第二跳（consume 命中）直接跳过，I4 计数不失真。
++        if not isinstance(result, dict) or result.get("_ledger_recorded"):
++            return
 +        path = _ledger_path()
 +        if path is None:
 +            return
++        # 终审 C3：真实 pending 形状——action gate 是 status 值 "approval_required"；
++        # command/code gate 是 status "pending_approval" ＋ approval_pending 键。
++        status = result.get("status")
++        pending = status in ("approval_required", "pending_approval") or bool(
++            result.get("approval_pending") or result.get("approval_required"))
 +        approved = result.get("approved")
-+        pending = bool(result.get("approval_required") or result.get("pending_approval"))
 +        if pending:
 +            record_type = "approval.pending"
 +            decided_by = "policy:risk-evaluated"
@@ -224,8 +296,11 @@ index 000000000..47a501cae
 +            record_type = "approval.exempted"
 +            decided_by = "policy:risk-evaluated" if mode == "guarded" else "policy:auto"
 +        elif approved is False:
++            # 终审 I2：timeout/notify_failed/cancelled/blocked 也带 user_consent=False——
++            # 仅 outcome=denied 才是真人拒绝，其余机器终态归策略。
++            human_denied = result.get("user_consent") is False and result.get("outcome") == "denied"
 +            record_type = "approval.resolved"
-+            decided_by = "user" if result.get("user_consent") is False else "policy:auto"
++            decided_by = "user" if human_denied else "policy:auto"
 +        else:
 +            return
 +        detail: dict[str, Any] = {}
@@ -252,6 +327,10 @@ index 000000000..47a501cae
 +        path.parent.mkdir(parents=True, exist_ok=True)
 +        with path.open("a", encoding="utf-8") as handle:
 +            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
++        try:
++            result["_ledger_recorded"] = True
++        except Exception:
++            pass
 +    except Exception as exc:
 +        logger.warning("approval ledger write failed (tool=%s): %s", tool, type(exc).__name__)
 +
@@ -268,18 +347,23 @@ index 000000000..47a501cae
 +            finally:
 +                _GUARD_DEPTH.reset(token)
 +            if depth == 0 and isinstance(result, dict):
-+                from tools import approval_context
++                # 终审 I1：全部取值（含 mode()）都在 try 内——账本侧任何异常不得
++                # 顶掉守卫结果；此处再包一层，双保险于 record 内部的 fail-soft。
++                try:
++                    from tools import approval_context
 +
-+                profile = (os.environ.get("HERMES_PROFILE_NAME") or os.environ.get("HERMES_PROFILE") or "").strip()
-+                if not profile:
-+                    profile = Path(os.environ.get("HERMES_HOME", "")).name
-+                record_approval_decision(
-+                    tool=tool, result=result,
-+                    session_id=approval_context.get_current_session_key(default=""),
-+                    profile=profile,
-+                    platform=approval_context._get_session_platform(),
-+                    mode=mode(),
-+                )
++                    profile = (os.environ.get("HERMES_PROFILE_NAME") or os.environ.get("HERMES_PROFILE") or "").strip()
++                    if not profile:
++                        profile = Path(os.environ.get("HERMES_HOME", "")).name
++                    record_approval_decision(
++                        tool=tool, result=result,
++                        session_id=approval_context.get_current_session_key(default=""),
++                        profile=profile,
++                        platform=approval_context._get_session_platform(),
++                        mode=mode(),
++                    )
++                except Exception as exc:
++                    logger.warning("approval ledger guard hook failed (tool=%s): %s", tool, type(exc).__name__)
 +            return result
 +        return wrapped
 +    return decorate

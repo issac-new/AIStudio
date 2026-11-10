@@ -78,3 +78,43 @@ describe('补丁 765 接线锁（合成点唯一）', () => {
     expect(calls).toBe(1)
   })
 })
+
+describe('终审修复 C1/C2：DSH 导入路径可解析＋档位取值源', () => {
+  it('补丁 766 的 DSH import 相对路径在注入态可解析（四级）', async () => {
+    const { createRequire } = await import('node:module')
+    const { readFileSync: rf } = await import('node:fs')
+    const patch = rf(join(repoRoot, 'patches/766-server-coding-launch-fourmode.patch'), 'utf8')
+    const m = patch.match(/import \{ dshPermissionRequired \} from '([^']+)'/)
+    expect(m, '补丁含 dsh import 行').toBeTruthy()
+    const dshFile = join(repoRoot, 'vendor/hermes-studio/packages/server/src/modules/coding-agents/services/dsh/chat-turn.ts')
+    const req = createRequire(dshFile)
+    expect(() => req.resolve(m![1] + '.ts'.replace('.ts', ''))).toBeTruthy()
+    // 相对深度显式断言：services/dsh/ → src/custom 需四级
+    expect(m![1]).toBe('../../../../custom/executioncontract/mode-policy')
+  })
+
+  it('codingLaunchApprovalRecord 优先消费四挡 permissionMode；未配置回落二值（C2）', async () => {
+    const mod = await import('../server/approval-ledger/coding-entry')
+    const rec = mod.codingLaunchApprovalRecord({
+      codingAgentId: 'zcode', sessionSource: 'coding_agent',
+      permissionMode: 'plan', sessionId: 's', agentSessionId: 'a',
+    } as never)
+    expect(rec.mode).toBe('plan')
+    const fallback = mod.codingLaunchApprovalRecord({
+      codingAgentId: 'zcode', sessionSource: 'coding_agent',
+      approvalRequired: true, sessionId: 's', agentSessionId: 'a',
+    } as never)
+    expect(fallback.mode).toBe('plan')
+    const neither = mod.codingLaunchApprovalRecord({
+      codingAgentId: 'zcode', sessionSource: 'coding_agent',
+      sessionId: 's', agentSessionId: 'a',
+    } as never)
+    expect(neither.mode).toBe('yolo')
+  })
+
+  it('补丁 765 调用点传 permissionMode 而非不存在的 launch.approvalRequired（C2）', () => {
+    const patch = readFileSync(join(repoRoot, 'patches/765-server-coding-launch-approval-ledger.patch'), 'utf8')
+    expect(patch).toContain('permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined')
+    expect(patch).not.toContain('approvalRequired: launch.approvalRequired')
+  })
+})

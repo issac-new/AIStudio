@@ -92,7 +92,12 @@ export function appendApprovalRecord(record: ApprovalLedgerRecord): boolean {
 
 /** 入口层合成免审记录的唯一便捷口（yolo 放行/策略放行都走这里）。 */
 export function synthesizeExempted(input: Parameters<typeof buildApprovalRecord>[0]): boolean {
-  return appendApprovalRecord(buildApprovalRecord(input))
+  // 终审 I4：含契约解析在内的任何异常都 fail-soft——账本绝不上抛打断调用方（含 vendor 启动成功门）。
+  try {
+    return appendApprovalRecord(buildApprovalRecord(input))
+  } catch {
+    return false
+  }
 }
 
 function compactIfNeeded(): void {

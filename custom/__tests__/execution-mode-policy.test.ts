@@ -85,3 +85,20 @@ describe('decidedByForResult 与 Python approval_ledger 对齐', () => {
     expect(decidedByForResult({}, 'yolo')).toBeNull()
   })
 })
+
+describe('终审修复：真实 pending 形状与超时归因', () => {
+  it('action gate 真实形状 {status:"approval_required"} 识别为 pending', () => {
+    expect(decidedByForResult({ approved: undefined, status: 'approval_required' }, 'build'))
+      .toEqual({ recordType: 'approval.pending', decidedBy: 'policy:risk-evaluated' })
+  })
+  it('command/code gate 真实形状 {status:"pending_approval", approval_pending:true} 识别为 pending', () => {
+    expect(decidedByForResult({ status: 'pending_approval', approval_pending: true }, 'build'))
+      .toEqual({ recordType: 'approval.pending', decidedBy: 'policy:risk-evaluated' })
+  })
+  it('超时/通知失败/撤回不是人工拒绝：仅 outcome=denied 且 user_consent=false 才归 user', () => {
+    for (const outcome of ['timeout', 'notify_failed', 'cancelled', 'blocked']) {
+      expect(decidedByForResult({ approved: false, user_consent: false, outcome }, 'guarded').decidedBy).toBe('policy:auto')
+    }
+    expect(decidedByForResult({ approved: false, user_consent: false, outcome: 'denied' }, 'guarded').decidedBy).toBe('user')
+  })
+})

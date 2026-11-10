@@ -33,8 +33,8 @@ describe('补丁 766 接线锁（四挡启动贯通）', () => {
     expect(p).toContain('run.launch.permissionMode ?? (run.launch.approvalRequired ? \'plan\' : \'yolo\')')
     expect(p).toContain("permissionRequired: dshPermissionRequired(")
     expect(p).toContain("from '../../../custom/executioncontract/mode-policy'")
-    // 启动侧只在一处（manager.start 调用）注入 permissionMode
-    expect((p.split('permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined').length - 1)).toBe(1)
+    // 启动侧注入恰两处且分工明确：765 给账本调用、766 给 manager.start——各一枚补丁一处
+    expect((p.split('permissionMode: sessionMode ? zcodeNativeMode(sessionMode) : undefined').length - 1)).toBe(2)
   })
 
   it('默认行为不变：未配置会话档不传 permissionMode（回落 yolo/plan 二值）', () => {

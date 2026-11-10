@@ -66,7 +66,11 @@ export function dshPermissionRequired(
 export function decidedByForResult(
   result: Record<string, unknown>, mode: ModeId | string,
 ): { recordType: ApprovalRecordType; decidedBy: string } | null {
-  if (result.approval_required === true || result.pending_approval === true) {
+  // 真实 pending 形状（approval.py）：action gate=status 值 "approval_required"；
+  // command/code gate=status "pending_approval" ＋ approval_pending 键。终审 C3。
+  const status = result.status
+  if (status === 'approval_required' || status === 'pending_approval' || result.approval_pending === true
+    || result.approval_required === true) {
     return { recordType: 'approval.pending', decidedBy: 'policy:risk-evaluated' }
   }
   if (result.approved === true) {
@@ -74,7 +78,11 @@ export function decidedByForResult(
     return { recordType: 'approval.exempted', decidedBy: mode === 'guarded' ? 'policy:risk-evaluated' : 'policy:auto' }
   }
   if (result.approved === false) {
-    if (result.user_consent === false) return { recordType: 'approval.resolved', decidedBy: 'user' }
+    // 终审 I2：_denied 对 timeout/notify_failed/cancelled/blocked 也带 user_consent=false——
+    // 仅 outcome=denied 才是真人拒绝，其余机器终态归策略。
+    if (result.user_consent === false && result.outcome === 'denied') {
+      return { recordType: 'approval.resolved', decidedBy: 'user' }
+    }
     return { recordType: 'approval.resolved', decidedBy: 'policy:auto' }
   }
   return null

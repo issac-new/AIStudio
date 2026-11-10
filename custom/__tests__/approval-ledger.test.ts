@@ -113,3 +113,14 @@ describe('approval-ledger P0b', () => {
     expect(r.riskClass).toBe('git_write')
   })
 })
+
+describe('终审修复 I4：契约损坏不炸启动成功门', () => {
+  it('synthesizeExempted 对坏契约 fail-soft（返回 false 不抛）', () => {
+    process.env.HERMES_EXECUTION_CONTRACT_PATH = join(dir, 'not-exist.json')
+    try {
+      expect(synthesizeExempted({ tool: 'x', mode: 'yolo', sessionId: 's', profile: 'p', entryPoint: 't', decided: 'auto' })).toBe(false)
+    } finally {
+      delete process.env.HERMES_EXECUTION_CONTRACT_PATH
+    }
+  })
+})

@@ -1209,10 +1209,19 @@
 763-agent-unified-approval-ledger.patch
 
 764-build-studio-skills-seed-packaging.patch
+
 # 765（2026-11-10 执行内核统一 P0b-2 Task 2，spec 2026-11-10-execution-kernel-p0b2-p1）：
 # 编码任务启动成功门合成免审记录（IDE/群聊/工作流共用唯一合成点；先例=736）。
+# 终审 C2 修正：档位取 sessionModeOf 会话档经 zcodeNativeMode 归一（launch 无 approvalRequired 字段）。
 765-server-coding-launch-approval-ledger.patch
 
 # 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
-# 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导；run-manager 类型；启动侧会话档归一注入。
+# 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导（services/dsh 四级上溯）；run-manager 类型。
 766-server-coding-launch-fourmode.patch
+# 765（2026-11-10 执行内核统一 P0b-2 Task 2，spec 2026-11-10-execution-kernel-p0b2-p1）：
+# 编码任务启动成功门合成免审记录（IDE/群聊/工作流共用唯一合成点；先例=736）。
+#
+
+# 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
+# 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导；run-manager 类型；启动侧会话档归一注入。
+
