@@ -4,8 +4,7 @@
 // 守门：custom/__tests__/execution-contract.test.ts 断言四表完整性；上游四挡目录
 // （vendor/zcode/.../zcode-agent-model-state.ts）变更时本契约须同步重锚。
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 
 /** 四挡权限模式（逐字对齐上游 ZCODE_AGENT_MODE_OPTIONS 的四个 id）。 */
 export const MODE_IDS = ['build', 'guarded', 'plan', 'yolo'] as const
@@ -97,7 +96,11 @@ export interface ExecutionContract {
   }
 }
 
-const contractPath = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'config', 'execution-contract.json')
+// __dirname 双运行时口径（simrun/supervisor.ts 先例）：server tsconfig 为
+// commonjs，import.meta 不可用（TS1343，ts-node serve 首次编译即挂）；vitest 的
+// SSR 转换注入的 __dirname 同源码目录。custom/server/executioncontract 三级向上
+// 即仓根，契约正本=仓根/config/execution-contract.json。
+const contractPath = resolve(__dirname, '..', '..', '..', 'config', 'execution-contract.json')
 
 let cached: ExecutionContract | null = null
 
