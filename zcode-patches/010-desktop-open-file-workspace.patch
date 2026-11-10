@@ -1,0 +1,30 @@
+diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
+index c8d0c0fa4..aa3a58281 100644
+--- a/packages/desktop/src/main/index.ts
++++ b/packages/desktop/src/main/index.ts
+@@ -2138,6 +2138,25 @@ app.on("second-instance", (_event, argv, _workingDirectory, additionalData) => {
+   }
+ });
+ 
++// overlay[open-file-workspace]（zcode-patches 010，spec 2026-11-10-zcode-openfile-workspace）：
++// macOS `open -a ZCode <dir>` 的目录以 open-file 事件到达（不进 argv），此前无处理被
++// 忽略。冷启动（ready 前）并入 startupOpenWorkspaceRequest（首个优先）随主窗口
++// bootstrap 打开，与 --open-workspace argv 同语义；ready 后与 second-instance 同口径
++// 直投 handleOpenWorkspacePath（校验本地目录→IPC 投 renderer，未就绪有排队）。
++if (process.platform === "darwin") {
++  app.on("open-file", (event, openPath) => {
++    event.preventDefault();
++    if (!app.isReady()) {
++      startupOpenWorkspaceRequest ??= { path: openPath, source: "open-workspace-arg" };
++      return;
++    }
++    handleOpenWorkspacePath(openPath, logger, {
++      allowWithoutReadyWindow: true,
++      resolveApplicationWindow: () => getApplicationWindowsExcludingCuaIndicator()[0] ?? null,
++    });
++  });
++}
++
+ app.whenReady().then(async () => {
+   markMainLaunchAppReady();
+   installRequestSecurityDiagnostics(session.defaultSession.webRequest, logger);

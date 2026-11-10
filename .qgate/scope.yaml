@@ -36,6 +36,9 @@ paths:
   - package.json
   - .swarm-yuan/gate-audit.jsonl
   - .swarm-yuan/gate-deny.jsonl
+  - docs/superpowers/specs/2026-11-10-zcode-openfile-workspace.md
+  - zcode-patches/010-desktop-open-file-workspace.patch
+  - zcode-patches/series
   - docs/superpowers/specs/2026-11-10-ide-devtools-task-cwd.md
   - custom/client/ide/components/IdeDevTools.vue
   - custom/client/ide/__tests__/devtools-ui.test.ts

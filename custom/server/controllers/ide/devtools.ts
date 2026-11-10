@@ -18,7 +18,7 @@
 import { execFile, execFileSync } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, win32 } from 'node:path'
 import type { Context } from 'koa'
 import { synthesizeExempted } from '../../approval-ledger/ledger-store'
 
@@ -66,6 +66,20 @@ export function resolveZcodeCli(exists: (p: string) => boolean = existsSync): st
   return exists(ZCODE_CLI_DIST) ? ZCODE_CLI_DIST : null
 }
 
+/** Windows 桌面 APP 本体（nsis per-user 默认位；productName=ZCode 实测）。
+ *  2026-11-10 spec 2026-11-10-zcode-openfile-workspace：APP 本体在场即以
+ *  --open-workspace 直开任务工作区（桌面端 argv/second-instance 全链在位）；
+ *  CLI 不认该参，缺席时只设 /d 工作目录回落。 */
+export function resolveWindowsZcodeAppExe(
+  env: { LOCALAPPDATA?: string } | undefined, exists: (p: string) => boolean = existsSync,
+): string | null {
+  const root = env?.LOCALAPPDATA?.trim()
+  if (!root) return null
+  // 目标恒为 Windows：显式 win32.join，宿主在 darwin（测试）也产出反斜杠路径
+  const exe = win32.join(root, 'Programs', 'ZCode', 'ZCode.exe')
+  return exists(exe) ? exe : null
+}
+
 /**
  * 组装启动命令（纯函数；cwd 由调用方先行校验）。
  * 返回 null = 平台不支持或工具不在白名单。
@@ -77,7 +91,7 @@ export function buildLaunchPlan(
   tool: ToolKey,
   cwd: string | null,
   platform: NodeJS.Platform,
-  deps: { exists?: (p: string) => boolean } = {},
+  deps: { exists?: (p: string) => boolean; env?: { LOCALAPPDATA?: string } } = {},
 ): LaunchPlan | null {
   const def = TOOL_DEFS.find(d => d.key === tool)
   const known = !!def || LAUNCH_ONLY_TOOLS.has(tool)
@@ -109,11 +123,15 @@ export function buildLaunchPlan(
 
   // win32（2026-11-10 收窄：只留 zcode 与 terminal-zcode）
   switch (tool) {
-    case 'zcode':
-      // start /d 设进程工作目录（确定性生效，无需 app 配合）；无 cwd 行为不变。
+    case 'zcode': {
+      // APP 本体在场→--open-workspace 直开（确定性）；缺席回落 PATH CLI＋/d
+      //（CLI 不认 --open-workspace，不可附加）。无 cwd 两形态都不带参。
+      const exe = resolveWindowsZcodeAppExe(deps.env, deps.exists ?? existsSync)
+      if (exe) return cwd ? { file: exe, args: ['--open-workspace', resolve(cwd)] } : { file: exe, args: [] }
       return cwd
         ? { file: 'cmd', args: ['/c', 'start', '', '/d', resolve(cwd), 'zcode'] }
         : { file: 'cmd', args: ['/c', 'start', '', 'zcode'] }
+    }
     case 'terminal-zcode': {
       const dir = cwd ?? homedir()
       return { file: 'cmd', args: ['/c', 'start', 'cmd', '/k', `cd /d ${dir} && zcode`] }
