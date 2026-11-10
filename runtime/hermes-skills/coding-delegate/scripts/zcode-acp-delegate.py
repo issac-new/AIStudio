@@ -46,6 +46,36 @@ def log(msg: str) -> None:
     print(f"[{stamp}] {msg}", flush=True)
 
 
+def approval_ledger_exempt(session_id: str, mode: str = "yolo") -> None:
+    """统一审批账本（2026-11-10 执行内核统一批 P0b，spec 2026-11-10-§6/§8）：
+    委托会话按无人值守 yolo 设计建立即放行——append-only 记一条 approval.exempted。
+    fail-soft：账本路径缺失/不可写时静默跳过（观测面不阻断委托）。"""
+    try:
+        base = os.environ.get("HERMES_APPROVAL_LEDGER_DIR", "").strip()
+        if not base:
+            webui = os.environ.get("HERMES_WEB_UI_HOME", "").strip()
+            if not webui:
+                return
+            base = str(Path(webui) / "approval-ledger")
+        p = Path(base)
+        p.mkdir(parents=True, exist_ok=True)
+        import datetime
+        import uuid as _uuid
+        rec = {
+            "recordType": "approval.exempted", "tool": "zcode_acp_session",
+            "riskClass": "shell", "mode": mode, "policyId": "four-mode-yolo",
+            "policyVersion": "1.0.0", "sessionId": session_id,
+            "profile": os.environ.get("HERMES_PROFILE", ""),
+            "entryPoint": "coding-delegate", "decidedBy": "policy:auto",
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "recordId": str(_uuid.uuid4()),
+        }
+        with open(p / "approval-ledger.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
 class TaskContextError(Exception):
     """--task 装配失败（任务不存在/工作区未物化/路径逃逸）——exit 2 语义。"""
 
@@ -417,6 +447,7 @@ def main() -> int:
         return finish(EXIT_ENGINE_MISSING, "session_new")
     session_id = sess["result"].get("sessionId")
     log(f"session 建立成功：{session_id}")
+    approval_ledger_exempt(str(session_id or ""))
 
     # ── 2.5 会话模型（可选；--model / ZCODE_ACP_MODEL）──
     # 引擎默认模型取自机器配置——计划端点侧某模型失效时（2026-10-26 实例：
