@@ -645,3 +645,6 @@ paths:
   - docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md
   - patches/612-agent-observation-pack-recall.patch
   - docs/manuals/aistudio-training-and-user-guide.md
+
+  # 2026-11-10 v0.23.1 合入收口实录（含设计文档三处修订）
+  - docs/superpowers/specs/2026-11-10-vendor-agent-v0231-merge-closeout.md

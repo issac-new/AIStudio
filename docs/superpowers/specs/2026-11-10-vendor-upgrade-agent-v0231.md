@@ -43,6 +43,16 @@
 
 DESIGN_SYNC: touched —— `vendor/VENDOR.md`（vendor 台账正本：表行 commit/版本＋dated 条目）、`AGENTS.md:29`（vendor 行版本）、`README.md:117`（组件表版本行）、`team/README.md`（版本方案叙述＋What changed 节）、`team/VERSION`/`team/version.json`（agent-teams 版本真源/机读载体）、`RELEASE-MANIFEST.json`（agent-teams.version）、`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`（数字总账 hermes-agent 基线行 v0.23.1＋agent teams 模块行 v0.23.1-team.1）；A.1 三处登记（附录索引计数＋机械索引行＋design 索引两清单）；scope.yaml 同批声明。
 
+## 合入 main 实录（2026-11-10 17:45-18:10，终态 origin/main ad5b400bf）
+
+并发窗口 main 新增 4 提交（记忆统一/IDE 面板收窄/记忆 M1 收口）。处置链：
+1. worktree rebase main：4 文件冲突全并集解（receipts 台账/scope 登记块/附录 A 计数 609→610＋代登记 IDE 批未登项（608→609）＋三行 A.1 表/机械索引链接三行＋计数 617→619）。
+2. **pre-commit 钩子 merge commit 误伤 pristine 基线变更（新坑）**：a6c23d199 的 vendor/hermes-agent 面变更=0——「inject 注入态不入提交」撤出规则对 merge commit 也生效，把分支带来的 pristine 基线换血整面撤出。修复=main 上 git rm + archive + add 后普通提交 3f9089c00（VENDOR_SYNC=1，2781 文件与上游 diff 精确吻合）。**后续 vendor 基线批 merge 后必须抽验 merge 提交 vendor 面 diff 非零**。
+3. VENDOR.md 台账漏入（git rm 目录时未 add 台账，M 状态残留随 stash/rebase 漂移）→6129cf932 补齐＋3dcce1215 合并。
+4. 培训手册投影块 121↔122 三方摇摆：056d3de33 误信 docs:sync 瞬时输出写 122；main/worktree 双树真链复测均 121（page 80/redirect 41）→ad5b400bf revert 056d3de33 归位真值。**IDE 面板收窄批的 docs:sync 属主域已闭环（其原提交状态在册），本批 revert 只归位真值**。
+5. main 验证终态：clean+inject 461/461 applied complete（sim 重定向）；拼合树 pytest 152/0；release:check 四模块全绿；merge-invariants 五项全过；pre-push qgate L0 门集全过；推送 2f31b492b..ad5b400bf。
+6. main npm test 全量 8655 过/2 失败/11 跳过——两失败=overlay-replay（宿主 29 kept 预检中止，sim 重定向单跑 1/1 过 56s）＋route-manifest（测试期 121↔122 摇摆窗口，推送态 release:check 绿）。
+
 ## 挂账（不处置清单）
 
 | # | 项 | 处置建议 |
