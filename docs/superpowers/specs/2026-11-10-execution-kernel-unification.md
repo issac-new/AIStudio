@@ -291,6 +291,9 @@ P1/P2 期间 `acp_send(provider=zcode)` 仍是完整 Ycode agent，且可能本�
 
 ### 4. 实施进度（随批回填）
 
+- **P0b-2 已落地（2026-11-10 晚，feat/execution-kernel-p0b2）**：入口 8/8 收口——#1 Hermes 守卫终态写账（补丁 763，Python 公共出口＋嵌套去重，测试按 agent 路由前缀落 tests/tools/）；#3 IDE/群聊/工作流编码启动免审记录（补丁 765，startCodingAgentRunInternal 成功门唯一合成点）。补丁工程定谳：注入按首 ---/+++ 头路由，补丁须树相对路径、上下文须锚纯重放态。
+- **P1 首批已落地（同分支）**：mode-policy 四挡判定器（未知档 fail-closed=ask；plan=只读集拒绝；guarded 高风险待审）；补丁 766 启动参数四挡贯通（zcode --mode 优先 permissionMode、DSH 布尔推导、未配置回落现状二值默认不变）；Ekko 瀑布账本按会话档归一；mention-dispatch 引擎档归一；config/coding-backend-absorption.json 13 家×十面承接清单（4 面实现带证据，余 not-collected，waived 须签字）。**未完**：P1 剩余=13 家逐家退役执行（P2）、Ekko 下线（P3）、四挡在 guarded 挡与 approval-rules 八态的合流求值。
+
 - **P0a 已落地（2026-11-10，本分支 3 提交）**：契约正本 `config/execution-contract.json`（四表＋白名单＋风险分级）＋`custom/server/executioncontract/` 装载校验＋`fourModeOf` 唯一归一点＋10 断言守门（含与上游四挡目录逐字重锚、edit 不得删、变异探针四枚）。零行为变化达成。
 - **P0b-1 已落地（同日）**：`custom/server/approval-ledger/` 三态同 schema append-only 账本（只记不裁、fail-soft）＋`entryCoverage` I4 取数口。入口接线 6/8：#2/#4-ekko（`tool-hooks` postExecute ok=策略放行落 exempted）、#5（`mention-dispatch` 派发落 exempted，会话档经 `fourModeOf` 归一）、#8（DevTools 直启 zcode 系两键）、#6（`acp-client` auto_approve 放行，Python 侧 env 门控路径 fail-soft）、#7（`coding-delegate` session/new 建立即记，无人值守 yolo 设计口径）。**未接线**：#1（Hermes bridge 工具面，Python 侧需补丁）、#3（IDE 编程任务，vendor `chat-turn`/`handle-coding-agent-run` 需 B 类补丁）——留 P0b-2，接完前 P0b 退出条件（八入口全见记录）未达成。
 

@@ -36,6 +36,17 @@ paths:
   - package.json
   - .swarm-yuan/gate-audit.jsonl
   - .swarm-yuan/gate-deny.jsonl
+  - custom/server/executioncontract/mode-policy.ts
+  - custom/server/approval-ledger/coding-entry.ts
+  - custom/__tests__/execution-mode-policy.test.ts
+  - custom/__tests__/coding-launch-fourmode.test.ts
+  - custom/__tests__/coding-agent-approval-ledger.test.ts
+  - config/coding-backend-absorption.json
+  - patches/763-agent-unified-approval-ledger.patch
+  - patches/765-server-coding-launch-approval-ledger.patch
+  - patches/766-server-coding-launch-fourmode.patch
+  - docs/superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md
+  - docs/superpowers/plans/2026-11-10-execution-kernel-p0b2-p1.md
   - docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md
   - docs/superpowers/specs/2026-11-01-chat-turn-recovery-design.md
   - custom/server/governance/lifecycle/verdict.ts
