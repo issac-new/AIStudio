@@ -31,7 +31,10 @@ spec:
         file: ".qgate/junit-report.xml"
         minTotal: 7600
       evidenceType: unit-test-result
-      timeoutMs: 600000
+      # 2026-11-11 v1.0.15 发布轮校准：套件 7600→8726 后 --no-file-parallelism 串行墙钟
+      # 实测 ~11 分钟（junit time_sum 352s＋transform/collect 串行开销），600s 撞线连三
+      # executor-error（套件本身 0 失败）。抬到 20 分钟双倍裕量；minTotal 收缩守门不受影响。
+      timeoutMs: 1200000
   evidence:
     required:
       - unit-test-result
