@@ -295,3 +295,4 @@
 {"at":"2026-11-10T10:09:17Z","spec":"docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md","receipt":"4df420b169be7f33d4e8d4722f7d6f4d6e051b23","commit":"9128904ee"}
 {"at":"2026-11-10T10:38:35Z","spec":"docs/superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md","receipt":"daa67b8245fb94b56fcb3e02c676ae6dca05bc40","commit":"10c6fd1d6"}
 {"at":"2026-11-10T13:02:55Z","spec":"docs/superpowers/specs/2026-11-10-interaction-walkthrough-round.md","receipt":"2feb5a3cdc403d98c961d8c1bbdb88042b8917f3","commit":"801fc8480"}
+{"at":"2026-11-10T10:23:42Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md","receipt":"11287882ea6679fa094d65888cd78fd1b1140efd","commit":"c078e719e"}
