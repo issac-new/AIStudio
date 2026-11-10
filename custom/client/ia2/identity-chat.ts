@@ -4,7 +4,8 @@
 // identity-chat.ts）对话。纯函数+fetch，无 store 依赖，供画布与测试共用。
 
 export interface IdentityInfo {
-  kind: 'gateway'
+  /** 批2（2026-11-10）：matrix=roster 绑定的远程账号（DM 对话）；gateway=本机网关 profile。 */
+  kind: 'gateway' | 'matrix'
   id: string
   label: string
   online: boolean
