@@ -28,11 +28,11 @@ index d8d6b718e..c4e57adeb 100644
 +check_execute_code_guard = _ledgered_guard(tool="execute_code", mode=_approval_ledger_mode)(check_execute_code_guard)
 +check_dangerous_command = _ledgered_guard(tool="terminal", mode=_approval_ledger_mode)(check_dangerous_command)
 +
-diff --git a/tests/tools/test_approval_ledger.py b/tests/test_approval_ledger.py
+diff --git a/tests/tools/test_approval_ledger.py b/tests/tools/test_approval_ledger.py
 new file mode 100644
 index 000000000..277488c1f
 --- /dev/null
-+++ b/tests/test_approval_ledger.py
++++ b/tests/tools/test_approval_ledger.py
 @@ -0,0 +1,115 @@
 +"""统一审批账本（P0b-2）：真实守卫出口与记录语义。"""
 +import json
