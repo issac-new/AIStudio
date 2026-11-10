@@ -293,3 +293,4 @@
 {"at":"2026-11-10T09:45:57Z","spec":"docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md","receipt":"4aa1e3e5d8ab42ade9671a8a59e8a5c824e4fc88","commit":"10c6fd1d6"}
 {"at":"2026-11-10T09:46:35Z","spec":"docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md","receipt":"e5848f7d9d5016f690834d2d87cbfdd593762240","commit":"10c6fd1d6"}
 {"at":"2026-11-10T10:09:17Z","spec":"docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md","receipt":"4df420b169be7f33d4e8d4722f7d6f4d6e051b23","commit":"9128904ee"}
+{"at":"2026-11-10T10:38:35Z","spec":"docs/superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md","receipt":"daa67b8245fb94b56fcb3e02c676ae6dca05bc40","commit":"10c6fd1d6"}
