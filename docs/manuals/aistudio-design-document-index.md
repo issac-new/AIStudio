@@ -648,8 +648,10 @@
 - [2026-11-10-vendor-upgrade-agent-v0231.md](../superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md)
 - [2026-11-10-vendor-agent-v0231-merge-closeout.md](../superpowers/specs/2026-11-10-vendor-agent-v0231-merge-closeout.md)
 - [2026-11-10-ekko-hermes-skill-store-unification.md](../superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md)
-- [2026-11-10-execution-kernel-p0b2-p1.md](../superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md)## archive（2 份，不计入上述根目录）
+- [2026-11-10-execution-kernel-p0b2-p1.md](../superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md)
 - [2026-11-10-page-walkthrough-import-meta-fix.md](../superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md)
+
+## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
 
 - [2026-09-25-mux-v2-fullflow-runbook.md](../superpowers/specs/archive/2026-09-25-mux-v2-fullflow-runbook.md)
