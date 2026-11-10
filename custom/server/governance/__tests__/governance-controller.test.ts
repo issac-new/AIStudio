@@ -90,6 +90,37 @@ describe('治理中心 REST（/api/governance）', () => {
     expect(body.commit).toMatch(/^[0-9a-f]{7,}$/)
   })
 
+  it('master 默认分支仓（无 origin/main 引用）工件仍 exists:true 且可读全文（2026-11-10 走查定谳回归）', async () => {
+    // 真实治理仓（issac-new/governance）默认分支是 master——克隆后无 origin/main
+    // 引用。旧实现 docMeta 双 ref 循环里 origin/main reject 会炸掉整个 try，把已
+    // 命中的 HEAD 结果一并丢弃：PUT 刚提交完工件读回却是"不在仓"（读写矛盾）。
+    const repo2 = mkdtempSync(join(tmpdir(), 'gov-repo-master-'))
+    const git2 = (args: string[]) => execFileSync('git', ['-C', repo2, ...args], { encoding: 'utf8' })
+    git2(['init', '-b', 'master'])
+    git2(['config', 'user.email', 't@t'])
+    git2(['config', 'user.name', 't'])
+    mkdirSync(join(repo2, 'docs/requirements'), { recursive: true })
+    writeFileSync(join(repo2, 'docs/requirements/RFD-001.freeze.md'), '# master 仓冻结\n\nfrozen: true\n')
+    git2(['add', '-A'])
+    git2(['commit', '-m', 'freeze-on-master'])
+    git2(['remote', 'add', 'origin', repo2])
+    // 刻意不造 refs/remotes/origin/main（生产克隆的真实形态）
+    const prevRepo = process.env.GOVERNANCE_REPO
+    try {
+      process.env.GOVERNANCE_REPO = repo2
+      const ov = await get('/api/governance/overview')
+      const freeze2 = ov.body.docs.find((d: any) => d.kind === 'freeze')
+      expect(freeze2.exists).toBe(true)
+      expect(freeze2.commit).toMatch(/^[0-9a-f]{7,}$/)
+      const doc2 = await get('/api/governance/doc?kind=freeze')
+      expect(doc2.status).toBe(200)
+      expect(doc2.body.markdown).toContain('frozen: true')
+    } finally {
+      process.env.GOVERNANCE_REPO = prevRepo
+      rmSync(repo2, { recursive: true, force: true })
+    }
+  })
+
   it('未知 kind 404；缺失工件 404', async () => {
     expect((await get('/api/governance/doc?kind=nope')).status).toBe(404)
     expect((await get('/api/governance/doc?kind=retro')).status).toBe(404)

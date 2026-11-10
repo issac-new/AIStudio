@@ -679,3 +679,8 @@ paths:
   - docs/superpowers/specs/2026-11-10-interaction-walkthrough-round.md
   - scripts/regression/change-gov-walkthrough.mjs
   - scripts/regression/prod-board-write-walkthrough.mjs
+
+  # 2026-11-10 治理工件 docMeta 引用隔离修复＋缺口面收口（fix/func-gap-close-20261110）
+  - docs/superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md
+  - custom/server/governance/governance-controller.ts
+  - custom/server/governance/__tests__/governance-controller.test.ts
