@@ -23,6 +23,7 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | 域 | 职责 |
 |---|---|
 | `toolcontract/` | 工具契约（副作用/超时/重试/幂等/脱敏）单一事实源 |
+| `executioncontract/` | 执行面契约四表（四挡权限模式/编码后端白名单/审批账本 schema/会话标识映射/事件语义/工具风险分级），正本=config/execution-contract.json；P0a 只读不写（spec 2026-11-10-execution-kernel-unification） |
 | `toolpipeline/` | 工具执行瀑布：审计 → 结果围栏 → 技能治理 → 执法门 |
 | `harness/` | 治理读模型（能力目录/成本账/成熟度/九层体检） |
 | `loop/graph/` | 图执行器、检查点、重试与停滞检测 |
