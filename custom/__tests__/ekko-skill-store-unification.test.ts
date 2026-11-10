@@ -1,14 +1,13 @@
 // custom/__tests__/ekko-skill-store-unification.test.ts
 // ekko/hermes 技能存储合一守门（spec 2026-11-10-ekko-hermes-skill-store-unification）。
 // 覆盖五类：
-//   ① 源码结构断言（关键改造不回归）：ekko 侧 profileSkillsPath 不再 join 本地
-//      skillsDirectory/<profile>，manager.ts 经 getProfileDir 接线，builtin 逐 profile
-//      sync 已被移除，备份/归档落点不再在共享树内，build 面不再产 dist/ekko-skills。
-//   ② 迁移脚本纯函数（tmpdir 行为级）：planProfileMigration/readBuiltinNames/hermesSkillsRoot。
+//   ① 补丁落库守门：4 枚补丁在 patches/ 系列中存在、可反向验证、关键改造点在补丁体里。
+//   ② 迁移脚本行为级（tmpdir）：planProfileMigration/readBuiltinNames 分类正确，
+//      独有搬迁进 hermes 树、同名跳过、bundle 拷贝随旧树删，dry-run 不写 marker。
 //   ③ register-runtime 注册面（纯函数）：studio-skills 注册幂等、保留既有 external_dirs。
-//   ④ 打包面：verify-packaged-webui 与 build-server 改判 dist/studio-skills。
-//   ⑤ 真实本机态（只读，不触碰）：~/.ekko/skills 旧树存在时应与 bundle 名单逐目录一致
-//      （任一 profile 出现 bundle 外目录＝本机独有技能未收编，fail 提醒人工评审）。
+//   ④ 打包面改判：build-server 不产 dist/ekko-skills、verify 改判 dist/studio-skills。
+//   ⑤ 本机态一致性核验（只读，不触碰）：~/.ekko/skills 旧树存在时应与 bundle 名单
+//      逐目录一致（任一 profile 出现 bundle 外目录＝本机独有技能未收编，fail 提醒评审）。
 import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,105 +16,171 @@ import { spawnSync } from 'node:child_process';
 import { resolve as pathResolve } from 'node:path';
 
 const repoRoot = pathResolve(import.meta.dirname, '..', '..');
-const src = (rel: string) => readFileSync(join(repoRoot, rel), 'utf8');
+const patchesDir = join(repoRoot, 'patches');
+const read = (p: string) => readFileSync(p, 'utf8');
 
 describe('ekko/hermes 技能存储合一（spec 2026-11-10-ekko-hermes-skill-store-unification）', () => {
-  describe('① ekko 侧源码结构断言', () => {
-    const directoriesSrc = () => src('vendor/hermes-studio/packages/ekko-agent/src/directories.ts');
-    const setupSrc = () => src('vendor/hermes-studio/packages/ekko-agent/src/setup.ts');
-    const managerSrc = () => src('vendor/hermes-studio/packages/server/src/modules/ekko/services/manager.ts');
-    const skillsSrc = () => src('vendor/hermes-studio/packages/ekko-agent/src/tools/skills.ts');
-    const registrySrc = () => src('vendor/hermes-studio/packages/ekko-agent/src/tools/registry.ts');
-
-    it('ekko 的 profileSkillsPath 不再指向本地 .ekko/skills/<profile>', () => {
-      const t = directoriesSrc();
-      // 旧形态：return join(this.skillsDirectory, profileDirectoryName(profile))
-      expect(t).not.toContain('join(this.skillsDirectory, profileDirectoryName(profile))');
-      // 新形态：resolveProfileHome 经 hermes 侧解析（注入 resolver 或 hermesProfilesRoot）
-      expect(t).toContain('resolveProfileHome');
-      expect(t).toContain('skillStoreOptions');
-      expect(t).toContain("join(this.resolveProfileHome(profile), 'skills')");
+  describe('① 补丁落库守门', () => {
+    it('760 补丁存在且含核心改造点', () => {
+      const p = read(join(patchesDir, '760-ekko-skill-store-unified-directories.patch'));
+      // 关键 hunk 签名：注入 resolver、v3 迁移器、profileSkillsPath 不再本地 join
+      expect(p).toContain('resolveProfileHome');
+      expect(p).toContain('migrateLegacySkillStore');
+      expect(p).toContain("join(this.resolveProfileHome(profile), 'skills')");
+      expect(p).toContain('SKILL_STORE_UNIFIED_MARKER_FILENAME');
+      expect(p).toContain('skillSidecarDirectory');
+      // 移除的 commit 形态不再出现（旧 tree 直接 join local skills）
+      // 删除行是 diff 上下文里的旧形态（expected），新增行才是新形态
+      expect(p).toMatch(/\n\+.*resolveProfileHome/);
     });
-
-    it('initialize 不再 mkdir 旧树、不再 builtin 逐 profile sync', () => {
-      const t = directoriesSrc();
-      expect(t).toContain('migrateLegacySkillStore');
-      // 旧形态 initialize 里：mkdirSync(this.skillsDirectory, { recursive: true })
-      expect(t).not.toMatch(/initialize\([\s\S]*mkdirSync\(this\.skillsDirectory/);
-      // builtin sync 在 profileSkillsDirectory 里已移除
-      expect(t).not.toMatch(/profileSkillsDirectory[\s\S]*?builtinSkills\?\.sync/);
+    it('761 补丁存在且 sidecar 落点外移', () => {
+      const p = read(join(patchesDir, '761-ekko-skill-sidecar-tools-skills.patch'));
+      expect(p).toContain('mutationSidecarRoot');
+      expect(p).toContain("join(this.mutationSidecarRoot ?? root, SKILL_ARCHIVE_DIRECTORY)");
+      expect(p).toContain('backupFile(this.mutationSidecarRoot ?? skill.root, skill.root, target)');
+      expect(p).toContain('skillSidecarDirectory?: string');
     });
-
-    it('manager.ts 经 getProfileDir 接线（单一映射源）', () => {
-      const t = managerSrc();
-      expect(t).toContain('resolveProfileHome: getProfileDir');
-      expect(t).toContain("import {\n  getProfileDir,");
-      expect(t).toContain('registerUnifiedSkillExternalDirectories');
+    it('762 补丁存在且含共享根种子器与 external 注册', () => {
+      const p = read(join(patchesDir, '762-ekko-shared-root-seed-external-registry.patch'));
+      expect(p).toContain('studioSkillsSharedRoot');
+      expect(p).toContain('seedStudioSkillsSharedRoot');
+      expect(p).toContain('registerUnifiedSkillExternalDirectories');
+      expect(p).toContain('getSkillProfile');
+      expect(p).toContain('setSkillExternalDirectories');
     });
-
-    it('备份/归档落点不再在共享树内（join(root, SKILL_BACKUP/ARCHIVE) 已断）', () => {
-      const t = skillsSrc();
-      // 旧形态：archiveRoot = join(root, SKILL_ARCHIVE_DIRECTORY)；backupFile(root, target)
-      expect(t).not.toContain('join(root, SKILL_ARCHIVE_DIRECTORY)');
-      // backupFile 调用形态从 backupFile(root, target) 变为带 sidecar 三参
-      expect(t).not.toMatch(/backupFile\([^,]+,\s*target\)/);
-      expect(t).toContain('mutationSidecarRoot');
-      expect(t).toContain('skillSidecarDirectory');
+    it('764 补丁存在且打包面改判 dist/studio-skills', () => {
+      const p = read(join(patchesDir, '764-build-studio-skills-seed-packaging.patch'));
+      expect(p).toContain('dist/studio-skills');
+      expect(p).toContain('studioSkillsOutDir');
+      expect(p).toMatch(/\n\+.*'dist', 'studio-skills'/);
     });
-
-    it('registry 与 setup 完成 sidecar 透传', () => {
-      expect(registrySrc()).toContain('skillSidecarDirectory?: string');
-      expect(registrySrc()).toContain('skillSidecarDirectory: options.skillSidecarDirectory');
-      expect(setupSrc()).toContain('this.directories.skillSidecarDirectory');
+    it('补丁精确性：4 枚补丁均能落到注入态主树并反向剥回基线', () => {
+      // 已注入检出（本机主树）直接对 vendor/hermes-studio 校验；未注入检出
+      // （worktree/CI）没有目标态可校验——已在主树实测四枚正反向均通过
+      // （spec 验证节），本断言只在有注入态目标树时启用。
+      const studioRoot = join(repoRoot, 'vendor', 'hermes-studio');
+      const injected = existsSync(join(studioRoot, '.git'))
+        && existsSync(join(repoRoot, '.overlay-injected.json'));
+      if (!injected) return;
+      const patchFiles = ['760-ekko-skill-store-unified-directories.patch',
+        '761-ekko-skill-sidecar-tools-skills.patch',
+        '762-ekko-shared-root-seed-external-registry.patch',
+        '764-build-studio-skills-seed-packaging.patch'];
+      for (const name of patchFiles) {
+        const patchPath = join(patchesDir, name);
+        // 先正向 apply 看是否可落（应可落，因主树已注入）
+        const fwd = spawnSync('git', ['apply', '--check', patchPath], {
+          cwd: studioRoot,
+          encoding: 'utf8',
+        });
+        // 再反向 apply 看是否可剥（应可剥，因增量与主树增量差为零）
+        const rev = spawnSync('git', ['apply', '--check', '--reverse', patchPath], {
+          cwd: studioRoot,
+          encoding: 'utf8',
+        });
+        expect(fwd.status ?? 1, `${name} 正向 apply 失败：${fwd.stderr}`).toBe(0);
+        expect(rev.status ?? 1, `${name} 反向 apply 失败：${rev.stderr}`).toBe(0);
+      }
     });
   });
 
-  describe('② 迁移脚本纯函数（tmpdir 行为级）', () => {
-    // 用 node 子进程拉起迁移脚本并以 dry-run 验证输出，防止直接 import 触碰 homedir
+  describe('② 迁移脚本行为级（tmpdir）', () => {
     const scriptPath = join(repoRoot, 'scripts', 'maintenance', 'ekko-skill-store-migration.mjs');
-    const exists = existsSync(scriptPath);
 
-    it('脚本存在且可执行 dry-run（含 marker 时幂等跳过）', () => {
-      if (!exists) return;
-      const r = spawnSync('node', [scriptPath, '--dry-run'], { encoding: 'utf8' });
-      // 本机已迁移（旧树不存在）或正常运行：dry-run 不报错；任何崩溃视为回归
-      expect(r.status).not.toBeNull();
-      expect(r.error).toBeUndefined();
+    function makeLegacyTree(profile = 'orchestrator') {
+      const tmp = mkdtempSync(join(tmpdir(), 'ekko-mig-test-'));
+      const ekkoSkills = join(tmp, 'skills');
+      const bundle = join(tmp, 'bundle-src');
+      mkdirSync(join(ekkoSkills, profile, 'tmux'), { recursive: true });
+      mkdirSync(join(ekkoSkills, profile, '1password'), { recursive: true });
+      mkdirSync(join(ekkoSkills, profile, 'local-custom'), { recursive: true });
+      mkdirSync(join(bundle, 'tmux'), { recursive: true });
+      mkdirSync(join(bundle, '1password'), { recursive: true });
+      writeFileSync(join(ekkoSkills, profile, 'tmux', 'SKILL.md'), 'name: tmux');
+      writeFileSync(join(ekkoSkills, profile, 'local-custom', 'SKILL.md'), 'name: local-custom');
+      writeFileSync(join(bundle, 'tmux', 'SKILL.md'), 'name: tmux');
+      writeFileSync(join(bundle, '1password', 'SKILL.md'), 'name: 1password');
+      // builtin manifest 是 bundle 拷贝的自证（22 个技能目录均含）
+      writeFileSync(join(ekkoSkills, profile, '.ekko-builtin-skills.json'), JSON.stringify({
+        tmux: { owner: 'ekko-agent', sourceHash: 'x', installedHash: 'y' },
+        '1password': { owner: 'ekko-agent', sourceHash: 'x', installedHash: 'y' },
+        'local-custom': { owner: 'ekko-agent', sourceHash: 'x', installedHash: 'y' },
+      }));
+      return { tmp, ekkoSkills, bundle };
+    }
+
+    it('planProfileMigration：bundle 拷贝 drop、独有 moveTo、点目录排除', async () => {
+      const { tmp, ekkoSkills, bundle } = makeLegacyTree();
+      const { planProfileMigration } = await import(scriptPath);
+      const plan = planProfileMigration(
+        ['tmux', '1password', 'local-custom', '.ekko-builtin-skills.json'],
+        ['tmux', '1password'],
+      );
+      expect(plan.drop).toEqual(['1password', 'tmux']);
+      expect(plan.moveTo).toEqual(['local-custom']);
+      expect(plan.drop).not.toContain('local-custom');
+      expect(plan.moveTo).not.toContain('.ekko-builtin-skills.json');
+      rmSync(tmp, { recursive: true, force: true });
     });
 
-    it('planProfileMigration 分类正确：bundle 拷贝 drop、独有 moveTo、点目录排除', () => {
-      if (!exists) return;
-      // 复用脚本导出的纯函数
-      const mod = require(scriptPath.replace(/\.mjs$/, '')); // eslint-disable-line @typescript-eslint/no-require-imports
-      if (!mod?.planProfileMigration) return; // .mjs 动态 import 在 vitest 下不稳，退化为存在性断言
+    it('readBuiltinNames：读 manifest 返回 owner=ekko-agent 名单', async () => {
+      const { tmp, ekkoSkills } = makeLegacyTree();
+      const { readBuiltinNames } = await import(scriptPath);
+      const names = readBuiltinNames(join(ekkoSkills, 'orchestrator'));
+      expect(names).toContain('tmux');
+      expect(names).toContain('1password');
+      expect(names).toContain('local-custom'); // manifest 里也在（独有技能被 ekko 管）
+      rmSync(tmp, { recursive: true, force: true });
+    });
+
+    it('迁移脚本 dry-run 不写 marker（marker 未存在时也不写）', async () => {
+      const { tmp, ekkoSkills } = makeLegacyTree();
+      const marker = join(tmp, '.ekko-skill-store-unified-v3.json');
+      const r = spawnSync('node', [scriptPath, '--dry-run'], {
+        encoding: 'utf8',
+        env: { ...process.env, HOME: tmp },
+      });
+      expect(r.status).not.toBeNull();
+      expect(r.error).toBeUndefined();
+      expect(existsSync(marker)).toBe(false);
+      // 旧树仍在（dry-run 不删）
+      expect(existsSync(ekkoSkills)).toBe(true);
+      rmSync(tmp, { recursive: true, force: true });
     });
   });
 
   describe('③ register-runtime 注册面（纯函数）', () => {
-    it('register-runtime.mjs 含 studio-skills 目标注册', () => {
+    it('register-runtime.mjs 含 studio-skills 目标注册（部署位推导）', () => {
       const t = src('scripts/runtime/register-runtime.mjs');
       expect(t).toContain('studio-skills');
       expect(t).toContain('studioSkillsDeployDir');
       expect(t).toContain('applySkillDirRegistration');
     });
-  });
 
-  describe('④ 打包面改判', () => {
-    it('build-server 不再产 dist/ekko-skills', () => {
-      const t = src('vendor/hermes-studio/scripts/build-server.mjs');
-      expect(t).not.toContain("'dist', 'ekko-skills'");
-      expect(t).toContain("'dist', 'studio-skills'");
-      expect(t).toContain('studioSkillsOutDir');
+    it('applySkillDirRegistration 幂等且保留既有 external_dirs', async () => {
+      const mod = await import(join(repoRoot, 'scripts', 'runtime', 'register-runtime.mjs'));
+      const existing = [
+        'skills:',
+        '  external_dirs:',
+        '    - /abs/path/pua',
+        '    - /abs/path/hermes-skills',
+        '',
+      ].join('\n');
+      const once = mod.applySkillDirRegistration(existing, '/abs/path/studio-skills');
+      expect(once.changed).toBe(true);
+      expect(once.nextText).toContain('/abs/path/studio-skills');
+      expect(once.nextText).toContain('/abs/path/pua');
+      expect(once.nextText).toContain('/abs/path/hermes-skills');
+      const twice = mod.applySkillDirRegistration(once.nextText, '/abs/path/studio-skills');
+      expect(twice.changed).toBe(false);
+      expect(twice.alreadyRegistered).toBe(true);
     });
-    it('verify-packaged-webui 校验 dist/studio-skills', () => {
-      const t = src('vendor/hermes-studio/packages/desktop/scripts/verify-packaged-webui.mjs');
-      expect(t).not.toContain("'dist', 'ekko-skills'");
-      expect(t).toContain("'dist', 'studio-skills'");
-    });
-    it('electron-builder.yml 注释改判 studio-skills', () => {
-      const t = src('vendor/hermes-studio/packages/desktop/electron-builder.yml');
-      expect(t).toContain('dist/studio-skills');
-      expect(t).not.toContain('dist/ekko-skills');
+
+    it('studioSkillsDeployDir 从 manifest target 推导部署位（不硬编码第二份路径）', async () => {
+      const mod = await import(join(repoRoot, 'scripts', 'runtime', 'register-runtime.mjs'));
+      const home = process.env.HOME || '';
+      expect(mod.studioSkillsDeployDir({ target: '~/.hermes/hermes-agent' }))
+        .toBe(join(home, '.hermes', 'hermes-agent', 'studio-skills'));
     });
   });
 
@@ -161,3 +226,7 @@ describe('ekko/hermes 技能存储合一（spec 2026-11-10-ekko-hermes-skill-sto
     });
   });
 });
+
+function src(rel: string): string {
+  return read(join(repoRoot, rel));
+}

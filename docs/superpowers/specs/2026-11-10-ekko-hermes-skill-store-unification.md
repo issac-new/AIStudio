@@ -21,7 +21,7 @@
 
 ```
 ~/.hermes/profiles/<p>/skills/            ← 唯一技能树（hermes + ekko 两套 UI/agent 都读写）
-~/.hermes/hermes-agent/studio-skills/     ← 22 个原 ekko 内置技能正本（一份，只读共享根）
+~/.hermes/hermes-agent/studio-skills/     ← 22 个原 ekko 内置技能（一份，只读共享根，启动种子自 dist/studio-skills）
      ↑ hermes: skills.external_dirs（TIER_EXTERNAL，同名时 profile 版胜出）
      ↑ ekko:  config skills.profiles.<p>.externalDirectories（profile 根先、共享根后，同名语义一致）
 ~/.hermes-web-ui/.ekko/skill-sidecar/<p>/ ← ekko 备份/归档/元数据外移区（防 hermes rglob 扫到幽灵 SKILL.md）
@@ -41,17 +41,16 @@
 
 | # | 文件 | 改动 |
 |---|---|---|
-| 760 | `packages/ekko-agent/src/directories.ts` | `profileSkillsPath/profileSkillsDirectory` 改由注入的 hermes profile 解析器落位（不自带第二份映射；`default` 随 hermes 侧解析）；`synchronizeProfileSkills`/builtin 同步断开；`resetLegacySkillsDirectory` 改造为一次性迁移器（marker `.ekko-skill-store-unified-v3.json`：搬旧树独有技能→hermes 树，同名 hermes 胜；剩余 rename 隔离后删除）；`checkProfileSkills` 改校验 external 注册与共享根可读 |
+| 760 | `packages/ekko-agent/src/directories.ts`＋`packages/ekko-agent/src/setup.ts`（注入 `resolveProfileHome` 接线，含 sidecar 透传） | `profileSkillsPath/profileSkillsDirectory` 改由注入的 hermes profile 解析器落位（不自带第二份映射；`default` 随 hermes 侧解析）；`synchronizeProfileSkills`/builtin 同步断开；`resetLegacySkillsDirectory` 改造为一次性迁移器（marker `.ekko-skill-store-unified-v3.json`：搬旧树独有技能→hermes 树，同名 hermes 胜；剩余 rename 隔离后删除）；`checkProfileSkills` 改校验 external 注册与共享根可读 |
 | 761 | `packages/ekko-agent/src/tools/skills.ts` | `.ekko-backups`/`.ekko-archive`/`.ekko-skill.json` 落点外移到 `skill-sidecar` 区——必须做，否则备份/归档里的 SKILL.md 会被 hermes rglob 扫成幽灵技能 |
 | 762 | `packages/ekko-agent/src/setup.ts` ＋ `packages/server/src/modules/ekko/services/manager.ts` | 启动幂等注册每 profile `externalDirectories = [<hermes profile skills 根>, <studio-skills 共享根>]`（保留用户已有条目）；与补丁 566 同文件 hunk 分离 |
-| 763 | `packages/server/src/modules/ekko/services/skill-import.ts`/`skills.ts` | 导入与 CRUD 落点跟随新根（经 layout 传递，预计小改；与补丁 618 hunk 分离） |
-| 764 | `scripts/build-server.mjs`＋`packages/desktop/electron-builder.yml`＋`packages/desktop/scripts/verify-packaged-webui.mjs` | 去 `dist/ekko-skills` 拷贝/打包/校验，落实大 spec §5 下线项 |
+| 763 | （实证零改动，不落补丁） `packages/server/src/modules/ekko/services/skill-import.ts`/`skills.ts` | 导入与 CRUD 落点经 `ensureProfile(profile).skillDirectory` 传递，自动跟随新根 |
+| 764 | `scripts/build-server.mjs`＋`packages/desktop/electron-builder.yml`＋`packages/desktop/scripts/verify-packaged-webui.mjs`＋`packages/ekko-agent/src/directories.ts`（bundle 源解析） | `dist/ekko-skills` 改名 `dist/studio-skills`：打包面保留（种子来源），逐 profile 拷贝语义下线；原「下线」裁决转为「转共享根种子」 |
 
 **A 类（仓内自有面）**
 
-- `runtime/studio-skills/studio/<name>/`：22 技能正本，从主树**注入态**提取（含 patch 329/690 品牌化，不从 pristine vendor 提取）。
-- `runtime-manifest.json`：登记 studio-skills 条目（模式同 coding-delegate）。
-- `scripts/runtime/register-runtime.mjs`：扩展注册 studio-skills external_dirs（幂等）。
+- **共享根种子器**（`modules/ekko/services/manager.ts`，随补丁 762）：启动时把 bundle 源（开发树=注入态 vendor `packages/ekko-agent/skills`；打包 App=`dist/studio-skills`）种入 `<hermes root>/hermes-agent/studio-skills/studio/<name>`（每技能原子 rename、幂等重种对齐发布版）。**单正本=vendor 源，部署形态=种子一份**，替代原 52 份逐 profile 拷贝。
+- `scripts/runtime/register-runtime.mjs`：扩展注册 studio-skills external_dirs（幂等；挂**部署位**而非仓内路径——ekko 侧只认部署位，发布版 App 机器无仓路径，两侧必须同路径）。
 - `team/shared/generate-configs.py`：profile config 模板内置 `skills.external_dirs` 共享根（team 部署重写 config 后不丢）。
 - `scripts/maintenance/ekko-skill-store-migration.mjs`：本机一次性迁移脚本（规则与产品内嵌迁移器一致：校验→归档→删→报告）。
 - 测试：`custom/__tests__/ekko-skill-store-unification.test.ts`（迁移器行为/路径指向/sidecar 外移/external 注册幂等/build 不产 dist/ekko-skills）。
@@ -71,7 +70,7 @@
 | D2 | 唯一技能树＝`~/.hermes/profiles/<p>/skills` | hermes 是钉版上游、协作件全在 Python 侧；大 spec D1 已定 Hermes 唯一所有者 | 以 `.ekko/skills` 为基（否决：52 份拷贝模式本身是漂移源） |
 | D3 | 22 内置技能收编到 `studio-skills` 共享根，经 `external_dirs`/`externalDirectories` 只读挂载 | hermes 现成 TIER_EXTERNAL 机制；AIStudio 已有 register-runtime 逐 profile 注册先例；消除 52 份拷贝 | 逐 profile 复制进 hermes 树（否决：回到拷贝漂移老路） |
 | D4 | ekko 备份/归档/元数据外移 `.ekko/skill-sidecar` | hermes rglob 全递归会把 `.ekko-backups` 里的 SKILL.md 扫成幽灵技能 | 留在共享树（否决：污染 hermes 目录） |
-| D5 | `dist/ekko-skills` 打包面本批下线（build/electron-builder/verify 三处） | 大 spec §5 已裁；本批收编完成后 bundle 消费者已消失 | 留到 P3（否决：共享根正本在 runtime/，bundle 再无消费方） |
+| D5 | `dist/ekko-skills` 改名 `dist/studio-skills`，由「逐 profile 拷贝源」转为「机器级共享根种子源」 | 发布版 App 用户机器无开发仓、无人铺设共享根；正本=vendor 源，种子=启动一次性铺一份，仍满足大 spec §5「原拷贝语义下线」 | 整目录删除（否决：发布版 App 22 技能会消失） |
 
 ## 验证
 
