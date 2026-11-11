@@ -118,3 +118,5 @@ Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互�
 5. 缺少可靠来源时删除数字或标明未核实，不用旧值冒充现状。
 
 2026-11-11 zcode 同步批核对：zcode 基线谱系行与 Ycode 模块行随基线升 3.18.0（b95ebaff，单 sync 提交 5099 文件，spec 2026-11-11-zcode-3180-sync-and-qwen-absorb）；补丁 002/006 重生成、010 直放、新增 011（Qwen Code 1.0 吸收：MCP inputSchema 参数名消毒＋调用回译），活跃补丁 9→10。studio/agent/驾驶舱/teams/yuan 行持平。
+
+2026-11-11 同日收口修正（「完成未做」批）：bootstrap plugins.test **56/56 全绿**——同步批验证段初判「documents 两失败=上游存量债」系误判，真因=直跑 vitest 绕过 turbo 构建前置（test dependsOn build；office 族四插件＋node-repl-host/browser-use/zcode-site 产物缺位时 seed 完整性检查按设计拒发插件），补建后全绿；主检出引擎重建完成（pnpm install 刷新＋server 3.18.0 构建＋闭包补建）。基线行与版本值不受影响。
