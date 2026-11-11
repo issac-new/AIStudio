@@ -6,7 +6,7 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 |---|---|---|---|---|
 | hermes-studio | `cedaceaef` | v0.8.20（**tag 命名说明**：上游 v1.0.9 的 package.json 本就是 0.8.11，此后回归 0.8.x 线连发 v0.8.12~v0.8.20；v1.0.9→v0.8.20 谱系前进 63 提交非降级，台账以 git ancestry 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
 | hermes-agent | `3b4215785` | v0.23.1 | https://github.com/NousResearch/hermes-agent.git | 同上 |
-| zcode | `a9fe401e` | 包版本 3.17.2（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
+| zcode | `b95ebaff` | 包版本 3.18.0（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
 
 > 2026-10-31 升级轮：hermes-studio 基线已升 v0.8.0（本批，44 失败件重生成/2 退役/4 条迁位，重放零失败）；补丁 329 esp32 段随上游迁移改指 `packages/mcu/esp32-*`。hermes-agent 仍 v0.22.5（main 领先 3087c）。zcode 已于 2026-10-31 同步批升 `a60ba6a7`（v3.17.1 线，8 条活跃补丁重放零失败，002/006 重生成、引擎构建绿）；同步 spec 见 `2026-10-31-zcode-3171-sync.md`。
 
@@ -46,3 +46,5 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 
 - `vendor/zcode` 自带 npm+pnpm 双锁为上游形态原样保留（与 upstream/zcode 同文件逐字一致）；构建只走 pnpm（scripts/zcode-engine.mjs），npm 侧 package-lock.json 是上游历史残留、不参与任何流程，删除即基线漂移，故保留立档。
 - `upstream/<tree>` 是升级缓存树，保持 pristine（HEAD 与 vendor 钉版同 commit）。**禁止在其工作树手改 package.json/lock**——overlay 需要的新依赖一律走 patches/ 补丁在 vendor 注入态入册（manifest 先例：017 matrix-js-sdk、080 echarts、103 lunar、136 cron-parser、137 proper-lockfile、138 pg、573 playwright-163；锁收口：687）。2026-10-24 实测发现 upstream/hermes-studio 工作树存在 6 项手改脏态（影子双源），已还原 pristine，锁由补丁 687 正身承载。
+
+> 2026-11-11 同步批（spec `2026-11-11-zcode-3180-sync-and-qwen-absorb.md`）：zcode 基线升 **v3.18.0**（`b95ebaff`，单 sync 提交 5099 文件 +429348/−44745；主题=session-control 12 会话工具/插件 extension host+plugin-api 1.4.0/原生 git worktree 隔离/design 双线/登录分区+凭据 v2/子代理后台失速治理）。补丁面：002/006 锚漂移重生成（002=zcodeAgentService +465 后 import/method 锚漂、006=official-plugin-definitions 前插 design 条目+marketplaces 尾注并句），010 实测直放（上游 +142 未触插入锚）；新增 011（MCP inputSchema 参数名消毒＋调用回译，Qwen Code 1.0 唯一确凿差距吸收项）。净基线 10/10 重放零失败、inject 幂等二连过；upstream/zcode 缓存树同批 checkout b95ebaff。hermes-studio 维持 v0.8.20、hermes-agent 维持 v0.23.1（本批不动）。

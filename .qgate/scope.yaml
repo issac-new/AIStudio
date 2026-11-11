@@ -754,3 +754,20 @@ paths:
   # 2026-11-11 烧机续跑环（feat/run29-burn-resume）
   - docs/superpowers/specs/2026-11-11-burn-resume-attempts.md
   - simharness/mux/mx-burn-test.sh
+
+  # 2026-11-11 zcode 3.18.0 同步＋Qwen Code 1.0 吸收轮（feat/zcode-3180-sync）
+  - docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md
+  - docs/manuals/aistudio-training-and-user-guide.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md
+  - team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md
+  - RELEASE-MANIFEST.json
+  - scripts/__tests__/overlay-pristine-replay.test.ts
+  - vendor/VENDOR.md
+  - vendor/zcode/
+  - zcode-patches/002-import-session-rpc.patch
+  - zcode-patches/006-zcode-cua-plugin-bundled.patch
+  - zcode-patches/011-mcp-schema-sanitizer.patch
+  - zcode-patches/series

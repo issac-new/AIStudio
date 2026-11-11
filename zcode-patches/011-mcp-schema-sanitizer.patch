@@ -1,0 +1,426 @@
+diff --git a/apps/zcode-cli/packages/core/src/mcp/index.ts b/apps/zcode-cli/packages/core/src/mcp/index.ts
+index 09bcc9c3..c0f970a5 100644
+--- a/apps/zcode-cli/packages/core/src/mcp/index.ts
++++ b/apps/zcode-cli/packages/core/src/mcp/index.ts
+@@ -30,6 +30,7 @@ import {
+   normalizeMcpToolResultForModel,
+ } from "./image-normalization.js";
+ import { toMcpToolName, toModelVisibleMcpNamePart } from "./name.js";
++import { restoreOriginalArgKeys, sanitizeMcpInputSchema } from "./schema-sanitizer.js";
+ 
+ export {
+   createMcpAppProvidedToolEntry,
+@@ -135,6 +136,14 @@ export function createMcpToolEntry(
+   const isHostNodeReplExecution =
+     descriptor.serverName === "node_repl" && descriptor.toolName === "js";
+   const isCuaAppObservation = isZCodeCuaGetAppState(descriptor);
++  // overlay 011（Qwen Code 1.0 吸收）：模型 API 对 inputSchema 顶层属性名强制
++  // ^[a-zA-Z0-9_.-]{1,64}$，第三方 MCP server 常带 `8:BizyAir.aspect_ratio` 这类
++  // 冒号参数名，未消毒会被 provider 整单拒收（工具定义级失败，模型无纠错机会）。
++  // 消毒只作用于模型面投影（descriptor 原始 schema 不动）；调用时经 keyMap 回译原名分发。
++  const sanitizedInputSchema = sanitizeMcpInputSchema(
++    createModelFacingMcpInputSchema(descriptor, isCuaAppObservation),
++    descriptor.toolName,
++  );
+   // 宿主 node_repl 的 js 能执行本机 Node 代码，不能沿用普通未知 MCP 的 medium/network
+   // 默认值；否则权限 UI 会把文件/进程级能力错误描述成普通网络调用。
+   const sideEffectScope: ModelToolSideEffectScope = isHostNodeReplExecution ? "system" : "network";
+@@ -188,7 +197,7 @@ export function createMcpToolEntry(
+           modelContentProtection: OFFICIAL_CUA_FRAME_MODEL_CONTENT_PROTECTION,
+         }
+       : {}),
+-    inputSchema: createModelFacingMcpInputSchema(descriptor, isCuaAppObservation),
++    inputSchema: sanitizedInputSchema.schema as JsonSchema,
+     outputSchema: McpToolOutputJsonSchema,
+     metadata: {
+       shouldDefer: true,
+@@ -247,7 +256,11 @@ export function createMcpToolEntry(
+         {
+           serverName: descriptor.serverName,
+           toolName: descriptor.toolName,
+-          arguments: toMcpRuntimeArguments(input, isCuaAppObservation),
++          arguments:
++            restoreOriginalArgKeys(
++              toMcpRuntimeArguments(input, isCuaAppObservation),
++              sanitizedInputSchema.keyMap,
++            ) ?? {},
+           trace: {
+             traceId: context.traceId,
+             spanId: context.spanId,
+diff --git a/apps/zcode-cli/packages/core/src/mcp/schema-sanitizer.ts b/apps/zcode-cli/packages/core/src/mcp/schema-sanitizer.ts
+new file mode 100644
+index 00000000..1af098d5
+--- /dev/null
++++ b/apps/zcode-cli/packages/core/src/mcp/schema-sanitizer.ts
+@@ -0,0 +1,183 @@
++/**
++ * MCP inputSchema 顶层属性名消毒＋调用回译（overlay 011，2026-11-11 Qwen Code 1.0 吸收轮）。
++ *
++ * 来源：Qwen Code packages/core/src/mcp/mcp-schema-sanitizer.ts（Apache-2.0，
++ * Copyright 2026 Google LLC / Qwen Team，本文件保留其实现语义与许可声明）。
++ * 部分第三方 MCP server（ComfyUI 桥接类为代表）会产出内嵌节点 id/类名的参数名，如
++ * `8:BizyAir_NanoBanana2.aspect_ratio`——`:` 不合模型 API 对 inputSchema 顶层
++ * 属性名的 `^[a-zA-Z0-9_.-]{1,64}$` 约束，provider 会整单拒收（工具定义级失败，
++ * 模型侧无自我纠错机会）。
++ *
++ * 约束：只改写顶层 properties key 并镜像进 required；嵌套结构（items/子对象）不动
++ * ——约束实际只施加在顶层，保持回译路径简单正确。改写保留 sanitized→original 映射，
++ * 模型调用时经 restoreOriginalArgKeys 还原为原始名再分发到 MCP server。
++ */
++
++/** 模型 API 对 input_schema 顶层属性名强制的模式。 */
++export const MCP_PROPERTY_KEY_PATTERN = /^[a-zA-Z0-9_.-]{1,64}$/;
++
++/** 单字符白名单（逐码点改写依据）。 */
++const MCP_PROPERTY_CHAR_PATTERN = /[a-zA-Z0-9_.-]/;
++
++/** 消毒后属性名长度上限。 */
++const MAX_KEY_LENGTH = 64;
++
++export interface SanitizedMcpInputSchema {
++  /** 可安全送达模型 API 的 schema；无需改写时原引用返回。 */
++  schema: unknown;
++  /** 顶层属性 sanitized→original 映射；未发生改写时为 null。 */
++  keyMap: Map<string, string> | null;
++}
++
++function sanitizeKey(key: string): string {
++  let out = "";
++  for (const ch of key) {
++    out += MCP_PROPERTY_CHAR_PATTERN.test(ch) ? ch : "_";
++  }
++  if (out.length === 0) out = "_";
++  if (out.length > MAX_KEY_LENGTH) out = out.slice(0, MAX_KEY_LENGTH);
++  return out;
++}
++
++/**
++ * 修剪 required 中引用了 properties 未定义名字的「幽灵项」。部分 server 会把
++ * `//TODO: Add Field Name 0` 这类占位名写进 required；严格校验的 provider
++ * （Moonshot/Kimi 实测）会因此拒收整个工具 schema，砸掉整会话的请求，故防御性剪除。
++ * 非字符串项原样保留；无删减时返回 undefined 以保持原引用快路径。
++ */
++function pruneGhostRequired(
++  required: unknown,
++  validNames: Set<string>,
++): unknown[] | undefined {
++  if (!Array.isArray(required)) return undefined;
++  const cleaned = (required as unknown[]).filter(
++    (r) => typeof r !== "string" || validNames.has(r),
++  );
++  if (cleaned.length === required.length) return undefined;
++  return cleaned;
++}
++
++export function sanitizeMcpInputSchema(
++  input: unknown,
++  toolName?: string,
++): SanitizedMcpInputSchema {
++  if (!input || typeof input !== "object") {
++    return { schema: input, keyMap: null };
++  }
++
++  const schemaObj = input as Record<string, unknown>;
++  const properties = schemaObj["properties"];
++  if (!properties || typeof properties !== "object") {
++    if (schemaObj["type"] !== "object") {
++      return { schema: input, keyMap: null };
++    }
++    const cleanedRequired = pruneGhostRequired(schemaObj["required"], new Set());
++    if (cleanedRequired !== undefined) {
++      return { schema: { ...schemaObj, required: cleanedRequired }, keyMap: null };
++    }
++    return { schema: input, keyMap: null };
++  }
++
++  const propsObj = properties as Record<string, unknown>;
++  const originalKeys = Object.keys(propsObj);
++
++  // 快路径：全部合规时仅剩幽灵 required 一种隐患，剪除后其余原引用不动。
++  if (originalKeys.every((k) => MCP_PROPERTY_KEY_PATTERN.test(k))) {
++    const cleanedRequired = pruneGhostRequired(
++      schemaObj["required"],
++      new Set(originalKeys),
++    );
++    if (cleanedRequired === undefined) {
++      return { schema: input, keyMap: null };
++    }
++    return { schema: { ...schemaObj, required: cleanedRequired }, keyMap: null };
++  }
++
++  const newProperties: Record<string, unknown> = {};
++  const sanitizedToOriginal = new Map<string, string>();
++  const originalToSanitized = new Map<string, string>();
++  const usedKeys = new Set<string>();
++
++  // 第一遍：先为所有原生合规名占位，防止后续改写名静默覆盖既有同名兄弟
++  // （如 `foo:bar` 先于 `foo_bar` 出现时，前者必须让位成 `foo_bar_1`）。
++  for (const original of originalKeys) {
++    if (MCP_PROPERTY_KEY_PATTERN.test(original)) {
++      usedKeys.add(original);
++    }
++  }
++
++  // 第二遍：按原始顺序产出，仅改写不合规名，并对碰撞消歧。
++  for (const original of originalKeys) {
++    let sanitized: string;
++    if (MCP_PROPERTY_KEY_PATTERN.test(original)) {
++      sanitized = original;
++    } else {
++      sanitized = sanitizeKey(original);
++      if (usedKeys.has(sanitized)) {
++        // 动态后缀预算保证结果不超 MAX_KEY_LENGTH（极端碰撞 `_1`…`_1000` 同理）。
++        let suffix = 1;
++        let candidate: string;
++        do {
++          const suffixStr = `_${suffix}`;
++          const baseBudget = Math.max(0, MAX_KEY_LENGTH - suffixStr.length);
++          candidate = sanitized.slice(0, baseBudget) + suffixStr;
++          suffix += 1;
++        } while (usedKeys.has(candidate));
++        sanitized = candidate;
++      }
++      usedKeys.add(sanitized);
++    }
++    newProperties[sanitized] = propsObj[original];
++    if (sanitized !== original) {
++      sanitizedToOriginal.set(sanitized, original);
++      originalToSanitized.set(original, sanitized);
++    }
++  }
++
++  if (sanitizedToOriginal.size === 0) {
++    return { schema: input, keyMap: null };
++  }
++
++  const newSchema: Record<string, unknown> = {
++    ...schemaObj,
++    properties: newProperties,
++  };
++
++  const required = schemaObj["required"];
++  if (Array.isArray(required)) {
++    const validNames = new Set(Object.keys(newProperties));
++    const mapped = (required as unknown[]).map((r) =>
++      typeof r === "string" ? (originalToSanitized.get(r) ?? r) : r,
++    );
++    newSchema["required"] = pruneGhostRequired(mapped, validNames) ?? mapped;
++  }
++
++  return { schema: newSchema, keyMap: sanitizedToOriginal };
++}
++
++/**
++ * 把模型产出的顶层参数键回译为 MCP server 的原始属性名（分发前调用）。
++ * 无需改写时原引用返回。
++ */
++export function restoreOriginalArgKeys(
++  args: Record<string, unknown> | undefined,
++  keyMap: Map<string, string> | null | undefined,
++): Record<string, unknown> | undefined {
++  if (!args || !keyMap || keyMap.size === 0) return args;
++
++  let needsRewrite = false;
++  for (const k of Object.keys(args)) {
++    if (keyMap.has(k)) {
++      needsRewrite = true;
++      break;
++    }
++  }
++  if (!needsRewrite) return args;
++
++  const result: Record<string, unknown> = {};
++  for (const [key, value] of Object.entries(args)) {
++    const original = keyMap.get(key);
++    result[original ?? key] = value;
++  }
++  return result;
++}
+diff --git a/apps/zcode-cli/packages/core/tests/mcp-schema-sanitizer.test.ts b/apps/zcode-cli/packages/core/tests/mcp-schema-sanitizer.test.ts
+new file mode 100644
+index 00000000..cb2743c5
+--- /dev/null
++++ b/apps/zcode-cli/packages/core/tests/mcp-schema-sanitizer.test.ts
+@@ -0,0 +1,182 @@
++/**
++ * overlay 011（Qwen Code 1.0 吸收轮）：MCP inputSchema 参数名消毒＋调用回译。
++ * 来源与设计约束见 ../src/mcp/schema-sanitizer.ts 头注。
++ */
++import { describe, expect, it } from "vitest";
++import type { McpPort, McpToolDescriptor, ToolExecutionContext } from "@zcode/contracts";
++import {
++  MCP_PROPERTY_KEY_PATTERN,
++  restoreOriginalArgKeys,
++  sanitizeMcpInputSchema,
++} from "../src/mcp/schema-sanitizer.js";
++import { createMcpToolEntry } from "../src/mcp/index.js";
++
++describe("sanitizeMcpInputSchema", () => {
++  it("合规 schema 走快路径：原引用返回且不产生 keyMap", () => {
++    const schema = {
++      type: "object" as const,
++      properties: { aspect_ratio: { type: "string" } },
++      required: ["aspect_ratio"],
++    };
++    const result = sanitizeMcpInputSchema(schema, "tool");
++    expect(result.schema).toBe(schema);
++    expect(result.keyMap).toBeNull();
++  });
++
++  it("冒号参数名被改写并镜像 required（ComfyUI 桥接类实名形态）", () => {
++    const result = sanitizeMcpInputSchema(
++      {
++        type: "object",
++        properties: {
++          "8:BizyAir_NanoBanana2.aspect_ratio": { type: "string" },
++          prompt: { type: "string" },
++        },
++        required: ["8:BizyAir_NanoBanana2.aspect_ratio", "prompt"],
++      },
++      "tool",
++    );
++    const schema = result.schema as { properties: Record<string, unknown>; required: string[] };
++    expect(Object.keys(schema.properties)).toEqual([
++      "8_BizyAir_NanoBanana2.aspect_ratio",
++      "prompt",
++    ]);
++    expect(schema.required).toEqual(["8_BizyAir_NanoBanana2.aspect_ratio", "prompt"]);
++    expect(result.keyMap).toEqual(
++      new Map([["8_BizyAir_NanoBanana2.aspect_ratio", "8:BizyAir_NanoBanana2.aspect_ratio"]]),
++    );
++  });
++
++  it("改写名与既有合规兄弟碰撞时后缀消歧，且原生合规名不被改写", () => {
++    const result = sanitizeMcpInputSchema({
++      type: "object",
++      properties: {
++        "foo:bar": { type: "string" },
++        foo_bar: { type: "number" },
++      },
++    });
++    const schema = result.schema as { properties: Record<string, unknown> };
++    expect(Object.keys(schema.properties)).toEqual(["foo_bar_1", "foo_bar"]);
++    expect(result.keyMap).toEqual(new Map([["foo_bar_1", "foo:bar"]]));
++  });
++
++  it("required 引用未定义属性的幽灵项被剪除（严格 provider 拒收整单的防线）", () => {
++    const schema = {
++      type: "object" as const,
++      properties: { a: { type: "string" } },
++      required: ["a", "//TODO: Add Field Name 0"],
++    };
++    const result = sanitizeMcpInputSchema(schema, "tool");
++    expect(result.schema).not.toBe(schema);
++    expect((result.schema as { required: string[] }).required).toEqual(["a"]);
++    expect(result.keyMap).toBeNull();
++  });
++
++  it("超长参数名截断到 64 字符上限", () => {
++    const long = `${"x".repeat(80)}:tail`;
++    const result = sanitizeMcpInputSchema({
++      type: "object",
++      properties: { [long]: { type: "string" } },
++    });
++    const key = Object.keys((result.schema as { properties: Record<string, unknown> }).properties)[0];
++    expect(key.length).toBeLessThanOrEqual(64);
++    expect(MCP_PROPERTY_KEY_PATTERN.test(key)).toBe(true);
++  });
++});
++
++describe("restoreOriginalArgKeys", () => {
++  it("模型按消毒名调用时回译为原始名", () => {
++    const keyMap = new Map([["8_BizyAir_NanoBanana2.aspect_ratio", "8:BizyAir_NanoBanana2.aspect_ratio"]]);
++    const args = { "8_BizyAir_NanoBanana2.aspect_ratio": "16:9", prompt: "hi" };
++    expect(restoreOriginalArgKeys(args, keyMap)).toEqual({
++      "8:BizyAir_NanoBanana2.aspect_ratio": "16:9",
++      prompt: "hi",
++    });
++  });
++
++  it("keyMap 缺席或无命中时原引用返回", () => {
++    const args = { a: 1 };
++    expect(restoreOriginalArgKeys(args, null)).toBe(args);
++    expect(restoreOriginalArgKeys(args, new Map([["b", "c"]]))).toBe(args);
++  });
++});
++
++describe("createMcpToolEntry 接线（模型面消毒＋分发回译）", () => {
++  function fakeMcpPort(captured: Array<Record<string, unknown>>): McpPort {
++    return {
++      connectConfiguredServers: async () => ({ statuses: {}, tools: [] }),
++      connectServer: async () => ({
++        status: "connected",
++        transport: "stdio",
++        toolCount: 1,
++        updatedAt: "now",
++      }),
++      disconnectServer: async () => undefined,
++      status: async () => ({}),
++      listTools: async () => [],
++      callTool: async (request) => {
++        captured.push(request.arguments as Record<string, unknown>);
++        return { content: [{ type: "text", text: "ok" }] };
++      },
++      close: async () => {},
++    };
++  }
++
++  function context(): ToolExecutionContext {
++    return {
++      abortSignal: new AbortController().signal,
++      sessionId: "sess-sanitizer" as never,
++      toolCallId: "tool-sanitizer",
++      traceId: "trace-sanitizer" as never,
++      workingDirectory: "/tmp/project",
++      workspaceRoot: "/tmp/project",
++    } as ToolExecutionContext;
++  }
++
++  it("模型看到消毒后的 schema；调用参数在分发前回译为原始名", async () => {
++    const descriptor: McpToolDescriptor = {
++      serverName: "comfyui-bridge",
++      toolName: "generate",
++      inputSchema: {
++        type: "object",
++        properties: {
++          "8:BizyAir_NanoBanana2.aspect_ratio": { type: "string" },
++          prompt: { type: "string" },
++        },
++        required: ["8:BizyAir_NanoBanana2.aspect_ratio"],
++      },
++    };
++    const captured: Array<Record<string, unknown>> = [];
++    const entry = createMcpToolEntry(
++      "mcp__comfyui-bridge__generate",
++      descriptor,
++      fakeMcpPort(captured),
++      false,
++    );
++
++    const modelSchema = entry.inputSchema as { properties: Record<string, unknown> };
++    expect(Object.keys(modelSchema.properties)).toContain("8_BizyAir_NanoBanana2.aspect_ratio");
++    expect(Object.keys(modelSchema.properties)).not.toContain("8:BizyAir_NanoBanana2.aspect_ratio");
++
++    await entry.handler(
++      { "8_BizyAir_NanoBanana2.aspect_ratio": "16:9", prompt: "a cat" },
++      context(),
++    );
++    expect(captured).toEqual([
++      { "8:BizyAir_NanoBanana2.aspect_ratio": "16:9", prompt: "a cat" },
++    ]);
++  });
++
++  it("消毒器为纯函数：createMcpToolEntry 不改动 descriptor 原始 schema", () => {
++    const inputSchema = {
++      type: "object",
++      properties: { "8:BizyAir_NanoBanana2.aspect_ratio": { type: "string" } },
++    };
++    const descriptor: McpToolDescriptor = {
++      serverName: "comfyui-bridge",
++      toolName: "generate",
++      inputSchema,
++    };
++    createMcpToolEntry("mcp__comfyui-bridge__generate", descriptor, fakeMcpPort([]), false);
++    expect(Object.keys(inputSchema.properties)).toEqual(["8:BizyAir_NanoBanana2.aspect_ratio"]);
++  });
++});
