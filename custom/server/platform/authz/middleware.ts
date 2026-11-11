@@ -19,6 +19,13 @@ export function requireProfileParameterAccess(parameter: string) {
     if (user && !Array.isArray(user.profiles) && user.username) {
       user.profiles = [user.username]
     }
+    // N29-17（run29 G4 实证补全）：toAuthenticatedUser 构造的 JWT principal 不携带
+    // status 字段，canAccessProfile 的 status==='active' 条件恒假——N28-3 只回填
+    // profiles 治错了字段，403 依旧。到达授权层的 principal 必然在役（上游认证
+    // 中间件已拒绝禁用/不存在用户），缺场=在役；??= 保留显式携带值。
+    if (user && user.status === undefined) {
+      user.status = 'active'
+    }
     if (typeof profile !== 'string' || !profile || !canAccessProfile(user, profile)) {
       fail(ctx, 403, '无权访问该 profile')
       return

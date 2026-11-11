@@ -165,4 +165,22 @@ describe('requireProfileParameterAccess', () => {
     await requireProfileParameterAccess('name')(superAdmin, superNext)
     expect(superNext).toHaveBeenCalledTimes(1)
   })
+
+  // N29-17（run29 G4 实证）：toAuthenticatedUser 构造的 JWT principal 无 status 无 profiles
+  // （username 在）——N28-3 只回填 profiles 时 canAccessProfile 的 status 条件恒假仍 403。
+  it('JWT principal 缺 status 缺 profiles 时同名 profile 放行（status 缺场=在役）', async () => {
+    const ctx = profileContext({ id: 3, username: 'fanfan', role: 'admin' }, 'fanfan')
+    const next = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(ctx, next)
+    expect(next).toHaveBeenCalledTimes(1)
+    expect(ctx.status).not.toBe(403)
+  })
+
+  it('显式 disabled 的 principal 不得被回填洗白', async () => {
+    const ctx = profileContext({ id: 4, username: 'bob', role: 'admin', status: 'disabled' }, 'bob')
+    const next = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(ctx, next)
+    expect(ctx.status).toBe(403)
+    expect(next).not.toHaveBeenCalled()
+  })
 })
