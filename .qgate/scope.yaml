@@ -771,3 +771,8 @@ paths:
   - zcode-patches/006-zcode-cua-plugin-bundled.patch
   - zcode-patches/011-mcp-schema-sanitizer.patch
   - zcode-patches/series
+
+  # 2026-11-11 G4 principal status 回填（fix/g4-profile-status）
+  - docs/superpowers/specs/2026-11-11-g4-principal-status-backfill.md
+  - custom/server/platform/authz/middleware.ts
+  - custom/server/platform/__tests__/policy.test.ts
