@@ -776,3 +776,8 @@ paths:
   - docs/superpowers/specs/2026-11-11-g4-principal-status-backfill.md
   - custom/server/platform/authz/middleware.ts
   - custom/server/platform/__tests__/policy.test.ts
+
+  # 2026-11-11 userenv 路径逃逸先于授权判 400（fix/userenv-escape-400）
+  - custom/server/platform/authz/middleware.ts
+  - custom/server/platform/__tests__/policy.test.ts
+  - docs/superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md
