@@ -153,10 +153,12 @@ if [[ "$_gw_healthy" = 1 ]]; then
       if [[ -n "$_etime" ]]; then
         _er="$_etime"
         case "$_er" in
-          *-*) _ed=${_er%%-*}; _er=${_er#*-}; _es=$(( _ed * 86400 )) ;;
+          *-*) _ed=${_er%%-*}; _er=${_er#*-}; _es=$(( 10#$_es + 10#$_ed * 86400 )) ;;
         esac
         IFS=: read -r _eh _em _esec <<< "$_er"
-        _es=$(( _es + ${_eh:-0} * 3600 + ${_em:-0} * 60 + ${_esec:-0} ))
+        # 10# 强制十进制（N29-18）：ps etime 前导零（如 08 分）按八进制解析——
+        # 「value too great for base」炸断 mx-up，product-dist 供给被静默跳过。
+        _es=$(( 10#$_es + 10#${_eh:-0} * 3600 + 10#${_em:-0} * 60 + 10#${_esec:-0} ))
       fi
       if [[ "$_es" -gt 0 ]]; then
         _gw_start=$(( $(date +%s) - _es ))
