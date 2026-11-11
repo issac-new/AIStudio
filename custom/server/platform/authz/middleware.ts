@@ -16,7 +16,7 @@ export function requireProfileParameterAccess(parameter: string) {
     // 畸形请求，先于授权判 400——设计文档口径（方案 §5.11 组 11「逃逸先于 404 判」）；
     // 403 会把畸形请求伪装成授权问题，且控制器的 400 判被本中间件前置拦截永远不可达。
     if (typeof profile === 'string' && (profile.includes('/') || profile.includes('\\') || profile.includes('..') || profile.includes('%') || profile.includes('\0'))) {
-      fail(ctx, 400, 'invalid_profile_name', { problems: ['profile 参数含非法字符（路径逃逸）'] })
+      fail(ctx, 400, 'profile 参数含非法字符（路径逃逸）', { code: 'invalid_profile_name', problems: ['profile 参数含非法字符（路径逃逸）'] })
       return
     }
 
