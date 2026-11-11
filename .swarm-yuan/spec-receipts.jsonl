@@ -308,3 +308,4 @@
 {"at":"2026-11-11T05:46:43Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"0ed9eb7f4da70cad05130b40f38d0898e99d52bb","commit":"67267e3ac"}
 {"at":"2026-11-11T06:34:42Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"32fe804499df9bead2deeffdaa5f0401d678440c","commit":"762e64acb"}
 {"at":"2026-11-11T15:25:10Z","spec":"docs/superpowers/specs/2026-11-11-g4-principal-status-backfill.md","receipt":"1ef94562a1fa330df660996ccbbe7b4a08d7329d","commit":"eb6e9e7ae"}
+{"at":"2026-11-11T15:43:55Z","spec":"docs/superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md","receipt":"0076ad6ab2b40022f5814aa41684cf7ccdcd8072","commit":"14d9fd661"}

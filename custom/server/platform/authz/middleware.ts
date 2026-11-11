@@ -12,6 +12,14 @@ export function requireProfileParameterAccess(parameter: string) {
       return
     }
     const profile = ctx.params?.[parameter]
+    // N29-19（run29 G4 userenv 负例实证）：profile 参数含路径逃逸/分隔符/编码痕迹＝
+    // 畸形请求，先于授权判 400——设计文档口径（方案 §5.11 组 11「逃逸先于 404 判」）；
+    // 403 会把畸形请求伪装成授权问题，且控制器的 400 判被本中间件前置拦截永远不可达。
+    if (typeof profile === 'string' && (profile.includes('/') || profile.includes('\\') || profile.includes('..') || profile.includes('%') || profile.includes('\0'))) {
+      fail(ctx, 400, 'invalid_profile', { problems: ['profile 参数含非法字符（路径逃逸）'] })
+      return
+    }
+
     // N28-3（run28 收尾批）：JWT claims 无 profiles 字段时按用户名回填——「用户默认可访问
     // 与自己同名的 profile」。run28 实录：studio 签发的 JWT 只含 role/matrix_user_id，
     // canAccessProfile 仅 super_admin 直通，普通用户访问自己的 profile env 恒 403

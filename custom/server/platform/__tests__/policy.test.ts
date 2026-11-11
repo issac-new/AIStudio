@@ -183,4 +183,13 @@ describe('requireProfileParameterAccess', () => {
     expect(ctx.status).toBe(403)
     expect(next).not.toHaveBeenCalled()
   })
+
+  // N29-19：路径逃逸 profile 先于授权判 400（403 会伪装成授权问题，控制器 400 判被前置拦截不可达）
+  it('profile 参数路径逃逸 → 400 invalid_profile（先于授权）', async () => {
+    const ctx = profileContext({ id: 5, username: 'alice', role: 'admin', status: 'active', profiles: ['alice'] }, '..%2f..%2fetc')
+    const next = vi.fn(async () => {})
+    await requireProfileParameterAccess('name')(ctx, next)
+    expect(ctx.status).toBe(400)
+    expect(next).not.toHaveBeenCalled()
+  })
 })
