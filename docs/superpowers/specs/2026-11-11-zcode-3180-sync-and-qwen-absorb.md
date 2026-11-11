@@ -37,7 +37,8 @@
 - 类型面：`core` 包 `tsc --noEmit` 0 错（011 插桩类型正确）。
 - 引擎构建：`node scripts/zcode-engine.mjs ensure` rc=0（pnpm install＋packages/server tsup＋build:remote 全绿）。
 - 冒烟：importSessionV4 RPC 在构建产物 entry-http.js 命中；skills 三根（.zcode/.agents/.claude）在注入态 roots.ts；CUA broker.js/node-backend.js `node --check` 过；011 schema-sanitizer.js 进 core dist 且被 dist/mcp/index.js 引用。
-- bootstrap `plugins.test.ts`：56 例 54 过，2 失败（documents 发现缺席两例）**pristine 同败定谳=上游 3.18.0 存量测试债**（stash 四文件回 pristine 复跑同败，与本批补丁无关）；006 翻转测试「computer-use 默认启用」过。
+- bootstrap `plugins.test.ts`：**56/56 全过（2026-11-11 收口修正实记）**。初判「2 失败=上游存量测试债」系**误判**——stash 对照只证明与补丁无关，未排除环境构建变量；真因=直跑 vitest 绕过了 turbo 构建前置（`test` dependsOn `build` 会先建 office 族四插件 dist＋node-repl-host/browser-use/zcode-site 产物，缺产物时 seed 完整性检查按设计拒发插件），补建后全绿。006 翻转测试「computer-use 默认启用」过。
+- 主检出引擎重建（收口批补做）：`pnpm install` 刷新（补 session-control 等新依赖）＋`@zcode/server` 构建（3.18.0 entry-http 4.29MB）＋bootstrap 依赖闭包与插件族 dist 补建全绿。
 - 台账对账：`npm run release:check` ycode=3.18.0 对账（见提交描述实记）。
 
 ## 设计文档影响
