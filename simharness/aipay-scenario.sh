@@ -2127,6 +2127,13 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   capture_step "testpass_done" "/app/stage/build?tab=board"
   capture_step "eval_done" "/app/eval" "click:[data-testid=eval-tab-metrics]"
 
+  # N29-20（run29 G4 死锁根治）：能力探测 rc!=0 时不得置 testpass_done——旧逻辑只挡
+  # g4_pass 不挡 testpass_done，重入按 done 键跳过探针段→ready 前置闸恒拦→监督器
+  # 无限重启零重试。改为不置 done 键即退出，断点重进重跑探针（产品修复/扩容后自愈；
+  # 评测子门 GAP 语义不变——eval 失败仍放行 testpass_done，只如实记 gap）。
+  if (( _cap_rc != 0 )); then
+    fail "G4 能力探测 rc=${_cap_rc}——不置 testpass_done，断点重进重跑探针（N29-20 防死锁）"
+  fi
   sset testpass_done 1
   # G4 置位条件：评测子门 0/4 且新能力探测全绿——两者任一失败都不置 g4_pass。
   if (( _eval_gate_ok == 1 && _cap_rc == 0 )); then
