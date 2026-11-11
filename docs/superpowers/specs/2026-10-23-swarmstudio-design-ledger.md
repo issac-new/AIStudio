@@ -73,10 +73,10 @@
 |---|---|---|
 | hermes-studio 基线 | v0.8.20 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.23.1 | `vendor/VENDOR.md` |
-| zcode 基线谱系 | v3.16.1 系列（包版本 3.17.2 @a9fe401e，2026-11-03 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
+| zcode 基线谱系 | v3.16.1 系列（包版本 3.18.0 @b95ebaff，2026-11-11 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
 | 驾驶舱模块 | 0.8.20-studio.2 | `RELEASE-NOTES.md` |
 | agent teams 模块 | v0.23.1-team.2 | `team/VERSION` |
-| Ycode 模块 | 3.17.2 | `vendor/zcode/package.json` |
+| Ycode 模块 | 3.18.0 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
 | yuan skill 模块 | v2.100.3 | `skills/swarm-yuan/CHANGELOG.md` |
 | 整体源码包 | 1.0.15-overlay | 仓根 `package.json` 与发布清单 |
@@ -116,3 +116,5 @@ Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互�
 3. 版本变化时，先更新版本载体，再更新本表核实值与核实日。
 4. 动态实现计数不写入设计正文，也不追加到本表。
 5. 缺少可靠来源时删除数字或标明未核实，不用旧值冒充现状。
+
+2026-11-11 zcode 同步批核对：zcode 基线谱系行与 Ycode 模块行随基线升 3.18.0（b95ebaff，单 sync 提交 5099 文件，spec 2026-11-11-zcode-3180-sync-and-qwen-absorb）；补丁 002/006 重生成、010 直放、新增 011（Qwen Code 1.0 吸收：MCP inputSchema 参数名消毒＋调用回译），活跃补丁 9→10。studio/agent/驾驶舱/teams/yuan 行持平。

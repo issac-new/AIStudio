@@ -174,6 +174,7 @@ curl -s https://pypi.org/pypi/lh-harness/json | jq -r '.info.version, .releases[
 
 ## 八、变更日志
 
+- 2026-11-11 zcode 3.18.0 同步批：运行时基线三树 zcode 进位 a9fe401e→b95ebaff（v3.18.0，单 sync 提交 5099 文件；session-control/插件 extension host/worktree 隔离/登录 v2 随基线获得）；补丁 002/006 重生成＋新增 011（MCP inputSchema 参数名消毒＋调用回译，Qwen Code 1.0 逐项对照唯一确凿差距吸收项）。spec `2026-11-11-zcode-3180-sync-and-qwen-absorb.md`。
 - 2026-11-09 裁决执行批（同日晚）：判级升档 better-harness/pi-harness 落表（用户令「完成未做」）；OpenExecutive v0.7.0 delta 收口（外置盘 openexec-delta-20261109/）；ATT- 2026-11-09 台账刷新批：点名刷新 32 点位CK v20.1 句刷新。spec `2026-11-09-ledger-judgment-followup.md`。
 - 2026-11-09 台账刷新批：点名刷新 32 点位（26＋补测 6）；openagentontology RETIRED 复核通过（94 天定谳）；x402 1497c 异常证伪（343c）挂账关闭；Graph-Engineering 正名锚定；DeepInfer +1c 漂移记档；判级建议升 🔴 2 条（better-harness/pi-harness）与 OpenExecutive v0.7.0 delta 重跑待用户裁决。spec `2026-11-09-runtime-deps-refresh.md`。
 

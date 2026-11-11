@@ -478,7 +478,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（178 份）
+## 2026-11（181 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -658,6 +658,9 @@
 - [2026-11-10-zcode-openfile-workspace.md](../superpowers/specs/2026-11-10-zcode-openfile-workspace.md)
 - [2026-11-11-release-v1.0.15-overlay.md](../superpowers/specs/2026-11-11-release-v1.0.15-overlay.md)
 - [2026-11-11-run29-prelude.md](../superpowers/specs/2026-11-11-run29-prelude.md)
+- [2026-11-11-zcode-3180-sync-and-qwen-absorb.md](../superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md)
+- [2026-11-11-g2-completion-summary-channel.md](../superpowers/specs/2026-11-11-g2-completion-summary-channel.md)
+- [2026-11-11-burn-resume-attempts.md](../superpowers/specs/2026-11-11-burn-resume-attempts.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。

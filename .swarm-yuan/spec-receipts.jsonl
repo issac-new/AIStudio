@@ -304,3 +304,5 @@
 {"at":"2026-11-10T16:33:37Z","spec":"docs/superpowers/specs/2026-11-11-run29-prelude.md","receipt":"5a914d09c209bf2f7edcf6c1a0b56eb682a0bef1","commit":"3285fc707"}
 {"at":"2026-11-10T18:08:47Z","spec":"docs/superpowers/specs/2026-11-11-g2-completion-summary-channel.md","receipt":"6c73b4b5d2f9a2a96aa29dc3d7585976b0c4ad88","commit":"39de89e2e"}
 {"at":"2026-11-10T20:06:08Z","spec":"docs/superpowers/specs/2026-11-11-burn-resume-attempts.md","receipt":"799217c0cb5b1d62fce6da521da3956cf7ea6ade","commit":"6c44987b4"}
+{"at":"2026-11-11T05:38:02Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"c1ef287c06f73b911c184b491ee4068843d0ab73","commit":"f7eb68330"}
+{"at":"2026-11-11T05:46:43Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"0ed9eb7f4da70cad05130b40f38d0898e99d52bb","commit":"67267e3ac"}

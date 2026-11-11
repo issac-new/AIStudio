@@ -20,12 +20,14 @@ function run(cmd: string, cwd: string) {
   return execSync(cmd, { cwd, encoding: 'utf8', timeout: 240_000, stdio: ['ignore', 'pipe', 'pipe'] })
 }
 
-// 临时 worktree 注册与删除走 git 通道（与 .claude/worktrees 同纪律；孤儿由 prune 兜底）
+// 临时 worktree 注册与删除走 git 通道（与 .claude/worktrees 同纪律；孤儿由 prune 兜底）。
+// 超时 120s：全量套件并行满载下 git worktree remove --force 对大树可超 vitest 默认 10s
+// 钩子时限（2026-11-11 zcode 3.18.0 同步批全量两连红实证：测试本体过、清理钩子超时假红）。
 afterAll(() => {
   try { run('git worktree remove --force .', TMP_WT) } catch { /* 目录可能已被删 */ }
   try { execSync('git worktree prune', { cwd: REPO }) } catch { /* best-effort */ }
   rmSync(TMP_WT, { recursive: true, force: true })
-})
+}, 120_000)
 
 describe('overlay 补丁系列 pristine 全量重放（三 lane 真管线）', () => {
   it('clean+inject 在 pristine worktree 达到 manifest complete（zcode 002-009 + patches 全系可应用）', () => {

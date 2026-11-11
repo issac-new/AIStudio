@@ -1,6 +1,8 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
-# 基线: origin/main @ a9fe401e (v3.17.2 线, 2026-11-03 同步批；同步口径=上游 main 变更非版本 tag)。
+# 基线: origin/main @ b95ebaff (v3.18.0 线, 2026-11-11 同步批；同步口径=上游 main 变更非版本 tag)。
+# 2026-11-11 同步批（spec 2026-11-11-zcode-3180-sync-and-qwen-absorb）：a9fe401e→b95ebaff
+# 单 sync 提交 5099 文件 +429348/−44745；002/006 锚漂移重生成（010 实测直放），净基线 10/10 全过。
 #
 # 001 已退役（2026-10-21 v3.16.1 基线轮）：上游 tsup.config.ts 已原生把 yazl 列入
 # external（附带 ESM require("fs") 崩溃原因注释），补丁语义被上游吸收，继续应用会冲突。
@@ -76,3 +78,15 @@
 #      handleOpenWorkspacePath。Finder「打开方式」同链生效。Windows 链路上游已在
 #      （argv＋second-instance），无需补丁。
 010-desktop-open-file-workspace.patch
+
+# 011（2026-11-11 Qwen Code 1.0 吸收轮，spec 2026-11-11-zcode-3180-sync-and-qwen-absorb）：
+#      MCP inputSchema 顶层参数名消毒＋调用回译。吸收自 Qwen Code
+#      packages/core/src/mcp/mcp-schema-sanitizer.ts（Apache-2.0，语义保留出处头注）。
+#      差距核对定谳：zcode 只消毒工具名（sanitizeMcpName），properties key 原样透传——
+#      第三方 server 带 `8:BizyAir.aspect_ratio` 类冒号参数名时被 provider 按
+#      ^[a-zA-Z0-9_.-]{1,64}$ 整单拒收（工具定义级失败，模型无纠错机会）。
+#      消毒只作用于 createMcpToolEntry 的模型面投影（descriptor 原始 schema 不动），
+#      handler 分发前经 keyMap 回译原名；顺带剪除 required 引用未定义属性的幽灵项
+#      （严格 provider 如 Moonshot 会整单拒收）。Qwen 逐项对照其余差距=零（失败分类
+#      18 类>8 类/压缩三级阶梯>两级/流恢复预算 10>2/MCP 池化已有，锚点见 spec D1）。
+011-mcp-schema-sanitizer.patch
