@@ -56,6 +56,19 @@
 5. 独立审读：由未撰写正文的审查者检查技术准确性、章节连贯性、新手可执行性和证据边界，主会话复核发现并完成修正。
 6. 明确未验证项：未做真实新手试课、实体打印、Windows 实机、完全气隙安装或真实模型编码时，交付说明逐项列出。
 
+### 执行结果（2026-11-12）
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 结构与非口径 | 只读 Python 检查器：行数、操作卡五字段、代码围栏、Mermaid 块、`file:line` 锚点、本地链接、必备主题、禁用旧口径 | 933 行；15 卡；5 图；60 锚点有效；0 本地链接；`MANUAL_CHECK_OK` |
+| 文档守门 | `npx vitest run custom/__tests__/docs-ssot-guard.test.ts custom/__tests__/interactive-training-manual.test.ts scripts/__tests__/gen-doc-indexes.test.ts` | 33/33 通过 |
+| 文档索引 | `node scripts/maintenance/gen-doc-indexes.mjs --check` | 0 problem |
+| 技能自检 | `bash skills/swarm-yuan/scripts/self-check.sh --check-only` | 通过；保留既有 `FACT_SCRIPT_LOC` 行数告警（他批治理面，未在本任务消红） |
+| 差异卫生 | `git diff --check origin/main...HEAD` 与 `git diff --check -- docs .swarm-yuan .qgate` | 均通过（`vendor/**` 注入脏态不属本任务） |
+| 独立审读 | 两轮独立审查：任务级（7 项 Minor 全修）；终审（3 Important＋9 Minor 全修） | 终审修正后复跑上表，全部通过 |
+
+未验证项：未执行安装、生成、strict 激活、真实项目研发、真实 ACP 编码、合成练习、Windows 实机、完全气隙安装、真实新手试课与实体打印；历史案例数字只证明其所属版本。
+
 ## 设计文档影响
 
 DESIGN_SYNC: none——本批只重组培训材料和登记本 spec，不变更产品能力、架构、接口、阈值或数字总账；技术事实继续引用 `skills/swarm-yuan/README.md`、`SKILL.md`、当前脚本与 `assets/facts.conf`，不触及 DESIGN_DOCS 注册表四正本。
