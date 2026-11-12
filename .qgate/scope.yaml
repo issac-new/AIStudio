@@ -45,3 +45,8 @@ paths:
   - .npmrc
   - .gitleaks.toml
   - .env.example
+
+  # 2026-11-12 run29 补拍轮：frame-verify 0tasks 收窄（fix/frame-reshoot-0tasks-granularity）
+  - docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md
+  - simharness/mux/frame-verify.py
+  - simharness/tests/frame-verify-empties.test.sh
