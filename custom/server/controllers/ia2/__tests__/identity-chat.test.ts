@@ -6,14 +6,26 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>()
+  // profiles 夹具条目无真身：readdirSync 已劫持为固定清单，statSync 必须随夹具
+  // 语义返回目录真（此前透传真盘——本机恰好存在同名真实 ~/.hermes/profiles
+  // 档案才绿＝测宿主状态；CI 上 statSync ENOENT 被实现吞成空清单，identities 恒 []，
+  // 2026-11-12 CI 平台差异清偿）。
+  const PROFILE_FIXTURE = ['_shared', 'worker-coder', 'orchestrator', 'data-arch']
   return {
     ...actual,
     readFileSync: (p: string) => {
       if (String(p).endsWith('.env')) return 'API_SERVER_KEY=test-key\n'
       return actual.readFileSync(p)
     },
-    readdirSync: (p: string) => (String(p).endsWith('profiles') ? ['_shared', 'worker-coder', 'orchestrator', 'data-arch'] : actual.readdirSync(p)),
-    statSync: (p: string) => actual.statSync(p),
+    readdirSync: (p: string) => (String(p).endsWith('profiles') ? PROFILE_FIXTURE : actual.readdirSync(p)),
+    statSync: (p: string) => {
+      const s = String(p)
+      const name = s.slice(Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\')) + 1)
+      if (/(^|[/\\])profiles[/\\]/.test(s) && PROFILE_FIXTURE.includes(name)) {
+        return { isDirectory: () => true } as unknown as ReturnType<typeof actual.statSync>
+      }
+      return actual.statSync(p)
+    },
   }
 })
 

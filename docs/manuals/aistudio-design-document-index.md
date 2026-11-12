@@ -666,6 +666,7 @@
 - [2026-11-12-aistudio-complete-training-manual.md](../superpowers/specs/2026-11-12-aistudio-complete-training-manual.md)
 - [2026-11-12-capability-acceptance-matrix.md](../superpowers/specs/2026-11-12-capability-acceptance-matrix.md)
 - [2026-11-12-ci-deps-order.md](../superpowers/specs/2026-11-12-ci-deps-order.md)
+- [2026-11-12-ci-platform-gaps.md](../superpowers/specs/2026-11-12-ci-platform-gaps.md)
 - [2026-11-12-ci-product-tests.md](../superpowers/specs/2026-11-12-ci-product-tests.md)
 - [2026-11-12-ci-typecheck-into-product-tests.md](../superpowers/specs/2026-11-12-ci-typecheck-into-product-tests.md)
 - [2026-11-12-doc-canon-single-source.md](../superpowers/specs/2026-11-12-doc-canon-single-source.md)

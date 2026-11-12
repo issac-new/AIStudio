@@ -68,6 +68,8 @@ jobs:
         run: node scripts/ensure-injected.mjs
       - name: typecheck:harness（custom/server 全目录；类型依赖经注入态链齐备）
         run: npm run typecheck:harness
+      - name: 安装系统依赖（ffmpeg——videoref 真抽帧守门用例的产品硬依赖）
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: 安装 Chromium（diagram PNG 导出等真实浏览器用例）
         run: npx playwright install chromium
       - name: 全量 vitest（与 basic-check 门同配方：串行文件防并行污染）

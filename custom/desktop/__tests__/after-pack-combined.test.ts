@@ -13,14 +13,12 @@ import { describe, it, expect } from 'vitest'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync, chmodSync } from 'fs'
 import { resolve } from 'path'
 import { createRequire } from 'module'
+// 上游根解析复用测试单一事实源（env → 仓内 vendor → 旧兄弟 upstream）：
+// 此前硬编码兄弟 ../upstream 在 CI 单检出上不存在（AGENTS.md 规则 9 同款约束）。
+import { upstreamPath } from '../../test/upstream-root'
 
-const overlayRoot = resolve(__dirname, '..', '..', '..')
-const hookPath = resolve(
-  overlayRoot, '..', 'upstream', 'hermes-studio', 'packages', 'desktop', 'scripts', 'after-pack-combined.cjs',
-)
-const prebuildsDir = resolve(
-  overlayRoot, '..', 'upstream', 'hermes-studio', 'node_modules', 'node-pty', 'prebuilds',
-)
+const hookPath = upstreamPath('hermes-studio', 'packages', 'desktop', 'scripts', 'after-pack-combined.cjs')
+const prebuildsDir = upstreamPath('hermes-studio', 'node_modules', 'node-pty', 'prebuilds')
 
 const requireHook = () => {
   if (!existsSync(hookPath)) return null
