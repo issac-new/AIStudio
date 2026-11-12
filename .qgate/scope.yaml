@@ -809,3 +809,13 @@ paths:
   - simharness/mux/mx-burn-test.sh
   - simharness/aipay-scenario.sh
   - simharness/tests/run30-actions.test.sh
+  # 2026-11-12 expdual 收尾批（feat/expdual-closeout）
+  - docs/superpowers/specs/2026-11-12-expdual-closeout.md
+  - custom/server/expdual/**
+  - custom/client/expdual/**
+  - config/features.ts
+  - config/mechanism-budget.json
+  - registries/client/bootstrap.ts
+  - custom/client/ia2/views/IaFeatureShell.vue
+  - custom/client/ia2/nav-centers.ts
+  - .swarm-yuan/decisions.jsonl

@@ -8,7 +8,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-const props = defineProps<{ feature: 'bpa' | 'ontology' | 'eval' | 'skillgov' }>()
+const props = defineProps<{ feature: 'bpa' | 'ontology' | 'eval' | 'skillgov' | 'expdual' }>()
 const router = useRouter()
 const { locale } = useI18n()
 
@@ -17,6 +17,7 @@ const LABELS: Record<string, { zh: string; en: string; flag: string }> = {
   ontology: { zh: '本体工作台', en: 'Ontology workbench', flag: 'VITE_CUSTOM_ONTOLOGY' },
   eval: { zh: '评测工作台', en: 'Eval studio', flag: 'VITE_CUSTOM_EVAL' },
   skillgov: { zh: '技能治理工作台', en: 'Skill governance', flag: 'VITE_CUSTOM_SKILLGOV' },
+  expdual: { zh: '双轨经验台账', en: 'Experience ledger', flag: 'VITE_CUSTOM_EXPDUAL' },
 }
 const meta = computed(() => LABELS[props.feature] ?? LABELS.eval)
 const isZh = computed(() => String(locale.value ?? 'zh').startsWith('zh'))

@@ -478,7 +478,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（184 份）
+## 2026-11（189 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -664,6 +664,11 @@
 - [2026-11-11-g4-principal-status-backfill.md](../superpowers/specs/2026-11-11-g4-principal-status-backfill.md)
 - [2026-11-11-userenv-escape-400-preauthz.md](../superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md)
 - [2026-11-12-expdual-ttse.md](../superpowers/specs/2026-11-12-expdual-ttse.md)
+- [2026-11-12-expdual-closeout.md](../superpowers/specs/2026-11-12-expdual-closeout.md)
+- [2026-11-12-run29-full-retrospective.md](../superpowers/specs/2026-11-12-run29-full-retrospective.md)
+- [2026-11-12-run29-retro-rootfix.md](../superpowers/specs/2026-11-12-run29-retro-rootfix.md)
+- [2026-11-12-run30-actions.md](../superpowers/specs/2026-11-12-run30-actions.md)
+- [2026-11-12-run30-prelaunch-actions.md](../superpowers/specs/2026-11-12-run30-prelaunch-actions.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。

@@ -62,6 +62,10 @@ export async function bootstrapClient(app: App): Promise<void> {
   // IaFeatureShell 渲染「未启用」说明页而非 404/静默回首页；开关只管导航可见性。
   registrations.push(import('../../custom/client/skillgov').then(m => m.registerSkillgov(app)))
 
+  // 双轨经验台账（TTSE 吸收收尾批）：/app/expdual，默认开（VITE_CUSTOM_EXPDUAL=false
+  // 关导航）；路由无条件注册，口径同 skillgov。
+  registrations.push(import('../../custom/client/expdual').then(m => m.registerExpdual(app)))
+
   // 本体工作台（GB/T 48000.3 方法论产品化，spec 2026-10-10-ontology-studio-spec.md）：
   // 默认开，VITE_CUSTOM_ONTOLOGY=false 显式关。导航入口（FlowNavPanel 内 OntologyNavEntry）。
   // 路由无条件注册（口径同上，Task 10）。

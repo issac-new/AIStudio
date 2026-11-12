@@ -5,7 +5,7 @@
 // 让「环境认识」和「条件技巧」在简报里不混成一段。fail-soft：任何异常返回空块。
 import { scopeAllows, type ScopeFilter } from '../expcandidates/scope-match'
 import { DEFAULT_TOP_K, MAX_TOP_K, type DualRule, type DualStoreShape } from './dual-types'
-import { jaccard, tokenSet } from './dual-text'
+import { bigramSimilarity } from '../eval/vectorizer'
 import { readDualStore } from './dual-store'
 
 export interface DualSelectOptions extends ScopeFilter {
@@ -29,18 +29,18 @@ function clampK(value: number | undefined): number {
   return Math.max(1, Math.min(MAX_TOP_K, Math.trunc(n)))
 }
 
-/** 选取：命中率看词面相似度，无语境时按证据计数（论文的 top-K 与本仓的"不造召回"折中）。 */
+/** 选取：相似度用 eval 域特征哈希 bigram 余弦（仓内真向量基线单一事实源，收尾批升级——
+ * 词面 Jaccard 对「同义不同词序/部分词重叠」弱）；无语境时按证据计数（不造召回）。 */
 export function selectDualRules(store: DualStoreShape, opts: DualSelectOptions = {}): DualSelection {
   const filter: ScopeFilter = {
     ...(opts.column ? { column: opts.column } : {}),
     ...(opts.specialist ? { specialist: opts.specialist } : {}),
   }
   const query = String(opts.query ?? '').trim()
-  const queryTokens = query ? tokenSet(query) : null
   const active = store.rules.filter((r) => r.status === 'active' && scopeAllows(r.scope, filter))
   const rank = (a: DualRule, b: DualRule): number => {
-    if (queryTokens) {
-      const diff = jaccard(queryTokens, tokenSet(a.text)) - jaccard(queryTokens, tokenSet(b.text))
+    if (query) {
+      const diff = bigramSimilarity(query, a.text) - bigramSimilarity(query, b.text)
       if (diff !== 0) return -diff
     }
     if (a.count !== b.count) return b.count - a.count
