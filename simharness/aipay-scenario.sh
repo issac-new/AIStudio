@@ -453,6 +453,7 @@ if step_reached reqgate; then
     workunit_record "$_wu_fanfan_id" acceptance "g1-frozen:${RFD_ID}" \
       "G1 冻结四要素（验收标准/Scope-Out/影响面/涉敏）判读全过，冻结单 $(freeze_doc) 已入 origin/main，以同基线供设计与安全评审" "p-operator"
     dlv_gate_try G1 pass "需求冻结四要素过（AC/Scope-Out/影响面/涉敏）"
+    mx_stage_snapshot_maybe g1   # 阶段快照：G1 过键（恢复点=dispatch 起跑前）
   fi
 fi
 
@@ -1155,6 +1156,7 @@ if [ "$(posture)" = "strict" ]; then
       # M3 事件化：P2 done（概设定稿）→ G2 pass（arch 评审）→ case→P3
       dlv_enabled && dlv_scenario_phase P2 fanfan G2 arch artifact "概设评审过（arch 板 ${AGID}）" P3
       dlv_gate_try G2 pass "架构治理评审过（arch 板 ${AGID}）" arch
+      mx_stage_snapshot_maybe g2   # 阶段快照：G2 初评过键（恢复点=close 起跑前）
     else
       echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
       mx_gate_breaker_trip g2 "G2 架构治理评审" 1
@@ -1198,6 +1200,7 @@ if [ "$(posture)" = "strict" ]; then
           workunit_record "$_wu_arch_id" rejection "g2-arch-history-gap:${RFD_ID}" \
             "评审卡缺历史偏差检索结论，按验证投入留痕记打回：要求 arch 补检索结论后重报，闸键维持不阻断" "p-operator"
         fi
+        mx_stage_snapshot_maybe g2   # 阶段快照：G2 复评过键（与初评同闸同恢复点，save 幂等只落一份）
       else
         # 判词锚守卫（2026-11-05 run27 根治）：判词未引用本轮修订锚＝评审人读旧稿的
         # 错配判词——不计闸轮（不 trip），重钉锚重派复评后 fail 交监督器续跑重入。
@@ -1634,6 +1637,7 @@ DEVSPECS
   dlv_gate_try G3 pass "编码门通过（分支合流+本地测试证据在案）"
   # M3 事件化：P3 done（开发实施+自测收口）→ G3 pass（本地门禁）→ case→P4
   dlv_enabled && dlv_scenario_phase P3 chen G3 chen command-exit "devimpl 分支自测+评审过" P4
+  mx_stage_snapshot_maybe g3   # 阶段快照：G3 过键（恢复点=testpass 起跑前）
 fi
 
 # ══ 步骤 16b：合并集成 + 测试执行 + 缺陷闭环 ═════════
@@ -2151,6 +2155,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
   fi
   # M3 事件化：P4 done（集成+缺陷闭环+测试报告）→ G4 pass（非实现者 tester）→ case→P5
   dlv_enabled && dlv_scenario_phase P4 qi G4 qi command-exit "testpass 测试报告入仓+G4 硬闸置位" P5
+  mx_stage_snapshot_maybe g4   # 阶段快照：G4 过键（恢复点=ready 起跑前；g4_pass 未置的 GAP 轮不打）
 fi
 
 # ══ 步骤 20：ready（G5 发布准出评审，V3 新增；吸收原 templates 模板完备性）══
@@ -2571,6 +2576,7 @@ if [ "$(posture)" = "strict" ]; then
   MX_TICK_FN=_stage_tick   # 出 G5 后回落到预热两件（early-start 键已落=零动作；显式回落防语义漂移）
   capture_step "ready_done" "/app/stage/accept?tab=g5"     # 步20 承载面（G5 审批留痕；run23 复盘补拍摄位）
   capture_step "ready_inbox" "/app/inbox"                  # 步20 第二拍摄位：审批收件箱（2026-10-31 活体复核 /app/inbox 即真路由；面板首拉间歇，采集时序见 capture-plan 注）
+  mx_stage_snapshot_maybe g5   # 阶段快照：G5 过键+ready 步收口（恢复点=release 起跑前）
 fi
 
 # ══ 步骤 21：发版交付记录（线下执行，在册追踪）═══════
@@ -2603,6 +2609,7 @@ if step_reached release && [[ -z "$(sget release_done)" ]]; then
   dlv_gate_try G6 pass "发布门 released（REL-MERGE/TAG/DELIVER 三卡）" ops
   python3 "$SCRIPT_DIR/mux/r18-collect.py" --run "${RUN_ID}" effect --step 20 --text "G5 过闸+REL 三卡记录" --ev "cards=REL-MERGE,REL-TAG,REL-DELIVER" >/dev/null 2>&1 || true
   r18_guard 20
+  mx_stage_snapshot_maybe g6   # 阶段快照：发布门过键（恢复点=uat 起跑前）
 fi
 
 # ══ 步骤 22：uat（业务验收，V3 新增）══════════════════
@@ -2781,6 +2788,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]] && [[ -z "$(sget uat_conditio
     fi
     # M3 事件化：P5 done（发布+UAT 验收报告）→ case→P6
     dlv_enabled && dlv_scenario_advance P5 fanfan P6 "git:main#$(git -C "${DIRECTOR_CLONE:-.}" rev-parse --short HEAD 2>/dev/null || echo na):docs/acceptance/${RFD_ID}-acceptance.md"
+    mx_stage_snapshot_maybe uat   # 阶段快照：UAT 终态键（uat_done|uat_conditional 二取一；恢复点=retro 起跑前）
   else
     echo "ISSUE|uat-ac-failed|fanfan-agent|UAT 证据核对失败：${UAT_MISS}" >> "$EVID_DIR/issues.log"
     fail "UAT 验收未过（${UAT_MISS}）——缺陷回流 defect 语义"
@@ -3478,6 +3486,7 @@ PYD
 
   # M3 事件化收口：六 stage/六 gate/终态断言 + 证据报告（记问题单不打断）
   dlv_enabled && dlv_scenario_assert
+  mx_stage_snapshot_maybe report   # 阶段快照：报告收口键（终态点——事故复盘用，无下游续跑）
 fi
 
 note "===== 全流程执行区间（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）内全部 gates 执行完毕 ====="
