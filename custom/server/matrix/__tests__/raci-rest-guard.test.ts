@@ -107,6 +107,10 @@ const HARNESS_REST_WHITELIST = [
   // 假体（函数名与生产原语同名故命中正则），全文无真实 REST URL/curl——与上行
   // multi-owner-stall 同款「测试文件 stub 原语≠直连」先例；正则本身不放宽。
   'tests/dm-send-tracked.test.sh',
+  // run30 行动项守门（2026-11-12 清债批补录）：grep 断言里引用 mx_wait_sender
+  // 验证 A1 双信号接线（原语名出现在匹配模式中），全文 0 处 curl/_matrix——
+  // 同款「测试文件引用原语≠直连」；正则本身不放宽。
+  'tests/run30-actions.test.sh',
 ]
 
 function walk(dir: string, exts: string[], out: string[] = []): string[] {

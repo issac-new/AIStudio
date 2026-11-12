@@ -846,3 +846,15 @@ paths:
   - custom/client/ia2/views/IaFeatureShell.vue
   - custom/client/ia2/nav-centers.ts
   - .swarm-yuan/decisions.jsonl
+
+  # 2026-11-12 handbook 吸收批清债（feat/handbook-debt）
+  - docs/superpowers/specs/2026-11-12-handbook-debt-clearance.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - custom/server/matrix/__tests__/raci-rest-guard.test.ts
+  - simharness/mux/mx-enable-run-trace.sh
+  - .qgate/scope.yaml
+  - .swarm-yuan/gate-deny.jsonl
+  - .swarm-yuan/spec-receipts.jsonl
+  - scripts/ensure-injected.mjs
+  - scripts/__tests__/overlay-pristine-replay.test.ts
