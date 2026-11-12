@@ -217,6 +217,8 @@ export interface ReplayRunInput {
   expectedSetHash?: string
   /** 期望考卷版本（复评锚定）：与解析出的版本不符则拒绝。 */
   expectedRevision?: number
+  /** 校准/门检运行置 true：失败样本不自动回流回归库（防污染）。 */
+  skipAutoReflow?: boolean
 }
 
 export interface RunnerDeps {
@@ -424,6 +426,6 @@ export async function runReplayEval(input: ReplayRunInput, deps: RunnerDeps): Pr
   appendRun(run)
   // run 完成自动回流（挂账清偿批 B4）：失败样本幂等回流回归库；结果只随 run
   // 透出不改判（reflowTaskToSet 内部幂等+结构性自拒；env EVAL_AUTO_REFLOW_ON_RUN=0 关）。
-  const autoReflow = autoReflowFailedSamples(set, run)
+  const autoReflow = input.skipAutoReflow ? undefined : autoReflowFailedSamples(set, run)
   return { ok: true, run, autoReflow }
 }

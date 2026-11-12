@@ -109,3 +109,33 @@ describe('mx-eval-lib 接线源码级断言', () => {
     expect(src).not.toMatch(/eval_golden_gate[^\n]*\|\|.*return 1/)
   })
 })
+
+describe('F2P 校准（2026-11-12 handbook 吸收）', () => {
+  it('请求 calibrate 时产出 f2p/p2p 读数；stub 让负例全过 → 未校准', async () => {
+    const r = await goldenGateCheck(
+      { judge: { config: loadEvalConfig(), ask: perfectAsk, cache: new TtlCache(60_000) }, outcomeCtx: outcomeContext() },
+      { calibrate: true },
+    )
+    expect(r.ok).toBe(true)
+    expect(r.calibration).toMatchObject({ f2pTotal: 30, p2pTotal: 30, calibrated: false, decision: 'uncalibrated' })
+    expect(r.calibration!.f2pPassed).toBeGreaterThan(0)
+    expect(r.calibration!.f2pPassed).toBeLessThan(30)
+    expect(r.calibration!.failed.length).toBeGreaterThan(0)
+  })
+
+  it('enforce=1 且未校准 → ok:false（默认不开启，观察态不变）', async () => {
+    const r = await goldenGateCheck(
+      { judge: { config: loadEvalConfig(), ask: perfectAsk, cache: new TtlCache(60_000) }, outcomeCtx: outcomeContext() },
+      { calibrate: true, enforce: true },
+    )
+    expect(r.ok).toBe(false)
+    expect(r.enforced).toBe(true)
+    expect(r.problems?.length).toBeGreaterThan(0)
+  })
+
+  it('enforce=1 但未请求 calibrate → 直接拒绝（没有读数可判）', async () => {
+    const r = await goldenGateCheck(undefined, { enforce: true })
+    expect(r.ok).toBe(false)
+    expect(r.problems?.join(' ')).toContain('calibrate')
+  })
+})

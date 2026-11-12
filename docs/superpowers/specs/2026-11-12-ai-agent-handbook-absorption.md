@@ -41,7 +41,8 @@
 | 文件 | 变更 |
 |---|---|
 | `custom/server/eval/golden-set.ts` | 新增并列 `GOLDEN_CASES` 元数据（bucket/scenario/sourceRef/expected）与 `GOLDEN_NEGATIVE_MATERIALS`（由正例确定性改写的合成负例）；`GOLDEN_MATERIALS` 保持原结构派生 |
-| `custom/server/eval/golden-gate.ts` | `calibrate:true` 时跑 P2P＋F2P；`GoldenGateResult` 加 `calibration{p2pPassed,p2pTotal,f2pRejected,f2pTotal,ece,brier,decision}`；默认观察态；`GOLDEN_GATE_ENFORCE=1` 且校准未达标才 `ok:false`；gate 运行禁用 auto-reflow |
+| `custom/server/eval/golden-gate.ts` | `calibrate:true` 时用 30 条合成负例跑 F2P，并与现有 P2P 逐例配对；`GoldenGateResult` 加 `calibration{f2pPassed,f2pTotal,p2pPassed,p2pTotal,failed,decision}`；默认观察态；`GOLDEN_GATE_ENFORCE=1` 或 `enforce:true` 且未校准才 `ok:false`；gate 运行禁用 auto-reflow |
+| `custom/server/eval/routes/analysis.ts` | `POST /gate-check?calibrate=1&enforce=1` 透传选项；响应增 `calibration` 与 `gateMode` |
 | `custom/server/eval/runner.ts` | 新增可选 `skipAutoReflow`，gate 与校准运行不污染回归库 |
 | `custom/server/eval/failure-taxonomy.ts`（新增） | canonical 七类（ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN/FLAKY）＋eval 六类映射；`badcase-distill.ts` 加可选 `canonical` 字段，旧 `rootCause` 联合不变 |
 | `simharness/mux/mx-eval-summary.py`、`mx-report-gen.py` | 读取 `evidence/evals/golden-gate.json`，summary 加 `goldenGate`，报告加"黄金集门检（桶 x/y/z·误杀 n·校准状态）"行；缺席为 null，不改退出码 |
@@ -87,7 +88,7 @@
 
 - 批 1：`npx vitest run custom/server/controllers/hermes/__tests__/trace-graph.test.ts custom/server/harness/__tests__/run-result.test.ts custom/hermes-agent-plugins/__tests__/run-trace-schema.test.ts`；`npm run typecheck:harness`。
 - 批 2：`npx vitest run custom/server/toolcontract/__tests__/action-recovery.test.ts custom/server/toolcontract/__tests__/idempotency-status.test.ts custom/server/toolcontract/__tests__/contract.test.ts custom/server/toolpipeline/__tests__/contract-guard.test.ts custom/server/resume/__tests__/resume-planner.test.ts custom/server/memscope/__tests__/memory-write-guard.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts custom/hermes-agent-plugins/__tests__/action-ledger.test.ts`。
-- 批 3：`npx vitest run custom/server/eval/__tests__/golden-gate.test.ts custom/server/eval/__tests__/golden-set.test.ts custom/server/eval/__tests__/failure-taxonomy.test.ts`；`python3 -m py_compile simharness/mux/mx-eval-summary.py simharness/mux/mx-report-gen.py`；合成夹具跑 summary/report 各一次。
+- 批 3：`npx vitest run custom/server/eval/__tests__/golden-gate.test.ts custom/server/eval/__tests__/golden-set.test.ts custom/server/eval/__tests__/failure-taxonomy.test.ts custom/server/eval/__tests__/golden-report-wiring.test.ts custom/server/eval/__tests__/badcase-distill.test.ts`；`python3 -m py_compile simharness/mux/mx-eval-summary.py simharness/mux/mx-report-gen.py`；`mx-eval-summary.py` 用临时 `golden-gate.json` 夹具真跑一次（`goldenGate` 透传）。
 - 批 4：`npx vitest run custom/server/zcode/__tests__/team-stop.test.ts custom/server/tokenbudget/__tests__/budget-lease.test.ts custom/server/__tests__/zcode-mention-dispatch.test.ts`。
 - 全量：`npm test`（若 worktree 注入态不可用，按 N-4 配方先建链；失败项如实列）。
 - 注入/部署面：本批零 vendor 改动，`npm run inject` 不需重放；Hermes 插件按目录部署，验证脚本用 `python3 -c` 真导入。

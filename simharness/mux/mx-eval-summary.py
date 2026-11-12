@@ -84,6 +84,8 @@ def main():
     swarm = load(a.dir, "swarm-collab.json") or {}
     # 跨轮评测榜（2026-10-24 聚合层）：同样只透传不进判据。
     bench = load(a.dir, "swarm-bench.json") or {}
+    # 黄金集门检读数（2026-11-12 handbook 吸收）：gate-check 落盘件；缺席如实 null。
+    golden_gate = load(a.dir, "golden-gate.json") or {}
 
     reg = registry.get("registry") or {}
     cons = reg.get("consumption") or {}
@@ -156,6 +158,19 @@ def main():
             "revision": ev_set.get("revision"),
             "contentHash": current_hash,
         },
+        # 黄金集门检（2026-11-12）：buckets/mismatch/calibration 从 gate-check 落盘件透传；
+        # 缺席 null，不改主判定（观察态；enforce 由 gate-check 侧决定 ok）。
+        "goldenGate": (
+            {
+                "ok": golden_gate.get("ok"),
+                "buckets": golden_gate.get("buckets"),
+                "mismatch": golden_gate.get("mismatch"),
+                "calibration": golden_gate.get("calibration"),
+                "gateMode": golden_gate.get("gateMode"),
+                "runId": golden_gate.get("runId"),
+            }
+            if golden_gate else None
+        ),
         "run": {
             "id": run.get("id"),
             "setHash": set_hash,

@@ -14,6 +14,7 @@
 import { createHash } from 'node:crypto'
 import { attemptPassed } from './aggregate'
 import { clefAskMixed, JudgeUnavailableError } from './clef'
+import { canonicalOfBadCase, type CanonicalFailureCategory } from './failure-taxonomy'
 import { originKeyOf } from './origin'
 import type { DistillLedgerEntry } from './flywheel'
 import type { EvalConfig, EvalRun, EvalSet, EvalTask, RubricAssertion, ToolCallRecord } from './types'
@@ -50,6 +51,8 @@ export interface DistilledCase {
   /** 可直接 appendTasksToSet 的回归任务（幂等 id：bd-{来源键哈希}）。 */
   task: EvalTask
   rootCause: BadCaseRootCause
+  /** 跨域 canonical 分类（只增字段，旧 rootCause 联合不变）。 */
+  canonical: CanonicalFailureCategory
   /** 禁忌动作清单（人读；机器可执行面在 task.rubric 的禁忌断言里）。 */
   tabooActions: string[]
   failedSteps: number | null
@@ -219,6 +222,7 @@ export function distillBadCase(
     distilled: {
       task: distilledTask,
       rootCause,
+      canonical: canonicalOfBadCase(rootCause),
       tabooActions: [tabooText, ...digest.failedAssertions.map((f) => `断言 ${f.id} 不得再次失败：${f.text}`)],
       failedSteps,
       stepRedline,
