@@ -36,6 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .cover .kicker{color:#9fc3ee;font-size:15px;letter-spacing:.18em;font-weight:700}
 .cover h1{margin:1.2cqw 0 1cqw;font-size:5.2cqw;line-height:1.12;letter-spacing:-.02em;color:#fff}
 .cover p{margin:0;max-width:88cqw;font-size:1.8cqw;line-height:1.55;color:#d7e6f7}
+.cover .slogan{margin:1.1cqw 0 0;color:#cfe3fa;font-size:1.55cqw;letter-spacing:.14em;font-weight:600}
 .cover .meta{margin-top:2.2cqw;display:flex;gap:2cqw;flex-wrap:wrap;color:#a9c6e8;font-size:1.15cqw}
 .cover .nums{display:flex;gap:14px;margin-top:34px}
 .cover .nums div{border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:10px 16px;background:rgba(255,255,255,.06)}
@@ -60,6 +61,49 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .ledger td b{color:var(--ink)}
 .ledger .dim{display:block;margin-top:2px;color:var(--muted);font-size:1.02cqw}
 .ledger-note{margin:.55cqw 0 0;color:var(--muted);font-size:1.08cqw;line-height:1.4}
+
+/* 结构化看板（生成与激活、守门与证据） */
+.board{flex:1;min-height:0;display:flex;flex-direction:column;gap:1.1cqw;padding:.2cqw}
+.board .row{display:flex;gap:1cqw;align-items:stretch;min-height:0;flex:1 1 0}
+.board .row.stages{flex:1.08}
+.board .row.facts{flex:.92}
+.board .row.top{flex:1.12}
+.board .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:.8cqw .95cqw;display:flex;flex-direction:column;gap:.5cqw;min-width:0;overflow:hidden}
+.board .card.accent{background:var(--accent-soft);border-color:#b9d2ee}
+.board .card.bounds{flex:.88}
+.board .card h3{margin:0;font-size:1.38cqw;line-height:1.25;color:var(--ink);display:flex;align-items:center;gap:.45cqw}
+.board .card h3 .n{display:inline-grid;place-items:center;width:1.75cqw;height:1.75cqw;border-radius:6px;background:var(--accent);color:#fff;font-size:.9cqw;font-weight:700;flex:0 0 auto}
+.board .card h3 small{font-size:.88cqw;color:var(--muted);font-weight:400}
+.board .card p{margin:auto 0 0;color:var(--muted);font-size:1.06cqw;line-height:1.42}
+.board .chips{display:flex;flex-wrap:wrap;gap:.35cqw}
+.board .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:.14cqw .55cqw;font-size:.98cqw;line-height:1.35;color:#3c4f66;white-space:nowrap}
+.board .chip.warn{border-color:#e5c07b;background:#fff8e8;color:#8a5a00}
+.board .arrow{align-self:center;color:var(--muted);font-size:1.5cqw;flex:0 0 auto}
+.board .big{display:flex;align-items:baseline;gap:.6cqw;color:var(--ink)}
+.board .big b{font-size:3cqw;line-height:1;color:var(--accent)}
+.board .big span{font-size:.95cqw;color:var(--muted)}
+.board .bar{display:flex;height:1.55cqw;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+.board .bar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.82cqw;color:#fff;background:#1f5fae;white-space:nowrap}
+.board .bar i:nth-child(2){background:#4a86c8}
+.board .bar i:nth-child(3){background:#9fc0e2;color:#173b68}
+.board .layers{display:flex;flex-direction:column;gap:.3cqw}
+.board .layers div{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;padding:.18cqw .55cqw;font-size:.98cqw;background:#fff;color:#33475f}
+.board .chain{display:flex;align-items:center;gap:.3cqw;flex-wrap:wrap;font-size:.98cqw;color:#33475f}
+.board .chain span{border:1px solid var(--line);border-radius:6px;padding:.15cqw .45cqw;background:#fff}
+.board .chain em{font-style:normal;color:var(--muted)}
+.board .steps{display:flex;gap:.35cqw;align-items:center}
+.board .steps span{display:inline-grid;place-items:center;min-width:1.35cqw;height:1.35cqw;border-radius:999px;background:#eef4fb;color:#52708f;font-size:.8cqw;font-weight:700}
+.board .layers b{color:var(--accent);margin-right:.35cqw}
+.board .layers em{float:right;font-style:normal;color:var(--muted);font-size:.86cqw}
+.board .evi{display:grid;grid-template-columns:1fr 1fr;gap:.45cqw}
+.board .evi div{border:1px solid var(--line);background:#f7fbff;border-radius:6px;padding:.35cqw .5cqw}
+.board .evi b{display:block;font-size:.92cqw;color:var(--ink);line-height:1.3}
+.board .evi small{display:block;margin-top:.15cqw;font-size:.8cqw;color:var(--muted);line-height:1.3}
+.board .bounds-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7cqw}
+.board .bounds-grid div{border-left:3px solid #e5c07b;background:#fff8e8;border-radius:6px;padding:.5cqw .6cqw;display:flex;flex-direction:column;gap:.3cqw}
+.board .bounds-grid b{font-size:.98cqw;color:#8a5a00;line-height:1.3}
+.board .bounds-grid span{font-size:.86cqw;color:#6b5a3a;line-height:1.35}
+
 /* 导航 */
 .nav{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;align-items:center;gap:8px;z-index:10;transition:opacity .25s ease}
 .nav button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:var(--ink);font-size:16px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.3)}
@@ -102,6 +146,7 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <div class="kicker">AIStudio 技术培训 · 15 分钟</div>
   <h1>人定方向，机器守门，AI 干活</h1>
   <p>一张全景图逐层展开：先看判断依据，再看系统、流程与守门机制，最后交代三个交付物的能力来源。</p>
+  <div class="slogan">博学 · 审问 · 慎思 · 明辨 · 笃行 · 不贰过 · 举一反三</div>
   <div class="meta"><span>适用版本 1.0.15-overlay</span><span>驾驶舱 0.8.20-studio.2</span><span>teams v0.23.1-team.2</span><span>Ycode 3.18.0</span><span>yuan v2.100.3</span></div>
   <div class="nums"><div><b>15 分钟</b><span>16 页</span></div><div><b>3 层</b><span>界面／组织／执行</span></div><div><b>3 个来源</b><span>清单呈现</span></div><div><b>4 条判据</b><span>一致·明确·完整·可查</span></div></div>
 </section>
@@ -256,7 +301,93 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
 </section>
 
 <section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">06</span><h2>机制：研发能力 SOP 化与五项能力</h2></div><span class="time">4 分钟</span></header>
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">06</span><h2>双循环：研发小循环嵌在组织大循环里</h2></div><span class="time">1 分钟</span></header>
+  <p class="slide-lead">swarm-yuan skill 跑研发小循环；hermes agent teams + Matrix 跑组织协作与改进的大循环；两环通过任务卡、证据与复盘记录承接。</p>
+  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 360" role="img" aria-label="双循环结构图：研发小循环嵌套在组织大循环内，任务卡向内、交付物与证据向外、复盘结论回流">
+  <text x="32" y="26" class="dtitle">↻ 组织大循环 · hermes agent teams + Matrix（房间·消息·审批留痕）</text>
+  <defs><marker id="apdual" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="16" y="40" width="948" height="300" rx="20" fill="#f7fbff" stroke="#a9b8c9" stroke-width="1.4" stroke-dasharray="7 5"/>
+  <rect x="80" y="76" width="200" height="40" rx="8" class="dbox"/><text x="96" y="101" class="dsmall">① 派发与认领</text>
+  <rect x="700" y="76" width="200" height="40" rx="8" class="dbox"/><text x="716" y="101" class="dsmall">② 协作执行</text>
+  <rect x="820" y="180" width="140" height="40" rx="8" class="dbox"/><text x="836" y="205" class="dsmall">③ 独立评审</text>
+  <rect x="640" y="290" width="200" height="40" rx="8" class="dbox"/><text x="656" y="315" class="dsmall">④ 审批与发布</text>
+  <rect x="80" y="286" width="200" height="40" rx="8" class="dbox"/><text x="96" y="311" class="dsmall">⑤ 复盘与改进</text>
+  <path class="dline" d="M282 96 L696 96" marker-end="url(#apdual)"/>
+  <path class="dline" d="M900 118 L882 176" marker-end="url(#apdual)"/>
+  <path class="dline" d="M890 222 L842 286" marker-end="url(#apdual)"/>
+  <path class="dline" d="M638 310 L284 310" marker-end="url(#apdual)"/>
+  <path class="dline" d="M180 284 L180 120" marker-end="url(#apdual)"/>
+  <rect x="250" y="118" width="480" height="164" rx="16" class="dbox-accent"/>
+  <text x="270" y="146" class="dtitle">↻ 研发小循环 · swarm-yuan skill</text>
+  <rect x="270" y="170" width="180" height="38" rx="7" class="dbox-soft"/><text x="286" y="194" class="dsmall">① 规格与计划</text>
+  <rect x="530" y="170" width="180" height="38" rx="7" class="dbox-soft"/><text x="546" y="194" class="dsmall">② 实现与提交</text>
+  <rect x="530" y="235" width="180" height="38" rx="7" class="dbox-soft"/><text x="546" y="259" class="dsmall">③ 测试与验证</text>
+  <rect x="270" y="235" width="180" height="38" rx="7" class="dbox-soft"/><text x="286" y="259" class="dsmall">④ 合入与回归</text>
+  <path class="dline" d="M452 189 L526 189" marker-end="url(#apdual)"/>
+  <path class="dline" d="M620 210 L620 233" marker-end="url(#apdual)"/>
+  <path class="dline" d="M528 254 L454 254" marker-end="url(#apdual)"/>
+  <path class="dline" d="M360 233 L360 210" marker-end="url(#apdual)"/>
+  <path class="dline" d="M212 200 L246 200" marker-end="url(#apdual)"/>
+  <text x="120" y="192" class="dsmall">任务卡＋复盘改进</text>
+  <path class="dline" d="M734 200 L816 200" marker-end="url(#apdual)"/>
+  <text x="736" y="192" class="dsmall" font-size="12">交付物＋证据</text>
+  </svg></div></div>
+  <div class="takeaway"><b>大小循环的分工：</b>小循环保证单次交付正确，大循环保证组织持续改进；任务卡向下、交付物与证据向上、复盘结论回流，两层用同一套台账承接。</div>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>06 / 16 · 双循环</span></footer>
+</section>
+
+<section class="slide">
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">07</span><h2>流程：九节点、四阶段、六道质量门</h2></div><span class="time">3 分钟</span></header>
+  <p class="slide-lead">九个节点组织执行，四个阶段分批验收，六道质量门在关键处停下核对。</p>
+  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 270" role="img" aria-label="九节点四阶段六质量门主流程图">
+  <text x="14" y="24" class="dtitle">九节点、四阶段、六道质量门</text>
+  <g class="dsmall" fill="#b45746">
+  <text x="70" y="50">G1</text><text x="196" y="50">G2</text><text x="322" y="50">G3</text><text x="448" y="50">G4</text><text x="574" y="50">G5</text><text x="700" y="50">G6</text>
+  </g>
+  <rect x="14" y="60" width="112" height="74" rx="8" class="dbox"/><text x="70" y="88" class="dlabel" text-anchor="middle">① 需求</text><text x="70" y="108" class="dsmall" text-anchor="middle">目标与验收</text>
+  <rect x="140" y="60" width="112" height="74" rx="8" class="dbox"/><text x="196" y="88" class="dlabel" text-anchor="middle">② 探查</text><text x="196" y="108" class="dsmall" text-anchor="middle">现有资产</text>
+  <rect x="266" y="60" width="112" height="74" rx="8" class="dbox"/><text x="322" y="88" class="dlabel" text-anchor="middle">③ 规格</text><text x="322" y="108" class="dsmall" text-anchor="middle">决策与边界</text>
+  <rect x="392" y="60" width="112" height="74" rx="8" class="dbox"/><text x="448" y="88" class="dlabel" text-anchor="middle">④ 计划</text><text x="448" y="108" class="dsmall" text-anchor="middle">拆分与顺序</text>
+  <rect x="518" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="574" y="88" class="dlabel" text-anchor="middle">⑤ 编码</text><text x="574" y="108" class="dsmall" text-anchor="middle">分支开发</text>
+  <rect x="644" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="700" y="88" class="dlabel" text-anchor="middle">⑥ 测试</text><text x="700" y="108" class="dsmall" text-anchor="middle">真跑与门禁</text>
+  <rect x="770" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="826" y="88" class="dlabel" text-anchor="middle">⑦ 评审</text><text x="826" y="108" class="dsmall" text-anchor="middle">非实现者</text>
+  <rect x="14" y="152" width="112" height="60" rx="8" class="dbox"/><text x="70" y="178" class="dlabel" text-anchor="middle">⑧ 合入</text><text x="70" y="198" class="dsmall" text-anchor="middle">主干合并</text>
+  <rect x="140" y="152" width="112" height="60" rx="8" class="dbox"/><text x="196" y="178" class="dlabel" text-anchor="middle">⑨ 回归</text><text x="196" y="198" class="dsmall" text-anchor="middle">主干验证</text>
+  <rect x="14" y="230" width="380" height="28" rx="6" class="dbox-soft"/><text x="204" y="249" class="dsmall" text-anchor="middle">分支开发（⑤）</text>
+  <rect x="406" y="230" width="250" height="28" rx="6" class="dbox-soft"/><text x="531" y="249" class="dsmall" text-anchor="middle">分支测试（⑥⑦）</text>
+  <rect x="668" y="230" width="130" height="28" rx="6" class="dbox-soft"/><text x="733" y="249" class="dsmall" text-anchor="middle">主干合并（⑧）</text>
+  <rect x="810" y="230" width="156" height="28" rx="6" class="dbox-soft"/><text x="888" y="249" class="dsmall" text-anchor="middle">主干回归（⑨）</text>
+</svg></div></div>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>07 / 16 · 流程</span></footer>
+</section>
+
+<section class="slide">
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">08</span><h2>发布判断：四项条件同时成立</h2></div><span class="time">—</span></header>
+  <p class="slide-lead">对象一致、责任明确、证据完整、例外可查；缺一项即冻结或待核实。</p>
+  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 170" role="img" aria-label="发布成立四项条件图">
+  <text x="14" y="24" class="dtitle">人在这里作发布判断：四项条件同时成立</text>
+  <rect x="14" y="42" width="228" height="110" rx="9" class="dbox-accent"/>
+  <text x="128" y="70" class="dlabel" text-anchor="middle">对象一致</text>
+  <text x="128" y="94" class="dsmall" text-anchor="middle">任务、提交、测试、审批</text>
+  <text x="128" y="114" class="dsmall" text-anchor="middle">指向同一事项</text>
+  <rect x="258" y="42" width="228" height="110" rx="9" class="dbox"/>
+  <text x="372" y="70" class="dlabel" text-anchor="middle">责任明确</text>
+  <text x="372" y="94" class="dsmall" text-anchor="middle">各环节有负责人</text>
+  <text x="372" y="114" class="dsmall" text-anchor="middle">与验收人</text>
+  <rect x="502" y="42" width="228" height="110" rx="9" class="dbox"/>
+  <text x="616" y="70" class="dlabel" text-anchor="middle">证据完整</text>
+  <text x="616" y="94" class="dsmall" text-anchor="middle">结论可回溯</text>
+  <text x="616" y="114" class="dsmall" text-anchor="middle">原始记录</text>
+  <rect x="746" y="42" width="220" height="110" rx="9" class="dbox"/>
+  <text x="856" y="70" class="dlabel" text-anchor="middle">例外可查</text>
+  <text x="856" y="94" class="dsmall" text-anchor="middle">代理、跳过、豁免</text>
+  <text x="856" y="114" class="dsmall" text-anchor="middle">单独登记并披露</text>
+</svg></div></div>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>08 / 16 · 判断</span></footer>
+</section>
+
+<section class="slide">
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">09</span><h2>机制：研发能力 SOP 化与五项能力</h2></div><span class="time">4 分钟</span></header>
   <p class="slide-lead">SOP 把资深研发的判断写成步骤、检查与证据；五项说明构成，六层说明实现。</p>
   <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 210" role="img" aria-label="五项能力与 SOP 关系图">
   <text x="14" y="24" class="dtitle">研发能力 SOP 化：五项能力说明构成</text>
@@ -289,11 +420,11 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <text x="32" y="166" class="dsmall">SOP：把资深研发的判断写成步骤、检查与证据，使合格执行者在相同输入下得到质量一致的结果</text>
   <text x="32" y="188" class="dsmall">关系：五项=能力构成；六层=实现结构；三层投影=责任归属。问题与新经验回流，更新资产。</text>
 </svg></div></div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>06 / 16 · 机制</span></footer>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>09 / 16 · 机制</span></footer>
 </section>
 
 <section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">07</span><h2>本体：组织资产的结构化解构与重组</h2></div><span class="time">1 分钟</span></header>
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">10</span><h2>本体：组织资产的结构化解构与重组</h2></div><span class="time">1 分钟</span></header>
   <p class="slide-lead">本体用对象、关系、动作描述领域知识，把文档与经验变成可查询、可组合、可复用的结构；解构、组织、运用与改进都围绕它发生。</p>
   <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 260" role="img" aria-label="本体结构图：原始资产经对象关系动作抽取，组织为清单边集配方，再用于检索、影响分析、任务组装与经验回流">
   <text x="8" y="26" class="dtitle">同一结构支撑解构、组织、运用与改进</text>
@@ -317,97 +448,116 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <text x="490" y="234" class="dsmall" text-anchor="middle">问题与新经验回流：补对象、补关系、补规则；局部重探，不推倒重来</text>
   </svg></div></div>
   <div class="takeaway"><b>本体的用处：</b>同一套对象—关系—动作，既用于解构资产，也用于组织复用、影响分析与经验回流；结构不统一，后三步都会失真。</div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>07 / 16 · 本体</span></footer>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>10 / 16 · 本体</span></footer>
 </section>
 
 <section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">08</span><h2>双循环：研发小循环嵌在组织大循环里</h2></div><span class="time">1 分钟</span></header>
-  <p class="slide-lead">swarm-yuan skill 跑研发小循环；hermes agent teams + Matrix 跑组织协作与改进的大循环；两环通过任务卡、证据与复盘记录承接。</p>
-  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 360" role="img" aria-label="双循环结构图：研发小循环嵌套在组织大循环内，任务卡向内、交付物与证据向外、复盘结论回流">
-  <text x="32" y="26" class="dtitle">↻ 组织大循环 · hermes agent teams + Matrix（房间·消息·审批留痕）</text>
-  <defs><marker id="apdual" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
-  <rect x="16" y="40" width="948" height="300" rx="20" fill="#f7fbff" stroke="#a9b8c9" stroke-width="1.4" stroke-dasharray="7 5"/>
-  <rect x="80" y="76" width="200" height="40" rx="8" class="dbox"/><text x="96" y="101" class="dsmall">① 派发与认领</text>
-  <rect x="700" y="76" width="200" height="40" rx="8" class="dbox"/><text x="716" y="101" class="dsmall">② 协作执行</text>
-  <rect x="820" y="180" width="140" height="40" rx="8" class="dbox"/><text x="836" y="205" class="dsmall">③ 独立评审</text>
-  <rect x="640" y="290" width="200" height="40" rx="8" class="dbox"/><text x="656" y="315" class="dsmall">④ 审批与发布</text>
-  <rect x="80" y="286" width="200" height="40" rx="8" class="dbox"/><text x="96" y="311" class="dsmall">⑤ 复盘与改进</text>
-  <path class="dline" d="M282 96 L696 96" marker-end="url(#apdual)"/>
-  <path class="dline" d="M900 118 L882 176" marker-end="url(#apdual)"/>
-  <path class="dline" d="M890 222 L842 286" marker-end="url(#apdual)"/>
-  <path class="dline" d="M638 310 L284 310" marker-end="url(#apdual)"/>
-  <path class="dline" d="M180 284 L180 120" marker-end="url(#apdual)"/>
-  <rect x="250" y="118" width="480" height="164" rx="16" class="dbox-accent"/>
-  <text x="270" y="146" class="dtitle">↻ 研发小循环 · swarm-yuan skill</text>
-  <rect x="270" y="170" width="180" height="38" rx="7" class="dbox-soft"/><text x="286" y="194" class="dsmall">① 规格与计划</text>
-  <rect x="530" y="170" width="180" height="38" rx="7" class="dbox-soft"/><text x="546" y="194" class="dsmall">② 实现与提交</text>
-  <rect x="530" y="235" width="180" height="38" rx="7" class="dbox-soft"/><text x="546" y="259" class="dsmall">③ 测试与验证</text>
-  <rect x="270" y="235" width="180" height="38" rx="7" class="dbox-soft"/><text x="286" y="259" class="dsmall">④ 合入与回归</text>
-  <path class="dline" d="M452 189 L526 189" marker-end="url(#apdual)"/>
-  <path class="dline" d="M620 210 L620 233" marker-end="url(#apdual)"/>
-  <path class="dline" d="M528 254 L454 254" marker-end="url(#apdual)"/>
-  <path class="dline" d="M360 233 L360 210" marker-end="url(#apdual)"/>
-  <path class="dline" d="M212 200 L246 200" marker-end="url(#apdual)"/>
-  <text x="120" y="192" class="dsmall">任务卡＋复盘改进</text>
-  <path class="dline" d="M734 200 L816 200" marker-end="url(#apdual)"/>
-  <text x="736" y="192" class="dsmall" font-size="12">交付物＋证据</text>
-  </svg></div></div>
-  <div class="takeaway"><b>大小循环的分工：</b>小循环保证单次交付正确，大循环保证组织持续改进；任务卡向下、交付物与证据向上、复盘结论回流，两层用同一套台账承接。</div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>08 / 16 · 双循环</span></footer>
-</section>
-
-<section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">09</span><h2>流程：九节点、四阶段、六道质量门</h2></div><span class="time">3 分钟</span></header>
-  <p class="slide-lead">九个节点组织执行，四个阶段分批验收，六道质量门在关键处停下核对。</p>
-  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 270" role="img" aria-label="九节点四阶段六质量门主流程图">
-  <text x="14" y="24" class="dtitle">九节点、四阶段、六道质量门</text>
-  <g class="dsmall" fill="#b45746">
-  <text x="70" y="50">G1</text><text x="196" y="50">G2</text><text x="322" y="50">G3</text><text x="448" y="50">G4</text><text x="574" y="50">G5</text><text x="700" y="50">G6</text>
-  </g>
-  <rect x="14" y="60" width="112" height="74" rx="8" class="dbox"/><text x="70" y="88" class="dlabel" text-anchor="middle">① 需求</text><text x="70" y="108" class="dsmall" text-anchor="middle">目标与验收</text>
-  <rect x="140" y="60" width="112" height="74" rx="8" class="dbox"/><text x="196" y="88" class="dlabel" text-anchor="middle">② 探查</text><text x="196" y="108" class="dsmall" text-anchor="middle">现有资产</text>
-  <rect x="266" y="60" width="112" height="74" rx="8" class="dbox"/><text x="322" y="88" class="dlabel" text-anchor="middle">③ 规格</text><text x="322" y="108" class="dsmall" text-anchor="middle">决策与边界</text>
-  <rect x="392" y="60" width="112" height="74" rx="8" class="dbox"/><text x="448" y="88" class="dlabel" text-anchor="middle">④ 计划</text><text x="448" y="108" class="dsmall" text-anchor="middle">拆分与顺序</text>
-  <rect x="518" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="574" y="88" class="dlabel" text-anchor="middle">⑤ 编码</text><text x="574" y="108" class="dsmall" text-anchor="middle">分支开发</text>
-  <rect x="644" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="700" y="88" class="dlabel" text-anchor="middle">⑥ 测试</text><text x="700" y="108" class="dsmall" text-anchor="middle">真跑与门禁</text>
-  <rect x="770" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="826" y="88" class="dlabel" text-anchor="middle">⑦ 评审</text><text x="826" y="108" class="dsmall" text-anchor="middle">非实现者</text>
-  <rect x="14" y="152" width="112" height="60" rx="8" class="dbox"/><text x="70" y="178" class="dlabel" text-anchor="middle">⑧ 合入</text><text x="70" y="198" class="dsmall" text-anchor="middle">主干合并</text>
-  <rect x="140" y="152" width="112" height="60" rx="8" class="dbox"/><text x="196" y="178" class="dlabel" text-anchor="middle">⑨ 回归</text><text x="196" y="198" class="dsmall" text-anchor="middle">主干验证</text>
-  <rect x="14" y="230" width="380" height="28" rx="6" class="dbox-soft"/><text x="204" y="249" class="dsmall" text-anchor="middle">分支开发（⑤）</text>
-  <rect x="406" y="230" width="250" height="28" rx="6" class="dbox-soft"/><text x="531" y="249" class="dsmall" text-anchor="middle">分支测试（⑥⑦）</text>
-  <rect x="668" y="230" width="130" height="28" rx="6" class="dbox-soft"/><text x="733" y="249" class="dsmall" text-anchor="middle">主干合并（⑧）</text>
-  <rect x="810" y="230" width="156" height="28" rx="6" class="dbox-soft"/><text x="888" y="249" class="dsmall" text-anchor="middle">主干回归（⑨）</text>
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">11</span><h2>六层实现：上一层输出是下一层输入</h2></div><span class="time">—</span></header>
+  <p class="slide-lead">认知、规范、装配、使用、验证、成长；最后一层回流第一层。</p>
+  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 200" role="img" aria-label="六层实现结构图">
+  <text x="14" y="24" class="dtitle">六层实现：上一层的输出是下一层的输入</text>
+  <defs><marker id="asix" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="14" y="42" width="146" height="70" rx="8" class="dbox-soft"/>
+  <text x="87" y="66" class="dlabel" text-anchor="middle">认知</text><text x="87" y="88" class="dsmall" text-anchor="middle">项目有什么</text><text x="87" y="104" class="dsmall" text-anchor="middle">清单·边集·配方</text>
+  <rect x="174" y="42" width="146" height="70" rx="8" class="dbox-soft"/>
+  <text x="247" y="66" class="dlabel" text-anchor="middle">规范</text><text x="247" y="88" class="dsmall" text-anchor="middle">应该怎样做</text><text x="247" y="104" class="dsmall" text-anchor="middle">铁律·规则·参数</text>
+  <rect x="334" y="42" width="146" height="70" rx="8" class="dbox-accent"/>
+  <text x="407" y="66" class="dlabel" text-anchor="middle">装配</text><text x="407" y="88" class="dsmall" text-anchor="middle">形成可用技能</text><text x="407" y="104" class="dsmall" text-anchor="middle">骨架·填充·激活</text>
+  <rect x="494" y="42" width="146" height="70" rx="8" class="dbox-accent"/>
+  <text x="567" y="66" class="dlabel" text-anchor="middle">使用</text><text x="567" y="88" class="dsmall" text-anchor="middle">九节点研发</text><text x="567" y="104" class="dsmall" text-anchor="middle">规格·分支·提交</text>
+  <rect x="654" y="42" width="146" height="70" rx="8" class="dbox-accent"/>
+  <text x="727" y="66" class="dlabel" text-anchor="middle">验证</text><text x="727" y="88" class="dsmall" text-anchor="middle">测试与评审</text><text x="727" y="104" class="dsmall" text-anchor="middle">门禁·探针·证据</text>
+  <rect x="814" y="42" width="152" height="70" rx="8" class="dbox-soft"/>
+  <text x="890" y="66" class="dlabel" text-anchor="middle">成长</text><text x="890" y="88" class="dsmall" text-anchor="middle">变化与回流</text><text x="890" y="104" class="dsmall" text-anchor="middle">重探查·经验保留</text>
+  <path class="dline" d="M160 77 L171 77" marker-end="url(#asix)"/>
+  <path class="dline" d="M320 77 L331 77" marker-end="url(#asix)"/>
+  <path class="dline" d="M480 77 L491 77" marker-end="url(#asix)"/>
+  <path class="dline" d="M640 77 L651 77" marker-end="url(#asix)"/>
+  <path class="dline" d="M800 77 L811 77" marker-end="url(#asix)"/>
+  <path class="dline-dash" d="M890 112 C890 160 87 160 87 116" marker-end="url(#asix)"/>
+  <text x="490" y="150" class="dsmall" text-anchor="middle">项目变化 → 局部重探查 → 新知识归位；上一层未落实的部分，会以返工形式在下一层显现</text>
 </svg></div></div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>09 / 16 · 流程</span></footer>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>11 / 16 · 实现</span></footer>
 </section>
 
 <section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">10</span><h2>发布判断：四项条件同时成立</h2></div><span class="time">—</span></header>
-  <p class="slide-lead">对象一致、责任明确、证据完整、例外可查；缺一项即冻结或待核实。</p>
-  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 170" role="img" aria-label="发布成立四项条件图">
-  <text x="14" y="24" class="dtitle">人在这里作发布判断：四项条件同时成立</text>
-  <rect x="14" y="42" width="228" height="110" rx="9" class="dbox-accent"/>
-  <text x="128" y="70" class="dlabel" text-anchor="middle">对象一致</text>
-  <text x="128" y="94" class="dsmall" text-anchor="middle">任务、提交、测试、审批</text>
-  <text x="128" y="114" class="dsmall" text-anchor="middle">指向同一事项</text>
-  <rect x="258" y="42" width="228" height="110" rx="9" class="dbox"/>
-  <text x="372" y="70" class="dlabel" text-anchor="middle">责任明确</text>
-  <text x="372" y="94" class="dsmall" text-anchor="middle">各环节有负责人</text>
-  <text x="372" y="114" class="dsmall" text-anchor="middle">与验收人</text>
-  <rect x="502" y="42" width="228" height="110" rx="9" class="dbox"/>
-  <text x="616" y="70" class="dlabel" text-anchor="middle">证据完整</text>
-  <text x="616" y="94" class="dsmall" text-anchor="middle">结论可回溯</text>
-  <text x="616" y="114" class="dsmall" text-anchor="middle">原始记录</text>
-  <rect x="746" y="42" width="220" height="110" rx="9" class="dbox"/>
-  <text x="856" y="70" class="dlabel" text-anchor="middle">例外可查</text>
-  <text x="856" y="94" class="dsmall" text-anchor="middle">代理、跳过、豁免</text>
-  <text x="856" y="114" class="dsmall" text-anchor="middle">单独登记并披露</text>
-</svg></div></div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>10 / 16 · 判断</span></footer>
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">12</span><h2>生成与激活：档位、目录、历史兼容</h2></div><span class="time">—</span></header>
+  <p class="slide-lead">只生成骨架不算完成；strict 全部通过才由 draft 改为 active。</p>
+  <div class="slide-body"><figure class="board" aria-label="生成与激活结构图：探查建模、装配填充、验证激活，以及档位、目录、历史兼容与经验保留">
+  <div class="row stages">
+    <div class="card">
+      <h3><span class="n">01</span>探查与建模 <small>Step 1—5</small></h3>
+      <div class="chips"><span class="chip">自检</span><span class="chip">三路探查</span><span class="chip">组件清单</span><span class="chip">关系边集</span><span class="chip">17 项特征卡</span></div>
+      <div class="steps"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+      <p>产出：notes · 清单 · 边集 · 框架证据</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="card accent">
+      <h3><span class="n">02</span>装配与填充 <small>Step 6—9</small></h3>
+      <div class="chips"><span class="chip">档位骨架</span><span class="chip">六段目录</span><span class="chip">meta / workflow / reference</span><span class="chip">assets / check / scripts</span></div>
+      <div class="steps"><span>6</span><span>7</span><span>8</span><span>9</span></div>
+      <p>产出：目标技能目录（draft）</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="card accent">
+      <h3><span class="n">03</span>验证与激活 <small>Step 10—13</small></h3>
+      <div class="chips"><span class="chip">核心门禁</span><span class="chip">独立审查</span><span class="chip">strict 全过</span><span class="chip">draft → active</span></div>
+      <div class="steps"><span>10</span><span>11</span><span>12</span><span>13</span></div>
+      <p>产出：active 技能 + 激活报告</p>
+    </div>
+  </div>
+  <div class="row facts">
+    <div class="card"><h3>档位</h3><div class="chips"><span class="chip">lite</span><span class="chip">standard</span><span class="chip">compliance</span><span class="chip">auto</span></div><p>核心认知 / 完整骨架 / 合规矩阵 / 按信号选档</p></div>
+    <div class="card"><h3>三类目录</h3><div class="chain"><span>生成器源码</span><em>→</em><span>目标技能</span><em>→</em><span>项目运行态</span></div><p>~/.agents/skills/&lt;项目&gt;-dev/ → .swarm-yuan/；技能内报告不混同</p></div>
+    <div class="card"><h3>历史兼容</h3><div class="chips"><span class="chip">SCHEMA_EPOCH 前</span><span class="chip">后</span></div><p>边界前不追溯新字段；边界后要求完整字段</p></div>
+    <div class="card"><h3>经验保留</h3><div class="chips"><span class="chip">lessons.md</span><span class="chip">升级不覆盖</span></div><p>连续两次升级后字节级一致</p></div>
+  </div>
+</figure></div>
+  <div class="takeaway"><b>生成的边界：</b>档位决定深度，目录决定边界，strict 决定能否激活；骨架不等于可用技能。</div>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>12 / 16 · 生成</span></footer>
 </section>
 
 <section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">11</span><h2>技术递进：从技能封装到递归自我改进</h2></div><span class="time">1 分钟</span></header>
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">13</span><h2>守门与证据：门禁、拦截、编码链</h2></div><span class="time">—</span></header>
+  <p class="slide-lead">四类证据分别证明不同事实；门禁全部通过不等同于业务正确。</p>
+  <div class="slide-body"><figure class="board" aria-label="守门与证据结构图：59 道门禁、四层拦截、编码链证据与能力边界">
+  <div class="row top">
+    <div class="card" style="flex:1.05">
+      <h3><span class="n">A</span>门禁规模</h3>
+      <div class="big"><b>59</b><span>道门禁 · 204 变量</span></div>
+      <div class="bar"><i style="width:20%">核心 12</i><i style="width:54%">标准 32</i><i style="width:26%">合规 19</i></div>
+      <div class="chips"><span class="chip">返回码 0/1/2</span></div>
+      <p>204 个配置变量参与判定；gate-runs 默认关闭，显式目录才落盘</p>
+    </div>
+    <div class="card" style="flex:.95">
+      <h3><span class="n">B</span>四层拦截</h3>
+      <div class="layers"><div><b>L1</b>写时 <em>编辑器拦截</em></div><div><b>L2</b>提交 <em>pre-commit</em></div><div><b>L3</b>门禁 <em>检查集</em></div><div><b>L4</b>构建 <em>准入</em></div></div>
+      <div class="chips"><span class="chip">变异验证：改坏 → 必须抓到</span></div>
+      <p>各有降级面：未安装 / 未配置 / 缺库</p>
+    </div>
+    <div class="card" style="flex:1.25">
+      <h3><span class="n">C</span>编码链证据</h3>
+      <div class="chain"><span>worker 备技能</span><em>→</em><span>ACP 传 cwd</span><em>→</em><span>引擎执行</span><em>→</em><span>worker 复核</span></div>
+      <div class="evi"><div><b>技能装载</b><small>技能真的被装载</small></div><div><b>cwd</b><small>工作目录正确</small></div><div><b>引擎身份</b><small>执行引擎可信</small></div><div><b>测试 diff</b><small>变更被测试覆盖</small></div></div>
+    </div>
+  </div>
+  <div class="card bounds">
+    <h3><span class="n">!</span>边界与验证</h3>
+    <div class="bounds-grid">
+      <div><b>门禁通过 ≠ 业务正确</b><span>覆盖词法/结构/流程/配置，不覆盖逻辑与需求歧义</span></div>
+      <div><b>激活通过 ≠ 持续有效</b><span>只证明当次检查；夹具只证明检查能力</span></div>
+      <div><b>夹具通过 ≠ 外部有效</b><span>真实缺陷语料仍在采集</span></div>
+      <div><b>R134：离线 ≠ 气隙自足</b><span>npm/pip 运行时仍用目标机源</span></div>
+    </div>
+    <p>变异验证：改坏门禁或代码，测试必须抓到；抓不到即检查未生效。</p>
+  </div>
+</figure></div>
+  <div class="takeaway"><b>守门的边界：</b>门禁守已知规则，证据证当次事实；边界必须与结论一起披露。</div>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>13 / 16 · 证据</span></footer>
+</section>
+
+<section class="slide">
+  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">14</span><h2>技术递进：从技能封装到递归自我改进</h2></div><span class="time">1 分钟</span></header>
   <p class="slide-lead">skill → spec → loop → graph → harness → multi-agent（memory）→ RSI：能力从可复制走向可进化。</p>
   <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 320" role="img" aria-label="技术递进图：skill、spec、loop、graph、harness、multi-agent 记忆与 RSI 逐级递进">
   <text x="8" y="26" class="dtitle">能力递进：后一层消费前一层的输出</text>
@@ -441,105 +591,7 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <path class="dline" d="M818 128 L823 98" marker-end="url(#apstep)"/>
   </svg></div></div>
   <div class="takeaway"><b>递进不是替换：</b>每一层都消费上一层的输出；RSI 把改进回路本身也纳入回路。</div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>11 / 16 · 技术递进</span></footer>
-</section>
-
-<section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">12</span><h2>六层实现：上一层输出是下一层输入</h2></div><span class="time">—</span></header>
-  <p class="slide-lead">认知、规范、装配、使用、验证、成长；最后一层回流第一层。</p>
-  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 200" role="img" aria-label="六层实现结构图">
-  <text x="14" y="24" class="dtitle">六层实现：上一层的输出是下一层的输入</text>
-  <defs><marker id="asix" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
-  <rect x="14" y="42" width="146" height="70" rx="8" class="dbox-soft"/>
-  <text x="87" y="66" class="dlabel" text-anchor="middle">认知</text><text x="87" y="88" class="dsmall" text-anchor="middle">项目有什么</text><text x="87" y="104" class="dsmall" text-anchor="middle">清单·边集·配方</text>
-  <rect x="174" y="42" width="146" height="70" rx="8" class="dbox-soft"/>
-  <text x="247" y="66" class="dlabel" text-anchor="middle">规范</text><text x="247" y="88" class="dsmall" text-anchor="middle">应该怎样做</text><text x="247" y="104" class="dsmall" text-anchor="middle">铁律·规则·参数</text>
-  <rect x="334" y="42" width="146" height="70" rx="8" class="dbox-accent"/>
-  <text x="407" y="66" class="dlabel" text-anchor="middle">装配</text><text x="407" y="88" class="dsmall" text-anchor="middle">形成可用技能</text><text x="407" y="104" class="dsmall" text-anchor="middle">骨架·填充·激活</text>
-  <rect x="494" y="42" width="146" height="70" rx="8" class="dbox-accent"/>
-  <text x="567" y="66" class="dlabel" text-anchor="middle">使用</text><text x="567" y="88" class="dsmall" text-anchor="middle">九节点研发</text><text x="567" y="104" class="dsmall" text-anchor="middle">规格·分支·提交</text>
-  <rect x="654" y="42" width="146" height="70" rx="8" class="dbox-accent"/>
-  <text x="727" y="66" class="dlabel" text-anchor="middle">验证</text><text x="727" y="88" class="dsmall" text-anchor="middle">测试与评审</text><text x="727" y="104" class="dsmall" text-anchor="middle">门禁·探针·证据</text>
-  <rect x="814" y="42" width="152" height="70" rx="8" class="dbox-soft"/>
-  <text x="890" y="66" class="dlabel" text-anchor="middle">成长</text><text x="890" y="88" class="dsmall" text-anchor="middle">变化与回流</text><text x="890" y="104" class="dsmall" text-anchor="middle">重探查·经验保留</text>
-  <path class="dline" d="M160 77 L171 77" marker-end="url(#asix)"/>
-  <path class="dline" d="M320 77 L331 77" marker-end="url(#asix)"/>
-  <path class="dline" d="M480 77 L491 77" marker-end="url(#asix)"/>
-  <path class="dline" d="M640 77 L651 77" marker-end="url(#asix)"/>
-  <path class="dline" d="M800 77 L811 77" marker-end="url(#asix)"/>
-  <path class="dline-dash" d="M890 112 C890 160 87 160 87 116" marker-end="url(#asix)"/>
-  <text x="490" y="150" class="dsmall" text-anchor="middle">项目变化 → 局部重探查 → 新知识归位；上一层未落实的部分，会以返工形式在下一层显现</text>
-</svg></div></div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>12 / 16 · 实现</span></footer>
-</section>
-
-<section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">13</span><h2>生成与激活：档位、目录、历史兼容</h2></div><span class="time">—</span></header>
-  <p class="slide-lead">只生成骨架不算完成；strict 全部通过才由 draft 改为 active。</p>
-  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 350" role="img" aria-label="生成、激活与目录结构图">
-  <text x="14" y="24" class="dtitle">生成一套技能：探查、装配、验证与激活</text>
-  <rect x="14" y="38" width="300" height="120" rx="9" class="dbox-soft"/>
-  <text x="164" y="62" class="dlabel" text-anchor="middle">探查与建模（Step 1—5）</text>
-  <text x="164" y="86" class="dsmall" text-anchor="middle">自检 · 行为统计 · 三路探查</text>
-  <text x="164" y="106" class="dsmall" text-anchor="middle">组件清单 · 关系边集 · 配方</text>
-  <text x="164" y="126" class="dsmall" text-anchor="middle">17 项特征卡</text>
-  <text x="164" y="148" class="dsmall" text-anchor="middle" fill="#2f7d51">产出：notes、清单、边集、框架证据</text>
-  <rect x="330" y="38" width="300" height="120" rx="9" class="dbox-accent"/>
-  <text x="480" y="62" class="dlabel" text-anchor="middle">装配与填充（Step 6—9）</text>
-  <text x="480" y="86" class="dsmall" text-anchor="middle">按档位生成骨架</text>
-  <text x="480" y="106" class="dsmall" text-anchor="middle">六段目录：meta / workflow / reference</text>
-  <text x="480" y="126" class="dsmall" text-anchor="middle">/ assets / check / scripts</text>
-  <text x="480" y="148" class="dsmall" text-anchor="middle" fill="#2f7d51">产出：目标技能目录（draft）</text>
-  <rect x="646" y="38" width="318" height="120" rx="9" class="dbox-accent"/>
-  <text x="805" y="62" class="dlabel" text-anchor="middle">验证与激活（Step 10—13）</text>
-  <text x="805" y="86" class="dsmall" text-anchor="middle">核心门禁 · 独立审查 · 记忆写回</text>
-  <text x="805" y="106" class="dsmall" text-anchor="middle">strict：完整性 / 清单 / 预算 / 配置</text>
-  <text x="805" y="126" class="dsmall" text-anchor="middle">全部通过才由 draft 改为 active</text>
-  <text x="805" y="148" class="dsmall" text-anchor="middle" fill="#2f7d51">产出：active 技能 + 激活报告</text>
-  <path class="dline" d="M314 98 L327 98" marker-end="url(#as)"/>
-  <path class="dline" d="M630 98 L643 98" marker-end="url(#as)"/>
-  <defs><marker id="as" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
-  <rect x="14" y="176" width="950" height="158" rx="9" class="dbox"/>
-  <text x="32" y="200" class="dlabel">生成档位、目录边界与历史兼容</text>
-  <text x="32" y="224" class="dsmall">档位：lite（核心认知与门禁）／standard（完整骨架）／compliance（增加合规矩阵与资料）；auto 按项目信号选档</text>
-  <text x="32" y="248" class="dsmall">三类目录：生成器源码 → 目标技能（默认 ~/.agents/skills/&lt;项目&gt;-dev/）→ 项目运行态（.swarm-yuan/）</text>
-  <text x="32" y="272" class="dsmall">技能内另有同名 .swarm-yuan/ 保存激活报告，与项目运行态不可混同；项目运行态是否入库由项目规则决定</text>
-  <text x="32" y="296" class="dsmall">历史兼容：决策校验设时间边界（SCHEMA_EPOCH），边界前不追溯新字段，边界后仍要求完整字段</text>
-  <text x="32" y="320" class="dsmall">经验保留：lessons.md 属项目保留文件，升级不覆盖，连续两次升级后字节级一致</text>
-</svg></div></div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>13 / 16 · 生成</span></footer>
-</section>
-
-<section class="slide">
-  <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">14</span><h2>守门与证据：门禁、拦截、编码链</h2></div><span class="time">—</span></header>
-  <p class="slide-lead">四类证据分别证明不同事实；门禁全部通过不等同于业务正确。</p>
-  <div class="slide-body"><div class="figure"><svg viewBox="0 0 980 330" role="img" aria-label="门禁、拦截、编码链与边界图">
-  <text x="14" y="24" class="dtitle">守门与证据：门禁、拦截、编码链</text>
-  <rect x="14" y="40" width="300" height="104" rx="9" class="dbox-accent"/>
-  <text x="164" y="64" class="dlabel" text-anchor="middle">59 道门禁 · 204 变量</text>
-  <rect x="34" y="78" width="120" height="24" rx="5" class="dbox-soft"/><text x="94" y="95" class="dsmall" text-anchor="middle">核心 12</text>
-  <rect x="164" y="78" width="120" height="24" rx="5" class="dbox-soft"/><text x="224" y="95" class="dsmall" text-anchor="middle">标准 32</text>
-  <rect x="34" y="108" width="120" height="24" rx="5" class="dbox-soft"/><text x="94" y="125" class="dsmall" text-anchor="middle">合规 19</text>
-  <rect x="164" y="108" width="120" height="24" rx="5" class="dbox-soft"/><text x="224" y="125" class="dsmall" text-anchor="middle">返回码 0/1/2</text>
-  <text x="164" y="150" class="dsmall" text-anchor="middle">gate-runs 默认关闭，显式目录才落盘</text>
-  <rect x="330" y="40" width="300" height="104" rx="9" class="dbox"/>
-  <text x="480" y="64" class="dlabel" text-anchor="middle">四层拦截</text>
-  <text x="480" y="88" class="dsmall" text-anchor="middle">L1 写时 · L2 提交 · L3 门禁 · L4 构建</text>
-  <text x="480" y="110" class="dsmall" text-anchor="middle">各有降级面：未安装、未配置、缺库</text>
-  <text x="480" y="132" class="dsmall" text-anchor="middle">变异验证用于检验检查本身是否有效</text>
-  <rect x="646" y="40" width="318" height="104" rx="9" class="dbox"/>
-  <text x="805" y="64" class="dlabel" text-anchor="middle">编码链证据分层</text>
-  <text x="805" y="88" class="dsmall" text-anchor="middle">worker 准备技能 → ACP 传递 cwd → 引擎执行</text>
-  <text x="805" y="110" class="dsmall" text-anchor="middle">→ worker 复核文件、类型、测试、diff</text>
-  <text x="805" y="132" class="dsmall" text-anchor="middle">技能装载、cwd、引擎身份、测试四类证据</text>
-  <rect x="14" y="160" width="950" height="146" rx="9" class="dbox-soft"/>
-  <text x="32" y="186" class="dlabel">能力边界与离线口径</text>
-  <text x="32" y="210" class="dsmall">门禁覆盖词法、结构、流程与配置，全部通过不等同于业务正确；四层拦截无法覆盖业务逻辑错误与需求歧义</text>
-  <text x="32" y="234" class="dsmall">激活通过仅证明当次检查通过，不保证此后持续有效；夹具通过仅证明检查能力，不证明真实项目的外部有效性；真实缺陷语料仍在采集</text>
-  <text x="32" y="258" class="dsmall">变异验证：故意改坏门禁或代码，确认测试能抓到故障；注入后仍全部通过，说明检查未实际生效</text>
-  <text x="32" y="282" class="dsmall">R134 离线口径：内嵌源无法提供的资料，npm/pip 运行时仍使用目标机源；离线包不等于完全气隙自足</text>
-</svg></div></div>
-  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>14 / 16 · 证据</span></footer>
+  <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>14 / 16 · 技术递进</span></footer>
 </section>
 
 <section class="slide">

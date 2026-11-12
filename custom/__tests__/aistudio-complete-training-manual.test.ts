@@ -27,9 +27,10 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     expect(html.length).toBeGreaterThan(20000)
   })
 
-  it('PPT 形态：十七页、十四张图、末尾一页附录台账', () => {
+  it('PPT 形态：十七页、十二张图、两页结构化看板、末尾一页附录台账', () => {
     expect((html.match(/<section class="slide/g) ?? [])).toHaveLength(17)
-    expect((html.match(/<svg/g) ?? [])).toHaveLength(14)
+    expect((html.match(/<svg/g) ?? [])).toHaveLength(12)
+    expect((html.match(/class="board"/g) ?? [])).toHaveLength(2)
     expect((html.match(/class="ledger"/g) ?? [])).toHaveLength(1)
     expect((html.match(/<table/g) ?? [])).toHaveLength(1)
     expect(html).toContain('class="slide cover"')
@@ -78,7 +79,7 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     for (const fact of ['1.0.15-overlay', '0.8.20-studio.2', 'v0.23.1-team.2', '3.18.0', 'v2.100.3']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
-    for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', '59 道门禁', 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭', '研发小循环', '组织大循环', 'Matrix', '本体', '对象 · 关系 · 动作', 'GB/T 22239', 'ISO 26262', 'OWASP ASVS 5.0']) {
+    for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', '59 道门禁', 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭', '研发小循环', '组织大循环', 'Matrix', '本体', '对象 · 关系 · 动作', 'GB/T 22239', 'ISO 26262', 'OWASP ASVS 5.0', '博学 · 审问 · 慎思 · 明辨 · 笃行 · 不贰过 · 举一反三']) {
       expect(html, `核心理念缺失：${fact}`).toContain(fact)
     }
     expect(html).toContain('全部通过不等同于业务正确')
