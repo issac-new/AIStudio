@@ -18,6 +18,11 @@ spec:
     - id: l0.scope
       type: scope
       mode: scope
+      # 2026-11-12：仓库 scope.yaml 重定义为「作业区围栏」；批次级范围由 task-intent
+      # 可选收窄（登记了意图 → 围栏 ∩ 意图 scope；未登记 → 只查围栏）。
+      taskIntent:
+        file: ".qgate/registers/task-intent.json"
+        require: false
       evidenceType: scope-check-result
   evidence:
     required:

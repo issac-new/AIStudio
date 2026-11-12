@@ -31,13 +31,14 @@ describe('qgate 断言登记与 pre-push 强制面', () => {
     }
   })
 
-  it('scope.yaml 声明了本变更的改动面', () => {
+  it('scope.yaml 是作业区围栏（2026-11-12 重定义：不再按批登记改动面）', () => {
     const doc = loadYaml('.qgate/scope.yaml')
     const paths = doc.paths as string[]
     expect(Array.isArray(paths)).toBe(true)
+    // 围栏按顶层目录声明：custom/** 覆盖 modelcap/qgate 等全部子域，runtime 同理。
+    expect(paths).toContain('custom/**')
     expect(paths).toContain('runtime/**')
-    expect(paths).toContain('custom/server/modelcap/**')
-    expect(paths).toContain('custom/qgate/**')
+    // 旧语义断言（具体子域路径）已随围栏化退役；防回涨由 qgate-repo-scope-fence.test.ts 守。
   })
 
   it('pre-push 走 L0 硬件集并默认拦截', () => {
