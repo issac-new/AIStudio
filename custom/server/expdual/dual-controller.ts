@@ -246,7 +246,16 @@ router.get('/premise-signals', async (ctx) => {
     ok(ctx, { available: false, note: `假设登记簿读取失败：${String((e as Error).message || e)}`, signals: [] })
     return
   }
-  const signals = []
+  // strictNullChecks 下 `= []` 不再走 any 演化推断，显式注解投影行形状
+  const signals: {
+    premiseId: string
+    premiseStatus: string
+    statement: string
+    refutedBy: string | null
+    ruleId: string
+    ruleText: string
+    score: number
+  }[] = []
   for (const premise of premises) {
     for (const rule of facts) {
       const score = bigramSimilarity(premise.statement, rule.text)

@@ -9,6 +9,7 @@ import { listCandidates } from '../../expcandidates/exp-store'
 import type { ExpCandidate } from '../../expcandidates/exp-types'
 import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } from './apply'
 import { attachRegression, readEvalEvidence, readRegressionEvidence } from './evidence'
+import type { RegressionEvidence } from './types'
 import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
@@ -227,7 +228,8 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
   if ((metrics.evidenceMode ?? 'explicit') !== 'explicit') {
     throw new ServiceError(400, 'origin/mixed 是诊断证据，不能作为候选探测；请绑定 fresh explicit 评测运行')
   }
-  let regression = null
+  // strictNullChecks 下 `= null` 只推得 null 型，按 readRegressionEvidence 返回形状注解
+  let regression: RegressionEvidence | null = null
   if (input.regressionRunId) {
     regression = readRegressionEvidence(input.regressionRunId)
     if (!regression) throw new ServiceError(400, `回归运行不存在：${input.regressionRunId}`)

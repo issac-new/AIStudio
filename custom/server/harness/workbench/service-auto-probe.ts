@@ -20,6 +20,7 @@ import {
 } from './loop'
 import { behavioralDiversity, decomposeSearch, gainRetention, objectivePointsOf } from './multi-objective'
 import { createSet, getSet } from '../../eval/store'
+import type { EvalSet } from '../../eval/types'
 import { runReplayEval } from '../../eval/runner'
 import { loadEvalConfig } from '../../eval/types'
 import type { AskFn } from '../../eval/judge'
@@ -94,7 +95,8 @@ export async function startAutoProbe(id: string, opts: AutoProbeOptions): Promis
   }
   const set = getSet(String(opts.setId ?? ''))
   if (!set) throw new ServiceError(400, `评测集不存在：${opts.setId}`)
-  let regressionSet = null
+  // strictNullChecks 下 `= null` 只推得 null 型，按 getSet 返回形状显式注解
+  let regressionSet: EvalSet | undefined = undefined
   if (opts.regressionSetId) {
     regressionSet = getSet(opts.regressionSetId)
     if (!regressionSet) throw new ServiceError(400, `回归集不存在：${opts.regressionSetId}`)
