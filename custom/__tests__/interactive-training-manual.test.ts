@@ -22,16 +22,17 @@ type Run28Evidence = {
 }
 
 function courseData() {
-  const markers = ['const PARTS =', 'const PHASES =', 'const RUN28_EVIDENCE =', 'const MANUAL_PRINCIPLES ='].map(marker => html.indexOf(marker))
+  const markers = ['const PARTS =', 'const PHASES =', 'const RUN28_EVIDENCE =', 'const MANUAL_PRINCIPLES =', 'const MANUAL_PLAIN ='].map(marker => html.indexOf(marker))
   for (const start of markers) expect(start).toBeGreaterThan(-1)
   const start = Math.min(...markers)
   const end = html.indexOf('\n\nconst $ =')
   expect(end).toBeGreaterThan(start)
-  return new Function(`${html.slice(start, end)}; return { PARTS, PHASES, SCENES, RUN28_EVIDENCE, MANUAL_PRINCIPLES }`)() as {
+  return new Function(`${html.slice(start, end)}; return { PARTS, PHASES, SCENES, RUN28_EVIDENCE, MANUAL_PRINCIPLES, MANUAL_PLAIN }`)() as {
     PARTS: Array<{ id: string; name: string }>
     PHASES: Array<{ id: string }>
     RUN28_EVIDENCE: Record<string, Run28Evidence>
     MANUAL_PRINCIPLES: Record<string, string>
+    MANUAL_PLAIN: Record<string, { title: string; what: string; why: string; goal: string; principle: string; prepare: string[]; steps: Array<{ action: string; explain: string; pass: string; fail: string; save: string }>; case: { title: string; background: string; action: string; result: string } }>
     SCENES: Array<{
       id: string; part: string; phase: string; navShort: string; focus: string; duration: number; summary: string; proof: string
       layer: string; practiceRef: string; feedsNextCycle?: string
@@ -171,9 +172,19 @@ describe('AIStudio 交互培训课程契约', () => {
 
   it('技术手册：原理、实操、案例、证据与演示侧栏构成完整课程', () => {
     const s2 = (text: string) => text.split('id="topologySvg"').length - 1
-    const { PHASES, SCENES, RUN28_EVIDENCE, MANUAL_PRINCIPLES } = courseData()
+    const { PHASES, SCENES, RUN28_EVIDENCE, MANUAL_PRINCIPLES, MANUAL_PLAIN } = courseData()
     expect(Object.keys(MANUAL_PRINCIPLES).sort()).toEqual(SCENES.map(scene => scene.id).sort())
     for (const scene of SCENES) expect(MANUAL_PRINCIPLES[scene.id].length, `${scene.id} 原理说明`).toBeGreaterThan(60)
+    expect(Object.keys(MANUAL_PLAIN).sort()).toEqual(SCENES.map(scene => scene.id).sort())
+    for (const scene of SCENES) {
+      const plain = MANUAL_PLAIN[scene.id]
+      expect(plain.steps, `${scene.id} 通俗步骤数`).toHaveLength(scene.steps.length)
+      expect(plain.prepare.length, `${scene.id} 准备项`).toBeGreaterThanOrEqual(2)
+      for (const [index, step] of plain.steps.entries()) {
+        for (const field of ['action', 'explain', 'pass', 'fail', 'save'] as const) expect(step[field].length, `${scene.id} step ${index + 1} ${field}`).toBeGreaterThan(8)
+        expect(`${step.action}${step.explain}${step.pass}${step.fail}${step.save}`, `${scene.id} step ${index + 1} 仍需懂内部缩写`).not.toMatch(/(DAG|RACI|MAET|SCHEMA_EPOCH|HERMES_\w+|G[1-6]|L[1-4])/)
+      }
+    }
     // 左侧进度轨由 PHASES 驱动，四阶段把 14 幕完整分组且全部可点导航；横幅带阶段与幕次
     expect(html).toContain('function renderPhaseRoute')
     expect(html).toContain('data-directory-scene="${entry.index}"')
@@ -184,7 +195,7 @@ describe('AIStudio 交互培训课程契约', () => {
     // 四组冲突数字原样呈现，且每个核心数字都能回溯到证据 fact，不另造口径
     const metricsBlock = html.slice(html.indexOf('const metrics = ['), html.indexOf("$('caseMetrics').innerHTML"))
     expect(metricsBlock.length).toBeGreaterThan(0)
-    for (const token of ['26', '6/6 <em>≠</em> 5/6', '65 / 8/65', '11/13｜13/14', '步链', '含代偿 / 净额', 'open / 已修', '报告｜后续帧']) {
+    for (const token of ['26', '6/6 <em>≠</em> 5/6', '65 / 8/65', '11/13｜13/14', '流程步骤', '含代偿 ≠ 扣除后', '未关闭 / 已修复', '原报告｜后续核验']) {
       expect(metricsBlock, `metrics ${token}`).toContain(token)
     }
     const allFacts = Object.values(RUN28_EVIDENCE).map(item => item.fact).join('\n')
@@ -218,7 +229,7 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(principleBlock).toContain('id="manualPrinciple"')
     expect(practiceBlock.indexOf('id="flowSvg"')).toBeLessThan(practiceBlock.indexOf('id="coachSteps"'))
     expect(caseBlock).toContain('id="relationshipSvg"')
-    expect(html).toContain('${escapeSvg(MANUAL_PRINCIPLES[scene.id])}')
+    expect(html).toContain('${escapeSvg(plain.principle)}')
     expect(html).toContain('class="manual-notes"')
     expect(html).toContain('height: calc(100vh - 58px)')
     expect(html).not.toContain('function fitPageToViewport')
@@ -605,7 +616,7 @@ describe('培训页本地启动器', () => {
     expect(home.status).toBe(200)
     expect(home.headers.get('content-type')).toContain('text/html')
     expect(home.headers.get('content-security-policy')).toContain("connect-src 'none'")
-    expect(await home.text()).toContain('AIStudio 交互式培训手册')
+    expect(await home.text()).toContain('AIStudio 技术培训与演示手册')
 
     const swarmGuide = await fetch(`${base}/aistudio-swarm-yuan-guide.html`)
     expect(swarmGuide.status).toBe(200)

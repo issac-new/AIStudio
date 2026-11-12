@@ -1027,7 +1027,7 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 - [设计文档全量索引](aistudio-design-document-index.md)：全部根目录 spec 与 archive spec 的可点击快照。
 - [run28 案例（交互培训专题）](aistudio-interactive-training.html#scene=project-run28-case)：最新完整轮的真实报告、含代偿与净额对照；[完整 Markdown](aistudio-run28-simulation-case.md)为可选来源。
 - [run25 全流程推演案例](aistudio-run25-simulation-case.md)：run25/run26 历史方案、报告与后续清偿对照。
-- [14 幕交互拓扑培训](aistudio-interactive-training.html)：面向技术人员的培训手册与演示说明。每幕依次讲清原理与结构、结构/架构图融入原理、流程图引出实操、关系图收束案例交接的连贯图解、实操演示流程、run28 场景案例、证据与验收；左侧为四阶段 14 幕目录，右侧同步当前步骤的讲解重点、交付物、验收检查和常见误操作，可打开对应拓扑。案例与示例代码默认展开，打印输出 14 页 A4 横屏完整教案。
+- [14 幕交互拓扑培训](aistudio-interactive-training.html)：面向第一次接触系统的技术人员。每幕先解释“这是什么、为什么要做”，再给出结构图、系统架构图和逐步演示；每一步都写清讲师怎么讲、看到什么算完成、失败怎么办、要保存什么。原始技术核对项与示例命令可展开，打印输出 14 页 A4 横屏教案。
 - [AIStudio 终态设计文档](../DESIGN.md)：稳定产品与架构依据。
 - [全流程推演方案](../superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步、六闸和最终验收依据。
 - [发布清单](../../RELEASE-MANIFEST.json)：当前模块版本与两件发布资产政策。

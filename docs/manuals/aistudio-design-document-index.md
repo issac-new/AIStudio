@@ -476,7 +476,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（210 份）
+## 2026-11（211 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -659,6 +659,7 @@
 - [2026-11-11-g4-principal-status-backfill.md](../superpowers/specs/2026-11-11-g4-principal-status-backfill.md)
 - [2026-11-11-release-v1.0.15-overlay.md](../superpowers/specs/2026-11-11-release-v1.0.15-overlay.md)
 - [2026-11-11-run29-prelude.md](../superpowers/specs/2026-11-11-run29-prelude.md)
+- [2026-11-11-training-plain-language.md](../superpowers/specs/2026-11-11-training-plain-language.md)
 - [2026-11-11-userenv-escape-400-preauthz.md](../superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md)
 - [2026-11-11-zcode-3180-sync-and-qwen-absorb.md](../superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md)
 - [2026-11-12-ai-agent-handbook-absorption.md](../superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md)
@@ -701,8 +702,8 @@
 
 <<<<<<< HEAD
 <<<<<<< HEAD
-- 当前工作树根目录：**663 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 210 份；合计 663 份。
+- 当前工作树根目录：**664 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 211 份；合计 664 份。
 =======
 - 当前工作树根目录：**659 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 206 份；合计 659 份。
