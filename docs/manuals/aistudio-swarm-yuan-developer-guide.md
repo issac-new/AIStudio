@@ -165,7 +165,7 @@ flowchart TB
 
 ## 吸收全景：81 个框架、15 个运行时和 61 份方法论从哪里来
 
-swarm-yuan 的能力不是凭空发明的。它把四类来源吸收成自己的规则、门禁和文档：真实项目研究、开源技能与方法论、行业标准映射、自研机制。这一节回答“盒子里到底装了什么、每样从哪里来、什么时候才生效”。全部条目登记在 `skills/swarm-yuan/references/capability-map.md`（吸收台账单一事实源：逐档来源、证据、消费节点与触发），自检用 G25 双向对账、孤儿零容忍，所以下面每一项都可回查，不是宣传清单。
+这一节回答“它凭什么有这些能力、每样从哪里来、什么时候生效”。来源分三类，分开列以免把外部吸收误当自研：**外部调研吸收**（真实项目研究、开源技能与方法论）、**行业标准映射**、**自研机制**。全部条目登记在 `skills/swarm-yuan/references/capability-map.md`（吸收台账单一事实源：逐档来源、证据、消费节点与触发），自检用 G25 双向对账、孤儿零容忍，所以下面每一项都可回查，不是宣传清单。
 
 ### 81 个技术栈框架规则
 
@@ -185,7 +185,7 @@ swarm-yuan 的能力不是凭空发明的。它把四类来源吸收成自己的
 
 ### 15 个外部运行时（三层接线）
 
-接线深度不同，责任不同。任何一层没装都不阻塞，走各自降级载体，分层说明见 `skills/swarm-yuan/SKILL.md:46`：
+接线深度不同，责任不同。三层各自带降级载体：深度层回退内置 grep 与本地解析，CLI 层用随技能分发的降级载体或仓内物化原文，方法论层只是引用、缺席不阻塞；共同边界是**未装不阻塞但逐项披露**，分层说明见 `skills/swarm-yuan/SKILL.md:46`：
 
 | 层 | 对象 | 怎样接线 | 未安装时 |
 |---|---|---|---|
@@ -193,7 +193,18 @@ swarm-yuan 的能力不是凭空发明的。它把四类来源吸收成自己的
 | CLI 接线（6） | OpenSpec、comet、gsd-core、codex-security、mattpocock-skills、diagram-design | 门禁与状态机按需调用 CLI；mattpocock-skills 与 diagram-design 为仓内物化（前者物化 27 技能并带 MANIFEST 与 LICENSE） | 同上 |
 | 方法论引用（5） | superpowers、gstack、ECC、Ruflo、impeccable | AI 按九节点引用其模式，不做硬依赖 | 引用面缺席，流程仍可走 |
 
-外部运行时的版本随时间变化，不写进手册；当前实测版本看 `self-check.sh --check-only` 输出。
+外部运行时的版本随时间变化，不写进手册；当前实测版本看 `self-check.sh --check-only` 输出。行业 profile 不是运行时，用 `--industry <name|none>` 显式加载并由 conf-render 注入，**不是自动识别**；自动检测只决定 lite/standard/compliance 档位，不替你选行业。
+
+### 27 个物化技能（读原文执行）
+
+`skills/swarm-yuan/runtime/mattpocock-skills/` 物化 mattpocock/skills 共 27 个（engineering 20 + productivity 7），消费方式是读技能原文执行，不随目标技能分发：
+
+| 组 | 全部技能 |
+|---|---|
+| engineering（20） | ask-matt、code-review、codebase-design、diagnosing-bugs、domain-modeling、grill-with-docs、implement、implement-spec、improve-codebase-architecture、pr、prototype、research、retro、setup-matt-pocock-skills、tdd、to-spec、to-tickets、triage、wayfinder、wizard |
+| productivity（7） | grill-me、grilling、handoff、teach、to-questionnaire、wait-what、writing-for-agents |
+
+名单以目录与 `MANIFEST.md` 为正本；目标技能侧不随包，缺失时按方法论层改写降级。
 
 ### 61 份方法论与规范文档
 
@@ -213,7 +224,18 @@ swarm-yuan 的能力不是凭空发明的。它把四类来源吸收成自己的
 
 ### 研究与案例档案（生成器侧）
 
-`skills/swarm-yuan/docs/research/` 共 106 篇 R 系列档案：设计演进与重构决策、换栈演练（第九棒补 PHP、第十棒补 Ruby 生态）、真实项目回归（R124/R143 JVM 全栈、R118 NestJS）、审计加固、运行时刷新与各吸收轮实录（如 R143 Ponytail＋Headroom）。`skills/swarm-yuan/references/case-studies/` 承载可授课案例。这些是生成器侧档案，不随目标技能分发；分发面以 `UNIVERSAL_FILES=109`（lite 51）为正本。
+`skills/swarm-yuan/docs/research/` 现有 106 篇研究档案，R 编号档跨度 R1–R144、允许同号多档（如 R124、R143 各两档）；全量清单以目录为准，`ls skills/swarm-yuan/docs/research/` 即可枚举。下表按文件名关键词分组（runtime-refresh/ponytail、regression/jvm、drill、absorption/capability-map、audit/hardening/standards，其余归基础设计与外部调研），各组合计 106：
+
+| 主题 | 代表编号 | 篇数 |
+|---|---|---|
+| 运行时刷新与整合轮 | R16、R105、R140–R144 | 51 |
+| 基础设计与外部调研 | R1–R9、R11–R19、R101–R104、R114 | 26 |
+| 真实项目回归 | R44、R72、R118、R121、R124、R143 | 10 |
+| 方法论吸收与台账 | R14、R37、R86、R88、R143-ponytail、2026-10-20 台账 | 10 |
+| 审计与安全加固 | R7、R8、R54、R119、R126 | 5 |
+| 换栈演练 | R58、R60、R62、R64 | 4 |
+
+这些是生成器侧档案，不随目标技能分发；分发面以 `UNIVERSAL_FILES=109`（lite 51）为正本。
 
 ### 行业标准映射
 
