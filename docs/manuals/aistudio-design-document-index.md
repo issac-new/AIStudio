@@ -5,8 +5,8 @@
 - 快照基线：`3690ceba3`；核实日：2026-11-11；版本线：`1.0.15-overlay`（v1.0.15 发布轮）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
 <<<<<<< HEAD
-- 当前工作树根目录：**656 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 203 份；合计 656 份。
+- 当前工作树根目录：**657 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 204 份；合计 657 份。
 =======
 - 当前工作树根目录：**651 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 198 份；合计 651 份。
@@ -483,7 +483,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（203 份）
+## 2026-11（204 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -670,6 +670,7 @@
 - [2026-11-11-zcode-3180-sync-and-qwen-absorb.md](../superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md)
 - [2026-11-12-ai-agent-handbook-absorption.md](../superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md)
 - [2026-11-12-capability-acceptance-matrix.md](../superpowers/specs/2026-11-12-capability-acceptance-matrix.md)
+- [2026-11-12-ci-deps-order.md](../superpowers/specs/2026-11-12-ci-deps-order.md)
 - [2026-11-12-ci-product-tests.md](../superpowers/specs/2026-11-12-ci-product-tests.md)
 - [2026-11-12-ci-typecheck-into-product-tests.md](../superpowers/specs/2026-11-12-ci-typecheck-into-product-tests.md)
 - [2026-11-12-doc-canon-single-source.md](../superpowers/specs/2026-11-12-doc-canon-single-source.md)
