@@ -2,6 +2,7 @@
 # level: 0=静态 / 1=口径与契约 / 2=单元与集成 / 3=生成链路 / 4=独立验证 / 5=真实项目
 test-ai-judgment.sh	2	yes	general	-
 test-api-test-coverage.sh	2	yes	general	-
+test-branch-protected-allowlist.sh	2	yes	general	2026-11-12
 test-bat-parity.sh	2	yes	general	-
 test-capability-map-g25.sh	1	yes	general	-
 test-check-impact-baseline.sh	2	yes	general	-

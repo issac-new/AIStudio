@@ -28,6 +28,7 @@ test-upgrade-hygiene.sh	generation
 test-workflow-methodology-ref.sh	generation
 # domain: gates
 test-ai-judgment.sh	gates
+test-branch-protected-allowlist.sh	gates
 test-api-test-coverage.sh	gates
 test-check-impact-baseline.sh	gates
 test-check-test-zero-runs.sh	gates

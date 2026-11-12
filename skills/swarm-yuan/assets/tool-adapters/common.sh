@@ -176,7 +176,10 @@ ta_registry_host() {  # $1=tool $2=col(2=detect,3=install_path) → stdout（空
 }
 
 ta_tool_home() {  # $1=tool → stdout 宿主安装探测目录（空=无判据，不拦）
-  local tool="$1" home det
+  # home/det 声明即初始化：bash 3.2 把 `local x` 视为已置空，bash≥4.4 视为未置——
+  # 不初始化时下方 [[ -z "$home" ]] 在 Linux（bash 5.2 + set -u）报 unbound variable，
+  # 宿主检测/交叉渲染/注销整链中断（2026-11-12 Linux CI 安装族测试失败根因之一）。
+  local tool="$1" home="" det=""
   # 优先注册表第2列 dir: 判据（探测目录=宿主家目录）；无 dir: 再退第3列 install_path
   # （旧 8 家第3列恰好是家目录）。hermes/dsh/ccswitch 第3列是 skills 安装子目录——
   # 曾被直接当探测目录，宿主已装但未装过技能（子目录不存在）时必漏检
