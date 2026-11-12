@@ -68,7 +68,7 @@ describe('AIStudio 完整培训手册契约', () => {
       'run28',
       '订单编辑',
       '评分表',
-      '未验证',
+      '培训不覆盖'
     ]) expect(html, `缺少主题：${needle}`).toContain(needle)
   })
 
@@ -84,6 +84,11 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).toContain('全绿不等于业务正确')
     expect(html).toContain('真实缺陷语料仍在采集')
     expect(html).not.toContain('【待补】')
+    // 手册不写自身编写过程与作者验证记录
+    expect(html).not.toContain('本手册没有验证')
+    expect(html).not.toContain('编制日期')
+    expect(html).not.toContain('这份手册')
+    expect(html).not.toContain('自包含文档')
     // 文章概念未落地时必须如实标注，不许写成已实现
     expect(html).toContain('未采用')
     expect(html).toContain('部分实现')

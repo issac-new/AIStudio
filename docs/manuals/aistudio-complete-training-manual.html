@@ -200,18 +200,18 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
     <div class="s"><b>2 案例</b><span>run28 复盘与订单编辑</span></div>
   </div>
   <div class="grid g3" style="margin-top:16px">
-    <div class="card"><h4>这份手册回答什么</h4><p>人、机器与 AI 怎样分工；一项工作怎样从想法走到发布；质量靠哪些机制守住；新手怎样做、怎样讲、怎样验。</p></div>
+    <div class="card"><h4>这套体系回答什么</h4><p>人、机器与 AI 怎样分工；一项工作怎样从想法走到发布；质量靠哪些机制守住；新手怎样做、怎样讲、怎样验。</p></div>
     <div class="card"><h4>它不代替什么</h4><p>不代替真实系统操作、不代替业务验收、不代替发布裁决。所有界面与数据都是培训模拟。</p></div>
-    <div class="card"><h4>事实从哪里来</h4><p>版本取自发布清单，数字取自技能数字正本，流程取自当前脚本；未验证的部分在第 13 章逐条列明。</p></div>
+    <div class="card"><h4>读完之后能做什么</h4><p>能判断一项工作卡在哪、该找谁、要什么证据；能按操作卡跑通生成、激活、研发、门禁与更新；能向他人解释每个数字的口径。</p></div>
   </div>
 </header>
 
-<h2 style="border-top:0;padding-top:30px"><span class="no">怎么用这份手册</span>先读哪、后读哪、什么时候翻回来</h2>
+<h2 style="border-top:0;padding-top:30px"><span class="no">学习路径</span>先读哪、后读哪、什么时候翻回来</h2>
 <p class="lead">第一次接触，按第 1 到第 12 章顺序读，大约一天。已经上手的人，可以直接跳到第 10 章操作卡，遇到说不清的地方再回第 7、8 章找机制。要带人讲课，用第 12 章的评分表当讲义提纲。</p>
 <div class="grid g3">
   <div class="card"><h4>想先建立判断</h4><p>读第 1—3 章。你会知道这套系统里谁负责什么、一项工作怎样从想法走到发布，以及哪里必须停下来等人裁决。</p></div>
   <div class="card"><h4>想动手做一遍</h4><p>读第 10 章八张操作卡。每张卡都写清做什么、怎么讲、看到什么算完成、失败怎么办、留下什么证据。</p></div>
-  <div class="card"><h4>想核对真假</h4><p>读第 9、11、13 章。吸收清单、案例数字和事实源索引都给出出处，未验证的部分单独列明。</p></div>
+  <div class="card"><h4>想核对真假</h4><p>读第 9、11、13 章。吸收清单给出每一项的出处，案例数字标注所属版本与口径，事实源索引指到原始文件。</p></div>
 </div>
 <div class="note"><strong>阅读约定</strong>书中所有界面与数据都是培训模拟，不连接真实任务、审批或生产数据。命令示例标注了只读或写操作，执行前请回到对应章节确认副作用；“看到什么算完成”一律指可观察的结果，不是“感觉懂了”。</div>
 
@@ -941,7 +941,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 <section class="chapter" id="s10">
 <h2><span class="no">第十章 · 上手</span>八张操作卡，照着做就能跑通</h2>
 <p class="lead">每张卡都按同一结构写：做什么、讲师怎么解释、看到什么算完成、失败怎么办、留下什么证据。命令分为只读与写操作，写操作前先确认目录和权限。</p>
-<div class="note"><strong>先约定三个路径变量</strong>本手册用 <code>YUAN_SRC</code> 表示技能源码树，<code>YUAN_HOME</code> 表示安装后的技能根，<code>PROJECT_DIR</code> 表示目标项目，<code>SKILL_DIR</code> 表示生成出来的项目技能。示例里出现的 <code>/absolute/path/to/...</code> 都要替换成真实绝对路径。</div>
+<div class="note"><strong>先约定三个路径变量</strong>本篇用 <code>YUAN_SRC</code> 表示技能源码树，<code>YUAN_HOME</code> 表示安装后的技能根，<code>PROJECT_DIR</code> 表示目标项目，<code>SKILL_DIR</code> 表示生成出来的项目技能。示例里出现的 <code>/absolute/path/to/...</code> 都要替换成真实绝对路径。</div>
 
 <div class="op">
 <header><span class="n">1</span><h4>先看清环境，再动手</h4><span class="tag tag-ro">只读</span></header>
@@ -1221,7 +1221,7 @@ bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp</
 
 <h3>术语表</h3>
 <table>
-<thead><tr><th style="width:190px">术语</th><th>本手册含义</th></tr></thead>
+<thead><tr><th style="width:190px">术语</th><th>含义</th></tr></thead>
 <tbody>
 <tr><td>三层投影</td><td>同一原则的三层载体：驾驶舱＝人机界面层，hermes 集群＝组织控制层，目标技能＝机制执行层</td></tr>
 <tr><td>四论</td><td>系统论（看清）、信息论（看准）、科学方法论（认识可靠）、控制论（行动有效）</td></tr>
@@ -1260,18 +1260,17 @@ bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp</
 </tbody>
 </table>
 
-<h3>本手册没有验证的部分</h3>
+<h3>本期培训不覆盖的场景</h3>
 <ul class="check x">
-<li>没有用真实新手做试课，可读性由文档审读与浏览器走查覆盖，不等于教学效果实测。</li>
-<li>没有做实体纸张打印；版式按 A4 纵向设计并做过导出检查，纸面观感仍需实际打印确认。</li>
-<li>没有在 Windows 实机和完全断网环境执行安装、生成与门禁。</li>
-<li>没有重新执行 run28 或 trade-forge；案例数字按所属版本引用，不是本轮复测。</li>
-<li>外部运行时的版本与可用性会变，以本机自检输出为准，不在本手册固定。</li>
+<li>Windows 实机与完全断网环境：课程演示在本机环境完成，跨平台安装需另做环境核对。</li>
+<li>真实项目复测：案例数字按所属版本引用，用于讲解口径，不替代当前项目的实测结果。</li>
+<li>外部运行时版本：随安装变化，以本机自检输出为准，课程不固定具体版本。</li>
+<li>业务验收与发布裁决：属于组织责任，课程只训练如何准备证据、如何读结论。</li>
 </ul>
 
 <footer class="end">
-  <p><strong>AIStudio 完整培训手册（含 swarm-yuan）</strong> · 适用版本 1.0.15-overlay · 编制日期 2026-11-12</p>
-  <p>本手册为单文件自包含文档：样式、图形与示例均内嵌，不依赖外部资源，可离线阅读与打印。所有界面与数据均为培训模拟，不连接真实任务、审批或生产数据。</p>
+  <p><strong>AIStudio 完整培训手册（含 swarm-yuan）</strong> · 适用版本 1.0.15-overlay</p>
+  <p>所有界面与数据均为培训模拟，不连接真实任务、审批或生产数据。</p>
 </footer>
 </section>
 
