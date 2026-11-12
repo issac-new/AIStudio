@@ -1,0 +1,73 @@
+name: product-tests
+
+# 产品测试 CI（2026-11-12 设计复盘 P1-7）：此前 CI 只测 qgate/swarm-yuan 自身与治理
+# 静态门，注释明说「全量 npm test 依赖本地注入态 vendor 树，CI 不可复现」——事实上注入
+# 是可复现的：vendor/ 是 git 跟踪的 pristine 基线，ensure-injected 只需 git+node。
+# 本工作流补齐链路：npm ci（vendor studio）→ ensure-injected（注入+依赖软链）→
+# playwright chromium → 全量 vitest（--no-file-parallelism，与 basic-check 门同配方）。
+# 与本地门的分工不变：pre-push 仍是 L0 快门，本工作流是「推到 main 的提交都有一次
+# 自动化测试记录」的底线；release 仍走 release:preflight 全链。
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'skills/**'
+      - 'team/**'
+      - '.qgate/**'
+      - '.swarm-yuan/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'skills/**'
+      - 'team/**'
+      - '.qgate/**'
+      - '.swarm-yuan/**'
+
+concurrency:
+  group: product-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  full-suite:
+    name: 全量 vitest（注入态可复现）
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # inject 重放类测试会建临时 worktree，需要历史
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: npm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('vendor/hermes-studio/package-lock.json') }}
+      - name: Playwright 浏览器缓存
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('vendor/hermes-studio/package-lock.json') }}
+      - name: 安装 vendor 依赖（README 快速上手配方）
+        run: npm ci --no-audit --no-fund --ignore-scripts
+        working-directory: vendor/hermes-studio
+      - name: 注入（补丁重放 + node_modules 软链 + runtime 部署到隔离 HOME）
+        run: node scripts/ensure-injected.mjs
+      - name: 安装 Chromium（diagram PNG 导出等真实浏览器用例）
+        run: npx playwright install chromium
+      - name: 全量 vitest（与 basic-check 门同配方：串行文件防并行污染）
+        run: npx vitest run --no-file-parallelism --reporter=junit --outputFile=.qgate/junit-report.xml
+      - name: 上传 junit 证据
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: .qgate/junit-report.xml
+          retention-days: 14
