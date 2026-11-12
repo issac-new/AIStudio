@@ -788,12 +788,27 @@ paths:
 
   # 2026-11-12 ai-agent-handbook 吸收（feat/handbook-absorb）
   - docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - docs/DESIGN.md
   - custom/hermes-agent-plugins/**
+  - custom/client/shared/adapters/run-trace-adapter.ts
+  - custom/client/zcode/store/zcode-projection.ts
+  - custom/server/__tests__/zcode-session-projection.test.ts
   - custom/server/harness/**
   - custom/server/toolcontract/**
   - custom/server/toolpipeline/**
   - custom/server/resume/**
+  - custom/server/memscope/**
   - custom/server/eval/**
-  - custom/server/zcode/**
+  - custom/server/zcode/team-stop*.ts
+  - custom/server/zcode/dispatch-reasons.ts
+  - custom/server/zcode/mention-dispatch.ts
+  - custom/server/zcode/__tests__/team-stop.test.ts
   - custom/server/tokenbudget/**
+  - custom/server/controllers/hermes/trace.ts
+  - custom/server/controllers/hermes/__tests__/trace-graph.test.ts
   - simharness/mux/**
+  - .qgate/scope.yaml
+  - .swarm-yuan/gate-deny.jsonl
+  - .swarm-yuan/spec-receipts.jsonl
