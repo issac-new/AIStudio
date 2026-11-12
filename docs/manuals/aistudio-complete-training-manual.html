@@ -161,7 +161,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <ol>
     <li><a href="#s1">1 人定方向，机器守门，AI 干活</a></li>
     <li><a href="#s2">2 一个会进化的循环</a></li>
-    <li><a href="#s3">3 AI 工厂怎样造工具</a></li>
+    <li><a href="#s3">3 按需造工具，随问题生长</a></li>
     <li><a href="#s4">4 和 AI 说清楚的语言</a></li>
     <li><a href="#s5">5 四层架构与四项举措</a></li>
   </ol>
@@ -194,8 +194,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
     <span>读者：研发、测试、运维、审计、项目与产品</span>
   </div>
   <div class="stat">
-    <div class="s"><b>9 章</b><span>从全局定位到附录速查</span></div>
-    <div class="s"><b>10 图</b><span>结构、流程、架构与账目</span></div>
+    <div class="s"><b>13 章</b><span>从顶层设计到落地验收</span></div>
+    <div class="s"><b>14 图</b><span>结构、流程、架构与账目</span></div>
     <div class="s"><b>8 张卡</b><span>照做即可跑通的操作卡</span></div>
     <div class="s"><b>2 案例</b><span>run28 复盘与订单编辑</span></div>
   </div>
@@ -205,15 +205,6 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
     <div class="card"><h4>读完之后能做什么</h4><p>能判断一项工作卡在哪、该找谁、要什么证据；能按操作卡跑通生成、激活、研发、门禁与更新；能向他人解释每个数字的口径。</p></div>
   </div>
 </header>
-
-<h2 style="border-top:0;padding-top:30px"><span class="no">学习路径</span>先读哪、后读哪、什么时候翻回来</h2>
-<p class="lead">第一次接触，按第 1 到第 12 章顺序读，大约一天。已经上手的人，可以直接跳到第 10 章操作卡，遇到说不清的地方再回第 7、8 章找机制。要带人讲课，用第 12 章的评分表当讲义提纲。</p>
-<div class="grid g3">
-  <div class="card"><h4>想先建立判断</h4><p>读第 1—3 章。你会知道这套系统里谁负责什么、一项工作怎样从想法走到发布，以及哪里必须停下来等人裁决。</p></div>
-  <div class="card"><h4>想动手做一遍</h4><p>读第 10 章八张操作卡。每张卡都写清做什么、怎么讲、看到什么算完成、失败怎么办、留下什么证据。</p></div>
-  <div class="card"><h4>想核对真假</h4><p>读第 9、11、13 章。吸收清单给出每一项的出处，案例数字标注所属版本与口径，事实源索引指到原始文件。</p></div>
-</div>
-<div class="note"><strong>阅读约定</strong>书中所有界面与数据都是培训模拟，不连接真实任务、审批或生产数据。命令示例标注了只读或写操作，执行前请回到对应章节确认副作用；“看到什么算完成”一律指可观察的结果，不是“感觉懂了”。</div>
 
 <section class="chapter" id="s1">
 <h2><span class="no">第一章 · 全局定位</span>人定方向，机器守门，AI 干活</h2>
@@ -350,7 +341,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 </section>
 
 <section class="chapter" id="s3">
-<h2><span class="no">第三章 · 行动基础</span>AI 工厂：遇到问题就造一件趁手的工具</h2>
+<h2><span class="no">第三章 · 行动基础</span>按需造工具：遇到问题就造一件趁手的工具</h2>
 <p class="lead">传统做法是先把工具建好，再交付使用；AI 时代问题涌现得太快，等建好就已经过时。更合适的机制是：遇到问题、定义问题、制定方案、造工具、用它解决问题——如此往复。</p>
 
 <h3>从“建好再用”到“边用边造”</h3>
@@ -364,7 +355,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 <p>这条转变的关键不是“多造工具”，而是<strong>让造工具这件事本身有标准流程</strong>。否则每个人都在造，最后没人知道哪个能用、哪个有门禁、哪个只是临时脚本。</p>
 
 <figure>
-<svg viewBox="0 0 980 210" role="img" aria-label="AI 工厂五步动态机制图">
+<svg viewBox="0 0 980 210" role="img" aria-label="按需造工具五步动态机制图">
   <defs><marker id="a10" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
   <rect x="16" y="60" width="168" height="66" rx="9" class="dbox"/>
   <text x="100" y="86" class="dlabel" text-anchor="middle">遇到问题</text>
@@ -388,7 +379,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <path class="dline-dash" d="M866 132 C866 168 210 172 100 132" marker-end="url(#a10)"/>
   <text x="480" y="188" class="dsmall" text-anchor="middle">下一轮的问题，往往就是这一轮工具留下的缺口</text>
 </svg>
-<figcaption><strong>图 4 AI 工厂五步</strong><span>造工具不是终点；工具被用、被验、被更新，才算完成一轮</span></figcaption>
+<figcaption><strong>图 4 造工具五步</strong><span>造工具不是终点；工具被用、被验、被更新，才算完成一轮</span></figcaption>
 </figure>
 
 <h3>AIStudio 里对应的是什么</h3>

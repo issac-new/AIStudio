@@ -48,7 +48,6 @@ describe('AIStudio 完整培训手册契约', () => {
       '三层投影',
       '四论',
       '会进化的循环',
-      'AI 工厂',
       '思维语言',
       '四层架构',
       '四项举措',
@@ -89,6 +88,9 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).not.toContain('编制日期')
     expect(html).not.toContain('这份手册')
     expect(html).not.toContain('自包含文档')
+    expect(html).not.toContain('AI 工厂')
+    expect(html).not.toContain('学习路径')
+    expect(html).not.toContain('导读')
     // 文章概念未落地时必须如实标注，不许写成已实现
     expect(html).toContain('未采用')
     expect(html).toContain('部分实现')
