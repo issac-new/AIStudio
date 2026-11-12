@@ -57,7 +57,7 @@ flowchart TB
 
 **④ 最小单元质量与拼装流水线解决“正确零件怎样形成正确产品”。** 最小单元同时受两类标准约束：质量标准要求职责与契约清楚、路径真实、测试覆盖正常和失败路径、错误处理与安全检查不裁剪；拼装标准要求先查复用件、保持依赖方向、声明稳定单元变更、以最小新增胶水连接，并评估下游影响。spec-first、测试先行、复用阶梯、九节点与研发四阶段把这些要求编排成标准研发流水线。`skills/swarm-yuan/README.md:75-80,190-196`
 
-**⑤ 独立全面检查解决“凭什么达到生产标准”。** 机械门禁检查词法、结构、流程与配置；真实测试执行代码并核验业务行为；独立审查由非实现者检查需求、设计和证据；验证器用正反例与变异探针检查门禁自身是否有效。四者不能互相替代，“严苛、细致、独立”也不等于隐瞒跳过项或让实现者自报通过。`skills/swarm-yuan/README.md:151-184`
+**⑤ 独立全面检查解决“凭什么达到生产标准”。** 机械门禁检查词法、结构、流程与配置；真实测试执行代码并核验业务行为；独立审查由非实现者检查需求、设计和证据；独立验证器用正反例与真实缺陷语料检查门禁的检出能力。这四类证据不能互相替代，“严苛、细致、独立”也不等于隐瞒跳过项或让实现者自报通过。Mutation Check 不属于这四类证据，它是另一套变异探针方法：故意注入故障后重跑，确认测试或门禁断言真的能发现它——生成器侧用它检验门禁夹具，项目侧用它检验测试敏感度。`skills/swarm-yuan/README.md:151-184`
 
 五项形成闭环：标准提供底线，个性补充项目事实，本体组织资产，流水线调用资产，独立检查验证结果，发现的问题再回流为项目经验。生成器只是承载这条链的工具，不能替代其中任何一环。
 
@@ -139,7 +139,7 @@ flowchart TB
 | 个性化研发能力 | 领域模型、既有实现、Git 习惯、历史缺陷与排障经验 | 特征卡、行为挖掘、领域规律验证、问题三选一归位 | `codebase.md`、组件库清单、`recipes.md`、`lessons.md`、habits notes | AI 审读、领域测试、路径验真、配方结构检查 | 代码证据、行为初稿采纳记录、决策、更新 diff |
 | 本体化组织资产 | 组件、接口、数据、依赖与允许的状态变换 | objects/links/actions 类型目录，清单、边集与配方重组 | `references/ontology/`、`reference-manual.md`、`relations.jsonl`、`recipes.md` | 计数与 path-check、relations verify、机制本体 self-check | 边集证据列、trace、decisions、gate-runs、指纹 |
 | 最小单元质量与拼装流水线 | 稳定单元、契约、配方、测试与工程方法 | 复用阶梯、最小胶水、spec-first、测试先行、九节点与四阶段 | spec、plan、代码、测试、`workflow.md`、状态与合并记录 | `--reuse`、`--stable-diff`、构建、真实测试、独立审查 | 单元测试、回归报告、review-record、merge 与 main 回归 |
-| 独立全面检查 | 当次变更、门禁配置、测试与审查对象 | L1-L4、precheck、真实测试、非实现者审查、验证器与变异 | `gate-runs.jsonl`、测试报告、`review-record.md`、验证器日志 | 门禁查结构，测试查行为，审查查语义与证据，验证器查检查者 | 返回码与 skip、用例和断言、审查 actor、变异前后结果 |
+| 独立全面检查 | 当次变更、门禁配置、测试与审查对象 | L1-L4、precheck、真实测试、非实现者审查、独立验证器；Mutation Check 作有效性探针 | `gate-runs.jsonl`、测试报告、`review-record.md`、验证器日志、变异前后夹具输出 | 门禁查结构，测试查行为，审查查语义与证据，验证器以正反例和真实语料查检出能力；Mutation Check 只查“检查本身是否有效” | 返回码与 skip、用例和断言、审查 actor、验证器正反例结果、变异前后对照 |
 
 独立检查尤其要避免“一个脚本包打天下”：precheck 返回 0 不能替代真实测试，测试全绿不能替代独立审查，独立验证器通过也不能外推为所有真实缺陷都可拦截。检查和证据必须能对上同一个项目快照与同一个变更。
 
@@ -210,7 +210,7 @@ flowchart TB
 
 ### 升级为什么不会重写项目经验
 
-`references/lessons.md` 属于 `PROJECT_SPECIFIC_FILES`，升级保留项目内容。`test-lessons-preserve.sh` 在连续两次 upgrade 后比较 lessons 与入口文件的 MD5，锁定字节级保留和幂等性。升级仍应先预演、检查在途任务，再更新工具链并局部重探查项目内容；升级不等于自动理解新项目。`skills/swarm-yuan/scripts/generate-skill.sh:187-198`；`skills/swarm-yuan/tests/test-lessons-preserve.sh:37-73`
+`references/lessons.md` 属于 `PROJECT_SPECIFIC_FILES`，升级保留项目内容。`test-lessons-preserve.sh` 在第一次 upgrade 后比较 lessons.md 与 SKILL.md 的 MD5（含手加的 lessons 入口行），确认两者整体字节级保留；第二次 upgrade 再验证 lessons.md 幂等。升级仍应先预演、检查在途任务，再更新工具链并局部重探查项目内容；升级不等于自动理解新项目。`skills/swarm-yuan/scripts/generate-skill.sh:187-198`；`skills/swarm-yuan/tests/test-lessons-preserve.sh:37-73`
 
 ## 6. 九节点、四阶段和六状态怎样对应
 
@@ -263,7 +263,7 @@ strict、warn、advisory 是按 `fail()` 能力划分的横切强度，与 core/
 |---:|---|
 | 0 | 没有 FAIL/ERROR；WARN、advisory 和默认模式下的 SKIPPED 不阻断。`--fix-suggest` 即使收集到 FAIL 也固定返回 0，只能看建议，不能当验收通过 |
 | 1 | 业务 FAIL 或门禁自身 ERROR 的最终汇总失败；未知模式、非法 `--format` 等部分 CLI 用法错误也返回 1，须结合输出判断 |
-| 2 | 一类用于配置、项目根、门禁实现完整性等启动或运行错误；另一类是显式 `--strict-skip` 且没有 FAIL、但存在 SKIPPED。不能把 2 一律解释成“部分跳过” |
+| 2 | 三类：①配置、项目根、门禁实现完整性等启动或运行错误；②显式 `--strict-skip` 且没有 FAIL、但存在 SKIPPED；③所属技能仍为 draft 时执行 `--all-full` 或 `--compliance-suite`，门禁在启动阶段直接拒绝。第三类不是代码失败，回操作卡 4 完成 strict 激活后再跑。不能把 2 一律解释成“部分跳过” |
 
 最终输出单列 fail、warn、advisory、skip 计数。skip 不计 warn，也不等于 pass；默认有跳过仍可能返回 0，所以“通过”不等于“全部覆盖”。`skills/swarm-yuan/assets/precheck.sh:2031-2087`
 
@@ -461,7 +461,7 @@ sed -n '1,12p' "$SKILL_DIR/SKILL.md"
 cat "$SKILL_DIR/.swarm-yuan/activation-report.json"
 ```
 
-- **怎样解释**：strict 预检通过并不自动激活；`--mark-active` 会再次执行必需检查。清单路径、计数、预算、框架 glob 或 spec-first 接线失败都必须保持 draft。历史决策由 SCHEMA_EPOCH 兼容，新决策不能借历史豁免缺字段。
+- **怎样解释**：strict 预检通过并不自动激活；`--mark-active` 会再次执行必需检查。清单路径、计数、预算、框架 glob 或 spec-first 接线失败都必须保持 draft。历史决策由 SCHEMA_EPOCH 兼容，新决策不能借历史豁免缺字段。上面用 `--project-dir "$PROJECT_DIR"` 把决策账本定位到项目根：本项目按 R141 让决策账本落项目侧；`trace-log.sh` 头注仍写“指向技能目录”的旧口径，实际以显式项目侧为准，脚本本身未改。
 - **完成标志**：`SKILL.md` 显示 `status: active`，activation report 为 passed，manifest 已刷新；随后 `--all-full` 和 `--compliance-suite` 才解除 draft 状态锁。
 - **失败处置**：按输出的第一处未满足项回到对应 Step：占位回 Step 7，语义配置回 Step 8，清单漏项回 Step 4，决策缺字段补决策，预算超标先瘦身。relations 失锚和 audit open goal 是提示，要记录但不能误当硬阻断原因。
 - **留存证据**：保存 strict 输出、激活输出、activation report、manifest、最终状态和决策记录。不得只保存 active 字样而丢失检查过程。
@@ -492,7 +492,7 @@ bash "$SKILL_DIR/scripts/state-machine.sh" transition build
 
 - **怎样解释**：状态机不替代需求评审，也不替代 Git。L1-L4 的“已批准”机器判据只是非占位决策记录，人的评审仍需真实发生。路径查询无命中可能表示边集缺漏，不能直接推断没有消费者。
 - **完成标志**：spec 与 plan 已评审，分支和隔离工作区正确，测试先行，状态已逐级到 build；没有通过手改 `state.yaml` 跨阶段。
-- **失败处置**：信息不足先问人；边集缺失先重跑 `relations-extract.sh`；design 缺 proposal 补文件或配置 SPEC_FILE；build 缺 spec 补 spec，不为绕过而关闭 SPEC_REQUIRED。确需豁免时按项目决策流程留痕。
+- **失败处置**：信息不足先问人；边集缺失先重跑 `relations-extract.sh`；design 缺 proposal 补文件或配置 SPEC_FILE；build 缺 spec 补 spec，不为绕过而关闭 SPEC_REQUIRED。`init` 报状态文件已存在时，先收口旧 change，或换一个 change 名；确需重置用 `state-machine.sh init <change> --force`，它会把 `state.yaml` 重写为 open，作废旧 change 的阶段、结论和证据字段（decisions 与 trace 账本历史仍在），重置前先确认没有在途任务。确需豁免时按项目决策流程留痕。
 - **留存证据**：保存需求确认、探查锚点、spec、plan、分支基线、state.yaml、decisions 与 trace。代码 diff 必须能回指这份 spec。
 
 ### 操作卡 6：完成分支测试、独立审查、合入与主干回归
@@ -591,7 +591,8 @@ bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$
 # 写操作：确认无在途任务、预演可接受后升级工具链
 bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"
 
-# 写操作：AI 只重探查变化 scope，更新清单/配方/规则后复核
+# 写操作：AI 只重探查变化 scope，更新清单/配方/规则（写动作在这里）
+# 只读：复核清单计数、路径与稳定性，不改文件
 bash "$YUAN_HOME/scripts/inventory-verify.sh" "$PROJECT_DIR" \
   --skill-dir "$SKILL_DIR" --tsv --path-check --stability-audit --strict
 
