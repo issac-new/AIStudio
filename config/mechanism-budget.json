@@ -86,6 +86,14 @@
       "pairedRemovals": [
         "cognition P0 批已删 4 处内联上游根解析副本与 build-dmg 必坏回落（0aee3bf），platform/* 与其共享收敛目标，不重复计退役"
       ]
+    },
+    {
+      "at": "2026-11-12",
+      "delta": "+0 scripts / +0 npm scripts / +0 gates / +0 ledgers（检查函数并入既有 gen-doc-indexes.mjs）",
+      "reason": "守卫测试迁 lint 首批（spec 2026-11-12-guard-tests-migration-plan）：docs-ssot-guard 的 README 唯一正本指针、附录 A 冻结声明句、附录 A 标题计数互洽三组纯文本断言并入 gen-doc-indexes --check（失败信息带修复指引，pre-push merge-invariants 同点拦截），不新增机制文件",
+      "pairedRemovals": [
+        "docs-ssot-guard.test.ts 削 3 个纯文本断言测试（守卫面迁 --check 生成校验，测试套件只留解析器行为与结构完整性）"
+      ]
     }
   ],
   "sunset": [
