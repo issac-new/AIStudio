@@ -71,3 +71,9 @@ vendor/**/*.tsbuildinfo
 
 # linked worktree 的 runtime 部署影子目录（deploy-agent-runtime 重定向目标；不入库）
 /.runtime-deploy-shadow/
+# 运行态台账退出 git（2026-11-12 设计复盘 P0-2）：这些文件由钩子/脚本每次运行追加，
+# 入库会把「工具调用」变成提交并制造并行会话合并冲突。语义决策仍在 decisions/收据。
+/.swarm-yuan/gate-audit.jsonl
+/.swarm-yuan/gate-deny.jsonl
+/.swarm-yuan/trace.jsonl
+/.swarm-yuan/merge-invariants.jsonl
