@@ -38,6 +38,8 @@ export const DISPATCH_REASON_CODES = [
   // ── 进程级准入（2026-11-03 DeerFlow capacity 吸收轮，只追加）──
   'capacity_exhausted',      // 并发上限已满且策略=拒绝（等待无用：槽位要等既有 run 结束）
   'capacity_timeout',        // 排队等待超过截止仍未拿到槽位
+  // ── 团队治理（2026-11-12 handbook 吸收，只追加）──
+  'team_stop',               // 团队级停止条件命中（深度/派生数/返工/无进展）
 ] as const
 
 export type DispatchReasonCode = (typeof DISPATCH_REASON_CODES)[number]

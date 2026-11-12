@@ -1,6 +1,6 @@
 name: run-trace
-version: "1.1.0"
-description: "Local observability plugin for RunTraceView - writes JSONL trace files for L2 evidence"
+version: "1.2.0"
+description: "Local observability plugin for RunTraceView - writes JSONL trace files for L2 evidence (schema 1.2: span_kind + context manifest)"
 author: overlay-team
 kind: standalone
 optional_env:
@@ -18,13 +18,23 @@ optional_env:
     description: "Correlation field: prompt template name stamped into trace header (default: unset)"
   - name: HERMES_RUN_TRACE_PROMPT_VERSION
     description: "Correlation field: prompt template version stamped into trace header (default: unset)"
+  - name: HERMES_RUN_TRACE_PERMISSION_MODE
+    description: "Context Manifest permission_basis (default: unset = unknown)"
+  - name: HERMES_RUN_TRACE_CONTEXT_TRUST
+    description: "Context Manifest default trust_level (default: runtime)"
 hooks:
   - on_session_start
   - on_session_end
   - pre_api_request
   - post_api_request
   - api_request_error
+  - pre_tool_call
   - post_tool_call
+  - pre_llm_call
+  - post_llm_call
+  - post_compaction
+  - on_human_input_request
+  - on_human_input_resolved
   - subagent_start
   - subagent_stop
 manifest_version: 1

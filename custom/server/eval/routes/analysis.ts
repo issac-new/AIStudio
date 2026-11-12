@@ -459,19 +459,22 @@ ctx.body = { ok: true, ...r, line: e2eVerdictLine(r) }
 export async function postGateCheck(ctx: Context) {
   const { goldenGateCheck } = await import('../golden-gate')
   try {
-    const result = await goldenGateCheck()
+    const calibrate = String(ctx.query?.calibrate ?? '') === '1'
+    const enforce = String(ctx.query?.enforce ?? '') === '1'
+    const result = await goldenGateCheck(undefined, { calibrate, enforce })
     if (!result.ok) {
       fail(ctx, 400, (result.problems ?? ['黄金集门检失败']).join('；'))
       return
     }
-    const { buckets, mismatch } = result
+    const { buckets, mismatch, calibration } = result
     created(ctx, {
       semantics: result.semantics,
       runId: result.runId,
       buckets,
       mismatch,
-      // 判据语义随响应披露：观察态（未校准不阻断）；校准批收敛后此字段升级为 'blocking'
-      gateMode: 'observational',
+      ...(calibration ? { calibration } : {}),
+      // 判据语义随响应披露：默认观察态；enforce=1 且校准通过才是 blocking。
+      gateMode: result.enforced ? 'blocking' : 'observational',
     })
   } catch (e) {
     fail(ctx, 500, `黄金集门检异常：${e instanceof Error ? e.message : String(e)}`)

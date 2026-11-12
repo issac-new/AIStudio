@@ -50,7 +50,7 @@ const TRACE_DIR = underHermes('traces')
 
 // Types matching frontend adapter
 type EvidenceTier = 'L1' | 'L2' | 'L3'
-type TraceNodeKind = 'ingress' | 'workflow' | 'agent' | 'skill' | 'tool' | 'memory' | 'service' | 'peer' | 'approval'
+type TraceNodeKind = 'ingress' | 'workflow' | 'agent' | 'skill' | 'tool' | 'memory' | 'service' | 'peer' | 'approval' | 'step' | 'compaction' | 'hitl' | 'interrupt' | 'unknown'
 type SpanStatus = 'running' | 'ok' | 'error' | 'cancelled'
 
 interface TraceNode {
@@ -91,6 +91,8 @@ interface TraceTimelineItem {
 interface JSONLHeader {
   type: 'header'
   version: string
+  schema_version?: string
+  trace_id?: string
   session_id: string
   task_id?: string
   started_at: number
@@ -101,10 +103,18 @@ interface JSONLHeader {
 
 interface JSONLChunk {
   type: 'chunk'
-  kind: 'llm_span' | 'tool_span' | 'subagent_span'
+  kind: 'llm_span' | 'tool_span' | 'subagent_span' | 'step_span' | 'compaction_span' | 'hitl_span' | 'context_manifest' | string
   phase?: 'pre' | 'post' | 'start' | 'stop'
+  span_kind?: 'entry' | 'step' | 'llm' | 'tool' | 'retrieval' | 'memory' | 'guardrail' | 'compaction' | 'hitl' | 'interrupt' | 'context' | string
+  span_phase?: 'pre' | 'post' | 'start' | 'end' | 'error' | 'waiting' | 'resolved' | 'snapshot' | string
+  schema_version?: string
+  trace_id?: string
+  attempt_id?: string
+  span_seq?: number
   session_id: string
+  task_id?: string
   api_request_id?: string
+  call_id?: string
   tool_call_id?: string
   subagent_label?: string
   tool_name?: string
@@ -127,16 +137,56 @@ interface JSONLChunk {
   output_tokens?: number
   api_calls?: number
   ts?: number
+  retry_count?: number
+  // schema 1.2 new span fields
+  step_index?: number
+  step_semantics?: string
+  history_message_count?: number
+  user_message_chars?: number
+  response_chars?: number
+  request_id?: string
+  hitl_kind?: string
+  platform?: string
+  prompt_chars?: number
+  outcome?: string
+  trace_boundary?: 'interrupt' | 'resume' | string
+  linked_trace_id?: string
+  compaction_kind?: string
+  reason?: string
+  before_tokens?: number
+  after_tokens?: number
+  messages_removed?: number
+  old_session_id?: string
+  // context manifest
+  manifest_version?: string
+  context_fingerprint?: string
+  message_count?: number
+  tool_count?: number
+  approx_input_tokens?: number
+  request_char_count?: number
+  sources?: Array<{
+    source_type?: string
+    scope?: string
+    content_hash?: string
+    token_count?: number
+    trust_level?: string
+    permission_basis?: string | null
+    selected_reason?: string
+  }>
+  generated_at?: number
 }
 
 interface JSONLTrailer {
   type: 'trailer'
+  schema_version?: string
+  trace_id?: string
   session_id: string
   ended_at: number
   duration_ms: number
   outcome?: string
   error?: string
   summary?: string
+  sampling?: { kept?: boolean; reason?: string; [k: string]: unknown }
 }
 
 type JSONLLine = JSONLHeader | JSONLChunk | JSONLTrailer
@@ -203,15 +253,32 @@ export interface TraceUsageSummary {
   api_calls: number
 }
 
+/** schema 1.2：span_kind 优先；旧 JSONL 按 kind/phase 反推（只读兼容，不改旧文件）。 */
+export function spanKindOf(chunk: JSONLChunk): string {
+  if (chunk.span_kind) return chunk.span_kind
+  switch (chunk.kind) {
+    case 'llm_span': return 'llm'
+    case 'tool_span': return 'tool'
+    case 'subagent_span': return 'agent'
+    case 'step_span': return 'step'
+    case 'compaction_span': return 'compaction'
+    case 'hitl_span': return 'hitl'
+    case 'context_manifest': return 'context'
+    default: return 'unknown'
+  }
+}
+
 export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trailer?: JSONLTrailer): {
   nodes: TraceNode[]
   edges: TraceEdge[]
   usage: TraceUsageSummary
+  contextManifests: JSONLChunk[]
 } {
   const nodes: TraceNode[] = []
   const edges: TraceEdge[] = []
   const seenIds = new Set<string>()
   const usage: TraceUsageSummary = { input_tokens: 0, output_tokens: 0, api_calls: 0 }
+  const contextManifests = chunks.filter(c => c.kind === 'context_manifest')
 
   // Root workflow node
   const workflowId = `workflow:${header.session_id}`
@@ -368,7 +435,120 @@ export function buildTraceGraph(header: JSONLHeader, chunks: JSONLChunk[], trail
     }
   }
 
-  return { nodes, edges, usage }
+  // Build step span nodes（step=模型回合；同一 turn 的 start/end 合并）
+  const stepSpans = new Map<string, { start?: JSONLChunk; end?: JSONLChunk }>()
+  for (const chunk of chunks) {
+    if (spanKindOf(chunk) !== 'step') continue
+    const key = chunk.turn_id || `step-${chunk.step_index ?? chunk.span_seq ?? chunk.started_at ?? stepSpans.size}`
+    const span = stepSpans.get(key) || {}
+    if (chunk.span_phase === 'start' || chunk.phase === 'start') span.start = chunk
+    else span.end = chunk
+    stepSpans.set(key, span)
+  }
+  for (const [key, span] of stepSpans) {
+    const start = span.start
+    const end = span.end
+    const startedAt = start?.started_at || end?.started_at || header.started_at
+    const endedAt = end?.ended_at
+    const durationMs = end?.duration_ms || (endedAt && startedAt ? Math.round((endedAt - startedAt) * 1000) : undefined)
+    const nodeId = `step:${header.session_id}:${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+    if (seenIds.has(nodeId)) continue
+    nodes.push({
+      id: nodeId,
+      kind: 'step',
+      label: `Step ${start?.step_index ?? '?'}`,
+      detail: start?.step_semantics || start?.model || undefined,
+      status: end ? (end.status === 'error' ? 'error' : 'ok') : 'running',
+      startedAt,
+      endedAt,
+      durationMs,
+      evidence: 'L2',
+      ref: { sessionId: header.session_id, spanRef: key, spanKind: 'llm_span' },
+    })
+    seenIds.add(nodeId)
+    edges.push({ id: `edge:${workflowId}:${nodeId}`, from: workflowId, to: nodeId, kind: 'call', evidence: 'L2' })
+  }
+
+  // Compaction spans（单条即完整；不合并）
+  for (const chunk of chunks) {
+    if (spanKindOf(chunk) !== 'compaction') continue
+    const nodeId = `compaction:${header.session_id}:${chunk.span_seq ?? chunk.ended_at ?? chunk.started_at}`
+    if (seenIds.has(nodeId)) continue
+    nodes.push({
+      id: nodeId,
+      kind: 'compaction',
+      label: `Compaction ${chunk.compaction_kind || ''}`.trim(),
+      detail: chunk.before_tokens != null || chunk.after_tokens != null
+        ? `${chunk.before_tokens ?? '?'}→${chunk.after_tokens ?? '?'} tokens`
+        : undefined,
+      status: chunk.status === 'error' ? 'error' : 'ok',
+      startedAt: chunk.started_at || header.started_at,
+      endedAt: chunk.ended_at,
+      durationMs: chunk.duration_ms,
+      evidence: 'L2',
+      ref: { sessionId: header.session_id },
+    })
+    seenIds.add(nodeId)
+    edges.push({ id: `edge:${workflowId}:${nodeId}`, from: workflowId, to: nodeId, kind: 'call', evidence: 'L2' })
+  }
+
+  // HITL spans（同一 request_id 的 waiting/resolved 合并；跨请求恢复边界）
+  const hitlSpans = new Map<string, { waiting?: JSONLChunk; resolved?: JSONLChunk }>()
+  for (const chunk of chunks) {
+    if (spanKindOf(chunk) !== 'hitl') continue
+    const key = chunk.request_id || `hitl-${chunk.span_seq ?? hitlSpans.size}`
+    const span = hitlSpans.get(key) || {}
+    if (chunk.span_phase === 'waiting') span.waiting = chunk
+    else span.resolved = chunk
+    hitlSpans.set(key, span)
+  }
+  for (const [key, span] of hitlSpans) {
+    const waiting = span.waiting
+    const resolved = span.resolved
+    const startedAt = waiting?.started_at || resolved?.started_at || header.started_at
+    const endedAt = resolved?.ended_at
+    const nodeId = `hitl:${header.session_id}:${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+    if (seenIds.has(nodeId)) continue
+    nodes.push({
+      id: nodeId,
+      kind: 'hitl',
+      label: `HITL ${waiting?.hitl_kind || ''}`.trim(),
+      detail: resolved?.outcome || (waiting ? 'waiting' : undefined),
+      status: resolved ? 'ok' : 'running',
+      startedAt,
+      endedAt,
+      durationMs: resolved?.duration_ms,
+      evidence: 'L2',
+      ref: { sessionId: header.session_id },
+    })
+    seenIds.add(nodeId)
+    edges.push({ id: `edge:${workflowId}:${nodeId}`, from: workflowId, to: nodeId, kind: 'call', evidence: 'L2' })
+  }
+
+  // 未知 span_kind 不静默丢弃：落 unknown 节点，供消费面显式识别。
+  const knownSpanKinds = new Set(['entry', 'step', 'llm', 'tool', 'retrieval', 'memory', 'guardrail', 'compaction', 'hitl', 'interrupt', 'context', 'agent'])
+  for (const chunk of chunks) {
+    const spanKind = spanKindOf(chunk)
+    if (knownSpanKinds.has(spanKind)) continue
+    const nodeId = `unknown:${header.session_id}:${chunk.span_seq ?? chunk.started_at ?? nodes.length}`
+    if (seenIds.has(nodeId)) continue
+    nodes.push({
+      id: nodeId,
+      kind: 'unknown',
+      label: chunk.kind,
+      detail: spanKind,
+      status: 'running',
+      startedAt: chunk.started_at || header.started_at,
+      endedAt: chunk.ended_at,
+      durationMs: chunk.duration_ms,
+      evidence: 'L2',
+      ref: { sessionId: header.session_id },
+    })
+    seenIds.add(nodeId)
+    edges.push({ id: `edge:${workflowId}:${nodeId}`, from: workflowId, to: nodeId, kind: 'call', evidence: 'L2' })
+  }
+
+  return { nodes, edges, usage, contextManifests }
 }
 
 /**
@@ -426,13 +606,14 @@ async function handleSessionTrace(ctx: any) {
       return
     }
 
-    const { nodes, edges, usage } = buildTraceGraph(header, chunks, trailer)
+    const { nodes, edges, usage, contextManifests } = buildTraceGraph(header, chunks, trailer)
 
     ctx.body = {
       session_id: sessionId,
       evidence: 'L2',
       nodes,
       edges,
+      context_manifests: contextManifests,
       meta: {
         started_at: header.started_at,
         ended_at: trailer?.ended_at,
@@ -442,6 +623,9 @@ async function handleSessionTrace(ctx: any) {
         outcome: trailer?.outcome,
         usage,
         format,
+        schema_version: header.schema_version || chunks[0]?.schema_version,
+        trace_id: header.trace_id || trailer?.trace_id,
+        sampling: trailer?.sampling,
         complete: Boolean(trailer && header.session_id === sessionId),
       },
     }

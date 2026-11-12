@@ -15,6 +15,8 @@ import { underWebUi } from '../lib/paths'
 /** 结果缓存上限：回放面只承载小结果（脱敏摘要级），大产物走 artifactRefs。 */
 const RESULT_CACHE_MAX_BYTES = 8192
 
+export type IdempotencyStatus = 'intended' | 'sent' | 'confirmed' | 'failed' | 'blocked'
+
 export interface IdempotencyRecord {
   key: string
   tool: string
@@ -22,6 +24,16 @@ export interface IdempotencyRecord {
   lastAt: number
   /** 命中次数（含首次写入后的重复调用）。 */
   count: number
+  /** 2026-11-12 handbook 吸收：动作生命周期状态。旧记录缺省=未知（按 confirmed 兼容）。 */
+  status?: IdempotencyStatus
+  /** 同一键的尝试次数（intent 写入累加）。 */
+  attempts?: number
+  /** 外部副作用标识（退款单号/PR 号/消息 id 等，由执行器可选提供）。 */
+  externalRef?: string
+  /** 失败归一类别（transient/permission/unknown…），由执行器提供。 */
+  errorClass?: string
+  /** 结算时刻（confirmed/failed/blocked 写入）。 */
+  settledAt?: number
   /** 结果摘要指纹（不落结果原文）。 */
   resultDigest?: string
   /**
@@ -122,6 +134,8 @@ export class IdempotencyStore {
           ...existing,
           lastAt: now,
           count: existing.count + 1,
+          status: 'confirmed',
+          settledAt: now,
           resultDigest: input.resultDigest ?? existing.resultDigest,
           ...(cached !== undefined ? { result: cached } : {}),
         }
@@ -131,10 +145,138 @@ export class IdempotencyStore {
           firstAt: now,
           lastAt: now,
           count: 1,
+          status: 'confirmed',
+          attempts: 1,
+          settledAt: now,
           resultDigest: input.resultDigest,
           ...(cached !== undefined ? { result: cached } : {}),
           expiresAt: now + Math.max(1_000, input.ttlMs),
         }
+    loaded.set(key, record)
+    this.evict(loaded)
+    this.persist()
+    return { ...record }
+  }
+
+  /**
+   * 动作意图：执行前写 intended。已有 confirmed/sent/blocked 记录不降级——
+   * 返回 `reused:true` 让调用方先查外部状态/直接复用；intended/failed 允许重试累加。
+   */
+  beginIntent(key: string, input: { tool: string; ttlMs: number }): { record: IdempotencyRecord; reused: boolean } {
+    const loaded = this.load()
+    const now = this.now()
+    const existing = loaded.get(key)
+    if (existing) {
+      const status = existing.status ?? 'confirmed'
+      if (status === 'confirmed' || status === 'sent' || status === 'blocked') {
+        existing.lastAt = now
+        this.persist()
+        return { record: { ...existing }, reused: true }
+      }
+      const record: IdempotencyRecord = {
+        ...existing,
+        status: 'intended',
+        attempts: (existing.attempts ?? existing.count) + 1,
+        lastAt: now,
+      }
+      loaded.set(key, record)
+      this.persist()
+      return { record: { ...record }, reused: false }
+    }
+    const record: IdempotencyRecord = {
+      key,
+      tool: input.tool,
+      firstAt: now,
+      lastAt: now,
+      count: 1,
+      status: 'intended',
+      attempts: 1,
+      expiresAt: now + Math.max(1_000, input.ttlMs),
+    }
+    loaded.set(key, record)
+    this.evict(loaded)
+    this.persist()
+    return { record: { ...record }, reused: false }
+  }
+
+  /** 已发出：执行器在动作真正进入外部系统后写（超时/断线也写 sent，不写 failed）。 */
+  markSent(key: string, input: { tool: string; ttlMs: number; externalRef?: string }): IdempotencyRecord {
+    return this.patch(key, {
+      tool: input.tool,
+      ttlMs: input.ttlMs,
+      patch: { status: 'sent', settledAt: undefined, externalRef: input.externalRef },
+    })
+  }
+
+  /** 已确认：拿到外部成功凭据后写；结果缓存语义同 complete。 */
+  confirm(key: string, input: { tool: string; ttlMs: number; resultDigest?: string; result?: unknown; externalRef?: string }): IdempotencyRecord {
+    const loaded = this.load()
+    const now = this.now()
+    let cached: unknown
+    if (input.result !== undefined) {
+      try {
+        const serialized = JSON.stringify(input.result)
+        cached = serialized && serialized.length <= RESULT_CACHE_MAX_BYTES ? input.result : undefined
+      } catch { /* 不可序列化结果不缓存 */ }
+    }
+    const existing = loaded.get(key)
+    const record: IdempotencyRecord = {
+      ...(existing ?? { key, tool: input.tool, firstAt: now, count: 1, expiresAt: now + Math.max(1_000, input.ttlMs) }),
+      lastAt: now,
+      count: existing ? existing.count + 1 : 1,
+      status: 'confirmed',
+      settledAt: now,
+      ...(input.resultDigest !== undefined ? { resultDigest: input.resultDigest } : {}),
+      ...(input.externalRef !== undefined ? { externalRef: input.externalRef } : {}),
+      ...(cached !== undefined ? { result: cached } : {}),
+    }
+    loaded.set(key, record)
+    this.evict(loaded)
+    this.persist()
+    return { ...record }
+  }
+
+  /** 已失败：明确失败（非超时/未知）才写；retryable 由调用方在恢复判定里消费。 */
+  fail(key: string, input: { tool?: string; ttlMs?: number; errorClass?: string; externalRef?: string }): IdempotencyRecord {
+    return this.patch(key, {
+      tool: input.tool ?? 'unknown',
+      ttlMs: input.ttlMs ?? 60_000,
+      patch: { status: 'failed', settledAt: this.now(), errorClass: input.errorClass, externalRef: input.externalRef },
+    })
+  }
+
+  /** 已拦截：准备执行前被策略/审批/幂等守卫拒绝。 */
+  blocked(key: string, input: { tool?: string; ttlMs?: number; errorClass?: string }): IdempotencyRecord {
+    return this.patch(key, {
+      tool: input.tool ?? 'unknown',
+      ttlMs: input.ttlMs ?? 60_000,
+      patch: { status: 'blocked', settledAt: this.now(), errorClass: input.errorClass ?? 'blocked' },
+    })
+  }
+
+  /** 未结算动作（intended/sent 且未过期）：恢复前必须先核对外部状态。 */
+  unsettled(now = this.now()): IdempotencyRecord[] {
+    const loaded = this.load()
+    return [...loaded.values()]
+      .filter((r) => (r.status === 'intended' || r.status === 'sent') && r.expiresAt > now)
+      .sort((a, b) => b.lastAt - a.lastAt)
+  }
+
+  private patch(key: string, input: { tool: string; ttlMs: number; patch: Partial<IdempotencyRecord> }): IdempotencyRecord {
+    const loaded = this.load()
+    const now = this.now()
+    const existing = loaded.get(key)
+    const record: IdempotencyRecord = {
+      ...(existing ?? {
+        key,
+        tool: input.tool,
+        firstAt: now,
+        count: 0,
+        expiresAt: now + Math.max(1_000, input.ttlMs),
+      }),
+      lastAt: now,
+      ...input.patch,
+    }
     loaded.set(key, record)
     this.evict(loaded)
     this.persist()
@@ -197,8 +339,7 @@ export class IdempotencyStore {
 }
 
 /** 从契约与调用上下文生成幂等键（TTL 由调用方按契约取）。 */
-export function idempotencyKeyFor(input: {
-  tool: string
+export function idempotencyKeyFor(input: {  tool: string
   args: unknown
   userId?: string
   runId?: string
@@ -219,4 +360,20 @@ export function idempotencyKeyFor(input: {
     keyFields: input.keyFields,
     now: input.now,
   })
+}
+
+/**
+ * 进程级共享单例：tool-hooks 与 contract-guard 曾各自 new 一个实例，缓存互不刷新，
+ * 导致 auditHook 落键后 contractGuard.peek 看不到（同进程 replay 失效）。
+ * 路径由 env 在首次解析，测试用 `_resetSharedIdempotencyStoreForTests` 清缓存。
+ */
+let sharedStore: IdempotencyStore | null = null
+
+export function sharedIdempotencyStore(): IdempotencyStore {
+  if (!sharedStore) sharedStore = new IdempotencyStore()
+  return sharedStore
+}
+
+export function _resetSharedIdempotencyStoreForTests(): void {
+  sharedStore = null
 }

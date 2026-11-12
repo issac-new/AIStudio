@@ -302,13 +302,14 @@ eval_flow() { # 步 20 主流程：建集→运行→红队→采集→线上证
   [[ -n "$rt_id" ]] && sset eval_redteam_run_id "$rt_id"
   eval_collect "$run_id" "${rt_id:-}"
   eval_live_evidence "$run_id" >/dev/null 2>&1 || true
+  # 黄金集门检先于摘要（2026-11-12）：同轮读数进 eval-summary/goldenGate，避免摘要读到上一轮文件。
+  eval_golden_gate >/dev/null 2>&1 || true
   rc=0
   out=$(eval_summary) || rc=$?
   note "[评测] ${out}"
   # 处置链（V8.46）：失败样本→处置单→同卷复评→机械关闭。不改评测判据；
   # 未关项记问题单并在报告证据九如实呈现（处置链未闭合≠评测门禁改写）。
   eval_remediation_flow "$run_id" >/dev/null 2>&1 || issue_once eval-remediation-open "$RFD_ID" "处置链存在未关闭项（详见 evidence/evals/remediations.json）"
-  eval_golden_gate >/dev/null 2>&1 || true   # 黄金集门检（观察态叠加子门，读数与缺口自行落档不影响主判定）
   case "$rc" in
     0) sset_once g4_eval_pass "$(date +%s)"; return 0 ;;
     4) sset g4_eval_gap 1; issue_once eval-gate-gap "$RFD_ID" "$out"; return 4 ;;

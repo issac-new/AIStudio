@@ -7,9 +7,12 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
+  GOLDEN_MATERIALS,
+  GOLDEN_NEGATIVE_MATERIALS,
   GOLDEN_RATIO,
   GOLDEN_SOURCES,
   GOLDEN_SET_NAME,
+  assertGoldenNegatives,
   assertGoldenRatio,
   buildGoldenSetInput,
   buildGoldenTasks,
@@ -118,5 +121,16 @@ describe('规模与裁判披露接线（源码级）', () => {
     expect(judge).toContain('models: config.judgeModels,')
     // 旧条件形态（多模型才写）必须退役
     expect(judge).not.toContain('judgeModels.length > 1 ? { models')
+  })
+})
+
+describe('黄金集合成负例（F2P 校准资产）', () => {
+  it('30 例负例全覆盖且与正例不同、self-check 零 problems', () => {
+    const tasks = buildGoldenTasks()
+    expect(Object.keys(GOLDEN_NEGATIVE_MATERIALS)).toHaveLength(30)
+    expect(assertGoldenNegatives(tasks)).toEqual([])
+    for (const t of tasks) {
+      expect(GOLDEN_NEGATIVE_MATERIALS[t.id]).not.toBe(GOLDEN_MATERIALS[t.id])
+    }
   })
 })

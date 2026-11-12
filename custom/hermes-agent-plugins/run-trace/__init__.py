@@ -21,6 +21,7 @@ import os
 import re
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -39,6 +40,16 @@ except ImportError:
     _OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+# ── 2026-11-12 ai-agent-handbook 吸收：执行语义与证据链（schema 1.2）──
+# 只增不改：旧消费面继续读 kind/phase；新消费面读 span_kind/span_phase。
+# 词表取自手册第 13 章 13 节点执行语义；本运行时没有独立 RETRIEVAL/MEMORY/GUARDRAIL
+# 火点，缺失即不产出，不用别的 span 冒充。
+SCHEMA_VERSION = "1.2.0"
+SPAN_KINDS = frozenset({
+    "entry", "step", "llm", "tool", "retrieval", "memory",
+    "guardrail", "compaction", "hitl", "interrupt", "context",
+})
 
 # ── 2026-10-17 调用约定修复（run20 复盘 A7 数据面）──
 # 核心 invoke_hook 按 **kwargs 展开调用回调（plugins_dispatch._hook_callback_kwargs：
@@ -70,9 +81,16 @@ class TraceSession:
     task_id: Optional[str] = None
     file_handle: Any = None
     started_at: float = field(default_factory=time.time)
+    # 2026-11-12：trace/attempt/span 序号（schema 1.2 的关联锚点）。
+    trace_id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    attempt: int = 0
+    span_seq: int = 0
+    step_seq: int = 0
     api_request_ids: Dict[str, dict] = field(default_factory=dict)  # api_request_id -> span info
     tool_call_ids: Dict[str, dict] = field(default_factory=dict)  # tool_call_id -> span info
     subagent_ids: Dict[str, dict] = field(default_factory=dict)  # subagent label -> span info
+    pending_steps: Dict[str, dict] = field(default_factory=dict)  # turn_id -> step span info
+    pending_hitl: Dict[str, dict] = field(default_factory=dict)  # request_id -> hitl span info
     last_updated_at: float = field(default_factory=time.time)
     # 三层保留决策用的会话内累计（2026-10-19 观测层轮）：
     # had_error=任一路径出错（api_request_error/tool error/trailer error）→ 第一层全量保留；
@@ -124,6 +142,156 @@ def _write_jsonl_line(file_handle: Any, data: dict) -> None:
         file_handle.flush()
     except Exception as exc:
         logger.warning("Failed to write JSONL line: %s", exc)
+
+
+def _sha256_text(value: Any) -> Optional[str]:
+    """稳定哈希：str 原样；容器按 sort_keys JSON；不可序列化退回 str。"""
+    if value is None:
+        return None
+    if not isinstance(value, (str, bytes)):
+        try:
+            value = json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+        except Exception:
+            value = str(value)
+    if isinstance(value, str):
+        value = value.encode("utf-8", "replace")
+    return hashlib.sha256(value).hexdigest()
+
+
+def _approx_tokens(value: Any) -> Optional[int]:
+    """粗估 token：仅用于 manifest 计量，不冒充 provider usage。"""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        try:
+            value = json.dumps(value, ensure_ascii=False, default=str)
+        except Exception:
+            value = str(value)
+    return max(1, len(value) // 4) if value else 0
+
+
+def _llm_attempt_id(api_request_id: str, retry_count: Any) -> str:
+    """物理尝试 id：api_request_id 是逻辑调用，retry_count 区分重试。"""
+    try:
+        retry = int(retry_count or 0)
+    except (TypeError, ValueError):
+        retry = 0
+    return f"{api_request_id or 'llm'}:r{retry}"
+
+
+def _enrich_span(
+    chunk: dict,
+    state: "TraceSession",
+    span_kind: str,
+    span_phase: str,
+    *,
+    task_id: Optional[str] = None,
+    turn_id: Optional[str] = None,
+    status: Optional[str] = None,
+    started_at: Optional[float] = None,
+    ended_at: Optional[float] = None,
+    attempt_id: Optional[str] = None,
+) -> dict:
+    """补齐 schema 1.2 必填关联字段（单点，不改旧字段语义）。"""
+    chunk.setdefault("schema_version", SCHEMA_VERSION)
+    chunk.setdefault("span_kind", span_kind)
+    chunk.setdefault("span_phase", span_phase)
+    chunk.setdefault("trace_id", state.trace_id)
+    chunk.setdefault("session_id", state.session_id)
+    if task_id is not None:
+        chunk["task_id"] = task_id
+    elif "task_id" not in chunk:
+        chunk["task_id"] = state.task_id
+    if turn_id is not None:
+        chunk["turn_id"] = turn_id
+    chunk.setdefault("attempt_id", attempt_id or f"{state.trace_id}:a{state.attempt}")
+    chunk.setdefault("status", status or ("started" if span_phase in ("pre", "start", "request") else "ok"))
+    if started_at is not None and chunk.get("started_at") is None:
+        chunk["started_at"] = started_at
+    if ended_at is not None:
+        chunk["ended_at"] = ended_at
+    chunk.setdefault("span_seq", state.span_seq)
+    state.span_seq += 1
+    return chunk
+
+
+def _build_context_manifest(
+    payload: dict,
+    state: "TraceSession",
+    *,
+    session_id: str,
+    task_id: Optional[str],
+    turn_id: Optional[str],
+    api_request_id: str,
+) -> dict:
+    """Context Manifest：记录模型这次实际看见的来源、版本、规模与指纹。
+
+    只存哈希与计量，不复制正文（正文已在 request_messages 中）。所有字段来自
+    pre_api_request 的真实载荷，缺什么就缺什么，不用默认值冒充。
+    """
+    system_prompt = payload.get("system_prompt")
+    messages = payload.get("request_messages")
+    request = payload.get("request") if isinstance(payload.get("request"), dict) else {}
+    tools = request.get("tools") if isinstance(request, dict) else None
+    model = payload.get("model")
+    provider = payload.get("provider")
+    permission_mode = _env("HERMES_RUN_TRACE_PERMISSION_MODE") or None
+    trust_level = _env("HERMES_RUN_TRACE_CONTEXT_TRUST") or "runtime"
+
+    sources = []
+
+    def add(source_type: str, value: Any, scope: str, token_count: Optional[int], reason: str) -> None:
+        digest = _sha256_text(value)
+        if digest is None:
+            return
+        sources.append({
+            "source_type": source_type,
+            "scope": scope,
+            "content_hash": f"sha256:{digest}",
+            "token_count": token_count,
+            "trust_level": trust_level,
+            "permission_basis": permission_mode,
+            "selected_reason": reason,
+        })
+
+    add("system_prompt", system_prompt, "session", _approx_tokens(system_prompt), "system_prompt_parts")
+    add("conversation", messages, "session",
+        payload.get("approx_input_tokens") or _approx_tokens(messages), "request_messages")
+    add("tools", tools, "session", None, "tool_definitions")
+
+    fingerprint = _sha256_text({
+        "model": model,
+        "provider": provider,
+        "system_prompt": _sha256_text(system_prompt),
+        "messages": _sha256_text(messages),
+        "tools": _sha256_text(tools),
+    })
+    manifest = {
+        "type": "chunk",
+        "kind": "context_manifest",
+        "span_kind": "context",
+        "span_phase": "snapshot",
+        "schema_version": SCHEMA_VERSION,
+        "manifest_version": "1.0",
+        "trace_id": state.trace_id,
+        "session_id": session_id,
+        "task_id": task_id if task_id is not None else state.task_id,
+        "turn_id": turn_id,
+        "api_request_id": api_request_id,
+        "attempt_id": _llm_attempt_id(api_request_id, payload.get("retry_count")),
+        "model": model,
+        "provider": provider,
+        "message_count": payload.get("message_count"),
+        "tool_count": payload.get("tool_count"),
+        "approx_input_tokens": payload.get("approx_input_tokens"),
+        "request_char_count": payload.get("request_char_count"),
+        "sources": sources,
+        "context_fingerprint": f"sha256:{fingerprint}" if fingerprint else None,
+        "generated_at": time.time(),
+        "span_seq": state.span_seq,
+    }
+    state.span_seq += 1
+    return manifest
 
 
 def _session_key(session_id: str, task_id: Optional[str] = None) -> str:
@@ -313,6 +481,7 @@ def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: 
         # Build header
         started_at = payload.get("started_at", time.time())
         corr = _correlation_fields()
+        trace_id = uuid.uuid4().hex
         if _use_otel_format():
             header = build_session_span(
                 session_id=session_id,
@@ -326,7 +495,10 @@ def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: 
         else:
             header = {
                 "type": "header",
-                "version": "1.1.0",
+                "version": "1.2.0",
+                "schema_version": SCHEMA_VERSION,
+                "trace_id": trace_id,
+                "attempt": 0,
                 "session_id": session_id,
                 "task_id": task_id,
                 "started_at": started_at,
@@ -344,6 +516,7 @@ def _on_session_start(collab_event_id: Any = None, model: Any = None, provider: 
             file_path=file_path,
             file_handle=file_handle,
             started_at=started_at,
+            trace_id=trace_id,
         )
         _TRACE_STATE[key] = state
         _SESSION_KEY_INDEX[session_id] = key
@@ -387,6 +560,8 @@ def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None
         else:
             trailer = {
                 "type": "trailer",
+                "schema_version": SCHEMA_VERSION,
+                "trace_id": state.trace_id,
                 "session_id": session_id,
                 "ended_at": ended_at,
                 "duration_ms": duration_ms,
@@ -417,9 +592,9 @@ def _on_session_end(ended_at: Any = None, error: Any = None, outcome: Any = None
     logger.debug("Ended trace session %s", session_id)
 
 
-def _pre_api_request(api_call_count: Any = None, api_request_id: Any = None, collab_event_id: Any = None, model: Any = None, provider: Any = None, request_messages: Any = None, session_id: Any = None, started_at: Any = None, task_id: Any = None, turn_id: Any = None, **_kw: Any) -> None:
+def _pre_api_request(api_call_count: Any = None, api_request_id: Any = None, collab_event_id: Any = None, model: Any = None, provider: Any = None, request_messages: Any = None, session_id: Any = None, started_at: Any = None, task_id: Any = None, turn_id: Any = None, retry_count: Any = None, system_prompt: Any = None, message_count: Any = None, tool_count: Any = None, approx_input_tokens: Any = None, request_char_count: Any = None, request: Any = None, **_kw: Any) -> None:
     payload: dict = dict(_kw)
-    payload.update({'api_call_count': api_call_count, 'api_request_id': api_request_id, 'collab_event_id': collab_event_id, 'model': model, 'provider': provider, 'request_messages': request_messages, 'session_id': session_id, 'started_at': started_at, 'task_id': task_id, 'turn_id': turn_id})
+    payload.update({'api_call_count': api_call_count, 'api_request_id': api_request_id, 'collab_event_id': collab_event_id, 'model': model, 'provider': provider, 'request_messages': request_messages, 'session_id': session_id, 'started_at': started_at, 'task_id': task_id, 'turn_id': turn_id, 'retry_count': retry_count, 'system_prompt': system_prompt, 'message_count': message_count, 'tool_count': tool_count, 'approx_input_tokens': approx_input_tokens, 'request_char_count': request_char_count, 'request': request})
     payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write LLM span start chunk."""
     session_id = payload.get("session_id", "")
@@ -449,6 +624,7 @@ def _pre_api_request(api_call_count: Any = None, api_request_id: Any = None, col
                 "phase": "pre",
                 "session_id": session_id,
                 "api_request_id": api_request_id,
+                "call_id": api_request_id,
                 "turn_id": payload.get("turn_id"),
                 "model": payload.get("model"),
                 "provider": payload.get("provider"),
@@ -456,21 +632,37 @@ def _pre_api_request(api_call_count: Any = None, api_request_id: Any = None, col
                 "api_call_count": payload.get("api_call_count"),
                 "request_messages": payload.get("request_messages"),
             }
+            _enrich_span(
+                chunk, state, "llm", "pre",
+                task_id=payload.get("task_id"), turn_id=payload.get("turn_id"),
+                status="running", started_at=started_at,
+                attempt_id=_llm_attempt_id(api_request_id, payload.get("retry_count")),
+            )
         _write_jsonl_line(state.file_handle, chunk)
+
+        # Context Manifest：与 LLM span 同请求落盘，回答「模型这次看见了什么」。
+        if not _use_otel_format():
+            manifest = _build_context_manifest(
+                payload, state,
+                session_id=session_id, task_id=payload.get("task_id"),
+                turn_id=payload.get("turn_id"), api_request_id=api_request_id,
+            )
+            _write_jsonl_line(state.file_handle, manifest)
 
         # Track span for post handler
         state.api_request_ids[api_request_id] = {
             "started_at": started_at,
             "model": payload.get("model"),
+            "attempt_id": _llm_attempt_id(api_request_id, payload.get("retry_count")),
         }
         state.last_updated_at = time.time()
 
     logger.debug("Pre API request %s for session %s", api_request_id, session_id)
 
 
-def _post_api_request(api_duration: Any = None, api_request_id: Any = None, collab_event_id: Any = None, ended_at: Any = None, finish_reason: Any = None, first_chunk_at: Any = None, model: Any = None, provider: Any = None, response: Any = None, session_id: Any = None, started_at: Any = None, task_id: Any = None, turn_id: Any = None, usage: Any = None, **_kw: Any) -> None:
+def _post_api_request(api_duration: Any = None, api_request_id: Any = None, collab_event_id: Any = None, ended_at: Any = None, finish_reason: Any = None, first_chunk_at: Any = None, model: Any = None, provider: Any = None, response: Any = None, session_id: Any = None, started_at: Any = None, task_id: Any = None, turn_id: Any = None, usage: Any = None, retry_count: Any = None, **_kw: Any) -> None:
     payload: dict = dict(_kw)
-    payload.update({'api_duration': api_duration, 'api_request_id': api_request_id, 'collab_event_id': collab_event_id, 'ended_at': ended_at, 'finish_reason': finish_reason, 'first_chunk_at': first_chunk_at, 'model': model, 'provider': provider, 'response': response, 'session_id': session_id, 'started_at': started_at, 'task_id': task_id, 'turn_id': turn_id, 'usage': usage})
+    payload.update({'api_duration': api_duration, 'api_request_id': api_request_id, 'collab_event_id': collab_event_id, 'ended_at': ended_at, 'finish_reason': finish_reason, 'first_chunk_at': first_chunk_at, 'model': model, 'provider': provider, 'response': response, 'session_id': session_id, 'started_at': started_at, 'task_id': task_id, 'turn_id': turn_id, 'usage': usage, 'retry_count': retry_count})
     payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
     """Write LLM span end chunk with usage."""
     session_id = payload.get("session_id", "")
@@ -513,6 +705,7 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
                 "phase": "post",
                 "session_id": session_id,
                 "api_request_id": api_request_id,
+                "call_id": api_request_id,
                 "turn_id": payload.get("turn_id"),
                 "model": payload.get("model"),
                 "provider": payload.get("provider"),
@@ -522,6 +715,7 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
                 "finish_reason": payload.get("finish_reason"),
                 "usage": payload.get("usage"),
                 "response_preview": cleaned_text,
+                "retry_count": payload.get("retry_count"),
             }
             if reasoning_text:
                 _max = _reasoning_max_chars()
@@ -545,6 +739,20 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
                 if len(chunk["response_preview"]) > 500:
                     chunk["response_preview"] = chunk["response_preview"][:500] + "..."
 
+            _enrich_span(
+                chunk, state, "llm", "post",
+                task_id=payload.get("task_id"), turn_id=payload.get("turn_id"),
+                status="ok", started_at=started_at, ended_at=ended_at,
+                attempt_id=span_info.get("attempt_id") or _llm_attempt_id(api_request_id, payload.get("retry_count")),
+            )
+        if _use_otel_format():
+            # OTel 路径同样补关联字段（其 span schema 独立，只加通用关联键）。
+            _enrich_span(
+                chunk, state, "llm", "post",
+                task_id=payload.get("task_id"), turn_id=payload.get("turn_id"),
+                status="ok", started_at=started_at, ended_at=ended_at,
+                attempt_id=span_info.get("attempt_id") or _llm_attempt_id(api_request_id, payload.get("retry_count")),
+            )
         _write_jsonl_line(state.file_handle, chunk)
         # 第三层尾部保留判定的 token 累计（usage 拆分含 cache/reasoning，全部计入成本体量）。
         usage = payload.get("usage")
@@ -556,6 +764,51 @@ def _post_api_request(api_duration: Any = None, api_request_id: Any = None, coll
         state.last_updated_at = time.time()
 
     logger.debug("Post API request %s for session %s", api_request_id, session_id)
+
+
+def _pre_tool_call(api_request_id: Any = None, args: Any = None, conversation_id: Any = None, session_id: Any = None, task_id: Any = None, tool_call_id: Any = None, tool_name: Any = None, turn_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'api_request_id': api_request_id, 'args': args, 'conversation_id': conversation_id, 'session_id': session_id, 'task_id': task_id, 'tool_call_id': tool_call_id, 'tool_name': tool_name, 'turn_id': turn_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """Write tool span start（2026-11-12：补「开始」时刻，旧插件只有结束）。"""
+    session_id = payload.get("session_id", "")
+    task_id = payload.get("task_id")
+    tool_call_id = payload.get("tool_call_id", "")
+    if not tool_call_id:
+        return
+
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, task_id)
+        if not state:
+            return
+        started_at = time.time()
+        chunk = {
+            "type": "chunk",
+            "kind": "tool_span",
+            "span_kind": "tool",
+            "span_phase": "start",
+            "session_id": session_id,
+            "tool_call_id": tool_call_id,
+            "tool_name": payload.get("tool_name"),
+            "args": payload.get("args"),
+            "turn_id": payload.get("turn_id"),
+            "api_request_id": payload.get("api_request_id"),
+            "started_at": started_at,
+            "status": "running",
+            "ts": started_at,
+        }
+        if chunk["args"] and isinstance(chunk["args"], str) and len(chunk["args"]) > 1000:
+            chunk["args"] = chunk["args"][:1000] + "..."
+        _enrich_span(
+            chunk, state, "tool", "start",
+            task_id=task_id, turn_id=payload.get("turn_id"),
+            status="running", started_at=started_at,
+        )
+        _write_jsonl_line(state.file_handle, chunk)
+        state.tool_call_ids[tool_call_id] = {"started_at": started_at}
+        state.last_updated_at = time.time()
+
+    logger.debug("Tool call %s (%s) started for session %s", tool_call_id, payload.get("tool_name"), session_id)
 
 
 def _post_tool_call(api_request_id: Any = None, args: Any = None, collab_event_id: Any = None, duration_ms: Any = None, error_message: Any = None, error_type: Any = None, result: Any = None, session_id: Any = None, status: Any = None, task_id: Any = None, tool_call_id: Any = None, tool_name: Any = None, ts: Any = None, turn_id: Any = None, **_kw: Any) -> None:
@@ -572,6 +825,13 @@ def _post_tool_call(api_request_id: Any = None, args: Any = None, collab_event_i
         state = _lookup_state(session_id, task_id)
         if not state:
             return
+
+        span_info = state.tool_call_ids.pop(tool_call_id, {})
+        started_at = span_info.get("started_at") or payload.get("ts") or time.time()
+        ended_at = time.time()
+        duration_ms = payload.get("duration_ms")
+        if duration_ms is None:
+            duration_ms = int((ended_at - started_at) * 1000) if started_at else 0
 
         if _use_otel_format():
             chunk = build_tool_span(
@@ -601,7 +861,9 @@ def _post_tool_call(api_request_id: Any = None, args: Any = None, collab_event_i
                 "error_message": payload.get("error_message"),
                 "turn_id": payload.get("turn_id"),
                 "api_request_id": payload.get("api_request_id"),
-                "ts": payload.get("ts", time.time()),
+                "ts": payload.get("ts", started_at),
+                "started_at": started_at,
+                "ended_at": ended_at,
             }
             # Truncate large args/result
             if chunk["args"] and isinstance(chunk["args"], str):
@@ -611,12 +873,212 @@ def _post_tool_call(api_request_id: Any = None, args: Any = None, collab_event_i
                 if len(chunk["result"]) > 1000:
                     chunk["result"] = chunk["result"][:1000] + "..."
 
+            _enrich_span(
+                chunk, state, "tool", "end",
+                task_id=task_id, turn_id=payload.get("turn_id"),
+                status="error" if (payload.get("status") == "error" or payload.get("error_message")) else "ok",
+                started_at=started_at, ended_at=ended_at,
+            )
+        if _use_otel_format():
+            _enrich_span(
+                chunk, state, "tool", "end",
+                task_id=task_id, turn_id=payload.get("turn_id"),
+                status="error" if (payload.get("status") == "error" or payload.get("error_message")) else "ok",
+                started_at=started_at, ended_at=ended_at,
+            )
         _write_jsonl_line(state.file_handle, chunk)
         if payload.get("status") == "error" or payload.get("error_message"):
             state.had_error = True
         state.last_updated_at = time.time()
 
     logger.debug("Tool call %s (%s) for session %s", tool_call_id, payload.get("tool_name"), session_id)
+
+
+def _pre_llm_call(conversation_history: Any = None, is_first_turn: Any = None, model: Any = None, platform: Any = None, session_id: Any = None, task_id: Any = None, turn_id: Any = None, user_message: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'conversation_history': conversation_history, 'is_first_turn': is_first_turn, 'model': model, 'platform': platform, 'session_id': session_id, 'task_id': task_id, 'turn_id': turn_id, 'user_message': user_message})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """Step span start：本运行时 step = 一次模型回合（turn），不是 ReAct 子步。"""
+    session_id = payload.get("session_id", "")
+    task_id = payload.get("task_id")
+    turn_id = payload.get("turn_id")
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, task_id)
+        if not state:
+            return
+        started_at = time.time()
+        state.step_seq += 1
+        chunk = {
+            "type": "chunk",
+            "kind": "step_span",
+            "span_kind": "step",
+            "span_phase": "start",
+            "step_semantics": "model_turn",
+            "step_index": state.step_seq,
+            "session_id": session_id,
+            "task_id": task_id,
+            "turn_id": turn_id,
+            "model": payload.get("model"),
+            "platform": payload.get("platform"),
+            "is_first_turn": payload.get("is_first_turn"),
+            "history_message_count": len(payload.get("conversation_history") or []),
+            "user_message_chars": len(payload.get("user_message") or "") if isinstance(payload.get("user_message"), str) else None,
+            "started_at": started_at,
+            "status": "running",
+        }
+        _enrich_span(
+            chunk, state, "step", "start",
+            task_id=task_id, turn_id=turn_id, status="running", started_at=started_at,
+        )
+        _write_jsonl_line(state.file_handle, chunk)
+        if turn_id:
+            state.pending_steps[turn_id] = {"started_at": started_at, "step_index": state.step_seq}
+        state.last_updated_at = time.time()
+
+
+def _post_llm_call(assistant_response: Any = None, conversation_history: Any = None, model: Any = None, platform: Any = None, session_id: Any = None, task_id: Any = None, turn_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'assistant_response': assistant_response, 'conversation_history': conversation_history, 'model': model, 'platform': platform, 'session_id': session_id, 'task_id': task_id, 'turn_id': turn_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """Step span end：只记计量，不复制回答正文（正文已在 LLM span 预览）。"""
+    session_id = payload.get("session_id", "")
+    task_id = payload.get("task_id")
+    turn_id = payload.get("turn_id")
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, task_id)
+        if not state:
+            return
+        span_info = state.pending_steps.pop(turn_id, {}) if turn_id else {}
+        started_at = span_info.get("started_at") or time.time()
+        ended_at = time.time()
+        chunk = {
+            "type": "chunk",
+            "kind": "step_span",
+            "span_kind": "step",
+            "span_phase": "end",
+            "step_semantics": "model_turn",
+            "step_index": span_info.get("step_index"),
+            "session_id": session_id,
+            "task_id": task_id,
+            "turn_id": turn_id,
+            "model": payload.get("model"),
+            "platform": payload.get("platform"),
+            "history_message_count": len(payload.get("conversation_history") or []),
+            "response_chars": len(payload.get("assistant_response") or "") if isinstance(payload.get("assistant_response"), str) else None,
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "duration_ms": int((ended_at - started_at) * 1000),
+            "status": "ok",
+        }
+        _enrich_span(
+            chunk, state, "step", "end",
+            task_id=task_id, turn_id=turn_id, status="ok", started_at=started_at, ended_at=ended_at,
+        )
+        _write_jsonl_line(state.file_handle, chunk)
+        state.last_updated_at = time.time()
+
+
+def _post_compaction(after_tokens: Any = None, before_tokens: Any = None, kind: Any = None, messages_removed: Any = None, old_session_id: Any = None, reason: Any = None, session_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'after_tokens': after_tokens, 'before_tokens': before_tokens, 'kind': kind, 'messages_removed': messages_removed, 'old_session_id': old_session_id, 'reason': reason, 'session_id': session_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """Compaction span：压缩前后 token 与移除条数，供 Context Manifest 与成本归因。"""
+    session_id = payload.get("session_id", "")
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, None)
+        if not state:
+            return
+        now = time.time()
+        chunk = {
+            "type": "chunk",
+            "kind": "compaction_span",
+            "span_kind": "compaction",
+            "span_phase": "end",
+            "session_id": session_id,
+            "old_session_id": payload.get("old_session_id") or None,
+            "compaction_kind": payload.get("kind"),
+            "reason": payload.get("reason"),
+            "before_tokens": payload.get("before_tokens"),
+            "after_tokens": payload.get("after_tokens"),
+            "messages_removed": payload.get("messages_removed"),
+            "started_at": now,
+            "ended_at": now,
+            "status": "ok",
+        }
+        _enrich_span(chunk, state, "compaction", "end", status="ok", started_at=now, ended_at=now)
+        _write_jsonl_line(state.file_handle, chunk)
+        state.last_updated_at = now
+
+
+def _on_human_input_request(kind: Any = None, platform: Any = None, prompt: Any = None, request_id: Any = None, session_id: Any = None, session_key: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'kind': kind, 'platform': platform, 'prompt': prompt, 'request_id': request_id, 'session_id': session_id, 'session_key': session_key})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """HITL waiting：跨请求恢复的边界标记；不落 prompt 正文，只落计量。"""
+    session_id = payload.get("session_id", "")
+    request_id = payload.get("request_id", "")
+    if not session_id or not request_id:
+        return
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, None)
+        if not state:
+            return
+        now = time.time()
+        chunk = {
+            "type": "chunk",
+            "kind": "hitl_span",
+            "span_kind": "hitl",
+            "span_phase": "waiting",
+            "session_id": session_id,
+            "request_id": request_id,
+            "hitl_kind": payload.get("kind"),
+            "platform": payload.get("platform"),
+            "prompt_chars": len(payload.get("prompt") or "") if isinstance(payload.get("prompt"), str) else None,
+            "started_at": now,
+            "status": "waiting",
+            "trace_boundary": "interrupt",
+            "linked_trace_id": state.trace_id,
+        }
+        _enrich_span(chunk, state, "hitl", "waiting", status="waiting", started_at=now)
+        _write_jsonl_line(state.file_handle, chunk)
+        state.pending_hitl[request_id] = {"started_at": now}
+        state.last_updated_at = now
+
+
+def _on_human_input_resolved(outcome: Any = None, request_id: Any = None, session_id: Any = None, **_kw: Any) -> None:
+    payload: dict = dict(_kw)
+    payload.update({'outcome': outcome, 'request_id': request_id, 'session_id': session_id})
+    payload = {k: v for k, v in payload.items() if v is not None or k in _kw}
+    """HITL resolved：同一 request_id 闭合等待窗，并标明恢复关联。"""
+    session_id = payload.get("session_id", "")
+    request_id = payload.get("request_id", "")
+    if not session_id or not request_id:
+        return
+    with _STATE_LOCK:
+        state = _lookup_state(session_id, None)
+        if not state:
+            return
+        span_info = state.pending_hitl.pop(request_id, {})
+        started_at = span_info.get("started_at") or time.time()
+        ended_at = time.time()
+        chunk = {
+            "type": "chunk",
+            "kind": "hitl_span",
+            "span_kind": "hitl",
+            "span_phase": "resolved",
+            "session_id": session_id,
+            "request_id": request_id,
+            "outcome": payload.get("outcome"),
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "duration_ms": int((ended_at - started_at) * 1000),
+            "status": "ok",
+            "trace_boundary": "resume",
+            "linked_trace_id": state.trace_id,
+        }
+        _enrich_span(chunk, state, "hitl", "resolved", status="ok", started_at=started_at, ended_at=ended_at)
+        _write_jsonl_line(state.file_handle, chunk)
+        state.last_updated_at = ended_at
 
 
 def _subagent_start(api_calls: Any = None, collab_event_id: Any = None, input_tokens: Any = None, label: Any = None, output_tokens: Any = None, session_id: Any = None, started_at: Any = None, task_count: Any = None, task_id: Any = None, task_index: Any = None, **_kw: Any) -> None:
@@ -747,6 +1209,7 @@ def _on_api_request_error(api_duration: Any = None, api_request_id: Any = None, 
             "phase": "error",
             "session_id": session_id,
             "api_request_id": api_request_id,
+            "call_id": api_request_id,
             "turn_id": payload.get("turn_id"),
             "model": payload.get("model"),
             "provider": payload.get("provider"),
@@ -760,6 +1223,12 @@ def _on_api_request_error(api_duration: Any = None, api_request_id: Any = None, 
             "error_type": error.get("type"),
             "error_message": (error.get("message") or "")[:500] or None,
         }
+        _enrich_span(
+            chunk, state, "llm", "error",
+            task_id=task_id, turn_id=payload.get("turn_id"),
+            status="error", started_at=started_at, ended_at=ended_at,
+            attempt_id=_llm_attempt_id(api_request_id, payload.get("retry_count")),
+        )
         _write_jsonl_line(state.file_handle, chunk)
         state.had_error = True
         state.last_updated_at = time.time()
@@ -783,7 +1252,13 @@ def register(ctx: Any) -> None:
     ctx.register_hook("pre_api_request", _pre_api_request)
     ctx.register_hook("post_api_request", _post_api_request)
     ctx.register_hook("api_request_error", _on_api_request_error)
+    ctx.register_hook("pre_tool_call", _pre_tool_call)
     ctx.register_hook("post_tool_call", _post_tool_call)
+    ctx.register_hook("pre_llm_call", _pre_llm_call)
+    ctx.register_hook("post_llm_call", _post_llm_call)
+    ctx.register_hook("post_compaction", _post_compaction)
+    ctx.register_hook("on_human_input_request", _on_human_input_request)
+    ctx.register_hook("on_human_input_resolved", _on_human_input_resolved)
     ctx.register_hook("subagent_start", _subagent_start)
     ctx.register_hook("subagent_stop", _subagent_stop)
 

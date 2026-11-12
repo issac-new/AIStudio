@@ -48,3 +48,53 @@ describe('buildTraceGraph usage 汇总（T2：usage anchor 跨运行累计）', 
     expect(nodes.find((n) => n.id.includes('tool-1'))?.ref).toEqual({ sessionId: 's1', spanRef: 'tool-1', spanKind: 'tool_span' })
   })
 })
+
+describe('schema 1.2 执行语义与证据链', () => {
+  it('step/compaction/hitl span 渲染为节点，waiting/resolved 合并', () => {
+    const chunks = [
+      { type: 'chunk', kind: 'step_span', span_kind: 'step', span_phase: 'start', session_id: 's1', turn_id: 'turn-1', step_index: 1, model: 'm', started_at: 100 } as Chunk,
+      { type: 'chunk', kind: 'step_span', span_kind: 'step', span_phase: 'end', session_id: 's1', turn_id: 'turn-1', step_index: 1, started_at: 100, ended_at: 101, duration_ms: 1000, status: 'ok' } as Chunk,
+      { type: 'chunk', kind: 'compaction_span', span_kind: 'compaction', span_phase: 'end', session_id: 's1', compaction_kind: 'history', before_tokens: 1000, after_tokens: 400, started_at: 101, status: 'ok' } as Chunk,
+      { type: 'chunk', kind: 'hitl_span', span_kind: 'hitl', span_phase: 'waiting', session_id: 's1', request_id: 'req-1', hitl_kind: 'approval', started_at: 102, status: 'waiting' } as Chunk,
+      { type: 'chunk', kind: 'hitl_span', span_kind: 'hitl', span_phase: 'resolved', session_id: 's1', request_id: 'req-1', outcome: 'approved', started_at: 102, ended_at: 105, duration_ms: 3000, status: 'ok' } as Chunk,
+    ]
+    const { nodes } = buildTraceGraph(header, chunks)
+    expect(nodes.find(n => n.kind === 'step')?.detail).toBeDefined()
+    expect(nodes.find(n => n.kind === 'compaction')?.detail).toBe('1000→400 tokens')
+    expect(nodes.find(n => n.kind === 'hitl')).toMatchObject({ status: 'ok', detail: 'approved' })
+  })
+
+  it('context_manifest 不生成节点，原样返回供消费面读取', () => {
+    const chunks = [
+      { type: 'chunk', kind: 'context_manifest', span_kind: 'context', span_phase: 'snapshot', session_id: 's1', manifest_version: '1.0', context_fingerprint: 'sha256:abc', sources: [{ source_type: 'system_prompt', content_hash: 'sha256:def' }] } as Chunk,
+    ]
+    const { nodes, contextManifests } = buildTraceGraph(header, chunks)
+    expect(nodes.some(n => n.kind === 'unknown' || n.kind === 'step')).toBe(false)
+    expect(contextManifests).toHaveLength(1)
+    expect(contextManifests[0].manifest_version).toBe('1.0')
+    expect(contextManifests[0].sources?.[0].source_type).toBe('system_prompt')
+  })
+
+  it('旧 JSONL（只有 kind/phase）仍按原语义渲染，不产生 unknown 噪音', () => {
+    const chunks = [
+      llmPre('api-1'), llmPost('api-1', { input_tokens: 1, output_tokens: 1 }),
+      { type: 'chunk', kind: 'tool_span', phase: 'post', session_id: 's1', tool_call_id: 't1' } as Chunk,
+      { type: 'chunk', kind: 'subagent_span', phase: 'start', session_id: 's1', subagent_label: 'sub' } as Chunk,
+      { type: 'chunk', kind: 'subagent_span', phase: 'stop', session_id: 's1', subagent_label: 'sub' } as Chunk,
+    ]
+    const { nodes } = buildTraceGraph(header, chunks)
+    expect(nodes.some(n => n.kind === 'unknown')).toBe(false)
+    expect(nodes.find(n => n.kind === 'agent')?.label).toBe('sub')
+  })
+
+  it('未知 span_kind 落 unknown 节点，不静默丢弃', () => {
+    const chunks = [
+      { type: 'chunk', kind: 'future_span', span_kind: 'future_kind', span_phase: 'end', session_id: 's1', started_at: 100 } as Chunk,
+    ]
+    const { nodes } = buildTraceGraph(header, chunks)
+    const unknown = nodes.find(n => n.kind === 'unknown')
+    expect(unknown).toBeTruthy()
+    expect(unknown?.label).toBe('future_span')
+    expect(unknown?.detail).toBe('future_kind')
+  })
+})

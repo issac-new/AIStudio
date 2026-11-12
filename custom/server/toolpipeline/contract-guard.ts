@@ -25,7 +25,7 @@ import {
   rewriteAsOutputViolation,
   schemaRejectionEnvelope,
 } from '../toolcontract/error-envelope'
-import { IdempotencyStore } from '../toolcontract/idempotency-store'
+import { IdempotencyStore, sharedIdempotencyStore } from '../toolcontract/idempotency-store'
 import { getToolCallCorrelation } from './call-correlation'
 
 interface PreExecuteVerdict {
@@ -89,7 +89,7 @@ export function contractGuardHook(
     contractResolver?: (name: string) => ToolContract
   } = {},
 ) {
-  const store = options.idempotencyStore ?? new IdempotencyStore()
+  const store = options.idempotencyStore ?? sharedIdempotencyStore()
   const resolveContract = options.contractResolver ?? resolveToolContract
   return {
     async preExecute(

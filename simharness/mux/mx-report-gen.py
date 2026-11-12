@@ -2913,6 +2913,15 @@ def eval_summary_html():
     except Exception:
         return '<p class="stat-note">评测摘要解析失败——如实标注，不造数。</p>'
 
+    # 黄金集门检读数（2026-11-12 handbook 吸收）：gate-check 落盘件；缺席如实缺席。
+    gg = {}
+    ggp = EVID / 'evals' / 'golden-gate.json'
+    if ggp.exists():
+        try:
+            gg = json.loads(ggp.read_text(encoding='utf-8', errors='replace'))
+        except Exception:
+            gg = {}
+
     def pct(v):
         return '—' if v is None else f'{float(v) * 100:.1f}%'
     def esc(v):
@@ -2956,6 +2965,18 @@ def eval_summary_html():
     bench = d.get('swarmBench') or {}
     diff_txt = ' · '.join(f"{b.get('tier')}={pct(b.get('passAtK'))}({b.get('taskCount')})" for b in by_diff if isinstance(b, dict)) or '未标注'
     role_txt = ' · '.join(f"{b.get('role')}={pct(b.get('passAtK'))}({b.get('passed')}/{b.get('taskCount')})" for b in by_role if isinstance(b, dict)) or '未标注'
+    # 黄金集门检：桶/误杀/校准三态；未跑=门外（不冒充 0 误杀）。
+    if gg:
+        _gb = gg.get('buckets') or {}
+        _gcal = gg.get('calibration') or {}
+        gg_txt = (f"桶 {_gb.get('positive', '?')}/{_gb.get('ambiguous', '?')}/{_gb.get('adversarial', '?')}"
+                  f" · 误杀 {len(gg.get('mismatch') or [])}")
+        if _gcal:
+            gg_txt += (f" · 校准 {_gcal.get('decision')}"
+                       f"（F2P {_gcal.get('f2pPassed')}/{_gcal.get('f2pTotal')}"
+                       f" · P2P {_gcal.get('p2pPassed')}/{_gcal.get('p2pTotal')}）")
+    else:
+        gg_txt = '未跑（golden-gate.json 缺席）'
     stab_txt = f"翻转 {pct(stab.get('flipRate'))}（{stab.get('flips')}/{stab.get('checked')}，{stab.get('rounds')} 轮）" if stab else '未开启'
     comm_sw = swarm.get('communication') or {}
     cred_sw = swarm.get('credit') or {}
@@ -3029,6 +3050,7 @@ def eval_summary_html():
       <tr><td>评测规模与裁判</td><td>{esc(run.get('taskCount') if run.get('taskCount') is not None else '—')} 题 × k={esc(run.get('k') if run.get('k') is not None else '—')} · 判分 {esc(run.get('attempts') if run.get('attempts') is not None else '—')} 次（含效率证据 {esc(run.get('attemptsWithEfficiency') if run.get('attemptsWithEfficiency') is not None else '—')}）· 裁判 {esc(('+'.join((run.get('judgeFingerprint') or {}).get('models') or []) or '—'))}</td><td>规模与裁判指纹（C 批）：判分次数=题×k；裁判变更后跨轮读数不可比</td></tr>
       <tr><td>端到端读数</td><td>pass@1 {pct(run.get('passAt1'))} · pass@k {pct(run.get('passAtK'))} · unknown {pct(run.get('unknownRatio'))} · 红线 {'命中' if run.get('riskVeto') else '干净'}</td><td>Eval Studio 运行报告</td></tr>
       <tr><td>发布门禁</td><td>{esc(gate.get('verdict'))} · 实测项 {esc(gate.get('measuredCount'))} · 缺口 {esc('、'.join(gate.get('gapKeys') or []) or '无')}{gate_checks_txt}</td><td>六检查；缺口如实 no_data；fail 项点名实测与阈值</td></tr>
+      <tr><td>黄金集门检</td><td>{esc(gg_txt)}</td><td>P2P 误杀读数 + 请求校准时的 F2P 配对；默认观察态，enforce 才阻断（2026-11-12 吸收）</td></tr>
       <tr><td>评估器三角</td><td>规则 {esc(src.get('s0'))} · 裁判 {esc((src.get('s1') or 0) + (src.get('s0+s1') or 0))} · 人工 {esc(src.get('human'))} · 冲突 {esc(tri.get('conflicts'))} · 判词可审计 {pct((tri.get('audit') or {}).get('ratio'))}</td><td>S0/S1/人工互证；判词 reason 可追问</td></tr>
       <tr><td>严格 vs 保守</td><td>严格 {pct(strict.get('passAtK'))} · 保守（反事实）{pct(cons.get('passAtK'))} · 误杀候选 {esc(human.get('falseKillCandidates'))} · 假通过候选 {esc(human.get('falsePassCandidates'))}</td><td>保守口径不作门禁，只量误杀空间</td></tr>
       <tr><td>四层指标金字塔</td><td>{esc(pyr_txt)}</td><td>模型/应用/Agent/线上；no_data 如实</td></tr>

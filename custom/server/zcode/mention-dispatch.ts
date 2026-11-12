@@ -30,6 +30,8 @@ import { fewshotRerank, rerankInjectLine } from '../eval/fewshot-rerank'
 import { listLedger } from '../eval/flywheel'
 import { admitDispatch, capacityFromEnv } from './dispatch-capacity'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
+import { evaluateTeamStop, type TeamStopFacts } from './team-stop'
+import { collectTeamStopFacts } from './team-stop-facts'
 import { registerEntry } from '../taskledger/taskledger-store'
 import {
   resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation,
@@ -146,6 +148,8 @@ export interface PlanFacts {
    * runningTotal 由调用方注入（本文件不自己数在跑 run，避免与 pending 槽双事实源）。
    */
   capacity?: { runningTotal: number; maxRunning: number; policy?: 'reject' | 'queue'; waitedMs?: number; queueTimeoutMs?: number }
+  /** 团队级停止事实（2026-11-12 handbook 吸收；缺省=不评团队条件）。 */
+  team?: TeamStopFacts
 }
 
 export interface PlanRequest {
@@ -165,6 +169,8 @@ export interface DispatchPlan {
   runsFor: string
   squad?: { name: string; leader: string; members: string[] }
   detail: string
+  /** 非拦截态下的团队停止告警（enforce 关闭时只记录，不改变 action）。 */
+  warnings?: string[]
 }
 
 /** 派单落到的执行 agent（squad=leader）；槽锁键与预演 runsFor 同源，防两处漂移。 */
@@ -177,6 +183,7 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
   const { token, workspacePath } = req
   let runsFor = token.target
   let squad: DispatchPlan['squad']
+  let warnings: string[] | undefined
   if (token.kind === 'squad') {
     const def: SquadDefinition | null = resolveSquad(token.target)
     if (!def) {
@@ -185,7 +192,12 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
     squad = { name: token.target, leader: def.leader, members: def.members }
     runsFor = def.leader
   }
-  const wrap = (plan: Omit<DispatchPlan, 'runsFor' | 'squad'>): DispatchPlan => ({ ...plan, runsFor, squad })
+  const wrap = (plan: Omit<DispatchPlan, 'runsFor' | 'squad' | 'warnings'>): DispatchPlan => ({
+    ...plan,
+    runsFor,
+    squad,
+    ...(warnings ? { warnings } : {}),
+  })
 
   // 1) known/deferred 档（与构造器同语义：deferred 隐含已知，先于未知判定）。
   const known = facts.deferredAgents.has(runsFor) || facts.knownAgents.has(runsFor)
@@ -198,6 +210,17 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
     const def = resolveSquad(squad.name)
     if (def && isSelfTrigger(def, req.mentionAuthor)) {
       return wrap({ action: 'reject', reason: 'self_trigger_suppressed', detail: `leader ${squad.leader} @ 自己的 squad，不再触发` })
+    }
+  }
+  // 2.5) 团队级停止条件（2026-11-12 handbook 吸收）：enforce 才 reject，否则只告警。
+  if (facts.team) {
+    const teamStop = evaluateTeamStop(facts.team)
+    if (teamStop.stop) {
+      const detail = `团队停止条件 ${teamStop.code}：${teamStop.reason}`
+      if (facts.team.enforce) {
+        return wrap({ action: 'reject', reason: 'team_stop', detail })
+      }
+      warnings = [detail]
     }
   }
   // 3) pending 槽：活跃 → 并入；过期 → 放行重派（TTL 语义见 MentionDispatchOptions.pendingTtlMs）。
@@ -338,12 +361,17 @@ export class MentionDispatchService {
     let engineOnline = false
     try { engineOnline = await this.engine.probe() } catch { engineOnline = false }
 
+    const planFacts = this.planFacts()
+    if (token.kind === 'squad') {
+      // 团队级事实只在 squad 委托时采集；普通 @agent 保持原判定面。
+      planFacts.team = collectTeamStopFacts({ teamId: token.target, now: this.now() })
+    }
     const plan = planDispatch({
       token,
       workspacePath: params.workspacePath,
       mentionAuthor: params.mentionAuthor ?? this.mentionAuthor,
       engineOnline,
-    }, this.planFacts())
+    }, planFacts)
     const envelope = { ...base, ...(plan.squad ? { leader: plan.squad.leader } : {}) }
 
     if (plan.action === 'reject') {
