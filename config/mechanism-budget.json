@@ -11,6 +11,14 @@
   "changes": [
     {
       "at": "2026-11-12",
+      "delta": "+1 script / −1 script（org-governance-walkthrough 按登记 sunset 退役；capability-matrix 新增）；npmScripts +0（并入 release:preflight 链内联调用，不新增条目）",
+      "reason": "设计复盘 P0-5：能力验收矩阵进发布门。配对退役=org-governance-walkthrough（2026-11-05 一次性走查已完成 12/12，sunset 登记在册、reviewBy 2026-12-05，全仓零引用）",
+      "pairedRemovals": [
+        "删除 scripts/regression/org-governance-walkthrough.mjs（sunset 条目同步移出册；其历史证据在 spec 2026-11-05-org-governance-closeout.md）"
+      ]
+    },
+    {
+      "at": "2026-11-12",
       "delta": "+1 script / scripts 136→137（补账抬位）",
       "reason": "expdual 收尾批清偿（spec 2026-11-12-expdual-closeout 债1）：scripts/maintenance/ekko-skill-store-migration.mjs 系 2026-11-10 ekko-skill-store 批（8acb7d202）合入时未同步预算册——git log --diff-filter=A 实证其为最后一个新增 .mjs；本批按 2026-11-07 hrgov-seed/patch-touched 补账先例抬位至实测值 137，governance-lint --budget 由 FAIL 转 PASS",
       "pairedRemovals": [
@@ -130,16 +138,6 @@
       "retireWhen": "索引由 docs-ssot-guard 自动生成后"
     },
     {
-      "id": "org-governance-walkthrough",
-      "owner": "governance",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "三页签走查由产品巡检器覆盖后",
-      "check": {
-        "type": "filePresent",
-        "path": "scripts/regression/org-governance-walkthrough.mjs"
-      }
-    },
-    {
       "id": "spec-fidelity",
       "owner": "quality",
       "reviewBy": "2026-12-20",
@@ -174,6 +172,16 @@
       "owner": "loop",
       "reviewBy": "2026-12-20",
       "retireWhen": "四族终止词表统一为单一枚举后"
+    },
+    {
+      "id": "capability-matrix",
+      "owner": "release",
+      "reviewBy": "2027-02-12",
+      "retireWhen": "能力读数并入产品端点 /api/harness/capability-matrix 且 release:preflight 直接消费端点时降级为薄壳",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/capability-matrix.mjs"
+      }
     }
   ]
 }

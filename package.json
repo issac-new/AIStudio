@@ -45,7 +45,7 @@
     "docs:check": "node scripts/platform/docs/sync-training-docs.mjs --check",
     "release:check": "npm run docs:check && node scripts/verify-release-manifest.mjs",
     "release:gate": "node scripts/platform/release/release-gate.mjs",
-    "release:preflight": "node custom/qgate/dist/cli.js run engineering.basic-check --trigger release --include-disabled && node scripts/qgate-health.mjs --scope release --require-fresh && node custom/qgate/dist/cli.js release-report && node scripts/audit-sample.mjs --record && node scripts/release-evidence.mjs --write",
+    "release:preflight": "node custom/qgate/dist/cli.js run engineering.basic-check --trigger release --include-disabled && node scripts/qgate-health.mjs --scope release --require-fresh && node custom/qgate/dist/cli.js release-report && node scripts/audit-sample.mjs --record && node scripts/release-evidence.mjs --write && node scripts/capability-matrix.mjs --check --write",
     "release:packages": "npm run release:check && npm run release:preflight && node scripts/make-release-packages.mjs",
     "release:incremental": "npm run release:preflight && node scripts/make-incremental-package.mjs",
     "offline:package": "npm run release:preflight && node scripts/make-offline-package.mjs",

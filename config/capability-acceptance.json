@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "purpose": "能力验收矩阵：产品能力声明的单一事实源。发布门只对「声明为 available 的能力」要证据——static 检查当场跑，runtime 声明须带新鲜证据文件；证据过期=UNVERIFIED，不是 PASS。取代以「六闸全过」代替能力可用的口径。",
+  "staleDays": 30,
+  "capabilities": [
+    {
+      "id": "workbench.six-stage",
+      "claim": "日常工作台六阶段（搭建/需求/分析设计/开发/验收/治理）可进入",
+      "status": "available",
+      "checks": [
+        { "type": "fileContains", "path": "registries/client/bootstrap.ts", "pattern": "registerIa2" },
+        { "type": "fileExists", "path": "custom/client/ia2/views/WorkbenchView.vue" },
+        { "type": "fileExists", "path": "custom/server/harness/workbench/service.ts" }
+      ]
+    },
+    {
+      "id": "ide.workspace",
+      "claim": "IDE 工作区（任务/会话/文件/终端/审查）可用",
+      "status": "available",
+      "checks": [
+        { "type": "fileExists", "path": "custom/client/ide/views/IdeShell.vue" },
+        { "type": "fileExists", "path": "custom/client/ide/views/IdeChatPane.vue" }
+      ]
+    },
+    {
+      "id": "sim.fullflow",
+      "claim": "全流程推演 26 步六闸可编排与判读",
+      "status": "available",
+      "checks": [
+        { "type": "fileExists", "path": "simharness/aipay-scenario.sh" },
+        { "type": "fileExists", "path": "custom/server/governance/lifecycle/verdict.ts" },
+        { "type": "fileExists", "path": "custom/server/governance/lifecycle/release-state.ts" }
+      ]
+    },
+    {
+      "id": "kanban.board",
+      "claim": "Kanban 唯一看板：卡面/泳道/催办可操作",
+      "status": "available",
+      "checks": [
+        { "type": "fileExists", "path": "custom/client/kanban/components/KanbanTaskDrawer.vue" },
+        { "type": "fileExists", "path": "custom/server/matrix" }
+      ]
+    },
+    {
+      "id": "gov.approvals",
+      "claim": "审批收件箱与双人会签在位",
+      "status": "available",
+      "checks": [
+        { "type": "fileExists", "path": "custom/server/approval-inbox/approval-log.ts" },
+        { "type": "fileExists", "path": "custom/server/approval-ledger/ledger-store.ts" }
+      ]
+    },
+    {
+      "id": "eval.golden-gate",
+      "claim": "评测黄金集门（P2P 材料＋judge 指纹冻结）在位",
+      "status": "available",
+      "checks": [
+        { "type": "fileExists", "path": "custom/server/eval/golden-gate.ts" },
+        { "type": "fileExists", "path": "custom/server/eval/__tests__/golden-gate.test.ts" }
+      ]
+    },
+    {
+      "id": "sim.director-dispatch",
+      "claim": "O7 总监派发在真实负载下常态产出任务书",
+      "status": "experimental",
+      "claimNote": "run29 实测 director 成功率 9.8%（5/51），未兑现；run30 起默认 preset，director 仅标定轮开启（2026-11-12-run29-full-retrospective 发现一，处置 A1 折中）。",
+      "runtimeEvidence": {
+        "evidencePath": "docs/superpowers/specs/2026-11-12-run29-full-retrospective.md",
+        "collectedAt": "2026-11-12",
+        "metric": "director_success_rate",
+        "value": "5/51"
+      },
+      "checks": []
+    },
+    {
+      "id": "sim.uat-verdict",
+      "claim": "UAT 判词可读出集合式验收声明",
+      "status": "available",
+      "claimNote": "N29-21 修复后有 27 判例；活体验证来自 run29（条件终态 A4 于 2026-11-12 落地）。",
+      "runtimeEvidence": {
+        "evidencePath": "docs/superpowers/specs/2026-11-12-run29-retro-rootfix.md",
+        "collectedAt": "2026-11-12",
+        "metric": "uat_verdict_readability",
+        "value": "27 判例"
+      },
+      "checks": []
+    }
+  ]
+}
