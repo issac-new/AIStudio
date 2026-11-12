@@ -4,6 +4,9 @@
 // 可随子任务派生、可级联撤销。本模块先立账本语义：预留=在途占用，结算=转实际支出，
 // 撤销=释放预留。预算判定读「已花费 + 未结算预留」，并发 run 不会在支出可见前全放行。
 //
+// 结果形状=lease-or-reason（成功带实体、失败带 reason），不引入 ok 布尔联合——
+// K19 棘轮要求失败体收敛到统一出口，域内联用实体缺席表达失败。
+//
 // 边界：本模块是 Studio 侧账本，不拦截 Hermes 的模型请求（硬准入属执行内核统一范围）。
 // 默认无租约时行为不变；租约文件缺席=空账。
 import { existsSync, mkdirSync, readFileSync } from 'fs'
@@ -82,17 +85,19 @@ export class BudgetLeaseStore {
     userId?: string
     profileId?: string
     ttlMs?: number
-  }): { ok: true; lease: BudgetLease } | { ok: false; reason: string } {
-    if (!(input.limitUsd >= 0)) return { ok: false, reason: 'limitUsd 必须 ≥ 0' }
+  }): { lease: BudgetLease | null; reason?: string } {
+    if (!(input.limitUsd >= 0)) return { lease: null, reason: 'limitUsd 必须 ≥ 0' }
     const loaded = this.load()
-    if (loaded.has(input.leaseId)) return { ok: false, reason: `租约已存在：${input.leaseId}` }
+    if (loaded.has(input.leaseId)) return { lease: null, reason: `租约已存在：${input.leaseId}` }
     const now = this.now()
     if (input.parentLeaseId) {
       const parent = loaded.get(input.parentLeaseId)
-      if (!parent || parent.revoked) return { ok: false, reason: `父租约不存在或已撤销：${input.parentLeaseId}` }
+      if (!parent || parent.revoked) {
+        return { lease: null, reason: `父租约不存在或已撤销：${input.parentLeaseId}` }
+      }
       const avail = Math.max(0, parent.limitUsd - parent.reservedUsd - parent.spentUsd)
       if (avail < input.limitUsd) {
-        return { ok: false, reason: `父租约可用额 ${round(avail)} 不足以派生 ${input.limitUsd}` }
+        return { lease: null, reason: `父租约可用额 ${round(avail)} 不足以派生 ${input.limitUsd}` }
       }
       parent.reservedUsd = round(parent.reservedUsd + input.limitUsd)
     }
@@ -112,38 +117,38 @@ export class BudgetLeaseStore {
     }
     loaded.set(lease.leaseId, lease)
     this.persist()
-    return { ok: true, lease: { ...lease } }
+    return { lease: { ...lease } }
   }
 
   /** 在租约内预留一次调用预算；可用额不足则拒绝（调用方决定降级/等待）。 */
-  reserve(leaseId: string, usd: number): { ok: true; lease: BudgetLease } | { ok: false; reason: string } {
-    if (!(usd >= 0)) return { ok: false, reason: '预留额必须 ≥ 0' }
+  reserve(leaseId: string, usd: number): { lease: BudgetLease | null; reason?: string } {
+    if (!(usd >= 0)) return { lease: null, reason: '预留额必须 ≥ 0' }
     const lease = this.load().get(leaseId)
-    if (!lease || lease.revoked) return { ok: false, reason: `租约不存在或已撤销：${leaseId}` }
+    if (!lease || lease.revoked) return { lease: null, reason: `租约不存在或已撤销：${leaseId}` }
     const avail = Math.max(0, lease.limitUsd - lease.reservedUsd - lease.spentUsd)
-    if (avail < usd) return { ok: false, reason: `租约可用额 ${round(avail)} 不足以预留 ${usd}` }
+    if (avail < usd) return { lease: null, reason: `租约可用额 ${round(avail)} 不足以预留 ${usd}` }
     lease.reservedUsd = round(lease.reservedUsd + usd)
     this.persist()
-    return { ok: true, lease: { ...lease } }
+    return { lease: { ...lease } }
   }
 
   /** 结算：预留转实际支出（usd 可小于预留额，差额释放）。 */
-  settle(leaseId: string, usd: number): { ok: true; lease: BudgetLease } | { ok: false; reason: string } {
-    if (!(usd >= 0)) return { ok: false, reason: '结算额必须 ≥ 0' }
+  settle(leaseId: string, usd: number): { lease: BudgetLease | null; reason?: string } {
+    if (!(usd >= 0)) return { lease: null, reason: '结算额必须 ≥ 0' }
     const lease = this.load().get(leaseId)
-    if (!lease) return { ok: false, reason: `租约不存在：${leaseId}` }
+    if (!lease) return { lease: null, reason: `租约不存在：${leaseId}` }
     const release = Math.min(lease.reservedUsd, usd)
     lease.reservedUsd = round(lease.reservedUsd - release)
     lease.spentUsd = round(lease.spentUsd + usd)
     this.persist()
-    return { ok: true, lease: { ...lease } }
+    return { lease: { ...lease } }
   }
 
   /** 撤销：释放自身预留；默认级联撤销子租约。 */
-  revoke(leaseId: string, cascade = true): { ok: true; revoked: string[] } | { ok: false; reason: string } {
+  revoke(leaseId: string, cascade = true): { revoked: string[] | null; reason?: string } {
     const loaded = this.load()
     const lease = loaded.get(leaseId)
-    if (!lease) return { ok: false, reason: `租约不存在：${leaseId}` }
+    if (!lease) return { revoked: null, reason: `租约不存在：${leaseId}` }
     const revoked: string[] = []
     const visit = (id: string) => {
       const item = loaded.get(id)
@@ -158,7 +163,7 @@ export class BudgetLeaseStore {
     }
     visit(leaseId)
     this.persist()
-    return { ok: true, revoked }
+    return { revoked }
   }
 
   /** 活跃租约的未结算预留总额（按用户/档案过滤；预算判定用）。 */

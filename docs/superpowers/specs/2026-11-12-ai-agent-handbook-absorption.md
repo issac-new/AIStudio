@@ -87,12 +87,23 @@
 
 ## 验证
 
-- 批 1：`npx vitest run custom/server/controllers/hermes/__tests__/trace-graph.test.ts custom/server/harness/__tests__/run-result.test.ts custom/hermes-agent-plugins/__tests__/run-trace-schema.test.ts`；`npm run typecheck:harness`。
-- 批 2：`npx vitest run custom/server/toolcontract/__tests__/action-recovery.test.ts custom/server/toolcontract/__tests__/idempotency-status.test.ts custom/server/toolcontract/__tests__/contract.test.ts custom/server/toolpipeline/__tests__/contract-guard.test.ts custom/server/resume/__tests__/resume-planner.test.ts custom/server/memscope/__tests__/memory-write-guard.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts custom/hermes-agent-plugins/__tests__/action-ledger.test.ts`。
-- 批 3：`npx vitest run custom/server/eval/__tests__/golden-gate.test.ts custom/server/eval/__tests__/golden-set.test.ts custom/server/eval/__tests__/failure-taxonomy.test.ts custom/server/eval/__tests__/golden-report-wiring.test.ts custom/server/eval/__tests__/badcase-distill.test.ts`；`python3 -m py_compile simharness/mux/mx-eval-summary.py simharness/mux/mx-report-gen.py`；`mx-eval-summary.py` 用临时 `golden-gate.json` 夹具真跑一次（`goldenGate` 透传）。
-- 批 4：`npx vitest run custom/server/zcode/__tests__/team-stop.test.ts custom/server/tokenbudget/__tests__/budget-lease.test.ts custom/server/tokenbudget/__tests__/budget-policy.test.ts custom/server/zcode/__tests__/dispatch-capacity.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts`。
-- 全量：`npm test`（若 worktree 注入态不可用，按 N-4 配方先建链；失败项如实列）。
-- 注入/部署面：本批零 vendor 改动，`npm run inject` 不需重放；Hermes 插件按目录部署，验证脚本用 `python3 -c` 真导入。
+目标测试（四批全绿）：
+
+- 批 1：`npx vitest run custom/server/controllers/hermes/__tests__/trace-graph.test.ts custom/server/harness/__tests__/run-result.test.ts custom/server/harness/__tests__/execution-join.test.ts custom/hermes-agent-plugins/__tests__/run-trace-schema.test.ts`——13+16+2 用例全过（插件行为门用 `python3 -c` 真 import 驱动 14 个 hook）。
+- 批 2：`npx vitest run custom/server/toolcontract/__tests__/action-recovery.test.ts custom/server/toolcontract/__tests__/idempotency-status.test.ts custom/server/toolcontract/__tests__/contract.test.ts custom/server/toolpipeline/__tests__/contract-guard.test.ts custom/server/resume/__tests__/resume-planner.test.ts custom/server/memscope/__tests__/memory-write-guard.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts custom/hermes-agent-plugins/__tests__/action-ledger.test.ts`——全过；旧「只观测」断言未动（guard/enforce 默认关）。
+- 批 3：`npx vitest run custom/server/eval/__tests__/golden-gate.test.ts custom/server/eval/__tests__/golden-set.test.ts custom/server/eval/__tests__/failure-taxonomy.test.ts custom/server/eval/__tests__/golden-report-wiring.test.ts custom/server/eval/__tests__/badcase-distill.test.ts custom/server/eval/__tests__/auto-reflow.test.ts`——42 用例全过；`python3 -m py_compile` 两脚本过；`mx-eval-summary.py` 以临时 `golden-gate.json` 夹具真跑，`goldenGate` 透传与 verdict=gap 退出码 4 均符合预期。
+- 批 4：`npx vitest run custom/server/zcode/__tests__/team-stop.test.ts custom/server/tokenbudget/__tests__/budget-lease.test.ts custom/server/tokenbudget/__tests__/budget-policy.test.ts custom/server/zcode/__tests__/dispatch-capacity.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts`——全过。
+- `npm run typecheck:harness` 四批后均 RC=0。
+
+全量回归（worktree 注入态）：
+
+- worktree 起跑即被 pretest 挡：zcode 002 对 pristine 不适用＝挂账 N-4 已知形态。按 N-4 配方解：rsync 主树 vendor 注入态（--exclude node_modules）＋改写 `.overlay-injected.json` 根路径；另发现主树 manifest 漏登 `767-server-expdual-routes.patch`（vendor 实含其内容、reverse-check 过）＝主树侧存量漂移，本批在 worktree 侧补登后 `ensure-injected` v2 noop。
+- 全量 `npm test` 第一轮：8808 passed / 5 failed / 11 skipped。5 失败逐一处置：
+  - K19 `ok:false` 棘轮 884>874＝本批引入（budget-lease 域内字面量）→ 改 lease-or-reason 结果形状（成功带实体、失败带 reason，零字面量）后绿；golden-gate 新增失败体在既有排除清单内（域内 Result 联合先例）。
+  - dispatch 词表冻结守门＝本批追加 `team_stop` 未过守门 → 守门数组同步追加（冻结纪律：只追加）后绿。
+  - 培训索引计数＝本批暴露的存量漂移（expdual 批补链接未同步计数）→ 按文件系统实测对齐（总 638、2026-11 标题 185）后绿。
+  - `overlay-pristine-replay` 与 `raci-rest-guard ④` 在主树同红＝存量债非本批引入（pristine 重放红正是 N-4「zcode 002 pristine 必炸」的守门面；raci ④ 未动）。不在本批修，如实挂账。
+- 修复后定向复跑 59/59 绿；第二轮全量见交付说明（合并前完成）。
 
 ## 设计文档影响
 

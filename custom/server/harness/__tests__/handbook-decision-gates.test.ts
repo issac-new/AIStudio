@@ -74,10 +74,10 @@ describe('关 4：效率（预算租约）', () => {
     const dir = mkdtempSync(join(tmpdir(), 'handbook-budget-'))
     try {
       const store = new BudgetLeaseStore({ path: join(dir, 'leases.json'), now: () => 1_000 })
-      expect(store.derive({ leaseId: 'r', limitUsd: 1 }).ok).toBe(true)
-      expect(store.reserve('r', 1).ok).toBe(true)
+      expect(store.derive({ leaseId: 'r', limitUsd: 1 }).lease).toBeTruthy()
+      expect(store.reserve('r', 1).lease).toBeTruthy()
       expect(store.available('r')).toBe(0)
-      expect(store.reserve('r', 0.01).ok).toBe(false)
+      expect(store.reserve('r', 0.01).lease).toBeNull()
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

@@ -1625,6 +1625,8 @@ npm run serve
 | 黄金集门检（2026-11-06 G4 子门，run28 后复核） | 30 例 P2P 材料已在 run28 完成观察态真跑并落 `evidence/evals/golden-gate.json`；实测 14 例误杀，说明判分器尚未校准，当前仍不阻断主门 | 保持观察态并校准误杀；未达到校准判据前不得升为硬门，也不得把本轮主门通过解释为黄金集全过 |
 | 帧证据二态（2026-11-06，run28 后复核） | run28 帧采集与独立核验已完成；报错态与整板空白态判据已修，问题帧翻红、补拍与降级凭证均按真实状态呈现 | 继续按注册帧形态核验，保留报错、空白和缺帧的负面结论；摘要不得写「全部实拍」，隔离与降级步不计入可核验实拍 |
 | 跨轮指标留档（2026-11-06 O1，run28 后复核） | `docs/governance/run-metrics.jsonl` 已有 run27 与 run28 两轮记录，连续两轮判据已具备实际输入 | 按既定指标阈值消费两轮序列；缺轮、断档或指标缺席仍如实标注，不把两轮留档直接写成长期趋势结论 |
+| 执行证据链（2026-11-12 handbook 吸收） | run-trace schema 1.2（span_kind/Context Manifest/step/compaction/HITL span）在插件侧实现并有行为门；HITL 只做同 trace 边界标记（trace_boundary=interrupt/resume），不新建 trace 文件；Manifest 权限模式与信任级来自部署 env，缺省不猜；schema 1.2 事件须插件部署到目标 profile 后才出现在新 trace（旧 JSONL 读侧兼容已守门） | 以真实会话 trace 核对 span_kind 覆盖与 manifest 指纹稳定性；不得据旧 1.1 trace 宣称已有该面 |
+| 恢复真值与多 agent 预算（2026-11-12 handbook 吸收） | Action Ledger/幂等三态/恢复查未结算已接线（guard 默认关）；LLM 请求硬准入未接——`call_id/attempt_id` 已随 span 落账，预算租约先立账本语义，接入点属执行内核统一范围；团队停止 enforce 默认关且委派深度仅采纳调用方显式值（台账无 parent 链不猜）；黄金集 F2P 用合成负例，非 ground truth | 硬准入接入前不得宣称"LLM 调用受预算拦截"；深度事实须有真实 parent 链来源后才可注入；F2P 读数只证明判据区分力下限 |
 
 这些边界是实现检查项，不是新的设计原则。
 主要代码锚点为 `zcode-acp-delegate.py` 的 `resolve_engine_bin_env`、

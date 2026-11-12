@@ -36,31 +36,30 @@ afterEach(() => {
 describe('预算租约（handbook 预算关）', () => {
   it('根租约→子租约派生→预留→结算→可用额单调变化', () => {
     const store = new BudgetLeaseStore({ path, now: () => now })
-    expect(store.derive({ leaseId: 'root', limitUsd: 10, userId: 'u1' }).ok).toBe(true)
+    expect(store.derive({ leaseId: 'root', limitUsd: 10, userId: 'u1' }).lease).toBeTruthy()
     expect(store.available('root')).toBe(10)
 
-    expect(store.derive({ leaseId: 'child', parentLeaseId: 'root', limitUsd: 4 }).ok).toBe(true)
+    expect(store.derive({ leaseId: 'child', parentLeaseId: 'root', limitUsd: 4 }).lease).toBeTruthy()
     expect(store.available('root')).toBe(6) // 父租约被预留 4
     expect(store.available('child')).toBe(4)
 
-    expect(store.reserve('child', 3).ok).toBe(true)
+    expect(store.reserve('child', 3).lease).toBeTruthy()
     expect(store.available('child')).toBe(1)
-    expect(store.reserve('child', 2).ok).toBe(false)
+    expect(store.reserve('child', 2).lease).toBeNull()
 
-    expect(store.settle('child', 1.5).ok).toBe(true)
+    expect(store.settle('child', 1.5).lease).toBeTruthy()
     expect(store.get('child')).toMatchObject({ reservedUsd: 1.5, spentUsd: 1.5 })
   })
 
   it('父租约可用额不足拒绝派生；级联撤销释放子租约', () => {
     const store = new BudgetLeaseStore({ path, now: () => now })
     store.derive({ leaseId: 'root', limitUsd: 1 })
-    expect(store.derive({ leaseId: 'big', parentLeaseId: 'root', limitUsd: 2 }).ok).toBe(false)
+    expect(store.derive({ leaseId: 'big', parentLeaseId: 'root', limitUsd: 2 }).reason).toContain('不足以派生')
 
     store.derive({ leaseId: 'a', parentLeaseId: 'root', limitUsd: 0.5 })
     store.derive({ leaseId: 'b', parentLeaseId: 'a', limitUsd: 0.2 })
     const revoked = store.revoke('a')
-    expect(revoked.ok).toBe(true)
-    if (revoked.ok) expect(revoked.revoked).toEqual(expect.arrayContaining(['a', 'b']))
+    expect(revoked.revoked).toEqual(expect.arrayContaining(['a', 'b']))
     expect(store.list().some((l) => l.leaseId === 'b')).toBe(false)
   })
 
@@ -75,8 +74,8 @@ describe('预算租约（handbook 预算关）', () => {
   it('预算状态计入未结算预留：预留占满即 block（enforce 开）', () => {
     setBudgetPolicy({ userId: 'u1', dailyUsd: 10, action: 'block' })
     const store = sharedBudgetLeaseStore()
-    store.derive({ leaseId: 'r', limitUsd: 10, userId: 'u1', ttlMs: 60_000 })
-    expect(store.reserve('r', 10).ok).toBe(true)
+    expect(store.derive({ leaseId: 'r', limitUsd: 10, userId: 'u1', ttlMs: 60_000 }).lease).toBeTruthy()
+    expect(store.reserve('r', 10).lease).toBeTruthy()
     const status = budgetStatus({ userId: 'u1', now })
     expect(status.reservedUsd).toBe(10)
     expect(status.availableUsd).toBe(0)
