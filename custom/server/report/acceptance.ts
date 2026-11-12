@@ -175,7 +175,7 @@ export function checkProductOutcomeGrid(html: string): ProductOutcomeGridVerdict
   const violations: string[] = []
   if (html.includes('产品功能实证')) {
     if (!html.includes('class="po-shots"')) violations.push('产品成效帧未用四列缩略网格 .po-shots（§5.4.4 版面：1/4 宽网格+点击放大）')
-    // RegExpMatchArray | never[] 联合的回调参数会塌缩成 never，注解收口为 string[]
+    // RegExpMatchArray | never[] 联合的回调参数会塌缩成 never，注解显式标为 string[]
     const captions: string[] = html.match(/<figcaption><span class="shot-kind">功能实证<\/span>([^<]*)<\/figcaption>/g) || []
     if (captions.length === 0 || captions.some((c) => c.replace(/<[^>]+>/g, '').trim().length < 3)) {
       violations.push('产品成效帧图注缺失或为空（帧名短图注，禁长路径前缀）')
