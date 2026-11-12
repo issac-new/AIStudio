@@ -28,11 +28,11 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html.length).toBeGreaterThan(20000)
   })
 
-  it('六段结构与十七张图齐备，每张图都有编号与图注', () => {
+  it('五段结构与十四张图齐备，每张图都有编号与图注', () => {
     const ids = [...html.matchAll(/<section class="chapter" id="(s\d+)">/g)].map(match => match[1])
-    expect(ids).toEqual(['s1', 's2', 's3', 's4', 's5', 's6'])
+    expect(ids).toEqual(['s1', 's2', 's3', 's4', 's5'])
     const figures = [...html.matchAll(/<figure>([\s\S]*?)<\/figure>/g)].map(match => match[1])
-    expect(figures).toHaveLength(17)
+    expect(figures).toHaveLength(14)
     figures.forEach((figure, index) => {
       expect(figure, `图 ${index + 1} 缺 SVG`).toContain('<svg')
       expect(figure, `图 ${index + 1} 缺图注`).toMatch(new RegExp(`图 ${index + 1} `))
@@ -41,7 +41,7 @@ describe('AIStudio 完整培训手册契约', () => {
     for (const match of html.matchAll(/<a href="#(s\d+)">/g)) expect(html).toContain(`id="${match[1]}"`)
   })
 
-  it('覆盖 15 分钟课程的六段主线与关键机制', () => {
+  it('覆盖 15 分钟课程的五段主线与关键机制', () => {
     for (const needle of [
       '人定方向，机器守门，AI 干活',
       '三层投影',
@@ -60,15 +60,13 @@ describe('AIStudio 完整培训手册契约', () => {
       '三类目录',
       'Step 1—5',
       'Step 10—13',
-      'strict 激活',
+      'strict 终检',
       '59 道门禁',
       '四层拦截',
       '吸收来源',
       'AIStudio（hermes agent teams）',
       'swarm-yuan skill',
       'Ycode',
-      '两套口径',
-      '验收四项判据',
       '五个关键问题与对应措施',
       '可靠、准确、有效如何保证',
       '五条基本原则',
@@ -79,7 +77,7 @@ describe('AIStudio 完整培训手册契约', () => {
     for (const fact of ['1.0.15-overlay', '0.8.20-studio.2', 'v0.23.1-team.2', '3.18.0', 'v2.100.3']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
-    for (const fact of ['59', '204', '44954', '6/6', '5/6', '65', '8/65', '11/13', '13/14']) {
+    for (const fact of ['59', '204']) {
       expect(html, `事实缺失：${fact}`).toContain(fact)
     }
     expect(html).toContain('全部通过不等同于业务正确')
@@ -101,7 +99,7 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).toContain('.toc{display:none')
     expect(html).toMatch(/figure,table,\.op,\.card,\.note\{break-inside:avoid\}/)
     expect(html).not.toContain('<table>')
-    expect((html.match(/<figure>/g) ?? []).length).toBeGreaterThanOrEqual(17)
+    expect((html.match(/<figure>/g) ?? []).length).toBeGreaterThanOrEqual(14)
   })
 
   it('启动器放行该页并保持只读安全边界', async () => {
