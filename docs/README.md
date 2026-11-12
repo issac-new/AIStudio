@@ -9,13 +9,14 @@
 | 唯一设计正本（终稿） | [DESIGN.md](DESIGN.md)（文件名固定不带日期；specs 下同名路径为旧址指针） |
 | 上手与日常使用 | [USAGE.md](USAGE.md) |
 | 六团队独立交付路径 | [产品交付团队培训手册](manuals/aistudio-training-and-user-guide.md) |
-| swarm-yuan 研发核心技能 | [swarm-yuan 技术说明](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（课程主入口）；[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)（可选来源） |
+| swarm-yuan 研发核心技能 | [swarm-yuan 培训手册](manuals/aistudio-swarm-yuan-developer-guide.md)（产品、技术与操作主教材，含吸收全景与实训）；[swarm-yuan 技术说明](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（课程内技术幕） |
 | 全量页面与能力边界 | [全量功能清单](manuals/aistudio-feature-inventory.md) |
 | 部署、配置与运维检查 | [管理员运维参考](manuals/aistudio-operations-reference.md) |
 | 设计事实源与冲突裁决 | [设计文档导读](manuals/aistudio-design-document-guide.md) |
 | 全部 spec 可点击索引 | [设计文档全量索引](manuals/aistudio-design-document-index.md) |
 | 当前最新完整推演轮与真实报告案例 | [run28 案例](manuals/aistudio-interactive-training.html#scene=project-run28-case)（课程主入口）：含代偿 6/6、净额 5/6、自主派发、黄金集观察态与证据缺口；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)（可选来源） |
 | 历史推演与补流案例 | [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的教学档案，不代表当前最新轮 |
+| 完整培训手册（15 分钟版） | [AIStudio 技术培训演示稿](manuals/aistudio-complete-training-manual.html)：PPT 形态 17 页（12 图＋2 页结构化看板＋1 页附录台账），16:9 翻页演示、A4 横向打印；`npm run training` 后访问 `/aistudio-complete-training-manual.html` |
 | 14 幕交互培训与一键启动 | [交互培训页](manuals/aistudio-interactive-training.html)；`npm run training` |
 | Windows x64 排查 | [windows-x64-setup.md](windows-x64-setup.md) |
 | 一页看懂产品（离线单文件） | [intro.html](intro.html) |
