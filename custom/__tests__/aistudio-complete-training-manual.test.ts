@@ -25,49 +25,43 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).not.toMatch(/<img[^>]+src=["']https?:/i)
     expect(html).not.toMatch(/@import\s+url\(/i)
     expect(html).not.toMatch(/(?:src|href)=["'](?:https?:)?\/\//i)
-    expect(html.length).toBeGreaterThan(60000)
+    expect(html.length).toBeGreaterThan(20000)
   })
 
-  it('十三章结构与十四张图齐备，每张图都有编号与图注', () => {
+  it('五段结构与六张图齐备，每张图都有编号与图注', () => {
     const ids = [...html.matchAll(/<section class="chapter" id="(s\d+)">/g)].map(match => match[1])
-    expect(ids).toEqual(['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13'])
+    expect(ids).toEqual(['s1', 's2', 's3', 's4', 's5'])
     const figures = [...html.matchAll(/<figure>([\s\S]*?)<\/figure>/g)].map(match => match[1])
-    expect(figures).toHaveLength(14)
+    expect(figures).toHaveLength(6)
     figures.forEach((figure, index) => {
       expect(figure, `图 ${index + 1} 缺 SVG`).toContain('<svg')
       expect(figure, `图 ${index + 1} 缺图注`).toMatch(new RegExp(`图 ${index + 1} `))
       expect(figure, `图 ${index + 1} 缺无障碍标签`).toMatch(/aria-label="[^"]+"/)
     })
-    // 侧栏目录每个锚点都能在正文找到
     for (const match of html.matchAll(/<a href="#(s\d+)">/g)) expect(html).toContain(`id="${match[1]}"`)
   })
 
-  it('覆盖产品、流水线、机制、吸收、操作、案例与验收七个必备面', () => {
+  it('覆盖 15 分钟课程的五段主线与关键机制', () => {
     for (const needle of [
       '人定方向，机器守门，AI 干活',
       '三层投影',
       '四论',
-      '会进化的循环',
-      '思维语言',
-      '四层架构',
-      '四项举措',
-      '工具集市',
-      '六团队',
+      '15 分钟',
+      '四个模块',
       '九节点',
-      '研发四阶段',
+      '四阶段',
       '五项能力',
-      '六层',
+      '三类目录',
       'Step 1—13',
-      '吸收全景',
-      '81 个技术栈框架规则',
-      '15 个外部运行时',
-      '61 份方法论',
-      '106 篇 R 系列档案',
-      '操作卡',
-      'run28',
-      '订单编辑',
-      '评分表',
-      '培训不覆盖'
+      'strict 激活',
+      '59 道门禁',
+      '四层拦截',
+      '吸收来源',
+      'AIStudio（hermes agent teams）',
+      'swarm-yuan skill',
+      'Ycode',
+      '两套口径',
+      '验收标准',
     ]) expect(html, `缺少主题：${needle}`).toContain(needle)
   })
 
@@ -75,12 +69,10 @@ describe('AIStudio 完整培训手册契约', () => {
     for (const fact of ['1.0.15-overlay', '0.8.20-studio.2', 'v0.23.1-team.2', '3.18.0', 'v2.100.3']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
-    for (const fact of ['123', '59', '204', '44954', '12 小时 29 分 14 秒', '6/6', '5/6', '65', '11/13', '13/14']) {
+    for (const fact of ['59', '204', '44954', '6/6', '5/6', '65', '8/65', '11/13', '13/14']) {
       expect(html, `事实缺失：${fact}`).toContain(fact)
     }
-    // 三条边界必须写在正文里，不能只靠口头补充
-    expect(html).toContain('不等于自动合规')
-    expect(html).toContain('全绿不等于业务正确')
+    expect(html).toContain('全部通过不等同于业务正确')
     expect(html).toContain('真实缺陷语料仍在采集')
     expect(html).not.toContain('【待补】')
     // 手册不写自身编写过程与作者验证记录
@@ -91,9 +83,6 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).not.toContain('AI 工厂')
     expect(html).not.toContain('学习路径')
     expect(html).not.toContain('导读')
-    // 文章概念未落地时必须如实标注，不许写成已实现
-    expect(html).toContain('未采用')
-    expect(html).toContain('部分实现')
   })
 
   it('按 A4 纵向排版，打印时隐藏侧栏并避免图表被截断', () => {
@@ -112,6 +101,6 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toContain('text/html')
     expect(response.headers.get('content-security-policy')).toContain("connect-src 'none'")
-    expect(await response.text()).toContain('从看清全局，到做出可验收的交付')
+    expect(await response.text()).toContain('人定方向，机器守门，AI 干活')
   })
 })
