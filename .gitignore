@@ -68,3 +68,6 @@ vendor/**/*.tsbuildinfo
 
 # 覆盖率产物（v0.4 test:coverage）
 /coverage/
+
+# linked worktree 的 runtime 部署影子目录（deploy-agent-runtime 重定向目标；不入库）
+/.runtime-deploy-shadow/

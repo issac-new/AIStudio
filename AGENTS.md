@@ -6,7 +6,7 @@
 
 1. 只改本仓；`vendor/**` 是钉版基线（台账 `vendor/VENDOR.md`），注入后的脏态是预期工作态、不入提交（pre-commit 自动撤出）；基线替换只走 `npm run vendor:sync` + `VENDOR_SYNC=1` 显式通道。`vendor/**` 内禁建 `.git`。
 2. 代码改动先写 `docs/superpowers/specs/YYYY-MM-DD-<slug>.md`，至少含「变更 / 决策记录 / 验证 / 设计文档影响」四段（设计文档影响=DESIGN_SYNC 声明：触及整合正本/数字总账须 touched 并同批修订，L2 钩子核验；纯内部变更 none 附理由）；spec 是决策事实源，不是事后补记。四段由 L2/L3 机检（`spf_sections_check`）；存量债豁免清单 `.swarm-yuan/spec-sections-baseline.txt` 只许减（达标即删，守门测试断言基线内条目仍不达标）。已合入主干的 spec 有内容收据（`.swarm-yuan/spec-receipts.jsonl`）：改写会判 drift，授权修订须 `SPEC_REBIND=1` 显式重绑。
-3. 分支 `feat|fix|refactor/<slug>`，从 `origin/main` 起；并行会话用 worktree；清理只走 `git worktree remove/prune`，禁止 `rm -rf`。
+3. 分支 `feat|fix|refactor/<slug>`，从 `origin/main` 起；并行会话用 worktree；清理只走 `git worktree remove/prune`，禁止 `rm -rf`。worktree 开工三步：`git worktree add .claude/worktrees/<name> -b <type>/<slug> origin/main` → 根目录写 `IN-FLIGHT`（session＋created）→ 直接 `npm test`。fresh worktree 无需手工建链：`pretest` 的 `ensure-injected` 会全量注入（实测 20s）并把 `node_modules` 自动链到主检出共享实例（N-4 已于 `a8002fd55` 根治）。注意 `inject` 会把本检出 `runtime/` 同步到宿主：linked worktree 默认改写到检出内 `.runtime-deploy-shadow/`（不触共享安装树）；确需到达宿主时显式 `RUNTIME_DEPLOY_ALLOW_WORKTREE=1`，演练用 `--runtime <目录>` 或 `RUNTIME_DEPLOY_TARGET`。
 4. 提交前跑目标测试 `npx vitest run <path>`；合并前 `npm test`；新增服务端模块跑 `npm run typecheck:harness`。
 5. 失败不隐瞒：测试红、步骤跳过、未验证项必须写进交付说明。
 6. 安全纪律：审计不落敏感原值；密钥只存 env 名；不削弱既有安全边界。

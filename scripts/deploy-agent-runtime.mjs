@@ -14,8 +14,9 @@
 // 后置同步按退出码消费：0=complete、2=partial、1=failed）。RUNTIME_DEPLOY_MANIFEST
 // 可覆盖清单路径（测试隔离面；绝对 manifest.root 直接采用）。
 import { readFileSync, existsSync, copyFileSync, mkdirSync, lstatSync, readdirSync, unlinkSync } from 'node:fs';
-import { resolve, dirname, join, basename } from 'node:path';
+import { resolve, dirname, join, basename, sep } from 'node:path';
 import { homedir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { deriveAgentPatchTouchedFiles } from './platform/deploy/patch-touched.mjs';
 
 // 路径解析（Z5）：worktree 检出（.claude/worktrees/<x>）与正常检出（ncwk/overlay）层级
@@ -64,7 +65,49 @@ if (!srcRoot) {
   console.error(`[deploy-agent-runtime] fail-fast：manifest.root=${manifest.root} 的源目录均不存在，已试：\n  ${srcCandidates.join('\n  ')}`);
   process.exit(1);
 }
-const dstRoot = runtimeArg > 0 ? process.argv[runtimeArg + 1] : join(homedir(), manifest.target.replace(/^~/, '').replace(/^\//, ''));
+const runtimeEnvTarget = process.env.RUNTIME_DEPLOY_TARGET?.trim();
+let dstRoot = runtimeEnvTarget || (runtimeArg > 0 ? process.argv[runtimeArg + 1] : join(homedir(), manifest.target.replace(/^~/, '').replace(/^\//, '')));
+
+// ── worktree 隔离（2026-11-12 设计复盘 P0）：linked worktree 默认写检出内影子目录 ──
+// 背景：.claude/worktrees/<x> 里跑 inject/npm test 时，本脚本会把该检出 runtime/ 与
+// vendor 注入态同步到 ~/.hermes/hermes-agent——那是所有会话共享的宿主树。并行会话下，
+// 一个 worktree 的在途 runtime 改动会静默改掉别的会话正在用的运行时。
+// 策略：linked worktree 且未显式指定目标时，默认把写入重定向到检出内
+// `.runtime-deploy-shadow/`（不触共享安装树；inject 预检照常以影子为基准，
+// 不会 partial 死锁）；确需把本次改动部署到宿主时显式 RUNTIME_DEPLOY_ALLOW_WORKTREE=1；
+// 演练/测试可用 --runtime <dir> 或 RUNTIME_DEPLOY_TARGET 指定任意隔离目标。
+const _gitDirPair = (root) => {
+  const out = (args) => {
+    try {
+      return execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch { return ''; }
+  };
+  const gd = out(['rev-parse', '--git-dir']);
+  const gcd = out(['rev-parse', '--git-common-dir']);
+  return { gd, gcd };
+};
+const _p = _gitDirPair(overlayRoot);
+// RUNTIME_DEPLOY_LINKED_WORKTREE=1|0 仅为测试注入面（CI 在普通克隆上跑，无法自然构造
+// linked worktree 判定）；生产路径不读该变量。
+const _linkedOverride = process.env.RUNTIME_DEPLOY_LINKED_WORKTREE;
+const linkedWorktree = _linkedOverride === '1' || _linkedOverride === '0'
+  ? _linkedOverride === '1'
+  : Boolean(_p.gd && _p.gcd && resolve(overlayRoot, _p.gd) !== resolve(overlayRoot, _p.gcd));
+const explicitTarget = Boolean(runtimeEnvTarget) || runtimeArg > 0
+  // RUNTIME_DEPLOY_MANIFEST 是既有「测试隔离面」（清单自带 root/target），如测试已把
+  // HOME 指向临时目录，这里不再叠加影子重定向；真实宿主路径（默认清单）才走影子。
+  || Boolean(process.env.RUNTIME_DEPLOY_MANIFEST?.trim());
+const allowHostWrite = process.env.RUNTIME_DEPLOY_ALLOW_WORKTREE === '1';
+const shadowMode = linkedWorktree && !explicitTarget && !allowHostWrite;
+if (shadowMode) {
+  dstRoot = join(overlayRoot, '.runtime-deploy-shadow');
+  console.warn('[deploy-agent-runtime] linked worktree：宿主写入已重定向到检出内影子目录 .runtime-deploy-shadow（不触共享安装树）；确需部署到宿主设 RUNTIME_DEPLOY_ALLOW_WORKTREE=1');
+}
+const dstInsideCheckout = resolve(dstRoot) === resolve(overlayRoot) || resolve(dstRoot).startsWith(resolve(overlayRoot) + sep);
+if (process.argv.includes('--explain-worktree')) {
+  console.log(JSON.stringify({ overlayRoot, dstRoot, linkedWorktree, shadowMode, dstInsideCheckout, runtimeArgExplicit: runtimeArg > 0, envTargetExplicit: Boolean(runtimeEnvTarget), allowHostWriteEnv: allowHostWrite }));
+  process.exit(0);
+}
 
 let same = 0, copied = 0, missing = 0, conflict = 0, kept = 0, copyErr = 0;
 const conflicts = [];            // 目标与源不同、按 --force 覆盖前先备份的清单（P6 可回滚+告警）
