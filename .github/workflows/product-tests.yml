@@ -55,10 +55,16 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-${{ hashFiles('vendor/hermes-studio/package-lock.json') }}
-      - name: 安装 vendor 依赖（README 快速上手配方）
-        run: npm ci --no-audit --no-fund --ignore-scripts
+      - name: 注入①（补丁重放——patch 017/136 会向 vendor package.json 加 overlay 依赖）
+        run: node scripts/ensure-injected.mjs
+      - name: 安装 vendor 依赖（README 快速上手配方：先注入后安装）
+        # 顺序是关键（2026-11-12 fresh 克隆实证）：先注入再 npm install，安装器才能看到
+        # patch 加进清单的 matrix-js-sdk/cron-parser；反序必漏装（TS2307）。用 install 而非
+        # ci：vendor lock 按 pristine 清单生成、从不随补丁重生成，ci 在清单/lock 漂移上会
+        # 静默漏装。根治（lock 重生成策略或依赖声明面外移）挂 P1-9 补丁族压实批。
+        run: npm install --no-audit --no-fund --ignore-scripts
         working-directory: vendor/hermes-studio
-      - name: 注入（补丁重放 + node_modules 软链 + runtime 部署到隔离 HOME）
+      - name: 注入②（补链 node_modules 软链——①时 vendor 尚未装依赖，软链被跳过）
         run: node scripts/ensure-injected.mjs
       - name: typecheck:harness（custom/server 全目录；类型依赖经注入态链齐备）
         run: npm run typecheck:harness
