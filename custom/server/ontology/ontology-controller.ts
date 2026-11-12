@@ -283,7 +283,12 @@ router.get('/fibo', (ctx) => {
 router.get('/fibo/related-docs', (ctx) => {
   const conceptId = typeof ctx.query.conceptId === 'string' && ctx.query.conceptId ? ctx.query.conceptId : ''
   const entries = conceptId ? fiboGlossary().entries.filter((e) => e.id === conceptId) : fiboGlossary().entries
-  const related = []
+  // strictNullChecks 下 `= []` 不再走 any 演化推断，显式注解投影行形状
+  const related: {
+    conceptId: string
+    label: string
+    docs: { file: string; title: string; date: string | null; matchedLine: string; term: string }[]
+  }[] = []
   for (const e of entries) {
     const terms = [e.labelZh, e.label, ...e.aliases].filter((t) => typeof t === 'string' && t.trim())
     // 多术语批扫：同一文档多形态命中（支付/Payment）只计一次，命中形态取首个
