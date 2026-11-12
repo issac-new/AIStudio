@@ -28,18 +28,18 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html.length).toBeGreaterThan(60000)
   })
 
-  it('九章结构与十张图齐备，每张图都有编号与图注', () => {
-    const ids = [...html.matchAll(/<section class="chapter" id="(s\d)">/g)].map(match => match[1])
-    expect(ids).toEqual(['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9'])
+  it('十三章结构与十四张图齐备，每张图都有编号与图注', () => {
+    const ids = [...html.matchAll(/<section class="chapter" id="(s\d+)">/g)].map(match => match[1])
+    expect(ids).toEqual(['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13'])
     const figures = [...html.matchAll(/<figure>([\s\S]*?)<\/figure>/g)].map(match => match[1])
-    expect(figures).toHaveLength(10)
+    expect(figures).toHaveLength(14)
     figures.forEach((figure, index) => {
       expect(figure, `图 ${index + 1} 缺 SVG`).toContain('<svg')
       expect(figure, `图 ${index + 1} 缺图注`).toMatch(new RegExp(`图 ${index + 1} `))
       expect(figure, `图 ${index + 1} 缺无障碍标签`).toMatch(/aria-label="[^"]+"/)
     })
     // 侧栏目录每个锚点都能在正文找到
-    for (const match of html.matchAll(/<a href="#(s\d)">/g)) expect(html).toContain(`id="${match[1]}"`)
+    for (const match of html.matchAll(/<a href="#(s\d+)">/g)) expect(html).toContain(`id="${match[1]}"`)
   })
 
   it('覆盖产品、流水线、机制、吸收、操作、案例与验收七个必备面', () => {
@@ -47,6 +47,12 @@ describe('AIStudio 完整培训手册契约', () => {
       '人定方向，机器守门，AI 干活',
       '三层投影',
       '四论',
+      '会进化的循环',
+      'AI 工厂',
+      '思维语言',
+      '四层架构',
+      '四项举措',
+      '工具集市',
       '六团队',
       '九节点',
       '研发四阶段',
@@ -78,6 +84,9 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).toContain('全绿不等于业务正确')
     expect(html).toContain('真实缺陷语料仍在采集')
     expect(html).not.toContain('【待补】')
+    // 文章概念未落地时必须如实标注，不许写成已实现
+    expect(html).toContain('未采用')
+    expect(html).toContain('部分实现')
   })
 
   it('按 A4 纵向排版，打印时隐藏侧栏并避免图表被截断', () => {

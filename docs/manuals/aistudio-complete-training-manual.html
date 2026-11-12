@@ -157,23 +157,27 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 <nav class="toc" aria-label="手册目录">
   <h2>AIStudio 培训手册</h2>
   <span class="ver">v1.0.15-overlay · 2026-11-12</span>
-  <div class="part">读懂全局</div>
+  <div class="part">顶层设计</div>
   <ol>
     <li><a href="#s1">1 人定方向，机器守门，AI 干活</a></li>
-    <li><a href="#s2">2 AIStudio 全景</a></li>
-    <li><a href="#s3">3 一件事怎么走完</a></li>
+    <li><a href="#s2">2 一个会进化的循环</a></li>
+    <li><a href="#s3">3 AI 工厂怎样造工具</a></li>
+    <li><a href="#s4">4 和 AI 说清楚的语言</a></li>
+    <li><a href="#s5">5 四层架构与四项举措</a></li>
   </ol>
-  <div class="part">深入机制</div>
+  <div class="part">系统与机制</div>
   <ol>
-    <li><a href="#s4">4 swarm-yuan：研发能力 SOP 化</a></li>
-    <li><a href="#s5">5 吸收了哪些框架与方法</a></li>
+    <li><a href="#s6">6 AIStudio 全景</a></li>
+    <li><a href="#s7">7 一件事怎么走完</a></li>
+    <li><a href="#s8">8 swarm-yuan：研发能力 SOP 化</a></li>
+    <li><a href="#s9">9 吸收了哪些框架与方法</a></li>
   </ol>
-  <div class="part">动手与验收</div>
+  <div class="part">落地与验收</div>
   <ol>
-    <li><a href="#s6">6 上手实操</a></li>
-    <li><a href="#s7">7 两个案例</a></li>
-    <li><a href="#s8">8 考核与检查表</a></li>
-    <li><a href="#s9">9 附录</a></li>
+    <li><a href="#s10">10 上手实操</a></li>
+    <li><a href="#s11">11 两个案例</a></li>
+    <li><a href="#s12">12 考核与检查表</a></li>
+    <li><a href="#s13">13 附录</a></li>
   </ol>
 </nav>
 
@@ -198,16 +202,16 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <div class="grid g3" style="margin-top:16px">
     <div class="card"><h4>这份手册回答什么</h4><p>人、机器与 AI 怎样分工；一项工作怎样从想法走到发布；质量靠哪些机制守住；新手怎样做、怎样讲、怎样验。</p></div>
     <div class="card"><h4>它不代替什么</h4><p>不代替真实系统操作、不代替业务验收、不代替发布裁决。所有界面与数据都是培训模拟。</p></div>
-    <div class="card"><h4>事实从哪里来</h4><p>版本取自发布清单，数字取自技能数字正本，流程取自当前脚本；未验证的部分在第 9 章逐条列明。</p></div>
+    <div class="card"><h4>事实从哪里来</h4><p>版本取自发布清单，数字取自技能数字正本，流程取自当前脚本；未验证的部分在第 13 章逐条列明。</p></div>
   </div>
 </header>
 
 <h2 style="border-top:0;padding-top:30px"><span class="no">怎么用这份手册</span>先读哪、后读哪、什么时候翻回来</h2>
-<p class="lead">第一次接触，按第 1 到第 8 章顺序读，大约一天。已经上手的人，可以直接跳到第 6 章操作卡，遇到说不清的地方再回第 3、4 章找机制。要带人讲课，用第 8 章的评分表当讲义提纲。</p>
+<p class="lead">第一次接触，按第 1 到第 12 章顺序读，大约一天。已经上手的人，可以直接跳到第 10 章操作卡，遇到说不清的地方再回第 7、8 章找机制。要带人讲课，用第 12 章的评分表当讲义提纲。</p>
 <div class="grid g3">
   <div class="card"><h4>想先建立判断</h4><p>读第 1—3 章。你会知道这套系统里谁负责什么、一项工作怎样从想法走到发布，以及哪里必须停下来等人裁决。</p></div>
-  <div class="card"><h4>想动手做一遍</h4><p>读第 6 章八张操作卡。每张卡都写清做什么、怎么讲、看到什么算完成、失败怎么办、留下什么证据。</p></div>
-  <div class="card"><h4>想核对真假</h4><p>读第 5、7、9 章。吸收清单、案例数字和事实源索引都给出出处，未验证的部分单独列明。</p></div>
+  <div class="card"><h4>想动手做一遍</h4><p>读第 10 章八张操作卡。每张卡都写清做什么、怎么讲、看到什么算完成、失败怎么办、留下什么证据。</p></div>
+  <div class="card"><h4>想核对真假</h4><p>读第 9、11、13 章。吸收清单、案例数字和事实源索引都给出出处，未验证的部分单独列明。</p></div>
 </div>
 <div class="note"><strong>阅读约定</strong>书中所有界面与数据都是培训模拟，不连接真实任务、审批或生产数据。命令示例标注了只读或写操作，执行前请回到对应章节确认副作用；“看到什么算完成”一律指可观察的结果，不是“感觉懂了”。</div>
 
@@ -284,7 +288,220 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 </table>
 </section>
 <section class="chapter" id="s2">
-<h2><span class="no">第二章 · 全景</span>AIStudio 里都有什么，谁负责什么</h2>
+<h2><span class="no">第二章 · 理论基础</span>一个会进化的循环，而不是一条流水线</h2>
+<p class="lead">把 AI 研发团队当成“更快的流水线”会看错它。它真正改变的是循环速度：认知、推理、行动、再认知，每一圈都比上一圈更准。这一章讲清这个循环，以及 AIStudio 用哪些实物让它转起来。</p>
+
+<h3>三个动作，一个飞轮</h3>
+<p>AI 的优势不是“一次想得很全”，而是可以高频地“想—做—看结果”。传统研发受限于人的注意力和交接带宽，一轮循环可能要几天；AI 可以把一轮压缩到几十分钟。但速度只有在方向对、结果可核验时才有价值，所以循环必须有三个约束：前提清楚、结果可观察、错误能回流。</p>
+<figure>
+<svg viewBox="0 0 980 320" role="img" aria-label="认知推理行动飞轮图">
+  <defs><marker id="a9" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <circle cx="490" cy="160" r="118" fill="none" stroke="#dbe2ea" stroke-width="26"/>
+  <text x="490" y="150" class="dlabel" text-anchor="middle">知识 · 推理 · 行动 · 价值</text>
+  <text x="490" y="172" class="dtext" text-anchor="middle">四元动态演化</text>
+  <text x="490" y="192" class="dsmall" text-anchor="middle">每一圈都留下证据</text>
+  <rect x="360" y="10" width="260" height="52" rx="10" class="dbox-accent"/>
+  <text x="490" y="34" class="dlabel" text-anchor="middle">认知：项目实际有什么</text>
+  <text x="490" y="52" class="dsmall" text-anchor="middle">探查、清单、关系边集、框架证据</text>
+  <rect x="700" y="208" width="260" height="52" rx="10" class="dbox-accent"/>
+  <text x="830" y="232" class="dlabel" text-anchor="middle">推理：应该怎么做</text>
+  <text x="830" y="250" class="dsmall" text-anchor="middle">规格、计划、复用判断、风险</text>
+  <rect x="360" y="258" width="260" height="52" rx="10" class="dbox-accent"/>
+  <text x="490" y="282" class="dlabel" text-anchor="middle">行动：做出来并验证</text>
+  <text x="490" y="300" class="dsmall" text-anchor="middle">分支、测试、门禁、评审</text>
+  <rect x="20" y="208" width="260" height="52" rx="10" class="dbox-accent"/>
+  <text x="150" y="232" class="dlabel" text-anchor="middle">价值：能不能交付</text>
+  <text x="150" y="250" class="dsmall" text-anchor="middle">发布裁决、回执、复盘行动项</text>
+  <path class="dline" d="M620 40 C720 60 790 130 810 200" marker-end="url(#a9)"/>
+  <path class="dline" d="M800 264 C700 300 600 300 500 312" marker-end="url(#a9)"/>
+  <path class="dline" d="M360 284 C250 290 170 260 150 264" marker-end="url(#a9)"/>
+  <path class="dline" d="M150 204 C170 120 260 50 350 42" marker-end="url(#a9)"/>
+  <text x="880" y="120" class="dsmall" text-anchor="middle">提出假设</text>
+  <text x="880" y="138" class="dsmall" text-anchor="middle">进行实验</text>
+  <text x="880" y="156" class="dsmall" text-anchor="middle">观察结果</text>
+  <text x="880" y="174" class="dsmall" text-anchor="middle">更新原则</text>
+</svg>
+<figcaption><strong>图 3 可进化循环</strong><span>认知→推理→行动→价值→再认知；一圈不落地，下一圈就是空转</span></figcaption>
+</figure>
+
+<h3>两个小循环：先定义问题，再拆解任务</h3>
+<p>循环里最容易出错的是起点。问题没定义清楚，后面做得越快错得越远。所以每一轮其实有两个小循环：</p>
+<table>
+<thead><tr><th style="width:150px">小循环</th><th>要回答的问题</th><th style="width:280px">做错的典型后果</th></tr></thead>
+<tbody>
+<tr><td>问题定义循环</td><td>这真的是要解决的问题吗？边界在哪？怎样算解决？</td><td>做出一个没人要的功能，测试全绿但业务无感</td></tr>
+<tr><td>任务拆解循环</td><td>最小可交付是什么？依赖顺序是什么？哪一步先验证？</td><td>大改一起上，出问题无法定位，也无法回滚</td></tr>
+</tbody>
+</table>
+<p>这两个循环对应到日常动作，就是“先写规格再写代码”和“先跑最小路径再扩展”。规格不是文档负担，它是把问题定义固定下来的手段；最小路径不是保守，它是让循环能快速得到反馈。</p>
+
+<h3>AIStudio 用什么让飞轮转起来</h3>
+<table>
+<thead><tr><th style="width:120px">环节</th><th style="width:280px">对应动作</th><th>留下的实物</th></tr></thead>
+<tbody>
+<tr><td>认知</td><td>探查项目结构、组件、依赖、框架与历史</td><td>组件清单、关系边集、任务配方、框架证据</td></tr>
+<tr><td>推理</td><td>写规格、拆任务、判断复用与风险</td><td>规格、计划、复用声明、决策记录</td></tr>
+<tr><td>行动</td><td>分支编码、测试、门禁、独立评审</td><td>提交、测试报告、门禁证据、评审记录</td></tr>
+<tr><td>价值</td><td>发布裁决、观察、复盘</td><td>发布回执、观察记录、遗留行动项</td></tr>
+<tr><td>再认知</td><td>指纹变化、局部重探查、经验归位</td><td>新清单、新配方、教训、新基线</td></tr>
+</tbody>
+</table>
+<div class="note warn"><strong>不要把“进化”说成自动学习</strong>AIStudio 不会因为跑得多就自己变聪明。变的是资产：清单更准、配方更全、规则更贴项目。这些都需要人确认、需要证据支撑；没有回流动作，飞轮只是重复劳动。</div>
+</section>
+
+<section class="chapter" id="s3">
+<h2><span class="no">第三章 · 行动基础</span>AI 工厂：遇到问题就造一件趁手的工具</h2>
+<p class="lead">传统做法是先把工具建好，再交付使用；AI 时代问题涌现得太快，等建好就已经过时。更合适的机制是：遇到问题、定义问题、制定方案、造工具、用它解决问题——如此往复。</p>
+
+<h3>从“建好再用”到“边用边造”</h3>
+<table>
+<thead><tr><th style="width:190px">模式</th><th>假设</th><th>问题</th></tr></thead>
+<tbody>
+<tr><td>工具集成 → 完成建造 → 交付使用</td><td>需求稳定、边界清楚</td><td>建造周期长；问题一变，工具就废；使用者只能适应工具</td></tr>
+<tr><td>遇到问题 → 定义 → 方案 → 造工具 → 解决</td><td>问题持续涌现、边界会变</td><td>要求工具有生成能力、可安装、可治理，否则会造出一堆孤儿脚本</td></tr>
+</tbody>
+</table>
+<p>这条转变的关键不是“多造工具”，而是<strong>让造工具这件事本身有标准流程</strong>。否则每个人都在造，最后没人知道哪个能用、哪个有门禁、哪个只是临时脚本。</p>
+
+<figure>
+<svg viewBox="0 0 980 210" role="img" aria-label="AI 工厂五步动态机制图">
+  <defs><marker id="a10" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="16" y="60" width="168" height="66" rx="9" class="dbox"/>
+  <text x="100" y="86" class="dlabel" text-anchor="middle">遇到问题</text>
+  <text x="100" y="106" class="dsmall" text-anchor="middle">现象、影响、复现</text>
+  <rect x="204" y="60" width="168" height="66" rx="9" class="dbox"/>
+  <text x="288" y="86" class="dlabel" text-anchor="middle">定义问题</text>
+  <text x="288" y="106" class="dsmall" text-anchor="middle">边界、验收、非目标</text>
+  <rect x="392" y="60" width="168" height="66" rx="9" class="dbox"/>
+  <text x="476" y="86" class="dlabel" text-anchor="middle">制定方案</text>
+  <text x="476" y="106" class="dsmall" text-anchor="middle">复用优先、最小胶水</text>
+  <rect x="580" y="60" width="168" height="66" rx="9" class="dbox-accent"/>
+  <text x="664" y="86" class="dlabel" text-anchor="middle">造工具</text>
+  <text x="664" y="106" class="dsmall" text-anchor="middle">生成、填充、激活、检查</text>
+  <rect x="768" y="60" width="196" height="66" rx="9" class="dbox-accent"/>
+  <text x="866" y="86" class="dlabel" text-anchor="middle">解决问题并回流</text>
+  <text x="866" y="106" class="dsmall" text-anchor="middle">用、验、复盘、更新资产</text>
+  <path class="dline" d="M184 93 L200 93" marker-end="url(#a10)"/>
+  <path class="dline" d="M372 93 L388 93" marker-end="url(#a10)"/>
+  <path class="dline" d="M560 93 L576 93" marker-end="url(#a10)"/>
+  <path class="dline" d="M748 93 L764 93" marker-end="url(#a10)"/>
+  <path class="dline-dash" d="M866 132 C866 168 210 172 100 132" marker-end="url(#a10)"/>
+  <text x="480" y="188" class="dsmall" text-anchor="middle">下一轮的问题，往往就是这一轮工具留下的缺口</text>
+</svg>
+<figcaption><strong>图 4 AI 工厂五步</strong><span>造工具不是终点；工具被用、被验、被更新，才算完成一轮</span></figcaption>
+</figure>
+
+<h3>AIStudio 里对应的是什么</h3>
+<table>
+<thead><tr><th style="width:170px">文章概念</th><th style="width:300px">AIStudio 的实现</th><th style="width:130px">状态</th><th>边界</th></tr></thead>
+<tbody>
+<tr><td>按项目生成工具</td><td>swarm-yuan 生成器探查项目后生成专属技能包，经填充、检查、激活才可用</td><td>已实现</td><td>生成不等于可用；必须过激活与门禁</td></tr>
+<tr><td>工具箱</td><td>15 个外部运行时按深度、命令行、方法论三层接线，另有技能包内的脚本与模板</td><td>已实现</td><td>未安装时降级为提示，不阻塞</td></tr>
+<tr><td>工具集市</td><td>以技能包分发与运行时接线替代；没有 Nacos 式的在线市场</td><td>未采用</td><td>不做在线安装与版本市场，避免来源不可控</td></tr>
+<tr><td>动态扩展的治理</td><td>MCP 治理方法论文档、生成流程、激活检查、知识预算</td><td>部分实现</td><td>工具数量受预算与门禁约束，不是无限扩张</td></tr>
+</tbody>
+</table>
+<div class="note"><strong>为什么不做“集市”</strong>集市的前提是来源可信、版本可核、安装可回滚。当前更稳的做法是把工具固化进技能包与受控运行时，用生成流程和激活检查保证质量；等治理能力跟上，再谈开放安装。</div>
+</section>
+
+<section class="chapter" id="s4">
+<h2><span class="no">第四章 · 协作基础</span>和 AI 说清楚：一套能落地的思维语言</h2>
+<p class="lead">和 AI 协作，靠的不是“提示词技巧”，而是把工程经验写成精确、结构化、可复现、可验证的表达。写得含糊，AI 只能猜；猜出来的结果再快也不能用。</p>
+
+<h3>四条标准，缺一条就不可控</h3>
+<table>
+<thead><tr><th style="width:120px">标准</th><th>要求</th><th style="width:300px">在 AIStudio 里的对应</th></tr></thead>
+<tbody>
+<tr><td>精确性</td><td>指令无歧义，术语有定义，减少模型猜测空间</td><td>术语表、受控语言规范、接口契约、字段命名</td></tr>
+<tr><td>结构化</td><td>任务分解有层次，提示有固定骨架</td><td>规格模板、计划模板、九节点骨架、操作卡五字段</td></tr>
+<tr><td>可复现性</td><td>相同输入得到可预测输出</td><td>模板双态夹具、固定评测集、同题同版复评</td></tr>
+<tr><td>可验证性</td><td>结果可量化，过程可追溯</td><td>可观察验收条件、门禁证据、评审记录、发布回执</td></tr>
+</tbody>
+</table>
+
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="思维语言五层结构图">
+  <rect x="20" y="18" width="940" height="48" rx="8" class="dbox-accent"/>
+  <text x="40" y="40" class="dlabel">语义声明：把问题说成可判断的命题</text>
+  <text x="40" y="58" class="dsmall">完整描述的问题 → 重构后的问题 → 准确定义的问题；目标与结果的衰减要显式度量</text>
+  <rect x="20" y="78" width="940" height="48" rx="8" class="dbox"/>
+  <text x="40" y="100" class="dlabel">语法表达：完整结构 + 上下文规则 + 分析方法</text>
+  <text x="40" y="118" class="dsmall">模板、字段、命名、引用格式；让机器能解析、人能维护</text>
+  <rect x="20" y="138" width="940" height="48" rx="8" class="dbox"/>
+  <text x="40" y="160" class="dlabel">组织结构：推理怎样展开</text>
+  <text x="40" y="178" class="dsmall">归纳、演绎、溯因、类比、分解、假设、辩证；按任务类型选方法</text>
+  <rect x="20" y="198" width="940" height="48" rx="8" class="dbox"/>
+  <text x="40" y="220" class="dlabel">思维范式：从固定套路到可组合</text>
+  <text x="40" y="238" class="dsmall">同一问题允许不同路径；方法可拆、可换、可组合，但验收标准不变</text>
+  <rect x="20" y="258" width="940" height="34" rx="8" class="dbox-soft"/>
+  <text x="40" y="280" class="dsmall">思维工具集：结构化方法（如 TOGAF 元模型）与领域最佳实践；工具服务于判断，不替代判断</text>
+</svg>
+<figcaption><strong>图 5 思维语言五层</strong><span>从“把问题说清”到“选对方法”，每层都有可检查的载体</span></figcaption>
+</figure>
+
+<h3>每层落到哪个文件</h3>
+<table>
+<thead><tr><th style="width:140px">层</th><th style="width:300px">AIStudio 的载体</th><th>讲师怎么讲</th></tr></thead>
+<tbody>
+<tr><td>语义声明</td><td>需求规格、可观察验收条件、非目标清单</td><td>“做完”的标准必须能被第三个人独立判断</td></tr>
+<tr><td>语法表达</td><td>规格模板、计划模板、命名与引用规范、受控语言</td><td>模板不是形式主义，它保证同一类问题每次都被完整问到</td></tr>
+<tr><td>组织结构</td><td>方法路由：按任务类型选择探查、诊断、设计、评审路径</td><td>同一个问题可以分解，也可以类比；选错方法会绕远路</td></tr>
+<tr><td>思维范式</td><td>四论：系统论看清、信息论看准、科学方法论可靠、控制论有效</td><td>范式是可组合的，不是唯一正确答案</td></tr>
+<tr><td>思维工具集</td><td>方法论文档库：TOGAF 元模型、业务本体方法、受控语言、评审方法等</td><td>工具是参考系；没有工具也能做，但容易漏面</td></tr>
+</tbody>
+</table>
+<div class="note warn"><strong>诚实说明</strong>文章提到的麦肯锡七步法，本仓方法论文档库没有专门收录；不要在任何培训材料里声称已内置。TOGAF 有对应文档（元模型方法），业务本体有 FIBO 蒸馏方法，受控语言有 ASD-STE100 纪律，这些可以如实讲。</div>
+</section>
+
+<section class="chapter" id="s5">
+<h2><span class="no">第五章 · 目标分析</span>四层架构，把“AI 化”拆成可施工的四件事</h2>
+<p class="lead">“建一个 AI 研发团队”听起来像一件事，实际是四层工程：先把领域知识结构化，再把交互情境化，再把生产与验证流程化，最后把反馈闭环化。缺任何一层，AI 就只能做演示，进不了生产。</p>
+
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="四层架构图">
+  <rect x="20" y="20" width="940" height="56" rx="9" class="dbox-accent"/>
+  <text x="40" y="44" class="dlabel">第四层 · 持续改进反馈层</text>
+  <text x="40" y="64" class="dsmall">复盘、教训、指标趋势、指纹变化 → 回流到下面三层；没有这一层，前三层会慢慢腐烂</text>
+  <rect x="20" y="88" width="940" height="56" rx="9" class="dbox"/>
+  <text x="40" y="112" class="dlabel">第三层 · 生产与验证层</text>
+  <text x="40" y="132" class="dsmall">九节点、研发四阶段、门禁、独立评审、发布裁决；把“会做”变成“可验收”</text>
+  <rect x="20" y="156" width="940" height="56" rx="9" class="dbox"/>
+  <text x="40" y="180" class="dlabel">第二层 · 交互情境化层</text>
+  <text x="40" y="200" class="dsmall">规格、计划、任务卡、上下文裁剪；让 AI 在正确的问题和约束里工作</text>
+  <rect x="20" y="224" width="940" height="56" rx="9" class="dbox-soft"/>
+  <text x="40" y="248" class="dlabel">第一层 · 基础知识与结构层</text>
+  <text x="40" y="268" class="dsmall">领域知识、组件清单、关系边集、配方、标准映射；回答“有什么、谁依赖谁、按什么标准做”</text>
+</svg>
+<figcaption><strong>图 6 四层架构</strong><span>从下往上建，从上往下改：下面不稳，上面怎么调都晃</span></figcaption>
+</figure>
+
+<h3>四层在 AIStudio 里长什么样</h3>
+<table>
+<thead><tr><th style="width:150px">层</th><th style="width:320px">AIStudio 载体</th><th>判断这层是否建成的标志</th></tr></thead>
+<tbody>
+<tr><td>基础知识与结构</td><td>认知层产物：组件清单、<code>relations.jsonl</code>、任务配方、框架证据、标准映射</td><td>新人能靠它回答“这个功能在哪个文件、改它会牵动谁”</td></tr>
+<tr><td>交互情境化</td><td>规格模板、计划模板、任务卡、上下文预算、术语表</td><td>同一任务换一个人执行，产出结构一致、结论可对齐</td></tr>
+<tr><td>生产与验证</td><td>九节点、四阶段、59 道门禁、L1—L4、独立评审、发布裁决</td><td>每个“完成”都能回到当次提交和当次输出</td></tr>
+<tr><td>持续改进反馈</td><td>复盘行动项、教训库、门禁趋势、项目指纹与局部重探查</td><td>同类问题第二次出现时，有机制而不是靠提醒</td></tr>
+</tbody>
+</table>
+
+<h3>四项举措：哪些已落地，哪些只落了一半</h3>
+<table>
+<thead><tr><th style="width:180px">举措</th><th style="width:330px">落地形态</th><th style="width:110px">状态</th><th>边界</th></tr></thead>
+<tbody>
+<tr><td>模型服务平台</td><td>gateway / orchestrator 统一接入模型与执行者，任务经派发进入编码引擎</td><td>已实现</td><td>模型渠道与限流仍受外部额度影响</td></tr>
+<tr><td>领域工程知识图谱</td><td>组件清单＋关系边集＋机制本体，按“对象—关系—动作”组织</td><td>部分实现</td><td>不是图数据库，也不做形式化推理；跨仓缝合仍未做</td></tr>
+<tr><td>辅助智能体与工具箱</td><td>15 个外部运行时＋技能包内脚本、模板、检查器</td><td>已实现</td><td>按需接线，未安装则降级</td></tr>
+<tr><td>契约驱动的研发流程</td><td>spec-first 四层拦截、状态机准入、门禁与证据落盘</td><td>已实现</td><td><code>--no-verify</code> 等逃生口仍存在，需要审计补位</td></tr>
+<tr><td>成本效益评估</td><td>用量与定价计量、成本估算方法论文档</td><td>部分实现</td><td>没有完整的 ROI 模型与动态优化闭环</td></tr>
+</tbody>
+</table>
+<div class="note"><strong>怎么用这张表</strong>带人讲课时，先让学员指出“哪一项只落了一半”，再问“缺的那一半会导致什么”。这比背四条举措更能检验是否真懂系统。</div>
+</section>
+
+<section class="chapter" id="s6">
+<h2><span class="no">第六章 · 全景</span>AIStudio 里都有什么，谁负责什么</h2>
 <p class="lead">AIStudio 是一个单仓工程：桌面驾驶舱、智能体团队、编码引擎、技能生成器四块在同一个仓库里，靠补丁与扩展层注入上游基线。对使用者来说，它是一套“人看板、AI 干活、机制留证”的工作系统。</p>
 
 <h3>四块拼图，各管一段</h3>
@@ -319,7 +536,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <text x="40" y="230" class="dtext">vendor/ 是钉版上游基线（只读，台账 VENDOR.md）；patches/ 与 custom/ 是二次开发注入层；registries/ 登记路由与功能；docs/ 保存设计规格与培训材料</text>
   <text x="40" y="250" class="dsmall">版本数字来自 RELEASE-MANIFEST.json，当前 1.0.15-overlay；四模块各自有独立版本与发布链</text>
 </svg>
-<figcaption><strong>图 3 四模块与基线</strong><span>界面、组织、执行三层各有载体，同一个仓库交付</span></figcaption>
+<figcaption><strong>图 7 四模块与基线</strong><span>界面、组织、执行三层各有载体，同一个仓库交付</span></figcaption>
 </figure>
 
 <h3>六个团队，六个责任面</h3>
@@ -357,7 +574,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <rect x="20" y="182" width="930" height="40" rx="9" class="dbox-soft"/>
   <text x="485" y="207" class="dtext" text-anchor="middle">同一个任务编号贯穿六段：谁交、交给谁、交了什么、凭什么算完成</text>
 </svg>
-<figcaption><strong>图 4 六团队协作</strong><span>横向是交接顺序，纵向是界面与证据；消息只负责提醒</span></figcaption>
+<figcaption><strong>图 8 六团队协作</strong><span>横向是交接顺序，纵向是界面与证据；消息只负责提醒</span></figcaption>
 </figure>
 
 <h3>产品面上，人主要在哪几处操作</h3>
@@ -385,8 +602,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 </div>
 </section>
 
-<section class="chapter" id="s3">
-<h2><span class="no">第三章 · 主线</span>一件事怎么从想法走到发布</h2>
+<section class="chapter" id="s7">
+<h2><span class="no">第七章 · 主线</span>一件事怎么从想法走到发布</h2>
 <p class="lead">一项工作要穿过八个节点、四个阶段和六道质量门。每个节点都留下可复核的东西；没有证据的“完成”不算完成。</p>
 
 <figure>
@@ -427,7 +644,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <text x="548" y="190" class="dsmall" text-anchor="middle">分支开发（⑤）→ 分支测试（⑥⑦）→ 主干合并（⑧）→ 主干回归（⑨）</text>
   <text x="16" y="34" class="dtiny dsmall">六个检查点贯穿：需求门 G1 · 设计门 G2 · 提交门 G3 · 独立验收 G4 · 批准门 G5 · 发布复盘 G6</text>
 </svg>
-<figcaption><strong>图 5 主流程</strong><span>九节点负责做事，四阶段负责分批验收，六道门负责在关键处停下来核对</span></figcaption>
+<figcaption><strong>图 9 主流程</strong><span>九节点负责做事，四阶段负责分批验收，六道门负责在关键处停下来核对</span></figcaption>
 </figure>
 
 <h3>每一段必须留下什么</h3>
@@ -451,8 +668,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 <p>一项工作能走到发布，靠的不是某个人记得住流程，而是四件事同时成立：<strong>对象清楚</strong>（任务、提交、测试、审批指向同一件事）、<strong>责任清楚</strong>（每一步有负责人和验收人）、<strong>证据清楚</strong>（每段结论能回到原始记录）、<strong>例外清楚</strong>（代理、跳过、豁免都单独记账并披露）。</p>
 <p>后面的章节会反复用到这四个词。读第四、五章时，留意每个机制在补哪一块；读第六、七章时，留意每次失败是因为哪一块缺了。</p>
 </section>
-<section class="chapter" id="s4">
-<h2><span class="no">第四章 · 深入机制</span>swarm-yuan：把研发能力做成可执行的 SOP</h2>
+<section class="chapter" id="s8">
+<h2><span class="no">第八章 · 深入机制</span>swarm-yuan：把研发能力做成可执行的 SOP</h2>
 <p class="lead">SOP 是标准作业流程。所谓“研发能力的 SOP 化”，就是把资深研发脑中的判断，写成任何合格执行者照着做都能得到同样质量结果的步骤、检查与证据。swarm-yuan 不是代码生成器，它是这套 SOP 的生成器与执行器。</p>
 
 <h3>五项能力，形成一条链</h3>
@@ -492,7 +709,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <text x="680" y="206" class="dsmall" text-anchor="middle">问题与新经验回流，更新资产</text>
   <text x="16" y="250" class="dtext">一句话：标准给底线，项目给事实，本体给结构，流水线给动作，独立检查给结论。</text>
 </svg>
-<figcaption><strong>图 6 五项能力链</strong><span>每一环都对应真实文件和检查，不是概念口号</span></figcaption>
+<figcaption><strong>图 10 五项能力链</strong><span>每一环都对应真实文件和检查，不是概念口号</span></figcaption>
 </figure>
 
 <table>
@@ -542,7 +759,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <text x="40" y="226" class="dtext">认知产出清单/边集/配方 → 规范产出铁律与检查参数 → 装配产出目标技能与激活报告 → 使用产出规格/代码/提交 → 验证产出测试与评审证据 → 成长回流为新资产</text>
   <text x="40" y="250" class="dsmall">上一层没做实的部分，下一层一定会以返工的形式补回来：清单缺项→复用判断错；规则含糊→门禁判不准；测试不真→评审无法下结论</text>
 </svg>
-<figcaption><strong>图 7 六层实现</strong><span>五环回答“能力由什么构成”，六层回答“系统怎样做到”</span></figcaption>
+<figcaption><strong>图 11 六层实现</strong><span>五环回答“能力由什么构成”，六层回答“系统怎样做到”</span></figcaption>
 </figure>
 
 <h3>生成一套技能：Step 1—13</h3>
@@ -570,7 +787,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <text x="490" y="204" class="dtext" text-anchor="middle">任一必需检查失败都停在 draft；激活报告只证明当次通过，不保证以后一直全绿</text>
   <text x="490" y="226" class="dsmall" text-anchor="middle">日常研发不再重跑这十三步；项目结构变化时用升级流程做局部重探查</text>
 </svg>
-<figcaption><strong>图 8 生成流程</strong><span>先探查再装配，最后验证；跳过验证直接发布是常见事故源</span></figcaption>
+<figcaption><strong>图 12 生成流程</strong><span>先探查再装配，最后验证；跳过验证直接发布是常见事故源</span></figcaption>
 </figure>
 
 <table>
@@ -625,7 +842,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <text x="810" y="172" class="dsmall" text-anchor="middle">查语义、查检查本身、查当次执行</text>
   <text x="490" y="212" class="dsmall" text-anchor="middle">四类证据不能互相替代：任何一类缺席，结论都要降级</text>
 </svg>
-<figcaption><strong>图 9 证据分层</strong><span>拦截、门禁、测试、评审各证明不同事实；组合起来才叫发布证据</span></figcaption>
+<figcaption><strong>图 13 证据分层</strong><span>拦截、门禁、测试、评审各证明不同事实；组合起来才叫发布证据</span></figcaption>
 </figure>
 <table>
 <thead><tr><th style="width:90px">返回码</th><th>含义</th><th style="width:280px">容易误读的地方</th></tr></thead>
@@ -658,8 +875,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 </ul>
 </section>
 
-<section class="chapter" id="s5">
-<h2><span class="no">第五章 · 吸收全景</span>它调研和吸收了哪些框架、技能与方法</h2>
+<section class="chapter" id="s9">
+<h2><span class="no">第九章 · 吸收全景</span>它调研和吸收了哪些框架、技能与方法</h2>
 <p class="lead">能力不是凭空发明的。swarm-yuan 把四类来源吸收成规则、门禁与文档：真实项目研究、开源技能与方法论、行业标准映射、自研机制。全部条目登记在能力地图（capability-map）里，可逐项回查。</p>
 
 <h3>81 个技术栈框架规则</h3>
@@ -721,8 +938,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 <li><strong>默认不启用</strong>：框架按命中注入、行业 profile 显式选择、方法论层是引用不是依赖——知道“有什么”不等于“全开着”。</li>
 </ul>
 </section>
-<section class="chapter" id="s6">
-<h2><span class="no">第六章 · 上手</span>八张操作卡，照着做就能跑通</h2>
+<section class="chapter" id="s10">
+<h2><span class="no">第十章 · 上手</span>八张操作卡，照着做就能跑通</h2>
 <p class="lead">每张卡都按同一结构写：做什么、讲师怎么解释、看到什么算完成、失败怎么办、留下什么证据。命令分为只读与写操作，写操作前先确认目录和权限。</p>
 <div class="note"><strong>先约定三个路径变量</strong>本手册用 <code>YUAN_SRC</code> 表示技能源码树，<code>YUAN_HOME</code> 表示安装后的技能根，<code>PROJECT_DIR</code> 表示目标项目，<code>SKILL_DIR</code> 表示生成出来的项目技能。示例里出现的 <code>/absolute/path/to/...</code> 都要替换成真实绝对路径。</div>
 
@@ -862,8 +1079,8 @@ bash install-offline.sh                    # 在离线包根执行</code></pre>
 </div>
 </section>
 
-<section class="chapter" id="s7">
-<h2><span class="no">第七章 · 案例</span>两个案例，看懂“完成”和“通过”的区别</h2>
+<section class="chapter" id="s11">
+<h2><span class="no">第十一章 · 案例</span>两个案例，看懂“完成”和“通过”的区别</h2>
 <p class="lead">第一个案例讲一轮真实推演怎样读账：流程完成不等于净额通过。第二个案例讲一次真实需求怎样走完流程：功能能跑不等于可以批准。</p>
 
 <h3>案例一：run28，两本账要分开看</h3>
@@ -888,7 +1105,7 @@ bash install-offline.sh                    # 在离线包根执行</code></pre>
   <text x="680" y="244" class="dtext">后续核验 13/14（缺 1 项运行证明）</text>
   <text x="150" y="280" class="dsmall">三组都不能互相覆盖：流程完成、真实通过、证据覆盖是三件事</text>
 </svg>
-<figcaption><strong>图 10 run28 两本账</strong><span>读到“全过”时，先问一句：扣掉代偿还剩多少</span></figcaption>
+<figcaption><strong>图 14 run28 两本账</strong><span>读到“全过”时，先问一句：扣掉代偿还剩多少</span></figcaption>
 </figure>
 <table>
 <thead><tr><th style="width:220px">现象</th><th>正确读法</th><th style="width:300px">容易被误读成</th></tr></thead>
@@ -926,8 +1143,8 @@ git diff        # 还原后应为空</code></pre>
 <div class="note warn"><strong>红线</strong>不得在真实业务仓注入故障；不得修改期望值来迎合故障；不得把未执行的套件记成通过。注入、变红、还原、复绿四段证据要成套保存。</div>
 </section>
 
-<section class="chapter" id="s8">
-<h2><span class="no">第八章 · 验收</span>学员交什么，讲师看什么</h2>
+<section class="chapter" id="s12">
+<h2><span class="no">第十二章 · 验收</span>学员交什么，讲师看什么</h2>
 <p class="lead">验收不看“讲得好不好”，看能不能拿出当次证据。作品齐全、证据对得上、边界说得清，才算通过。</p>
 
 <h3>学员要交的七样东西</h3>
@@ -970,11 +1187,11 @@ git diff        # 还原后应为空</code></pre>
 </table>
 </section>
 
-<section class="chapter" id="s9">
-<h2><span class="no">第九章 · 附录</span>速查、术语与事实源</h2>
+<section class="chapter" id="s13">
+<h2><span class="no">第十三章 · 附录</span>速查、术语与事实源</h2>
 
 <h3>命令速查</h3>
-<p class="small muted">速查只用于回忆，执行前回到第六章对应操作卡确认副作用。注释里的“只读/写”是分类。</p>
+<p class="small muted">速查只用于回忆，执行前回到第十章对应操作卡确认副作用。注释里的“只读/写”是分类。</p>
 <pre><code># 安装与自检
 bash "$YUAN_SRC/install.sh" --list                     # 只读：检测环境
 bash "$YUAN_SRC/install.sh"                            # 写：安装到 ~/.agents/skills
