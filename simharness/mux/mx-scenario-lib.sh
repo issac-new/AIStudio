@@ -73,6 +73,20 @@ sset() { grep -v "^$1=" "$STATE" 2>/dev/null > "$STATE.tmp" || true; echo "$1=$2
 # 闸键首过保护：G5 等闸键在重启循环中每圈重写，首过时刻被最后一次
 # 覆写（11:30:41 首过→仪表盘显示 11:37）。闸类状态键一律 sset_once——已有值不覆盖。
 sset_once() { grep -q "^$1=" "$STATE" 2>/dev/null && return 0; sset "$1" "$2"; }
+# 阶段快照挂钩（2026-11-12 设计复盘 P2-13 第一段）：闸过键后调用——MX_STAGE_SNAPSHOT=1
+# 才生效（首轮观察期默认关，不动既轮行为）；快照失败 fail-soft 记问题单不杀驱动
+# （断点续跑本体是 state 键幂等，快照是恢复增强件，不构成闸依赖）。save 幂等：同闸
+# 已有快照自动跳过，监督器重启循环每圈重放零开销。
+mx_stage_snapshot_maybe() { # <gate>：g1..g6/uat/report
+  [[ "${MX_STAGE_SNAPSHOT:-0}" == "1" ]] || return 0
+  local _out _rc
+  _out="$(bash "${SCRIPT_DIR:?SCRIPT_DIR 未定义}/mux/mx-stage-snapshot.sh" save "$RUN_DIR" "$1" 2>&1)"; _rc=$?
+  # rc=3=闸键未落（G4 GAP 轮等合法态）静默跳过；其余非零=真失败记问题单
+  if (( _rc != 0 && _rc != 3 )); then
+    echo "ISSUE|stage-snapshot|$1|阶段快照失败(rc=${_rc})：${_out}（fail-soft 不阻断推演——恢复能力退化为无快照的裸断点续跑）" >> "$EVID_DIR/issues.log"
+  fi
+  return 0
+}
 # 幂等记录：重启循环每圈重放记录点，qgate-evidence ×11/uat-precheck ×5
 # 刷单污染台账。同类型+主体已有 ISSUE 行即跳过（处置语义：重复发生记次数无收益，事故账
 # 由 scenario.log 时间线承载）。冲突处理：必要时先显式删旧行再记新单。

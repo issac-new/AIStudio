@@ -330,3 +330,4 @@
 {"at":"2026-11-12T06:14:13Z","spec":"docs/superpowers/specs/2026-11-12-capability-acceptance-matrix.md","receipt":"6730dbb7d2581010729b0b7701ace0042ae45986","commit":"c60381055"}
 {"at":"2026-11-12T06:23:52Z","spec":"docs/superpowers/specs/2026-11-12-ci-product-tests.md","receipt":"199fd467e3d50c1578932c8da5374790c812e7a4","commit":"c60381055"}
 {"at":"2026-11-12T07:15:29Z","spec":"docs/superpowers/specs/2026-11-12-typecheck-full-tree.md","receipt":"d40a61755e431032be0374b117a35a6f499046dc","commit":"034e94138"}
+{"at":"2026-11-12T07:14:15Z","spec":"docs/superpowers/specs/2026-11-12-sim-stage-snapshot.md","receipt":"87ab295f73f1d02639fedb31a709f60c5506302f","commit":"034e94138"}
