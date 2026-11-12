@@ -4,8 +4,8 @@
 
 - 快照基线：`3690ceba3`；核实日：2026-11-11；版本线：`1.0.15-overlay`（v1.0.15 发布轮）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
-- 当前工作树根目录：**649 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 196 份；合计 649 份。
+- 当前工作树根目录：**650 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 197 份；合计 650 份。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
@@ -478,7 +478,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（196 份）
+## 2026-11（197 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -665,6 +665,7 @@
 - [2026-11-11-zcode-3180-sync-and-qwen-absorb.md](../superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md)
 - [2026-11-12-ai-agent-handbook-absorption.md](../superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md)
 - [2026-11-12-capability-acceptance-matrix.md](../superpowers/specs/2026-11-12-capability-acceptance-matrix.md)
+- [2026-11-12-ci-product-tests.md](../superpowers/specs/2026-11-12-ci-product-tests.md)
 - [2026-11-12-doc-canon-single-source.md](../superpowers/specs/2026-11-12-doc-canon-single-source.md)
 - [2026-11-12-expdual-closeout.md](../superpowers/specs/2026-11-12-expdual-closeout.md)
 - [2026-11-12-expdual-ttse.md](../superpowers/specs/2026-11-12-expdual-ttse.md)

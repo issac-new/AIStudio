@@ -328,3 +328,4 @@
 {"at":"2026-11-12T05:28:40Z","spec":"docs/superpowers/specs/2026-11-12-scope-gate-area-fence.md","receipt":"89a7dbeeb515b558d658c7ca5f08f99cc37b1f5f","commit":"1fa2c9add"}
 {"at":"2026-11-12T05:19:18Z","spec":"docs/superpowers/specs/2026-11-12-runtime-ledgers-out-of-git.md","receipt":"ed40e625b119ecda29e00cf1dd2897b5728aabc6","commit":"a8002fd55"}
 {"at":"2026-11-12T06:14:13Z","spec":"docs/superpowers/specs/2026-11-12-capability-acceptance-matrix.md","receipt":"6730dbb7d2581010729b0b7701ace0042ae45986","commit":"c60381055"}
+{"at":"2026-11-12T06:23:52Z","spec":"docs/superpowers/specs/2026-11-12-ci-product-tests.md","receipt":"199fd467e3d50c1578932c8da5374790c812e7a4","commit":"c60381055"}
