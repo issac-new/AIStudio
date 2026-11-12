@@ -858,3 +858,7 @@ paths:
   - .swarm-yuan/spec-receipts.jsonl
   - scripts/ensure-injected.mjs
   - scripts/__tests__/overlay-pristine-replay.test.ts
+  # 2026-11-12 swarm-yuan 培训手册（docs/swarm-yuan-training-manual；spec、计划、正文与两处登记清单）
+  - docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md
+  - docs/superpowers/plans/2026-11-12-swarm-yuan-training-manual.md
+  - docs/manuals/aistudio-swarm-yuan-developer-guide.md
