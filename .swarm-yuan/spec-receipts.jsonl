@@ -337,3 +337,4 @@
 {"at":"2026-11-12T08:00:14Z","spec":"docs/superpowers/specs/2026-11-12-ci-deps-order.md","receipt":"a7761bf38fc1fd0cc7a78642a5166ef2e583a9cc","commit":"18d29bf31"}
 {"at":"2026-11-12T08:04:35Z","spec":"docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md","receipt":"624593a06d96a2a097a8c31a2f66a5d182cdf15e","commit":"9684540d9"}
 {"at":"2026-11-12T08:08:58Z","spec":"docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md","receipt":"7e046bac07ca3277c8edfee2360b23d1d115a2b4","commit":"34e96eb77"}
+{"at":"2026-11-12T09:47:43Z","spec":"docs/superpowers/specs/2026-11-12-lock-root-deps.md","receipt":"1e950de3819a6c3fe67420228792db909367360d","commit":"d064043fa"}

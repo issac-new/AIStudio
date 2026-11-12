@@ -476,7 +476,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（205 份）
+## 2026-11（206 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -670,8 +670,10 @@
 - [2026-11-12-domain-retirement-inventory.md](../superpowers/specs/2026-11-12-domain-retirement-inventory.md)
 - [2026-11-12-expdual-closeout.md](../superpowers/specs/2026-11-12-expdual-closeout.md)
 - [2026-11-12-expdual-ttse.md](../superpowers/specs/2026-11-12-expdual-ttse.md)
+- [2026-11-12-frame-reshoot-0tasks-granularity.md](../superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md)
 - [2026-11-12-guard-tests-migration-plan.md](../superpowers/specs/2026-11-12-guard-tests-migration-plan.md)
 - [2026-11-12-handbook-debt-clearance.md](../superpowers/specs/2026-11-12-handbook-debt-clearance.md)
+- [2026-11-12-lock-root-deps.md](../superpowers/specs/2026-11-12-lock-root-deps.md)
 - [2026-11-12-run29-full-retrospective.md](../superpowers/specs/2026-11-12-run29-full-retrospective.md)
 - [2026-11-12-run29-retro-rootfix.md](../superpowers/specs/2026-11-12-run29-retro-rootfix.md)
 - [2026-11-12-run30-actions.md](../superpowers/specs/2026-11-12-run30-actions.md)
@@ -683,7 +685,6 @@
 - [2026-11-12-worktree-host-write-isolation.md](../superpowers/specs/2026-11-12-worktree-host-write-isolation.md)
 - [2026-11-12-yuan-facts-freshness.md](../superpowers/specs/2026-11-12-yuan-facts-freshness.md)
 
-- [2026-11-12-frame-reshoot-0tasks-granularity.md](../superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md) — run29 补拍轮：frame-verify 0tasks 判空收窄（阶段条计数误伤第三粒度）
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
 
@@ -694,7 +695,7 @@
 
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
 
-- 当前工作树根目录：**658 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 205 份；合计 658 份。
+- 当前工作树根目录：**659 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 206 份；合计 659 份。
 - 当前工作树根目录：**651 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 198 份；合计 651 份。

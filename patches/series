@@ -1229,3 +1229,4 @@
 # 767（2026-11-12 TTSE 双轨经验吸收，spec 2026-11-12-expdual-ttse）：
 # 双轨经验台账路由注册（/api/expdual/* 挂进 bootstrap/routes.ts；先例 627）。
 767-server-expdual-routes.patch
+768-package-lock-root-deps.patch
