@@ -309,3 +309,6 @@
 {"at":"2026-11-11T06:34:42Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"32fe804499df9bead2deeffdaa5f0401d678440c","commit":"762e64acb"}
 {"at":"2026-11-11T15:25:10Z","spec":"docs/superpowers/specs/2026-11-11-g4-principal-status-backfill.md","receipt":"1ef94562a1fa330df660996ccbbe7b4a08d7329d","commit":"eb6e9e7ae"}
 {"at":"2026-11-11T15:43:55Z","spec":"docs/superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md","receipt":"0076ad6ab2b40022f5814aa41684cf7ccdcd8072","commit":"14d9fd661"}
+{"at":"2026-11-12T01:06:51Z","spec":"docs/superpowers/specs/2026-11-12-expdual-ttse.md","receipt":"deba18480435b377d416d3cae9fcd3c9957862f6","commit":"67e149ad3"}
+{"at":"2026-11-12T01:07:15Z","spec":"docs/superpowers/specs/2026-11-12-expdual-ttse.md","receipt":"68b10cff52a6d9b374c0b37eec2499ede409dd11","commit":"d442fb6f2"}
+{"at":"2026-11-12T01:07:42Z","spec":"docs/superpowers/specs/2026-11-12-expdual-ttse.md","receipt":"e0bbdc9faa5e327d5a349df6f730c99991c9b419","commit":"2bb836d50"}

@@ -15,6 +15,7 @@ import type { ExpCandidate } from './exp-types'
 import type { DispatchTarget } from '../constraints/constraint-types'
 import { fewshotInjectLine, recallFewshot } from '../eval/fewshot'
 import { listLedger } from '../eval/flywheel'
+import { scopeAllows, scopeSpecificity, type ScopeFilter } from './scope-match'
 
 /** 注入上限：经验行比约束卡更少（3 条），防简报膨胀。 */
 export const MAX_EXP_INJECT = 3
@@ -33,32 +34,12 @@ export function injectionRunLabel(): string {
   return process.env.EXPERIENCE_INJECT_RUN?.trim() || `adhoc-${new Date().toISOString().slice(0, 10)}`
 }
 
-/** 作用域过滤条件（派单现场可判定的两维）。 */
-export interface ExperienceScopeFilter {
-  column?: string
-  specialist?: string
-}
+/** 作用域过滤条件（派单现场可判定的两维）；定义在 scope-match，expdual 同源复用。 */
+export type ExperienceScopeFilter = ScopeFilter
 
 /** 经验是否落在当前派单作用域内：无 scope=全局；scope 限定而当前维度缺席→排除（不猜）。 */
 export function experienceInScope(candidate: ExpCandidate, filter?: ExperienceScopeFilter): boolean {
-  if (!filter) return true
-  const scope = candidate.scope
-  if (!scope) return true
-  if (Array.isArray(scope.columns) && scope.columns.length > 0) {
-    if (!filter.column || !scope.columns.includes(filter.column)) return false
-  }
-  if (Array.isArray(scope.specialists) && scope.specialists.length > 0) {
-    if (!filter.specialist || !scope.specialists.includes(filter.specialist)) return false
-  }
-  return true
-}
-
-/** 作用域具体度：带 scope 的候选优先于全局候选（更具体的作用域更可能是当前语境的正解）。 */
-function scopeSpecificity(candidate: ExpCandidate): number {
-  const scope = candidate.scope
-  if (!scope) return 0
-  return (Array.isArray(scope.columns) && scope.columns.length > 0 ? 1 : 0)
-    + (Array.isArray(scope.specialists) && scope.specialists.length > 0 ? 1 : 0)
+  return scopeAllows(candidate.scope, filter)
 }
 
 /** 可注入候选：approved 态；按作用域过滤（无 scope 视为全局）；作用域更具体者优先，封顶 3。 */
@@ -66,7 +47,7 @@ export function selectableExperiences(candidates: ExpCandidate[], filter?: Exper
   return [...candidates]
     .filter((c) => c.status === 'approved')
     .filter((c) => experienceInScope(c, filter))
-    .sort((a, b) => scopeSpecificity(b) - scopeSpecificity(a)
+    .sort((a, b) => scopeSpecificity(b.scope) - scopeSpecificity(a.scope)
       || a.updatedAt.localeCompare(b.updatedAt)
       || a.id.localeCompare(b.id))
     .slice(0, MAX_EXP_INJECT)

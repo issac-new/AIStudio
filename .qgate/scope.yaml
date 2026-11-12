@@ -781,3 +781,7 @@ paths:
   - custom/server/platform/authz/middleware.ts
   - custom/server/platform/__tests__/policy.test.ts
   - docs/superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md
+
+  # 2026-11-12 双轨经验台账（TTSE 吸收，feat/expdual-ttse）
+  - docs/superpowers/specs/2026-11-12-expdual-ttse.md
+  - custom/server/expdual/**
