@@ -67,10 +67,16 @@ git commit -m "docs(swarm-yuan): 登记培训手册设计与实施计划"
 
 **Files:**
 - Modify: `docs/manuals/aistudio-swarm-yuan-developer-guide.md`
+- Modify: `docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md`（用户补充的五项核心逻辑）
+- Modify: `docs/superpowers/plans/2026-11-12-swarm-yuan-training-manual.md`（同步实施与验收要求）
 
 **Interfaces:**
 - Consumes: Task 1 的 spec；当前 `skills/swarm-yuan/README.md`、`SKILL.md`、脚本、facts 与有效历史案例。
 - Produces: 单一培训正文，供现有 `docs/README.md` 入口和后续审读使用。
+
+- [ ] **Step 0: 以研发人员能力的 SOP 化为总主线**
+
+把用户补充的五项核心逻辑贯穿全文：标准研发能力、个性化研发能力、本体化组织资产、最小单元质量与拼装流水线、独立全面检查。产品开篇给出能力形成链和图，技术设计给出五项到机制、实物、检查与证据的映射，操作、案例和考核均可回指，不只写一句口号。
 
 - [ ] **Step 1: 建立新手导读与产品结构**
 
@@ -115,7 +121,7 @@ Expected: 两条命令退出 0；若暴露既有问题，区分本批引入与�
 
 - [ ] **Step 2: 检查 Markdown 本地链接和文件行号锚点**
 
-用隔离的 Node 或 Python 脚本只读扫描手册：相对链接解析到工作树内真实文件；`path:line` 或 `path:start-end` 不超过目标文件行数；Mermaid 代码块成对闭合。不得把未检查写成通过。
+用隔离的 Node 或 Python 脚本只读扫描手册：相对链接解析到工作树内真实文件；`path:line` 或 `path:start-end` 不超过目标文件行数；Mermaid 代码块成对闭合。检查五项 SOP 核心逻辑均有定义、机制映射和至少一个操作或实训锚点。不得把未检查写成通过。
 
 - [ ] **Step 3: 运行相关 Vitest 守门**
 
