@@ -17,6 +17,7 @@
 2. 讲述认知、规范、装配、使用、验证、成长六层设计，指出标准与经验怎样变成实物文件和检查证据。
 3. 完成安装、生成、填充、strict 激活、日常研发、门禁判读、失败处置、反馈更新与离线安装。
 4. 判断什么算完成、失败怎样恢复、留什么证据，并解释门禁全绿为何仍不能证明业务正确、fixture 通过为何仍有**外部有效性边界**。
+5. 能说明三层投影与四论各自对应的当次证据，并指出五项能力、四论、三层之间的关系。
 
 文中路径默认相对 AIStudio 仓根。操作卡中的 `/absolute/path/to/...` 是必须替换的绝对路径；命令没有在本轮执行。每张操作卡都有“做什么、怎样解释、完成标志、失败处置、留存证据”五字段，写操作与只读检查分别标识。
 
@@ -62,7 +63,7 @@ flowchart TB
 
 ## 谁定方向、谁守门、谁干活：三层投影与四论
 
-**一句话定位：人定方向 · 机器守门 · AI 干活。** 一个人或少数几个人带少量 AI 助手时，可以靠人盯、靠模型自觉；AI 员工多了之后，质量不能靠模型自觉，必须靠机制——每个“必须”都要有机器检查、可复核证据和失败阻断。`docs/manuals/AI协作标准手册.md:225-228`
+**一句话定位：人定方向 · 机器守门 · AI 干活。** 一个人或少数几个人带少量 AI 助手时，可以靠人盯、靠模型自觉；AI 员工多了之后，质量不能靠模型自觉，必须靠机制——每个“必须”都要有机器检查、可复核证据和失败阻断。逐字正本见 `team/profiles/orchestrator/SOUL.md:3-4`；设计文档同句见 `runtime/hermes-records/design/hermes-complete-design-doc.md:3`。
 
 | 层 | 对象 | 人机分工 | 与手册章节的对应 |
 |---|---|---|---|
@@ -165,7 +166,7 @@ flowchart TB
 
 ## 吸收全景：81 个框架、15 个运行时和 61 份方法论从哪里来
 
-这一节回答“它凭什么有这些能力、每样从哪里来、什么时候生效”。来源分三类，分开列以免把外部吸收误当自研：**外部调研吸收**（真实项目研究、开源技能与方法论）、**行业标准映射**、**自研机制**。全部条目登记在 `skills/swarm-yuan/references/capability-map.md`（吸收台账单一事实源：逐档来源、证据、消费节点与触发），自检用 G25 双向对账、孤儿零容忍，所以下面每一项都可回查，不是宣传清单。
+这一节回答“它凭什么有这些能力、每样从哪里来、什么时候生效”。来源分三类，分开列以免把外部吸收误当自研：**外部调研吸收**（真实项目研究、开源技能与方法论）、**行业标准映射**、**自研机制**。可回查范围分四层，各以对应载体为准：61 份 references／方法论逐档登记于 `skills/swarm-yuan/references/capability-map.md`（来源、证据分级、消费节点），由 G25 双向对账（实存文档必须入账、账上不登记不存在文档）；81 个框架以 `skills/swarm-yuan/references/frameworks/` 目录与 `FACT_FRAMEWORKS=81` 为正本；106 篇研究档案以 `skills/swarm-yuan/docs/research/` 目录为准；27 个物化技能以 `skills/swarm-yuan/runtime/mattpocock-skills/MANIFEST.md` 为准。所以下面每一项都能回到对应目录或账本，不是宣传清单。
 
 ### 81 个技术栈框架规则
 
@@ -218,24 +219,26 @@ flowchart TB
 | 安全与合规（9） | security-spec、crypto-spec、cwe-database、standards-compliance、compliance-checkpoints、regulatory-checkpoint-table、security-certification-profiles、mcp-governance、codex-security-methodology | codex-security 吸收自 openai/codex-security；regulatory-checkpoint-table 执法检查主表 173 条 |
 | 认知与思维（5） | cognition-framework、cognitive-bias、logic-razor、four-theories-methodology、gsd-patterns | four-theories＝系统论、信息论、科学方法论、控制论四论闭环 |
 | 知识治理与吸收（6） | capability-map、knowledge-lifecycle-methodology、knowledge-retrieval-ladder、context-engineering-layering、cordis-composability-methodology、code-graph-tools | knowledge-lifecycle 吸收自京东海博实践；cordis-composability 吸收自 DeepSeek Harness |
-| 表达与呈现（3） | frontend-design-methodology、diagram-production-methodology、controlled-language-methodology | impeccable v4.0.2；diagram-design v2.6.110（生成器侧档）；受控语言 ASD-STE100 |
+| 表达与呈现（3） | frontend-design-methodology、diagram-production-methodology、controlled-language-methodology | impeccable（pbakaus，方法论引用层）；diagram-design（cathrynlavery，生成器侧档，当前基线见 capability-map 与文档头）；受控语言 ASD-STE100 |
 | 估算与治理（3） | cost-estimation-methodology、decision-governance、governance-agents | cost-estimation＝NESMA GB/T 42588-2023 功能点估算 |
 | 行业 profile（8） | industry-profile-automotive、industry-profile-energy、industry-profile-finance、industry-profile-gov、industry-profile-industrial、industry-profile-medical、industry-profile-payment、industry-profile-telecom | payment 吸收 hermes pay-team 人格内核；配置覆盖层见 `skills/swarm-yuan/assets/industry-profiles/` |
+
+61 档中 42 档随技能分发（以 `skills/swarm-yuan/assets/registry/dist.tsv` 为准），其余仅生成器侧；8 个行业 profile 由 `--industry` 渲染进 conf、不作为 references 分发。
 
 ### 研究与案例档案（生成器侧）
 
 `skills/swarm-yuan/docs/research/` 现有 106 篇研究档案，R 编号档跨度 R1–R144、允许同号多档（如 R124、R143 各两档）；全量清单以目录为准，`ls skills/swarm-yuan/docs/research/` 即可枚举。下表按文件名关键词分组（runtime-refresh/ponytail、regression/jvm、drill、absorption/capability-map、audit/hardening/standards，其余归基础设计与外部调研），各组合计 106：
 
-| 主题 | 代表编号 | 篇数 |
+| 主题 | 示例编号 | 篇数 |
 |---|---|---|
 | 运行时刷新与整合轮 | R16、R105、R140–R144 | 51 |
-| 基础设计与外部调研 | R1–R9、R11–R19、R101–R104、R114 | 26 |
-| 真实项目回归 | R44、R72、R118、R121、R124、R143 | 10 |
-| 方法论吸收与台账 | R14、R37、R86、R88、R143-ponytail、2026-10-20 台账 | 10 |
+| 基础设计与外部调研 | R1–R6、R9、R11–R13、R17–R19、R101–R104、R114 | 26 |
+| 真实项目回归 | R44、R72、R75、R80、R82、R83、R87、R118、R121、R124 | 10 |
+| 方法论吸收与台账 | R14、R37、R50、R86、R88、2026-10-20 台账 | 10 |
 | 审计与安全加固 | R7、R8、R54、R119、R126 | 5 |
 | 换栈演练 | R58、R60、R62、R64 | 4 |
 
-这些是生成器侧档案，不随目标技能分发；分发面以 `UNIVERSAL_FILES=109`（lite 51）为正本。
+这些是生成器侧档案，不随目标技能分发；分发面以 `FACT_UNIVERSAL_FILES=109`（lite 51）为正本。
 
 ### 行业标准映射
 
@@ -259,7 +262,9 @@ flowchart TB
 | check | `scripts/precheck.sh`、`precheck*.conf`、`gate-enforce-level.conf`、`rules.d/` 与 hooks/commands/settings 等，负责注册、配置和执行检查 |
 | scripts | `state-machine.sh`、`trace-log.sh`、`memory-writeback.sh`、关系与清单工具、项目指纹等，承载状态、证据和维护动作 |
 
-分发清单以 `UNIVERSAL_FILES` 为准，项目内容保留清单以 `PROJECT_SPECIFIC_FILES` 为准。lite 保留核心认知、模板与门禁脚本，不含完整 hooks/commands/settings 和完整九节点 workflow；standard 是完整骨架；compliance 在 standard 上增加合规资料与矩阵。auto 根据合规、规模、形态、框架和 monorepo 信号选档，信号模糊时走 standard；也可在位置参数前显式写 `--profile lite|standard|compliance`。`skills/swarm-yuan/scripts/generate-skill.sh:940-968,984-994` 目标技能要“薄”，生成器可以“厚”。每次会话重复加载的入口和 references 受字节预算约束；新增知识必须替换、压缩或登记例外，不能只增不减。预算值不要手抄进项目文档，统一读取 `skills/swarm-yuan/assets/facts.conf`。`skills/swarm-yuan/README.md:45-47,135-149`
+分发清单以 `UNIVERSAL_FILES` 为准，项目内容保留清单以 `PROJECT_SPECIFIC_FILES` 为准。lite 保留核心认知、模板与门禁脚本，不含完整 hooks/commands/settings 和完整九节点 workflow；standard 是完整骨架；compliance 在 standard 上增加合规资料与矩阵。auto 根据合规、规模、形态、框架和 monorepo 信号选档，信号模糊时走 standard；也可在位置参数前显式写 `--profile lite|standard|compliance`。`skills/swarm-yuan/scripts/generate-skill.sh:1003-1122`
+
+目标技能要“薄”，生成器可以“厚”。每次会话重复加载的入口和 references 受字节预算约束；新增知识必须替换、压缩或登记例外，不能只增不减。预算值不要手抄进项目文档，统一读取 `skills/swarm-yuan/assets/facts.conf`。`skills/swarm-yuan/README.md:45-47,135-149`
 
 ## 5. Step 1-13 怎样生成可信技能
 
@@ -352,7 +357,7 @@ state-machine 只能逐级前进，普通 `set phase` 和 `set created_at` 被�
 
 ## 7. precheck 怎样执行、汇总和留证
 
-配置分 core、arch、compliance，可加载 industry，最后加载 `precheck.patch.conf` 用户覆盖层。项目定制优先放覆盖层，降低升级漂移。`TEST_CMD`、`BUILD_CMD`、`MUTATION_CMD` 会作为 shell 命令执行，只能使用受信任配置。
+precheck 是目标技能内的门禁执行器：按 core、arch、compliance 三层配置加载（可再叠加 industry 与 `precheck.patch.conf` 覆盖层），按 `--all`/`--all-full`/`--compliance-suite` 三档执行。项目定制优先放覆盖层，降低升级漂移。`TEST_CMD`、`BUILD_CMD`、`MUTATION_CMD` 会作为 shell 命令执行，只能使用受信任配置。
 
 当前数字以 `skills/swarm-yuan/assets/facts.conf:24-46` 为准：门禁总数 59，其中 FULL 53、advisory-only 6；聚合执行面记为 `--all`=12、`--all-full`=32、`--compliance-suite`=19，分别对应核心、standard 和合规套件。FULL 53 由 standard 32、compliance 19 和 `decision_audit/state_phase` 2 组成，不等于 `--all-full` 的数量。配置变量为 204，即 core 30、arch 126、compliance 48。
 
@@ -396,12 +401,12 @@ L1/L4 检查存在性；L2 以 staged ∪ branch 和 index 正文为准；L3 以
 
 ## 9. 测试、独立验证和变异验证怎样防止虚报通过
 
-`check_test` 先运行真实 `TEST_CMD`，再检查零用例空跑、覆盖率、零断言、断言密度、聚焦测试和负向/边界比例；配置 `MUTATION_CMD` 后继续检查变异结果。负向比例主要按含相关关键词的测试文件占比计算，不是对业务语义的完整理解。`skills/swarm-yuan/assets/gates/quality/test.sh:3-90`；`skills/swarm-yuan/assets/gates-strict.sh:198-275`
+`check_test` 先运行真实 `TEST_CMD`，再检查零用例空跑、覆盖率、零断言、断言密度、聚焦测试和负向/边界比例；配置 `MUTATION_CMD` 后继续检查变异结果。负向比例主要按含相关关键词的测试文件占比计算，不是对业务语义的完整理解。`skills/swarm-yuan/assets/gates/quality/test.sh:3-90`；`skills/swarm-yuan/assets/gates-strict.sh:198-306`
 
 两种变异验证必须分开：
 
 - **生成器侧 Mutation Check**：故意给门禁函数注入故障，重跑 violating/compliant fixture。变异后仍能抓出故障，才证明断言有效。
-- **项目侧变异测试**：只有配置 `MUTATION_CMD` 后才执行；命令失败、无法解析阈值分数或分数低于阈值都会 fail。
+- **项目侧变异测试**：只有配置 `MUTATION_CMD` 后才执行。命令执行失败必 fail；配置 `MUTATION_MIN_SCORE>0` 后，解析不到分数或分数低于阈值才 fail；未配阈值时解析失败仅 warn，不阻断。`skills/swarm-yuan/assets/gates-strict.sh:277-306`
 
 fixture 双态测试只能证明违规样例被抓、合规样例通过和重构前后行为一致，不能证明所有真实缺陷都能被拦截。当前外部有效性文档仍记录真实历史 bug 语料待采集；既有试验中 fixture 曾漏掉 3 个 P0/P1 bug。因此课堂结论必须限定到已测项目、框架和用例，不得宣称普遍质量保障。`skills/swarm-yuan/verifier/v2/external-validity.md:1-13,47-52`
 
@@ -638,7 +643,8 @@ all_rc=$?
 GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" \
   bash "$SKILL_DIR/scripts/precheck.sh" --all-full
 full_rc=$?
-bash "$SKILL_DIR/scripts/precheck.sh" --compliance-suite
+GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" \
+  bash "$SKILL_DIR/scripts/precheck.sh" --compliance-suite
 compliance_rc=$?
 printf 'all_rc=%s all_full_rc=%s compliance_rc=%s\n' \
   "$all_rc" "$full_rc" "$compliance_rc"
@@ -817,7 +823,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 1. **生成包**：目标技能路径、profile、SKILL.md、manifest、activation report、strict 与激活输出。
 2. **认知包**：17 项特征卡承接说明、组件库清单、relations.jsonl、至少一个五要素完整配方、框架证据。
 3. **研发包**：一个真实需求的 spec、plan、feature 分支 diff、测试先行记录、review-record。
-4. **证据包**：precheck 原始输出与返回码、gate-runs、skip/warn 处置、构建和测试报告。
+4. **证据包**：precheck 原始输出与返回码、gate-runs、skip/warn 处置、构建和测试报告、独立验证器正反例结果（Mutation Check 另列为单独项）。
 5. **反馈包**：一次结构或内容变化后的知识 diff、局部重探查、清单复核和新指纹。
 6. **边界声明**：未运行项、外部环境限制、外部有效性边界、ACP 与离线安装中未覆盖的部分。
 7. **认知说明**：能说明三层投影与四论闭环在本项目分别对应哪些证据，例如驾驶舱看板、gate-runs、状态机与反馈更新各指向哪份记录。
@@ -830,7 +836,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 | 个性化研发能力 | 15 | 至少一条领域规则或潜在经验被代码证实，并转成配方、lessons 或规则，而非照抄通用模板 |
 | 本体化组织资产 | 20 | 组件清单、关系边集与任务配方能回答“有什么、谁依赖谁、怎样行动”，并通过路径、计数和边集核验 |
 | 最小单元质量与拼装流水线 | 20 | 一个复用单元有正常与失败路径测试，新增胶水最小，九节点和研发四阶段证据完整 |
-| 独立全面检查 | 20 | gate-runs、真实测试、非实现者 review-record 与一种变异/验证器证据各自独立成立，skip 已解释 |
+| 独立全面检查 | 20 | gate-runs、真实测试、非实现者 review-record 与独立验证器证据各自成立，skip 已解释；Mutation Check 作为有效性探针单独列示，不计入四类证据 |
 | 诚实边界 | 10 | 历史数字不冒充当前复测，L1-L4、ACP、R134、外部有效性限制说明准确 |
 
 建议 80 分及格，但“伪造证据、编造路径、删除检查求绿、把 draft 当 active”任一出现即判不合格。讲师应抽查原始命令和文件，不只听汇报。
@@ -844,20 +850,24 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 ```bash
 bash "$YUAN_SRC/install.sh"                            # 写：装到 ~/.agents/skills
 bash "$YUAN_HOME/scripts/self-check.sh" --check-only   # 只读：自检
-bash "$YUAN_HOME/scripts/generate-skill.sh" --profile standard "$SKILL_NAME" "$PROJECT_DIR"
-bash "$YUAN_HOME/scripts/relations-extract.sh" "$PROJECT_DIR" --skill-dir "$SKILL_DIR"
-bash "$YUAN_HOME/scripts/framework-evidence.sh" "$PROJECT_DIR"   # 只读：框架证据
-bash "$YUAN_HOME/scripts/generate-skill.sh" --inject-frameworks "$SKILL_DIR"
-bash "$YUAN_HOME/scripts/generate-skill.sh" --verify-completeness --strict "$SKILL_DIR"
-bash "$YUAN_HOME/scripts/generate-skill.sh" --mark-active "$SKILL_DIR"
-bash "$SKILL_DIR/scripts/relations-query.sh" "$SKILL_DIR" "$PROJECT_DIR" --file "relative/path/to/File.java"
-bash "$SKILL_DIR/scripts/precheck.sh" --list-gates     # 只读：实时门禁名单
-bash "$SKILL_DIR/scripts/precheck.sh" --all            # 写：核心 12
-GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" bash "$SKILL_DIR/scripts/precheck.sh" --all-full
-bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$PROJECT_DIR"
-bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"
-bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp
-bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --profile standard "$SKILL_NAME" "$PROJECT_DIR"  # 写：建骨架
+bash "$YUAN_HOME/scripts/relations-extract.sh" "$PROJECT_DIR" --skill-dir "$SKILL_DIR"       # 写：生成边集
+bash "$YUAN_HOME/scripts/framework-evidence.sh" "$PROJECT_DIR"                               # 只读：框架证据
+bash "$YUAN_HOME/scripts/generate-skill.sh" --inject-frameworks "$SKILL_DIR"                 # 写：注入门禁
+bash "$YUAN_HOME/scripts/generate-skill.sh" --verify-completeness --strict "$SKILL_DIR"      # 只读：占位核验
+bash "$YUAN_HOME/scripts/generate-skill.sh" --mark-active "$SKILL_DIR"                       # 写：draft→active
+bash "$SKILL_DIR/scripts/relations-query.sh" "$SKILL_DIR" "$PROJECT_DIR" --file "relative/path/to/File.java"  # 只读
+bash "$SKILL_DIR/scripts/state-machine.sh" status                                            # 只读：阶段与证据
+bash "$YUAN_HOME/scripts/inventory-verify.sh" "$PROJECT_DIR" --skill-dir "$SKILL_DIR" --tsv --path-check  # 只读
+bash "$SKILL_DIR/scripts/precheck.sh" --list-gates                                           # 只读：门禁名单
+bash "$SKILL_DIR/scripts/precheck.sh" --all                                                  # 写：核心 12
+GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" bash "$SKILL_DIR/scripts/precheck.sh" --all-full      # 写：32
+GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" bash "$SKILL_DIR/scripts/precheck.sh" --compliance-suite  # 写：19
+bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$PROJECT_DIR"  # 只读：预演
+bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"            # 写：升级工具链
+bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR"                            # 只读：变化报告
+bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp                # 写：落新基线
+bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"                                            # 写：合成练习
 ```
 
 ## 27. 术语表
@@ -881,6 +891,8 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 | strict | 此处有两种语境：严格核验模式；门禁按 fail 能力划分的一种强度，须结合上下文 |
 | spec-first | 可写源码区发生变更前，先形成并批准治理本次变更的 spec |
 | 门禁 | 对流程、词法、结构和配置执行的机器检查，不等于业务语义验证 |
+| precheck | 目标技能内的门禁执行器：按 core/arch/compliance/industry/patch 五层加载配置，按 `--all`/`--all-full`/`--compliance-suite` 三档执行 |
+| self-check | 生成器侧自检脚本；`--check-only` 只检测不安装，核对运行时、文档口径与预算 |
 | fixture | 构造的正反例样例，证明特定检查能力，不能替代真实项目外部有效性 |
 | Mutation Check | 故意改变门禁或代码，确认测试能抓到故障的验证方法 |
 | gate-runs | 显式开启后写入的逐门禁 JSONL 证据，`run` 是记录序号，不是套件批次号 |
@@ -892,8 +904,8 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 | 主题 | 当前事实源 |
 |---|---|
 | 版本与发布 | `RELEASE-MANIFEST.json:88-101`；`skills/swarm-yuan/CHANGELOG.md:3-11` |
-| 产品总原则与四论 | `docs/manuals/AI协作标准手册.md:225-228`；`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118` |
-| 三层投影 | `docs/DESIGN.md:17-19`（驾驶舱与 hermes agent 职责）、`:404-414`（产品交互层与协作运行层分箱）；本手册“三层投影与四论”一节 |
+| 产品总原则与四论 | `team/profiles/orchestrator/SOUL.md:3-4`；`runtime/hermes-records/design/hermes-complete-design-doc.md:3`；`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118` |
+| 三层投影 | `team/profiles/orchestrator/SOUL.md:3-4`（一句话＋三层原句）；`docs/DESIGN.md:17-19`、`:404-414` 仅作组件职责与分层图辅助 |
 | 标准与个性化研发能力 | `skills/swarm-yuan/references/standards-compliance.md`；`skills/swarm-yuan/references/security-spec.md`；`skills/swarm-yuan/references/domain-knowledge.md`；`skills/swarm-yuan/scripts/mine-habits.sh` |
 | 本体化组织资产与拼装 | `skills/swarm-yuan/assets/ontology/`；`skills/swarm-yuan/references/business-ontology-methodology.md:253-258`；`skills/swarm-yuan/README.md:75-80,217-245` |
 | 数字与预算 | `skills/swarm-yuan/assets/facts.conf` |
@@ -903,7 +915,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 | 生成落点、strict 与 SCHEMA_EPOCH | `skills/swarm-yuan/scripts/generator/subcommands.sh:280-519,798-885,978-1006` |
 | precheck 序列、返回码与 gate-runs | `skills/swarm-yuan/assets/precheck.sh:470-587,683-695,1255-1467,1879-2087` |
 | 状态机与 spec-first | `skills/swarm-yuan/assets/state-machine.sh`；`skills/swarm-yuan/assets/spec-first-lib.sh` |
-| 测试与变异 | `skills/swarm-yuan/assets/gates/quality/test.sh`；`skills/swarm-yuan/assets/gates-strict.sh:198-305` |
+| 测试与变异 | `skills/swarm-yuan/assets/gates/quality/test.sh`；`skills/swarm-yuan/assets/gates-strict.sh:198-306` |
 | trade-forge 主案例 | `skills/swarm-yuan/docs/research/R143-runtime-refresh.md:52-80` |
 | nest-forge 反馈案例 | `skills/swarm-yuan/docs/research/R118-nestjs-regression.md` |
 | 家级技能根决策 | `docs/superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md` |
