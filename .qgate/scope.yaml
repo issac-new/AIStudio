@@ -865,3 +865,10 @@ paths:
   - scripts/__tests__/deploy-agent-runtime.test.ts
   - AGENTS.md
   - .gitignore
+  - README.md
+  - docs/README.md
+  - docs/manuals/aistudio-design-document-guide.md
+  - docs/superpowers/specs/2026-11-12-doc-canon-single-source.md
+  - custom/__tests__/docs-ssot-guard.test.ts
+  - scripts/merge-invariants.mjs
+  - scripts/__tests__/merge-invariants.test.ts

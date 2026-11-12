@@ -17,47 +17,14 @@
 //   5) qgate health（默认 advisory；--require-qgate-health 才阻断）
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync, appendFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, appendFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
-const SPECS_DIR = 'docs/superpowers/specs'
-const APPENDIX = `${SPECS_DIR}/2026-10-21-swarmstudio-appendix-a-spec-index.md`
 const RECEIPTS = '.swarm-yuan/spec-receipts.jsonl'
 const LEDGER = '.swarm-yuan/merge-invariants.jsonl'
 const CLI = 'custom/qgate/dist/cli.js'
-
-function stem(file) {
-  return file.replace(/\.md$/, '')
-}
-
-export function compareDocsSets(specFiles, appendixRows, roleRows) {
-  const specs = new Set(specFiles.map(stem))
-  const a1 = appendixRows.map(stem)
-  const role = roleRows.map(stem)
-  const duplicates = [...new Set(a1.filter((x, i) => a1.indexOf(x) !== i))]
-  const overlap = a1.filter((x) => role.includes(x))
-  const union = new Set([...a1, ...role])
-  const missing = [...specs].filter((x) => !union.has(x))
-  const ghosts = [...union].filter((x) => !specs.has(x))
-  return { missing, ghosts, duplicates, overlap, specs: specs.size, a1: a1.length, role: role.length }
-}
-
-export function parseAppendix(text) {
-  const lines = text.split('\n')
-  const roleStart = lines.findIndex((l) => l.startsWith('### 角色/排除'))
-  const a1 = []
-  const role = []
-  const isRow = (l) => /^\|\s*2026-/.test(l)
-  const cell = (l) => l.split('|')[1]?.trim() ?? ''
-  for (let i = 0; i < lines.length; i += 1) {
-    if (!isRow(lines[i])) continue
-    if (roleStart >= 0 && i > roleStart) role.push(cell(lines[i]))
-    else a1.push(cell(lines[i]))
-  }
-  return { appendixRows: a1, roleRows: role }
-}
 
 function checkManifest() {
   const script = join(ROOT, 'scripts/verify-release-manifest.mjs')
@@ -68,12 +35,16 @@ function checkManifest() {
 }
 
 function checkDocs() {
+  // 2026-11-12 文档口径收敛：覆盖义务从「手维护的附录 A」迁到「生成的机械索引」。
+  // 附录 A 冻结为历史档案（只保留无幽灵/无重复的结构校验，见 docs-ssot-guard），
+  // 单一事实源=gen-doc-indexes 的 --check（链接集合＝specs 直接根集合＋头计数一致）。
   try {
-    const specFiles = readdirSync(join(ROOT, SPECS_DIR)).filter((f) => f.endsWith('.md'))
-    const { appendixRows, roleRows } = parseAppendix(readFileSync(join(ROOT, APPENDIX), 'utf8'))
-    const r = compareDocsSets(specFiles, appendixRows, roleRows)
-    const ok = r.missing.length === 0 && r.ghosts.length === 0 && r.duplicates.length === 0 && r.overlap.length === 0
-    return { id: 'docs-index', status: ok ? 'pass' : 'fail', detail: ok ? `${r.specs} specs covered` : JSON.stringify(r) }
+    const script = join(ROOT, 'scripts/maintenance/gen-doc-indexes.mjs')
+    if (!existsSync(script)) return { id: 'docs-index', status: 'fail', detail: 'gen-doc-indexes.mjs missing' }
+    const res = spawnSync(process.execPath, [script, '--check'], { cwd: ROOT, encoding: 'utf8', timeout: 120_000 })
+    const out = `${res.stdout ?? ''}${res.stderr ?? ''}`.trim()
+    const ok = res.status === 0
+    return { id: 'docs-index', status: ok ? 'pass' : 'fail', detail: ok ? (out.split('\n')[0] || 'design-index covered') : out.slice(-800) }
   } catch (e) {
     return { id: 'docs-index', status: 'fail', detail: e.message }
   }

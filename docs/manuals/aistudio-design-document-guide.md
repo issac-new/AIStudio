@@ -19,7 +19,7 @@
 | [AIStudio 终态设计文档](../DESIGN.md) | 唯一整合设计正本（固定文件名 `docs/DESIGN.md`） | 讲理念、产品、架构、核心机制和工程边界；不把它当作逐轮变更史或测试总数账本 |
 | [全流程推演方案](../superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md) | 推演步骤、质量门、责任和运行判据的专题事实源 | 讲 26 步推演及其实施细节时使用；总体协作的 15 个编号消息不在这里展开 |
 | [设计事实与容量基线](../superpowers/specs/2026-10-23-swarmstudio-design-ledger.md) | 数字附录，不是独立正本 | 查稳定参数与推演参考编制；版本表以核实日为准，当前值仍回到版本载体核对 |
-| [附录 A](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) | specs 根目录的逐份人工摘要与角色分类 | 查单份文档主旨；计数随批次滚动，不能替代文件系统盘点 |
+| [附录 A](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) | specs 根目录逐份主旨摘要与角色分类的**历史档案**（2026-11-12 冻结） | 查单份文档主旨与当时结论；不再承担新增登记，现行覆盖看机械索引 |
 | [附录 B](../superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md) | 55 份实施计划与 32 份研究／复盘的历史索引 | 查决策来路和事故背景，不把历史“已实施”直接当作当前仍有效 |
 | [附录 C](../superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md) | swarm-yuan 方法论、早期决策与研究索引 | 查能力层语料；当前数字改读 `skills/swarm-yuan/assets/facts.conf`，决策全文读技能根的设计演进正本 |
 | [附录 D](../superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md) | 历史根因、证伪假设、否决项和工作规则 | 用于风险讲解与复盘；否决项保留当时适用范围，不扩成跨领域永久禁令 |
@@ -247,7 +247,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 多数差异来自日期和分母，不应直接判为错误：
 
-- 当前工作树根目录实际 631 份，附录 A 的 A.1 当前收 621 份专题设计／规格／决策，另有 9 份导航、正本旧址指针、数字总账、A-D、合并地图与退役拼接指针，合计同为 613；`archive/` 2 份另计。月度分组以机械索引生成结果为准，2026-11 当前为 177 份。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-4`；`docs/manuals/aistudio-design-document-index.md:5-8`
+- 2026-11-12 起不再有两个手维护的分母：附录 A 冻结为历史档案（保留既有 636 行摘要），specs 根目录的覆盖与计数由 `scripts/maintenance/gen-doc-indexes.mjs` 生成并校验（`--check` 失败即视为索引漂移）。机械索引当前读数直接看 `docs/manuals/aistudio-design-document-index.md` 头部生成行，不在此手抄。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md:1-3`；`scripts/maintenance/gen-doc-indexes.mjs:1-20`
 - 附录 B 的 55＋32 是 2026-10-23 历史计划与研究索引，不是 specs 根目录总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md:1-6,66-68`
 - 附录 C.1 收 57 份方法论，C.2 的 51 是补入前的历史快照；当前数字应读 `facts.conf`，不能拿 51 当现行总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md:70-72,166-180`
 - 附录 D.1 的 43 是运行与方案复盘根因条数，文件头的 21 是推演轮次数，两者不是同一分母。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md:1-5`
@@ -263,6 +263,6 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 1. **先判角色再改文档。** 稳定结构改整合正本，单项变更写带日期 spec，历史档案不改写来路。新 spec 必须包含“变更、决策记录、验证、设计文档影响”四段；触及正本或数字总账时声明 `DESIGN_SYNC: touched` 并同批兑现。
 2. **当前行为先回读实现。** 状态、权限、默认开关和路由必须给当前 `file:line`，旧 spec 只用于解释设计意图。发现正本滞后时，不用新文档悄悄覆盖，应在对应 spec 记录差异并修订正本。
 3. **版本先看载体。** 更新版本时先改版本载体，再核对发布清单、发布说明与总账；基线以 VENDOR 表格为准，不能复制旧摘要。
-4. **文件覆盖按文件系统验收。** 新增、删除或移动 spec 后，同时更新附录 A 的人工摘要和机械索引的链接与计数。机械索引只证明“收进了”，不证明“仍现行”。
+4. **文件覆盖看机械索引。** 新增、删除或移动 spec 后只需重生成机械索引（`node scripts/maintenance/gen-doc-indexes.mjs --write`，`--check` 在合并门与 CI 校验）；附录 A 已冻结，不再追加条目。机械索引只证明“收进了”，不证明“仍现行”。
 5. **讲师预演区分模拟与真人。** HumanGate 代批必须说明 delegated／director-proxy，严格模式要显式配置；没有第二名会签人、真实 ACP、多机或桌面环境时，对应课程保持未验证。
 6. **每次发布复核旧口径。** 重点检查本导读第 4 章列出的状态表、日常／SIM 入口、严格模式、版本摘要、发布资产与附录分母，避免新事实与旧注记同时自称当前。

@@ -102,7 +102,7 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 
 第六条命令行与自动化契约要求 CLI 退出码、错误类别与结果信封同源，stdout 只出结果，见 [docs/DESIGN.md:711-720](docs/DESIGN.md#L711-L720)。
 
-总体设计事实的整合正本是[终态设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)。文档按理念、产品、架构、交付、治理、实施和验证分层组织，组件内部细节以专题文档与 ADR 为证据。
+总体设计事实的整合正本是[终态设计文档](docs/DESIGN.md)。文档按理念、产品、架构、交付、治理、实施和验证分层组织，组件内部细节以专题文档与 ADR 为证据。
 
 ## 实施：vendor 基线 + 注入
 
@@ -111,7 +111,7 @@ AIStudio 不是单一应用，而是五个组件构成的分布式交付体系�
 - A 类接入：`custom/` 纯新增组件，构建期 alias 重定向加运行时注册。
 - B 类 patch：`patches/` 按编号序列 `git apply`，可反向还原。vendor 树注入后的脏态是预期工作态，pre-commit 钩子会阻止误提交。
 - 上游升级走净树重放：外置升级源树 `git pull` → `vendor/` 整树替换 → `npm run inject` 重放。0.7.38 到 0.7.39 升级时补丁全量重放通过，二次开发不陷分叉泥潭。
-- 仓内其余组件：`simharness/`（全流程推演 harness，subtree 并入）、`skills/swarm-yuan/`（技能本体源码）、`docs/superpowers/`（整合正本、专题规格与决策档案）。
+- 仓内其余组件：`simharness/`（全流程推演 harness，subtree 并入）、`skills/swarm-yuan/`（技能本体源码）、`docs/superpowers/`（专题规格与决策档案；整合正本在 `docs/DESIGN.md`）。
 
 | 基线 | 用途 | 版本 |
 |---|---|---|
@@ -172,7 +172,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 - [run28 案例（交互培训专题）](docs/manuals/aistudio-interactive-training.html#scene=project-run28-case)：当前最新完整轮，覆盖含代偿 6/6 与净额 5/6、自主派发 14 条、黄金集 14 例误杀、报告呈现 11/13 与后续帧核验 13/14；[完整 Markdown](docs/manuals/aistudio-run28-simulation-case.md)为可选来源。
 - [run25 全流程推演案例（历史）](docs/manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的历史档案，保留六闸、UAT、GAP、事故和未做项的判读价值，不代表当前最新轮。
 - [14 幕交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：按“规则与技能→执行与验证→治理与复盘→案例综合验收”组织 run28 复核工作包；每幕有前序交接物、run28 证据和下一步，项目与研发各 3 幕；`npm run training` 一键启动，以六套独立拓扑展示跨团队协作与角色交付，面向 PC 横屏使用。
-- [AIStudio 终态设计文档](docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md)：理念、产品、设计、实施与验证的唯一正本。
+- [AIStudio 终态设计文档](docs/DESIGN.md)：理念、产品、设计、实施与验证的唯一正本。
 - [Hermes Agent 集群设计文档](team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md)：运行面的组织、机制、治理与决策依据。
 - [Hermes Agent Architecture](vendor/hermes-agent/website/docs/developer-guide/architecture.md)：上游 agent 引擎与 gateway 内部架构。
 - [设计文档导航](docs/superpowers/specs/2026-10-21-ncwk-unified-product-design.md)：正本、附件和历史档案入口。
@@ -180,7 +180,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 - [设计事实与容量基线](docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)：稳定参数、参考部署与版本快照。
 - [发布清单 RELEASE-MANIFEST.json](RELEASE-MANIFEST.json)：定义四个独立模块的版本、产物与安装通道。`npm run release:check` 执行对账。
 - 每版远端只上传整体源码包与 yuan everything 离线包两件及配套校验件。`npm run release:packages` 默认只打整体包，`--all-modules` 为显式 4+1 全量逃生通道；vendor 源码随包，registry 依赖在线安装，SHA256SUMS 随目录提供。
-- 历史 spec 索引见[附录 A](docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)。
+- 全量 spec 索引见[设计文档全量索引](docs/manuals/aistudio-design-document-index.md)（机械生成）；[附录 A](docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) 自 2026-11-12 冻结为历史档案。
 
 ## 已知注意点
 
