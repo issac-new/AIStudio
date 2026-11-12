@@ -362,3 +362,4 @@
 {"at":"2026-11-12T08:08:58Z","spec":"docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md","receipt":"7e046bac07ca3277c8edfee2360b23d1d115a2b4","commit":"34e96eb77"}
 {"at":"2026-11-12T09:47:43Z","spec":"docs/superpowers/specs/2026-11-12-lock-root-deps.md","receipt":"1e950de3819a6c3fe67420228792db909367360d","commit":"d064043fa"}
 {"at":"2026-11-12T09:51:32Z","spec":"docs/superpowers/specs/2026-11-12-domain-retirement-execution.md","receipt":"3f8cb3e629a84f9d39c4882789f0415681827a73","commit":"d064043fa"}
+{"at":"2026-11-12T10:07:18Z","spec":"docs/superpowers/specs/2026-11-12-ci-platform-gaps.md","receipt":"99640ec873167ed908696db80bc402c3ed3e2841","commit":"d064043fa"}

@@ -4,14 +4,19 @@
 // （PowerShell/xdotool 不在 mac 上）——本守门收窄的是：①三平台构造不炸；
 // ②命令派发形状正确（mock runner 断言参数，零 shell 拼接面）；③非法参数/
 // 工具缺失的显式错误路径。
-import { describe, it, expect } from 'vitest'
+//
+// 路径解析复用 custom/test/upstream-root 单一事实源（env → 仓内 vendor/zcode →
+// 旧兄弟 upstream/zcode；CI 平台差异清偿 2026-11-12）：此前硬编码兄弟
+// ../upstream/zcode 在 CI 单检出上不存在。注入态缺席（未跑 ensure-injected 的
+// 裸树）时显式 skip——后端文件由 zcode-patches 003 注入生成，裸树本无此面。
+import { existsSync } from 'fs'
 import { pathToFileURL } from 'url'
-import { resolve } from 'path'
+import { describe, it, expect } from 'vitest'
+import { upstreamPath } from '../../../test/upstream-root'
 
-const upstreamRoot = process.env.OVERLAY_UPSTREAM_ROOT?.trim()
-  ? resolve(process.env.OVERLAY_UPSTREAM_ROOT.trim(), 'zcode')
-  : resolve(__dirname, '../../../../../upstream/zcode')
-const backendUrl = pathToFileURL(resolve(upstreamRoot, 'packages/zcode-cua/node-backend.js')).href
+const backendPath = upstreamPath('zcode', 'packages', 'zcode-cua', 'node-backend.js')
+const backendUrl = pathToFileURL(backendPath).href
+const maybeIt = existsSync(backendPath) ? it : it.skip
 
 async function loadBackend() {
   return await import(backendUrl) as typeof import('cua-node-backend-shim')
@@ -28,7 +33,7 @@ interface CuaNodeBackendModule {
 }
 
 describe('CUA node-backend 平台分支（win/linux mac 可测面）', () => {
-  it('三平台构造不炸；方法词表 20 项含 set_value', async () => {
+  maybeIt('三平台构造不炸；方法词表 20 项含 set_value', async () => {
     const mod = await loadBackend() as unknown as CuaNodeBackendModule
     for (const platform of ['darwin', 'win32', 'linux']) {
       expect(typeof mod.createNodeAutomationBackend({ platform }).health).toBe('function')
@@ -37,7 +42,7 @@ describe('CUA node-backend 平台分支（win/linux mac 可测面）', () => {
     expect(mod.NODE_BACKEND_METHODS.length).toBeGreaterThanOrEqual(20)
   })
 
-  it('win32：鼠标/键盘经 powershell.exe 固定参数派发（SendInput/SetCursorPos 形状）', async () => {
+  maybeIt('win32：鼠标/键盘经 powershell.exe 固定参数派发（SendInput/SetCursorPos 形状）', async () => {
     const calls: Array<{ cmd: string; args: string[] }> = []
     const mod = await loadBackend() as unknown as CuaNodeBackendModule
     const backend = mod.createNodeAutomationBackend({
@@ -62,7 +67,7 @@ describe('CUA node-backend 平台分支（win/linux mac 可测面）', () => {
     expect(calls.find((c) => c.args.join(' ').includes('SendInput'))).toBeTruthy()
   })
 
-  it('linux：工具探测经 sh command -v；xdotool 可用时输入走 xdotool（Y11 无工具显式错）', async () => {
+  maybeIt('linux：工具探测经 sh command -v；xdotool 可用时输入走 xdotool（Y11 无工具显式错）', async () => {
     const mod = await loadBackend() as unknown as CuaNodeBackendModule
     const available = new Set(['xdotool', 'maim'])
     const backend = mod.createNodeAutomationBackend({
@@ -90,7 +95,7 @@ describe('CUA node-backend 平台分支（win/linux mac 可测面）', () => {
     expect(bareStatus.note).toContain('xdotool')
   })
 
-  it('win32 linux 截屏：PowerShell CopyFromScreen / maim 派发形状（mock 命中后走文件读取分支报错路径可控）', async () => {
+  maybeIt('win32 linux 截屏：PowerShell CopyFromScreen / maim 派发形状（mock 命中后走文件读取分支报错路径可控）', async () => {
     const mod = await loadBackend() as unknown as CuaNodeBackendModule
     const winCalls: Array<{ cmd: string; args: string[] }> = []
     const win = mod.createNodeAutomationBackend({
@@ -114,7 +119,7 @@ describe('CUA node-backend 平台分支（win/linux mac 可测面）', () => {
     expect(linCalls.find((c) => c.cmd === 'maim')).toBeTruthy()
   })
 
-  it('非法参数显式拒（坐标越界/空文本/未知平台）——不静默成功', async () => {
+  maybeIt('非法参数显式拒（坐标越界/空文本/未知平台）——不静默成功', async () => {
     const mod = await loadBackend() as unknown as CuaNodeBackendModule
     const backend = mod.createNodeAutomationBackend({
       platform: 'win32',

@@ -1,6 +1,17 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterAll, afterEach } from 'vitest'
 import { join } from 'path'
 import { runWindowFromSessionId } from '../incident-sources'
+
+// TZ 钉死（CI 平台差异清偿 2026-11-12）：48h 回落窗起点取「本地时区当天 00:00」，
+// 产品口径＝run id 日期为 +0800 运维日期（下方断言注释本就锚定 +0800）。
+// CI runner 是 UTC，不钉死则本地零点差 8h（1791993600 vs 1792022400）。
+// 期望值不动——钉的是实现既定语义，不是为 CI 改产品行为。
+const originalTz = process.env.TZ
+process.env.TZ = 'Asia/Shanghai'
+afterAll(() => {
+  if (originalTz === undefined) delete process.env.TZ
+  else process.env.TZ = originalTz
+})
 
 // A7（2026-10-16 run20 复盘）：事故报告 17 要素聚合窗口跨天修复守门。
 // 修的四件：①state.env 真窗优先（run_started_at→now+2h 缓冲）②无 state 回落 48h
