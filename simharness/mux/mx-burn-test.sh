@@ -151,7 +151,9 @@ ST=pass; REASONS="attempts=${ATTEMPT};"
 # "0\n0" 使 JSON 破损（burn-20261103-215414 实锤）。空值兜底改后置展开。
 FAIL_LINES="$(grep -cE '^\[mux FAIL |\[ERR\]' "$LOG" 2>/dev/null)"; FAIL_LINES="${FAIL_LINES:-0}"
 [ "${FAIL_LINES:-0}" -gt 0 ] && { ST=fail; REASONS="${REASONS}fail_lines=$FAIL_LINES;"; }
-DONE_KEYS="$(grep -cE '_done=1|_done=[0-9]{10}' "$RUN_DIR/state.env" 2>/dev/null)"; DONE_KEYS="${DONE_KEYS:-0}"
+# A6（run29 复盘）：行首锚定＋排除 capture_ok_* 副键——旧口径把采集副键计入
+# （run29 烧机收据 done 键 21，真实主步 13）。口径正本=mx-scenario-lib 的 mx_done_key_count。
+DONE_KEYS="$(grep -E '^[a-z0-9_]+_done=(1|[0-9]{10})$' "$RUN_DIR/state.env" 2>/dev/null | grep -vc '^capture_ok_' || true)"; DONE_KEYS="${DONE_KEYS:-0}"
 # 目标步达成判据：目标步自身的 done 键在位（archgate 的键= arch_pass 或 g2_arch_pass；其余用 <step>_done）
 case "$UNTIL" in
   archgate) GOAL_OK=$(grep -cE '^(g2_arch_pass|arch_pass)=' "$RUN_DIR/state.env" 2>/dev/null); GOAL_OK="${GOAL_OK:-0}" ;;

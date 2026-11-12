@@ -2978,9 +2978,12 @@ run28（20261107-v8-run28，14h29m 六闸全过，report_done=1794090918）结�
 
 run29（20261111-v8-run29，27h20m 六闸全过，审计零 FAIL/46 WARN）值守与审计环收敛过程暴露的工装缺口，根治批 main 随批：
 
-1. **催办桶真做判据**：wait_alive_truth 系（单发 cur_work＋multi 分桶 _w）的工作判据用「真做」（tool completed/API call#≥2）——单轮嘴炮回合不续命催办桶；稀疏滴流（每小时一条嘴炮）不再永久压制滞锚催办（xiao 78min/bella 2.3h 静默值守人工 DM 的自动化替代）。
+1. **滞锚提醒的真做判据**：wait_alive_truth 系（单发 cur_work＋multi 分桶 _w）的工作判据用「真做」（tool completed/API call#≥2）——单轮嘴炮回合不续命提醒计时；稀疏滴流（每小时一条嘴炮）不再永久压制滞锚提醒（xiao 78min/bella 2.3h 静默值守人工私信的自动化替代）。
 2. **降级消息保留交付锚**：director 移交超时/SEND-FAILED 的降级「自主组织」消息追加原任务书要点（800 字截断）——交付物锚点与验收行不再被通用文整体替换丢失。
 3. **UAT 判词范围形态**：治理判读正本（lifecycle/verdict.ts）接受 AC-N~M 区间归属与集合判词（全过/全部通过/全不通过）——集合式声明「AC-1~7 逐条判定，七条全过」不再全判「未见」。
 4. **审计对齐 capture-plan 四态**：`step|none|` 声明步（无界面承载，真值=state/API/消息流）不再按「载荷任一位在位」断言打回；repo 型步维持断言。
 5. **交付物真值取代豁免**：/archive/ 归档件不计跨轮冒充；同目录存在本轮声明件=旧档被取代不计罪（无取代者维持硬判）。
-6. **热部署纪律**（run29 实操沉淀）：product-dist 供给在 mx-setup 不在 mx-up；mx-up「studio 已在跑跳过」不重载新 bundle——热换链=build:full→mx-setup→kill 8802→mx-up；mx-up etime 前导零八进制陷阱（10# 修复）曾致供给段静默炸断。
+6. **热部署纪律**（run29 实操记录）：product-dist 供给在 mx-setup 不在 mx-up；mx-up「studio 已在跑跳过」不重载新 bundle——热换链=build:full→mx-setup→kill 8802→mx-up；mx-up etime 前导零八进制陷阱（10# 修复）曾致供给段静默炸断。
+7. **审计收敛纪律（一次处置完再复扫）**：审计 FAIL 后先读 `evidence/report-audit-findings.json` 全量清单（驱动同步生成 `evidence/audit-fix-checklist.md` 分族清单），把当前全部缺口按族一次处置完（补登记/真值更正/降级），再触发复扫；禁止「修一类→复扫→看下一类」的逐族推进。run29 实测 24 轮 FAIL／4.18 小时，其中约 6 轮源于凭证族名写错（审计只认 `r18-collection-missing`/`frame-capture-failed`）、约 10 轮卡在推送被拒（中央裸仓内嵌 worktree 占持 main）。验收口径：下一轮审计 FAIL 轮次 ≤3。
+8. **director 派发模式处置（折中）**：默认 preset 派发；director 仅用于标定轮（显式设 `MX_DISPATCH_MODE=director`）。开启时必带两条：①派发正文含「无派发容量请回 `DIRECTOR-DEGRADED reason=<原因>`」的声明式降级通道（双信号等待，声明即降级不空等）；②`evidence/director-metrics.jsonl` 逐次留档（outcome=success/degraded、reason=ok/declared/timeout/send-failed、耗时）。run29 实测 51 次派发仅 5 次走通（9.8%），无指标时只能事后翻台账。
+9. **确定性失败二段式**：监督器判「连续 N 次同指纹失败」时，第 1 次自动重挂（60 秒退避＋计数重置＋`evidence/alerts.jsonl` 告警＋issues 记 `driver-deterministic-stage1`），第 2 次才停止自愈（`driver-deterministic-fail`）。run29 实测直接退出 5 次，每次停在「等人工重挂」——无人值守即永久停滞。

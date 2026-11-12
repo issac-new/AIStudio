@@ -800,3 +800,12 @@ paths:
   # 2026-11-12 run29 全面复盘（docs/run29-full-retrospective）
   - docs/superpowers/specs/2026-11-12-run29-full-retrospective.md
   - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+
+  # 2026-11-12 run30 行动项落地批（fix/run30-actions；A1/A2/A3/A4/A6＋台账）
+  - docs/superpowers/specs/2026-11-12-run30-actions.md
+  - docs/superpowers/specs/2026-11-12-run30-prelaunch-actions.md
+  - simharness/mux/mx-scenario-lib.sh
+  - simharness/mux/run-driver-supervisor.sh
+  - simharness/mux/mx-burn-test.sh
+  - simharness/aipay-scenario.sh
+  - simharness/tests/run30-actions.test.sh

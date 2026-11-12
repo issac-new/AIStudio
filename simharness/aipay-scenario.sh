@@ -2607,7 +2607,10 @@ fi
 
 # ══ 步骤 22：uat（业务验收，V3 新增）══════════════════
 # bella（需求提出方）按 G1 freeze 的 AC-1..N 逐条回验——G1 冻结标准的闭环回验。
-if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
+# A4（run29 复盘）：uat_conditional 与 uat_done 同为终态——旧守卫只认 uat_done，
+# 条件验收后每次驱动重入都重跑本步（run29 实测 25 次重执行：uat-conditional/
+# uat-cond-proxy/uat-push 三类记单共 66 行，占全轮 issues 30%，并重复提交验收书）。
+if step_reached uat && [[ -z "$(sget uat_done)" ]] && [[ -z "$(sget uat_conditional)" ]]; then
   gate_blocked release_done uat
   repo_pull
   AC_LIST=$(sed -n '/^## .*验收标准/,/^## /p' "$DIRECTOR_CLONE/${RFD_DOC}" | grep -oE "AC-[0-9]+" | sort -u | tr '\n' ' ')
@@ -2721,13 +2724,13 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
         echo "- 结论：判词汇总（${UAT_VERDICTS}）——**不构成无条件验收**；有条件/不通过项的放行权归需求提出方 bella（人），条件闭环后另行验收。"
       fi
     } > "$ACC"
-    [[ $UAT_ALL_PASS == 1 ]] || echo "ISSUE|uat-conditional|fanfan-agent|UAT 非全过（${UAT_VERDICTS}），验收有条件，放行权归 bella" >> "$EVID_DIR/issues.log"
+    [[ $UAT_ALL_PASS == 1 ]] || issue_once uat-conditional fanfan-agent "UAT 非全过（${UAT_VERDICTS}），验收有条件，放行权归 bella"
     # 落 main 走 repo_commit_main（P4）：在 integration 上 commit 再 push origin main
     # 是空推/被拒，验收书进不了 main 且 set -e 暴毙、uat_done 落不了键。
     if repo_commit_main "docs/acceptance/${RFD_ID}-acceptance.md" "bella (UAT)" "bella@aipaydev.local" "docs(acceptance): ${RFD_ID} 业务验收（${UAT_VERDICTS}）"; then
       note "[UAT] 验收文档已入仓：docs/acceptance/${RFD_ID}-acceptance.md → origin/main"
     else
-      echo "ISSUE|uat-push|director|验收文档推送 origin/main 失败（留存 ${ACC}）" >> "$EVID_DIR/issues.log"
+      issue_once uat-push director "验收文档推送 origin/main 失败（留存 ${ACC}）"
       note "[观察] 验收文档推送失败（留存本地，记问题单）"
     fi
     # UAT 落键收口（2026-10-19 闸门收口 #1）：非全过不再静默等价全过。原实现非全过仍
@@ -2765,7 +2768,7 @@ if step_reached uat && [[ -z "$(sget uat_done)" ]]; then
           echo "ISSUE|uat-cond-timeout|${RFD_ID}|strict 姿态 ${MX_UAT_COND_WAIT:-900}s 内无真实认可事件——条件 AC 判定保持 pending（不代认可）" >> "$EVID_DIR/issues.log"
         fi
       else
-        echo "ISSUE|uat-cond-proxy|${RFD_ID}|standard 姿态由驱动代发认可事件（director-proxy）——净额口径扣除；条件 AC 判定保持 pending（未经真人认可）" >> "$EVID_DIR/issues.log"
+        issue_once uat-cond-proxy "${RFD_ID}" "standard 姿态由驱动代发认可事件（director-proxy）——净额口径扣除；条件 AC 判定保持 pending（未经真人认可）"
         echo "uat:${RFD_ID} UAT-COND-APPROVED director-proxy $(date +%s)" >> "${APPROVED_LOG:-$EVID_DIR/approved.events}"
       fi
       note "[UAT] ${RFD_ID} 验收有条件（${UAT_VERDICTS}）——放行权归 bella，落 uat_conditional（uat_done 不落）"
@@ -3242,6 +3245,39 @@ note "===== 下半场完成（到 ${START_STEP} 起全部门禁执行完）=====
 # 逐步汇编执行状态/问题单/治理报告/截图证据（evidence/screenshots/*.png）成端到端
 # 演示报告；驾驶舱/协作沟通/IDE 工作台的走查截图由内置浏览器工具（playwright/
 # chrome dev tools / computer use）在流程中捕获落档，本步自动嵌入。
+# A3（run29 复盘）：审计 FAIL 后生成「分族处置清单」——run29 实测 24 轮 FAIL／4.18h，
+# 根因是逐族处置（修一类→复扫→看下一类）。清单把侧柜全量 fails 按族聚合，一次性列出
+# 全部待处置项；纪律=全部处置完再一次复扫（方案 §5.13 第 7 条）。
+_mx_audit_checklist() {
+  local _f="$EVID_DIR/report-audit-findings.json" _out="$EVID_DIR/audit-fix-checklist.md"
+  [[ -n "${EVID_DIR:-}" && -f "$_f" ]] || return 0
+  python3 - "$_f" "$_out" <<'PYAUD' 2>/dev/null || true
+import json, sys, collections, re
+src, out = sys.argv[1], sys.argv[2]
+try:
+    d = json.load(open(src, encoding='utf-8'))
+except Exception:
+    sys.exit(0)
+fails = d.get('fails') or []
+warns = d.get('warns') or []
+def fam(s):
+    s = str(s)
+    m = re.match(r'^(R\d+[a-z]?|查\d+[a-z]?)', s)
+    if m: return m.group(1)
+    for k in ('载荷全缺', 'skill', 'delivery', '帧', '往轮产物', '死锚', '逐步问题单'):
+        if k in s: return k
+    return '其他'
+c = collections.Counter(fam(x) for x in fails)
+lines = ['# 审计分族处置清单（全部处置完再复扫）', '', f'FAIL {len(fails)} 条，WARN {len(warns)} 条。', '', '## 分族计数', '']
+for k, v in c.most_common():
+    lines.append(f'- {k}: {v}')
+lines += ['', '## 全量 FAIL（逐条处置，处置完再一次复扫）', '']
+lines += [f'{i+1}. {str(x)[:400]}' for i, x in enumerate(fails)]
+open(out, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+PYAUD
+  note "[报告] 审计分族处置清单：${_out}（全部处置完再复扫）"
+}
+
 if step_reached report && [[ -z "$(sget report_done)" ]]; then
   gov_report >/dev/null
   # 台账 UTF-8 净化（run16 复盘，fix/run16-report-truth）：issues.log/state.env 混入坏
@@ -3422,8 +3458,10 @@ PYD
   # 收官判据②（§5.7，2026-10-07 修订接线）：mx-report-audit 硬跑熔断——FAIL 即不得落
   # report_done、报告不得持久化交付（15 项 FAIL 下报告曾被产出交付，判据②
   # 当时未接线执行；已有 ISSUE+DISP 的缺口按 §5.6 采集纪律⑩ 降级不计 FAIL）。
-  python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
-    || fail "报告审计 FAIL（§5.7 收官判据②——缺口记录+DISP 降级后重试）"
+  if ! python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"}; then
+    _mx_audit_checklist
+    fail "报告审计 FAIL（§5.7 收官判据②——缺口记录+DISP 降级后重试；分族清单 evidence/audit-fix-checklist.md）"
+  fi
   # 双正本制（§5.4）：final-report.html（人读正本）缺一即违例——run10 收官时未产出实锤；
   # PART1 未注册时合并器会给出注册指引（按轮人工正本，禁旧轮顶包）。
   # run26 复盘：PART1 未注册在合并步才报错＝白等 58 分钟（审计环先转完）。人工注册仍优先；

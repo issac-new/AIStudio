@@ -76,6 +76,15 @@ sset_once() { grep -q "^$1=" "$STATE" 2>/dev/null && return 0; sset "$1" "$2"; }
 # 幂等记录：重启循环每圈重放记录点，qgate-evidence ×11/uat-precheck ×5
 # 刷单污染台账。同类型+主体已有 ISSUE 行即跳过（处置语义：重复发生记次数无收益，事故账
 # 由 scenario.log 时间线承载）。冲突处理：必要时先显式删旧行再记新单。
+# A6（run29 复盘）：状态键判读行首锚定——主步 done 键计数单一实现。
+# 背景：裸子串 grep 会把 capture_ok_<step>_done=1 一并计入（run29 烧机收据显示
+# done 键 21、真实主步 13，即此口径污染）；状态键读取一律「行首锚定 + 明确排除副键」。
+mx_done_key_count() { # <state.env 路径> → 主步 done 键数（排除 capture_ok_*）
+  local f="${1:-${STATE:-}}"
+  [[ -n "$f" && -f "$f" ]] || { printf '0\n'; return 0; }
+  grep -E '^[a-z0-9_]+_done=(1|[0-9]{10})$' "$f" 2>/dev/null | grep -vc '^capture_ok_' || true
+}
+
 issue_once() { # issue_once <type> <subject> <desc>
   local _f="$EVID_DIR/issues.log"
   mkdir -p "$EVID_DIR"
@@ -2359,6 +2368,16 @@ dispatch_task() { # <humanUser> <requirement> <ac-line> <refs> <discipline> <men
   dispatch_in_room "$_who" "$_msg" "$_mentions"
 }
 
+# A1（run29 复盘）：director 派发指标留档——一行一次尝试（success/degraded + 原因 + 耗时）。
+# run29 实测 51 次派发仅 5 次走通（9.8%），但当时无结构化指标，只能事后翻 self-dispatch；
+# 指标独立成文件便于 run30 报告直接引用「派发构成」行。
+_mx_director_metric() { # <outcome:success|degraded> <reason> <elapsed_s>
+  [[ -n "${EVID_DIR:-}" && -d "${EVID_DIR:-}" ]] || return 0
+  printf '{"ts":"%s","run":"%s","outcome":"%s","reason":"%s","elapsed_s":%s}\n' \
+    "$(date -u +%FT%TZ)" "${RUN_ID:-?}" "$1" "$2" "${3:-0}" \
+    >> "$EVID_DIR/director-metrics.jsonl" 2>/dev/null || true
+}
+
 dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   local m uid rid u lp members
   # ── O7 派发权移交总监（PR-7，spec 2026-11-06-director-dispatch）──
@@ -2367,18 +2386,24 @@ dispatch_in_room() { # <humanUser> <text> <mention-mxid-csv> → event_id
   # preset——O7 退役面）。缺省未设=零新行为。活体验证=run28 首跑。
   local _d_degraded=0
   if [[ "${MX_DISPATCH_MODE:-}" = "director" ]]; then
-    local _d_lead _d_tok _d_body _d_marker _d_dir
+    local _d_lead _d_tok _d_body _d_marker _d_dir _d_t0 _d_elapsed _d_outcome _d_reason
     _d_lead="$(agent_mxid wei)"                       # 团队负责人A（displayname 职能表）
     _d_tok="$(load_token "$1")"
+    # A1（run29 复盘）：无容量即时声明通道——总监若排不出任务书，可回一行
+    # DIRECTOR-DEGRADED 立即结束等待；run29 实测 46/51 次派发在 480s 窗口耗尽后降级，
+    # 等待本身是纯损耗（且降级消息丢交付锚）。声明式降级把这段等待压到一次往返。
     _d_body="【需求移交】${RFD_ID:+（${RFD_ID}）}以下是需求草稿（供参考，可调整拆分与指派）：
 $2
 
-@${_d_lead#@} 请由团队负责人牵头：审阅需求、拆分任务、指派执行者并向被指派者发出任务书（须带派发标识与验收口径）。本消息不预设分工与人日。"
+@${_d_lead#@} 请由团队负责人牵头：审阅需求、拆分任务、指派执行者并向被指派者发出任务书（须带派发标识与验收口径）。本消息不预设分工与人日。
+若当前无派发容量或无法拆分，请直接回一行「DIRECTOR-DEGRADED reason=<原因>」——我方立即走降级通道，不再等待，不追责。"
     rid="$(sget room_analysis)"
+    _d_t0=$(date +%s)
     _d_marker=$(mx_send "$_d_tok" "$rid" "$_d_body" "$_d_lead" 2>/dev/null) || _d_marker="SEND-FAILED"
     if [[ "$_d_marker" != "SEND-FAILED" ]]; then
-      _d_dir=$(mx_wait_sender "$_d_tok" "$rid" "$_d_lead" "$_d_marker" "${MX_DIRECTOR_TIMEOUT:-480}" '@[a-z-]+-agent' 2>/dev/null || true)
-      if [[ -n "$_d_dir" ]]; then
+      # 双信号等待：派发（@执行者）或声明式降级（DIRECTOR-DEGRADED）任一到达即结束
+      _d_dir=$(mx_wait_sender "$_d_tok" "$rid" "$_d_lead" "$_d_marker" "${MX_DIRECTOR_TIMEOUT:-480}" '(@[a-z-]+-agent|DIRECTOR-DEGRADED)' 2>/dev/null || true)
+      if [[ -n "$_d_dir" ]] && ! printf '%s' "$_d_dir" | grep -q 'DIRECTOR-DEGRADED'; then
         # 净额达标台账（B 批 self-dispatch 同族；mode 字段 additive）
         if [[ -n "${EVID_DIR:-}" && -d "${EVID_DIR:-}" ]]; then
           printf '{"ts":"%s","run":"%s","from":"wei-agent","mode":"director","requirement":"%s"}\n' \
@@ -2386,15 +2411,27 @@ $2
             >> "$EVID_DIR/self-dispatch.jsonl" 2>/dev/null || true
         fi
         note "[PR-7] 总监派发 ✓（wei-agent 自主产出任务书；移交锚 ${_d_marker:0:18}）"
+        _d_elapsed=$(( $(date +%s) - _d_t0 ))
+        _mx_director_metric success ok "$_d_elapsed"
         echo "$_d_marker"
         return 0
       fi
-      compensate director-dispatch-timeout "run=${RUN_ID:-?} wei-agent ${MX_DIRECTOR_TIMEOUT:-480}s 未产出派发（降级 strict 自主组织）" 2>/dev/null || true
+      _d_elapsed=$(( $(date +%s) - _d_t0 ))
+      if [[ -n "$_d_dir" ]]; then
+        # 声明式降级：不算超时（总监如实声明无容量），单独计数——成功率指标口径分离
+        _d_reason=declared
+        note "[PR-7] 总监声明无容量（${_d_dir:0:60}）——立即降级 strict 自主组织消息（${_d_elapsed}s）"
+      else
+        _d_reason=timeout
+        compensate director-dispatch-timeout "run=${RUN_ID:-?} wei-agent ${MX_DIRECTOR_TIMEOUT:-480}s 未产出派发（降级 strict 自主组织）" 2>/dev/null || true
+        note "[PR-7] 总监派发超时——降级 strict 自主组织消息"
+      fi
+      _mx_director_metric degraded "$_d_reason" "$_d_elapsed"
       _d_degraded=1
-      note "[PR-7] 总监派发超时——降级 strict 自主组织消息"
     else
       compensate director-dispatch-timeout "run=${RUN_ID:-?} 需求移交 SEND-FAILED（降级 strict 自主组织）" 2>/dev/null || true
       _d_degraded=1
+      _mx_director_metric degraded send-failed 0
       note "[PR-7] 需求移交发送失败——降级 strict 自主组织消息"
     fi
   fi
