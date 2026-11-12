@@ -95,22 +95,37 @@ export function combinedGateVerdict(sources: { room?: GateVerdict; card?: GateVe
 
 export type UatVerdictWord = '通过' | '有条件通过' | '不通过' | '未见'
 
-const UAT_VERDICT_ALT = '(有条件通过|不通过|未通过|通过|FAIL|PASS)'
-const UAT_SEG_RE = new RegExp(`(AC-\\d+(?:[/、,及和 ]+AC-\\d+)*)[^。；;\\n]{0,40}?${UAT_VERDICT_ALT}`, 'g')
+// N29-21（run29 复盘根治）：集合判词加入——长词在前防「通过」子串截胡；
+// 范围形态 AC-N~M（含 AC-N~AC-M）与集合声明「全过」共现时按区间归属逐条判。
+const UAT_VERDICT_ALT = '(有条件通过|全部不通过|全不通过|未通过|不通过|全部通过|全过|通过|FAIL|PASS)'
+const UAT_SEG_RE = new RegExp(`(AC-\\d+(?:\\s*[~～]\\s*(?:AC-)?\\d+|[/、,及和 ]+AC-\\d+)*)[^。；;\\n]{0,40}?${UAT_VERDICT_ALT}`, 'g')
 const FROZEN_AC_RE = /冻结\s*AC-(\d+)/
 const UAT_NORM: Record<string, UatVerdictWord> = {
   有条件通过: '有条件通过', 不通过: '不通过', 未通过: '不通过',
   通过: '通过', FAIL: '不通过', PASS: '通过',
+  全部通过: '通过', 全过: '通过', 全部不通过: '不通过', 全不通过: '不通过',
+}
+/** 段内 AC 标的展开：单 id 整词 + 范围 AC-a~b 区间成员（N29-21）。 */
+function uatSegOwnsAc(seg: string, ac: string): boolean {
+  const num = Number(ac.slice(3))
+  for (const single of seg.matchAll(/(?<!\d)AC-(\d+)(?!\d)/g)) {
+    if (Number(single[1]) === num) return true
+  }
+  for (const range of seg.matchAll(/AC-(\d+)\s*[~～]\s*(?:AC-)?(\d+)/g)) {
+    const lo = Number(range[1]), hi = Number(range[2])
+    if (lo <= hi ? num >= lo && num <= hi : num >= hi && num <= lo) return true
+  }
+  return false
 }
 
-/** 证据正文按 AC 编号取判词。段共享/括号注耐受/冻结映射/整词/后段胜，未见=缺席如实。 */
+/** 证据正文按 AC 编号取判词。段共享/括号注耐受/冻结映射/整词/范围归属/后段胜，未见=缺席如实。 */
 export function uatVerdictFor(body: string, ac: string): UatVerdictWord {
   const own = new RegExp(`(?<!\\d)${escapeRe(ac)}(?!\\d)`)
   const num = ac.slice(3)
   let hit: UatVerdictWord = '未见'
   for (const line of body.split('\n')) {
     for (const m of line.matchAll(UAT_SEG_RE)) {
-      if (own.test(m[1]) || FROZEN_AC_RE.exec(m[0])?.[1] === num) {
+      if (own.test(m[1]) || uatSegOwnsAc(m[1], ac) || FROZEN_AC_RE.exec(m[0])?.[1] === num) {
         hit = UAT_NORM[m[2]]
       }
     }

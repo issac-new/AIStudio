@@ -2973,3 +2973,14 @@ run28（20261107-v8-run28，14h29m 六闸全过，report_done=1794090918）结�
 8. **进度锚动态枚举**：固定六路之外枚举本轮开跑后新鲜的 `origin/{feat,wt,test}/*` 分支——防执行单元在非固定命名分支上干活被判 STALE（run28 lin 的 T03 分支不可见实锤）。
 9. **词表加词即回扫**：`plan-html/jargon-check.py` 词表新增词当日必须跑 `jargon-source-gate.test.sh` 清存量（run28「落档」加词未回扫、A10 报告审计才暴露实锤）。
 10. **基线刷新口径（2026-11-11）**：run29 基线=main 3285fc707 线（v1.0.14 后十批：执行内核统一 P0b2 八入口写账＋四挡启动、记忆统一 Hindsight 唯一 provider、统一身份聊天批1+2（roster 身份源＋账号级 DM）、IDE 工具面板收窄 9→2、治理 docMeta 引用隔离修复、全页面走查 TS1343 修复、vendor agent v0.23.1 换血）。新增产品面验证归属：记忆统一=守护进程面（:8888 hindsight daemon）、执行内核=记账面（八入口写账）——均无 studio HTTP 承载，不入 §5.11 探测组；统一身份聊天属 HTTP 面但负例语义为 fail-soft（roster 缺席回网关身份＋reason，非拒绝型），本轮以 smoke/register 步编制三方对账（roster×org×matrix=15）覆盖，不单列探测组。产品 dist 供给注意：`npm run build` 只建 client，server bundle 须 `npm run build:full`（run29 开跑前实锤：server bundle 停在 81 提交前的 4f10460bb）。
+
+### 5.13 run29 复盘条款（2026-11-12 立，N29-14~23 清偿；run30 起生效）
+
+run29（20261111-v8-run29，27h20m 六闸全过，审计零 FAIL/46 WARN）值守与审计环收敛过程暴露的工装缺口，根治批 main 随批：
+
+1. **催办桶真做判据**：wait_alive_truth 系（单发 cur_work＋multi 分桶 _w）的工作判据用「真做」（tool completed/API call#≥2）——单轮嘴炮回合不续命催办桶；稀疏滴流（每小时一条嘴炮）不再永久压制滞锚催办（xiao 78min/bella 2.3h 静默值守人工 DM 的自动化替代）。
+2. **降级消息保留交付锚**：director 移交超时/SEND-FAILED 的降级「自主组织」消息追加原任务书要点（800 字截断）——交付物锚点与验收行不再被通用文整体替换丢失。
+3. **UAT 判词范围形态**：治理判读正本（lifecycle/verdict.ts）接受 AC-N~M 区间归属与集合判词（全过/全部通过/全不通过）——集合式声明「AC-1~7 逐条判定，七条全过」不再全判「未见」。
+4. **审计对齐 capture-plan 四态**：`step|none|` 声明步（无界面承载，真值=state/API/消息流）不再按「载荷任一位在位」断言打回；repo 型步维持断言。
+5. **交付物真值取代豁免**：/archive/ 归档件不计跨轮冒充；同目录存在本轮声明件=旧档被取代不计罪（无取代者维持硬判）。
+6. **热部署纪律**（run29 实操沉淀）：product-dist 供给在 mx-setup 不在 mx-up；mx-up「studio 已在跑跳过」不重载新 bundle——热换链=build:full→mx-setup→kill 8802→mx-up；mx-up etime 前导零八进制陷阱（10# 修复）曾致供给段静默炸断。

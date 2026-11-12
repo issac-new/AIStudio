@@ -43,6 +43,13 @@ _agent_log_last_work_ts() {
   local f="$CTRL/$(basename "$(dirname "$(dirname "$1")")").ts"
   [[ -f "$f" ]] && cat "$f" || echo 0
 }
+# N29-15（run29 复盘根治）：催办桶工作判据改真做（realwork）——夹具同源供数
+# （本测的「复活」=时间戳增长，在真做语义下等价工具轮回归；嘴炮/真做分立断言
+# 见 mx-hb 提取函数行为测）。
+_agent_log_last_realwork_ts() {
+  local f="$CTRL/$(basename "$(dirname "$(dirname "$1")")").ts"
+  [[ -f "$f" ]] && cat "$f" || echo 0
+}
 eval "$FN_SRC"
 
 mkdir -p "$HERMES_ROOT/profiles/aa/logs" "$HERMES_ROOT/profiles/bb/logs"

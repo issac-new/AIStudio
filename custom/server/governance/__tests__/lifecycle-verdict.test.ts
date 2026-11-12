@@ -122,6 +122,23 @@ describe('uatVerdictFor（AC 组共享判词/括号注耐受/冻结映射/后段
   it('多段命中同 AC 取后段（逐条明细行更具体者胜）', () => {
     expect(uatVerdictFor('汇总：AC-4 有条件通过\n明细：AC-4 不通过（余额回退缺失）', 'AC-4')).toBe('不通过')
   })
+
+  // N29-21（run29 复盘根治）：集合式声明——范围形态＋集合判词
+  it('范围形态 AC-N~M 按区间归属逐条判（run29 语料：AC-1~7 逐条判定，七条全过）', () => {
+    const body = 'UAT-EVIDENCE RFD-001 run29（G1 冻结 AC-1~7 逐条判定，七条全过；矩阵定稿见仓）'
+    expect(uatVerdictFor(body, 'AC-3')).toBe('通过')
+    expect(uatVerdictFor(body, 'AC-7')).toBe('通过')
+    expect(uatVerdictFor(body, 'AC-8')).toBe('未见')
+  })
+
+  it('范围显式双端 AC-2~AC-4 与全不通过集合判词', () => {
+    expect(uatVerdictFor('AC-2~AC-4 全不通过', 'AC-3')).toBe('不通过')
+    expect(uatVerdictFor('AC-2~AC-4 全部通过', 'AC-5')).toBe('未见')
+  })
+
+  it('范围不误吞邻号：AC-1~3 全过 不覆盖 AC-4', () => {
+    expect(uatVerdictFor('AC-1~3 全过；AC-4 有条件通过', 'AC-4')).toBe('有条件通过')
+  })
 })
 
 describe('coveredAcs（AC 覆盖缺号清单）', () => {

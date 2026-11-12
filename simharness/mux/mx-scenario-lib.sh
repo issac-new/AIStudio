@@ -1637,7 +1637,10 @@ wait_alive_truth() { # <desc> <idle-sec> <agents-csv> <predicate-cmd...>
     if mx_wait_eval "$@"; then note "[真值] $desc ✓"; return 0; fi
     cur_work=0
     for a in ${logs[@]+"${logs[@]}"}; do
-      w=$(_agent_log_last_work_ts "$a")
+      # N29-15（run29 复盘根治）：催办桶工作判据用「真做」（tool completed/API#≥2）——
+      # 任意工作行含单轮 API call#1 嘴炮回合，稀疏滴流（每小时一条嘴炮）会把 sig 永续
+      # 刷新、催办永不触发（run29 xiao 静默 78min/bella 纯心跳 2.3h 实证）。
+      w=$(_agent_log_last_realwork_ts "$a")
       (( w > cur_work )) && cur_work=$w
     done
     if (( _room_alive == 1 )); then
@@ -1820,7 +1823,8 @@ wait_alive_truth_multi() { # <idle-sec> <agents-csv> <anchor-spec>...  # 失败�
       fi
       _lg="${_uo_logs[$_ui]}"
       if [[ -n "$_lg" ]]; then
-        _w=$(_agent_log_last_work_ts "$_lg" 2>/dev/null || echo 0)
+        # N29-15：分桶同用真做判据（嘴炮回合不续命催办桶——见 wait_alive_truth 同名注释）
+        _w=$(_agent_log_last_realwork_ts "$_lg" 2>/dev/null || echo 0)
       elif (( _hb_on == 1 )); then
         _w=$(hb_agent_lw "$_x" 2>/dev/null || echo 0)
       else
@@ -2397,7 +2401,12 @@ $2
   # strict 判定收编 director 降级（D4：降级链 director→strict，不回 preset）
   if [ "$(posture)" = "strict" ] || [[ "$_d_degraded" = "1" ]]; then
     # V8.29 §2.4 待收紧面：strict 不发预写派发词（拆分/人日/纪律归组织侧自主产出）
-    set -- "$1" "【自主组织】收到需求派单：请对 ${RFD_ID:-当前轮} 需求按你的职能自主拆分、评估与派发执行；验收以 G1 冻结单 AC 为准，双凭证（commit+卡号）收口。本消息不预设拆分与人日。" "${3:-}"
+    # N29-16（run29 复盘根治）：降级消息保留原任务书要点——旧版整体替换把交付物锚点/
+    # 验收行全丢，xiao 收降级令后自主拆分直奔实现、漏交付标准系分稿（值守双 DM 补救 2h）。
+    # 通用自主组织语义与具体交付锚并存：正文不预设拆分与人日，要点段原样携带（800 字截断）。
+    set -- "$1" "【自主组织】收到需求派单：请对 ${RFD_ID:-当前轮} 需求按你的职能自主拆分、评估与派发执行；验收以 G1 冻结单 AC 为准，双凭证（commit+卡号）收口。本消息不预设拆分与人日。
+——原始需求要点（交付锚以此为准）——
+${2:0:800}" "${3:-}"
     # 自派发台账（2026-11-06 B 批）：一行=一次真实自主派单，报告净额行实算消费。
     # 独立 jsonl 而非 compensate——自派发是净额达标行为，进代偿账会被清偿门当
     # 待清偿代偿（open 笔须清偿/waive），语义相反。fail-soft。
