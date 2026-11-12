@@ -681,6 +681,38 @@ _R18_OP_STEPS = OP_STEPS
 _R18_EFFECT_STEPS = EFFECT_STEPS
 _R18_SKILL_STEPS = SKILL_STEPS
 _R18_DELIVERY_STEPS = DELIVERY_STEPS
+
+# N29-22（run29 复盘根治）：capture-plan 四态 none 型步豁免——`step|none|理由` 行声明的
+# 步按设计无界面承载（真值=state/API/消息转录，另有专项断言面），落尾「任一位在位」
+# 断言不再对其计 FAIL。步名→步号沿用 r18-collect STEP_KEY_TO_NUM 规范序（first-wins
+# ＋特有键归位），repo 型步维持原断言（run29 实测有载荷承载）。run29 实证：步 1-8 等
+# none 型步被按「载荷全缺」整批 FAIL，值守被迫逐条 DISP 降级（13→11 fails 的主构成）。
+_CAPTURE_PLAN = Path(__file__).resolve().parent / 'capture-plan.env'
+_CAPTURE_NONE_STEPS = set()
+try:
+    _CP_KEY_NUM = {}
+    for _i, _k in enumerate([
+            'smoke_done', 'smoke_done', 'smoke_done', 'smoke_done', 'appinit_done', 'people_done',
+            'g1_frozen', 'room_analysis', 'dispatch_marker', 'register_done', 'analysis_done', 'triage_done',
+            'anexec_done', 'review_done', 'g2_arch_pass', 'close_done', 'plan_done', 'devimpl_done',
+            'defect_done', 'ready_done', 'uat_done', 'workmgr_done', 'audit_done', 'retro_done',
+            'ide_done', 'report_done'], 1):
+        _CP_KEY_NUM.setdefault(_k, _i)
+    _CP_KEY_NUM.update({'login_done': 3, 'room_done': 8, 'testpass_done': 19, 'eval_done': 19,
+                        'release_done': 20, 'deliver_gate': 23, 'report_view': 26,
+                        'dispatch_done': 9})
+    # smoke 段子步同键归并（smoke_done 键覆盖步 1-4——与 _STAGE_ALIAS_STEPS 同口径）
+    if 'smoke_done' in _CP_KEY_NUM:
+        for _n in (1, 2, 3, 4):
+            _CAPTURE_NONE_STEPS.add(_n)
+    for _cp_line in _CAPTURE_PLAN.read_text(encoding='utf-8', errors='replace').splitlines():
+        _cp_parts = _cp_line.split('|')
+        if len(_cp_parts) >= 2 and _cp_parts[1].strip() == 'none' and not _cp_line.lstrip().startswith('#'):
+            _cp_n = _CP_KEY_NUM.get(_cp_parts[0].strip())
+            if _cp_n:
+                _CAPTURE_NONE_STEPS.add(_cp_n)
+except OSError:
+    pass  # capture-plan 缺席=无豁免面（fail-closed 保持旧断言）
 _r18_missing_file = not R18F.exists()
 _r18_payloads = {}
 _ilines_r18 = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines() if (EVID / 'issues.log').exists() else []
@@ -856,6 +888,7 @@ for blk in blocks:
                 fails.append(f'R18 步 {n} delivery 门禁灯帧缺（R29：MX_DELIVERY=1 全程开启+面板实拍+r18-collect.py deliver 登记；静默关旗标即 P15 打回——或按§5.6 采集纪律⑩ 登记降级）')
     if n not in _R18_DIALOG_STEPS and n not in _R18_OP_STEPS and n not in _R18_EFFECT_STEPS \
             and n not in _R18_SKILL_STEPS and n not in _R18_DELIVERY_STEPS \
+            and n not in _CAPTURE_NONE_STEPS \
             and d_cnt == 0 and o_cnt == 0 and e_cnt == 0 and s_cnt == 0 and v_cnt == 0 and not _r18_missing_file:
         # 夹具子步同源豁免（run23 复盘）：步 2/4 是冒烟段的子步（账号配置/功能就绪），
         # 产品面没有独立操作位——实拍帧与载荷天然挂在同段兄弟步（1=smoke/3=登录）上，

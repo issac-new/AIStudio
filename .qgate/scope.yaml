@@ -785,3 +785,14 @@ paths:
   # 2026-11-12 双轨经验台账（TTSE 吸收，feat/expdual-ttse）
   - docs/superpowers/specs/2026-11-12-expdual-ttse.md
   - custom/server/expdual/**
+
+  # 2026-11-12 run29 复盘根治批（fix/run29-retro-rootfix；N29-14~23）
+  - docs/superpowers/specs/2026-11-12-run29-retro-rootfix.md
+  - simharness/mux/mx-scenario-lib.sh
+  - simharness/mux/mx-report-audit.py
+  - simharness/mux/mx-report-gen.py
+  - simharness/mux/mx-up.sh
+  - simharness/tests/multi-owner-stall.test.sh
+  - simharness/mux/tests/r18-capability.test.sh
+  - custom/server/governance/lifecycle/verdict.ts
+  - custom/server/governance/__tests__/lifecycle-verdict.test.ts

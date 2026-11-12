@@ -94,7 +94,9 @@ AUD=$(AIPAY_SIM_ROOT="$FX" python3 "$HERE/mx-report-audit.py" --run "$RUN" 2>&1 
 must_fail() { echo "$AUD" | grep -qF "$1" || { echo "FAIL 审计应打回：$1"; echo "$AUD"; exit 1; }; }
 must_fail "R18 步 11 缺「对话全文」"       # 对话必采步 done 且无载荷 → 打回
 must_fail "R18 步 7 缺「环节效果」"        # 效果必采步
-must_fail "R18 步 5 载荷全缺"              # 其余 done 步任一位在位即可（17/21 属对话必采集走上一类文案）
+# N29-22（run29 复盘根治）：catch-all 代表步 5→12——步 5（appinit）capture-plan 判
+# none 型（无界面承载），按四态豁免不再打回；步 12（triage，repo 型）维持任一位在位断言。
+must_fail "R18 步 12 载荷全缺"             # 其余 done 步任一位在位即可（17/21 属对话必采集走上一类文案）
 # N28-5a（run28 收尾批）：8/10 转 none 型（真值=matrix 消息流），不得再要求操作前后帧
 if echo "$AUD" | grep -q 'R18 步 8 缺「操作前后帧」'; then
   echo "FAIL N28-5a 回归：步 8 不应再按操作步打回"; echo "$AUD"; exit 1

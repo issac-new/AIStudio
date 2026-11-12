@@ -3965,17 +3965,45 @@ def _art_resolve(rel: str):
             sha = _git_out('rev-parse', '--short', ref).strip()
             src = ref if _art_refreshed(ref, rel) else f'{ref}（在仓·旧版）'
             text = _git_out('show', f'{ref}:{rel}')
-            return text, src, sha, _art_truth(text, ref)
+            return text, src, sha, _art_truth(text, ref, rel)
     p = CEN / rel
     if p.exists():
         text = p.read_text(encoding='utf-8', errors='replace')
-        return text, '(工作树检出)', CEN_ANCHOR, _art_truth(text, '')
+        return text, '(工作树检出)', CEN_ANCHOR, _art_truth(text, '', rel)
     return None, '', '', {}
 
-def _art_truth(text: str, ref: str) -> dict:
+def _art_truth(text: str, ref: str, rel: str = '') -> dict:
     """交付物真值标记（report_truth 判据的生成器侧投影）——stale/dead_anchor。
-    锚活性按分支缓存（ls-remote 一次网络往返；同分支多件不重复查）。"""
+    锚活性按分支缓存（ls-remote 一次网络往返；同分支多件不重复查）。
+    N29-23（run29 复盘根治）两步取代豁免：①/archive/ 归档件已出交付面不计 stale；
+    ②同目录存在声明轮==本轮的取代件（本轮新档已产出）不计 stale——旧档躺在目录里
+    被真值扫描计罪是「冒充」误判（run29 实证：AN-PAYCORE 新旧 materials 并存，
+    旧 run28 件被读为本轮交付物）。无取代者才维持跨轮冒充硬判。"""
     stale, declared = report_truth.stale_verdict(text, RUN_ID)
+    if stale and rel:
+        import os as _os
+        if '/archive/' in f'/{rel}':
+            stale = False
+            print(f'[truth] 归档件不计跨轮冒充（已出交付面）：{rel}', file=sys.stderr)
+        else:
+            _d = _os.path.dirname(rel)
+            if _d:
+                _refs = [r for r in (ref, 'origin/main', 'origin/integration/RFD-001') if r]
+                for _r2 in _refs:
+                    _ls = _git_out('ls-tree', '-r', '--name-only', _r2, '--', _d).splitlines()
+                    for _sib in _ls:
+                        if _sib == rel or '/archive/' in _sib:
+                            continue
+                        _t2 = _git_out('show', f'{_r2}:{_sib}')
+                        if not _t2:
+                            continue
+                        _s2, _d2 = report_truth.stale_verdict(_t2, RUN_ID)
+                        if not _s2 and _d2 == RUN_ID:
+                            stale = False
+                            print(f'[truth] 旧档已被本轮取代（不计冒充）：{rel} ← {_sib}', file=sys.stderr)
+                            break
+                    if not stale:
+                        break
     branch = ref[len('origin/'):] if ref.startswith('origin/') else ''
     dead = bool(branch) and not _anchor_alive_cached(branch)
     if stale:
