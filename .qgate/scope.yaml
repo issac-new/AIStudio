@@ -858,3 +858,10 @@ paths:
   - .swarm-yuan/spec-receipts.jsonl
   - scripts/ensure-injected.mjs
   - scripts/__tests__/overlay-pristine-replay.test.ts
+  - docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md
+  - docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md
+  - docs/manuals/aistudio-design-document-index.md
+  - scripts/deploy-agent-runtime.mjs
+  - scripts/__tests__/deploy-agent-runtime.test.ts
+  - AGENTS.md
+  - .gitignore

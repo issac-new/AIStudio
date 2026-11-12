@@ -106,3 +106,40 @@ describe('deploy-agent-runtime：状态化输出与退出码', () => {
     }))
   })
 })
+
+// worktree 隔离守卫（2026-11-12 设计复盘 P0）：linked worktree 里跑 inject/npm test 时，
+// 本脚本默认会把检出 runtime/ 同步到共享宿主树。守卫必须在「有实际写入 + 目标在检出外」
+// 时 fail-closed；显式放行或 --runtime 隔离面不拦。CI 在普通克隆上跑，linked 判定用
+// RUNTIME_DEPLOY_LINKED_WORKTREE 测试注入面固定（生产路径不读）。
+describe('deploy-agent-runtime：worktree 宿主写入隔离', () => {
+  // 影子重定向只作用于「默认清单 + 默认宿主目标」。用临时 HOME 保证任何情况下不写真宿主；
+  // 自定义清单（RUNTIME_DEPLOY_MANIFEST）本身即既有测试隔离面，不叠加影子。
+  const fakeHome = () => join(tmp, 'fake-home')
+  const runHost = (extraEnv: Record<string, string> = {}) => {
+    const env: NodeJS.ProcessEnv = { ...process.env, HOME: fakeHome(), ...extraEnv }
+    delete env.RUNTIME_DEPLOY_MANIFEST
+    const r = spawnSync('node', [SCRIPT], { env, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 })
+    return { code: r.status ?? 1, out: (r.stdout ?? '') + (r.stderr ?? '') }
+  }
+
+  it('linked worktree 默认目标 → 写入重定向到检出内影子目录（不触宿主）', () => {
+    const r = runHost({ RUNTIME_DEPLOY_LINKED_WORKTREE: '1' })
+    expect(r.code).toBe(0)
+    expect(r.out).toContain('.runtime-deploy-shadow')
+    expect(r.out).toContain('RUNTIME_DEPLOY_ALLOW_WORKTREE=1')
+    expect(existsSync(join(fakeHome(), '.hermes', 'hermes-agent'))).toBe(false)
+  })
+
+  it('显式放行（RUNTIME_DEPLOY_ALLOW_WORKTREE=1）→ 目标恢复为宿主（临时 HOME）', () => {
+    const r = runHost({ RUNTIME_DEPLOY_LINKED_WORKTREE: '1', RUNTIME_DEPLOY_ALLOW_WORKTREE: '1' })
+    expect(r.code).toBe(0)
+    expect(r.out).not.toContain('.runtime-deploy-shadow')
+    expect(r.out).toContain(join(fakeHome(), '.hermes', 'hermes-agent'))
+  })
+
+  it('非 linked（主检出/普通克隆）→ 不重定向', () => {
+    const r = runHost({ RUNTIME_DEPLOY_LINKED_WORKTREE: '0' })
+    expect(r.code).toBe(0)
+    expect(r.out).not.toContain('.runtime-deploy-shadow')
+  })
+})

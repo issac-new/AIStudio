@@ -322,3 +322,5 @@
 {"at":"2026-11-12T03:19:58Z","spec":"docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md","receipt":"ff36a7c959d37b03de1b198b3f9753551547c427","commit":"043960307"}
 {"at":"2026-11-12T03:26:58Z","spec":"docs/superpowers/specs/2026-11-12-expdual-closeout.md","receipt":"50cc3851fce8c8921bcc21aa6ac1fb1371e9875a","commit":"295a3bfb7"}
 {"at":"2026-11-12T04:44:35Z","spec":"docs/superpowers/specs/2026-11-12-handbook-debt-clearance.md","receipt":"2331efabc73b2d0535f6a2c623d21a83a5ebbdc5","commit":"358dc08f2"}
+{"at":"2026-11-12T05:02:34Z","spec":"docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md","receipt":"13e76634c6c465c4f738a6b1a779d1ae9c77452f","commit":"a8002fd55"}
+{"at":"2026-11-12T05:13:38Z","spec":"docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md","receipt":"6cf87fd781cb0a487da2fdb6e1aac9f775be7211","commit":"d858eec92"}
