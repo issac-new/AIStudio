@@ -476,7 +476,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（208 份）
+## 2026-11（209 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -674,6 +674,7 @@
 - [2026-11-12-frame-reshoot-0tasks-granularity.md](../superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md)
 - [2026-11-12-guard-tests-migration-plan.md](../superpowers/specs/2026-11-12-guard-tests-migration-plan.md)
 - [2026-11-12-handbook-debt-clearance.md](../superpowers/specs/2026-11-12-handbook-debt-clearance.md)
+- [2026-11-12-lock-root-deps.md](../superpowers/specs/2026-11-12-lock-root-deps.md)
 - [2026-11-12-run29-full-retrospective.md](../superpowers/specs/2026-11-12-run29-full-retrospective.md)
 - [2026-11-12-run29-retro-rootfix.md](../superpowers/specs/2026-11-12-run29-retro-rootfix.md)
 - [2026-11-12-run30-actions.md](../superpowers/specs/2026-11-12-run30-actions.md)
@@ -697,7 +698,12 @@
 
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
 
-- 当前工作树根目录：**661 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 208 份；合计 661 份。
+<<<<<<< HEAD
+- 当前工作树根目录：**662 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 209 份；合计 662 份。
+=======
+- 当前工作树根目录：**659 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 206 份；合计 659 份。
+>>>>>>> fix/overlay-deps-lock-root
 - 当前工作树根目录：**651 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 198 份；合计 651 份。
