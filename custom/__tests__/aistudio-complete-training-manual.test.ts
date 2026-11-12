@@ -27,9 +27,9 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     expect(html.length).toBeGreaterThan(20000)
   })
 
-  it('PPT 形态：十五页、十二张图、末尾一页附录台账', () => {
-    expect((html.match(/<section class="slide/g) ?? [])).toHaveLength(15)
-    expect((html.match(/<svg/g) ?? [])).toHaveLength(12)
+  it('PPT 形态：十六页、十三张图、末尾一页附录台账', () => {
+    expect((html.match(/<section class="slide/g) ?? [])).toHaveLength(16)
+    expect((html.match(/<svg/g) ?? [])).toHaveLength(13)
     expect((html.match(/class="ledger"/g) ?? [])).toHaveLength(1)
     expect((html.match(/<table/g) ?? [])).toHaveLength(1)
     expect(html).toContain('class="slide cover"')
@@ -62,13 +62,14 @@ describe('AIStudio 15 分钟演示稿契约', () => {
       '系统：四个模块与六类团队角色',
       '发布判断：四项条件同时成立',
       '流程：九节点、四阶段、六道质量门',
+      '双循环：研发小循环嵌在组织大循环里',
       '研发能力 SOP 化与五项能力',
       '六层实现',
       '技术递进：从技能封装到递归自我改进',
       '生成与激活',
       '守门与证据',
       '收束：机制让正确做法成为默认路径',
-      '附录：来源台账',
+      '附录：调研吸收台账',
     ]) expect(html, `缺少页面：${needle}`).toContain(needle)
   })
 
@@ -76,7 +77,7 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     for (const fact of ['1.0.15-overlay', '0.8.20-studio.2', 'v0.23.1-team.2', '3.18.0', 'v2.100.3']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
-    for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', '59 道门禁', 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭']) {
+    for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', '59 道门禁', 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭', '研发小循环', '组织大循环', 'Matrix']) {
       expect(html, `核心理念缺失：${fact}`).toContain(fact)
     }
     expect(html).toContain('全部通过不等同于业务正确')
