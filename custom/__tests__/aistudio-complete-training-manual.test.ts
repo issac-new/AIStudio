@@ -35,6 +35,10 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     expect(html).toContain('class="slide cover"')
     expect(html).toContain('aspect-ratio:16/9')
     expect(html).toContain('@page{size:A4 landscape')
+    expect(html).toContain('container-type:inline-size')
+    expect(html).toContain('100vh * 16 / 9')
+    expect(html).toContain('requestFullscreen')
+    expect(html).toContain('html:fullscreen .slide')
   })
 
   it('每页有页脚，图表有图注与无障碍标签', () => {

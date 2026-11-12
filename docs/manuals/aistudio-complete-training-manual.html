@@ -14,48 +14,52 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
-.deck{min-height:100%;display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px 0 40px}
-.slide{position:relative;width:min(1280px,96vw);aspect-ratio:16/9;background:var(--paper);border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.45);padding:34px 46px 46px;display:flex;flex-direction:column;overflow:hidden}
+.deck{min-height:100%;display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0 26px}
+.slide{position:relative;width:min(100vw,calc(100vh * 16 / 9));aspect-ratio:16/9;background:var(--paper);border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.45);padding:2.6cqw 3.6cqw 3.4cqw;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}
 .slide::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent)}
 .slide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
 .slide-head .no{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;margin-right:12px;flex:0 0 auto}
-.slide-head h2{margin:0;font-size:30px;line-height:1.25;color:var(--ink);letter-spacing:-.01em}
-.slide-head .time{color:var(--muted);font-size:13px;white-space:nowrap;padding-top:6px}
-.slide-lead{margin:0 0 14px;font-size:17px;line-height:1.6;color:#3c4f66;max-width:1040px}
+.slide-head h2{margin:0;font-size:2.9cqw;line-height:1.22;color:var(--ink);letter-spacing:-.01em}
+.slide-head .time{color:var(--muted);font-size:1.05cqw;white-space:nowrap;padding-top:6px}
+.slide-lead{margin:0 0 1.1cqw;font-size:1.62cqw;line-height:1.55;color:#3c4f66;max-width:100%}
 .slide-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
 .figure{flex:1;min-height:0;border:1px solid var(--line);border-radius:8px;background:#fbfcfe;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:4px}
 .figure svg{width:100%;height:100%;max-height:100%}
 .bullets{display:flex;gap:12px;flex-wrap:wrap;margin:0;padding:0;list-style:none}
-.bullets li{flex:1 1 240px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:15px;line-height:1.5;background:#fff}
-.bullets li strong{display:block;color:var(--ink);font-size:16px;margin-bottom:2px}
-.bullets li span{color:var(--muted);font-size:13px}
-.slide-foot{position:absolute;left:46px;right:46px;bottom:14px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px;border-top:1px solid var(--line-soft);padding-top:6px}
+.bullets li{flex:1 1 20cqw;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:.8cqw .9cqw;font-size:1.28cqw;line-height:1.5;background:#fff}
+.bullets li strong{display:block;color:var(--ink);font-size:1.38cqw;margin-bottom:2px}
+.bullets li span{color:var(--muted);font-size:1.1cqw}
+.slide-foot{position:absolute;left:3.6cqw;right:3.6cqw;bottom:1cqw;display:flex;justify-content:space-between;color:var(--muted);font-size:.95cqw;border-top:1px solid var(--line-soft);padding-top:.5cqw}
 /* 封面 */
-.cover{justify-content:center;background:linear-gradient(135deg,#0f2742 0%,#16395c 55%,#1f5fae 100%);color:#fff;padding:56px 64px}
+.cover{justify-content:center;background:linear-gradient(135deg,#0f2742 0%,#16395c 55%,#1f5fae 100%);color:#fff;padding:4.4cqw 5cqw}
 .cover::before{display:none}
 .cover .kicker{color:#9fc3ee;font-size:15px;letter-spacing:.18em;font-weight:700}
-.cover h1{margin:16px 0 14px;font-size:58px;line-height:1.15;letter-spacing:-.02em;color:#fff}
-.cover p{margin:0;max-width:900px;font-size:20px;line-height:1.6;color:#d7e6f7}
-.cover .meta{margin-top:28px;display:flex;gap:26px;flex-wrap:wrap;color:#a9c6e8;font-size:14px}
+.cover h1{margin:1.2cqw 0 1cqw;font-size:5.2cqw;line-height:1.12;letter-spacing:-.02em;color:#fff}
+.cover p{margin:0;max-width:88cqw;font-size:1.8cqw;line-height:1.55;color:#d7e6f7}
+.cover .meta{margin-top:2.2cqw;display:flex;gap:2cqw;flex-wrap:wrap;color:#a9c6e8;font-size:1.15cqw}
 .cover .nums{display:flex;gap:14px;margin-top:34px}
 .cover .nums div{border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:10px 16px;background:rgba(255,255,255,.06)}
-.cover .nums b{display:block;font-size:24px;color:#fff}
-.cover .nums span{font-size:12px;color:#a9c6e8}
+.cover .nums b{display:block;font-size:2.2cqw;color:#fff}
+.cover .nums span{font-size:1cqw;color:#a9c6e8}
 /* 清单页 */
 .checklist{columns:2;column-gap:26px;margin:0;padding:0;list-style:none}
-.checklist li{break-inside:avoid;margin:0 0 14px;padding-left:24px;position:relative;font-size:17px;line-height:1.55}
+.checklist li{break-inside:avoid;margin:0 0 1.1cqw;padding-left:1.8cqw;position:relative;font-size:1.48cqw;line-height:1.5}
 .checklist li::before{content:"✓";position:absolute;left:0;top:0;color:var(--ok);font-weight:700}
 .checklist li b{color:var(--ink)}
-.checklist li small{display:block;color:var(--muted);font-size:14px;line-height:1.5}
+.checklist li small{display:block;color:var(--muted);font-size:1.15cqw;line-height:1.5}
 .checklist.warn li::before{content:"·";color:var(--warn);font-weight:700}
 .badge{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700}
 .badge.warn{background:var(--warn-soft);color:var(--warn)}
-.takeaway{margin-top:auto;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 16px;font-size:16px;line-height:1.55;color:#1d3a5c}
+.takeaway{margin-top:auto;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:.9cqw 1.2cqw;font-size:1.3cqw;line-height:1.5;color:#1d3a5c}
 .takeaway b{color:var(--ink)}
 /* 导航 */
-.nav{position:fixed;right:20px;bottom:18px;display:flex;gap:8px;z-index:10}
+.nav{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;align-items:center;gap:8px;z-index:10;transition:opacity .25s ease}
 .nav button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:var(--ink);font-size:16px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.3)}
-.nav .count{align-self:center;color:#cfe0f3;font-size:12px;margin-right:4px}
+.nav .count{align-self:center;color:var(--muted);background:rgba(255,255,255,.94);border-radius:999px;padding:5px 10px;font-size:12px;margin-right:4px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.nav.idle{opacity:0;pointer-events:none}
+html:fullscreen{background:#0b1c30}
+html:fullscreen .deck{padding:0;gap:0}
+html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0;box-shadow:none}
 /* 图示通用样式（与内嵌 SVG 类名对应） */
 .dbox{fill:#fff;stroke:#a9b8c9;stroke-width:1.2}
 .dbox-accent{fill:#eaf2fb;stroke:#1f5fae;stroke-width:1.6}
@@ -63,11 +67,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .dbox-warn{fill:#fdf0ed;stroke:#b45746;stroke-width:1.4}
 .dline{stroke:#718096;stroke-width:1.5;fill:none}
 .dline-dash{stroke:#98a6b8;stroke-width:1.4;fill:none;stroke-dasharray:5 4}
-.dlabel{fill:#243b53;font-size:14px;font-weight:600;font-family:inherit}
-.dtext{fill:#526174;font-size:12px;font-family:inherit}
-.dtitle{fill:#173b68;font-size:14px;font-weight:700;font-family:inherit}
-.dsmall{fill:#718096;font-size:11px;font-family:inherit}
-.dnum{fill:#1f5fae;font-size:12px;font-weight:700;font-family:inherit}
+.dlabel{fill:#243b53;font-size:16px;font-weight:600;font-family:inherit}
+.dtext{fill:#526174;font-size:14px;font-family:inherit}
+.dtitle{fill:#173b68;font-size:16px;font-weight:700;font-family:inherit}
+.dsmall{fill:#718096;font-size:13px;font-family:inherit}
+.dnum{fill:#1f5fae;font-size:14px;font-weight:700;font-family:inherit}
 /* 打印：一页一张，16:9 横向 */
 @page{size:A4 landscape;margin:0}
 @media print{
@@ -466,7 +470,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <section class="slide">
   <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">15</span><h2>收束：机制让正确做法成为默认路径</h2></div><span class="time">结语</span></header>
   <p class="slide-lead">人保留判断权，机器承担守门责任，智能体承担执行工作；任何“完成”都要能回到当次证据。</p>
-  <div class="slide-body">
+  <div class="slide-body" style="justify-content:center">
     <ul class="bullets">
       <li><strong>对象一致</strong><span>任务、提交、测试、审批指向同一事项</span></li>
       <li><strong>责任明确</strong><span>各环节有负责人与验收人</span></li>
@@ -482,7 +486,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>结语 · 培训模拟，不连接真实数据</span></footer>
 </section>
 </div>
-<div class="nav"><span class="count" id="count">1 / 16</span><button id="prev" aria-label="上一页">‹</button><button id="next" aria-label="下一页">›</button></div>
+<div class="nav"><span class="count" id="count">1 / 16</span><button id="prev" aria-label="上一页">‹</button><button id="next" aria-label="下一页">›</button><button id="full" aria-label="全屏演示" title="全屏演示">⛶</button></div>
 <script>
 const slides = [...document.querySelectorAll('.slide')];
 let idx = 0;
@@ -490,6 +494,21 @@ const counter = document.getElementById('count');
 function go(step){ idx = Math.max(0, Math.min(slides.length - 1, idx + step)); slides[idx].scrollIntoView({behavior:'smooth', block:'center'}); counter.textContent = (idx + 1) + ' / ' + slides.length; }
 document.getElementById('next').addEventListener('click', () => go(1));
 document.getElementById('prev').addEventListener('click', () => go(-1));
+let idleTimer = 0;
+const nav = document.querySelector('.nav');
+function showNav() {
+  nav.classList.remove('idle');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => nav.classList.add('idle'), 2200);
+}
+addEventListener('mousemove', showNav);
+addEventListener('keydown', showNav);
+nav.addEventListener('mouseenter', () => { clearTimeout(idleTimer); nav.classList.remove('idle'); });
+nav.addEventListener('mouseleave', showNav);
+showNav();
+document.getElementById('full').addEventListener('click', () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.();
+});
 window.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(1); }
   if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(-1); }
