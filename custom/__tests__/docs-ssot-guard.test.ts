@@ -1,6 +1,9 @@
 // specs 根目录的覆盖义务唯一来源＝gen-doc-indexes 生成的机械索引（设计文档全量索引）；
 // 附录 A 自 2026-11-12 冻结为历史档案，只保留结构完整性（无重复/无重叠/无失效路径），
-// 不再承担「每新增一份 spec 必须登记」的义务。README 的「唯一正本」指针也在此守门。
+// 不再承担「每新增一份 spec 必须登记」的义务。
+// 2026-11-12 守卫测试迁 lint 首批：README 唯一正本指针、附录 A 冻结声明句、
+// 附录 A 标题计数互洽三组纯文本断言已迁入 gen-doc-indexes --check（失败即给修复
+// 指引，pre-push merge-invariants 同点拦截），本文件只留解析器行为与结构完整性。
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -10,7 +13,6 @@ const ROOT = resolve(__dirname, '../..')
 const SPECS_DIR = resolve(ROOT, 'docs/superpowers/specs')
 const APPENDIX_PATH = resolve(SPECS_DIR, '2026-10-21-swarmstudio-appendix-a-spec-index.md')
 const INDEX_PATH = resolve(ROOT, 'docs/manuals/aistudio-design-document-index.md')
-const README_PATH = resolve(ROOT, 'README.md')
 
 type TableRow = {
   cells: string[]
@@ -200,23 +202,5 @@ ${delimiter}
     expect(a1Stems.filter((stem) => roleStems.includes(stem))).toEqual([])
     const dangling = [...a1Stems, ...roleStems].filter((stem) => !rootStems.has(stem) && !archiveStems.has(stem))
     expect(dangling, '附录 A 冻结后仍须指向存在文件（specs 根或 archive）').toEqual([])
-  })
-
-  it('附录 A 顶部声明冻结（覆盖义务已迁至机械索引）', () => {
-    const head = readFileSync(APPENDIX_PATH, 'utf8').split('\n').slice(0, 6).join('\n')
-    expect(head).toContain('冻结')
-    expect(head).toContain('aistudio-design-document-index')
-  })
-
-  it('README 的唯一正本指针指向 docs/DESIGN.md，不再指向旧址指针 spec', () => {
-    const readme = readFileSync(README_PATH, 'utf8')
-    expect(readme).toContain('docs/DESIGN.md')
-    expect(readme).not.toContain('2026-10-23-swarmstudio-integrated-design.md')
-  })
-
-  it('标题声明的 A.1 数量等于 A.1 实际数据行数', () => {
-    const parsed = parseAppendix(readFileSync(APPENDIX_PATH, 'utf8'))
-    expect(Number.isInteger(parsed.statedA1Count), '标题必须以「（N 份…）」声明 A.1 行数').toBe(true)
-    expect(parsed.statedA1Count).toBe(parsed.a1Rows.length)
   })
 })
