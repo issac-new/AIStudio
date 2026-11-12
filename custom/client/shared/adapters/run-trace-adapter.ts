@@ -4,7 +4,7 @@ import { normalizeRunEvent, type TraceEvent } from '@/custom/shared/adapters/tra
 import { applyTraceEvent, type TraceMiddleware, defaultMiddlewares } from '@/custom/shared/adapters/trace-middlewares'
 
 export type EvidenceTier = 'L1' | 'L2' | 'L3'
-export type TraceNodeKind = 'ingress' | 'workflow' | 'agent' | 'skill' | 'tool' | 'memory' | 'service' | 'peer' | 'approval'
+export type TraceNodeKind = 'ingress' | 'workflow' | 'agent' | 'skill' | 'tool' | 'memory' | 'service' | 'peer' | 'approval' | 'step' | 'compaction' | 'hitl' | 'interrupt' | 'unknown'
 export type SpanStatus = 'running' | 'ok' | 'error' | 'cancelled'
 export type EdgeKind = 'spawn' | 'call' | 'recall' | 'converge' | 'delegate'
 export type TraceTimelineItemKind = 'thinking' | 'tool' | 'memory' | 'message'

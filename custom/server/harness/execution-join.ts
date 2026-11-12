@@ -14,6 +14,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { readExecutionRecords, type ExecutionRecord } from '../execution-records/record'
 import { queryToolExecAudit, type ToolExecAuditEntry } from '../toolpipeline/tool-hooks'
+import { deriveRunResult, type RunResult, type QualityStatus } from './run-result'
 
 export interface ExecutionJoinSource<T> {
   available: boolean
@@ -29,6 +30,8 @@ export interface ExecutionJoinResult {
   toolAudit: ExecutionJoinSource<ToolExecAuditEntry[]>
   enforceApprovals: ExecutionJoinSource<Array<Record<string, unknown>>>
   resultContract: ExecutionJoinSource<Record<string, unknown>>
+  /** Run Result 四维：由上面四源派生，任一侧缺席只影响该维（fail-soft）。 */
+  runResult: RunResult
 }
 
 /** 执法批单 JSON 直读（与 enforce-approvals.ts 同一存储、只读、fail-soft）。 */
@@ -125,5 +128,38 @@ export async function executionJoin(query: {
     }
   }
 
-  return { ...base, executionRecords, toolAudit, enforceApprovals, resultContract }
+  // 5) Run Result 四维（2026-11-12 handbook 吸收）：派生而非新事实源。
+  const latestRecord = executionRecords.available ? executionRecords.entries?.[0] : undefined
+  const missingEvidence: string[] = []
+  if (!executionRecords.available) missingEvidence.push('execution-record')
+  if (!toolAudit.available) missingEvidence.push('tool-audit')
+  if (!resultContract.available) missingEvidence.push('result-contract')
+  const contractVerdict = resultContract.available && resultContract.entries
+    ? (resultContract.entries.verdict ?? resultContract.entries.status ?? resultContract.entries.quality)
+    : undefined
+  const runResult = deriveRunResult({
+    execution: latestRecord
+      ? {
+          outcome: latestRecord.outcome,
+          exitCode: latestRecord.exitCode,
+          reason: latestRecord.reason,
+          recordId: latestRecord.runId,
+        }
+      : null,
+    simulation: null,
+    evidence: {
+      source: 'execution-join',
+      missing: missingEvidence,
+      completeness: missingEvidence.length === 0 ? 'complete' : (executionRecords.available || toolAudit.available ? 'partial' : 'unknown'),
+      evidenceRefs: [
+        ...(executionRecords.available ? (executionRecords.entries ?? []).map((r) => `record:${r.runId}`) : []),
+        ...(toolAudit.available ? (toolAudit.entries ?? []).map((e) => `tool-audit:${e.tool}:${e.argDigest ?? e.ts}`) : []),
+      ],
+    },
+    quality: contractVerdict != null
+      ? { verdict: String(contractVerdict) as QualityStatus, source: 'result-contract', evidenceRefs: [`task:${taskId}`] }
+      : null,
+  })
+
+  return { ...base, executionRecords, toolAudit, enforceApprovals, resultContract, runResult }
 }

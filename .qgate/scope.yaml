@@ -785,3 +785,15 @@ paths:
   # 2026-11-12 双轨经验台账（TTSE 吸收，feat/expdual-ttse）
   - docs/superpowers/specs/2026-11-12-expdual-ttse.md
   - custom/server/expdual/**
+
+  # 2026-11-12 ai-agent-handbook 吸收（feat/handbook-absorb）
+  - docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md
+  - custom/hermes-agent-plugins/**
+  - custom/server/harness/**
+  - custom/server/toolcontract/**
+  - custom/server/toolpipeline/**
+  - custom/server/resume/**
+  - custom/server/eval/**
+  - custom/server/zcode/**
+  - custom/server/tokenbudget/**
+  - simharness/mux/**
