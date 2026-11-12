@@ -340,7 +340,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 - **改之时**：每次编辑过范围与敏感度检查。
 - **收尾时**：按任务类型选门禁序列执行。
 
-多门禁同跑有执行纪律：按"构建、测试、接口、契约、复用、一致性、分层、文档、安全、依赖"的顺序串行。任一步失败即停，不用后面的绿掩盖前面的红。每步留痕到执行账本，审查时据此确认序列真跑过，而不是声称跑过。
+多门禁同跑有执行纪律：按注册的 `ALL_GATES_*` 数组顺序串行。`--all`、`--all-full`、`--compliance-suite` 会遍历各自序列并累计失败，最后统一汇总；单个 FAIL 不中断后续检查，也不被后续 PASS 抵消。显式启用 gate-runs 后每步留痕到执行账本，审查时据此确认序列真跑过，而不是声称跑过。
 
 "无 spec 写源码"这条流程约束按四层拦截落地，判据出自同一个库（spec-first-lib.sh）：
 
@@ -547,7 +547,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 3 | 冷启动到读项目代码动作数 | ≤3 步 | mark-active 后新会话到首个读码动作 |
 | 4 | 门禁可达率 | 100% | 默认执行序列可触达 / facts.conf 对账 |
 | 5 | 组件库清单预算 | 32KiB 硬顶 | self-check 断言 |
-| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11520B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
+| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11776B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
 | 7 | 上下文预算体积（references 拷贝） | ≤FACT_ARTIFACT_BYTES_BUDGET（当前值见附录 A，例外逐例登记于 docs/budget-exception-ledger.md） | self-check 断言 |
 | 8 | 结构性：反向引用数 | 0 | self-check G19 |
 | 9 | 连接性：孤儿资产数 | 0 | self-check G18 |
@@ -3502,24 +3502,24 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 <!-- >>> registry:runtimes >>> (generated from assets/registry/runtimes.tsv; do not edit) -->
 | 名称 | 仓库 | 许可证 | 当前基线 | 接入 | 证据 | 机器标记 |
 |---|---|---|---|---|---|---|
-| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.103 | deep | M1 | baseline_status=synced |
+| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.104 | deep | M1 | baseline_status=synced |
 | GitNexus | abhigyanpatwari/GitNexus | PolyForm Noncommercial 1.0.0 | npm 1.6.12 | deep | M1 | baseline_status=license-risk |
-| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.11.0 | deep | M1 | baseline_status=watch |
+| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.12.1 | deep | M1 | baseline_status=watch |
 | ocr | alibaba/open-code-review | Apache-2.0 | v1.13.6 | deep | M1 | baseline_status=synced |
 | openspec | Fission-AI/OpenSpec | MIT | v1.16.1 | cli | M1 | baseline_status=synced |
 | comet | rpamis/comet | MIT | 0.5.2 | cli | M1 | baseline_status=synced |
 | gsd-core | open-gsd/gsd-core | MIT | v1.20.1 | cli | M1 | baseline_status=synced |
 | codex-security | openai/codex-security | Apache-2.0 | npm-v0.8.3 | cli | M1 | baseline_status=synced |
 | mattpocock-skills | mattpocock/skills | MIT | v1.3.2 | cli | M1 | baseline_status=synced |
-| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.142 | cli | M1 | baseline_status=synced |
+| diagram-design | cathrynlavery/diagram-design | MIT | v2.6.148 | cli | M1 | baseline_status=synced |
 | superpowers | obra/superpowers | MIT | v7.0.2 | method | M1 | baseline_status=synced |
-| gstack | garrytan/gstack | MIT | v1.96.0.0 tip 6666b729 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.72.2 | method | M1 | baseline_status=synced |
+| gstack | garrytan/gstack | MIT | v1.98.0.0 tip 350d4196 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.74.1 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
-| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.0 | method | M1 | baseline_status=synced |
+| impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.1 | method | M1 | baseline_status=synced |
 | dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.2-rc.1 | source | M0 | baseline_status=synced |
 | pua | tanweai/pua | MIT | v3.5.1 | source | M0 | baseline_status=synced |
-| semantica | semantica-agi/semantica | MIT | main c0ec77be | source | M0 | baseline_status=synced |
+| semantica | semantica-agi/semantica | MIT | main 39cf7216 | source | M0 | baseline_status=synced |
 | pi | earendil-works/pi | MIT | v1.5.0 | source | M0 | baseline_status=synced |
 | codegraph | colbymchenry/codegraph | MIT | 未定 | none | M0 | baseline_status=watch |
 | claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.319 | host | M3 | baseline_status=synced |
@@ -3579,8 +3579,11 @@ cd Swarm-yuan/swarm-yuan
 bash install.sh
 ```
 
+默认（无参数，2026-11-09 起）统一安装到 `~/.agents/skills/`——跨工具通用单副本，zcode 原生发现根装后即见；检测到的宿主仅披露不分流，需要装进各家原生目录用 `--all` 或单宿主旗标。安装到 `~/.agents/skills/` 时自动向原生读该根的宿主（当前 zcode）交叉渲染规则面（AGENTS.md 集成块）。
+
 | 选项 | 安装到 |
 |------|--------|
+| `--agents` | `~/.agents/skills/`（默认；跨工具通用技能目录） |
 | `--claude` | `~/.claude/skills/` |
 | `--codex` | `~/.codex/skills/` |
 | `--cursor` | `~/.cursor/skills/` |
@@ -3593,7 +3596,7 @@ bash install.sh
 | `--list` | 仅列出检测到的环境 |
 | `--uninstall --<目标>` | 从对应环境卸载（如 `--uninstall --claude`，`--uninstall --all` 卸载所有已检测环境）。技能目录存档为 `<目录>.uninstalled.<UTC时间戳>`，渲染期写入的宿主配置（hooks 条目/标记块/插件注册）一并注销，用户自有配置保留；幂等可重复执行 |
 
-环境检测判据：宿主家目录存在（如 `~/.cursor`）或宿主 CLI 在 PATH（如 `command -v cursor`），二者满足其一即视为已安装；安装目标始终是各自 `skills/` 子目录。
+环境检测判据：宿主家目录存在（如 `~/.cursor`）或宿主 CLI 在 PATH（如 `command -v cursor`），二者满足其一即视为已安装。检测到的宿主默认不分流安装（统一 `~/.agents/skills/`），`--all`/单宿主旗标才写各自 `skills/` 子目录。
 
 ---
 
@@ -3954,7 +3957,7 @@ bash scripts/generate-skill.sh --render-tools <skill-dir> [project-root] [tool]
 或直接运行：
 
 ```bash
-bash ~/.claude/skills/swarm-yuan/scripts/generate-skill.sh --upgrade my-project-dev /path/to/project
+bash ~/.agents/skills/swarm-yuan/scripts/generate-skill.sh --upgrade my-project-dev /path/to/project
 ```
 
 默认继承原 profile。升级先核验项目状态机（`.swarm-yuan/state.yaml`）：任务停在中间阶段（design/build/verify/operate）即以退出码 2 拒绝升级，并点名在途任务与解除路径；仅注册（open）与已归档（archive）放行，确认接受任务前后工具链版本斜切时设 `SWARM_YUAN_UPGRADE_ALLOW_INFLIGHT=1` 显式豁免。通过后在临时副本完成，成功后发布并把完整原件存到 `.upgrade-backup-*`；失败保留原技能。项目正文与已有配置保持，缺失配置项由生成器补齐。
@@ -4028,7 +4031,7 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 
 | 易混对 | 辨析 |
 |--------|------|
-| **生成器 vs 目标技能** | 生成器 = swarm-yuan 本身（造规则包的）；目标技能 = 生成物（某项目专属的规则包，"生成物"是同义通称，多用于预算/厚薄语境）。两者各有一份 `SKILL.md` 和 `scripts/`——生成器的 SKILL.md 是生成器的入口说明书；目标技能的 SKILL.md 是目标技能的入口说明书（≤11520B，约 11KiB，另有 20000B 硬顶——宿主压缩后重挂载技能在 20000 字符处截断，超线内容整会话消失，管的是**后者**）。 |
+| **生成器 vs 目标技能** | 生成器 = swarm-yuan 本身（造规则包的）；目标技能 = 生成物（某项目专属的规则包，"生成物"是同义通称，多用于预算/厚薄语境）。两者各有一份 `SKILL.md` 和 `scripts/`——生成器的 SKILL.md 是生成器的入口说明书；目标技能的 SKILL.md 是目标技能的入口说明书（≤11776B，约 11KiB，另有 20000B 硬顶——宿主压缩后重挂载技能在 20000 字符处截断，超线内容整会话消失，管的是**后者**）。 |
 | **"自检"一词三义** | ①生成器自检 = 生成器仓库的 `scripts/self-check.sh`（生成流程 Step 1，检查生成器健康）；②目标技能门禁运行 = 目标技能的 `scripts/precheck.sh`（执法检查，日常"提交前自检"指的是它）；③conf 诊断 = 目标技能的 `precheck.sh --doctor`（配置 lint，不判门禁）。三者是三份不同脚本/模式，分属两体。 |
 | **.swarm-yuan/ 目录 vs swarm-yuan 仓库** | `.swarm-yuan/`（带点）是**目标技能在目标项目根**落下的运行时数据目录（四本账等）；`swarm-yuan/`（不带点）是生成器仓库/目录。同名是历史沿用，一指数据一指代码。 |
 | **门禁家族 vs 严格度 vs 执行序列** | 见 §4「门禁分层」。家族=归哪个套餐管；严格度=会不会阻断；执行序列=怎么触发。三轴正交，互不推出。 |
@@ -4151,7 +4154,7 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 
 # facts.conf —— swarm-yuan 口径单一事实源（WP-P1）
 #
-# 所有"56 门禁 / 29+19 / 197 变量 / 17 特征卡 / 15 运行时 / 32 领域 / 13 步流程 / 81 框架"
+# 所有"59 门禁（FULL 53 + advisory-only 6）/ standard 32 + compliance 19 / 204 变量 / 17 特征卡 / 15 运行时 / 32 领域 / 13 步流程 / 81 框架"
 # 等 catchphrase 的权威数字源。变更这里 = 变更全局口径。
 #
 # 用法：
@@ -4173,14 +4176,14 @@ bash scripts/precheck.sh --compliance-suite  # 合规 19 门禁（强监管交�
 #   - references 数 = references/*.md（不含 frameworks/ 子目录）
 
 # ===== 门禁（precheck.sh）=====
-FACT_GATES_TOTAL=59           # check_* 顶层函数总数（field-feedback +check_method_size 54→55；R101 +check_spec_first 55→56）
-FACT_GATES_CORE=12            # ALL_GATES_CORE（R101 +check_spec_first 入核心 10→11——四层拦截模型的门禁面承载）
-FACT_GATES_ARCH=20            # ALL_GATES_STANDARD − CORE（field-feedback +check_method_size 17→18）
-FACT_GATES_COMPLIANCE=19      # ALL_GATES_COMPLIANCE（main 9 + WP-S1 +4安全 + WP-S2 +4质量 + cert/cwe +2——audit-claims-reality 修正：cert_audit/cwe_audit 入列后未同步，长期误标 17）
+FACT_GATES_TOTAL=59           # check_* 顶层函数总数（当前 59 = FULL 53 + advisory-only 6）
+FACT_GATES_CORE=12            # ALL_GATES_CORE（--all 执行序列）
+FACT_GATES_ARCH=20            # ALL_GATES_STANDARD − CORE
+FACT_GATES_COMPLIANCE=19      # ALL_GATES_COMPLIANCE（--compliance-suite 执行序列）
 FACT_GATES_ADVISORY_ONLY=6    # advisory-only（不在任何执行序列）：operate/learnings/loop-oracle/pr-quality/skill-supply-chain/upstream-baseline（cert/cwe 进 compliance、decision/state-phase 进 FULL、upstream-baseline 挂 precheck 启动、其余挂宿主 hooks/loop-hook；可达率 59/59。audit-claims-reality 修正：旧值 10 未随序列迁移同步）
-FACT_GATES_STANDARD=32        # ALL_GATES_STANDARD = CORE + ARCH（field-feedback +method_size 27→28；R101 +spec_first 28→29）
-FACT_GATES_FULL=53            # ALL_GATES_FULL（field-feedback +method_size 48→49；R101 +spec_first 49→50）
-# 闭合方程（self-check 机器断言守）：TOTAL 56 = FULL 50 + ADVISORY_ONLY 6；FULL 50 = STANDARD 29 + COMPLIANCE 19 + 2
+FACT_GATES_STANDARD=32        # ALL_GATES_STANDARD = CORE 12 + ARCH 20（--all-full 执行序列）
+FACT_GATES_FULL=53            # ALL_GATES_FULL = STANDARD 32 + COMPLIANCE 19 + decision/state-phase 2
+# 闭合方程（self-check 机器断言守）：TOTAL 59 = FULL 53 + ADVISORY_ONLY 6；FULL 53 = STANDARD 32 + COMPLIANCE 19 + 2
 
 # ===== 配置变量（precheck.conf 三件套合计）=====
 # WP-P3 后：arch.conf 移除 38 个无示例空占位 <FW>_SRC_GLOBS（懒生成），
@@ -4190,8 +4193,8 @@ FACT_GATES_FULL=53            # ALL_GATES_FULL（field-feedback +method_size 48�
 # 决策 28 后：169 → 171（+STABLE_PROPAGATE/STABLE_PROPAGATE_HOPS，Palantir markings-propagate 映射）
 # 七轮复盘后：171 → 173（CORE 12→13 修正历史漂移 e45d253；ARCH 111→112 +EVAL_WHITELIST 七轮误报治理）
 # WP-P2-extension 后：arch.conf +5 框架 globs（SPARK/HIVE/TDENGINE/DORIS/HARMONYOS_SRC_GLOBS）178→183
-FACT_CONF_VARS=204            # core+arch+compliance 合计（WP-P2-extension +5 框架 globs 178→183；P0-5 +BUILD_DEEP_RUNTIMES 183→184；R23 回归 D8 +BASE_BRANCH 184→185；测试质量轮 +8 core 覆盖率/断言/变异 +4 arch 接口测试 185→197；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 197→199）
-FACT_CONF_VARS_USERFACE=20      # R13 conf 收缩：user 面必配项预算（开关/位置/预算类；43 glob 阈值数据已迁 rules.d/framework-globs.rules——物理变量 199 含兼容别名，user 面必配 ≈ 133 中约 20 开关项）
+FACT_CONF_VARS=204            # core 30 + arch 126 + compliance 48 = 204（三配置文件的物理变量合计）
+FACT_CONF_VARS_USERFACE=20      # R13 conf 收缩：user 面必配项预算（开关/位置/预算类；43 glob 阈值数据已迁 rules.d/framework-globs.rules——物理变量 204 含兼容别名，user 面必配 ≈ 133 中约 20 开关项）
 FACT_CONF_VARS_CORE=30        # precheck.conf（field-feedback +SPEC_REQUIRED/SPEC_GLOB 16→18；P0-5 +BUILD_DEEP_RUNTIMES 18→19；R23 回归 D8 +BASE_BRANCH 19→20；测试质量轮 +8 覆盖率/断言密度/负向/变异 20→28；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 28→30）
 FACT_CONF_VARS_ARCH=126       # precheck.arch.conf（WP-P2-extension +5 框架 globs 112→117；测试质量轮 +4 接口测试 117→121）
 FACT_CONF_VARS_COMPLIANCE=48  # precheck.compliance.conf（WP-S1 30+9 + WP-S2 +7）
@@ -4207,7 +4210,7 @@ FACT_RUNTIMES_DEEP=4          # 深度接线（GitNexus/graphify/claude-mem/ocr�
 FACT_RUNTIMES_CLI=6           # CLI 接线（OpenSpec/comet/gsd-core/codex-security/mattpocock-skills/diagram-design——后两项为仓内物化型，非 command -v 型）
 FACT_RUNTIMES_METHOD=5        # 方法论引用（superpowers/gstack/ECC/Ruflo/impeccable）
 FACT_MATTPPOCOCK_SKILLS=27    # mattpocock 物化技能数（runtime/mattpocock-skills/：engineering 20 + productivity 7；self-check 对账上游刷新漂移）
-FACT_DIAGRAM_DESIGN_VERSION=2.6.142  # diagram-design 物化基线（runtime/diagram-design/MANIFEST.md；R124 刷新同步，R140 零差异升锚，R141 mermaid digest 刷新，R143 全量物化刷新 21 文件+verify-geometry 迁 scripts/ 随迁）
+FACT_DIAGRAM_DESIGN_VERSION=2.6.148  # diagram-design 物化基线（runtime/diagram-design/MANIFEST.md；R124 刷新同步，R140 零差异升锚，R141 mermaid digest 刷新，R143 全量物化刷新，R144 物化刷新 12 提交——arc-diagram 三示例/references×5/scripts×2）
 FACT_DIAGRAM_DESIGN_TYPES=45  # 上游图表类型数（SKILL.md §3 选择表；描述词与类型表同步由上游 verify-docs-sync 守）
 
 # ===== 领域知识 =====
@@ -4221,6 +4224,7 @@ FACT_COGNITION_LAYERS=5       # 五层认知框架（定义源：references/cogn
 # ===== 生成流程 =====
 FACT_FLOW_STEPS=13            # 生成流程详解主步骤数（generation-flow.md "^## Step" 机械可数：Step 1-13；Step 4 含命名子阶段（框架深化与门禁注入），不另计）
 FACT_FLOW_NODES=9             # 目标 skill workflow.md 的 9 个工作流节点（与 generate-skill.sh 骨架「九节点」一致；⑥门禁验证拆为⑥编码验证+⑦独立审查）。研发四阶段顺序挂载（2026-10-27 决策 57）：分支开发⑤→分支测试⑥⑦→主干合并⑧→主干回归⑨——节点数不因阶段挂载变化
+FACT_PROJECT_FACTS_FILE=references/project-facts.md  # 生成物事实层文件相对路径（单一事实源；P2-12a/12b 根治：项目数字写死进 SKILL.md 属 PROJECT_SPECIFIC_FILES 永不重生成、随项目演进必漂移——aistudio-dev 实测 334 spec/6270 测试 vs 现实 650/8726。改为 scripts/project-facts.sh 机械现算落此文件，SKILL.md 认知摘要表与 --upgrade 提示均引用本键只留指针；消费者=generate-skill.sh 模板行 + self-check 2f 断言 + tests/test-project-facts.sh）
 
 # ===== 框架规则引擎 =====
 FACT_FRAMEWORKS=81            # references/frameworks/*.md（不含 _template.md）；WP-P2-extension +spark/+hive/+tdengine/+doris/+harmonyos（74→79）；R62（2026-09-25 第九棒换栈演练）+php（79→80，PHP+composer 生态补缺）；R64（2026-09-26 第十棒换栈演练）+ruby（80→81，Ruby+Bundler 生态补缺）
@@ -4254,7 +4258,7 @@ FACT_ENFORCE_EFFECTIVE_ADVISORY=18   # 有效分层：静态 15 + override 3（s
 # ===== profile 三档 =====
 
 # ===== 生成器骨架文件 =====
-FACT_UNIVERSAL_FILES=109       # generate-skill.sh UNIVERSAL_FILES 清单条目数（C1 机械计数；R13 45 → +memory-writeback+cost-report 等账本族 → R14/R15 +gate-plan+audit-closure → R16 +ontology 三份+ontology-verify → field-feedback +review-record-template = 59 → 全局一致性二轮 +standards-map.conf/framework-globs.rules 随发补齐 = 65（agents-md-audit-round 2026-09-10 补记：5170a0a 改值未改链）→ v2.14.2 自包含轮 +relations-extract/inventory-verify/inventory-dimensions.conf = 68 → v2.14.3 排查 A3 +relations-query.sh = 69 → 功能点估算轮（2026-09-15）+cost-estimation-methodology.md 随发 = 70 → R37（2026-09-18）+lazy-generation-methodology.md 随发 = 71 → R52（2026-09-25）随发补缺 +12（分派表引用的方法论/行为档：knowledge-lifecycle/decision-governance/ai-process-records/agent-skills/codex/mea-loop/togaf/cordis/frontend-design/codex-security/mcp-governance/crypto-spec——分派目标侧可达）= 83 → R72 全量回归轮（2026-09-29）+mine-habits.sh 随发（D6 修复三处引用悬空，v2.14.2 自包含先例对齐）= 84 → R86 新运行时吸收轮（2026-10-03）+mattpocock-skills-methodology.md 随技能分发（feature/fix 路由行分派对齐 G25 ⑥）= 85 → R88（2026-10-04）+rsi-evidence-methodology.md 随发（此前键值 86 已先于链更新，R100 补链）= 86 → R100 受控语言轮（2026-10-09）+controlled-language-methodology.md 随发（人面输出纪律全档适用）= 87 → R98 记忆后端适配轮（2026-10-09）+memory-backends.sh 随发（记忆后端契约单一事实源）= 88 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite，判定单一事实源）+spec-first-pre-commit.sh（standard，L2 提交时强拦）= 90 → R103 五宿主 hooks 整合轮（2026-10-09）+spec-first-bridge.sh（standard，五宿主 L1 写时拦截桥）= 91 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh 随发（目标技能侧结构自检，lite 全档）= 92 → 本体轮（2026-10-22）+business-ontology-methodology.md +fibo-financial-ontology.md 随发（standard 档）= 94 → 运维排障底座轮（2026-10-22）+ops-readonly-guard.sh +tunnel.sh +tunnel.conf（用户可填充）+bugfix-runbook.md +remote-debug-jvm.md 随发（standard 档，存量项目 fix 任务连研发环境取证底座）= 99 → R138（2026-10-22）+assets/lib/files.sh 随发（产物侧 detect-frameworks 运行库）# 100 → 合规检查能力轮（2026-10-22）+compliance-checkpoints.md +regulatory-checkpoint-table.md +inspection-ledger.sh 随发（compliance 档，执法检查知识层+迎检台账）= 103）；ub-mode 吸收轮 +clean-code-metrics-methodology.md 随发 = 105 → pstack 吸收批（2026-11-03）+failure-taxonomy 与 knowledge-retrieval-ladder 两档补登 = 107（pstack-methodology 走 gen_only：目标技能拿到的是产物规范而非方法论档，不占分发预算）；预算瘦身轮（2026-11-03）code-graph-tools 转 gen_only（选型研究是生成期决策）= 109
+FACT_UNIVERSAL_FILES=110       # generate-skill.sh UNIVERSAL_FILES 清单条目数（C1 机械计数；R13 45 → +memory-writeback+cost-report 等账本族 → R14/R15 +gate-plan+audit-closure → R16 +ontology 三份+ontology-verify → field-feedback +review-record-template = 59 → 全局一致性二轮 +standards-map.conf/framework-globs.rules 随发补齐 = 65（agents-md-audit-round 2026-09-10 补记：5170a0a 改值未改链）→ v2.14.2 自包含轮 +relations-extract/inventory-verify/inventory-dimensions.conf = 68 → v2.14.3 排查 A3 +relations-query.sh = 69 → 功能点估算轮（2026-09-15）+cost-estimation-methodology.md 随发 = 70 → R37（2026-09-18）+lazy-generation-methodology.md 随发 = 71 → R52（2026-09-25）随发补缺 +12（分派表引用的方法论/行为档：knowledge-lifecycle/decision-governance/ai-process-records/agent-skills/codex/mea-loop/togaf/cordis/frontend-design/codex-security/mcp-governance/crypto-spec——分派目标侧可达）= 83 → R72 全量回归轮（2026-09-29）+mine-habits.sh 随发（D6 修复三处引用悬空，v2.14.2 自包含先例对齐）= 84 → R86 新运行时吸收轮（2026-10-03）+mattpocock-skills-methodology.md 随技能分发（feature/fix 路由行分派对齐 G25 ⑥）= 85 → R88（2026-10-04）+rsi-evidence-methodology.md 随发（此前键值 86 已先于链更新，R100 补链）= 86 → R100 受控语言轮（2026-10-09）+controlled-language-methodology.md 随发（人面输出纪律全档适用）= 87 → R98 记忆后端适配轮（2026-10-09）+memory-backends.sh 随发（记忆后端契约单一事实源）= 88 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite，判定单一事实源）+spec-first-pre-commit.sh（standard，L2 提交时强拦）= 90 → R103 五宿主 hooks 整合轮（2026-10-09）+spec-first-bridge.sh（standard，五宿主 L1 写时拦截桥）= 91 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh 随发（目标技能侧结构自检，lite 全档）= 92 → 本体轮（2026-10-22）+business-ontology-methodology.md +fibo-financial-ontology.md 随发（standard 档）= 94 → 运维排障底座轮（2026-10-22）+ops-readonly-guard.sh +tunnel.sh +tunnel.conf（用户可填充）+bugfix-runbook.md +remote-debug-jvm.md 随发（standard 档，存量项目 fix 任务连研发环境取证底座）= 99 → R138（2026-10-22）+assets/lib/files.sh 随发（产物侧 detect-frameworks 运行库）# 100 → 合规检查能力轮（2026-10-22）+compliance-checkpoints.md +regulatory-checkpoint-table.md +inspection-ledger.sh 随发（compliance 档，执法检查知识层+迎检台账）= 103）；ub-mode 吸收轮 +clean-code-metrics-methodology.md 随发 = 105 → pstack 吸收批（2026-11-03）+failure-taxonomy 与 knowledge-retrieval-ladder 两档补登 = 107（pstack-methodology 走 gen_only：目标技能拿到的是产物规范而非方法论档，不占分发预算）；预算瘦身轮（2026-11-03）code-graph-tools 转 gen_only（选型研究是生成期决策）= 109 → P2-12 事实层轮（2026-11-12）+project-facts.sh 随发（lite 档，项目数字现算事实层——复盘 P2-12a/12b）= 110
 
 # ===== Oracle Gate 循环（WP-loop，借鉴 tanweai/pua pua-loop + autoresearch Oracle Isolation）=====
 FACT_LOOP_ORACLE=1                   # 1=启用 Stop hook Oracle Gate（verify_command 独立验证 <promise>）
@@ -4311,7 +4315,7 @@ FACT_MEASURE_METADATA_REQUIRED=1   # 1=fail（十一轮复盘：核心 13/13 全
 # ===== 生成管线工具化（WP-P2~P5）=====
 FACT_FRAMEWORK_EVIDENCE=1               # framework-evidence.sh 产出（1=启用，台账 TSV）
 FACT_CONF_RENDER_PROFILES=3             # conf-render.sh profile 档（lite/standard/compliance）
-FACT_UNIVERSAL_FILES_CORE=51            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46）
+FACT_UNIVERSAL_FILES_CORE=52            # UNIVERSAL_FILES 标 lite 档的条目数（三 profile 都拷）（C1 机械计数，含带尾注释条目；audit-2026-08-25 修正：30 是行尾锚定 grep 的盲区读数；v2.14.2 自包含轮 +3 边集/核验工具随发=40；v2.14.3 排查 A3 +relations-query.sh=41；R72 全量回归轮 +mine-habits.sh 随发=42；R100 受控语言轮 +controlled-language-methodology.md（lite 档）=43；R98 记忆后端适配轮 +memory-backends.sh 随发（lite 档）=44 → R101 四层拦截轮（2026-10-09）+spec-first-lib.sh（lite 档，fail-gate-hook lite 依赖判定库）=45 → R122 图表生产能力轮（2026-10-19）+diagram-check.sh（lite 档，目标技能侧结构自检）=46 → P2-12 事实层轮（2026-11-12）+project-facts.sh（lite 档，项目数字现算事实层）=52）
 
 # ===== 复杂度负向预算（决策 26，WP-rhetoric-honesty）=====
 # 范式声称帮项目降复杂度，自身复杂度不可逆上升（门禁 27->52->54）会证伪范式可信度。
@@ -4345,7 +4349,7 @@ FACT_SCRIPT_LOC=9972            # 四脚本（assets/precheck+gates-strict/warn/
 # 事实：门禁/变量有预算，但门禁代码与框架注入代码的行数长期无上限（终态设计 §十已登记为风险）。
 # 口径：引擎 LOC = assets/precheck.sh + assets/gates/_lib.sh + assets/gates/<domain>/*.sh（域源，不含生成的 gates-*.sh 聚合视图，避免双计）；
 #       框架门禁 LOC = assets/framework-gates/*.sh（注入目标技能的执行面）。
-# 强度：超过上限即 fail（与门禁 56 同族）；下降不拦，但应在下一轮把上限收紧到新实测值。
+# 强度：超过上限即 fail（与门禁 59 同族）；下降不拦，但应在下一轮把上限收紧到新实测值。
 FACT_ENGINE_CODE_LOC_MAX=8600           # 引擎域源代码行数上限（2026-10-24 实测冻结 7769：precheck 2094 + gates/_lib.sh 778 + gates 域源 4897；2026-10-26 设计文档同步轮登记上调 7769→7800；2026-10-30 ub-mode 吸收轮登记上调 7800→7980：实测 7951，成因=复杂度维度与重复度维度并入既有两门禁（_lib.sh 三个扫描 helper + method-size/reuse 各一段），扩容既有门禁内涵而非新增门禁数，决策 58）
 FACT_FRAMEWORK_GATE_LOC_MAX=18469       # 框架门禁注入代码行数上限（2026-10-24 冻结 18464；R141 sharding 聚合外包检测 +5 行登记上调）
 
@@ -4365,12 +4369,12 @@ FACT_VERSION_ORACLE_RULE=1              # 版本 oracle 单源规则存在标志
 # file-glob 级静态属性，不沿调用链传播——`--stable-diff` 防直接改稳定单元，
 # 防不了"改下游依赖间接破坏契约"。决策 28 扩展 `--stable-diff` 语义加传播段
 # （下游改动只 warn 不 fail，保持 enforce_level 归类不变），不新增 check_* 门禁
-# （守决策 26/26.2：门禁预算 56 冻结）。G16 断言守 absorb 四载体一致性，不计入 56
+# （守决策 26/26.2：门禁预算 59 冻结）。G16 断言守 absorb 四载体一致性，不计入 59
 # （决策 27 第 4 条：G<N> 是合规扩展点）。
 FACT_STABLE_PROPAGATE=1                 # 1=启用标记沿调用链传播（决策 28）；0=关闭（仅直接改稳定单元 fail）
 FACT_STABLE_PROPAGATE_HOPS=1            # 传播跳数（默认 1，仅 1 跳下游邻域；0=禁用传播段）
 FACT_ARTIFACT_BYTES_BUDGET=618496   # 税制断言：UNIVERSAL_FILES 拷贝体积预算（Codex catalog 2%/10k-token 预算的 bash 对应物）。决策 38/26.2：预算是恒等式——新增须等额删除或逐例登记（登记理由链台账：swarm-yuan/docs/budget-exception-ledger.md，累计 33 次登记自本行行尾注释迁出）；self-check check_complexity_budget 对账真值；R125 起分发面经 distill-references.sh 净化，预算不再随运行时刷新轮上涨
-FACT_SKILLMD_BYTES_BUDGET=11520     # 生成物 SKILL.md 正文预算（≈8KB→11KB 锚，Codex MAX_SKILL_PROMPT_BYTES 同源）。第八次登记 11392→11520（2026-11-07，R143）：v2.99.3 后生成器侧批（行为评测脚本/降标守卫/门禁数 56→59 等）随发文件与索引行增重，gen-e2e 实测 11458B 超 66B——R72/R98/R138 同款先例（随发文件入清单区的功能性增量非注记膨胀）；不构成注记膨胀先例。第六次登记 10752→11264（2026-10-12，两轮并行合并取覆盖值）：成因=run14 交付形态 DoD 轮（2ce9fa9）生成器交付形态段入产物 SKILL.md——运行时刷新轮实测 10954B 超 202B（登记 11008）、回归轮实测 11003B 超 251B（登记 11264），同一功能性增量的两次独立测量；该 DoD 轮未跑 gen-e2e 即合入，回归轮连同 CI 诚实性缺陷一并根治；第七次登记 11264→11392（2026-10-22，R138 产物侧运行库轮）：assets/lib/files.sh 入分发清单（dist.tsv 95 行），产物 SKILL.md 按需读取索引区 +1 行，gen-e2e 实测 11296B 超 32B——R72/R98 同款先例（随发文件入清单区的功能性增量非注记膨胀）。不构成先例。R72 全量回归轮（2026-09-29）R98 记忆后端适配轮（2026-10-09）第五次登记 10240→10752：gen-e2e 实测 10273B 超 33B，成因=按需读取索引表 +1 行（memory-backends.sh 随发条目，记忆后端契约单一事实源——R72 同款先例：随发文件入清单区的功能性增量非注记膨胀）；不构成先例。
+FACT_SKILLMD_BYTES_BUDGET=11776     # 生成物 SKILL.md 正文预算（≈8KB→11KB 锚，Codex MAX_SKILL_PROMPT_BYTES 同源）。第九次登记 11520→11776（2026-11-12，P2-12 事实层轮）：认知摘要表 +项目数字指针行、按需读取索引 +project-facts.sh 随发条目，gen-e2e 实测 11707B 超 187B——R72/R98/R138 同款先例（随发文件入清单区的功能性增量非注记膨胀）；不构成注记膨胀先例。第八次登记 11392→11520（2026-11-07，R143）：v2.99.3 后生成器侧批（行为评测脚本/降标守卫/门禁数 56→59 等）随发文件与索引行增重，gen-e2e 实测 11458B 超 66B——R72/R98/R138 同款先例（随发文件入清单区的功能性增量非注记膨胀）；不构成注记膨胀先例。第六次登记 10752→11264（2026-10-12，两轮并行合并取覆盖值）：成因=run14 交付形态 DoD 轮（2ce9fa9）生成器交付形态段入产物 SKILL.md——运行时刷新轮实测 10954B 超 202B（登记 11008）、回归轮实测 11003B 超 251B（登记 11264），同一功能性增量的两次独立测量；该 DoD 轮未跑 gen-e2e 即合入，回归轮连同 CI 诚实性缺陷一并根治；第七次登记 11264→11392（2026-10-22，R138 产物侧运行库轮）：assets/lib/files.sh 入分发清单（dist.tsv 95 行），产物 SKILL.md 按需读取索引区 +1 行，gen-e2e 实测 11296B 超 32B——R72/R98 同款先例（随发文件入清单区的功能性增量非注记膨胀）。不构成先例。R72 全量回归轮（2026-09-29）R98 记忆后端适配轮（2026-10-09）第五次登记 10240→10752：gen-e2e 实测 10273B 超 33B，成因=按需读取索引表 +1 行（memory-backends.sh 随发条目，记忆后端契约单一事实源——R72 同款先例：随发文件入清单区的功能性增量非注记膨胀）；不构成先例。
 FACT_SKILLMD_BYTES_HARD_CAP=20000    # 生成物 SKILL.md 硬顶（R140 物化 superpowers 7.0.1 防线：宿主压缩后重挂载技能在 20000 字符处截断、其后内容整会话消失；预算可按先例再登记上调，硬顶锚宿主行为不可越——两档防线，超线须裁正文或移入 references/ 按需读；消费者=tests/e2e/run-gen-e2e.sh §7.6b）
 FACT_MAP_BYTES_BUDGET=32768       # audit-2026-08-25：生成物地图预算（≤32KiB；载体=生成物 references/reference-manual.md 的两列地图表，锚点=gen-e2e §7.7 对骨架实测）
 FACT_CLI_AB_ENHANCED_GATES=--reuse,--review,--diagram,--skill-supply-chain,--method-size
@@ -4434,7 +4438,7 @@ unset _facts_dir
 | code-graph-tools | GitNexus/graphify/codegraph 调研（A） | 生成流程 Step 3 图谱优先【生成器侧】 | 图谱工具选型（目标技能不随之分发：选型是生成期决策） |
 | togaf-metamodel-methodology | TOGAF BDAT（B） | §D.0.6 四层视角 | 架构类变更探查 |
 | frontend-design-methodology | pbakaus/impeccable（B） | 生成流程 Step 7 + 开发工作流 ⑤ 前端 | 前端设计任务 |
-| diagram-production-methodology | cathrynlavery/diagram-design v2.6.142（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账） | 生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布 | 需要可发布架构/流程/时序/状态/ER/依赖/部署图 |
+| diagram-production-methodology | cathrynlavery/diagram-design v2.6.148（A，MIT；版本真值=runtime/diagram-design/MANIFEST.md，facts.conf FACT_DIAGRAM_DESIGN_VERSION 对账） | 生成流程 Step 7 + 开发工作流 ③ spec/⑦ 审查/⑨ 发布 | 需要可发布架构/流程/时序/状态/ER/依赖/部署图 |
 
 ### 族② 拼装与知识消费（开发工作流 ②⑤）
 

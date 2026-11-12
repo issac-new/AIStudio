@@ -110,6 +110,7 @@ UNIVERSAL_FILES=(
   "scripts/setup-loop.sh|hook|standard"
   "scripts/loop-hook.sh|hook|standard"
   "scripts/project-fingerprint.sh|gen|lite"
+  "scripts/project-facts.sh|assets|lite"
   "scripts/inventory-update.sh|gen|lite"
   "scripts/relations-extract.sh|gen|lite"
   "scripts/inventory-verify.sh|gen|lite"
@@ -1530,6 +1531,11 @@ _publish_upgrade() {
   echo "=== 升级完成 ==="
   echo "  备份: $backup_dir"
   echo "  profile: ${PROFILE}；下一步: AI 检查新增内容 + 运行门禁验证"
+  # 事实层可刷新提示（P2-12a/12b）：upgrade 不自动刷（斜切窗口内重算可能落在半迁移态），
+  # 只提示命令——scripts/project-facts.sh 已随本次 UNIVERSAL_FILES 落进目标技能。
+  if [[ -f "$SKILL_DIR/scripts/project-facts.sh" ]]; then
+    echo "  事实层可刷新: bash scripts/project-facts.sh ${SKILL_DIR} ${PROJECT_DIR}（项目数字现算进 references/project-facts.md——SKILL.md 认知摘要只指路不写死）"
+  fi
 }
 
 _dryrun_report() {  # $1=live（升级前原件） $2=staged（升级后暂存副本）
@@ -2347,6 +2353,14 @@ else
   _nav_flow="开发工作流九节点（①需求→…→⑨发布）→references/workflow.md；任务配方→references/recipes.md（②探查先查）；守卫链=spec-first hook（无 spec 写码即拦）→状态机阶段守卫→门禁序列→拦截落 gate-deny.jsonl"
 fi
 _DELIVERY_SHAPES=$(_detect_delivery_shapes "$PROJECT_DIR")
+# 事实层指针单一事实源（P2-12a/12b）：认知摘要表只指路不写死项目数字——SKILL.md 属
+# PROJECT_SPECIFIC_FILES 永不重生成，写死数字随项目演进必漂移；数字由 create 尾段的
+# project-facts.sh 首刷进可重算文件。facts.conf 是生成器侧文件（不随技能分发），缺席回退默认相对路径。
+if [[ -f "$ASSETS_DIR/facts.conf" ]]; then
+  # shellcheck disable=SC1090
+  source "$ASSETS_DIR/facts.conf"
+fi
+_pf_rel="${FACT_PROJECT_FACTS_FILE:-references/project-facts.md}"
 
 cat > "$SKILL_DIR/SKILL.md" <<EOF
 ---
@@ -2374,6 +2388,7 @@ status: draft
 | 测试命令 | $(grep -m1 '^TEST_CMD=' "$SKILL_DIR/scripts/precheck.conf" 2>/dev/null | sed "s/^TEST_CMD=//;s/'//g;s| *#.*||" || echo "（AI 探查填充）") |
 | 检测框架 | $(bash "$SRC_SCRIPTS/detect-frameworks.sh" "$PROJECT_DIR" 2>/dev/null | grep -E '^ACTIVE_FRAMEWORKS=' | sed 's/^ACTIVE_FRAMEWORKS=//;s/[()"]//g' || echo "（无已知框架）") |
 | 交付形态嗅探 | ${_DELIVERY_SHAPES}（AI 核正；每型运行证据=完成定义一部分，单测全绿≠可运行） |
+| 项目数字 | specs/补丁/测试/vendor 基线——scripts/project-facts.sh 机械现算，见 ${_pf_rel}（首行 as_of 戳）；**勿写死进本表**（写死=永不重生成必漂移） |
 
 > 项目类型与改造分类由 AI 探查判定；生成器只做自动嗅探。
 
@@ -2486,6 +2501,7 @@ _idx_desc() {  # $1=path $2=cat → 用途短语（≤10 字，防 8KB 预算爆
     memory-writeback.sh) echo "记忆写回";;
     trace-log.sh) echo "调用/决策留痕";;
     project-fingerprint.sh) echo "指纹感知入口";;
+    project-facts.sh) echo "项目数字事实层";;
     generate-skill.sh) echo "生成器垫片";;
     cost-report.sh) echo "成本报告";;
     spec-template.md) echo "spec 模板 §1-24";;
@@ -2619,6 +2635,14 @@ if declare -F inject_frameworks >/dev/null && [[ -f "$SKILL_DIR/scripts/precheck
   else
     inject_frameworks "$SKILL_DIR" || echo "  ⚠ 门禁注入返回非 0（$?），请人工检查"
   fi
+fi
+
+# 事实层首刷（P2-12a/12b）：骨架落位后立即现算项目数字进 references/project-facts.md。
+# 只在 create/resume 跑（upgrade 走 _publish_upgrade 尾段提示，不自动刷——dry-run 零写入
+# 承诺 + 刷新时机属用户裁决）；置于 _write_skill_manifest 前使 files.count 计入该文件。
+if [[ "$MODE" != "upgrade" && -f "$ASSETS_DIR/project-facts.sh" ]]; then
+  bash "$ASSETS_DIR/project-facts.sh" "$SKILL_DIR" "$PROJECT_DIR" \
+    || echo "  ⚠ 事实层首刷失败（不阻断骨架交付；手动重跑: bash scripts/project-facts.sh <技能目录> <项目根>）" >&2
 fi
 
 _write_skill_manifest "$SKILL_DIR" "${SWARM_YUAN_STAMP}-$$"
