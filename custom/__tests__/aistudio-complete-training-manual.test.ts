@@ -62,6 +62,8 @@ describe('AIStudio 完整培训手册契约', () => {
       'Ycode',
       '两套口径',
       '验收标准',
+      '关键问题与对应措施',
+      '可靠、准确、有效如何保证',
     ]) expect(html, `缺少主题：${needle}`).toContain(needle)
   })
 

@@ -146,8 +146,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   pre{font-size:8pt;white-space:pre-wrap;word-break:break-word}
   a{color:inherit;text-decoration:none}
   .page{break-before:auto}
-  section.chapter{break-before:page}
-  .cover{break-after:page}
+  section.chapter{break-before:auto}
+  .cover{break-after:auto}
 }
 </style>
 </head>
@@ -159,11 +159,11 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <span class="ver">15 分钟版 · v1.0.15-overlay</span>
   <div class="part">五段课程</div>
   <ol>
-    <li><a href="#s1">1 全局定位（3 分钟）</a></li>
+    <li><a href="#s1">1 理念与关键问题（4 分钟）</a></li>
     <li><a href="#s2">2 AIStudio（3 分钟）</a></li>
     <li><a href="#s3">3 swarm-yuan（4 分钟）</a></li>
     <li><a href="#s4">4 吸收来源（2 分钟）</a></li>
-    <li><a href="#s5">5 上手与验收（3 分钟）</a></li>
+    <li><a href="#s5">5 上手与验收（2 分钟）</a></li>
   </ol>
 </nav>
 
@@ -187,8 +187,41 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 </header>
 
 <section class="chapter" id="s1">
-<h2><span class="no">第一段 · 3 分钟</span>全局定位：三层分工与四论依据</h2>
-<p class="lead">AI 智能体规模扩大后，质量不能依赖模型自觉，只能依赖结构：人确定方向与例外，机制守住边界，AI 执行具体工作。</p>
+<h2><span class="no">第一段 · 4 分钟</span>核心理念、原则与关键问题</h2>
+<p class="lead"><strong>理念</strong>：人定方向、机器守门、AI 干活。AI 智能体规模扩大后，质量不能依赖模型自觉，只能依赖结构。<strong>思路</strong>：把研发能力做成标准作业流程——先把标准与经验固化为资产，再把资产装配成流水线，最后用独立检查决定能否交付。</p>
+
+<table>
+<thead><tr><th style="width:110px">原则</th><th>含义</th><th style="width:300px">违反后的典型后果</th></tr></thead>
+<tbody>
+<tr><td>对象一致</td><td>任务、提交、测试、审批指向同一事项</td><td>用旧提交的测试报告证明新代码</td></tr>
+<tr><td>责任明确</td><td>每个环节有负责人与验收人，人机分工不混</td><td>流程走完但无人对结果负责</td></tr>
+<tr><td>证据优先</td><td>自述不构成证据，结论须回到当次输出与记录</td><td>“已完成”无法复核，问题延迟暴露</td></tr>
+<tr><td>开环加闭环</td><td>提出要求的同时设置拦截，违反即被阻断</td><td>规则只写在文档里，实际无人执行</td></tr>
+<tr><td>例外可查</td><td>代理、跳过、豁免单独登记并披露</td><td>“全部通过”掩盖真实缺口</td></tr>
+</tbody>
+</table>
+
+<h3>关键问题与对应措施</h3>
+<table>
+<thead><tr><th style="width:230px">关键问题</th><th style="width:300px">措施</th><th>判据</th></tr></thead>
+<tbody>
+<tr><td>规模扩大后人工监督无法覆盖</td><td>把要求写成 hooks、门禁与状态机准入，形成闭环</td><td>违反时被阻断，有拦截记录</td></tr>
+<tr><td>需求与设计表述不清</td><td>规格先行，验收条件写成可观察断言，冻结后变更重评审</td><td>第三方可独立判断是否完成</td></tr>
+<tr><td>AI 自述完成不可信</td><td>真实测试、独立评审、逐门禁证据，自述不作结论</td><td>结论可回溯至当次提交与输出</td></tr>
+<tr><td>门禁通过但业务出错</td><td>四类证据互补：门禁查结构、测试查行为、评审查质量、业务验收查价值</td><td>四类证据分别成立，缺口如实披露</td></tr>
+<tr><td>项目知识随人员流动流失</td><td>清单、关系边集、任务配方、经验文件固化并随升级保留</td><td>新成员可据此定位与复用，升级后经验仍在</td></tr>
+</tbody>
+</table>
+
+<h3>可靠、准确、有效如何保证</h3>
+<table>
+<thead><tr><th style="width:100px">维度</th><th style="width:260px">依赖</th><th>具体做法</th></tr></thead>
+<tbody>
+<tr><td>可靠</td><td>科学方法论：结论可复现</td><td>正反例夹具、变异探针、同题同版复评；门禁本身也要被检查</td></tr>
+<tr><td>准确</td><td>信息论：口径统一、噪声可控</td><td>单一事实源、跳过项单列、数字标注版本与来源、双向对账</td></tr>
+<tr><td>有效</td><td>控制论：偏差可纠正</td><td>状态机准入、门禁阻断、趋势观察、复盘行动项进入下一轮</td></tr>
+</tbody>
+</table>
 
 <figure>
 <svg viewBox="0 0 980 250" role="img" aria-label="三层投影图：人机界面层、组织控制层、机制执行层">
@@ -402,7 +435,7 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 </section>
 
 <section class="chapter" id="s5">
-<h2><span class="no">第五段 · 3 分钟</span>上手与验收：做一遍，验一遍</h2>
+<h2><span class="no">第五段 · 2 分钟</span>上手与验收：做一遍，验一遍</h2>
 <p class="lead">十五分钟内完成一次最小演示：确认环境、生成技能、执行一个需求、判读门禁、给出结论。每步均须留下证据。</p>
 
 <table>
