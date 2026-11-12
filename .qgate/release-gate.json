@@ -1,17 +1,17 @@
 {
-  "evidenceId": "release-gate/1794332588818",
+  "evidenceId": "release-gate/1794492152647",
   "status": "complete",
-  "commit": "39de89e2ef4445de7732822b3001ed2d967c8565",
-  "startedAt": 1794332588818,
-  "endedAt": 1794333425260,
+  "commit": "766a9284740e0af72d82b539a9a491332869c027",
+  "startedAt": 1794492152647,
+  "endedAt": 1794492933850,
   "failedStep": null,
   "bundleIdentity": {
-    "bundleId": "f8417ab1e05db3ce0198fb5ec39849420d426d68ca6381b2545a8586fa683388",
+    "bundleId": "325e47d93e6b1075e4bdbcd7957bb09a995eb94c469250dce2b9e8548fa4cd5a",
     "file": "/Users/cuishi/lab/AIStudio/vendor/hermes-studio/dist/server/bundle-identity.txt",
-    "generatedAtMs": 1794333424372.7917,
-    "patchCount": 469,
+    "generatedAtMs": 1794492933027.3599,
+    "patchCount": 472,
     "assetCount": 19,
-    "patchDigestsSha": "1e9c2039691a448d3f3d399e40eb0ec07cfc723701f83ed73c4d5c27ef852b03",
+    "patchDigestsSha": "d3f02208eb554ddc5c7e07c6b46298fb6ccdb15f8415923f067b637d81c379aa",
     "runtimeManifestDigest": "c847becc4e274803d2e7c5324a51aaa8394a72aecc21b7b93aa66134ab659901",
     "recomputedMatch": true
   },
@@ -22,8 +22,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794332588943,
-      "endedAt": 1794332590277
+      "startedAt": 1794492152815,
+      "endedAt": 1794492154067
     },
     {
       "id": "gate-basic-check",
@@ -31,8 +31,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794332590710,
-      "endedAt": 1794333254945
+      "startedAt": 1794492154253,
+      "endedAt": 1794492746726
     },
     {
       "id": "gate-harness-eval",
@@ -40,8 +40,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333255126,
-      "endedAt": 1794333258936
+      "startedAt": 1794492746906,
+      "endedAt": 1794492750415
     },
     {
       "id": "gate-L0.convention-alignment",
@@ -49,8 +49,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333259103,
-      "endedAt": 1794333261236
+      "startedAt": 1794492750574,
+      "endedAt": 1794492752669
     },
     {
       "id": "gate-L1.symbol-grounding",
@@ -58,8 +58,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333261402,
-      "endedAt": 1794333264684
+      "startedAt": 1794492752826,
+      "endedAt": 1794492755839
     },
     {
       "id": "gate-L0.acceptance-coverage",
@@ -67,8 +67,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333264862,
-      "endedAt": 1794333267066
+      "startedAt": 1794492756003,
+      "endedAt": 1794492758106
     },
     {
       "id": "gate-L0.registers",
@@ -76,8 +76,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333267233,
-      "endedAt": 1794333269381
+      "startedAt": 1794492758265,
+      "endedAt": 1794492760435
     },
     {
       "id": "gate-L0.requirement-trace",
@@ -85,8 +85,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333269541,
-      "endedAt": 1794333271607
+      "startedAt": 1794492760599,
+      "endedAt": 1794492762670
     },
     {
       "id": "gate-L0.scope-check",
@@ -94,8 +94,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333271781,
-      "endedAt": 1794333273964
+      "startedAt": 1794492762828,
+      "endedAt": 1794492764878
     },
     {
       "id": "gate-governance.orgscale",
@@ -103,8 +103,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333274128,
-      "endedAt": 1794333311268
+      "startedAt": 1794492765035,
+      "endedAt": 1794492811823
     },
     {
       "id": "gate-hrgov.workunit-contract",
@@ -112,8 +112,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333311463,
-      "endedAt": 1794333359995
+      "startedAt": 1794492811997,
+      "endedAt": 1794492879296
     },
     {
       "id": "typecheck-harness",
@@ -121,8 +121,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333360186,
-      "endedAt": 1794333363560
+      "startedAt": 1794492879469,
+      "endedAt": 1794492883978
     },
     {
       "id": "typecheck-client",
@@ -130,8 +130,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333363728,
-      "endedAt": 1794333392208
+      "startedAt": 1794492884134,
+      "endedAt": 1794492907961
     },
     {
       "id": "build-full",
@@ -139,8 +139,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333392404,
-      "endedAt": 1794333424460
+      "startedAt": 1794492908135,
+      "endedAt": 1794492933114
     },
     {
       "id": "release-report",
@@ -148,8 +148,8 @@
       "status": "pass",
       "exitCode": 0,
       "failure": null,
-      "startedAt": 1794333424624,
-      "endedAt": 1794333424762
+      "startedAt": 1794492933266,
+      "endedAt": 1794492933395
     }
   ]
 }
