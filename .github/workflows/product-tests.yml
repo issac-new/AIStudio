@@ -60,6 +60,8 @@ jobs:
         working-directory: vendor/hermes-studio
       - name: 注入（补丁重放 + node_modules 软链 + runtime 部署到隔离 HOME）
         run: node scripts/ensure-injected.mjs
+      - name: typecheck:harness（custom/server 全目录；类型依赖经注入态链齐备）
+        run: npm run typecheck:harness
       - name: 安装 Chromium（diagram PNG 导出等真实浏览器用例）
         run: npx playwright install chromium
       - name: 全量 vitest（与 basic-check 门同配方：串行文件防并行污染）
