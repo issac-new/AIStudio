@@ -14,7 +14,13 @@ import { join, resolve } from 'node:path'
 // 注意：纯 `npm run inject` 的 runtime 部署是 DRY-RUN（宿主 ~/.hermes 不动；实测
 // /tmp/inject-replay.log 2026-11-07），CI 环境无宿主也安全。
 const REPO = resolve(__dirname, '..', '..')
-const TMP_WT = join(tmpdir(), `overlay-replay-${process.pid}`)
+const TMP_WT_BASE = join(tmpdir(), `overlay-replay-${process.pid}`)
+const createdWTs: string[] = []
+function newWt(): string {
+  const wt = `${TMP_WT_BASE}-${createdWTs.length + 1}`
+  createdWTs.push(wt)
+  return wt
+}
 
 function run(cmd: string, cwd: string) {
   return execSync(cmd, { cwd, encoding: 'utf8', timeout: 240_000, stdio: ['ignore', 'pipe', 'pipe'] })
@@ -24,14 +30,17 @@ function run(cmd: string, cwd: string) {
 // 超时 120s：全量套件并行满载下 git worktree remove --force 对大树可超 vitest 默认 10s
 // 钩子时限（2026-11-11 zcode 3.18.0 同步批全量两连红实证：测试本体过、清理钩子超时假红）。
 afterAll(() => {
-  try { run('git worktree remove --force .', TMP_WT) } catch { /* 目录可能已被删 */ }
+  for (const wt of createdWTs) {
+    try { run('git worktree remove --force .', wt) } catch { /* 目录可能已被删 */ }
+    rmSync(wt, { recursive: true, force: true })
+  }
   try { execSync('git worktree prune', { cwd: REPO }) } catch { /* best-effort */ }
-  rmSync(TMP_WT, { recursive: true, force: true })
 }, 120_000)
 
 describe('overlay 补丁系列 pristine 全量重放（三 lane 真管线）', () => {
   it('clean+inject 在 pristine worktree 达到 manifest complete（zcode 002-009 + patches 全系可应用）', () => {
     execSync('git worktree prune', { cwd: REPO })
+    const TMP_WT = newWt()
     // detached HEAD：不建分支（守门只读性质，避免 CI 里留下分支引用）
     run(`git worktree add --detach "${TMP_WT}" HEAD`, REPO)
 
@@ -54,5 +63,31 @@ describe('overlay 补丁系列 pristine 全量重放（三 lane 真管线）', (
     }
     const validation = readFileSync(join(TMP_WT, 'vendor/zcode/packages/shared/src/validation.ts'), 'utf8')
     expect(validation).toContain('"claudeCode", "codex", "kimi"')
+  }, 300_000)
+
+  // N-4 根治回归门（2026-11-12 清债批）：ensure-injected 路径（pretest 同款）在
+  // 无清单 pristine 树上必须一次走通——旧代码 healZcodePatches 先把 zcode lane
+  // 预应用、主流程 inject 再放 002 对已应用树 forward-check 必炸（fresh worktree
+  // `npm test` 确定性红，四天靠 rsync 注入态配方绕行）。本门＝对该双跑的直接回归。
+  it('ensure-injected 直跑无清单 pristine 树一次走通（N-4 双跑根治；不 clean 预处理）', () => {
+    execSync('git worktree prune', { cwd: REPO })
+    const TMP_WT = newWt()
+    run(`git worktree add --detach "${TMP_WT}" HEAD`, REPO)
+    expect(existsSync(join(TMP_WT, '.overlay-injected.json'))).toBe(false)
+
+    // ensure-injected：清单缺席 → 跳过 zcode 预自愈 → 主流程全量 inject（含 zcode lane）。
+    // 回归签名=旧代码会先打「重放自愈」把 zcode lane 预应用（双跑必炸）；修复后不得出现。
+    const out = execSync('node scripts/ensure-injected.mjs', { cwd: TMP_WT, encoding: 'utf8', timeout: 240_000, stdio: ['ignore', 'pipe', 'pipe'] })
+    expect(out).not.toContain('重放自愈')
+    expect(out).toContain('未检测到注入清单')
+
+    const manifest = JSON.parse(readFileSync(join(TMP_WT, '.overlay-injected.json'), 'utf8'))
+    expect(manifest.status).toBe('complete')
+    const failed = (manifest.patches ?? []).filter((p: any) => p.status === 'failed')
+    expect(failed, `失败补丁: ${failed.map((p: any) => p.name).join(', ')}`).toHaveLength(0)
+    const applied = (manifest.patches ?? []).map((p: any) => p.name)
+    for (const p of ['002-import-session-rpc.patch', '011-mcp-schema-sanitizer.patch', '767-server-expdual-routes.patch']) {
+      expect(applied).toContain(p)
+    }
   }, 300_000)
 })

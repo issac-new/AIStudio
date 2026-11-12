@@ -121,14 +121,6 @@ function healZcodePatches() {
   }
 }
 
-// zcode 补丁漂移自愈先于主 inject 判定：zcode 是独立树，与 hermes-studio 的 inject
-// 标志无关；早退路径同样需要它（2026-10-19：脏树缺文件被早退跳过）。
-healZcodePatches();
-// node_modules 软链幂等补链（AIStudio 单仓轮）：全新克隆按 README 顺序先 inject 后
-// npm install——inject 时 node_modules 尚不存在、软链跳过，装完没人补链则 serve/
-// dev 从 custom/server 解析 koa 全崩（/tmp 干净克隆 2026-10-24 实证）。
-ensureNodeModulesSymlink();
-
 // ── 主判定：manifest v2 + 严格增量 ──
 let manifest = null;
 try {
@@ -137,6 +129,24 @@ try {
   console.error(`[ensure-injected] ${e.message}`);
   process.exit(1);
 }
+
+// zcode 补丁漂移自愈【只在已建立注入态的树上跑】：清单缺席/failed/v1 时，下面的
+// 主流程会走全量 inject（自含 zcode lane）——此时先 heal 会把 zcode lane 预先整套
+// 应用，inject 再放 002 时对已应用树 forward-check 必炸（"patch does not apply"＋
+// blocked-by-failed 连锁），即 N-4「fresh worktree npm test 必炸」的确定性根因
+//（2026-11-12 定位：双跑实锤=heal 落盘时刻与 inject 失败同一秒、树内容与注入态
+// 全同）。heal 的服务对象是「清单在位但 zcode 树被 reset 的漂移态」（2026-10-03
+// 原场景）与「脏树缺新文件」（2026-10-19），两者都要求清单在位。
+if (manifest && isV2Manifest(manifest) && manifest.status !== 'failed'
+  && !(manifest.patches ?? []).some((p) => p.status === 'failed')) {
+  healZcodePatches();
+} else if (manifest) {
+  console.log('[ensure-injected] 清单缺席/failed/v1：跳过 zcode 预自愈（主流程全量 inject 自会覆盖 zcode lane，双跑必炸）');
+}
+// node_modules 软链幂等补链（AIStudio 单仓轮）：全新克隆按 README 顺序先 inject 后
+// npm install——inject 时 node_modules 尚不存在、软链跳过，装完没人补链则 serve/
+// dev 从 custom/server 解析 koa 全崩（/tmp 干净克隆 2026-10-24 实证）。
+ensureNodeModulesSymlink();
 
 if (manifest && !isV2Manifest(manifest)) {
   // v1：一次性迁移指引，不自动收养（exit 3——与 0/1/2 区分的专用迁移码）
