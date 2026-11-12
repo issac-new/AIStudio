@@ -146,8 +146,8 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   pre{font-size:8pt;white-space:pre-wrap;word-break:break-word}
   a{color:inherit;text-decoration:none}
   .page{break-before:auto}
-  section.chapter{break-before:auto}
-  .cover{break-after:auto}
+  section.chapter{break-before:page}
+  .cover{break-after:page}
 }
 </style>
 </head>
@@ -173,170 +173,220 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
 <header class="cover">
   <div class="kicker"><span></span>AIStudio 技术培训 · 15 分钟版</div>
   <h1>人定方向，机器守门，AI 干活</h1>
-  <p class="sub">用 15 分钟建立全局判断：谁负责什么，工作怎样从需求走到发布，质量靠哪些机制守住，以及三个交付物分别吸收了哪些外部能力。</p>
+  <p class="sub">五段课程、十三张图。先建立判断，再看系统构成、机制、吸收来源与验收。</p>
   <div class="meta">
     <span>适用版本：AIStudio 1.0.15-overlay</span>
     <span>驾驶舱 0.8.20-studio.2 · teams v0.23.1-team.2 · Ycode 3.18.0 · yuan v2.100.3</span>
   </div>
   <div class="stat">
-    <div class="s"><b>15 分钟</b><span>五段课程，每段 2—4 分钟</span></div>
-    <div class="s"><b>6 图</b><span>结构、流程、能力与账目</span></div>
-    <div class="s"><b>3 个来源</b><span>AIStudio、swarm-yuan、Ycode 分列</span></div>
-    <div class="s"><b>4 条判据</b><span>对象一致、责任明确、证据完整、例外可查</span></div>
+    <div class="s"><b>15 分钟</b><span>五段，每段 2—4 分钟</span></div>
+    <div class="s"><b>14 图</b><span>以图承载判断，文字只作注解</span></div>
+    <div class="s"><b>3 个来源</b><span>AIStudio · swarm-yuan · Ycode</span></div>
+    <div class="s"><b>4 条判据</b><span>对象一致 · 责任明确 · 证据完整 · 例外可查</span></div>
   </div>
 </header>
 
 <section class="chapter" id="s1">
-<h2><span class="no">第一段 · 4 分钟</span>核心理念、原则与关键问题</h2>
-<p class="lead"><strong>理念</strong>：人定方向、机器守门、AI 干活。AI 智能体规模扩大后，质量不能依赖模型自觉，只能依赖结构。<strong>思路</strong>：把研发能力做成标准作业流程——先把标准与经验固化为资产，再把资产装配成流水线，最后用独立检查决定能否交付。</p>
-
-<table>
-<thead><tr><th style="width:110px">原则</th><th>含义</th><th style="width:300px">违反后的典型后果</th></tr></thead>
-<tbody>
-<tr><td>对象一致</td><td>任务、提交、测试、审批指向同一事项</td><td>用旧提交的测试报告证明新代码</td></tr>
-<tr><td>责任明确</td><td>每个环节有负责人与验收人，人机分工不混</td><td>流程走完但无人对结果负责</td></tr>
-<tr><td>证据优先</td><td>自述不构成证据，结论须回到当次输出与记录</td><td>“已完成”无法复核，问题延迟暴露</td></tr>
-<tr><td>开环加闭环</td><td>提出要求的同时设置拦截，违反即被阻断</td><td>规则只写在文档里，实际无人执行</td></tr>
-<tr><td>例外可查</td><td>代理、跳过、豁免单独登记并披露</td><td>“全部通过”掩盖真实缺口</td></tr>
-</tbody>
-</table>
-
-<h3>关键问题与对应措施</h3>
-<table>
-<thead><tr><th style="width:230px">关键问题</th><th style="width:300px">措施</th><th>判据</th></tr></thead>
-<tbody>
-<tr><td>规模扩大后人工监督无法覆盖</td><td>把要求写成 hooks、门禁与状态机准入，形成闭环</td><td>违反时被阻断，有拦截记录</td></tr>
-<tr><td>需求与设计表述不清</td><td>规格先行，验收条件写成可观察断言，冻结后变更重评审</td><td>第三方可独立判断是否完成</td></tr>
-<tr><td>AI 自述完成不可信</td><td>真实测试、独立评审、逐门禁证据，自述不作结论</td><td>结论可回溯至当次提交与输出</td></tr>
-<tr><td>门禁通过但业务出错</td><td>四类证据互补：门禁查结构、测试查行为、评审查质量、业务验收查价值</td><td>四类证据分别成立，缺口如实披露</td></tr>
-<tr><td>项目知识随人员流动流失</td><td>清单、关系边集、任务配方、经验文件固化并随升级保留</td><td>新成员可据此定位与复用，升级后经验仍在</td></tr>
-</tbody>
-</table>
-
-<h3>可靠、准确、有效如何保证</h3>
-<table>
-<thead><tr><th style="width:100px">维度</th><th style="width:260px">依赖</th><th>具体做法</th></tr></thead>
-<tbody>
-<tr><td>可靠</td><td>科学方法论：结论可复现</td><td>正反例夹具、变异探针、同题同版复评；门禁本身也要被检查</td></tr>
-<tr><td>准确</td><td>信息论：口径统一、噪声可控</td><td>单一事实源、跳过项单列、数字标注版本与来源、双向对账</td></tr>
-<tr><td>有效</td><td>控制论：偏差可纠正</td><td>状态机准入、门禁阻断、趋势观察、复盘行动项进入下一轮</td></tr>
-</tbody>
-</table>
+<h2><span class="no">第一段 · 4 分钟</span>理念、原则与关键问题</h2>
+<p class="lead">理念一句话：人定方向、机器守门、AI 干活。思路是把研发能力做成标准作业流程：标准与经验固化为资产，资产装配成流水线，独立检查决定能否交付。</p>
 
 <figure>
-<svg viewBox="0 0 980 250" role="img" aria-label="三层投影图：人机界面层、组织控制层、机制执行层">
-  <text x="20" y="26" class="dtitle">同一原则在三个层级的体现</text>
-  <rect x="20" y="42" width="940" height="58" rx="10" class="dbox-accent"/>
-  <text x="40" y="66" class="dlabel">人机界面层 · SwarmStudio 驾驶舱</text>
-  <text x="40" y="86" class="dtext">人确定方向、审阅全局、裁决例外、审批发布；界面呈现证据，不替代原始记录</text>
-  <rect x="20" y="112" width="940" height="58" rx="10" class="dbox"/>
-  <text x="40" y="136" class="dlabel">组织控制层 · hermes 集群</text>
-  <text x="40" y="156" class="dtext">智能体接收任务、执行并回写状态；机械验收与审批台账在此守门</text>
-  <rect x="20" y="182" width="940" height="58" rx="10" class="dbox-soft"/>
-  <text x="40" y="206" class="dlabel">机制执行层 · swarm-yuan 目标技能</text>
-  <text x="40" y="226" class="dtext">守门嵌入编码回路：读写拦截、提交检查、构建准入、合入与回归证据</text>
+<svg viewBox="0 0 980 240" role="img" aria-label="五条基本原则图">
+  <text x="14" y="24" class="dtitle">五条基本原则</text>
+  <g>
+  <rect x="14" y="40" width="184" height="170" rx="9" class="dbox-accent"/>
+  <text x="28" y="66" class="dlabel">对象一致</text>
+  <text x="28" y="90" class="dsmall">任务、提交、测试、</text><text x="28" y="106" class="dsmall">审批指向同一事项</text>
+  <text x="28" y="136" class="dsmall" fill="#b45746">违反：以旧提交报告</text><text x="28" y="152" class="dsmall" fill="#b45746">证明新代码</text>
+  <rect x="206" y="40" width="184" height="170" rx="9" class="dbox"/>
+  <text x="220" y="66" class="dlabel">责任明确</text>
+  <text x="220" y="90" class="dsmall">各环节有负责人与</text><text x="220" y="106" class="dsmall">验收人，人机不混</text>
+  <text x="220" y="136" class="dsmall" fill="#b45746">违反：流程走完但</text><text x="220" y="152" class="dsmall" fill="#b45746">无人对结果负责</text>
+  <rect x="398" y="40" width="184" height="170" rx="9" class="dbox"/>
+  <text x="412" y="66" class="dlabel">证据优先</text>
+  <text x="412" y="90" class="dsmall">自述不构成证据，</text><text x="412" y="106" class="dsmall">结论回到当次输出</text>
+  <text x="412" y="136" class="dsmall" fill="#b45746">违反：“已完成”</text><text x="412" y="152" class="dsmall" fill="#b45746">无法复核</text>
+  <rect x="590" y="40" width="184" height="170" rx="9" class="dbox"/>
+  <text x="604" y="66" class="dlabel">开环加闭环</text>
+  <text x="604" y="90" class="dsmall">提要求的同时设置</text><text x="604" y="106" class="dsmall">拦截，违反即阻断</text>
+  <text x="604" y="136" class="dsmall" fill="#b45746">违反：规则只在</text><text x="604" y="152" class="dsmall" fill="#b45746">文档里，无人执行</text>
+  <rect x="782" y="40" width="184" height="170" rx="9" class="dbox"/>
+  <text x="796" y="66" class="dlabel">例外可查</text>
+  <text x="796" y="90" class="dsmall">代理、跳过、豁免</text><text x="796" y="106" class="dsmall">单独登记并披露</text>
+  <text x="796" y="136" class="dsmall" fill="#b45746">违反：“全部通过”</text><text x="796" y="152" class="dsmall" fill="#b45746">掩盖真实缺口</text>
+  </g>
 </svg>
-<figcaption><strong>图 1 三层投影</strong><span>上层不替代下层证据，执行层门禁亦不能替代人的发布裁决</span></figcaption>
+<figcaption><strong>图 1 五条原则</strong><span>原则不是口号：每条都对应一类可观察的失效</span></figcaption>
 </figure>
-
-<p>这套机制的可靠性依据来自四论：系统论看清边界与结构，信息论看准口径与噪声，科学方法论保证结论可复现，控制论保证行动可纠偏。四者通过“认识—信息—模型—行动—反馈”形成闭环。工程上的落点是一条纪律：<strong>开环提要求、闭环兜底</strong>——只写提示词，违反未必被发现；写成 hooks、门禁或状态机准入，违反即被阻断。</p>
 
 <figure>
-<svg viewBox="0 0 980 230" role="img" aria-label="四论闭环图">
-  <text x="20" y="24" class="dtitle">四论构成一个闭环</text>
-  <rect x="330" y="86" width="320" height="70" rx="12" class="dbox-soft"/>
-  <text x="490" y="114" class="dlabel" text-anchor="middle">认识—信息—模型—行动—反馈</text>
-  <text x="490" y="136" class="dsmall" text-anchor="middle">每一轮回到起点，认识更深</text>
-  <rect x="50" y="30" width="210" height="56" rx="9" class="dbox-accent"/>
-  <text x="155" y="54" class="dlabel" text-anchor="middle">系统论 · 看清</text>
-  <text x="155" y="74" class="dsmall" text-anchor="middle">边界、要素、层次、关系</text>
-  <rect x="720" y="30" width="210" height="56" rx="9" class="dbox-accent"/>
-  <text x="825" y="54" class="dlabel" text-anchor="middle">信息论 · 看准</text>
-  <text x="825" y="74" class="dsmall" text-anchor="middle">测量、压缩、去噪</text>
-  <rect x="50" y="160" width="210" height="56" rx="9" class="dbox-accent"/>
-  <text x="155" y="184" class="dlabel" text-anchor="middle">科学方法论 · 可靠</text>
-  <text x="155" y="204" class="dsmall" text-anchor="middle">假设、实验、可复现</text>
-  <rect x="720" y="160" width="210" height="56" rx="9" class="dbox-accent"/>
-  <text x="825" y="184" class="dlabel" text-anchor="middle">控制论 · 有效</text>
-  <text x="825" y="204" class="dsmall" text-anchor="middle">目标、偏差、纠偏</text>
-  <path class="dline" d="M260 58 C300 70 320 86 330 96"/>
-  <path class="dline" d="M720 58 C680 70 660 86 650 96"/>
-  <path class="dline" d="M650 146 C660 156 680 172 720 188"/>
-  <path class="dline" d="M330 146 C320 156 300 172 260 188"/>
+<svg viewBox="0 0 980 330" role="img" aria-label="关键问题与措施对照图">
+  <text x="14" y="24" class="dtitle">五个关键问题与对应措施</text>
+  <text x="14" y="44" class="dsmall" fill="#64748b">关键问题</text>
+  <text x="360" y="44" class="dsmall" fill="#64748b">措施</text>
+  <text x="790" y="44" class="dsmall" fill="#64748b">判据</text>
+  <g>
+  <rect x="14" y="52" width="320" height="44" rx="7" class="dbox-soft"/><text x="26" y="78" class="dsmall">规模扩大后人工监督无法覆盖</text>
+  <path class="dline" d="M336 74 L352 74" marker-end="url(#aq)"/>
+  <rect x="358" y="52" width="410" height="44" rx="7" class="dbox"/><text x="370" y="78" class="dsmall">把要求写成 hooks、门禁与状态机准入</text>
+  <text x="782" y="78" class="dsmall">违反被阻断，有拦截记录</text>
+  <rect x="14" y="104" width="320" height="44" rx="7" class="dbox-soft"/><text x="26" y="130" class="dsmall">需求与设计表述不清</text>
+  <path class="dline" d="M336 126 L352 126" marker-end="url(#aq)"/>
+  <rect x="358" y="104" width="410" height="44" rx="7" class="dbox"/><text x="370" y="130" class="dsmall">规格先行；验收条件写成可观察断言</text>
+  <text x="782" y="130" class="dsmall">第三方可独立判断完成</text>
+  <rect x="14" y="156" width="320" height="44" rx="7" class="dbox-soft"/><text x="26" y="182" class="dsmall">AI 自述完成不可信</text>
+  <path class="dline" d="M336 178 L352 178" marker-end="url(#aq)"/>
+  <rect x="358" y="156" width="410" height="44" rx="7" class="dbox"/><text x="370" y="182" class="dsmall">真实测试、独立评审、逐门禁证据</text>
+  <text x="782" y="182" class="dsmall">结论可回溯当次提交</text>
+  <rect x="14" y="208" width="320" height="44" rx="7" class="dbox-soft"/><text x="26" y="234" class="dsmall">门禁通过但业务出错</text>
+  <path class="dline" d="M336 230 L352 230" marker-end="url(#aq)"/>
+  <rect x="358" y="208" width="410" height="44" rx="7" class="dbox"/><text x="370" y="234" class="dsmall">四类证据互补：结构、行为、质量、价值</text>
+  <text x="782" y="234" class="dsmall">四类分别成立，缺口披露</text>
+  <rect x="14" y="260" width="320" height="44" rx="7" class="dbox-soft"/><text x="26" y="286" class="dsmall">项目知识随人员流动流失</text>
+  <path class="dline" d="M336 282 L352 282" marker-end="url(#aq)"/>
+  <rect x="358" y="260" width="410" height="44" rx="7" class="dbox"/><text x="370" y="286" class="dsmall">清单、关系边集、配方、经验文件固化</text>
+  <text x="782" y="286" class="dsmall">新成员可定位复用，升级保留</text>
+  </g>
+  <defs><marker id="aq" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
 </svg>
-<figcaption><strong>图 2 四论闭环</strong><span>看清、看准、可靠、有效，四者互为输入</span></figcaption>
+<figcaption><strong>图 2 问题与措施</strong><span>每个问题都有对应措施与可观察判据，不靠倡议解决</span></figcaption>
 </figure>
 
-<div class="note"><strong>基本纪律</strong>仅提出要求而不设置检查，等同于没有要求。文档说明应然做法，机制保证违反时无法通过。</div>
+<figure>
+<svg viewBox="0 0 980 230" role="img" aria-label="可靠准确有效三维保障图">
+  <text x="14" y="24" class="dtitle">可靠、准确、有效如何保证</text>
+  <rect x="40" y="44" width="280" height="150" rx="10" class="dbox-accent"/>
+  <text x="180" y="74" class="dlabel" text-anchor="middle">可靠</text>
+  <text x="180" y="96" class="dtext" text-anchor="middle">科学方法论：结论可复现</text>
+  <text x="180" y="124" class="dsmall" text-anchor="middle">正反例夹具 · 变异探针</text>
+  <text x="180" y="144" class="dsmall" text-anchor="middle">同题同版复评</text>
+  <text x="180" y="168" class="dsmall" text-anchor="middle">门禁本身也要被检查</text>
+  <rect x="350" y="44" width="280" height="150" rx="10" class="dbox-accent"/>
+  <text x="490" y="74" class="dlabel" text-anchor="middle">准确</text>
+  <text x="490" y="96" class="dtext" text-anchor="middle">信息论：口径统一</text>
+  <text x="490" y="124" class="dsmall" text-anchor="middle">单一事实源 · 双向对账</text>
+  <text x="490" y="144" class="dsmall" text-anchor="middle">跳过项单列</text>
+  <text x="490" y="168" class="dsmall" text-anchor="middle">数字标注版本与来源</text>
+  <rect x="660" y="44" width="280" height="150" rx="10" class="dbox-accent"/>
+  <text x="800" y="74" class="dlabel" text-anchor="middle">有效</text>
+  <text x="800" y="96" class="dtext" text-anchor="middle">控制论：偏差可纠正</text>
+  <text x="800" y="124" class="dsmall" text-anchor="middle">状态机准入 · 门禁阻断</text>
+  <text x="800" y="144" class="dsmall" text-anchor="middle">趋势观察</text>
+  <text x="800" y="168" class="dsmall" text-anchor="middle">复盘行动项进入下一轮</text>
+  <path class="dline" d="M320 119 L347 119" marker-end="url(#ar)"/>
+  <path class="dline" d="M630 119 L657 119" marker-end="url(#ar)"/>
+  <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+</svg>
+<figcaption><strong>图 3 三维保障</strong><span>可靠靠可复现，准确靠口径统一，有效靠闭环纠偏</span></figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 980 190" role="img" aria-label="四论闭环图">
+  <text x="14" y="24" class="dtitle">四论：认识与行动的方法体系</text>
+  <rect x="14" y="40" width="220" height="74" rx="9" class="dbox-accent"/>
+  <text x="124" y="66" class="dlabel" text-anchor="middle">系统论 · 看清</text>
+  <text x="124" y="88" class="dsmall" text-anchor="middle">边界、要素、层次、关系</text>
+  <rect x="254" y="40" width="220" height="74" rx="9" class="dbox-accent"/>
+  <text x="364" y="66" class="dlabel" text-anchor="middle">信息论 · 看准</text>
+  <text x="364" y="88" class="dsmall" text-anchor="middle">测量、压缩、去噪</text>
+  <rect x="494" y="40" width="220" height="74" rx="9" class="dbox-accent"/>
+  <text x="604" y="66" class="dlabel" text-anchor="middle">科学方法论 · 可靠</text>
+  <text x="604" y="88" class="dsmall" text-anchor="middle">假设、实验、可复现</text>
+  <rect x="734" y="40" width="232" height="74" rx="9" class="dbox-accent"/>
+  <text x="850" y="66" class="dlabel" text-anchor="middle">控制论 · 有效</text>
+  <text x="850" y="88" class="dsmall" text-anchor="middle">目标、偏差、纠偏、反馈</text>
+  <path class="dline" d="M234 77 L251 77" marker-end="url(#afour)"/>
+  <path class="dline" d="M474 77 L491 77" marker-end="url(#afour)"/>
+  <path class="dline" d="M714 77 L731 77" marker-end="url(#afour)"/>
+  <path class="dline-dash" d="M850 114 C850 168 124 168 124 118" marker-end="url(#afour)"/>
+  <text x="490" y="160" class="dsmall" text-anchor="middle">认识—信息—模型—行动—反馈：每一轮回到起点，认识更深</text>
+  <defs><marker id="afour" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+</svg>
+<figcaption><strong>图 4 四论闭环</strong><span>看清、看准、可靠、有效，四者互为输入，形成闭环</span></figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 980 220" role="img" aria-label="三层投影图">
+  <text x="14" y="24" class="dtitle">三层分工：同一原则的三个层级</text>
+  <rect x="14" y="40" width="952" height="52" rx="9" class="dbox-accent"/>
+  <text x="32" y="62" class="dlabel">人机界面层 · SwarmStudio 驾驶舱</text>
+  <text x="32" y="82" class="dsmall">人确定方向、审阅全局、裁决例外、审批发布；界面呈现证据，不替代原始记录</text>
+  <rect x="14" y="100" width="952" height="52" rx="9" class="dbox"/>
+  <text x="32" y="122" class="dlabel">组织控制层 · hermes 集群</text>
+  <text x="32" y="142" class="dsmall">智能体接收任务、执行并回写状态；机械验收与审批台账在此守门</text>
+  <rect x="14" y="160" width="952" height="52" rx="9" class="dbox-soft"/>
+  <text x="32" y="182" class="dlabel">机制执行层 · swarm-yuan 目标技能</text>
+  <text x="32" y="202" class="dsmall">守门嵌入编码回路：读写拦截、提交检查、构建准入、合入与回归证据</text>
+</svg>
+<figcaption><strong>图 5 三层投影</strong><span>上层不替代下层证据，执行层门禁不能替代人的发布裁决</span></figcaption>
+</figure>
 </section>
 
 <section class="chapter" id="s2">
-<h2><span class="no">第二段 · 3 分钟</span>AIStudio：四模块、六团队与一条主线</h2>
-<p class="lead">AIStudio 以单仓方式交付四个模块，靠补丁与扩展层注入上游基线。其基本形态是人工审阅、智能体执行、机制留证。</p>
+<h2><span class="no">第二段 · 3 分钟</span>AIStudio：四模块、六团队、一条主线</h2>
+<p class="lead">四个模块以单仓交付，靠补丁注入上游基线；六类团队角色依次承担需求、派工、实现、测试、发布与审计；工作经九个节点、四个阶段、六道质量门。</p>
 
 <figure>
-<svg viewBox="0 0 980 210" role="img" aria-label="AIStudio 四模块关系图">
-  <rect x="20" y="40" width="220" height="90" rx="10" class="dbox-accent"/>
-  <text x="130" y="66" class="dlabel" text-anchor="middle">驾驶舱</text>
-  <text x="130" y="88" class="dsmall" text-anchor="middle">人机界面 · 0.8.20-studio.2</text>
-  <text x="130" y="108" class="dsmall" text-anchor="middle">工作台 · 项目 · 看板 · 评审</text>
-  <rect x="270" y="40" width="220" height="90" rx="10" class="dbox"/>
-  <text x="380" y="66" class="dlabel" text-anchor="middle">智能体团队</text>
-  <text x="380" y="88" class="dsmall" text-anchor="middle">组织控制 · v0.23.1-team.2</text>
-  <text x="380" y="108" class="dsmall" text-anchor="middle">多 profile · 任务执行 · 审批</text>
-  <rect x="520" y="40" width="220" height="90" rx="10" class="dbox"/>
-  <text x="630" y="66" class="dlabel" text-anchor="middle">编码引擎 Ycode</text>
-  <text x="630" y="88" class="dsmall" text-anchor="middle">本机执行 · 3.18.0</text>
-  <text x="630" y="108" class="dsmall" text-anchor="middle">ACP 会话 · 工具调用</text>
-  <rect x="770" y="40" width="190" height="90" rx="10" class="dbox-accent"/>
-  <text x="865" y="66" class="dlabel" text-anchor="middle">技能 swarm-yuan</text>
-  <text x="865" y="88" class="dsmall" text-anchor="middle">机制执行 · v2.100.3</text>
-  <text x="865" y="108" class="dsmall" text-anchor="middle">门禁 · 流程 · 知识</text>
-  <rect x="20" y="156" width="940" height="38" rx="8" class="dbox-soft"/>
-  <text x="490" y="180" class="dtext" text-anchor="middle">六类团队角色依次承担：需求验收、派工、实现、独立测试、就绪与发布、证据审计</text>
+<svg viewBox="0 0 980 250" role="img" aria-label="AIStudio 四模块与六团队图">
+  <text x="14" y="24" class="dtitle">四个模块</text>
+  <rect x="14" y="38" width="228" height="72" rx="9" class="dbox-accent"/>
+  <text x="128" y="62" class="dlabel" text-anchor="middle">驾驶舱</text>
+  <text x="128" y="82" class="dsmall" text-anchor="middle">人机界面 · 0.8.20-studio.2</text>
+  <text x="128" y="100" class="dsmall" text-anchor="middle">工作台 · 项目 · 看板 · 评审</text>
+  <rect x="258" y="38" width="228" height="72" rx="9" class="dbox"/>
+  <text x="372" y="62" class="dlabel" text-anchor="middle">智能体团队</text>
+  <text x="372" y="82" class="dsmall" text-anchor="middle">组织控制 · v0.23.1-team.2</text>
+  <text x="372" y="100" class="dsmall" text-anchor="middle">多 profile · 任务 · 审批</text>
+  <rect x="502" y="38" width="228" height="72" rx="9" class="dbox"/>
+  <text x="616" y="62" class="dlabel" text-anchor="middle">编码引擎 Ycode</text>
+  <text x="616" y="82" class="dsmall" text-anchor="middle">本机执行 · 3.18.0</text>
+  <text x="616" y="100" class="dsmall" text-anchor="middle">ACP 会话 · 工具调用</text>
+  <rect x="746" y="38" width="220" height="72" rx="9" class="dbox-accent"/>
+  <text x="856" y="62" class="dlabel" text-anchor="middle">技能 swarm-yuan</text>
+  <text x="856" y="82" class="dsmall" text-anchor="middle">机制执行 · v2.100.3</text>
+  <text x="856" y="100" class="dsmall" text-anchor="middle">门禁 · 流程 · 知识</text>
+  <text x="14" y="140" class="dtitle">六类团队角色</text>
+  <g>
+  <rect x="14" y="152" width="148" height="52" rx="8" class="dbox-soft"/><text x="88" y="174" class="dsmall" text-anchor="middle">需求与验收</text><text x="88" y="192" class="dsmall" text-anchor="middle">产品</text>
+  <rect x="176" y="152" width="148" height="52" rx="8" class="dbox-soft"/><text x="250" y="174" class="dsmall" text-anchor="middle">派工与质量门</text><text x="250" y="192" class="dsmall" text-anchor="middle">项目</text>
+  <rect x="338" y="152" width="148" height="52" rx="8" class="dbox-soft"/><text x="412" y="174" class="dsmall" text-anchor="middle">实现与提交</text><text x="412" y="192" class="dsmall" text-anchor="middle">研发</text>
+  <rect x="500" y="152" width="148" height="52" rx="8" class="dbox-soft"/><text x="574" y="174" class="dsmall" text-anchor="middle">独立测试与评审</text><text x="574" y="192" class="dsmall" text-anchor="middle">测试</text>
+  <rect x="662" y="152" width="148" height="52" rx="8" class="dbox-soft"/><text x="736" y="174" class="dsmall" text-anchor="middle">就绪与发布</text><text x="736" y="192" class="dsmall" text-anchor="middle">运维</text>
+  <rect x="824" y="152" width="142" height="52" rx="8" class="dbox-soft"/><text x="895" y="174" class="dsmall" text-anchor="middle">证据与整改</text><text x="895" y="192" class="dsmall" text-anchor="middle">审计</text>
+  </g>
 </svg>
-<figcaption><strong>图 3 四模块与六团队</strong><span>界面、组织、执行三层各有载体，同一任务编号贯穿全程</span></figcaption>
+<figcaption><strong>图 6 四模块与六团队</strong><span>界面、组织、执行各有载体；同一任务编号贯穿六个环节</span></figcaption>
 </figure>
-
-<p>一项工作经过九个节点、四个阶段与六道质量门。九节点为：需求理解、探查、编写规格、拆分计划、分支编码、测试、独立评审、合入主干、主干回归与发布；四阶段为：分支开发、分支测试、主干合并、主干回归；六道质量门为需求、设计、提交、独立验收、批准与发布复盘。</p>
 
 <figure>
-<svg viewBox="0 0 980 170" role="img" aria-label="主流程图：从需求到发布">
-  <defs><marker id="af" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
-  <rect x="16" y="52" width="140" height="56" rx="8" class="dbox-accent"/>
-  <text x="86" y="76" class="dlabel" text-anchor="middle">需求与规格</text>
-  <text x="86" y="94" class="dsmall" text-anchor="middle">范围 · 验收 · 非目标</text>
-  <rect x="176" y="52" width="140" height="56" rx="8" class="dbox"/>
-  <text x="246" y="76" class="dlabel" text-anchor="middle">派工与探查</text>
-  <text x="246" y="94" class="dsmall" text-anchor="middle">负责人 · 资产 · 容量</text>
-  <rect x="336" y="52" width="140" height="56" rx="8" class="dbox"/>
-  <text x="406" y="76" class="dlabel" text-anchor="middle">分支开发</text>
-  <text x="406" y="94" class="dsmall" text-anchor="middle">先测试 · 后实现</text>
-  <rect x="496" y="52" width="140" height="56" rx="8" class="dbox-accent"/>
-  <text x="566" y="76" class="dlabel" text-anchor="middle">分支测试</text>
-  <text x="566" y="94" class="dsmall" text-anchor="middle">门禁 · 独立评审</text>
-  <rect x="656" y="52" width="140" height="56" rx="8" class="dbox"/>
-  <text x="726" y="76" class="dlabel" text-anchor="middle">合入与回归</text>
-  <text x="726" y="94" class="dsmall" text-anchor="middle">主干全量 · 回滚</text>
-  <rect x="816" y="52" width="148" height="56" rx="8" class="dbox"/>
-  <text x="890" y="76" class="dlabel" text-anchor="middle">发布与复盘</text>
-  <text x="890" y="94" class="dsmall" text-anchor="middle">回执 · 观察 · 行动项</text>
-  <path class="dline" d="M156 80 L173 80" marker-end="url(#af)"/>
-  <path class="dline" d="M316 80 L333 80" marker-end="url(#af)"/>
-  <path class="dline" d="M476 80 L493 80" marker-end="url(#af)"/>
-  <path class="dline" d="M636 80 L653 80" marker-end="url(#af)"/>
-  <path class="dline" d="M796 80 L813 80" marker-end="url(#af)"/>
-  <text x="490" y="140" class="dsmall" text-anchor="middle">每个节点均须留存证据；缺少证据的“完成”不构成交付</text>
+<svg viewBox="0 0 980 270" role="img" aria-label="九节点四阶段六质量门主流程图">
+  <text x="14" y="24" class="dtitle">九节点、四阶段、六道质量门</text>
+  <g class="dsmall" fill="#b45746">
+  <text x="70" y="50">G1</text><text x="196" y="50">G2</text><text x="322" y="50">G3</text><text x="448" y="50">G4</text><text x="574" y="50">G5</text><text x="700" y="50">G6</text>
+  </g>
+  <g>
+  <rect x="14" y="60" width="112" height="74" rx="8" class="dbox"/><text x="70" y="88" class="dlabel" text-anchor="middle">① 需求</text><text x="70" y="108" class="dsmall" text-anchor="middle">目标与验收</text>
+  <rect x="140" y="60" width="112" height="74" rx="8" class="dbox"/><text x="196" y="88" class="dlabel" text-anchor="middle">② 探查</text><text x="196" y="108" class="dsmall" text-anchor="middle">现有资产</text>
+  <rect x="266" y="60" width="112" height="74" rx="8" class="dbox"/><text x="322" y="88" class="dlabel" text-anchor="middle">③ 规格</text><text x="322" y="108" class="dsmall" text-anchor="middle">决策与边界</text>
+  <rect x="392" y="60" width="112" height="74" rx="8" class="dbox"/><text x="448" y="88" class="dlabel" text-anchor="middle">④ 计划</text><text x="448" y="108" class="dsmall" text-anchor="middle">拆分与顺序</text>
+  <rect x="518" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="574" y="88" class="dlabel" text-anchor="middle">⑤ 编码</text><text x="574" y="108" class="dsmall" text-anchor="middle">分支开发</text>
+  <rect x="644" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="700" y="88" class="dlabel" text-anchor="middle">⑥ 测试</text><text x="700" y="108" class="dsmall" text-anchor="middle">真跑与门禁</text>
+  <rect x="770" y="60" width="112" height="74" rx="8" class="dbox-accent"/><text x="826" y="88" class="dlabel" text-anchor="middle">⑦ 评审</text><text x="826" y="108" class="dsmall" text-anchor="middle">非实现者</text>
+  <rect x="14" y="152" width="112" height="60" rx="8" class="dbox"/><text x="70" y="178" class="dlabel" text-anchor="middle">⑧ 合入</text><text x="70" y="198" class="dsmall" text-anchor="middle">主干合并</text>
+  <rect x="140" y="152" width="112" height="60" rx="8" class="dbox"/><text x="196" y="178" class="dlabel" text-anchor="middle">⑨ 回归</text><text x="196" y="198" class="dsmall" text-anchor="middle">主干验证</text>
+  </g>
+  <rect x="14" y="230" width="380" height="28" rx="6" class="dbox-soft"/><text x="204" y="249" class="dsmall" text-anchor="middle">分支开发（⑤）</text>
+  <rect x="406" y="230" width="250" height="28" rx="6" class="dbox-soft"/><text x="531" y="249" class="dsmall" text-anchor="middle">分支测试（⑥⑦）</text>
+  <rect x="668" y="230" width="130" height="28" rx="6" class="dbox-soft"/><text x="733" y="249" class="dsmall" text-anchor="middle">主干合并（⑧）</text>
+  <rect x="810" y="230" width="156" height="28" rx="6" class="dbox-soft"/><text x="888" y="249" class="dsmall" text-anchor="middle">主干回归（⑨）</text>
 </svg>
-<figcaption><strong>图 4 主流程</strong><span>九节点组织执行，四阶段分批验收，六道质量门在关键节点核对</span></figcaption>
+<figcaption><strong>图 7 主流程</strong><span>九节点组织执行，四阶段分批验收，六道质量门在关键节点核对</span></figcaption>
 </figure>
-
-<p>发布能否成立，取决于四项条件同时满足：<strong>对象一致</strong>（任务、提交、测试、审批指向同一事项）、<strong>责任明确</strong>（各环节有负责人与验收人）、<strong>证据完整</strong>（结论可回溯原始记录）、<strong>例外可查</strong>（代理、跳过、豁免单独登记并披露）。</p>
 </section>
 
 <section class="chapter" id="s3">
-<h2><span class="no">第三段 · 4 分钟</span>swarm-yuan：把研发能力做成可执行的 SOP</h2>
-<p class="lead">SOP 即标准作业流程。swarm-yuan 将资深研发人员的经验判断转化为步骤、检查与证据，使合格执行者在相同输入下得到质量一致的结果。它是这套 SOP 的生成器与执行器，不是代码生成器。</p>
+<h2><span class="no">第三段 · 4 分钟</span>swarm-yuan：研发能力 SOP 化</h2>
+<p class="lead">把资深研发的判断转化为步骤、检查与证据：标准给底线，项目给事实，资产给结构，流水线给动作，独立检查给结论。</p>
 
 <figure>
 <svg viewBox="0 0 980 190" role="img" aria-label="五项能力链图">
@@ -368,125 +418,204 @@ footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);col
   <path class="dline-dash" d="M869 118 C869 160 482 164 482 122" marker-end="url(#ag)"/>
   <text x="676" y="172" class="dsmall" text-anchor="middle">问题与新经验回流，更新资产</text>
 </svg>
-<figcaption><strong>图 5 五项能力链</strong><span>标准给底线，项目给事实，本体给结构，流水线给动作，独立检查给结论</span></figcaption>
+<figcaption><strong>图 8 五项能力链</strong><span>标准、项目、资产、流水线、独立检查，缺一环即断链</span></figcaption>
 </figure>
 
-<table>
-<thead><tr><th style="width:130px">主题</th><th>要点</th><th style="width:300px">完成判据</th></tr></thead>
-<tbody>
-<tr><td>三类目录</td><td>生成器源码、目标技能（默认 <code>~/.agents/skills/&lt;项目&gt;-dev/</code>）、项目运行态（<code>.swarm-yuan/</code>）；技能内另有同名目录保存激活报告，两处不可混同</td><td>能指出三者位置与职责，且不把运行态当生成产物</td></tr>
-<tr><td>生成流程</td><td>Step 1—13：探查与建模（1—5）、装配与填充（6—9）、验证与激活（10—13）</td><td>组件、关系、配方有代码证据；占位清零；门禁有真实结果</td></tr>
-<tr><td>strict 激活</td><td>检查顺序：入口存在、框架 glob、规格接线、完整性、清单、预算、写报告，全部通过才改为 active</td><td>激活报告与当次输出一致；任一必需项失败保持 draft</td></tr>
-<tr><td>历史兼容</td><td>决策校验设时间边界（SCHEMA_EPOCH）；边界前记录不追溯新字段，边界后仍要求完整字段</td><td>新决策不缺字段；历史账本不被误杀</td></tr>
-<tr><td>经验保留</td><td><code>lessons.md</code> 属项目保留文件，升级不覆盖，连续两次升级后字节级一致</td><td>升级后旧经验仍在，且未重复写入</td></tr>
-<tr><td>日常研发</td><td>九节点映射六个状态：open、design、build、verify、archive、operate；状态机只做准入与更新</td><td>状态变化有对应证据，不以状态替代测试与合并</td></tr>
-<tr><td>门禁体系</td><td>59 道门禁：核心 12、标准 32、合规 19；配置变量 204；三种返回码 0/1/2</td><td>能解释跳过与警告；证据可对应本次运行</td></tr>
-<tr><td>四层拦截</td><td>L1 写时、L2 提交、L3 门禁、L4 构建准入；各有降级面</td><td>能说明每层实际覆盖范围与放行条件</td></tr>
-<tr><td>编码链证据</td><td>worker 先准备技能，ACP 传递上下文与工作目录，引擎执行，worker 复核结果</td><td>技能装载、cwd、引擎身份、当次测试四类证据齐全</td></tr>
-</tbody>
-</table>
+<figure>
+<svg viewBox="0 0 980 340" role="img" aria-label="swarm-yuan 生成与激活机制图">
+  <text x="14" y="24" class="dtitle">生成一套技能：探查、装配、验证</text>
+  <rect x="14" y="38" width="300" height="150" rx="9" class="dbox-soft"/>
+  <text x="164" y="62" class="dlabel" text-anchor="middle">探查与建模（Step 1—5）</text>
+  <text x="164" y="86" class="dsmall" text-anchor="middle">自检环境 · 行为统计</text>
+  <text x="164" y="106" class="dsmall" text-anchor="middle">三路探查结构/规范/组织</text>
+  <text x="164" y="126" class="dsmall" text-anchor="middle">组件清单 · 关系边集</text>
+  <text x="164" y="146" class="dsmall" text-anchor="middle">17 项特征卡</text>
+  <text x="164" y="170" class="dsmall" text-anchor="middle" fill="#2f7d51">产出：notes、清单、边集、框架证据</text>
+  <rect x="330" y="38" width="300" height="150" rx="9" class="dbox-accent"/>
+  <text x="480" y="62" class="dlabel" text-anchor="middle">装配与填充（Step 6—9）</text>
+  <text x="480" y="86" class="dsmall" text-anchor="middle">按档位生成骨架</text>
+  <text x="480" y="106" class="dsmall" text-anchor="middle">lite / standard / compliance</text>
+  <text x="480" y="126" class="dsmall" text-anchor="middle">AI 填充项目知识</text>
+  <text x="480" y="146" class="dsmall" text-anchor="middle">接入 hooks 与门禁</text>
+  <text x="480" y="170" class="dsmall" text-anchor="middle" fill="#2f7d51">产出：目标技能目录（draft）</text>
+  <rect x="646" y="38" width="318" height="150" rx="9" class="dbox-accent"/>
+  <text x="805" y="62" class="dlabel" text-anchor="middle">验证与激活（Step 10—13）</text>
+  <text x="805" y="86" class="dsmall" text-anchor="middle">核心门禁 · 独立审查</text>
+  <text x="805" y="106" class="dsmall" text-anchor="middle">记忆写回 · strict 终检</text>
+  <text x="805" y="126" class="dsmall" text-anchor="middle">完整性 · 清单 · 预算 · 配置</text>
+  <text x="805" y="146" class="dsmall" text-anchor="middle">全部通过才改为 active</text>
+  <text x="805" y="170" class="dsmall" text-anchor="middle" fill="#2f7d51">产出：active 技能 + 激活报告</text>
+  <path class="dline" d="M314 113 L327 113" marker-end="url(#as)"/>
+  <path class="dline" d="M630 113 L643 113" marker-end="url(#as)"/>
+  <defs><marker id="as" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="14" y="204" width="950" height="120" rx="9" class="dbox"/>
+  <text x="32" y="230" class="dlabel">三类目录与历史兼容</text>
+  <text x="32" y="254" class="dsmall">生成器源码 → 目标技能（默认 ~/.agents/skills/&lt;项目&gt;-dev/）→ 项目运行态（.swarm-yuan/）；技能内另有同名目录保存激活报告，两处不可混同</text>
+  <text x="32" y="278" class="dsmall">决策校验设时间边界（SCHEMA_EPOCH）：边界前记录不追溯新字段，边界后仍要求完整字段</text>
+  <text x="32" y="302" class="dsmall">lessons.md 属项目保留文件：升级不覆盖，连续两次升级后字节级一致</text>
+</svg>
+<figcaption><strong>图 9 生成与激活</strong><span>只生成骨架不构成完成；验证与激活全部通过才算交付</span></figcaption>
+</figure>
 
-<div class="note warn"><strong>能力边界</strong>门禁覆盖词法、结构、流程与配置，全部通过不等同于业务正确；四层拦截无法覆盖业务逻辑错误与需求歧义；激活通过仅证明当次检查通过，不保证此后持续有效；夹具通过仅证明检查能力，不证明真实项目的外部有效性；真实缺陷语料仍在采集。上述结论须依靠真实测试、独立评审与业务验收。</div>
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="门禁、四层拦截与编码链证据图">
+  <text x="14" y="24" class="dtitle">门禁、拦截与编码链证据</text>
+  <rect x="14" y="40" width="300" height="110" rx="9" class="dbox-accent"/>
+  <text x="164" y="64" class="dlabel" text-anchor="middle">59 道门禁 · 204 变量</text>
+  <rect x="34" y="78" width="120" height="26" rx="5" class="dbox-soft"/><text x="94" y="96" class="dsmall" text-anchor="middle">核心 12</text>
+  <rect x="164" y="78" width="120" height="26" rx="5" class="dbox-soft"/><text x="224" y="96" class="dsmall" text-anchor="middle">标准 32</text>
+  <rect x="34" y="112" width="120" height="26" rx="5" class="dbox-soft"/><text x="94" y="130" class="dsmall" text-anchor="middle">合规 19</text>
+  <rect x="164" y="112" width="120" height="26" rx="5" class="dbox-soft"/><text x="224" y="130" class="dsmall" text-anchor="middle">返回码 0/1/2</text>
+  <rect x="330" y="40" width="300" height="110" rx="9" class="dbox"/>
+  <text x="480" y="64" class="dlabel" text-anchor="middle">四层拦截</text>
+  <text x="480" y="88" class="dsmall" text-anchor="middle">L1 写时 · L2 提交 · L3 门禁 · L4 构建</text>
+  <text x="480" y="110" class="dsmall" text-anchor="middle">各有降级面：未安装、未配置、缺库</text>
+  <text x="480" y="132" class="dsmall" text-anchor="middle">全绿不等于业务正确</text>
+  <rect x="646" y="40" width="318" height="110" rx="9" class="dbox"/>
+  <text x="805" y="64" class="dlabel" text-anchor="middle">编码链证据分层</text>
+  <text x="805" y="88" class="dsmall" text-anchor="middle">worker 准备技能 → ACP 传递 cwd → 引擎执行</text>
+  <text x="805" y="110" class="dsmall" text-anchor="middle">→ worker 复核文件、类型、测试、diff</text>
+  <text x="805" y="132" class="dsmall" text-anchor="middle">技能装载、cwd、引擎身份、测试四类证据</text>
+  <rect x="14" y="170" width="950" height="112" rx="9" class="dbox-soft"/>
+  <text x="32" y="196" class="dlabel">能力边界</text>
+  <text x="32" y="220" class="dsmall">门禁覆盖词法、结构、流程与配置，全部通过不等同于业务正确；四层拦截无法覆盖业务逻辑错误与需求歧义</text>
+  <text x="32" y="244" class="dsmall">激活通过仅证明当次检查通过，不保证此后持续有效；夹具通过仅证明检查能力，不证明真实项目的外部有效性</text>
+  <text x="32" y="268" class="dsmall">真实缺陷语料仍在采集；上述结论须依靠真实测试、独立评审与业务验收</text>
+</svg>
+<figcaption><strong>图 10 门禁与证据</strong><span>四类证据分别证明不同事实，任何一类缺席都要降级结论</span></figcaption>
+</figure>
 </section>
 
 <section class="chapter" id="s4">
-<h2><span class="no">第四段 · 2 分钟</span>吸收来源：三个交付物分列</h2>
-<p class="lead">三者上游不同、吸收方式不同，分别统计，不合并计数。</p>
+<h2><span class="no">第四段 · 2 分钟</span>吸收来源：三者分列</h2>
+<p class="lead">三个交付物上游不同、吸收方式不同，分别统计，不合并计数。</p>
 
-<h3>4.1 AIStudio（hermes agent teams）</h3>
-<p>上游基线：产品面 hermes-studio v0.8.20（ekko-studio），运行时 hermes-agent v0.23.1（NousResearch）。基线只读入库，二次开发经补丁注入。外部方法按批次吸收，每批有规格、落地代码与守门。</p>
-<table>
-<thead><tr><th style="width:200px">批次</th><th>吸收内容</th><th style="width:250px">落地形态</th></tr></thead>
-<tbody>
-<tr><td>AgentTeams</td><td>项目一级模型、执行记录、拓扑契约、技能导出</td><td>项目页、执行记录、拓扑注册表</td></tr>
-<tr><td>vivo Harness（W1—W4）</td><td>工具契约执法、结果协议、可观测与任务模型、验收 DSL</td><td>契约守卫、结果信封、任务卡</td></tr>
-<tr><td>AI Native 五篇</td><td>规格保真度门、终止码、三类失败模式、上下文开销比</td><td>规格检查、终止码表、评分卡</td></tr>
-<tr><td>super-agent</td><td>编排域六表、授权强度三档、准入观察态</td><td>编排台账、授权模型</td></tr>
-<tr><td>MASS / DeerFlow</td><td>交接质量账本：交付率、掉落、停滞、抖动</td><td>交接质量端点</td></tr>
-<tr><td>PluginRSI</td><td>组件库：晋级即沉淀、版本并存</td><td>组件库与复用流程</td></tr>
-<tr><td>主动式 AI 综述</td><td>澄清与暂缓、注意力与资源分账</td><td>介入策略与反馈台账</td></tr>
-<tr><td>Harmony / EvoTeam / RSI / expdual / handbook</td><td>多目标分解、团队库与交接规则、证据分级、双轨经验、运行轨迹与停止条件</td><td>调度、团队资产、评测、经验台账</td></tr>
-</tbody>
-</table>
-
-<h3>4.2 swarm-yuan skill</h3>
-<table>
-<thead><tr><th style="width:170px">类别</th><th style="width:110px">数量</th><th>内容与边界</th></tr></thead>
-<tbody>
-<tr><td>技术栈框架规则</td><td>81</td><td>前端 16、后端与语言 19、数据存储 18、消息调度 12、工具 4、测试 3、数据处理 3、基础设施 4、AI 应用 2；仅项目实际命中时注入</td></tr>
-<tr><td>外部运行时</td><td>15</td><td>深度接线 4、CLI 接线 6、方法论引用 5；未安装时降级为提示</td></tr>
-<tr><td>方法论与规范</td><td>61</td><td>生成流程 13、领域本体 4、质量验证 10、安全合规 9、认知思维 5、知识治理 6、表达呈现 3、估算治理 3、行业 profile 8；其中 42 份随技能分发</td></tr>
-<tr><td>研究档案</td><td>106</td><td>运行时刷新 51、基础设计 26、真实回归 10、方法论吸收 10、审计加固 5、换栈演练 4；生成器侧档案，不随技能分发</td></tr>
-</tbody>
-</table>
-
-<h3>4.3 Ycode</h3>
-<p>zcode 的受管分叉，基线 v3.18.0（commit <code>b95ebaff</code>）。采用“上游同步＋补丁序列”维护，当前活跃补丁 10 枚（002—011）：</p>
-<table>
-<thead><tr><th style="width:170px">能力组</th><th style="width:110px">补丁</th><th>内容</th></tr></thead>
-<tbody>
-<tr><td>编码会话与导入</td><td>002</td><td>importSession RPC，支撑会话导入写入</td></tr>
-<tr><td>桌面操作</td><td>003—007</td><td>桌面级操作活体实现、无宿主回落、组合按键修复、默认启用、对齐官方宿主协议</td></tr>
-<tr><td>技能根与工作区</td><td>009、010</td><td>兼容既有 <code>.claude/skills</code> 技能根；macOS 打开目录事件并入工作区流程</td></tr>
-<tr><td>模型接入与错误语义</td><td>008、011</td><td>broker 不可达统一错误码；MCP 参数名消毒与调用回译（吸收自 Qwen Code 1.0）</td></tr>
-</tbody>
-</table>
-<p class="small muted">补丁 001 因上游原生吸收已退役；CUA 的 Windows 与 Linux 路径未做真机验证，该限制在补丁注释中记录。</p>
+<figure>
+<svg viewBox="0 0 980 360" role="img" aria-label="三个交付物的吸收来源图">
+  <text x="14" y="24" class="dtitle">吸收来源与落地</text>
+  <rect x="14" y="40" width="300" height="300" rx="10" class="dbox-accent"/>
+  <text x="164" y="66" class="dlabel" text-anchor="middle">AIStudio（hermes agent teams）</text>
+  <text x="30" y="94" class="dsmall">上游：hermes-studio 0.8.20</text>
+  <text x="30" y="112" class="dsmall">　　　hermes-agent 0.23.1</text>
+  <text x="30" y="140" class="dsmall">吸收批次：</text>
+  <text x="30" y="162" class="dsmall">· AgentTeams 项目/执行/拓扑</text>
+  <text x="30" y="182" class="dsmall">· vivo Harness W1—W4</text>
+  <text x="30" y="202" class="dsmall">· AI Native 五篇</text>
+  <text x="30" y="222" class="dsmall">· super-agent 编排与授权</text>
+  <text x="30" y="242" class="dsmall">· MASS/DeerFlow 交接质量</text>
+  <text x="30" y="262" class="dsmall">· PluginRSI 组件库</text>
+  <text x="30" y="282" class="dsmall">· Harmony / EvoTeam / RSI</text>
+  <text x="30" y="302" class="dsmall">· expdual / handbook</text>
+  <text x="30" y="326" class="dsmall" fill="#2f7d51">落地：补丁注入 + 规格 + 守门</text>
+  <rect x="330" y="40" width="300" height="300" rx="10" class="dbox"/>
+  <text x="480" y="66" class="dlabel" text-anchor="middle">swarm-yuan skill</text>
+  <text x="346" y="94" class="dsmall">框架规则 81（九个生态域）</text>
+  <text x="346" y="114" class="dsmall">外部运行时 15（深 4/CLI 6/引 5）</text>
+  <text x="346" y="134" class="dsmall">方法论与规范 61（42 分发）</text>
+  <text x="346" y="154" class="dsmall">研究档案 106（生成器侧）</text>
+  <text x="346" y="182" class="dsmall">代表来源：</text>
+  <text x="346" y="204" class="dsmall">· ponytail / mattpocock-skills</text>
+  <text x="346" y="224" class="dsmall">· FIBO / TOGAF 元模型</text>
+  <text x="346" y="244" class="dsmall">· 京东海博知识生命周期</text>
+  <text x="346" y="264" class="dsmall">· DeepSeek Harness / ub-mode</text>
+  <text x="346" y="284" class="dsmall">· NESMA / ASD-STE100</text>
+  <text x="346" y="326" class="dsmall" fill="#2f7d51">落地：能力地图 + 三载体对账</text>
+  <rect x="646" y="40" width="318" height="300" rx="10" class="dbox"/>
+  <text x="805" y="66" class="dlabel" text-anchor="middle">Ycode（zcode 受管分叉）</text>
+  <text x="662" y="94" class="dsmall">基线 v3.18.0（b95ebaff）</text>
+  <text x="662" y="114" class="dsmall">活跃补丁 10 枚（002—011）</text>
+  <text x="662" y="142" class="dsmall">· 002 会话导入 RPC</text>
+  <text x="662" y="162" class="dsmall">· 003—007 桌面操作（CUA）</text>
+  <text x="662" y="182" class="dsmall">· 008 broker 错误码统一</text>
+  <text x="662" y="202" class="dsmall">· 009 .claude/skills 兼容根</text>
+  <text x="662" y="222" class="dsmall">· 010 macOS 打开工作区</text>
+  <text x="662" y="242" class="dsmall">· 011 MCP 参数名消毒（Qwen）</text>
+  <text x="662" y="270" class="dsmall">001 已退役：上游原生吸收</text>
+  <text x="662" y="298" class="dsmall">CUA 的 Windows/Linux 未真机验证</text>
+  <text x="662" y="326" class="dsmall" fill="#2f7d51">落地：上游同步 + 补丁重放</text>
+</svg>
+<figcaption><strong>图 11 三项吸收来源</strong><span>AIStudio、swarm-yuan、Ycode 各自独立，不合并统计</span></figcaption>
+</figure>
 </section>
 
 <section class="chapter" id="s5">
-<h2><span class="no">第五段 · 2 分钟</span>上手与验收：做一遍，验一遍</h2>
-<p class="lead">十五分钟内完成一次最小演示：确认环境、生成技能、执行一个需求、判读门禁、给出结论。每步均须留下证据。</p>
+<h2><span class="no">第五段 · 2 分钟</span>上手与验收</h2>
+<p class="lead">十五分钟内完成一次最小演示：确认环境、生成技能、执行需求、判读门禁、给出结论；每步均须留下证据。</p>
 
-<table>
-<thead><tr><th style="width:60px">步骤</th><th style="width:220px">操作</th><th>完成标志</th><th style="width:260px">留存证据</th></tr></thead>
-<tbody>
-<tr><td>1</td><td>确认路径、版本与依赖</td><td>自检无失败项</td><td>环境变量与自检输出</td></tr>
-<tr><td>2</td><td>安装生成器到家级技能根</td><td>目录含入口与脚本，旧安装有备份</td><td>安装输出与备份目录</td></tr>
-<tr><td>3</td><td>生成项目技能并填充内容</td><td>特征卡有值，清单与配方带证据，门禁有结果</td><td>探查笔记、边集、评审记录</td></tr>
-<tr><td>4</td><td>执行 strict 激活</td><td>入口为 active，报告与输出一致</td><td>strict 输出与激活报告</td></tr>
-<tr><td>5</td><td>按九节点完成一个需求</td><td>规格先行，分支开发，测试先失败后通过</td><td>规格、计划、提交、测试记录</td></tr>
-<tr><td>6</td><td>运行门禁并判读</td><td>能解释返回码、警告与跳过</td><td>命令、返回码、逐门禁证据</td></tr>
-<tr><td>7</td><td>项目变化后更新</td><td>变化范围有清单，旧经验保留</td><td>变化报告、差异、新指纹</td></tr>
-<tr><td>8</td><td>给出发布结论</td><td>含代偿与净额分列，遗留项有责任人</td><td>裁决记录、回执、行动项</td></tr>
-</tbody>
-</table>
-
-<p>run28 为一次完整推演：26 个步骤全部完成，耗时 44954 秒（12 小时 29 分 14 秒）。含代偿六道检查全部通过，扣除代理批准后净额为 5/6。</p>
 <figure>
-<svg viewBox="0 0 980 200" role="img" aria-label="run28 两套口径对比图">
-  <text x="20" y="24" class="dtitle">案例：同一轮推演，三组数字各有口径</text>
-  <text x="20" y="62" class="dlabel">检查通过</text>
+<svg viewBox="0 0 980 190" role="img" aria-label="八步操作主线图">
+  <text x="14" y="24" class="dtitle">八步操作主线</text>
+  <g>
+  <rect x="14" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="69" y="64" class="dsmall" text-anchor="middle">1 环境确认</text><text x="69" y="84" class="dsmall" text-anchor="middle">路径/版本/依赖</text>
+  <rect x="136" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="191" y="64" class="dsmall" text-anchor="middle">2 安装生成器</text><text x="191" y="84" class="dsmall" text-anchor="middle">家级技能根</text>
+  <rect x="258" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="313" y="64" class="dsmall" text-anchor="middle">3 生成与填充</text><text x="313" y="84" class="dsmall" text-anchor="middle">清单/配方/证据</text>
+  <rect x="380" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="435" y="64" class="dsmall" text-anchor="middle">4 strict 激活</text><text x="435" y="84" class="dsmall" text-anchor="middle">active 与报告</text>
+  <rect x="502" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="557" y="64" class="dsmall" text-anchor="middle">5 九节点需求</text><text x="557" y="84" class="dsmall" text-anchor="middle">规格先行</text>
+  <rect x="624" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="679" y="64" class="dsmall" text-anchor="middle">6 门禁判读</text><text x="679" y="84" class="dsmall" text-anchor="middle">返回码/跳过</text>
+  <rect x="746" y="40" width="110" height="66" rx="7" class="dbox-soft"/><text x="801" y="64" class="dsmall" text-anchor="middle">7 变化更新</text><text x="801" y="84" class="dsmall" text-anchor="middle">差异/新指纹</text>
+  <rect x="868" y="40" width="98" height="66" rx="7" class="dbox-soft"/><text x="917" y="64" class="dsmall" text-anchor="middle">8 发布结论</text><text x="917" y="84" class="dsmall" text-anchor="middle">两套口径</text>
+  </g>
+  <path class="dline" d="M14 130 L966 130" marker-end="url(#at)"/>
+  <text x="490" y="156" class="dsmall" text-anchor="middle">每步留存证据：环境变量、安装输出、探查笔记、激活报告、提交与测试、门禁证据、差异、裁决与回执</text>
+  <defs><marker id="at" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+</svg>
+<figcaption><strong>图 12 八步主线</strong><span>先做出来，再用证据证明做对了</span></figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 980 230" role="img" aria-label="run28 两套口径对比图">
+  <text x="14" y="24" class="dtitle">案例：同一轮推演，三组数字各有口径</text>
+  <text x="14" y="62" class="dlabel">检查通过</text>
   <rect x="150" y="46" width="300" height="20" rx="4" class="dbox-accent"/>
   <text x="460" y="62" class="dtext">含代偿 6/6：流程全部完成</text>
   <rect x="150" y="74" width="250" height="20" rx="4" class="dbox-warn"/>
   <text x="410" y="90" class="dtext">净额 5/6：扣除代理批准</text>
-  <text x="20" y="126" class="dlabel">问题与证据</text>
+  <text x="14" y="126" class="dlabel">问题与证据</text>
   <rect x="150" y="110" width="640" height="20" rx="4" class="dbox-soft"/>
   <text x="160" y="126" class="dsmall">未关闭 65 条（均有处置结论）；实际修复 8/65</text>
   <rect x="150" y="140" width="440" height="20" rx="4" class="dbox-accent"/>
   <text x="600" y="156" class="dtext">报告覆盖 11/13</text>
   <rect x="150" y="166" width="520" height="20" rx="4" class="dbox-accent"/>
   <text x="680" y="182" class="dtext">后续核验 13/14（缺 1 项运行证明）</text>
+  <text x="150" y="212" class="dsmall">耗时 44954 秒（12 小时 29 分 14 秒）；26 个步骤全部完成</text>
 </svg>
-<figcaption><strong>图 6 run28 两套口径</strong><span>判读“全部通过”时，须同时核对扣除代偿后的净额</span></figcaption>
+<figcaption><strong>图 13 run28 两套口径</strong><span>判读“全部通过”时，须同时核对扣除代偿后的净额</span></figcaption>
 </figure>
 
-<h3>验收标准</h3>
-<ol>
-<li><strong>交付物齐全</strong>：生成包、认知包、研发包、证据包、反馈包、边界声明、认知说明，共七项。</li>
-<li><strong>证据可对应</strong>：每项结论能回到当次命令输出、提交与测试记录；仅有退出码不构成证据。</li>
-<li><strong>边界说明清楚</strong>：未运行项、环境限制、外部有效性边界如实列明。</li>
-<li><strong>无违规行为</strong>：伪造证据、编造路径、删除检查取得通过、草稿当已激活、代理批准冒充人工批准，任一出现即判不合格。</li>
-</ol>
-
-<div class="note"><strong>结语</strong>机制的价值不在于增加流程，而在于使正确做法成为默认路径、使错误做法无法通过。人保留判断权，机器承担守门责任，智能体承担执行工作。</div>
+<figure>
+<svg viewBox="0 0 980 200" role="img" aria-label="验收四项判据图">
+  <text x="14" y="24" class="dtitle">验收四项判据</text>
+  <rect x="14" y="40" width="228" height="130" rx="9" class="dbox-accent"/>
+  <text x="128" y="68" class="dlabel" text-anchor="middle">交付物齐全</text>
+  <text x="128" y="94" class="dsmall" text-anchor="middle">生成包 · 认知包</text>
+  <text x="128" y="114" class="dsmall" text-anchor="middle">研发包 · 证据包</text>
+  <text x="128" y="134" class="dsmall" text-anchor="middle">反馈包 · 边界声明</text>
+  <text x="128" y="154" class="dsmall" text-anchor="middle">认知说明</text>
+  <rect x="258" y="40" width="228" height="130" rx="9" class="dbox"/>
+  <text x="372" y="68" class="dlabel" text-anchor="middle">证据可对应</text>
+  <text x="372" y="94" class="dsmall" text-anchor="middle">结论回到当次命令输出</text>
+  <text x="372" y="114" class="dsmall" text-anchor="middle">提交与测试记录</text>
+  <text x="372" y="134" class="dsmall" text-anchor="middle">仅有退出码不构成证据</text>
+  <rect x="502" y="40" width="228" height="130" rx="9" class="dbox"/>
+  <text x="616" y="68" class="dlabel" text-anchor="middle">边界说清楚</text>
+  <text x="616" y="94" class="dsmall" text-anchor="middle">未运行项 · 环境限制</text>
+  <text x="616" y="114" class="dsmall" text-anchor="middle">外部有效性边界</text>
+  <text x="616" y="134" class="dsmall" text-anchor="middle">不隐瞒跳过项</text>
+  <rect x="746" y="40" width="220" height="130" rx="9" class="dbox-warn"/>
+  <text x="856" y="68" class="dlabel" text-anchor="middle">无违规行为</text>
+  <text x="856" y="94" class="dsmall" text-anchor="middle">伪造证据 · 编造路径</text>
+  <text x="856" y="114" class="dsmall" text-anchor="middle">删除检查取得通过</text>
+  <text x="856" y="134" class="dsmall" text-anchor="middle">草稿当已激活</text>
+  <text x="856" y="154" class="dsmall" text-anchor="middle">代理批准冒充人工批准</text>
+</svg>
+<figcaption><strong>图 14 验收判据</strong><span>任一判据不成立，结论记为未通过或待核实</span></figcaption>
+</figure>
+</section>
 
 <footer class="end">
   <p><strong>AIStudio 技术培训手册（15 分钟版）</strong> · 适用版本 1.0.15-overlay</p>
   <p>所有界面与数据均为培训模拟，不连接真实任务、审批或生产数据。</p>
 </footer>
-</section>
 
 </div>
 </main>

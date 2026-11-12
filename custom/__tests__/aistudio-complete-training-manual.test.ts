@@ -28,11 +28,11 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html.length).toBeGreaterThan(20000)
   })
 
-  it('五段结构与六张图齐备，每张图都有编号与图注', () => {
+  it('五段结构与十四张图齐备，每张图都有编号与图注', () => {
     const ids = [...html.matchAll(/<section class="chapter" id="(s\d+)">/g)].map(match => match[1])
     expect(ids).toEqual(['s1', 's2', 's3', 's4', 's5'])
     const figures = [...html.matchAll(/<figure>([\s\S]*?)<\/figure>/g)].map(match => match[1])
-    expect(figures).toHaveLength(6)
+    expect(figures).toHaveLength(14)
     figures.forEach((figure, index) => {
       expect(figure, `图 ${index + 1} 缺 SVG`).toContain('<svg')
       expect(figure, `图 ${index + 1} 缺图注`).toMatch(new RegExp(`图 ${index + 1} `))
@@ -52,7 +52,8 @@ describe('AIStudio 完整培训手册契约', () => {
       '四阶段',
       '五项能力',
       '三类目录',
-      'Step 1—13',
+      'Step 1—5',
+      'Step 10—13',
       'strict 激活',
       '59 道门禁',
       '四层拦截',
@@ -61,9 +62,10 @@ describe('AIStudio 完整培训手册契约', () => {
       'swarm-yuan skill',
       'Ycode',
       '两套口径',
-      '验收标准',
-      '关键问题与对应措施',
+      '验收四项判据',
+      '五个关键问题与对应措施',
       '可靠、准确、有效如何保证',
+      '五条基本原则',
     ]) expect(html, `缺少主题：${needle}`).toContain(needle)
   })
 
@@ -92,6 +94,8 @@ describe('AIStudio 完整培训手册契约', () => {
     expect(html).toContain('@media print')
     expect(html).toContain('.toc{display:none')
     expect(html).toMatch(/figure,table,\.op,\.card,\.note\{break-inside:avoid\}/)
+    expect(html).not.toContain('<table>')
+    expect((html.match(/<figure>/g) ?? []).length).toBeGreaterThanOrEqual(14)
   })
 
   it('启动器放行该页并保持只读安全边界', async () => {
