@@ -91,6 +91,14 @@ EXPECT = {
 # defect 补拍帧被误判红。同 run26 裸「暂无」教训：占位词按列级粒度一律不收。
 EMPTY_MARKERS = ['还没有任务工作区', '暂无可选任务', '未选择对象', '暂无数据', '没有找到',
                  '未开始', '还没有', '0tasks']
+# 「0tasks」判空收窄（2026-11-12 run29 补拍轮第三粒度修正）：左侧阶段导航条逐阶段印
+# 「N tasks」计数——目标板有 5 张卡时，其他阶段的「0 tasks」（如「搭建 0 tasks」）同页
+# 在案，run28 页级口径把满板误判空白（run29 register_done 补拍实锤：5tasks 头计数＋
+# RFD-001 排期基线卡在帧内，仍被 0tasks 判红）。收窄=抽页内全部「(\d+)tasks」计数，
+# 任一 >0 即非空板、0tasks 不计否定；全零才维持判空。泳道占位词不收的纪律不变。
+def _board_counts_all_zero(text: str) -> bool:
+    counts = [int(m) for m in re.findall(r'(\d+)tasks', text)]
+    return all(c == 0 for c in counts) if counts else False
 # 报错态噪声（2026-11-08 run28 帧独立审计根治）：期望词命中只证「页面 chrome 有词」，
 # 核心区报错的帧照样过验——run28 实锤：anexec/review/ready 帧内「API Error 403: 需要
 # 平台超级管理员权限」、ide 帧深链「不存在或当前账号无权访问」均被判 ✓已核验。
@@ -126,7 +134,8 @@ def verdict(text: str, exp: dict) -> tuple:
     """纯判定（2026-11-08 抽函数供守门测试行为断言）：期望词命中 + 空白态/报错态
     否定词 → (ok, hit, empties, errors)。词面安全边界见两组词表注释。"""
     hit = [w for w in exp['want'] if w in text]
-    empties = [m for m in EMPTY_MARKERS if m in text]
+    empties = [m for m in EMPTY_MARKERS if m in text
+               and (m != '0tasks' or _board_counts_all_zero(text))]
     errors = [m for m in ERROR_MARKERS if m in text]
     ok = (bool(hit) or not exp['want']) and not empties and not errors
     return ok, hit, empties, errors
