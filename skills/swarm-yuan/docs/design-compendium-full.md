@@ -480,7 +480,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 门禁分层 | 核心 12 + 架构 20 + 合规 19 + advisory-only 6 + FULL 尾部治理 2（合计 59，闭合方程见 facts.conf）。执行序列 `--all` / `--all-full` / `--compliance-suite` |
 | 特征卡 | 17 项（P0 六项强制，P1 十一项可增量） |
 | 框架规则集 | 81（规则文档与门禁片段 1:1 配对） |
-| 配置变量 / 上限 | 204 / 210 |
+| 配置变量 / 上限 | 205 / 210 |
 | 执行面代码行数 / 上限 | 引擎域源 ≤FACT_ENGINE_CODE_LOC_MAX（8600）；框架门禁注入 ≤FACT_FRAMEWORK_GATE_LOC_MAX（18469）；逐例上调登记见 facts.conf 键注记 |
 | 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤618496B（604KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
 | 外部运行时 | 15 个整合（深度 4 + CLI 6 + 方法论 5；CLI 第 5/6 项 mattpocock-skills/diagram-design 为仓内物化运行时）。登记 22（含图谱备选 codegraph、两宿主、机制源 pua/semantica/pi 等）。自动检测 11 |
@@ -3634,7 +3634,7 @@ bash install.sh
 
 **特征卡 → 文件填充（Step 4）：** SKILL.md 的铁律来自第 2/6 项 → codebase.md 的技术栈来自第 4 项 → dev-guide.md 的改造分类来自第 3 项 → reference-manual.md 的组件库来自第 11 项 → release.md 的命令来自第 5 项……17 项特征卡是目标技能所有文件的「数据源」。
 
-**特征卡 → 门禁配置（Step 5）：** precheck.conf 生成期必读文件合计 204 个变量（core 30 + arch 126 + compliance 48；真值 `assets/facts.conf` FACT_CONF_VARS 族），从特征卡推导：
+**特征卡 → 门禁配置（Step 5）：** precheck.conf 生成期必读文件合计 205 个变量（core 30 + arch 126 + compliance 48；真值 `assets/facts.conf` FACT_CONF_VARS 族），从特征卡推导：
 
 | 配置变量 | 来自特征卡第几项 |
 |---------|----------------|
@@ -3809,7 +3809,7 @@ bash install.sh
 | Step 5 | **提取 17 项特征卡**（每项落到真实路径，不用占位符） |
 | Step 6 | 创建骨架（含 hooks / commands / precheck.conf） |
 | Step 7 | AI 填充全部文件——**特征卡驱动，消除全部占位符** |
-| Step 8 | AI 配置 precheck.conf——**204 个变量从特征卡推导** |
+| Step 8 | AI 配置 precheck.conf——**205 个变量从特征卡推导** |
 | Step 9 | AI 生成 hooks / commands / settings.local.json / .mcp.json 集成（generate-skill.sh create 段自动产出骨架，AI 按项目已装运行时激活 MCP server） |
 | Step 10 | AI 运行门禁（--all 核心 12 → --all-full 标准 32；合规 19 按需 --compliance-suite）——**特征卡定义规则，门禁验证合规** |
 | Step 11 | AI 独立审查——`precheck.sh --review`（ocr 5 维度或 AI 清单）+ review-record 落盘 |
@@ -4193,9 +4193,9 @@ FACT_GATES_FULL=53            # ALL_GATES_FULL = STANDARD 32 + COMPLIANCE 19 + d
 # 决策 28 后：169 → 171（+STABLE_PROPAGATE/STABLE_PROPAGATE_HOPS，Palantir markings-propagate 映射）
 # 七轮复盘后：171 → 173（CORE 12→13 修正历史漂移 e45d253；ARCH 111→112 +EVAL_WHITELIST 七轮误报治理）
 # WP-P2-extension 后：arch.conf +5 框架 globs（SPARK/HIVE/TDENGINE/DORIS/HARMONYOS_SRC_GLOBS）178→183
-FACT_CONF_VARS=204            # core 30 + arch 126 + compliance 48 = 204（三配置文件的物理变量合计）
+FACT_CONF_VARS=205            # core 31 + arch 126 + compliance 48 = 204（三配置文件的物理变量合计）
 FACT_CONF_VARS_USERFACE=20      # R13 conf 收缩：user 面必配项预算（开关/位置/预算类；43 glob 阈值数据已迁 rules.d/framework-globs.rules——物理变量 204 含兼容别名，user 面必配 ≈ 133 中约 20 开关项）
-FACT_CONF_VARS_CORE=30        # precheck.conf（field-feedback +SPEC_REQUIRED/SPEC_GLOB 16→18；P0-5 +BUILD_DEEP_RUNTIMES 18→19；R23 回归 D8 +BASE_BRANCH 19→20；测试质量轮 +8 覆盖率/断言密度/负向/变异 20→28；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 28→30）
+FACT_CONF_VARS_CORE=31        # precheck.conf（field-feedback +SPEC_REQUIRED/SPEC_GLOB 16→18；P0-5 +BUILD_DEEP_RUNTIMES 18→19；R23 回归 D8 +BASE_BRANCH 19→20；测试质量轮 +8 覆盖率/断言密度/负向/变异 20→28；设计文档同步轮 +DESIGN_SYNC_REQUIRED/DESIGN_DOCS 28→30）
 FACT_CONF_VARS_ARCH=126       # precheck.arch.conf（WP-P2-extension +5 框架 globs 112→117；测试质量轮 +4 接口测试 117→121）
 FACT_CONF_VARS_COMPLIANCE=48  # precheck.compliance.conf（WP-S1 30+9 + WP-S2 +7）
 
@@ -4343,7 +4343,7 @@ FACT_CONTEXT_SURFACE_BUDGET=199680          # 生成期必读三件套字节上�
 # 三轮复盘状态记录（防僵尸开关）：warn-only 长期保持——理由：LOC 增删属正常开发活动，
 # 本 key 的用途是"改脚本后提示同步文档口径"，非"限制脚本规模"（规模由 FACT_GATES_BUDGET 管）。
 # 不设推进条件（无需翻 fail）。
-FACT_SCRIPT_LOC=9972            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）；2026-10-27 收口合并批（core 尾批并入）后实测 9355；2026-11-05 --gates 重生成补齐 spec-first 规格保真度四维块（域源早于视图，+15 行）
+FACT_SCRIPT_LOC=9988            # 四脚本（assets/precheck+gates-strict/warn/advisory）合计行数（self-check 机械计数；改脚本后同步本值；R141 实测对齐；设计文档同步轮 +9=check_spec_first 域源 design-sync 核验再生；2026-10-26 函数拆分净 0）；2026-10-27 收口合并批（core 尾批并入）后实测 9355；2026-11-05 --gates 重生成补齐 spec-first 规格保真度四维块（域源早于视图，+15 行）；2026-11-12 实测对齐 9988（四文件合计；消除 main 既有 16 行漂移）
 
 # ===== 执行面复杂度预算（2026-10-24 重构轮，决策 54）=====
 # 事实：门禁/变量有预算，但门禁代码与框架注入代码的行数长期无上限（终态设计 §十已登记为风险）。

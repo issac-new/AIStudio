@@ -298,7 +298,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 门禁分层 | 核心 12 + 架构 20 + 合规 19 + advisory-only 6 + FULL 尾部治理 2（合计 59，闭合方程见 facts.conf）。执行序列 `--all` / `--all-full` / `--compliance-suite` |
 | 特征卡 | 17 项（P0 六项强制，P1 十一项可增量） |
 | 框架规则集 | 81（规则文档与门禁片段 1:1 配对） |
-| 配置变量 / 上限 | 204 / 210 |
+| 配置变量 / 上限 | 205 / 210 |
 | 执行面代码行数 / 上限 | 引擎域源 ≤FACT_ENGINE_CODE_LOC_MAX（8600）；框架门禁注入 ≤FACT_FRAMEWORK_GATE_LOC_MAX（18469）；逐例上调登记见 facts.conf 键注记 |
 | 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤618496B（604KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
 | 外部运行时 | 15 个整合（深度 4 + CLI 6 + 方法论 5；CLI 第 5/6 项 mattpocock-skills/diagram-design 为仓内物化运行时）。登记 22（含图谱备选 codegraph、两宿主、机制源 pua/semantica/pi 等）。自动检测 11 |

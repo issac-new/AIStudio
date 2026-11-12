@@ -79,7 +79,7 @@ bash install.sh
 
 **特征卡 → 文件填充（Step 4）：** SKILL.md 的铁律来自第 2/6 项 → codebase.md 的技术栈来自第 4 项 → dev-guide.md 的改造分类来自第 3 项 → reference-manual.md 的组件库来自第 11 项 → release.md 的命令来自第 5 项……17 项特征卡是目标技能所有文件的「数据源」。
 
-**特征卡 → 门禁配置（Step 5）：** precheck.conf 生成期必读文件合计 204 个变量（core 30 + arch 126 + compliance 48；真值 `assets/facts.conf` FACT_CONF_VARS 族），从特征卡推导：
+**特征卡 → 门禁配置（Step 5）：** precheck.conf 生成期必读文件合计 205 个变量（core 30 + arch 126 + compliance 48；真值 `assets/facts.conf` FACT_CONF_VARS 族），从特征卡推导：
 
 | 配置变量 | 来自特征卡第几项 |
 |---------|----------------|
@@ -254,7 +254,7 @@ bash install.sh
 | Step 5 | **提取 17 项特征卡**（每项落到真实路径，不用占位符） |
 | Step 6 | 创建骨架（含 hooks / commands / precheck.conf） |
 | Step 7 | AI 填充全部文件——**特征卡驱动，消除全部占位符** |
-| Step 8 | AI 配置 precheck.conf——**204 个变量从特征卡推导** |
+| Step 8 | AI 配置 precheck.conf——**205 个变量从特征卡推导** |
 | Step 9 | AI 生成 hooks / commands / settings.local.json / .mcp.json 集成（generate-skill.sh create 段自动产出骨架，AI 按项目已装运行时激活 MCP server） |
 | Step 10 | AI 运行门禁（--all 核心 12 → --all-full 标准 32；合规 19 按需 --compliance-suite）——**特征卡定义规则，门禁验证合规** |
 | Step 11 | AI 独立审查——`precheck.sh --review`（ocr 5 维度或 AI 清单）+ review-record 落盘 |

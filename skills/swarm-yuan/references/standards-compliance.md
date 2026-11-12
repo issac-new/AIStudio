@@ -122,7 +122,7 @@ GB/T 8566-2022（IDT ISO/IEC/IEEE 12207:2017）第 6 章四大过程组：6.1 �
 | Step 5 提取 17 项特征卡 | 6.4 技术过程组 | 需求定义（质量需求按特性陈述，对齐 GB/T 25000.10） | codebase.md 特征卡（17 项具体值） |
 | Step 6 create 骨架 | 6.4 技术过程组 | 设计/实现启动（合成） | generate-skill.sh 输出 + 骨架文件树 |
 | Step 7 AI 填充全部文件 + Step 4 框架深化 | 6.4 技术过程组 | 实现过程（文档/门禁实现） | 六段式文件全量内容（零占位标记） |
-| Step 8 AI 配置 precheck.conf | 6.3 技术管理过程组 | 质量保证策划 + 配置管理（测度元素实例化） | precheck.conf 生成期必读文件（204 变量真实值） |
+| Step 8 AI 配置 precheck.conf | 6.3 技术管理过程组 | 质量保证策划 + 配置管理（测度元素实例化） | precheck.conf 生成期必读文件（205 变量真实值） |
 | Step 9 AI 生成 hooks/commands/MCP 集成 | 6.2 组织的项目使能 | 工具链/过程支撑环境 | hooks.json/commands/settings.local.json/.mcp.json |
 | Step 10 AI 运行门禁验证（--all → --all-full） | 6.4 技术过程组·验证过程 | built-right 证据 | precheck 输出 + fail 修复重跑记录 |
 | Step 4 框架深化：门禁注入（--inject-frameworks） | 6.3 技术管理过程组 | 配置管理（受控变更，幂等+哈希裁决） | precheck.sh 标记区块 + 注入日志 |

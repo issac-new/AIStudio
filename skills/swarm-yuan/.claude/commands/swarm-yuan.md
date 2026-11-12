@@ -62,7 +62,7 @@ bash ~/.claude/skills/swarm-yuan/scripts/generate-skill.sh <skill名称> <项目
 - `scripts/mcp-tools.md` — MCP 工具接入说明
 
 ### 8. AI 自动配置 precheck.conf
-从特征卡推导 204 个配置变量（precheck.conf 三件套：core 30 + arch 126 + compliance 48），自动填写 `scripts/precheck.conf`+`precheck.arch.conf`+`precheck.compliance.conf`。
+从特征卡推导 205 个配置变量（precheck.conf 三件套：core 31 + arch 126 + compliance 48），自动填写 `scripts/precheck.conf`+`precheck.arch.conf`+`precheck.compliance.conf`。
 
 ### 9. AI 运行门禁验证
 ```bash
