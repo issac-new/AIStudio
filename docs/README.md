@@ -9,7 +9,7 @@
 | 唯一设计正本（终稿） | [DESIGN.md](DESIGN.md)（文件名固定不带日期；specs 下同名路径为旧址指针） |
 | 上手与日常使用 | [USAGE.md](USAGE.md) |
 | 六团队独立交付路径 | [产品交付团队培训手册](manuals/aistudio-training-and-user-guide.md) |
-| swarm-yuan 研发核心技能 | [swarm-yuan 技术说明](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（课程主入口）；[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)（可选来源） |
+| swarm-yuan 研发核心技能 | [swarm-yuan 培训手册](manuals/aistudio-swarm-yuan-developer-guide.md)（产品、技术与操作主教材，含吸收全景与实训）；[swarm-yuan 技术说明](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（课程内技术幕） |
 | 全量页面与能力边界 | [全量功能清单](manuals/aistudio-feature-inventory.md) |
 | 部署、配置与运维检查 | [管理员运维参考](manuals/aistudio-operations-reference.md) |
 | 设计事实源与冲突裁决 | [设计文档导读](manuals/aistudio-design-document-guide.md) |
