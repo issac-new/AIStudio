@@ -114,6 +114,7 @@ interface JSONLChunk {
   session_id: string
   task_id?: string
   api_request_id?: string
+  call_id?: string
   tool_call_id?: string
   subagent_label?: string
   tool_name?: string

@@ -99,6 +99,8 @@ export const REASON_CHIP_TEXT: Record<string, string> = {
   // ── 进程级准入（2026-11-03）──
   capacity_exhausted: '并发已满',
   capacity_timeout: '排队超时',
+  // ── 团队治理（2026-11-12）──
+  team_stop: '团队停止条件',
 }
 
 export interface ProjectionState {

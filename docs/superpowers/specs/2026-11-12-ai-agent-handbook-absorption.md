@@ -53,10 +53,11 @@
 | 文件 | 变更 |
 |---|---|
 | `custom/server/zcode/team-stop.ts`（新增） | 纯判定：派生任务数、返工轮次、无进展、可选委派深度；阈值可配；输出 `{stop,code,reason}` |
-| `custom/server/zcode/mention-dispatch.ts` | `PlanFacts` 加可选 `team`；在自触发之后、pending 槽之前评估；`TEAM_STOP_ENFORCE=1` 才 reject，默认只记录 |
+| `custom/server/zcode/mention-dispatch.ts` | `PlanFacts` 加可选 `team`；在自触发之后、pending 槽之前评估；`TEAM_STOP_ENFORCE=1` 才 reject（reason `team_stop`），默认只带 `warnings` |
+| `custom/server/zcode/dispatch-reasons.ts`、`custom/client/zcode/store/zcode-projection.ts` | 追加 `team_stop` 词表与中文标签（冻结纪律：只追加） |
 | `custom/server/zcode/team-stop-facts.ts`（新增） | 从 dispatch-ledger/squad 评估账本收集事实；深度仅采纳调用方显式值，不猜 |
 | `custom/server/tokenbudget/budget-lease.ts`（新增） | 预算租约：derive/reserve/settle/revoke/status，JSON 持久化，可级联撤销 |
-| `custom/server/tokenbudget/budget-policy.ts` | 状态加 `reservedUsd/availableUsd`；`HERMES_BUDGET_ENFORCE=1` 时 block 判定计入预留 |
+| `custom/server/tokenbudget/budget-policy.ts` | 状态加 `reservedUsd/availableUsd`；`HERMES_BUDGET_ENFORCE=1` 时 block 判定计入预留（已花费＋未结算预留） |
 | `custom/server/zcode/__tests__/team-stop.test.ts`、`custom/server/tokenbudget/__tests__/budget-lease.test.ts` | 停止四码、阈值、默认不拦；租约派生/结算/撤销/并发预留 |
 | `custom/hermes-agent-plugins/run-trace/__init__.py` | LLM span 增 `call_id`/`attempt_id`（`api_request_id`＋`retry_count`），成功 span 也带重试次数 |
 
@@ -89,7 +90,7 @@
 - 批 1：`npx vitest run custom/server/controllers/hermes/__tests__/trace-graph.test.ts custom/server/harness/__tests__/run-result.test.ts custom/hermes-agent-plugins/__tests__/run-trace-schema.test.ts`；`npm run typecheck:harness`。
 - 批 2：`npx vitest run custom/server/toolcontract/__tests__/action-recovery.test.ts custom/server/toolcontract/__tests__/idempotency-status.test.ts custom/server/toolcontract/__tests__/contract.test.ts custom/server/toolpipeline/__tests__/contract-guard.test.ts custom/server/resume/__tests__/resume-planner.test.ts custom/server/memscope/__tests__/memory-write-guard.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts custom/hermes-agent-plugins/__tests__/action-ledger.test.ts`。
 - 批 3：`npx vitest run custom/server/eval/__tests__/golden-gate.test.ts custom/server/eval/__tests__/golden-set.test.ts custom/server/eval/__tests__/failure-taxonomy.test.ts custom/server/eval/__tests__/golden-report-wiring.test.ts custom/server/eval/__tests__/badcase-distill.test.ts`；`python3 -m py_compile simharness/mux/mx-eval-summary.py simharness/mux/mx-report-gen.py`；`mx-eval-summary.py` 用临时 `golden-gate.json` 夹具真跑一次（`goldenGate` 透传）。
-- 批 4：`npx vitest run custom/server/zcode/__tests__/team-stop.test.ts custom/server/tokenbudget/__tests__/budget-lease.test.ts custom/server/__tests__/zcode-mention-dispatch.test.ts`。
+- 批 4：`npx vitest run custom/server/zcode/__tests__/team-stop.test.ts custom/server/tokenbudget/__tests__/budget-lease.test.ts custom/server/tokenbudget/__tests__/budget-policy.test.ts custom/server/zcode/__tests__/dispatch-capacity.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts`。
 - 全量：`npm test`（若 worktree 注入态不可用，按 N-4 配方先建链；失败项如实列）。
 - 注入/部署面：本批零 vendor 改动，`npm run inject` 不需重放；Hermes 插件按目录部署，验证脚本用 `python3 -c` 真导入。
 

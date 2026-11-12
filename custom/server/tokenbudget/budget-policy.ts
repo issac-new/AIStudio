@@ -15,6 +15,7 @@ import { dirname, resolve } from 'path'
 import { queryRunManifests, runCostFromTrace } from '../runmanifest/run-manifest'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
+import { sharedBudgetLeaseStore } from './budget-lease'
 
 export type BudgetAction = 'warn' | 'downgrade' | 'block'
 
@@ -35,6 +36,10 @@ export interface BudgetStatus {
   policy: BudgetPolicy | null
   day: string
   spentUsd: number
+  /** 活跃预算租约的未结算预留（2026-11-12 handbook 吸收）。 */
+  reservedUsd: number
+  /** 限额内还剩多少（limitUsd - spent - reserved）；无限额=null。 */
+  availableUsd: number | null
   limitUsd: number | null
   ratio: number | null
   /** allow=未超限；warn/downgrade/block=策略动作。 */
@@ -156,9 +161,11 @@ export function budgetStatus(input: { userId?: string; profileId?: string; now?:
   const now = input.now ?? Date.now()
   const policy = resolveBudgetPolicy(input.userId, input.profileId)
   const spend = todaySpend(input.userId, input.profileId, now)
+  const reservedUsd = sharedBudgetLeaseStore().reservedUsdFor(input.userId, input.profileId)
+  const committedUsd = Math.round((spend.spentUsd + reservedUsd) * 10000) / 10000
   const limitUsd = policy?.dailyUsd ?? null
-  const ratio = limitUsd != null && limitUsd > 0 ? Math.round((spend.spentUsd / limitUsd) * 10000) / 10000 : null
-  const decision = policy ? evaluateBudget(spend.spentUsd, limitUsd, policy.action) : { exceeded: false, action: 'allow' as const }
+  const ratio = limitUsd != null && limitUsd > 0 ? Math.round((committedUsd / limitUsd) * 10000) / 10000 : null
+  const decision = policy ? evaluateBudget(committedUsd, limitUsd, policy.action) : { exceeded: false, action: 'allow' as const }
   const exceeded = decision.exceeded
   return {
     userId: input.userId,
@@ -166,6 +173,8 @@ export function budgetStatus(input: { userId?: string; profileId?: string; now?:
     policy,
     day: dayStamp(now),
     spentUsd: spend.spentUsd,
+    reservedUsd,
+    availableUsd: limitUsd != null ? Math.max(0, Math.round((limitUsd - committedUsd) * 10000) / 10000) : null,
     limitUsd,
     ratio,
     action: decision.action,
@@ -174,8 +183,8 @@ export function budgetStatus(input: { userId?: string; profileId?: string; now?:
     enforce: process.env.HERMES_BUDGET_ENFORCE === '1',
     note: policy
       ? exceeded
-        ? `当日支出 ${spend.spentUsd} USD 已达/超过限额 ${limitUsd} USD，策略动作 ${policy.action}`
-        : `当日支出 ${spend.spentUsd} USD，限额 ${limitUsd} USD`
+        ? `当日支出 ${spend.spentUsd} USD ＋预留 ${reservedUsd} USD 已达/超过限额 ${limitUsd} USD，策略动作 ${policy.action}`
+        : `当日支出 ${spend.spentUsd} USD ＋预留 ${reservedUsd} USD，限额 ${limitUsd} USD`
       : '未配置预算策略（只观测，不阻断）',
   }
 }

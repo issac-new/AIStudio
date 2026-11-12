@@ -2,9 +2,13 @@
 // 不复制手册的 Node 挑战实现，只断言本仓恢复/记忆/效率决策的边界：
 // 超时≠失败、未结算不重放、跨租户不写、超预算不派。
 import { describe, it, expect } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { decideActionRecovery } from '../../toolcontract/action-recovery'
 import { decideResume, type ResumeFacts } from '../../resume/resume-planner'
 import { decideMemoryWrite } from '../../memscope/memory-write-guard'
+import { BudgetLeaseStore } from '../../tokenbudget/budget-lease'
 
 function emptyFacts(): ResumeFacts {
   return {
@@ -62,5 +66,20 @@ describe('关 3：记忆作用域', () => {
     expect(decideMemoryWrite({
       tenantId: 't1', userId: 'u1', evidence: 'confirmed', sourceRef: 'trace:1',
     }).allow).toBe(true)
+  })
+})
+
+describe('关 4：效率（预算租约）', () => {
+  it('租约预留耗尽后拒绝继续预留（并发 run 不会在支出可见前全放行）', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'handbook-budget-'))
+    try {
+      const store = new BudgetLeaseStore({ path: join(dir, 'leases.json'), now: () => 1_000 })
+      expect(store.derive({ leaseId: 'r', limitUsd: 1 }).ok).toBe(true)
+      expect(store.reserve('r', 1).ok).toBe(true)
+      expect(store.available('r')).toBe(0)
+      expect(store.reserve('r', 0.01).ok).toBe(false)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
