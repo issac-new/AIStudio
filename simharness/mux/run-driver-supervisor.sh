@@ -163,6 +163,31 @@ note "owner 取得（instance=${MY_INSTANCE:0:8}…，bash-supervisor pid=$$）"
 _storm=0
 _storm_same=0      # 连续同指纹失败次数（确定性失败判定，见下方注释）
 _storm_fp=""       # 上轮驱动日志新增段的失败指纹
+_det_stage=0       # 确定性失败二段式阶段（0=未重挂过；1=已自动重挂一次）——A2（run29 复盘）
+
+# A2（run29 复盘）：确定性失败二段式判定（纯函数，行为测可提取）。
+# run29 实测监督器判确定性失败后直接退出 5 次，每次都停在「等人工重挂」——无人值守时
+# 即永久停滞。二段式：第 1 段自动重挂一次（60s 退避＋计数重置＋告警），第 2 段才停。
+mx_storm_decision() { # <same_count> <same_max> <stage> → continue|rearm|exit
+  local same="${1:-0}" max="${2:-0}" stage="${3:-0}"
+  if [[ "$max" -le 0 || "$same" -lt "$max" ]]; then printf 'continue'; return 0; fi
+  if [[ "$stage" -eq 1 ]]; then printf 'exit'; else printf 'rearm'; fi
+}
+
+# 幂等记单（监督器不 source mx-scenario-lib，issue_once 不可用——本地最小实现）
+mx_issue_once() { # <type> <subject> <desc>
+  local _f="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
+  grep -qF "ISSUE|$1|$2|" "$_f" 2>/dev/null && return 0
+  echo "ISSUE|$1|$2|$3" >> "$_f" 2>/dev/null || true
+}
+
+# 告警落点（A2）：evidence/alerts.jsonl 供值守/巡检机械读取（issues.log 混业务记账）。
+mx_alert() { # <level> <code> <message>
+  local _ev="${SIM_ROOT}/runs/${RUN_ID}/evidence"
+  [[ -d "$_ev" ]] || return 0
+  printf '{"ts":"%s","level":"%s","code":"%s","message":"%s"}\n' \
+    "$(date -u +%FT%TZ)" "${1:-warn}" "${2:-?}" "${3:-}" >> "$_ev/alerts.jsonl" 2>/dev/null || true
+}
 while true; do
   [[ -f "$STOPFLAG" ]] && { note "stop 文件在位，监督器退出"; rm -f "$STOPFLAG"; exit 0; }
   if grep -q '^report_done=' "$STATE" 2>/dev/null; then
@@ -282,10 +307,23 @@ while true; do
     # 依据：同一失败集重复执行不产生新证据，停下来才是可观测的终态；继续刷只会
     # 制造「以为在自愈」的假象（run23 65 分钟实证）。
     _same_max="${MX_STORM_SAME_MAX:-5}"
-    if [[ "$_same_max" -gt 0 && $_storm_same -ge "$_same_max" ]]; then
+    _dec="$(mx_storm_decision "$_storm_same" "$_same_max" "$_det_stage")"
+    if [[ "$_dec" = "rearm" ]]; then
+      # 第 1 段：自动重挂一次（告警＋退避＋计数重置）；「重启不产生新信息」的前提是
+      # 缺口未变，60s 退避下人工/自动处置恰好落盘的窗口被吃进这一轮。
+      _det_stage=1
       _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
-      echo "ISSUE|driver-deterministic-fail|supervisor|驱动连续 ${_storm_same} 次退出且失败指纹不变（${_storm_fp}）——判定确定性失败，监督器停止自愈（人工可见）；复位=修复缺口后重挂监督器或指纹变化" >> "$_iss_path"
-      note "⛔ 连续 ${_storm_same} 次同指纹失败（${_storm_fp}）——判定确定性失败，监督器退出（真值：证据/缺口未变，重启不产生新信息）"
+      mx_issue_once driver-deterministic-stage1 supervisor "驱动连续 ${_storm_same} 次同指纹失败（${_storm_fp}）——二段式第 1 段：自动重挂一次（60s 退避＋计数重置）；第 2 次判定即停并告警"
+      mx_alert warn driver-deterministic-stage1 "同指纹连续 ${_storm_same} 次（${_storm_fp}）——自动重挂一次"
+      note "⛔ 首次判定确定性失败（${_storm_fp}）——二段式第 1 段：60s 退避后自动重挂一次"
+      _storm=0; _storm_same=0; _storm_fp=""
+      monitor_events
+      sleep 60
+    elif [[ "$_dec" = "exit" ]]; then
+      _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
+      mx_issue_once driver-deterministic-fail supervisor "驱动连续 ${_storm_same} 次退出且失败指纹不变（${_storm_fp}）——二段式第 2 段：自动重挂已用尽，监督器停止自愈；复位=修复缺口后重挂监督器或指纹变化"
+      mx_alert error driver-deterministic-fail "同指纹再次连续 ${_storm_same} 次（${_storm_fp}）——自动重挂已用尽，停止"
+      note "⛔ 同指纹再次连续 ${_storm_same} 次（${_storm_fp}）——二段式第 2 段：监督器退出（人工可见）"
       exit 3
     fi
     if [[ $_storm -ge 10 ]]; then
