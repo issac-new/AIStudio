@@ -1,15 +1,19 @@
 {
   "source_mockup": null,
-  "source_plan": "docs/superpowers/specs/2026-11-09-training-v1.0.14-refresh.md",
+  "source_plan": "docs/superpowers/specs/2026-11-11-training-plain-language.md",
   "mode": "evolve",
   "html_file": "docs/manuals/aistudio-interactive-training.html",
   "pretext_tier": "native-css",
   "framework": "vanilla",
-  "iterations": 35,
-  "date": "2026-11-09",
+  "iterations": 36,
+  "date": "2026-11-11",
   "screen": "aistudio-training",
-  "branch": "docs/training-v1-0-14-refresh",
+  "branch": "docs/manual-plain-language",
   "changelog": [
+    {
+      "date": "2026-11-11",
+      "summary": "默认阅读层改为通俗操作手册：每步包含操作、讲解、完成标志、失败处置和留存结果；技术核对项与示例命令按需展开。"
+    },
     {
       "date": "2026-11-10",
       "summary": "取消独立图解拼盘，结构/架构图随原理、流程图随实操、关系图随案例交接，形成连续教学叙事。"

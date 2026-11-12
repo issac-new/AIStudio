@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="AIStudio 六团队 A4 横屏培训课件，14 幕动态步骤、完整打印教案与六套拓扑">
-<title>AIStudio 交互式培训手册</title>
+<meta name="description" content="AIStudio 面向技术人员的中文培训与演示手册：原理、图解、逐步操作、场景案例和验收">
+<title>AIStudio 技术培训与演示手册</title>
 <style>
 :root {
   --ink: #17251d; --muted: #607066; --accent: #1c8755; --accent-soft: #dff2e6;
@@ -204,6 +204,15 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
   #printRoot .lesson-more ul { font-size: 7.2pt; line-height: 1.18; }
   #printRoot .print-dense .lesson-steps ol { font-size: 7pt; line-height: 1.18; }
   #printRoot .print-dense .lesson-steps .lesson-goal { margin-bottom: 1mm; font-size: 6.4pt; line-height: 1.15; }
+  #printRoot .print-dense .lesson-example dl { font-size: 6.1pt; line-height: 1.08; }
+  #printRoot .print-dense .lesson-example dt { font-size: 6.1pt; }
+  #printRoot .print-dense .lesson-code pre { font-size: 5.5pt; line-height: 1.1; }
+  #printRoot .print-dense .lesson-more { padding: 1mm 2mm 0; }
+  #printRoot .print-dense .lesson-more-grid { font-size: 6.4pt; }
+  #printRoot .print-dense .lesson-more ul { font-size: 6.4pt; line-height: 1.1; }
+  #printRoot .print-dense .lesson-more h2 { margin-bottom: 1mm; font-size: 7.2pt; }
+  #printRoot .print-dense .case-evidence-print { padding-bottom: .6mm; margin-bottom: .6mm; }
+  #printRoot .print-dense .case-evidence-print ul { font-size: 5.8pt !important; line-height: 1.15 !important; }
   #printRoot .print-dense .lesson-example dl { font-size: 6.4pt; line-height: 1.15; }
   #printRoot .print-dense .lesson-example dt { font-size: 6.4pt; }
   #printRoot .print-dense .lesson-code pre { font-size: 5.8pt; }
@@ -263,6 +272,10 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
 #appRoot .manual-steps li.is-done .step-index { color: #718096; }
 #appRoot .manual-steps .step-index { color: var(--manual-accent); font-size: 12px; font-weight: 700; padding-top: 3px; }
 #appRoot .manual-steps .step-title { font-size: 14px; line-height: 1.65; }
+#appRoot .manual-steps .step-title small { display: block; margin-top: 4px; color: #64748b; font-size: 12px; font-weight: 400; line-height: 1.6; }
+#appRoot .technical-reference { margin: 14px 0; color: #526174; font-size: 12px; }
+#appRoot .technical-reference summary { cursor: pointer; color: #405a78; font-weight: 650; }
+#appRoot .technical-reference p, #appRoot .technical-reference li { line-height: 1.7; }
 #appRoot .manual-steps li.is-active .step-title { color: #173b68; font-weight: 700; }
 #appRoot .manual-steps .step-state { color: #8291a3; font-size: 11px; white-space: nowrap; padding-top: 4px; }
 #appRoot .case-narrative { margin: 16px 0; }
@@ -342,10 +355,11 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
       </header>
       <section class="manual-section" id="principleSection">
         <h2><span>01</span>原理与结构</h2>
-        <h3>原理说明</h3><p id="manualPrinciple" class="manual-lead"></p><h3>本幕学习目标</h3><p id="manualAction"></p>
+        <h3>原理说明</h3><p id="manualPrinciple" class="manual-lead"></p><h3>学完你能做到什么</h3><p id="manualAction"></p>
         <figure class="diagram-figure"><figcaption><strong>本幕机制结构</strong><span>从输入到可验收交付</span></figcaption><svg id="structureSvg" role="img" aria-label="本幕结构图" viewBox="0 0 760 330"></svg></figure>
-        <div class="principle-grid"><div><h3>输入条件</h3><ul id="coachInputs"></ul></div><div><h3>整幕完成判据</h3><p class="dock-proof" id="coachProof"></p></div></div>
-        <div class="manual-note"><strong>系统边界与交接</strong><p class="dock-layer" id="coachLayer"></p></div>
+        <div class="principle-grid"><div><h3>开始前准备</h3><ul id="coachInputs"></ul></div><div><h3>完成后的结果</h3><p class="dock-proof" id="coachProof"></p></div></div>
+        <div class="manual-note"><strong>这一幕怎样接入下一幕</strong><p class="dock-layer" id="coachLayer"></p></div>
+        <details class="technical-reference"><summary>技术核对项（供开发人员查阅）</summary><p id="technicalSummary"></p><p id="technicalPrinciple"></p><p id="technicalLayer"></p></details>
         <figure class="diagram-figure diagram-wide"><figcaption><strong>系统架构与责任链</strong><span>本幕在六团队协作中的位置</span></figcaption><svg id="architectureSvg" role="img" aria-label="本幕系统架构图" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg></figure>
       </section>
       <section class="manual-section" id="practiceSection">
@@ -353,6 +367,7 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
         <p class="section-intro">机制与系统位置明确后，沿下图逐步演示；点击任一步，右侧同步显示该步交付、验收与误操作。</p>
         <figure class="diagram-figure diagram-wide"><figcaption><strong>演示流程</strong><span>先看全链路，再逐步操作</span></figcaption><svg id="flowSvg" role="img" aria-label="本幕实操流程图" viewBox="0 0 1000 250"></svg></figure>
         <ol id="coachSteps" class="manual-steps"></ol>
+        <details class="technical-reference"><summary>查看原始技术核对项</summary><ol id="technicalSteps"></ol></details>
       </section>
       <section class="manual-section" id="caseSection">
         <h2><span>03</span>场景案例与讲解</h2>
@@ -370,17 +385,17 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
         <div class="case-metrics" id="caseMetrics" aria-label="run28 案例口径"></div>
         <div class="evidence-attachments" id="caseEvidence" aria-label="证据附件"></div>
         <div class="evidence-detail" id="evidenceDetail" aria-live="polite"></div>
-        <h3>对应手册与延伸阅读</h3><div id="coachReferences" class="lesson-references"></div>
+        <h3>还需要细节时，打开这些材料</h3><div id="coachReferences" class="lesson-references"></div>
       </section>
       <footer class="document-pager"><button id="prevStepButton" type="button">← 上一步</button><span id="stepText">步骤 1 / 5</span><button id="nextStepButton" type="button">下一步 →</button></footer>
     </article>
     <aside class="manual-notes" aria-label="演示说明">
-      <div class="notes-heading"><span class="card-step" id="cardStep">1</span><div><small>当前演示步骤</small><h2>讲解与验收</h2></div></div>
-      <section><h3>本步讲解重点</h3><p id="currentStepText" class="notes-current"></p></section>
-      <section><h3>交付物</h3><ul id="coachDeliverables"></ul></section>
-      <section><h3>验收检查</h3><ul id="coachChecks"></ul></section>
-      <section><h3>常见误操作</h3><ul id="coachPitfalls"></ul></section>
-      <section><h3>本步流转</h3><div id="coachFlowLabels"></div></section>
+      <div class="notes-heading"><span class="card-step" id="cardStep">1</span><div><small>当前演示步骤</small><h2>这一步怎么做</h2></div></div>
+      <section><h3>讲师这样解释</h3><p id="currentStepText" class="notes-current"></p></section>
+      <section><h3>要留下什么</h3><ul id="coachDeliverables"></ul></section>
+      <section><h3>看到什么算完成</h3><ul id="coachChecks"></ul></section>
+      <section><h3>卡住时怎么办</h3><ul id="coachPitfalls"></ul></section>
+      <section><h3>系统内部路径（供开发对照）</h3><div id="coachFlowLabels"></div></section>
       <section><h3>步骤定位</h3><div class="step-dots" id="stepDots" aria-label="幕内步骤"></div></section>
       <button id="resetViewButton" type="button" class="topology-open">查看本步拓扑与证据流</button>
       <p class="notes-disclaimer">本手册用于培训讲解，不连接真实任务、审批或生产数据。</p>
@@ -1359,6 +1374,243 @@ const MANUAL_PRINCIPLES = {
   'project-run28-case': 'run28 复盘采用“报告快照、后续补证、净额口径”三层阅读法。含代偿六闸说明流程走完，净额判据说明真实通过范围，后续帧与整改台账说明报告之后发生的变化，三者不能相互覆盖。',
 }
 
+const MANUAL_PLAIN = {
+  'product-overview': {
+    title: '先看清：一项任务怎样在六个团队之间交接',
+    what: '这一幕用一张任务卡讲清六个团队各自做什么，以及结果最终保存在哪里。',
+    why: '学会后，你能判断一项工作现在归谁、下一步交给谁，不会因为群里有人说“做完了”就当作完成。',
+    goal: '跟着一张示例任务走一遍交接，并能指出每个结果的正式保存位置。',
+    principle: '把团队协作想成快递接力：每一棒都要写清寄件人、收件人、包裹和签收位置。任务卡记录工作，代码仓记录代码，审批系统记录批准，证据目录记录测试结果；聊天消息只负责提醒。',
+    prepare: ['打开培训页面，不需要登录真实系统', '准备一张虚拟任务卡，标题为“培训演示任务”'],
+    steps: [
+      { action: '打开任务列表，找到“培训演示任务”，抄下它的任务编号。', explain: '任务编号就像快递单号，后面所有结果都靠它对上号。', pass: '你能指出任务编号，而不是只读任务标题。', fail: '找不到任务时，先看是否选对了项目；不要拿聊天记录编号代替。', save: '在演示记录中写下任务编号。' },
+      { action: '沿着图上的顺序，说出每一项工作由谁交给谁、交了什么。', explain: '讲师重点指三处：可发通知的环节、必须带操作规则的环节、必须由另一人复查的环节。', pass: '你能完整说出一次交接，不需要背数字编号。', fail: '说不清时，先回答“谁做、做什么、结果放哪”，再补细节。', save: '画出一张简化交接顺序图。' },
+      { action: '把任务编号、代码提交、测试报告、批准记录分别放到对应位置。', explain: '这一步是在练习“每类结果有固定家”，不是把所有材料塞进一个文件夹。', pass: '五类材料都能从任务编号反查。', fail: '缺材料就明确写“尚未采集”，不要补一张无关截图。', save: '形成一张结果索引表。' },
+      { action: '故意把测试报告关联到另一条代码提交，再练习退回。', explain: '这是错误演示：测试的代码和准备发布的代码不是同一份，就必须停下核对。', pass: '你能发现不一致，并说出应退回给哪个团队。', fail: '不要因为测试报告写着“通过”就忽略代码版本不同。', save: '记录一次退回原因和处理人。' },
+      { action: '回到任务系统、代码仓、审批系统和证据目录，各核对一次。', explain: '页面上的汇总只是阅读入口，最终结论要能回到原始系统验证。', pass: '你能从汇总页找到原始记录。', fail: '只有汇总没有原始记录时，结论标为“待核实”。', save: '写下四个原始记录的入口。' },
+    ],
+    case: { title: '示例：一个登录功能的任务卡', background: '产品提出“用户可以用邮箱登录”，研发交付代码，测试验证登录成功和失败，审计核对批准人。', action: '讲师用任务编号把这四段记录串起来，并演示聊天里一句“已完成”为什么不能代替测试报告。', result: '学员看到的是同一件工作在不同系统中的记录，而不是一张孤立的完成截图。' },
+  },
+  'product-spec-design': {
+    title: '把需求写清楚：让开发和测试理解同一件事',
+    what: '这一幕练习把一句需求变成可执行的设计和可检查的验收条件。',
+    why: '需求写不清，开发只能猜，测试也无法判断对错。先把边界和完成标准说清楚，后面的返工才会少。',
+    goal: '完成一份简短需求与设计说明，并能用实例判断它是否合格。',
+    principle: '好需求要回答四个问题：要做什么、明确不做什么、遇到什么异常怎么办、怎样算完成。设计说明再回答“由哪些部分实现、改坏了怎样撤回”。冻结表示大家确认当前版本；之后改内容就要重新确认。',
+    prepare: ['选择“修改登录密码”作为练习需求', '准备一份空白需求记录'],
+    steps: [
+      { action: '写下目标、范围、不做的内容、依赖、接口、验收、风险和验证方法。', explain: '讲师逐块问一句人话，例如“非目标”就是“这次明确不做什么”。', pass: '八块都有内容，没有“同上”“待定”糊弄过去。', fail: '某块确实不知道时，写清负责人和确认期限。', save: '保存需求说明第一版。' },
+      { action: '把“密码修改要安全”改写成可以直接观察的验收条件。', explain: '例如“输入旧密码错误时提示错误，新密码不变”，就能直接测试。', pass: '正常、换一种合法操作、出错、用户取消四类情况都有例子。', fail: '只写“体验好”“更安全”就不算可验收。', save: '保存验收条件清单。' },
+      { action: '在需求页检查影响范围和敏感信息，再确认需求版本。', explain: '修改密码会碰账号和隐私，所以要先说清谁能看、谁能改。', pass: '需求检查中没有未处理的空项。', fail: '检查不通过就退回补充，不要带着缺口进入设计。', save: '记录本次需求确认的版本。' },
+      { action: '写出实现组件、数据变化、影响范围和两种可选做法。', explain: '备选方案要说明取舍，例如“改旧接口”与“新增接口”各自影响什么。', pass: '另一人能据此说出准备怎么实现、怎样回退。', fail: '只有一种写法且没有理由时，说明设计还没想透。', save: '保存设计说明和取舍理由。' },
+      { action: '挑一条验收条件，追到设计、任务、测试和最终试用记录。', explain: '这条链证明“最初要求的事”最后被真正实现并验证。', pass: '从任一验收条件都能找到后续记录。', fail: '冻结后新增需求时，必须重新评审，不要直接塞进旧任务。', save: '保存一条完整追溯链。' },
+    ],
+    case: { title: '示例：修改登录密码', background: '用户希望修改密码，但不能允许旧密码错误时也修改成功。', action: '从正常修改、旧密码错误、新密码太弱、用户取消四种情况写验收，再让设计说明对应每个处理。', result: '需求不再是一句口号，开发和测试拿到的是同一份可执行说明。' },
+  },
+  'development-swarm-yuan-tech': {
+    title: '看懂 swarm-yuan：怎样给项目生成一套研发操作规则',
+    what: '这一幕讲清“生成规则的工具”和“项目实际使用的规则”有什么区别。',
+    why: '只有确认规则真的生成、通过检查并被本次任务读取，才能说研发过程受这些规则约束。',
+    goal: '生成一套项目研发规则，并验证它确实在本次编码任务中生效。',
+    principle: 'swarm-yuan 像一套“项目规则生成器”。它先读项目结构和已有约定，再生成一份项目专用技能包；技能包告诉研发助手怎样写规格、建分支、测试和提交。生成成功不等于已被使用，所以还要检查激活报告和本次任务的读取记录。',
+    prepare: ['准备一个本地示例项目', '确认生成过程只在本地读写示例目录'],
+    steps: [
+      { action: '分别找出生成器、项目技能包和运行记录三个目录。', explain: '生成器负责生产规则，技能包是项目以后使用的规则，运行记录保存本次执行状态。', pass: '你能指出三者各自的位置和用途。', fail: '不要把修改运行状态文件当成生成或激活成功。', save: '记录三个目录的路径。' },
+      { action: '按向导生成项目技能包，再依次运行完整性、规则和激活检查。', explain: '任何检查失败都停留在草稿状态，先修生成内容再继续。', pass: '激活报告写明通过，并列出实际生成的文件。', fail: '检查失败时保留报告，修完重新运行，不手改状态。', save: '保存生成日志和激活报告。' },
+      { action: '查看旧项目记录怎样兼容，以及升级后哪些经验文件会保留。', explain: '历史记录可以少填一些旧字段，新记录仍要按完整格式写；升级不能抹掉项目积累的经验。', pass: '旧记录能读，新记录能通过完整检查，经验文件仍在。', fail: '不要为了通过检查删除历史记录或经验文件。', save: '记录一次升级前后对照。' },
+      { action: '把日常研发九步对应到页面上的六个状态。', explain: '状态机只负责检查能否进入下一步并保存状态，真正的测试、合并和发布由对应工具执行。', pass: '你能说清“状态改变”和“实际执行”不是一回事。', fail: '状态显示完成但没有执行日志时，仍算未完成。', save: '保存一次状态转换记录。' },
+      { action: '分别演示写文件、提交、推送前和构建前的拦截。', explain: '讲师故意制造一个缺规格或缺测试的操作，让学员看到系统在哪里拦下。', pass: '每类拦截都有实际触发记录和原因。', fail: '只看到配置写着“启用”不算验证，要实际操作一次。', save: '保存四条拦截结果。' },
+      { action: '让编码助手执行一次示例任务，核对它先读技能包且进入正确目录。', explain: '这一步证明规则真的进入当前任务，而不是只存在于磁盘上。', pass: '任务日志同时出现技能读取、正确工作目录和实际执行结果。', fail: '缺任一证据就写“尚未验证”，不要用“激活成功”替代。', save: '保存本次任务日志与结果摘要。' },
+    ],
+    case: { title: '示例：规则已生成，但编码助手没有读取', background: '项目目录里已有技能包，激活检查也通过，但一次编码任务没有任何读取记录。', action: '讲师对比激活报告和任务日志，指出前者证明规则可用，后者才证明本次真的用了。', result: '学员能把“规则存在”“规则激活”“本次使用”分成三个独立结论。' },
+  },
+  'operations-readiness': {
+    title: '开始演示前：确认服务和环境真的可用',
+    what: '这一幕像演出前检查灯光、音响和舞台，逐项确认培训环境。',
+    why: '服务能打开页面，不代表登录、任务、编码和治理功能都正常；分项检查才能快速定位问题。',
+    goal: '完成一次演示前检查，并能说清楚每项检查证明了什么。',
+    principle: '把系统想成一家餐厅：门口亮灯只证明营业，不等于厨房、收银和外卖都正常。页面服务、业务接口、协作网关和编码引擎要分别检查，还要确认它们读的是同一套配置和数据。',
+    prepare: ['启动本地培训环境', '打开终端和本手册的检查清单'],
+    steps: [
+      { action: '记录版本、代码提交、运行目录和实际监听的地址。', explain: '先确认你检查的是哪一份程序，避免改了代码却测到旧进程。', pass: '页面版本与运行目录能和当前项目对应。', fail: '目录或版本不符时先停止旧进程，再启动正确项目。', save: '保存环境基本信息。' },
+      { action: '分别打开页面存活、业务就绪、网关健康和编码引擎检查地址。', explain: '每个地址只回答一类问题，不要把一个“正常”当成全部正常。', pass: '每项结果都被单独记录。', fail: '某一项失败就标出对应组件，不写笼统的“系统坏了”。', save: '保存分项检查结果。' },
+      { action: '不带登录信息访问受保护接口，观察是否被要求登录。', explain: '返回“需要登录”反而说明接口已挂载并且权限保护生效。', pass: '受保护接口没有绕过登录直接暴露数据。', fail: '返回“找不到页面”时优先检查服务是否注入了该接口。', save: '记录状态码和判断。' },
+      { action: '查看编码引擎是否在线，以及网关实际连接了哪些执行者。', explain: '讲师把“在线”“就绪”“正在工作”三个词分别解释，避免混为一谈。', pass: '引擎在线状态和网关连接列表都能读出来。', fail: '只有进程存在但没有在线标志时，仍按未就绪处理。', save: '保存引擎与网关状态。' },
+      { action: '核对数据目录、治理仓、独立演示目录和绑定地址。', explain: '这些配置决定数据写到哪里，生产环境不能误连培训目录。', pass: '当前环境使用的路径都来自本次演示配置。', fail: '发现真实生产路径时立即停止写操作并纠正配置。', save: '保存环境路径对照表。' },
+      { action: '运行环境自检和发布对账，把警告与未验证项分别抄下。', explain: '检查完成不代表所有项目都通过，警告和跳过项必须如实保留。', pass: '报告能区分通过、警告、保留文件和未验证。', fail: '不要为了好看的报告删除警告或把跳过写成通过。', save: '形成演示前就绪报告。' },
+    ],
+    case: { title: '示例：首页能打开，但编码助手不可用', background: '页面检查正常，编码引擎却显示离线。', action: '讲师沿页面、业务接口、网关、编码引擎逐项定位，而不是重启所有服务碰运气。', result: '问题被缩小到编码引擎，其他正常项不会被误报成故障。' },
+  },
+  'project-dispatch': {
+    title: '派一张任务卡：从“已派”跟踪到“真的执行”',
+    what: '这一幕练习选择一张可开始的任务，确认它交给谁，并跟踪执行。',
+    why: '系统显示“已派发”只说明做出了分配决定，不代表执行者已经接手，更不代表任务完成。',
+    goal: '完成一次派发演示，并能区分已分配、已认领、执行中和已交付。',
+    principle: '派发像叫车：系统找到司机是“已分配”，司机接单是“已认领”，车辆出发是“执行中”，到达目的地才是“完成”。每一步都要看对应记录，不能用一个状态覆盖全过程。',
+    prepare: ['准备一张内容完整、前置工作已完成的虚拟任务卡', '确认演示项目允许派发'],
+    steps: [
+      { action: '打开项目列表和看板，找到一张“可以开始”的任务卡。', explain: '暂停项目不会继续自动派单；已完成项目不能当作新任务重新使用。', pass: '你选中的卡片没有未完成的依赖。', fail: '卡片被阻塞时先读原因，不要强行启动。', save: '记录项目状态和任务编号。' },
+      { action: '检查任务卡上的负责人、验收人、独立目录和完成标准。', explain: '这些信息让执行者知道做什么，也让验收人知道谁负责判断。', pass: '负责与验收角色明确，完成标准可读。', fail: '只有一句标题或负责人为空时先补齐。', save: '保存派发前的任务卡。' },
+      { action: '核对当前有多少执行者可用，以及这块看板允许同时跑几张卡。', explain: '容量就像车道数，超过容量只会排队，不会更快。', pass: '你能说出当前可用容量和排队情况。', fail: '没有配置并发数时按系统默认值理解，不自行假设无限并发。', save: '保存容量与排队判断。' },
+      { action: '只触发一次派发，然后依次找到分配、认领和执行记录。', explain: '重复点击可能制造重复任务；每次状态变化都要看新证据。', pass: '分配决定、认领人、执行编号和执行日志能连起来。', fail: '只有分配没有认领时先查执行者是否在线，不要重复派。', save: '保存完整派发链记录。' },
+      { action: '给一张被卡住的任务发催办，并在补齐信息后重新检查状态。', explain: '催办记录说明系统决定通知谁，真正送达还要看评论或消息回复。', pass: '对方收到并回复后，阻塞原因才被解除。', fail: '只有“催办成功”字样不代表对方已处理。', save: '保存催办、回复和解除阻塞记录。' },
+    ],
+    case: { title: '示例：看板显示已派发，执行者却没有工作', background: '任务已分配，但没有认领记录和执行日志。', action: '讲师先查执行者是否在线、容量是否已满，再决定催办或重新分配。', result: '学员不会把“系统已派”误报为“执行者正在做”。' },
+  },
+  'development-swarm': {
+    title: '带着项目规则做一次编码任务',
+    what: '这一幕不再生成规则，而是练习使用已有规则完成一次研发任务。',
+    why: '日常开发要复用项目规则，并确认本次任务真的读取规则、进入正确目录。',
+    goal: '完成一次带项目规则的编码演示，并留下可复核的执行记录。',
+    principle: '使用规则就像厨师拿到本店菜谱：菜谱已经在店里，不需要每做一道菜都重写。但要证明厨师拿到的是本店菜谱、站在本店厨房，并真的按菜谱做了菜。',
+    prepare: ['准备已通过检查的项目技能包', '准备一张小型编码任务卡'],
+    steps: [
+      { action: '先判断这次要“生成规则”还是“使用规则”。', explain: '日常编码直接使用已有项目技能包，不重新运行生成器。', pass: '你选择了现有技能包，并说出复用理由。', fail: '项目结构已变时才考虑局部更新，不要无差别重建。', save: '记录本次使用的技能包版本。' },
+      { action: '检查技能包文件是否齐全，激活检查是否通过。', explain: '只有空目录或手工写一个“已激活”标记，都不能证明规则可用。', pass: '技能说明、参考材料、脚本和检查配置都存在。', fail: '缺文件或检查失败时先回到生成与修复流程。', save: '保存激活检查结果。' },
+      { action: '列出项目实际配置的检查项，再运行一次完整检查。', explain: '讲师先读清单再执行，避免把别的项目检查数量套过来。', pass: '实际输出能对应清单，并保留失败和跳过原因。', fail: '检查失败就修对应项，不用减少检查项来变绿。', save: '保存本次检查完整输出。' },
+      { action: '开始编码前，在任务日志中找到本次读取技能包的记录。', explain: '这条记录证明执行者先拿到了项目规则。', pass: '读取记录属于当前任务，而不是历史任务。', fail: '找不到记录时暂停编码并检查任务配置。', save: '保存技能读取记录。' },
+      { action: '核对编码任务的工作目录和实际执行程序。', explain: '任务卡指定的独立目录必须和实际执行目录一致，否则可能改错代码。', pass: '目录、执行程序和任务卡三者一致。', fail: '只看到执行程序名称不够，还要核对真实路径和版本。', save: '保存目录与执行程序信息。' },
+      { action: '汇总本次结果，明确哪些已验证、哪些仍缺证据。', explain: '讲师把“技能可用”“本次已读”“任务已执行”三个结论分别打勾。', pass: '三项都有本次证据才称执行链完整。', fail: '任何一项缺失都如实写未验证。', save: '形成一页执行摘要。' },
+    ],
+    case: { title: '示例：技能包已激活，但任务进错了目录', background: '编码助手读取了正确规则，却在主目录而不是任务独立目录修改代码。', action: '讲师对比任务卡和实际工作目录，停止执行并纠正后重跑。', result: '规则正确也不能抵消工作目录错误，两个检查都必须保留。' },
+  },
+  'development-delivery': {
+    title: '交付一段代码：让测试、提交和任务卡对得上',
+    what: '这一幕从任务卡进入编码，再交付一段可测试、可审查的代码。',
+    why: '“我本地跑过”不能证明交付正确；别人需要知道改了哪份代码、跑了哪些测试、结果是什么。',
+    goal: '形成一个范围清楚的代码提交，并把测试和评审证据关联到同一任务。',
+    principle: '交付像寄出一个包裹：任务卡是寄件单，独立目录是打包台，代码提交是包裹，测试报告是安检单，评审是另一名工作人员的复核。所有单据上的编号必须一致。',
+    prepare: ['准备一张编码任务卡和最新主干代码', '确认使用独立工作目录和分支'],
+    steps: [
+      { action: '从任务卡打开编码页，核对任务编号、目录、分支和负责人。', explain: '先防止串卡：看起来相同的任务可能属于不同项目。', pass: '编码页信息与任务卡一致。', fail: '发现目录或任务不对时立即停止编辑。', save: '记录本次编码起点。' },
+      { action: '从最新主干建立任务分支，测试和实现都放在这个分支。', explain: '分支给这项工作一个独立边界，主干保持可随时发布。', pass: '能说出基线版本和任务分支名称。', fail: '不要直接在主干写任务代码。', save: '保存分支和基线信息。' },
+      { action: '先补测试，再按设计实现；发现设计不成立就退回。', explain: '测试先把“应该发生什么”写清楚，避免代码写完后才找理由。', pass: '实现没有超出任务范围，测试覆盖新要求。', fail: '需要扩大范围时回到设计评审，不在代码里偷偷加。', save: '保存测试与实现的对照。' },
+      { action: '运行目标测试和适用检查，保存命令、退出状态和关键输出。', explain: '退出状态为 0 才表示命令正常完成，截图里的“通过”字样不是唯一依据。', pass: '测试报告对应当前代码提交。', fail: '失败后保存原始输出，修复再跑，不删除失败记录。', save: '保存完整测试记录。' },
+      { action: '检查改动清单，只提交本任务内容，再请另一名人员评审。', explain: '评审者必须独立于实现者，并绑定当前提交，避免看旧版本。', pass: '提交只含任务相关文件，评审对象是当前提交。', fail: '混入无关文件就拆出，不扩大提交范围。', save: '保存提交编号和评审记录。' },
+      { action: '获批后按授权合入，并在主干重新运行完整测试。', explain: '分支通过只说明分支状态，合并后还要验证与其他改动的组合。', pass: '主干回归结果和合入记录都已保存。', fail: '合并后失败要新开修复，不把分支旧结果当成主干结果。', save: '保存合入与主干回归证据。' },
+    ],
+    case: { title: '示例：测试通过，但测的是旧提交', background: '研发补了代码，测试报告却仍指向上一版提交。', action: '讲师对比提交编号，要求在当前提交重跑并重新评审。', result: '最终交付的代码、测试和评审指向同一版本。' },
+  },
+  'testing-g4-review': {
+    title: '独立验收：测试通过之后为什么还要代码评审',
+    what: '这一幕分别练习功能测试和代码评审，并处理发现的缺陷。',
+    why: '测试回答“现在能不能用”，评审回答“这样实现是否安全、可维护、符合设计”；两个问题都需要答案。',
+    goal: '独立执行验收，完成缺陷的报修与复验，再给出评审结论。',
+    principle: '验收像验房：通电测试证明灯能亮，检查布线则判断以后是否容易短路。测试者和评审者都不能只看开发者自述，修复后还要用新版本重新验证。',
+    prepare: ['准备待验收的代码提交和需求验收条件', '确保测试者、评审者不是实现者本人'],
+    steps: [
+      { action: '核对测试的代码提交与准备交付的提交，并记录三类人员身份。', explain: '先确认对象正确，再确认测试和评审确实独立。', pass: '提交一致，实现者、测试者、评审者身份清楚。', fail: '提交不一致就先停止验收并更新测试对象。', save: '记录验收对象与人员。' },
+      { action: '按验收条件测试正常操作、另一种合法操作、异常输入和取消终止。', explain: '不只演示顺利路径，还要证明出错和取消时系统行为正确。', pass: '每类路径都有实际输出。', fail: '只测正常路径时不能宣布功能验收完整。', save: '保存四类测试结果。' },
+      { action: '给每个缺陷建一张问题单，修复后在新提交上复验。', explain: '原失败证据保留，新证据说明修复是否有效。', pass: '问题单能从失败追到修复提交和复验结果。', fail: '不要用一句“已修”关闭问题单。', save: '保存缺陷闭环记录。' },
+      { action: '另查实现是否符合设计、是否越权、是否影响数据和能否回退。', explain: '这些事项即使功能测试全绿也可能有问题。', pass: '评审意见覆盖设计、权限、数据、安全和回退。', fail: '只有“代码看起来没问题”不算评审。', save: '保存评审清单与意见。' },
+      { action: '明确选择批准或退回修改，再回读审批历史和任务状态。', explain: '结论必须落到正式系统，不能只停留在口头或聊天。', pass: '审批记录与任务状态一致。', fail: '退回后没有新复验就不能重新批准。', save: '保存最终验收结论。' },
+    ],
+    case: { title: '示例：功能能用，但普通用户能看管理员数据', background: '正常测试全部通过，代码评审却发现权限判断缺失。', action: '讲师把功能通过和权限缺陷同时呈现，退回修复后分别复验。', result: '学员理解测试绿不等于可以批准。' },
+  },
+  'testing-eval': {
+    title: '用固定题库评估：修复后怎样证明真的变好',
+    what: '这一幕用同一组题目和评分标准，对比修改前后的结果。',
+    why: '只看几个成功例子很容易误判；固定题库才能比较改善，也能发现把旧问题修成了新问题。',
+    goal: '完成一次评估、失败处置和同题复评，并保留每次证据。',
+    principle: '评估像同一份试卷重考：题目和评分标准不变，才能比较前后成绩。换题、换评分口径或只挑通过的题目，都不能证明修复有效。',
+    prepare: ['选择一组固定练习题和明确评分标准', '保留一次原始失败记录'],
+    steps: [
+      { action: '打开评估页，核对题目、期望行为和评分标准。', explain: '这里是在给已有结果打分，不是重新让模型现场回答。', pass: '你能说出本次题库版本和评分依据。', fail: '题目或评分标准不明确时先补齐，不开始比较。', save: '记录题库与评分版本。' },
+      { action: '用原始失败证据运行评估，保留失败题和无法判断的题。', explain: '无法判断必须单独列出，不能自动算成功。', pass: '报告保留失败、未知和安全红线。', fail: '不要删除失败样本让通过率变高。', save: '保存原始评估报告。' },
+      { action: '给失败题建立处置单，写清准备怎样修。', explain: '样本太少时只能做功能练习，不能据此宣称整体质量提升。', pass: '每张处置单都对应具体失败题。', fail: '样本不足时明确写“仅作练习”。', save: '保存失败样本处置单。' },
+      { action: '修复后补充新结果，用同一题库和评分标准重评。', explain: '旧证据只能证明旧问题存在，不能证明新问题已解决。', pass: '前后报告使用同一版本题库，新结果来自修复后。', fail: '只重放旧证据不能关闭处置单。', save: '保存修复后的新评估。' },
+      { action: '同时检查原来失败的题是否改善、原来通过的题是否退化。', explain: '修复一个答案却弄坏另一个答案，也不能算成功。', pass: '改善和回归都有对照结果。', fail: '出现新退化就继续处置，不只看总分。', save: '保存改善与退化对照表。' },
+      { action: '分别填写功能评估与技能评估结论，注明缺证据的部分。', explain: '“有缺口”“满足条件后通过”和“已经通过”是三种不同结论。', pass: '结论没有混淆，未实跑的内容写未知。', fail: '不要把条件性结论或缺口写成通过。', save: '保存两类评估结论。' },
+    ],
+    case: { title: '示例：修复后通过率提高，但两道旧题退化', background: '新报告显示失败题减少，但两道原本正确的题现在答错。', action: '讲师用同题对照指出改善与退化，要求继续修复而不是只看总分。', result: '评估结论同时包含改善、回归和仍缺证据的部分。' },
+  },
+  'audit-posture-approval': {
+    title: '检查批准是否有效：谁批的、凭什么批、有没有过期',
+    what: '这一幕从审计角度核对系统开关、审批人和高风险操作记录。',
+    why: '页面上有“批准”按钮，不代表批准链有效；真正要看当前配置和正式审批记录。',
+    goal: '核对一次关键操作的授权，并把结论写成通过、缺口或未知。',
+    principle: '有效批准像支票：要有正确出票人、明确金额、有效期限和必要会签。系统开关决定是否允许操作，审批记录证明谁作了决定，审计负责独立核对，三者不能互相替代。',
+    prepare: ['选择一项虚拟高风险操作', '准备当前运行配置和审批记录'],
+    steps: [
+      { action: '写清本次审计对象、版本和需要检查的权限边界。', explain: '系统管理员、组织负责人和团队负责人不是同一角色，先分清。', pass: '审计范围和角色边界都能说清。', fail: '不要用一个“管理员”概括所有权限。', save: '保存审计范围与版本。' },
+      { action: '从正在运行的进程读取实际开关，而不是只看配置文件。', explain: '配置文件写了启用，运行进程也可能没有重新加载。', pass: '结论来自实际生效配置。', fail: '无法读取实际状态时写未知，不按期望配置推断。', save: '保存实际配置证据。' },
+      { action: '分别测试非法参数、未声明规则和检查器异常时的行为。', explain: '不同失败有不同默认策略，不能笼统说“全部拦截”或“全部放行”。', pass: '每种情况的实际结果与规则说明一致。', fail: '检查器没有执行中止能力时，不要宣称已强制终止。', save: '保存边界测试结果。' },
+      { action: '回查审批的发起人、决定人、决定方式、授权强度和有效期。', explain: '如果要求两人分别操作，还要证明两个身份确实不同。', pass: '关键字段完整，批准仍在有效期内。', fail: '缺决定人或过期都不能算有效批准。', save: '保存审批记录核对表。' },
+      { action: '挑一条高风险操作，检查第二人会签和紧急通道理由。', explain: '紧急通道不是跳审计，而是事后必须能还原理由和过程。', pass: '会签人或紧急理由都有正式记录。', fail: '找不到第二人或理由时标为缺口。', save: '保存会签或紧急操作记录。' },
+      { action: '把每项结论写成通过、缺口或未知，并附上原始证据。', explain: '审计可以报告问题，也可以明确说不知道，但不能把未知写成通过。', pass: '每项结论都能回到证据。', fail: '隔离功能未接入时不得写“已隔离”。', save: '形成带证据的审计结论表。' },
+    ],
+    case: { title: '示例：审批页显示通过，但批准人已过期', background: '流程状态是通过，正式记录中的授权有效期却已经结束。', action: '讲师以原始审批记录纠正页面印象，并标为授权缺口。', result: '学员能用证据判断批准是否仍然有效。' },
+  },
+  'project-release-retro': {
+    title: '决定能不能发布：把批准、回滚和遗留问题讲清楚',
+    what: '这一幕把前面的需求、开发、测试和审批结果汇总成一次发布决定。',
+    why: '发布不是点一个按钮；必须先知道发布哪一版、出了问题怎么退、谁批准、还有哪些风险。',
+    goal: '做一次有依据的放行或冻结决定，并把遗留问题带入下一轮。',
+    principle: '发布像放行一艘船：货物清单是版本，安全检查是测试，船长签字是批准，返航方案是回滚。船离岸后还要观察；发现的问题要记到下一班次，不是宣布“圆满结束”。',
+    prepare: ['汇总当前版本的需求、测试、审批和运行证据', '准备放行与冻结两种演示结论'],
+    steps: [
+      { action: '先说明这是日常发布还是培训推演，并选择对应记录。', explain: '两套记录不能混用，避免把培训结果当成真实发布。', pass: '本次决定使用的记录来源明确。', fail: '来源混用时先停止并重新整理。', save: '记录发布类型和证据来源。' },
+      { action: '按需求、设计、开发、测试、批准、复盘六个检查点登记证据。', explain: '每个检查点都要有当前证据、决定人和失败后的动作。', pass: '没有空证据，也没有把未知当通过。', fail: '任一必要检查失败就进入冻结，不继续放行。', save: '保存六检查点清单。' },
+      { action: '核对发布提交、依赖、回滚步骤、灰度范围和用户说明。', explain: '讲师追问“出问题时谁在多长时间内怎样退回”，检验回滚是否具体。', pass: '版本明确，回滚命令和负责人可直接执行。', fail: '只写“可回滚”没有步骤就不算准备完成。', save: '保存发布准备清单。' },
+      { action: '分别写用户试用结论和发布批准结论。', explain: '用户觉得好用和系统允许发布是两个决定，不能合成一句“大家都同意”。', pass: '两类结论都有独立依据。', fail: '等待确认或条件性通过都不能冒充真人批准。', save: '保存试用与批准两份结论。' },
+      { action: '明确选择放行或冻结；放行后另取真实发布回执。', explain: '批准只代表允许执行，实际发布还要看通道回执和运行观察。', pass: '决定、执行回执、观察负责人和复验结果齐全。', fail: '没有执行回执时不能写“已发布”。', save: '保存发布决定与回执。' },
+      { action: '把遗留问题写成已修、继续观察或延后，并指定责任人和期限。', explain: '复盘的结果要进入下一轮工作，不是只写经验教训。', pass: '每个遗留问题都有负责人、期限和复查标准。', fail: '没有问题单承接的“以后注意”不算闭环。', save: '保存带期限的复盘行动项。' },
+    ],
+    case: { title: '示例：六个流程都走完，仍有一项是代批', background: '流程报告显示全部走完，但净额核对发现一项由代理批准，不是真人批准。', action: '讲师分别展示“流程完成”和“真实批准”两本账，决定不能简单宣称全部通过。', result: '发布结论如实保留批准缺口和后续行动项。' },
+  },
+  'operations-release': {
+    title: '发布后盯住系统：发现停滞、处理异常、必要时回滚',
+    what: '这一幕练习发布后观察，以及任务停滞时的排查和恢复。',
+    why: '发布成功只是开始；真正要确认系统持续正常，并知道什么时候需要回滚。',
+    goal: '完成一次停滞排查和发布观察，能按既定步骤执行回滚。',
+    principle: '运行观察像设备巡检：先看仪表和日志，再判断故障类型，最后选择恢复动作。不能看到灯不亮就直接换整机，也不能为了恢复而手改任务状态。',
+    prepare: ['准备一条虚拟停滞任务和发布后的观察记录', '准备一份可执行的回滚说明'],
+    steps: [
+      { action: '只读采集停滞任务、认领记录、网关日志和诊断信息。', explain: '先收证据，不先改状态；同一张卡要核对当前是否仍被认领。', pass: '停滞判断有当前日志和时间依据。', fail: '只看到卡片长时间不动就直接重派，可能制造重复执行。', save: '保存停滞任务原始证据。' },
+      { action: '把问题初步分成环境、超时、产品、脚本、流程或未知。', explain: '分类决定下一步找谁和做什么；同一个错误第二次出现必须改变处置。', pass: '你能说出分类依据和下一项检查。', fail: '无法判断时写未知，并列出下一项采集。', save: '保存故障分类与判断依据。' },
+      { action: '确认真停滞后，再按权限执行收回或重新分配。', explain: '先排除依赖、容量、锁和额度等原因，恢复后还要验证新执行记录。', pass: '新认领和执行记录有效，旧任务没有重复运行。', fail: '只改了任务状态但没有新执行证据，不算恢复。', save: '保存恢复前后记录。' },
+      { action: '发布前核对依赖、灰度、告警、负责人、回滚命令和文件校验值。', explain: '校验值用来确认发布文件没有被替换。', pass: '准备项都有具体内容和负责人。', fail: '缺回滚或告警时不要靠口头承诺补位。', save: '保存发布准备记录。' },
+      { action: '发布后保存真实回执，观察错误、指标、任务状态和用户反馈。', explain: '讲师逐项说明观察窗口和异常如何回流成问题单。', pass: '观察到的事实都有时间点和来源。', fail: '没有采集的指标写未采集，不填一个看似正常的数。', save: '保存发布后观察报告。' },
+      { action: '达到回滚条件时按说明执行，并记录原因、执行人、结果和复验。', explain: '回滚是恢复正常，不是掩盖失败；前后证据都要保留。', pass: '系统恢复且复验通过，回滚记录完整。', fail: '回滚失败就升级处置，不删除原事故记录。', save: '保存回滚与复验记录。' },
+    ],
+    case: { title: '示例：任务看起来睡着，实际上仍在执行', background: '卡片长时间没有状态变化，但日志仍在持续输出。', action: '讲师用日志和认领记录排除假停滞，不重新分配。', result: '避免重复执行，同时把真正需要观察的指标留下。' },
+  },
+  'audit-evidence-remediation': {
+    title: '审计证据链：发现不一致后怎样整改和复验',
+    what: '这一幕练习把任务、代码、测试、审批和运行记录对齐，并处理证据缺口。',
+    why: '报告写得完整不等于事实成立；证据必须属于同一对象，并能由另一人独立复核。',
+    goal: '完成一次证据核对、问题整改和独立复验。',
+    principle: '证据链像一串带有编号的封存袋：每个袋子说明内容、来源和经手人。袋子被换、编号断掉或原材料缺失，都要明确标记；不能用新补的材料冒充当时就已经存在。',
+    prepare: ['选择一个虚拟审计对象和固定版本', '准备任务、代码、测试和审批记录'],
+    steps: [
+      { action: '建立审计目录，写清对象、范围、版本和本次运行编号。', explain: '先固定审计边界，避免中途换对象。', pass: '所有后续材料都指向同一对象和版本。', fail: '范围变化时另建运行，不混入旧结果。', save: '保存审计基本信息。' },
+      { action: '按任务编号和代码提交收齐证据，先列候选发现。', explain: '候选只是待核对线索，不是已经成立的结论。', pass: '每条候选都有原始记录。', fail: '不要为了报告完整先把候选写成事实。', save: '保存候选发现清单。' },
+      { action: '检查证据是否被改、链接是否断、原始来源是否缺失。', explain: '讲师用具体例子区分内容变化、记录被挤出、链接失效和从未采集。', pass: '你能说出每种异常的现象和下一项验证。', fail: '来源缺失时写未知，不猜它原来正常。', save: '保存证据完整性检查。' },
+      { action: '对候选分别接受、驳回或要求补证，由另一人复核。', explain: '提出结论的人不能独自完成最终验证。', pass: '复核人不同，复核对象和方法写清楚。', fail: '证据不足就继续补证，不靠多数票决定事实。', save: '保存候选处置和复核记录。' },
+      { action: '为成立的问题登记负责人、期限和复验条件。', explain: '整改单必须能回答“谁在什么时候用什么证据关掉它”。', pass: '每个接受的问题都有可执行整改条件。', fail: '缺证据的问题不能为了清零而关闭。', save: '保存负责人明确的整改单。' },
+      { action: '用新证据复验，由另一名审计人员签独立结论。', explain: '报告原快照、后来补的证据和最终处理分别标日期。', pass: '复验人、证据时间和最终结论一致。', fail: '后续补证不能回写成报告当时已经具备。', save: '保存复验与最终结论。' },
+    ],
+    case: { title: '示例：后续补齐了截图，能否修改原报告', background: '原报告缺少一张关键运行证据，后续重新执行并补齐。', action: '讲师保留原报告缺口，同时新增带日期的补证记录。', result: '最终状态更完整，但历史缺口没有被抹掉。' },
+  },
+  'project-run28-case': {
+    title: '综合案例：怎样读完一轮真实推演而不被数字骗到',
+    what: '这一幕用 run28 这次完整推演，练习读报告、找缺口和形成下一轮行动。',
+    why: '“26 步完成”“六道检查走完”听起来很好，但仍要追问哪些是真通过、哪些有代偿、哪些证据后来才补。',
+    goal: '独立完成一份案例阅读卡，并能向他人解释关键数字的含义。',
+    principle: '读报告要分三次看：先看当时报告写了什么，再看后来补了什么，最后看扣除代偿后真正成立多少。三张账放在一起，才能避免用一个漂亮数字覆盖所有问题。',
+    prepare: ['打开 run28 的最终报告和补充证据目录', '准备一张空白案例阅读卡'],
+    steps: [
+      { action: '确认案例编号、两份报告位置和实际完成的 26 个步骤。', explain: '案例编号用来固定阅读对象；步骤数量只说明流程范围。', pass: '你找到的是 run28，不是相邻轮次的报告。', fail: '找不到完整报告时不能用另一轮代替。', save: '写下案例编号和报告入口。' },
+      { action: '分别读出“含代偿全部走完”和“扣除代偿后的真实通过”。', explain: '代理批准可以帮助流程继续，但不能算真人批准，这两个数字必须并列。', pass: '你能解释为什么 6/6 与 5/6 可以同时成立。', fail: '不要把流程走完写成所有检查都真实通过。', save: '记录两本账的差一项。' },
+      { action: '分别读未关闭问题、已有处置和真正修复的数量。', explain: '“已经有处理意见”和“已经修好”不是一回事；人工派发、脚本预写和代操作也分别计数。', pass: '三组数字各自有来源，没有混加。', fail: '不要把有处置结论当成问题清零。', save: '保存问题与派发分类。' },
+      { action: '用开始和结束时间算出本次耗时，并注明采用的记录。', explain: '本例采用 44954 秒，即 12 小时 29 分 14 秒；其他口径要说明来源。', pass: '计算过程和记录来源都能复核。', fail: '不要为了让数字一致而直接覆盖旧口径。', save: '保存耗时计算与来源。' },
+      { action: '对比原报告与后续证据核验的覆盖数量。', explain: '后续补证提高了当前覆盖，但原报告当时缺什么仍然要保留。', pass: '你能指出唯一缺的运行证明，以及两个数字分别属于哪个时点。', fail: '不要用后来的 13/14 改写原来的 11/13。', save: '保存报告与补证时点对照。' },
+      { action: '把误杀和剩余证据缺口写成下一轮行动项。', explain: '黄金集已运行但仍处于观察，说明工具本身也需要校准。', pass: '每项行动都有负责人、期限和复查条件。', fail: '不要把“已运行评估”写成“评估结果可信且稳定”。', save: '形成案例阅读卡和行动项。' },
+    ],
+    case: { title: '综合案例：run28 的两本账', background: '这次推演完成 26 步，流程含代偿六检查点全走完，但净额为 5/6，报告和后续证据覆盖也不同。', action: '讲师按“原报告、后续补证、扣除代偿”三次阅读，把数字放回各自时点。', result: '学员既能说出完成了什么，也能指出还没有证明什么。' },
+  },
+}
+
 const $ = id => document.getElementById(id)
 const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
 let current = 0
@@ -1371,7 +1623,7 @@ let globalView = false
 let selectedEvidenceId = null
 let stepIndex = 0
 let exampleOpen = true
-let codeOpen = true
+let codeOpen = false
 let motionAllowed = !reducedQuery.matches
 
 function syncFlowAnimation() {
@@ -1431,11 +1683,15 @@ function renderEvidenceAttachments(scene) {
   $('evidenceDetail').innerHTML = `<strong>${escapeSvg(selectedEvidenceId)}</strong><span>${escapeSvg(evidence.runId)} · ${escapeSvg(evidence.source)} · ${escapeSvg(evidence.locator)}</span><p>${escapeSvg(evidence.fact)}</p>`
 }
 function renderCoach(scene) {
-  fillList('coachInputs', scene.inputs)
-  $('exampleTitle').textContent = scene.example.title
-  $('exampleGiven').textContent = scene.example.given
-  $('exampleWhen').textContent = scene.example.when
-  $('exampleThen').textContent = scene.example.then
+  const plain = MANUAL_PLAIN[scene.id]
+  fillList('coachInputs', plain.prepare)
+  fillList('technicalSteps', scene.steps)
+  $('technicalSummary').textContent = scene.summary
+  $('technicalPrinciple').textContent = MANUAL_PRINCIPLES[scene.id]
+  $('exampleTitle').textContent = plain.case.title
+  $('exampleGiven').textContent = plain.case.background
+  $('exampleWhen').textContent = plain.case.action
+  $('exampleThen').textContent = plain.case.result
   const code = scene.example.code
   if (code) {
     $('coachCodeLabel').textContent = code.label
@@ -1447,7 +1703,9 @@ function renderCoach(scene) {
   syncExampleDisclosure()
   renderEvidenceAttachments(scene)
   // 每幕模拟声明 + 实操对照（P2 Task 3 培训分层：本页=模拟层，实操=手册 17.x）
-  $('coachLayer').textContent = scene.layer === 'simulation'
+  const nextScene = SCENES.find(item => item.id === (scene.handoff.next ?? scene.feedsNextCycle))
+  $('coachLayer').textContent = `这一幕的结果会交给“${nextScene?.navShort ?? '下一轮需求复核'}”。需要查看真实产品操作时，参考手册第 ${scene.practiceRef} 节。`
+  $('technicalLayer').textContent = scene.layer === 'simulation'
     ? `layer=simulation；${PHASES.find(phase => phase.id === scene.phase).name}｜${handoffText(scene)}；实操见手册第 ${scene.practiceRef} 节`
     : `未知幕层级 ${String(scene.layer)}——培训页只承载 simulation 层`
   $('coachReferences').replaceChildren(...scene.references.map(reference => {
@@ -1464,11 +1722,13 @@ function renderStep() {
   const guide = scene.stepGuide[stepIndex]
   $('simStage').dataset.step = String(stepIndex + 1)
   $('simStage').dataset.activeNode = guide.nodeId
-  $('coachSteps').innerHTML = scene.steps.map((text, index) => `<li class="${index === stepIndex ? 'is-active' : ''} ${index < stepIndex ? 'is-done' : ''}"><button type="button" data-manual-step="${index}" aria-current="${index === stepIndex ? 'step' : 'false'}"><span class="step-index">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${escapeSvg(text)}</span><span class="step-state">${index === stepIndex ? '正在讲解' : index < stepIndex ? '已讲' : ''}</span></button></li>`).join('')
-  $('currentStepText').textContent = scene.steps[stepIndex]
-  fillList('coachDeliverables', [scene.deliverables[guide.deliverable]])
-  fillList('coachChecks', [scene.checks[guide.check]])
-  fillList('coachPitfalls', [scene.pitfalls[guide.pitfall]])
+  const plainSteps = MANUAL_PLAIN[scene.id].steps
+  const currentPlainStep = plainSteps[stepIndex]
+  $('coachSteps').innerHTML = plainSteps.map((plainStep, index) => `<li class="${index === stepIndex ? 'is-active' : ''} ${index < stepIndex ? 'is-done' : ''}"><button type="button" data-manual-step="${index}" aria-current="${index === stepIndex ? 'step' : 'false'}"><span class="step-index">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${escapeSvg(plainStep.action)}<small>${escapeSvg(plainStep.explain)}</small></span><span class="step-state">${index === stepIndex ? '正在讲解' : index < stepIndex ? '已讲' : ''}</span></button></li>`).join('')
+  $('currentStepText').textContent = currentPlainStep.explain
+  fillList('coachDeliverables', [currentPlainStep.save])
+  fillList('coachChecks', [currentPlainStep.pass])
+  fillList('coachPitfalls', [currentPlainStep.fail])
   $('cardStep').textContent = String(stepIndex + 1)
   const labels = guide.flowIds.map(id => {
     const flow = TOPO_VIEWS[scene.part].flows.find(item => item.id === id)
@@ -1508,30 +1768,31 @@ function diagramDefs(id) {
   return `<defs><marker id="${id}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096" /></marker></defs>`
 }
 function renderStructureDiagram(scene) {
-  const input = scene.inputs.slice(0, 2).join('；')
-  const output = scene.deliverables.slice(0, 3).join('；')
-  $('structureSvg').innerHTML = `${diagramDefs('structureArrow')}<text x="30" y="30" class="diagram-title">输入</text><text x="270" y="30" class="diagram-title">核心机制</text><text x="570" y="30" class="diagram-title">交付与验收</text><rect class="diagram-box-muted" x="30" y="55" width="170" height="190" rx="8" /><rect class="diagram-box-accent" x="275" y="55" width="210" height="190" rx="8" /><rect class="diagram-box" x="560" y="55" width="170" height="190" rx="8" />${diagramText(input, 115, 95, 10, 6)}${diagramText(MANUAL_PRINCIPLES[scene.id], 380, 82, 13, 6)}${diagramText(output, 645, 95, 10, 6)}${diagramArrow('structureArrow', 200, 150, 270, 150)}${diagramArrow('structureArrow', 485, 150, 555, 150)}<text x="380" y="280" text-anchor="middle" class="diagram-small">验收：${escapeSvg(scene.checks[0])}</text>`
+  const plain = MANUAL_PLAIN[scene.id]
+  const input = plain.prepare.join('；')
+  const output = plain.steps.slice(0, 3).map(step => step.save).join('；')
+  $('structureSvg').innerHTML = `${diagramDefs('structureArrow')}<text x="30" y="30" class="diagram-title">输入</text><text x="270" y="30" class="diagram-title">核心机制</text><text x="570" y="30" class="diagram-title">交付与验收</text><rect class="diagram-box-muted" x="30" y="55" width="170" height="190" rx="8" /><rect class="diagram-box-accent" x="275" y="55" width="210" height="190" rx="8" /><rect class="diagram-box" x="560" y="55" width="170" height="190" rx="8" />${diagramText(input, 115, 95, 10, 6)}${diagramText(plain.principle, 380, 82, 13, 6)}${diagramText(output, 645, 95, 10, 6)}${diagramArrow('structureArrow', 200, 150, 270, 150)}${diagramArrow('structureArrow', 485, 150, 555, 150)}<text x="380" y="280" text-anchor="middle" class="diagram-small">完成标志：${escapeSvg(plain.steps[0].pass)}</text>`
 }
 function renderFlowDiagram(scene) {
   const count = scene.steps.length
   const gap = 14
   const width = Math.min(142, (940 - gap * (count - 1)) / count)
   const startX = (1000 - (width * count + gap * (count - 1))) / 2
-  const parts = scene.steps.map((text, index) => {
+  const parts = MANUAL_PLAIN[scene.id].steps.map((plainStep, index) => {
     const x = startX + index * (width + gap)
     const stateClass = index === stepIndex ? 'diagram-active' : index < stepIndex ? 'diagram-done' : 'diagram-box'
-    const box = `<rect class="${stateClass}" x="${x}" y="55" width="${width}" height="140" rx="8" />${diagramText(`步骤 ${index + 1}`, x + width / 2, 80, 12, 1, 'diagram-title')}${diagramText(text, x + width / 2, 108, Math.max(7, Math.floor(width / 14)), 4)}`
+    const box = `<rect class="${stateClass}" x="${x}" y="55" width="${width}" height="140" rx="8" />${diagramText(`步骤 ${index + 1}`, x + width / 2, 80, 12, 1, 'diagram-title')}${diagramText(plainStep.action, x + width / 2, 108, Math.max(7, Math.floor(width / 14)), 4)}`
     const arrow = index < count - 1 ? diagramArrow('flowArrow', x + width, 125, x + width + gap - 3, 125) : ''
     return box + arrow
   }).join('')
   $('flowSvg').innerHTML = diagramDefs('flowArrow') + parts + `<text x="500" y="230" text-anchor="middle" class="diagram-small">蓝色为当前讲解步骤，灰色为已讲步骤；点击正文步骤可同步定位。</text>`
 }
 function renderRelationshipDiagram(scene) {
-  const previous = scene.handoff.consumes.map(item => `${item.scene}
-${item.artifact}`).join('；')
-  const next = scene.handoff.next ?? scene.feedsNextCycle
-  const evidence = scene.caseEvidenceIds.slice(0, 4).join(' · ')
-  $('relationshipSvg').innerHTML = `${diagramDefs('relationshipArrow')}<text x="30" y="28" class="diagram-title">前序交接</text><text x="285" y="28" class="diagram-title">当前产物</text><text x="560" y="28" class="diagram-title">下一幕</text><rect class="diagram-box-muted" x="30" y="55" width="175" height="105" rx="8" /><rect class="diagram-box-accent" x="285" y="55" width="190" height="105" rx="8" /><rect class="diagram-box" x="555" y="55" width="175" height="105" rx="8" />${diagramText(previous, 117, 86, 12, 3, 'diagram-small')}${diagramText(scene.handoff.produces, 380, 92, 13, 2, 'diagram-title')}${diagramText(next, 642, 92, 12, 2)}${diagramArrow('relationshipArrow', 205, 108, 280, 108)}${diagramArrow('relationshipArrow', 475, 108, 550, 108)}<path class="diagram-arrow" d="M380 160 L380 205" marker-end="url(#relationshipArrow)" /><rect class="diagram-box" x="120" y="210" width="520" height="85" rx="8" /><text x="380" y="237" text-anchor="middle" class="diagram-title">关联证据 ${scene.caseEvidenceIds.length} 条</text>${diagramText(evidence, 380, 263, 34, 2, 'diagram-small')}`
+  const previous = scene.handoff.consumes.map(item => SCENES.find(candidate => candidate.id === item.scene)?.navShort ?? item.scene).join('、')
+  const nextId = scene.handoff.next ?? scene.feedsNextCycle
+  const next = SCENES.find(candidate => candidate.id === nextId)?.navShort ?? '下一轮需求复核'
+  const evidence = `本幕 ${scene.caseEvidenceIds.length} 条原始材料，见第 04 节`
+  $('relationshipSvg').innerHTML = `${diagramDefs('relationshipArrow')}<text x="30" y="28" class="diagram-title">前序交接</text><text x="285" y="28" class="diagram-title">当前产物</text><text x="560" y="28" class="diagram-title">下一幕</text><rect class="diagram-box-muted" x="30" y="55" width="175" height="105" rx="8" /><rect class="diagram-box-accent" x="285" y="55" width="190" height="105" rx="8" /><rect class="diagram-box" x="555" y="55" width="175" height="105" rx="8" />${diagramText(previous, 117, 86, 12, 3, 'diagram-small')}${diagramText(scene.navShort, 380, 92, 13, 2, 'diagram-title')}${diagramText(next, 642, 92, 12, 2)}${diagramArrow('relationshipArrow', 205, 108, 280, 108)}${diagramArrow('relationshipArrow', 475, 108, 550, 108)}<path class="diagram-arrow" d="M380 160 L380 205" marker-end="url(#relationshipArrow)" /><rect class="diagram-box" x="120" y="210" width="520" height="85" rx="8" /><text x="380" y="237" text-anchor="middle" class="diagram-title">关联证据 ${scene.caseEvidenceIds.length} 条</text>${diagramText(evidence, 380, 263, 34, 2, 'diagram-small')}`
 }
 function renderDiagrams(scene) {
   renderStructureDiagram(scene)
@@ -1541,10 +1802,10 @@ function renderDiagrams(scene) {
 function renderPhaseRoute() {
   $('directoryScenes').innerHTML = PHASES.map(phase => `<div class="phase-track"><span class="phase-label">${phase.name}</span><div class="phase-scenes">${SCENES.map((scene, index) => ({ scene, index })).filter(entry => entry.scene.phase === phase.id).map(entry => `<button class="directory-scene ${entry.index < current ? 'is-traversed' : ''}" type="button" data-directory-scene="${entry.index}" aria-current="${entry.index === current ? 'step' : 'false'}" title="${entry.scene.short}">${entry.index + 1} · ${entry.scene.navShort}</button>`).join('')}</div></div>`).join('')
   const metrics = [
-    ['26', '步链'],
-    ['6/6 <em>≠</em> 5/6', '含代偿 / 净额'],
-    ['65 / 8/65', 'open / 已修'],
-    ['11/13｜13/14', '报告｜后续帧'],
+    ['26', '流程步骤'],
+    ['6/6 <em>≠</em> 5/6', '含代偿 ≠ 扣除后'],
+    ['65 / 8/65', '未关闭 / 已修复'],
+    ['11/13｜13/14', '原报告｜后续核验'],
   ]
   $('caseMetrics').innerHTML = metrics.map(([value, label]) => `<div class="case-metric"><strong>${value}</strong><span>${label}</span></div>`).join('')
 }
@@ -1552,16 +1813,17 @@ function renderScene() {
   const scene = SCENES[current]
   const part = PARTS.find(item => item.id === scene.part)
   $('sceneLabel').textContent = `${PHASES.find(phase => phase.id === scene.phase).name} · ${scene.short}`
-  $('coachTitle').textContent = `${part.name}｜${scene.title}`
-  $('coachSummary').textContent = scene.summary
-  $('manualPrinciple').textContent = MANUAL_PRINCIPLES[scene.id]
-  $('manualAction').textContent = scene.action
-  $('coachProof').textContent = scene.proof
+  const plain = MANUAL_PLAIN[scene.id]
+  $('coachTitle').textContent = plain.title
+  $('coachSummary').textContent = `${plain.what} ${plain.why}`
+  $('manualPrinciple').textContent = plain.principle
+  $('manualAction').textContent = plain.goal
+  $('coachProof').textContent = plain.case.result
   $('actionNumber').textContent = String(current + 1)
   $('prevButton').disabled = current === 0
   $('mobileStep').value = String(current)
   document.querySelectorAll('[data-part]').forEach(button => button.setAttribute('aria-current', String(button.dataset.part === scene.part)))
-  $('caseActor').textContent = `${part.name} · ${scene.focus} · ${scene.route}`
+  $('caseActor').textContent = `${part.name} · 演示入口：${scene.route}`
   $('stagePhase').textContent = `${PHASES.find(phase => phase.id === scene.phase).name} · 第 ${current + 1} 幕 / 14 · ${scene.navShort}`
   document.querySelectorAll('[data-timeline]').forEach(button => {
     const index = Number(button.dataset.timeline)
@@ -1584,7 +1846,7 @@ function goTo(index) {
   current = Math.max(0, Math.min(SCENES.length - 1, index))
   stepIndex = 0
   exampleOpen = true
-  codeOpen = true
+  codeOpen = false
   globalView = false
   visited.add(current)
   renderScene()
@@ -1669,10 +1931,11 @@ function printReferences(scene) {
 }
 function printPage(scene, index) {
   const part = PARTS.find(item => item.id === scene.part)
-  const densePayload = scene.steps.join('').length + scene.example.given.length + scene.example.when.length + scene.example.then.length + (scene.example.code ? scene.example.code.content.length : 0)
-  const dense = densePayload > 520 ? ' print-dense' : ''
+  const plain = MANUAL_PLAIN[scene.id]
+  const densePayload = plain.steps.map(step => step.action + step.pass + step.fail).join('').length + plain.case.background.length + plain.case.action.length + plain.case.result.length + (scene.example.code ? scene.example.code.content.length : 0)
+  const dense = densePayload > 440 ? ' print-dense' : ''
   const code = scene.example.code ? `<div class="lesson-code"><span>${escapeSvg(scene.example.code.label)}</span><em class="code-exec-note">本页不执行</em><pre><code>${escapeSvg(scene.example.code.content)}</code></pre></div>` : ''
-  return `<article class="a4-page${dense}" data-scene-id="${scene.id}"><header class="page-header"><div><div class="eyebrow"><span class="scene-number">${index + 1}</span><span>${escapeSvg(PHASES.find(phase => phase.id === scene.phase).name)} · ${escapeSvg(scene.short)}</span></div><h1>${escapeSvg(part.name)}｜${escapeSvg(scene.title)}</h1><p class="coach-summary">${escapeSvg(scene.summary)}</p></div><div class="page-route">真实产品入口<code>${escapeSvg(scene.route)}</code><span class="practice-ref">${escapeSvg(handoffText(scene))} · 实操见手册 §${scene.practiceRef}</span></div></header><div class="lesson-main"><section class="topology-panel"><div class="panel-head"><strong>角色拓扑</strong><span>亮线=本幕路径</span></div><svg class="topology-svg" role="img" aria-label="${escapeSvg(scene.short)}拓扑" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet">${topologySvgContent(TOPO_VIEWS[scene.part], index, false, false, `-${scene.id}`)}</svg></section><section class="lesson-steps"><h2>操作步骤</h2><p class="lesson-goal">${escapeSvg(MANUAL_PRINCIPLES[scene.id])}</p><p class="lesson-goal"><strong>实操目标：</strong>${escapeSvg(scene.action)}</p>${printList(scene.steps, true)}</section><section class="lesson-example"><h2>${escapeSvg(scene.example.title)}</h2><dl><dt>背景</dt><dd>${escapeSvg(scene.example.given)}</dd><dt>操作</dt><dd>${escapeSvg(scene.example.when)}</dd><dt>应得结果</dt><dd>${escapeSvg(scene.example.then)}</dd></dl>${code}</section></div><div class="page-bottom"><section class="lesson-more"><div class="lesson-more-grid">${caseEvidencePrint(scene)}<section><div class="lesson-inputs"><h2>输入条件</h2>${printList(scene.inputs)}</div><h2>本幕交付物</h2>${printList(scene.deliverables)}</section><section><h2>验收检查</h2>${printList(scene.checks)}</section><section><h2>常见误操作</h2>${printList(scene.pitfalls)}<div class="proof-box"><h2>整幕完成判据</h2><p>${escapeSvg(scene.proof)}</p></div></section><section><h2>对应手册</h2><div class="lesson-references">${printReferences(scene)}</div></section></div></section><footer class="page-footer"><span>第 ${index + 1} 幕，共 ${SCENES.length} 幕 · ${escapeSvg(scene.target)}</span><span>培训模拟 · 不连接真实数据</span><span>${index + 1} / ${SCENES.length}</span></footer></div></article>`
+  return `<article class="a4-page${dense}" data-scene-id="${scene.id}"><header class="page-header"><div><div class="eyebrow"><span class="scene-number">${index + 1}</span><span>${escapeSvg(PHASES.find(phase => phase.id === scene.phase).name)} · ${escapeSvg(scene.short)}</span></div><h1>${escapeSvg(plain.title)}</h1><p class="coach-summary">${escapeSvg(plain.what + plain.why)}</p></div><div class="page-route">真实产品入口<code>${escapeSvg(scene.route)}</code><span class="practice-ref">${escapeSvg(handoffText(scene))} · 实操见手册 §${scene.practiceRef}</span></div></header><div class="lesson-main"><section class="topology-panel"><div class="panel-head"><strong>角色拓扑</strong><span>亮线=本幕路径</span></div><svg class="topology-svg" role="img" aria-label="${escapeSvg(scene.short)}拓扑" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet">${topologySvgContent(TOPO_VIEWS[scene.part], index, false, false, `-${scene.id}`)}</svg></section><section class="lesson-steps"><h2>操作步骤</h2><p class="lesson-goal">${escapeSvg(plain.principle)}</p><p class="lesson-goal"><strong>学完目标：</strong>${escapeSvg(plain.goal)}</p>${printList(plain.steps.map(step => `${step.action} 完成：${step.pass} 失败时：${step.fail}`), true)}</section><section class="lesson-example"><h2>${escapeSvg(plain.case.title)}</h2><dl><dt>案例背景</dt><dd>${escapeSvg(plain.case.background)}</dd><dt>演示过程</dt><dd>${escapeSvg(plain.case.action)}</dd><dt>最后得到</dt><dd>${escapeSvg(plain.case.result)}</dd></dl>${code}</section></div><div class="page-bottom"><section class="lesson-more"><div class="lesson-more-grid">${caseEvidencePrint(scene)}<section><div class="lesson-inputs"><h2>输入条件</h2>${printList(plain.prepare)}</div><h2>要留下什么</h2>${printList(plain.steps.map(step => step.save))}</section><section><h2>验收检查</h2>${printList(plain.steps.map(step => step.pass))}</section><section><h2>失败时怎么办</h2>${printList(plain.steps.map(step => step.fail))}<div class="proof-box"><h2>整幕完成判据</h2><p>${escapeSvg(plain.goal)}</p></div></section><section><h2>对应手册</h2><div class="lesson-references">${printReferences(scene)}</div></section></div></section><footer class="page-footer"><span>第 ${index + 1} 幕，共 ${SCENES.length} 幕 · ${escapeSvg(plain.goal)}</span><span>培训模拟 · 不连接真实数据</span><span>${index + 1} / ${SCENES.length}</span></footer></div></article>`
 }
 function preparePrint() {
   setPlaying(false)
