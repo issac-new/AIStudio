@@ -64,20 +64,14 @@ _pick_runner() {
   return 1
 }
 
-RUNNER_BIN="$(_pick_runner)" || {
-  echo "skill-behavioral-eval: 无可用 runner（claude/codex 都不在 PATH）——Tier-3 未运行（exit 2，不计为通过）" >&2
-  exit 2
-}
-
-# 用例装载（只取有内容的行）
-TMP="$(mktemp -d "${TMPDIR:-/tmp}/swarm-behave.XXXXXX")"
-trap 'rm -rf "$TMP"' EXIT
-grep -v '^#' "$CASES" | grep -v '^[[:space:]]*$' | tail -n +2 > "$TMP/cases.tsv"
-if [[ -s "$TMP/cases.tsv" ]] || [[ "$DRY" -eq 1 ]]; then :; else echo "skill-behavioral-eval: 用例为空（只有表头）——先按目标仓真实任务填用例（exit 2）" >&2; exit 2; fi
-
+# dry-run 只打印计划不烧 token，必须在 runner 探测之前——否则无 claude/codex 的环境
+# （Linux CI 容器）先 exit 2，计划面永远不可达（态1 实抓，2026-11-12）。
 if [[ "$DRY" -eq 1 ]]; then
   echo "▶ Tier-3 计划（dry-run，不烧 token）"
-  echo "  runner    = ${RUNNER_BIN}"
+  _dr="$(_pick_runner 2>/dev/null || true)"
+  echo "  runner    = ${RUNNER:-${_dr:-未探测到}}"
+  [[ -n "${RUNNER}${_dr}" ]] || \
+    echo "             （dry-run 不要求 runner 在位；实跑需 claude/codex 在 PATH 或 --runner 显式给定）"
   echo "  skill     = ${SKILL}"
   echo "  max-turns = ${MAX_TURNS}  timeout = ${TIMEOUT_S}s"
   n=0
@@ -89,6 +83,13 @@ if [[ "$DRY" -eq 1 ]]; then
   echo "  共 ${n} 例"$([[ "$n" -eq 0 ]] && echo "（模板态：尚未填用例）" || true)
   exit 0
 fi
+
+RUNNER_BIN="$(_pick_runner)" || {
+  echo "skill-behavioral-eval: 无可用 runner（claude/codex 都不在 PATH）——Tier-3 未运行（exit 2，不计为通过）" >&2
+  exit 2
+}
+
+if [[ -s "$TMP/cases.tsv" ]]; then :; else echo "skill-behavioral-eval: 用例为空（只有表头）——先按目标仓真实任务填用例（exit 2）" >&2; exit 2; fi
 
 _fail=0; _pass=0; _total=0
 while IFS=$'\t' read -r cid prompt expect forbid; do
