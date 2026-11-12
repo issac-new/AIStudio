@@ -32,7 +32,8 @@
 | `custom/server/toolpipeline/tool-hooks.ts`、`contract-guard.ts` | 改用共享单例，消除同进程两实例缓存不一致 |
 | `custom/server/toolcontract/action-recovery.ts` | 新增纯判定：`confirmed → reuse`、`failed+retryable → retry`、`sent/unknown → check_external`、`blocked → manual` |
 | `custom/server/resume/resume-planner.ts` | `ResumeFacts` 加可选 `unsettled`；读 action-ledger 未结算动作；有未结算 → `manual_gate`，理由带条数与动作名 |
-| `custom/server/harness/__tests__/handbook-decision-gates.test.ts` | 四关判定夹具：退款超时（sent→check_external，不重放）、恢复（unsettled→manual）、记忆作用域（跨租户拒）、效率（超预算拒） |
+| `custom/server/memscope/memory-write-guard.ts`（新增） | 记忆写入纯判定：作用域缺失/跨租户/跨用户/证据未确认/缺来源一律拒绝 |
+| `custom/server/harness/__tests__/handbook-decision-gates.test.ts` | 四关判定夹具：退款超时（sent→check_external，不重放）、恢复（unsettled→manual）、记忆作用域（跨租户/模型自述拒）、效率（超预算拒，批 4 接线） |
 | `custom/server/toolcontract/__tests__/contract.test.ts`、`custom/server/resume/__tests__/resume-planner.test.ts`、`custom/hermes-agent-plugins/__tests__/action-ledger.test.ts` | 新增行为与兼容断言 |
 
 ### 批 3：评测硬化
@@ -85,7 +86,7 @@
 ## 验证
 
 - 批 1：`npx vitest run custom/server/controllers/hermes/__tests__/trace-graph.test.ts custom/server/harness/__tests__/run-result.test.ts custom/hermes-agent-plugins/__tests__/run-trace-schema.test.ts`；`npm run typecheck:harness`。
-- 批 2：`npx vitest run custom/server/toolcontract/__tests__/contract.test.ts custom/server/toolpipeline/__tests__/contract-guard.test.ts custom/server/resume/__tests__/resume-planner.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts custom/hermes-agent-plugins/__tests__/action-ledger.test.ts`。
+- 批 2：`npx vitest run custom/server/toolcontract/__tests__/action-recovery.test.ts custom/server/toolcontract/__tests__/idempotency-status.test.ts custom/server/toolcontract/__tests__/contract.test.ts custom/server/toolpipeline/__tests__/contract-guard.test.ts custom/server/resume/__tests__/resume-planner.test.ts custom/server/memscope/__tests__/memory-write-guard.test.ts custom/server/harness/__tests__/handbook-decision-gates.test.ts custom/hermes-agent-plugins/__tests__/action-ledger.test.ts`。
 - 批 3：`npx vitest run custom/server/eval/__tests__/golden-gate.test.ts custom/server/eval/__tests__/golden-set.test.ts custom/server/eval/__tests__/failure-taxonomy.test.ts`；`python3 -m py_compile simharness/mux/mx-eval-summary.py simharness/mux/mx-report-gen.py`；合成夹具跑 summary/report 各一次。
 - 批 4：`npx vitest run custom/server/zcode/__tests__/team-stop.test.ts custom/server/tokenbudget/__tests__/budget-lease.test.ts custom/server/__tests__/zcode-mention-dispatch.test.ts`。
 - 全量：`npm test`（若 worktree 注入态不可用，按 N-4 配方先建链；失败项如实列）。

@@ -38,7 +38,7 @@ import {
   type ToolSideEffect,
 } from '../toolcontract/contract'
 import { normalizeToolOutcome } from '../toolcontract/error-envelope'
-import { IdempotencyStore } from '../toolcontract/idempotency-store'
+import { sharedIdempotencyStore } from '../toolcontract/idempotency-store'
 import { underWebUi } from '../lib/paths'
 import { synthesizeExempted } from '../approval-ledger/ledger-store'
 
@@ -206,7 +206,7 @@ interface PendingCall {
 const pendingCalls = new Map<string, PendingCall[]>()
 const PENDING_PER_KEY_CAP = 32
 const duplicateTracker = new CallSignatureTracker()
-const idempotencyStore = new IdempotencyStore()
+const idempotencyStore = sharedIdempotencyStore()
 
 function scopeOf(context?: AuditContext): string {
   return context?.runId || context?.sessionId || context?.profileId || 'anonymous'

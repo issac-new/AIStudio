@@ -26,12 +26,23 @@ export interface CheckpointEvidence {
   note?: string
 }
 
+export interface UnsettledActions {
+  found: boolean
+  count: number
+  actions?: Array<{ key: string; tool: string; status: string; ts?: number }>
+  path?: string
+  corrupt?: boolean
+  note?: string
+}
+
 export interface ResumeFacts {
   runId?: string
   sessionId?: string
   graph: CheckpointEvidence
   handoff: CheckpointEvidence
   progress: CheckpointEvidence
+  /** 2026-11-12 handbook 吸收：未结算副作用动作（sent/intended）。缺席=未查/无账本。 */
+  unsettled?: UnsettledActions
 }
 
 export interface ResumePlan {
@@ -150,6 +161,55 @@ async function readGraphCheckpoint(runId: string | undefined, now: number): Prom
   }
 }
 
+function actionLedgerPath(): string {
+  const dir = process.env.HERMES_ACTION_LEDGER_DIR?.trim() || underHermes('action-ledger')
+  return join(dir, 'ledger.jsonl')
+}
+
+/** 只读 action-ledger：同一 key 取末条；sent/intended 且在新鲜窗口内视为未结算。 */
+function readUnsettledActions(now: number, maxAgeMs: number): UnsettledActions {
+  const path = actionLedgerPath()
+  if (!existsSync(path)) return { found: false, count: 0, path }
+  let bad = 0
+  const latest = new Map<string, Record<string, unknown>>()
+  try {
+    const lines = readFileSync(path, 'utf8').split('\n')
+    for (const line of lines) {
+      if (!line.trim()) continue
+      try {
+        const row = JSON.parse(line) as Record<string, unknown>
+        const key = typeof row.key === 'string' ? row.key : ''
+        if (key) latest.set(key, row)
+      } catch {
+        bad += 1
+      }
+    }
+  } catch {
+    return { found: false, count: 0, path, corrupt: true, note: '动作账本读取失败' }
+  }
+  const actions: Array<{ key: string; tool: string; status: string; ts?: number }> = []
+  for (const [key, row] of latest) {
+    const status = String(row.status ?? '')
+    if (status !== 'intended' && status !== 'sent') continue
+    const ts = typeof row.ts === 'number' ? row.ts * 1000 : null
+    if (ts != null && now - ts > maxAgeMs) continue
+    actions.push({
+      key,
+      tool: String(row.tool ?? 'unknown'),
+      status,
+      ...(typeof row.ts === 'number' ? { ts: row.ts } : {}),
+    })
+  }
+  actions.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
+  return {
+    found: actions.length > 0,
+    count: actions.length,
+    actions: actions.slice(0, 20),
+    path,
+    ...(bad > 0 && actions.length === 0 ? { corrupt: true, note: `账本有 ${bad} 坏行且无有效未结算记录` } : {}),
+  }
+}
+
 export function collectResumeFacts(input: { runId?: string; sessionId?: string }, now = Date.now()): Omit<ResumeFacts, 'graph'> & { graph: CheckpointEvidence } {
   const key = input.runId || input.sessionId
   const handoff = findHandoff(key)
@@ -158,6 +218,7 @@ export function collectResumeFacts(input: { runId?: string; sessionId?: string }
     runId: input.runId,
     sessionId: input.sessionId,
     graph: { found: false },
+    unsettled: readUnsettledActions(now, resumeMaxAgeMs()),
     handoff: handoff
       ? {
           found: true,
@@ -189,6 +250,22 @@ export function decideResume(facts: ResumeFacts, opts: ResumePlanOptions = {}): 
   const maxAge = opts.maxAgeMs ?? resumeMaxAgeMs()
   const reasons: string[] = []
   const stale = (e: CheckpointEvidence): boolean => typeof e.ageMs === 'number' && e.ageMs > maxAge
+
+  // 未结算副作用优先于任何检查点：检查点只能证明「任务到哪」，不能证明「钱退没退」。
+  if (facts.unsettled?.corrupt) {
+    reasons.push(facts.unsettled.note || '动作账本损坏——无法确认外部副作用是否已发生')
+    return { runId: facts.runId, sessionId: facts.sessionId, decision: 'manual_gate', reasons, facts }
+  }
+  if (facts.unsettled?.found && facts.unsettled.count > 0) {
+    const sample = (facts.unsettled.actions ?? [])
+      .slice(0, 3)
+      .map((a) => `${a.tool}(${a.status})`)
+      .join('、')
+    reasons.push(
+      `存在 ${facts.unsettled.count} 个未结算副作用动作${sample ? `：${sample}` : ''}——先查外部真实状态，禁止直接重放`,
+    )
+    return { runId: facts.runId, sessionId: facts.sessionId, decision: 'manual_gate', reasons, facts }
+  }
 
   if (facts.graph.found) {
     if ((facts.graph.pendingInterrupts ?? 0) > 0) {

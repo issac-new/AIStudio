@@ -17,6 +17,7 @@ beforeEach(() => {
   process.env.HERMES_SESSION_CHECKPOINTS_DIR = join(dir, 'handoff')
   process.env.HERMES_PROGRESS_CHECKPOINTS_DIR = join(dir, 'progress')
   process.env.HERMES_LOOP_DIR = join(dir, 'loop')
+  process.env.HERMES_ACTION_LEDGER_DIR = join(dir, 'action-ledger')
   mkdirSync(join(dir, 'handoff'), { recursive: true })
   mkdirSync(join(dir, 'progress'), { recursive: true })
   _resetResumePlannerForTests()
@@ -26,6 +27,7 @@ afterEach(() => {
   delete process.env.HERMES_SESSION_CHECKPOINTS_DIR
   delete process.env.HERMES_PROGRESS_CHECKPOINTS_DIR
   delete process.env.HERMES_LOOP_DIR
+  delete process.env.HERMES_ACTION_LEDGER_DIR
   delete process.env.HERMES_RESUME_MAX_AGE_MS
   _resetResumePlannerForTests()
   rmSync(dir, { recursive: true, force: true })
@@ -109,5 +111,46 @@ describe('collectResumeFacts / planResume', () => {
     const plan = await planResume({ runId: 'r-missing' })
     expect(plan.decision).toBe('new_session')
     expect(plan.facts.graph.found).toBe(false)
+  })
+})
+
+describe('未结算动作优先于检查点（handbook 恢复关）', () => {
+  function writeLedger(rows: Array<Record<string, unknown>>) {
+    mkdirSync(join(dir, 'action-ledger'), { recursive: true })
+    writeFileSync(
+      join(dir, 'action-ledger', 'ledger.jsonl'),
+      rows.map((r) => JSON.stringify(r)).join('\n') + '\n',
+      'utf8',
+    )
+  }
+
+  it('新鲜图检查点 + sent 动作 → manual_gate，理由带动作名', () => {
+    writeLedger([{ ts: Date.now() / 1000, key: 'k1', tool: 'refund', status: 'sent' }])
+    const facts = collectResumeFacts({ runId: 'r1' })
+    expect(facts.unsettled).toMatchObject({ found: true, count: 1 })
+    facts.graph = { found: true, superStep: 3, pendingInterrupts: 0, ageMs: 1_000, next: 'next: step4' }
+    const plan = decideResume(facts)
+    expect(plan.decision).toBe('manual_gate')
+    expect(plan.reasons.join(' ')).toContain('refund')
+    expect(plan.reasons.join(' ')).toContain('未结算')
+  })
+
+  it('同 key 末条 confirmed → 不算未结算；intended 算', () => {
+    writeLedger([
+      { ts: Date.now() / 1000 - 10, key: 'k2', tool: 'refund', status: 'intended' },
+      { ts: Date.now() / 1000, key: 'k2', tool: 'refund', status: 'confirmed' },
+    ])
+    expect(collectResumeFacts({ runId: 'r2' }).unsettled).toMatchObject({ found: false, count: 0 })
+
+    writeLedger([{ ts: Date.now() / 1000, key: 'k3', tool: 'refund', status: 'intended' }])
+    expect(collectResumeFacts({ runId: 'r3' }).unsettled).toMatchObject({ found: true, count: 1 })
+  })
+
+  it('账本全坏行 → corrupt，判定为 manual_gate 而非当作空账', () => {
+    mkdirSync(join(dir, 'action-ledger'), { recursive: true })
+    writeFileSync(join(dir, 'action-ledger', 'ledger.jsonl'), '{not-json\n', 'utf8')
+    const facts = collectResumeFacts({ runId: 'r4' })
+    expect(facts.unsettled).toMatchObject({ corrupt: true })
+    expect(decideResume(facts).decision).toBe('manual_gate')
   })
 })

@@ -1,0 +1,20 @@
+name: action-ledger
+version: "1.0.0"
+description: "Side-effect action truth ledger for recovery: intent → sent/confirmed/failed, optional guard"
+author: overlay-team
+kind: standalone
+optional_env:
+  - name: HERMES_ACTION_LEDGER_DIR
+    description: "Directory for append-only ledger.jsonl (default: ~/.hermes/action-ledger)"
+  - name: HERMES_ACTION_LEDGER_GUARD
+    description: "1 = block a side-effect tool when the same key has an unsettled sent/intended action (default: 0 = observe only)"
+  - name: HERMES_ACTION_LEDGER_WINDOW_SECONDS
+    description: "Idempotency key time window in seconds (default: 900)"
+  - name: HERMES_ACTION_LEDGER_STALE_SECONDS
+    description: "How long an unsettled record blocks under guard (default: 60)"
+  - name: HERMES_ACTION_LEDGER_TOOLS
+    description: "Comma-separated extra side-effect tool names (default: built-in list + prefixes)"
+hooks:
+  - pre_tool_call
+  - post_tool_call
+manifest_version: 1
