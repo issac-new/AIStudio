@@ -4224,7 +4224,7 @@ FACT_COGNITION_LAYERS=5       # 五层认知框架（定义源：references/cogn
 # ===== 生成流程 =====
 FACT_FLOW_STEPS=13            # 生成流程详解主步骤数（generation-flow.md "^## Step" 机械可数：Step 1-13；Step 4 含命名子阶段（框架深化与门禁注入），不另计）
 FACT_FLOW_NODES=9             # 目标 skill workflow.md 的 9 个工作流节点（与 generate-skill.sh 骨架「九节点」一致；⑥门禁验证拆为⑥编码验证+⑦独立审查）。研发四阶段顺序挂载（2026-10-27 决策 57）：分支开发⑤→分支测试⑥⑦→主干合并⑧→主干回归⑨——节点数不因阶段挂载变化
-FACT_PROJECT_FACTS_FILE=references/project-facts.md  # 生成物事实层文件相对路径（单一事实源；P2-12a/12b 根治：项目数字写死进 SKILL.md 属 PROJECT_SPECIFIC_FILES 永不重生成、随项目演进必漂移——aistudio-dev 实测 334 spec/6270 测试 vs 现实 650/8726。改为 scripts/project-facts.sh 机械现算落此文件，SKILL.md 认知摘要表与 --upgrade 提示均引用本键只留指针；消费者=generate-skill.sh 模板行 + self-check 2f 断言 + tests/test-project-facts.sh）
+FACT_PROJECT_FACTS_FILE=references/project-facts.md  # 生成物事实层文件相对路径（单一事实源；P2-12a/12b 根治：项目数字写死进 SKILL.md 属 PROJECT_SPECIFIC_FILES 永不重生成、随项目演进必漂移——aistudio-dev 实测 334 spec/6270 测试 vs 现实 650/8726。改为 scripts/project-facts.sh 机械现算落此文件，SKILL.md 认知摘要表与 --upgrade 提示均引用本键只留指针；消费者=generate-skill.sh 模板行 + self-check 3d/5b 断言 + tests/test-project-facts.sh）
 
 # ===== 框架规则引擎 =====
 FACT_FRAMEWORKS=81            # references/frameworks/*.md（不含 _template.md）；WP-P2-extension +spark/+hive/+tdengine/+doris/+harmonyos（74→79）；R62（2026-09-25 第九棒换栈演练）+php（79→80，PHP+composer 生态补缺）；R64（2026-09-26 第十棒换栈演练）+ruby（80→81，Ruby+Bundler 生态补缺）

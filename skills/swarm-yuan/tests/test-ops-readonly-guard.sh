@@ -161,7 +161,7 @@ _ref_true="$(find references -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' 
 [[ -n "$_ref_decl" && "$_ref_decl" == "$_ref_true" ]] \
   && ok "facts FACT_REFERENCES=${_ref_decl} == references/*.md 实存" \
   || bad "FACT_REFERENCES 与实存篇数不符（声明=${_ref_decl} 实存=${_ref_true}）"
-has assets/facts.conf "FACT_UNIVERSAL_FILES=109" "facts FACT_UNIVERSAL_FILES=109"
+has assets/facts.conf "FACT_UNIVERSAL_FILES=110" "facts FACT_UNIVERSAL_FILES=110"
 has assets/env-setup.sh "tunnel.sh\" doctor" "env-setup 隧道体检示例"
 
 echo "▶ 分发面纪律（目标技能 --verify-completeness 兼容）"
