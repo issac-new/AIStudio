@@ -9,15 +9,14 @@
 
 ## 导读：这门课怎样学
 
-建议用一天完成：产品与六层设计 1.5 小时，生成流程与研发流程 1.5 小时，操作演示 1 小时，贯穿实训 2.5 小时，考核 0.5 小时。第一次学习按章节顺序读；已经装好技能的人可直接从第三部分操作章开始，但仍需阅读证据边界。
+建议用一天完成：三层投影、四论与五项能力 1.5 小时，生成流程与研发流程 1.5 小时，操作演示 1 小时，贯穿实训 2.5 小时，考核 0.5 小时。第一次学习按章节顺序读；已经装好技能的人可直接从第三部分操作章开始，但仍需阅读证据边界。想先了解它调研和吸收了哪些框架、运行时与方法论，可先读第二部分开头的「吸收全景」。
 
 完成课程后，学员应能回答并实践以下问题：
 
 1. 说明“研发人员能力的 SOP 化”五项形成链，以及生成器、目标技能和项目运行态的职责边界。
 2. 讲述认知、规范、装配、使用、验证、成长六层设计，指出标准与经验怎样变成实物文件和检查证据。
 3. 完成安装、生成、填充、strict 激活、日常研发、门禁判读、失败处置、反馈更新与离线安装。
-4. 看到什么才算完成，失败后怎样恢复，哪些证据必须留存。
-5. 解释门禁全绿仍不能证明业务正确，以及 fixture 通过为何仍有**外部有效性边界**。
+4. 判断什么算完成、失败怎样恢复、留什么证据，并解释门禁全绿为何仍不能证明业务正确、fixture 通过为何仍有**外部有效性边界**。
 
 文中路径默认相对 AIStudio 仓根。操作卡中的 `/absolute/path/to/...` 是必须替换的绝对路径；命令没有在本轮执行。每张操作卡都有“做什么、怎样解释、完成标志、失败处置、留存证据”五字段，写操作与只读检查分别标识。
 
@@ -57,9 +56,34 @@ flowchart TB
 
 **④ 最小单元质量与拼装流水线解决“正确零件怎样形成正确产品”。** 最小单元同时受两类标准约束：质量标准要求职责与契约清楚、路径真实、测试覆盖正常和失败路径、错误处理与安全检查不裁剪；拼装标准要求先查复用件、保持依赖方向、声明稳定单元变更、以最小新增胶水连接，并评估下游影响。spec-first、测试先行、复用阶梯、九节点与研发四阶段把这些要求编排成标准研发流水线。`skills/swarm-yuan/README.md:75-80,190-196`
 
-**⑤ 独立全面检查解决“凭什么达到生产标准”。** 机械门禁检查词法、结构、流程与配置；真实测试执行代码并核验业务行为；独立审查由非实现者检查需求、设计和证据；独立验证器用正反例与真实缺陷语料检查门禁的检出能力。这四类证据不能互相替代，“严苛、细致、独立”也不等于隐瞒跳过项或让实现者自报通过。Mutation Check 不属于这四类证据，它是另一套变异探针方法：故意注入故障后重跑，确认测试或门禁断言真的能发现它——生成器侧用它检验门禁夹具，项目侧用它检验测试敏感度。`skills/swarm-yuan/README.md:151-184`
+**⑤ 独立全面检查解决“凭什么达到生产标准”。** 机械门禁检查词法、结构、流程与配置；真实测试执行代码并核验业务行为；独立审查由非实现者检查需求、设计和证据；独立验证器用正反例与合成夹具检查门禁的检出能力；真实历史缺陷语料的外部有效性证据仍在采集。这四类证据不能互相替代，“严苛、细致、独立”也不等于隐瞒跳过项或让实现者自报通过。Mutation Check 不属于这四类证据，它是另一套变异探针方法：故意注入故障后重跑，确认测试或门禁断言真的能发现它——生成器侧用它检验门禁夹具，项目侧用它检验测试敏感度。`skills/swarm-yuan/README.md:151-184`
 
 五项形成闭环：标准提供底线，个性补充项目事实，本体组织资产，流水线调用资产，独立检查验证结果，发现的问题再回流为项目经验。生成器只是承载这条链的工具，不能替代其中任何一环。
+
+## 谁定方向、谁守门、谁干活：三层投影与四论
+
+**一句话定位：人定方向 · 机器守门 · AI 干活。** 一个人或少数几个人带少量 AI 助手时，可以靠人盯、靠模型自觉；AI 员工多了之后，质量不能靠模型自觉，必须靠机制——每个“必须”都要有机器检查、可复核证据和失败阻断。`docs/manuals/AI协作标准手册.md:225-228`
+
+| 层 | 对象 | 人机分工 | 与手册章节的对应 |
+|---|---|---|---|
+| 人机界面层 | SwarmStudio 驾驶舱 | 人定方向、看清证据、裁决例外与发布 | 第 14-15 节研发与门禁判读、第 25 节验收 |
+| 组织控制层 | hermes 集群 | AI 干活、机械验收守门、记录任务与审批 | 第 10 节 ACP 证据、第 6 节研发四阶段 |
+| 机制执行层 | swarm-yuan 目标技能 | 把守门落进编码回路：读写、提交、构建与合入 | 第 5 节 Step 1-13、第 7 节 precheck、第 8 节 L1-L4 |
+
+三层是同一条原则的三次投影，不是三个独立产品：上层不替代下层证据，执行层门禁也不能替人作发布裁决；本手册主要讲最下面一层，它守得住，上面两层的“看清”和“裁决”才有事实基础。
+
+系统论、信息论、科学方法论、控制论共同构成面向复杂系统的认识与行动方法体系——系统论解决“看清”，信息论解决“看准”，科学方法论解决“认识可靠”，控制论解决“行动有效”；四者通过“认识—信息—模型—行动—反馈”相互耦合，把对复杂系统的认知转化为可验证、可执行、可持续优化的能力。这套理念是 hermes agent teams 的灵魂，也是驾驶舱、swarm-yuan 技能与设计文档整体重构的驱动。
+
+| 理论 | 解决的问题 | 在本产品的落地机制 | 证据 |
+|---|---|---|---|
+| 系统论 | 看清边界、要素、层次与依赖 | 组件库清单、关系边集、机制本体 | path-check 与计数核验、`relations.jsonl`、本体类型对账 |
+| 信息论 | 看准口径、度量与噪声 | 单一事实源 `facts.conf`、证据可度量、降噪与诚实披露 | facts 对账、skip 单列、返回码与 gate-runs |
+| 科学方法论 | 认识可靠、结论可复现 | 假设与证据分级、正反例与变异、外部有效性边界 | fixture、Mutation Check、`verifier/v2/external-validity.md` |
+| 控制论 | 行动有效、偏差可纠正 | 门禁-测试-审查闭环、gate-runs、阶段状态机、反馈更新 | `gate-runs.jsonl`、`state.yaml`、指纹与升级预演 |
+
+**三项分工一句话说清**：五项回答“能力由什么构成”，四论回答“凭什么相信这套能力可靠”，三层回答“责任落在哪一层”。工程纪律是“开环提要求必须配闭环兜底”：只写进提示词是开环，写成 hooks、门禁或状态机准入才是闭环。`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118`
+
+这一原则落到操作有四条：人只做方向与例外；每个“必须”都要有机器对应物，写不出检查项就只能算约定；AI 的自述不是证据，完成与通过要有当次输出支撑；机制本身也要被检查，门禁要能被变异探针抓失效。
 
 ## 1. 生成器、目标技能和日常研发怎样连成生命周期
 
@@ -96,11 +120,7 @@ flowchart LR
 | 目标技能 | 默认家级 `~/.agents/skills/<项目>-dev/`；项目内已有受支持技能目录时优先复用 | 保存该项目的 `SKILL.md`、references、assets、scripts、rules.d 与宿主配置 |
 | 项目运行态 | 目标项目根 `.swarm-yuan/` | 保存 `state.yaml`、notes、tasks、trace、decisions、gate-runs、指纹与恢复数据 |
 
-目标技能内部还可能有另一个 `.swarm-yuan/`，保存 `activation-report.json` 等生成或升级证据。技能根的 `skill-manifest.json` 与 `.swarm-yuan-version` 记录交付身份。两处同名目录不能合并理解；项目运行态是否入库也由目标项目规则决定，不能按目录名一律删除或提交。`skills/swarm-yuan/scripts/generator/subcommands.sh:865-869`
-
-当前目录规则有四级：先复用项目内既有技能目录；再命中家级 `~/.agents/skills/<name>`；再让 legacy 家级 `~/.zcode/skills/<name>` 原位续命；最后兜底到家级 `~/.agents/skills`。第三个位置参数可显式指定目标目录。`skills/swarm-yuan/scripts/generator/subcommands.sh:978-1006`
-
-安装生成器也默认写入 `~/.agents/skills/`。无参数安装只披露检测到的宿主，不分流到各家目录；`--all` 或 `--claude`、`--zcode` 等显式旗标才写对应宿主目录。`skills/swarm-yuan/install.sh:727-744`
+目标技能内部还可能有另一个 `.swarm-yuan/`，保存 `activation-report.json` 等生成或升级证据。技能根的 `skill-manifest.json` 与 `.swarm-yuan-version` 记录交付身份。两处同名目录不能合并理解；项目运行态是否入库也由目标项目规则决定，不能按目录名一律删除或提交。`skills/swarm-yuan/scripts/generator/subcommands.sh:865-869` 当前目录规则有四级：先复用项目内既有技能目录；再命中家级 `~/.agents/skills/<name>`；再让 legacy 家级 `~/.zcode/skills/<name>` 原位续命；最后兜底到家级 `~/.agents/skills`。第三个位置参数可显式指定目标目录。`skills/swarm-yuan/scripts/generator/subcommands.sh:978-1006` 安装生成器也默认写入 `~/.agents/skills/`。无参数安装只披露检测到的宿主，不分流到各家目录；`--all` 或 `--claude`、`--zcode` 等显式旗标才写对应宿主目录。`skills/swarm-yuan/install.sh:727-744`
 
 ## 3. 六层设计怎样把知识变成交付能力
 
@@ -125,8 +145,6 @@ flowchart TB
 | 验证 | 代码改动、测试、门禁结果、审查记录 | 真跑构建和测试，独立审查，正反例与变异验证 | 测试输出、`review-record.md`、验证器日志、当次 ACP 证据 | 退出码、真实用例、断言与负向路径、可选变异分数；模型自述不能代替验证 |
 | 成长 | 项目结构变化、新问题、新版本生成器 | 指纹 diff、局部重探查、内容三态更新、工具链升级、经验归位 | 更新后的清单/配方/规则、`lessons.md`、新指纹基线 | 条目骤降保护、清单复核、升级预演、决策留痕；新增知识须受预算约束 |
 
-认知层的组件库清单回答“有什么”，关系边集回答“谁依赖谁”，任务配方回答“怎样复用拼装”。三者缺一，AI 就容易重复造轮子或漏改字符串耦合点。`skills/swarm-yuan/README.md:86-121`
-
 # 第二部分 技术设计：机制怎样落地
 
 ## 技术总图：五项能力怎样映射到实物和证据
@@ -143,6 +161,71 @@ flowchart TB
 
 独立检查尤其要避免“一个脚本包打天下”：precheck 返回 0 不能替代真实测试，测试全绿不能替代独立审查，独立验证器通过也不能外推为所有真实缺陷都可拦截。检查和证据必须能对上同一个项目快照与同一个变更。
 
+四论在技术实现中各有对应机制：系统论靠清单、边集与本体看边界和依赖；信息论靠 `facts.conf` 单一事实源、skip 单列与返回码看准口径和噪声；科学方法论靠模板双态夹具、Mutation Check 与外部有效性边界保证结论可复现；控制论靠门禁-测试-审查闭环、gate-runs、状态机与反馈更新完成纠偏。四者不是四套新工具，而是对已有机制的归类，证据面与上表逐列对齐。
+
+## 吸收全景：81 个框架、15 个运行时和 61 份方法论从哪里来
+
+swarm-yuan 的能力不是凭空发明的。它把四类来源吸收成自己的规则、门禁和文档：真实项目研究、开源技能与方法论、行业标准映射、自研机制。这一节回答“盒子里到底装了什么、每样从哪里来、什么时候才生效”。全部条目登记在 `skills/swarm-yuan/references/capability-map.md`（吸收台账单一事实源：逐档来源、证据、消费节点与触发），自检用 G25 双向对账、孤儿零容忍，所以下面每一项都可回查，不是宣传清单。
+
+### 81 个技术栈框架规则
+
+每个框架一份规则文档加一组门禁片段。只有项目真的用到某个框架，`--inject-frameworks` 才把对应门禁挂进目标技能；用不到的不会进来。名单以 `skills/swarm-yuan/references/frameworks/` 目录与 `FACT_FRAMEWORKS=81` 为正本：
+
+| 生态域 | 覆盖的框架与中间件 |
+|---|---|
+| 前端与客户端（16） | react、vue、angular、nextjs、nuxt、antd、element、naiveui、tailwind、vite、webpack、flutter、android、ios-swiftui、react-native、harmonyos |
+| 后端框架与语言栈（19） | spring-boot、spring-cloud、spring-security、spring-data-jpa、spring-batch、nestjs、express、koa、fastify、gin、kratos、django、flask、fastapi、dotnet、c-cpp、php、ruby、cargo |
+| 数据访问与存储（18） | mysql、postgresql、opengauss、sqlserver、dameng、redis、elasticsearch、doris、hive、tdengine、paimon、mybatis、gorm、prisma、typeorm、sqlalchemy、druid、sharding |
+| 消息、调度与分布式（12） | kafka、rabbitmq、rocketmq、quartz、xxl-job、elasticjob、seata、sentinel、nacos、dubbo、netty、celery |
+| 工具与序列化（4） | jackson、lombok、mapstruct、validation |
+| 测试（3） | junit5-mockito、jest-vitest、pytest |
+| 数据处理（3） | spark、flink、kettle |
+| 基础设施与可观测（4） | dockerfile、kubernetes、terraform、opentelemetry |
+| AI 应用（2） | langchain、rag-pipeline |
+
+### 15 个外部运行时（三层接线）
+
+接线深度不同，责任不同。任何一层没装都不阻塞，走各自降级载体，分层说明见 `skills/swarm-yuan/SKILL.md:46`：
+
+| 层 | 对象 | 怎样接线 | 未安装时 |
+|---|---|---|---|
+| 深度接线（4） | GitNexus、graphify、claude-mem、open-code-review | precheck.sh 以真实命令调用，产出直接进证据 | 对应门禁降级为提示并逐项披露，不阻断 |
+| CLI 接线（6） | OpenSpec、comet、gsd-core、codex-security、mattpocock-skills、diagram-design | 门禁与状态机按需调用 CLI；mattpocock-skills 与 diagram-design 为仓内物化（前者物化 27 技能并带 MANIFEST 与 LICENSE） | 同上 |
+| 方法论引用（5） | superpowers、gstack、ECC、Ruflo、impeccable | AI 按九节点引用其模式，不做硬依赖 | 引用面缺席，流程仍可走 |
+
+外部运行时的版本随时间变化，不写进手册；当前实测版本看 `self-check.sh --check-only` 输出。
+
+### 61 份方法论与规范文档
+
+分组按主要用途归纳，权威登记以 capability-map 与 `skills/swarm-yuan/references/` 目录为准；带来源的条目在文件头保留原始出处，版本与轮次细节见 `skills/swarm-yuan/assets/facts.conf:54-79` 注释：
+
+| 主题域 | 文档 | 代表性来源 |
+|---|---|---|
+| 生成与研发流程（13） | generation-flow、exploration-guide、template-spec、task-methodology-router、agent-skills-methodology、codex-methodology、dsh-engineering-methodology、claude-code-capabilities、subagent-orchestration、mea-loop-methodology、lazy-generation-methodology、mattpocock-skills-methodology、memory-persistence | lazy-generation 吸收自 DietrichGebert/ponytail（七层复用阶梯）；mattpocock-skills 吸收自 mattpocock/skills v1.2.3（访谈设计树、spec 测试缝、纵切拆分、诊断回路） |
+| 领域与本体（4） | domain-knowledge、business-ontology-methodology、fibo-financial-ontology、togaf-metamodel-methodology | FIBO master_2026Q3 源码级术语（MIT）蒸馏出业务本体五步法 |
+| 质量验证与排障（10） | review-methodology、rsi-evidence-methodology、pstack-methodology、failure-taxonomy、bugfix-runbook、remote-debug-jvm、canary-monitoring、clean-code-metrics-methodology、quality-management-standards、ai-process-records | rsi-evidence 三源吸收（清华 RSI 综述＋D2I-ai＋字节论文）；clean-code-metrics 吸收自 unclebob/ub-mode |
+| 安全与合规（9） | security-spec、crypto-spec、cwe-database、standards-compliance、compliance-checkpoints、regulatory-checkpoint-table、security-certification-profiles、mcp-governance、codex-security-methodology | codex-security 吸收自 openai/codex-security；regulatory-checkpoint-table 执法检查主表 173 条 |
+| 认知与思维（5） | cognition-framework、cognitive-bias、logic-razor、four-theories-methodology、gsd-patterns | four-theories＝系统论、信息论、科学方法论、控制论四论闭环 |
+| 知识治理与吸收（6） | capability-map、knowledge-lifecycle-methodology、knowledge-retrieval-ladder、context-engineering-layering、cordis-composability-methodology、code-graph-tools | knowledge-lifecycle 吸收自京东海博实践；cordis-composability 吸收自 DeepSeek Harness |
+| 表达与呈现（3） | frontend-design-methodology、diagram-production-methodology、controlled-language-methodology | impeccable v4.0.2；diagram-design v2.6.110（生成器侧档）；受控语言 ASD-STE100 |
+| 估算与治理（3） | cost-estimation-methodology、decision-governance、governance-agents | cost-estimation＝NESMA GB/T 42588-2023 功能点估算 |
+| 行业 profile（8） | industry-profile-automotive、industry-profile-energy、industry-profile-finance、industry-profile-gov、industry-profile-industrial、industry-profile-medical、industry-profile-payment、industry-profile-telecom | payment 吸收 hermes pay-team 人格内核；配置覆盖层见 `skills/swarm-yuan/assets/industry-profiles/` |
+
+### 研究与案例档案（生成器侧）
+
+`skills/swarm-yuan/docs/research/` 共 106 篇 R 系列档案：设计演进与重构决策、换栈演练（第九棒补 PHP、第十棒补 Ruby 生态）、真实项目回归（R124/R143 JVM 全栈、R118 NestJS）、审计加固、运行时刷新与各吸收轮实录（如 R143 Ponytail＋Headroom）。`skills/swarm-yuan/references/case-studies/` 承载可授课案例。这些是生成器侧档案，不随目标技能分发；分发面以 `UNIVERSAL_FILES=109`（lite 51）为正本。
+
+### 行业标准映射
+
+`skills/swarm-yuan/assets/standards-map.conf` 用五字段（规则或门禁 id、CWE、GB/ISO、ASVS5 节、置信度）把门禁挂到标准条文；compliance 档分发该映射，SARIF 转换器把 CWE 与 GB/ISO 写进规则元数据（`skills/swarm-yuan/scripts/to-sarif.sh:42-65`），合规门校验矩阵与映射完整性（`skills/swarm-yuan/assets/gates/compliance/compliance.sh:23-87`）。边界不变：映射是可裁剪基线，不等于自动合规或认证。
+
+### 为什么这份全景可信
+
+- **单一事实源**：capability-map 逐档登记来源、证据、消费节点与触发；自检 G25 双向对账，孤儿零容忍。
+- **三载体一致**：每次方法论吸收要求 references、SKILL.md、facts.conf 三处同步，G13/G14/G15/G17 逐项实测。
+- **吞吐有界**：新增知识受预算约束（门禁 59、变量 204、上下文表面等以 facts.conf 为准），吸收不是无限堆料。
+- **默认不启用**：框架规则按命中注入、行业 profile 显式选择、方法论层是引用不是依赖——知道“有什么”不等于“全都开着”。
+
 ## 4. 六段目录和生成档位各装什么
 
 | 逻辑段 | 主要文件与职责 |
@@ -154,9 +237,7 @@ flowchart TB
 | check | `scripts/precheck.sh`、`precheck*.conf`、`gate-enforce-level.conf`、`rules.d/` 与 hooks/commands/settings 等，负责注册、配置和执行检查 |
 | scripts | `state-machine.sh`、`trace-log.sh`、`memory-writeback.sh`、关系与清单工具、项目指纹等，承载状态、证据和维护动作 |
 
-分发清单以 `UNIVERSAL_FILES` 为准，项目内容保留清单以 `PROJECT_SPECIFIC_FILES` 为准。lite 保留核心认知、模板与门禁脚本，不含完整 hooks/commands/settings 和完整九节点 workflow；standard 是完整骨架；compliance 在 standard 上增加合规资料与矩阵。auto 根据合规、规模、形态、框架和 monorepo 信号选档，信号模糊时走 standard；也可在位置参数前显式写 `--profile lite|standard|compliance`。`skills/swarm-yuan/scripts/generate-skill.sh:940-968,984-994`
-
-目标技能要“薄”，生成器可以“厚”。每次会话重复加载的入口和 references 受字节预算约束；新增知识必须替换、压缩或登记例外，不能只增不减。预算值不要手抄进项目文档，统一读取 `skills/swarm-yuan/assets/facts.conf`。`skills/swarm-yuan/README.md:45-47,135-149`
+分发清单以 `UNIVERSAL_FILES` 为准，项目内容保留清单以 `PROJECT_SPECIFIC_FILES` 为准。lite 保留核心认知、模板与门禁脚本，不含完整 hooks/commands/settings 和完整九节点 workflow；standard 是完整骨架；compliance 在 standard 上增加合规资料与矩阵。auto 根据合规、规模、形态、框架和 monorepo 信号选档，信号模糊时走 standard；也可在位置参数前显式写 `--profile lite|standard|compliance`。`skills/swarm-yuan/scripts/generate-skill.sh:940-968,984-994` 目标技能要“薄”，生成器可以“厚”。每次会话重复加载的入口和 references 受字节预算约束；新增知识必须替换、压缩或登记例外，不能只增不减。预算值不要手抄进项目文档，统一读取 `skills/swarm-yuan/assets/facts.conf`。`skills/swarm-yuan/README.md:45-47,135-149`
 
 ## 5. Step 1-13 怎样生成可信技能
 
@@ -343,16 +424,14 @@ flowchart TB
 - **做什么**：在生成器源码树可用、目标项目路径已确定的终端中设置变量。Windows 使用 Git Bash 或 WSL，并用 POSIX 路径。
 
 ```bash
-export YUAN_SRC="/absolute/path/to/AIStudio/skills/swarm-yuan"
-export PROJECT_DIR="/absolute/path/to/target-project"
-export SKILL_NAME="$(basename "$PROJECT_DIR" | sed 's/[^A-Za-z0-9._-]/-/g')-dev"
-export YUAN_HOME="$HOME/.agents/skills/swarm-yuan"
+export PROJECT_DIR="/absolute/path/to/target-project" \
+  SKILL_NAME="$(basename "$PROJECT_DIR" | sed 's/[^A-Za-z0-9._-]/-/g')-dev" \
+  YUAN_SRC="/absolute/path/to/AIStudio/skills/swarm-yuan" \
+  YUAN_HOME="$HOME/.agents/skills/swarm-yuan"
 
-bash --version
+bash --version; git --version; python3 --version
 bash "$YUAN_SRC/install.sh" --version
 bash "$YUAN_SRC/install.sh" --list
-git --version
-python3 --version
 git -C "$PROJECT_DIR" status --short --branch
 ```
 
@@ -479,12 +558,10 @@ bash "$SKILL_DIR/scripts/state-machine.sh" init order-edit
 # ①②：AI 复述目标/非目标/验收，先查 recipes、组件清单和关系边集
 bash "$SKILL_DIR/scripts/relations-query.sh" "$SKILL_DIR" "$PROJECT_DIR" --file "src/main/java/com/example/OrderService.java"
 
-# ③④：写 proposal/spec/tasks，spec 至少含变更、决策记录、验证、设计文档影响
-# 写操作：proposal 或 SPEC_FILE 就绪后进入 design
+# ③④：写 proposal/spec/tasks（含变更、决策记录、验证、设计文档影响）；就绪后进入 design
 bash "$SKILL_DIR/scripts/state-machine.sh" transition design
 
-# ⑤：创建符合项目规则的 feature 分支/worktree，先测试后实现
-# 写操作：已批准 spec、build_mode 和 isolation 就绪后进入 build
+# ⑤：创建 feature 分支/worktree，先测试后实现；spec、build_mode、isolation 就绪后进入 build
 bash "$SKILL_DIR/scripts/state-machine.sh" transition build
 ```
 
@@ -591,8 +668,7 @@ bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$
 # 写操作：确认无在途任务、预演可接受后升级工具链
 bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"
 
-# 写操作：AI 只重探查变化 scope，更新清单/配方/规则（写动作在这里）
-# 只读：复核清单计数、路径与稳定性，不改文件
+# 写：AI 只重探查变化 scope，更新清单/配方/规则；只读：复核清单计数、路径与稳定性
 bash "$YUAN_HOME/scripts/inventory-verify.sh" "$PROJECT_DIR" \
   --skill-dir "$SKILL_DIR" --tsv --path-check --stability-audit --strict
 
@@ -646,9 +722,7 @@ bash install-offline.sh --minimal --agents
 | 最小单元质量与拼装流水线 | 复用既有 Mapper/Service/前端单元，新增最小胶水，按 spec、分支测试、独立审查、合入和 main 回归推进 |
 | 独立全面检查 | 静态框架门禁、真实测试、分片物理直查、独立审查与双故障注入分别提供不同证据 |
 
-该轮曾检测 10 个框架，完成订单编辑 feature 与双故障注入 fix。它证明当次生成链、特定测试和三层拦截咬合，不证明当前 v2.100.3 自动获得同样数字，也不证明所有 JVM 项目都覆盖。
-
-另有一个可独立重跑的合成练习 `skills/swarm-yuan/tests/e2e/run-fieldchange-e2e.sh`，用临时 Java 样例验证字段映射和任务清单。合成练习便于教学，但不能替代真实业务项目。
+该轮曾检测 10 个框架，完成订单编辑 feature 与双故障注入 fix。它证明当次生成链、特定测试和三层拦截咬合，不证明当前 v2.100.3 自动获得同样数字，也不证明所有 JVM 项目都覆盖；另有一个可独立重跑的合成练习 `skills/swarm-yuan/tests/e2e/run-fieldchange-e2e.sh`，用临时 Java 样例验证字段映射和任务清单。合成练习便于教学，但不能替代真实业务项目。
 
 ## 19. 实训一：再生成时怎样保留真值并激活
 
@@ -692,9 +766,7 @@ bash install-offline.sh --minimal --agents
 
 ### R118 反馈案例给这门课补什么
 
-R118 的 nest-forge 历史版本为 **v2.83.0，日期 2026-10-18**。该轮先让真实工具链通过，再完成生成和两个研发任务。RolesGuard 接线任务从“元数据存在但守卫未注册”定位到 member 越权，又以 member 403、admin 200 验证；随后发现 `addSelects` 被 TypeORM 静默忽略导致登录失败，改为 QueryBuilder `addSelect` 并补注册到登录的回归。最后把四条事实就地更新到 reference-manual，并写新指纹。
-
-这个案例说明反馈更新要同时保留业务缺陷、验证锚和环境事实，不能只更新组件名称。其 18/18、7/7 等数字只证明 v2.83.0 的 nest-forge 当次结果。`skills/swarm-yuan/docs/research/R118-nestjs-regression.md:6-20`
+R118 的 nest-forge 历史版本为 **v2.83.0，日期 2026-10-18**。该轮先让真实工具链通过，再完成生成和两个研发任务。RolesGuard 接线任务从“元数据存在但守卫未注册”定位到 member 越权，又以 member 403、admin 200 验证；随后发现 `addSelects` 被 TypeORM 静默忽略导致登录失败，改为 QueryBuilder `addSelect` 并补注册到登录的回归。最后把四条事实就地更新到 reference-manual，并写新指纹。这个案例说明反馈更新要同时保留业务缺陷、验证锚和环境事实，不能只更新组件名称。其 18/18、7/7 等数字只证明 v2.83.0 的 nest-forge 当次结果。`skills/swarm-yuan/docs/research/R118-nestjs-regression.md:6-20`
 
 ## 23. 合成练习怎样独立重跑
 
@@ -718,7 +790,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 
 ## 24. 学员需要提交哪些实操作品
 
-每位学员或小组提交一个目录，至少包含：
+每位学员或小组提交一个目录，至少包含以下七项；只有文档没有命令输出，或只有退出码没有当次文件与测试证据，都不算完整作品。
 
 1. **生成包**：目标技能路径、profile、SKILL.md、manifest、activation report、strict 与激活输出。
 2. **认知包**：17 项特征卡承接说明、组件库清单、relations.jsonl、至少一个五要素完整配方、框架证据。
@@ -726,8 +798,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 4. **证据包**：precheck 原始输出与返回码、gate-runs、skip/warn 处置、构建和测试报告。
 5. **反馈包**：一次结构或内容变化后的知识 diff、局部重探查、清单复核和新指纹。
 6. **边界声明**：未运行项、外部环境限制、外部有效性边界、ACP 与离线安装中未覆盖的部分。
-
-只有文档没有命令输出，或只有退出码没有当次文件与测试证据，都不算完整作品。
+7. **认知说明**：能说明三层投影与四论闭环在本项目分别对应哪些证据，例如驾驶舱看板、gate-runs、状态机与反馈更新各指向哪份记录。
 
 ## 25. 讲师怎样验收
 
@@ -742,40 +813,28 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 
 建议 80 分及格，但“伪造证据、编造路径、删除检查求绿、把 draft 当 active”任一出现即判不合格。讲师应抽查原始命令和文件，不只听汇报。
 
+准入说明（不占分）：学员须先交齐第 24 节七项作品，能当场指出三层投影与四论各自对应的当次证据，才进入评分；认知说明缺失或与证据对不上时，先补证据再评。以上五项能力与认知说明都只核对当次可观察结果，不按模型自述给分。
+
 ## 26. 命令速查
 
-速查用于回忆，执行时必须回到对应操作卡读取五字段和副作用。
+速查用于回忆，执行时必须回到对应操作卡读取五字段和副作用；注释里的只读/写是副作用分类。
 
 ```bash
-# 安装与自检
-bash "$YUAN_SRC/install.sh" --list
-bash "$YUAN_SRC/install.sh"
-bash "$YUAN_HOME/scripts/self-check.sh" --check-only
-
-# 创建、填充辅助与激活
+bash "$YUAN_SRC/install.sh"                            # 写：装到 ~/.agents/skills
+bash "$YUAN_HOME/scripts/self-check.sh" --check-only   # 只读：自检
 bash "$YUAN_HOME/scripts/generate-skill.sh" --profile standard "$SKILL_NAME" "$PROJECT_DIR"
 bash "$YUAN_HOME/scripts/relations-extract.sh" "$PROJECT_DIR" --skill-dir "$SKILL_DIR"
-bash "$YUAN_HOME/scripts/framework-evidence.sh" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/framework-evidence.sh" "$PROJECT_DIR"   # 只读：框架证据
 bash "$YUAN_HOME/scripts/generate-skill.sh" --inject-frameworks "$SKILL_DIR"
 bash "$YUAN_HOME/scripts/generate-skill.sh" --verify-completeness --strict "$SKILL_DIR"
 bash "$YUAN_HOME/scripts/generate-skill.sh" --mark-active "$SKILL_DIR"
-
-# 日常使用与门禁
 bash "$SKILL_DIR/scripts/relations-query.sh" "$SKILL_DIR" "$PROJECT_DIR" --file "relative/path/to/File.java"
-bash "$SKILL_DIR/scripts/state-machine.sh" status
-bash "$SKILL_DIR/scripts/precheck.sh" --list-gates
-bash "$SKILL_DIR/scripts/precheck.sh" --all
+bash "$SKILL_DIR/scripts/precheck.sh" --list-gates     # 只读：实时门禁名单
+bash "$SKILL_DIR/scripts/precheck.sh" --all            # 写：核心 12
 GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" bash "$SKILL_DIR/scripts/precheck.sh" --all-full
-bash "$SKILL_DIR/scripts/precheck.sh" --compliance-suite
-bash "$SKILL_DIR/scripts/precheck.sh" --fix-suggest
-
-# 反馈更新
-bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR"
 bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$PROJECT_DIR"
 bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"
 bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp
-
-# 合成练习
 bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 ```
 
@@ -783,15 +842,19 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 
 | 术语 | 本课含义 |
 |---|---|
-| 研发人员能力的 SOP 化 | 把标准、经验、组织资产、研发动作与验证方法变成可执行、可检查、可更新的标准作业系统 |
-| 机制本体 / 业务本体 | 前者描述生成器与技能的对象、关系、动作；后者统一目标项目的业务术语与约束，两层不能混写 |
-| 最小单元 | 可独立指明契约、质量与测试的复用对象；它同时还要满足依赖、复用与最小胶水的拼装标准 |
+| 人定方向、机器守门、AI 干活 | 产品总原则：人负责方向、例外与最终裁决；机制负责守门；AI 负责执行。规模扩大后质量不能依赖模型自觉 |
+| 三层投影 | 同一原则的三层载体：驾驶舱＝人机界面层，hermes 集群＝组织控制层，swarm-yuan 目标技能＝机制执行层 |
+| 四论 | 系统论（看清）、信息论（看准）、科学方法论（认识可靠）、控制论（行动有效），通过“认识—信息—模型—行动—反馈”耦合 |
+| 开环与闭环 | 只写提示词是开环，违反不必然被发现；写成 hooks、门禁或状态机准入才是闭环。合法形态是开环提要求＋闭环兜底 |
 | 生成器 | swarm-yuan 本体，负责探查、装配、验证和升级目标技能 |
 | 目标技能 | 为某个项目生成的 `<项目>-dev`，日常研发实际消费的规则与知识包 |
 | 组件库清单 | 组件、接口、数据等项目零件的清单，含路径、说明和约束 |
 | 关系边集 | `relations.jsonl` 中的依赖记录，机械边与 AI 补的语义边共同服务影响面反查 |
 | 任务配方 | 高频任务的复用步骤，含触发场景、前置查询、复用件、胶水、门禁与验证 |
 | 特征卡 | 17 项项目特征，是目标技能内容和门禁参数的来源，不是单一独立文件 |
+| 研发人员能力的 SOP 化 | 把标准、经验、组织资产、研发动作与验证方法变成可执行、可检查、可更新的标准作业系统 |
+| 机制本体 / 业务本体 | 前者描述生成器与技能的对象、关系、动作；后者统一目标项目的业务术语与约束，两层不能混写 |
+| 最小单元 | 可独立指明契约、质量与测试的复用对象；它同时还要满足依赖、复用与最小胶水的拼装标准 |
 | draft / active | draft 是可续传骨架；active 是 strict 激活后的可用状态 |
 | strict | 此处有两种语境：严格核验模式；门禁按 fail 能力划分的一种强度，须结合上下文 |
 | spec-first | 可写源码区发生变更前，先形成并批准治理本次变更的 spec |
@@ -807,9 +870,12 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 | 主题 | 当前事实源 |
 |---|---|
 | 版本与发布 | `RELEASE-MANIFEST.json:88-101`；`skills/swarm-yuan/CHANGELOG.md:3-11` |
+| 产品总原则与四论 | `docs/manuals/AI协作标准手册.md:225-228`；`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118` |
+| 三层投影 | `docs/DESIGN.md:17-19`（驾驶舱与 hermes agent 职责）、`:404-414`（产品交互层与协作运行层分箱）；本手册“三层投影与四论”一节 |
 | 标准与个性化研发能力 | `skills/swarm-yuan/references/standards-compliance.md`；`skills/swarm-yuan/references/security-spec.md`；`skills/swarm-yuan/references/domain-knowledge.md`；`skills/swarm-yuan/scripts/mine-habits.sh` |
 | 本体化组织资产与拼装 | `skills/swarm-yuan/assets/ontology/`；`skills/swarm-yuan/references/business-ontology-methodology.md:253-258`；`skills/swarm-yuan/README.md:75-80,217-245` |
 | 数字与预算 | `skills/swarm-yuan/assets/facts.conf` |
+| 吸收全景 | `skills/swarm-yuan/references/capability-map.md`；`skills/swarm-yuan/assets/facts.conf:54-79` |
 | 生成总流程与日常入口 | `skills/swarm-yuan/SKILL.md:56-132`；`skills/swarm-yuan/references/generation-flow.md` |
 | 安装参数与默认根 | `skills/swarm-yuan/install.sh:1-24,580-754` |
 | 生成落点、strict 与 SCHEMA_EPOCH | `skills/swarm-yuan/scripts/generator/subcommands.sh:280-519,798-885,978-1006` |
@@ -818,23 +884,16 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"
 | 测试与变异 | `skills/swarm-yuan/assets/gates/quality/test.sh`；`skills/swarm-yuan/assets/gates-strict.sh:198-305` |
 | trade-forge 主案例 | `skills/swarm-yuan/docs/research/R143-runtime-refresh.md:52-80` |
 | nest-forge 反馈案例 | `skills/swarm-yuan/docs/research/R118-nestjs-regression.md` |
-| 合成练习 | `skills/swarm-yuan/tests/e2e/run-fieldchange-e2e.sh` |
 | 家级技能根决策 | `docs/superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md` |
 | ACP 证据 | `runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py:186-339`；相关有效 spec |
 | R134 离线边界 | `skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,270-354,466-515` |
-| 外部有效性边界 | `skills/swarm-yuan/verifier/v2/external-validity.md` |
 
 ## 29. 未验证项与交付前最后检查
 
-本手册没有在本轮做真实新手试课、实体打印、Windows 实机、完全气隙安装、真实业务项目生成或真实模型编码。课堂若完成其中任何一项，应追加当次日期、版本、项目快照、命令和原始结果，不能回写成“手册已经证明”。
+本手册没有在本轮做真实新手试课、实体打印、Windows 实机、完全气隙安装、真实业务项目生成或真实模型编码。课堂若完成其中任何一项，应追加当次日期、版本、项目快照、命令和原始结果，不能回写成“手册已经证明”。交付一个真实需求前，最后逐项确认：
 
-交付一个真实需求前，最后逐项确认：
-
-- [ ] 目标技能已 strict 激活，当前宿主与本次任务都有实际读取证据。
-- [ ] spec、plan、worktree、分支和基线明确，九节点与研发四阶段顺序完整。
-- [ ] precheck 的 FAIL、ERROR、SKIPPED 分别解释，没有把返回 0 写成全部覆盖。
-- [ ] L1-L4 的实际宿主和生效状态已核对，没有把生成配置当成运行实证。
+- [ ] 目标技能已 strict 激活并有当次读取证据；spec、plan、worktree、分支和基线明确，九节点与研发四阶段顺序完整；precheck 的 FAIL、ERROR、SKIPPED 分别解释，没有把返回 0 写成全部覆盖。
+- [ ] L1-L4 的实际生效面已核对，没有把生成配置当成运行实证。
 - [ ] 测试有真实输出、负向和边界用例；需要时有变异验证与独立审查。
-- [ ] ACP 的技能装载、cwd、引擎身份和当次回合有分层证据，provider 名没有替代引擎身份。
-- [ ] 技能更新保留项目内容并重新核验，离线安装没有隐去 npm/pip 源、Windows 与气隙边界。
+- [ ] ACP 的技能装载、cwd、引擎身份和当次回合有分层证据，provider 名没有替代引擎身份；技能更新保留项目内容并重新核验，离线安装没有隐去 npm/pip 源、Windows 与气隙边界。
 - [ ] 所有结论都能回到当次文件、命令输出或明确标注的历史证据。
