@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.100.4] - 2026-11-12
+AIStudio v1.0.16 发布轮随批（Linux CI 修复＋登记错位清偿＋计数锁传导）。门禁数与预算均不变：本轮无新增门禁、无预算上调。
+- **Linux CI 四安装族测试修复**：bash 3.x `local` 同语句引用语义（赋值与引用拆行）＋install dry-run 输出排序稳定性；四安装族 Linux 全绿。
+- **branch 门保护分支白名单根治**：main 检出上 branch 保护门恒红误报——PROTECTED_BRANCH_ALLOW 白名单登记（保护分支存在性检查不再对本地无此分支的检出误拦）；FACT_CONF_VARS_CORE 30→31、计数锁总量 204→205，五处文档＋测试表同步＋compendium LC_ALL=C 重灌。
+- **sweep 三处登记错位清偿**：ops-readonly-guard 计数锁 109→110（随事实面）；sweep 失败日志上传 artifact（runner 逐测明细此前只在 runner /tmp 不可追溯）。
+- **生成物事实层 P2-12a/12b**：项目数字现算根治——生成脚本读 facts.conf/仓内真值现场计算，静态数字引用退役（防口径漂移）。
+
 ## [v2.100.3] - 2026-11-11
 技能根统一 ~/.agents/skills 批（2026-11-09 用户裁定：自身安装与生成技能默认落位统一家级，跨工具单副本）＋AIStudio v1.0.15 发布轮随批（门禁计数注释修正）。门禁数与预算均不变：本轮无新增门禁、无预算上调。
 - **install.sh auto 统一**：无参数默认一律装 `~/.agents/skills/`（检测到的宿主仅披露不分流；多宿主交互菜单退役，auto 零交互）；`--all`/单宿主旗标显式通道不变。

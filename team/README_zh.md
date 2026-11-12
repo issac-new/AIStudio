@@ -158,7 +158,7 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 完整三位底座版本跟随 `vendor/VENDOR.md` 的 hermes-agent 基线，`-team.N` 是 AIStudio 团队扩展发布序。因此，**0.23.0 是上游底座版本**，**team.2 是该底座上的第二次团队扩展发布**，不是上游的 `team.2` 版本。
 
-当前 AIStudio **1.0.15-overlay** 配套 agent teams **v0.23.1-team.2**、hermes-agent 上游底座 **0.23.1**、yuan **v2.100.3**、Ycode **3.17.2**。各模块版本独立，yuan 与 Ycode 的版本不计入 team 扩展序。
+当前 AIStudio **1.0.16-overlay** 配套 agent teams **v0.23.1-team.3**、hermes-agent 上游底座 **0.23.1**、yuan **v2.100.4**、Ycode **3.18.0**。各模块版本独立，yuan 与 Ycode 的版本不计入 team 扩展序。
 
 ### 本轮变化（v0.23.0-team.2）
 

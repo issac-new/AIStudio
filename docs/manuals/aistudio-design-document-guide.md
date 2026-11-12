@@ -3,8 +3,8 @@
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
 - 快照基线：`3690ceba3`。
-- 当前版本：`1.0.15-overlay`。
-- 核实日期：2026-11-11（v1.0.15 发布轮复核）。
+- 当前版本：`1.0.16-overlay`。
+- 核实日期：2026-11-12（v1.0.16 发布轮复核）。
 - 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 631 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
@@ -178,8 +178,8 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 | 对象 | 当前值 | 权威载体 |
 |---|---|---|
-| 整体源码包 | `1.0.15-overlay`，tag `v1.0.15-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
-| 驾驶舱模块声明 | `0.8.20-studio.2` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
+| 整体源码包 | `1.0.16-overlay`，tag `v1.0.16-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
+| 驾驶舱模块声明 | `0.8.20-studio.3` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.23.1-team.2` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `3.18.0` | `vendor/zcode/package.json` |
 | yuan skill | `v2.100.3` | `skills/swarm-yuan/CHANGELOG.md` |
@@ -192,8 +192,8 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 当前两件主资产是：
 
-1. `aistudio-full-1.0.15-overlay-src.tar.gz`。
-2. `swarm-yuan-offline-v1.0.15-overlay-everything.zip`。
+1. `aistudio-full-1.0.16-overlay-src.tar.gz`。
+2. `swarm-yuan-offline-1.0.16-overlay-everything.zip`。
 
 两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件；ModelScope 的 `aistudio/` 只替换 full 包，`swarm-yuan/` 按版本目录放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:130-160`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
 
@@ -231,7 +231,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 2026-11-09 培训刷新批已按当前载体重核三处事实：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.20／hermes-agent v0.23.1／zcode 3.18.0／驾驶舱 0.8.20-studio.2／agent teams v0.23.1-team.2／yuan v2.100.3／整体包 1.0.15-overlay），核实日 2026-11-11；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
+1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.20／hermes-agent v0.23.1／zcode 3.18.0／驾驶舱 0.8.20-studio.3／agent teams v0.23.1-team.3／yuan v2.100.4／整体包 1.0.16-overlay），核实日 2026-11-12；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
 2. 整合正本 §5.4 的当前基线表已归为 hermes-studio v0.8.17；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
 3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已归为 hermes-studio v0.8.17。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json:45,160`；`vendor/VENDOR.md:7,24`
 
