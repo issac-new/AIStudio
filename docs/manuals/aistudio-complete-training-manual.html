@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AIStudio 完整培训手册（含 swarm-yuan）</title>
+<meta name="description" content="AIStudio 与 swarm-yuan 的完整培训手册：全局定位、六团队协作、研发流水线、门禁证据、操作演示与案例复盘">
+<style>
+:root{
+  --ink:#172b4d; --text:#2d3a4a; --muted:#64748b; --line:#dbe2ea; --line-soft:#eaeef3;
+  --accent:#2457a6; --accent-soft:#eef4fb; --ok:#2f7d51; --ok-soft:#eaf6ee;
+  --warn:#b45746; --warn-soft:#fdf0ed; --paper:#ffffff; --bg:#f3f5f8;
+  --code-bg:#141d28; --code-fg:#e6edf3;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:16px;line-height:1.78;-webkit-font-smoothing:antialiased}
+.layout{display:grid;grid-template-columns:264px minmax(0,1fr);gap:0;max-width:1440px;margin:0 auto}
+/* 侧边目录 */
+.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px 40px 26px;border-right:1px solid var(--line);background:#fbfcfe}
+.toc h2{margin:0 0 4px;font-size:13px;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.toc .ver{display:block;margin-bottom:18px;color:#8b98a8;font-size:11.5px}
+.toc ol{list-style:none;margin:0;padding:0;counter-reset:toc}
+.toc li{margin:0 0 2px}
+.toc a{display:block;padding:5px 8px;border-radius:5px;color:#425466;text-decoration:none;font-size:13px}
+.toc a:hover{background:#edf2f7;color:var(--accent)}
+.toc .sub a{padding-left:20px;font-size:12.5px;color:#5f7086}
+.toc .part{margin:14px 0 4px;padding:0 8px;color:#8b98a8;font-size:11px;font-weight:700;letter-spacing:.06em}
+/* 正文 */
+main{min-width:0;background:var(--paper)}
+.page{max-width:1040px;margin:0 auto;padding:48px 56px 80px}
+h1,h2,h3,h4{color:var(--ink);line-height:1.35;margin:0}
+h1{font-size:34px;letter-spacing:-.02em}
+h2{margin:56px 0 6px;padding-top:22px;border-top:1px solid var(--line);font-size:26px;letter-spacing:-.01em}
+h2 .no{display:block;margin-bottom:6px;color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.14em}
+h3{margin:34px 0 8px;font-size:19px}
+h4{margin:22px 0 6px;font-size:16px}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:4px 0}
+.lead{font-size:18px;line-height:1.7;color:#3a4a5d}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+strong{color:var(--ink)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;background:#f1f4f8;color:#33445a;padding:1px 5px;border-radius:4px}
+pre{margin:14px 0;padding:14px 16px;border-radius:8px;background:var(--code-bg);color:var(--code-fg);overflow:auto;font-size:13px;line-height:1.65}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+/* 封面 */
+.cover{padding:18px 0 30px;border-bottom:3px solid var(--accent)}
+.cover .kicker{display:flex;gap:10px;align-items:center;color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.1em}
+.cover .kicker span{display:inline-block;width:28px;height:2px;background:var(--accent)}
+.cover h1{margin:14px 0 12px}
+.cover .sub{max-width:760px;font-size:17px;color:#40566f}
+.cover .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:18px;color:var(--muted);font-size:12.5px}
+/* 卡片与提示 */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px 16px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{margin:4px 0;font-size:14px}
+.note{margin:16px 0;padding:12px 16px;border-left:3px solid #8aa9cf;background:#f6f8fb;border-radius:0 8px 8px 0;font-size:14.5px}
+.note strong{display:block;margin-bottom:2px;font-size:12.5px;color:#405a78;letter-spacing:.04em}
+.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.warn strong{color:#8c4232}
+.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+.ok strong{color:#24603f}
+/* 表格 */
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+th,td{padding:8px 10px;border:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:#f4f7fa;color:#33475f;font-weight:700;font-size:13px}
+td code{font-size:12.5px}
+tbody tr:nth-child(even){background:#fbfcfd}
+/* 图 */
+figure{margin:20px 0;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;overflow:hidden}
+figure svg{display:block;width:100%;height:auto;background:#fbfcfe}
+figcaption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;padding:9px 14px;border-top:1px solid var(--line);background:#fff;color:var(--muted);font-size:12.5px}
+figcaption strong{color:#33475f;font-size:12.5px}
+/* SVG 通用 */
+.dbox{fill:#fff;stroke:#a9b8c9;stroke-width:1.2}
+.dbox-accent{fill:#eef4fb;stroke:#2457a6;stroke-width:1.6}
+.dbox-warn{fill:#fdf0ed;stroke:#b45746;stroke-width:1.4}
+.dbox-soft{fill:#f4f6f8;stroke:#bdc8d4}
+.dline{stroke:#718096;stroke-width:1.5;fill:none}
+.dline-dash{stroke:#98a6b8;stroke-width:1.4;fill:none;stroke-dasharray:5 4}
+.dlabel{fill:#243b53;font-size:14px;font-weight:600;font-family:inherit}
+.dtext{fill:#526174;font-size:12px;font-family:inherit}
+.dtitle{fill:#173b68;font-size:14px;font-weight:700;font-family:inherit}
+.dsmall{fill:#718096;font-size:11px;font-family:inherit}
+.dnum{fill:#2457a6;font-size:12px;font-weight:700;font-family:inherit}
+/* 操作卡 */
+.op{border:1px solid var(--line);border-radius:10px;margin:18px 0;overflow:hidden;background:#fff}
+.op header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#f4f7fa;border-bottom:1px solid var(--line)}
+.op header .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700}
+.op header h4{margin:0;font-size:15px}
+.op .body{padding:12px 16px 16px}
+.op dl{margin:0;display:grid;grid-template-columns:86px minmax(0,1fr);gap:6px 12px;font-size:14px}
+.op dt{color:#405a78;font-weight:700;font-size:12.5px;padding-top:2px}
+.op dd{margin:0}
+.op .tag{display:inline-block;margin-left:auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.tag-ro{background:#eaf6ee;color:#24603f}
+.tag-rw{background:#fdf0ed;color:#8c4232}
+/* 数字条 */
+.stat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.stat .s{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff}
+.stat .s b{display:block;color:var(--accent);font-size:24px;line-height:1.2}
+.stat .s span{display:block;color:var(--muted);font-size:12px}
+/* 检查表 */
+.check{list-style:none;padding:0}
+.check li{position:relative;padding-left:26px;margin:6px 0;font-size:14.5px}
+.check li::before{content:"✓";position:absolute;left:0;top:0;color:var(--ok);font-weight:700}
+.check.x li::before{content:"✗";color:var(--warn)}
+/* 页脚 */
+footer.end{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+/* 响应式 */
+@media (max-width:1180px){.layout{grid-template-columns:220px minmax(0,1fr)}.page{padding:36px 34px 64px}}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .toc{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .toc ol{columns:2;column-gap:18px}
+  .page{padding:26px 18px 56px}
+  h1{font-size:27px}h2{font-size:22px}
+  .g2,.g3{grid-template-columns:minmax(0,1fr)}
+  .stat{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .op dl{grid-template-columns:minmax(0,1fr);gap:2px}
+  .op dt{padding-top:8px}
+}
+/* 打印：A4 纵向 */
+@page{size:A4 portrait;margin:14mm 13mm}
+@media print{
+  body{background:#fff;font-size:10.5pt;line-height:1.62}
+  .layout{display:block;max-width:none}
+  .toc{display:none}
+  .page{max-width:none;padding:0}
+  h1{font-size:22pt}
+  h2{font-size:16pt;margin:22pt 0 4pt;padding-top:8pt;break-after:avoid}
+  h3{font-size:12pt;margin:14pt 0 4pt;break-after:avoid}
+  h4{break-after:avoid}
+  figure,table,.op,.card,.note{break-inside:avoid}
+  figure{margin:10pt 0}
+  figcaption{font-size:8pt}
+  table{font-size:8.6pt}
+  th,td{padding:4pt 5pt}
+  pre{font-size:8pt;white-space:pre-wrap;word-break:break-word}
+  a{color:inherit;text-decoration:none}
+  .page{break-before:auto}
+  section.chapter{break-before:page}
+  .cover{break-after:page}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="手册目录">
+  <h2>AIStudio 培训手册</h2>
+  <span class="ver">v1.0.15-overlay · 2026-11-12</span>
+  <div class="part">读懂全局</div>
+  <ol>
+    <li><a href="#s1">1 人定方向，机器守门，AI 干活</a></li>
+    <li><a href="#s2">2 AIStudio 全景</a></li>
+    <li><a href="#s3">3 一件事怎么走完</a></li>
+  </ol>
+  <div class="part">深入机制</div>
+  <ol>
+    <li><a href="#s4">4 swarm-yuan：研发能力 SOP 化</a></li>
+    <li><a href="#s5">5 吸收了哪些框架与方法</a></li>
+  </ol>
+  <div class="part">动手与验收</div>
+  <ol>
+    <li><a href="#s6">6 上手实操</a></li>
+    <li><a href="#s7">7 两个案例</a></li>
+    <li><a href="#s8">8 考核与检查表</a></li>
+    <li><a href="#s9">9 附录</a></li>
+  </ol>
+</nav>
+
+<main>
+<div class="page">
+
+<header class="cover">
+  <div class="kicker"><span></span>AIStudio 技术培训 · 独立完整版</div>
+  <h1>从看清全局，到做出可验收的交付</h1>
+  <p class="sub">一份手册讲完 AIStudio 与 swarm-yuan：人和 AI 如何分工，六个团队怎样交接，研发流水线怎样运转，质量靠什么机制守住，以及新手怎样一步步做出来、讲清楚、验得实。</p>
+  <div class="meta">
+    <span>适用版本：AIStudio 1.0.15-overlay</span>
+    <span>模块：驾驶舱 0.8.20-studio.2 · teams v0.23.1-team.2 · Ycode 3.18.0 · yuan v2.100.3</span>
+    <span>读者：研发、测试、运维、审计、项目与产品</span>
+  </div>
+  <div class="stat">
+    <div class="s"><b>9 章</b><span>从全局定位到附录速查</span></div>
+    <div class="s"><b>10 图</b><span>结构、流程、架构与账目</span></div>
+    <div class="s"><b>8 张卡</b><span>照做即可跑通的操作卡</span></div>
+    <div class="s"><b>2 案例</b><span>run28 复盘与订单编辑</span></div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h4>这份手册回答什么</h4><p>人、机器与 AI 怎样分工；一项工作怎样从想法走到发布；质量靠哪些机制守住；新手怎样做、怎样讲、怎样验。</p></div>
+    <div class="card"><h4>它不代替什么</h4><p>不代替真实系统操作、不代替业务验收、不代替发布裁决。所有界面与数据都是培训模拟。</p></div>
+    <div class="card"><h4>事实从哪里来</h4><p>版本取自发布清单，数字取自技能数字正本，流程取自当前脚本；未验证的部分在第 9 章逐条列明。</p></div>
+  </div>
+</header>
+
+<h2 style="border-top:0;padding-top:30px"><span class="no">怎么用这份手册</span>先读哪、后读哪、什么时候翻回来</h2>
+<p class="lead">第一次接触，按第 1 到第 8 章顺序读，大约一天。已经上手的人，可以直接跳到第 6 章操作卡，遇到说不清的地方再回第 3、4 章找机制。要带人讲课，用第 8 章的评分表当讲义提纲。</p>
+<div class="grid g3">
+  <div class="card"><h4>想先建立判断</h4><p>读第 1—3 章。你会知道这套系统里谁负责什么、一项工作怎样从想法走到发布，以及哪里必须停下来等人裁决。</p></div>
+  <div class="card"><h4>想动手做一遍</h4><p>读第 6 章八张操作卡。每张卡都写清做什么、怎么讲、看到什么算完成、失败怎么办、留下什么证据。</p></div>
+  <div class="card"><h4>想核对真假</h4><p>读第 5、7、9 章。吸收清单、案例数字和事实源索引都给出出处，未验证的部分单独列明。</p></div>
+</div>
+<div class="note"><strong>阅读约定</strong>书中所有界面与数据都是培训模拟，不连接真实任务、审批或生产数据。命令示例标注了只读或写操作，执行前请回到对应章节确认副作用；“看到什么算完成”一律指可观察的结果，不是“感觉懂了”。</div>
+
+<section class="chapter" id="s1">
+<h2><span class="no">第一章 · 全局定位</span>人定方向，机器守门，AI 干活</h2>
+<p class="lead">这句话不是口号，而是这套系统在 AI 员工变多之后唯一能站住的分工：人负责方向和例外，机制负责守门，AI 负责执行。质量不能指望模型自觉，只能指望每个“必须”都有机器检查、有证据、有阻断。</p>
+
+<h3>为什么规模一大，自觉就不够用了</h3>
+<p>一个人带两三个 AI 助手时，人可以盯着每一步，错了立刻拦下。当 AI 员工变成几十个、任务并行、跨团队交接，人已经看不过来：模型会漏跑测试、会把自己的推测写成结论、会在没有规格的情况下直接改代码。这些不是偶发失误，而是概率事件；只要次数够多，一定发生。</p>
+<p>所以系统必须换一种可靠性来源：<strong>不依赖每个执行者都可靠，而依赖结构让错误必然被发现。</strong>规则不只要写进提示词，还要写成拦截：写文件时检查有没有规格，提交时检查分支和证据，构建前检查批准状态，发布前检查门禁和回滚。提示词是开环，违反可能没人知道；拦截是闭环，违反会被当场挡下。</p>
+<div class="note warn"><strong>一条硬纪律</strong>只写要求不给检查，等于没有要求。合法的写法是“开环提要求＋闭环兜底”：文档说清应该怎样做，机制保证做不到就过不去。</div>
+
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="三层投影图：人机界面层、组织控制层、机制执行层">
+  <text x="20" y="26" class="dtitle">同一套原则，站在三个高度</text>
+  <rect x="20" y="44" width="940" height="66" rx="10" class="dbox-accent"/>
+  <text x="40" y="70" class="dlabel">人机界面层 · SwarmStudio 驾驶舱</text>
+  <text x="40" y="92" class="dtext">人在这里定方向、看全景、裁决例外、审批发布；界面呈现证据，但不替代原始记录</text>
+  <text x="790" y="80" class="dsmall" text-anchor="end">人</text>
+  <rect x="20" y="122" width="940" height="66" rx="10" class="dbox"/>
+  <text x="40" y="148" class="dlabel">组织控制层 · hermes 集群</text>
+  <text x="40" y="170" class="dtext">AI 员工在这里接任务、跑执行、回写状态；机械验收与审批台账在这里守门</text>
+  <text x="790" y="158" class="dsmall" text-anchor="end">AI 员工</text>
+  <rect x="20" y="200" width="940" height="66" rx="10" class="dbox-soft"/>
+  <text x="40" y="226" class="dlabel">机制执行层 · swarm-yuan 目标技能</text>
+  <text x="40" y="248" class="dtext">守门落进编码回路：读写拦截、提交检查、构建准入、合入与回归证据</text>
+  <text x="790" y="236" class="dsmall" text-anchor="end">编码回路</text>
+  <path class="dline" d="M500 110 L500 120" marker-end="url(#a1)"/>
+  <path class="dline" d="M500 188 L500 198" marker-end="url(#a1)"/>
+  <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+</svg>
+<figcaption><strong>图 1 三层投影</strong><span>上层不替代下层证据，执行层门禁也不能替人作发布裁决</span></figcaption>
+</figure>
+
+<h3>四论：凭什么相信这套机制可靠</h3>
+<p>机制不是零散规则的堆叠。系统论、信息论、科学方法论、控制论共同构成一套面向复杂系统的认识与行动方法：系统论解决“看清”，信息论解决“看准”，科学方法论解决“认识可靠”，控制论解决“行动有效”。四者通过“认识—信息—模型—行动—反馈”相互耦合，把认知转化为可验证、可执行、可持续优化的能力。</p>
+
+<figure>
+<svg viewBox="0 0 980 330" role="img" aria-label="四论闭环图">
+  <text x="20" y="24" class="dtitle">四论不是四门课，是一个闭环</text>
+  <rect x="330" y="118" width="320" height="86" rx="12" class="dbox-soft"/>
+  <text x="490" y="148" class="dlabel" text-anchor="middle">复杂系统</text>
+  <text x="490" y="172" class="dtext" text-anchor="middle">认识—信息—模型—行动—反馈</text>
+  <text x="490" y="190" class="dsmall" text-anchor="middle">每一轮都回到起点，但认识更深</text>
+  <rect x="60" y="48" width="220" height="62" rx="10" class="dbox-accent"/>
+  <text x="170" y="74" class="dlabel" text-anchor="middle">系统论 · 看清</text>
+  <text x="170" y="94" class="dtext" text-anchor="middle">边界、要素、层次、关系</text>
+  <rect x="700" y="48" width="220" height="62" rx="10" class="dbox-accent"/>
+  <text x="810" y="74" class="dlabel" text-anchor="middle">信息论 · 看准</text>
+  <text x="810" y="94" class="dtext" text-anchor="middle">测量什么、如何压缩去噪</text>
+  <rect x="60" y="222" width="220" height="62" rx="10" class="dbox-accent"/>
+  <text x="170" y="248" class="dlabel" text-anchor="middle">科学方法论 · 认识可靠</text>
+  <text x="170" y="268" class="dtext" text-anchor="middle">假设、实验、可复现</text>
+  <rect x="700" y="222" width="220" height="62" rx="10" class="dbox-accent"/>
+  <text x="810" y="248" class="dlabel" text-anchor="middle">控制论 · 行动有效</text>
+  <text x="810" y="268" class="dtext" text-anchor="middle">目标、偏差、纠偏、反馈</text>
+  <path class="dline" d="M280 79 L330 128" marker-end="url(#a2)"/>
+  <path class="dline" d="M700 79 L650 128" marker-end="url(#a2)"/>
+  <path class="dline" d="M650 194 L700 253" marker-end="url(#a2)"/>
+  <path class="dline" d="M330 194 L280 253" marker-end="url(#a2)"/>
+  <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+</svg>
+<figcaption><strong>图 2 四论闭环</strong><span>看清 → 看准 → 认识可靠 → 行动有效，再回到新的认识</span></figcaption>
+</figure>
+
+<table>
+<thead><tr><th style="width:110px">四论</th><th style="width:150px">解决的问题</th><th>在本产品里的落地</th></tr></thead>
+<tbody>
+<tr><td><strong>系统论</strong></td><td>看清边界与结构</td><td>单仓四模块划界、六团队责任、组件清单与关系边集、门禁按族分层</td></tr>
+<tr><td><strong>信息论</strong></td><td>看准口径与噪声</td><td>数字以单一事实源为准、跳过项单列、证据可度量、上下文预算与去重</td></tr>
+<tr><td><strong>科学方法论</strong></td><td>认识可靠可复现</td><td>正反例 fixture、变异探针、独立审查、外部有效性边界</td></tr>
+<tr><td><strong>控制论</strong></td><td>行动有效可纠偏</td><td>状态机准入、门禁阻断、返回码、趋势与再探查形成反馈</td></tr>
+</tbody>
+</table>
+</section>
+<section class="chapter" id="s2">
+<h2><span class="no">第二章 · 全景</span>AIStudio 里都有什么，谁负责什么</h2>
+<p class="lead">AIStudio 是一个单仓工程：桌面驾驶舱、智能体团队、编码引擎、技能生成器四块在同一个仓库里，靠补丁与扩展层注入上游基线。对使用者来说，它是一套“人看板、AI 干活、机制留证”的工作系统。</p>
+
+<h3>四块拼图，各管一段</h3>
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="AIStudio 四模块关系图">
+  <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="20" y="40" width="220" height="100" rx="10" class="dbox-accent"/>
+  <text x="130" y="66" class="dlabel" text-anchor="middle">驾驶舱 cockpit</text>
+  <text x="130" y="88" class="dtext" text-anchor="middle">人机界面</text>
+  <text x="130" y="108" class="dsmall" text-anchor="middle">工作台 · 项目 · 看板 · 评审</text>
+  <text x="130" y="126" class="dsmall" text-anchor="middle">0.8.20-studio.2</text>
+  <rect x="270" y="40" width="220" height="100" rx="10" class="dbox"/>
+  <text x="380" y="66" class="dlabel" text-anchor="middle">智能体团队 teams</text>
+  <text x="380" y="88" class="dtext" text-anchor="middle">组织控制层</text>
+  <text x="380" y="108" class="dsmall" text-anchor="middle">多 profile · 任务执行 · 审批</text>
+  <text x="380" y="126" class="dsmall" text-anchor="middle">v0.23.1-team.2</text>
+  <rect x="520" y="40" width="220" height="100" rx="10" class="dbox"/>
+  <text x="630" y="66" class="dlabel" text-anchor="middle">编码引擎 Ycode</text>
+  <text x="630" y="88" class="dtext" text-anchor="middle">本机执行编码</text>
+  <text x="630" y="108" class="dsmall" text-anchor="middle">ACP 会话 · 工具调用</text>
+  <text x="630" y="126" class="dsmall" text-anchor="middle">3.18.0</text>
+  <rect x="770" y="40" width="190" height="100" rx="10" class="dbox-accent"/>
+  <text x="865" y="66" class="dlabel" text-anchor="middle">技能 yuan</text>
+  <text x="865" y="88" class="dtext" text-anchor="middle">机制执行层</text>
+  <text x="865" y="108" class="dsmall" text-anchor="middle">门禁 · 流程 · 知识</text>
+  <text x="865" y="126" class="dsmall" text-anchor="middle">v2.100.3</text>
+  <path class="dline" d="M240 90 L266 90" marker-end="url(#a3)"/>
+  <path class="dline" d="M490 90 L516 90" marker-end="url(#a3)"/>
+  <path class="dline" d="M740 90 L766 90" marker-end="url(#a3)"/>
+  <rect x="20" y="182" width="940" height="76" rx="10" class="dbox-soft"/>
+  <text x="40" y="208" class="dlabel">同仓基线与证据面</text>
+  <text x="40" y="230" class="dtext">vendor/ 是钉版上游基线（只读，台账 VENDOR.md）；patches/ 与 custom/ 是二次开发注入层；registries/ 登记路由与功能；docs/ 保存设计规格与培训材料</text>
+  <text x="40" y="250" class="dsmall">版本数字来自 RELEASE-MANIFEST.json，当前 1.0.15-overlay；四模块各自有独立版本与发布链</text>
+</svg>
+<figcaption><strong>图 3 四模块与基线</strong><span>界面、组织、执行三层各有载体，同一个仓库交付</span></figcaption>
+</figure>
+
+<h3>六个团队，六个责任面</h3>
+<p>团队不是组织架构图上的方块，而是六类“必须有人负责”的判断：需求能不能验收、工作有没有派对人、代码能不能审查、测试是不是独立、环境能不能恢复、批准是否有效。同一项任务会依次穿过这些判断。</p>
+<figure>
+<svg viewBox="0 0 980 240" role="img" aria-label="六团队协作拓扑图">
+  <defs><marker id="a4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="20" y="90" width="130" height="62" rx="9" class="dbox-accent"/>
+  <text x="85" y="116" class="dlabel" text-anchor="middle">产品</text>
+  <text x="85" y="136" class="dsmall" text-anchor="middle">需求 · 验收条件</text>
+  <rect x="180" y="90" width="130" height="62" rx="9" class="dbox"/>
+  <text x="245" y="116" class="dlabel" text-anchor="middle">项目</text>
+  <text x="245" y="136" class="dsmall" text-anchor="middle">派工 · 质量门</text>
+  <rect x="340" y="90" width="130" height="62" rx="9" class="dbox"/>
+  <text x="405" y="116" class="dlabel" text-anchor="middle">研发</text>
+  <text x="405" y="136" class="dsmall" text-anchor="middle">实现 · 自测 · 提交</text>
+  <rect x="500" y="90" width="130" height="62" rx="9" class="dbox"/>
+  <text x="565" y="116" class="dlabel" text-anchor="middle">测试</text>
+  <text x="565" y="136" class="dsmall" text-anchor="middle">独立验收 · 评审</text>
+  <rect x="660" y="90" width="130" height="62" rx="9" class="dbox"/>
+  <text x="725" y="116" class="dlabel" text-anchor="middle">运维</text>
+  <text x="725" y="136" class="dsmall" text-anchor="middle">就绪 · 发布 · 恢复</text>
+  <rect x="820" y="90" width="130" height="62" rx="9" class="dbox"/>
+  <text x="885" y="116" class="dlabel" text-anchor="middle">审计</text>
+  <text x="885" y="136" class="dsmall" text-anchor="middle">证据 · 整改 · 复验</text>
+  <path class="dline" d="M150 121 L176 121" marker-end="url(#a4)"/>
+  <path class="dline" d="M310 121 L336 121" marker-end="url(#a4)"/>
+  <path class="dline" d="M470 121 L496 121" marker-end="url(#a4)"/>
+  <path class="dline" d="M630 121 L656 121" marker-end="url(#a4)"/>
+  <path class="dline" d="M790 121 L816 121" marker-end="url(#a4)"/>
+  <rect x="20" y="18" width="450" height="46" rx="9" class="dbox-soft"/>
+  <text x="245" y="46" class="dtext" text-anchor="middle">驾驶舱：人在这里看全景、批例外、发发布令</text>
+  <rect x="510" y="18" width="440" height="46" rx="9" class="dbox-soft"/>
+  <text x="730" y="46" class="dtext" text-anchor="middle">证据面：任务、提交、测试、审批、运行记录</text>
+  <rect x="20" y="182" width="930" height="40" rx="9" class="dbox-soft"/>
+  <text x="485" y="207" class="dtext" text-anchor="middle">同一个任务编号贯穿六段：谁交、交给谁、交了什么、凭什么算完成</text>
+</svg>
+<figcaption><strong>图 4 六团队协作</strong><span>横向是交接顺序，纵向是界面与证据；消息只负责提醒</span></figcaption>
+</figure>
+
+<h3>产品面上，人主要在哪几处操作</h3>
+<table>
+<thead><tr><th style="width:190px">入口</th><th>做什么</th><th style="width:220px">判断依据</th></tr></thead>
+<tbody>
+<tr><td><code>/app</code> 工作台</td><td>看今天要处理什么：待办、评审、异常、发布</td><td>汇总只是入口，结论回原始记录</td></tr>
+<tr><td><code>/app/projects</code> 项目</td><td>项目状态、暂停与完成、负责人</td><td>暂停只拦机器派单，不停在飞执行</td></tr>
+<tr><td><code>/app/board</code> 看板</td><td>任务卡流转：待办、进行、阻塞、评审</td><td>卡片状态不等于代码已交付</td></tr>
+<tr><td><code>/app/records</code> 记录</td><td>只读复核执行记录与委派历史</td><td>有记录不等于本次成功</td></tr>
+<tr><td><code>/app/stage/reqs</code> 需求</td><td>范围、验收条件、涉敏评估、冻结</td><td>冻结后变更要重新评审</td></tr>
+<tr><td><code>/app/stage/design</code> 设计</td><td>组件、接口、数据、影响面、备选</td><td>设计要能被另一人照着实现</td></tr>
+<tr><td><code>/app/stage/accept</code> 验收</td><td>质量门、用户试用、发布裁决</td><td>多本账分开读，不混算</td></tr>
+<tr><td><code>/app/eval</code> 评估</td><td>固定题库打分、失败处置、同题复评</td><td>换题或换口径不能比较</td></tr>
+<tr><td><code>/app/harness</code> 推演</td><td>全流程演练与复盘报告</td><td>推演结果不等于真实生产</td></tr>
+</tbody>
+</table>
+<p class="small muted">路由总量随版本变化，发布对账以 <code>npm run docs:check</code> 的实测为准（当前 123 条＝82 页面＋41 重定向）。手册不写死页面清单，避免与真实注册表漂移。</p>
+
+<h3>三个常见误解</h3>
+<div class="grid g3">
+  <div class="card"><h4>“看板 done 就是完成”</h4><p>卡片状态是协作信号。真正的完成要有当前提交的测试、独立评审和合入记录；状态可以被人改，证据不能。</p></div>
+  <div class="card"><h4>“门禁全绿就是质量好”</h4><p>门禁只检查它擅长的那一面：词法、结构、流程、配置。算法错误、契约破坏、遗漏边界仍要靠真实测试与评审。</p></div>
+  <div class="card"><h4>“AI 说修好了”</h4><p>自述不是证据。要看当次命令输出、失败复现是否消失、有没有引入新问题；三者缺一，结论只能是“待核实”。</p></div>
+</div>
+</section>
+
+<section class="chapter" id="s3">
+<h2><span class="no">第三章 · 主线</span>一件事怎么从想法走到发布</h2>
+<p class="lead">一项工作要穿过八个节点、四个阶段和六道质量门。每个节点都留下可复核的东西；没有证据的“完成”不算完成。</p>
+
+<figure>
+<svg viewBox="0 0 980 250" role="img" aria-label="任务全流程八字图：需求理解到发布复盘">
+  <defs><marker id="a5" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="16" y="70" width="104" height="64" rx="8" class="dbox-accent"/>
+  <text x="68" y="96" class="dlabel" text-anchor="middle">① 需求</text>
+  <text x="68" y="116" class="dsmall" text-anchor="middle">目标与验收</text>
+  <rect x="136" y="70" width="104" height="64" rx="8" class="dbox"/>
+  <text x="188" y="96" class="dlabel" text-anchor="middle">② 探查</text>
+  <text x="188" y="116" class="dsmall" text-anchor="middle">现有资产</text>
+  <rect x="256" y="70" width="104" height="64" rx="8" class="dbox"/>
+  <text x="308" y="96" class="dlabel" text-anchor="middle">③ 规格</text>
+  <text x="308" y="116" class="dsmall" text-anchor="middle">决策与边界</text>
+  <rect x="376" y="70" width="104" height="64" rx="8" class="dbox"/>
+  <text x="428" y="96" class="dlabel" text-anchor="middle">④ 计划</text>
+  <text x="428" y="116" class="dsmall" text-anchor="middle">拆分与顺序</text>
+  <rect x="496" y="70" width="104" height="64" rx="8" class="dbox-accent"/>
+  <text x="548" y="96" class="dlabel" text-anchor="middle">⑤ 编码</text>
+  <text x="548" y="116" class="dsmall" text-anchor="middle">分支开发</text>
+  <rect x="616" y="70" width="104" height="64" rx="8" class="dbox-accent"/>
+  <text x="668" y="96" class="dlabel" text-anchor="middle">⑥ 测试</text>
+  <text x="668" y="116" class="dsmall" text-anchor="middle">真跑与门禁</text>
+  <rect x="736" y="70" width="104" height="64" rx="8" class="dbox-accent"/>
+  <text x="788" y="96" class="dlabel" text-anchor="middle">⑦ 评审</text>
+  <text x="788" y="116" class="dsmall" text-anchor="middle">非实现者</text>
+  <rect x="856" y="70" width="108" height="64" rx="8" class="dbox"/>
+  <text x="910" y="96" class="dlabel" text-anchor="middle">⑧⑨ 合入</text>
+  <text x="910" y="116" class="dsmall" text-anchor="middle">主干回归发布</text>
+  <path class="dline" d="M120 102 L133 102" marker-end="url(#a5)"/>
+  <path class="dline" d="M240 102 L253 102" marker-end="url(#a5)"/>
+  <path class="dline" d="M360 102 L373 102" marker-end="url(#a5)"/>
+  <path class="dline" d="M480 102 L493 102" marker-end="url(#a5)"/>
+  <path class="dline" d="M600 102 L613 102" marker-end="url(#a5)"/>
+  <path class="dline" d="M720 102 L733 102" marker-end="url(#a5)"/>
+  <path class="dline" d="M840 102 L853 102" marker-end="url(#a5)"/>
+  <rect x="376" y="168" width="344" height="34" rx="8" class="dbox-soft"/>
+  <text x="548" y="190" class="dsmall" text-anchor="middle">分支开发（⑤）→ 分支测试（⑥⑦）→ 主干合并（⑧）→ 主干回归（⑨）</text>
+  <text x="16" y="34" class="dtiny dsmall">六个检查点贯穿：需求门 G1 · 设计门 G2 · 提交门 G3 · 独立验收 G4 · 批准门 G5 · 发布复盘 G6</text>
+</svg>
+<figcaption><strong>图 5 主流程</strong><span>九节点负责做事，四阶段负责分批验收，六道门负责在关键处停下来核对</span></figcaption>
+</figure>
+
+<h3>每一段必须留下什么</h3>
+<table>
+<thead><tr><th style="width:150px">阶段</th><th style="width:230px">做什么</th><th>完成标志（可观察）</th><th style="width:190px">失败时先查什么</th></tr></thead>
+<tbody>
+<tr><td>需求与规格</td><td>把一句话需求写成范围、验收条件、不做的事、风险和验证方法</td><td>另一人能据此判断“做完没有”，不靠猜</td><td>是否只有标题没有验收条件</td></tr>
+<tr><td>派工</td><td>选一张可开始的任务卡，确认负责人、目录、容量</td><td>分配、认领、执行记录能连成一条线</td><td>是否只有“已派发”没有认领</td></tr>
+<tr><td>分支开发</td><td>从最新主干建分支，先测试后实现，改动不越界</td><td>测试与实现同分支，提交只含本任务</td><td>是否直接改了主干或混入无关文件</td></tr>
+<tr><td>分支测试</td><td>运行目标测试与门禁，独立评审代码</td><td>测试报告指向当前提交，评审人不是实现者</td><td>是否拿旧提交的报告充数</td></tr>
+<tr><td>主干合并</td><td>核验前序证据、回滚方案与兼容性后合入</td><td>合入记录可追溯，回滚步骤可执行</td><td>是否跳过了批准或回滚说明</td></tr>
+<tr><td>主干回归</td><td>在主干重跑全量测试与适用门禁</td><td>主干结果与分支结果分开记录</td><td>是否用分支结果冒充主干结果</td></tr>
+<tr><td>发布与复盘</td><td>放行或冻结，取真实回执，登记遗留问题</td><td>回执、观察负责人、行动项齐全</td><td>是否只有“已发布”没有观察与回执</td></tr>
+</tbody>
+</table>
+
+<h3>谁来批，批什么</h3>
+<p>批准不是点一个按钮。有效的批准要能回答：谁发起的、谁决定的、以什么方式决定、授权有多强、什么时候过期。代理批准能让流程继续，但不能算真人批准；这两本账必须分开记，否则“全部通过”会掩盖实际缺口。</p>
+<div class="note"><strong>给讲师的提问</strong>“这次发布是谁批的？他凭什么批？如果明天他休假，这个批准还有效吗？”三个问题能快速检验学员是否真的理解了批准链，而不是记住了界面位置。</div>
+<h3>把这一章压成一句话</h3>
+<p>一项工作能走到发布，靠的不是某个人记得住流程，而是四件事同时成立：<strong>对象清楚</strong>（任务、提交、测试、审批指向同一件事）、<strong>责任清楚</strong>（每一步有负责人和验收人）、<strong>证据清楚</strong>（每段结论能回到原始记录）、<strong>例外清楚</strong>（代理、跳过、豁免都单独记账并披露）。</p>
+<p>后面的章节会反复用到这四个词。读第四、五章时，留意每个机制在补哪一块；读第六、七章时，留意每次失败是因为哪一块缺了。</p>
+</section>
+<section class="chapter" id="s4">
+<h2><span class="no">第四章 · 深入机制</span>swarm-yuan：把研发能力做成可执行的 SOP</h2>
+<p class="lead">SOP 是标准作业流程。所谓“研发能力的 SOP 化”，就是把资深研发脑中的判断，写成任何合格执行者照着做都能得到同样质量结果的步骤、检查与证据。swarm-yuan 不是代码生成器，它是这套 SOP 的生成器与执行器。</p>
+
+<h3>五项能力，形成一条链</h3>
+<figure>
+<svg viewBox="0 0 980 290" role="img" aria-label="五项能力形成链图">
+  <defs><marker id="a6" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="16" y="52" width="176" height="96" rx="10" class="dbox-accent"/>
+  <text x="104" y="78" class="dnum" text-anchor="middle">① 标准研发能力</text>
+  <text x="104" y="100" class="dtext" text-anchor="middle">行业业务/质量/安全规范</text>
+  <text x="104" y="120" class="dtext" text-anchor="middle">技术栈与架构最佳实践</text>
+  <text x="104" y="138" class="dsmall" text-anchor="middle">形成共同底线</text>
+  <rect x="208" y="52" width="176" height="96" rx="10" class="dbox"/>
+  <text x="296" y="78" class="dnum" text-anchor="middle">② 个性化研发能力</text>
+  <text x="296" y="100" class="dtext" text-anchor="middle">项目结构 · 领域经验</text>
+  <text x="296" y="120" class="dtext" text-anchor="middle">Git 行为 · 历史坑</text>
+  <text x="296" y="138" class="dsmall" text-anchor="middle">形成项目专属规则</text>
+  <rect x="400" y="52" width="176" height="96" rx="10" class="dbox"/>
+  <text x="488" y="78" class="dnum" text-anchor="middle">③ 组织资产本体</text>
+  <text x="488" y="100" class="dtext" text-anchor="middle">对象—关系—动作</text>
+  <text x="488" y="120" class="dtext" text-anchor="middle">清单—边集—配方</text>
+  <text x="488" y="138" class="dsmall" text-anchor="middle">让知识可查可拼</text>
+  <rect x="592" y="52" width="176" height="96" rx="10" class="dbox"/>
+  <text x="680" y="78" class="dnum" text-anchor="middle">④ 标准研发流水线</text>
+  <text x="680" y="100" class="dtext" text-anchor="middle">最小单元质量与拼装</text>
+  <text x="680" y="120" class="dtext" text-anchor="middle">九节点 · 四阶段</text>
+  <text x="680" y="138" class="dsmall" text-anchor="middle">把资产编排成动作</text>
+  <rect x="784" y="52" width="180" height="96" rx="10" class="dbox-accent"/>
+  <text x="874" y="78" class="dnum" text-anchor="middle">⑤ 独立全面检查</text>
+  <text x="874" y="100" class="dtext" text-anchor="middle">门禁 · 真测试 · 评审</text>
+  <text x="874" y="120" class="dtext" text-anchor="middle">变异验证 · 证据链</text>
+  <text x="874" y="138" class="dsmall" text-anchor="middle">形成生产准入证据</text>
+  <path class="dline" d="M192 100 L205 100" marker-end="url(#a6)"/>
+  <path class="dline" d="M384 100 L397 100" marker-end="url(#a6)"/>
+  <path class="dline" d="M576 100 L589 100" marker-end="url(#a6)"/>
+  <path class="dline" d="M768 100 L781 100" marker-end="url(#a6)"/>
+  <path class="dline-dash" d="M874 148 C874 208 488 214 488 152" marker-end="url(#a6)"/>
+  <text x="680" y="206" class="dsmall" text-anchor="middle">问题与新经验回流，更新资产</text>
+  <text x="16" y="250" class="dtext">一句话：标准给底线，项目给事实，本体给结构，流水线给动作，独立检查给结论。</text>
+</svg>
+<figcaption><strong>图 6 五项能力链</strong><span>每一环都对应真实文件和检查，不是概念口号</span></figcaption>
+</figure>
+
+<table>
+<thead><tr><th style="width:132px">能力</th><th style="width:220px">对应实物</th><th>能做什么</th><th style="width:220px">不能外推成</th></tr></thead>
+<tbody>
+<tr><td>① 标准研发能力</td><td><code>standards-map.conf</code>、<code>industry-profiles/</code>、<code>rules.d/</code></td><td>把标准条文映射到门禁，按行业与项目裁剪成可执行检查</td><td>不等于自动合规、认证或覆盖全部法规</td></tr>
+<tr><td>② 个性化研发能力</td><td>17 项特征卡、<code>mine-habits.sh</code>、<code>recipes.md</code>、<code>lessons.md</code></td><td>把项目结构、书面约定、Git 行为与已验证经验固化为规则和配方</td><td>不是模型微调；未记录的经验无法自动获得</td></tr>
+<tr><td>③ 组织资产本体</td><td><code>assets/ontology/</code>、组件清单、<code>relations.jsonl</code></td><td>回答有什么、谁依赖谁、怎样复用；支持影响面反查</td><td>不是完整数字孪生，也不是自动推理引擎</td></tr>
+<tr><td>④ 标准研发流水线</td><td>复用 spec、<code>check_reuse</code>、<code>stable-diff</code>、九节点、状态机</td><td>约束最小单元与拼装方式，按四阶段推进交付</td><td>不是全自动 CI/CD；语义是否“最小”仍靠人判断</td></tr>
+<tr><td>⑤ 独立全面检查</td><td>L1-L4、真实测试、评审、变异探针、ACP 证据</td><td>分别验证流程、结构、行为与实现质量，形成发布证据</td><td>全绿不等于业务正确或生产就绪</td></tr>
+</tbody>
+</table>
+
+<h3>实现上分六层，一层喂一层</h3>
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="六层实现结构图">
+  <defs><marker id="a7" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <g>
+  <rect x="20" y="30" width="150" height="58" rx="8" class="dbox-soft"/>
+  <text x="95" y="54" class="dlabel" text-anchor="middle">认知</text>
+  <text x="95" y="74" class="dsmall" text-anchor="middle">项目实际有什么</text>
+  <rect x="186" y="30" width="150" height="58" rx="8" class="dbox-soft"/>
+  <text x="261" y="54" class="dlabel" text-anchor="middle">规范</text>
+  <text x="261" y="74" class="dsmall" text-anchor="middle">应该怎样做</text>
+  <rect x="352" y="30" width="150" height="58" rx="8" class="dbox-accent"/>
+  <text x="427" y="54" class="dlabel" text-anchor="middle">装配</text>
+  <text x="427" y="74" class="dsmall" text-anchor="middle">形成可用技能</text>
+  <rect x="518" y="30" width="150" height="58" rx="8" class="dbox-accent"/>
+  <text x="593" y="54" class="dlabel" text-anchor="middle">使用</text>
+  <text x="593" y="74" class="dsmall" text-anchor="middle">九节点日常研发</text>
+  <rect x="684" y="30" width="150" height="58" rx="8" class="dbox-accent"/>
+  <text x="759" y="54" class="dlabel" text-anchor="middle">验证</text>
+  <text x="759" y="74" class="dsmall" text-anchor="middle">测试 · 评审 · 探针</text>
+  <rect x="850" y="30" width="110" height="58" rx="8" class="dbox-soft"/>
+  <text x="905" y="54" class="dlabel" text-anchor="middle">成长</text>
+  <text x="905" y="74" class="dsmall" text-anchor="middle">变化与回流</text>
+  </g>
+  <path class="dline" d="M170 59 L183 59" marker-end="url(#a7)"/>
+  <path class="dline" d="M336 59 L349 59" marker-end="url(#a7)"/>
+  <path class="dline" d="M502 59 L515 59" marker-end="url(#a7)"/>
+  <path class="dline" d="M668 59 L681 59" marker-end="url(#a7)"/>
+  <path class="dline" d="M834 59 L847 59" marker-end="url(#a7)"/>
+  <path class="dline-dash" d="M905 88 C905 132 95 132 95 91" marker-end="url(#a7)"/>
+  <text x="500" y="150" class="dsmall" text-anchor="middle">项目变化 → 局部重探查 → 新知识归位</text>
+  <rect x="20" y="176" width="940" height="96" rx="10" class="dbox"/>
+  <text x="40" y="202" class="dlabel">每一层的产出都是下一层的输入</text>
+  <text x="40" y="226" class="dtext">认知产出清单/边集/配方 → 规范产出铁律与检查参数 → 装配产出目标技能与激活报告 → 使用产出规格/代码/提交 → 验证产出测试与评审证据 → 成长回流为新资产</text>
+  <text x="40" y="250" class="dsmall">上一层没做实的部分，下一层一定会以返工的形式补回来：清单缺项→复用判断错；规则含糊→门禁判不准；测试不真→评审无法下结论</text>
+</svg>
+<figcaption><strong>图 7 六层实现</strong><span>五环回答“能力由什么构成”，六层回答“系统怎样做到”</span></figcaption>
+</figure>
+
+<h3>生成一套技能：Step 1—13</h3>
+<p>这十三步是“造工具”的流程，不是每天研发的流程。脚本负责枚举、复制、渲染和核验；AI 负责判断、填充和审查。只生成骨架不算完成，必须走完验证与激活。</p>
+<figure>
+<svg viewBox="0 0 980 250" role="img" aria-label="Step 1 到 13 三组流程图">
+  <defs><marker id="a8" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#718096"/></marker></defs>
+  <rect x="16" y="46" width="300" height="120" rx="10" class="dbox-soft"/>
+  <text x="166" y="72" class="dlabel" text-anchor="middle">探查与建模（1—5）</text>
+  <text x="166" y="96" class="dtext" text-anchor="middle">自检 · 行为统计 · 三路探查</text>
+  <text x="166" y="116" class="dtext" text-anchor="middle">组件/关系/配方 · 17 项特征卡</text>
+  <text x="166" y="140" class="dsmall" text-anchor="middle">产出：notes、清单、边集、框架证据</text>
+  <rect x="340" y="46" width="300" height="120" rx="10" class="dbox-accent"/>
+  <text x="490" y="72" class="dlabel" text-anchor="middle">装配与填充（6—9）</text>
+  <text x="490" y="96" class="dtext" text-anchor="middle">生成骨架 · AI 填充 · 门禁接线</text>
+  <text x="490" y="116" class="dtext" text-anchor="middle">hooks / commands / settings</text>
+  <text x="490" y="140" class="dsmall" text-anchor="middle">产出：目标技能目录（draft）</text>
+  <rect x="664" y="46" width="300" height="120" rx="10" class="dbox-accent"/>
+  <text x="814" y="72" class="dlabel" text-anchor="middle">验证与激活（10—13）</text>
+  <text x="814" y="96" class="dtext" text-anchor="middle">门禁 · 独立审查 · 记忆写回</text>
+  <text x="814" y="116" class="dtext" text-anchor="middle">strict 完整性、清单、预算</text>
+  <text x="814" y="140" class="dsmall" text-anchor="middle">产出：active 技能 + 激活报告</text>
+  <path class="dline" d="M316 106 L337 106" marker-end="url(#a8)"/>
+  <path class="dline" d="M640 106 L661 106" marker-end="url(#a8)"/>
+  <text x="490" y="204" class="dtext" text-anchor="middle">任一必需检查失败都停在 draft；激活报告只证明当次通过，不保证以后一直全绿</text>
+  <text x="490" y="226" class="dsmall" text-anchor="middle">日常研发不再重跑这十三步；项目结构变化时用升级流程做局部重探查</text>
+</svg>
+<figcaption><strong>图 8 生成流程</strong><span>先探查再装配，最后验证；跳过验证直接发布是常见事故源</span></figcaption>
+</figure>
+
+<table>
+<thead><tr><th style="width:70px">阶段</th><th>关键动作</th><th style="width:300px">完成判据</th></tr></thead>
+<tbody>
+<tr><td>1—5</td><td>自检生成器环境；读规则与历史；三路探查结构、规范、代码组织；填 17 项特征卡</td><td>组件、关系、配方有代码证据；P0 特征卡是具体值；统计事实经审读</td></tr>
+<tr><td>6—9</td><td>按档位生成骨架（lite / standard / compliance）；AI 填充项目内容；接门禁与宿主配置</td><td>骨架无空泛模板话；<code># TODO:model</code> 清零；只启用真正理解的配置</td></tr>
+<tr><td>10—13</td><td>跑核心门禁；独立审查并落记录；写回记忆；strict 终检后激活</td><td>门禁有真实结果；评审人非实现者；清单、预算、完整性全过才 active</td></tr>
+</tbody>
+</table>
+
+<h3>日常研发：九节点与研发四阶段</h3>
+<p>九节点是每天做事的路，四阶段是把它们分成四批验收。①需求理解、②探查、③写规格、④拆分计划、⑤分支编码、⑥测试、⑦独立评审、⑧合入主干、⑨主干回归与发布。前四步定方向，五到七在分支上完成，八合入，九在主干验证。</p>
+<table>
+<thead><tr><th style="width:140px">研发阶段</th><th style="width:120px">包含节点</th><th>为什么这样分批</th></tr></thead>
+<tbody>
+<tr><td>分支开发</td><td>⑤</td><td>从最新主干起分支，测试与实现同分支，主干保持可发布</td></tr>
+<tr><td>分支测试</td><td>⑥⑦</td><td>测试、门禁与独立评审都在分支完成，全绿才允许合入</td></tr>
+<tr><td>主干合并</td><td>⑧</td><td>核验前序证据、回滚与兼容性，按授权合入</td></tr>
+<tr><td>主干回归</td><td>⑨</td><td>合入后在主干重跑全量，发现并行改动的交互问题</td></tr>
+</tbody>
+</table>
+<p class="small muted">状态机把九节点映射成六个状态：open（①②）、design（③④）、build（⑤）、verify（⑥⑦）、archive（⑧）、operate（⑨及发布后观察）。状态机只做逐级准入和状态更新，不会替你跑测试、合并或发布。</p>
+
+<h3>守门：59 道门、三档聚合、三种返回码</h3>
+<p>门禁检查的是词法、结构、流程与配置，属于“机械能判”的部分。当前共 59 道，按用途分成三档聚合：核心 <code>--all</code> 12 道、标准 <code>--all-full</code> 32 道、合规 <code>--compliance-suite</code> 19 道。配置变量 204 个（core 30、arch 126、compliance 48），数字以 <code>assets/facts.conf</code> 为正本。</p>
+<figure>
+<svg viewBox="0 0 980 220" role="img" aria-label="门禁与证据分层图">
+  <rect x="20" y="30" width="180" height="70" rx="9" class="dbox-accent"/>
+  <text x="110" y="56" class="dlabel" text-anchor="middle">L1 写时拦截</text>
+  <text x="110" y="78" class="dsmall" text-anchor="middle">改代码前要有规格</text>
+  <rect x="216" y="30" width="180" height="70" rx="9" class="dbox-accent"/>
+  <text x="306" y="56" class="dlabel" text-anchor="middle">L2 提交检查</text>
+  <text x="306" y="78" class="dsmall" text-anchor="middle">staged 与分支关联</text>
+  <rect x="412" y="30" width="180" height="70" rx="9" class="dbox-accent"/>
+  <text x="502" y="56" class="dlabel" text-anchor="middle">L3 门禁检查</text>
+  <text x="502" y="78" class="dsmall" text-anchor="middle">工作区与暂存区</text>
+  <rect x="608" y="30" width="180" height="70" rx="9" class="dbox-accent"/>
+  <text x="698" y="56" class="dlabel" text-anchor="middle">L4 构建准入</text>
+  <text x="698" y="78" class="dsmall" text-anchor="middle">进入 build 前核批准</text>
+  <rect x="804" y="30" width="156" height="70" rx="9" class="dbox-soft"/>
+  <text x="882" y="56" class="dlabel" text-anchor="middle">合入与发布</text>
+  <text x="882" y="78" class="dsmall" text-anchor="middle">人裁决 + 回执</text>
+  <rect x="20" y="126" width="300" height="66" rx="9" class="dbox"/>
+  <text x="170" y="150" class="dlabel" text-anchor="middle">机械门禁 precheck</text>
+  <text x="170" y="172" class="dsmall" text-anchor="middle">59 道，查结构/流程/配置</text>
+  <rect x="340" y="126" width="300" height="66" rx="9" class="dbox"/>
+  <text x="490" y="150" class="dlabel" text-anchor="middle">真实测试与构建</text>
+  <text x="490" y="172" class="dsmall" text-anchor="middle">执行代码，验行为</text>
+  <rect x="660" y="126" width="300" height="66" rx="9" class="dbox"/>
+  <text x="810" y="150" class="dlabel" text-anchor="middle">独立评审 / 变异验证 / ACP 证据</text>
+  <text x="810" y="172" class="dsmall" text-anchor="middle">查语义、查检查本身、查当次执行</text>
+  <text x="490" y="212" class="dsmall" text-anchor="middle">四类证据不能互相替代：任何一类缺席，结论都要降级</text>
+</svg>
+<figcaption><strong>图 9 证据分层</strong><span>拦截、门禁、测试、评审各证明不同事实；组合起来才叫发布证据</span></figcaption>
+</figure>
+<table>
+<thead><tr><th style="width:90px">返回码</th><th>含义</th><th style="width:280px">容易误读的地方</th></tr></thead>
+<tbody>
+<tr><td><code>0</code></td><td>没有 FAIL 或 ERROR</td><td>WARN、advisory 与默认模式下的 SKIPPED 不阻断，所以“通过”不等于“全覆盖”</td></tr>
+<tr><td><code>1</code></td><td>业务 FAIL 或门禁自身 ERROR</td><td><code>--fix-suggest</code> 收集到 FAIL 也返回 0，只能看建议</td></tr>
+<tr><td><code>2</code></td><td>启动/配置错误，或显式 <code>--strict-skip</code> 下存在 SKIPPED</td><td>不能一律解释成“部分跳过”</td></tr>
+</tbody>
+</table>
+
+<h3>四层拦截各自守哪一段</h3>
+<table>
+<thead><tr><th style="width:70px">层</th><th style="width:190px">真实能力</th><th>边界（必须讲清）</th></tr></thead>
+<tbody>
+<tr><td>L1</td><td>写文件时拒绝无规格修改</td><td>宿主与 hooks 必须实际安装启用；草稿、未配置、缺库等情形会放行</td></tr>
+<tr><td>L2</td><td>提交时检查暂存内容与分支关联</td><td><code>--no-verify</code> 可跳过；配置或判定库缺失时 fail-open</td></tr>
+<tr><td>L3</td><td>门禁检查工作区、暂存区与未跟踪文件</td><td>只有真的运行才生效；未启用、非 Git 仓库会 SKIPPED</td></tr>
+<tr><td>L4</td><td>进入构建前检查批准与规格</td><td>不使用状态机就不触发；<code>SPEC_REQUIRED=0</code> 或库缺失会降级</td></tr>
+</tbody>
+</table>
+<div class="note warn"><strong>不要过度承诺</strong>四层拦截是互补的纵深，不是密不透风的墙。它们能让“没规格就改代码”这类问题大概率被挡下，但挡不住业务逻辑写错、契约设计错和需求本身有歧义。那些必须靠真实测试、独立评审和业务验收。</div>
+
+<h3>能力边界，写在结论里</h3>
+<ul class="check">
+<li>不替代编码宿主、真实工具链，也不替代人的需求、架构和发布裁决。</li>
+<li>不是操作系统沙箱；权限与隔离由宿主和部署环境负责。</li>
+<li>门禁擅长词法与结构，算法错误、契约破坏和遗漏边界仍靠测试与评审。</li>
+<li>激活通过证明的是当次结构、清单与预算检查通过，不证明以后一直全绿。</li>
+<li>fixture 通过证明检查能力，不证明真实项目的外部有效性；真实缺陷语料仍在采集。</li>
+</ul>
+</section>
+
+<section class="chapter" id="s5">
+<h2><span class="no">第五章 · 吸收全景</span>它调研和吸收了哪些框架、技能与方法</h2>
+<p class="lead">能力不是凭空发明的。swarm-yuan 把四类来源吸收成规则、门禁与文档：真实项目研究、开源技能与方法论、行业标准映射、自研机制。全部条目登记在能力地图（capability-map）里，可逐项回查。</p>
+
+<h3>81 个技术栈框架规则</h3>
+<p>每个框架一份规则文档加一组门禁片段。只有项目真的用到某个框架，注入时才把对应门禁挂进来；用不到的不会进目标技能。</p>
+<table>
+<thead><tr><th style="width:190px">生态域</th><th>覆盖的框架与中间件</th></tr></thead>
+<tbody>
+<tr><td>前端与客户端（16）</td><td>react、vue、angular、nextjs、nuxt、antd、element、naiveui、tailwind、vite、webpack、flutter、android、ios-swiftui、react-native、harmonyos</td></tr>
+<tr><td>后端与语言栈（19）</td><td>spring-boot、spring-cloud、spring-security、spring-data-jpa、spring-batch、nestjs、express、koa、fastify、gin、kratos、django、flask、fastapi、dotnet、c-cpp、php、ruby、cargo</td></tr>
+<tr><td>数据访问与存储（18）</td><td>mysql、postgresql、opengauss、sqlserver、dameng、redis、elasticsearch、doris、hive、tdengine、paimon、mybatis、gorm、prisma、typeorm、sqlalchemy、druid、sharding</td></tr>
+<tr><td>消息、调度与分布式（12）</td><td>kafka、rabbitmq、rocketmq、quartz、xxl-job、elasticjob、seata、sentinel、nacos、dubbo、netty、celery</td></tr>
+<tr><td>工具与序列化（4）</td><td>jackson、lombok、mapstruct、validation</td></tr>
+<tr><td>测试（3）</td><td>junit5-mockito、jest-vitest、pytest</td></tr>
+<tr><td>数据处理（3）</td><td>spark、flink、kettle</td></tr>
+<tr><td>基础设施与可观测（4）</td><td>dockerfile、kubernetes、terraform、opentelemetry</td></tr>
+<tr><td>AI 应用（2）</td><td>langchain、rag-pipeline</td></tr>
+</tbody>
+</table>
+
+<h3>15 个外部运行时，三层接线</h3>
+<table>
+<thead><tr><th style="width:130px">接线层</th><th style="width:90px">数量</th><th>对象与方式</th><th style="width:200px">未安装时</th></tr></thead>
+<tbody>
+<tr><td>深度接线</td><td>4</td><td>GitNexus、graphify、claude-mem、open-code-review；门禁以真实命令调用，产出直接进证据</td><td>降级为提示并逐项披露，不阻断</td></tr>
+<tr><td>CLI 接线</td><td>6</td><td>OpenSpec、comet、gsd-core、codex-security、mattpocock-skills、diagram-design；按需调用命令，后两项为仓内物化</td><td>同上</td></tr>
+<tr><td>方法论引用</td><td>5</td><td>superpowers、gstack、ECC、Ruflo、impeccable；按节点引用模式，不做硬依赖</td><td>引用面缺席，流程可走</td></tr>
+</tbody>
+</table>
+<p class="small muted">运行时版本随时间变化，不在手册写死；当前实测以 <code>bash skills/swarm-yuan/scripts/self-check.sh --check-only</code> 的输出为准。</p>
+
+<h3>61 份方法论与规范文档</h3>
+<table>
+<thead><tr><th style="width:150px">主题域</th><th>文档</th><th style="width:250px">代表性来源</th></tr></thead>
+<tbody>
+<tr><td>生成与研发流程（13）</td><td>generation-flow、exploration-guide、template-spec、task-methodology-router、agent-skills-methodology、codex-methodology、dsh-engineering-methodology、claude-code-capabilities、subagent-orchestration、mea-loop-methodology、lazy-generation-methodology、mattpocock-skills-methodology、memory-persistence</td><td>lazy-generation 吸收自 ponytail（七层复用阶梯）；mattpocock-skills 吸收自 mattpocock/skills v1.2.3</td></tr>
+<tr><td>领域与本体（4）</td><td>domain-knowledge、business-ontology-methodology、fibo-financial-ontology、togaf-metamodel-methodology</td><td>FIBO 2026Q3 源码级术语（MIT）蒸馏出业务本体五步法</td></tr>
+<tr><td>质量验证与排障（10）</td><td>review-methodology、rsi-evidence-methodology、pstack-methodology、failure-taxonomy、bugfix-runbook、remote-debug-jvm、canary-monitoring、clean-code-metrics-methodology、quality-management-standards、ai-process-records</td><td>rsi-evidence 三源（清华 RSI 综述＋D2I-ai＋字节论文）；clean-code-metrics 吸收自 ub-mode</td></tr>
+<tr><td>安全与合规（9）</td><td>security-spec、crypto-spec、cwe-database、standards-compliance、compliance-checkpoints、regulatory-checkpoint-table、security-certification-profiles、mcp-governance、codex-security-methodology</td><td>codex-security 吸收自 openai/codex-security；执法检查主表 173 条</td></tr>
+<tr><td>认知与思维（5）</td><td>cognition-framework、cognitive-bias、logic-razor、four-theories-methodology、gsd-patterns</td><td>四论＝系统论、信息论、科学方法论、控制论</td></tr>
+<tr><td>知识治理（6）</td><td>capability-map、knowledge-lifecycle-methodology、knowledge-retrieval-ladder、context-engineering-layering、cordis-composability-methodology、code-graph-tools</td><td>knowledge-lifecycle 吸收自京东海博实践；cordis 吸收自 DeepSeek Harness</td></tr>
+<tr><td>表达与呈现（3）</td><td>frontend-design-methodology、diagram-production-methodology、controlled-language-methodology</td><td>impeccable v4.0.2；diagram-design v2.6.110；受控语言 ASD-STE100</td></tr>
+<tr><td>估算与治理（3）</td><td>cost-estimation-methodology、decision-governance、governance-agents</td><td>cost-estimation＝NESMA GB/T 42588-2023 功能点估算</td></tr>
+<tr><td>行业 profile（8）</td><td>industry-profile-automotive、industry-profile-energy、industry-profile-finance、industry-profile-gov、industry-profile-industrial、industry-profile-medical、industry-profile-payment、industry-profile-telecom</td><td>payment 吸收自 hermes pay-team 人格内核；配置覆盖层见 <code>industry-profiles/</code></td></tr>
+</tbody>
+</table>
+
+<h3>研究档案与案例</h3>
+<p><code>docs/research/</code> 下有 106 篇 R 系列档案：设计演进与重构决策、换栈演练（第九棒补 PHP、第十棒补 Ruby）、真实项目回归（JVM 全栈、NestJS）、审计加固、运行时刷新与各吸收轮实录。<code>references/case-studies/</code> 承载可授课案例。这些是生成器侧档案，不随目标技能分发。</p>
+
+<h3>标准怎么落到门禁上</h3>
+<p><code>standards-map.conf</code> 用五列把门禁挂到标准条文：规则或门禁编号、CWE、GB/ISO 条款、ASVS5 小节、置信度。合规档分发这张映射，报告转换器把 CWE 与 GB/ISO 写进规则元数据，合规门校验矩阵完整性与字段合法性。</p>
+<div class="note"><strong>边界不变</strong>映射是可裁剪的基线，不等于自动合规或认证。真正的合规结论仍需组织流程与必要的外部审核；地图只负责让检查项和条文对得上号。</div>
+
+<h3>为什么这份清单可信</h3>
+<ul class="check">
+<li><strong>单一事实源</strong>：能力地图逐档登记来源、证据、消费节点与触发条件，自检做双向对账，孤儿零容忍。</li>
+<li><strong>三载体一致</strong>：每次吸收要求 references、技能入口与数字正本三处同步，自检逐项实测。</li>
+<li><strong>吞吐有界</strong>：新增知识受预算约束（门禁数、变量数、上下文体积），吸收不是无限堆料。</li>
+<li><strong>默认不启用</strong>：框架按命中注入、行业 profile 显式选择、方法论层是引用不是依赖——知道“有什么”不等于“全开着”。</li>
+</ul>
+</section>
+<section class="chapter" id="s6">
+<h2><span class="no">第六章 · 上手</span>八张操作卡，照着做就能跑通</h2>
+<p class="lead">每张卡都按同一结构写：做什么、讲师怎么解释、看到什么算完成、失败怎么办、留下什么证据。命令分为只读与写操作，写操作前先确认目录和权限。</p>
+<div class="note"><strong>先约定三个路径变量</strong>本手册用 <code>YUAN_SRC</code> 表示技能源码树，<code>YUAN_HOME</code> 表示安装后的技能根，<code>PROJECT_DIR</code> 表示目标项目，<code>SKILL_DIR</code> 表示生成出来的项目技能。示例里出现的 <code>/absolute/path/to/...</code> 都要替换成真实绝对路径。</div>
+
+<div class="op">
+<header><span class="n">1</span><h4>先看清环境，再动手</h4><span class="tag tag-ro">只读</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>确认技能源码树、安装根、目标项目三者位置正确；检查生成器自身是否健康。</dd>
+<dt>怎么讲</dt><dd>像演出前检查灯光音响：版本、路径、依赖任何一项不对，后面所有结论都不可信。</dd>
+<dt>完成标志</dt><dd>能说出四个变量的真实值；自检输出没有失败项；知道当前版本号从哪里读。</dd>
+<dt>失败怎么办</dt><dd>路径不对先改环境变量，不要靠 <code>cd</code> 碰运气；自检失败先修环境，不要带病生成。</dd>
+<dt>留什么</dt><dd>环境变量清单、自检输出、版本号与来源文件。</dd>
+</dl>
+<pre><code>echo "$YUAN_SRC $YUAN_HOME $PROJECT_DIR $SKILL_DIR"
+bash "$YUAN_SRC/install.sh" --list          # 只读：检测可用宿主
+bash "$YUAN_HOME/scripts/self-check.sh" --check-only   # 只读：不安装、不升级</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">2</span><h4>安装生成器</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>把生成器装到家级技能根，供多个项目共用。</dd>
+<dt>怎么讲</dt><dd>安装只影响“工具在哪”，不影响任何项目；装错位置会让后续找不到技能。</dd>
+<dt>完成标志</dt><dd>目标目录存在 <code>SKILL.md</code> 与脚本；重新执行 <code>--list</code> 能看到它；同名旧安装有备份。</dd>
+<dt>失败怎么办</dt><dd>权限不足先确认目录归属；同名冲突看备份是否生成，不要手工删旧目录了事。</dd>
+<dt>留什么</dt><dd>安装输出、安装根路径、备份目录名。</dd>
+</dl>
+<pre><code>bash "$YUAN_SRC/install.sh"                 # 写：默认装到 ~/.agents/skills/
+bash "$YUAN_HOME/scripts/self-check.sh" --check-only</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">3</span><h4>生成项目技能并填充内容</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>探查项目、生成骨架、让 AI 按探查结果填满项目知识、跑核心门禁、做独立审查。</dd>
+<dt>怎么讲</dt><dd>骨架只是空盒子；真正的价值在“这个项目有什么、谁依赖谁、这类任务怎么做”被写进去。</dd>
+<dt>完成标志</dt><dd>17 项特征卡有具体值；组件清单与关系边集带路径证据；配方五要素齐全；核心门禁有真实结果；评审记录由非实现者写。</dd>
+<dt>失败怎么办</dt><dd>探查不足就回上一步补，不编造组件；框架证据为空先判断“不适用”还是“漏查”；构建失败回项目工具链，不要用删检查换通过。</dd>
+<dt>留什么</dt><dd>探查笔记、框架证据、关系边集、填充差异、评审记录、门禁输出。</dd>
+</dl>
+<pre><code>bash "$YUAN_HOME/scripts/mine-habits.sh" "$PROJECT_DIR"      # 行为统计初稿
+bash "$YUAN_HOME/scripts/generate-skill.sh" --profile standard "$SKILL_NAME" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/relations-extract.sh" "$PROJECT_DIR" --skill-dir "$SKILL_DIR"
+bash "$YUAN_HOME/scripts/framework-evidence.sh" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --inject-frameworks "$SKILL_DIR"
+bash "$SKILL_DIR/scripts/precheck.sh" --all
+bash "$SKILL_DIR/scripts/precheck.sh" --review</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">4</span><h4>strict 终检与激活</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>补一条真实决策记录，先只读预检，再执行激活；激活通过后技能才从草稿变可用。</dd>
+<dt>怎么讲</dt><dd>激活不是改一个状态字，而是一串检查：完整性、清单、预算、框架配置、规格接线，全过才放行。</dd>
+<dt>完成标志</dt><dd>技能入口显示 active；激活报告为通过；报告里的检查项与当次输出一致。</dd>
+<dt>失败怎么办</dt><dd>按第一处未满足项回到对应步骤：占位回填充、清单漏项回探查、预算超标先瘦身；关系失锚是提示，要记录但不能当硬阻断。</dd>
+<dt>留什么</dt><dd>strict 输出、激活输出、激活报告、最终状态。</dd>
+</dl>
+<pre><code>bash "$SKILL_DIR/scripts/trace-log.sh" --project-dir "$PROJECT_DIR" \
+  --decision --type Taste --suggestion "按探查结果装配 standard 技能" \
+  --user-action approved --rationale "组件、配方、框架与测试均已按证据填充"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --verify-completeness --strict "$SKILL_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --mark-active "$SKILL_DIR"</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">5</span><h4>按九节点做一个需求</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>从任务卡进入：复述目标与非目标，查已有组件与配方，写规格与计划，建分支，先测试后实现。</dd>
+<dt>怎么讲</dt><dd>先想清楚“不做会怎样”和“怎样算做完”，比写代码更重要；复用检查是为了避免重复造轮子。</dd>
+<dt>完成标志</dt><dd>规格含范围、验收、风险与验证；分支从最新主干起；测试先红后绿；改动只含本任务。</dd>
+<dt>失败怎么办</dt><dd>发现设计不成立就退回规格，不在代码里偷偷扩范围；目录或任务不对立即停手核对。</dd>
+<dt>留什么</dt><dd>规格、计划、分支名与基线、测试红绿记录、提交。</dd>
+</dl>
+<pre><code>bash "$SKILL_DIR/scripts/state-machine.sh" init --project-dir "$PROJECT_DIR"
+bash "$SKILL_DIR/scripts/state-machine.sh" set phase design --project-dir "$PROJECT_DIR"
+bash "$SKILL_DIR/scripts/state-machine.sh" set phase build --project-dir "$PROJECT_DIR"
+bash "$SKILL_DIR/scripts/state-machine.sh" status</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">6</span><h4>跑门禁并读懂结果</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>先看实时门禁名单，再按需要跑核心、标准或合规套件；开启逐门禁证据落盘。</dd>
+<dt>怎么讲</dt><dd>门禁是“机械能判”的那部分；返回 0 只说明没有 FAIL，跳过和警告仍要读。</dd>
+<dt>完成标志</dt><dd>能解释 0/1/2 三种返回码；能列出本次 FAIL、WARN、SKIP 各多少；证据文件能对上本次运行。</dd>
+<dt>失败怎么办</dt><dd>先看第一条 FAIL 的原始输出；区分“代码问题”“配置缺失”“环境不可用”；不要用 <code>--no-verify</code> 或删检查换绿。</dd>
+<dt>留什么</dt><dd>命令与返回码、完整输出、证据文件路径、跳过项说明。</dd>
+</dl>
+<pre><code>bash "$SKILL_DIR/scripts/precheck.sh" --list-gates
+GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" bash "$SKILL_DIR/scripts/precheck.sh" --all-full
+bash "$SKILL_DIR/scripts/precheck.sh" --compliance-suite   # 合规按需
+bash "$SKILL_DIR/scripts/precheck.sh" --fix-suggest        # 只读建议，恒返回 0</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">7</span><h4>项目变了，更新技能</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>先看结构变化报告，再预演升级，确认无在途任务后执行；只重探查变化范围。</dd>
+<dt>怎么讲</dt><dd>技能不是一次性脚手架；项目结构变了、踩了新坑，知识要跟着动，但只动该动的部分。</dd>
+<dt>完成标志</dt><dd>变化范围有清单；升级预演报告新增/变更/删除；旧经验文件保留；复核后落新基线。</dd>
+<dt>失败怎么办</dt><dd>清单条目骤降先停下查原因；事实与代码冲突以代码为准并记录；不要用整文件覆盖新骨架。</dd>
+<dt>留什么</dt><dd>变化报告、预演输出、知识差异、复核结果、新指纹。</dd>
+</dl>
+<pre><code>bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR"           # 报告变化
+bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp</code></pre>
+</div>
+</div>
+
+<div class="op">
+<header><span class="n">8</span><h4>离线安装，先认清边界</h4><span class="tag tag-rw">写操作</span></header>
+<div class="body">
+<dl>
+<dt>做什么</dt><dd>校验离线包完整性，安装技能本体；运行时、源码包与知识资料按目标机可用的源安装。</dd>
+<dt>怎么讲</dt><dd>离线包不是“断网什么都有”。当前口径是：内嵌源装不了的资料，npm/pip 运行时仍走目标机源。</dd>
+<dt>完成标志</dt><dd>校验值全部匹配；技能本体可自检；哪些依赖仍需联网一目了然。</dd>
+<dt>失败怎么办</dt><dd>校验失败不重试安装，先重新取包；缺运行时按提示走目标机源，别声称已经气隙自足。</dd>
+<dt>留什么</dt><dd>校验输出、安装日志、仍需联网的依赖清单。</dd>
+</dl>
+<pre><code>shasum -a 256 -c SHA256SUMS               # macOS；Linux 用 sha256sum -c
+bash install-offline.sh                    # 在离线包根执行</code></pre>
+</div>
+</div>
+</section>
+
+<section class="chapter" id="s7">
+<h2><span class="no">第七章 · 案例</span>两个案例，看懂“完成”和“通过”的区别</h2>
+<p class="lead">第一个案例讲一轮真实推演怎样读账：流程完成不等于净额通过。第二个案例讲一次真实需求怎样走完流程：功能能跑不等于可以批准。</p>
+
+<h3>案例一：run28，两本账要分开看</h3>
+<p>run28 是一次完整推演：26 个步骤全部走完，耗时 44954 秒（12 小时 29 分 14 秒）。如果只看“六道检查全过”，结论会是 6/6。但其中一道检查由代理批准完成，扣除后净额是 5/6。两个数字都对，说的是不同的事。</p>
+<figure>
+<svg viewBox="0 0 980 300" role="img" aria-label="run28 两本账对比图">
+  <text x="20" y="26" class="dtitle">同一轮推演，三组数字各有口径</text>
+  <text x="20" y="66" class="dlabel">检查通过</text>
+  <rect x="150" y="50" width="300" height="22" rx="4" class="dbox-accent"/>
+  <text x="460" y="66" class="dtext">含代偿 6/6：流程全部走完</text>
+  <rect x="150" y="80" width="250" height="22" rx="4" class="dbox-warn"/>
+  <text x="410" y="96" class="dtext">净额 5/6：扣掉代理批准</text>
+  <text x="20" y="140" class="dlabel">问题处置</text>
+  <rect x="150" y="124" width="640" height="22" rx="4" class="dbox-soft"/>
+  <text x="160" y="140" class="dsmall">未关闭 65 条（全部有处置结论）</text>
+  <rect x="150" y="154" width="80" height="22" rx="4" class="dbox-warn"/>
+  <text x="240" y="170" class="dtext">真正修复 8/65：处置 ≠ 修复</text>
+  <text x="20" y="214" class="dlabel">证据覆盖</text>
+  <rect x="150" y="198" width="440" height="22" rx="4" class="dbox-accent"/>
+  <text x="600" y="214" class="dtext">报告呈现 11/13</text>
+  <rect x="150" y="228" width="520" height="22" rx="4" class="dbox-accent"/>
+  <text x="680" y="244" class="dtext">后续核验 13/14（缺 1 项运行证明）</text>
+  <text x="150" y="280" class="dsmall">三组都不能互相覆盖：流程完成、真实通过、证据覆盖是三件事</text>
+</svg>
+<figcaption><strong>图 10 run28 两本账</strong><span>读到“全过”时，先问一句：扣掉代偿还剩多少</span></figcaption>
+</figure>
+<table>
+<thead><tr><th style="width:220px">现象</th><th>正确读法</th><th style="width:300px">容易被误读成</th></tr></thead>
+<tbody>
+<tr><td>26 步完成</td><td>说明流程范围走完了</td><td>“质量已经达标”</td></tr>
+<tr><td>含代偿 6/6</td><td>六道检查都有结论，其中一道靠代理批准</td><td>“六道全部真人通过”</td></tr>
+<tr><td>净额 5/6</td><td>扣掉代理批准后的真实通过数</td><td>“系统有严重缺陷”或“和 6/6 一样”</td></tr>
+<tr><td>open 65 / 已修 8/65</td><td>未关闭问题数，与真正修复数是两个口径</td><td>“65 条全部处理完”</td></tr>
+<tr><td>报告 11/13、后续 13/14</td><td>两个时点的覆盖，后续补证不能回写原报告</td><td>“报告已经是 13/14”</td></tr>
+</tbody>
+</table>
+<div class="note"><strong>讲师提问</strong>“如果领导只问一句‘这轮过了没有’，你怎么答？”合格答法是分两句话说：流程含代偿 6/6 走完，净额 5/6，其中 G5 是代理批准；另有 65 项未关闭问题、报告覆盖 11/13。不合格答法是单说“过了”。</div>
+
+<h3>案例二：订单编辑，功能对了仍可能被退回</h3>
+<p>需求是给订单加编辑能力：只能改可编辑字段，已关闭订单拒绝修改，未知订单返回不存在，改数据必须带分片键，前端只在非终态显示入口。测试全绿之后，评审仍然可能退回——因为分片键丢了、权限没判、回滚没写，这些不是“功能测试”能覆盖的。</p>
+<table>
+<thead><tr><th style="width:150px">检查面</th><th>要看到什么</th><th style="width:260px">只做表面验证的后果</th></tr></thead>
+<tbody>
+<tr><td>正常路径</td><td>可编辑字段更新成功，返回新版本</td><td>只测 200，不测字段是否真落库</td></tr>
+<tr><td>状态约束</td><td>已关闭订单被拒绝，数据不变</td><td>只看报错码，不查数据库是否被改</td></tr>
+<tr><td>分片约束</td><td>更新语句带分片键，只影响目标分片</td><td>功能能跑，但全表扫描或写错分片</td></tr>
+<tr><td>前端契约</td><td>非终态显示入口，金额校验与创建同源</td><td>只测函数存在，不测真实渲染</td></tr>
+<tr><td>回滚</td><td>出问题能按步骤退回上一版本</td><td>只写“可回滚”，没有命令和负责人</td></tr>
+</tbody>
+</table>
+
+<h3>验证检查是否真的有效：故障注入</h3>
+<p>测试全绿不等于测试有效。做法是故意注入两类故障，看系统能不能抓到：把状态条件去掉，制造并发覆盖风险；把分片键从更新语句里删掉，制造跨分片写。前者应该被业务测试抓到，后者应该被框架门禁抓到。如果注入后仍然全绿，说明测试或门禁没在真正检查。</p>
+<pre><code># 只在隔离练习副本里做，做完立即还原
+# 故障一：移除状态条件（CAS 退化）→ 期望并发测试变红
+# 故障二：移除分片键（WHERE 只按订单号）→ 期望分片门禁变红
+git diff        # 保存注入差异
+git checkout -- .   # 还原（确认无未提交改动时）
+git diff        # 还原后应为空</code></pre>
+<div class="note warn"><strong>红线</strong>不得在真实业务仓注入故障；不得修改期望值来迎合故障；不得把未执行的套件记成通过。注入、变红、还原、复绿四段证据要成套保存。</div>
+</section>
+
+<section class="chapter" id="s8">
+<h2><span class="no">第八章 · 验收</span>学员交什么，讲师看什么</h2>
+<p class="lead">验收不看“讲得好不好”，看能不能拿出当次证据。作品齐全、证据对得上、边界说得清，才算通过。</p>
+
+<h3>学员要交的七样东西</h3>
+<ol>
+<li><strong>生成包</strong>：目标技能路径、档位、入口文件、清单、激活报告、strict 与激活输出。</li>
+<li><strong>认知包</strong>：特征卡承接说明、组件清单、关系边集、至少一个五要素完整的任务配方、框架证据。</li>
+<li><strong>研发包</strong>：一个真实需求的规格、计划、分支差异、测试先行记录、评审记录。</li>
+<li><strong>证据包</strong>：门禁原始输出与返回码、逐门禁证据、跳过与警告的处置、构建与测试报告。</li>
+<li><strong>反馈包</strong>：一次结构或内容变化后的知识差异、局部重探查、清单复核、新指纹。</li>
+<li><strong>边界声明</strong>：未运行项、环境限制、外部有效性边界、离线与真实编码中未覆盖的部分。</li>
+<li><strong>认知说明</strong>：能指出三层投影与四论各自对应本次哪些记录，例如哪份门禁输出、哪条状态转换、哪次反馈更新。</li>
+</ol>
+<p class="small muted">只有文档没有命令输出，或只有退出码没有当次文件与测试证据，都不算完整作品。</p>
+
+<h3>讲师评分表</h3>
+<table>
+<thead><tr><th style="width:200px">维度</th><th style="width:70px">分值</th><th>至少一个可观察的通过结果</th></tr></thead>
+<tbody>
+<tr><td>标准研发能力</td><td>15</td><td>规格写清业务/质量/安全约束；框架规律有代码证据；标准映射与门禁结果能对应</td></tr>
+<tr><td>个性化研发能力</td><td>15</td><td>至少一条项目经验被代码证实并转成配方、教训或规则，不是照抄模板</td></tr>
+<tr><td>组织资产本体</td><td>20</td><td>清单、边集、配方能回答“有什么、谁依赖谁、怎样复用”，并通过路径、计数与边集核验</td></tr>
+<tr><td>标准研发流水线</td><td>20</td><td>一个复用单元有正常与失败路径测试；新增胶水最小；九节点与四阶段证据完整</td></tr>
+<tr><td>独立全面检查</td><td>20</td><td>门禁证据、真实测试、非实现者评审、一种变异或验证器证据各自独立成立，跳过已解释</td></tr>
+<tr><td>诚实边界</td><td>10</td><td>历史数字不冒充本轮复测；四层拦截、离线口径、外部有效性限制说明准确</td></tr>
+</tbody>
+</table>
+<p>建议 80 分及格。出现以下任一情况直接不合格：伪造证据、编造路径、删除检查求绿、把草稿当已激活、用代理批准冒充真人批准。</p>
+
+<h3>常见失败与处置</h3>
+<table>
+<thead><tr><th style="width:230px">症状</th><th>先查什么</th><th style="width:280px">正确处置</th></tr></thead>
+<tbody>
+<tr><td>生成后技能是空的</td><td>是否只跑了骨架创建，没做 AI 填充</td><td>回到探查与填充步骤，补齐项目内容</td></tr>
+<tr><td>激活一直失败</td><td>第一条未满足项是什么：占位、清单、预算还是配置</td><td>按项回到对应步骤修复，不手改状态</td></tr>
+<tr><td>门禁全绿但线上出问题</td><td>门禁覆盖的是结构还是行为；测试是否真实运行</td><td>补真实测试与独立评审，调整对门禁的预期</td></tr>
+<tr><td>测试一直红</td><td>是代码问题、环境问题还是断言写错</td><td>保留原始输出，逐层定位；不要删断言求绿</td></tr>
+<tr><td>任务卡住了</td><td>是没人认领、依赖未完成还是容量满</td><td>先补信息或催办，确认停滞后才重新分配</td></tr>
+<tr><td>批准找不到人</td><td>决定人是否在册、授权是否过期</td><td>补正式批准；代理批准单独记账</td></tr>
+</tbody>
+</table>
+</section>
+
+<section class="chapter" id="s9">
+<h2><span class="no">第九章 · 附录</span>速查、术语与事实源</h2>
+
+<h3>命令速查</h3>
+<p class="small muted">速查只用于回忆，执行前回到第六章对应操作卡确认副作用。注释里的“只读/写”是分类。</p>
+<pre><code># 安装与自检
+bash "$YUAN_SRC/install.sh" --list                     # 只读：检测环境
+bash "$YUAN_SRC/install.sh"                            # 写：安装到 ~/.agents/skills
+bash "$YUAN_HOME/scripts/self-check.sh" --check-only    # 只读：自检
+
+# 生成与激活
+bash "$YUAN_HOME/scripts/generate-skill.sh" --profile standard "$SKILL_NAME" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/relations-extract.sh" "$PROJECT_DIR" --skill-dir "$SKILL_DIR"
+bash "$YUAN_HOME/scripts/framework-evidence.sh" "$PROJECT_DIR"   # 只读：框架证据
+bash "$YUAN_HOME/scripts/generate-skill.sh" --inject-frameworks "$SKILL_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --verify-completeness --strict "$SKILL_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --mark-active "$SKILL_DIR"
+
+# 日常与门禁
+bash "$SKILL_DIR/scripts/state-machine.sh" status       # 只读：阶段与证据
+bash "$SKILL_DIR/scripts/precheck.sh" --list-gates      # 只读：实时门禁名单
+bash "$SKILL_DIR/scripts/precheck.sh" --all             # 写：核心 12
+GATE_RUNS_DIR="$PROJECT_DIR/.swarm-yuan/gate-runs" bash "$SKILL_DIR/scripts/precheck.sh" --all-full
+bash "$SKILL_DIR/scripts/precheck.sh" --compliance-suite
+bash "$SKILL_DIR/scripts/precheck.sh" --fix-suggest     # 只读：建议，恒返回 0
+
+# 更新
+bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade --dry-run "$SKILL_NAME" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --upgrade "$SKILL_NAME" "$PROJECT_DIR"
+bash "$YUAN_HOME/scripts/generate-skill.sh" --refresh "$SKILL_DIR" --commit-fp</code></pre>
+
+<h3>术语表</h3>
+<table>
+<thead><tr><th style="width:190px">术语</th><th>本手册含义</th></tr></thead>
+<tbody>
+<tr><td>三层投影</td><td>同一原则的三层载体：驾驶舱＝人机界面层，hermes 集群＝组织控制层，目标技能＝机制执行层</td></tr>
+<tr><td>四论</td><td>系统论（看清）、信息论（看准）、科学方法论（认识可靠）、控制论（行动有效）</td></tr>
+<tr><td>开环与闭环</td><td>只写提示词是开环；写成 hooks、门禁或状态机准入才是闭环</td></tr>
+<tr><td>生成器 / 目标技能</td><td>前者是 swarm-yuan 本体；后者是为某个项目生成的 <code>&lt;项目&gt;-dev</code> 技能包</td></tr>
+<tr><td>项目运行态</td><td>目标项目根 <code>.swarm-yuan/</code>，保存状态、笔记、任务、决策、门禁证据与指纹</td></tr>
+<tr><td>组件库清单</td><td>组件、接口、数据的清单，含路径、说明与稳定性，回答“有什么”</td></tr>
+<tr><td>关系边集</td><td><code>relations.jsonl</code> 里的依赖记录，回答“改谁会影响谁”</td></tr>
+<tr><td>任务配方</td><td>高频任务的复用步骤：触发场景、前置查询、复用件、胶水、门禁与验证</td></tr>
+<tr><td>特征卡</td><td>17 项项目特征，是技能内容与门禁参数的来源</td></tr>
+<tr><td>严格激活（strict）</td><td>草稿转可用的终检：完整性、清单、预算、配置全部通过才放行</td></tr>
+<tr><td>规格先行（spec-first）</td><td>改可写代码前先形成并批准规格，四层拦截分别守写、提交、门禁与构建</td></tr>
+<tr><td>门禁</td><td>对流程、词法、结构与配置的机器检查，不等于业务语义验证</td></tr>
+<tr><td>夹具（fixture）</td><td>构造的正反例样例，证明检查能力，不能替代真实项目外部有效性</td></tr>
+<tr><td>变异验证</td><td>故意改坏代码或检查，确认测试或门禁能抓到故障</td></tr>
+<tr><td>逐门禁证据</td><td>显式开启后写入的 JSONL 记录，每条是一次检查的事实</td></tr>
+<tr><td>ACP</td><td>Agent Client Protocol，用于把任务上下文、工作目录与会话事件交给编码引擎</td></tr>
+<tr><td>净额</td><td>扣除代理批准等代偿后的真实通过数，与含代偿口径并列阅读</td></tr>
+</tbody>
+</table>
+
+<h3>事实源索引</h3>
+<table>
+<thead><tr><th style="width:210px">主题</th><th>以什么为准</th></tr></thead>
+<tbody>
+<tr><td>版本与发布</td><td><code>RELEASE-MANIFEST.json</code>、<code>RELEASE-NOTES.md</code>、各模块版本载体</td></tr>
+<tr><td>路由与功能注册</td><td><code>registries/</code>；发布对账 <code>npm run docs:check</code></td></tr>
+<tr><td>产品与架构正本</td><td><code>docs/DESIGN.md</code></td></tr>
+<tr><td>数字与预算</td><td><code>skills/swarm-yuan/assets/facts.conf</code></td></tr>
+<tr><td>生成流程与日常入口</td><td><code>skills/swarm-yuan/SKILL.md</code>、<code>references/generation-flow.md</code></td></tr>
+<tr><td>门禁序列与返回码</td><td><code>assets/precheck.sh</code>、<code>assets/facts.conf</code></td></tr>
+<tr><td>状态机与规格拦截</td><td><code>assets/state-machine.sh</code>、<code>assets/spec-first-lib.sh</code></td></tr>
+<tr><td>吸收清单</td><td><code>references/capability-map.md</code>；框架目录与 references 目录实数</td></tr>
+<tr><td>外部有效性</td><td><code>verifier/v2/external-validity.md</code></td></tr>
+<tr><td>本篇案例</td><td>run28 最终报告与后续补证；trade-forge 历史回归档案（按所属版本引用）</td></tr>
+</tbody>
+</table>
+
+<h3>本手册没有验证的部分</h3>
+<ul class="check x">
+<li>没有用真实新手做试课，可读性由文档审读与浏览器走查覆盖，不等于教学效果实测。</li>
+<li>没有做实体纸张打印；版式按 A4 纵向设计并做过导出检查，纸面观感仍需实际打印确认。</li>
+<li>没有在 Windows 实机和完全断网环境执行安装、生成与门禁。</li>
+<li>没有重新执行 run28 或 trade-forge；案例数字按所属版本引用，不是本轮复测。</li>
+<li>外部运行时的版本与可用性会变，以本机自检输出为准，不在本手册固定。</li>
+</ul>
+
+<footer class="end">
+  <p><strong>AIStudio 完整培训手册（含 swarm-yuan）</strong> · 适用版本 1.0.15-overlay · 编制日期 2026-11-12</p>
+  <p>本手册为单文件自包含文档：样式、图形与示例均内嵌，不依赖外部资源，可离线阅读与打印。所有界面与数据均为培训模拟，不连接真实任务、审批或生产数据。</p>
+</footer>
+</section>
+
+</div>
+</main>
+</div>
+</body>
+</html>

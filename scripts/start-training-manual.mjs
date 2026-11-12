@@ -12,6 +12,10 @@ const DOCUMENTS = new Map([
     file: resolve(ROOT, 'docs/manuals/aistudio-swarm-yuan-guide.html'),
     type: 'text/html; charset=utf-8',
   }],
+  ['/aistudio-complete-training-manual.html', {
+    file: resolve(ROOT, 'docs/manuals/aistudio-complete-training-manual.html'),
+    type: 'text/html; charset=utf-8',
+  }],
   ['/aistudio-interactive-training.html', {
     file: resolve(ROOT, 'docs/manuals/aistudio-interactive-training.html'),
     type: 'text/html; charset=utf-8',
