@@ -1225,3 +1225,7 @@
 # 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
 # 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导；run-manager 类型；启动侧会话档归一注入。
 
+
+# 767（2026-11-12 TTSE 双轨经验吸收，spec 2026-11-12-expdual-ttse）：
+# 双轨经验台账路由注册（/api/expdual/* 挂进 bootstrap/routes.ts；先例 627）。
+767-server-expdual-routes.patch

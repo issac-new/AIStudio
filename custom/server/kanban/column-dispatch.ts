@@ -21,6 +21,7 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
+import { dualTrackLinesForDispatch } from '../expdual/dual-inject'
 import { selectHandoffRuleForDispatch } from '../handoff/handoff-rules'
 import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
@@ -146,6 +147,13 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     },
     taskTitle ?? undefined,
   )
+  // 双轨经验注入（TTSE 吸收，2026-11-12）：EXP_DUAL_INJECT=1 才启用；FACT/TIP 分块、
+  // 通道内独立编号、各封顶 3 条。与历史经验通道独立选通（互不依赖）。
+  const dualExperienceLines = dualTrackLinesForDispatch({
+    column: trigger.column,
+    ...(step.specialist ? { specialist: step.specialist } : {}),
+    ...(taskTitle ? { query: taskTitle } : {}),
+  })
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
@@ -155,6 +163,7 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     ...(step.constraints?.length ? [`约束（硬边界，越界须升级申请）：${step.constraints.map((c, i) => `${i + 1}. ${c}`).join('；')}`] : []),
     ...constraintCardLines,
     ...experienceLines,
+    ...dualExperienceLines,
     ...(rerankLine ? [rerankLine] : []),
     ...(precedentLine ? [precedentLine] : []),
     ...(semantic ? [semantic] : []),
