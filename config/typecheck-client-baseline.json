@@ -1,6 +1,6 @@
 {
   "errors": 19,
-  "generatedAt": "2026-11-07T05:58:16.367Z",
+  "generatedAt": "2026-11-12T03:23:37.001Z",
   "tool": "vue-tsc --noEmit",
   "note": "只许下降；按域清零后同步下调"
 }

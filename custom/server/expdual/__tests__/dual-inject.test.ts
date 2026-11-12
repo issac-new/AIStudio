@@ -49,6 +49,13 @@ describe('双轨注入', () => {
     expect(lines[5]).toMatch(/^T2\. /)
   })
 
+  it('bigram 余弦检索：词序打乱仍命中同主题规则（收尾批升级回归）', () => {
+    const store = seed()
+    const selection = selectDualRules(store, { query: '识别分隔符与探测 CSV 编码' })
+    expect(selection.facts[0].text).toContain('CSV 分隔符')
+    expect(selection.tips[0].text).toContain('chardet')
+  })
+
   it('每通道封顶 3 条；渲染不带 id/计数（防被当作本轮实测凭据）', () => {
     let store = emptyStore()
     store = applyInduce(store, [
@@ -81,7 +88,7 @@ describe('双轨注入', () => {
     expect(done.join('\n')).toContain('完成列要求附验收证据')
   })
 
-  it('有语境时按词面相似度排序（命中任务的规则优先）', () => {
+  it('有语境时按 bigram 余弦排序（命中任务的规则优先）', () => {
     const store = seed()
     const selection = selectDualRules(store, { query: 'CSV 编码探测与分隔符识别' })
     expect(selection.facts[0].text).toContain('CSV 分隔符')

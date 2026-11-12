@@ -8,6 +8,7 @@ import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { expDualRoutes } from '../dual-controller'
+import { _usePremiseLogDirForTests, _resetPremiseLogDirForTests, createPremise, putPremise } from '../../premiselog/store'
 
 const dir = mkdtempSync(join(tmpdir(), 'expdual-http-'))
 let server: ReturnType<Koa['listen']>
@@ -33,9 +34,14 @@ beforeAll(async () => {
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 })
 
+const premiseDir = mkdtempSync(join(tmpdir(), 'expdual-premise-'))
+_usePremiseLogDirForTests(premiseDir)
+
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()))
   rmSync(dir, { recursive: true, force: true })
+  rmSync(premiseDir, { recursive: true, force: true })
+  _resetPremiseLogDirForTests()
 })
 
 beforeEach(() => {
@@ -118,5 +124,83 @@ describe('双轨台账 HTTP 面', () => {
     expect(r.body.classification.channel).toBe('tip')
     expect(r.body.classification.rationale).toContain('命令式')
     expect((await post('/api/expdual/classify', { text: '' })).status).toBe(400)
+  })
+})
+describe('提示词契约 HTTP 面（收尾批）', () => {
+  beforeEach(async () => {
+    await post('/api/expdual/induce', {
+      ops: [
+        { op: 'ADD', channel: 'fact', text: 'workspace/input 目录是上游素材目录' },
+        { op: 'ADD', channel: 'tip', text: '', condition: '编码未知', action: '先用 chardet 探测编码' },
+      ],
+    })
+  })
+
+  it('POST /prompts/blame 从当前库渲染契约；缺轨迹 400', async () => {
+    const bad = await post('/api/expdual/prompts/blame', { taskRef: 't-1' })
+    expect(bad.status).toBe(400)
+    expect(bad.body.code).toBe('bad_prompt_input')
+
+    const r = await post('/api/expdual/prompts/blame', { taskRef: 't-1', trajectory: 'step-1 读模板失败' })
+    expect(r.status).toBe(200)
+    expect(r.body.prompt.system).toContain('最多归因一条规则')
+    expect(r.body.prompt.user).toContain('t-1')
+    expect(r.body.prompt.user).toContain('step-1 读模板失败')
+    expect(r.body.prompt.user).toContain('f-1.')
+    expect(r.body.prompt.user).toContain('t-1. 在「编码未知」条件下')
+  })
+
+  it('POST /prompts/induce 收轨迹样本并带 ops schema；坏样本被过滤不炸', async () => {
+    const r = await post('/api/expdual/prompts/induce', {
+      success: [{ taskRef: 'ok-1', text: '按列名分组通过' }],
+      failure: [{ taskRef: '', text: '缺 taskRef 的坏样本' }, { taskRef: 'bad-1', text: '按位置猜列失败' }],
+    })
+    expect(r.status).toBe(200)
+    expect(r.body.prompt.system).toContain('拿不准默认 TIP')
+    expect(r.body.prompt.user).toContain('ok-1')
+    expect(r.body.prompt.user).toContain('bad-1')
+    expect(r.body.prompt.user).not.toContain('缺 taskRef 的坏样本')
+  })
+
+  it('POST /prompts/synthesize 渲染退役池；未知 kind 400', async () => {
+    const r = await post('/api/expdual/prompts/synthesize', {})
+    expect(r.status).toBe(200)
+    expect(r.body.prompt.system).toContain('NONE')
+    expect((await post('/api/expdual/prompts/other', {})).status).toBe(400)
+  })
+})
+
+describe('premiselog ↔ FACT 复核信号（收尾批）', () => {
+  it('推翻的假设命中同主题 FACT → 信号；无关 FACT/TIP 不进信号', async () => {
+    await post('/api/expdual/induce', {
+      ops: [{ op: 'ADD', channel: 'fact', text: 'workspace/input 目录是上游素材目录' }],
+    })
+    const premise = createPremise({
+      statement: 'workspace/input 目录是上游素材目录',
+      kind: 'tech',
+      scope: ['expdual'],
+      reviewAt: Date.now() + 86_400_000,
+      createdBy: 'test',
+    })
+    putPremise({ ...premise, status: 'refuted', refutedBy: { evidence: '目录已迁至 workspace/upstream', at: Date.now(), by: 'test' } })
+
+    const r = await get('/api/expdual/premise-signals')
+    expect(r.status).toBe(200)
+    expect(r.body.available).toBe(true)
+    expect(r.body.threshold).toBe(0.35)
+    expect(r.body.signals.length).toBeGreaterThanOrEqual(1)
+    const hit = r.body.signals.find((s: { ruleId: string }) => s.ruleId === 'f-1')
+    expect(hit).toBeTruthy()
+    expect(hit.score).toBeGreaterThan(0.35)
+    expect(hit.refutedBy).toContain('workspace/upstream')
+    // TIP 通道不参与信号（环境事实才可能被假设推翻复核）
+    expect(r.body.signals.every((s: { ruleId: string }) => s.ruleId.startsWith('f-'))).toBe(true)
+  })
+
+  it('无推翻/过期假设 → 空信号不报错', async () => {
+    const r = await get('/api/expdual/premise-signals')
+    expect(r.status).toBe(200)
+    expect(r.body.signals).toEqual([])
+    expect(r.body.checkedPremises + r.body.checkedFacts).toBeGreaterThanOrEqual(0)
   })
 })

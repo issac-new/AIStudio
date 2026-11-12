@@ -14,8 +14,11 @@ import {
   closeChunk,
   dismissSynthesis,
 } from './dual-lifecycle'
+import { buildBlamePrompt, buildInducePrompt, buildSynthesisPrompt, type TraceSample } from './dual-prompts'
 import { readDualStore, writeDualStore } from './dual-store'
 import type { DualStoreShape, InduceOp, RetireReason } from './dual-types'
+import { listPremises } from '../premiselog/store'
+import { bigramSimilarity } from '../eval/vectorizer'
 
 const router = new Router({ prefix: '/api/expdual' })
 
@@ -178,6 +181,96 @@ router.post('/chunk/close', async (ctx) => {
   const result = closeChunk(store)
   writeDualStore(result.store)
   ok(ctx, { snapshot: result.snapshot, chunk: result.store.chunk })
+})
+
+// ── 提示词契约（收尾批：dual-prompts 接 HTTP，调用方不必 import 模块）──────────
+// 纯读面：从当前台账渲染 prompt bundle 返回，不落盘不执行；轨迹语料由调用方给。
+
+router.post('/prompts/:kind', async (ctx) => {
+  const body = bodyOf(ctx)
+  const kind = String(ctx.params.kind ?? '')
+  const store = readDualStore()
+  const rulesOf = (channel: 'fact' | 'tip'): string[] =>
+    store.rules.filter((r) => r.channel === channel && r.status === 'active').map((r) => `${r.id}. ${r.text}`)
+  if (kind === 'blame') {
+    const taskRef = String(body.taskRef ?? '').trim()
+    const trajectory = String(body.trajectory ?? '').trim()
+    if (!taskRef || !trajectory) {
+      reject(ctx, 'blame 提示词需要 taskRef 与 trajectory（失败轨迹正文）', 'bad_prompt_input')
+      return
+    }
+    ok(ctx, { kind, prompt: buildBlamePrompt({ taskRef, trajectory, rules: [...rulesOf('fact'), ...rulesOf('tip')] }) })
+    return
+  }
+  if (kind === 'induce') {
+    const samples = (rows: unknown, outcome: 'success' | 'failure'): TraceSample[] =>
+      (Array.isArray(rows) ? rows : [])
+        .map((row) => {
+          const r = row as { taskRef?: unknown; text?: unknown }
+          return { taskRef: String(r?.taskRef ?? '').trim(), outcome, text: String(r?.text ?? '').trim() }
+        })
+        .filter((s) => s.taskRef && s.text)
+    ok(ctx, {
+      kind,
+      prompt: buildInducePrompt({
+        success: samples(body.success, 'success'),
+        failure: samples(body.failure, 'failure'),
+        facts: rulesOf('fact'),
+        tips: rulesOf('tip'),
+      }),
+    })
+    return
+  }
+  if (kind === 'synthesize') {
+    const retired = store.retired.map((r) => `${r.id}. ${r.text}`)
+    ok(ctx, { kind, prompt: buildSynthesisPrompt({ retired }) })
+    return
+  }
+  reject(ctx, 'kind 须为 blame/induce/synthesize', 'bad_kind')
+})
+
+// ── premiselog ↔ FACT 复核信号（收尾批：假设层推翻 → 经验层复核建议，只读）──────
+// 纪律：不自动退役（spec D3）——一个域的判定不得静默放大成另一域的变更；
+// 信号只做「该 FACT 建议人工复核」的证据，退役仍走 /retire 显式提交。
+
+/** 信号阈值：bigram 余弦 ≥ 0.35 视为同一主题（低阈值宁多报，复核是人判）。 */
+export const PREMISE_SIGNAL_THRESHOLD = 0.35
+
+router.get('/premise-signals', async (ctx) => {
+  const store = readDualStore()
+  const facts = store.rules.filter((r) => r.channel === 'fact' && r.status === 'active')
+  let premises
+  try {
+    premises = listPremises().filter((p) => p.status === 'refuted' || p.status === 'expired')
+  } catch (e) {
+    ok(ctx, { available: false, note: `假设登记簿读取失败：${String((e as Error).message || e)}`, signals: [] })
+    return
+  }
+  const signals = []
+  for (const premise of premises) {
+    for (const rule of facts) {
+      const score = bigramSimilarity(premise.statement, rule.text)
+      if (score >= PREMISE_SIGNAL_THRESHOLD) {
+        signals.push({
+          premiseId: premise.id,
+          premiseStatus: premise.status,
+          statement: premise.statement,
+          refutedBy: premise.refutedBy?.evidence ?? null,
+          ruleId: rule.id,
+          ruleText: rule.text,
+          score: Number(score.toFixed(4)),
+        })
+      }
+    }
+  }
+  signals.sort((a, b) => b.score - a.score)
+  ok(ctx, {
+    available: true,
+    threshold: PREMISE_SIGNAL_THRESHOLD,
+    checkedPremises: premises.length,
+    checkedFacts: facts.length,
+    signals,
+  })
 })
 
 export { router as expDualRoutes }

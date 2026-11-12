@@ -478,7 +478,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（189 份）
+## 2026-11（190 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -665,6 +665,7 @@
 - [2026-11-11-userenv-escape-400-preauthz.md](../superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md)
 - [2026-11-12-expdual-ttse.md](../superpowers/specs/2026-11-12-expdual-ttse.md)
 - [2026-11-12-ai-agent-handbook-absorption.md](../superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md)
+- [2026-11-12-expdual-closeout.md](../superpowers/specs/2026-11-12-expdual-closeout.md)
 - [2026-11-12-run29-full-retrospective.md](../superpowers/specs/2026-11-12-run29-full-retrospective.md)
 - [2026-11-12-run29-retro-rootfix.md](../superpowers/specs/2026-11-12-run29-retro-rootfix.md)
 - [2026-11-12-run30-actions.md](../superpowers/specs/2026-11-12-run30-actions.md)

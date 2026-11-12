@@ -64,6 +64,10 @@ export interface FeatureConfig {
    *  入口；spec 2026-10-10-ontology-studio-spec.md）。产品能力非实验特性，默认开，
    *  VITE_CUSTOM_ONTOLOGY=false 显式关（cockpit/ide 档）。 */
   ontology: boolean;
+  /** 双轨经验台账（TTSE 吸收，2026-11-12 收尾批）：/app/expdual 双库/退役池/矛盾
+   * 候选/复核信号四区。默认开；VITE_CUSTOM_EXPDUAL=false 只关导航入口（K10 口径：
+   * 不门控服务端能力与端点）。 */
+  expdual: boolean;
   /** 流程架构工作台（企业级 BPA 方法论产品化，2026-10-14：/app/bpa + FlowNav
    *  入口；spec 2026-10-14-bpa-process-architecture-spec.md）。APQC PCF 分级 +
    *  OES/POS 流程地图 + PEMM 成熟度 + 治理硬约束。默认开，VITE_CUSTOM_BPA=false
@@ -92,6 +96,7 @@ export const features: FeatureConfig = {
   ontology: import.meta.env.VITE_CUSTOM_ONTOLOGY !== 'false',
   skillgov: import.meta.env.VITE_CUSTOM_SKILLGOV !== 'false',
   bpa: import.meta.env.VITE_CUSTOM_BPA !== 'false',
+  expdual: import.meta.env.VITE_CUSTOM_EXPDUAL !== 'false',
 };
 
 export function isFeatureEnabled(feature: keyof FeatureConfig): boolean {

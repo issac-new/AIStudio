@@ -4,11 +4,19 @@
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 136,
+    "scripts": 137,
     "ledgers": 6,
     "npmScripts": 52
   },
   "changes": [
+    {
+      "at": "2026-11-12",
+      "delta": "+1 script / scripts 136→137（补账抬位）",
+      "reason": "expdual 收尾批清偿（spec 2026-11-12-expdual-closeout 债1）：scripts/maintenance/ekko-skill-store-migration.mjs 系 2026-11-10 ekko-skill-store 批（8acb7d202）合入时未同步预算册——git log --diff-filter=A 实证其为最后一个新增 .mjs；本批按 2026-11-07 hrgov-seed/patch-touched 补账先例抬位至实测值 137，governance-lint --budget 由 FAIL 转 PASS",
+      "pairedRemovals": [
+        "一次性迁移工具随原批 sunset：ekko 技能存储迁移完成并验收后归档 scripts/maintenance/（责任归属原批，本批只补账不动脚本）"
+      ]
+    },
     {
       "at": "2026-11-07",
       "delta": "+2 脚本（补账登记：scripts/maintenance/hrgov-seed.mjs（3295a16d4 hrgov 种子批）＋scripts/platform/deploy/patch-touched.mjs（f3696d98e N-1 派生根治批）——两批合入时漏登预算，R143 收口批对账补记）",

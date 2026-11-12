@@ -11,7 +11,7 @@ import IaShell from './IaShell.vue'
 import FeatureDisabledView from './FeatureDisabledView.vue'
 import { features } from '../../../../config/features'
 
-type FeatureKey = 'bpa' | 'ontology' | 'eval' | 'skillgov'
+type FeatureKey = 'bpa' | 'ontology' | 'eval' | 'skillgov' | 'expdual'
 const props = defineProps<{ feature: FeatureKey }>()
 
 const VIEWS: Record<FeatureKey, Component> = {
@@ -19,12 +19,14 @@ const VIEWS: Record<FeatureKey, Component> = {
   ontology: defineAsyncComponent(() => import('@/custom/ontology/views/OntologyView.vue')),
   eval: defineAsyncComponent(() => import('@/custom/eval/views/EvalView.vue')),
   skillgov: defineAsyncComponent(() => import('@/custom/skillgov/views/SkillgovView.vue')),
+  expdual: defineAsyncComponent(() => import('@/custom/expdual/views/ExpdualView.vue')),
 }
 const ENABLED: Record<FeatureKey, boolean> = {
   bpa: features.bpa,
   ontology: features.ontology,
   eval: features.eval,
   skillgov: features.skillgov,
+  expdual: features.expdual,
 }
 
 const disabled = computed(() => !ENABLED[props.feature])

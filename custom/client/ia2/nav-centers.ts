@@ -102,7 +102,7 @@ export interface IslandNavMeta {
   /** 既有路由名 */
   name: string
   /** config/features.ts 开关键（与 FlowNavPanel 各 NavEntry 门控同源） */
-  featureKey: 'ide' | 'bpa' | 'ontology' | 'eval' | 'skillgov'
+  featureKey: 'ide' | 'bpa' | 'ontology' | 'eval' | 'skillgov' | 'expdual'
   labelZh: string
   labelEn: string
 }
@@ -116,6 +116,7 @@ export const ISLAND_NAVS: readonly IslandNavMeta[] = [
   { testid: 'ia-nav-island-ontology', name: 'ia2.ontology', featureKey: 'ontology', labelZh: '本体', labelEn: 'Ontology' },
   { testid: 'ia-nav-island-eval', name: 'ia2.eval', featureKey: 'eval', labelZh: '评测', labelEn: 'Eval' },
   { testid: 'ia-nav-island-skillgov', name: 'ia2.skillgov', featureKey: 'skillgov', labelZh: '技能治理', labelEn: 'Skill Gov' },
+  { testid: 'ia-nav-island-expdual', name: 'ia2.expdual', featureKey: 'expdual', labelZh: '经验台账', labelEn: 'Experience' },
 ]
 
 // ── 常用组与推演组注册表（2026-10-23 最近轨迹批迁入）────────────────────────
