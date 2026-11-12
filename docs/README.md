@@ -16,7 +16,7 @@
 | 全部 spec 可点击索引 | [设计文档全量索引](manuals/aistudio-design-document-index.md) |
 | 当前最新完整推演轮与真实报告案例 | [run28 案例](manuals/aistudio-interactive-training.html#scene=project-run28-case)（课程主入口）：含代偿 6/6、净额 5/6、自主派发、黄金集观察态与证据缺口；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)（可选来源） |
 | 历史推演与补流案例 | [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的教学档案，不代表当前最新轮 |
-| 完整培训手册（15 分钟版） | [AIStudio 技术培训手册](manuals/aistudio-complete-training-manual.html)：按产品三层重构的五段十四图（判据／人机界面／组织控制／机制执行／支撑来源），零表格、A4 纵向 8 页；`npm run training` 后访问 `/aistudio-complete-training-manual.html` |
+| 完整培训手册（15 分钟版） | [AIStudio 技术培训手册](manuals/aistudio-complete-training-manual.html)：一张全景图逐层分解的五段十三图（全景／系统／流程／机制／来源），零表格、A4 纵向 8 页；`npm run training` 后访问 `/aistudio-complete-training-manual.html` |
 | 14 幕交互培训与一键启动 | [交互培训页](manuals/aistudio-interactive-training.html)；`npm run training` |
 | Windows x64 排查 | [windows-x64-setup.md](windows-x64-setup.md) |
 | 一页看懂产品（离线单文件） | [intro.html](intro.html) |
