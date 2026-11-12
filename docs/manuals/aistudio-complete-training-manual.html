@@ -70,11 +70,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .board .row.top{flex:1.12}
 .board .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:.8cqw .95cqw;display:flex;flex-direction:column;gap:.5cqw;min-width:0;overflow:hidden}
 .board .card.accent{background:var(--accent-soft);border-color:#b9d2ee}
-.board .card.bounds{flex:.88}
-.board .card h3{margin:0;font-size:1.38cqw;line-height:1.25;color:var(--ink);display:flex;align-items:center;gap:.45cqw}
-.board .card h3 .n{display:inline-grid;place-items:center;width:1.75cqw;height:1.75cqw;border-radius:6px;background:var(--accent);color:#fff;font-size:.9cqw;font-weight:700;flex:0 0 auto}
-.board .card h3 small{font-size:.88cqw;color:var(--muted);font-weight:400}
-.board .card p{margin:auto 0 0;color:var(--muted);font-size:1.06cqw;line-height:1.42}
+.board .card.bounds{flex:.7}
+.board h3{margin:0;font-size:1.38cqw;line-height:1.25;color:var(--ink);display:flex;align-items:center;gap:.45cqw}
+.board h3 .n{display:inline-grid;place-items:center;width:1.75cqw;height:1.75cqw;border-radius:6px;background:var(--accent);color:#fff;font-size:.9cqw;font-weight:700;flex:0 0 auto}
+.board h3 small{font-size:.88cqw;color:var(--muted);font-weight:400}
+.board p{margin:auto 0 0;color:var(--muted);font-size:1.06cqw;line-height:1.42}
 .board .chips{display:flex;flex-wrap:wrap;gap:.35cqw}
 .board .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:.14cqw .55cqw;font-size:.98cqw;line-height:1.35;color:#3c4f66;white-space:nowrap}
 .board .chip.warn{border-color:#e5c07b;background:#fff8e8;color:#8a5a00}
@@ -86,7 +86,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .board .bar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.82cqw;color:#fff;background:#1f5fae;white-space:nowrap}
 .board .bar i:nth-child(2){background:#4a86c8}
 .board .bar i:nth-child(3){background:#9fc0e2;color:#173b68}
-.board .layers{display:flex;flex-direction:column;gap:.3cqw}
+.board .layers{display:grid;grid-template-columns:1fr 1fr;gap:.35cqw}
 .board .layers div{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;padding:.18cqw .55cqw;font-size:.98cqw;background:#fff;color:#33475f}
 .board .chain{display:flex;align-items:center;gap:.3cqw;flex-wrap:wrap;font-size:.98cqw;color:#33475f}
 .board .chain span{border:1px solid var(--line);border-radius:6px;padding:.15cqw .45cqw;background:#fff}
@@ -103,6 +103,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .board .bounds-grid div{border-left:3px solid #e5c07b;background:#fff8e8;border-radius:6px;padding:.5cqw .6cqw;display:flex;flex-direction:column;gap:.3cqw}
 .board .bounds-grid b{font-size:.98cqw;color:#8a5a00;line-height:1.3}
 .board .bounds-grid span{font-size:.86cqw;color:#6b5a3a;line-height:1.35}
+.board .pipeline{display:flex;gap:1cqw;align-items:stretch;background:var(--accent-soft);border:2px solid #b9d2ee;border-radius:12px;padding:1.1cqw;flex:1.3;min-height:0}
+.board .stage{flex:1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:.9cqw;display:flex;flex-direction:column;gap:.55cqw;min-width:0}
+.board .stage p{margin-top:auto}
+.board .row.facts{flex:.7}
+.board .row.main{flex:1.85}
+.board .side{display:flex;flex-direction:column;gap:1cqw;flex:1;min-width:0}
+.board .side .card:first-child{flex:.82}
+.board .side .card:last-child{flex:1.18}
+.board .card.hero{flex:1.15;justify-content:center;background:var(--accent-soft);border-color:#b9d2ee}
+
 
 /* 导航 */
 .nav{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;align-items:center;gap:8px;z-index:10;transition:opacity .25s ease}
@@ -484,22 +494,22 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">12</span><h2>生成与激活：档位、目录、历史兼容</h2></div><span class="time">—</span></header>
   <p class="slide-lead">只生成骨架不算完成；strict 全部通过才由 draft 改为 active。</p>
   <div class="slide-body"><figure class="board" aria-label="生成与激活结构图：探查建模、装配填充、验证激活，以及档位、目录、历史兼容与经验保留">
-  <div class="row stages">
-    <div class="card">
+  <div class="pipeline">
+    <div class="stage">
       <h3><span class="n">01</span>探查与建模 <small>Step 1—5</small></h3>
       <div class="chips"><span class="chip">自检</span><span class="chip">三路探查</span><span class="chip">组件清单</span><span class="chip">关系边集</span><span class="chip">17 项特征卡</span></div>
       <div class="steps"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
       <p>产出：notes · 清单 · 边集 · 框架证据</p>
     </div>
     <div class="arrow">→</div>
-    <div class="card accent">
+    <div class="stage">
       <h3><span class="n">02</span>装配与填充 <small>Step 6—9</small></h3>
       <div class="chips"><span class="chip">档位骨架</span><span class="chip">六段目录</span><span class="chip">meta / workflow / reference</span><span class="chip">assets / check / scripts</span></div>
       <div class="steps"><span>6</span><span>7</span><span>8</span><span>9</span></div>
       <p>产出：目标技能目录（draft）</p>
     </div>
     <div class="arrow">→</div>
-    <div class="card accent">
+    <div class="stage">
       <h3><span class="n">03</span>验证与激活 <small>Step 10—13</small></h3>
       <div class="chips"><span class="chip">核心门禁</span><span class="chip">独立审查</span><span class="chip">strict 全过</span><span class="chip">draft → active</span></div>
       <div class="steps"><span>10</span><span>11</span><span>12</span><span>13</span></div>
@@ -521,24 +531,25 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">13</span><h2>守门与证据：门禁、拦截、编码链</h2></div><span class="time">—</span></header>
   <p class="slide-lead">四类证据分别证明不同事实；门禁全部通过不等同于业务正确。</p>
   <div class="slide-body"><figure class="board" aria-label="守门与证据结构图：59 道门禁、四层拦截、编码链证据与能力边界">
-  <div class="row top">
-    <div class="card" style="flex:1.05">
+  <div class="row main">
+    <div class="card hero">
       <h3><span class="n">A</span>门禁规模</h3>
       <div class="big"><b>59</b><span>道门禁 · 204 变量</span></div>
       <div class="bar"><i style="width:20%">核心 12</i><i style="width:54%">标准 32</i><i style="width:26%">合规 19</i></div>
-      <div class="chips"><span class="chip">返回码 0/1/2</span></div>
-      <p>204 个配置变量参与判定；gate-runs 默认关闭，显式目录才落盘</p>
+      <div class="chips"><span class="chip">返回码 0/1/2</span><span class="chip">gate-runs 默认关闭</span></div>
+      <p>204 个配置变量参与判定；显式目录才落盘</p>
     </div>
-    <div class="card" style="flex:.95">
-      <h3><span class="n">B</span>四层拦截</h3>
-      <div class="layers"><div><b>L1</b>写时 <em>编辑器拦截</em></div><div><b>L2</b>提交 <em>pre-commit</em></div><div><b>L3</b>门禁 <em>检查集</em></div><div><b>L4</b>构建 <em>准入</em></div></div>
-      <div class="chips"><span class="chip">变异验证：改坏 → 必须抓到</span></div>
-      <p>各有降级面：未安装 / 未配置 / 缺库</p>
-    </div>
-    <div class="card" style="flex:1.25">
-      <h3><span class="n">C</span>编码链证据</h3>
-      <div class="chain"><span>worker 备技能</span><em>→</em><span>ACP 传 cwd</span><em>→</em><span>引擎执行</span><em>→</em><span>worker 复核</span></div>
-      <div class="evi"><div><b>技能装载</b><small>技能真的被装载</small></div><div><b>cwd</b><small>工作目录正确</small></div><div><b>引擎身份</b><small>执行引擎可信</small></div><div><b>测试 diff</b><small>变更被测试覆盖</small></div></div>
+    <div class="side">
+      <div class="card">
+        <h3><span class="n">B</span>四层拦截</h3>
+        <div class="layers"><div><b>L1</b>写时 <em>编辑器拦截</em></div><div><b>L2</b>提交 <em>pre-commit</em></div><div><b>L3</b>门禁 <em>检查集</em></div><div><b>L4</b>构建 <em>准入</em></div></div>
+        <p>各有降级面：未安装 / 未配置 / 缺库</p>
+      </div>
+      <div class="card">
+        <h3><span class="n">C</span>编码链证据</h3>
+        <div class="chain"><span>worker 备技能</span><em>→</em><span>ACP 传 cwd</span><em>→</em><span>引擎执行</span><em>→</em><span>worker 复核</span></div>
+        <div class="evi"><div><b>技能装载</b><small>技能真的被装载</small></div><div><b>cwd</b><small>工作目录正确</small></div><div><b>引擎身份</b><small>执行引擎可信</small></div><div><b>测试 diff</b><small>变更被测试覆盖</small></div></div>
+      </div>
     </div>
   </div>
   <div class="card bounds">
