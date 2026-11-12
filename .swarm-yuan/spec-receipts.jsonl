@@ -325,3 +325,4 @@
 {"at":"2026-11-12T05:02:34Z","spec":"docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md","receipt":"13e76634c6c465c4f738a6b1a779d1ae9c77452f","commit":"a8002fd55"}
 {"at":"2026-11-12T05:13:38Z","spec":"docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md","receipt":"6cf87fd781cb0a487da2fdb6e1aac9f775be7211","commit":"d858eec92"}
 {"at":"2026-11-12T05:16:58Z","spec":"docs/superpowers/specs/2026-11-12-doc-canon-single-source.md","receipt":"66755b8366cebca0cbb9104810fc2c7627ec43ba","commit":"a8002fd55"}
+{"at":"2026-11-12T05:19:18Z","spec":"docs/superpowers/specs/2026-11-12-runtime-ledgers-out-of-git.md","receipt":"ed40e625b119ecda29e00cf1dd2897b5728aabc6","commit":"a8002fd55"}
