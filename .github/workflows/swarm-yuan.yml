@@ -36,6 +36,14 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
       - name: Run the same full sweep as local development
         run: SWEEP_JOBS=2 bash skills/swarm-yuan/tests/run-sweep.sh
+      - name: 上传 sweep 失败日志（runner 逐测明细此前只在 runner /tmp，CI 不可见）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-logs
+          path: /tmp/sweep-logs.*/
+          retention-days: 14
+          if-no-files-found: ignore
 
   generator-self-gate:
     name: Generator self-gate (three gate profiles)
