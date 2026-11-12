@@ -333,3 +333,4 @@
 {"at":"2026-11-12T07:14:15Z","spec":"docs/superpowers/specs/2026-11-12-sim-stage-snapshot.md","receipt":"87ab295f73f1d02639fedb31a709f60c5506302f","commit":"034e94138"}
 {"at":"2026-11-12T07:22:27Z","spec":"docs/superpowers/specs/2026-11-12-domain-retirement-inventory.md","receipt":"80bfae628ec9df738c08569ea07f2e251c68624b","commit":"034e94138"}
 {"at":"2026-11-12T07:23:53Z","spec":"docs/superpowers/specs/2026-11-12-ci-typecheck-into-product-tests.md","receipt":"70feff4dcb512e5f7cc3045868bbc27ae84f0c8b","commit":"f3f2129c4"}
+{"at":"2026-11-12T07:34:59Z","spec":"docs/superpowers/specs/2026-11-12-yuan-facts-freshness.md","receipt":"450deaa2ade923a7cfcdd04aca6f136772146a1a","commit":"034e94138"}

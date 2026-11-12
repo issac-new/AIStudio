@@ -875,6 +875,15 @@ check_doc_consistency() {
     warn "FACT_SPEC_SECTIONS(${FACT_SPEC_SECTIONS:-?}) != spec-template.md 整数节($_spec_secs)——更新 facts.conf"
     FAIL=1
   fi
+
+  # 3d. 事实层口径（P2-12a/12b）：生成器 SKILL.md 模板认知摘要只指路不写死——模板须引用
+  # FACT_PROJECT_FACTS_FILE 指针（防将来模板重构退回写死数字的老缺陷形态）。
+  if grep -q 'FACT_PROJECT_FACTS_FILE' "$base/scripts/generate-skill.sh" 2>/dev/null; then
+    echo "  ✓ 生成器模板认知摘要引用 FACT_PROJECT_FACTS_FILE 指针（项目数字不写死）"
+  else
+    warn "生成器模板缺 FACT_PROJECT_FACTS_FILE 指针——认知摘要表恐退回写死项目数字（P2-12a/12b 复发）"
+    FAIL=1
+  fi
   else
     echo "  ℹ 非生成器仓（无 assets/facts.conf）——#2/#2b/#2c/#2d/#3 FACT_ 真值断言跳过（防 :-0 假默认误报）；#1 结构对账与 #4 预算断言仍执行"
   fi
@@ -917,6 +926,17 @@ check_doc_consistency() {
   # 5. 文档数字手抄退役声明：SKILL.md/README 不再内联具体计数（渲染由发布脚本注入）
   if grep -qE '(^|[^0-9.])[0-9]+ ?个(质量)?门禁' "$base/SKILL.md" 2>/dev/null && ! grep -q 'FACT_GATES_TOTAL' "$base/SKILL.md" 2>/dev/null; then
     warn "SKILL.md 仍手抄门禁数字（应引用 facts.conf 或不写数字）"
+  fi
+
+  # 5b. 事实层完整性（P2-12a/12b；生成器仓与目标技能上下文均适用）：已存在的
+  # references/project-facts.md 首行必须带 as_of 戳——机器可判新旧，防手改漂移。
+  if [[ -f "$base/references/project-facts.md" ]]; then
+    if head -1 "$base/references/project-facts.md" | grep -qE '^as_of: [0-9]{4}-[0-9]{2}-[0-9]{2} @ .+$'; then
+      echo "  ✓ 事实层 as_of 戳在位（$(head -1 "$base/references/project-facts.md" | sed 's/^as_of: //')）"
+    else
+      warn "references/project-facts.md 首行缺 as_of 戳（格式: as_of: <日期> @ <HEAD>）——重跑 scripts/project-facts.sh 勿手改"
+      FAIL=1
+    fi
   fi
 
   # 6. 版本口径三面机器锚（决策 38：根 README badge = 技能 README badge = CHANGELOG 首行版本）

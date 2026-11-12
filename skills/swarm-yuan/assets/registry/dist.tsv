@@ -1,4 +1,4 @@
-# dist.tsv — authoritative distribution manifest (103 rows；ub-mode 吸收轮 +1 -> 104).
+# dist.tsv — authoritative distribution manifest (109 rows；P2-12 事实层 +1 -> 110).
 # path	audience	tier	mode	cat	offline	src_pkg	requires	bytes
 # cat: source category (assets/gen/hook/rules/onto/ref/refd); bytes: references source bytes (context tax); - for scripts/assets.
 assets/spec-template.md	target	lite	copy	assets	yes	yes	-	-
@@ -40,6 +40,7 @@ scripts/codex-gate-wrapper.sh	target	standard	copy	hook	yes	yes	-	-
 scripts/setup-loop.sh	target	standard	copy	hook	yes	yes	-	-
 scripts/loop-hook.sh	target	standard	copy	hook	yes	yes	-	-
 scripts/project-fingerprint.sh	target	lite	copy	gen	yes	yes	-	-
+scripts/project-facts.sh	target	lite	copy	assets	yes	yes	-	-
 scripts/inventory-update.sh	target	lite	copy	gen	yes	yes	-	-
 scripts/relations-extract.sh	target	lite	copy	gen	yes	yes	-	-
 scripts/inventory-verify.sh	target	lite	copy	gen	yes	yes	-	-

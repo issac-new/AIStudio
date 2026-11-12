@@ -197,7 +197,7 @@ has references/capability-map.md "| compliance-checkpoints |" "capability-map �
 has references/capability-map.md "| regulatory-checkpoint-table |" "capability-map 登记主表"
 has references/task-methodology-router.md "迎检自查/强监管合规类" "task-router 迎检路由行"
 has SKILL.md "compliance-checkpoints（监管执法检查点库" "SKILL.md 路由表接知识件"
-has assets/facts.conf "FACT_UNIVERSAL_FILES=109" "facts FACT_UNIVERSAL_FILES=109"
+has assets/facts.conf "FACT_UNIVERSAL_FILES=110" "facts FACT_UNIVERSAL_FILES=110"
 # 不手抄篇数：读 facts.conf 声明值，与 references/*.md 实存对账（真值唯一源）。
 _ref_decl="$(sed -n 's/^FACT_REFERENCES=\([0-9][0-9]*\).*/\1/p' assets/facts.conf | head -1)"
 _ref_true="$(find references -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
