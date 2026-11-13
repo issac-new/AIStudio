@@ -180,17 +180,22 @@ def maybe_reduce_observation(content: str, tool_name: str, tool_call_id: str,
         return content
 
     # 1. Archive FIRST — full fidelity lives outside the model context whatever happens.
+    def _ledger(outcome: str, **extra) -> None:
+        record_efficiency_event("evidence_reduce", tool=tool_name, ref=str(tool_call_id),
+                                outcome=outcome, chars_original=len(content),
+                                archive=archive_path, session_id=session_id, **extra)
+
     archive_path = None
     try:
         from tools.tool_result_storage import _write_to_spillover, _safe_result_filename
         archive_path = _write_to_spillover(content, _safe_result_filename(tool_call_id))
     except Exception as exc:  # noqa: BLE001
         logger.debug("evidence_reducer archive step failed: %s", exc)
-
-    def _ledger(outcome: str, **extra) -> None:
-        record_efficiency_event("evidence_reduce", tool=tool_name, ref=str(tool_call_id),
-                                outcome=outcome, chars_original=len(content),
-                                archive=archive_path, session_id=session_id, **extra)
+    if not archive_path:
+        # 补丁 770（2026-11-13 超级智能体吸收批一）：全文归档未成（返回空或异常）
+        # 即 passthrough——无全文可回溯的 receipt 等于造假，摘要模型一次都不调。
+        _ledger("passthrough_archive_error")
+        return content
 
     # 2. Condense with the cheap model; any raise → pass-through.
     try:
