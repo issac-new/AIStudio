@@ -1,13 +1,19 @@
-// 账号切换编排守门（spec 2026-11-13 matrix-account-switch）：
-// 三步全序（取档位三元组 → matrix-login 换 JWT → 档位联动）与失败语义
-// （D2 先登录后切档：登录失败不动档位不动本地凭据；401 删仓上抛；403 零写入；
-// 档位联动 403 降级不阻断）。
+// 账号切换编排守门（spec 2026-11-13 matrix-account-switch；批二 D8/D9 密码形态）：
+// 三步全序（取档位凭据[token 直用/密码先 matrixSdkLogin 换 token] → matrix-login
+// 换 JWT → 档位联动）与失败语义（D2 先登录后切档：登录失败不动档位不动本地凭据；
+// 401 删仓上抛；403 零写入；档位联动 403 降级不阻断）。
 // @vitest-environment jsdom
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 
 const setApiKey = vi.hoisted(() => vi.fn())
+const sdkLogin = vi.hoisted(() => vi.fn())
 vi.mock('@/api/client', () => ({ setApiKey }))
 vi.mock('@/utils/deployment-url', () => ({ deploymentUrl: (p: string) => p }))
+// 批二 D9：密码形态经 matrixSdkLogin 换 token——部分 mock（vault 函数保真实现）
+vi.mock('../stores/matrix-credentials', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../stores/matrix-credentials')>()),
+  matrixSdkLogin: sdkLogin,
+}))
 
 import {
   switchToProfileAccount,
@@ -48,7 +54,7 @@ const isGet = (path: string) => (c: Call) => c.url === path && (c.init?.method ?
 const isPut = (path: string) => (c: Call) => c.url === path && c.init?.method === 'PUT'
 const isPost = (path: string) => (c: Call) => c.url === path && c.init?.method === 'POST'
 
-const PROFILE_CREDS = { configured: true, homeserverUrl: 'https://ms.test', accessToken: 'syt_profile', userId: '@pay:ms.test' }
+const PROFILE_CREDS = { configured: true, kind: 'token', homeserverUrl: 'https://ms.test', accessToken: 'syt_profile', userId: '@pay:ms.test' }
 const LOGIN_OK = { token: 'jwt_new', user: { matrix_display_name: '支付总监', matrix_avatar_url: null } }
 
 beforeEach(() => {
@@ -114,6 +120,38 @@ describe('switchToProfileAccount（档位联动链）', () => {
       { match: isGet('/api/matrix/gateway-credentials?profile=ghost'), status: 404, body: { configured: false } },
     ])
     await expect(switchToProfileAccount('ghost')).rejects.toBeInstanceOf(ProfileNotConfiguredError)
+  })
+
+  it('批二 D8 密码形态：先 matrixSdkLogin（localpart+密码）换 token 再走原链', async () => {
+    const PWD_CREDS = { configured: true, kind: 'password', homeserverUrl: 'http://localhost:8008', password: 'pw_secret', userId: '@swarm:matrix.test' }
+    mockFetchSeq([
+      { match: isGet('/api/matrix/gateway-credentials?profile=orchestrator'), status: 200, body: PWD_CREDS },
+      { match: isPost('/api/auth/matrix-login'), status: 200, body: LOGIN_OK },
+      { match: isPut('/api/hermes/profiles/active'), status: 200, body: { success: true } },
+    ])
+    sdkLogin.mockResolvedValue({ accessToken: 'syt_fresh', userId: '@swarm:matrix.test', deviceId: 'DEV_PW', homeserverUrl: 'http://localhost:8008' })
+
+    const result = await switchToProfileAccount('orchestrator')
+
+    // 密码登录参数：localpart（去 @ 与域）+ 密码
+    expect(sdkLogin).toHaveBeenCalledWith('http://localhost:8008', 'swarm', 'pw_secret')
+    // 后链用换来的 token（非密码）建立平台会话
+    expect(setApiKey).toHaveBeenCalledWith('jwt_new')
+    expect(getMatrixCredentials()).toMatchObject({ accessToken: 'syt_fresh', userId: '@swarm:matrix.test', deviceId: 'DEV_PW' })
+    expect(result).toEqual({ userId: '@swarm:matrix.test', profileSwitch: 'done', profile: 'orchestrator' })
+  })
+
+  it('批二 D8 密码形态登录失败 → StaleTokenError 提示更新 MATRIX_PASSWORD，零写入', async () => {
+    const PWD_CREDS = { configured: true, kind: 'password', homeserverUrl: 'http://localhost:8008', password: 'pw_wrong', userId: '@swarm:matrix.test' }
+    mockFetchSeq([
+      { match: isGet('/api/matrix/gateway-credentials?profile=orchestrator'), status: 200, body: PWD_CREDS },
+    ])
+    sdkLogin.mockRejectedValue(new Error('M_FORBIDDEN'))
+
+    await expect(switchToProfileAccount('orchestrator')).rejects.toThrow(/MATRIX_PASSWORD/)
+    expect(setApiKey).not.toHaveBeenCalled()
+    expect(getMatrixCredentials()).toBeNull()
+    expect(reloadMock).not.toHaveBeenCalled()
   })
 
   it('档位联动 403（非超管）→ 降级 skipped_forbidden：身份照切、凭据照写、reload 照发', async () => {

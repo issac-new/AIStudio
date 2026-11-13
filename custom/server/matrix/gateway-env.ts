@@ -123,11 +123,24 @@ export function profileEnvFilePath(profile: string, env: Record<string, string |
 }
 
 /**
- * 读指定档位凭据三件套；档位名非法抛错，档位 .env 缺席或三必填缺任一 → null。
- * 与 readGatewayMatrixEnv 同校验口径，但不走 matrix-session 回落——session 是
- * 「本机最近一次登录」而非「该档位」，按名取档位凭据只认 .env（spec D4）。
+ * 按名取档位凭据（spec 批二 D8 双形态）：token 三件套（HOMESERVER+ACCESS_TOKEN+
+ * USER_ID）或密码三件套（HOMESERVER+PASSWORD+USER_ID）任一齐全即配置有效，两态
+ * 齐备时 token 优先（免一次密码登录往返）。档位 .env 缺席或两种形态均不全 → null。
+ * 与 readGatewayMatrixEnv（active 链）不同：active 链只认 token（Brief 投递需
+ * token 直用）；密码形态是账号切换器按名取链路的能力，不走 matrix-session 回落
+ * （session 是「最近登录」非「该档位」，批一 D4）。
  */
-export function readProfileMatrixEnv(profile: string, env: Record<string, string | undefined> = process.env): GatewayMatrixEnv | null {
+export interface ProfileMatrixCredentials {
+  kind: 'token' | 'password'
+  homeserverUrl: string
+  userId: string
+  /** kind=token 时的访问令牌 */
+  accessToken?: string
+  /** kind=password 时的登录密码（仅回环闸内按需下发，列表端点零凭据） */
+  password?: string
+}
+
+export function readProfileMatrixEnv(profile: string, env: Record<string, string | undefined> = process.env): ProfileMatrixCredentials | null {
   let kv: Record<string, string> | null
   try {
     kv = parseDotenv(readFileSync(profileEnvFilePath(profile, env), 'utf8'))
@@ -137,9 +150,12 @@ export function readProfileMatrixEnv(profile: string, env: Record<string, string
   if (!kv) return null
   const homeserverUrl = kv.MATRIX_HOMESERVER ?? ''
   const accessToken = kv.MATRIX_ACCESS_TOKEN ?? ''
+  const password = kv.MATRIX_PASSWORD ?? ''
   const userId = kv.MATRIX_USER_ID ?? ''
-  if (homeserverUrl === '' || accessToken === '' || userId === '') return null
-  return { homeserverUrl, accessToken, userId }
+  if (homeserverUrl === '' || userId === '') return null
+  if (accessToken !== '') return { kind: 'token', homeserverUrl, userId, accessToken }
+  if (password !== '') return { kind: 'password', homeserverUrl, userId, password }
+  return null
 }
 
 /** 档位账号清单项（profile-accounts 端点载荷；不含 token——spec D4）。 */
@@ -150,9 +166,9 @@ export interface ProfileMatrixAccount {
 }
 
 /**
- * 列出全部已配 Matrix 凭据三件套的档位（spec D6：无凭据档位不列）。
- * 只认目录（readdir withFileTypes），`_` 开头目录跳过；清单不做在线 token
- * 校验——失效在切换动作经 matrix-login 暴露（spec 变更 2）。
+ * 列出全部已配 Matrix 凭据的档位（spec D6：无凭据档位不列；批二 D8：token/密码
+ * 双形态任一齐全即列）。只认目录（readdir withFileTypes），`_` 开头目录跳过；
+ * 清单不做在线凭据校验——失效在切换动作暴露（批一变更 2）。
  */
 export function listProfileMatrixAccounts(env: Record<string, string | undefined> = process.env): ProfileMatrixAccount[] {
   const profilesDir = join(hermesHomePath(env), 'profiles')

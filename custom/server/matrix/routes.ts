@@ -119,11 +119,14 @@ export function registerMatrixAuthRoutes(app: Koa) {
         ctx.body = { configured: false, reason: 'profile_not_configured' };
         return;
       }
+      // 批二 D8 双形态：kind=password 时下发密码（客户端先密码登录换 token），
+      // kind=token 时下发 token——均限回环闸内，与 active 链 token 下发同信任域。
       ctx.body = {
         configured: true,
+        kind: env.kind,
         homeserverUrl: env.homeserverUrl,
-        accessToken: env.accessToken,
         userId: env.userId,
+        ...(env.kind === 'token' ? { accessToken: env.accessToken } : { password: env.password }),
       };
       return;
     }

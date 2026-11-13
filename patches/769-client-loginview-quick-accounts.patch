@@ -1,0 +1,21 @@
+diff --git a/packages/client/src/views/LoginView.vue b/packages/client/src/views/LoginView.vue
+--- a/packages/client/src/views/LoginView.vue
++++ b/packages/client/src/views/LoginView.vue
+@@ -5,6 +5,7 @@
+ import { useAuthStore } from "@/stores/hermes/auth";
+ import { resolveLoginRedirect } from "@/utils/login-redirect";
+ import { fetchMatrixServerInfo } from "@/custom/ia2/matrix-server-info";
++import MatrixLoginQuickAccounts from "@/custom/matrix-chat/components/MatrixLoginQuickAccounts.vue";
+ 
+ const { t } = useI18n();
+ const router = useRouter();
+@@ -174,6 +175,9 @@
+         <button type="submit" class="login-btn" :disabled="loading">{{ loading ? "..." : t("login.submit") }}</button>
+         <button type="button" class="login-fallback-link" @click="activeTab = 'matrix'">{{ t("login.useMatrixLogin") }}</button>
+       </form>
++
++      <!-- 本机账号一键进入（custom 组件自包含；仅 matrix 页签展示） -->
++      <MatrixLoginQuickAccounts v-if="activeTab === 'matrix'" />
+     </div>
+   </div>
+ </template>

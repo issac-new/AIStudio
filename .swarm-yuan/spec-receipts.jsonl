@@ -370,3 +370,4 @@
 {"at":"2026-11-13T08:45:13Z","spec":"docs/superpowers/specs/2026-11-13-burn-waive-gate.md","receipt":"6a2ea84491560546bd4a254fee78a2a527f07799","commit":"b5bb25164"}
 {"at":"2026-11-13T12:31:16Z","spec":"docs/superpowers/specs/2026-11-13-tech-ledger-refresh-vendor-upgrade.md","receipt":"d0244742563739bdb866307e210e99497e975678","commit":"6de3db4c8"}
 {"at":"2026-11-13T13:10:37Z","spec":"docs/superpowers/specs/2026-11-13-matrix-account-switch.md","receipt":"b09a61adfb47e65bbc89675c32e59bf1e89c2c24","commit":"6de3db4c8"}
+{"at":"2026-11-13T15:57:15Z","spec":"docs/superpowers/specs/2026-11-13-matrix-account-switch-batch2.md","receipt":"fd0e69c5317c4cbe0919604193eeaa972c24f0c0","commit":"b819d91a5"}

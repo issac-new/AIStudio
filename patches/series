@@ -1,3 +1,5 @@
+# 769（2026-11-13 matrix 账号切换批二，spec 2026-11-13-matrix-account-switch-batch2）：
+# 登录页本机账号一键进入（LoginView 挂 custom 组件 MatrixLoginQuickAccounts）。
 001-schemas-matrix-columns.patch
 002-config-matrix-fields.patch
 003-vite-matrix-presbundle.patch
@@ -1230,3 +1232,4 @@
 # 双轨经验台账路由注册（/api/expdual/* 挂进 bootstrap/routes.ts；先例 627）。
 767-server-expdual-routes.patch
 768-package-lock-root-deps.patch
+769-client-loginview-quick-accounts.patch
