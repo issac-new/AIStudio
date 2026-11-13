@@ -1,8 +1,9 @@
 diff --git a/package-lock.json b/package-lock.json
+index 13434a9aa..767907418 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -9,6 +9,13 @@
-       "version": "0.8.20",
+       "version": "0.8.21",
        "license": "BSL-1.1",
        "dependencies": {
 +        "cron-parser": "^5.1.1",
@@ -15,7 +16,7 @@ diff --git a/package-lock.json b/package-lock.json
          "@audio/decode-mp3": "^1.1.0",
          "@audio/decode-wav": "^1.2.0",
          "@larksuiteoapi/node-sdk": "^1.73.0",
-@@ -46,6 +53,7 @@
+@@ -45,6 +52,7 @@
          "hermes-web-ui-mcp": "bin/hermes-web-ui-mcp.mjs"
        },
        "devDependencies": {
