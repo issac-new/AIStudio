@@ -368,3 +368,4 @@
 {"at":"2026-11-12T12:10:48Z","spec":"docs/superpowers/specs/2026-11-12-domain-retirement-execution.md","receipt":"5262e4520ddb53893bb6e0efe0447b2b22307541","commit":"c1879572a"}
 {"at":"2026-11-13T02:01:20Z","spec":"docs/superpowers/specs/2026-11-13-burn-verify-robustness.md","receipt":"c24c48741f4bf4760d4cdacdb4b35a239350911f","commit":"b5bb25164"}
 {"at":"2026-11-13T08:45:13Z","spec":"docs/superpowers/specs/2026-11-13-burn-waive-gate.md","receipt":"6a2ea84491560546bd4a254fee78a2a527f07799","commit":"b5bb25164"}
+{"at":"2026-11-13T12:31:16Z","spec":"docs/superpowers/specs/2026-11-13-tech-ledger-refresh-vendor-upgrade.md","receipt":"d0244742563739bdb866307e210e99497e975678","commit":"6de3db4c8"}
