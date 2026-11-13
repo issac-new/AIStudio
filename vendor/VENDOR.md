@@ -4,9 +4,9 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 
 | 树 | commit | 版本 | upstream remote | 提取方式 |
 |---|---|---|---|---|
-| hermes-studio | `cedaceaef` | v0.8.20（**tag 命名说明**：上游 v1.0.9 的 package.json 本就是 0.8.11，此后回归 0.8.x 线连发 v0.8.12~v0.8.20；v1.0.9→v0.8.20 谱系前进 63 提交非降级，台账以 git ancestry 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
+| hermes-studio | `312425cca` | v0.8.21（**tag 命名说明**：上游 v1.0.9 的 package.json 本就是 0.8.11，此后回归 0.8.x 线连发 v0.8.12~v0.8.21；v1.0.9→v0.8.21 谱系前进 66 提交非降级，台账以 git ancestry 为准） | https://github.com/EKKOLearnAI/ekko-studio.git（旧名 `hermes-studio` 为重定向别名；2026-10-31 实测 full_name=ekko-studio） | `git archive HEAD \| tar -x`（干净 HEAD，排除工作树注入态与 node_modules/dist） |
 | hermes-agent | `3b4215785` | v0.23.1 | https://github.com/NousResearch/hermes-agent.git | 同上 |
-| zcode | `b95ebaff` | 包版本 3.18.0（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
+| zcode | `fec97590` | 包版本 3.18.2（谱系 v3.16.1 系列；**同步口径=上游 main 变更，不看版本 tag**，2026-10-25 用户裁定） | （闭源底座仓，upstream/zcode 本地树） | 同上 |
 
 > 2026-10-31 升级轮：hermes-studio 基线已升 v0.8.0（本批，44 失败件重生成/2 退役/4 条迁位，重放零失败）；补丁 329 esp32 段随上游迁移改指 `packages/mcu/esp32-*`。hermes-agent 仍 v0.22.5（main 领先 3087c）。zcode 已于 2026-10-31 同步批升 `a60ba6a7`（v3.17.1 线，8 条活跃补丁重放零失败，002/006 重生成、引擎构建绿）；同步 spec 见 `2026-10-31-zcode-3171-sync.md`。
 
@@ -48,3 +48,5 @@ AIStudio 单仓整合轮（2026-10-24）落库。vendor/<tree> 是钉版的上�
 - `upstream/<tree>` 是升级缓存树，保持 pristine（HEAD 与 vendor 钉版同 commit）。**禁止在其工作树手改 package.json/lock**——overlay 需要的新依赖一律走 patches/ 补丁在 vendor 注入态入册（manifest 先例：017 matrix-js-sdk、080 echarts、103 lunar、136 cron-parser、137 proper-lockfile、138 pg、573 playwright-163；锁收口：687）。2026-10-24 实测发现 upstream/hermes-studio 工作树存在 6 项手改脏态（影子双源），已还原 pristine，锁由补丁 687 正身承载。
 
 > 2026-11-11 同步批（spec `2026-11-11-zcode-3180-sync-and-qwen-absorb.md`）：zcode 基线升 **v3.18.0**（`b95ebaff`，单 sync 提交 5099 文件 +429348/−44745；主题=session-control 12 会话工具/插件 extension host+plugin-api 1.4.0/原生 git worktree 隔离/design 双线/登录分区+凭据 v2/子代理后台失速治理）。补丁面：002/006 锚漂移重生成（002=zcodeAgentService +465 后 import/method 锚漂、006=official-plugin-definitions 前插 design 条目+marketplaces 尾注并句），010 实测直放（上游 +142 未触插入锚）；新增 011（MCP inputSchema 参数名消毒＋调用回译，Qwen Code 1.0 唯一确凿差距吸收项）。净基线 10/10 重放零失败、inject 幂等二连过；upstream/zcode 缓存树同批 checkout b95ebaff。hermes-studio 维持 v0.8.20、hermes-agent 维持 v0.23.1（本批不动）。
+
+> 2026-11-13 升级批（spec `2026-11-13-tech-ledger-refresh-vendor-upgrade.md`，台账点名刷新随批）：hermes-studio 基线升 **v0.8.21**（`312425cca`，上游 2026-11-11 发布；v0.8.20→v0.8.21 为 3 提交/72 文件，主题=BOT 协作历史统一聊天卡片 #3746＋STT 空 OpenAI-compatible transcript 修复 #3753）。studio 面 **042/768 两枚重锚**（上游 package.json/lock version 字面量 0.8.20→0.8.21 上下文漂移；042 品牌重命名 pkg、768 lock 根 deps 插行，意图不变重生成），其余补丁直放；zcode 基线升 **v3.18.2**（`fec97590`，v3.18.0→v3.18.2 两个 sync 提交 148 文件 +5870/−692，主题=CLI memory-diagnostics/credential-security/voice-input/microphone-access）；zcode-patches 10/10 零重生成直放，引擎构建绿。净基线 clean+inject 472 枚零失败；pristine 抽验 4/4。**流程教训两条**：①`VENDOR_SYNC=1 git add ... && git commit` 的 env 只作用于 add——`&&` 后的 commit 不继承，须 `VENDOR_SYNC=1` 直接前缀在 commit 命令上，否则 pre-commit 撤出 vendor staged 致空壳提交/漏录；②**git add 必须在 inject 之前**——注入态工作树上 add 会把补丁效果带进基线 commit（本批曾发生，vendor-sync 重替换＋amend 根治，pristine 复验把关）。upstream/hermes-studio 缓存树同批 checkout v0.8.21（单 tag 浅拉绕行 GitHub 直连重置）。hermes-agent 维持 v0.23.1（main +5475c canary 不追）。
