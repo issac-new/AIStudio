@@ -1,0 +1,285 @@
+diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
+--- a/tools/delegate_tool.py
++++ b/tools/delegate_tool.py
+@@ -49,6 +49,7 @@
+ )
+ from tools.delegate_tool_tasks import (
+     _MAX_TASK_IMAGES, _coerce_task_images, _coerce_task_schemas, _normalize_task_images, _normalize_task_list,
++    _validate_strict_flags,
+ )
+ from tools.delegate_tool_tuning import pin_child_service_tier
+ from tools.delegate_tool_toolsets import (
+@@ -465,6 +466,7 @@
+     task_list: list[dict[str, Any]], task_schemas: list[Optional[dict[str, Any]]], routes: list[Any], *,
+     top_role: str, max_iterations: int, parent_agent,
+     live_deleg_id: Optional[str], live_writers: list, task_images: Optional[list[Optional[list[str]]]] = None,
++    task_strict: Optional[list[bool]] = None,
+ ) -> tuple[list[tuple], Optional[str]]:
+     """Build every child on the main thread (construction is not thread-safe), each on its task's route;
+     ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure."""
+@@ -496,6 +498,10 @@
+         if _task_schema is not None:
+             with _quiet("Could not attach output schema to child %d", i):
+                 child._delegate_output_schema = _task_schema
++        # 补丁 771：严格合同标志与 schema 同点附着（child_run 结果判定读取）。
++        if task_strict and i < len(task_strict) and task_strict[i]:
++            with _quiet("Could not attach strict flag to child %d", i):
++                child._delegate_strict_output = True
+         # Validated per-task images; absent on image-less tasks, which keep the text-only goal turn.
+         _t_images = task_images[i] if task_images and i < len(task_images) else None
+         if _t_images:
+@@ -617,6 +623,11 @@
+     task_list, err = _normalize_task_list(goal, context, tasks, output_schema, top_role, max_children)
+     if not err:
+         task_schemas, err = _coerce_task_schemas(task_list, output_schema)
++    if not err:
++        # 补丁 771：strict_output_schema 预检（spawn 前）——非布尔或 strict 无 schema
++        # 即拒绝整个调用，不烧任何子代理。
++        err = _validate_strict_flags(task_list, task_schemas)
++    task_strict_flags = [bool(t.get("strict_output_schema")) for t in (task_list or [])]
+     if not err:
+         task_images, err = _coerce_task_images(task_list, images)
+     if not err:
+@@ -668,6 +679,7 @@
+     children, err = _build_children(
+         task_list, task_schemas, routes, top_role=top_role, max_iterations=default_max_iter, parent_agent=parent_agent,
+         live_deleg_id=live_deleg_id, live_writers=live_writers, task_images=task_images,
++        task_strict=task_strict_flags,
+     )
+     if err:
+         return tool_error(err)
+@@ -830,6 +842,14 @@
+                             "schema_valid, plus schema_errors on failure — the child's raw text is still returned "
+                             "as summary, never discarded). Keep it forgiving — require only fields you will read.",
+                         ),
++                        "strict_output_schema": _p(
++                            "boolean",
++                            "Optional (default false). Set true ONLY when a machine will consume this child's "
++                            "final answer: after the one correction retry it MUST satisfy output_schema or the "
++                            "result is reported failed (exit_reason output_schema_invalid; the raw text stays in "
++                            "summary). Requires output_schema on the same task. Leave false for research-style "
++                            "tasks where the raw text is the deliverable.",
++                        ),
+                         "images": _p(
+                             "array",
+                             "Optional images this child must SEE (max 8): local file paths or http(s) URLs — e.g. a "
+diff --git a/tools/delegate_tool_tasks.py b/tools/delegate_tool_tasks.py
+--- a/tools/delegate_tool_tasks.py
++++ b/tools/delegate_tool_tasks.py
+@@ -104,6 +104,28 @@
+     batch_error = _validate_batch_tasks(task_list) if isinstance(tasks, list) else None
+     return (None, batch_error) if batch_error else (task_list, None)
+ 
++
++def _validate_strict_flags(
++    task_list: list[dict[str, Any]], task_schemas: list[Optional[dict[str, Any]]]
++) -> Optional[str]:
++    """补丁 772（2026-11-13 超级智能体吸收批一）：``strict_output_schema`` 预检。
++
++    严格合同必须显式声明且自带 schema——非布尔值或 strict=true 而无 output_schema
++    在任何子代理启动前拒绝整个调用（返回可操作错误；None=通过）。
++    """
++    for i, task in enumerate(task_list):
++        raw = task.get("strict_output_schema")
++        if raw is None:
++            continue
++        if not isinstance(raw, bool):
++            return f"Task {i} strict_output_schema must be a boolean, got {type(raw).__name__}."
++        if raw and not (i < len(task_schemas) and isinstance(task_schemas[i], dict)):
++            return (
++                f"Task {i} sets strict_output_schema=true but declares no output_schema; "
++                "add the schema on the same task or drop the strict flag."
++            )
++    return None
++
+ def _coerce_task_schemas(
+     task_list: list[dict[str, Any]], output_schema: Optional[dict[str, Any]]
+ ) -> tuple[list[Optional[dict[str, Any]]], Optional[str]]:
+diff --git a/tools/delegate_tool_child_run.py b/tools/delegate_tool_child_run.py
+--- a/tools/delegate_tool_child_run.py
++++ b/tools/delegate_tool_child_run.py
+@@ -654,6 +654,16 @@
+         # for validated output.
+         exit_reason = "completed" if result.get("completed", False) else "max_iterations"
+         status = "completed" if usable_summary else "failed"
++        # 补丁 772（2026-11-13 超级智能体吸收批一）：strict_output_schema=true 的显式
++        # 严格合同失败关闭——仅翻转「正常完成（result.completed）且 schema 不合格」
++        # 的结果为 failed；预算耗尽（completed=False，状态语义=completed+truncated）、
++        # 中断与执行错误的原始终止原因不被 output_schema_invalid 覆盖，机器消费者以
++        # truncated/schema_valid 双旗识别不可解析。
++        if (result.get("completed", False) and usable_summary
++                and bool(getattr(child, "_delegate_strict_output", False))
++                and isinstance(schema.schema, dict) and schema.valid is False):
++            status = "failed"
++            exit_reason = "output_schema_invalid"
+ 
+     _cost = getattr(child, "session_estimated_cost_usd", 0.0)
+     _cost_status = getattr(child, "session_cost_status", None)
+@@ -693,6 +703,11 @@
+         _failure_reason = result.get("failure_reason")
+         if isinstance(_failure_reason, str) and _failure_reason:
+             entry["failure_reason"] = _failure_reason
++        if exit_reason == "output_schema_invalid":
++            # 严格合同失败的专属判词：summary 是未验证原文，机器消费者不得当 JSON 解析。
++            entry["error"] = ("strict_output_schema: declared output_schema not satisfied after the "
++                              "correction retry; summary is the child's raw unvalidated final text "
++                              "(see schema_errors)")
+     elif interrupt_note:
+         entry["error"] = interrupt_note
+ 
+diff --git a/tests/tools/test_delegate_strict_output_schema.py b/tests/tools/test_delegate_strict_output_schema.py
+new file mode 100644
+--- /dev/null
++++ b/tests/tools/test_delegate_strict_output_schema.py
+@@ -0,0 +1,151 @@
++"""772 strict_output_schema（spec 2026-11-13-superagent-contract-closure）。
++
++每任务可选 ``strict_output_schema: boolean``（默认 false）：
++- true 时必须有合法 output_schema（spawn 前拒绝）；
++- 一次既有纠正后仍不合格 → status=failed、exit_reason=output_schema_invalid，
++  原始文本保留在 summary（失败关闭，不冒充完成）；
++- interrupted / 执行错误 / max_iterations 的原始终止原因不被覆盖；
++- 默认宽松行为字节级不变（原 test_delegate_output_schema 互证）。
++"""
++
++from tools.delegate_tool import DELEGATE_TASK_SCHEMA, _run_single_child
++from tools.delegate_tool_tasks import _validate_strict_flags
++
++
++ADDRESS_SCHEMA = {
++    "type": "object",
++    "properties": {"city": {"type": "string"}},
++    "required": ["city"],
++}
++
++PROSE = 'Findings:\n```json\n{"town": "Oslo"}\n```\nlet me know.'
++
++
++class _StubChild:
++    """Minimal child double（照 test_delegate_output_schema:117-151，结果改为
++    全量 dict 以便逐例控制 completed/interrupted）。"""
++
++    tool_progress_callback = None
++    _delegate_saved_tool_names: list = []
++    _credential_pool = None
++    _subagent_id = None
++    _delegate_depth = 1
++    _parent_subagent_id = None
++    _delegate_output_schema = None
++    _delegate_strict_output = False
++    model = "test-model"
++    session_prompt_tokens = 0
++    session_completion_tokens = 0
++    session_estimated_cost_usd = 0.0
++    session_reasoning_tokens = 0
++    session_cost_status = None
++
++    def __init__(self, results):
++        self.results = [dict(r) for r in results]
++        self.calls: list = []
++
++    def get_activity_summary(self):
++        return {"api_call_count": 1, "max_iterations": 5, "current_tool": None}
++
++    def run_conversation(self, user_message, task_id=None, **_kwargs):
++        self.calls.append(user_message)
++        r = dict(self.results.pop(0))
++        r.setdefault("final_response", "")
++        r.setdefault("completed", True)
++        r.setdefault("api_calls", 1)
++        r.setdefault("messages", [])
++        return r
++
++    def close(self):
++        return None
++
++
++class _StubParent:
++    _current_task_id = None
++    _delegate_depth = 0
++
++    def _touch_activity(self, _desc):
++        return None
++
++
++def _run(child):
++    return _run_single_child(0, "produce the address", child, _StubParent())
++
++
++class TestStrictFailClosed:
++    def test_strict_fail_twice_is_failed_with_raw_summary(self):
++        child = _StubChild([{"final_response": PROSE}, {"final_response": PROSE}])
++        child._delegate_output_schema = ADDRESS_SCHEMA
++        child._delegate_strict_output = True
++        entry = _run(child)
++        assert entry["status"] == "failed"
++        assert entry["exit_reason"] == "output_schema_invalid"
++        assert entry["summary"] == PROSE
++        assert entry["schema_valid"] is False
++        assert entry["schema_errors"]
++        assert entry["schema_retries"] == 1
++        assert len(child.calls) == 2  # 既有唯一一次纠正
++        assert "strict_output_schema" in entry["error"]
++
++    def test_strict_retry_then_valid_stays_completed(self):
++        child = _StubChild([{"final_response": PROSE}, {"final_response": '{"city": "Oslo"}'}])
++        child._delegate_output_schema = ADDRESS_SCHEMA
++        child._delegate_strict_output = True
++        entry = _run(child)
++        assert entry["status"] == "completed"
++        assert entry["exit_reason"] == "completed"
++        assert entry["schema_valid"] is True
++        assert "error" not in entry
++
++    def test_strict_budget_exhausted_keeps_max_iterations_reason(self):
++        child = _StubChild([
++            {"final_response": PROSE, "completed": False},
++            {"final_response": PROSE},
++        ])
++        child._delegate_output_schema = ADDRESS_SCHEMA
++        child._delegate_strict_output = True
++        entry = _run(child)
++        # 预算耗尽保留既有语义：状态仍 completed（truncated 旗标承载预算事实），
++        # 严格标志只补 schema_valid=false，不改终止类结果。
++        assert entry["status"] == "completed"
++        assert entry["exit_reason"] == "max_iterations"
++        assert entry["truncated"] is True
++        assert entry["schema_valid"] is False
++
++    def test_strict_interrupted_keeps_interrupted_reason(self):
++        child = _StubChild([{"final_response": PROSE, "interrupted": True}])
++        child._delegate_output_schema = ADDRESS_SCHEMA
++        child._delegate_strict_output = True
++        entry = _run(child)
++        assert entry["status"] == "interrupted"
++        assert entry["exit_reason"] == "interrupted"
++        assert len(child.calls) == 1  # 中断不做 schema 纠正
++
++    def test_lenient_default_unchanged_completed_with_raw_text(self):
++        child = _StubChild([{"final_response": PROSE}, {"final_response": PROSE}])
++        child._delegate_output_schema = ADDRESS_SCHEMA
++        entry = _run(child)
++        assert entry["status"] == "completed"
++        assert entry["summary"] == PROSE
++        assert entry["schema_valid"] is False
++        assert "UNVALIDATED" in entry["schema_note"]
++
++
++class TestSpawnPreValidation:
++    def test_strict_without_schema_rejected(self):
++        err = _validate_strict_flags([{"goal": "g", "strict_output_schema": True}], [None])
++        assert err and "output_schema" in err
++
++    def test_non_bool_strict_rejected(self):
++        err = _validate_strict_flags([{"goal": "g", "strict_output_schema": "yes"}], [ADDRESS_SCHEMA])
++        assert err and "boolean" in err
++
++    def test_false_and_absent_pass(self):
++        assert _validate_strict_flags([{"goal": "g", "strict_output_schema": False}], [None]) is None
++        assert _validate_strict_flags([{"goal": "g"}], [ADDRESS_SCHEMA]) is None
++
++
++class TestSchemaAdvertise:
++    def test_strict_flag_advertised_per_task(self):
++        props = DELEGATE_TASK_SCHEMA["parameters"]["properties"]["tasks"]["items"]["properties"]
++        assert props["strict_output_schema"]["type"] == "boolean"

@@ -1,0 +1,53 @@
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -1176,12 +1176,16 @@
+ }
+ 
+ // ─── Task lifecycle（overlay 补充：delete/patch/decompose）─────────
++// 补丁 770（2026-11-13 超级智能体吸收批一）：三写入口与 complete/block 同权——
++// board 统一走 requestBoard（非法 400），副作用前过 authorizeTaskIds（隐藏
++// profile 404 且零副作用）；super_admin 无 profile 限制时沿用快路径，不额外预读。
+ 
+ export async function deleteTask(ctx: Context) {
+   try {
+-    const taskId = ctx.params.id
+-    const board = ctx.query.board as string | undefined
+-    await kanbanCli.deleteTask(taskId, { board })
++    const board = requestBoard(ctx)
++    if (!board) return
++    if (!await authorizeTaskIds(ctx, board, [ctx.params.id], undefined, 'delete')) return
++    await kanbanCli.deleteTask(ctx.params.id, { board })
+     ctx.body = { ok: true }
+   } catch (err: any) {
+     ctx.status = 500
+@@ -1191,10 +1195,11 @@
+ 
+ export async function patchTask(ctx: Context) {
+   try {
+-    const taskId = ctx.params.id
+-    const board = ctx.query.board as string | undefined
++    const board = requestBoard(ctx)
++    if (!board) return
++    if (!await authorizeTaskIds(ctx, board, [ctx.params.id], undefined, 'patch')) return
+     const body = ctx.request.body as any
+-    const task = await kanbanCli.patchTask(taskId, { ...body, board })
++    const task = await kanbanCli.patchTask(ctx.params.id, { ...body, board })
+     ctx.body = { task }
+   } catch (err: any) {
+     // HERMES_CUSTOM[v713]: CLI 状态机拒绝（"cannot X for Y"/"is not in ..."）是业务
+@@ -1213,10 +1218,11 @@
+ 
+ export async function decomposeTask(ctx: Context) {
+   try {
+-    const taskId = ctx.params.id
+-    const board = ctx.query.board as string | undefined
++    const board = requestBoard(ctx)
++    if (!board) return
++    if (!await authorizeTaskIds(ctx, board, [ctx.params.id], undefined, 'decompose')) return
+     const body = (ctx.request.body as any) || {}
+-    const result = await kanbanCli.decomposeTask(taskId, { board, author: body.author })
++    const result = await kanbanCli.decomposeTask(ctx.params.id, { board, author: body.author })
+     ctx.body = { result }
+   } catch (err: any) {
+     ctx.status = 500
