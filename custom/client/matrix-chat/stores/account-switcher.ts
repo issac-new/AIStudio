@@ -12,6 +12,7 @@
 import { setApiKey } from '@/api/client'
 import {
   getVaultAccount,
+  matrixSdkLogin,
   removeVaultAccount,
   storeMatrixCredentials,
   type MatrixCredentials,
@@ -87,17 +88,43 @@ async function matrixLoginByToken(creds: MatrixCredentials): Promise<MatrixLogin
   return await res.json() as MatrixLoginResponse
 }
 
-/** GET /api/matrix/gateway-credentials?profile=<name>——按名取档位三元组。 */
+/**
+ * GET /api/matrix/gateway-credentials?profile=<name>——按名取档位凭据（批二 D8 双形态）：
+ * kind=token 直用；kind=password 先 matrixSdkLogin 密码换 token（客户端既有能力，
+ * 与登录表单同函数，服务端不做密码代登——D9）。密码错误映射 StaleTokenError
+ * （提示更新 .env 的 MATRIX_PASSWORD）；此处抛的 StaleTokenError 在
+ * switchToProfileAccount 的 try 块之外，不会被外层再包一层档位文案。
+ */
+interface ProfileCredentialsResponse {
+  configured?: boolean
+  kind?: 'token' | 'password'
+  homeserverUrl?: string
+  userId?: string
+  accessToken?: string
+  password?: string
+}
+
 async function fetchProfileCredentials(profile: string): Promise<MatrixCredentials> {
   const { deploymentUrl } = await import('@/utils/deployment-url')
   const res = await fetch(deploymentUrl(`/api/matrix/gateway-credentials?profile=${encodeURIComponent(profile)}`))
   if (res.status === 404) throw new ProfileNotConfiguredError(profile)
   if (res.status === 400) throw new ProfileNotConfiguredError(profile)
   if (!res.ok) throw new Error(`读取档位凭据失败（${res.status}）`)
-  const g = await res.json() as { configured?: boolean; homeserverUrl?: string; accessToken?: string; userId?: string }
-  if (!g?.configured || !g.accessToken || !g.userId || !g.homeserverUrl) {
+  const g = await res.json() as ProfileCredentialsResponse
+  if (!g?.configured || !g.userId || !g.homeserverUrl) {
     throw new ProfileNotConfiguredError(profile)
   }
+  if (g.kind === 'password') {
+    if (!g.password) throw new ProfileNotConfiguredError(profile)
+    // m.id.user 收 localpart（synapse 兼容全 mxid，取 localpart 与 mx-lib 约定一致）
+    const localpart = g.userId.replace(/^@/, '').split(':')[0]
+    try {
+      return await matrixSdkLogin(g.homeserverUrl, localpart, g.password)
+    } catch {
+      throw new StaleTokenError(`档位 ${profile} 的 Matrix 密码已失效，请更新该档位 .env 的 MATRIX_PASSWORD`)
+    }
+  }
+  if (!g.accessToken) throw new ProfileNotConfiguredError(profile)
   // deviceId 空串与网关免密链同口径（matrix-client opts 侧 falsy 跳过）
   return { homeserverUrl: g.homeserverUrl, accessToken: g.accessToken, userId: g.userId, deviceId: '' }
 }

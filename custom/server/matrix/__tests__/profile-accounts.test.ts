@@ -52,19 +52,41 @@ describe('isSafeProfileName 白名单', () => {
 })
 
 describe('readProfileMatrixEnv 按名取档位凭据', () => {
-  it('三件套齐全返回（homeRoom 键多余不挡）', () => {
+  it('token 三件套齐全返回 kind=token（homeRoom 键多余不挡）', () => {
     writeProfileEnv('pay-orchestrator', [...FULL, 'MATRIX_HOME_ROOM=!x:1'])
     expect(readProfileMatrixEnv('pay-orchestrator')).toMatchObject({
+      kind: 'token',
       homeserverUrl: 'https://ms.example.org',
       accessToken: 'syt_tok',
       userId: '@gw:ms.example.org',
     })
   })
-  it('缺任一必填（token/userId/homeserver）→ null', () => {
-    writeProfileEnv('no-token', FULL.filter(l => !l.startsWith('MATRIX_ACCESS_TOKEN')))
-    expect(readProfileMatrixEnv('no-token')).toBeNull()
-    writeProfileEnv('no-user', FULL.filter(l => !l.startsWith('MATRIX_USER_ID')))
-    expect(readProfileMatrixEnv('no-user')).toBeNull()
+  it('批二 D8 密码形态：HOMESERVER+PASSWORD+USER_ID → kind=password 带密码', () => {
+    writeProfileEnv('orch-pwd', [
+      'MATRIX_HOMESERVER=http://localhost:8008',
+      'MATRIX_PASSWORD=pw_secret',
+      'MATRIX_USER_ID=@swarm:matrix.test',
+    ])
+    expect(readProfileMatrixEnv('orch-pwd')).toEqual({
+      kind: 'password',
+      homeserverUrl: 'http://localhost:8008',
+      userId: '@swarm:matrix.test',
+      password: 'pw_secret',
+    })
+  })
+  it('两种形态齐备时 token 优先（免一次密码登录往返）', () => {
+    writeProfileEnv('both', [...FULL, 'MATRIX_PASSWORD=pw_secret'])
+    expect(readProfileMatrixEnv('both')?.kind).toBe('token')
+  })
+  it('密码形态缺 userId 或 homeserver → null', () => {
+    writeProfileEnv('pwd-no-user', ['MATRIX_HOMESERVER=http://localhost:8008', 'MATRIX_PASSWORD=pw'])
+    expect(readProfileMatrixEnv('pwd-no-user')).toBeNull()
+    writeProfileEnv('pwd-no-hs', ['MATRIX_PASSWORD=pw', 'MATRIX_USER_ID=@x:matrix.test'])
+    expect(readProfileMatrixEnv('pwd-no-hs')).toBeNull()
+  })
+  it('token 与密码均缺 → null（仅 homeserver+userId 不构成配置）', () => {
+    writeProfileEnv('no-creds2', ['MATRIX_HOMESERVER=https://ms.example.org', 'MATRIX_USER_ID=@gw:ms.example.org'])
+    expect(readProfileMatrixEnv('no-creds2')).toBeNull()
   })
   it('档位 .env 缺席 → null', () => {
     expect(readProfileMatrixEnv('ghost')).toBeNull()
@@ -72,16 +94,18 @@ describe('readProfileMatrixEnv 按名取档位凭据', () => {
 })
 
 describe('listProfileMatrixAccounts 档位清单', () => {
-  it('有凭据档位才列；`_` 目录与无凭据档位跳过；按档位名稳定排序', () => {
+  it('有凭据档位才列（token/密码双形态，批二 D8）；`_` 目录与无凭据档位跳过；稳定排序；清单零凭据', () => {
     writeProfileEnv('zeta-team', FULL)
     writeProfileEnv('alpha-team', ['MATRIX_HOMESERVER=https://a.example.org', 'MATRIX_ACCESS_TOKEN=t_a', 'MATRIX_USER_ID=@a:a.example.org'])
+    writeProfileEnv('orch-pwd', ['MATRIX_HOMESERVER=http://localhost:8008', 'MATRIX_PASSWORD=pw_secret', 'MATRIX_USER_ID=@swarm:matrix.test'])
     writeProfileEnv('no-creds', ['# 注释占位'])
     mkdirSync(join(hermesHome, 'profiles', '_shared'), { recursive: true })
     writeFileSync(join(hermesHome, 'profiles', '_shared', '.env'), FULL.join('\n') + '\n')
     const accounts = listProfileMatrixAccounts()
-    expect(accounts.map(a => a.profile)).toEqual(['alpha-team', 'zeta-team'])
+    expect(accounts.map(a => a.profile)).toEqual(['alpha-team', 'orch-pwd', 'zeta-team'])
     expect(JSON.stringify(accounts)).not.toContain('syt_tok')
     expect(JSON.stringify(accounts)).not.toContain('t_a')
+    expect(JSON.stringify(accounts)).not.toContain('pw_secret')
   })
   it('profiles 目录缺席 → 空清单（不抛错）', () => {
     expect(listProfileMatrixAccounts()).toEqual([])
@@ -111,7 +135,7 @@ function fakeCtx(path: string, remoteAddress: string | undefined, query: Record<
 }
 
 describe('GET /api/matrix/gateway-credentials?profile=', () => {
-  it('按名直取档位三元组（不走 active 解析）', async () => {
+  it('按名直取档位三元组（不走 active 解析；批二起响应带 kind）', async () => {
     writeProfileEnv('pay-orchestrator', FULL)
     // active 指向另一个档位——证明 ?profile= 不受 active 影响
     writeProfileEnv('orchestrator', ['MATRIX_HOMESERVER=https://active.example.org', 'MATRIX_ACCESS_TOKEN=t_active', 'MATRIX_USER_ID=@act:active.example.org'])
@@ -119,7 +143,26 @@ describe('GET /api/matrix/gateway-credentials?profile=', () => {
     const ctx = fakeCtx('/api/matrix/gateway-credentials', '127.0.0.1', { profile: 'pay-orchestrator' })
     await mw(ctx as never)
     expect(ctx.status).toBe(200)
-    expect(ctx.body).toMatchObject({ configured: true, accessToken: 'syt_tok', userId: '@gw:ms.example.org' })
+    expect(ctx.body).toMatchObject({ configured: true, kind: 'token', accessToken: 'syt_tok', userId: '@gw:ms.example.org' })
+  })
+
+  it('批二 D8 密码形态：kind=password 回密码不带 accessToken（客户端先密码登录换 token）', async () => {
+    writeProfileEnv('orch-pwd', [
+      'MATRIX_HOMESERVER=http://localhost:8008',
+      'MATRIX_PASSWORD=pw_secret',
+      'MATRIX_USER_ID=@swarm:matrix.test',
+    ])
+    const mw = routesMiddleware()
+    const ctx = fakeCtx('/api/matrix/gateway-credentials', '127.0.0.1', { profile: 'orch-pwd' })
+    await mw(ctx as never)
+    expect(ctx.status).toBe(200)
+    expect(ctx.body).toEqual({
+      configured: true,
+      kind: 'password',
+      homeserverUrl: 'http://localhost:8008',
+      userId: '@swarm:matrix.test',
+      password: 'pw_secret',
+    })
   })
 
   it('非法档位名 400（穿越/保留目录）；未配置三件套 404', async () => {
