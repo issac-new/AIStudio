@@ -24,3 +24,15 @@
 ## 设计文档影响
 
 DESIGN_SYNC: none。纯台账/调研/裁定面，不触及整合正本与数字总账；zcode 基线内容已随前批入库，本批只补裁定叙事。
+
+## 附录 A：可选吸收 7 项触发条件复核表（T3，2026-11-13 实测）
+
+| # | 触发条件（delta 报告原文口径） | 复核证据 | 裁定 |
+|---|---|---|---|
+| OpenExec B1 循环防护启发式（#752 同 action 同 result 4 次即停＋15min 步上限） | simharness 出现循环失控案例 | run14 G5 85 圈事故（2026-10-10）构成历史满足；但本仓执行器层已有 `vendor/hermes-agent/agent/runaway_guard.py` 三维度检测（exact_action_repeat=同动作工具+参数指纹连续重复／exact_result_repeat=同结果指纹连续重复动作可不同／polling_repeat=同工具同目标结果不变，runaway_guard.py:8-12，2026-11-05 三死法批 cea63dd4e 落地）精确覆盖且粒度超出 #752 单一启发式；闸门层另有熔断证据签名并入 main tip（45b8d2f87/43df7b4ef）、判词锚钉（59dda6dee）、G5 重入消费（run27 批）多代根治 | **不吸收——机制已覆盖且更细**（吸收会造成同族双源） |
+| OpenExec B2 审批放行参数化（#761 Waits/Goes 双轴＋#780 三次重复放行） | 审批疲劳实测信号 | custom/server/approval-inbox 与 callgate 全文 grep「疲劳/fatigue」零命中——疲劳信号采集面不存在，信号本身未产生 | 维持挂起（触发未满足） |
+| OpenExec B3 盲区披露卡（#787） | RAG 问答面上线 | custom/server 无 rag/qa 产品面目录 | 维持挂起 |
+| Cybermes B1 finding 文件名校验＋info 归 recon_notes | hack 域聚合第三方扫描报告或落 finding 记录 | 现行 findings 形态=kanban 卡 metadata 执行留痕验证（evidence-governed-execution SKILL.md:50），无文件系统 finding 聚合 | 维持挂起 |
+| Cybermes B2 PATH 包装器自递归防护＋sqlmap 式 dispatcher | 吸收侧引入 tools/bin 式 PATH 包装器 | `tools/bin` 不存在（ls 零命中），无包装器分发面 | 维持挂起 |
+| Cybermes B3 npx 强制 @latest＋24h 缓存节流 | §12 登记的 cybermes-mcp filter_stream 真接线 | security-domain-delegation §12 维持「登记不接线」 | 维持挂起 |
+| Cybermes B4 delta 巡检纳入集成分支 | 立即 | 前批已落台账 §一.6 立规 | **已完成**（前批） |
