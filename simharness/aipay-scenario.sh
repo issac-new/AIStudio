@@ -576,11 +576,15 @@ if step_reached analysis; then
     # 与步骤 9 同款回灌：只中止不告知，等于把"凭证错了"变成人肉重跑（09-23 实锤：
     # agent 已建出真卡 t_4bee99f1 却没重报，房间里的 DONE 仍是旧的假卡号，被我方正确拒收，
     # 但没人告诉它要重报，于是死锁在验收上）。
+    # 回灌文案动态化（2026-11-13 burn-20261113 实录根治）：携带 verify_done_evidence
+    # 的真实失败形态（_vf_last_fail），替换固定 card 说教——实录中 196 次失败全在
+    # ls-tree 段（card 反核未到达），agent 收到的却是 card 整改指令，无关且无从修起。
     mx_send "$(load_token fanfan)" "$(sget room_analysis)" \
-      "@$(agent_mxid fanfan) 凭证核验未通过：你的账号板里其实已有 ${RFD_ID} 主卡。DONE 行里的 card 必须填建卡工具返回的真实卡 ID（形如 t_4bee99f1），拿需求编号充当一律判虚报。
-      请重新发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID，形如 t_4bee99f1>。
+      "@$(agent_mxid fanfan) 凭证核验未通过，失败原因：${_vf_last_fail:-未能取到失败形态（见驱动日志）}。
+      请按上述原因修正后重发一行结论：ANALYSIS-DONE-${RFD_ID} commit=<已推送commitId> card=<建卡工具返回的真实卡 ID>。
+      若失败原因与你的提交无关（如核验通道异常），回复 BLOCKED 并附你侧的 commit 与卡号证据即可，勿重做已完成的分析与记录。
       只需补这一行，不要重做已完成的分析与记录。" "$(agent_mxid fanfan)" >/dev/null 2>&1 || true
-    note "[拒收回灌] 已 @fanfan-agent 要求用真实卡 ID 重报结论行"
+    note "[拒收回灌] 已 @fanfan-agent 重报结论行（失败形态：${_vf_last_fail:-未取到}）"
     wait_alive_truth "重报后凭证反向核验" 600 fanfan verify_done_evidence "${RFD_ID}" \
       || { echo "ISSUE|done-without-verifiable-evidence|fanfan-agent|${RFD_ID} 两轮拒收后凭证仍缺失或造假" >> "$EVID_DIR/issues.log"; \
            fail "步骤 10 凭证核验未通过（已回灌拒收仍未重报），中止本轮"; }
