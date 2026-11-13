@@ -37,13 +37,28 @@ fixture 同时覆盖换证 URL 和 `ZAI_BUSINESS_BASE_URL`，确保登录完成�
 
 扩展既有 OAuth race HTTP fixture，不连接真实业务域：
 
-- 正常登录界面切换国内/全球，捕获 init 请求分别为 `zai_cn`/`zai`，中国区完整授权 URL 不重写；两次取消均不写登录态。
+- 正常登录界面切换国内/全球，捕获 init 请求分别为 `zai_cn`/`zai`；中国区保留授权站、state、client ID，只将回调改为当前环境的官网中转页并带 `provider=zai_cn`，复制链接与浏览器打开地址一致；两次取消均不写登录态。
 - 真实 Host polling 接收中国区 ready，原子保存中国区 OAuth 和 ZCode JWT、不同 ID 的关联 BigModel；全程不调用全球区业务换证接口。
 - 关联 Secret 不出现在日志，旧全球区会话字段被清理；保留旧登录协议的既有场景。
 - 中国区上游短期 token 已过期，但 ZCode JWT 仍有效时正常恢复；profile 401 或返回另一用户 ID 时保留原会话；关联密文损坏只清理关联。Renderer 不能直接读取关联私有键。
 
+`v3.18.0` hotfix 回归补充：在上述中国区场景中先投递官网 deep link，确认带归因和不带归因的授权码都不触发客户端兑换；随后释放 polling，验证主会话和关联材料落盘。polling 完成后再投递回调只更新归因，取消后的迟到回调必须拒绝。
+
+2026-11-11 macOS Electron：`auth-config/login/oauth-completion-race.test.ts` 12/12 通过，产物 `packages/desktop/.e2e-artifacts/desktop-e2e-20261110-162553-457`（目录时间为 UTC）。修复前同一中转断言已在 `desktop-e2e-20261110-162344-980` 失败：实际回调仍指向 fixture 的服务端地址。该回归使用真实 Main/Host/RPC 和合成 OAuth 服务，不代表真实上游授权、Windows/Linux 或手机 Web 已完成验收。
+
 2026-10-28 macOS Electron：三份规格共七个场景通过；最新构建来源的 WelcomeScreen sourcemap 与当前源文件一致。产物 `packages/desktop/.e2e-artifacts/desktop-e2e-20261028120903566-p6156-0de5353fd4d28b7b`。
 CLI adapters 27 项、bootstrap 9 项通过。该证据不包含真实套餐调用、MCP、手机和混版本远端；完整接入仍在实施。
+
+## AUTH-CN-START：国内新账号无 BigModel 关联时使用 Start Plan（pending）
+
+- Spec：`packages/desktop/test/e2e/auth-config/login/manual-review/pending/start-plan-cn-unlinked-login.test.ts`；Manifest：`packages/desktop/test/e2e/fixtures/cases/auth-config/start-plan-cn-unlinked-login.json`；共用夹具 `helpers/start-plan-cn-unlinked-fixture.ts`。
+- 场景：隔离凭据中种入 `zai_cn` 会话（ZCode 主体、共享 JWT、上游 OAuth token），没有 `oauth:linked_bigmodel`，设置中没有 `providerFamilyDomain` 与连接选择。账号控制面对该 JWT 的 profile 返回成功但无 `bigmodel` 块，Start balance 返回有效体验套餐与 GLM-5.3 额度。
+- 断言：重启后进入工作区而不是登录页；`getAccountAvailability()` 为 `zai_cn`、`families=[]`；BigModel Start 为 `available` 且 `current=true`，Z.ai Start 与 BigModel 个人套餐仍是 `not-connected`；balance 请求带 `Bearer <ZCode JWT>`，任何请求都不带中国区上游 token；以静态 Start 访问约束查询额度不返回 `not_authenticated`；设置页智谱分组只有 `coding-plan:account:bigmodel-start-plan` 一个 Start 入口，详情没有登录按钮；Composer 可选中 BigModel Start 的 GLM-5.3。Z.ai／BigModel 付费入口按原规则保留显示。
+- 运行：manual-review 默认 capture 需要真实模型入口，本例不调用模型，使用显式 replay（`E2E_PROVIDER_REPLAY_FIXTURE_PATH=…/fixtures/upstream/common.json`）。
+- 修复前：`desktop-e2e-20261112040909770-p15292-545632c973882447` 失败于 BigModel Start `unavailable / not-connected / current=false`，与用户实机现象一致；同次诊断记录启动后 `providerFamilyDomain=null`、登录页不可见（WelcomeScreen 发现已有用户会立即关闭，启动门禁不阻塞本例）。
+- 修复后：`desktop-e2e-20261112041617361-p38763-b2a2a9d673e78588` 1/1 通过，截图 `start-plan-cn-unlinked/cn-unlinked-start-plan-settings.png`；最终源码重新构建后 `desktop-e2e-20261112043445266-p33381-9adacb7b4564b51f` 1/1 通过。
+- 回归：`provider-builtin-refresh-failure` 1/1（`desktop-e2e-20261112042134214-p66138-1929189fadea0234`）；`account-key-usage-scene` 7/7（`desktop-e2e-20261112042528892-p87807-5d9bee7ef6b0c51e`），另两次在“中国区主登录通过关联 BigModel JWT 获取套餐 Token”第 177 行失败：用例取第一条 `/api/v1/mcp/usage`，日志显示该请求来自上一用例退出中的 Z.ai 进程（`credentialFamily=zai`），本例 CN 进程使用 `bigmodel` 材料，属既有夹具竞态。`conversation-session-start-plan-independent` 在修复前基线构建上同样两次失败于第 470 行 `/side` 首条推荐（`desktop-e2e-20261112043043431-p16553-ad755ec22592ef05`、`desktop-e2e-20261112043231997-p23948-a9cdce96293cdc7c`），与本修复无关，修复后同处失败；其第 182 行主路径推荐已出现。
+- 边界：合成账号控制面与真实 Main/Host/Renderer；未发起 Start 模型推理，未覆盖真实国内新账号、手机与远端 SSH。运行时鉴权用与模型调用相同的静态 Start 访问约束经 Host 解析验证，不等于真实推理已通过。
 
 ## Todo103 G09：固定 staging 登录行为整合验收
 
@@ -128,7 +143,7 @@ JWT 仍按现有明确专项保留，不因为存在账号 mock 就默认注入�
 
 | 字段             | 内容                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------- |
-| Spec             | `packages/desktop/test/e2e/auth-config/credentials/oauth-credential-recovery.test.ts`                         |
+| Spec             | `packages/desktop/test/e2e/auth-config/credentials/oauth-credential-recovery.test.ts` |
 | Fixture manifest | `packages/desktop/test/e2e/fixtures/cases/auth-config/oauth-credential-recovery.json` |
 | Provider fixture | 无，`providerRequestPolicy: "none"`                                                   |
 | 当前状态         | 已转正，正式路径 cold-start case                                                      |
@@ -196,7 +211,7 @@ Docker 准入暂不执行：该 case 不依赖 provider replay，也不属于 co
 
 | 字段             | 内容                                                                                         |
 | ---------------- | -------------------------------------------------------------------------------------------- |
-| Spec             | `packages/desktop/test/e2e/workspace/runtime/provider-readiness-agent-startup.test.ts`                         |
+| Spec             | `packages/desktop/test/e2e/workspace/runtime/provider-readiness-agent-startup.test.ts`       |
 | Fixture manifest | `packages/desktop/test/e2e/fixtures/cases/auth-config/provider-readiness-agent-startup.json` |
 | Provider fixture | 无，`providerRequestPolicy: "none"`                                                          |
 | 当前状态         | 已转正，正式路径 cold-start case                                                             |
@@ -252,7 +267,7 @@ Docker 准入不执行：该 auth/config case 不依赖 provider replay，也不
 
 | 字段             | 内容                                                                                    |
 | ---------------- | --------------------------------------------------------------------------------------- |
-| Spec             | `packages/desktop/test/e2e/auth-config/session/jwt-expiry-reauthentication.test.ts`                         |
+| Spec             | `packages/desktop/test/e2e/auth-config/session/jwt-expiry-reauthentication.test.ts`     |
 | Fixture manifest | `packages/desktop/test/e2e/fixtures/cases/auth-config/jwt-expiry-reauthentication.json` |
 | Provider fixture | 无，`providerRequestPolicy: "none"`                                                     |
 | 当前状态         | 候选 case，等待人工确认过期提示与重新登录入口后转正                                     |
@@ -330,7 +345,7 @@ Welcome 展示 Z.ai + BigModel 登录入口
 
 | 字段             | 内容                                                                            |
 | ---------------- | ------------------------------------------------------------------------------- |
-| Spec             | `packages/desktop/test/e2e/auth-config/session/jwt-401-auto-logout.test.ts`                         |
+| Spec             | `packages/desktop/test/e2e/auth-config/session/jwt-401-auto-logout.test.ts`     |
 | Fixture manifest | `packages/desktop/test/e2e/fixtures/cases/auth-config/jwt-401-auto-logout.json` |
 | Provider fixture | 无，`providerRequestPolicy: "none"`                                             |
 | 当前状态         | 候选 case，等待人工确认 401 触发提示、凭据清理和重启动作后转正                  |
@@ -390,7 +405,7 @@ Renderer 显示“登录已过期”
 
 | 字段             | 内容                                                                                                     |
 | ---------------- | -------------------------------------------------------------------------------------------------------- |
-| Spec             | `packages/desktop/test/e2e/coding-plan/account/subagent-coding-plan-login-catalog-stale.test.ts`                             |
+| Spec             | `packages/desktop/test/e2e/coding-plan/account/subagent-coding-plan-login-catalog-stale.test.ts`         |
 | Fixture manifest | `packages/desktop/test/e2e/fixtures/cases/auth-config/subagent-coding-plan-login-catalog-stale.json`     |
 | Provider fixture | 无模型请求；OAuth、`release/latest`、`client/configs`、套餐与 API key 接口均由 case-local HTTP mock 固定 |
 | 当前状态         | 已转正，正式路径登录后 UI 可用性与当前 Environment Model Selection 就绪 case                             |
@@ -939,6 +954,17 @@ Main 唯一 owner 候选通过 `desktop-e2e-20261029084759158-p91327-2f6c2ce829e
 macOS 完整签名包的本机更新与凭据保留已另行通过脚本＋原生界面联合验收，
 证据与范围见[系统安全存储规格](../plans/2026-10-29-system-credential-storage.md#macos-完整签名包验收2026-10-29)。
 这不改变上述 pending 用例的人工转正或 CI 准入状态。
+
+`auth-config/credentials/manual-review/pending/system-credential-data-root.test.ts`（SCS-DR01，
+ZCT-2120723935487688704）：默认根的合成旧明文经真实 Host 委托 Main 迁移为 OS 密文；经设置页同一
+Host RPC 把数据存储路径切到隔离子目录，断言新根有同一密文、macOS 新根系统条目存在；冷重启后
+Main 绑定新根仍读回原值，并能在新根写入同指纹的新凭据；原根文件保持不变。
+不设置管理密钥，结束时按两个唯一 account 精确清理系统条目。默认合成 E2E 使用托管密钥，
+密钥与路径无关，因此 CDD01 不覆盖此回归；设置页交互路径仍由 CDD01 覆盖。规格见
+[数据存储路径切换](../plans/2026-10-29-system-credential-storage.md#数据存储路径切换2026-11-12)。
+macOS 运行 1/1 通过：`desktop-e2e-20261112045322400-p11467-319ab851ac3b0783`；去掉登记的对照
+运行按预期失败：`desktop-e2e-20261112045639884-p32108-f3cce587acd337df`。用例仍为 pending，
+不做人工转正或 CI 准入；Windows/Linux 原生未实测。
 
 ## LOGIN-LAYOUT：登录页响应式布局
 

@@ -1,0 +1,1 @@
+{"ts":"2026-11-11T06:18:34Z","tool":"Bash","target":"cd /Users/cuishi/lab/AIStudio/vendor/zcode && rm -rf node_modules packages/server/dist packages/server/dist-remote 2>/dev/null; cd /Users/cuishi/lab/AIStudio && npm run zcode:ensure > /tmp/zcode-ensure-main2.log 2>&1; echo \"rc=$?\" >> /tmp/zcode-ensure-main2.log","gates":"rules.d:forbid"}
