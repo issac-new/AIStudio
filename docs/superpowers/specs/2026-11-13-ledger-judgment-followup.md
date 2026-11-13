@@ -53,3 +53,13 @@ DESIGN_SYNC: none。纯台账/调研/裁定面，不触及整合正本与数字�
 | e2e 基建/文档同步/版本台账 | 随基线获得 | 测试与文档面 |
 
 **总论**：必需 overlay 侧动作 **0**；10 枚补丁零文本失配（002/010 同文件不同 hunk 锚漂移属预期直放）；补丁面与上游变化面不相交的机制解释=补丁触碰的 zcodeAgentService/official-plugin-definitions/MCP inputSchema 等锚点文件均不在本轮 148 文件变化集中。
+
+## 附录 C：CyberStrikeAI v1.8.0 T2 深读收口（T2，报告全文 `research/cyberstrikeai-deepread-v18-20261113/`）
+
+新引擎拓扑：Go 宿主握全部权力（工具放行/HITL/toolguard/MCP 执行/证据签发/输出有界化压在 `pi_runner.go invoke()` 单一漏斗六道闸），一次性 Node worker（Pi SDK 1.5.2 钉版）只跑模型循环，stdin/stdout JSONL 提案-回执，工具永不落 worker 侧。
+
+- 旧基线处置：2026-10-22 Eino 基线深读 §2/附录 A 作废，§10 索引 70 条约 22 条已随本报告重锚；治理类结论（证据门/Jev/toolguard/C2 七类/黑板）经字节级 diff 实证全部存活。台账「T2 深读卡过期」标记解除。
+- **必吸收 3 项已落 evidence-governed-execution v1.1.0**：①工具调用 ID 防重放三件套（§1.7）②崩溃安全两侧配对（§3.6）③生成内容不得作为新用户指令再导入三层实现（§4.4）。
+- 可选 4 项带触发条件挂起（economy 预览门控/本地模型探测清单/复测快照模式/跨源重定向阻断）；不吸收 4 项（Pi 引擎本体/发布指纹链/tool_search 渐进披露/工作台 UI）。
+- delta 报告原「必吸收 1（evidence 全量+失败回退）」源码级复核降档为可选——spill 骨架基线已有，v1.8.0 增量仅 ReduceForModel 预压缩+economy 门控。
+- 判级维持 🟡（release 密集）。
