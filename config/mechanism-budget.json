@@ -4,11 +4,28 @@
     "gates": 48,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 137,
+    "scripts": 138,
     "ledgers": 6,
     "npmScripts": 52
   },
   "changes": [
+    {
+      "at": "2026-11-13",
+      "delta": "+3 patches（769 看板写授权/770 归档 fail-through/771 delegate 严格 output_schema）/ +0 scripts / +0 npm scripts / +0 gates / +0 ledgers（patches 实测 465 ≤ 562 cap，不动 limits.patches）",
+      "reason": "超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure）：交接合同与证据完整性三修复，均为既有面收口非新机制",
+      "pairedRemovals": [
+        "第二批任务级 version/统一迁移 envelope 落地时，与 769 的授权检查合并评估收编",
+        "evidence reducer 按其 sunset 触发退役时，614/770 一并退役"
+      ]
+    },
+    {
+      "at": "2026-11-13",
+      "delta": "+1 script / scripts 137→138（补账抬位）",
+      "reason": "scripts/ensure-vitest-birpc-patch.mjs 系 v1.0.16 发布批（766a92847，2026-11-12 birpc 超时根治）合入时未同步预算册——git log --diff-filter=A 实证；本批对账补记，责任归属原批",
+      "pairedRemovals": [
+        "补账性质：本批零新增脚本；该脚本的 sunset 随 birpc 超时根治批（junit reporter 盲区已由其守门覆盖）评估归档"
+      ]
+    },
     {
       "at": "2026-11-12",
       "delta": "+1 script / −1 script（org-governance-walkthrough 按登记 sunset 退役；capability-matrix 新增）；npmScripts +0（并入 release:preflight 链内联调用，不新增条目）",

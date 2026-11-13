@@ -1,13 +1,10 @@
 # AIStudio 设计文档机械索引
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
-
 - 快照基线：`3690ceba3`；核实日：2026-11-11；版本线：`1.0.16-overlay`（v1.0.16 发布轮）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
-
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
-
 ## 2026-06（29 份）
 
 - [2026-06-18-kanban-advanced-features-design.md](../superpowers/specs/2026-06-18-kanban-advanced-features-design.md)
@@ -476,7 +473,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（220 份）
+## 2026-11（221 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -694,20 +691,19 @@
 - [2026-11-12-yuan-linux-and-branchgate.md](../superpowers/specs/2026-11-12-yuan-linux-and-branchgate.md)
 - [2026-11-13-burn-verify-robustness.md](../superpowers/specs/2026-11-13-burn-verify-robustness.md)
 - [2026-11-13-burn-waive-gate.md](../superpowers/specs/2026-11-13-burn-waive-gate.md)
+- [2026-11-13-ledger-judgment-followup.md](../superpowers/specs/2026-11-13-ledger-judgment-followup.md)
 - [2026-11-13-matrix-account-switch-batch2.md](../superpowers/specs/2026-11-13-matrix-account-switch-batch2.md)
 - [2026-11-13-matrix-account-switch.md](../superpowers/specs/2026-11-13-matrix-account-switch.md)
-- [2026-11-13-ledger-judgment-followup.md](../superpowers/specs/2026-11-13-ledger-judgment-followup.md)
+- [2026-11-13-superagent-contract-closure.md](../superpowers/specs/2026-11-13-superagent-contract-closure.md)
 - [2026-11-13-tech-ledger-refresh-vendor-upgrade.md](../superpowers/specs/2026-11-13-tech-ledger-refresh-vendor-upgrade.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
-
 - [2026-09-25-mux-v2-fullflow-runbook.md](../superpowers/specs/archive/2026-09-25-mux-v2-fullflow-runbook.md)
 - [README.md](../superpowers/specs/archive/README.md)
-
 ## 维护口径
-
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
-
-- 当前工作树根目录：**673 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 220 份；合计 673 份。
+- 当前工作树根目录：**674 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 221 份；合计 674 份。
+- 当前工作树根目录：**672 份 Markdown**（HEAD 全量跟踪；2026-11-13 双批并进——matrix 账号切换 1＋台账点名刷新与 vendor 双升级 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 219 份；合计 672 份。

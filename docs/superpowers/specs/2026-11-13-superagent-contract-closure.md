@@ -202,7 +202,18 @@ PYTHONPATH=vendor/hermes-agent:runtime python3.14 -m pytest -q \
 4. 后端运行：按仓内隔离 serve 配方启动本 worktree，使用两个不同 profile 的测试身份对三个写端点各做一次隐藏/可见请求，记录状态码和 CLI 副作用；不做真实外部发布。
 5. 变异探针：临时移除任一授权调用、归档提前返回或 strict 失败赋值，对应新增测试必须重新变红，随后恢复实现。
 
-本段是验证设计；当前尚未执行，结果在实现后回填。
+### 5.4 实测回填（2026-11-13/14，worktree feat/superagent-contract-p0）
+
+| 项 | 实测 |
+|---|---|
+| Task 1 红绿 | 新测试先跑 9 failed/2 passed（隐藏 profile、同 profile、非法 board 全红）→ 实现后 13/13（含 2 个守门旧测试）；补丁 769 clean+inject 重放 complete，注入树 `authorizeTaskIds` 命中 16→20 |
+| Task 2 红绿 | 新测试 3 failed（现状归档失败仍调模型）→ 实现后 81/81（新增 3＋reducer 17＋storage 61）；runtime/ 与 vendor/ 两份 `diff -q` 同构；补丁 770 重放 complete |
+| Task 3 红绿 | 新测试 9 例先红（`_validate_strict_flags` ImportError）→ 实现后 45/45（新增 9＋宽松既有 36）；预算耗尽场景实现期勘误（见 §0.5/§3.3）；补丁 771 重放 complete |
+| 预算门 | `governance-lint --budget` 0 problems；随批补账 scripts 137→138（第 138 个=ensure-vitest-birpc-patch.mjs，v1.0.16 批 766a92847 漏登，责任归属原批）；patches 实测 465≤562 |
+| 实施勘误 | 归档测试落位 `runtime/tests/tools/`（spec 原写 runtime/tests/ 根）；PYTHONPATH 统一拼合树口径 `vendor/hermes-agent:runtime`（runtime/tools 无 `__init__.py`，命名空间包让位正包——行为测正本，双侧同构由 diff 断言） |
+| 全量回归 | npm test 8906 例：首轮 6 failed→处置后本批新增红清零——①②设计索引（docs-ssot/interactive-training-manual）＝新 spec 未入索引，`gen-doc-indexes --write` 重建后 29/29 绿；③④deploy/inject 两测＝worktree 陈旧影子目录（首次 pretest 部署的旧 runtime 与 770 后模板 kept→partial），移出隔离后全绿；余 2 例 raw-hex＝main 同红存量（本批零客户端 CSS），cockpit 版本节 1 例＝分支落后 main 的 RELEASE-NOTES 0.8.21 行（main 实测绿，rebase 后复跑确认）。typecheck:harness 0 错；runtime pytest 155/155（152 基线＋3 新增） |
+| 变异探针 | 3/3 有效：摘 deleteTask 授权→2 例红；摘归档短路→3 例红；摘 strict 翻转→1 例红；恢复后全部回绿 |
+| 实施勘误 | 归档测试落位 `runtime/tests/tools/`（spec 原写 runtime/tests/ 根）；PYTHONPATH 统一拼合树口径 `vendor/hermes-agent:runtime`（runtime/tools 无 `__init__.py`，命名空间包让位正包——行为测正本，双侧同构由 diff 断言）；**坑：worktree 内改 runtime 模板后，首次 pretest 留下的 `.runtime-deploy-shadow` 会使后续注入/部署预检 partial 中止——移出该生成目录或用 `RUNTIME_DEPLOY_TARGET` 指新隔离目标** |
 
 ## 6. 风险与回滚
 
