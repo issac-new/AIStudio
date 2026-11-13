@@ -80,4 +80,15 @@ fi
 bash -n "$LIB" && ok "bash -n mx-scenario-lib.sh" || bad "mx-scenario-lib.sh 语法错"
 bash -n "$DRV" && ok "bash -n aipay-scenario.sh" || bad "aipay-scenario.sh 语法错"
 
+
+# ── ⑤烧机收据第三态 burn-waived（2026-11-13 根治批：外部归因豁免产品化）──
+MR="$HERE/mux/mx-mechanism-receipt.py"
+grep -q "add_parser('waive')" "$MR" && ok "⑤waive 子命令在位" || bad "⑤waive 子命令缺"
+grep -q "WAIVER_TTL_S" "$MR" && grep -q "24 \* 3600" "$MR" && ok "⑤24h 新鲜窗在位" || bad "⑤豁免 TTL 缺"
+grep -q "fail_lines=" "$MR" && grep -q "re.search" "$MR" && ok "⑤fail_lines 判据从 reasons 解析" || bad "⑤fail_lines 判据形态错"
+grep -q "从未烧机不可豁免" "$MR" && ok "⑤从未烧机无豁免权（fail-closed）" || bad "⑤无收据豁免缺口"
+grep -q "多重失败先修复再烧" "$MR" && ok "⑤多重失败不豁免" || bad "⑤多重失败豁免口子"
+grep -q "verify-latest WAIVED" "$MR" && ok "⑤verify-latest 认豁免（第三态输出）" || bad "⑤第三态输出缺"
+python3 -I -m py_compile "$MR" && ok "⑤py_compile mx-mechanism-receipt.py" || bad "⑤receipt 工具语法错"
+
 [ "$fails" = 0 ] && echo "ALL-PASS" || { echo "HAS-FAIL"; exit 1; }

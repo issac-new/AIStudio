@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 # 机制文件清单（单一事实源）：机制地图（docs/design/mechanism-map.md §1/§4）四族——
@@ -158,12 +159,10 @@ def _file_sha(path: str):
         return None
 
 
-def cmd_verify_latest(a):
-    d, _n = mechanism_digest(a.root)
-    receipts_path = Path(a.receipts)
+def _load_latest_for_digest(receipts_path: Path, d: str):
+    """返回 (latest_record_or_None, err_or_None)——索引解析失败时 err 非空（fail-closed）。"""
     if not receipts_path.is_file():
-        print(f'verify-latest FAIL：收据索引缺席（{receipts_path}）——机制改动后从未烧机，先跑 mx-burn-test.sh')
-        return 1
+        return None, f'收据索引缺席（{receipts_path}）——机制改动后从未烧机，先跑 mx-burn-test.sh'
     latest = None
     for lineno, line in enumerate(receipts_path.read_text(encoding='utf-8').splitlines(), 1):
         line = line.strip()
@@ -172,20 +171,97 @@ def cmd_verify_latest(a):
         try:
             rec = json.loads(line)
         except json.JSONDecodeError:
-            print(f'verify-latest FAIL：索引第 {lineno} 行坏 JSON（fail-closed 不跳过）——人工核 {receipts_path}')
-            return 1
+            return None, f'索引第 {lineno} 行坏 JSON（fail-closed 不跳过）——人工核 {receipts_path}'
         if rec.get('mechanism_digest') == d:
             latest = rec
+    return latest, None
+
+
+WAIVER_TTL_S = 24 * 3600
+
+
+def _waiver_for_digest(waivers_path: Path, d: str):
+    """同 digest 最新豁免（<24h 才有效）；返回豁免记录或 None。"""
+    if not waivers_path.is_file():
+        return None
+    hit = None
+    for line in waivers_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            w = json.loads(line)
+        except json.JSONDecodeError:
+            continue  # 豁免台账坏行跳过（豁免是放宽面，坏行不拦开跑也不冒充豁免）
+        if w.get('mechanism_digest') == d and time.time() - w.get('at', 0) < WAIVER_TTL_S:
+            hit = w
+    return hit
+
+
+def cmd_waive(a):
+    """第三态豁免（2026-11-13 立项，spec 2026-11-13-burn-waive-gate）：外部归因 fail 的
+    机械豁免——先有机械 fail（fail_lines==1 且 goal_step_not_reached=机制面零多重失败的
+    代理判据）才可豁免；从未烧机（无收据）无豁免权；多重失败不豁免；reason 必填留档。"""
+    d, _n = mechanism_digest(a.root)
+    receipts_path = Path(a.receipts)
+    latest, err = _load_latest_for_digest(receipts_path, d)
+    if err:
+        print(f'waive FAIL：{err}')
+        return 1
+    if latest is None:
+        print('waive FAIL：无当前 digest 的烧机收据（从未烧机不可豁免——先跑 mx-burn-test.sh）')
+        return 1
+    if latest.get('status') != 'fail':
+        print(f"waive FAIL：当前 digest 最新收据 status={latest.get('status')}（豁免只对 fail 收据开放）")
+        return 1
+    import re
+    _reasons = str(latest.get('reasons', ''))
+    _m = re.search(r'fail_lines=(\d+)', _reasons)
+    _fl = int(_m.group(1)) if _m else 999
+    if _fl != 1 or 'goal_step_not_reached' not in _reasons:
+        print(f"waive FAIL：fail 形态不符豁免判据（fail_lines={_fl}、reasons={_reasons}——只豁免 fail_lines==1 且 goal_step_not_reached 的单点外部归因形态；多重失败先修复再烧）")
+        return 1
+    if not a.reason or not a.reason.strip():
+        print('waive FAIL：--reason 必填（留档豁免依据）')
+        return 1
+    waivers_path = receipts_path.parent / 'burn-waivers.jsonl'
+    rec = {
+        'mechanism_digest': d,
+        'at': int(time.time()),
+        'reason': a.reason.strip(),
+        'evidence': a.evidence,
+        'waived_run': latest.get('run_id'),
+        'operator': os.environ.get('USER', 'unknown'),
+    }
+    with waivers_path.open('a', encoding='utf-8') as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+    print(f"waive ✓（digest={d[:12]}…，run={rec['waived_run']}，理由={rec['reason'][:60]}…）→ {waivers_path}")
+    return 0
+
+
+def cmd_verify_latest(a):
+    d, _n = mechanism_digest(a.root)
+    receipts_path = Path(a.receipts)
+    latest, err = _load_latest_for_digest(receipts_path, d)
+    if err:
+        print(f'verify-latest FAIL：{err}')
+        return 1
     if latest is None:
         print('verify-latest FAIL：无当前 digest 的烧机收据（旧 digest 的 pass 不认账）——机制面已变化，须重烧')
         return 1
     if latest.get('status') != 'pass':
-        print(f"verify-latest FAIL：当前 digest 最新收据 status={latest.get('status')}（run={latest.get('run_id')}）——最新 fail 覆盖历史 pass，先修复再烧")
+        # 第三态（2026-11-13 burn-waive-gate）：fail 收据存在新鲜豁免（<24h、同 digest）
+        # → WAIVED 放行——外部归因（通道高峰期/限流）的机械替代路径，prelaunch ㉛ 零改动。
+        w = _waiver_for_digest(receipts_path.parent / 'burn-waivers.jsonl', d)
+        if w:
+            print(f"verify-latest WAIVED：当前 digest 最新收据 fail（run={latest.get('run_id')}）但有新鲜豁免（{time.strftime('%H:%M', time.localtime(w['at']))}，理由={str(w.get('reason'))[:80]}）——外部归因豁免放行，复盘仍见原始 fail")
+            return 0
+        print(f"verify-latest FAIL：当前 digest 最新收据 status={latest.get('status')}（run={latest.get('run_id')}）——最新 fail 覆盖历史 pass，先修复再烧；外部归因（fail_lines==1 且 goal_step_not_reached）可 waive --reason 留档豁免")
         return 1
     if not coverage_ok(latest.get('coverage')):
-        print(f"verify-latest FAIL：coverage 不足（{json.dumps(latest.get('coverage'), ensure_ascii=False)}，达标线=goal_step_reached 且 until≥{COVERAGE_FLOOR}）——短场景收据不算覆盖")
+        print(f'verify-latest FAIL：coverage 不足（{json.dumps(latest.get("coverage"), ensure_ascii=False)}，达标线=goal_step_reached 且 until≥{COVERAGE_FLOOR}）——短场景收据不算覆盖')
         return 1
-    print(f"verify-latest ok：当前 digest 最新收据 pass 且 coverage 达 {COVERAGE_FLOOR}（run={latest.get('run_id')}）")
+    print(f'verify-latest ok：当前 digest 最新收据 pass 且 coverage 达 {COVERAGE_FLOOR}（run={latest.get("run_id")}）')
     return 0
 
 
@@ -217,6 +293,12 @@ def main():
     p.add_argument('--root', required=True)
     p.add_argument('--receipts', required=True)
     p.set_defaults(fn=cmd_verify_latest)
+    p = sub.add_parser('waive')
+    p.add_argument('--root', required=True)
+    p.add_argument('--receipts', required=True)
+    p.add_argument('--reason', required=True)
+    p.add_argument('--evidence', default='')
+    p.set_defaults(fn=cmd_waive)
 
     a = ap.parse_args()
     rc = a.fn(a)
