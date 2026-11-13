@@ -36,3 +36,20 @@ DESIGN_SYNC: none。纯台账/调研/裁定面，不触及整合正本与数字�
 | Cybermes B2 PATH 包装器自递归防护＋sqlmap 式 dispatcher | 吸收侧引入 tools/bin 式 PATH 包装器 | `tools/bin` 不存在（ls 零命中），无包装器分发面 | 维持挂起 |
 | Cybermes B3 npx 强制 @latest＋24h 缓存节流 | §12 登记的 cybermes-mcp filter_stream 真接线 | security-domain-delegation §12 维持「登记不接线」 | 维持挂起 |
 | Cybermes B4 delta 巡检纳入集成分支 | 立即 | 前批已落台账 §一.6 立规 | **已完成**（前批） |
+
+## 附录 B：zcode v3.18.0→v3.18.2 逐项裁定（T1，报告全文 `research/zcode-3182-delta-assessment-20261113/`）
+
+13 主题 148 文件逐项裁定结论（完整表见报告）：
+
+| 主题 | 裁定 | 一句话依据 |
+|---|---|---|
+| memory-diagnostics（CLI 8 文件） | 随基线获得，仅记档 | 有界内存采样落盘，与执行内核审批账本不同域 |
+| credential-security（shared 4 文件） | 随基线获得，仅记档 | Linux keyring 回退+数据根密钥共享；AIStudio 无自有凭据面 |
+| Start 套餐国内登录修复 | 随基线获得 | 上游修复直收 |
+| Windows 安装器整修（installer-process-helper cpp） | 不适用（记档） | 三脚本对 runtime-host/build.json grep 零命中，Windows 离线包通道不受影响；未来纳入安装器产物时需带 helper exe |
+| 麦克风权限与语音输入 | 随基线获得 | 桌面能力面 |
+| UI 修复杂项/macOS 字体平滑/Web 远控移动端/浏览器设计模式 | 随基线获得 | 上游产品面 |
+| i18n×5 | 随基线获得（**中文体验受益**） | zh-CN +17 行（字体平滑 2+麦克风权限引导 11 正向改写） |
+| e2e 基建/文档同步/版本台账 | 随基线获得 | 测试与文档面 |
+
+**总论**：必需 overlay 侧动作 **0**；10 枚补丁零文本失配（002/010 同文件不同 hunk 锚漂移属预期直放）；补丁面与上游变化面不相交的机制解释=补丁触碰的 zcodeAgentService/official-plugin-definitions/MCP inputSchema 等锚点文件均不在本轮 148 文件变化集中。
