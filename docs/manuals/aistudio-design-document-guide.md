@@ -179,7 +179,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 | 对象 | 当前值 | 权威载体 |
 |---|---|---|
 | 整体源码包 | `1.0.16-overlay`，tag `v1.0.16-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
-| 驾驶舱模块声明 | `0.8.20-studio.3` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
+| 驾驶舱模块声明 | `0.8.21-studio.1` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.23.1-team.2` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `3.18.0` | `vendor/zcode/package.json` |
 | yuan skill | `v2.100.3` | `skills/swarm-yuan/CHANGELOG.md` |
@@ -231,7 +231,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 2026-11-09 培训刷新批已按当前载体重核三处事实：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.20／hermes-agent v0.23.1／zcode 3.18.0／驾驶舱 0.8.20-studio.3／agent teams v0.23.1-team.3／yuan v2.100.4／整体包 1.0.16-overlay），核实日 2026-11-12；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
+1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.21／hermes-agent v0.23.1／zcode 3.18.2／驾驶舱 0.8.21-studio.1／agent teams v0.23.1-team.3／yuan v2.100.4／整体包 1.0.16-overlay），核实日 2026-11-13；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
 2. 整合正本 §5.4 的当前基线表已归为 hermes-studio v0.8.17；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
 3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已归为 hermes-studio v0.8.17。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json:45,160`；`vendor/VENDOR.md:7,24`
 
