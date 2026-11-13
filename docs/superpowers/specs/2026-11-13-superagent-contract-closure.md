@@ -26,7 +26,7 @@
 
 ### 0.5 结果与证据
 
-严格 schema 失败的结果保留原始 `summary`、`schema_valid=false`、`schema_errors`。正常执行原本会完成时返回 `status=failed`、`exit_reason=output_schema_invalid` 和可诊断 `error`；中断、执行错误与 `max_iterations` 保留原终止原因，其中预算耗尽但严格 schema 不合格时仍为 `status=failed` 且 `truncated=true`。归档失败记录 `passthrough_archive_error`，不生成 `<reduced-observation>`。
+严格 schema 失败的结果保留原始 `summary`、`schema_valid=false`、`schema_errors`。正常执行原本会完成时返回 `status=failed`、`exit_reason=output_schema_invalid` 和可诊断 `error`；中断、执行错误与 `max_iterations` 保留原终止原因，预算耗尽保留既有语义（`status=completed`＋`truncated=true`＋`schema_valid=false` 双旗识别，实现期勘误：终止类结果的状态不因严格标志改变）。归档失败记录 `passthrough_archive_error`，不生成 `<reduced-observation>`。
 
 ### 0.6 异常与恢复
 
@@ -119,7 +119,7 @@
 #### Scenario: 终止原因优先级
 
 - **WHEN** 严格任务被中断、执行出错或耗尽 max_iterations，且最终文本不满足 schema
-- **THEN** interrupted/error/max_iterations 的原始终止原因不被 output_schema_invalid 覆盖；预算耗尽时结果为 `status=failed`、`exit_reason=max_iterations`、`truncated=true`，并保留 `schema_valid=false` 与原始 summary
+- **THEN** interrupted/error/max_iterations 的原始终止原因不被 output_schema_invalid 覆盖；预算耗尽保留既有语义（`status=completed`、`exit_reason=max_iterations`、`truncated=true`），机器消费者以 truncated＋schema_valid 双旗识别不可解析（实现期勘误：状态语义不因严格标志改变）
 
 #### Scenario: 默认宽松与非法配置
 
