@@ -4,7 +4,7 @@
 ledger 记 passthrough_archive_error。无全文可回溯的摘要等于造假，保真优先于省 token。
 
 运行口径：PYTHONPATH=vendor/hermes-agent:runtime（拼合树正本——runtime/tools 无
-__init__.py，命名空间包让位于 vendor 正包；runtime/ 与 vendor/ 两份文件由补丁 770
+__init__.py，命名空间包让位于 vendor 正包；runtime/ 与 vendor/ 两份文件由补丁 771
 保持同构，Task 4 以 diff 断言双侧一致）。_write_to_spillover 系函数内延迟 import，
 patch 打在其宿主模块 tool_result_storage 上。"""
 

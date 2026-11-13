@@ -1,5 +1,5 @@
 // @vitest-environment node
-// 超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure，补丁 769）：
+// 超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure，补丁 770）：
 // PATCH/DELETE/decompose 三写入口与 complete/block 同权——隐藏 profile 404 且 CLI
 // 零调用；board 走 requestBoard 400；super_admin 无额外 getTask 预读。
 // mock 面先例=overview-access.test.ts（kanban-service＋users 双 mock，读注入态源码）。

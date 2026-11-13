@@ -32,7 +32,7 @@
 
 ---
 
-### Task 1: 看板写授权一致化（补丁 771）
+### Task 1: 看板写授权一致化（补丁 770）
 
 **Files:**
 - Modify（经补丁）: `vendor/hermes-studio/packages/server/src/modules/hermes/controllers/kanban.ts` 的 `deleteTask`/`patchTask`/`decomposeTask`（注入态约 :1180-1225）
@@ -84,7 +84,7 @@
 - [ ] **Step 6: Commit**
   ```bash
   git add custom/server/services/hermes/__tests__/kanban-mutation-access.test.ts patches/770-server-kanban-mutation-authorization.patch patches/series
-  git commit -m "feat(kanban): PATCH/DELETE/decompose 三写入口接入 authorizeTaskIds——隐藏 profile 404 与 complete/block 同权（补丁 771）"
+  git commit -m "feat(kanban): PATCH/DELETE/decompose 三写入口接入 authorizeTaskIds——隐藏 profile 404 与 complete/block 同权（补丁 770）"
   ```
 
 ### Task 2: 证据压缩归档 fail-through（runtime 正本＋补丁 771）
@@ -122,12 +122,12 @@
   git -C vendor/hermes-agent diff --relative -- tools/evidence_reducer.py > patches/771-agent-evidence-reducer-archive-failthrough.patch
   git checkout -- vendor/hermes-agent/tools/evidence_reducer.py
   ```
-  series 登记 770；`npm run clean && npm run inject`；vendor 树 grep `passthrough_archive_error` 命中；Step 2/4 命令重跑全绿。
+  series 登记 771；`npm run clean && npm run inject`；vendor 树 grep `passthrough_archive_error` 命中；Step 2/4 命令重跑全绿。
 
 - [ ] **Step 6: Commit**
   ```bash
   git add runtime/tools/evidence_reducer.py runtime/tests/test_evidence_reducer_archive.py patches/771-agent-evidence-reducer-archive-failthrough.patch patches/series
-  git commit -m "fix(runtime): evidence_reducer 归档失败即 passthrough——无全文不摘要，模型零调用（补丁 772）"
+  git commit -m "fix(runtime): evidence_reducer 归档失败即 passthrough——无全文不摘要，模型零调用（补丁 771）"
   ```
 
 ### Task 3: delegate 严格 output_schema（补丁 772）
@@ -173,7 +173,7 @@
   git -C vendor/hermes-agent checkout -- tools/delegate_tool.py tools/delegate_tool_tasks.py tools/delegate_tool_child_run.py
   rm vendor/hermes-agent/tests/tools/test_delegate_strict_output_schema.py   # 补丁产物，随 inject 重放
   ```
-  series 登记 771；`npm run clean && npm run inject`；注入树重跑 Step 2/4 全绿。
+  series 登记 772；`npm run clean && npm run inject`；注入树重跑 Step 2/4 全绿。
 
 - [ ] **Step 6: Commit**
   ```bash

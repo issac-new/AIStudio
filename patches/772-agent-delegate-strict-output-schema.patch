@@ -132,7 +132,7 @@ new file mode 100644
 --- /dev/null
 +++ b/tests/tools/test_delegate_strict_output_schema.py
 @@ -0,0 +1,151 @@
-+"""771 strict_output_schema（spec 2026-11-13-superagent-contract-closure）。
++"""772 strict_output_schema（spec 2026-11-13-superagent-contract-closure）。
 +
 +每任务可选 ``strict_output_schema: boolean``（默认 false）：
 +- true 时必须有合法 output_schema（spawn 前拒绝）；

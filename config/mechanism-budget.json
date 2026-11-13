@@ -11,7 +11,7 @@
   "changes": [
     {
       "at": "2026-11-13",
-      "delta": "+3 patches（770 看板写授权/771 归档 fail-through/772 delegate 严格 output_schema）/ +0 scripts / +0 npm scripts / +0 gates / +0 ledgers（patches 实测 465 ≤ 562 cap，不动 limits.patches）",
+      "delta": "+3 patches（770 看板写授权/771 归档 fail-through/772 delegate 严格 output_schema）/ +0 scripts / +0 npm scripts / +0 gates / +0 ledgers（patches 实测 466 ≤ 562 cap，不动 limits.patches）",
       "reason": "超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure）：交接合同与证据完整性三修复，均为既有面收口非新机制",
       "pairedRemovals": [
         "第二批任务级 version/统一迁移 envelope 落地时，与 770 的授权检查合并评估收编",
