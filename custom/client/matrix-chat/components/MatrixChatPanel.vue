@@ -7,6 +7,7 @@ import { useMatrixRoomStore } from '@/custom/matrix-chat/stores/matrix-room'
 import { useMatrixRightPanelStore } from '@/custom/matrix-chat/stores/matrix-right-panel'
 import { useMatrixComposerStore } from '@/custom/matrix-chat/stores/matrix-composer'
 import MatrixRoomList from './MatrixRoomList.vue'
+import MatrixAccountSwitcher from './MatrixAccountSwitcher.vue'
 import MatrixServerMovedBanner from './MatrixServerMovedBanner.vue'
 import MatrixMessagePanel from './MatrixMessagePanel.vue'
 import MatrixRightPanel from './MatrixRightPanel.vue'
@@ -128,6 +129,7 @@ onUnmounted(() => {
       </div>
       <MatrixRoomList />
       <div class="page-sidebar-bottom">
+        <MatrixAccountSwitcher />
         <button class="page-sidebar-menu-btn" type="button" @click="showJoinRoom = true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
           <span>{{ t('matrixChat.joinRoom') }}</span>
