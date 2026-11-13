@@ -1982,18 +1982,62 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
             | select((.content.body//"") | contains($p))
             | select((.content.body//"") | test("commit=[0-9a-fA-F]{7,40} card=[^ ,；;]+"))
        ] | first | .content.body // ""')
-  [[ -n "$body" ]] || { note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
+  [[ -n "$body" ]] || { _vf_last_fail="未见 DONE 行（结论行未发或凭证形态不符）"; note "[凭证] 未见 $rfd 的 DONE 行"; return 1; }
   sha=$(printf '%s' "$body" | grep -oE 'commit=[0-9a-fA-F]{7,40}' | head -1 | cut -d= -f2)
   # card 提取钉字符集（run4 实锤）：agent 结论行常带 Markdown 加粗（**card=t_xxx**），
   # [^ ,；;]+ 会把 ** 一起吃进卡号致反核 grep 失配、真凭证误判虚报。卡 ID 只含
   # [A-Za-z0-9_-]，钉死字符集对加粗/代码块包裹免疫。
   card=$(printf '%s' "$body" | grep -oE 'card=[A-Za-z0-9_-]+' | head -1 | cut -d= -f2)
-  [[ -n "$sha" && -n "$card" ]] || { note "[凭证] DONE 行缺 commit/card 凭证：$body"; return 1; }
+  [[ -n "$sha" && -n "$card" ]] || { _vf_last_fail="DONE 行缺 commit/card 凭证"; note "[凭证] DONE 行缺 commit/card 凭证：$body"; return 1; }
   mx_fetch -C "$DIRECTOR_CLONE" fetch -q origin 2>/dev/null || true
-  git -C "$DIRECTOR_CLONE" cat-file -e "$sha^{commit}" 2>/dev/null \
-    || { note "[凭证] commit $sha 不存在于 aipaydev —— 虚报"; return 1; }
-  git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md" \
-    || { note "[凭证] commit $sha 里没有 ${rfd}-tasklist.md —— 虚报"; return 1; }
+  # 核验健壮性（2026-11-13 burn-20261113 实录根治）：①stderr 留证——git 层真实报错
+  # 不再被 2>/dev/null 吞（实录中同一真实凭证被误判「虚报」196 次而零留证，人工
+  # 复现含 pipefail 形态全通过无法定谳）；②文件在树判定去管道化——`| grep -q` 的
+  # SIGPIPE/pipefail/locale 语义面全部消灭，路径过滤交给 git 引擎，输出三分支判定：
+  # 含文件名=在树；fatal/error 前缀=git 报错（通道异常）；空=真缺席。
+  local _ve_err
+  _ve_err=$(git -C "$DIRECTOR_CLONE" cat-file -e "$sha^{commit}" 2>&1)
+  if [ -n "$_ve_err" ]; then
+    _vf_last_fail="commit $sha 在导演 clone 不可达"
+    note "[凭证] commit $sha 不存在于 aipaydev —— 虚报${_ve_err:+（git: ${_ve_err:0:200}）}"
+    return 1
+  fi
+  local _ve_ls
+  # 主判定=精确路径 ls-tree（2026-11-13 burn-20261113 实录根治）：字面 pathspec 无通配
+  # 歧义（glob pathspec 不跨目录、:(glob) magic 不受 ls-tree 支持、cat-file -e 对真缺席
+  # 也报 fatal 不可分流——三形态实测后取此）。实测三分支：命中=非空输出 rc0；真缺席=
+  # 空输出 rc0；对象坏/通道错=fatal rc≠0。路径与步骤 10 产物判据（docs/analysis/，
+  # repo_has/wait_truth 同锚）对齐——旧宽匹配放过放错位置的产物。
+  _ve_ls=$(git -C "$DIRECTOR_CLONE" ls-tree "$sha" -- "docs/analysis/${rfd}-tasklist.md" 2>&1)
+  if [[ "$_ve_ls" != *"${rfd}-tasklist.md"* ]]; then
+    # git 报错（通道异常）≠真缺席：fatal/error 分流出证，不进虚报判词
+    if [[ "$_ve_ls" == fatal:* || "$_ve_ls" == error:* ]]; then
+      _vf_last_fail="核验通道 git 报错（非你的问题，等待重试）"
+      note "[凭证] 核验通道异常（ls-tree 报错：${_ve_ls:0:200}）——sha=$sha 暂不定罪"
+      return 1
+    fi
+    # 连续同因失败交叉验证（bash3.2 标量计数，sha 变更即重置）：同 sha 连续 ≥5 次
+    # 缺席时第二通道全树 ls-tree 宽匹配（旧判定语义作第二意见，可命中放错位置产物）
+    # ——矛盾＝核验器自身故障，记 issue 暂停虚报判词（执法器故障不定罪 agent，也不
+    # 虚放：照常 return 1 走拒收回灌）。
+    if [ "$_vf_fail_sha" != "$sha" ]; then _vf_fail_sha="$sha"; _vf_fail_cnt=0; fi
+    _vf_fail_cnt=$(( ${_vf_fail_cnt:-0} + 1 ))
+    if [ "$_vf_fail_cnt" -ge 5 ]; then
+      if git -C "$DIRECTOR_CLONE" ls-tree -r --name-only "$sha" 2>/dev/null | grep -q "${rfd}-tasklist.md"; then
+        echo "ISSUE|verify-channel-inconsistent|driver|凭证核验通道自相矛盾：约定路径 ls-tree 判缺席但全树宽匹配命中（sha=$sha 第 $_vf_fail_cnt 次）——虚报判词暂停待通道恢复" >> "$EVID_DIR/issues.log"
+        _vf_last_fail="核验通道自相矛盾（非你的问题，等待通道恢复）"
+        note "[凭证] 核验通道异常（约定路径缺席×$_vf_fail_cnt 次 vs 全树宽匹配命中）——暂不定罪虚报，sha=$sha"
+        return 1
+      fi
+      _vf_last_fail="commit 里没有 docs/analysis/${rfd}-tasklist.md（双通道一致核验）"
+      note "[凭证] commit $sha 里没有 docs/analysis/${rfd}-tasklist.md —— 虚报（双通道一致缺席，第 $_vf_fail_cnt 次核）"
+      return 1
+    fi
+    _vf_last_fail="commit 里没有 docs/analysis/${rfd}-tasklist.md"
+    note "[凭证] commit $sha 里没有 docs/analysis/${rfd}-tasklist.md —— 虚报（第 $_vf_fail_cnt 次；累计 ≥5 次启用双通道交叉）"
+    return 1
+  fi
+  _vf_fail_sha=""; _vf_fail_cnt=0
   # 卡号反核含 archived（09-26 实锤 false negative）：agent 完成后归档卡属正常工作流，
   # kanban_list（默认活跃态 + studio API 面）都看不到 archived 真卡，曾把合格凭证
   # 误判"虚报"。改 CLI 直查全状态（活跃 + archived）；studio API 整板返空问题另记。
@@ -2012,7 +2056,7 @@ verify_done_evidence() { # <rfd> → 0 DONE 凭证全部为真 / 1 缺失或造�
     fi
   done
   [[ $card_found -eq 0 ]] \
-    || { note "[凭证] 锚档案账号板查无卡片 ${card}（含 archived）—— 虚报"; return 1; }
+    || { _vf_last_fail="账号板查无卡片 $card（含 archived）——card 须填建卡工具返回的真实卡 ID（形如 t_4bee99f1），拿需求编号充卡号一律判虚报"; note "[凭证] 锚档案账号板查无卡片 ${card}（含 archived）—— 虚报"; return 1; }
   note "[凭证] $rfd 完成证据成立（card 在锚档案账号板可查）：commit=$sha card=$card"
   return 0
 }
