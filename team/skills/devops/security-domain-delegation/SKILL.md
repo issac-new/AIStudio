@@ -1,7 +1,7 @@
 ---
 name: security-domain-delegation
 description: "派工安全/情报/渗透类任务给hack团队时用：授权门判定+红线入卡+被动源playbook+scope-as-code运行时校验+MCP handler防穿越红线。"
-version: 1.4.0
+version: 1.5.0
 metadata:
   hermes:
     tags: [security, delegation, kanban, hack-team, authorization-gate, passive-recon]
@@ -124,6 +124,7 @@ max_requests: 200      # 运行时预算：每目标请求上限，逐目标计�
 2. **逐目标校验**：每个实际触碰的具体目标（wildcard/CIDR 展开后的每个 IP/域名/URL）在动作前单独过判定，禁「清单整体批过、成员免检」。
 3. **无 scope 文件回退授权文档**：缺 scope.yaml 时回退 Direct Operator Authorization（上游=AGENTS.md；本侧=§1 授权门判定留痕）；两者皆无 = 不执行，禁回退成全放行。
 4. **max_requests 逐目标熔断**：预算按单个目标计数，触顶即停该目标；禁换目标续跑绕过总量意图。
+5. **fail-closed 三细则**（v1.5.0 对齐，源=上游 d337e4a9e/74539a20e 带回归测试的缺陷修复，delta 报告 research/cybermes-delta-20261113/）：①scope.yaml **存在但 in/out 规则皆空 = 拒绝执行**——「有文件」不等于「有授权」，空规则与缺文件同判；②派卡生成 scope.yaml 的脚手架**默认值禁 `*`**（通配即全放行，上游默认 scope.yaml 含 `*` 曾构成 fail-open），默认 out_of_scope 预置敏感域；③无 scope 文件走 operator 回退时，`.gov`/`.mil`/`.edu` 目标**仍阻断**（判前先剥端口写法，`example.gov:443` 剥成 `example.gov` 再判）——敏感域兜底不因回退路径失效。
 
 落法：主动项解锁后，orchestrator 派卡时生成 scope.yaml 随卡传播（与 §2 红线契约同层），红线契约段加一行「运行时按 scope.yaml 逐目标校验」；worker 越界即停并 kanban_comment 留痕；执行日志记录每目标判定结果（in/out/预算触顶），报告边界声明节引用该日志。上游另有 MCP 工具 cybermes_validate_scope 可直接校验（若按 B2 判定接入，默认仅开被动/只读工具）。
 
@@ -131,18 +132,23 @@ max_requests: 200      # 运行时预算：每目标请求上限，逐目标计�
 
 > 来源：Cybermes v3.5.0 sanitizeSlug（31583c2，+16/-1 覆盖 8 个 MCP handler：aggregate/list_findings/validate_scope/http_probe/recon_crawl/subdomain/fuzz/nuclei）。判例：**MCP server 即攻击面**——slug 参数是未认证调用者可控的路径注入点。
 
-**红线**：凡 handler/脚本/工具入口接受 `target_slug` 类参数（任何会被拼进文件系统路径/workspace 路径的标识：slug/name/id/path 段），必须先归一净化再拼路径：
+**红线**：凡 handler/脚本/工具入口接受 `target_slug` 类参数（任何会被拼进文件系统路径/workspace 路径的标识：slug/name/id/path 段），必须先归一净化再拼路径。**归一前先剥 URL 壳**（v1.5.0 对齐，源=上游 da087f5e8/57e006de8，`pkg/scope/scope.go:19-28`；动机=同一目标的 URL 形与裸主机名必须收敛同一 slug，否则按 slug 聚合的目录/预算/去重全部失效）：
 
 ```python
 import re
 def sanitize_slug(s: str) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", s.strip().lower()).strip("-")
+    s = s.strip().lower()                      # 小写去空格
+    s = re.sub(r"^https?://", "", s)           # 剥协议前缀
+    s = re.split(r"[/?#]", s, 1)[0]            # 首个 /?# 处截断（剥路径/查询/锚）
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")  # 白名单归一
     if not s:
         raise ValueError("empty slug after sanitize")
     return s
 ```
 
-规则：①白名单归一是根——`[^a-z0-9]+` 连续段折叠为单个 `-`，`../`、URL 编码变体（%2e%2e%2f）、Unicode 同形穿越在归一中直接消灭，**不依赖黑名单枚举攻击串**；②净化后仍须 `os.path.realpath` 前缀校验落在预期目录内（双保险）；③净化得空串 = 拒绝调用，禁回退原值；④上游 8 个 handler 一次补齐 = 系统性遗漏而非个例——审计 MCP/工具面时把「参数→路径」全链当 checklist 过一遍。
+收敛性判例：`https://example.com/x` 与 `example.com` 必须产出同一 slug `example-com`（旧版只归一不剥壳，前者产出 `https-example-com-x`——不穿越，但 URL 形与裸主机名分裂成两个 slug，聚合面失效）。
+
+规则：①白名单归一是根——`[^a-z0-9]+` 连续段折叠为单个 `-`，`../`、URL 编码变体（%2e%2e%2f）、Unicode 同形穿越在归一中直接消灭，**不依赖黑名单枚举攻击串**；②净化后仍须 `os.path.realpath` 前缀校验落在预期目录内（双保险）——前缀判定必须 `realpath == root` 或 `realpath.startswith(root + os.sep)`（或 `os.path.commonpath([root, realpath]) == root`），**禁裸字符串 startswith**：`/reports-evil` 会被 `startswith("/reports")` 误放行（上游 a8266d4f0 isSafeSubpath 修复带 `/reports-evil` vs `/reports` 穿越用例，delta 报告 research/cybermes-delta-20261113/）；③净化得空串 = 拒绝调用，禁回退原值；④上游 8 个 handler 一次补齐 = 系统性遗漏而非个例——审计 MCP/工具面时把「参数→路径」全链当 checklist 过一遍。
 
 ### 12. 可选接线登记：cybermes-mcp filter_stream（2026-10-28 Cybermes delta A3，仅登记不接线）
 
