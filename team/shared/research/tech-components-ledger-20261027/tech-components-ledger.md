@@ -2,7 +2,7 @@
 
 > 唯一事实源（范围见 §一.5）。既往全部组件型调研线 × 上游版本差异 × 判级 × 处置，一表统管。
 > 建立日 2026-10-28，由三件分卷（主索引/动作验收卷/历史差异卷）整合而成（原件归档本目录 `archive/`）。
-> 上游状态实测锚：2026-10-27 全量批量 + 2026-10-28 🔴 面复测 + 2026-10-31 点名刷新（gh api/npm/PyPI，见 §六）。
+> 上游状态实测锚：2026-10-27 全量批量 + 2026-10-28 🔴 面复测 + 2026-10-31 点名刷新 + 2026-11-13 点名刷新（gh api/npm/PyPI，见 §六）。
 > 口径：只收组件型调研线（有版本轴的 repo/CLI/框架）；方法论类（微信文/论文）不入本表，落地状态归设计文档附录 B。
 > 刷新程序权威源 = skill `tech-component-ledger-refresh-orch`（本文件即其产物契约所指的终态台账）。
 
@@ -13,6 +13,7 @@
 3. **退役线（用户裁决 2026-10-27）**：上游 `pushed_at` 距基准日 >90 天 → 保留历史轨迹、标 RETIRED、不再跟进。退役 ≠ 删除（报告/裁决矩阵/落地物原位保留，只停上游增量跟进）。临线（75-89 天）标「观察至 +90 天」；在跑卡未收口的临线组件，卡收口后退役。复活条款：重跑时 RETIRED 线仍查 pushed_at，复活（90 天内又有 push）按新增量重判级回观察名单。
 4. 判级口径：🔴 基线后大增量（>20 commits 或跨 minor）；🟡 中等增量；🟢 零/微增量/死水/已完结。🔴🟡 判级即派卡依据，放行前交用户裁决。
 5. **范围与三账分工（2026-10-31 补）**：本表是「组件型调研线」的唯一事实源，不是全仓所有版本定义的唯一来源。三棵 vendor 树（hermes-studio/hermes-agent/zcode）的钉版、升级流程与活跃补丁数以 `vendor/VENDOR.md` 为准，本表不重复登记版本行；技能域清单与运行时对账归 `skills/swarm-yuan/references/capability-map.md`；`docs/upstream-analysis/component-ledger.md` 已于 2026-10-28 降级为历史档案，不再新增行（2026-10-30 的 HelixHarness 行已迁入本表 §3.2）。方法论类（论文/微信文）不入本表，落地状态归设计文档附录 B。
+6. **集成分支入 compare 基线（2026-11-13 立规，源=Cybermes「零漂移」误判教训）**：上游以集成分支（dev/next/release 类）开发、main 只在发布时移动的仓，compare 判漂移必须把集成分支纳入基线（`compare/<tag>...<集成分支>` 或 pushed_at 查集成分支头）；只对 main compare 会把发布间隔误读为「零漂移」。点名刷新时对本表活跃线顺查默认分支是否=集成分支形态。
 
 ## 二、判级汇总（2026-10-31 点名刷新后）
 
@@ -27,6 +28,7 @@
 - **2026-11-07 全量核对批注（46 条当日实测，spec `2026-11-07-vendor-upgrade-studio-v0817`）**：持平 26／有更新 16／无版本轴 3／未能核对 1（Graph-Engineering 仓 404）。要点：Ghidra 转 🟢（wrapper 实测已绑 12.2+JDK25，§4.2 旧记录订正）；DSH 本机已升 0.2.2-rc.1＋dsh-tui 0.19.0（上游 next=0.2.2-rc.1/alpha=0.2.2-alpha.3）；有更新待盘点=OpenExecutive v0.6.9、AgentENV v0.2.5、ARL-Next v1.4.5、pi-harness v1.5.0、addyosmani/agent-skills 0.6.15（打破 10-13 静默）、REAP 11-05 新 push、ATT&CK v20.1（技能面仍引 v20.0，数据更新挂账）、semantica main 245c 仍未发版（钉 v0.7.0 口径不变）、HelixHarness +4c、harness2 +18c、x402 main ≈1497c（Link 分页口径，增量异常宜 compare 复核）；openagentontology 过 11-05 定日线且 11-07 仍零 push（92 天）→ 按 §一.3 应转 RETIRED（待执行）；运行时基线三树=studio v0.8.17（本批升级）／agent v0.23.0／zcode 3.17.2@a9fe401e 持平；REAGent 6.8.0=npm latest 持平；仓名勘误=hexstrike-ai（0x4m4）、REA-Prompts（JoasASantos）。
 - **2026-11-09 点名刷新批注（§一.2 触发，32 点位当日实测=点名 26＋补测 6，spec `2026-11-09-runtime-deps-refresh`）**：🔴 3 条全维持——semantica（v0.7.0...main **252c**、11-09 当日仍 push）、OpenExecutive（已发 **v0.7.0 跨 minor**（11-07 17:42），30319d9...main 210c，10-18/10-31 两轮 delta 版本表过期，重跑 delta 待用户裁决）、mattpocock（v1.3.2 后仅 3c，「v1.3.2 增量待补」欠账关闭）。**判级建议升 🔴 2 条（交用户裁决）**：better-harness（v0.6.4...main 359c，10-31 记 67c 的口径端点建议派卡前复核）、pi-harness（tag 顶 v1.5.0 跨 minor，v1.4.0...main 634c）。🟡 维持 6 条（CyberStrikeAI v1.7.24 release 面持平／Autopt 43c 持平静默 17 天／Cybermes v3.5.0 identical／AgentENV v0.2.5 论文型／x402 343c／A2A rc 未推进）。**x402 挂账证伪关闭**：11-07 的「≈1497c」系 Link 分页口径异常，compare 复核真实 343c（since 10-31 +48c）。**openagentontology RETIRED 复核通过**：11-09 实测 pushed_at=2026-08-07 静默 **94 天**>90、v0.2.0...main 7c 未动，无复活，11-07 判定执行定谳，定日复查线关闭。**Graph-Engineering 正名锚定 `DEEP-JLU/Awesome-Graph-Engineering`**（description 与综述线吻合、399★、10-30 仍收 PR；基线 sha a2de779 对该仓 compare 404 疑历史重写，增量不猜数留待下轮；10-31「仓 404 未定名」欠账可销）。仓名正名勘误：ACP=agentic-commerce-protocol/agentic-commerce-protocol、HexStrikeAI=0x4m4/hexstrike-ai（小写）、Startlux-Decision=StartLuxLabs/StartLux-Decision（slux npm 已 Unpublished 佐证关停）。补测 🟢 线（点名面外、用户质询后补齐）：lh-harness PyPI 0.1.8 持平／rea-agents npm 6.8.0 持平／FIBO 10-27 后零 push 持平／element-web 稳定 v1.12.33 持平（tag 面出 v1.12.34-rc.1 记档）／deepseek-recipe 快照 0 落后持平／**DeepInfer +1c 漂移**（5537415→a679bb86，11-03 push，快照型微增量记档不追）。ATT&CK v20.1 挂账维持（无 v20.2；技能面主引用句 v20.0 属文档句刷新欠账）。运行时基线三树=**studio v0.8.20（本批升级，上游三 tag 连发 10 提交）**／agent v0.23.0（canary 流不追）／zcode a9fe401e（main 同点）。
 - **2026-11-09 裁决执行批注（同日晚，用户令「完成未做」，spec `2026-11-09-ledger-judgment-followup`）**：①better-harness/pi-harness 判级正式升 🔴（§3.2 两行随批改判，均观察线无本机依赖不派吸收卡）；②OpenExecutive v0.7.0 delta 重跑收口（报告落外置盘 `research/openexec-delta-20261109/`——五主题/五面同构/结论性，§3.2 行基线进 v0.7.0）；③ATT&CK 技能面 v20.0 指引句刷新为 v20.1（security-tool-landscape-tracking SKILL.md 主体段，11-07 挂账清偿）。
+- **2026-11-13 点名刷新批注（§一.2 触发，用户裁决「全做＋三 delta 重跑」，spec `2026-11-13-tech-ledger-refresh-vendor-upgrade`）**：基线三树=**studio v0.8.21 本批升级**（11-11 发，3c/72f：BOT 协作历史统一聊天卡片＋STT 空 transcript 修复）／agent v0.23.1 持平（main +5475c canary 不追）／**zcode v3.18.2 本批同步**（main 两 sync 提交 `fec97590`，148f：memory-diagnostics/credential-security/voice-input）。🔴 5 条全维持：semantica 252→**255c**（11-09 后仅 3 个安全修复，趋缓）、OpenExecutive v0.7.0→**v0.7.3**（4 天 3 版，delta 重跑收口=同构推进无必吸收，基线进 v0.7.3）、mattpocock v1.3.2...main 1→**5c**（implement-spec 每票子代理/chief-of-staff wiki/software-factory 术语；镜像跟 tag 纪律不动，等 v1.3.3+）、better-harness 359→**361c**、pi-harness tag 顶 **v1.5.2**。🟡 面：**Cybermes 复活重判**——「identical 零漂移」系只对 main compare 的观测假象（集成分支 dev 11-13 一次性合入 71c＋tag v3.5.1），delta 重跑收口=Scope Guard fail-open/sanitizeSlug 两条已吸收红线各一次真实加固，**必吸收 3 项已随批落 security-domain-delegation v1.5.0**，判级回 🟡（对齐完成）；CyberStrikeAI v1.7.24→**v1.8.0**（11-13 跨 minor，delta 重跑收口=引擎级重构：Eino 全删换「Go 守治理+Node worker 托管 Pi SDK 1.5.2」双进程＋漏洞复测工作台；基线治理机制零触碰存活，两件机制吸收候选挂可选；**T2 源码深读卡已过期**标记挂行）；Autopt 43c 持平静默 21 天、AgentENV v0.2.5 持平（11-13 仍 push）、x402 11-01 后 87c 活跃、A2A v1.0.1+rc 持平。**addyosmani/agent-skills 打破静默**（10-14 后 ≥100c，11-01 push review findings 验证主题）→ 🟢 复活观察。**RETIRED 5 线复核全无复活**（AP2 150/ACP 118/openclaw-sec 141/HexStrikeAI 102/openagentontology 98 天）。**rea-agents 6.9.0**（11-12 发；本机实测已 6.9.0，台账 6.8.0 行滞后订正；能力差异见 §4.4）。DSH latest 0.2.2-rc.1 持平（next 通道进 rc.3 不追）。
 
 ## 三、分域总表
 
@@ -34,12 +36,12 @@
 
 | 组件 | 基线（上次调研） | 上游现况（实测） | 判级/差异 | 处置与去向 |
 |------|------------------|------------------|-----------|------------|
-| REA MCP（rea-agents） | 6.4.0（10-12 部署，170 工具） | 6.8.0（npm 10-25；本机 `rea --version`=6.8.0） | 🟢 已升级到位 | 10-27 升级+冒烟通过（能力差异见 §4.1） |
+| REA MCP（rea-agents） | 6.8.0（10-25 部署） | 6.9.0（npm 11-12；本机 `rea --version`=6.9.0 已最新） | 🟢 已升级到位 | 11-13 实测本机已 6.9.0（旧记 6.8.0 系台账滞后）；能力差异见 §4.4 |
 | Ghidra | 12.2（wrapper 实测已绑 `ghidra_12.2_PUBLIC`+JDK25，2026-11-07 订正） | 12.2（10-22 发布，revision 8ca9077 与本机一致=最新） | 🟢 已换绑 | 旧记录（12.1.4+temurin-21 待换绑）系台账滞后，§4.2 已订正 |
 | HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03，13116★（10-31 静默 89 天） | 🟢 上游停滞 | RETIRED 2026-10-28（用户显式裁决豁免 85 天线；T1/T2 卡已收口，T3 融合卡 t_58855791 照常跑完） |
-| CyberStrikeAI (AIPentest) | 调研立项（10-22） | v1.7.24（10-16）+ 10-23 durable async runs 提交 | 🟡 release 密集 | T2 卡 t_20ad092c 在跑，源码深读按最新 HEAD（自动覆盖 10-23 增量） |
+| CyberStrikeAI (AIPentest) | v1.7.24＋10-23 HEAD（T2 深读基线） | **v1.8.0**（11-13 发布，跨 minor）；v1.7.24...v1.8.0=71c/±27,000 行；v1.8.0=main HEAD | 🟡 release 密集（节奏放缓 4 天→28 天，单版体量升格引擎级） | **delta 已收口（11-13，报告 `research/cyberstrikeai-delta-20261113/`）**：跨 minor 实质=引擎架构级更换（Eino 全删 `cfaa95d7b` 换「Go 守治理+Node worker 托管 Pi SDK 1.5.2」双进程 `35508eb61`）＋漏洞复测工作台 `cab10bfcc`；基线治理机制（toolEvidence/Jev 审计/toolguard/C2 危险七类）零触碰存活；吸收候选两件挂可选（evidence 全量留档+有界预览+写失败回退／复测快照可审计演进）。**T2 源码深读卡（10-22 基线）已过期**——Eino 章与 knowledge 实现层引用随 v1.8.0 作废，下次深读按新引擎形态重开 |
 | Autopt (shiyeshu) | 06c834e（08-18，fixture 已落地 G9） | 43c 两段式架构演进（10-28 delta 实测；10-31 未再动） | 🟡 delta 已完成 | G9 fixture 复跑全绿 70 passed（独立仿真与上游解耦）；fixture 的 Deputy 硬否决模型与上游有界谏言语义有差异，见 delta §5 |
-| Cybermes (Zyrexnn) | v2.0.0（融合分析在案） | v3.5.0=main（10-31 compare identical；10-30 push 仅 tag/元数据） | 🟡 delta 已完成，代码零漂移 | MCP-first 转向（Go 原生 MCP server，Hermes 降为 12 客户端之一）；原结论 6 过期/3 成立/1 勘误；hack 域必吸收=Scope Guard scope-as-code+sanitizeSlug |
+| Cybermes (Zyrexnn) | v3.5.0（10-31 delta 收口） | **v3.5.1**（11-13 tag）；v3.5.0...v3.5.1=70c＋v3.5.1...main 1c（纯文档）；69 文件 | 🟡 复活后对齐完成 | **delta 已收口（11-13，报告 `research/cybermes-delta-20261113/`）**：11-09「identical 零漂移」系只对 main compare 的观测假象（集成分支 dev 开发、main 发布时移动——§一.6 已立规）；本轮对 Scope Guard/sanitizeSlug 两条已吸收红线各一次真实加固（d337e4a9e fail-open 修复＋da087f5e8/a8266d4f0 slug/穿越边界），**必吸收 3 项已随批落 security-domain-delegation v1.5.0**；可选 4 项带触发条件（B4 巡检立规已即办）；「Hermes 降为 12 客户端」订正=13 个（npm 适配器实测 hermes 在册） |
 | ARL-Next (owl234) | 已落地本机（wih_engine.py 移植） | v1.4.3，push 10-29（v1.4.3...main 27c） | 🟢 持续维护线 | 无动作 |
 | REAP (JoasASantos) | 10-26 快照融合（skill v1.2.0） | README+Skills md5 零漂移（10-31 实测，静默 5 天） | 🟢 | 无动作 |
 | OpenSecurity (zylc369) | 2.0 源码分析+蓝军报告（10-17） | tag 2.0 不变，10-19 有 push | 🟢 | 无动作 |
@@ -49,13 +51,13 @@
 
 | 组件 | 基线 | 上游现况 | 判级/差异 | 处置 |
 |------|------|----------|-----------|------|
-| semantica (semantica-agi) | v0.7.0 / 2a9afec（09-23 源码分析） | v0.7.0 未发版，main 217c（v0.7.0...main；feat 20/fix 121/security 14） | 🔴 大增量；本机有 semantica-runtime 常驻技能 | 最优先增量卡（运行时组件，过期风险实存）；10-28 delta 已收口，10-31 增量继续涨 |
-| OpenExecutive (SenteLabsAI) | v0.7.0（11-09 delta 收口） | **v0.7.0 跨 minor**（11-07）；v0.6.8→v0.7.0 66c/300 文件，30319d9...main 210c | 🔴 高活跃，跨 minor | **delta 已收口（11-09，用户令「完成未做」）**：报告落外置盘 `research/openexec-delta-20261109/`——v0.7.0 五主题（Memory 重做 8 条=带来源可审计可撤销事实库/Approvals 每通道单门/claim check 后重写而非追加更正/卡片四型问询/同名歧义防误）＋v0.6.9（长 turn Stop+I'll finish/Drive 域外共享先问/步数用尽诚实降级）；机制层与本仓五面同构无必吸收增量，结论性收口 |
-| mattpocock/skills | 2026-08-24 main@6654f6b（09-02 融合轮） | v1.3.2（10-29）；v1.3.1 后 51c | 🔴 增量已盘点，10-29 又发一版 | delta 完成：implement-spec/pr/retro 新三件、GLOSSARY 改名、devops-rd 旧产物已迁不受影响；市集三件套依赖 dsh plugin-market 线，与此线无关（勘误 #6）；v1.3.2 增量待补 |
-| addyosmani/agent-skills | 0.6.13（10-18 delta） | tag 顶仍 0.6.13，10-13 后零 push（10-31 静默 18 天；404 澄清：mattpocock/agent-skills 不存在） | 🟢 静默 | 观察线（未到退役线） |
+| semantica (semantica-agi) | v0.7.0 / 2a9afec（09-23 源码分析） | v0.7.0 未发版，main **255c**（11-13 实测；11-09 后仅 3 个安全修复 commit，增量趋缓） | 🔴 大增量；本机有 semantica-runtime 常驻技能 | 最优先增量卡（运行时组件，过期风险实存）；10-28 delta 已收口，增量趋缓观察 |
+| OpenExecutive (SenteLabsAI) | v0.7.3（11-13 delta 收口） | **v0.7.3**（11-12 发布，4 天 3 版）；v0.7.0...v0.7.3=80c（62+11+7），30319d9...main **275c**，v0.7.3...main 5c | 🔴 高活跃（节奏未衰减） | **delta 已收口（11-13，报告 `research/openexec-delta-20261113/`）**：同构推进无新机制面——80c 全为 v0.7.0 五主题的参数化/通道扩展/收口深化；无必吸收；可选 3 项带触发条件（循环防护启发式 #752=同 action 同 result 4 次即停；审批放行参数化 #761/#780 三次重复放行；盲区披露卡 #787）；不吸收=UI 面/Memory 展示族/Google Chat |
+| mattpocock/skills | v1.3.2（R143 镜像刷新基线） | v1.3.2 仍 tag 顶；v1.3.2...main **5c**（11-13 实测；implement-spec 每票新实现者子代理 #1342/chief-of-staff shared wiki #1363/software-factory 术语两提交） | 🔴 微增（无新 tag） | 11-13 记档：5c 中 chief-of-staff 属上游 in-progress 不取清单、software-factory 术语演进无机制增量，对本仓 27 技能镜像实际触点仅 implement-spec；**镜像跟 tag 纪律**——物化基线=v1.3.2 不动，等 v1.3.3+ 整刷 |
+| addyosmani/agent-skills | 0.6.13（10-18 delta） | tag 顶仍 0.6.13；10-14 后 **≥100c 打破静默**（11-01 push：validate review findings against code and baseline #736） | 🟢→复活观察 | 静默打破记档（review findings 验证主题与本仓独立审查节点同构）；下轮点名复核是否成势 |
 | DSH (@deepseek-ai/dsh) | 0.2.2-rc.1（2026-11-07 本机已升；dsh-tui 0.19.0 同批） | latest=next=0.2.2-rc.1，alpha=0.2.2-alpha.3 | 🟢 已对齐 latest | 轻跟 next 通道；旧行「v0.2.1-rc.2/已装 0.17.0」为 10-18 快照，本机实际装过 0.1.1-rc.2+0.10.0（10-18 行与实测不符系 dsh 与 dsh-tui 两线混淆，11-07 实测订正） |
-| better-harness (QoderAI) | 0.6.4 深读（10 月初） | v0.7.0-alpha2（09-12）；v0.6.4...main **359c**（11-09 实测；10-31 记 67c 系口径端点差异）、pushed 11-07 | 🔴 大增量（**11-09 用户裁决升档**，「完成未做」令） | 观察线（无本机依赖，不派吸收卡） |
-| pi-harness (earendil-works/pi) | 源码级深读（快照非 pin） | **v1.5.0 跨 minor**（11-08 push）；v1.4.0...main **634c** | 🔴 跨 minor＋大增量（**11-09 用户裁决升档**）；runtimes.tsv source 行 v1.5.0 已登记（R143） | 无在役依赖，按需跟 |
+| better-harness (QoderAI) | 0.6.4 深读（10 月初） | v0.7.0-alpha2 仍 tag 顶；v0.6.4...main **361c**（11-13 实测，11-09 记 359c）、pushed 11-11 | 🔴 大增量（11-09 用户裁决升档） | 观察线（无本机依赖，不派吸收卡） |
+| pi-harness (earendil-works/pi) | v1.5.0（R143 登记） | tag 顶 **v1.5.2**（11-13 实测）；v1.5.0...main 559c | 🔴 跨 minor＋大增量（11-09 用户裁决升档）；tag 面又进两版 v1.5.1/2 | 无在役依赖，按需跟；runtimes.tsv source 行下轮随 R144+ 刷新 |
 | LongHorizon-Harness (lh-harness) | v0.1.7 / a1dd9306（10-18） | PyPI 0.1.8（upload_time 2026-10-21，10-31 复核修正） | 🟢 仅 1 patch | 无动作 |
 | HarnessEval-W (MirroS-Lab) | 深读+蓝军复核 | 末 push 09-07（10-31 静默 54 天，未到线） | 🟢 | 无动作 |
 | Startlux-Decision (laya 线) | v1.1 模型+影子评测（10-17/19） | laya v0.4.15 | 🟢 已裁决退役（slux 关停，决策线非静默原因），仅留评测判例 | 无动作 |
@@ -119,6 +121,18 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 
 战术面 15 持平。技术 697→706，+9/−0 全 AI 类：Direct Prompt Injection、Indirect Prompt Injection、AI Result Poisoning、AI-Enabled Exfiltration、Impair Autonomous Defenses、Anti-Automation Evasion、Avoid CAPTCHA、Automate CAPTCHA Completion、Steal Application Specific Passwords。落点：`team/skills/devops/security-tool-landscape-tracking/SKILL.md` 已刷，llm-redteam 坐标系从此引 v20.0。
 
+### 4.4 REA 6.8.0 → 6.9.0（2026-11-12 发布，本机已 6.9.0）
+
+发布主题（官方 release notes，tag `rea-agents-6.9.0`，日期 2026-11-11）：
+
+1. **桌面任务/环境大版**：build computer（可复用构建机）内捕获/导出/见证桌面任务；SHA-256 钉版 AppImage/上游归档安装桌面应用；一捕获多任务；seed/end 检查点选择＋seed 文档启动打开；ReFS 卷支持（与 NTFS 同保 ACL/文件身份/快照/清理检查）。
+2. **新格式面**：.NET 单文件/Bun standalone/Deno compile 可执行的盘点与提取；UnityFS/Godot 3 PCK/微信小程序包/Zstandard ZIP 成员/经典 iNES；Intel HEX/Motorola S-record/U-Boot uImage/FIT/ESP flash/UF2/DfuSe 固件区段（保留容器声明）；NTFS MFT 记录＋USN journal 离线盘点；V8 code-cache 头与字节模式（不执行缓存，报 Electron cachedData 边界）；OpenAPI 操作/GraphQL SDL 离线清单＋与 HAR 观察比对；Windows Shell Link；Python 3.14/3.15 pyc 头识别。
+3. **调查增强**：Playwright v10 trace Evidence 导入＋离线验证浏览器场景；R8 mappings 应用＋Android manifest 组件声明＋JNI 静态候选＋外部 DEX 调用者追踪；ELF/PE/Mach-O 加固报告＋Mach-O 分片加密＋unwind 表恢复函数区间；Linux core-dump 进程/映射 notes＋内核版本配置；LLDB 源坐标；Ghidra 项目经验证副本复用＋跨会话 checkpoint；Kuna/目录反编译独立重试。
+4. **Evidence/分页/预算**：保留观察全面分页（native/引用/feature 追踪/批量反编译摘要）；Evidence 记录按需读取＋缺失链发现；资源预算失败可操作化（CLI/MCP 全域）＋每调用限额从操作快照读取。
+5. **CLI/MCP 面**：guided workflows＋已装指南搜索；MCP 工具族选择＋compact 输出 schema；插件安装（Claude Code/Codex 自包含＋Cursor Marketplace＋CodeBuddy/LM Studio/Cline 注册）；Windows P0 DOS MZ＋RISC-V ilp32 admission。
+
+本机核验（11-13）：`rea --version`=6.9.0、`npm ls -g rea-agents`=6.9.0（双通道一致；台账旧记 6.8.0 系滞后）。wrapper（`~/lab/tools/rea-mcp-wrapper.sh`）GHIDRA 12.2＋JDK25 绑定不变。6.8→6.9 无 breaking 前提变化（Node 前提同 6.8 口径）。
+
 ## 五、欠账与缺口登记
 
 | 项 | 状态 | 去向 |
@@ -157,6 +171,25 @@ curl -s https://pypi.org/pypi/lh-harness/json | jq -r '.info.version, .releases[
 # 基线版本：vendor/zcode/package.json=3.16.2；zcode-patches/series 8 条活跃（002-009）
 ```
 
+```bash
+# 2026-11-13 点名刷新（全部 gh api）
+gh api repos/EKKOLearnAI/ekko-studio/releases/latest --jq '{tag_name,published_at}'     # v0.8.21 / 2026-11-11
+gh api "repos/EKKOLearnAI/ekko-studio/compare/v0.8.20...v0.8.21" --jq '{ahead_by}'      # 3（72 files）
+gh api repos/NousResearch/hermes-agent/releases/latest --jq '.tag_name'                 # v0.23.1（持平）
+git -C upstream/zcode fetch origin && git -C upstream/zcode rev-parse --short origin/main  # fec97590（v3.18.2）
+gh api repos/semantica-agi/semantica/compare/v0.7.0...main --jq '.ahead_by'              # 255
+gh api repos/SenteLabsAI/OpenExecutive/releases/latest --jq '.tag_name'                  # v0.7.3
+gh api repos/SenteLabsAI/OpenExecutive/compare/v0.7.0...v0.7.3 --jq '.ahead_by'          # 80
+gh api repos/mattpocock/skills/compare/v1.3.2...main --jq '.ahead_by'                    # 5
+gh api repos/Zyrexnn/Cybermes/compare/v3.5.0...main --jq '.ahead_by'                     # 71（含集成分支合入；只对 main 曾误判 identical，见 §一.6）
+gh api repos/AIPentest/CyberStrikeAI/releases/latest --jq '{tag_name,published_at}'      # v1.8.0 / 2026-11-13
+gh api "repos/AIPentest/CyberStrikeAI/compare/v1.7.24...v1.8.0" --jq '.ahead_by'         # 71
+gh api repos/QoderAI/better-harness/compare/v0.6.4...main --jq '.ahead_by'               # 361
+gh api repos/earendil-works/pi/tags --jq '.[0].name'                                     # v1.5.2
+npm view rea-agents version                                                              # 6.9.0；本机 rea --version 同点
+# 本机面：rea --version=6.9.0；vendor/hermes-studio/packages/desktop/package.json version=0.8.21（pristine）；vendor/zcode/package.json=3.18.2
+```
+
 ## 七、整合勘误
 
 1. 剔除幽灵条目：原主索引列「AutoPT (Dizzy-K) 148 天 RETIRED」——30 线台账查无此线（唯一 Autopt 是 shiyeshu，🔴 活跃），判定为索引笔误，已删。
@@ -174,6 +207,7 @@ curl -s https://pypi.org/pypi/lh-harness/json | jq -r '.info.version, .releases[
 
 ## 八、变更日志
 
+- 2026-11-13 点名刷新批（§一.2 触发，用户裁决「全做＋三 delta 重跑」，spec `2026-11-13-tech-ledger-refresh-vendor-upgrade.md`）：点名面+RETIRED 线全实测；vendor 双基线随批升级（studio v0.8.21 补丁 042/768 重锚；zcode v3.18.2 补丁零重生成 10/10 直放）；rea-agents 6.9.0 本机核验已最新（§4.4 能力差异入账）；Cybermes 复活 delta 收口＋必吸收 3 项落 security-domain-delegation v1.5.0；OpenExecutive v0.7.3/CyberStrikeAI v1.8.0 delta 收口（均外置盘 research/*-delta-20261113/）；§一.6 集成分支入 compare 基线立规（Cybermes 零漂移误判教训）；addyosmani 复活观察记档。
 - 2026-11-11 zcode 3.18.0 同步批：运行时基线三树 zcode 进位 a9fe401e→b95ebaff（v3.18.0，单 sync 提交 5099 文件；session-control/插件 extension host/worktree 隔离/登录 v2 随基线获得）；补丁 002/006 重生成＋新增 011（MCP inputSchema 参数名消毒＋调用回译，Qwen Code 1.0 逐项对照唯一确凿差距吸收项）。spec `2026-11-11-zcode-3180-sync-and-qwen-absorb.md`。
 - 2026-11-09 裁决执行批（同日晚）：判级升档 better-harness/pi-harness 落表（用户令「完成未做」）；OpenExecutive v0.7.0 delta 收口（外置盘 openexec-delta-20261109/）；ATT- 2026-11-09 台账刷新批：点名刷新 32 点位CK v20.1 句刷新。spec `2026-11-09-ledger-judgment-followup.md`。
 - 2026-11-09 台账刷新批：点名刷新 32 点位（26＋补测 6）；openagentontology RETIRED 复核通过（94 天定谳）；x402 1497c 异常证伪（343c）挂账关闭；Graph-Engineering 正名锚定；DeepInfer +1c 漂移记档；判级建议升 🔴 2 条（better-harness/pi-harness）与 OpenExecutive v0.7.0 delta 重跑待用户裁决。spec `2026-11-09-runtime-deps-refresh.md`。

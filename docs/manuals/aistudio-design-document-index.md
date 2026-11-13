@@ -476,7 +476,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（217 份）
+## 2026-11（218 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -695,6 +695,7 @@
 - [2026-11-13-burn-verify-robustness.md](../superpowers/specs/2026-11-13-burn-verify-robustness.md)
 - [2026-11-13-burn-waive-gate.md](../superpowers/specs/2026-11-13-burn-waive-gate.md)
 - [2026-11-13-matrix-account-switch.md](../superpowers/specs/2026-11-13-matrix-account-switch.md)
+- [2026-11-13-tech-ledger-refresh-vendor-upgrade.md](../superpowers/specs/2026-11-13-tech-ledger-refresh-vendor-upgrade.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
@@ -706,5 +707,5 @@
 
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
 
-- 当前工作树根目录：**670 份 Markdown**（HEAD 全量跟踪；2026-11-12 ＋ai-agent-handbook 吸收 1＋补拍轮 1；此前多批计数漂移 6 于本批按文件系统实测对齐，另 run29 复盘/run30 行动项 4 份随合并补记链接与计数）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 217 份；合计 670 份。
+- 当前工作树根目录：**671 份 Markdown**（HEAD 全量跟踪；2026-11-13 双批并进——matrix 账号切换 1＋台账点名刷新与 vendor 双升级 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 218 份；合计 671 份。

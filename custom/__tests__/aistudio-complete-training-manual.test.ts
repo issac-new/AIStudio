@@ -76,7 +76,7 @@ describe('AIStudio 15 分钟演示稿契约', () => {
   })
 
   it('关键事实与版本一致，指南核心理念不缺失，边界不隐藏', () => {
-    for (const fact of ['1.0.16-overlay', '0.8.20-studio.3', 'v0.23.1-team.3', '3.18.0', 'v2.100.4']) {
+    for (const fact of ['1.0.16-overlay', '0.8.21-studio.1', 'v0.23.1-team.3', '3.18.2', 'v2.100.4']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
     for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', '59 道门禁', 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭', '研发小循环', '组织大循环', 'Matrix', '本体', '对象 · 关系 · 动作', 'GB/T 22239', 'ISO 26262', 'OWASP ASVS 5.0', '博学 · 审问 · 慎思 · 明辨 · 笃行 · 不贰过 · 举一反三']) {
