@@ -1,6 +1,6 @@
 # 管理思维全量清单
 
-> 本文档是"认知格栅"Agent Skill的"管理思维"维度知识库，涵盖8大管理领域的120+条管理思维模型。
+> 本文档是"认知格栅"Agent Skill的"管理思维"维度知识库，涵盖8大管理领域的135条管理思维模型。
 >
 > 生成日期：2025年
 > 覆盖范围：领导力思维、组织管理思维、战略执行思维、团队建设思维、运营管理思维、变革管理思维、人才发展思维、商业经营思维
@@ -9,14 +9,14 @@
 
 ## 目录
 
-1. [领导力思维（Leadership Thinking）](#一领导力思维)
-2. [组织管理思维（Organizational Management）](#二组织管理思维)
-3. [战略执行思维（Strategic Execution）](#三战略执行思维)
-4. [团队建设思维（Team Building）](#四团队建设思维)
-5. [运营管理思维（Operations Management）](#五运营管理思维)
-6. [变革管理思维（Change Management）](#六变革管理思维)
-7. [人才发展思维（Talent Development）](#七人才发展思维)
-8. [商业经营思维（Business Management）](#八商业经营思维)
+1. 领导力思维（Leadership Thinking）
+2. 组织管理思维（Organizational Management）
+3. 战略执行思维（Strategic Execution）
+4. 团队建设思维（Team Building）
+5. 运营管理思维（Operations Management）
+6. 变革管理思维（Change Management）
+7. 人才发展思维（Talent Development）
+8. 商业经营思维（Business Management）
 
 ---
 

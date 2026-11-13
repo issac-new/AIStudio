@@ -1,6 +1,9 @@
 # Orchestrator 认知增强集成指南
 
-> **用途**：本文件将 cognition-lattice 知识库（1969条）映射到 orchestrator 的核心决策场景。
+> **定位**：本文件是「如何使用九个知识维度」的集成示例与 SOP，不是第十个知识维度，也不包含任何知识条目。通用检索入口见技能根目录的 `SKILL.md` 与 `scripts/lattice.py`；维度清单与统计口径见 `catalog.md`。
+> **依赖边界**：文中 `SOUL.md`、`rules.md`、`email_kanban_rules.md`、`swarm`/`hack` 看板与 `worker-*` 均属外部 orchestrator profile 资产，不在本技能目录内；形如 `xxx.md` 的来源标注指本目录（`references/`）下的同名文件。
+>
+> **用途**：本文件将 cognition-lattice 知识库（1975条）映射到 orchestrator 的核心决策场景。
 > 当 orchestrator 面临任务路由、分解、分配、优先级判定或跨团队协调决策时，
 > 应先查阅本指南，找到对应的认知框架/思维模型，再读取对应 references 文件获取详细条目。
 
@@ -16,12 +19,13 @@
 | 优先级判定（多任务排序） | 艾森豪威尔矩阵、帕累托法则 | mental_models.md | Eisenhower Matrix, Pareto Principle |
 | 风险评估（安全路由判定） | 逆向思维、Pre-mortem | mental_models.md | Inversion, Pre-mortem |
 | 跨看板协调（swarm↔hack 联动） | 系统思维、反馈循环 | mental_models.md | Systems Thinking, Feedback Loops |
-| 需求澄清（需求方预设/隐性诉求挖掘，2026-08-28） | 苏格拉底式提问（Deliberate Questioning） | growth_thinking.md:1019 | Socratic Method（机制落 rd-clarify §2.3 诘问式） |
-| 调研/报告验收（信源立场与利益审查，2026-08-28） | 幸存者偏差、选择性引用 | interdisciplinary_tools.md:119 | Survivorship Bias（机制落 adversarial-review-lens §2.1 incentive-audit） |
 | 任务质量审查 | 证伪主义、红队思维 | mental_models.md, interdisciplinary_tools.md | Falsificationism, Red Team |
 | 团队瓶颈诊断 | 约束理论、瓶颈分析 | mental_models.md | Theory of Constraints |
 | 变革推动（流程改进） | Kotter变革八步、PDCA | thinking_frameworks.md, management_thinking.md | Kotter 8-Step, PDCA |
 | 决策偏差自检 | 确认偏误、锚定效应、规划谬误 | cognitive_biases.md | Confirmation Bias, Anchoring, Planning Fallacy |
+| 需求澄清（需求方预设/隐性诉求挖掘，2026-08-28） | 苏格拉底式提问（Deliberate Questioning） | growth_thinking.md:1019 | Socratic Method（机制落 rd-clarify §2.3 诘问式） |
+| 调研/报告验收（信源立场与利益审查，2026-08-28） | 幸存者偏差、选择性引用 | interdisciplinary_tools.md:119 | Survivorship Bias（机制落 adversarial-review-lens §2.1 incentive-audit） |
+| 局势判断与对策输出（推不动/争议僵持/资源博弈，2026-11-02） | 三十六计框架、计策卡决策法 | eastern_wisdom.md | 釜底抽薪、走为上计、计策卡决策法（997） |
 
 ---
 
@@ -225,8 +229,9 @@ worker-coder 能力圈: Python, Rust, API, 算法
 
 ## 七、决策偏差自检清单（唯一事实源）
 
-> **来源**：`cognitive_biases.md` / `psychological_effects.md`
 > 本节是集群 8 项偏差清单的唯一事实源（原 cognition-self-check 技能已于 2026-10-11 并入本文件后退役）。
+
+> **来源**：`cognitive_biases.md` / `psychological_effects.md`
 
 Orchestrator 在做路由/分配决策后，应快速自检以下偏差：
 
@@ -240,6 +245,8 @@ Orchestrator 在做路由/分配决策后，应快速自检以下偏差：
 | **框架效应** (Framing Effect) | 消息措辞影响判定（"入侵"vs"连接异常"） | 剥离情感色彩，只看技术实质 |
 | **代表性启发** (Representativeness) | 消息看起来像安全事件 → 忽略基率 | 结合先验概率和当前证据做贝叶斯更新 |
 | **过度自信** (Overconfidence) | 确信路由正确，不设 triage | 模糊场景一律 triage=True |
+
+---
 
 ## 七A、执行前守门清单（原 cognition-self-check 独有内容，2026-10-11 并入）
 
@@ -437,10 +444,33 @@ Orchestrator 接收消息/任务
 | **中庸之道** | 不过度自动化（误路由风险），也不过度人工（效率低） |
 | **知行合一** | 路由规则写到 rules.md 后必须在实践中验证执行 |
 | **改善 Kaizen** | 持续优化路由关键词表和 assignee 映射 |
+| **釜底抽薪** | 卡片推不动时不反复催执行者，改找出并改变支撑条件（依赖/考核/归属） |
+| **李代桃僵** | worker 资源不足时显式取舍：先保验收必需项，取舍交有权者拍板 |
+| **走为上计** | 方案/评审争议僵持时撤出对错之争，升级给有决定权者裁决 |
 
 ---
 
-*集成指南版本: 1.0*
+## 十三、三十六计决策纪律（见拆变出·一计一招，2026-11-02 融合）
+
+> **来源**：`eastern_wisdom.md` §三十六计体系（条目 992-997）；融合裁决存档 `~/.hermes/shared/research/20261102-36ji-cognition-fusion/`
+
+适用：任何「用认知框架输出判断」的 orchestrator 决策——路由判定、派工建议、打回意见、跨板协调方案、向用户的决策建议。六条纪律：
+
+1. **一计一招**：每次只出一策一个动作。给用户/worker 的建议不列平行清单——"条条都对，没有一条是冲着这件事来的"等于没说。
+2. **见拆变出四步**：见招（引用框架原文，原文与自己的解读分开写，不冒充）→ 拆招（说清机制与成立前提）→ 变招（映射到这张卡/这个用户的具体条件）→ 出招（给一个立刻可执行的动作 + 验证信号）。
+3. **前提显式化**：每条框架式建议附带「成立前提」；新事实推翻前提 → 换策并显式声明撤回的是哪条判断（与打回标记 [REJECT] 纪律同构）。
+4. **换策状态机**：续用（前提未变，只调动作话术）/ 换策（前提被推翻，声明撤回）/ 接策（前一策落地后出现新障碍）。同一卡/会话内记忆前文，不要求对方重述背景。
+5. **借/辨二分**：主动施策用「借」；防范性识别用「辨」——辨处境≠指控动机（如"资源被撤"先并排对账请有权者裁决，不先定罪）。
+6. **无计不硬套**：框架与事无实质关联时直说「此步无计」，直接给结果。框架为事服务，不为显得专业。
+
+框架选型附则：优先选受众心智已预装的框架（文化母题零解释成本）；一个名字同时压缩「处境+招法」即命名的力量——AI 输出质量 = 思维深度 × 表达精度。
+
+---
+
+---
+
+*集成指南版本: 1.2*
 *创建时间: 2026-07-23*
-*依赖: cognition-lattice v2.2 (1969条, 9维度)*
+*更新时间: 2026-11-13（恢复 v3.0 重构时丢失的 §七A 守门清单与 §一 映射行，v1.2）*
+*依赖: cognition-lattice v3.1 (1975条, 9维度, v3.0 技能结构)*
 *适用 profile: orchestrator*

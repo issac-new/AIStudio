@@ -13,15 +13,17 @@
 
 | 序号 | 分类 | 英文 | 条目数 | 核心领域 |
 |------|------|------|--------|----------|
-| 一 | 决策与判断模型 | Decision-Making Models | 21 | 心理学、决策科学、行为经济学 |
-| 二 | 经济与商业模型 | Economic & Business Models | 15 | 经济学、管理学、金融学 |
-| 三 | 系统与复杂性模型 | Systems & Complexity Models | 12 | 系统动力学、复杂性科学 |
-| 四 | 概率与统计模型 | Probability & Statistical Models | 12 | 概率论、统计学、数据科学 |
-| 五 | 策略与博弈模型 | Strategy & Game Theory Models | 10 | 博弈论、战略学 |
-| 六 | 创新与问题解决模型 | Innovation & Problem-Solving Models | 12 | 创新学、设计思维、认知科学 |
-| 七 | 学习与认知模型 | Learning & Cognitive Models | 10 | 认知科学、教育学、心理学 |
-| 八 | 科学与方法模型 | Scientific Method Models | 9 | 科学方法论、科学哲学 |
-| **总计** | | | **101** | |
+| 一 | 决策与判断模型 | Decision-Making Models | 111 | 心理学、决策科学、行为经济学 |
+| 二 | 经济与商业模型 | Economic & Business Models | 62 | 经济学、管理学、金融学 |
+| 三 | 系统与复杂性模型 | Systems & Complexity Models | 146 | 系统动力学、复杂性科学 |
+| 四 | 概率与统计模型 | Probability & Statistical Models | 128 | 概率论、统计学、数据科学 |
+| 五 | 策略与博弈模型 | Strategy & Game Theory Models | 34 | 博弈论、战略学 |
+| 六 | 创新与问题解决模型 | Innovation & Problem-Solving Models | 61 | 创新学、设计思维、认知科学 |
+| 七 | 学习与认知模型 | Learning & Cognitive Models | 101 | 认知科学、教育学、心理学 |
+| 八 | 科学与方法模型 | Scientific Method Models | 69 | 科学方法论、科学哲学 |
+| **总计** | | | **712** | |
+
+> 分类条目数以 `scripts/lattice.py audit` 实测为准（2026-11-05 校准，原表为 v1.0 的 101 条口径）。
 
 ---
 
@@ -5087,7 +5089,7 @@
 | 五、策略与博弈模型 | 34 | 24 | 4.8% |
 | 六、创新与问题解决模型 | 61 | 49 | 8.6% |
 | 七、学习与认知模型 | 101 | 91 | 14.2% |
-| 八、科学与方法模型 | 71 | 60 | 10.0% |
+| 八、科学与方法模型 | 69 | 60 | 9.7% |
 
 ---
 
