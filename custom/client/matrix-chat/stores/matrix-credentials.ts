@@ -15,11 +15,15 @@ const MATRIX_KEYS = {
   homeserverUrl: 'matrix_homeserver_url',
 } as const
 
-export function storeMatrixCredentials(creds: MatrixCredentials): void {
+export function storeMatrixCredentials(creds: MatrixCredentials, meta?: MatrixVaultMeta): void {
   localStorage.setItem(MATRIX_KEYS.accessToken, creds.accessToken)
   localStorage.setItem(MATRIX_KEYS.userId, creds.userId)
   localStorage.setItem(MATRIX_KEYS.deviceId, creds.deviceId)
   localStorage.setItem(MATRIX_KEYS.homeserverUrl, creds.homeserverUrl)
+  // 账号切换器（spec 2026-11-13）：每次写活跃凭据即自动入仓留底——手动登录、
+  // 网关免密桥接、账号切换三条路径全覆盖（D3），无需调用方各自记得入仓。
+  // meta 缺省 manual（既有调用方语义不变）；切换链带 source/profile/displayName。
+  upsertAccountVault(creds, meta)
 }
 
 export function getMatrixCredentials(): MatrixCredentials | null {
@@ -44,6 +48,88 @@ export function clearMatrixCredentials(): void {
 
 export function hasMatrixCredentials(): boolean {
   return getMatrixCredentials() !== null
+}
+
+// ─── 多槽凭据仓（vault，spec 2026-11-13 matrix-account-switch）─────────────
+// 活跃凭据仍是上方单槽四键（现有消费者零改动）；本仓是旁路留底，记录本机登录过的
+// 每个账号，供账号切换器一键回切。登出只清活跃槽、不清仓（决策 D3）；token 失效项
+// 由切换动作在 matrix-login 401 时删除（重登自动再入仓），不做 stale 标记态。
+
+/** vault localStorage 键（值为 MatrixVaultEntry[] 的 JSON） */
+const MATRIX_VAULT_KEY = 'matrix_account_vault'
+
+export type MatrixAccountSource = 'manual' | 'profile'
+
+/** vault 条目：凭据四件套 + 展示元数据 + 来源（manual=手动登录 / profile=档位切换） */
+export interface MatrixVaultEntry {
+  accessToken: string
+  userId: string
+  deviceId: string
+  homeserverUrl: string
+  displayName?: string
+  avatarUrl?: string
+  source: MatrixAccountSource
+  /** source=profile 时的档位名（UI 徽标与档位联动依据） */
+  profile?: string
+  savedAt: number
+}
+
+/** 切换/登录路径入仓时携带的元数据（displayName 从 matrix-login 响应的 user 取） */
+export interface MatrixVaultMeta {
+  displayName?: string
+  avatarUrl?: string
+  source?: MatrixAccountSource
+  profile?: string
+}
+
+function parseVault(raw: string | null): MatrixVaultEntry[] {
+  if (!raw) return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((e): e is MatrixVaultEntry =>
+      !!e && typeof e === 'object'
+      && typeof (e as MatrixVaultEntry).accessToken === 'string' && (e as MatrixVaultEntry).accessToken !== ''
+      && typeof (e as MatrixVaultEntry).userId === 'string' && (e as MatrixVaultEntry).userId !== ''
+      && typeof (e as MatrixVaultEntry).homeserverUrl === 'string' && (e as MatrixVaultEntry).homeserverUrl !== '')
+  } catch {
+    return []
+  }
+}
+
+/** 列出仓内全部账号（按 savedAt 降序——最近使用排前）。畸形 JSON/条目静默剔除。 */
+export function listVaultAccounts(): MatrixVaultEntry[] {
+  return parseVault(localStorage.getItem(MATRIX_VAULT_KEY))
+    .sort((a, b) => b.savedAt - a.savedAt)
+}
+
+/** 取指定账号（按 matrix userId 唯一键） */
+export function getVaultAccount(userId: string): MatrixVaultEntry | null {
+  return parseVault(localStorage.getItem(MATRIX_VAULT_KEY)).find(e => e.userId === userId) ?? null
+}
+
+/** upsert 一条账号记录（同 userId 覆盖并刷新 savedAt；deviceId 缺省空串与桥接链同口径）。 */
+export function upsertAccountVault(creds: MatrixCredentials, meta: MatrixVaultMeta = {}): MatrixVaultEntry {
+  const entry: MatrixVaultEntry = {
+    accessToken: creds.accessToken,
+    userId: creds.userId,
+    deviceId: creds.deviceId ?? '',
+    homeserverUrl: creds.homeserverUrl,
+    ...(meta.displayName ? { displayName: meta.displayName } : {}),
+    ...(meta.avatarUrl ? { avatarUrl: meta.avatarUrl } : {}),
+    source: meta.source ?? 'manual',
+    ...(meta.profile ? { profile: meta.profile } : {}),
+    savedAt: Date.now(),
+  }
+  const rest = parseVault(localStorage.getItem(MATRIX_VAULT_KEY)).filter(e => e.userId !== creds.userId)
+  localStorage.setItem(MATRIX_VAULT_KEY, JSON.stringify([...rest, entry]))
+  return entry
+}
+
+/** 删除一条账号记录（切换 401 时 token 失效清理；不存在的 userId 静默无操作）。 */
+export function removeVaultAccount(userId: string): void {
+  const rest = parseVault(localStorage.getItem(MATRIX_VAULT_KEY)).filter(e => e.userId !== userId)
+  localStorage.setItem(MATRIX_VAULT_KEY, JSON.stringify(rest))
 }
 
 export interface MatrixLoginResult {

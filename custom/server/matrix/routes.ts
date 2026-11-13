@@ -1,7 +1,7 @@
 // packages/server/src/custom/matrix/routes.ts
 import type Koa from 'koa';
 import Router from '@koa/router';
-import { readGatewayMatrixEnv } from './gateway-env'
+import { isSafeProfileName, listProfileMatrixAccounts, readGatewayMatrixEnv, readProfileMatrixEnv } from './gateway-env'
 import { loadMatrixSession } from './session-store';
 import { elementWebDirExists, getMatrixServerInfo } from './server-info';
 
@@ -43,13 +43,11 @@ function forwardedClients(ctx: { request?: { headers?: Record<string, string | s
 export function registerMatrixAuthRoutes(app: Koa) {
   const router = new Router({ prefix: '/api/matrix' });
 
-  // C2 自动登录：返回本机 gateway dotenv 的 Matrix 凭据三元组，供 Studio 免密自动登录。
-  // 同一信任域（用户本机 gateway 与 Studio 同身份），brief-matrix-delivery 已服务端消费
-  // 同源凭据；此处仅把三元组交客户端走既有 POST /api/auth/matrix-login（本就收 access_token
-  // 而非密码）建立会话。无 gateway 凭据时返回 { configured:false }，客户端回落手动登录页。
+  // 回环四闸共用守卫（gateway-credentials 与 profile-accounts 同信任域同闸——
+  // spec 2026-11-13 matrix-account-switch 变更 2/3）。不过闸即写 403 响应并返回 false。
   //
-  // 来源约束（S1，G3 加固）：本路由挂在鉴权中间件之前、服务默认绑 0.0.0.0，不设约束则
-  // 同网段任意主机都能拿走长期 access_token。四道闸：
+  // 来源约束（S1，G3 加固）：此类路由挂在鉴权中间件之前、服务默认绑 0.0.0.0，不设约束则
+  // 同网段任意主机都能取走长期 access_token 或档位账号清单。四道闸：
   //   ① TCP 对端 loopback——取 ctx.request.socket.remoteAddress（真实 TCP 对端）而非
   //      ctx.ip（可被 X-Forwarded-For 伪造）；
   //   ② 转发头闸：X-Forwarded-For/Forwarded 任一存在且含非回环客户端即 403——本机代理
@@ -63,17 +61,17 @@ export function registerMatrixAuthRoutes(app: Koa) {
   // referer、changeOrigin 改写 Host——经 vite dev 代理的请求与本机直连在后端不可区分，
   // dev:lan 下经 vite 代理路径的多机取凭据端到端禁止需代理侧加 xfwd 配合（上游只读，
   // 不在本仓改动面）。DNS rebinding 残余见③④。
-  router.get('/gateway-credentials', (ctx) => {
+  function guardLoopbackGatewayAccess(ctx: Koa.Context): boolean {
     const headers = ctx.request.headers ?? {};
     if (!isLoopbackPeer(ctx.request.socket?.remoteAddress)) {
       ctx.status = 403;
       ctx.body = { configured: false, reason: 'loopback_only' };
-      return;
+      return false;
     }
     if (forwardedClients(ctx).some((ip) => !isLoopbackHost(ip))) {
       ctx.status = 403;
       ctx.body = { configured: false, reason: 'forwarded_non_loopback' };
-      return;
+      return false;
     }
     const origin = headers['origin'] ? String(headers['origin']) : undefined;
     if (origin !== undefined) {
@@ -82,13 +80,51 @@ export function registerMatrixAuthRoutes(app: Koa) {
       if (!isLoopbackHost(originHost)) {
         ctx.status = 403;
         ctx.body = { configured: false, reason: 'origin_not_allowed' };
-        return;
+        return false;
       }
     }
     const host = headers['host'] ? String(headers['host']) : undefined;
     if (host !== undefined && !isLoopbackHost(host)) {
       ctx.status = 403;
       ctx.body = { configured: false, reason: 'host_not_allowed' };
+      return false;
+    }
+    return true;
+  }
+
+  // C2 自动登录：返回本机 gateway dotenv 的 Matrix 凭据三元组，供 Studio 免密自动登录。
+  // 同一信任域（用户本机 gateway 与 Studio 同身份），brief-matrix-delivery 已服务端消费
+  // 同源凭据；此处仅把三元组交客户端走既有 POST /api/auth/matrix-login（本就收 access_token
+  // 而非密码）建立会话。无 gateway 凭据时返回 { configured:false }，客户端回落手动登录页。
+  //
+  // ?profile=<name>（账号切换器，spec 变更 3）：按名直取该档位 .env 三件套，不走
+  // matrix-session 回落（session 是「最近登录」非「该档位」）；非法档位名 400（路径穿越
+  // 防线），档位未配齐三件套 404。无参行为不变（凭据链：active .env → session 回落）。
+  router.get('/gateway-credentials', (ctx) => {
+    if (!guardLoopbackGatewayAccess(ctx)) return;
+
+    // ctx.query 防御：真实 koa 恒有 query（querystring 解析产物），此处 ?? {} 兼容
+    // 路由单测的裸 fakeCtx（见 routes.test.ts fakeCtx 构造）
+    const profileQuery = (ctx.query ?? {} as Record<string, string>).profile;
+    if (profileQuery !== undefined) {
+      const profile = String(profileQuery);
+      if (!isSafeProfileName(profile)) {
+        ctx.status = 400;
+        ctx.body = { configured: false, reason: 'invalid_profile_name' };
+        return;
+      }
+      const env = readProfileMatrixEnv(profile);
+      if (!env) {
+        ctx.status = 404;
+        ctx.body = { configured: false, reason: 'profile_not_configured' };
+        return;
+      }
+      ctx.body = {
+        configured: true,
+        homeserverUrl: env.homeserverUrl,
+        accessToken: env.accessToken,
+        userId: env.userId,
+      };
       return;
     }
     // 凭据链（run23 复盘根治）：①orchestrator profile .env（桌面单用户形态，
@@ -116,6 +152,16 @@ export function registerMatrixAuthRoutes(app: Koa) {
       accessToken: env.accessToken,
       userId: env.userId,
     };
+  });
+
+  // GET /api/matrix/profile-accounts（账号切换器，spec 2026-11-13 matrix-account-switch
+  // 变更 2）：列出本机全部已配 Matrix 凭据三件套的 multiplex 档位。只回元数据
+  // （profile/userId/homeserverUrl）不含 token——token 由切换动作按需经
+  // gateway-credentials?profile= 获取（决策 D4）；不做在线 token 校验，失效在切换时
+  // 经 matrix-login 暴露。回环四闸与 gateway-credentials 同源（守卫共用）。
+  router.get('/profile-accounts', (ctx) => {
+    if (!guardLoopbackGatewayAccess(ctx)) return;
+    ctx.body = { accounts: listProfileMatrixAccounts() };
   });
 
   // GET /api/matrix/server-info：Matrix 部署地址单一事实源（spec 2026-10-20）。

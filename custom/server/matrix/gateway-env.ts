@@ -10,7 +10,7 @@
 //
 // 安全边界：本模块只读文件、不打印值；调用方（brief-matrix-delivery）不得将 token 落日志。
 
-import { readFileSync } from 'fs'
+import { readdirSync, readFileSync, type Dirent } from 'fs'
 import { homedir } from 'os'
 import { hermesHome } from '../lib/paths'
 import { join } from 'path'
@@ -105,6 +105,74 @@ export function readGatewayMatrixEnv(env: Record<string, string | undefined> = p
     ...(kv.MATRIX_HOME_ROOM ? { homeRoom: kv.MATRIX_HOME_ROOM } : {}),
     ...(kv.MATRIX_HOME_ROOM_THREAD_ID ? { homeRoomThreadId: kv.MATRIX_HOME_ROOM_THREAD_ID } : {}),
   }
+}
+
+// ─── 账号切换器（2026-11-13 spec matrix-account-switch）：按名取档位凭据 + 档位清单 ──
+
+/** 档位名安全校验：目录名即信任边界——`_` 开头（保留/归档目录）、路径穿越形态
+ * （`..`、分隔符、绝对路径前缀）一律不放行；正则收白名单字符集后仍需显式拒 `..` 段。 */
+export function isSafeProfileName(profile: string): boolean {
+  if (profile === '' || profile.startsWith('_')) return false
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(profile)) return false
+  return !profile.split(/[._-]/).includes('..') && !profile.includes('/')
+}
+
+/** 指定档位 dotenv 绝对路径（按名直取，不经 active_profile 解析）。 */
+export function profileEnvFilePath(profile: string, env: Record<string, string | undefined> = process.env): string {
+  return join(hermesHomePath(env), 'profiles', profile, '.env')
+}
+
+/**
+ * 读指定档位凭据三件套；档位名非法抛错，档位 .env 缺席或三必填缺任一 → null。
+ * 与 readGatewayMatrixEnv 同校验口径，但不走 matrix-session 回落——session 是
+ * 「本机最近一次登录」而非「该档位」，按名取档位凭据只认 .env（spec D4）。
+ */
+export function readProfileMatrixEnv(profile: string, env: Record<string, string | undefined> = process.env): GatewayMatrixEnv | null {
+  let kv: Record<string, string> | null
+  try {
+    kv = parseDotenv(readFileSync(profileEnvFilePath(profile, env), 'utf8'))
+  } catch {
+    return null
+  }
+  if (!kv) return null
+  const homeserverUrl = kv.MATRIX_HOMESERVER ?? ''
+  const accessToken = kv.MATRIX_ACCESS_TOKEN ?? ''
+  const userId = kv.MATRIX_USER_ID ?? ''
+  if (homeserverUrl === '' || accessToken === '' || userId === '') return null
+  return { homeserverUrl, accessToken, userId }
+}
+
+/** 档位账号清单项（profile-accounts 端点载荷；不含 token——spec D4）。 */
+export interface ProfileMatrixAccount {
+  profile: string
+  userId: string
+  homeserverUrl: string
+}
+
+/**
+ * 列出全部已配 Matrix 凭据三件套的档位（spec D6：无凭据档位不列）。
+ * 只认目录（readdir withFileTypes），`_` 开头目录跳过；清单不做在线 token
+ * 校验——失效在切换动作经 matrix-login 暴露（spec 变更 2）。
+ */
+export function listProfileMatrixAccounts(env: Record<string, string | undefined> = process.env): ProfileMatrixAccount[] {
+  const profilesDir = join(hermesHomePath(env), 'profiles')
+  let entries: Dirent[]
+  try {
+    entries = readdirSync(profilesDir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const out: ProfileMatrixAccount[] = []
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('_')) continue
+    if (!isSafeProfileName(entry.name)) continue
+    const creds = readProfileMatrixEnv(entry.name, env)
+    if (!creds) continue
+    out.push({ profile: entry.name, userId: creds.userId, homeserverUrl: creds.homeserverUrl })
+  }
+  // 档位名排序：清单展示顺序稳定（同一台机器两次请求序一致）
+  out.sort((a, b) => a.profile.localeCompare(b.profile))
+  return out
 }
 
 // ─── RACI / Matrix 模拟扩展 ────────────────────────────────────
