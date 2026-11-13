@@ -1220,11 +1220,8 @@
 # 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
 # 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导（services/dsh 四级上溯）；run-manager 类型。
 766-server-coding-launch-fourmode.patch
-# 765（2026-11-10 执行内核统一 P0b-2 Task 2，spec 2026-11-10-execution-kernel-p0b2-p1）：
-# 编码任务启动成功门合成免审记录（IDE/群聊/工作流共用唯一合成点；先例=736）。
 #
 
-# 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
 # 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导；run-manager 类型；启动侧会话档归一注入。
 
 
@@ -1233,3 +1230,8 @@
 767-server-expdual-routes.patch
 768-package-lock-root-deps.patch
 769-client-loginview-quick-accounts.patch
+
+# 769（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：
+# 看板 PATCH/DELETE/decompose 三写入口接入 authorizeTaskIds+requestBoard——隐藏
+# profile 404 且零副作用，与 complete/block 同权；super_admin 快路径不变。
+769-server-kanban-mutation-authorization.patch
