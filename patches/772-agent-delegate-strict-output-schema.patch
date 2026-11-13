@@ -74,7 +74,7 @@ diff --git a/tools/delegate_tool_tasks.py b/tools/delegate_tool_tasks.py
 +def _validate_strict_flags(
 +    task_list: list[dict[str, Any]], task_schemas: list[Optional[dict[str, Any]]]
 +) -> Optional[str]:
-+    """补丁 771（2026-11-13 超级智能体吸收批一）：``strict_output_schema`` 预检。
++    """补丁 772（2026-11-13 超级智能体吸收批一）：``strict_output_schema`` 预检。
 +
 +    严格合同必须显式声明且自带 schema——非布尔值或 strict=true 而无 output_schema
 +    在任何子代理启动前拒绝整个调用（返回可操作错误；None=通过）。
@@ -102,7 +102,7 @@ diff --git a/tools/delegate_tool_child_run.py b/tools/delegate_tool_child_run.py
          # for validated output.
          exit_reason = "completed" if result.get("completed", False) else "max_iterations"
          status = "completed" if usable_summary else "failed"
-+        # 补丁 771（2026-11-13 超级智能体吸收批一）：strict_output_schema=true 的显式
++        # 补丁 772（2026-11-13 超级智能体吸收批一）：strict_output_schema=true 的显式
 +        # 严格合同失败关闭——仅翻转「正常完成（result.completed）且 schema 不合格」
 +        # 的结果为 failed；预算耗尽（completed=False，状态语义=completed+truncated）、
 +        # 中断与执行错误的原始终止原因不被 output_schema_invalid 覆盖，机器消费者以

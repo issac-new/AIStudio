@@ -1231,17 +1231,17 @@
 768-package-lock-root-deps.patch
 769-client-loginview-quick-accounts.patch
 
-# 769（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：
+# 770（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：
 # 看板 PATCH/DELETE/decompose 三写入口接入 authorizeTaskIds+requestBoard——隐藏
 # profile 404 且零副作用，与 complete/block 同权；super_admin 快路径不变。
-769-server-kanban-mutation-authorization.patch
-
-# 770（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：
-# evidence_reducer 归档失败（返回空/异常）即 passthrough——不调摘要模型不产
-# receipt，ledger 记 passthrough_archive_error；runtime/ 正本同批同构。
-770-agent-evidence-reducer-archive-failthrough.patch
+770-server-kanban-mutation-authorization.patch
 
 # 771（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：
+# evidence_reducer 归档失败（返回空/异常）即 passthrough——不调摘要模型不产
+# receipt，ledger 记 passthrough_archive_error；runtime/ 正本同批同构。
+771-agent-evidence-reducer-archive-failthrough.patch
+
+# 772（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：
 # delegate_task 每任务 strict_output_schema 显式严格合同——spawn 前预检、正常完
 # 成不合格判 failed(output_schema_invalid)；中断/错误/预算耗尽原因优先；默认宽松不变。
-771-agent-delegate-strict-output-schema.patch
+772-agent-delegate-strict-output-schema.patch

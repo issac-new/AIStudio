@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""770 归档失败保真（spec 2026-11-13-superagent-contract-closure）：全文归档拿不到
+"""771 归档失败保真（spec 2026-11-13-superagent-contract-closure）：全文归档拿不到
 路径（返回 None 或抛异常）时必须原样 passthrough——不调摘要模型、不产 receipt、
 ledger 记 passthrough_archive_error。无全文可回溯的摘要等于造假，保真优先于省 token。
 

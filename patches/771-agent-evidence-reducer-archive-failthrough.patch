@@ -17,7 +17,7 @@ diff --git a/tools/evidence_reducer.py b/tools/evidence_reducer.py
      except Exception as exc:  # noqa: BLE001
          logger.debug("evidence_reducer archive step failed: %s", exc)
 +    if not archive_path:
-+        # 补丁 770（2026-11-13 超级智能体吸收批一）：全文归档未成（返回空或异常）
++        # 补丁 771（2026-11-13 超级智能体吸收批一）：全文归档未成（返回空或异常）
 +        # 即 passthrough——无全文可回溯的 receipt 等于造假，摘要模型一次都不调。
 +        _ledger("passthrough_archive_error")
 +        return content

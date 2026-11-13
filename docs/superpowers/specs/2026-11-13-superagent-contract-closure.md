@@ -67,7 +67,7 @@
 | 编号 | 决策 | 选择 | 备选 | 理由 | 类型 | 用户裁定 | 依据问题号 | decisions.jsonl 行号 |
 |---|---|---|---|---|---|---|---|---|
 | D1 | 两批推进范围 | 第一批三项修复，第二批另立 spec | 一次完成全部版本化/验证/调度改造 | 用户选择 A；先清偿可独立验证的事实缺陷，降低大改耦合 | UserChallenge | approved | Q1 | 122 |
-| D2 | 上游改造方式 | 三项各追加新补丁 769/770/771（reducer 代码正本在 runtime/，770 镜像 vendor；测试落 runtime/tests 与 771 内新增 vendor 测试文件） | 回写 013/614 | vendor 是钉版基线；重生成旧补丁会把后续同文件改动折叠进历史载体，独立补丁才可独立回滚 | Mechanical | approved | — | — |
+| D2 | 上游改造方式 | 三项各追加新补丁 770/770/771（reducer 代码正本在 runtime/，770 镜像 vendor；测试落 runtime/tests 与 771 内新增 vendor 测试文件） | 回写 013/614 | vendor 是钉版基线；重生成旧补丁会把后续同文件改动折叠进历史载体，独立补丁才可独立回滚 | Mechanical | approved | — | — |
 | D3 | schema 完成语义 | 每任务显式 `strict_output_schema`，默认 false | 全局把所有 schema 失败改成 failed | 长研究任务的原文仍有恢复价值，不能全局打断既有委派；严格合同必须由调用方选择 | Taste | approved as proposal | Q1 | — |
 | D4 | 授权实现 | 三 handler 复用 `authorizeTaskIds` 与 `requestBoard` | 各写一套 profile 过滤 | 单一事实源，隐藏任务统一 404，避免再次漏接 | Mechanical | approved | — | — |
 | D5 | 归档降级 | 归档失败在模型调用前返回原文 | 继续摘要但标注无归档 | 没有全文时摘要不可核验，必须优先保真 | Mechanical | approved | — | — |
@@ -130,13 +130,13 @@
 
 补丁策略：三项修复各追加新补丁，不回写历史 013/614——重生成旧补丁会把后续补丁的同文件改动折叠进历史载体，且逐项独立回滚需要独立载体。
 
-- `patches/769-server-kanban-mutation-authorization.patch`：三个 handler 接入既有授权函数与 board 校验。
+- `patches/770-server-kanban-mutation-authorization.patch`：三个 handler 接入既有授权函数与 board 校验。
 - `custom/server/services/hermes/__tests__/kanban-mutation-access.test.ts`：新增控制器行为测试（mock kanban-service 与 users，先例 overview-access）。
 - `runtime/tools/evidence_reducer.py`：归档失败提前返回（代码正本）。
 - `patches/770-agent-evidence-reducer-archive-failthrough.patch`：同一改动镜像 vendor/hermes-agent 树。
 - `runtime/tests/test_evidence_reducer_archive.py`：归档失败回归测试（runtime/tests 常驻套件，免注入即可跑）。
 - `patches/771-agent-delegate-strict-output-schema.patch`：委派参数、校验、状态判定与新增 vendor 测试文件 `tests/tools/test_delegate_strict_output_schema.py`。
-- `patches/series`：登记 769/770/771；不改既有补丁顺序。
+- `patches/series`：登记 770/771/772；不改既有补丁顺序。
 - `config/mechanism-budget.json`：patches 计数随 series 实算抬位＋changes 条目。
 - `docs/DESIGN.md`：能力边界表补一行「交接合同闭环」（见 §7）。
 
@@ -196,7 +196,7 @@ PYTHONPATH=vendor/hermes-agent:runtime python3.14 -m pytest -q \
 
 ### 5.3 回归与运行验证
 
-1. `npm run clean && npm run inject`：补丁重放零 FAILED，并检查 013/614/769 目标文件含预期行为。
+1. `npm run clean && npm run inject`：补丁重放零 FAILED，并检查 013/614/770-772 目标文件含预期行为。
 2. `npm run typecheck:harness`：服务端类型检查通过。
 3. `npm test`：合并前全量通过；若失败，先区分 main 既有红与本批新增红，本批新增红必须清零。
 4. 后端运行：按仓内隔离 serve 配方启动本 worktree，使用两个不同 profile 的测试身份对三个写端点各做一次隐藏/可见请求，记录状态码和 CLI 副作用；不做真实外部发布。
@@ -206,9 +206,9 @@ PYTHONPATH=vendor/hermes-agent:runtime python3.14 -m pytest -q \
 
 | 项 | 实测 |
 |---|---|
-| Task 1 红绿 | 新测试先跑 9 failed/2 passed（隐藏 profile、同 profile、非法 board 全红）→ 实现后 13/13（含 2 个守门旧测试）；补丁 769 clean+inject 重放 complete，注入树 `authorizeTaskIds` 命中 16→20 |
-| Task 2 红绿 | 新测试 3 failed（现状归档失败仍调模型）→ 实现后 81/81（新增 3＋reducer 17＋storage 61）；runtime/ 与 vendor/ 两份 `diff -q` 同构；补丁 770 重放 complete |
-| Task 3 红绿 | 新测试 9 例先红（`_validate_strict_flags` ImportError）→ 实现后 45/45（新增 9＋宽松既有 36）；预算耗尽场景实现期勘误（见 §0.5/§3.3）；补丁 771 重放 complete |
+| Task 1 红绿 | 新测试先跑 9 failed/2 passed（隐藏 profile、同 profile、非法 board 全红）→ 实现后 13/13（含 2 个守门旧测试）；补丁 770 clean+inject 重放 complete，注入树 `authorizeTaskIds` 命中 16→20 |
+| Task 2 红绿 | 新测试 3 failed（现状归档失败仍调模型）→ 实现后 81/81（新增 3＋reducer 17＋storage 61）；runtime/ 与 vendor/ 两份 `diff -q` 同构；补丁 772 重放 complete |
+| Task 3 红绿 | 新测试 9 例先红（`_validate_strict_flags` ImportError）→ 实现后 45/45（新增 9＋宽松既有 36）；预算耗尽场景实现期勘误（见 §0.5/§3.3）；补丁 772 重放 complete |
 | 预算门 | `governance-lint --budget` 0 problems；随批补账 scripts 137→138（第 138 个=ensure-vitest-birpc-patch.mjs，v1.0.16 批 766a92847 漏登，责任归属原批）；patches 实测 465≤562 |
 | 实施勘误 | 归档测试落位 `runtime/tests/tools/`（spec 原写 runtime/tests/ 根）；PYTHONPATH 统一拼合树口径 `vendor/hermes-agent:runtime`（runtime/tools 无 `__init__.py`，命名空间包让位正包——行为测正本，双侧同构由 diff 断言） |
 | 全量回归 | npm test 8906 例：首轮 6 failed→处置后本批新增红清零——①②设计索引（docs-ssot/interactive-training-manual）＝新 spec 未入索引，`gen-doc-indexes --write` 重建后 29/29 绿；③④deploy/inject 两测＝worktree 陈旧影子目录（首次 pretest 部署的旧 runtime 与 770 后模板 kept→partial），移出隔离后全绿；余 2 例 raw-hex＝main 同红存量（本批零客户端 CSS），cockpit 版本节 1 例＝分支落后 main 的 RELEASE-NOTES 0.8.21 行（main 实测绿，rebase 后复跑确认）。typecheck:harness 0 错；runtime pytest 155/155（152 基线＋3 新增） |
@@ -220,7 +220,7 @@ PYTHONPATH=vendor/hermes-agent:runtime python3.14 -m pytest -q \
 | 风险 | 缓解 | 回滚 |
 |---|---|---|
 | 授权误拦同 profile/admin | 同 profile、admin 隐藏、super_admin 三组行为测试 | 回退 013，不影响其他两项 |
-| 严格模式被误用到长研究任务 | 默认 false，工具描述明确只有机器必须消费完整 schema 才开启 | 调用方移除 strict；实现可单独回退 769 |
+| 严格模式被误用到长研究任务 | 默认 false，工具描述明确只有机器必须消费完整 schema 才开启 | 调用方移除 strict；实现可单独回退 772 |
 | 归档失败增加上下文 token | 保真优先于省 token；由后续主 spillover 再尝试保存，不伪造摘要 | 回退 runtime 与 614 对应测试 |
 | 补丁相互覆盖 | 分树生成并执行 clean+inject，目标文件逐段对账 | 恢复 series 与补丁文件，重新注入 |
 

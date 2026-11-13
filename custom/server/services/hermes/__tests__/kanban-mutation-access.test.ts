@@ -59,7 +59,7 @@ beforeEach(() => {
   deps.decomposeTask.mockResolvedValue({ created: 2 })
 })
 
-describe('批一补丁 769：三写入口授权一致化', () => {
+describe('批一补丁 770：三写入口授权一致化', () => {
   it.each(ENTRYPOINTS)('%s：隐藏 profile 任务 404 且副作用零调用', async (_label, handler, spyKey) => {
     const ctx = ctxFor({ id: 7, role: 'admin' })
     await handler(ctx)

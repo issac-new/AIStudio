@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript/Koa/Vitest（studio 面）、Python 3.14/pytest（hermes-agent 面）、patches/series 注入链。
 
-**Spec:** `docs/superpowers/specs/2026-11-13-superagent-contract-closure.md`（已批准；§3.4 补丁策略=追加 769/770/771，不回写 013/614）
+**Spec:** `docs/superpowers/specs/2026-11-13-superagent-contract-closure.md`（已批准；§3.4 补丁策略=追加 770/771/772，不回写 013/614）
 
 **Worktree:** `.claude/worktrees/superagent-contract-p0`，分支 `feat/superagent-contract-p0`。
 
@@ -17,7 +17,7 @@
 - 宽松默认不变：`strict_output_schema` 缺失/false 时结果形状与状态语义与现状字节级一致；schema-less 调用不新增任何键。
 - 终止原因优先级：`interrupted`/执行错误/`max_iterations` 不被 `output_schema_invalid` 覆盖；预算耗尽时 `exit_reason=max_iterations`、`truncated=true`。
 - 授权复用 `authorizeTaskIds`+`requestBoard`，不改 super_admin 快路径（无 profile 限制身份不额外预读任务）。
-- vendor 不直改提交：行为改动全部经 769/770/771 补丁＋series 登记；pre-commit 自动撤注入态。
+- vendor 不直改提交：行为改动全部经 770/771/772 补丁＋series 登记；pre-commit 自动撤注入态。
 - 不新增门/钩子/脚本/账本/npm script/依赖；`config/mechanism-budget.json` 补 changes 条目并按 series 实算抬位。
 - 本批不实施第二批：不动任务表 schema、done 状态机、orchestrator 调度。
 - 注释中文、标识符英文；补丁路径前缀必须 `a/packages/...`（studio）/`a/tools/...`（agent），防双重前缀坑。
@@ -32,12 +32,12 @@
 
 ---
 
-### Task 1: 看板写授权一致化（补丁 769）
+### Task 1: 看板写授权一致化（补丁 771）
 
 **Files:**
 - Modify（经补丁）: `vendor/hermes-studio/packages/server/src/modules/hermes/controllers/kanban.ts` 的 `deleteTask`/`patchTask`/`decomposeTask`（注入态约 :1180-1225）
 - Create: `custom/server/services/hermes/__tests__/kanban-mutation-access.test.ts`
-- Create: `patches/769-server-kanban-mutation-authorization.patch`；Modify: `patches/series`
+- Create: `patches/770-server-kanban-mutation-authorization.patch`；Modify: `patches/series`
 
 **Interfaces:**
 - Consumes: 控制器内既有 `requestBoard(ctx): string | null`、`authorizeTaskIds(ctx, board, ids, allowedStatuses?, action?): Promise<boolean>`。
@@ -71,11 +71,11 @@
 
 - [ ] **Step 5: 提取补丁并登记**
   ```bash
-  git -C vendor/hermes-studio diff --relative -- packages/server/src/modules/hermes/controllers/kanban.ts > patches/769-server-kanban-mutation-authorization.patch
-  head -3 patches/769-*.patch   # 必须 a/packages/...（双重前缀=错）
+  git -C vendor/hermes-studio diff --relative -- packages/server/src/modules/hermes/controllers/kanban.ts > patches/770-server-kanban-mutation-authorization.patch
+  head -3 patches/770-*.patch   # 必须 a/packages/...（双重前缀=错）
   git checkout -- vendor/hermes-studio/packages/server/src/modules/hermes/controllers/kanban.ts
   ```
-  series 尾部追加注释块＋`769-server-kanban-mutation-authorization.patch`；然后：
+  series 尾部追加注释块＋`770-server-kanban-mutation-authorization.patch`；然后：
   ```bash
   npm run clean && npm run inject
   ```
@@ -83,16 +83,16 @@
 
 - [ ] **Step 6: Commit**
   ```bash
-  git add custom/server/services/hermes/__tests__/kanban-mutation-access.test.ts patches/769-server-kanban-mutation-authorization.patch patches/series
-  git commit -m "feat(kanban): PATCH/DELETE/decompose 三写入口接入 authorizeTaskIds——隐藏 profile 404 与 complete/block 同权（补丁 769）"
+  git add custom/server/services/hermes/__tests__/kanban-mutation-access.test.ts patches/770-server-kanban-mutation-authorization.patch patches/series
+  git commit -m "feat(kanban): PATCH/DELETE/decompose 三写入口接入 authorizeTaskIds——隐藏 profile 404 与 complete/block 同权（补丁 771）"
   ```
 
-### Task 2: 证据压缩归档 fail-through（runtime 正本＋补丁 770）
+### Task 2: 证据压缩归档 fail-through（runtime 正本＋补丁 771）
 
 **Files:**
 - Modify: `runtime/tools/evidence_reducer.py:161-228`（`maybe_reduce_observation`）
 - Create: `runtime/tests/test_evidence_reducer_archive.py`
-- Create: `patches/770-agent-evidence-reducer-archive-failthrough.patch`；Modify: `patches/series`
+- Create: `patches/771-agent-evidence-reducer-archive-failthrough.patch`；Modify: `patches/series`
 
 **Interfaces:**
 - Consumes: 既有 `_write_to_spillover`、`_ledger`、`_call_reducer_model`。
@@ -119,25 +119,25 @@
 
 - [ ] **Step 5: 提取补丁并登记**
   ```bash
-  git -C vendor/hermes-agent diff --relative -- tools/evidence_reducer.py > patches/770-agent-evidence-reducer-archive-failthrough.patch
+  git -C vendor/hermes-agent diff --relative -- tools/evidence_reducer.py > patches/771-agent-evidence-reducer-archive-failthrough.patch
   git checkout -- vendor/hermes-agent/tools/evidence_reducer.py
   ```
   series 登记 770；`npm run clean && npm run inject`；vendor 树 grep `passthrough_archive_error` 命中；Step 2/4 命令重跑全绿。
 
 - [ ] **Step 6: Commit**
   ```bash
-  git add runtime/tools/evidence_reducer.py runtime/tests/test_evidence_reducer_archive.py patches/770-agent-evidence-reducer-archive-failthrough.patch patches/series
-  git commit -m "fix(runtime): evidence_reducer 归档失败即 passthrough——无全文不摘要，模型零调用（补丁 770）"
+  git add runtime/tools/evidence_reducer.py runtime/tests/test_evidence_reducer_archive.py patches/771-agent-evidence-reducer-archive-failthrough.patch patches/series
+  git commit -m "fix(runtime): evidence_reducer 归档失败即 passthrough——无全文不摘要，模型零调用（补丁 772）"
   ```
 
-### Task 3: delegate 严格 output_schema（补丁 771）
+### Task 3: delegate 严格 output_schema（补丁 772）
 
 **Files:**
 - Modify（经补丁）: `vendor/hermes-agent/tools/delegate_tool.py`（schema 通告＋`_build_children` 附着＋校验接线）
 - Modify（经补丁）: `vendor/hermes-agent/tools/delegate_tool_tasks.py`（新增校验器）
 - Modify（经补丁）: `vendor/hermes-agent/tools/delegate_tool_child_run.py:644-656`（状态判定）
 - Create（经补丁）: `vendor/hermes-agent/tests/tools/test_delegate_strict_output_schema.py`
-- Create: `patches/771-agent-delegate-strict-output-schema.patch`；Modify: `patches/series`
+- Create: `patches/772-agent-delegate-strict-output-schema.patch`；Modify: `patches/series`
 
 **Interfaces:**
 - Produces: `_validate_strict_flags(task_list, task_schemas) -> Optional[str]`（delegate_tool_tasks；strict 非 bool／strict=true 无 schema → 错误串，spawn 前返回）。
@@ -169,7 +169,7 @@
 - [ ] **Step 5: 提取补丁并登记**
   ```bash
   git -C vendor/hermes-agent add -N tests/tools/test_delegate_strict_output_schema.py
-  git -C vendor/hermes-agent diff --relative -- tools/delegate_tool.py tools/delegate_tool_tasks.py tools/delegate_tool_child_run.py tests/tools/test_delegate_strict_output_schema.py > patches/771-agent-delegate-strict-output-schema.patch
+  git -C vendor/hermes-agent diff --relative -- tools/delegate_tool.py tools/delegate_tool_tasks.py tools/delegate_tool_child_run.py tests/tools/test_delegate_strict_output_schema.py > patches/772-agent-delegate-strict-output-schema.patch
   git -C vendor/hermes-agent checkout -- tools/delegate_tool.py tools/delegate_tool_tasks.py tools/delegate_tool_child_run.py
   rm vendor/hermes-agent/tests/tools/test_delegate_strict_output_schema.py   # 补丁产物，随 inject 重放
   ```
@@ -177,8 +177,8 @@
 
 - [ ] **Step 6: Commit**
   ```bash
-  git add patches/771-agent-delegate-strict-output-schema.patch patches/series
-  git commit -m "feat(agent): delegate_task 每任务 strict_output_schema——显式严格合同失败关闭，默认宽松不变（补丁 771）"
+  git add patches/772-agent-delegate-strict-output-schema.patch patches/series
+  git commit -m "feat(agent): delegate_task 每任务 strict_output_schema——显式严格合同失败关闭，默认宽松不变（补丁 772）"
   ```
 
 ### Task 4: 机制预算、设计文档与全量回归
@@ -188,7 +188,7 @@
 - Modify: `docs/DESIGN.md` 能力边界表（批一立项提交已随 spec 同批落行；Task 4 只在措辞需勘误时微调）
 - Modify: spec 验证段回填实测数字
 
-- [ ] **Step 1: 预算登记**：changes 加 `+3 patches（769/770/771）`条目（reason=spec 路径；pairedRemovals=第二批迁移 envelope 落地时与 769 合并评估收编、reducer sunset 触发时 614/770 一并退役）；`node scripts/governance-lint.mjs --budget` 过（超限则按 series 实测抬位）。
+- [ ] **Step 1: 预算登记**：changes 加 `+3 patches（770/771/772）`条目（reason=spec 路径；pairedRemovals=第二批迁移 envelope 落地时与 770 合并估计收编、reducer sunset 触发时 614/771 一并退役）；`node scripts/governance-lint.mjs --budget` 过（超限则按 series 实测抬位）。
 - [ ] **Step 2: 文档同步**（上列两文档＋spec 回填）。
 - [ ] **Step 3: 全量回归**
   ```bash

@@ -5,7 +5,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
  }
  
  // ─── Task lifecycle（overlay 补充：delete/patch/decompose）─────────
-+// 补丁 769（2026-11-13 超级智能体吸收批一）：三写入口与 complete/block 同权——
++// 补丁 770（2026-11-13 超级智能体吸收批一）：三写入口与 complete/block 同权——
 +// board 统一走 requestBoard（非法 400），副作用前过 authorizeTaskIds（隐藏
 +// profile 404 且零副作用）；super_admin 无 profile 限制时沿用快路径，不额外预读。
  
