@@ -227,7 +227,9 @@ async function handleSwitch(item: AccountItem): Promise<void> {
   overflow-y: auto;
   padding: 8px;
   border-radius: 8px;
-  background: var(--bg-color, #fff);
+  /* token 化：--bg-color 先前为幽灵变量（有 fallback 无定义），就地定义后无 fallback */
+  --bg-color: #fff;
+  background: var(--bg-color);
   border: 1px solid rgba(127, 127, 127, 0.3);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }

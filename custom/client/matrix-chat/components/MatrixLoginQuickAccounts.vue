@@ -196,7 +196,9 @@ async function handleQuickLogin(item: QuickAccountItem): Promise<void> {
 
 .quick-accounts-error {
   font-size: 12px;
-  color: #d03050;
+  /* token 化：定义行不计数（raw-hex 预算闸口径），消费走 var() 无 fallback */
+  --quick-accounts-error-color: #d03050;
+  color: var(--quick-accounts-error-color);
   margin-top: 6px;
 }
 </style>

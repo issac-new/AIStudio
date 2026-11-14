@@ -13,6 +13,8 @@ import { judgeHumanAgreement } from '../human-agreement'
 import { buildRegistryView, summarizeConsumption } from '../metric-registry'
 import { runOutcomeCheck, listOutcomeVerifiers, type OutcomeRunContext } from '../outcome'
 import { runReplayEval, type SampleInput } from '../runner'
+import { appendDiscoveryRun, listDiscoveryRuns, scoreDiscovery, type DiscoveryRun } from '../discovery-score'
+import type { DiscoveryFinding } from '../types'
 import { computeE2eVerdict, e2eVerdictLine } from '../e2e-verdict'
 import { sampleFromTrace, sampleSpanFromTrace } from '../trace-sampler'
 import { reflowTraceToSet } from '../trace-reflow'
@@ -221,6 +223,63 @@ ctx.body = {
 }
 
 
+/** POST /runs/discovery（2026-11-14 P1 发现测试）：{setId, findings, note?} → 判分＋落账。
+ * 只接受 kind=discovery 的集（task 形态集走既有 /runs 回放判分通道）；findings 每条
+ * description 必填，evidenceRefs 缺失不拒收——判分层判 unsupported（锚点门槛在判分不在入口，
+ * 报告才能如实呈现「无锚点发现」这一失败形态而非入口静默丢弃）。 */
+export async function postRunsDiscovery(ctx: Context) {
+  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const setId = typeof body.setId === 'string' ? body.setId : ''
+  const findings = body.findings
+  if (!setId || !Array.isArray(findings)) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: ['setId 与 findings（数组）必填'] }
+    return
+  }
+  const set = getSet(setId)
+  if (!set) {
+    ctx.status = 404
+    ctx.body = { ok: false, problems: [`评测集不存在：${setId}`] }
+    return
+  }
+  if (set.kind !== 'discovery' || !set.discovery) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: [`集 ${setId} 非 discovery 形态（task 形态走 POST /runs 回放判分）`] }
+    return
+  }
+  const problems: string[] = []
+  findings.forEach((f, i) => {
+    const it = f as Partial<DiscoveryFinding>
+    if (!it || typeof it.description !== 'string' || !it.description.trim()) problems.push(`findings #${i} description 必填`)
+  })
+  if (problems.length) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems }
+    return
+  }
+  const score = scoreDiscovery(set.discovery, findings as DiscoveryFinding[])
+  const run: DiscoveryRun = {
+    id: `drun-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    setId,
+    setHash: set.contentHash,
+    score,
+    createdAt: Date.now(),
+    createdBy: actorOf(ctx) ?? 'anonymous',
+    ...(typeof body.note === 'string' && body.note.trim() ? { note: body.note.trim() } : {}),
+  }
+  appendDiscoveryRun(run)
+  ctx.status = 201
+  ctx.body = { ok: true, run }
+}
+
+/** GET /runs/discovery?setId=（P1）：发现测试运行账（独立账本；坏行计数如实呈现）。 */
+export async function getRunsDiscovery(ctx: Context) {
+  const setId = typeof ctx.query.setId === 'string' && ctx.query.setId ? ctx.query.setId : undefined
+  const { runs, badLines } = listDiscoveryRuns(setId)
+  ctx.body = { ok: true, runs, ...(badLines > 0 ? { badLines } : {}) }
+}
+
+
 export const runsHandlers = {
   postRuns,
   getRuns,
@@ -229,4 +288,6 @@ export const runsHandlers = {
   getRunsIdRemediations,
   getRemediations,
   postRemediationsIdVerify,
+  postRunsDiscovery,
+  getRunsDiscovery,
 }

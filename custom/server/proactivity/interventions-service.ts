@@ -30,6 +30,7 @@ import {
   type InterventionStore,
 } from './intervention-ledger'
 import { buildScorecard, type ProactivityScorecard } from './proactivity-scorecard'
+import { mergeBenefit, previewSuggestions, type PreviewResult } from './anticipation-preview'
 
 // ── 注意力偏好（单一事实源；与两轴策略同在 proactivity 目录）────
 
@@ -144,13 +145,21 @@ export interface SyncResult {
   records: InterventionRecord[]
   /** 本轮候选所依据的断点推断（2026-11-03）；调用方据此解释延后。 */
   breakpoint?: BreakpointDecision
+  /** 反事实差值预演统计（2026-11-14 P2）：命中预演的候选数；0＝全走静态表。 */
+  previewedCount?: number
 }
 
 /**
  * 从 delivery 建议同步干预：候选 → 治理裁决 → 落台账。
  * 看板根缺席时 available=false（fail-soft，不造数）。
+ * previews（2026-11-14 P2）：controller 前置慢通道产出的预演快照（topicKey → act−abstain 差值）；
+ * 缺席或不命中＝fail-open 回 SUGGESTION_PROFILE 静态表（D4：预演失败不得污染必达路径）。
  */
-export function syncInterventions(nowMs: number = Date.now(), actor?: string): SyncResult {
+export function syncInterventions(
+  nowMs: number = Date.now(),
+  actor?: string,
+  previews?: Map<string, PreviewResult>,
+): SyncResult {
   const { home } = resolveKanbanHome()
   if (!home) return { available: false, reason: '看板数据根缺席', created: 0, skipped: 0, byDecision: {}, records: [] }
   const breakpoint = resolveBreakpoint(nowMs).decision
@@ -168,6 +177,7 @@ export function syncInterventions(nowMs: number = Date.now(), actor?: string): S
   const byDecision: Record<string, number> = {}
   const records: InterventionRecord[] = []
   let skipped = 0
+  let previewedCount = 0
   for (const s of digest.suggestions) {
     const topicKey = `${s.kind}:${s.target}`
     const last = recentTopics.get(topicKey) ?? 0
@@ -176,6 +186,9 @@ export function syncInterventions(nowMs: number = Date.now(), actor?: string): S
       continue
     }
     const profile = SUGGESTION_PROFILE[s.kind] ?? { severity: 'info' as const, benefit: 0.4, cost: 0.15 }
+    const preview = previews?.get(topicKey)
+    const merged = mergeBenefit(profile.benefit, preview)
+    if (merged.source === 'preview') previewedCount += 1
     const candidate: InterventionCandidate = {
       id: `iv-${s.kind}-${s.target}-${nowMs.toString(36)}`,
       surface: 'suggestion',
@@ -183,7 +196,7 @@ export function syncInterventions(nowMs: number = Date.now(), actor?: string): S
       audience: 'human',
       urgency: 'normal',
       topicKey,
-      expectedBenefit: profile.benefit,
+      expectedBenefit: merged.benefit,
       attentionCost: profile.cost,
       // 断点由看板事件推断（p27 骑现成断点）：只有信息型干预会因非断点延后
       atBreakpoint: breakpoint.atBreakpoint,
@@ -207,12 +220,42 @@ export function syncInterventions(nowMs: number = Date.now(), actor?: string): S
       ...(verdict.nextWindowAtMs != null ? { nextWindowAtMs: verdict.nextWindowAtMs } : {}),
       decidedAtMs: nowMs,
       source: `delivery:${actor ?? 'sync'}`,
+      benefitSource: merged.source,
+      // 证据链（P5）：refs 锚定建议来源与断点依据；inference＝一句话触发推断；
+      // uncertainty＝预演置信（无预演=medium：静态启发式的固有不确定档）。
+      evidenceChain: {
+        source: 'delivery-digest',
+        refs: [`digest:${s.kind}/${s.target}`, ...(s.note ? [`note:${s.note.slice(0, 80)}`] : [])],
+        inference: `看板摘要发现 ${s.kind} 建议（${s.note.slice(0, 60)}），断点推断=${breakpoint.atBreakpoint ? 'at-breakpoint' : 'not-at-breakpoint'}`,
+        uncertainty: preview?.confidence ?? 'medium',
+      },
+      ...(merged.source === 'preview' && preview ? { previewExplanation: preview.explanation } : {}),
     }
     appendIntervention(rec)
     records.push(rec)
     byDecision[verdict.decision] = (byDecision[verdict.decision] ?? 0) + 1
   }
-  return { available: true, created: records.length, skipped, byDecision, records, breakpoint }
+  return { available: true, created: records.length, skipped, byDecision, records, breakpoint, previewedCount }
+}
+
+/**
+ * 带反事实差值预演的同步编排（P2 慢通道入口）：读建议 → 批量预演（上限/开关内）→
+ * syncInterventions 快通道裁决（预演快照注入）。预演全失败/关闭＝空 Map＝纯静态表现状。
+ * 快慢分离：本函数只在 REST sync 显式触发；clusterinspector 等既有调用方不受影响。
+ */
+export async function syncInterventionsWithPreview(nowMs: number = Date.now(), actor?: string): Promise<SyncResult> {
+  const { home } = resolveKanbanHome()
+  if (!home) return { available: false, reason: '看板数据根缺席', created: 0, skipped: 0, byDecision: {}, records: [] }
+  const boards = readAllBoards(home)
+  const digest = buildDigest(
+    boards.map((b) => ({ slug: b.slug, available: b.available, tasks: b.tasks, events: b.events })),
+    { nowSec: Math.floor(nowMs / 1000) },
+  )
+  const inputs = digest.suggestions.map((s) => ({
+    topicKey: `${s.kind}:${s.target}`, kind: s.kind, target: s.target, note: s.note,
+  }))
+  const previews = await previewSuggestions(inputs)
+  return syncInterventions(nowMs, actor, previews)
 }
 
 // ── 读数 ─────
@@ -251,6 +294,7 @@ export function scorecard(acceptedWithEffect = 0): ProactivityScorecard {
       score: e.score,
       decidedAtMs: e.decidedAtMs,
       topicKey: e.topicKey,
+      ...(e.evidenceChain ? { evidenceChain: e.evidenceChain } : {}),
     })),
     outcomes: store.feedback.map((f) => ({ interventionId: f.interventionId, outcome: f.outcome, at: f.at })),
     acceptedWithEffect,

@@ -163,3 +163,40 @@ describe('三层计分卡', () => {
     expect(card.mechanism.decisions.deliver).toBe(0)
   })
 })
+
+// ── P5（2026-11-14 Proactive AI 二轮）：偏差复利信号 ────────────────────────
+
+describe('P5 偏差复利信号（compoundingBias）', () => {
+  it('同 topic 高不确定投递≥3＝1 个信号 topic；无 evidenceChain 不计（不倒填）', async () => {
+    const { buildScorecard } = await import('../proactivity-scorecard')
+    const mk = (id: string, topicKey: string, uncertainty?: 'high') => ({
+      id, topicKey, surface: 'suggestion', severity: 'attention', audience: 'human' as const,
+      decision: 'deliver' as const, reasonCode: 'budget_ok' as const, score: 0.5, decidedAtMs: 1,
+      ...(uncertainty ? { evidenceChain: { source: 'test', refs: ['r'], inference: 'i', uncertainty } } : {}),
+    })
+    const card = buildScorecard({
+      entries: [
+        mk('a1', 't-hot', 'high'), mk('a2', 't-hot', 'high'), mk('a3', 't-hot', 'high'), // 信号 topic
+        mk('b1', 't-warm', 'high'), mk('b2', 't-warm', 'high'), // 2 次 <3 不算
+        mk('c1', 't-legacy'), mk('c2', 't-legacy'), mk('c3', 't-legacy'), // 无 evidenceChain 不计
+        mk('d1', 't-low', undefined), mk('d2', 't-low', undefined), mk('d3', 't-low', undefined), // 有链但非 high
+      ],
+      outcomes: [],
+    })
+    expect(card.mechanism.compoundingBiasTopics).toBe(1)
+    expect(card.mechanism.compoundingBiasDeliveries).toBe(3)
+  })
+
+  it('高不确定但被抑制/延后（未投递）不构成信号', async () => {
+    const { buildScorecard } = await import('../proactivity-scorecard')
+    const card = buildScorecard({
+      entries: [
+        { id: 'x1', topicKey: 't', surface: 'suggestion', severity: 'info', audience: 'human' as const, decision: 'suppress' as const, reasonCode: 'cooldown' as const, score: 0.1, decidedAtMs: 1, evidenceChain: { source: 's', refs: [], inference: 'i', uncertainty: 'high' } },
+        { id: 'x2', topicKey: 't', surface: 'suggestion', severity: 'info', audience: 'human' as const, decision: 'defer' as const, reasonCode: 'quiet_hours' as const, score: 0.1, decidedAtMs: 2, evidenceChain: { source: 's', refs: [], inference: 'i', uncertainty: 'high' } },
+        { id: 'x3', topicKey: 't', surface: 'suggestion', severity: 'info', audience: 'human' as const, decision: 'hold' as const, reasonCode: 'irreversible' as const, score: 0.1, decidedAtMs: 3, evidenceChain: { source: 's', refs: [], inference: 'i', uncertainty: 'high' } },
+      ],
+      outcomes: [],
+    })
+    expect(card.mechanism.compoundingBiasTopics).toBe(0)
+  })
+})

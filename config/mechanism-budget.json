@@ -10,6 +10,21 @@
   },
   "changes": [
     {
+      "at": "2026-11-14",
+      "delta": "+2 patches（773 standing-agenda 路由/774 earned-autonomy 路由）/ +0 scripts / +0 npm scripts / +0 gates / +1 域（standingagenda，无新账本类目——JSONL 复用 ledgers 口径不增）/ +1 建议器（executioncontract/earned-autonomy，advisory-only 只读端点非新门）",
+      "reason": "Proactive AI 二轮吸收（spec 2026-11-14-proactive-ai-round2）：P1 发现测试（eval 域扩展）/P2 反事实差值/P3 standing agenda/P4 earned autonomy/P5 偏差复利信号",
+      "pairedRemovals": [
+        "P2 落地后 SUGGESTION_PROFILE（interventions-service）从主路径降级为 fail-open fallback——机制预算配对降级项（spec D10）",
+        "standing-agenda 域若两轮推演无消费（match 端点调用为零）即随 sunset 退役，补丁 773 同批移 _skip",
+        "earned-autonomy 建议器若 track record 冷启动持续（approval-ledger 无按 profile 数据积累）即退役，补丁 774 同批移 _skip"
+      ],
+      "sunset": {
+        "owner": "proactive-ai-round2 批",
+        "reviewBy": "下两轮推演（run31/run32 复盘面）",
+        "retireWhen": "standingagenda match 端点与 earned-autonomy 端点连续两轮推演零消费即退役（补丁与域文件同批移除）"
+      }
+    },
+    {
       "at": "2026-11-13",
       "delta": "+3 patches（770 看板写授权/771 归档 fail-through/772 delegate 严格 output_schema）/ +0 scripts / +0 npm scripts / +0 gates / +0 ledgers（patches 实测 466 ≤ 562 cap，不动 limits.patches）",
       "reason": "超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure）：交接合同与证据完整性三修复，均为既有面收口非新机制",

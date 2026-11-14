@@ -17,6 +17,7 @@ import {
   resolveBreakpoint,
   scorecard as buildScorecardOf,
   syncInterventions,
+  syncInterventionsWithPreview,
   validateAttentionPrefs,
   writeAttentionPrefs,
 } from './interventions-service'
@@ -337,10 +338,11 @@ proactivityRouter.put('/attention', (ctx) => {
   ok(ctx, { prefs: saved })
 })
 
-/** 从 delivery 建议同步干预：候选 → 治理裁决 → 落台账（幂等 6h）。 */
-proactivityRouter.post('/interventions/sync', (ctx) => {
+/** 从 delivery 建议同步干预：候选 → 治理裁决 → 落台账（幂等 6h）。
+ * 2026-11-14 P2：走预演编排（act−abstain 差值优先、静态表 fail-open；ANTICIPATION_PREVIEW=off 关闭）。 */
+proactivityRouter.post('/interventions/sync', async (ctx) => {
   if (denyWrite(ctx as never)) return
-  const result = syncInterventions(Date.now(), actorOf(ctx))
+  const result = await syncInterventionsWithPreview(Date.now(), actorOf(ctx))
   if (!result.available) {
     ok(ctx, { available: false, reason: result.reason ?? '数据源不可用', created: 0, skipped: 0, byDecision: {} })
     return
@@ -352,6 +354,7 @@ proactivityRouter.post('/interventions/sync', (ctx) => {
     byDecision: result.byDecision,
     records: result.records,
     ...(result.breakpoint ? { breakpoint: result.breakpoint } : {}),
+    ...(result.previewedCount !== undefined ? { previewedCount: result.previewedCount } : {}),
   })
 })
 

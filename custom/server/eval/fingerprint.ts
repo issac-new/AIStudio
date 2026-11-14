@@ -6,8 +6,9 @@
 import { createHash } from 'crypto'
 import type { EvalSet, EvalTask } from './types'
 
-/** 规范化序列化：键排序后 JSON（对象键序不稳 → 排序保证同内容同串）。 */
-function canonicalize(value: unknown): string {
+/** 规范化序列化：键排序后 JSON（对象键序不稳 → 排序保证同内容同串）。
+ * 导出供指纹兼容锁定测试逐字节复算（2026-11-14 P1）。 */
+export function canonicalize(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`
   if (value && typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>)
@@ -18,9 +19,15 @@ function canonicalize(value: unknown): string {
   return JSON.stringify(value)
 }
 
-/** 全量 sha1 指纹（等值判定用全量，呈现截短）。 */
-export function contentFingerprint(set: Pick<EvalSet, 'tasks'>): string {
-  const canonical = canonicalize(set.tasks as unknown as EvalTask[])
+/** 全量 sha1 指纹（等值判定用全量，呈现截短）。
+ * 2026-11-14 P1：discovery 形态集并入 discovery 规格参与指纹（改题可检出）。
+ * 兼容性硬约束：discovery 缺席时走原序列化路径（数组直出）——存量集 hash 逐字节不变（测试锁定）。
+ */
+export function contentFingerprint(set: Pick<EvalSet, 'tasks' | 'discovery'>): string {
+  // discovery 缺席＝存量集：保持数组直出的原路径，不得包对象（包对象即改变全体存量 hash）。
+  const canonical = set.discovery === undefined
+    ? canonicalize(set.tasks as unknown as EvalTask[])
+    : canonicalize({ tasks: set.tasks as unknown as EvalTask[], discovery: set.discovery })
   return createHash('sha1').update(canonical, 'utf8').digest('hex')
 }
 

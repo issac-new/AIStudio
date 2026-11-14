@@ -21,6 +21,8 @@ export interface ScorecardInput {
     decidedAtMs: number
     /** 话题键（漏助/去重统计用）；缺省按 id 归并。 */
     topicKey?: string
+    /** 触发证据链（2026-11-14 P5）；uncertainty 参与 compoundingBias 信号统计。 */
+    evidenceChain?: { source: string; refs: string[]; inference: string; uncertainty?: 'low' | 'medium' | 'high' }
   }>
   outcomes: Array<{ interventionId: string; outcome: string; at: number }>
   /** 关联结果（任务层）：被采纳建议里，后续确实产生了动作的条数（缺省 0，不猜）。 */
@@ -61,6 +63,15 @@ export interface ProactivityScorecard {
     falseInterventionRate: number | null
     /** 漏助（近似）：延后过但同话题从未投递的条数。 */
     missedAssistance: number
+    /**
+     * 偏差复利信号（2026-11-14 P5，论文 7.2.1b）：同话题在证据链高不确定（uncertainty=high）
+     * 下仍反复投递/升级的 topic 数——「不确定的推断变成自信的议程」的代理指标。
+     * 口径：同 topic 高不确定投递（deliver/escalate）≥3 次＝1 个信号 topic；历史记录无
+     * evidenceChain 字段则不计（不倒填）。
+     */
+    compoundingBiasTopics: number
+    /** 信号涉及的总投递条数（呈现面参考）。 */
+    compoundingBiasDeliveries: number
   }
   user: {
     /** 真正占用人注意力的条数（deliver + escalate；agent 面不计）。 */
@@ -109,6 +120,7 @@ export function buildScorecard(input: ScorecardInput): ProactivityScorecard {
   let holds = 0
   const deferredTopics = new Map<string, number>()
   const deliveredTopics = new Set<string>()
+  const highUncertaintyDeliveries = new Map<string, number>()
   for (const e of input.entries) {
     decisions[e.decision] += 1
     if (e.reasonCode === 'quiet_hours') quietHoursDefers += 1
@@ -120,6 +132,10 @@ export function buildScorecard(input: ScorecardInput): ProactivityScorecard {
     if (e.decision === 'defer') deferredTopics.set(topic, (deferredTopics.get(topic) ?? 0) + 1)
     if (e.decision === 'deliver' || e.decision === 'escalate') deliveredTopics.add(topic)
     if (e.audience === 'human' && (e.decision === 'deliver' || e.decision === 'escalate')) humanInterruptions += 1
+    // P5 偏差复利：高不确定（evidenceChain.uncertainty=high）下的投递/升级按 topic 累计
+    if (e.evidenceChain?.uncertainty === 'high' && (e.decision === 'deliver' || e.decision === 'escalate')) {
+      highUncertaintyDeliveries.set(topic, (highUncertaintyDeliveries.get(topic) ?? 0) + 1)
+    }
   }
   // 反馈只统计人面投递过的条目（agent 面没有「人接受」语义）
   const humanDelivered = new Set(
@@ -165,6 +181,10 @@ export function buildScorecard(input: ScorecardInput): ProactivityScorecard {
       interventionPrecision: ratio(accepted, withFeedback),
       falseInterventionRate: ratio(rejected, withFeedback),
       missedAssistance,
+      compoundingBiasTopics: [...highUncertaintyDeliveries.values()].filter((n) => n >= 3).length,
+      compoundingBiasDeliveries: [...highUncertaintyDeliveries.entries()]
+        .filter(([, n]) => n >= 3)
+        .reduce((sum, [, n]) => sum + n, 0),
     },
     user: {
       interruptions: humanInterruptions,

@@ -39,6 +39,25 @@ export interface InterventionRecord {
   decidedAtMs: number
   /** 来源标识（如 delivery-suggestion / manual），便于回溯谁发起的候选。 */
   source?: string
+  /**
+   * benefit 来源（2026-11-14 P2）：static=SUGGESTION_PROFILE 启发式；preview=反事实差值预演
+   * （act−abstain，论文 4.2.3）。口径混记会让校准读数失真，故分账。
+   */
+  benefitSource?: 'static' | 'preview'
+  /** 预演解释（「我避免的未来」；benefitSource=preview 时携带）。 */
+  previewExplanation?: string
+  /**
+   * 触发证据链（2026-11-14 P5，论文 7.2.1）：把行动链回产生它的内部推断——
+   * 结构化字段非自由文本（可机检）；缺席＝历史记录（不倒填）。
+   */
+  evidenceChain?: {
+    source: string
+    /** 锚点（file:line / URL / 事件 id / 建议摘要键）。 */
+    refs: string[]
+    /** 一句话推断（这条干预为什么被触发）。 */
+    inference: string
+    uncertainty?: 'low' | 'medium' | 'high'
+  }
 }
 
 export interface InterventionFeedback {

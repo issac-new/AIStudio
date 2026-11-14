@@ -40,6 +40,10 @@
 | 断点推断缺省阈值 | 边界 3 分／间歇 20 分／节奏钳 5-120 分 | 看板生命周期事件推断断点：状态边界或长间歇判为断点，否则按事件间隔中位数推测下一断点；缺证据判非断点（`2026-11-03-proactive-intervention-governance.md`） |
 | 注意力偏好缺省 | 日 8／时 3／冷却 30 分／退避 12h／安静 22:00-08:00 | 同上；`attention.json` 可改，反馈不自动改写 |
 | 改进实验证据门缺省档 | 5 门告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT}` 逐门升硬闸；缺省不阻断（同上 §6.2） |
+| 反事实预演预算 | 单 sync 上限 5 条；`ANTICIPATION_PREVIEW=off` 关闭 | 干预收益双通道：预演差值优先（置信减权融合），失败/关闭回静态启发式表（`2026-11-14-proactive-ai-round2.md` P2） |
+| earned autonomy 建议阈值 | 冷启动 <20 hold／收紧：人介入 >30% 或积压 >50%／放宽：≥50 样本零介入且自动放行 >90% | advisory-only 不动档；放宽永须人确认（同上 P4） |
+| 发现测试判据 | 无锚点判 unsupported／正确沉默＝对已解决集零重复报告／验证负担＝超 maxFindings 比例 | discovery 形态评测四指标，指纹并入 discovery 字段且存量逐字节兼容（同上 P1） |
+| 偏差复利信号阈值 | 同话题高不确定投递 ≥3 次＝1 信号 | evidenceChain.uncertainty 驱动，机制层读数；无链不倒填（同上 P5） |
 
 页签、路由、工具、检测器和专题页面属于实现清单。
 其数量由注册表、代码和守门测试给出，不在本文手工维护。

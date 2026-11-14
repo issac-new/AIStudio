@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
 import { join } from 'path'
 import type {
-  EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
+  DiscoverySpec, EvalRun, EvalSet, EvalSetMeta, EvalSetRevision, EvalTask, RemediationRecord, RubricAssertion, RubricIterationLog,
 } from './types'
 import { loadEvalConfig } from './types'
 import { assertGoldenRatio } from './golden-set'
@@ -198,6 +198,32 @@ function validateAssertion(a: unknown, i: number, problems: string[]): void {
   }
 }
 
+/** discovery 形态规格校验（2026-11-14 P1）：scenario 必填；期望发现/已解决集每条须带非空 id+description。 */
+function validateDiscoverySpec(spec: unknown): string[] {
+  const problems: string[] = []
+  const it = spec as Partial<DiscoverySpec> | undefined
+  if (!it || typeof it.scenario !== 'string' || !it.scenario.trim()) {
+    problems.push('discovery.scenario 必填（工作域＋委托目标）')
+    return problems
+  }
+  if (it.scenario.length > 4000) problems.push('discovery.scenario 须 ≤4000 字符')
+  const checkList = (list: unknown, label: string) => {
+    if (list === undefined) return
+    if (!Array.isArray(list)) { problems.push(`discovery.${label} 须为数组`); return }
+    list.forEach((item, i) => {
+      const e = item as { id?: unknown; description?: unknown }
+      if (typeof e?.id !== 'string' || !e.id.trim()) problems.push(`discovery.${label} #${i} id 必填`)
+      if (typeof e?.description !== 'string' || !e.description.trim()) problems.push(`discovery.${label} #${i} description 必填`)
+    })
+  }
+  checkList(it.expectedFindings, 'expectedFindings')
+  checkList(it.resolvedConcerns, 'resolvedConcerns')
+  if (it.maxFindings !== undefined && (!Number.isInteger(it.maxFindings) || it.maxFindings < 1 || it.maxFindings > 500)) {
+    problems.push('discovery.maxFindings 须为 1-500 的整数')
+  }
+  return problems
+}
+
 function validateTask(t: unknown, i: number, problems: string[]): void {
   const it = t as Partial<EvalTask> | undefined
   if (!it || typeof it.id !== 'string' || !it.id.trim()) problems.push(`任务 #${i} id 必填`)
@@ -252,6 +278,9 @@ export interface CreateSetInput {
   /** 黄金集标志（2026-11-06 C 批）：true 时强制 10/10/10 配比校验。 */
   golden?: boolean
   tasks: unknown[]
+  /** 集形态（2026-11-14 P1）：缺省 task；discovery＝发现测试（tasks 可空，discovery 规格必填）。 */
+  kind?: 'task' | 'discovery'
+  discovery?: unknown
 }
 
 // ---------- 评测集 ----------
@@ -286,8 +315,17 @@ export function createSet(
   if (!name || name.length > 64) problems.push('name 必填（≤64 字符）')
   if (!TRACKS.has(String(input?.track))) problems.push('track 须为 e2e/process')
   if (input?.track !== 'process' && input?.module) problems.push('module 仅 Process 轨可填')
-  if (!Array.isArray(input?.tasks) || input.tasks.length === 0) problems.push('tasks 至少 1 条')
-  else input.tasks.forEach((t, i) => validateTask(t, i, problems))
+  // 形态分支（2026-11-14 P1）：task 形态维持「tasks 至少 1 条」；discovery 形态
+  // tasks 允许空数组、discovery 规格必填（scenario 非空）——判分走 discovery-score。
+  const kind = input?.kind === 'discovery' ? 'discovery' : 'task'
+  if (kind === 'task') {
+    if (!Array.isArray(input?.tasks) || input.tasks.length === 0) problems.push('tasks 至少 1 条')
+    else input.tasks.forEach((t, i) => validateTask(t, i, problems))
+  } else {
+    if (!Array.isArray(input?.tasks)) problems.push('tasks 须为数组（discovery 形态允许空数组）')
+    else input.tasks.forEach((t, i) => validateTask(t, i, problems))
+    problems.push(...validateDiscoverySpec(input?.discovery))
+  }
   // 黄金集配比校验（2026-11-06 C 批）：golden=true 时 10/10/10 是机制不是口头约定；
   // 校验器与守门测试同源（golden-set.ts assertGoldenRatio），错配比在建集口即拒。
   if (input?.golden === true) problems.push(...assertGoldenRatio(input.tasks as EvalTask[]))
@@ -307,6 +345,7 @@ export function createSet(
     createdBy,
     ...(input?.golden === true ? { golden: true } : {}),
     tasks: input.tasks as EvalTask[],
+    ...(kind === 'discovery' ? { kind: 'discovery' as const, discovery: input?.discovery as EvalSet['discovery'] } : {}),
   }
   set.contentHash = contentFingerprint(set)
   snapshotSet(store, set)
