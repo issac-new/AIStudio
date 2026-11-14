@@ -11,28 +11,21 @@ function refMatches(ruleRef: string | undefined, eventRef: string): boolean {
   return eventRef === ruleRef || eventRef.endsWith('/' + ruleRef)
 }
 
-/** 单条件×单事件匹配（纯函数）。 */
+/** 单条件×单事件匹配（纯函数）。AutomationSourceFilter 是扁平 interface（字段全可选），
+ * type 相等已由前置 return 保证，分支内直接访问对应可选字段。 */
 export function filterMatches(filter: AutomationSourceFilter, event: AutomationEvent): boolean {
   if (filter.type !== event.type) return false
   switch (event.type) {
-    case 'file': {
-      const f = filter as Extract<AutomationSourceFilter, { type: 'file' }>
-      return matchPathPattern(f.pathPattern ?? '', event.path)
-    }
-    case 'kanban': {
-      const f = filter as Extract<AutomationSourceFilter, { type: 'kanban' }>
-      return (!f.board || f.board === event.board)
-        && (!f.toColumn || f.toColumn === event.to)
-    }
-    case 'git': {
-      const f = filter as Extract<AutomationSourceFilter, { type: 'git' }>
-      return refMatches(f.ref, event.ref)
-    }
-    case 'webhook': {
-      const f = filter as Extract<AutomationSourceFilter, { type: 'webhook' }>
-      return (!f.source || f.source === event.source)
-        && (!f.eventType || f.eventType === event.eventType)
-    }
+    case 'file':
+      return matchPathPattern(filter.pathPattern ?? '', event.path)
+    case 'kanban':
+      return (!filter.board || filter.board === event.board)
+        && (!filter.toColumn || filter.toColumn === event.to)
+    case 'git':
+      return refMatches(filter.ref, event.ref)
+    case 'webhook':
+      return (!filter.source || filter.source === event.source)
+        && (!filter.eventType || filter.eventType === event.eventType)
   }
 }
 
