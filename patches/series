@@ -1227,7 +1227,6 @@
 # 766（2026-11-10 执行内核统一 P1 Task 4，spec 2026-11-10-execution-kernel-p0b2-p1）：
 # 启动参数四挡贯通——zcode --mode 优先 permissionMode（未配置回落二值默认不变）；DSH 布尔推导；run-manager 类型；启动侧会话档归一注入。
 
-
 # 767（2026-11-12 TTSE 双轨经验吸收，spec 2026-11-12-expdual-ttse）：
 # 双轨经验台账路由注册（/api/expdual/* 挂进 bootstrap/routes.ts；先例 627）。
 767-server-expdual-routes.patch
@@ -1268,4 +1267,3 @@
 # 776（2026-11-14 超级智能体吸收批二）：studio complete/block 透传
 # --expected-version，CLI version conflict 文本映射 409 version_conflict。
 776-server-kanban-expected-version.patch
->>>>>>> 944b35a (feat(kanban): 批二任务版本化＋分级验证——行级 version 触发器全路径递增＋expected_version CAS 409＋迁移 envelope 五字段＋verification 三档（补丁 775/776＋runtime 六镜像同构）)
