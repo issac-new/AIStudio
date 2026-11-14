@@ -1258,3 +1258,14 @@
 # earned autonomy 档位建议器路由挂载——/api/hermes/execution/earned-autonomy：
 # approval-ledger 决议分布→track record→收紧/放宽/维持建议（advisory-only）。
 774-server-earned-autonomy-routes.patch
+
+# 775（2026-11-14 超级智能体吸收批二，spec 2026-11-14-superagent-contract-batch2）：
+# 看板任务行级 version（触发器全路径递增）＋expected_version CAS 409＋task_events
+# 五字段迁移 envelope＋卡级 verification 三档（standard/independent/strict:pr）；
+# runtime 六镜像同批同构；CLI/工具 complete/block/create 透传。
+775-agent-kanban-versioned-writes.patch
+
+# 776（2026-11-14 超级智能体吸收批二）：studio complete/block 透传
+# --expected-version，CLI version conflict 文本映射 409 version_conflict。
+776-server-kanban-expected-version.patch
+>>>>>>> 944b35a (feat(kanban): 批二任务版本化＋分级验证——行级 version 触发器全路径递增＋expected_version CAS 409＋迁移 envelope 五字段＋verification 三档（补丁 775/776＋runtime 六镜像同构）)

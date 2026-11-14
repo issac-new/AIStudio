@@ -106,6 +106,12 @@ KANBAN_COMPLETE_SCHEMA = _schema(
     ),
     {
         "task_id": _prop("string", _DESC_TASK_ID_DEFAULT),
+        "expected_version": _prop("integer", (
+                "Optional optimistic-lock version: when provided and the task row's "
+                "version differs (another writer got there first), the completion is "
+                "rejected with no state change — re-read the task and retry. Omit "
+                "for legacy best-effort."
+        )),
         "summary": _prop("string", (
                 "Human-readable handoff, 1-3 sentences. Appears in "
                 "Run History on the dashboard and in downstream "
@@ -198,6 +204,11 @@ KANBAN_BLOCK_SCHEMA = _schema(
     ),
     {
         "task_id": _prop("string", _DESC_TASK_ID_DEFAULT),
+        "expected_version": _prop("integer", (
+                "Optional optimistic-lock version: when provided and the task row's "
+                "version differs, the block is rejected with no state change — "
+                "re-read the task and retry. Omit for legacy best-effort."
+        )),
         "reason": _prop("string", (
                 "What you need answered or what stopped you, in one or "
                 "two sentences. Don't paste the whole conversation; the "
@@ -509,6 +520,12 @@ KANBAN_CREATE_SCHEMA = _schema(
                 "blocks the task for human review). Use this for "
                 "open-ended cards where one shot rarely finishes the "
                 "work. Defaults to false (classic single-shot worker)."
+        )),
+        "verification": _prop("string", (
+                "Optional completion-verification level for this card: 'standard' "
+                "(default, existing DoD contract gate only), 'independent' (a review "
+                "handoff verdict is required before done), or 'strict:pr' (a passing "
+                "pr_acceptance is required before done)."
         )),
         "raci": {
             "type": "object",

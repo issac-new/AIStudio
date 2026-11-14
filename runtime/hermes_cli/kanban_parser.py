@@ -340,6 +340,9 @@ _SPECS = [
         _arg("--force", action="store_true",
              help="Override the live-claim guard: complete a running, claimed task "
                   "even without owning its run (closes the worker's run)."),
+        _arg("--expected-version", type=int, default=None,
+             help="Optimistic-lock version: reject with exit 1 when the row's version "
+                  "differs (another writer got there first); omit for legacy best-effort."),
     ], help="Mark one or more tasks done"),
     _cmd("edit", [
         _TASK_ID,
@@ -359,6 +362,9 @@ _SPECS = [
                   "blocked for a human; 'transient' marks a maybe-flaky failure. "
                   "Repeated same-kind re-blocks after unblock route the task to "
                   "triage to break unblock loops. Omit for a generic block."),
+        _arg("--expected-version", type=int, default=None,
+             help="Optimistic-lock version: reject with exit 1 when the row's version "
+                  "differs; omit for legacy best-effort."),
     ], help="Mark one or more tasks blocked"),
     _cmd("schedule", [
         _TASK_ID,

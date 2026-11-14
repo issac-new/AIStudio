@@ -910,6 +910,11 @@ _LATER_TASK_COLUMNS = (
     # NULL days = 未评估（派发重排保守计 1 人日）。
     ("estimate_days", "estimate_days REAL"),
     ("estimate_meta", "estimate_meta TEXT"),
+    # 批二（2026-11-14 superagent-contract-batch2）：行级乐观锁版本号（触发器
+    # trg_tasks_version_bump 在任何 UPDATE 后自动递增，覆盖内核迁移路径）＋
+    # 卡级完成验证等级（NULL=standard；independent；strict:pr）。
+    ("version", "version INTEGER NOT NULL DEFAULT 0"),
+    ("verification", "verification TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (
@@ -994,6 +999,29 @@ def _migrate_add_optional_columns(conn: sqlite3.Connection) -> None:
     # runs and can't be attributed).
     if "run_id" not in _column_names(conn, "task_events"):
         _add_column_if_missing(conn, "task_events", "run_id", "run_id INTEGER")
+    # 批二：迁移 envelope 四列（time 复用既有 created_at）。事件写入由
+    # kanban_db._append_event 统一携带；旧行为 NULL（历史事件先于 envelope）。
+    ev_cols = _column_names(conn, "task_events")
+    for _ecol, _edd in (
+        ("event_version", "event_version INTEGER"),
+        ("actor", "actor TEXT"),
+        ("reason", "reason TEXT"),
+        ("trace_id", "trace_id TEXT"),
+    ):
+        if _ecol not in ev_cols:
+            _add_column_if_missing(conn, "task_events", _ecol, _edd)
+    # 触发器：任何 tasks 行 UPDATE 后 version+1（recursive_triggers 默认 OFF，
+    # 触发器内的自增 UPDATE 不会再触发，无死循环）。这是"所有改任务行路径都
+    # 递增"的机械保证——claim/recompute_ready/reclaim 等内核路径零改动即覆盖。
+    conn.execute(
+        """
+        CREATE TRIGGER IF NOT EXISTS trg_tasks_version_bump
+        AFTER UPDATE ON tasks
+        BEGIN
+            UPDATE tasks SET version = version + 1 WHERE id = NEW.id;
+        END;
+        """
+    )
 
     # Same ordering rule as the ``tasks`` indexes above: index after column.
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_run ON task_events(run_id, id)")
@@ -1275,9 +1303,14 @@ def _main_db_file(conn: sqlite3.Connection) -> Optional[str]:
 
 
 @contextlib.contextmanager
-def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False):
+def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False, envelope: Optional[dict] = None):
     """IMMEDIATE write transaction; a claim CAS inside is atomic — at most one
     concurrent writer succeeds.
+
+    ``envelope``（批二，可选）：本次事务的迁移五要素上下文（actor/reason/trace_id；
+    version 由触发器产出、time 由事件 created_at 承载）——事务内 ``_append_event``
+    自动读取并入 task_events 的 envelope 列；缺省走 legacy 合成（actor=调用方
+    兜底、reason=``legacy:<kind>``），兼容期新旧客户端可共存。
 
     Nesting is an explicit opt-in (``allow_nested=True`` → savepoint; otherwise
     a loud ``RuntimeError``). Only composition primitives (``create_task``,
@@ -1308,6 +1341,8 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False):
         return
 
     _execute_boundary_with_retry(conn, "BEGIN IMMEDIATE")
+    if envelope is not None:
+        conn._kanban_txn_envelope = dict(envelope)
     try:
         yield conn
     except Exception:
@@ -1315,6 +1350,11 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False):
         # don't let this secondary failure shadow the real one.
         with contextlib.suppress(sqlite3.OperationalError):
             conn.execute("ROLLBACK")
+        if envelope is not None:
+            try:
+                del conn._kanban_txn_envelope
+            except AttributeError:
+                pass
         raise
     else:
         try:
@@ -1325,6 +1365,11 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False):
             with contextlib.suppress(sqlite3.OperationalError):
                 conn.execute("ROLLBACK")
             raise
+        if envelope is not None:
+            try:
+                del conn._kanban_txn_envelope
+            except AttributeError:
+                pass
         # Post-commit torn-extend check — raise now rather than silently corrupt.
         _check_file_length_invariant(conn)
 

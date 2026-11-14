@@ -1,0 +1,72 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -827,10 +827,13 @@
+ export async function completeTasks(
+   taskIds: string[],
+   summary?: string,
+-  opts?: KanbanBoardOptions & { operatorOverride?: boolean },
++  opts?: KanbanBoardOptions & { operatorOverride?: boolean; expectedVersion?: number },
+ ): Promise<void> {
+   const args = [...boardArgs(opts?.board), 'complete', ...taskIds]
+   if (summary) args.push('--summary', summary)
++  // 批二（superagent-contract-batch2）：乐观锁版本透传——CLI 版本不匹配时非零，
++  // execKanbanMutation 的错误文本携带 version conflict 供控制器映射 409。
++  if (opts?.expectedVersion != null) args.push('--expected-version', String(opts.expectedVersion))
+ 
+   if (!opts?.operatorOverride) {
+     await execKanbanMutation(args, 'Hermes CLI: kanban complete failed', 'Failed to complete kanban tasks')
+@@ -868,9 +871,13 @@
+   }
+ }
+ 
+-export async function blockTask(taskId: string, reason: string, opts?: KanbanBoardOptions): Promise<void> {
++export async function blockTask(
++  taskId: string, reason: string, opts?: KanbanBoardOptions & { expectedVersion?: number },
++): Promise<void> {
++  const args = [...boardArgs(opts?.board), 'block', taskId, reason]
++  if (opts?.expectedVersion != null) args.push('--expected-version', String(opts.expectedVersion))
+   await execKanbanMutation(
+-    [...boardArgs(opts?.board), 'block', taskId, reason],
++    args,
+     'Hermes CLI: kanban block failed',
+     'Failed to block kanban task',
+   )
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -596,7 +596,8 @@
+   const payload = bodyResult.body
+   const taskIds = requiredNonEmptyStringArray(payload.task_ids, 'task_ids')
+   const summary = optionalString(payload.summary, 'summary')
+-  if (rejectBadRequest(ctx, taskIds.error || summary.error)) return
++  const expectedVersion = optionalInteger(payload.expectedVersion, 'expectedVersion')
++  if (rejectBadRequest(ctx, taskIds.error || summary.error || expectedVersion.error)) return
+   const board = requestBoard(ctx)
+   if (!board) return
+   try {
+@@ -607,7 +608,10 @@
+       new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready', 'blocked', 'review']),
+       'complete',
+     )) return
+-    await kanbanCli.completeTasks(taskIds.value!, summary.value, { board, operatorOverride: true })
++    await kanbanCli.completeTasks(taskIds.value!, summary.value, {
++      board, operatorOverride: true,
++      ...(expectedVersion.value != null ? { expectedVersion: expectedVersion.value } : {}),
++    })
+     ctx.body = { ok: true }
+   } catch (err: any) {
+     // HERMES_CUSTOM[aipaydev] BEGIN
+@@ -1206,6 +1210,12 @@
+     // 规则拒绝而非服务器错误——回 409 让前端可区分（此前一律 500：走查实录
+     // triage→review 直转被状态机拒时表象为服务端故障）。
+     const msg = String(err?.message || '')
++    if (/version conflict/i.test(msg)) {
++      // 批二：乐观锁拒绝——CLI 文本携带 current/expected，交前端引导重读。
++      ctx.status = 409
++      ctx.body = { error: msg, code: 'version_conflict' }
++      return
++    }
+     if (/\bcannot\b.*\bfor\b|\bis not in\b|cannot be set manually|entered by a worker claim|BLOCKED_BY_POLICY/i.test(msg)) {
+       ctx.status = 409
+       ctx.body = { error: msg, code: 'state_transition_rejected' }

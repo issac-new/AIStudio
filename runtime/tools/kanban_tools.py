@@ -944,7 +944,8 @@ def _handle_complete(args: dict, **kw) -> str:
                 created_cards=created_cards, expected_run_id=_worker_run_id(tid),
                 receipt=args.get("receipt"),
                 workspace=os.environ.get("HERMES_KANBAN_WORKSPACE")
-                or _task_value(task, "workspace_path"))
+                or _task_value(task, "workspace_path"),
+                expected_version=args.get("expected_version"))
         except kb.ArtifactPreservationError as artifact_err:
             # Structured rejection — surface the phantom ids so the worker can retry with a corrected list
             # or drop the field. Audit event already landed in the DB. The task itself was NOT mutated (the
@@ -979,6 +980,16 @@ def _handle_complete(args: dict, **kw) -> str:
                 f"kanban_complete blocked: {empty_err}. Your task is still in-flight (no state "
                 f"change). Retry kanban_complete with a non-empty summary or result describing "
                 f"what was done.")
+        except kb.VersionConflictError as ver_err:
+            # 批二：旧快照覆盖被拒——任务被并发方推进，重读再试。
+            return tool_error(
+                f"kanban_complete refused: {ver_err}. Nothing changed. Re-read the task "
+                f"(kanban_get) and retry with its current version.")
+        except kb.VerificationLevelBlocked as ver_gate:
+            # 批二：卡声明的验证等级未满足——按等级给下一步，不自动改状态。
+            return tool_error(
+                f"kanban_complete blocked by verification level: {ver_gate}. Nothing changed. "
+                f"{ver_gate.detail}")
         task = kb.get_task(conn, tid)
         if not ok:
             # complete_task reports every refusal as bare False; a reopened or
@@ -1029,7 +1040,13 @@ def _handle_block(args: dict, **kw) -> str:
                f"{sorted(_GOAL_MODE_BLOCK_ALLOWED_KINDS)} (got {kind!r}). If the task is actually "
                f"finished or cannot proceed for another reason, call kanban_complete instead — "
                f"the completion judge will evaluate it.")
-        ok = kb.block_task(conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id(tid))
+        try:
+            ok = kb.block_task(conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id(tid),
+                               expected_version=args.get("expected_version"))
+        except kb.VersionConflictError as ver_err:
+            return tool_error(
+                f"kanban_block refused: {ver_err}. Nothing changed. Re-read the task "
+                f"(kanban_get) and retry with its current version.")
         _check(ok, f"could not block {tid} (unknown id or not in running/ready)")
         landed_kind = kb.get_task(conn, tid).block_kind
         extra: dict = {"block_kind": landed_kind}
@@ -1363,6 +1380,7 @@ def _handle_create(args: dict, **kw) -> str:
             completion_contract=args.get("completion_contract"),
             raci=(args.get("raci") if isinstance(args.get("raci"), dict) else None),
             initial_status=str(args.get("initial_status") or "running"),
+            verification=args.get("verification"),
             created_by=_persisted_identity(), session_id=session_id)
         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)
         wait = [e for e in kb.list_events(conn, new_tid) if e.kind == "dependency_wait"]
