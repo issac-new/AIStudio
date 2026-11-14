@@ -66,7 +66,9 @@ beforeAll(async () => {
   for (const k of ['HERMES_HOME', 'HARNESS2_STORE', 'HERMES_GOAL_ALIGNMENT_DIR', 'INTERVENTION_LEDGER_PATH',
     'ATTENTION_PREFS_PATH', 'HERMES_KANBAN_HOME', 'EXECUTION_RECORDS_DIR', 'USER_PERMS_AUDIT_FILE',
     // W4 组 14（harness 路由整挂）：审计账/执法批单/运行清单/govbus 事件四源全部隔离进临时目录
-    'TOOL_EXEC_AUDIT_DIR', 'HERMES_ENFORCE_APPROVALS_DIR', 'RUN_MANIFEST_DIR', 'HERMES_GOV_EVENT_DIR']) {
+    'TOOL_EXEC_AUDIT_DIR', 'HERMES_ENFORCE_APPROVALS_DIR', 'RUN_MANIFEST_DIR', 'HERMES_GOV_EVENT_DIR',
+    // 发现测试面（Proactive AI 二轮 P1 探测接线）：eval 集 store 与 discovery 运行账隔离进临时目录
+    'EVAL_STORE', 'HERMES_DISCOVERY_RUN_DIR']) {
     prevEnv[k] = process.env[k]
   }
   process.env.HERMES_HOME = join(dir, 'home')
@@ -81,6 +83,8 @@ beforeAll(async () => {
   process.env.HERMES_ENFORCE_APPROVALS_DIR = join(dir, 'enf-approvals')
   process.env.RUN_MANIFEST_DIR = join(dir, 'run-manifests')
   process.env.HERMES_GOV_EVENT_DIR = join(dir, 'govbus')
+  process.env.EVAL_STORE = join(dir, 'eval-store')
+  process.env.HERMES_DISCOVERY_RUN_DIR = join(dir, 'eval-store', 'discovery-runs')
 
   // userenv 夹具：default 档在册＋一个敏感键（脱敏回显面可读）
   const profileDir = join(dir, 'home', 'profiles', 'default')
@@ -107,6 +111,8 @@ beforeAll(async () => {
   const { userPermsAuditRoutes } = await import('../../custom/server/userperms/controller')
   // W4 组 14：harness 治理面整路由（tool-contracts/execution-join/taskmodel 所在）
   const { harnessRoutes } = await import('../../custom/server/harness/harness-controller')
+  // 发现测试探测（组 1 续）：eval 域路由（evalRoutes 自带 /api/hermes/eval prefix）
+  const { evalRoutes } = await import('../../custom/server/eval/controller')
   // vendor 技能面的生产装配：profile-config 等依赖注入在 import 时接线（与 studio
   // 启动同源），不接则 readConfigYamlForProfile 抛「not been configured」→全 500
   await import('../../vendor/hermes-studio/packages/server/src/bootstrap/agent-profile-adapter')
@@ -126,6 +132,7 @@ beforeAll(async () => {
   root.use(userenvRoutes.routes(), userenvRoutes.allowedMethods())
   root.use(userPermsAuditRoutes.routes(), userPermsAuditRoutes.allowedMethods())
   root.use(harnessRoutes.routes(), harnessRoutes.allowedMethods())
+  root.use(evalRoutes.routes(), evalRoutes.allowedMethods())
   root.use(skillRoutes.routes(), skillRoutes.allowedMethods())
   const app = new Koa()
   app.use(bodyParser())
