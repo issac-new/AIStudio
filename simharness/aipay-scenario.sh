@@ -738,11 +738,11 @@ ${COMMON//%WS%/$WS}" "$(agent_mxid lin),$(agent_mxid wei)"
       for t in AN-PAYCORE AN-MP AN-CHWX AN-CHALI; do
         repo_has "docs/analysis/$t-analysis.md" && _pw_n=$((_pw_n+1))
       done
-      (( _pw_n >= 2 )) && break
+      (( _pw_n >= 1 )) && break  # run30 复盘根治：轮询退出同改首份（与派发阈值一致）
       auto_approve "$SCAN_ROOM" || true
       sleep "$MX_POLL_IVAL"
     done
-    if (( _pw_n >= 2 )); then
+    if (( _pw_n >= 1 )); then  # run30 复盘根治：阈值 2→1（次份 3600s 未达回退集中实锤——首份即起骨架，流水线左移最大化）
       dispatch_in_room fanfan "@fanfan-agent:matrix.test 【概设预写（流式流水线预备轮）】四份系分任务并行执行中，已有 ${_pw_n} 份入库、其余在途。请现在加载 requirements-analyst 技能起概设骨架，不等末稿：
 1) 先读已入库的 docs/analysis/AN-*.md（先 git pull 拉最新）、${RFD_DOC}、docs/analysis/${RFD_ID}-tasklist.md
 2) 可先做消歧与冲突处理（重点：金额单位统一明确为「分」(int64)；接口契约字段命名统一 snake_case），整理结构层次
@@ -1372,7 +1372,7 @@ DEV-PAYCORE-S（csw-pay-core 状态机+幂等，1 人日）。任务纪律：拆
 工作区：并行安全（与 C/N 会话互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-S -b feat/DEV-PAYCORE-S origin/feat/DEV-PAYCORE-C（C 未落地时基于 origin/main，落地后 rebase 对接），在 ../pc-S 内开发。
 1) 实现 csw-pay-core 状态机+幂等
 2) 实现：支付单创建（merchantId+outTradeNo 幂等）、状态机流转 INIT→PAYING→SUCCESS/FAILED/CLOSED、查单、关单
-3) vitest ≥5 用例全绿（${PYTEST_NOTE:-}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。
+3) vitest ≥5 用例全绿（${PYTEST_NOTE:-}）；输出存 docs/evidence/DEV-PAYCORE-S-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径；（testlog 提交纪律：基于共享基分支起家的自带他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交——integration 合并 add/add 冲突实锤）push origin feat/DEV-PAYCORE-S；结论行 DEV-DONE-DEV-PAYCORE-S。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。
 4) 收尾：收到 PUSH-CONFIRMED-DEV-PAYCORE-S 回执后回主工作区 git worktree remove ../pc-S（分支已推远端，工作树即弃——不留残树占盘）。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room chen "@chen-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出「完成」——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
@@ -1389,7 +1389,7 @@ DEV-PAYCORE-N（csw-pay-core 回调+证据，1 人日）。任务纪律：拆 2 
 工作区：并行安全（与 C/S 会话互不等待）：cd $(workspace chen) && git fetch origin && git worktree add ../pc-N -b feat/DEV-PAYCORE-N origin/feat/DEV-PAYCORE-S（S 未落地时基于 origin/feat/DEV-PAYCORE-C 或 origin/main，落地后 rebase 对接），在 ../pc-N 内开发。
 1) 实现 csw-pay-core 回调+证据
 2) 实现：渠道回调接收入口（验签后更新状态机、重复回调幂等）
-3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE:-}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。
+3) vitest ≥3 用例（回调重复消费为主）全绿（${PYTEST_NOTE:-}）；输出存 docs/evidence/DEV-PAYCORE-N-testlog.txt 随分支提交（G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律同前；（testlog 提交纪律：基于共享基分支起家的自带他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交——integration 合并 add/add 冲突实锤）push origin feat/DEV-PAYCORE-N；结论行 DEV-DONE-DEV-PAYCORE-N。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。
 4) 收尾：收到 PUSH-CONFIRMED-DEV-PAYCORE-N 回执后回主工作区 git worktree remove ../pc-N（分支已推远端，工作树即弃——不留残树占盘）。" "$(agent_mxid chen),$(agent_mxid wei)"
 
     dispatch_in_room xiao "@xiao-agent:matrix.test 执行开发任务 【完成定义—本任务在以下 4 件事全部做完前，不得 Turn ended 或输出「完成」——脚本会等你 4 步全做才推进 devimpl_done 键（V8.32，2026-10-15 用户裁定根治"干完不交卷"形态）】：
@@ -1407,7 +1407,7 @@ DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。（testlog 提交纪律：基于共享基分支起家的自带他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交——integration 合并 add/add 冲突实锤）${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 
