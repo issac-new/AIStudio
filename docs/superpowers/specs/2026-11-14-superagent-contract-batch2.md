@@ -122,3 +122,16 @@ tasks SHALL 增 `version INTEGER NOT NULL DEFAULT 0`；**所有改 tasks 行的�
 ## 8. 不做（本批边界）
 
 第三件调度接线（reasoningEffort/订阅 wake-notify-context 入 dispatcher/orchestrator）；六闸/推演面改动；执行内核统一批既定范围（guarded 合流/P3 Ekko 退役）不受本批影响。
+
+
+## 9. 实测回填（2026-11-14，worktree feat/superagent-contract-b2）
+
+| 项 | 实测 |
+|---|---|
+| 红绿 | 两测试文件先红（22 例：列缺失/CAS 缺失/门缺失 ImportError 型）→实现后 22/22；CLI/Block/claim guard/db 回归合计 38/38 |
+| 补丁 | 775（agent 六文件＋两新测试，818 行）/776（studio 两文件，72 行）clean+pretest 全量重放 complete×3（含 rebase 后）；runtime 六镜像 diff 同构验证 |
+| rebase | origin/main 前进 13 提交（proactive 二轮 773/774＋run30 复盘批）；receipts 并集 384 行、series 上游逐字＋尾块、索引 --write 重建；series 曾残留冲突标记行致 planner 报"补丁文件不存在"——剥标记后 complete |
+| 全量 | npm test 8962 例：3 failed＝diagram playwright 环境（main 树同跑同红定谳存量）＋8947 passed＋12 skipped；typecheck 0 错；docs-ssot/interactive 29/29 |
+| 批量 kanban 集 | 84 文件点名跑 51 failed＝main 同红（测试间 HERMES_HOME 状态泄漏存量债，单跑全绿）——挂账测试基建 |
+| 变异探针 | 3/3 有效：摘 complete CAS 校验→1 红；摘 version 触发器段→12 errors（建库崩）；旁路 verification 门→5 红；恢复后全绿 |
+| 探针期事故 | `git checkout --` 会把注入态撤回 pristine 且增量注入因 sha 一致跳过重放（文件实际缺失）——探针恢复一律走 python 反向替换或 clean+inject 全量；本轮已按此恢复并复验 22/22 |
