@@ -1253,3 +1253,8 @@
 # standing-agenda 域路由挂载——/api/hermes/standing-agenda：触发条件注册→挂起→事件
 # 命中产出恢复建议（走 interventions 治理链，不直接动看板/唤醒 agent）。
 773-server-standing-agenda-routes.patch
+
+# 774（2026-11-14 Proactive AI 二轮 P4，spec 2026-11-14-proactive-ai-round2）：
+# earned autonomy 档位建议器路由挂载——/api/hermes/execution/earned-autonomy：
+# approval-ledger 决议分布→track record→收紧/放宽/维持建议（advisory-only）。
+774-server-earned-autonomy-routes.patch

@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -201,6 +201,9 @@
+ // overlay[standing-agenda]（Proactive AI 二轮 P3 2026-11-14）：跨会话持久意图——注册触发条件→挂起→
+ // 事件命中产出恢复建议（走 interventions 治理链裁决，不直接动看板）；/api/hermes/standing-agenda。
+ import { standingAgendaRouter } from '../custom/standingagenda/agenda-controller'
++// overlay[earned-autonomy]（Proactive AI 二轮 P4 2026-11-14）：档位建议器——approval-ledger
++// 决议分布按 profile 聚合 track record，输出收紧/放宽/维持建议（advisory-only，不动档）。
++import { earnedAutonomyRouter } from '../custom/executioncontract/earned-autonomy'
+ // overlay[workitem+impact]（JoyAI 闭环吸收轮 2026-10-26）：工作项全景串联 + 需求影响推演——
+ // /api/hermes/workitem/:taskId/panorama：以看板 taskId 为统一上下文锚汇聚全链路八面产物（纯读侧
+ // fail-soft）；/api/hermes/impact/requirement：需求文本四路词面命中（本体实例/板级 KG/FIBO 术语/
+@@ -626,6 +629,7 @@
+   app.use(precedentRouter.routes())             // 判例库：run 判例检索（天猫挂账批，fail-soft）
+   app.use(proactivityRouter.routes())           // 主动性两轴裁决+目标对齐台账（Qoder 吸收轮，fail-soft）
+   app.use(standingAgendaRouter.routes())     // standing agenda：触发条件注册+恢复建议治理链（P3，fail-soft）
++  app.use(earnedAutonomyRouter.routes())     // earned autonomy：track record 档位建议（P4，只读）
+   app.use(workitemRoutes.routes())              // 工作项全景串联：taskId → 全链路八面（JoyAI 吸收轮，fail-soft）
+   app.use(impactRoutes.routes())                 // 需求影响推演：四路词面命中（JoyAI 吸收轮，fail-soft）
+   app.use(modelcapRoutes.routes())               // 能力矩阵+风险分档路由（模型波动加固 C：读 fail-soft，高风险 fail-closed）
