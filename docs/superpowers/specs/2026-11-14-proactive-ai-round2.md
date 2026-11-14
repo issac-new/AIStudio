@@ -45,7 +45,7 @@
 - 新增 `custom/server/executioncontract/earned-autonomy.ts`：
   - `aggregateTrackRecord(profile)`：读 approval-ledger JSONL（fail-soft，文件缺席返回 null 不猜数），按 profile 聚合 `{ sampleSize; resolvedAuto; resolvedUser; deniedCount; riskEscalationCount }`。
   - `recommendMode(current: ModeId, record)`：纯函数——冷启动 `sampleSize < 20` 不出建议；`deniedShare > 0.2` → 收紧一挡建议（plan←build←guarded←yolo 方向）；`sampleSize ≥ 50 ∧ deniedCount = 0 ∧ resolvedAutoShare > 0.9` → 放宽一挡建议。返回 `{ direction: 'tighten'|'loosen'|'hold'; target: ModeId; evidence: string }`。
-  - 执行语义：**默认只建议**（REST `GET /api/hermes/execution/earned-autonomy?profile=` 呈现）；`EARNED_AUTONOMY_AUTO_TIGHTEN=1` 时收紧建议自动写会话档，**放宽永远须人确认**（对齐 enforcement-policy「只收紧不放宽」先例＋防谄媚：只消费决议统计，不消费任何文本反馈）。
+  - 执行语义：**advisory-only 只建议不动档**（REST `GET /api/hermes/execution/earned-autonomy?profile=` 呈现，响应携带 enforcement: 'advisory-only' 声明）。收紧自动写档（`EARNED_AUTONOMY_AUTO_TIGHTEN`）挂账：四挡 ModeId→permmodes PermissionMode 的反向映射仓内不存在，自造即第三套词表映射（违反单一事实源红线）；放宽永远须人确认（对齐 enforcement-policy「只收紧不放宽」先例＋防谄媚：只消费决议统计，不消费任何文本反馈）。
 - 挂载：executioncontract 域 controller 增端点（无新补丁——该域路由已挂载）。
 
 ### P5 机制级监督（证据链＋偏差复利监控）
@@ -66,7 +66,7 @@
 | D4 | 预演 fail-open 回静态表、critical 跳过预演 | 论文 4.6.2「反思消耗延迟与时机门冲突」；预演不可靠时污染仲裁门比没有预演更糟；critical 必达不等慢通道 | 预演失败则抑制投递（否决：把新增故障面引入既有必达路径） | 是 |
 | D5 | standing agenda 落 custom 层，恢复建议走 interventions 治理链 | 恢复动作经治理者四门+两轴裁决＝恢复即一次受治理的干预；不自建旁路绕过已建立的仲裁面；避免 B 类补丁 773 的重放回归面 | vendor kanban 卡级 standing 语义补丁（否决：本轮价值在闭环语义不在存储位置；卡级挂账后续批） | 是 |
 | D6 | resumeCondition 复用 AutomationSourceFilter | 四源事件语义已在 automations 域单一事实源化，matcher 直接消费 AutomationEvent；再造过滤器词表=双口径 | 新事件 DSL（否决：表达力冗余且无消费者） | 是 |
-| D7 | earned autonomy 默认只建议，收紧 opt-in 自动、放宽永须人确认 | D7 首轮精神（控制感）+论文警告信任是观察量非优化目标；「收紧自动」对齐 enforce-gate 只收紧先例 | 双向自动调挡（否决：放宽自动化=把权限升级交给被评估者自己） | 是 |
+| D7 | earned autonomy advisory-only 只建议不动档（auto-tighten 写档挂账） | 首轮 D7 精神（控制感）+论文警告信任是观察量非优化目标；四挡→PermissionMode 反向映射缺失，自造即双口径（实现级修正：spec 初稿的 opt-in 自动收紧降为挂账） | 双向自动调挡（否决：放宽自动化=把权限升级交给被评估者自己） | 是 |
 | D8 | 冷启动阈值 sampleSize<20 不出建议 | 论文「在大规模运行记录上证明可靠性后才扩大授权」；小样本建议=噪声放大 | 无阈值（否决：3 条记录就能建议改挡，统计上不成立） | 是 |
 | D9 | 偏差复利用 scorecard 机制层读数呈现而非独立告警域 | 论文定位是「监控面」不是新门；obsalerts 是环境基线漂移域，语义不同（推理偏差≠指标漂移） | 新建 bias-alerts 域（否决：机制预算不允许只加不减） | 是 |
 | D10 | P2 的 SUGGESTION_PROFILE 降级为 fallback＝机制预算配对项 | 「新增门/账本须配对删除或降级」；静态表仍承担 fail-open 职责不是死代码 | 删除静态表（否决：fail-open 路径需要它） | 是 |
@@ -74,18 +74,15 @@
 ## 验证
 
 - 目标测试（每 P 落地即跑）：`npx vitest run custom/server/eval custom/server/proactivity custom/server/standingagenda custom/server/executioncontract`
-- P1：指纹兼容锁定测试（老集合无 discovery 字段 hash 逐字节不变）＋discovery 校验分支＋判分四指标（precision/recall/正确沉默/验证负担）＋无锚点判 unsupported。
-- P2：预演纯函数（mock LLM 两分支）＋fail-open 路径＋delta 融合权重＋critical 跳过＋开关关闭回静态表。
-- P3：matcher 四源匹配（file 通配/kanban 列迁移/git ref/webhook eventType）＋恢复建议走 interventions 落账＋stale 目标附重对齐。
-- P4：track record 聚合（含 ledger 缺席 fail-soft null）＋建议矩阵（冷启动 hold/高拒绝收紧/大样本零拒绝放宽）＋auto-tighten 开关。
-- P5：evidenceChain 落账回读＋compoundingBias 信号计数＋坏档隔离。
-- 全量 `npm test`＋`npm run typecheck:harness`；simharness 探测组扩展跑 `simharness/tests` 相关面。
+- 实测（2026-11-14 worktree proactive-ai-r2）：P1 `discovery-score.test.ts` 14/14（指纹逐字节兼容锁定/四指标矩阵/校验分支/账本坏行隔离）；P2 域 83/83（预演纯函数/融合权重/fail-open/开关/批量上限/熔断不外抛）；P3 `standingagenda.test.ts` 10/10（四源匹配矩阵/REST 真 HTTP：立案→match 走治理链落 interventions→状态流转非法 400）；P4 `earned-autonomy.test.ts` 9/9（聚合分布/建议矩阵/REST advisory-only 契约）；P5 域 85/85（偏差复利信号两例）。
+- 实现级修正记录：P1 discovery run 走独立 DiscoveryRun JSONL 账（`POST|GET /runs/discovery`），不写 EvalRun 主账——task 回放判分 schema（attempts/aggregates 按任务键控）双形态塞入会互相污染；GET 路由注册在 `/runs/:id` 之前（compare 先例，防参数路径吞掉）。
+- 全量 `npm test`＋`npm run typecheck:harness`＋clean inject 全链重放（补丁 773/774 重放验证）；mechanism-budget lint 0 problem；gen-doc-indexes --check 0 problem。
 
 ## 设计文档影响
 
 DESIGN_SYNC: touched
 
-- `docs/superpowers/specs/2026-10-23-swarmstudio-integrated-design.md`：§5.8 proactivity 域描述增 anticipation 预演面与 standing agenda 域引用；§5.x eval 域增 discovery 形态一句；executioncontract 域增 earned-autonomy 建议器一句。
-- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：§A 增稳定参数行（discovery 四判据阈值、预演开关与单 sync 上限、恢复建议走治理链、earned autonomy 冷启动阈值与方向限制）。
-- `config/mechanism-budget.json`：登记 standing-agenda 域与 earned-autonomy 建议器（sunset：owner=本轮批、reviewBy=下两轮推演、retireWhen=多轮推演无消费即退役）；配对降级=P2 SUGGESTION_PROFILE 主路径降级（D10）。
-- `docs/superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md`：登记本 spec 与调研报告。
+- `docs/DESIGN.md`（整合正本，旧址 spec 已是指针）：主动性治理段增二轮吸收增量——反事实预演双通道与 fail-open、standing agenda 立案三件套与恢复走治理链、earned autonomy track record 建议器阈值语义、发现测试四判据与证据链/偏差复利信号。
+- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：§A 稳定参数增四行（反事实预演预算、earned autonomy 建议阈值、发现测试判据、偏差复利信号阈值）。
+- `config/mechanism-budget.json`：登记本轮（+2 patches 773/774、+standingagenda 域、+earned-autonomy 建议器；sunset=连续两轮推演零消费即退役）；配对降级=P2 SUGGESTION_PROFILE 主路径降级（D10）。
+- `docs/manuals/aistudio-design-document-index.md`：`gen-doc-indexes --write` 机械登记（附录 A 已于 2026-11-12 冻结，新增只进机械索引）——675→676，check 0 problem。
