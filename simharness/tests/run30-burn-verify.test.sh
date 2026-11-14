@@ -101,4 +101,11 @@ grep -q '_nudges == 10' "$SUP" && ok "⑥10 次升级语义保留" || bad "⑥�
 grep -q '累计 \${_wd}s' "$SUP" && ok "⑥升级记单累计秒数（修 _nudges×_NG 失真）" || bad "⑥记单时间式旧"
 if grep -q '(_wd - _WM) % _NG == 0' "$SUP"; then bad "⑥旧固定间隔判定残留"; else ok "⑥旧固定间隔判定清除"; fi
 
+
+# ── ⑦run30 复盘 rootfix 断言（2026-11-14：merge-conflict 警告统一＋概设预写阈值）──
+DRV="$HERE/aipay-scenario.sh"
+W=$(grep -c "add/add 冲突实锤" "$DRV"); [ "$W" -ge 4 ] && ok "⑦testlog 冲突警告 4/4 任务书覆盖（$W 处）" || bad "⑦警告覆盖=$W <4"
+grep -q "_pw_n >= 1" "$DRV" && ok "⑦概设预写阈值=首份入库（>=1）" || bad "⑦阈值未改"
+grep -q "_pw_n >= 2" "$DRV" && bad "⑦旧阈值残留" || ok "⑦旧阈值清除"
+
 [ "$fails" = 0 ] && echo "ALL-PASS" || { echo "HAS-FAIL"; exit 1; }
