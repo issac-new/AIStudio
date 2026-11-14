@@ -235,6 +235,9 @@ while true; do
     # 300s 即首催，此后每 300s 幂等再催（连续 10 次无响应升级记单人工介入信号，
     # 防无限轰炸）；指纹轮询 120s 不变（发现≤240s、动作≤300s 满足总时限）。
     _WM="${MX_BREAKER_WAIT_MAX:-300}"; _NG="${MX_BREAKER_NUDGE_EVERY:-300}"
+    # 指数退避状态（run30 实录根治：固定 300s 对冷态/深睡 agent 是纯轰炸——G2 环
+    # 14 次 70min 零响应）：间隔 _NG→2×→4× 封顶 1800s；首催准点，此后对无响应降频。
+    _nudge_next=$_WM; _nudge_gap=$_NG; _nudges=0
     while true; do
       [[ -f "$STOPFLAG" ]] && { note "stop 文件在位（证据等待中），监督器退出"; rm -f "$STOPFLAG"; exit 0; }
       grep -q '^report_done=' "$STATE" 2>/dev/null && { note "report_done 已落键，监督器功成身退"; exit 0; }
@@ -257,22 +260,25 @@ while true; do
           declare -F dependency_watch_once >/dev/null 2>&1 && dependency_watch_once
         ' >> "$LOGS/$RUN_ID-driver.log" 2>&1
       ) || true
-      # 超时催办：每 _NG 一次催办令（群内点名 owner 补评审卡）；连续 10 次无响应
-      # 升级记单（人工介入信号）——防无限轰炸，但永不放弃（用户 2026-10-14：禁死等）
-      if (( _wd >= _WM && (_wd - _WM) % _NG == 0 )); then
-        _nudges=$(( (_wd - _WM) / _NG + 1 ))
+      # 超时催办（指数退避，run30 实录根治）：首催仍准点（用户 300s 时限保留）；
+      # 此后对无响应自动降频——冷态 agent 的无效轰炸减 75%+。连续 10 次无响应升级
+      # 记单（人工介入信号）——语义不变（用户 2026-10-14：禁死等→催办永不放弃）。
+      if (( _wd >= _nudge_next )); then
+        _nudges=$(( _nudges + 1 ))
         _iss_path="$SIM_ROOT/runs/$RUN_ID/evidence/issues.log"
-        _nud="ISSUE|breaker-wait-nudge|supervisor|G5 熔断证据等待 ${_wd}s 指纹不变——已自动催办评审卡 owner 第 ${_nudges} 次（run19 根治+用户 300s 时限收紧）"
+        _nud="ISSUE|breaker-wait-nudge|supervisor|G5 熔断证据等待 ${_wd}s 指纹不变——已自动催办评审卡 owner 第 ${_nudges} 次（run19 根治+退避间隔 ${_nudge_gap}s）"
         grep -qF "breaker-wait-nudge" "$_iss_path" 2>/dev/null || echo "$_nud" >> "$_iss_path"
         if (( _nudges == 10 )); then
           # run19 复盘根治（裁决请求通道空转）：升级时扫分析群近 30 分钟「请导演裁决/报导演」
           # 未应答形态计数附入记单（run19 实锤：chen 10:45 裁决请求在熔断等待期无人应答 32 分钟）
           _vr_cnt=$(grep -c '裁决' "$SIM_ROOT/runs/$RUN_ID/evidence/scenario.log" 2>/dev/null || echo 0)
-          echo "ISSUE|breaker-wait-escalated|supervisor|催办 10 次（$((_nudges * _NG))s）仍无证据变化——agent 补齐链疑似停摆，请人工介入（GATE_BREAKER_OVERRIDE 复议或查 agent 会话）；附：本轮日志内裁决请求信号 ${_vr_cnt} 处（含向导演请求未应答形态，须人工复核）" >> "$_iss_path"
-          note "⚠ 催办 10 次无响应——已升级记单（人工介入信号+裁决请求信号 ${_vr_cnt} 处），继续每 ${_NG}s 催办不弃守"
+          echo "ISSUE|breaker-wait-escalated|supervisor|催办 10 次（累计 ${_wd}s）仍无证据变化——agent 补齐链疑似停摆，请人工介入（GATE_BREAKER_OVERRIDE 复议或查 agent 会话）；附：本轮日志内裁决请求信号 ${_vr_cnt} 处（含向导演请求未应答形态，须人工复核）" >> "$_iss_path"
+          note "⚠ 催办 10 次无响应——已升级记单（人工介入信号+裁决请求信号 ${_vr_cnt} 处），退避催办不弃守"
         fi
         _br_nudge_g5 "${_wd}"
-        note "熔断等待 ${_wd}s 无证据变化——第 ${_nudges} 次催办评审卡 owner（每 ${_NG}s，用户 300s 时限）"
+        note "熔断等待 ${_wd}s 无证据变化——第 ${_nudges} 次催办评审卡 owner（退避 ${_nudge_gap}s，下次 +${_nudge_gap}s）"
+        _nudge_gap=$(( _nudge_gap * 2 )); (( _nudge_gap > 1800 )) && _nudge_gap=1800
+        _nudge_next=$(( _wd + _nudge_gap ))
       fi
     done
     continue

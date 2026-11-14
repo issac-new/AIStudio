@@ -91,4 +91,14 @@ grep -q "多重失败先修复再烧" "$MR" && ok "⑤多重失败不豁免" || 
 grep -q "verify-latest WAIVED" "$MR" && ok "⑤verify-latest 认豁免（第三态输出）" || bad "⑤第三态输出缺"
 python3 -I -m py_compile "$MR" && ok "⑤py_compile mx-mechanism-receipt.py" || bad "⑤receipt 工具语法错"
 
+
+# ── ⑥熔断催办指数退避（2026-11-14 run30 慢点根治：固定 300s 对冷态 agent 纯轰炸）──
+SUP="$HERE/mux/run-driver-supervisor.sh"
+grep -q '_nudge_next=$_WM; _nudge_gap=$_NG; _nudges=0' "$SUP" && ok "⑥退避状态初始化在位（首催准点）" || bad "⑥退避状态缺"
+grep -q '_nudge_gap=\$(( _nudge_gap \* 2 ))' "$SUP" && ok "⑥间隔翻倍在位" || bad "⑥翻倍缺"
+grep -q '_nudge_gap > 1800' "$SUP" && ok "⑥1800s 封顶在位" || bad "⑥封顶缺"
+grep -q '_nudges == 10' "$SUP" && ok "⑥10 次升级语义保留" || bad "⑥升级语义漂移"
+grep -q '累计 \${_wd}s' "$SUP" && ok "⑥升级记单累计秒数（修 _nudges×_NG 失真）" || bad "⑥记单时间式旧"
+if grep -q '(_wd - _WM) % _NG == 0' "$SUP"; then bad "⑥旧固定间隔判定残留"; else ok "⑥旧固定间隔判定清除"; fi
+
 [ "$fails" = 0 ] && echo "ALL-PASS" || { echo "HAS-FAIL"; exit 1; }
