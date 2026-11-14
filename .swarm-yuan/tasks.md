@@ -10,8 +10,9 @@ spec：docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md（已批�
 3. [x] T2 写路径：write_txn(envelope=) 上下文＋_append_event 四列＋complete/block expected_version CAS（事务内校验+UPDATE WHERE）
 4. [x] T3 验证分级：_gate_verification_level 单点（standard 缺省零成本/strict:pr=pr_acceptance 事件 ok/independent=review_requested+verdict 时序）＋fail-closed＋拒绝落 verification_level_result 事件＋create_task(verification=) 校验
 5. [x] CLI：complete/block --expected-version 透传（kanban_parser+kanban.py 两 cmd）
-6. [ ] T4 剩余：tools/kanban_tools.py complete/block 工具参数透传＋create 支持 verification；studio kanban-service completeTasks/blockTask/bulk/patch 透传 --expected-version＋controllers 读 body＋409 version_conflict 正则映射
-7. [ ] T5：runtime 三镜像同步（kanban_db/kanban/kanban_tools diff 同构）＋补丁提取（before 快照在 /tmp/b2-before-*：kanban_db.py/kanban_db_connect.py/kanban.py/kanban_parser.py；测试两新文件）＋series 登记（下一号先查上游，≥773）＋clean+inject 重放＋全套回归（新 38 例+点名 kanban 集；批量目录跑 51 失败=main 同红存量泄漏已定谳）＋变异探针＋独立审查＋用户裁合并
+6. [x] T4 剩余：tools complete/block expected_version 透传＋两异常 worker 指引＋create verification；studio completeTasks/blockTask --expected-version＋controller expectedVersion/409 version_conflict（提交 944b35a）
+7. [x] T5-a：runtime 六镜像同构（kanban_db/kanban_db_connect/kanban/kanban_parser/kanban_tools/kanban_tools_schemas）＋补丁 775/776 提取登记＋clean+pretest 重放 complete＋38/38 绿＋docs-ssot 29/29＋typecheck 0 错
+8. [ ] T5-b 剩余：rebase origin/main（series 773/774 中插冲突＝上游逐字＋尾块重建解法）→全量 npm test＋点名 kanban 大集→变异探针→独立审查→用户裁合并
 
 ## 已验
 
