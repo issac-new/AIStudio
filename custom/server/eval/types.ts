@@ -215,6 +215,43 @@ export interface EvalClarification {
   frozenAt: number
 }
 
+/**
+ * 发现测试规格（2026-11-14 Proactive AI 二轮 P1）：discovery 形态集的判分参照。
+ * 论文 §6.1.5：不预选 issue，评「agent 是否自行发现值得做的工作」＋正确沉默。
+ */
+export interface ExpectedFinding {
+  id: string
+  /** 期望发现的问题描述（判 recall：agent 发现命中其一即计）。 */
+  description: string
+  /** 证据锚点提示（判 precision 辅助；file:line / url / command-output / event）。 */
+  evidenceHint?: string
+}
+
+/** 已解决问题集：考「正确沉默」——agent 重复报告这些＝行动偏差（FixedBench 实证）。 */
+export interface ResolvedConcern {
+  id: string
+  description: string
+  resolvedAt?: number
+}
+
+export interface DiscoverySpec {
+  /** 工作域＋委托目标（agent 被放入的场景与长期目标语句）。 */
+  scenario: string
+  /** 期望发现清单；空/缺省＝开放域（只判 precision 不判 recall）。 */
+  expectedFindings?: ExpectedFinding[]
+  /** 已解决问题集；命中重复报告计入行动偏差惩罚。 */
+  resolvedConcerns?: ResolvedConcern[]
+  /** 发现条数上限（人工验证负担代理；超出计入 verificationBurden）。 */
+  maxFindings?: number
+}
+
+/** discovery 形态运行提交的单条发现：无 evidenceRefs 直接判 unsupported（红线：结论无锚点不成立）。 */
+export interface DiscoveryFinding {
+  description: string
+  evidenceRefs: string[]
+  severity?: string
+}
+
 export interface EvalTask {
   id: string
   problem: string
@@ -255,6 +292,14 @@ export interface EvalSet {
   createdBy?: string
   tasks: EvalTask[]
   /**
+   * 集形态（2026-11-14 Proactive AI 二轮 P1）：缺省/`task`＝显式任务回放判分；
+   * `discovery`＝发现测试——无显式任务（tasks 允许空数组），判分走 discovery-score
+   * （发现精度/召回/正确沉默/验证负担四指标），存档走独立 DiscoveryRun 账。
+   */
+  kind?: 'task' | 'discovery'
+  /** discovery 形态必填（校验在建集口分支执行）。 */
+  discovery?: DiscoverySpec
+  /**
    * 是否要求先通过 F2P/P2P 校准才能正式运行（2026-10-30 HelixHarness 吸收轮）。
    * 缺省 false：存量集向后兼容；新建/改版后要收紧的集置 true。
    */
@@ -274,8 +319,8 @@ export interface EvalSet {
   golden?: boolean
   /**
    * 集级澄清事实（2026-10-30）：随 run 起跑冻结进 EvalRun.clarifications。
-   * 注意：contentFingerprint 只覆盖 tasks（向后兼容，改此字段不改变 setHash）；
-   * 校准侧用 clarificationsHash 单独判失效。
+   * 注意：contentFingerprint 覆盖 tasks＋discovery（2026-11-14 P1 起；改此字段不改变 setHash）；
+   * clarifications 不进指纹，校准侧用 clarificationsHash 单独判失效。
    */
   clarifications?: EvalClarification[]
 }
