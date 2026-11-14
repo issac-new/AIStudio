@@ -138,6 +138,23 @@ results.push(await probe('proactivity', '负例：反馈未知干预必须 400�
   return { status: 400 }
 }))
 
+// ── 组 1（续）：发现测试面（Proactive AI 二轮 P1，2026-11-14）─────────
+results.push(await probe('proactivity', '发现测试运行账可读（discovery 形态独立账 fail-soft）', async () => {
+  const r = await call('GET', '/api/hermes/eval/runs/discovery')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!==true')
+  expect(Array.isArray(r.body?.runs), 'runs 须为数组（空账本合法）')
+  return { runs: r.body.runs.length, badLines: r.body.badLines ?? 0 }
+}))
+
+results.push(await probe('proactivity', '负例：discovery 判分缺 findings 400／不存在集 404（不静默造记录）', async () => {
+  const bad1 = await call('POST', '/api/hermes/eval/runs/discovery', { setId: 'eset-anything' })
+  expect(bad1.status === 400, `缺 findings 须 400, got ${bad1.status}`)
+  const bad2 = await call('POST', '/api/hermes/eval/runs/discovery', { setId: 'eset-nonexistent', findings: [] })
+  expect(bad2.status === 404, `不存在集须 404, got ${bad2.status}`)
+  return { missingFindings: 400, unknownSet: 404 }
+}))
+
 // ── 组 2：交接质量账本 ─────────────────────────────────────────
 results.push(await probe('handoff', '质量读数可读（episodes/交付率口径在场）', async () => {
   const r = await call('GET', '/api/harness/handoff/quality?windowHours=24&stallHours=6')

@@ -77,6 +77,7 @@
 - 实测（2026-11-14 worktree proactive-ai-r2）：P1 `discovery-score.test.ts` 14/14（指纹逐字节兼容锁定/四指标矩阵/校验分支/账本坏行隔离）；P2 域 83/83（预演纯函数/融合权重/fail-open/开关/批量上限/熔断不外抛）；P3 `standingagenda.test.ts` 10/10（四源匹配矩阵/REST 真 HTTP：立案→match 走治理链落 interventions→状态流转非法 400）；P4 `earned-autonomy.test.ts` 9/9（聚合分布/建议矩阵/REST advisory-only 契约）；P5 域 85/85（偏差复利信号两例）。
 - 实现级修正记录：P1 discovery run 走独立 DiscoveryRun JSONL 账（`POST|GET /runs/discovery`），不写 EvalRun 主账——task 回放判分 schema（attempts/aggregates 按任务键控）双形态塞入会互相污染；GET 路由注册在 `/runs/:id` 之前（compare 先例，防参数路径吞掉）。
 - 全量 `npm test`＋`npm run typecheck:harness`＋clean inject 全链重放（补丁 773/774 重放验证）；mechanism-budget lint 0 problem；gen-doc-indexes --check 0 problem。
+- 接线补落批（同日，fix/probe-discovery-wiring）：simharness 探测组接线实落——`mx-capability-probes.mjs` 组 1 增 discovery 两探测（运行账可读正例＋缺 findings 400/不存在集 404 双负例），守门夹具挂 `evalRoutes`＋`EVAL_STORE`/`HERMES_DISCOVERY_RUN_DIR` 隔离临时目录；`capability-probes.test.ts` 2/2 绿（首合批此项仅由 eval 域真 HTTP 测试承载，探测面本批补齐——三方一致收口）。
 
 ## 设计文档影响
 
