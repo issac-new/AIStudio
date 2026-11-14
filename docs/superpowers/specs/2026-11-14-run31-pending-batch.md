@@ -4,7 +4,7 @@
 
 | # | 项 | 锚点 | 根因层 | 验收判据 | 状态 |
 |---|---|---|---|---|---|
-| N31-1 | frame 缺帧×2 人工复核（mp_runtime_proof/report_view） | issues.log `frame-content-mismatch`（观察桶·纪律 28） | 采集链特定面（18b 依赖微信工具；report_view 帧位） | 逐帧定谳（实拍/不可拍/重构步）+DISP 回写带锚 | open |
+| N31-1 | frame 缺帧×2 定谳 ✅ | issues.log `frame-content-mismatch` | ①report_view=时序竞态假缺帧（终态 capture_ok=1＋r18 在册，issue 为审计先行轮误记——run31 不改，环窗缝固有）②mp_runtime_proof=上游缺件连锁（DEV-MP runtime-proof 未交付，fail-closed 正确——随 G-d 治愈） | 定谳双引用本行＋DISP 建议观察归桶 | 已定谳 |
 | N31-2 | report open 项族处置（step_issue_rows 十步 57 行：uat-ac-failed/eval-gate-gap/g5-humangate-proxy 等） | `evidence/report-truth-findings.json` | report 审计多轮收束后的终态问题单 | 三类处置（已修带锚/结构挂账/环境态定性）双引用落仓 | open |
 | N31-3 | merge-conflict S/N DISP 延后桶回写 | issues.log `DISP|merge-conflict`（结构性缺陷·纪律 28/46） | 任务书 add/add 警告缺失（本批已补——run31 验证） | 警告 4/4 生效+run31 该型归零或带锚说明 | 已根治待验证 |
 | N31-4 | 重烧 mx-burn-test 拿新收据 | 机制 digest 已变（退避批+本批） | ㉛ 门 digest 绑定 | verify-latest pass（WAIVED 收据不认跨 digest） | open |
