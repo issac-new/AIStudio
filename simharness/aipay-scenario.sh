@@ -139,7 +139,7 @@ if [[ -z "$(sget capture_preflight_ok)" ]]; then
   else
     mv "$EVID_DIR"/screenshots/steps/capture-precheck-op1-*.png "$EVID_DIR/screenshots/" 2>/dev/null || true
     echo "ISSUE|capture-preflight-failed|director|采集链开跑预检失败（r18-frames 试拍 rc≠0：playwright 依赖或浏览器链路坏——run14 全补拍事故的同族根因）" >> "$EVID_DIR/issues.log"
-    note "[FAIL] 采集链开跑预检失败——实时帧链路不可用，拒绝带病开跑（修复指引：simharness npm install（playwright 已在 devDependencies）；浏览器 channel 检查）"
+    note "[FAIL] 采集链开跑预检失败——实时帧链路不可用，拒绝带病开跑（修复指引按序排查：①docker/synapse（8008）②studio 8802 ③gateway 8801 ④simharness npm install（playwright）⑤浏览器 channel——2026-11-14 夜实录：三连败真因是 docker daemon 停→synapse 断，提示语旧版只指 npm 误导修复方向）"
     if [[ -n "$(sget capture_preflight_failed)" ]]; then
       note "[FAIL] 采集链预检两连败——正常退出停跑（监督器自愈环不空转），人工修复后手动重跑"
       exit 0

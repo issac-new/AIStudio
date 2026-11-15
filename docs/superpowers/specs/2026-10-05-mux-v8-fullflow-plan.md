@@ -2985,5 +2985,18 @@ run29（20261111-v8-run29，27h20m 六闸全过，审计零 FAIL/46 WARN）值�
 5. **交付物真值取代豁免**：/archive/ 归档件不计跨轮冒充；同目录存在本轮声明件=旧档被取代不计罪（无取代者维持硬判）。
 6. **热部署纪律**（run29 实操记录）：product-dist 供给在 mx-setup 不在 mx-up；mx-up「studio 已在跑跳过」不重载新 bundle——热换链=build:full→mx-setup→kill 8802→mx-up；mx-up etime 前导零八进制陷阱（10# 修复）曾致供给段静默炸断。
 7. **审计收敛纪律（一次处置完再复扫）**：审计 FAIL 后先读 `evidence/report-audit-findings.json` 全量清单（驱动同步生成 `evidence/audit-fix-checklist.md` 分族清单），把当前全部缺口按族一次处置完（补登记/真值更正/降级），再触发复扫；禁止「修一类→复扫→看下一类」的逐族推进。run29 实测 24 轮 FAIL／4.18 小时，其中约 6 轮源于凭证族名写错（审计只认 `r18-collection-missing`/`frame-capture-failed`）、约 10 轮卡在推送被拒（中央裸仓内嵌 worktree 占持 main）。验收判据：下一轮审计 FAIL 轮次 ≤3。
-8. **director 派发模式处置（折中）**：默认 preset 派发；director 仅用于标定轮（显式设 `MX_DISPATCH_MODE=director`）。开启时必带两条：①派发正文含「无派发容量请回 `DIRECTOR-DEGRADED reason=<原因>`」的声明式降级通道（双信号等待，声明即降级不空等）；②`evidence/director-metrics.jsonl` 逐次留档（outcome=success/degraded、reason=ok/declared/timeout/send-failed、耗时）。run29 实测 51 次派发仅 5 次走通（9.8%），无指标时只能事后翻台账。
+8. **director 派发模式处置（折中）**：默认 preset 派发；director 仅用于标定轮（显式设 `MX_DISPATCH_MODE=director`）。开启时必带两条：①派发正文含「无派发容量请回 `DIRECTOR-DEGRADED reason=<原因>`」的声明式降级通道（双信号等待，声明即降级不空等）；②`evidence/director-metrics.jsonl` 逐次留档（outcome=success/degraded、reason=ok/declared/timeout/send-failed、耗时）。run29 实测 51 次派发仅 5 次走通（9.8%），无指标时只能事后翻台账。【run30 标定定案见 §5.14 第 6 条：success 5.9% 全落日间，D1 修正=默认 preset＋仅日间标定】
 9. **确定性失败二段式**：监督器判「连续 N 次同指纹失败」时，第 1 次自动重挂（60 秒退避＋计数重置＋`evidence/alerts.jsonl` 告警＋issues 记 `driver-deterministic-stage1`），第 2 次才停止自愈（`driver-deterministic-fail`）。run29 实测直接退出 5 次，每次停在「等人工重挂」——无人值守即永久停滞。
+
+### 5.14 run30 复盘条款（2026-11-15 立；run31 起生效）
+
+run30（20261113-v8-run30，21h08m，A2 二段式停机收官；六闸 delivery 链全绿）暴露的工装与流程缺口，根治批随批（main 6a5a4deb4/3905e2645/66a3213d2/08a301e65/16e0306f9）：
+
+1. **凭证核验三分支判定**：交付凭证「文件在 commit」的核验用精确路径 ls-tree（命中=非空输出/真缺席=空输出 rc0/通道错=fatal——三分支语义唯一干净；实测通配 pathspec 不跨目录、:(glob) 不受支持、cat-file 缺席也 fatal 不可分流）。git 调用 stderr 一律留证（截 200 字符进 note）；同 sha 连续 ≥5 次缺席启用双通道交叉（全树宽匹配作第二意见），矛盾＝「核验通道异常」记单暂停虚报判词（执法器故障不定罪 agent 也不虚放）；回灌文案动态携带真实失败形态（含通道异常时给 BLOCKED+自证出口）。
+2. **烧机收据第三态 burn-waived**：`mx-mechanism-receipt.py waive`——fail 收据且 reasons 含 `fail_lines=1`+`goal_step_not_reached`（单点外部归因代理判据）＋reason 必填留档→写 `burn-waivers.jsonl`（24h TTL 自动失效）；verify-latest 认新鲜豁免转 WAIVED。外部通道故障不再阻塞开跑（run30 实录 6h 阻塞）；从未烧机/多重失败均不豁免（fail-closed）。
+3. **熔断催办指数退避**：间隔 `_NG→2×→4×` 封顶 1800s，首催准点（300s 时限保留）；10 次升级记单语义不变。run30 实录固定 300s 对冷态/深睡 agent 是纯轰炸（G2 环 14 次 70min 零响应）。
+4. **起跑时间学（G-d）**：起跑窗 09:00-11:00——全程落日间活跃段；G2/尾段（第 8-14h）避开 00:00-07:00 凌晨深睡窗（run30 实录凌晨段 agent 群体零交付 3h、在线工位=1）。守夜不再靠机制硬扛，靠起跑窗根本不落夜。
+5. **交付任务书统一件**：①testlog add/add 冲突警告四家任务书（C/S/N/MP）全覆盖（与 CHWX 族模板同句式；警告位不得拆「结论行 DEV-DONE-X。${ACP_NOTE:-}」断言锚）；②概设预写触发阈值=首份系分入库即派骨架（原次份 3600s 常未达回退集中，run30 概设段 3h22m 实录）。
+6. **A1 标定定案（D1 修正）**：director 通道 51 笔 success 3（5.9%）且全落日间、深夜 100% 失败（timeout/send-failed 混合）——**director 默认 preset 常态化，标定轮仅在日间活跃窗开**（§5.13 第 8 条折中方案的实测修正）；标定数据按 director-metrics.jsonl 留档口径不变。
+7. **指标留档收官门**：O1 留档（run-metrics.jsonl 追加）仅 `report_done` 在位的收官轮写——预检重放未收官轮不再产假投影行（run30 开跑轮「④自污染」结构性根治）。
+8. **采集预检排查序**：预检 FAIL 提示按序指路 docker/synapse(8008)→studio(8802)→gateway(8801)→npm(playwright)→channel——2026-11-14 夜三连败真因是 docker daemon 停→synapse 断，旧提示只指 npm 误导修复方向。

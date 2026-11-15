@@ -108,4 +108,15 @@ W=$(grep -c "add/add 冲突实锤" "$DRV"); [ "$W" -ge 4 ] && ok "⑦testlog 冲
 grep -q "_pw_n >= 1" "$DRV" && ok "⑦概设预写阈值=首份入库（>=1）" || bad "⑦阈值未改"
 grep -q "_pw_n >= 2" "$DRV" && bad "⑦旧阈值残留" || ok "⑦旧阈值清除"
 
+
+# ── ⑧方案同步＋潜在病根（2026-11-15 全面复盘二轮）──
+GEN="$HERE/mux/mx-report-gen.py"
+PLAN="$HERE/../docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md"
+grep -q "report_done 缺席）——指标留档跳过" "$GEN" && ok "⑧O1 留档收官门在位" || bad "⑧留档门缺"
+grep -q "①docker/synapse（8008）" "$HERE/aipay-scenario.sh" && ok "⑧预检提示五序排查在位" || bad "⑧提示语旧版"
+grep -q "### 5.14 run30 复盘条款" "$PLAN" && ok "⑧方案 §5.14 在正本" || bad "⑧方案缺节"
+_c514=$(sed -n '/### 5.14/,$p' "$PLAN" | grep -cE '^[0-9]+\. \*\*')
+[ "${_c514:-0}" -ge 8 ] && ok "⑧§5.14 八条齐（${_c514}）" || bad "⑧§5.14 条数=${_c514:-0}"
+grep -q "§5.14 第 6 条" "$PLAN" && ok "⑧§5.13 交叉引用在位" || bad "⑧交叉引用缺"
+
 [ "$fails" = 0 ] && echo "ALL-PASS" || { echo "HAS-FAIL"; exit 1; }
