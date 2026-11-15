@@ -804,6 +804,9 @@ class Task:
     raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
     estimate_days: Optional[float] = None    # HERMES_CUSTOM[estimate] person-days; None = unestimated
     estimate_meta: Optional[dict] = None     # estimate provenance JSON (complexity/tokens/source/...)
+    # 批二：乐观锁版本号与完成验证等级（读面——客户端据此构造 expected_version）。
+    version: int = 0
+    verification: Optional[str] = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Task:
@@ -831,6 +834,8 @@ class Task:
             estimate_meta=est_meta_value,
             goal_mode=bool(g("goal_mode")),
             block_recurrences=int(g("block_recurrences") or 0),
+            version=int(g("version") or 0),
+            verification=_row_get(row, "verification"),
         )
 
 
@@ -935,6 +940,11 @@ class Event:
     payload: Optional[dict]
     created_at: int
     run_id: Optional[int] = None
+    # 批二：迁移 envelope（time=created_at 复用；历史事件四列为 None）。
+    event_version: Optional[int] = None
+    actor: Optional[str] = None
+    reason: Optional[str] = None
+    trace_id: Optional[str] = None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Event:
@@ -943,6 +953,9 @@ class Event:
             id=row["id"], task_id=row["task_id"], kind=_lossy_text(row["kind"]),
             payload=_json_or(_lossy_text(row["payload"])), created_at=_to_epoch(row["created_at"]) or 0,
             run_id=_opt_int(run_id),
+            event_version=_opt_int(_row_get(row, "event_version")),
+            actor=_row_get(row, "actor"), reason=_row_get(row, "reason"),
+            trace_id=_row_get(row, "trace_id"),
         )
 
 
@@ -3079,8 +3092,9 @@ def _pr_acceptance_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
 
 def _review_verdict_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
     """independent 判据：走过评审闭环——存在 ``review_requested`` 且其后有
-    reviewer 判定（``changes_requested`` / ``review_verdict`` 事件即证据；
-    人工批准出 review 的 completed 走 complete_task 同门，无需另判）。"""
+    reviewer 侧活动证据：批准路径＝reviewer 在 review 态的 ``completed``、
+    驳回路径＝``changes_requested``（两者都构成"独立看过"）；``review_verdict``
+    为预留扩展位。防伪：时序必须晚于 review_requested。"""
     req = conn.execute(
         "SELECT id FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
         "ORDER BY id LIMIT 1",
@@ -3090,13 +3104,13 @@ def _review_verdict_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
         return False
     verdict = conn.execute(
         "SELECT id FROM task_events WHERE task_id = ? AND kind IN "
-        "('changes_requested', 'review_verdict') AND id > ? LIMIT 1",
+        "('changes_requested', 'review_verdict', 'completed') AND id > ? LIMIT 1",
         (task_id, req["id"]),
     ).fetchone()
     return verdict is not None
 
 
-def _gate_verification_level(conn: sqlite3.Connection, task_id: str) -> None:
+def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None) -> None:
     """complete_task 单点等级门（在既有 gates/DoD 门之后）。
 
     - NULL/standard：现状零成本路径直接过。
@@ -3112,7 +3126,10 @@ def _gate_verification_level(conn: sqlite3.Connection, task_id: str) -> None:
     detail, satisfied = None, None
     try:
         if level == "strict:pr":
-            satisfied = _pr_acceptance_satisfied(conn, task_id)
+            # 本次 complete 的 PR 检查结果优先（green 即过）；None=无 PR 契约
+            # 或检查不可用，回落库内历史事件。
+            satisfied = (bool(pr_receipt_ok) if pr_receipt_ok is not None
+                         else _pr_acceptance_satisfied(conn, task_id))
             detail = "latest pr_acceptance event receipt.ok" if satisfied else (
                 "no passing pr_acceptance event; wait for required PR checks "
                 "to go green, then complete again"
@@ -3184,8 +3201,6 @@ def complete_task(
     _gate_empty_completion(conn, task_id, result=result, summary=summary)
     # 内核完成契约门（A 层下沉）：任何完成面（工具/CLI/面板）都必须过这里。
     validated_receipt = _gate_completion_contract(conn, task_id, receipt=receipt, workspace=workspace)
-    # 批二：卡级完成验证等级门（standard 缺省=现状零成本路径；判定 fail-closed）。
-    _gate_verification_level(conn, task_id)
     if validated_receipt is not None and validated_receipt.get("ok"):
         metadata = dict(metadata or {})
         metadata["completion_receipt"] = validated_receipt
@@ -3195,7 +3210,24 @@ def complete_task(
         conn, task_id, metadata, summary=summary, result=result,
     )
     handoff_summary = summary if summary is not None else result
+    # 批二：等级满足结果随完成留痕（standard 缺省不落——零噪音）。
+    _ver_row = conn.execute("SELECT verification FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    _ver_level = (_ver_row["verification"] if _ver_row else None) or "standard"
+    if _ver_level != "standard":
+        metadata = dict(metadata or {})
+        metadata["verification_result"] = {"level": _ver_level, "satisfied": True}
     acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
+    # 批二：卡级完成验证等级门（standard 缺省=现状零成本路径；判定 fail-closed）。
+    # 门序在 prepare_acceptance 之后：strict:pr 优先用本次 PR 检查结果
+    # （acceptance.ok），无 PR 契约的卡回落库内最新 pr_acceptance 事件——
+    # 先门后查会让 strict 卡首次 complete 必拒且 acceptance 永不落库（死锁）。
+    _gate_verification_level(
+        conn, task_id,
+        # prepare 返回 (snapshot, receipt)；receipt.ok=本次 PR required checks 实测
+        pr_receipt_ok=(acceptance[1].get("ok")
+                       if isinstance(acceptance, tuple) and len(acceptance) == 2
+                       and isinstance(acceptance[1], dict) else None),
+    )
     if acceptance is False:
         return False
     # Staged copies live outside the txn: a rollback after staging must not
@@ -3716,7 +3748,8 @@ def block_task(
         cur_row = conn.execute(
             "SELECT status, block_kind, block_recurrences, version FROM tasks WHERE id = ?", (task_id,),
         ).fetchone()
-        # 批二 CAS：与 complete_task 同型——事务内校验＋UPDATE WHERE 并入。
+        # 批二 CAS：BEGIN IMMEDIATE 下事务内校验即原子（与 complete 的
+        # 校验＋WHERE 双保险行为等价——complete 高频面保留双保险，此处从简）。
         if expected_version is not None and cur_row is not None:
             if int(cur_row["version"]) != int(expected_version):
                 raise VersionConflictError(task_id, cur_row["version"], expected_version)

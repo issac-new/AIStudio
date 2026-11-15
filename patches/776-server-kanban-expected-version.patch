@@ -1,7 +1,17 @@
 diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 --- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
 +++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
-@@ -827,10 +827,13 @@
+@@ -451,6 +451,9 @@
+     // 不透明 500。完成闸拒绝是预期业务态（result/summary 缺失、前置未闭环）——
+     // 分类打标并附行动提示，控制器据此映射 422（controllers/kanban.ts 同批）。
+     const raw = String(err?.message || err || '')
++    // 批二：乐观锁拒绝优先放行——version conflict 文本可能同时含 "cannot complete"
++    // （_bulk_apply 失败前缀），先于此 422 分类冒泡给控制器映射 409。
++    if (/version conflict/i.test(raw)) throw err
+     if (/completion_blocked|cannot complete/i.test(raw)) {
+       const blocked = new Error(
+         `${errorPrefix}: ${raw}` +
+@@ -827,10 +830,13 @@
  export async function completeTasks(
    taskIds: string[],
    summary?: string,
@@ -16,7 +26,7 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
  
    if (!opts?.operatorOverride) {
      await execKanbanMutation(args, 'Hermes CLI: kanban complete failed', 'Failed to complete kanban tasks')
-@@ -868,9 +871,13 @@
+@@ -868,9 +874,13 @@
    }
  }
  
@@ -32,6 +42,32 @@ diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.t
      'Hermes CLI: kanban block failed',
      'Failed to block kanban task',
    )
+@@ -1173,6 +1183,7 @@
+ }
+ 
+ export interface KanbanTaskPatchOptions extends KanbanBoardOptions {
++  expectedVersion?: number
+   status?: string
+   assignee?: string | null
+   priority?: number
+@@ -1196,9 +1207,15 @@
+   if (patch.status) {
+     const s = patch.status
+     if (s === 'done') {
+-      await completeTasks([taskId], patch.summary, { board })
++      await completeTasks([taskId], patch.summary, {
++        board,
++        ...(patch.expectedVersion != null ? { expectedVersion: patch.expectedVersion } : {}),
++      })
+     } else if (s === 'blocked') {
+-      await blockTask(taskId, patch.block_reason || '', { board })
++      await blockTask(taskId, patch.block_reason || '', {
++        board,
++        ...(patch.expectedVersion != null ? { expectedVersion: patch.expectedVersion } : {}),
++      })
+     } else if (s === 'ready') {
+       const task = await getTask(taskId, { board })
+       if (task?.task.status === 'blocked' || task?.task.status === 'scheduled') {
 diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
 --- a/packages/server/src/modules/hermes/controllers/kanban.ts
 +++ b/packages/server/src/modules/hermes/controllers/kanban.ts
@@ -45,7 +81,7 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
    const board = requestBoard(ctx)
    if (!board) return
    try {
-@@ -607,7 +608,10 @@
+@@ -607,10 +608,19 @@
        new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready', 'blocked', 'review']),
        'complete',
      )) return
@@ -57,7 +93,44 @@ diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages
      ctx.body = { ok: true }
    } catch (err: any) {
      // HERMES_CUSTOM[aipaydev] BEGIN
-@@ -1206,6 +1210,12 @@
++    if (/version conflict/i.test(String(err?.message || ''))) {
++      // 批二：乐观锁拒绝——409 version_conflict（CLI 文本带 current/expected）。
++      ctx.status = 409
++      ctx.body = { error: String(err?.message || ''), code: 'version_conflict' }
++      return
++    }
+     if (err?.kanbanBlocked) {
+       ctx.status = 422
+       ctx.body = { error: err.message, code: 'completion_blocked',
+@@ -628,6 +638,8 @@
+   if (rejectBadRequest(ctx, bodyResult.error)) return
+   const reason = requiredNonEmptyString(bodyResult.body.reason, 'reason')
+   if (rejectBadRequest(ctx, reason.error)) return
++  const expectedVersion = optionalInteger((bodyResult.body as any).expectedVersion, 'expectedVersion')
++  if (rejectBadRequest(ctx, expectedVersion.error)) return
+   const board = requestBoard(ctx)
+   if (!board) return
+   try {
+@@ -638,9 +650,17 @@
+       new Set<kanbanCli.KanbanTaskStatus>(['running', 'ready']),
+       'block',
+     )) return
+-    await kanbanCli.blockTask(ctx.params.id, reason.value!, { board })
++    await kanbanCli.blockTask(ctx.params.id, reason.value!, {
++      board,
++      ...(expectedVersion.value != null ? { expectedVersion: expectedVersion.value } : {}),
++    })
+     ctx.body = { ok: true }
+   } catch (err: any) {
++    if (/version conflict/i.test(String(err?.message || ''))) {
++      ctx.status = 409
++      ctx.body = { error: String(err?.message || ''), code: 'version_conflict' }
++      return
++    }
+     ctx.status = 500
+     ctx.body = { error: err.message }
+   }
+@@ -1206,6 +1226,12 @@
      // 规则拒绝而非服务器错误——回 409 让前端可区分（此前一律 500：走查实录
      // triage→review 直转被状态机拒时表象为服务端故障）。
      const msg = String(err?.message || '')

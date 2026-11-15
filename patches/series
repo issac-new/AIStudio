@@ -1264,6 +1264,6 @@
 # runtime 六镜像同批同构；CLI/工具 complete/block/create 透传。
 775-agent-kanban-versioned-writes.patch
 
-# 776（2026-11-14 超级智能体吸收批二）：studio complete/block 透传
+# 776（2026-11-14 超级智能体吸收批二）：studio complete/block/patch 透传
 # --expected-version，CLI version conflict 文本映射 409 version_conflict。
 776-server-kanban-expected-version.patch

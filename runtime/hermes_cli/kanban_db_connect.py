@@ -14,6 +14,7 @@ import os
 import random
 import re
 import secrets
+import uuid
 import shutil
 import sqlite3
 import threading
@@ -1341,8 +1342,10 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False, envelope:
         return
 
     _execute_boundary_with_retry(conn, "BEGIN IMMEDIATE")
-    if envelope is not None:
-        conn._kanban_txn_envelope = dict(envelope)
+    # 批二：事务级 trace_id 恒有值——显式 envelope 优先，否则本事务 UUID。
+    _base_env = dict(envelope) if envelope is not None else {}
+    _base_env.setdefault("trace_id", str(uuid.uuid4()))
+    conn._kanban_txn_envelope = _base_env
     try:
         yield conn
     except Exception:
@@ -1350,11 +1353,10 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False, envelope:
         # don't let this secondary failure shadow the real one.
         with contextlib.suppress(sqlite3.OperationalError):
             conn.execute("ROLLBACK")
-        if envelope is not None:
-            try:
-                del conn._kanban_txn_envelope
-            except AttributeError:
-                pass
+        try:
+            del conn._kanban_txn_envelope
+        except AttributeError:
+            pass
         raise
     else:
         try:
@@ -1365,11 +1367,10 @@ def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False, envelope:
             with contextlib.suppress(sqlite3.OperationalError):
                 conn.execute("ROLLBACK")
             raise
-        if envelope is not None:
-            try:
-                del conn._kanban_txn_envelope
-            except AttributeError:
-                pass
+        try:
+            del conn._kanban_txn_envelope
+        except AttributeError:
+            pass
         # Post-commit torn-extend check — raise now rather than silently corrupt.
         _check_file_length_invariant(conn)
 

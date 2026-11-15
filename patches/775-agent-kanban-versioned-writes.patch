@@ -1,7 +1,48 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -1056,7 +1056,14 @@
+@@ -804,6 +804,9 @@
+     raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
+     estimate_days: Optional[float] = None    # HERMES_CUSTOM[estimate] person-days; None = unestimated
+     estimate_meta: Optional[dict] = None     # estimate provenance JSON (complexity/tokens/source/...)
++    # 批二：乐观锁版本号与完成验证等级（读面——客户端据此构造 expected_version）。
++    version: int = 0
++    verification: Optional[str] = None
+ 
+     @classmethod
+     def from_row(cls, row: sqlite3.Row) -> Task:
+@@ -831,6 +834,8 @@
+             estimate_meta=est_meta_value,
+             goal_mode=bool(g("goal_mode")),
+             block_recurrences=int(g("block_recurrences") or 0),
++            version=int(g("version") or 0),
++            verification=_row_get(row, "verification"),
+         )
+ 
+ 
+@@ -935,6 +940,11 @@
+     payload: Optional[dict]
+     created_at: int
+     run_id: Optional[int] = None
++    # 批二：迁移 envelope（time=created_at 复用；历史事件四列为 None）。
++    event_version: Optional[int] = None
++    actor: Optional[str] = None
++    reason: Optional[str] = None
++    trace_id: Optional[str] = None
+ 
+     @classmethod
+     def from_row(cls, row: sqlite3.Row) -> Event:
+@@ -943,6 +953,9 @@
+             id=row["id"], task_id=row["task_id"], kind=_lossy_text(row["kind"]),
+             payload=_json_or(_lossy_text(row["payload"])), created_at=_to_epoch(row["created_at"]) or 0,
+             run_id=_opt_int(run_id),
++            event_version=_opt_int(_row_get(row, "event_version")),
++            actor=_row_get(row, "actor"), reason=_row_get(row, "reason"),
++            trace_id=_row_get(row, "trace_id"),
+         )
+ 
+ 
+@@ -1056,7 +1069,14 @@
      -- 重排保守计 1 人日）；decompose 落库前已把超帽子卡钳到 1 天帽值。
      estimate_days        REAL,
      -- 估算来源 JSON（complexity/est_tokens/source 等），estimate_set 事件同源。
@@ -17,7 +58,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
  );
  
  CREATE TABLE IF NOT EXISTS task_links (
-@@ -1079,7 +1086,13 @@
+@@ -1079,7 +1099,13 @@
      run_id     INTEGER,
      kind       TEXT NOT NULL,
      payload    TEXT,
@@ -32,7 +73,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
  );
  
  -- Historical attempt record. Each time the dispatcher claims a task, a
-@@ -1351,6 +1364,7 @@
+@@ -1351,6 +1377,7 @@
      creator_task_id: Optional[str] = None,
      completion_contract: Optional[str] = None,
      raci: Optional[dict] = None,
@@ -40,7 +81,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
  ) -> str:
      """Create a task (optionally under ``parents``); returns its id.
  
-@@ -1371,6 +1385,14 @@
+@@ -1371,6 +1398,14 @@
      from hermes_cli.kanban_pr_acceptance import validate_contract
  
      completion_contract = validate_contract(completion_contract)
@@ -55,7 +96,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
      model_override, provider_override = _validate_model_override(model_override, provider_override)
      reasoning_effort = normalize_reasoning_effort(reasoning_effort)
      assignee = _canonical_assignee(assignee)
-@@ -1458,8 +1480,9 @@
+@@ -1458,8 +1493,9 @@
                          max_runtime_seconds,
                          skills, max_retries, model_override, provider_override,
                          reasoning_effort,
@@ -67,7 +108,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
                      """,
                      (
                          task_id, title.strip(), body, assignee, task_status, priority,
-@@ -1470,6 +1493,7 @@
+@@ -1470,6 +1506,7 @@
                          _opt_int(max_retries), model_override, provider_override, reasoning_effort,
                          1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
                          json.dumps(raci) if isinstance(raci, dict) else None,
@@ -75,7 +116,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
                      ),
                  )
                  if cursor.rowcount == 0:
-@@ -2093,9 +2117,20 @@
+@@ -2093,9 +2130,20 @@
      一律锚定该 id，与 task_events 既有的本地自增 id 分工不同。"""
      if collab_event_id:
          payload = {**(payload or {}), "collab_event_id": collab_event_id}
@@ -98,7 +139,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
      )
  
  
-@@ -2891,6 +2926,27 @@
+@@ -2891,6 +2939,27 @@
  
  class ArtifactPreservationError(RuntimeError):
      """Raised when a declared scratch deliverable cannot be preserved."""
@@ -126,7 +167,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
  
  
  class LiveClaimError(ValueError):
-@@ -2999,12 +3055,103 @@
+@@ -2999,12 +3068,107 @@
      return validated
  
  
@@ -154,8 +195,9 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 +
 +def _review_verdict_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
 +    """independent 判据：走过评审闭环——存在 ``review_requested`` 且其后有
-+    reviewer 判定（``changes_requested`` / ``review_verdict`` 事件即证据；
-+    人工批准出 review 的 completed 走 complete_task 同门，无需另判）。"""
++    reviewer 侧活动证据：批准路径＝reviewer 在 review 态的 ``completed``、
++    驳回路径＝``changes_requested``（两者都构成"独立看过"）；``review_verdict``
++    为预留扩展位。防伪：时序必须晚于 review_requested。"""
 +    req = conn.execute(
 +        "SELECT id FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
 +        "ORDER BY id LIMIT 1",
@@ -165,13 +207,13 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 +        return False
 +    verdict = conn.execute(
 +        "SELECT id FROM task_events WHERE task_id = ? AND kind IN "
-+        "('changes_requested', 'review_verdict') AND id > ? LIMIT 1",
++        "('changes_requested', 'review_verdict', 'completed') AND id > ? LIMIT 1",
 +        (task_id, req["id"]),
 +    ).fetchone()
 +    return verdict is not None
 +
 +
-+def _gate_verification_level(conn: sqlite3.Connection, task_id: str) -> None:
++def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None) -> None:
 +    """complete_task 单点等级门（在既有 gates/DoD 门之后）。
 +
 +    - NULL/standard：现状零成本路径直接过。
@@ -187,7 +229,10 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 +    detail, satisfied = None, None
 +    try:
 +        if level == "strict:pr":
-+            satisfied = _pr_acceptance_satisfied(conn, task_id)
++            # 本次 complete 的 PR 检查结果优先（green 即过）；None=无 PR 契约
++            # 或检查不可用，回落库内历史事件。
++            satisfied = (bool(pr_receipt_ok) if pr_receipt_ok is not None
++                         else _pr_acceptance_satisfied(conn, task_id))
 +            detail = "latest pr_acceptance event receipt.ok" if satisfied else (
 +                "no passing pr_acceptance event; wait for required PR checks "
 +                "to go green, then complete again"
@@ -230,16 +275,32 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
  ) -> bool:
      """``running|ready|blocked|review -> done``; records ``result``.
  
-@@ -3037,6 +3184,8 @@
-     _gate_empty_completion(conn, task_id, result=result, summary=summary)
-     # 内核完成契约门（A 层下沉）：任何完成面（工具/CLI/面板）都必须过这里。
-     validated_receipt = _gate_completion_contract(conn, task_id, receipt=receipt, workspace=workspace)
+@@ -3046,7 +3210,24 @@
+         conn, task_id, metadata, summary=summary, result=result,
+     )
+     handoff_summary = summary if summary is not None else result
++    # 批二：等级满足结果随完成留痕（standard 缺省不落——零噪音）。
++    _ver_row = conn.execute("SELECT verification FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    _ver_level = (_ver_row["verification"] if _ver_row else None) or "standard"
++    if _ver_level != "standard":
++        metadata = dict(metadata or {})
++        metadata["verification_result"] = {"level": _ver_level, "satisfied": True}
+     acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
 +    # 批二：卡级完成验证等级门（standard 缺省=现状零成本路径；判定 fail-closed）。
-+    _gate_verification_level(conn, task_id)
-     if validated_receipt is not None and validated_receipt.get("ok"):
-         metadata = dict(metadata or {})
-         metadata["completion_receipt"] = validated_receipt
-@@ -3062,10 +3211,16 @@
++    # 门序在 prepare_acceptance 之后：strict:pr 优先用本次 PR 检查结果
++    # （acceptance.ok），无 PR 契约的卡回落库内最新 pr_acceptance 事件——
++    # 先门后查会让 strict 卡首次 complete 必拒且 acceptance 永不落库（死锁）。
++    _gate_verification_level(
++        conn, task_id,
++        # prepare 返回 (snapshot, receipt)；receipt.ok=本次 PR required checks 实测
++        pr_receipt_ok=(acceptance[1].get("ok")
++                       if isinstance(acceptance, tuple) and len(acceptance) == 2
++                       and isinstance(acceptance[1], dict) else None),
++    )
+     if acceptance is False:
+         return False
+     # Staged copies live outside the txn: a rollback after staging must not
+@@ -3062,10 +3243,16 @@
              if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
                  return False
              trow = conn.execute(
@@ -257,7 +318,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
              # Refuse to close a LIVE worker's run without proof of ownership
              # (expected_run_id) or an explicit human override (force=True); see
              # _claim_is_live for what "live" means.
-@@ -3085,6 +3240,9 @@
+@@ -3085,6 +3272,9 @@
                         AND status IN ('running', 'ready', 'blocked', 'review')
                      """
              params: tuple = (result, now, task_id)
@@ -267,7 +328,7 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
              if expected_run_id is not None:
                  sql += " AND current_run_id = ?"
                  params = (*params, int(expected_run_id))
-@@ -3536,6 +3694,7 @@
+@@ -3536,6 +3726,7 @@
  def block_task(
      conn: sqlite3.Connection, task_id: str, *, reason: Optional[str] = None,
      kind: Optional[str] = None, expected_run_id: Optional[int] = None,
@@ -275,14 +336,15 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
  ) -> bool:
      """``running``/``ready`` -> ``blocked`` (or ``todo`` / ``triage``, see
      :func:`_route_block`). ``kind='dependency'`` with no incomplete parent is
-@@ -3555,8 +3714,12 @@
+@@ -3555,8 +3746,13 @@
          raise ValueError(f"block kind must be one of {sorted(VALID_BLOCK_KINDS)} or None")
      with write_txn(conn):
          cur_row = conn.execute(
 -            "SELECT status, block_kind, block_recurrences FROM tasks WHERE id = ?", (task_id,),
 +            "SELECT status, block_kind, block_recurrences, version FROM tasks WHERE id = ?", (task_id,),
          ).fetchone()
-+        # 批二 CAS：与 complete_task 同型——事务内校验＋UPDATE WHERE 并入。
++        # 批二 CAS：BEGIN IMMEDIATE 下事务内校验即原子（与 complete 的
++        # 校验＋WHERE 双保险行为等价——complete 高频面保留双保险，此处从简）。
 +        if expected_version is not None and cur_row is not None:
 +            if int(cur_row["version"]) != int(expected_version):
 +                raise VersionConflictError(task_id, cur_row["version"], expected_version)
@@ -292,7 +354,15 @@ diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
 diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
 --- a/hermes_cli/kanban_db_connect.py
 +++ b/hermes_cli/kanban_db_connect.py
-@@ -910,6 +910,11 @@
+@@ -14,6 +14,7 @@
+ import random
+ import re
+ import secrets
++import uuid
+ import shutil
+ import sqlite3
+ import threading
+@@ -910,6 +911,11 @@
      # NULL days = 未评估（派发重排保守计 1 人日）。
      ("estimate_days", "estimate_days REAL"),
      ("estimate_meta", "estimate_meta TEXT"),
@@ -304,7 +374,7 @@ diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
  )
  
  _NOTIFY_SUB_COLUMNS = (
-@@ -994,6 +999,29 @@
+@@ -994,6 +1000,29 @@
      # runs and can't be attributed).
      if "run_id" not in _column_names(conn, "task_events"):
          _add_column_if_missing(conn, "task_events", "run_id", "run_id INTEGER")
@@ -334,7 +404,7 @@ diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
  
      # Same ordering rule as the ``tasks`` indexes above: index after column.
      conn.execute("CREATE INDEX IF NOT EXISTS idx_events_run ON task_events(run_id, id)")
-@@ -1275,10 +1303,15 @@
+@@ -1275,9 +1304,14 @@
  
  
  @contextlib.contextmanager
@@ -342,52 +412,59 @@ diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
 +def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False, envelope: Optional[dict] = None):
      """IMMEDIATE write transaction; a claim CAS inside is atomic — at most one
      concurrent writer succeeds.
- 
++
 +    ``envelope``（批二，可选）：本次事务的迁移五要素上下文（actor/reason/trace_id；
 +    version 由触发器产出、time 由事件 created_at 承载）——事务内 ``_append_event``
 +    自动读取并入 task_events 的 envelope 列；缺省走 legacy 合成（actor=调用方
 +    兜底、reason=``legacy:<kind>``），兼容期新旧客户端可共存。
-+
+ 
      Nesting is an explicit opt-in (``allow_nested=True`` → savepoint; otherwise
      a loud ``RuntimeError``). Only composition primitives (``create_task``,
-     ``add_comment``) opt in — helpers with post-commit side effects
-@@ -1308,6 +1341,8 @@
+@@ -1308,6 +1342,10 @@
          return
  
      _execute_boundary_with_retry(conn, "BEGIN IMMEDIATE")
-+    if envelope is not None:
-+        conn._kanban_txn_envelope = dict(envelope)
++    # 批二：事务级 trace_id 恒有值——显式 envelope 优先，否则本事务 UUID。
++    _base_env = dict(envelope) if envelope is not None else {}
++    _base_env.setdefault("trace_id", str(uuid.uuid4()))
++    conn._kanban_txn_envelope = _base_env
      try:
          yield conn
      except Exception:
-@@ -1315,6 +1350,11 @@
+@@ -1315,6 +1353,10 @@
          # don't let this secondary failure shadow the real one.
          with contextlib.suppress(sqlite3.OperationalError):
              conn.execute("ROLLBACK")
-+        if envelope is not None:
-+            try:
-+                del conn._kanban_txn_envelope
-+            except AttributeError:
-+                pass
++        try:
++            del conn._kanban_txn_envelope
++        except AttributeError:
++            pass
          raise
      else:
          try:
-@@ -1325,6 +1365,11 @@
+@@ -1325,6 +1367,10 @@
              with contextlib.suppress(sqlite3.OperationalError):
                  conn.execute("ROLLBACK")
              raise
-+        if envelope is not None:
-+            try:
-+                del conn._kanban_txn_envelope
-+            except AttributeError:
-+                pass
++        try:
++            del conn._kanban_txn_envelope
++        except AttributeError:
++            pass
          # Post-commit torn-extend check — raise now rather than silently corrupt.
          _check_file_length_invariant(conn)
  
 diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
 --- a/hermes_cli/kanban.py
 +++ b/hermes_cli/kanban.py
-@@ -1136,7 +1136,8 @@
+@@ -387,6 +387,7 @@
+         task_id = kb.create_task(
+             conn, title=args.title, body=body, assignee=args.assignee,
+             created_by=args.created_by or _profile_author(),
++            verification=getattr(args, "verification", None),
+             workspace_kind=ws_kind, workspace_path=ws_path, branch_name=branch_name,
+             project_id=getattr(args, "project", None), tenant=args.tenant, priority=args.priority,
+             parents=tuple(args.parent or ()), triage=bool(getattr(args, "triage", False)),
+@@ -1136,7 +1137,8 @@
                                          expected_run_id=_worker_run_id_for(tid),
                                          force=bool(getattr(args, "force", False)),
                                          receipt=receipt,
@@ -397,7 +474,7 @@ diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
              except kb.LiveClaimError:
                  fail_msg[tid] = (f"cannot complete {tid}: a live worker is running it. Wait for the "
                                   f"worker, `hermes kanban reclaim {tid}` to release it, or re-run with "
-@@ -1220,8 +1221,10 @@
+@@ -1220,8 +1222,10 @@
                  return f"{tid} → triage (unblock loop detected — {verdict}){suffix}"
              return f"Blocked {tid}{suffix}"
  
@@ -412,7 +489,18 @@ diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
 diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
 --- a/hermes_cli/kanban_parser.py
 +++ b/hermes_cli/kanban_parser.py
-@@ -340,6 +340,9 @@
+@@ -183,6 +183,10 @@
+                   "worktree under the project's primary repo with a "
+                   "deterministic branch. See `hermes project list`."),
+         _TENANT,
++        _arg("--verification", choices=["standard", "independent", "strict:pr"],
++             help="Completion-verification level: standard (default, DoD gate only), "
++                  "independent (review handoff verdict required before done), "
++                  "strict:pr (passing pr_acceptance required before done)."),
+         _PRIORITY,
+         _arg("--triage", action="store_true",
+              help="Park in triage — a specifier will flesh out the spec and promote to todo"),
+@@ -340,6 +344,9 @@
          _arg("--force", action="store_true",
               help="Override the live-claim guard: complete a running, claimed task "
                    "even without owning its run (closes the worker's run)."),
@@ -422,7 +510,7 @@ diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
      ], help="Mark one or more tasks done"),
      _cmd("edit", [
          _TASK_ID,
-@@ -359,6 +362,9 @@
+@@ -359,6 +366,9 @@
                    "blocked for a human; 'transient' marks a maybe-flaky failure. "
                    "Repeated same-kind re-blocks after unblock route the task to "
                    "triage to break unblock loops. Omit for a generic block."),
@@ -513,24 +601,24 @@ diff --git a/tools/kanban_tools_schemas.py b/tools/kanban_tools_schemas.py
          "reason": _prop("string", (
                  "What you need answered or what stopped you, in one or "
                  "two sentences. Don't paste the whole conversation; the "
-@@ -509,6 +520,12 @@
-                 "blocks the task for human review). Use this for "
+@@ -510,6 +521,12 @@
                  "open-ended cards where one shot rarely finishes the "
                  "work. Defaults to false (classic single-shot worker)."
-+        )),
+         )),
 +        "verification": _prop("string", (
 +                "Optional completion-verification level for this card: 'standard' "
 +                "(default, existing DoD contract gate only), 'independent' (a review "
 +                "handoff verdict is required before done), or 'strict:pr' (a passing "
 +                "pr_acceptance is required before done)."
-         )),
++        )),
          "raci": {
              "type": "object",
+             "description": "Structured RACI assignment: keys responsible/approver/consulted/informed, values arrays of account names. Takes precedence over body-text RACI.",
 diff --git a/tests/hermes_cli/test_kanban_versioned_writes.py b/tests/hermes_cli/test_kanban_versioned_writes.py
 new file mode 100644
 --- /dev/null
 +++ b/tests/hermes_cli/test_kanban_versioned_writes.py
-@@ -0,0 +1,149 @@
+@@ -0,0 +1,163 @@
 +"""批二（spec 2026-11-14-superagent-contract-batch2）任务一：行级 version＋迁移 envelope。
 +
 +覆盖：幂等迁移（旧库补列）、触发器全路径递增（含裸 UPDATE/claim）、complete/block
@@ -680,11 +768,25 @@ new file mode 100644
 +        assert row["actor"] == "op:v2"
 +        assert row["reason"] == "manual"
 +        assert row["trace_id"] == "tr-1"
++
++    def test_trace_id_always_present_without_envelope(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="tr", assignee="w")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "promoted", {})
++        assert _events(conn, tid)[-1]["trace_id"]
++
++    def test_task_read_face_exposes_version_and_verification(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="rf", assignee="w", verification="strict:pr")
++        t = kb.get_task(conn, tid)
++        assert t.version == 0
++        assert t.verification == "strict:pr"
 diff --git a/tests/hermes_cli/test_kanban_verification_levels.py b/tests/hermes_cli/test_kanban_verification_levels.py
 new file mode 100644
 --- /dev/null
 +++ b/tests/hermes_cli/test_kanban_verification_levels.py
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,156 @@
 +"""批二（spec 2026-11-14-superagent-contract-batch2）任务二：完成验证分级。
 +
 +覆盖：standard 缺省即现状、strict:pr（PR acceptance 未过拒/过后放/证据留痕）、
@@ -757,6 +859,31 @@ new file mode 100644
 +        with kb.write_txn(conn):
 +            kb._append_event(conn, tid, "pr_acceptance", {"ok": True, "head": "abc123"})
 +        assert kb.complete_task(conn, tid, result="pr green") is True
++
++    def test_strict_pr_satisfied_by_fresh_receipt_not_stale_event(self, kanban_home, monkeypatch):
++        import hermes_cli.kanban_db as kdb
++        conn = _conn()
++        tid = _ready(conn, verification="strict:pr")
++        captured = {}
++        real_gate = kdb._gate_verification_level
++        def gate_spy(conn_, task_id_, *, pr_receipt_ok=None):
++            captured["pr_ok"] = pr_receipt_ok
++            real_gate(conn_, task_id_, pr_receipt_ok=pr_receipt_ok)
++        monkeypatch.setattr(kdb, "_gate_verification_level", gate_spy)
++        import hermes_cli.kanban_pr_acceptance_store as prs
++        monkeypatch.setattr(prs, "prepare_acceptance",
++            lambda conn_, tid_, rid, md: ((1, "ready", "github:o/r#1"), {"ok": True}))
++        monkeypatch.setattr(prs, "record_acceptance", lambda conn_, tid_, acc: True)
++        assert kdb.complete_task(conn, tid, result="pr green now") is True
++        assert captured["pr_ok"] is True
++
++    def test_independent_reviewer_approval_counts(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn, verification="independent")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "review_requested", {"implementer": "w", "reviewer": "r"})
++            kb._append_event(conn, tid, "completed", {"summary": "reviewer approved"})
++        assert kb.complete_task(conn, tid, result="approved path") is True
 +
 +    def test_rejection_event_carries_level_result(self, kanban_home):
 +        conn = _conn()

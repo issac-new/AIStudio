@@ -387,6 +387,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
         task_id = kb.create_task(
             conn, title=args.title, body=body, assignee=args.assignee,
             created_by=args.created_by or _profile_author(),
+            verification=getattr(args, "verification", None),
             workspace_kind=ws_kind, workspace_path=ws_path, branch_name=branch_name,
             project_id=getattr(args, "project", None), tenant=args.tenant, priority=args.priority,
             parents=tuple(args.parent or ()), triage=bool(getattr(args, "triage", False)),

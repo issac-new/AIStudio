@@ -183,6 +183,10 @@ _SPECS = [
                   "worktree under the project's primary repo with a "
                   "deterministic branch. See `hermes project list`."),
         _TENANT,
+        _arg("--verification", choices=["standard", "independent", "strict:pr"],
+             help="Completion-verification level: standard (default, DoD gate only), "
+                  "independent (review handoff verdict required before done), "
+                  "strict:pr (passing pr_acceptance required before done)."),
         _PRIORITY,
         _arg("--triage", action="store_true",
              help="Park in triage — a specifier will flesh out the spec and promote to todo"),
