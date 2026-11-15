@@ -23,7 +23,7 @@ POST /api/v1/models               租户级模型注册（幂等）。关键形�
 POST /api/v1/knowledge-bases      {name, embedding_model_id=<注册后的真实模型 id>}  ← 必须先绑嵌入，否则解析报 model ID empty
 POST /api/v1/knowledge-bases/{id}/knowledge/file    单文件上传（multipart 字段名 "file"；上限默认 50MB）
 POST /api/v1/knowledge-bases/{id}/hybrid-search     {query_text, top_k}
-POST /api/v1/sessions + /api/v1/sessions/{sid}/chat 问答（agent_enabled:false 走直答管线，带引用）
+POST /api/v1/sessions + /api/v1/knowledge-chat/{sid} 问答（stream=true SSE 增量拼接，答案带 <kb doc chunk_id> 内联引用锚点）
 ```
 
 坑：PATCH models 的 parameters 更新会静默失效——改模型配置删旧重建；新建 KB 时 embedding_model_id 必须用注册接口返回的真实 id（非自拟名字）。
