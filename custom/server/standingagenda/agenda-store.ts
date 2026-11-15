@@ -29,6 +29,12 @@ export interface StandingAgendaRecord {
   lastResumeAt?: number
   /** 溯源：立案会话（P5 意图+diff 一体的最小增量）。 */
   sessionId?: string
+  /**
+   * 卡级锚（2026-11-15 清偿挂账）：绑定看板卡 id 时，只有该卡的 kanban 事件能恢复这条议程——
+   * 跨卡的同列流转不再误触发。锚在本域存储而非 vendor kanban schema（补丁面串行约束与
+   * 单一事实源考虑，理由见 spec D2）。
+   */
+  cardId?: string
   /** 关联 goal-alignment 目标 id（可选；有则恢复建议附新鲜度检查——stale 时「先重对齐再恢复」）。 */
   goalId?: string
   note?: string
@@ -37,6 +43,8 @@ export interface StandingAgendaRecord {
 /** 恢复建议（matcher 命中后产出；投 interventions 治理链，不直接动看板）。 */
 export interface ResumeProposal {
   recordId: string
+  /** 卡级锚回显（有则深链到看板卡）。 */
+  cardId?: string
   title: string
   mandateGoal: string
   /** 命中的事件（证据锚点回填）。 */
@@ -67,7 +75,8 @@ export function validateAgendaInput(input: {
   mandateGoal?: unknown
   evidence?: unknown
   resumeCondition?: unknown
-}): { problems: string[]; value?: { title: string; mandateGoal: string; evidence: string[]; resumeCondition: AutomationSourceFilter } } {
+  cardId?: unknown
+}): { problems: string[]; value?: { title: string; mandateGoal: string; evidence: string[]; resumeCondition: AutomationSourceFilter; cardId?: string } } {
   const problems: string[] = []
   const title = typeof input.title === 'string' ? input.title.trim() : ''
   const mandateGoal = typeof input.mandateGoal === 'string' ? input.mandateGoal.trim() : ''

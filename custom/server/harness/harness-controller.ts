@@ -52,9 +52,10 @@ import { TOOL_CONTRACT_VERSION, BUILTIN_CONTRACTS } from '../toolcontract/contra
 import { buildNineLayers, collectNineLayersInputs, type NineLayersReport } from './nine-layers'
 import { PROFILE_PRESETS, presetsValid, routeTaskProfile, type TaskFacts } from '../goalbudget/task-router'
 import { handoffRoutes } from '../handoff/handoff-controller'
+import { collectLineage } from '../lineage/lineage'
 import { workbenchRoutes } from './workbench/controller'
 import { teamLibraryRoutes } from '../team-library/controller'
-import { fail , ok } from '../lib/http'
+import { fail, ok } from '../lib/http'
 // 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
 import { simLaunchRoutes } from '../simcenter/sim-launch'
 // 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
@@ -70,6 +71,21 @@ const router = new Router({ prefix: '/api/harness' })
 // 不新增 bootstrap patch。子路由自带写面权限校验（super_admin）。
 router.use('/workbench', workbenchRoutes.routes(), workbenchRoutes.allowedMethods())
 router.use('/handoff', handoffRoutes.routes(), handoffRoutes.allowedMethods())
+
+// 会话溯源（2026-11-15）：sessionId/taskId → 决策轨迹＋持久意图＋交付证据与 diff（只读聚合）。
+router.get('/lineage', (ctx) => {
+  const sessionId = typeof ctx.query.sessionId === 'string' ? ctx.query.sessionId.trim() : ''
+  const taskId = typeof ctx.query.taskId === 'string' ? ctx.query.taskId.trim() : ''
+  if (!sessionId && !taskId) {
+    fail(ctx, 400, 'sessionId 或 taskId 至少给一个', { code: 'invalid_key' })
+    return
+  }
+  try {
+    ok(ctx, { lineage: collectLineage({ ...(sessionId ? { sessionId } : {}), ...(taskId ? { taskId } : {}) }) })
+  } catch (e) {
+    fail(ctx, 400, e instanceof Error ? e.message : String(e), { code: 'lineage_failed' })
+  }
+})
 // 团队库（EvoTeam 吸收，2026-11-08）：只读库＋建议选择，不接管派单。
 router.use('/team-library', teamLibraryRoutes.routes(), teamLibraryRoutes.allowedMethods())
 // 受控 harness 推演启动（SIM_HARNESS_LAUNCH=1 + super_admin；固定脚本，不接受任意命令）

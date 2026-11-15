@@ -206,3 +206,37 @@ describe('P3 standing agenda REST（/api/hermes/standing-agenda）', () => {
     expect(records.find((x) => x.id === r.id)!.status).toBe('resumed')
   })
 })
+
+// ── 卡级 anchoring（2026-11-15 挂账清偿）：cardId 绑定后只认同卡事件 ──
+describe('卡级 standing（cardId 锚）', () => {
+  const base = {
+    title: '等卡完成后恢复重构',
+    mandateGoal: '把里程碑推到上线',
+    evidence: ['docs/plan.md:12'],
+    resumeCondition: { type: 'kanban' as const, board: 'b1', toColumn: 'done' },
+    parkedAt: Date.now(),
+    status: 'parked' as const,
+    resumeCount: 0,
+  }
+
+  it('绑定 cardId 后：同卡事件命中、邻卡同列流转不触发', () => {
+    const record = { ...base, id: 'sa-1', cardId: 'card-A' }
+    const other = { ...base, id: 'sa-2' }
+    const events = [{ type: 'kanban' as const, board: 'b1', taskId: 'card-B', from: 'doing', to: 'done' }]
+    const hitOther = matchResumes([other], events)
+    expect(hitOther).toHaveLength(1) // 未绑定卡的不受限
+    const hitAnchored = matchResumes([record], events)
+    expect(hitAnchored).toHaveLength(0) // 绑定了 card-A，card-B 不命中
+
+    const ownEvent = [{ type: 'kanban' as const, board: 'b1', taskId: 'card-A', from: 'doing', to: 'done' }]
+    const p = matchResumes([record], ownEvent)
+    expect(p).toHaveLength(1)
+    expect(p[0].cardId).toBe('card-A')
+  })
+
+  it('非 kanban 事件不受 cardId 约束（文件/钩子事件照常命中）', () => {
+    const record = { ...base, id: 'sa-3', cardId: 'card-A', resumeCondition: { type: 'git' as const, ref: 'main' } }
+    const p = matchResumes([record], [{ type: 'git' as const, ref: 'refs/heads/main', commits: [{ sha: 'abcdef1234' }] }])
+    expect(p).toHaveLength(1)
+  })
+})

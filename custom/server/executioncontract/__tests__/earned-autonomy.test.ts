@@ -7,8 +7,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createServer } from 'node:http'
 import {
-  aggregateTrackRecord, recommendMode, TIGHTEN_ORDER, type TrackRecord,
+  aggregateTrackRecord, applyTighten, permissionModeFor, recommendMode, MODE_TO_PERMISSION, TIGHTEN_ORDER, type TrackRecord,
 } from '../earned-autonomy'
+import { sessionModeOf, setSessionMode } from '../../permmodes/session-mode-store'
 import type { ApprovalLedgerRecord } from '../../approval-ledger/ledger-store'
 
 function rec(over: Partial<ApprovalLedgerRecord>): ApprovalLedgerRecord {
@@ -128,6 +129,51 @@ describe('P4 REST（/api/hermes/execution/earned-autonomy）', () => {
     expect(body.enforcement).toBe('advisory-only')
   })
 
+  it('POST /apply：hold 建议 409（无可收紧）；tighten 但 env 未开 409；env 开后写档', async () => {
+    // 账本空 → 冷启动 hold
+    const hold = await fetch(`${base}/apply`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ profile: 'pf-apply', mode: 'guarded' }),
+    })
+    expect(hold.status).toBe(409)
+    const holdBody = (await hold.json()) as { code?: string }
+    expect(holdBody.code).toBe('no_tighten')
+
+    // 造高人介入率 → tighten
+    const ledger = await import('../../approval-ledger/ledger-store')
+    for (let i = 0; i < 25; i += 1) {
+      ledger.appendApprovalRecord(ledger.buildApprovalRecord({
+        recordType: 'approval.resolved', tool: 'Bash', riskClass: 'shell', mode: 'guarded',
+        policyId: 'p', policyVersion: '1', sessionId: 's1', profile: 'pf-apply', entryPoint: 'test',
+        decidedBy: 'user', ts: '2026-11-15T00:00:00Z',
+      }) as never)
+    }
+    const off = await fetch(`${base}/apply`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ profile: 'pf-apply', mode: 'guarded' }),
+    })
+    expect(off.status).toBe(409)
+    expect(((await off.json()) as { code?: string }).code).toBe('auto_tighten_disabled')
+
+    const modeDir = join(dir, 'modes')
+    process.env.HERMES_SESSION_MODES_DIR = modeDir
+    process.env.EARNED_AUTONOMY_AUTO_TIGHTEN = '1'
+    try {
+      const applied = await fetch(`${base}/apply`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ profile: 'pf-apply', mode: 'guarded' }),
+      })
+      expect(applied.status).toBe(200)
+      const ab = (await applied.json()) as { applied: boolean; next?: string; direction: string }
+      expect(ab.applied).toBe(true)
+      expect(ab.direction).toBe('tighten')
+      expect(ab.next).toBe('default')
+    } finally {
+      delete process.env.EARNED_AUTONOMY_AUTO_TIGHTEN
+      delete process.env.HERMES_SESSION_MODES_DIR
+    }
+  })
+
   it('真账本（临时目录）→ 高人介入收紧建议可读', async () => {
     const rows = Array.from({ length: 30 }, () => rec({ recordType: 'approval.resolved', decidedBy: 'user', profile: 'pf-tighten' }))
     mkdirSync(dir, { recursive: true })
@@ -136,5 +182,48 @@ describe('P4 REST（/api/hermes/execution/earned-autonomy）', () => {
     const body = await res.json() as { recommendation: { direction: string; target: string } }
     expect(body.recommendation.direction).toBe('tighten')
     expect(body.recommendation.target).toBe('guarded')
+  })
+})
+
+// ── 自动收紧（2026-11-15 挂账清偿）：映射单点＋只收紧＋env 闸＋原档回滚 ──
+describe('applyTighten（自动收紧写档）', () => {
+  it('四挡→七档映射表锁死（权限强度单调）', () => {
+    expect(MODE_TO_PERMISSION).toEqual({
+      plan: 'plan', build: 'default', guarded: 'acceptEdits', yolo: 'bypassPermissions',
+    })
+    expect(permissionModeFor('yolo')).toBe('bypassPermissions')
+  })
+
+  it('env 未开 → 不写档，建议照常；reason 说明', () => {
+    const r = applyTighten('p1', { direction: 'tighten', target: 'build', evidence: 'x' }, { autoTightenEnabled: false })
+    expect(r.applied).toBe(false)
+    expect(r.next).toBeUndefined()
+    expect(r.reason).toContain('未启用')
+  })
+
+  it('loosen/hold 一律不写档（放宽须人确认）', () => {
+    for (const dir of ['loosen', 'hold'] as const) {
+      const r = applyTighten('p1', { direction: dir, target: 'guarded', evidence: 'x' }, { autoTightenEnabled: true })
+      expect(r.applied).toBe(false)
+      expect(r.reason).toContain('只收紧不放宽')
+    }
+  })
+
+  it('tighten + env 开 → 写会话档，返回原档可回滚', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'earned-modes-'))
+    const prev = process.env.HERMES_SESSION_MODES_DIR
+    process.env.HERMES_SESSION_MODES_DIR = dir
+    try {
+      setSessionMode('p1', 'acceptEdits')
+      const r = applyTighten('p1', { direction: 'tighten', target: 'build', evidence: 'x' }, { autoTightenEnabled: true })
+      expect(r.applied).toBe(true)
+      expect(r.next).toBe('default')
+      expect(r.previous).toBe('acceptEdits')
+      expect(sessionModeOf('p1')).toBe('default')
+    } finally {
+      if (prev === undefined) delete process.env.HERMES_SESSION_MODES_DIR
+      else process.env.HERMES_SESSION_MODES_DIR = prev
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
