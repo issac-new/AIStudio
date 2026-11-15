@@ -4910,6 +4910,11 @@ def _net_pair_table() -> str:
 # run 产物可清、指标不灭：跨轮对照与证伪判据（「并行度连续两轮低于基线」类）从此
 # 可测。fail-open（留档失败不阻断报告，记 stderr）。
 try:
+    _rd_gate = str(state.get('report_done', '') or '')
+    if not _rd_gate:
+        # 2026-11-15 全面复盘根治：未收官轮（预检重放/projection）不写仓内指标账——
+        # 每跑一次 prelaunch ⑧ 落一行旧轮假投影行、同预检 ④ 判脏的结构性自污染源。
+        raise RuntimeError('run 未收官（report_done 缺席）——指标留档跳过')
     _REPO_GOV = Path(__file__).resolve().parents[2] / 'docs' / 'governance'
     _REPO_GOV.mkdir(parents=True, exist_ok=True)
     _st, _rd = state.get('run_started_at', ''), state.get('report_done', '')
