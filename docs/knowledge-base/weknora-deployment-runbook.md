@@ -19,7 +19,7 @@
 ```
 POST /api/v1/auth/register        {username,email,password}
 POST /api/v1/auth/login           → body.token (JWT)
-POST /api/v1/models               租户级模型注册（幂等；type=Embedding/KnowledgeQA，source=remote，url+parameters.base_url）
+POST /api/v1/models               租户级模型注册（幂等）。关键形状：name 必须就是调用名（如 Ollama 真实模型名）；parameters 必含 base_url（Ollama 端点要带 /v1 后缀，平台按 OpenAI 接口拼 /v1/embeddings）、interface_type="openai"、api_key 非空占位、provider="generic"、embedding_parameters.dimension
 POST /api/v1/knowledge-bases      {name, embedding_model_id=<注册后的真实模型 id>}  ← 必须先绑嵌入，否则解析报 model ID empty
 POST /api/v1/knowledge-bases/{id}/knowledge/file    单文件上传（multipart 字段名 "file"；上限默认 50MB）
 POST /api/v1/knowledge-bases/{id}/hybrid-search     {query_text, top_k}
