@@ -1,0 +1,945 @@
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -804,6 +804,9 @@
+     raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
+     estimate_days: Optional[float] = None    # HERMES_CUSTOM[estimate] person-days; None = unestimated
+     estimate_meta: Optional[dict] = None     # estimate provenance JSON (complexity/tokens/source/...)
++    # 批二：乐观锁版本号与完成验证等级（读面——客户端据此构造 expected_version）。
++    version: int = 0
++    verification: Optional[str] = None
+ 
+     @classmethod
+     def from_row(cls, row: sqlite3.Row) -> Task:
+@@ -831,6 +834,8 @@
+             estimate_meta=est_meta_value,
+             goal_mode=bool(g("goal_mode")),
+             block_recurrences=int(g("block_recurrences") or 0),
++            version=int(g("version") or 0),
++            verification=_row_get(row, "verification"),
+         )
+ 
+ 
+@@ -935,6 +940,11 @@
+     payload: Optional[dict]
+     created_at: int
+     run_id: Optional[int] = None
++    # 批二：迁移 envelope（time=created_at 复用；历史事件四列为 None）。
++    event_version: Optional[int] = None
++    actor: Optional[str] = None
++    reason: Optional[str] = None
++    trace_id: Optional[str] = None
+ 
+     @classmethod
+     def from_row(cls, row: sqlite3.Row) -> Event:
+@@ -943,6 +953,9 @@
+             id=row["id"], task_id=row["task_id"], kind=_lossy_text(row["kind"]),
+             payload=_json_or(_lossy_text(row["payload"])), created_at=_to_epoch(row["created_at"]) or 0,
+             run_id=_opt_int(run_id),
++            event_version=_opt_int(_row_get(row, "event_version")),
++            actor=_row_get(row, "actor"), reason=_row_get(row, "reason"),
++            trace_id=_row_get(row, "trace_id"),
+         )
+ 
+ 
+@@ -1056,7 +1069,14 @@
+     -- 重排保守计 1 人日）；decompose 落库前已把超帽子卡钳到 1 天帽值。
+     estimate_days        REAL,
+     -- 估算来源 JSON（complexity/est_tokens/source 等），estimate_set 事件同源。
+-    estimate_meta        TEXT
++    estimate_meta        TEXT,
++    -- 批二（2026-11-14）：行级乐观锁版本号——任何行 UPDATE 由触发器
++    -- trg_tasks_version_bump 自动 +1（含内核迁移路径）；expected_version
++    -- 不匹配的显式写入在动词层拒绝（409）。verification 为卡级完成验证
++    -- 等级：NULL/standard=现状；independent=需 review handoff；strict:pr=
++    -- PR acceptance 必过。
++    version              INTEGER NOT NULL DEFAULT 0,
++    verification         TEXT
+ );
+ 
+ CREATE TABLE IF NOT EXISTS task_links (
+@@ -1079,7 +1099,13 @@
+     run_id     INTEGER,
+     kind       TEXT NOT NULL,
+     payload    TEXT,
+-    created_at INTEGER NOT NULL
++    created_at INTEGER NOT NULL,
++    -- 批二迁移 envelope（time=created_at 复用；event_version 为事件落库时
++    -- tasks.version 的快照，触发器递增后的当前值）。
++    event_version INTEGER,
++    actor      TEXT,
++    reason     TEXT,
++    trace_id   TEXT
+ );
+ 
+ -- Historical attempt record. Each time the dispatcher claims a task, a
+@@ -1351,6 +1377,7 @@
+     creator_task_id: Optional[str] = None,
+     completion_contract: Optional[str] = None,
+     raci: Optional[dict] = None,
++    verification: Optional[str] = None,
+ ) -> str:
+     """Create a task (optionally under ``parents``); returns its id.
+ 
+@@ -1371,6 +1398,14 @@
+     from hermes_cli.kanban_pr_acceptance import validate_contract
+ 
+     completion_contract = validate_contract(completion_contract)
++    # 批二：卡级验证等级（standard 缺省；independent；strict:pr）——非法值建卡即拒。
++    if verification is not None:
++        verification = str(verification).strip()
++        if verification and verification not in VALID_VERIFICATION_LEVELS:
++            raise ValueError(
++                f"verification must be one of {sorted(VALID_VERIFICATION_LEVELS)} or None, got {verification!r}"
++            )
++        verification = verification or None
+     model_override, provider_override = _validate_model_override(model_override, provider_override)
+     reasoning_effort = normalize_reasoning_effort(reasoning_effort)
+     assignee = _canonical_assignee(assignee)
+@@ -1458,8 +1493,9 @@
+                         max_runtime_seconds,
+                         skills, max_retries, model_override, provider_override,
+                         reasoning_effort,
+-                        goal_mode, goal_max_turns, session_id, completion_contract, raci
+-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
++                        goal_mode, goal_max_turns, session_id, completion_contract, raci,
++                        verification
++                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     """,
+                     (
+                         task_id, title.strip(), body, assignee, task_status, priority,
+@@ -1470,6 +1506,7 @@
+                         _opt_int(max_retries), model_override, provider_override, reasoning_effort,
+                         1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
+                         json.dumps(raci) if isinstance(raci, dict) else None,
++                        verification,
+                     ),
+                 )
+                 if cursor.rowcount == 0:
+@@ -2093,9 +2130,20 @@
+     一律锚定该 id，与 task_events 既有的本地自增 id 分工不同。"""
+     if collab_event_id:
+         payload = {**(payload or {}), "collab_event_id": collab_event_id}
++    # 批二：迁移 envelope——write_txn(envelope=...) 提供的事务上下文优先；
++    # 缺省 legacy 合成（actor=环境身份兜底、reason=legacy:<kind>），兼容期
++    # 旧调用方事件可识别可收敛。event_version 取触发器递增后的当前行值。
++    env = getattr(conn, "_kanban_txn_envelope", None) or {}
++    vrow = conn.execute("SELECT version FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    _actor = env.get("actor") or os.environ.get("HERMES_KANBAN_ACTOR") or "cli"
++    _reason = env.get("reason") or f"legacy:{kind}"
++    _trace = env.get("trace_id")
+     conn.execute(
+-        "INSERT INTO task_events (task_id, run_id, kind, payload, created_at) "
+-        "VALUES (?, ?, ?, ?, ?)", (task_id, run_id, kind, _json_or_null(payload), int(time.time())),
++        "INSERT INTO task_events (task_id, run_id, kind, payload, created_at, "
++        "event_version, actor, reason, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
++        (task_id, run_id, kind, _json_or_null(payload), int(time.time()),
++         int(vrow["version"]) if vrow is not None and vrow["version"] is not None else None,
++         _actor, _reason, _trace),
+     )
+ 
+ 
+@@ -2891,6 +2939,27 @@
+ 
+ class ArtifactPreservationError(RuntimeError):
+     """Raised when a declared scratch deliverable cannot be preserved."""
++
++
++class VersionConflictError(ValueError):
++    """批二：expected_version 与行内 version 不匹配——旧快照覆盖新状态的显式
++    拒绝。CLI/API 映射 409 version_conflict，消息附 current/expected 两者。"""
++
++    def __init__(self, task_id: str, current, expected):
++        self.task_id, self.current, self.expected = task_id, current, expected
++        super().__init__(
++            f"version conflict on {task_id}: expected version {expected}, "
++            f"current version is {current}; re-read the task and retry"
++        )
++
++
++class VerificationLevelBlocked(ValueError):
++    """批二：卡声明的 verification 等级未满足——完成被拒（fail-closed），错误
++    文本指引下一步（request_review / 待 PR 转绿），不自动改任务状态。"""
++
++    def __init__(self, level: str, detail: str):
++        self.level, self.detail = level, detail
++        super().__init__(f"verification level '{level}' not satisfied: {detail}")
+ 
+ 
+ class LiveClaimError(ValueError):
+@@ -2999,12 +3068,107 @@
+     return validated
+ 
+ 
++# 批二（2026-11-14 superagent-contract-batch2）：卡级完成验证等级。
++VALID_VERIFICATION_LEVELS = frozenset({"standard", "independent", "strict:pr"})
++
++
++def _pr_acceptance_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
++    """strict:pr 判据：最新 ``pr_acceptance`` 事件的 receipt.ok（kanban 库内
++    真值——store 的 record_acceptance 在 complete 事务内落此事件，本判定只读，
++    不新增第二事实源）。"""
++    row = conn.execute(
++        "SELECT payload FROM task_events WHERE task_id = ? AND kind = 'pr_acceptance' "
++        "ORDER BY id DESC LIMIT 1",
++        (task_id,),
++    ).fetchone()
++    if row is None or not row["payload"]:
++        return False
++    try:
++        receipt = json.loads(row["payload"])
++    except (TypeError, ValueError):
++        return False
++    return bool(receipt.get("ok"))
++
++
++def _review_verdict_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
++    """independent 判据：走过评审闭环——存在 ``review_requested`` 且其后有
++    reviewer 侧活动证据：批准路径＝reviewer 在 review 态的 ``completed``、
++    驳回路径＝``changes_requested``（两者都构成"独立看过"）；``review_verdict``
++    为预留扩展位。防伪：时序必须晚于 review_requested。"""
++    req = conn.execute(
++        "SELECT id FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
++        "ORDER BY id LIMIT 1",
++        (task_id,),
++    ).fetchone()
++    if req is None:
++        return False
++    verdict = conn.execute(
++        "SELECT id FROM task_events WHERE task_id = ? AND kind IN "
++        "('changes_requested', 'review_verdict', 'completed') AND id > ? LIMIT 1",
++        (task_id, req["id"]),
++    ).fetchone()
++    return verdict is not None
++
++
++def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None) -> None:
++    """complete_task 单点等级门（在既有 gates/DoD 门之后）。
++
++    - NULL/standard：现状零成本路径直接过。
++    - independent：需评审闭环证据（review handoff＋verdict）。
++    - strict:pr：需 PR acceptance 事件 ok。
++    判定器异常 fail-closed（verifier_unavailable），不猜通过；拒绝落
++    ``verification_level_result`` 事件（事务外小事务，同 gate_transition 先例）。
++    """
++    row = conn.execute("SELECT verification FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    level = (row["verification"] if row else None) or "standard"
++    if level == "standard":
++        return
++    detail, satisfied = None, None
++    try:
++        if level == "strict:pr":
++            # 本次 complete 的 PR 检查结果优先（green 即过）；None=无 PR 契约
++            # 或检查不可用，回落库内历史事件。
++            satisfied = (bool(pr_receipt_ok) if pr_receipt_ok is not None
++                         else _pr_acceptance_satisfied(conn, task_id))
++            detail = "latest pr_acceptance event receipt.ok" if satisfied else (
++                "no passing pr_acceptance event; wait for required PR checks "
++                "to go green, then complete again"
++            )
++        elif level == "independent":
++            satisfied = _review_verdict_satisfied(conn, task_id)
++            detail = "review handoff with a verdict on record" if satisfied else (
++                "no review handoff verdict found; call request_review and let "
++                "the reviewer run decide before completing"
++            )
++        else:
++            # 未知值在建/改时已拒；库内直写的畸形值按 fail-closed 处理。
++            raise ValueError(f"unknown verification level {level!r}")
++    except VerificationLevelBlocked:
++        raise
++    except Exception as exc:  # noqa: BLE001 — 判定器任何异常都不得放行
++        with contextlib.suppress(Exception):
++            with write_txn(conn):
++                _append_event(conn, task_id, "verification_level_result",
++                              {"level": level, "satisfied": False,
++                               "reason": "verifier_unavailable", "error": str(exc)[:300]})
++        raise VerificationLevelBlocked(
++            level, f"verifier_unavailable ({exc}); retry when the verifier is reachable"
++        ) from None
++    if not satisfied:
++        with contextlib.suppress(Exception):
++            with write_txn(conn):
++                _append_event(conn, task_id, "verification_level_result",
++                              {"level": level, "satisfied": False, "reason": detail})
++        raise VerificationLevelBlocked(level, detail)
++
++
+ def complete_task(
+     conn: sqlite3.Connection, task_id: str, *, result: Optional[str] = None,
+     summary: Optional[str] = None, metadata: Optional[dict] = None,
+     created_cards: Optional[Iterable[str]] = None, expected_run_id: Optional[int] = None,
+     fire_lifecycle_hook: bool = True, force: bool = False,
+     receipt: Optional[dict] = None, workspace: Optional[str] = None,
++    expected_version: Optional[int] = None,
+ ) -> bool:
+     """``running|ready|blocked|review -> done``; records ``result``.
+ 
+@@ -3046,7 +3210,24 @@
+         conn, task_id, metadata, summary=summary, result=result,
+     )
+     handoff_summary = summary if summary is not None else result
++    # 批二：等级满足结果随完成留痕（standard 缺省不落——零噪音）。
++    _ver_row = conn.execute("SELECT verification FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    _ver_level = (_ver_row["verification"] if _ver_row else None) or "standard"
++    if _ver_level != "standard":
++        metadata = dict(metadata or {})
++        metadata["verification_result"] = {"level": _ver_level, "satisfied": True}
+     acceptance = prepare_acceptance(conn, task_id, expected_run_id, metadata)
++    # 批二：卡级完成验证等级门（standard 缺省=现状零成本路径；判定 fail-closed）。
++    # 门序在 prepare_acceptance 之后：strict:pr 优先用本次 PR 检查结果
++    # （acceptance.ok），无 PR 契约的卡回落库内最新 pr_acceptance 事件——
++    # 先门后查会让 strict 卡首次 complete 必拒且 acceptance 永不落库（死锁）。
++    _gate_verification_level(
++        conn, task_id,
++        # prepare 返回 (snapshot, receipt)；receipt.ok=本次 PR required checks 实测
++        pr_receipt_ok=(acceptance[1].get("ok")
++                       if isinstance(acceptance, tuple) and len(acceptance) == 2
++                       and isinstance(acceptance[1], dict) else None),
++    )
+     if acceptance is False:
+         return False
+     # Staged copies live outside the txn: a rollback after staging must not
+@@ -3062,10 +3243,16 @@
+             if acceptance is not None and not record_acceptance(conn, task_id, acceptance):
+                 return False
+             trow = conn.execute(
+-                "SELECT status, claim_lock, worker_pid, worker_started_at FROM tasks WHERE id = ?",
++                "SELECT status, claim_lock, worker_pid, worker_started_at, version FROM tasks WHERE id = ?",
+                 (task_id,),
+             ).fetchone()
+             prior_status = trow["status"] if trow else None
++            # 批二 CAS：显式携带 expected_version 时先校验后并入 UPDATE WHERE——
++            # 校验与写入同事务，并发窗口内他方写入仍被 WHERE 拦住（原子拒绝）。
++            if expected_version is not None:
++                _current_version = trow["version"] if trow else None
++                if _current_version is None or int(_current_version) != int(expected_version):
++                    raise VersionConflictError(task_id, _current_version, expected_version)
+             # Refuse to close a LIVE worker's run without proof of ownership
+             # (expected_run_id) or an explicit human override (force=True); see
+             # _claim_is_live for what "live" means.
+@@ -3085,6 +3272,9 @@
+                        AND status IN ('running', 'ready', 'blocked', 'review')
+                     """
+             params: tuple = (result, now, task_id)
++            if expected_version is not None:
++                sql += " AND version = ?"
++                params = (*params, int(expected_version))
+             if expected_run_id is not None:
+                 sql += " AND current_run_id = ?"
+                 params = (*params, int(expected_run_id))
+@@ -3536,6 +3726,7 @@
+ def block_task(
+     conn: sqlite3.Connection, task_id: str, *, reason: Optional[str] = None,
+     kind: Optional[str] = None, expected_run_id: Optional[int] = None,
++    expected_version: Optional[int] = None,
+ ) -> bool:
+     """``running``/``ready`` -> ``blocked`` (or ``todo`` / ``triage``, see
+     :func:`_route_block`). ``kind='dependency'`` with no incomplete parent is
+@@ -3555,8 +3746,13 @@
+         raise ValueError(f"block kind must be one of {sorted(VALID_BLOCK_KINDS)} or None")
+     with write_txn(conn):
+         cur_row = conn.execute(
+-            "SELECT status, block_kind, block_recurrences FROM tasks WHERE id = ?", (task_id,),
++            "SELECT status, block_kind, block_recurrences, version FROM tasks WHERE id = ?", (task_id,),
+         ).fetchone()
++        # 批二 CAS：BEGIN IMMEDIATE 下事务内校验即原子（与 complete 的
++        # 校验＋WHERE 双保险行为等价——complete 高频面保留双保险，此处从简）。
++        if expected_version is not None and cur_row is not None:
++            if int(cur_row["version"]) != int(expected_version):
++                raise VersionConflictError(task_id, cur_row["version"], expected_version)
+         if cur_row is None:
+             return False
+         # The breaker (``_record_task_failure``) parks cards ``blocked`` with no
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -14,6 +14,7 @@
+ import random
+ import re
+ import secrets
++import uuid
+ import shutil
+ import sqlite3
+ import threading
+@@ -910,6 +911,11 @@
+     # NULL days = 未评估（派发重排保守计 1 人日）。
+     ("estimate_days", "estimate_days REAL"),
+     ("estimate_meta", "estimate_meta TEXT"),
++    # 批二（2026-11-14 superagent-contract-batch2）：行级乐观锁版本号（触发器
++    # trg_tasks_version_bump 在任何 UPDATE 后自动递增，覆盖内核迁移路径）＋
++    # 卡级完成验证等级（NULL=standard；independent；strict:pr）。
++    ("version", "version INTEGER NOT NULL DEFAULT 0"),
++    ("verification", "verification TEXT"),
+ )
+ 
+ _NOTIFY_SUB_COLUMNS = (
+@@ -994,6 +1000,29 @@
+     # runs and can't be attributed).
+     if "run_id" not in _column_names(conn, "task_events"):
+         _add_column_if_missing(conn, "task_events", "run_id", "run_id INTEGER")
++    # 批二：迁移 envelope 四列（time 复用既有 created_at）。事件写入由
++    # kanban_db._append_event 统一携带；旧行为 NULL（历史事件先于 envelope）。
++    ev_cols = _column_names(conn, "task_events")
++    for _ecol, _edd in (
++        ("event_version", "event_version INTEGER"),
++        ("actor", "actor TEXT"),
++        ("reason", "reason TEXT"),
++        ("trace_id", "trace_id TEXT"),
++    ):
++        if _ecol not in ev_cols:
++            _add_column_if_missing(conn, "task_events", _ecol, _edd)
++    # 触发器：任何 tasks 行 UPDATE 后 version+1（recursive_triggers 默认 OFF，
++    # 触发器内的自增 UPDATE 不会再触发，无死循环）。这是"所有改任务行路径都
++    # 递增"的机械保证——claim/recompute_ready/reclaim 等内核路径零改动即覆盖。
++    conn.execute(
++        """
++        CREATE TRIGGER IF NOT EXISTS trg_tasks_version_bump
++        AFTER UPDATE ON tasks
++        BEGIN
++            UPDATE tasks SET version = version + 1 WHERE id = NEW.id;
++        END;
++        """
++    )
+ 
+     # Same ordering rule as the ``tasks`` indexes above: index after column.
+     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_run ON task_events(run_id, id)")
+@@ -1275,9 +1304,14 @@
+ 
+ 
+ @contextlib.contextmanager
+-def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False):
++def write_txn(conn: sqlite3.Connection, *, allow_nested: bool = False, envelope: Optional[dict] = None):
+     """IMMEDIATE write transaction; a claim CAS inside is atomic — at most one
+     concurrent writer succeeds.
++
++    ``envelope``（批二，可选）：本次事务的迁移五要素上下文（actor/reason/trace_id；
++    version 由触发器产出、time 由事件 created_at 承载）——事务内 ``_append_event``
++    自动读取并入 task_events 的 envelope 列；缺省走 legacy 合成（actor=调用方
++    兜底、reason=``legacy:<kind>``），兼容期新旧客户端可共存。
+ 
+     Nesting is an explicit opt-in (``allow_nested=True`` → savepoint; otherwise
+     a loud ``RuntimeError``). Only composition primitives (``create_task``,
+@@ -1308,6 +1342,10 @@
+         return
+ 
+     _execute_boundary_with_retry(conn, "BEGIN IMMEDIATE")
++    # 批二：事务级 trace_id 恒有值——显式 envelope 优先，否则本事务 UUID。
++    _base_env = dict(envelope) if envelope is not None else {}
++    _base_env.setdefault("trace_id", str(uuid.uuid4()))
++    conn._kanban_txn_envelope = _base_env
+     try:
+         yield conn
+     except Exception:
+@@ -1315,6 +1353,10 @@
+         # don't let this secondary failure shadow the real one.
+         with contextlib.suppress(sqlite3.OperationalError):
+             conn.execute("ROLLBACK")
++        try:
++            del conn._kanban_txn_envelope
++        except AttributeError:
++            pass
+         raise
+     else:
+         try:
+@@ -1325,6 +1367,10 @@
+             with contextlib.suppress(sqlite3.OperationalError):
+                 conn.execute("ROLLBACK")
+             raise
++        try:
++            del conn._kanban_txn_envelope
++        except AttributeError:
++            pass
+         # Post-commit torn-extend check — raise now rather than silently corrupt.
+         _check_file_length_invariant(conn)
+ 
+diff --git a/hermes_cli/kanban.py b/hermes_cli/kanban.py
+--- a/hermes_cli/kanban.py
++++ b/hermes_cli/kanban.py
+@@ -387,6 +387,7 @@
+         task_id = kb.create_task(
+             conn, title=args.title, body=body, assignee=args.assignee,
+             created_by=args.created_by or _profile_author(),
++            verification=getattr(args, "verification", None),
+             workspace_kind=ws_kind, workspace_path=ws_path, branch_name=branch_name,
+             project_id=getattr(args, "project", None), tenant=args.tenant, priority=args.priority,
+             parents=tuple(args.parent or ()), triage=bool(getattr(args, "triage", False)),
+@@ -1136,7 +1137,8 @@
+                                         expected_run_id=_worker_run_id_for(tid),
+                                         force=bool(getattr(args, "force", False)),
+                                         receipt=receipt,
+-                                        workspace=os.environ.get("HERMES_KANBAN_WORKSPACE"))
++                                        workspace=os.environ.get("HERMES_KANBAN_WORKSPACE"),
++                                        expected_version=getattr(args, "expected_version", None))
+             except kb.LiveClaimError:
+                 fail_msg[tid] = (f"cannot complete {tid}: a live worker is running it. Wait for the "
+                                  f"worker, `hermes kanban reclaim {tid}` to release it, or re-run with "
+@@ -1220,8 +1222,10 @@
+                 return f"{tid} → triage (unblock loop detected — {verdict}){suffix}"
+             return f"Blocked {tid}{suffix}"
+ 
++        _ev = getattr(args, "expected_version", None)
+         op = _commented(conn, reason, author, "BLOCKED", lambda tid: kb.block_task(
+-            conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id_for(tid)))
++            conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id_for(tid),
++            expected_version=_ev))
+         return _bulk_apply(ids, op, ok_msg, lambda tid: f"cannot block {tid}")
+ 
+ 
+diff --git a/hermes_cli/kanban_parser.py b/hermes_cli/kanban_parser.py
+--- a/hermes_cli/kanban_parser.py
++++ b/hermes_cli/kanban_parser.py
+@@ -183,6 +183,10 @@
+                   "worktree under the project's primary repo with a "
+                   "deterministic branch. See `hermes project list`."),
+         _TENANT,
++        _arg("--verification", choices=["standard", "independent", "strict:pr"],
++             help="Completion-verification level: standard (default, DoD gate only), "
++                  "independent (review handoff verdict required before done), "
++                  "strict:pr (passing pr_acceptance required before done)."),
+         _PRIORITY,
+         _arg("--triage", action="store_true",
+              help="Park in triage — a specifier will flesh out the spec and promote to todo"),
+@@ -340,6 +344,9 @@
+         _arg("--force", action="store_true",
+              help="Override the live-claim guard: complete a running, claimed task "
+                   "even without owning its run (closes the worker's run)."),
++        _arg("--expected-version", type=int, default=None,
++             help="Optimistic-lock version: reject with exit 1 when the row's version "
++                  "differs (another writer got there first); omit for legacy best-effort."),
+     ], help="Mark one or more tasks done"),
+     _cmd("edit", [
+         _TASK_ID,
+@@ -359,6 +366,9 @@
+                   "blocked for a human; 'transient' marks a maybe-flaky failure. "
+                   "Repeated same-kind re-blocks after unblock route the task to "
+                   "triage to break unblock loops. Omit for a generic block."),
++        _arg("--expected-version", type=int, default=None,
++             help="Optimistic-lock version: reject with exit 1 when the row's version "
++                  "differs; omit for legacy best-effort."),
+     ], help="Mark one or more tasks blocked"),
+     _cmd("schedule", [
+         _TASK_ID,
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -944,7 +944,8 @@
+                 created_cards=created_cards, expected_run_id=_worker_run_id(tid),
+                 receipt=args.get("receipt"),
+                 workspace=os.environ.get("HERMES_KANBAN_WORKSPACE")
+-                or _task_value(task, "workspace_path"))
++                or _task_value(task, "workspace_path"),
++                expected_version=args.get("expected_version"))
+         except kb.ArtifactPreservationError as artifact_err:
+             # Structured rejection — surface the phantom ids so the worker can retry with a corrected list
+             # or drop the field. Audit event already landed in the DB. The task itself was NOT mutated (the
+@@ -979,6 +980,16 @@
+                 f"kanban_complete blocked: {empty_err}. Your task is still in-flight (no state "
+                 f"change). Retry kanban_complete with a non-empty summary or result describing "
+                 f"what was done.")
++        except kb.VersionConflictError as ver_err:
++            # 批二：旧快照覆盖被拒——任务被并发方推进，重读再试。
++            return tool_error(
++                f"kanban_complete refused: {ver_err}. Nothing changed. Re-read the task "
++                f"(kanban_get) and retry with its current version.")
++        except kb.VerificationLevelBlocked as ver_gate:
++            # 批二：卡声明的验证等级未满足——按等级给下一步，不自动改状态。
++            return tool_error(
++                f"kanban_complete blocked by verification level: {ver_gate}. Nothing changed. "
++                f"{ver_gate.detail}")
+         task = kb.get_task(conn, tid)
+         if not ok:
+             # complete_task reports every refusal as bare False; a reopened or
+@@ -1029,7 +1040,13 @@
+                f"{sorted(_GOAL_MODE_BLOCK_ALLOWED_KINDS)} (got {kind!r}). If the task is actually "
+                f"finished or cannot proceed for another reason, call kanban_complete instead — "
+                f"the completion judge will evaluate it.")
+-        ok = kb.block_task(conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id(tid))
++        try:
++            ok = kb.block_task(conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id(tid),
++                               expected_version=args.get("expected_version"))
++        except kb.VersionConflictError as ver_err:
++            return tool_error(
++                f"kanban_block refused: {ver_err}. Nothing changed. Re-read the task "
++                f"(kanban_get) and retry with its current version.")
+         _check(ok, f"could not block {tid} (unknown id or not in running/ready)")
+         landed_kind = kb.get_task(conn, tid).block_kind
+         extra: dict = {"block_kind": landed_kind}
+@@ -1363,6 +1380,7 @@
+             completion_contract=args.get("completion_contract"),
+             raci=(args.get("raci") if isinstance(args.get("raci"), dict) else None),
+             initial_status=str(args.get("initial_status") or "running"),
++            verification=args.get("verification"),
+             created_by=_persisted_identity(), session_id=session_id)
+         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)
+         wait = [e for e in kb.list_events(conn, new_tid) if e.kind == "dependency_wait"]
+diff --git a/tools/kanban_tools_schemas.py b/tools/kanban_tools_schemas.py
+--- a/tools/kanban_tools_schemas.py
++++ b/tools/kanban_tools_schemas.py
+@@ -106,6 +106,12 @@
+     ),
+     {
+         "task_id": _prop("string", _DESC_TASK_ID_DEFAULT),
++        "expected_version": _prop("integer", (
++                "Optional optimistic-lock version: when provided and the task row's "
++                "version differs (another writer got there first), the completion is "
++                "rejected with no state change — re-read the task and retry. Omit "
++                "for legacy best-effort."
++        )),
+         "summary": _prop("string", (
+                 "Human-readable handoff, 1-3 sentences. Appears in "
+                 "Run History on the dashboard and in downstream "
+@@ -198,6 +204,11 @@
+     ),
+     {
+         "task_id": _prop("string", _DESC_TASK_ID_DEFAULT),
++        "expected_version": _prop("integer", (
++                "Optional optimistic-lock version: when provided and the task row's "
++                "version differs, the block is rejected with no state change — "
++                "re-read the task and retry. Omit for legacy best-effort."
++        )),
+         "reason": _prop("string", (
+                 "What you need answered or what stopped you, in one or "
+                 "two sentences. Don't paste the whole conversation; the "
+@@ -510,6 +521,12 @@
+                 "open-ended cards where one shot rarely finishes the "
+                 "work. Defaults to false (classic single-shot worker)."
+         )),
++        "verification": _prop("string", (
++                "Optional completion-verification level for this card: 'standard' "
++                "(default, existing DoD contract gate only), 'independent' (a review "
++                "handoff verdict is required before done), or 'strict:pr' (a passing "
++                "pr_acceptance is required before done)."
++        )),
+         "raci": {
+             "type": "object",
+             "description": "Structured RACI assignment: keys responsible/approver/consulted/informed, values arrays of account names. Takes precedence over body-text RACI.",
+diff --git a/tests/hermes_cli/test_kanban_versioned_writes.py b/tests/hermes_cli/test_kanban_versioned_writes.py
+new file mode 100644
+--- /dev/null
++++ b/tests/hermes_cli/test_kanban_versioned_writes.py
+@@ -0,0 +1,163 @@
++"""批二（spec 2026-11-14-superagent-contract-batch2）任务一：行级 version＋迁移 envelope。
++
++覆盖：幂等迁移（旧库补列）、触发器全路径递增（含裸 UPDATE/claim）、complete/block
++CAS 409、兼容缺省放行＋legacy envelope 合成、task_events 四列落库。
++"""
++
++from __future__ import annotations
++
++import sqlite3
++from pathlib import Path
++
++import pytest
++
++from hermes_cli import kanban_db as kb
++from hermes_cli import kanban_db_connect as kbc
++
++
++@pytest.fixture
++def kanban_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setenv("HERMES_HOME", str(home))
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    kb.init_db()
++    return home
++
++
++def _conn() -> sqlite3.Connection:
++    return kbc.connect()
++
++
++def _events(conn, task_id: str) -> list[sqlite3.Row]:
++    return conn.execute(
++        "SELECT * FROM task_events WHERE task_id=? ORDER BY id", (task_id,)
++    ).fetchall()
++
++
++class TestSchema:
++    def test_tasks_version_and_verification_columns_exist(self, kanban_home):
++        cols = {r["name"] for r in _conn().execute("PRAGMA table_info(tasks)")}
++        assert "version" in cols
++        assert "verification" in cols
++
++    def test_task_events_envelope_columns_exist(self, kanban_home):
++        cols = {r["name"] for r in _conn().execute("PRAGMA table_info(task_events)")}
++        assert {"event_version", "actor", "reason", "trace_id"} <= cols
++
++    def test_migration_idempotent_on_legacy_db(self, kanban_home):
++        kb.init_db()
++        conn = _conn()
++        n = conn.execute(
++            "SELECT COUNT(*) FROM sqlite_master WHERE type='trigger' AND name='trg_tasks_version_bump'"
++        ).fetchone()[0]
++        assert n == 1
++
++    def test_new_task_starts_version_zero(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="v0", assignee="w")
++        v = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        assert v == 0
++
++
++class TestVersionBumpAllPaths:
++    def test_raw_update_bumps_via_trigger(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="t", assignee="w")
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++        v = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        assert v >= 1
++
++    def test_claim_bumps_version(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="t", assignee="w")
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++        v_before = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        claimed = kb.claim_task(conn, tid, claimer="w")
++        assert claimed is not None
++        v_after = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        assert v_after > v_before
++
++    def test_complete_bumps_version(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="t", assignee="w")
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++        kb.claim_task(conn, tid, claimer="w")
++        v_before = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        assert kb.complete_task(conn, tid, result="done", expected_run_id=None) is True
++        row = conn.execute("SELECT version, status FROM tasks WHERE id=?", (tid,)).fetchone()
++        assert row["status"] == "done" and row["version"] > v_before
++
++
++class TestExpectedVersionCas:
++    def _ready(self, conn):
++        tid = kb.create_task(conn, title="cas", assignee="w")
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++        return tid
++
++    def test_stale_expected_version_rejected_with_current(self, kanban_home):
++        conn = _conn()
++        tid = self._ready(conn)
++        v = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET priority=5 WHERE id=?", (tid,))
++        with pytest.raises(Exception) as ei:
++            kb.complete_task(conn, tid, result="late", expected_version=v)
++        assert "version" in str(ei.value).lower()
++        assert conn.execute("SELECT status FROM tasks WHERE id=?", (tid,)).fetchone()["status"] != "done"
++
++    def test_matching_expected_version_passes(self, kanban_home):
++        conn = _conn()
++        tid = self._ready(conn)
++        v = conn.execute("SELECT version FROM tasks WHERE id=?", (tid,)).fetchone()["version"]
++        assert kb.complete_task(conn, tid, result="ok", expected_version=v) is True
++
++    def test_missing_expected_version_compat_passes(self, kanban_home):
++        conn = _conn()
++        tid = self._ready(conn)
++        assert kb.complete_task(conn, tid, result="legacy-ok") is True
++
++
++class TestEventEnvelope:
++    def test_complete_event_carries_envelope_columns(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="env", assignee="w")
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++        assert kb.complete_task(conn, tid, result="done") is True
++        ev = [e for e in _events(conn, tid) if e["kind"] == "completed"]
++        assert ev, "completed event missing"
++        row = ev[-1]
++        assert isinstance(row["event_version"], int) and row["event_version"] >= 1
++        assert row["actor"]
++        assert row["reason"]
++        assert "legacy" in row["reason"] or "complete" in row["reason"]
++
++    def test_txn_envelope_context_writes_actor_reason_trace(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="ctx", assignee="w")
++        with kb.write_txn(conn, envelope={"actor": "op:v2", "reason": "manual", "trace_id": "tr-1"}):
++            conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++            kb._append_event(conn, tid, "promoted", {"note": "ctx"})
++        row = _events(conn, tid)[-1]
++        assert row["actor"] == "op:v2"
++        assert row["reason"] == "manual"
++        assert row["trace_id"] == "tr-1"
++
++    def test_trace_id_always_present_without_envelope(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="tr", assignee="w")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "promoted", {})
++        assert _events(conn, tid)[-1]["trace_id"]
++
++    def test_task_read_face_exposes_version_and_verification(self, kanban_home):
++        conn = _conn()
++        tid = kb.create_task(conn, title="rf", assignee="w", verification="strict:pr")
++        t = kb.get_task(conn, tid)
++        assert t.version == 0
++        assert t.verification == "strict:pr"
+diff --git a/tests/hermes_cli/test_kanban_verification_levels.py b/tests/hermes_cli/test_kanban_verification_levels.py
+new file mode 100644
+--- /dev/null
++++ b/tests/hermes_cli/test_kanban_verification_levels.py
+@@ -0,0 +1,156 @@
++"""批二（spec 2026-11-14-superagent-contract-batch2）任务二：完成验证分级。
++
++覆盖：standard 缺省即现状、strict:pr（PR acceptance 未过拒/过后放/证据留痕）、
++independent（review handoff 缺失拒/走过评审闭环放/时序反例）、判定器异常
++fail-closed、非法等级值建卡即拒。
++"""
++
++from __future__ import annotations
++
++import sqlite3
++from pathlib import Path
++
++import pytest
++
++from hermes_cli import kanban_db as kb
++from hermes_cli import kanban_db_connect as kbc
++
++
++@pytest.fixture
++def kanban_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setenv("HERMES_HOME", str(home))
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    kb.init_db()
++    return home
++
++
++def _conn() -> sqlite3.Connection:
++    return kbc.connect()
++
++
++def _ready(conn, verification=None):
++    tid = kb.create_task(conn, title="v", assignee="w")
++    if verification:
++        with kb.write_txn(conn):
++            conn.execute("UPDATE tasks SET verification=? WHERE id=?", (verification, tid))
++    with kb.write_txn(conn):
++        conn.execute("UPDATE tasks SET status='ready' WHERE id=?", (tid,))
++    return tid
++
++
++class TestStandardDefault:
++    def test_missing_verification_behaves_as_today(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn)
++        assert kb.complete_task(conn, tid, result="plain") is True
++
++    def test_explicit_standard_passes_without_extra_evidence(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn, verification="standard")
++        assert kb.complete_task(conn, tid, result="plain") is True
++
++
++class TestStrictPr:
++    def test_strict_pr_rejected_without_acceptance(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn, verification="strict:pr")
++        with pytest.raises(Exception) as ei:
++            kb.complete_task(conn, tid, result="pr not green")
++        msg = str(ei.value).lower()
++        assert "verification" in msg or "pr" in msg
++        assert conn.execute("SELECT status FROM tasks WHERE id=?", (tid,)).fetchone()["status"] != "done"
++
++    def test_strict_pr_passes_after_acceptance_recorded(self, kanban_home):
++        # 判据只认 kanban 库内 pr_acceptance 事件（store.record_acceptance 的
++        # 落库真值形态）：直落一条 ok receipt 模拟 store 写入后的库内状态。
++        conn = _conn()
++        tid = _ready(conn, verification="strict:pr")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "pr_acceptance", {"ok": True, "head": "abc123"})
++        assert kb.complete_task(conn, tid, result="pr green") is True
++
++    def test_strict_pr_satisfied_by_fresh_receipt_not_stale_event(self, kanban_home, monkeypatch):
++        import hermes_cli.kanban_db as kdb
++        conn = _conn()
++        tid = _ready(conn, verification="strict:pr")
++        captured = {}
++        real_gate = kdb._gate_verification_level
++        def gate_spy(conn_, task_id_, *, pr_receipt_ok=None):
++            captured["pr_ok"] = pr_receipt_ok
++            real_gate(conn_, task_id_, pr_receipt_ok=pr_receipt_ok)
++        monkeypatch.setattr(kdb, "_gate_verification_level", gate_spy)
++        import hermes_cli.kanban_pr_acceptance_store as prs
++        monkeypatch.setattr(prs, "prepare_acceptance",
++            lambda conn_, tid_, rid, md: ((1, "ready", "github:o/r#1"), {"ok": True}))
++        monkeypatch.setattr(prs, "record_acceptance", lambda conn_, tid_, acc: True)
++        assert kdb.complete_task(conn, tid, result="pr green now") is True
++        assert captured["pr_ok"] is True
++
++    def test_independent_reviewer_approval_counts(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn, verification="independent")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "review_requested", {"implementer": "w", "reviewer": "r"})
++            kb._append_event(conn, tid, "completed", {"summary": "reviewer approved"})
++        assert kb.complete_task(conn, tid, result="approved path") is True
++
++    def test_rejection_event_carries_level_result(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn, verification="strict:pr")
++        with pytest.raises(Exception):
++            kb.complete_task(conn, tid, result="no pr")
++        row = conn.execute(
++            "SELECT payload FROM task_events WHERE task_id=? AND kind LIKE '%verification%' ORDER BY id DESC",
++            (tid,),
++        ).fetchone()
++        assert row is not None, "verification_level_result event missing"
++
++
++class TestIndependent:
++    def test_independent_rejected_without_review_handoff(self, kanban_home):
++        conn = _conn()
++        tid = _ready(conn, verification="independent")
++        kb.claim_task(conn, tid, claimer="w")
++        with pytest.raises(Exception) as ei:
++            kb.complete_task(conn, tid, result="no review")
++        assert "review" in str(ei.value).lower() or "independent" in str(ei.value).lower()
++
++    def test_independent_passes_after_review_verdict(self, kanban_home):
++        # 判据读事件流真值（review_requested＋其后的 verdict 事件），与
++        # request_review/request_changes 动词落库形态一致——直落两事件模拟闭环。
++        conn = _conn()
++        tid = _ready(conn, verification="independent")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "review_requested", {"implementer": "w", "reviewer": "r"})
++            kb._append_event(conn, tid, "changes_requested", {"reviewer": "r", "reason": "fix"})
++        assert kb.complete_task(conn, tid, result="after review") is True
++
++    def test_independent_verdict_before_request_does_not_count(self, kanban_home):
++        # 判定必须发生在 review_requested 之后（时序判据防伪回执）。
++        conn = _conn()
++        tid = _ready(conn, verification="independent")
++        with kb.write_txn(conn):
++            kb._append_event(conn, tid, "changes_requested", {"reviewer": "r", "reason": "early"})
++            kb._append_event(conn, tid, "review_requested", {"implementer": "w", "reviewer": "r"})
++        with pytest.raises(Exception):
++            kb.complete_task(conn, tid, result="stale verdict")
++
++
++class TestFailClosed:
++    def test_verifier_crash_rejects_not_passes(self, kanban_home, monkeypatch):
++        conn = _conn()
++        tid = _ready(conn, verification="strict:pr")
++        monkeypatch.setattr(
++            "hermes_cli.kanban_db._pr_acceptance_satisfied",
++            lambda conn, task_id: (_ for _ in ()).throw(RuntimeError("gh down")),
++        )
++        with pytest.raises(Exception) as ei:
++            kb.complete_task(conn, tid, result="verifier down")
++        assert "verifier" in str(ei.value).lower() or "unavailable" in str(ei.value).lower()
++
++    def test_invalid_verification_value_rejected_at_write(self, kanban_home):
++        conn = _conn()
++        with pytest.raises(Exception):
++            kb.create_task(conn, title="bad", assignee="w", verification="ultra")

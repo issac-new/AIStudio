@@ -387,6 +387,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
         task_id = kb.create_task(
             conn, title=args.title, body=body, assignee=args.assignee,
             created_by=args.created_by or _profile_author(),
+            verification=getattr(args, "verification", None),
             workspace_kind=ws_kind, workspace_path=ws_path, branch_name=branch_name,
             project_id=getattr(args, "project", None), tenant=args.tenant, priority=args.priority,
             parents=tuple(args.parent or ()), triage=bool(getattr(args, "triage", False)),
@@ -1136,7 +1137,8 @@ def _cmd_complete(args: argparse.Namespace) -> int:
                                         expected_run_id=_worker_run_id_for(tid),
                                         force=bool(getattr(args, "force", False)),
                                         receipt=receipt,
-                                        workspace=os.environ.get("HERMES_KANBAN_WORKSPACE"))
+                                        workspace=os.environ.get("HERMES_KANBAN_WORKSPACE"),
+                                        expected_version=getattr(args, "expected_version", None))
             except kb.LiveClaimError:
                 fail_msg[tid] = (f"cannot complete {tid}: a live worker is running it. Wait for the "
                                  f"worker, `hermes kanban reclaim {tid}` to release it, or re-run with "
@@ -1220,8 +1222,10 @@ def _cmd_block(args: argparse.Namespace) -> int:
                 return f"{tid} → triage (unblock loop detected — {verdict}){suffix}"
             return f"Blocked {tid}{suffix}"
 
+        _ev = getattr(args, "expected_version", None)
         op = _commented(conn, reason, author, "BLOCKED", lambda tid: kb.block_task(
-            conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id_for(tid)))
+            conn, tid, reason=reason, kind=kind, expected_run_id=_worker_run_id_for(tid),
+            expected_version=_ev))
         return _bulk_apply(ids, op, ok_msg, lambda tid: f"cannot block {tid}")
 
 
