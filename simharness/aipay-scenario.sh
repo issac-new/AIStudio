@@ -1407,7 +1407,7 @@ DEV-MP（csw-cashier-mp，2 人日）。任务纪律（先拆分再编码，2026
 工作区 $(workspace xiao)（git checkout -b feat/DEV-MP origin/main）。
 1) 实现 apps/csw-cashier-mp：双端目录（wechat/ 支付宝 alipay/），收银台页（订单展示/支付方式/15分钟倒计时/结果三态/失败重试不重复下单），api client 调 BFF 契约（见概设文档）
 2) 逻辑层断言测试（自研脚本或 vitest 均可）≥6 用例全绿（运行输出保存到 docs/evidence/DEV-MP-testlog.txt 随分支提交，G3 证据，缺件判未完成；发结论行前自检该 testlog 文件已在分支上存在且非空——左移件 d；testlog 末尾附 npm audit --omit=dev 摘要段（漏洞计数+top 项，无法联网时写明「npm audit 不可达」一行——安全合规件 run15 前置 P3-7③））。提交纪律：git add 只取本任务改动与该 testlog 显式路径，严禁携带他任务 evidence 文件
-3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。（testlog 提交纪律：基于共享基分支起家的自带他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交——integration 合并 add/add 冲突实锤）${ACP_NOTE:-}边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
+3) push origin feat/DEV-MP；结论行 DEV-DONE-DEV-MP。${ACP_NOTE:-}（testlog 提交纪律：基于共享基分支起家的自带他任务 testlog 若被本地复跑改动，提交前必须 git checkout 还原，严禁随本分支提交——integration 合并 add/add 冲突实锤）边界纪律：交付仅限 push origin feat/<你的任务分支>；不得直接推 origin/main；不得代做他人/他域任务。评审与合并集成归你的域 lead（wei/mei）职权，不得请求产品经理代合并（PM 不合并不评审代码）。${FRESH_NOTE:-}不许谎报。" "$(agent_mxid xiao),$(agent_mxid mei)"
     sset devimpl_d1 1
   fi
 

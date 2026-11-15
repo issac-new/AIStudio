@@ -6,6 +6,15 @@
 
 ---
 
+## gap-20261114-proactive-6a：Proactive AI 6A 综述全量融合（干预五档/打断预算/挣得自主权/主动性评测）
+
+- **来源**：微信文《下一代 Agent 到底需要什么能力？UIUC、Google、斯坦福等联合推出 Proactive AI 综述》→ 回源一手三件套：论文 PDF 204 页（storage.googleapis.com/gweb-research2023-media/pubtools/1048480.pdf，pdftotext 105 万字符）+ GitHub README 215K + 项目主页，全部存档 `~/.hermes/shared/research/20261114-proactive-ai-6a/`（FUSION-VERDICT-20261114.md + digest×8 + hermes-6a-mapping.md）。防重复扫描零命中=首次融合。
+- **深读覆盖**：正文 8 章 632K 全量（§1-§2 orchestrator 亲读；§3-§8 八路子代理全文通读，机制条目 246 条）；References 区按书级蒸馏惯例不读。
+- **裁决**：概念层 7 项（吸收 4/等效 2/收缩 1）+ 机制层 43 簇 = 吸收 12 / 收缩吸收 5 / 等效印证 18 / 不吸收 8。核心判断：五 A 已有强对位（多数印证），Anticipation 近空白；增量=干预交付五档阶梯/出手门与打断预算/挣得自主权通道/条件锚失效重访/主动性过程评测/便宜 oracle 配比六类，非新基础设施。
+- **落地（2026-11-14）**：① 新 skill `devops/proactive-6a-orchestration` v1.0.0（操作面正本）；② alert-triage-rules 增补 §七 打断预算与断点搭车；③ delegation-brief-format v1.11.0 增补 §4.1 剩余决策空间 residual: 字段；④ agent-eval-system-design 增补 §6 主动性评测维度（机制层四+用户层二+负陷阱必测）；⑤ capability-ladder 增补 §13 挣得的自主权通道（normal 档待独立评审）。
+- **登记待派缺口**：hack 变体搜索收尾（M6c-3）/ 持久情境模型机制面（M4a-1，影子起步）/ matter-state 事项级追踪（M6d-10）/ 雷达项目感知与多样性（S2/S4）/ dispatcher 可防危害维度（E14 增量）/ evals 负陷阱题组（A5 效力面）/ K12 四条（M6d-11/12/13/17/21，经 k12edu-orch 转交）。
+- **状态**：融合与五落点 done（验收 grep 全过）；登记缺口 open 待派。
+
 ## gap-20261102-design-doc-sync：1031-1102 窗口复盘 → 设计文档口径刷新
 
 - **来源**：用户令「根据上次设计文档更新之后的变化内容，更新整体设计文档」。窗口起点 = 正本上次更新 commit `d16b4b433`（2026-10-31 10:32，组件台账刷新批）。方法 = skill `design-doc-retro-rebuild` 五路盘点。
