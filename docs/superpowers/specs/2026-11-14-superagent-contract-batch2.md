@@ -135,3 +135,19 @@ tasks SHALL 增 `version INTEGER NOT NULL DEFAULT 0`；**所有改 tasks 行的�
 | 批量 kanban 集 | 84 文件点名跑 51 failed＝main 同红（测试间 HERMES_HOME 状态泄漏存量债，单跑全绿）——挂账测试基建 |
 | 变异探针 | 3/3 有效：摘 complete CAS 校验→1 红；摘 version 触发器段→12 errors（建库崩）；旁路 verification 门→5 红；恢复后全绿 |
 | 探针期事故 | `git checkout --` 会把注入态撤回 pristine 且增量注入因 sha 一致跳过重放（文件实际缺失）——探针恢复一律走 python 反向替换或 clean+inject 全量；本轮已按此恢复并复验 22/22 |
+
+
+## 10. 独立审查处置（2026-11-15，request-changes→修复复验）
+
+| 级别 | 问题 | 处置 |
+|---|---|---|
+| Critical-1 | strict:pr 门序死锁（门先于 record_acceptance→PR 事件永不落库→永不满足） | 门移 prepare_acceptance 之后，strict:pr 优先本次 receipt.ok（无 PR 契约回落历史事件）；防回归用例锁定门序契约（7693ce1e6） |
+| Important-2 | independent 语义反转（驳回算证据、批准反被拒） | 判据集加 reviewer 的 completed（批准=独立看过）；防回归用例锁定批准路径 |
+| Important-3 | Task/Event 读面无新列（客户端拿不到 version） | Task+version/verification、Event+四列映射；读面断言用例 |
+| Important-4 | envelope 无生产接线（trace_id 恒 NULL） | write_txn 事务级 UUID 恒有值；complete 成功路径 metadata 落 verification_result；trace 断言用例 |
+| Important-5 | studio 409 实为 422＋block/patch 未通＋CLI 无 --verification | 422 正则排除 version conflict；complete/block/patchTask 三端 409 通；CLI create --verification（_TENANT 宏误删事故一并修复） |
+| Minor-6/9 | block 注释失实；series 空行漂移 | 注释改真；series=上游逐字＋尾块重建 |
+
+**修复复验**：42/42（26 新例含 5 防回归）＋全量 vitest 8962 例 0 failed（上游 diagram 红已清偿）＋typecheck 0 错＋budget 0 problem＋六镜像 diff 同构＋F8 全量重放 complete。
+
+**实施勘误（补丁重建方法论）**：多轮 clean/重放打散工作区 after 概念后，775/776 曾出现「增量补丁丢 HEAD 基础」「difflib 段截断」「测试段混入 diff 头」三种坏件——终局方案=**runtime 六镜像作唯一权威 after 源＋baseA 基线快照（无批二注入态）一次性全量 diff**；提取补丁内新文件须过滤 `+++` 头行。
