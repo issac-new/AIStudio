@@ -1,8 +1,12 @@
 # Proactive AI 综述第二轮吸收（全文版）：发现测试、反事实差值、standing agenda、earned autonomy、机制级监督
 
 日期：2026-11-14
-状态：in-progress（分支 `feat/proactive-ai-round2`，worktree `proactive-ai-r2`，自 origin/main 1bc799ca4 起）
+状态：implemented（五批 P1-P5 全部合入 main `1de52a936`；2026-11-15 于主检出复跑四域 540/540 绿、DESIGN_SYNC 三件在位核验通过）
 触发：用户「深入调研 https://mp.weixin.qq.com/s/p_OenOwaSqhFLG55RPQM-A 完善 AIStudio」＋「全做」裁决（五批 P1-P5 全量执行）。
+同源轮登记（2026-11-15 立，防再次误吸收）：同一篇综述已吸收两轮，本仓不再重复吸收——
+- 第一轮 2026-11-03：摘要版（微信 3.8k 字）→ `2026-11-03-proactive-intervention-governance.md`（注意力轴五档决策/反馈台账/三层计分卡/断点推断）；同日补全文精读（203 页 PDF）→ `docs/reports/2026-11-03-proactive-ai-fulltext-analysis.md` 与四门化修正（clarify/hold/接受度折现/适当依赖四象限）。
+- 第二轮 2026-11-14（本 spec）：全文升级吸收 P1-P5（发现测试/反事实差值/standing agenda/earned autonomy/机制级监督）。
+- 再次收到同一链接（`/s/p_OenOwaSqhFLG55RPQM-A`）时的处置：先读本节，不新开吸收轮；如需继续，只能从本 spec 的三处显式挂账里选（`EARNED_AUTONOMY_AUTO_TIGHTEN` 自动收紧写档／卡级 standing 语义／完整会话溯源面），且需用户裁决。
 调研正本：`docs/reports/2026-11-14-proactive-ai-fulltext-round2.md`（论文全文 11,652 行三路深读；首轮 2026-11-03 只有摘要版 3.8k 字，本轮是同论文升级吸收）。
 论文：《Proactive AI for Superintelligent Agents》（UIUC/Google/Stanford/Berkeley/CMU）。
 
@@ -81,9 +85,13 @@
 
 ## 设计文档影响
 
-DESIGN_SYNC: touched
+DESIGN_SYNC: none
 
-- `docs/DESIGN.md`（整合正本，旧址 spec 已是指针）：主动性治理段增二轮吸收增量——反事实预演双通道与 fail-open、standing agenda 立案三件套与恢复走治理链、earned autonomy track record 建议器阈值语义、发现测试四判据与证据链/偏差复利信号。
+2026-11-15 状态修订：本批只改状态行与同源轮登记，无设计文档修订。合并批（`1de52a936`）的设计同步已落地并核验在位——明细见下节「附：合并批设计同步（历史留痕）」。
+
+### 附：合并批设计同步（历史留痕）
+
+- `docs/DESIGN.md`（整合正本）：主动性治理段增二轮吸收增量——反事实预演双通道与 fail-open、standing agenda 立案三件套与恢复走治理链、earned autonomy track record 建议器阈值语义、发现测试四判据与证据链/偏差复利信号。
 - `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：§A 稳定参数增四行（反事实预演预算、earned autonomy 建议阈值、发现测试判据、偏差复利信号阈值）。
 - `config/mechanism-budget.json`：登记本轮（+2 patches 773/774、+standingagenda 域、+earned-autonomy 建议器；sunset=连续两轮推演零消费即退役）；配对降级=P2 SUGGESTION_PROFILE 主路径降级（D10）。
 - `docs/manuals/aistudio-design-document-index.md`：`gen-doc-indexes --write` 机械登记（附录 A 已于 2026-11-12 冻结，新增只进机械索引）——675→676，check 0 problem。
