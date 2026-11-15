@@ -7,12 +7,16 @@
 //   - userResolvedShare＝人介入率（decidedBy=user / 全部 resolved）——高＝当前挡位超出实际可靠性
 //   - pendingShare＝悬而未决占比——高＝挡位产生的审批积压
 //   - resolvedAutoShare＝策略自动放行占比——高且人介入近零＝已证明可靠
-// 纪律（spec D7/D8）：默认只建议不动档（收紧自动写档挂账——四挡→PermissionMode 反向
-// 映射缺失，不自造第三套词表映射）；冷启动 <20 不出建议；只消费决议统计不消费文本反馈（防谄媚）。
+// 纪律（spec D7/D8）：默认只建议不动档；冷启动 <20 不出建议；只消费决议统计不消费文本反馈（防谄媚）。
+// 收紧自动写档（2026-11-15 清偿挂账）：`EARNED_AUTONOMY_AUTO_TIGHTEN=1` 时把 tighten 建议
+// 落到会话权限档（session-mode-store）；**永不自动放宽**。四挡→七档的唯一映射声明在本文件
+// `MODE_TO_PERMISSION`（单点事实源，测试锁表；此前挂账理由「映射缺失」由此解除）。
 import Router from '@koa/router'
 import { ok, fail as httpFail } from '../lib/http'
 import { MODE_IDS, type ModeId } from './index'
 import { readApprovalLedger, type ApprovalLedgerRecord } from '../approval-ledger/ledger-store'
+import { sessionModeOf, setSessionMode } from '../permmodes/session-mode-store'
+import type { PermissionMode } from '../permmodes/permission-modes'
 
 /** 收紧方向序（索引大=权限宽；tighten=向索引小走一步）。 */
 export const TIGHTEN_ORDER: readonly ModeId[] = ['plan', 'build', 'guarded', 'yolo']
@@ -102,6 +106,66 @@ function safeReadLedger(): ApprovalLedgerRecord[] {
   try { return readApprovalLedger(2000) } catch { return [] }
 }
 
+// ── 四挡 → 七档权限模式（唯一映射；写档需要它，挂账理由由此解除） ────
+//
+// 对齐逻辑：plan 只读；build 写/执行需审批（default）；guarded 自动改文件、执行仍审批
+// （acceptEdits）；yolo 全放行（bypassPermissions）。映射按「权限强度单调」排，测试锁表——
+// 任何新增挡位/权限档都必须同时改这里与测试，否则守门当场红。
+
+export const MODE_TO_PERMISSION: Readonly<Record<ModeId, PermissionMode>> = {
+  plan: 'plan',
+  build: 'default',
+  guarded: 'acceptEdits',
+  yolo: 'bypassPermissions',
+}
+
+export function permissionModeFor(mode: ModeId): PermissionMode {
+  return MODE_TO_PERMISSION[mode]
+}
+
+export interface ApplyResult {
+  applied: boolean
+  profile: string
+  /** 建议方向（hold/loosen 一律不写档）。 */
+  direction: ModeRecommendation['direction']
+  target: ModeId
+  previous: PermissionMode | null
+  /** 写入后的会话档（未写=undefined）。 */
+  next?: PermissionMode
+  reason: string
+}
+
+/**
+ * 收紧执行器（唯一写口）：
+ *   · `EARNED_AUTONOMY_AUTO_TIGHTEN !== '1'` → 不写（默认 off，存量行为不变）；
+ *   · direction 非 tighten → 不写（放宽永远须人确认，防把权限升级交给被评估者）；
+ *   · 写会话档（per-profile），返回原档供回滚；写失败如实抛错由调用方转 5xx。
+ * 只收紧不放宽的纪律与 enforcement-policy 先例一致。
+ */
+export function applyTighten(
+  profile: string,
+  recommendation: ModeRecommendation,
+  deps: { autoTightenEnabled?: boolean } = {},
+): ApplyResult {
+  const enabled = deps.autoTightenEnabled ?? process.env.EARNED_AUTONOMY_AUTO_TIGHTEN === '1'
+  const previous = (() => {
+    try { return sessionModeOf(profile) } catch { return null }
+  })()
+  const base: ApplyResult = {
+    applied: false, profile, direction: recommendation.direction, target: recommendation.target, previous,
+    reason: '',
+  }
+  if (recommendation.direction !== 'tighten') {
+    return { ...base, reason: `方向 ${recommendation.direction} 不写档：放宽/维持须人确认（只收紧不放宽）` }
+  }
+  if (!enabled) {
+    return { ...base, reason: '自动收紧未启用（EARNED_AUTONOMY_AUTO_TIGHTEN!=1）——建议照常呈现，档位不动' }
+  }
+  const next = permissionModeFor(recommendation.target)
+  setSessionMode(profile, next)
+  return { ...base, applied: true, next, reason: `已收紧：${recommendation.target} → 会话权限档 ${next}（原档 ${previous ?? '未配置'}）` }
+}
+
 // ── REST（GET 单端点；呈现建议不写任何状态） ────
 
 export const earnedAutonomyRouter = new Router({ prefix: '/api/hermes/execution/earned-autonomy' })
@@ -122,4 +186,27 @@ earnedAutonomyRouter.get('/', (ctx) => {
     enforcement: 'advisory-only',
     thresholds: { coldStartMin: COLD_START_MIN, loosenMinSample: LOOSEN_MIN_SAMPLE, tightenUserShare: TIGHTEN_USER_SHARE },
   })
+})
+
+/** 收紧执行口（POST）：仅在 tighten 且 env 开启时写会话档；放宽永远拒绝（409）。 */
+earnedAutonomyRouter.post('/apply', (ctx) => {
+  const body = ((ctx.request as { body?: unknown }).body ?? {}) as Record<string, unknown>
+  const profile = String(body.profile ?? '').trim()
+  if (!profile) { httpFail(ctx, 400, 'profile 必填', { code: 'invalid_profile' }); return }
+  const modeRaw = String(body.mode ?? '')
+  const current: ModeId = (MODE_IDS as readonly string[]).includes(modeRaw) ? modeRaw as ModeId : 'build'
+  const record = trackRecordOf(profile)
+  const recommendation = recommendMode(current, record)
+  if (recommendation.direction !== 'tighten') {
+    httpFail(ctx, 409, recommendation.direction === 'loosen'
+      ? '建议方向为放宽：放宽永远须人确认，本口不写档'
+      : '当前建议为维持：无可收紧动作', { code: 'no_tighten' })
+    return
+  }
+  const result = applyTighten(profile, recommendation)
+  if (!result.applied) {
+    httpFail(ctx, 409, result.reason, { code: 'auto_tighten_disabled' })
+    return
+  }
+  ok(ctx, result as unknown as Record<string, unknown>)
 })

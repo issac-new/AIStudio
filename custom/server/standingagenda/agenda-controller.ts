@@ -53,7 +53,12 @@ const STATUS_FLOW: Record<StandingAgendaStatus, StandingAgendaStatus[]> = {
 
 standingAgendaRouter.get('/', (ctx) => {
   const { records, badLines } = readAgendas()
-  ok(ctx, { agendas: records, ...(badLines > 0 ? { badLines } : {}) })
+  const cardId = typeof ctx.query.cardId === 'string' ? ctx.query.cardId.trim() : ''
+  const status = typeof ctx.query.status === 'string' ? ctx.query.status.trim() : ''
+  const filtered = records.filter((r) =>
+    (!cardId || r.cardId === cardId) && (!status || r.status === status),
+  )
+  ok(ctx, { agendas: filtered, ...(badLines > 0 ? { badLines } : {}), ...(cardId ? { cardId } : {}) })
 })
 
 standingAgendaRouter.get('/:id', (ctx) => {
@@ -67,6 +72,9 @@ standingAgendaRouter.post('/', (ctx) => {
   const v = validateAgendaInput(body)
   if (!v.value) { httpFail(ctx, 400, '立案校验失败', { code: 'invalid_agenda', problems: v.problems }); return }
   const sessionId = typeof body.sessionId === 'string' && body.sessionId.trim() ? body.sessionId.trim() : undefined
+  const cardIdRaw = typeof body.cardId === 'string' ? body.cardId.trim() : ''
+  if (cardIdRaw && cardIdRaw.length > 120) { httpFail(ctx, 400, 'cardId 超长（≤120 字符）', { code: 'invalid_card' }); return }
+  const cardId = cardIdRaw || undefined
   const goalId = typeof body.goalId === 'string' && body.goalId.trim() ? body.goalId.trim() : undefined
   const record: StandingAgendaRecord = {
     id: newAgendaId(),
@@ -78,6 +86,7 @@ standingAgendaRouter.post('/', (ctx) => {
     status: 'parked',
     resumeCount: 0,
     ...(sessionId ? { sessionId } : {}),
+    ...(cardId ? { cardId } : {}),
     ...(goalId ? { goalId } : {}),
     ...(typeof body.note === 'string' && body.note.trim() ? { note: body.note.trim().slice(0, 500) } : {}),
   }
@@ -125,7 +134,7 @@ standingAgendaRouter.post('/:id/match', (ctx) => {
     audience: candidate.audience,
     urgency: 'normal',
     topicKey: candidate.topicKey!,
-    summary: `恢复建议：${record.title}（触发 ${p.matchedEventSummary}）`.slice(0, 200),
+    summary: `恢复建议：${record.title}${record.cardId ? `「卡 ${record.cardId}」` : ''}（触发 ${p.matchedEventSummary}）`.slice(0, 200),
     benefit: candidate.expectedBenefit!,
     cost: candidate.attentionCost!,
     decision: verdict.decision,

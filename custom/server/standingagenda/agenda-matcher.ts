@@ -53,10 +53,15 @@ export function matchResumes(
   const proposals: ResumeProposal[] = []
   for (const record of records) {
     if (record.status !== 'parked') continue
-    const hit = events.find((e) => filterMatches(record.resumeCondition, e))
+    // 卡级锚：记录绑定了卡时，kanban 事件必须同卡才算命中（跨卡同列流转不误触发）
+    const hit = events.find((e) =>
+      filterMatches(record.resumeCondition, e)
+      && !(record.cardId && e.type === 'kanban' && e.taskId !== record.cardId),
+    )
     if (!hit) continue
     proposals.push({
       recordId: record.id,
+      ...(record.cardId ? { cardId: record.cardId } : {}),
       title: record.title,
       mandateGoal: record.mandateGoal,
       matchedEventSummary: summarizeEvent(hit),
