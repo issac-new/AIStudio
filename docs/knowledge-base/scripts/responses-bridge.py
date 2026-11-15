@@ -6,7 +6,7 @@
 含 SSE 真流式（Responses 的 SSE 事件流 → chat.completions 的 chunk 流）。
 
 用法:
-  BRIDGE_PORT=18085 UPSTREAM=http://127.0.0.1:15721/v1/responses \
+  BRIDGE_PORT=18085 UPSTREAM=http://127.0.0.1:PORT/v1/responses \
   BRIDGE_API_KEY=sk-xxx python3 responses-bridge.py
 
 环境变量（全部可省，见下默认）:
@@ -19,7 +19,7 @@ import json, os, urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 PORT = int(os.environ.get("BRIDGE_PORT", "18085"))
-UPSTREAM = os.environ.get("UPSTREAM", "http://127.0.0.1:15721/v1/responses")
+UPSTREAM = os.environ.get("UPSTREAM", "http://your-responses-gateway/v1/responses")
 API_KEY = os.environ.get("BRIDGE_API_KEY", "")
 LOG = os.environ.get("BRIDGE_LOG", "/tmp/responses-bridge.log")
 
