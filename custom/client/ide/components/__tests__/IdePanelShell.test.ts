@@ -46,4 +46,59 @@ describe('IdePanelShell', () => {
     })
     expect(wrapper.find('[data-testid="shell-tools-count"]').exists()).toBe(true)
   })
+
+  // 终审 IMPORTANT 3：document 级 Esc 无层次——多层同开一次 Esc 全关，对照分屏选中态
+  // 与侧问草稿会被连坐清空。要求模块级开窗栈：后开先关，一次 Esc 只关栈顶。
+  it('Esc 开窗栈：两壳叠开按一次 Esc 只关栈顶（后挂载者），再按关下一层', async () => {
+    const flush = () => new Promise(r => setTimeout(r, 0))
+    const first = mount(IdePanelShell, {
+      props: { title: '第一层：恢复到历史点', variant: 'dialog', testid: 'shell-stack-first' },
+      attachTo: document.body,
+    })
+    const second = mount(IdePanelShell, {
+      props: { title: '第二层：抽帧', variant: 'dialog', testid: 'shell-stack-second' },
+      attachTo: document.body,
+    })
+    try {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await flush()
+      expect(second.emitted('close'), '一次 Esc 只关栈顶（后挂载者）').toHaveLength(1)
+      expect(first.emitted('close'), '底层壳不得被连坐关闭').toBeUndefined()
+      // 父层响应 close 卸载栈顶后，Esc 落到下一层
+      second.unmount()
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await flush()
+      expect(first.emitted('close'), '栈顶已关，再按 Esc 关下一层').toHaveLength(1)
+    } finally {
+      first.unmount()
+      if (document.body.contains(second.element)) second.unmount()
+    }
+  })
+
+  // 终审 IMPORTANT 3：Safari 中文组词取消候选词的 Esc（isComposing，老版缺席时 keyCode 229）
+  // 不得连带关面板。
+  it('IME 组词中的 Esc 不关壳（isComposing 与 keyCode 229 双守卫），普通 Esc 仍关闭', async () => {
+    const flush = () => new Promise(r => setTimeout(r, 0))
+    // jsdom 构造器不认 isComposing/keyCode 遗留初始化键，实例级覆写保证两条守卫分支可达
+    const escEvent = (overrides: { isComposing?: boolean; keyCode?: number }): KeyboardEvent => {
+      const ev = new KeyboardEvent('keydown', { key: 'Escape' })
+      for (const [k, v] of Object.entries(overrides)) Object.defineProperty(ev, k, { value: v })
+      return ev
+    }
+    const wrapper = mount(IdePanelShell, {
+      props: { title: '恢复到历史点', variant: 'dialog', testid: 'shell-ime' },
+      attachTo: document.body,
+    })
+    try {
+      document.dispatchEvent(escEvent({ isComposing: true }))
+      document.dispatchEvent(escEvent({ keyCode: 229 }))
+      await flush()
+      expect(wrapper.emitted('close'), 'IME 组词 Esc 不触发关闭').toBeUndefined()
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      await flush()
+      expect(wrapper.emitted('close'), '守卫不得吞掉普通 Esc').toHaveLength(1)
+    } finally {
+      wrapper.unmount()
+    }
+  })
 })

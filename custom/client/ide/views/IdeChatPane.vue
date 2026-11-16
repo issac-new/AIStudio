@@ -816,15 +816,6 @@ const chatActionLabels = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].chat
   flex: none;
 }
 
-/* 高频动作：图标 + 短文字（宽度自适应，覆盖 26px 方块缺省） */
-.ide-chat__action--label {
-  width: auto;
-  gap: 4px;
-  padding: 0 8px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .ide-chat__action {
   width: 26px;
   height: 26px;
@@ -838,6 +829,17 @@ const chatActionLabels = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].chat
   border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
+
+  /* 高频动作：图标 + 短文字（宽度自适应，覆盖 26px 方块缺省）。
+     终审 IMPORTANT 1：嵌套成复合选择器（.ide-chat__action.ide-chat__action--label）抬高
+     特异性，width/font-size 不再被 base 同特异性压制（原独立规则写在 base 之前会失效）。 */
+  &.ide-chat__action--label {
+    width: auto;
+    gap: 4px;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
 
   &:hover:not(:disabled) {
     color: var(--text-primary);
