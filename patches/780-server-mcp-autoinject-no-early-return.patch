@@ -1,0 +1,194 @@
+diff --git a/packages/server/src/modules/hermes/services/mcp/studio-autoinject.ts b/packages/server/src/modules/hermes/services/mcp/studio-autoinject.ts
+--- a/packages/server/src/modules/hermes/services/mcp/studio-autoinject.ts
++++ b/packages/server/src/modules/hermes/services/mcp/studio-autoinject.ts
+@@ -235,100 +235,113 @@
+     existing.env[MANAGED_ENV_KEY] === desiredEnv[MANAGED_ENV_KEY]
+ }
+ 
+-async function injectIntoProfile(
++export interface ManagedMcpMergeResult {
++  cfg: Record<string, any>
++  changed: boolean
++  injected: boolean
++  hadManagedExisting: boolean
++  skipped: string[]
++}
++
++/**
++ * 纯合并：把 MANAGED_SERVERS 补进一份 profile 配置。
++ *
++ * 用户禁用的同名服务、非托管的同名服务都不覆盖，但**不早退**：
++ * 早退会让排在前面的 api/browser/use 一旦被禁用，后面的 interaction
++ * 永远补不进去（pay-orchestrator/worker-coder 实测缺 interaction 即此因）。
++ */
++export function mergeManagedMcpServers(
++  current: unknown,
+   profile: string,
+   bundledScript: string | null,
+-): Promise<BundledMcpInjectionTargetResult> {
+-  return await updateConfigYamlForProfile(profile, current => {
+-    const cfg = isRecord(current) ? current : {}
+-    if (!isRecord(cfg.mcp_servers)) cfg.mcp_servers = {}
++): ManagedMcpMergeResult {
++  const cfg = isRecord(current) ? current : {}
++  if (!isRecord(cfg.mcp_servers)) cfg.mcp_servers = {}
++  const skipped: string[] = []
+ 
+-    let changed = false
+-    let injected = false
+-    let hadManagedExisting = false
++  let changed = false
++  let injected = false
++  let hadManagedExisting = false
+ 
+-    for (const { name } of MANAGED_SERVERS) {
+-      const legacyName = name === 'ekko-studio-interaction' ? 'ekko-studio-plan' : name.replace(/^ekko-/, 'hermes-')
+-      const legacy = cfg.mcp_servers[legacyName]
+-      if (!cfg.mcp_servers[name] && isManagedServer(legacy)) {
+-        cfg.mcp_servers[name] = legacy
+-        delete cfg.mcp_servers[legacyName]
+-        changed = true
+-      }
++  for (const { name } of MANAGED_SERVERS) {
++    const legacyName = name === 'ekko-studio-interaction' ? 'ekko-studio-plan' : name.replace(/^ekko-/, 'hermes-')
++    const legacy = cfg.mcp_servers[legacyName]
++    if (!cfg.mcp_servers[name] && isManagedServer(legacy)) {
++      cfg.mcp_servers[name] = legacy
++      delete cfg.mcp_servers[legacyName]
++      changed = true
+     }
++  }
+ 
+-    for (const [name, server] of Object.entries(cfg.mcp_servers)) {
+-      if (MANAGED_SERVER_NAMES.has(name)) continue
+-      if (LEGACY_SERVER_NAMES.has(name) && !isManagedServer(server)) {
+-        return {
+-          data: cfg,
+-          write: false,
+-          result: {
+-            profile,
+-            status: 'skipped',
+-            reason: `existing ${name} MCP server is not managed by Hermes Web UI`,
+-          } satisfies BundledMcpInjectionTargetResult,
+-        }
+-      }
+-      if (isManagedServer(server)) {
+-        delete cfg.mcp_servers[name]
+-        changed = true
+-        hadManagedExisting = true
+-      }
++  for (const [name, server] of Object.entries(cfg.mcp_servers)) {
++    if (MANAGED_SERVER_NAMES.has(name)) continue
++    if (LEGACY_SERVER_NAMES.has(name) && !isManagedServer(server)) {
++      skipped.push(`existing ${name} MCP server is not managed by Hermes Web UI`)
++      continue
+     }
+-
+-    for (const server of MANAGED_SERVERS) {
+-      const desired = managedConfig(profile, server.name, server.toolset, bundledScript)
+-      const existing = cfg.mcp_servers[server.name]
+-      if (!existing) {
+-        cfg.mcp_servers[server.name] = desired
+-        changed = true
+-        injected = true
+-        continue
+-      }
++    if (isManagedServer(server)) {
++      delete cfg.mcp_servers[name]
++      changed = true
+       hadManagedExisting = true
++    }
++  }
+ 
+-      if (!isManagedServer(existing)) {
+-        return {
+-          data: cfg,
+-          write: false,
+-          result: {
+-            profile,
+-            status: 'skipped',
+-            reason: `existing ${server.name} MCP server is not managed by Hermes Web UI`,
+-          } satisfies BundledMcpInjectionTargetResult,
+-        }
+-      }
++  for (const server of MANAGED_SERVERS) {
++    const desired = managedConfig(profile, server.name, server.toolset, bundledScript)
++    const existing = cfg.mcp_servers[server.name]
++    if (!existing) {
++      cfg.mcp_servers[server.name] = desired
++      changed = true
++      injected = true
++      continue
++    }
++    hadManagedExisting = true
+ 
+-      if (isRecord(existing) && existing.enabled === false) {
+-        return {
+-          data: cfg,
+-          write: changed,
+-          result: {
+-            profile,
+-            status: 'skipped',
+-            reason: `existing ${server.name} MCP server is disabled by user`,
+-          } satisfies BundledMcpInjectionTargetResult,
+-        }
+-      }
++    if (!isManagedServer(existing)) {
++      skipped.push(`existing ${server.name} MCP server is not managed by Hermes Web UI`)
++      continue
++    }
+ 
+-      if (!sameConfig(existing, desired)) {
+-        cfg.mcp_servers[server.name] = desired.timeout === undefined && Object.hasOwn(existing, 'timeout')
+-          ? { ...desired, timeout: existing.timeout }
+-          : desired
+-        changed = true
+-      }
++    if (isRecord(existing) && existing.enabled === false) {
++      skipped.push(`existing ${server.name} MCP server is disabled by user`)
++      continue
+     }
+ 
+-    if (!changed) {
++    if (!sameConfig(existing, desired)) {
++      cfg.mcp_servers[server.name] = desired.timeout === undefined && Object.hasOwn(existing, 'timeout')
++        ? { ...desired, timeout: existing.timeout }
++        : desired
++      changed = true
++    }
++  }
++
++  return { cfg, changed, injected, hadManagedExisting, skipped }
++}
++
++async function injectIntoProfile(
++  profile: string,
++  bundledScript: string | null,
++): Promise<BundledMcpInjectionTargetResult> {
++  return await updateConfigYamlForProfile(profile, current => {
++    const merged = mergeManagedMcpServers(current, profile, bundledScript)
++    const reason = merged.skipped.length ? merged.skipped.join('; ') : undefined
++    if (!merged.changed) {
+       return {
+-        data: cfg,
++        data: merged.cfg,
+         write: false,
+-        result: { profile, status: 'unchanged' } satisfies BundledMcpInjectionTargetResult,
++        result: merged.skipped.length
++          ? { profile, status: 'skipped', reason } satisfies BundledMcpInjectionTargetResult
++          : { profile, status: 'unchanged' } satisfies BundledMcpInjectionTargetResult,
+       }
+     }
+-
+-    return { data: cfg, result: { profile, status: injected && !hadManagedExisting ? 'injected' : 'updated' } satisfies BundledMcpInjectionTargetResult }
++    return {
++      data: merged.cfg,
++      result: {
++        profile,
++        status: merged.injected && !merged.hadManagedExisting ? 'injected' : 'updated',
++        ...(reason ? { reason } : {}),
++      } satisfies BundledMcpInjectionTargetResult,
++    }
+   }) as BundledMcpInjectionTargetResult
+ }
+ 

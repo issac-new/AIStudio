@@ -1,0 +1,49 @@
+diff --git a/bin/ekko-studio-mcp.mjs b/bin/ekko-studio-mcp.mjs
+--- a/bin/ekko-studio-mcp.mjs
++++ b/bin/ekko-studio-mcp.mjs
+@@ -245,7 +245,7 @@
+     : defaultProfile()
+   // Explicit run bindings take precedence. Shared Hermes MCP connections can
+   // select a restricted group-plan credential without changing process state.
+-  const contextId = ['/api/studio/task-plans/update', '/api/studio/session-tasks/list', '/api/studio/session-tasks/update'].includes(path)
++  const contextId = ['/api/studio/task-plans/update', '/api/studio/session-tasks/list', '/api/studio/session-tasks/update', '/api/studio/surfaces/request'].includes(path)
+     ? String(options.body?.context_id || '') : undefined
+   const runCredential = readRunCredential(profile, contextId)
+   const token = runCredential?.token || readToken(options.token, options.allowTokenFile !== false, profile)
+@@ -258,7 +258,7 @@
+     ...(profile ? { 'X-Hermes-Profile': profile } : {}),
+     ...(runCredential ? { 'X-Studio-Run-Context': runCredential.context_id } : {}),
+   }
+-  const fetchRequest = path === '/api/studio/mobile-calendar/request' || path === '/api/studio/mobile-health/request' || path === '/api/studio/clarifications/request' ? fetchMobileConsent : fetch
++  const fetchRequest = path === '/api/studio/mobile-calendar/request' || path === '/api/studio/mobile-health/request' || path === '/api/studio/clarifications/request' || path === '/api/studio/surfaces/request' ? fetchMobileConsent : fetch
+   const response = await fetchRequest(`${baseUrl()}${appendQuery(path, options.query)}`, {
+     method,
+     headers,
+@@ -1233,6 +1233,16 @@
+       question: { type: 'string', minLength: 1, maxLength: 4000 },
+       choices: { type: 'array', maxItems: 20, items: { type: 'string', minLength: 1, maxLength: 500 } },
+     }, ['context_id', 'question']),
++  },
++  {
++    name: 'ekko_studio_show_surface',
++    toolset: 'plan',
++    description: 'Present one declarative ekko-ui/v1 surface (a form, choice set or confirmation the user edits before anything is sent) in Studio/App and wait for the user to submit, cancel or for the timeout. Send the complete spec in one call: {protocol:"ekko-ui/v1", surfaceId, title?, fallbackText, state?, root, submitSchema?}. root is a component tree using only catalog components (box/stack/row/grid/card/divider/spacer, text/heading/code/badge/alert, form/field/input/textarea/number/select/radio/checkbox/switch/range/date/time, button/button-group, list/table/progress); inputs bind to state paths via "bind", buttons emit local actions via "events". Result: {status:"submitted"|"cancelled"|"expired"|"closed", surface_id, revision, action_id?, payload?}. A timeout, dismissal or cancellation is not consent. Use only the latest interaction context_id. Unavailable to background tasks and delegated subagents.',
++    inputSchema: inputSchema({
++      context_id: { type: 'string', description: 'Current turn interaction context supplied by Studio.' },
++      spec: { type: 'object', description: 'Complete ekko-ui/v1 spec. Unknown components or props are rejected; never send HTML, CSS or scripts.' },
++      timeout_ms: { type: 'number', minimum: 1000, maximum: 300000, description: 'Wait time for the user submission. Defaults to 300000 (5 minutes).' },
++    }, ['context_id', 'spec']),
+   },
+   {
+     name: 'ekko_studio_update_plan',
+@@ -2094,6 +2104,10 @@
+     case 'ekko_studio_clarify':
+       return jsonText(await request('/api/studio/clarifications/request', withAuthArgs(args, {
+         method: 'POST', body: pickDefined(args, ['context_id', 'question', 'choices']), signal,
++      })))
++    case 'ekko_studio_show_surface':
++      return jsonText(await request('/api/studio/surfaces/request', withAuthArgs(args, {
++        method: 'POST', body: pickDefined(args, ['context_id', 'spec', 'timeout_ms']), signal,
+       })))
+     case 'ekko_studio_update_plan':
+       return jsonText(await request('/api/studio/task-plans/update', withAuthArgs(args, {

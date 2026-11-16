@@ -312,6 +312,12 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 
 ---
 
+### 对话内声明式界面（Ekko UI Surface）
+
+| 能力 | 实现与边界 |
+|---|---|
+| Agent 在单聊里发表单/选择/确认卡 | MCP 工具 `ekko_studio_show_surface`（`ekko-studio-interaction`，toolset `plan`）发送 `ekko-ui/v1` JSON；Studio 用白名单原生组件渲染，用户一次填写提交后工具返回结构化 payload，同一 run 继续。协议与目录：`custom/client/chat/ekko-ui/protocol.ts`；渲染器：`custom/client/chat/ekko-ui/EkkoUISurface.vue`；聊天卡片：`custom/client/chat/components/EkkoUISurfaceCard.vue`；宿主：`custom/server/ekko-ui/surface-runs.ts`；补丁 777-779。**边界**：v1 只做「一次完整界面 + 提交/取消」，不做增量 patch、图片/上传、Canvas、持久挂起；服务启动时 `studio-autoinject` 会把缺失的 `ekko-studio-interaction` 补进各 profile（用户自管或显式禁用的同名服务不覆盖）；若用户显式禁用该服务，Agent 拿不到工具，会退回普通对话或 clarify。 |
+
 ## 九、未收编的上游页：11 个内容路由
 
 “未收编”表示不使用 `IaLegacyShell`，不表示不可用或没有权限。上游公共布局/路由 meta 仍按原实现生效。旧 `/hermes/history` 与 `/hermes/history/session/:sessionId` 已由补丁退役，不再是本组内容页；现行历史入口是第二节的 `/app/history*`。
