@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// mx-capability-probes.mjs —— 推演期新能力探测（2026-11-03 立，方案 §5.11；2026-11-04 扩组至十三组；同日 W4 未做项收口扩至十四组——harness 契约面）。
+// mx-capability-probes.mjs —— 推演期新能力探测（2026-11-03 立，方案 §5.11；2026-11-04 扩组至十三组；同日 W4 未做项收口扩至十四组——harness 契约面；
+// 2026-11-17 run31 扩至十七组——proactive 二轮（earned-autonomy/lineage/standing-agenda 过滤）、
+// always-on（run-outcome/outbox 只读面）、kanban version（expected_version CAS 409），spec 2026-11-17-sim-probes-run31）。
 //
 // 为什么单独一支脚本：新能力（主动性介入治理 / 交接质量 / 验收断言 / 主张回执 / 组件库与多目标 /
 // 探测并发与调度面 / 派单容量准入＋四性四格判据 / 项目状态机与拓扑 / 执行记录 / 环境变量编辑面 /
@@ -14,7 +16,7 @@
 //   --profile userenv 组探测的 profile 名（缺省 default；SIM 与测试夹具均有该档）
 //   --format  human|json（默认 human；json 模式 stdout 只出结果信封）
 //   --inspect-config 只报告基址/输出/凭据来源，不跑探测
-// 退出码（契约）：0=十四组全绿；1=有探测失败；2=全量 fetch failed＝基座不可达（环境态）；3=用法错误。
+// 退出码（契约）：0=十七组全绿；1=有探测失败；2=全量 fetch failed＝基座不可达（环境态）；3=用法错误。
 //
 // 纪律：脚本只读/只算，不写业务数据；acceptance 探测会在临时目录里造两个文件（探针自带清理）。
 // 状态机类端点（projectworkflow complete/pause）只打「不落库的拒绝分支」——成功路径会写
@@ -517,6 +519,228 @@ results.push(await probe('harness-contract', 'taskmodel 正例（有卡则投影
   expect(m?.schemaVersion === 1, `schemaVersion!=1：${m?.schemaVersion}`)
   expect(m && typeof m.available === 'object' && 'inputVersions' in m.available, 'available 细项缺失（fail-soft 透明度面）')
   return { taskId: m.taskId, available: m.available }
+}))
+
+// ── 组 15：Proactive AI 二轮端点（earned-autonomy / lineage / standing-agenda，spec 2026-11-17-sim-probes-run31）──
+// earned-autonomy apply 是唯一写口：负例只用「构造性必拒」路径——缺 profile 400；
+// 唯一冷启动 profile（账本零记录→样本 0<20→hold）在 applyTighten 之前 409（earned-autonomy.ts:200-204），
+// 与 EARNED_AUTONOMY_AUTO_TIGHTEN 环境闸无关，零写入。
+results.push(await probe('proactive-r2', 'earned-autonomy 建议面可读（advisory-only 诚实边界声明）', async () => {
+  const r = await call('GET', `/api/hermes/execution/earned-autonomy?profile=${encodeURIComponent(PROFILE)}`)
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!==true')
+  const rec = r.body?.trackRecord
+  expect(rec && typeof rec.sampleSize === 'number', 'trackRecord.sampleSize 缺失')
+  expect(['tighten', 'loosen', 'hold'].includes(r.body?.recommendation?.direction), `direction 越界：${r.body?.recommendation?.direction}`)
+  expect(r.body?.enforcement === 'advisory-only', `enforcement 必须 advisory-only（只建议不动档）：${r.body?.enforcement}`)
+  expect(typeof r.body?.thresholds?.coldStartMin === 'number', 'thresholds.coldStartMin 缺失')
+  return { sampleSize: rec.sampleSize, direction: r.body.recommendation.direction, enforcement: r.body.enforcement }
+}))
+
+results.push(await probe('proactive-r2', '负例：apply 缺 profile→400；冷启动 hold 方向→409 no_tighten（不写档，环境闸无关）', async () => {
+  const bad = await call('POST', '/api/hermes/execution/earned-autonomy/apply', {})
+  expect(bad.status === 400, `缺 profile 须 400, got ${bad.status}`)
+  expect(bad.body?.code === 'invalid_profile', 'code 非 invalid_profile')
+  // 唯一冷启动 profile：账本必然零记录→hold→409 先于 applyTighten（零写入、无环境依赖）
+  const cold = await call('POST', '/api/hermes/execution/earned-autonomy/apply', {
+    profile: `mx-probe-cold-${Date.now().toString(36)}`,
+    mode: 'build',
+  })
+  expect(cold.status === 409, `hold 方向须 409, got ${cold.status}`)
+  expect(cold.body?.code === 'no_tighten', `code 非 no_tighten：${JSON.stringify(cold.body)}`)
+  expect(cold.body?.ok === false, '拒绝体必须 ok:false')
+  return { missingProfile: 400, coldStartHold: 409 }
+}))
+
+results.push(await probe('proactive-r2', 'lineage 三源聚合形状（四数组＋coverage 计数＋未覆盖声明）', async () => {
+  const r = await call('GET', `/api/harness/lineage?taskId=mx-probe-no-such-${Date.now().toString(36)}`)
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!==true')
+  const lin = r.body?.lineage
+  expect(lin, 'lineage 缺失')
+  for (const k of ['decisions', 'intents', 'evidence', 'diffs']) expect(Array.isArray(lin?.[k]), `${k} 须为数组（fail-soft 空集合法）`)
+  for (const k of ['approvalsScanned', 'agendasScanned', 'evidenceScanned']) {
+    expect(typeof lin?.coverage?.[k] === 'number', `coverage.${k} 缺失`)
+  }
+  expect(typeof lin?.note === 'string' && lin.note.includes('未覆盖'), 'note 必须显式声明未覆盖面（不冒充全覆盖）')
+  return { decisions: lin.decisions.length, intents: lin.intents.length, evidence: lin.evidence.length }
+}))
+
+results.push(await probe('proactive-r2', '负例：lineage 无 sessionId/taskId → 400 invalid_key', async () => {
+  const r = await call('GET', '/api/harness/lineage')
+  expect(r.status === 400, `expected 400, got ${r.status}`)
+  expect(r.body?.code === 'invalid_key', 'code 非 invalid_key')
+  return { status: 400 }
+}))
+
+results.push(await probe('proactive-r2', 'standing-agenda 列表可读＋cardId/status 过滤生效（空账合法）', async () => {
+  const r = await call('GET', '/api/hermes/standing-agenda')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!==true')
+  expect(Array.isArray(r.body?.agendas), 'agendas 缺失')
+  const withCard = r.body.agendas.find((a) => typeof a?.cardId === 'string' && a.cardId)
+  if (!withCard) return { agendas: r.body.agendas.length, skipped: '无带 cardId 记录——过滤命中面由守门测试夹具验证（空态如实记）' }
+  const cardId = withCard.cardId
+  const status = typeof withCard.status === 'string' ? withCard.status : null
+  const f = await call('GET', `/api/hermes/standing-agenda?cardId=${encodeURIComponent(cardId)}`)
+  expect(f.status === 200 && Array.isArray(f.body?.agendas) && f.body.agendas.length > 0, 'cardId 过滤未命中')
+  expect(f.body.agendas.every((a) => a.cardId === cardId), 'cardId 过滤混入他卡记录')
+  expect(f.body?.cardId === cardId, '响应须回显生效的 cardId 过滤条件')
+  if (status) {
+    const s = await call('GET', `/api/hermes/standing-agenda?status=${encodeURIComponent(status)}`)
+    expect(s.status === 200 && Array.isArray(s.body?.agendas), 'status 过滤响应非法')
+    expect(s.body.agendas.every((a) => a.status === status), 'status 过滤混入其他状态记录')
+  }
+  return { agendas: r.body.agendas.length, cardId, status }
+}))
+
+results.push(await probe('proactive-r2', '负例：不存在 cardId→空集不报错；不存在 id 单条→404', async () => {
+  const ghost = `mx-probe-nonexistent-${Date.now().toString(36)}`
+  const r1 = await call('GET', `/api/hermes/standing-agenda?cardId=${encodeURIComponent(ghost)}`)
+  expect(r1.status === 200, `不存在 cardId 须 200 空集, got ${r1.status}`)
+  expect(Array.isArray(r1.body?.agendas) && r1.body.agendas.length === 0, '不存在 cardId 必须空集（过滤语义≠报错）')
+  expect(r1.body?.cardId === ghost, '空集响应仍须回显 cardId')
+  const r2 = await call('GET', `/api/hermes/standing-agenda/${encodeURIComponent(ghost)}`)
+  expect(r2.status === 404, `不存在 id 须 404, got ${r2.status}`)
+  expect(r2.body?.code === 'not_found', 'code 非 not_found')
+  return { emptySet: 200, notFound: 404 }
+}))
+
+// ── 组 16：Always-on 收口账与发件箱（run-outcome / outbox，spec 2026-11-17-sim-probes-run31）──
+// 纪律：outbox 只探 GET 与「校验先于入队」的 400 负例；POST /dispatch 会真派发通知，禁探。
+results.push(await probe('always-on', 'run-outcome 账本可读（records/badLines；空账合法）', async () => {
+  const r = await call('GET', '/api/hermes/run-outcome')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!==true')
+  expect(Array.isArray(r.body?.records), 'records 缺失')
+  expect(typeof r.body?.badLines === 'number', 'badLines 缺失')
+  for (const rec of r.body.records) {
+    expect(typeof rec?.id === 'string' && typeof rec?.runId === 'string', `记录形状非法：${JSON.stringify(rec).slice(0, 120)}`)
+    expect(['outbox', 'silence', 'deferred'].includes(rec?.outcome), `outcome 越界：${rec?.outcome}`)
+  }
+  return { records: r.body.records.length, badLines: r.body.badLines }
+}))
+
+results.push(await probe('always-on', 'run-outcome stats 形状（total=0 时 silenceShare 必须 null 不猜数）', async () => {
+  const r = await call('GET', '/api/hermes/run-outcome/stats')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(typeof r.body?.total === 'number', 'total 缺失')
+  for (const k of ['byOutcome', 'byReason', 'byRunKind']) {
+    expect(r.body?.[k] && typeof r.body[k] === 'object' && !Array.isArray(r.body[k]), `${k} 须为对象`)
+  }
+  if (r.body.total === 0) {
+    expect(r.body?.silenceShare === null, 'total=0 时 silenceShare 必须 null（沉默占比不猜数）')
+  } else {
+    expect(typeof r.body?.silenceShare === 'number', 'total>0 时 silenceShare 须为数值')
+  }
+  return { total: r.body.total, silenceShare: r.body.silenceShare }
+}))
+
+results.push(await probe('always-on', 'outbox 只读面可读（messages；stats 带 backlog 读数）', async () => {
+  const r = await call('GET', '/api/hermes/outbox')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.ok === true, 'ok!==true')
+  expect(Array.isArray(r.body?.messages), 'messages 缺失（空队合法）')
+  for (const m of r.body.messages) {
+    expect(typeof m?.id === 'string' && ['pending', 'delivering', 'delivered', 'failed', 'suppressed'].includes(m?.status), `消息形状非法：${JSON.stringify(m).slice(0, 120)}`)
+  }
+  const st = await call('GET', '/api/hermes/outbox/stats')
+  expect(st.status === 200, `stats status=${st.status}`)
+  expect(typeof st.body?.total === 'number', 'stats.total 缺失')
+  expect(st.body?.byStatus && typeof st.body.byStatus === 'object', 'byStatus 缺失')
+  expect(typeof st.body?.backlog?.pending === 'number', 'backlog.pending 缺失')
+  expect(st.body?.backlog?.oldestAgeMs === null || typeof st.body.backlog.oldestAgeMs === 'number', 'backlog.oldestAgeMs 形态非法')
+  return { messages: r.body.messages.length, pending: st.body.backlog.pending }
+}))
+
+results.push(await probe('always-on', '负例：run-outcome 词表外必拒 400；outbox 非法 recipient 必拒 400（均先于落账/入队）', async () => {
+  const bad1 = await call('POST', '/api/hermes/run-outcome', {
+    runId: 'mx-probe-neg', runKind: 'bogus', audience: 'human', outcome: 'silence', reasonCode: 'nothing-new',
+  })
+  expect(bad1.status === 400, `词表外 runKind 须 400, got ${bad1.status}`)
+  expect(bad1.body?.ok === false, '拒绝体必须 ok:false')
+  const bad2 = await call('POST', '/api/hermes/outbox', {
+    recipient: { kind: 'bogus', name: 'mx-probe' }, body: 'must-not-enqueue', source: 'mx-probe',
+  })
+  expect(bad2.status === 400, `非法 recipient 须 400, got ${bad2.status}`)
+  expect(bad2.body?.ok === false, '拒绝体必须 ok:false')
+  // 校验先于写入的直接证据：两负例之后队列/账本仍读得到且不含探针痕迹
+  const after = await call('GET', '/api/hermes/outbox')
+  const leaked = (after.body?.messages ?? []).some((m) => m?.body === 'must-not-enqueue')
+  expect(!leaked, '非法入队请求不得留下队列痕迹（校验必须先于入队）')
+  return { runOutcome: 400, outbox: 400 }
+}))
+
+// ── 组 17：看板行级 version / expected_version 乐观锁（补丁 775/776，spec 2026-11-17-sim-probes-run31）──
+// 实测对账：列表/详情 JSON 面不序列化 version/verification（kanban_output.py _TASK_DICT_FIELDS
+// 未含此二列）——正例如实取证缺席事实；version 能力证明由 409 CAS 负例承担。
+// 负例非破坏性：version 列 DEFAULT 0 且触发器只递增→expectedVersion=-1 构造性必拒；
+// CAS 校验在写事务内先于 UPDATE（补丁 775 complete_task hunk）→拒绝即回滚。
+// 前置门排除：只选 status ∈ running/ready/blocked、无 completion_contract、无父卡的卡；
+// verification/goal_mode 无 REST 读面（残余风险见 spec D3——SIM 场景卡不带此二属性）。
+results.push(await probe('kanban-version', '看板列表可达＋version/verification 列表面缺席如实取证', async () => {
+  const r = await call('GET', '/api/hermes/kanban?board=default&limit=20')
+  if (r.status === 404) return { skipped: 'kanban REST 面未挂或不可达（单测环境不挂 vendor 路由——组 14 taskmodel 先例）' }
+  expect(r.status === 200, `status=${r.status}`)
+  const tasks = r.body?.tasks ?? r.body
+  expect(Array.isArray(tasks), 'tasks 缺失')
+  for (const t of tasks) {
+    expect(typeof t?.id === 'string', `任务形状非法：${JSON.stringify(t).slice(0, 120)}`)
+  }
+  const withVersion = tasks.filter((t) => typeof t?.version === 'number').length
+  return {
+    tasks: tasks.length,
+    versionFieldRate: tasks.length === 0 ? null : withVersion / tasks.length,
+    note: withVersion === 0
+      ? '列表 JSON 面不携 version/verification（kanban_output.py _TASK_DICT_FIELDS 未序列化此二列）——读面断点如实取证，CAS 能力由本组负例证明'
+      : '列表面已携 version 字段',
+  }
+}))
+
+results.push(await probe('kanban-version', '负例：expected_version=-1 提交必拒 409 version_conflict（乐观锁 CAS，零状态变更）', async () => {
+  const list = await call('GET', '/api/hermes/kanban?board=default&limit=50')
+  if (list.status === 404) return { skipped: 'kanban REST 面未挂或不可达（单测环境不挂 vendor 路由——组 14 taskmodel 先例）' }
+  expect(list.status === 200, `list status=${list.status}`)
+  const tasks = list.body?.tasks ?? list.body
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return { skipped: 'default 板无卡——CAS 负例无触发条件（正负行为由补丁 775/776 侧测试＋活体走查把守，组 9/14 缺省先例）' }
+  }
+  // 选卡：可完成状态优先（running/ready/blocked）；随后逐卡 detail 排除有 PR 契约/有未终结父卡的
+  const completable = tasks.filter((t) => ['running', 'ready', 'blocked'].includes(t?.status))
+  const pool = completable.length > 0 ? completable : tasks
+  let target = null
+  let rejectReason = ''
+  for (const t of pool) {
+    if (completable.length === 0) { rejectReason = '无 running/ready/blocked 状态卡'; break }
+    const d = await call('GET', `/api/hermes/kanban/${encodeURIComponent(t.id)}?board=default`)
+    if (d.status !== 200) continue
+    const detail = d.body ?? {}
+    if (detail?.task?.completion_contract) continue // 有 PR 契约：acceptance 门先于 CAS，跳过
+    const parents = Array.isArray(detail?.parents) ? detail.parents : []
+    if (parents.length === 0) { target = t; break } // 无父卡：parents 门确定性满足
+    // 有父卡：逐父核对终结态（done/archived）；任一未终结即放弃该卡
+    let parentsClosed = true
+    for (const pid of parents.slice(0, 10)) {
+      const p = await call('GET', `/api/hermes/kanban/${encodeURIComponent(pid)}?board=default`)
+      const ps = p.body?.task?.status
+      if (p.status !== 200 || (ps !== 'done' && ps !== 'archived')) { parentsClosed = false; break }
+    }
+    if (parentsClosed) { target = t; break }
+  }
+  if (!target) {
+    return { skipped: rejectReason || '无合格卡（可完成状态＋无 PR 契约＋父卡终结）——负例条件不满足，不强行触发（组 9 条件负例先例）' }
+  }
+  const r = await call('POST', '/api/hermes/kanban/complete', {
+    task_ids: [target.id],
+    summary: 'mx-probe 乐观锁负例：expected_version=-1 构造性必拒（version>=0 恒成立），被拒即零状态变更',
+    expectedVersion: -1,
+  })
+  expect(r.status === 409, `expected 409 version_conflict, got ${r.status}（body=${JSON.stringify(r.body).slice(0, 200)}）`)
+  expect(r.body?.code === 'version_conflict', `code 非 version_conflict：${JSON.stringify(r.body).slice(0, 200)}`)
+  // 非破坏性复核：目标卡状态未变（拒绝路径零状态变更的直接证据）
+  const after = await call('GET', `/api/hermes/kanban/${encodeURIComponent(target.id)}?board=default`)
+  expect(after.status === 200 && after.body?.task?.status === target.status, `被拒后任务状态不得变化：${target.status} → ${after.body?.task?.status}`)
+  return { task: target.id, status: 409, code: 'version_conflict', statusUnchanged: true }
 }))
 
 // ── 汇总 ────────────────────────────────────────────────────
