@@ -11,6 +11,19 @@
  "changes": [
   {
    "at": "2026-11-16",
+   "delta": "+1 patch（792 活体验证补漏：3 测试文件＋2 处验证中抓出的缺陷修复）/ +0 域 / +0 watcher / +0 账本 / +0 scripts / +0 gates",
+   "reason": "Always-on Agents 活体验证补漏批（spec 2026-11-16-always-on-live-verification）：watcher 接线级集成测试＋dreaming 守护级 E2E＋outbox matrix 通道假 homeserver 真发送测试；主批「未验证项」清偿",
+   "pairedRemovals": [
+    "792 的活体/接线测试正是 786-791 机制预算 sunset 判据的证据来源：follow-up/dreaming/deferred 零消费判定由这些测试与推演读数共同承担，不再另建观测面"
+   ],
+   "sunset": {
+    "owner": "always-on 活体验证批",
+    "reviewBy": "随 786-791 主批 sunset 同批（run31/run32 复盘面）",
+    "retireWhen": "随主批整批退役条件（dreaming 零产出＋follow-up 零 create＋deferred 零记录连续两轮）触发时，792 测试文件同批移除"
+   }
+  },
+  {
+   "at": "2026-11-16",
    "delta": "+4 patches（786 follow-up 工具/存储/watcher、787 轮终 checkpoint、788 dreaming、789 延迟工具调用）/ +2 域（无新域；followup/manual 复用既有域）/ +3 watcher（followup/dreaming/deferred-approval）/ +1 账本（deferred.json，复用 ledgers 口径）/ +0 scripts / +0 gates",
    "reason": "Always-on Agents 吸收 P3-P6（spec 2026-11-16-always-on-agents-absorption）：follow-up 定时器/进度文件全量/空闲 dreaming/延迟工具调用闭环",
    "pairedRemovals": [
