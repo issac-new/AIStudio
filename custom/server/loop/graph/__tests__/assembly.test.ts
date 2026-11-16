@@ -15,12 +15,19 @@ import { InMemoryEventLogStore } from '../event-log-store'
 import { GraphBuilder, fnNode } from '../graph-definition'
 import { reducers } from '../types'
 import { compileLoopToDef } from '../graph-compiler'
+import type { GraphSpec } from '../graph-spec'
 import { appendContractsById } from '../phase-nodes'
 import { BudgetGuard } from '../../engine/budget-guard'
 import type { Router } from '@koa/router'
 import type { LoopInstance, TaskContract, LoopEvent } from '../../types'
 import type { LoopStateStore } from '../../store/state-store'
 import type { GraphLogEvent } from '../event-log-store'
+
+// 保留真实路由行为，仅捕获装配依赖以直接验收 Director runtime；不断言 mock 本身。
+vi.mock('../graph-rest', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../graph-rest')>()
+  return { ...actual, createGraphRunRouter: vi.fn(actual.createGraphRunRouter) }
+})
 
 // ---------------------------------------------------------------------------
 // fixtures
@@ -93,6 +100,37 @@ function assemblyOpts(over: Partial<GraphAssemblyOpts> = {}): GraphAssemblyOpts 
     shadowEventLog: new InMemoryEventLogStore(),
     specStorePath: undefined,
     ...over,
+  }
+}
+
+function functionOnlySpec(id: string): GraphSpec {
+  return {
+    id, version: 1, origin: 'editor',
+    channels: {
+      result: { reducer: 'overwrite', default: '' },
+      stopMet: { reducer: 'overwrite', default: false },
+    },
+    nodes: [{ id: 'only', type: 'function', config: { set: { result: 'function-ok', stopMet: true } } }],
+    edges: [], entryNode: 'only',
+    endCondition: { op: 'truthy', path: 'stopMet' },
+    limits: { maxSteps: 4 },
+  }
+}
+
+function agentTaskSpec(id: string): GraphSpec {
+  return {
+    id, version: 1, origin: 'editor',
+    channels: {
+      agentRequest: { reducer: 'append', default: [] },
+      stopMet: { reducer: 'overwrite', default: false },
+    },
+    nodes: [
+      { id: 'work', type: 'agent-task', config: { title: '真实工作卡', channel: 'agentRequest' } },
+      { id: 'done', type: 'function', config: { set: { stopMet: true } } },
+    ],
+    edges: [{ from: 'work', to: 'done' }], entryNode: 'work',
+    endCondition: { op: 'truthy', path: 'stopMet' },
+    limits: { maxSteps: 4 },
   }
 }
 
@@ -201,6 +239,122 @@ describe('createGraphAssembly', () => {
     expect(a.spawner).toBeNull()
     expect(a.interruptScanner).toBeNull() // shadow 只读双跑，不自动处置审批超时
     expect(a.briefJob).toBeNull()
+  })
+
+  it('生产 editor 无真实 bridge：agent-task 起跑失败且不产生 run', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(agentTaskSpec('production-no-bridge'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/production-no-bridge/runs')
+
+      expect(ctx.status).toBe(400)
+      expect((ctx.body as { error: string }).error).toContain('unavailable agent execution capability')
+      expect(await eventLog.listRuns()).toEqual([])
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('生产 editor 无 bridge：function-only spec 仍真实完成并记录 production 快照', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(functionOnlySpec('production-function-only'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/production-function-only/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string; state: Record<string, unknown> } }
+      expect(body.instance.status).toBe('completed')
+      expect(body.instance.state.result).toBe('function-ok')
+      expect(await eventLog.getRunSpec(body.runId)).toMatchObject({
+        runtimeKind: 'editor', executionMode: 'production',
+      })
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('shadow editor 显式 DryRun：agent-task 完成且快照保留 shadow executionMode', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'shadow', eventLog }))
+    try {
+      await a.specStore.save(agentTaskSpec('shadow-agent-task'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/shadow-agent-task/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string; state: Record<string, unknown> } }
+      expect(body.instance.status).toBe('completed')
+      expect(body.instance.state.agentRequest).toMatchObject([{ node: 'work', task: 'dry-t1' }])
+      expect(await eventLog.getRunSpec(body.runId)).toMatchObject({
+        runtimeKind: 'editor', executionMode: 'shadow',
+      })
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('Director 有 token 才声明真实桥能力，快照 runtimeKind=director/production', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', 'http://director.test')
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'POST') {
+        return new Response(JSON.stringify({ task: { id: 'director-task-1', status: 'todo' } }), { status: 200 })
+      }
+      if (url.endsWith('/api/hermes/kanban/director-task-1')) {
+        return new Response(JSON.stringify({ id: 'director-task-1', status: 'done' }), { status: 200 })
+      }
+      return new Response('not found', { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchImpl)
+    const eventLog = new InMemoryEventLogStore()
+    const routerFactory = vi.mocked(createGraphRunRouter)
+    routerFactory.mockClear()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy', eventLog }))
+    try {
+      const deps = routerFactory.mock.calls.at(-1)?.[0]
+      const runtime = deps?.directorRuntimeFactory?.('director-test-token')
+      expect(runtime).toBeDefined()
+      await a.specStore.save(agentTaskSpec('director-real-bridge'))
+
+      const { runId, instance } = await runtime!.startRun('director-real-bridge')
+
+      expect(instance.status).toBe('completed')
+      expect(instance.state.agentRequest).toMatchObject([{ node: 'work', task: 'director-task-1' }])
+      expect(await eventLog.getRunSpec(runId)).toMatchObject({
+        runtimeKind: 'director', executionMode: 'production',
+      })
+      expect(fetchImpl).toHaveBeenCalledTimes(2)
+      expect(fetchImpl.mock.calls[0]?.[1]?.headers).toMatchObject({
+        Authorization: 'Bearer director-test-token',
+      })
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('Director 无 token 直接拒绝，不落 spec/run 也不隐式 DryRun', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy', eventLog }))
+    try {
+      const ctx = await invoke(a.router, 'post', '/api/graph/sim-director/start', {
+        title: '匿名导演', description: '没有 token 不能生成假完成运行', modules: ['pay'],
+      })
+
+      expect(ctx.status).toBe(401)
+      expect(a.specStore.list()).toEqual([])
+      expect(await eventLog.listRuns()).toEqual([])
+    } finally {
+      a.stop()
+    }
   })
 })
 
