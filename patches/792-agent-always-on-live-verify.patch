@@ -1,0 +1,641 @@
+diff --git a/tests/gateway/test_followup_watcher_wiring.py b/tests/gateway/test_followup_watcher_wiring.py
+new file mode 100644
+--- /dev/null
++++ b/tests/gateway/test_followup_watcher_wiring.py
+@@ -0,0 +1,181 @@
++"""Watcher wiring tests for the follow-up watcher (Always-on P3, 2026-11-16 补漏批).
++
++These exercise ``GatewayFollowupsMixin._followup_fire_one`` end-to-end against a stub
++runner: the REAL followup store (temp SessionDB), the REAL claim/fire state machine,
++and a patched ``admit_route_wake`` recording the injection. No gateway process needed.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import time
++from pathlib import Path
++from types import SimpleNamespace
++from unittest.mock import patch
++
++import pytest
++
++
++@pytest.fixture
++def hermes_home(tmp_path, monkeypatch):
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    monkeypatch.setenv("HERMES_HOME", str(home))
++    from hermes_cli import goals
++
++    goals._DB_CACHE.clear()
++    yield home
++    goals._DB_CACHE.clear()
++
++
++ROUTE = {"platform": "telegram", "chat_id": "42", "chat_type": "dm", "user_id": "u1"}
++
++
++from enum import Enum
++
++
++class _FakePlatform(Enum):
++    TELEGRAM = "telegram"
++
++
++def make_harness(*, busy_keys: set[str] | None = None):
++    """mixin 挂在桩 runner 上：``_followup_fire_one`` 里 ``self`` 就是 runner。"""
++    from gateway.run_followups import GatewayFollowupsMixin
++
++    class Harness(GatewayFollowupsMixin):
++        def __init__(self):
++            self._running_agents = set(busy_keys or set())
++            self.wake_calls: list[tuple[str, str, str]] = []  # (producer, text, followup_id)
++            self.handle_message_events: list[str] = []
++            self.sources: list = []
++
++        def _adapters_for_profile(self, profile):
++            harness = self
++
++            async def _record_handle(event):
++                harness.handle_message_events.append(getattr(event, "text", str(event)))
++
++            return {_FakePlatform.TELEGRAM: SimpleNamespace(handle_message=_record_handle)}
++
++        def _build_process_event_source(self, meta):
++            src = SimpleNamespace(
++                platform=meta.get("platform", ""), chat_id=meta.get("chat_id", ""),
++                chat_type=meta.get("chat_type", ""), thread_id=meta.get("thread_id", ""),
++                user_id=meta.get("user_id", ""), user_name=meta.get("user_name", ""),
++                profile=None,
++            )
++            self.sources.append(src)
++            return src
++
++        def _session_key_for_source(self, source):
++            return f"{source.platform}:{source.chat_id}"
++
++        def _synthetic_prompt_event(self, source, text, *, internal=False):
++            return SimpleNamespace(text=text, source=source, internal=internal)
++
++        async def _run_in_executor_with_context(self, fn, *args, **kwargs):
++            return fn(*args, **kwargs)
++
++        async def fake_admit_route_wake(self, runner, adapter, source, text, producer, metadata=None):
++            self.wake_calls.append((producer, text, str((metadata or {}).get("followup_id", ""))))
++            return True
++
++    return Harness()
++
++
++def _make_state(now: float, **over):
++    from hermes_cli.followups import FollowupState
++
++    base = dict(
++        id="fu1", session_id="sess-1", prompt="check the reply", status="active",
++        created_at=now - 3600, due_at=now - 1, fired_at=0.0, attempts=0, last_error="",
++        route=dict(ROUTE),
++    )
++    base.update(over)
++    return FollowupState(**base)
++
++
++def run(coro):
++    return asyncio.run(coro)
++
++
++class TestFollowupFireOne:
++    def test_due_idle_session_claims_and_fires_via_admit_route_wake(self, hermes_home):
++        from gateway.run_followups import GatewayFollowupsMixin
++        from hermes_cli.followups import create_followup, list_followups
++
++        now = time.time()
++        create_followup("sess-1", "check the reply", 60, ROUTE, now=now - 61)
++        state = list_followups("sess-1")[0]
++        harness = make_harness()
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._followup_fire_one(state, warned_no_route=set()))
++        assert harness.wake_calls == [("followup", "check the reply", state.id)]
++        assert [s.status for s in list_followups("sess-1")] == ["fired"]
++        assert list_followups("sess-1")[0].fired_at >= now
++
++    def test_busy_session_stays_active_unclaimed(self, hermes_home):
++        from gateway.run_followups import GatewayFollowupsMixin
++        from hermes_cli.followups import create_followup, list_followups
++
++        now = time.time()
++        create_followup("sess-1", "p", 60, ROUTE, now=now - 61)
++        state = list_followups("sess-1")[0]
++        harness = make_harness(busy_keys={"telegram:42"})
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._followup_fire_one(state, warned_no_route=set()))
++        assert harness.wake_calls == []
++        assert list_followups("sess-1")[0].status == "active"
++
++    def test_admit_wake_refusal_falls_back_to_adapter_handle_message(self, hermes_home):
++        from gateway.run_followups import GatewayFollowupsMixin
++        from hermes_cli.followups import create_followup, list_followups
++
++        now = time.time()
++        create_followup("sess-1", "fallback path", 60, ROUTE, now=now - 61)
++        state = list_followups("sess-1")[0]
++        harness = make_harness()
++
++        async def refuse(*args, **kwargs):
++            return False
++
++        with patch("gateway.session_automation.admit_route_wake", refuse):
++            run(harness._followup_fire_one(state, warned_no_route=set()))
++        assert harness.handle_message_events == ["fallback path"]
++        assert list_followups("sess-1")[0].status == "fired"
++
++    def test_injection_error_releases_for_retry_then_fails(self, hermes_home):
++        from gateway.run_followups import GatewayFollowupsMixin
++        from hermes_cli.followups import create_followup, list_followups
++
++        now = time.time()
++        create_followup("sess-1", "boom", 60, ROUTE, now=now - 61)
++        harness = make_harness()
++
++        async def explode(*args, **kwargs):
++            raise RuntimeError("adapter down")
++
++        for expected_status, expected_attempts in (("active", 1), ("active", 2), ("failed", 3)):
++            state = list_followups("sess-1")[0]
++            assert state.status == "active"
++            with patch("gateway.session_automation.admit_route_wake", explode):
++                run(harness._followup_fire_one(state, warned_no_route=set()))
++            after = list_followups("sess-1")[0]
++            assert after.status == expected_status
++            assert after.attempts == expected_attempts
++
++    def test_no_adapter_warns_once_and_leaves_active(self, hermes_home):
++        from gateway.run_followups import GatewayFollowupsMixin
++        from hermes_cli.followups import create_followup, list_followups
++
++        now = time.time()
++        create_followup("sess-1", "p", 60, ROUTE, now=now - 61)
++        state = list_followups("sess-1")[0]
++
++        harness = make_harness()
++        harness._adapters_for_profile = lambda profile: {}
++        warned: set = set()
++        run(harness._followup_fire_one(state, warned_no_route=warned))
++        assert warned == {state.id}
++        assert list_followups("sess-1")[0].status == "active"
+diff --git a/tests/gateway/test_deferred_watcher_wiring.py b/tests/gateway/test_deferred_watcher_wiring.py
+new file mode 100644
+--- /dev/null
++++ b/tests/gateway/test_deferred_watcher_wiring.py
+@@ -0,0 +1,181 @@
++"""Watcher wiring tests for the deferred-approval watcher (Always-on P6 补漏批, 2026-11-16).
++
++Exercises ``GatewayDeferredApprovalMixin._deferred_scan_one`` against a stub runner with
++the REAL ledger (temp HERMES_HOME), REAL response files and REAL settle/expire state
++machines; only ``admit_route_wake`` is patched to record injections.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import json
++import time
++from enum import Enum
++from pathlib import Path
++from types import SimpleNamespace
++from unittest.mock import patch
++
++import pytest
++
++
++@pytest.fixture
++def hermes_home(tmp_path, monkeypatch):
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    monkeypatch.setenv("HERMES_HOME", str(home))
++    from hermes_cli import goals
++
++    goals._DB_CACHE.clear()
++    yield home
++    goals._DB_CACHE.clear()
++
++
++ROUTE = {"platform": "telegram", "chat_id": "42", "chat_type": "dm", "user_id": "u1"}
++
++
++class _FakePlatform(Enum):
++    TELEGRAM = "telegram"
++
++
++def make_harness():
++    from gateway.run_deferred import GatewayDeferredApprovalMixin
++
++    class Harness(GatewayDeferredApprovalMixin):
++        def __init__(self):
++            self.wake_calls: list[tuple[str, str]] = []  # (outcome, text)
++            self.handle_message_events: list[str] = []
++
++        def _adapters_for_profile(self, profile):
++            harness = self
++
++            async def _record_handle(event):
++                harness.handle_message_events.append(getattr(event, "text", str(event)))
++
++            return {_FakePlatform.TELEGRAM: SimpleNamespace(handle_message=_record_handle)}
++
++        def _build_process_event_source(self, meta):
++            return SimpleNamespace(
++                platform=meta.get("platform", ""), chat_id=meta.get("chat_id", ""),
++                chat_type=meta.get("chat_type", ""), thread_id=meta.get("thread_id", ""),
++                user_id=meta.get("user_id", ""), user_name=meta.get("user_name", ""),
++                profile=None,
++            )
++
++        def _session_key_for_source(self, source):
++            return f"{source.platform}:{source.chat_id}"
++
++        _running_agents: set = set()  # idle by default
++
++        def _synthetic_prompt_event(self, source, text, *, internal=False):
++            return SimpleNamespace(text=text, source=source, internal=internal)
++
++        async def _run_in_executor_with_context(self, fn, *args, **kwargs):
++            return fn(*args, **kwargs)
++
++        async def fake_admit_route_wake(self, runner, adapter, source, text, producer, metadata=None):
++            self.wake_calls.append((str((metadata or {}).get("outcome", "")), text))
++            return True
++
++    return Harness()
++
++
++def run(coro):
++    return asyncio.run(coro)
++
++
++def _write_response(request_id: str, choice: str, by: str = "qa"):
++    from tools.deferred_calls import responses_dir
++
++    responses_dir().mkdir(parents=True, exist_ok=True)
++    (responses_dir() / f"{request_id}.json").write_text(
++        json.dumps({"request_id": request_id, "choice": choice, "by": by}), encoding="utf-8"
++    )
++
++
++class TestDeferredScanOne:
++    def test_approval_response_settles_and_wakes_with_approved_text(self, hermes_home):
++        from tools.deferred_calls import list_deferred, record_deferred
++
++        rec = record_deferred(
++            session_key="kanban:b:t1", request_id="rq-ok", tool="terminal",
++            preview="rm -rf build", route=ROUTE, now=time.time(),
++        )
++        _write_response("rq-ok", "once")
++        harness = make_harness()
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))
++        assert len(harness.wake_calls) == 1
++        outcome, text = harness.wake_calls[0]
++        assert outcome == "approved"
++        assert "已批准" in text and "rm -rf build" in text
++        assert list_deferred("pending") == []
++        assert list_deferred("approved")[0]["id"] == rec["id"]
++        # 二轮扫描：pending 空，不再唤醒
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))
++        assert len(harness.wake_calls) == 1
++
++    def test_deny_response_wakes_with_denied_text(self, hermes_home):
++        from tools.deferred_calls import record_deferred
++
++        record_deferred(
++            session_key="kanban:b:t2", request_id="rq-no", tool="terminal",
++            preview="git push", route=ROUTE, now=time.time(),
++        )
++        _write_response("rq-no", "deny")
++        harness = make_harness()
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))
++        outcome, text = harness.wake_calls[0]
++        assert outcome == "denied"
++        assert "拒绝" in text and "不要重试" in text
++
++    def test_expired_record_wakes_once_with_expired_text(self, hermes_home):
++        from tools.deferred_calls import list_deferred, record_deferred
++
++        record_deferred(
++            session_key="kanban:b:t3", request_id="rq-old", tool="terminal",
++            preview="kubectl apply", route=ROUTE, ttl_seconds=60, now=time.time() - 3600,
++        )
++        harness = make_harness()
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))
++        outcome, text = harness.wake_calls[0]
++        assert outcome == "expired"
++        assert "超时" in text
++        assert list_deferred("expired")[0]["status"] == "expired"
++        # 二轮：无 pending 无再过期 → 零唤醒
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))
++        assert len(harness.wake_calls) == 1
++
++    def test_invalid_choice_response_is_ignored_not_settled(self, hermes_home):
++        from tools.deferred_calls import list_deferred, record_deferred
++
++        record_deferred(
++            session_key="kanban:b:t4", request_id="rq-bad", tool="terminal",
++            preview="x", route=ROUTE, now=time.time(),
++        )
++        _write_response("rq-bad", "maybe")
++        harness = make_harness()
++        with patch("gateway.session_automation.admit_route_wake", harness.fake_admit_route_wake):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))
++        assert harness.wake_calls == []
++        assert list_deferred("pending")[0]["id"]  # 未被误裁决
++
++    def test_wake_failure_is_logged_not_raised(self, hermes_home):
++        from tools.deferred_calls import record_deferred
++
++        record_deferred(
++            session_key="kanban:b:t5", request_id="rq-err", tool="terminal",
++            preview="y", route=ROUTE, now=time.time(),
++        )
++        _write_response("rq-err", "once")
++        harness = make_harness()
++
++        async def explode(*args, **kwargs):
++            raise RuntimeError("adapters gone")
++
++        with patch("gateway.session_automation.admit_route_wake", explode):
++            run(harness._deferred_scan_one("p1", warned_no_route=set()))  # 不抛
+diff --git a/tests/agent/test_memory_dreaming_live.py b/tests/agent/test_memory_dreaming_live.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_memory_dreaming_live.py
+@@ -0,0 +1,127 @@
++"""Live E2E for idle dreaming against the real Hindsight daemon (Always-on P5 补漏批).
++
++Env-gated: only runs when ``HERMES_DREAMING_LIVE=1`` AND ``hindsight_client`` is
++importable (deployment py312). Everything else skips — CI/单测环境零副作用.
++
++隔离：scratch bank（``hermes-live-dream-<ts>``，与生产 bank 前缀区分，可整体删除）；
++预算戳在临时 SessionDB；不触生产 bank。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import json
++import sys
++import time
++from pathlib import Path
++
++import pytest
++
++pytestmark = [
++    # 活体豁免：读部署插件 + 经 daemon 写 scratch bank（不经真实 home 文件面）
++    pytest.mark.allow_real_home_io,
++    pytest.mark.skipif(
++        not (Path.home() / ".hermes/plugins/hindsight/__init__.py").exists(),
++        reason="部署插件缺席（~/.hermes/plugins/hindsight）",
++    ),
++    pytest.mark.skipif(
++        importlib.util.find_spec("hindsight_client") is None,
++        reason="hindsight_client 不可导入（需部署解释器，如 anaconda py312）",
++    ),
++]
++
++
++# 打桩 Path.home 之前解析（真实部署位；monkeypatch 后不可再取 Path.home）
++_DEPLOYED_PLUGIN_DIR = Path("/dev/null")  # 占位：在下方真正解析
++
++
++def _resolve_plugin_dir() -> Path:
++    return Path(__import__("os").path.expanduser("~/.hermes/plugins/hindsight"))
++
++
++def _load_provider(bank: str, home_dir: Path):
++    # 本地守护配置先行（initialize 时读取）：mode=local_external + :8888
++    cfg_dir = home_dir / "hindsight"
++    cfg_dir.mkdir(parents=True, exist_ok=True)
++    (cfg_dir / "config.json").write_text(json.dumps({
++        "mode": "local_external", "api_url": "http://localhost:8888",
++        "bank_id": bank, "retain_async": False, "auto_recall": False, "auto_retain": False,
++        "timeout": 180, "idle_timeout": 200,
++    }, ensure_ascii=False), encoding="utf-8")
++    plugin_dir = _resolve_plugin_dir()
++    sys.path.insert(0, str(plugin_dir.parent))
++    spec = importlib.util.spec_from_file_location("hindsight", plugin_dir / "__init__.py")
++    mod = importlib.util.module_from_spec(spec)
++    sys.modules.setdefault("hindsight", mod)
++    spec.loader.exec_module(mod)
++    # 客户端自升级会动部署解释器环境：活体测试一律禁用
++    mod._maybe_upgrade_client = lambda: None
++    provider = mod.HindsightMemoryProvider()
++    provider.initialize(session_id=f"dream-live-{int(time.time())}", platform="cli")
++    provider._bank_id = bank  # scratch：不触生产 bank
++    return provider
++
++
++def test_dreaming_live_reflect_and_retain(tmp_path, monkeypatch):
++    pytest.importorskip("hindsight_client")
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    monkeypatch.setenv("HERMES_HOME", str(home))
++    monkeypatch.setenv("HERMES_MEMORY_DREAMING", "1")
++    from hermes_cli import goals
++
++    goals._DB_CACHE.clear()
++    try:
++        bank = f"hermes-live-dream-{int(time.time())}"
++        provider = _load_provider(bank, home)
++
++        # 1) 种子事实（实质内容——10 字符级琐碎文本无可抽取事实，实测 0 memory unit；
++        #    轮询等待 daemon 异步抽取落库，实测 ~10s 可召回）
++        for i in (1, 2):
++            out = provider.handle_tool_call("hindsight_retain", {
++                "content": (
++                    f"活体验证记录 {i}：AIStudio 常驻智能体批次于 2026-11-16 落地空闲 dreaming 机制，"
++                    "要求网关安静至少 30 分钟才触发，每个 profile 每 24 小时至多执行一次，"
++                    "产出以 tag dream 写回同一 bank。本验证只写 scratch bank，不触生产数据。"
++                ),
++                "context": "live-verify", "tags": ["live-dream"],
++            })
++            assert '"error"' not in out, out
++        deadline = time.time() + 60
++        seen = False
++        while time.time() < deadline:
++            recalled = provider.handle_tool_call("hindsight_recall", {"query": "dreaming 机制 触发条件"})
++            if "dreaming" in (recalled or "") and "No relevant" not in (recalled or ""):
++                seen = True
++                break
++            time.sleep(5)
++        assert seen, "种子事实 60s 内未可召回（daemon 抽取异常或内容无可抽取事实？）"
++
++        # 2) 真跑一轮 dream（force 绕过 24h 预算；预算戳落临时库）
++        from hermes_cli.goals import _get_session_db
++        from agent.memory_dreaming import DREAM_META_KEY, run_dreaming
++
++        db = _get_session_db()
++        result = run_dreaming(now=time.time(), db=db, provider=provider, force=True)
++        assert result.get("dreamed") is True, result
++        assert result.get("retained_chars", 0) > 0
++        assert db.get_meta(DREAM_META_KEY), "预算戳未落"
++
++        # 3) dream 产物可召回（tag dream 已进 scratch bank；索引异步，轮询窗口）
++        from agent.memory_dreaming import _unwrap_tool_text
++
++        deadline = time.time() + 60
++        hit = False
++        while time.time() < deadline:
++            recalled = _unwrap_tool_text(
++                provider.handle_tool_call("hindsight_recall", {"query": "跨会话模式 提炼"})
++            )
++            if "No relevant memories found." not in recalled and recalled:
++                hit = True
++                break
++            time.sleep(5)
++        assert hit, "dream 产物 60s 内未可召回"
++        provider.shutdown()
++    finally:
++        goals._DB_CACHE.clear()
+diff --git a/gateway/run_deferred.py b/gateway/run_deferred.py
+--- a/gateway/run_deferred.py
++++ b/gateway/run_deferred.py
+@@ -32,49 +32,52 @@
+             from tui_gateway.launch_profile_policy import async_launch_profile_scope_if_multiplexed
+             return async_launch_profile_scope_if_multiplexed()
+ 
+-        async def _scan_one_store(profile_name: Optional[str]) -> None:
+-            # 1) 过期处置（标记 + 一次告知）
+-            expired = await self._run_in_executor_with_context(expire_deferred)
+-            for record in expired or []:
+-                await self._deferred_wake(
+-                    record, "expired",
+-                    f"此前的审批请求已超时未被回答（{record.get('tool') or '操作'}："
+-                    f"{record.get('preview') or ''}）。不要重试该操作；继续其他工作或等待用户指示。",
+-                    warned_no_route, profile_name,
+-                )
+-            # 2) 答复处置
+-            for record in await self._run_in_executor_with_context(list_deferred, "pending"):
+-                response = await self._run_in_executor_with_context(
+-                    read_response, str(record.get("request_id") or ""),
+-                )
+-                if not response:
+-                    continue
+-                choice = str(response.get("choice") or "").strip().lower()
+-                settled = await self._run_in_executor_with_context(
+-                    settle_deferred, record["id"], choice, by=str(response.get("by") or ""),
+-                )
+-                if settled is None:
+-                    continue  # 已被别处裁决
+-                approved = settled.get("status") == "approved"
+-                text = (
+-                    f"用户已批准你此前挂起的操作（{settled.get('tool') or '操作'}："
+-                    f"{settled.get('preview') or ''}，决定={settled.get('decision')}）。"
+-                    "可继续执行；若已不再需要，说明并跳过。"
+-                    if approved else
+-                    f"用户拒绝了此前挂起的操作（{settled.get('tool') or '操作'}："
+-                    f"{settled.get('preview') or ''}）。不要重试；说明影响并给出替代方案或等待用户指示。"
+-                )
+-                await self._deferred_wake(settled, settled.get("status", ""), text, warned_no_route, profile_name)
+-
+         while self._running:
+             try:
+                 for profile_name, profile_home in await _resolve_handoff_watch_scopes(self):
+                     async with _scope(profile_home):
+-                        await _scan_one_store(profile_name)
++                        await self._deferred_scan_one(profile_name, warned_no_route)
+             except Exception as exc:  # noqa: BLE001 - one bad store must not stop the watcher
+                 logger.debug("deferred-approval watcher error: %s", exc)
+             await asyncio.sleep(interval)
+ 
++    async def _deferred_scan_one(self, profile_name: Optional[str], warned_no_route: set) -> None:
++        """一个 profile store 的一轮扫描（792 可测性提升：从 watcher 闭包提为方法，行为不变）。"""
++        from tools.deferred_calls import expire_deferred, list_deferred, read_response, settle_deferred
++
++        # 1) 过期处置（标记 + 一次告知）
++        expired = await self._run_in_executor_with_context(expire_deferred)
++        for record in expired or []:
++            await self._deferred_wake(
++                record, "expired",
++                f"此前的审批请求已超时未被回答（{record.get('tool') or '操作'}："
++                f"{record.get('preview') or ''}）。不要重试该操作；继续其他工作或等待用户指示。",
++                warned_no_route, profile_name,
++            )
++        # 2) 答复处置
++        for record in await self._run_in_executor_with_context(list_deferred, "pending"):
++            response = await self._run_in_executor_with_context(
++                read_response, str(record.get("request_id") or ""),
++            )
++            if not response:
++                continue
++            choice = str(response.get("choice") or "").strip().lower()
++            settled = await self._run_in_executor_with_context(
++                settle_deferred, record["id"], choice, by=str(response.get("by") or ""),
++            )
++            if settled is None:
++                continue  # 已被别处裁决
++            approved = settled.get("status") == "approved"
++            text = (
++                f"用户已批准你此前挂起的操作（{settled.get('tool') or '操作'}："
++                f"{settled.get('preview') or ''}，决定={settled.get('decision')}）。"
++                "可继续执行；若已不再需要，说明并跳过。"
++                if approved else
++                f"用户拒绝了此前挂起的操作（{settled.get('tool') or '操作'}："
++                f"{settled.get('preview') or ''}）。不要重试；说明影响并给出替代方案或等待用户指示。"
++            )
++            await self._deferred_wake(settled, settled.get("status", ""), text, warned_no_route, profile_name)
++
+     async def _deferred_wake(self, record: dict, outcome: str, text: str,
+                              warned_no_route: set, profile: Optional[str] = None) -> None:
+         """向记录的原会话注入答复事件（无路由/无 adapter 时只告警一次）。"""
+diff --git a/agent/memory_dreaming.py b/agent/memory_dreaming.py
+--- a/agent/memory_dreaming.py
++++ b/agent/memory_dreaming.py
+@@ -13,6 +13,7 @@
+ 
+ from __future__ import annotations
+ 
++import json
+ import logging
+ import time
+ from typing import Any, Optional
+@@ -28,6 +29,25 @@
+ )
+ 
+ 
++
++
++def _unwrap_tool_text(raw: Any) -> str:
++    """剥工具结果信封：hindsight 工具返回 ``{"result": ...}``/``{"error": ...}`` JSON 字符串，
++    直接当正文 retain 会把转义 JSON 写进 bank 且空判失效（活体验证 2026-11-16 抓出）。"""
++    text = str(raw or "").strip()
++    if text.startswith("{"):
++        try:
++            data = json.loads(text)
++        except ValueError:
++            return text
++        if isinstance(data, dict):
++            if data.get("error"):
++                return ""
++            value = data.get("result")
++            return str(value or "").strip()
++    return text
++
++
+ def dreaming_enabled() -> bool:
+     import os
+ 
+@@ -125,7 +145,7 @@
+         except Exception as exc:  # noqa: BLE001 - reflect unsupported/failed
+             logger.debug("dreaming: reflect failed: %s", exc)
+             return {"dreamed": False, "reason": "reflect-failed"}
+-        text = str(reflect or "").strip()
++        text = _unwrap_tool_text(reflect)
+         if not text or text == "No relevant memories found.":
+             return {"dreamed": False, "reason": "empty"}
+         try:

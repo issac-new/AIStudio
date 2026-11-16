@@ -1310,3 +1310,9 @@
 # 791（2026-11-16 Always-on Agents P3 修正）：followup_manage 描述首句压到 80 字符内，
 # 满足 tool_search 目录摘要「整句不被截断」守门。
 791-agent-followup-catalog-desc.patch
+
+# 792（2026-11-16 Always-on Agents 活体验证补漏批）：watcher 接线级集成测试
+# （follow-up claim/fire/忙顺延/回退/重试；deferred settle 唤醒/过期/幂等）＋
+# dreaming 活体 E2E（env+解释器门控，真实 :8888＋scratch bank）＋
+# reflect 工具信封 unwrap 修复（防转义 JSON 入库）＋ _deferred_scan_one 提为方法。
+792-agent-always-on-live-verify.patch
