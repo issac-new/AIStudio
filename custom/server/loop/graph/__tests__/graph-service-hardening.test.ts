@@ -204,6 +204,8 @@ describe('run UUID identity (P1 Task 8)', () => {
     const rebuilt = await svc2.rebuildRegistryFromLog()
     expect(rebuilt).toBe(2)
     expect(svc2.getRun(legacyId)?.status).toBe('awaiting-input')
+    expect(svc2.getRun(legacyId)?.instance.specSource).toBe('legacy-unpinned')
+    expect(svc2.getRun(legacyId)?.instance.specSnapshot).toBeUndefined()
 
     // resume 真恢复：从 checkpoint 应答 interrupt 走到 completed
     const legacyCp = await log.getLatestCheckpoint(legacyId)

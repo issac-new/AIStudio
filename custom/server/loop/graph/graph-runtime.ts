@@ -44,6 +44,15 @@ export interface GraphRuntimeOptions {
 }
 
 type PendingInterrupt = { nodeId: string; value: unknown; id: string; raisedAtMs?: number }
+type GraphSpecBinding = Pick<GraphInstance, 'specSnapshot' | 'specSource'>
+
+/** runtime-defined 明确标记 legacy；pinned 只投影元数据，GraphSpec 本体由 RunSpecStore 持久化。 */
+function specBindingFields(binding?: GraphSpecBinding): GraphSpecBinding {
+  return {
+    specSource: binding?.specSource ?? 'legacy-unpinned',
+    ...(binding?.specSnapshot ? { specSnapshot: { ...binding.specSnapshot } } : {}),
+  }
+}
 
 /** GraphEvent.type → 事件日志 kind（未列出者 kind = type 原样落盘） */
 /** GraphEvent.type → 事件日志 kind（导出供 shadow 对比等装配层复用） */
@@ -97,7 +106,12 @@ export class GraphRuntime {
   }
 
   /** 启动一个图实例 */
-  async start(graphDef: GraphDef, threadId: string, initialState?: StateValues): Promise<GraphInstance> {
+  async start(
+    graphDef: GraphDef,
+    threadId: string,
+    initialState?: StateValues,
+    specBinding?: GraphSpecBinding,
+  ): Promise<GraphInstance> {
     const instance: GraphInstance = {
       id: `${graphDef.id}-${threadId}`,
       graphDefId: graphDef.id,
@@ -108,6 +122,7 @@ export class GraphRuntime {
       totalCost: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     }
 
     const store = new ChannelStore(graphDef.stateSchema, initialState)
@@ -117,6 +132,7 @@ export class GraphRuntime {
       graphId: graphDef.id,
       threadId,
       ts: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     })
 
     return this.runLoop(graphDef, instance, store, 0, [graphDef.entryNode], [], {}, Date.now())
@@ -133,8 +149,9 @@ export class GraphRuntime {
     checkpoint: StoredCheckpoint,
     resumeValue: unknown,
     interruptId: string,
+    specBinding?: GraphSpecBinding,
   ): Promise<GraphInstance> {
-    return this.restoreAndRun(graphDef, checkpoint, { interruptId, value: resumeValue })
+    return this.restoreAndRun(graphDef, checkpoint, { interruptId, value: resumeValue }, specBinding)
   }
 
   /**
@@ -145,8 +162,9 @@ export class GraphRuntime {
   async continueFromCheckpoint(
     graphDef: GraphDef,
     checkpoint: StoredCheckpoint,
+    specBinding?: GraphSpecBinding,
   ): Promise<GraphInstance> {
-    return this.restoreAndRun(graphDef, checkpoint)
+    return this.restoreAndRun(graphDef, checkpoint, undefined, specBinding)
   }
 
   /**
@@ -154,12 +172,13 @@ export class GraphRuntime {
    * fork 产物被 startRun 消费时由 GraphService 调用：日志落 run.started
    * （rebuildRegistryFromLog 据此判别 fork 是否已起跑），onEvent 订阅方同步可见。
    */
-  emitStarted(graphDef: GraphDef, threadId: string): void {
+  emitStarted(graphDef: GraphDef, threadId: string, specBinding?: GraphSpecBinding): void {
     this.emitEvent({
       type: 'graph.started',
       graphId: graphDef.id,
       threadId,
       ts: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     })
   }
 
@@ -168,6 +187,7 @@ export class GraphRuntime {
     graphDef: GraphDef,
     checkpoint: StoredCheckpoint,
     resume?: { interruptId: string; value: unknown },
+    specBinding?: GraphSpecBinding,
   ): Promise<GraphInstance> {
     const threadId = checkpoint.runId
     const instance: GraphInstance = {
@@ -180,6 +200,7 @@ export class GraphRuntime {
       totalCost: checkpoint.totalCost,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     }
 
     const store = new ChannelStore(graphDef.stateSchema, checkpoint.state)
@@ -982,6 +1003,11 @@ export class GraphRuntime {
   /** 日志 payload：JSON 安全子集（delta 键名与路由事实；完整 state 由 checkpoint 承载，不进日志） */
   private logPayload(event: GraphEvent): Record<string, unknown> {
     switch (event.type) {
+      case 'graph.started':
+        return {
+          specSource: event.specSource ?? 'legacy-unpinned',
+          ...(event.specSnapshot ? { specSnapshot: jsonSafe(event.specSnapshot) } : {}),
+        }
       case 'graph.node-complete': {
         const r = event.result
         return {

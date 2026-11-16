@@ -23,6 +23,8 @@ import type {
 import { GraphRuntime } from './graph-runtime'
 import { CheckpointManager } from './checkpoint-manager'
 import type { EventLogStore, GraphLogEvent, StoredCheckpoint } from './event-log-store'
+import type { GraphSpec } from './graph-spec'
+import type { GraphSpecSnapshotMeta, StoredGraphRunSpec } from './run-spec-snapshot'
 
 /**
  * 新 run/fork 的 id 后缀（node:crypto randomUUID）。
@@ -33,9 +35,19 @@ function newRunSuffix(): string {
   return randomUUID()
 }
 
+export interface GraphDefinitionContext {
+  actor?: string
+  authToken?: string
+}
+
 export interface GraphServiceOptions {
   eventLog: EventLogStore
   deps?: Partial<GraphDeps>
+  /** pinned run 在 resume/fork-start 按当前上下文重新 hydrate；context 只透传，不持久化。 */
+  loadRunDefinition?(
+    runId: string,
+    context: GraphDefinitionContext,
+  ): Promise<{ def: GraphDef; snapshot: GraphSpecSnapshotMeta } | null>
 }
 
 export interface RunInfo {
@@ -50,8 +62,26 @@ interface RunRecord {
   graphId: string
   instance: GraphInstance
   runtime: GraphRuntime
+  /** 当前已解析定义；重启重建只恢复元数据，def 留空到 resume/fork-start。 */
+  def?: GraphDef
+  /** pinned run 的不可变起跑快照；legacy run 始终为空。 */
+  snapshot?: { spec: GraphSpec; meta: GraphSpecSnapshotMeta }
+  specSource: NonNullable<GraphInstance['specSource']>
   /** fork 产物：基底 checkpoint，startRun(forkedId) 时一次性消费（显式语义，不带预定应答） */
   forkBase?: { checkpoint: StoredCheckpoint }
+}
+
+function snapshotMetaOf(row: StoredGraphRunSpec): GraphSpecSnapshotMeta {
+  return {
+    specId: row.specId,
+    revision: null,
+    draftVersion: row.draftVersion,
+    runtimeKind: row.runtimeKind,
+    executionMode: row.executionMode,
+    contentHash: row.contentHash,
+    createdAt: row.createdAt,
+    createdBy: row.createdBy,
+  }
 }
 
 export class GraphService {
@@ -84,10 +114,11 @@ export class GraphService {
     graphId: string,
     initialState?: StateValues,
     runId?: string,
+    options?: {
+      snapshot?: { spec: GraphSpec; meta: GraphSpecSnapshotMeta }
+      definitionContext?: GraphDefinitionContext
+    },
   ): Promise<{ runId: string; instance: GraphInstance }> {
-    const def = this.graphs.get(graphId)
-    if (!def) throw new Error(`Graph not registered: ${graphId}`)
-
     if (runId !== undefined) {
       const rec = this.runs.get(runId)
       if (!rec) throw new Error(`Run not found: ${runId}`)
@@ -96,11 +127,12 @@ export class GraphService {
         throw new Error(`Run ${runId} belongs to graph ${rec.graphId}, not ${graphId}`)
       }
       if (!rec.forkBase) throw new Error(`Run already started: ${runId}`)
+      const def = await this.resolveRunDefinition(rec, options?.definitionContext)
       const { checkpoint } = rec.forkBase
       rec.forkBase = undefined
       // 补发 run.started：fork 两条消费路径都不经 runtime.start，日志须留起跑事实——
       // rebuildRegistryFromLog 据此判别 fork 是否已消费（防重启后静默重跑），onEvent 订阅方同步可见
-      rec.runtime.emitStarted(def, runId)
+      rec.runtime.emitStarted(def, runId, this.specBindingOf(rec))
       if (checkpoint.pendingInterrupts.length > 0) {
         // 台账 a 裁决：不自动应答 interrupt——直接进入 awaiting-input 等真人 resume，
         // interrupt payload 原样保留在基底 checkpoint（fork 时已存为新 run 的起点 checkpoint）
@@ -112,41 +144,65 @@ export class GraphService {
         return { runId, instance: rec.instance }
       }
       // 无 pendingInterrupts：从基底 checkpoint 的 nextNodes 续跑（不发 interrupt.resumed）
-      rec.instance = await rec.runtime.continueFromCheckpoint(def, checkpoint)
+      rec.instance = await rec.runtime.continueFromCheckpoint(def, checkpoint, this.specBindingOf(rec))
       return { runId, instance: rec.instance }
     }
 
+    const def = this.graphs.get(graphId)
+    if (!def) throw new Error(`Graph not registered: ${graphId}`)
     // 新 run 用 UUID（P1 Task 8）：进程内序号在双 service 同 event log 重建后归零
     // 复用旧 runId（P0 审查实锤——撞既有日志流/串图）。旧 run-<graph>-<seq> 记录
     // 仍可 rebuild/resume（rebuildRegistryFromLog 按 runId 逐流恢复，与生成规则无关）。
     const newRunId = `run-${graphId}-${newRunSuffix()}`
+    const snapshot = options?.snapshot
+    if (snapshot) {
+      // 快照必须先于 run.started 与任何节点副作用落盘；保存失败则 run 不起跑。
+      await this.eventLog.saveRunSpec({ runId: newRunId, ...snapshot.meta, spec: snapshot.spec })
+    }
+    const specSource: NonNullable<GraphInstance['specSource']> = snapshot ? 'run-snapshot' : 'legacy-unpinned'
     const runtime = this.makeRuntime(newRunId)
-    const instance = await runtime.start(def, newRunId, initialState)
+    const instance = await runtime.start(def, newRunId, initialState, {
+      specSource,
+      ...(snapshot ? { specSnapshot: snapshot.meta } : {}),
+    })
     this.runs.set(newRunId, {
       runId: newRunId,
       graphId,
       instance,
       runtime,
+      def,
+      snapshot,
+      specSource,
     })
     return { runId: newRunId, instance }
   }
 
   /** resume 闭环：run 必须处于 awaiting-input，从最新 checkpoint 真恢复续跑 */
-  async resumeRun(runId: string, interruptId: string, value: unknown): Promise<GraphInstance> {
+  async resumeRun(
+    runId: string,
+    interruptId: string,
+    value: unknown,
+    context?: GraphDefinitionContext,
+  ): Promise<GraphInstance> {
     const rec = this.runs.get(runId)
     if (!rec) throw new Error(`Run not found: ${runId}`)
     if (rec.instance.status !== 'awaiting-input') {
       throw new Error(`Run ${runId} is not awaiting-input (status=${rec.instance.status})`)
     }
-    const def = this.graphs.get(rec.graphId)
-    if (!def) throw new Error(`Graph not registered: ${rec.graphId}`)
+    const def = await this.resolveRunDefinition(rec, context)
     const checkpoint = await this.eventLog.getLatestCheckpoint(runId)
     if (!checkpoint) throw new Error(`No checkpoint found for run: ${runId}`)
     // 台账 c-2：interruptId 必须 ∈ 最新 checkpoint 的 pendingInterrupts
     if (!checkpoint.pendingInterrupts.some(i => i.id === interruptId)) {
       throw new Error(`Unknown interrupt: ${interruptId}`)
     }
-    rec.instance = await rec.runtime.resumeFromCheckpoint(def, checkpoint, value, interruptId)
+    rec.instance = await rec.runtime.resumeFromCheckpoint(
+      def,
+      checkpoint,
+      value,
+      interruptId,
+      this.specBindingOf(rec),
+    )
     return rec.instance
   }
 
@@ -158,9 +214,24 @@ export class GraphService {
 
     // fork 同 UUID 化（P1 Task 8，同 startRun 的重建复用缺陷面）
     const forkedId = `run-${rec.graphId}-fork-${newRunSuffix()}`
+    const ts = new Date().toISOString()
+    let copiedSnapshot: StoredGraphRunSpec | null = null
+    if (rec.specSource === 'run-snapshot') {
+      if (!rec.snapshot) throw new Error(`run_spec_snapshot_missing: ${runId}`)
+      try {
+        copiedSnapshot = await this.eventLog.copyRunSpec(runId, forkedId, {
+          createdAt: ts,
+          createdBy: rec.snapshot.meta.createdBy,
+        })
+      } catch (error) {
+        if (error instanceof Error && error.message === `Graph run spec not found: ${runId}`) {
+          throw new Error(`run_spec_snapshot_missing: ${runId}`)
+        }
+        throw error
+      }
+    }
     const forkedCheckpoint = await this.checkpointManager.fork(runId, superStep, forkedId)
 
-    const ts = new Date().toISOString()
     // P3 台账（T2：graph.forked live 副本无 eid）：fork 内已把 run.forked 落进
     // forkedId 日志流，该流此刻 paused 无并发写入——latestSeq 即 run.forked 的 seq，
     // 直接构造 eid 挂到事件对象上（与 runtime appendToEventLog 的回填同源同格式），
@@ -191,12 +262,19 @@ export class GraphService {
       createdAt: ts,
       updatedAt: ts,
       parentThreadId: runId,
+      specSource: rec.specSource,
+      ...(copiedSnapshot ? { specSnapshot: snapshotMetaOf(copiedSnapshot) } : {}),
     }
     this.runs.set(forkedId, {
       runId: forkedId,
       graphId: rec.graphId,
       instance,
       runtime: this.makeRuntime(forkedId),
+      def: rec.def,
+      ...(copiedSnapshot
+        ? { snapshot: { spec: copiedSnapshot.spec, meta: snapshotMetaOf(copiedSnapshot) } }
+        : {}),
+      specSource: rec.specSource,
       forkBase: { checkpoint: forkedCheckpoint },
     })
     return { runId: forkedId }
@@ -294,6 +372,33 @@ export class GraphService {
       const lastTs = events.length > 0 ? events[events.length - 1].ts : Date.now()
       const updatedAt = new Date(lastTs).toISOString()
       const forkEvent = events.find(e => e.kind === 'run.forked')
+      const startedEvent = events.find(e => e.kind === 'run.started')
+      const startedPinned = startedEvent?.payload.specSource === 'run-snapshot'
+      const pendingFork = forkEvent !== undefined && startedEvent === undefined
+      // 未消费 fork 没有 run.started：读取候选复制行并继承父 run 来源；已知 legacy 父 run 不被孤立行升级。
+      const storedSnapshot = startedPinned || pendingFork ? await this.eventLog.getRunSpec(runId) : null
+      let inheritedPinned = false
+      if (pendingFork) {
+        const parentRunId = forkEvent.payload.fromRunId as string | undefined
+        const parent = parentRunId ? this.runs.get(parentRunId) : undefined
+        if (parent) {
+          inheritedPinned = parent.specSource === 'run-snapshot'
+        } else if (storedSnapshot) {
+          inheritedPinned = true
+        } else if (parentRunId) {
+          const parentEvents = await this.eventLog.query(parentRunId)
+          inheritedPinned = parentEvents.some(
+            e => e.kind === 'run.started' && e.payload.specSource === 'run-snapshot',
+          )
+        }
+      }
+      // 旧事件没有 specSource，必须保持 registry 回退；只有显式/继承的 pinned 才可读快照。
+      const specSource: NonNullable<GraphInstance['specSource']> =
+        startedPinned || inheritedPinned ? 'run-snapshot' : 'legacy-unpinned'
+      const eventSnapshot = specSource === 'run-snapshot'
+        ? startedEvent?.payload.specSnapshot as GraphSpecSnapshotMeta | undefined
+        : undefined
+      const specSnapshot = storedSnapshot ? snapshotMetaOf(storedSnapshot) : eventSnapshot
       const instance: GraphInstance = {
         id: `${graphId}-${runId}`,
         graphDefId: graphId,
@@ -305,8 +410,19 @@ export class GraphService {
         createdAt: checkpoint?.createdAt ?? updatedAt,
         updatedAt,
         parentThreadId: forkEvent?.payload.fromRunId as string | undefined,
+        specSource,
+        ...(specSnapshot ? { specSnapshot: { ...specSnapshot } } : {}),
       }
-      const rec: RunRecord = { runId, graphId, instance, runtime: this.makeRuntime(runId) }
+      const rec: RunRecord = {
+        runId,
+        graphId,
+        instance,
+        runtime: this.makeRuntime(runId),
+        ...(storedSnapshot
+          ? { snapshot: { spec: storedSnapshot.spec, meta: snapshotMetaOf(storedSnapshot) } }
+          : {}),
+        specSource,
+      }
       // fork 未起跑（无 run.started）→ 重建 forkBase，startRun 仍可按显式语义消费
       if (forkEvent && !events.some(e => e.kind === 'run.started') && checkpoint) {
         rec.forkBase = { checkpoint }
@@ -320,6 +436,35 @@ export class GraphService {
   // ============================================================================
   // 内部
   // ============================================================================
+
+  private async resolveRunDefinition(
+    rec: RunRecord,
+    context: GraphDefinitionContext = {},
+  ): Promise<GraphDef> {
+    if (rec.specSource === 'run-snapshot') {
+      // 每次恢复都重新解析，调用方才有机根据当前 JWT 选择 Director registry；context 不写入 rec。
+      const loaded = await this.opts.loadRunDefinition?.(rec.runId, context)
+      if (!loaded) throw new Error(`run_spec_snapshot_missing: ${rec.runId}`)
+      rec.def = loaded.def
+      rec.instance.specSource = 'run-snapshot'
+      rec.instance.specSnapshot = { ...loaded.snapshot }
+      if (rec.snapshot) rec.snapshot = { ...rec.snapshot, meta: { ...loaded.snapshot } }
+      return loaded.def
+    }
+    // 兼容无快照旧 run/runtime-defined：仍读当前 registry，但显式标记为非 pinned。
+    const def = this.graphs.get(rec.graphId)
+    if (!def) throw new Error(`Graph not registered: ${rec.graphId}`)
+    rec.def = def
+    rec.instance.specSource = 'legacy-unpinned'
+    return def
+  }
+
+  private specBindingOf(rec: RunRecord): Pick<GraphInstance, 'specSnapshot' | 'specSource'> {
+    return {
+      specSource: rec.specSource,
+      ...(rec.instance.specSnapshot ? { specSnapshot: { ...rec.instance.specSnapshot } } : {}),
+    }
+  }
 
   private makeRuntime(runId: string): GraphRuntime {
     return new GraphRuntime(

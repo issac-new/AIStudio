@@ -15,6 +15,7 @@
 
 import type { PredicateExpr } from './predicate'
 import type { ErrorCategory } from '../../toolcontract/contract'
+import type { GraphSpecSnapshotMeta } from './run-spec-snapshot'
 
 /** 回边守卫：有限终止的循环级安全网 */
 export interface LoopGuard {
@@ -182,6 +183,10 @@ export interface GraphInstance {
   createdAt: string
   updatedAt: string
   parentThreadId?: string  // fork 来源
+  /** 起跑时绑定的不可变 GraphSpec 元数据；不含 Director 凭据。 */
+  specSnapshot?: GraphSpecSnapshotMeta
+  /** pinned 快照与旧 registry 回退显式分流，旧事件缺省按 legacy-unpinned。 */
+  specSource?: 'run-snapshot' | 'legacy-unpinned'
 }
 
 // ============================================================================
@@ -199,7 +204,9 @@ export interface GraphRunVerification {
 }
 
 export type GraphEvent =
-  | { type: 'graph.started'; graphId: string; threadId: string; ts: string }
+  | { type: 'graph.started'; graphId: string; threadId: string; ts: string
+      specSnapshot?: GraphSpecSnapshotMeta
+      specSource?: 'run-snapshot' | 'legacy-unpinned' }
   | { type: 'graph.step-start'; graphId: string; threadId: string; step: number; nodes: string[]; ts: string }
   | { type: 'graph.node-start'; graphId: string; threadId: string; nodeId: string; step: number; ts: string }
   | { type: 'graph.node-complete'; graphId: string; threadId: string; nodeId: string; step: number; result: NodeResult; ts: string }
