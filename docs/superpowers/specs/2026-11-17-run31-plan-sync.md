@@ -7,7 +7,8 @@ run30 后五个产品批（main 52ec7f384 proactive 清偿／950655d05 超级智
 1. **方案正本新增 §5.15**（`2026-10-05-mux-v8-fullflow-plan.md`）：五批能力面进推演验收与判读口径——Always-on 三 watcher 运行态取证与 dreaming sunset 判据、proactive/always-on/kanban version 探针组（§5.11 表新增行，组号以 `mx-capability-probes.mjs` 落地序为准）、complete 语义新口径（expected_version 409＋verification 档位 fail-closed）、LoopForge 完成判读口径（archived 不算成功／DryRun 仅显式 shadow）、Ekko autoinject 对 fleet 托管 MCP 装配面的取证、studio preload 安全加固随 N31-4 重烧。
 2. **数字总账刷新**（`2026-10-23-swarmstudio-design-ledger.md`）：§C 七行随载体真值进位（studio v0.8.21／Ycode 3.18.2／驾驶舱 0.8.20-studio.3／teams v0.23.1-team.3／yuan v2.100.4／整体包 1.0.16-overlay，核实日 2026-11-17）＋§A 新增「卡级验证三档」行（批二契约）。
 3. **VENDOR.md zcode 表行补正**（VENDOR_SYNC=1 通道）：11-13 双升级批将 zcode 同步至 `fec97590`（包版本 3.18.2），台账行在 merge 环节被 pre-commit 撤出漏入（同型坑第四次，b8b6202c0 补正只救回 studio 行）——本批补 zcode 行。
-4. **开跑门衔接**：N31-4（重烧收据 verify-latest pass）＋N31-5（起跑窗 09:00-11:00）确认为 run31 开跑硬门；N31-1/2/3 为收官回写项不阻塞开跑（台账 `2026-11-14-run31-pending-batch.md` 口径不变）。
+4. **开跑门衔接**：N31-4（重烧收据 verify-latest pass）＋N31-5（开跑窗 09:00-11:00）确认为 run31 开跑硬门；N31-1/2/3 为终局回写项不阻塞开跑（台账 `2026-11-14-run31-pending-batch.md` 口径不变）。
+5. **jargon 存量红清偿**：11-15 方案同步批写 §5.14 时引入 HARD 词（收官×5／催办／记单／起跑×3）未跑 jargon 门即合入，LoopForge 批不触 simharness 未复跑——jargon-source-gate 在 b1312b8aa 基线红（另 mx-report-gen.py:4915 注释 1 处）。本批改人话：收官→终局、催办→提醒、记单→记入问题单、起跑→开跑（§5.14 四行＋本批 §5.15 五处＋report-gen 注释一处；RuntimeError 消息在引号内属豁免且被 run30-burn-verify.test.sh:115 锚定，不动）。
 
 ## 决策记录
 

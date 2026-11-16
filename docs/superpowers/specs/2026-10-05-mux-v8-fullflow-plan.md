@@ -2990,26 +2990,26 @@ run29（20261111-v8-run29，27h20m 六闸全过，审计零 FAIL/46 WARN）值�
 
 ### 5.14 run30 复盘条款（2026-11-15 立；run31 起生效）
 
-run30（20261113-v8-run30，21h08m，A2 二段式停机收官；六闸 delivery 链全绿）暴露的工装与流程缺口，根治批随批（main 6a5a4deb4/3905e2645/66a3213d2/08a301e65/16e0306f9）：
+run30（20261113-v8-run30，21h08m，A2 二段式停机终局；六闸 delivery 链全绿）暴露的工装与流程缺口，根治批随批（main 6a5a4deb4/3905e2645/66a3213d2/08a301e65/16e0306f9）：
 
 1. **凭证核验三分支判定**：交付凭证「文件在 commit」的核验用精确路径 ls-tree（命中=非空输出/真缺席=空输出 rc0/通道错=fatal——三分支语义唯一干净；实测通配 pathspec 不跨目录、:(glob) 不受支持、cat-file 缺席也 fatal 不可分流）。git 调用 stderr 一律留证（截 200 字符进 note）；同 sha 连续 ≥5 次缺席启用双通道交叉（全树宽匹配作第二意见），矛盾＝「核验通道异常」记单暂停虚报判词（执法器故障不定罪 agent 也不虚放）；回灌文案动态携带真实失败形态（含通道异常时给 BLOCKED+自证出口）。
 2. **烧机收据第三态 burn-waived**：`mx-mechanism-receipt.py waive`——fail 收据且 reasons 含 `fail_lines=1`+`goal_step_not_reached`（单点外部归因代理判据）＋reason 必填留档→写 `burn-waivers.jsonl`（24h TTL 自动失效）；verify-latest 认新鲜豁免转 WAIVED。外部通道故障不再阻塞开跑（run30 实录 6h 阻塞）；从未烧机/多重失败均不豁免（fail-closed）。
-3. **熔断催办指数退避**：间隔 `_NG→2×→4×` 封顶 1800s，首催准点（300s 时限保留）；10 次升级记单语义不变。run30 实录固定 300s 对冷态/深睡 agent 是纯轰炸（G2 环 14 次 70min 零响应）。
-4. **起跑时间学（G-d）**：起跑窗 09:00-11:00——全程落日间活跃段；G2/尾段（第 8-14h）避开 00:00-07:00 凌晨深睡窗（run30 实录凌晨段 agent 群体零交付 3h、在线工位=1）。守夜不再靠机制硬扛，靠起跑窗根本不落夜。
+3. **熔断提醒指数退避**：间隔 `_NG→2×→4×` 封顶 1800s，首催准点（300s 时限保留）；10 次升级记入问题单语义不变。run30 实录固定 300s 对冷态/深睡 agent 是纯轰炸（G2 环 14 次 70min 零响应）。
+4. **开跑时间学（G-d）**：开跑窗 09:00-11:00——全程落日间活跃段；G2/尾段（第 8-14h）避开 00:00-07:00 凌晨深睡窗（run30 实录凌晨段 agent 群体零交付 3h、在线工位=1）。守夜不再靠机制硬扛，靠开跑窗根本不落夜。
 5. **交付任务书统一件**：①testlog add/add 冲突警告四家任务书（C/S/N/MP）全覆盖（与 CHWX 族模板同句式；警告位不得拆「结论行 DEV-DONE-X。${ACP_NOTE:-}」断言锚）；②概设预写触发阈值=首份系分入库即派骨架（原次份 3600s 常未达回退集中，run30 概设段 3h22m 实录）。
 6. **A1 标定定案（D1 修正）**：director 通道 51 笔 success 3（5.9%）且全落日间、深夜 100% 失败（timeout/send-failed 混合）——**director 默认 preset 常态化，标定轮仅在日间活跃窗开**（§5.13 第 8 条折中方案的实测修正）；标定数据按 director-metrics.jsonl 留档口径不变。
-7. **指标留档收官门**：O1 留档（run-metrics.jsonl 追加）仅 `report_done` 在位的收官轮写——预检重放未收官轮不再产假投影行（run30 开跑轮「④自污染」结构性根治）。
+7. **指标留档终局门**：O1 留档（run-metrics.jsonl 追加）仅 `report_done` 在位的终局轮写——预检重放未终局轮不再产假投影行（run30 开跑轮「④自污染」结构性根治）。
 8. **采集预检排查序**：预检 FAIL 提示按序指路 docker/synapse(8008)→studio(8802)→gateway(8801)→npm(playwright)→channel——2026-11-14 夜三连败真因是 docker daemon 停→synapse 断，旧提示只指 npm 误导修复方向。
 
 ### 5.15 run31 开跑前吸收条款（2026-11-17 立；run31 起生效）
 
 run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能体批二／6dab0115a Ekko UI Surface／40d1affc8 Always-on 五组件／b1312b8aa LoopForge 可信 SOP 执行地板）的能力面进推演验收与判读口径，同步批随批（spec `2026-11-17-run31-plan-sync.md`）：
 
-1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——起跑后与收官各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空。outbox/run-outcome REST 面进 §5.11 探针表新增组。
+1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——开跑后与终局各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空。outbox/run-outcome REST 面进 §5.11 探针表新增组。
 2. **proactive 三端点探针**（§5.11 表新增组）：earned-autonomy/apply 只做保证被拒负例（loosen/hold→409，非破坏）；lineage 三源聚合形状（sources＋未覆盖面声明在位）；standingagenda `?cardId=` 卡级过滤生效。
 3. **complete 语义新口径（批二）**：行级乐观锁 expected_version CAS 不匹配 409 `version_conflict`、卡级 verification 三档不满足 fail-closed 拒完成（判定器异常也拒）——探针负例覆盖 409；**run31 任务书不强制 verification 档位卡**（验收环不叠加二次验证依赖，档位卡活体留 run32 可选标定）；值守与审计判读「旧快照写回 409」为新正确行为不计缺陷。
 4. **LoopForge 完成判读口径**：graph 面 archived 不算成功（DONE_STATUSES 收窄）、DryRun 仅显式 shadow 可注入、不可执行节点 422 稳定码、pinned run 缺快照 fail-closed；RunSpawner/ShadowRunner 维持 legacy-unpinned 兼容态。run31 缺省 preset 派发（§5.14 第 6 条），判读遇 409/422 稳定码按新语义解读。
-5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——起跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
-6. **studio preload 安全加固收口**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，收口后 digest 变化由 N31-4 重烧覆盖。
+5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——开跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
+6. **studio preload 安全加固入仓**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，入仓后 digest 变化由 N31-4 重烧覆盖。
 7. **数字总账 §C 随批对齐**（v0.8.21／3.18.2／v1.0.16 族，核实日 2026-11-17）＋VENDOR.md zcode 台账行补正（merge 撤出漏入第四次清偿）——数字滞后是设计复盘「补账抬位」的载体面清偿。
-8. **N31 开跑门衔接**：N31-4（重烧收据 verify-latest pass，WAIVED 不认跨 digest）＋N31-5（起跑窗 09:00-11:00）为 run31 开跑硬门；N31-1/2/3 为收官回写项（N31-2a 已修族 run31 验证归零、N31-3 任务书警告 4/4 验证），不阻塞开跑。
+8. **N31 开跑门衔接**：N31-4（重烧收据 verify-latest pass，WAIVED 不认跨 digest）＋N31-5（开跑窗 09:00-11:00）为 run31 开跑硬门；N31-1/2/3 为终局回写项（N31-2a 已修族 run31 验证归零、N31-3 任务书警告 4/4 验证），不阻塞开跑。
