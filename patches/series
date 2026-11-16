@@ -1267,3 +1267,7 @@
 # 776（2026-11-14 超级智能体吸收批二）：studio complete/block/patch 透传
 # --expected-version，CLI version conflict 文本映射 409 version_conflict。
 776-server-kanban-expected-version.patch
+
+# 784（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
+# /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
+784-server-always-on-routes.patch

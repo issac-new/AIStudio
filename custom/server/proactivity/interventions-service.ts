@@ -31,6 +31,9 @@ import {
 } from './intervention-ledger'
 import { buildScorecard, type ProactivityScorecard } from './proactivity-scorecard'
 import { mergeBenefit, previewSuggestions, type PreviewResult } from './anticipation-preview'
+// Always-on Agents 吸收 P2（2026-11-16）：治理裁决接真实发送 + 收口账本。
+import { enqueueOutbox } from '../outbox/outbox-store'
+import { classifyGovernanceRound, recordRunOutcome } from '../notify/run-outcome'
 
 // ── 注意力偏好（单一事实源；与两轴策略同在 proactivity 目录）────
 
@@ -232,10 +235,62 @@ export function syncInterventions(
       ...(merged.source === 'preview' && preview ? { previewExplanation: preview.explanation } : {}),
     }
     appendIntervention(rec)
+    // 发件箱接线（Always-on Agents 吸收 P2，2026-11-16）：治理裁决不再「只记账」——
+    // deliver/escalate/high 入队立即发；batch 入队带 mergeKey 合并；defer 入队带
+    // notBefore 到期重投；suppress/hold 不入队（沉默只落收口账本）。
+    enqueueForVerdict(rec, verdict)
     records.push(rec)
     byDecision[verdict.decision] = (byDecision[verdict.decision] ?? 0) + 1
   }
+  // Run 收口（P1）：一 sync 轮即一次后台 Run，三态由治理裁决整体分类（沉默可审计）。
+  const round = classifyGovernanceRound(records.map((r) => ({ decision: r.decision, reasonCode: r.reasonCode })))
+  recordRunOutcome({
+    runId: `sync-${nowMs.toString(36)}`,
+    runKind: 'kanban',
+    audience: 'human',
+    outcome: round.outcome,
+    reasonCode: round.reasonCode,
+    refs: records.length ? records.map((r) => `intervention:${r.id}`) : ['sync:empty'],
+    at: nowMs,
+  })
   return { available: true, created: records.length, skipped, byDecision, records, breakpoint, previewedCount }
+}
+
+/** 治理裁决 → 发件箱入队（P2 接线；recipient 由 OUTBOX_RECIPIENT 指定，缺省 owner）。 */
+function enqueueForVerdict(rec: InterventionRecord, verdict: { decision: string; nextWindowAtMs?: number | null }): void {
+  if (verdict.decision === 'suppress' || verdict.decision === 'hold') return
+  const recipient = outboxRecipient()
+  const mergeKey = 'proactivity'
+  const base = {
+    recipient,
+    body: rec.summary,
+    source: 'proactivity',
+    runId: rec.id,
+    dedupeKey: `intervention:${rec.topicKey}`,
+    mergeKey,
+  }
+  if (verdict.decision === 'deliver' || verdict.decision === 'escalate') {
+    enqueueOutbox({ ...base, priority: rec.severity === 'attention' ? 'high' : 'normal' })
+    return
+  }
+  if (verdict.decision === 'batch') {
+    enqueueOutbox({ ...base, priority: 'normal' })
+    return
+  }
+  if (verdict.decision === 'clarify') {
+    // 澄清型延迟：等用户补充信息（不入队，收口账本记 deferred-approval）。
+    return
+  }
+  // defer：到期重投（nextWindowAtMs 缺席时保守推迟 1h）。
+  enqueueOutbox({
+    ...base,
+    priority: 'normal',
+    notBefore: verdict.nextWindowAtMs ?? Date.now() + 3_600_000,
+  })
+}
+
+function outboxRecipient(): { kind: 'member' | 'agent'; name: string } {
+  return { kind: 'member', name: process.env.OUTBOX_RECIPIENT?.trim() || 'owner' }
 }
 
 /**

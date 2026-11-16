@@ -643,6 +643,34 @@ E2EE 房不在支持范围（明文发送在加密房会显示不可解密）。
 汇总（只为有订阅的线程生成，生成后推进订阅游标；纯列变更静默但游标照推）→ 投递。
 任一步失败记入 `errors` 并继续其余步骤。定时轮取代了原来单独的投递定时器。
 
+#### 3.6.1 Always-on 运行面（五组件装配）
+
+常驻智能体的运行语义按 Anthropic《Building always-on agents》的五组件对账装配，不新造
+第六套运行时：事件收件箱由 `session_admissions` 承担（六源汇入、去重、按会话单活跃
+claim）；定时器分 cron（外部日程）与 follow-up（agent 自设跟进，唤醒原会话）；持久
+记忆走 Hindsight 唯一 provider，任务进度用 `session_checkpoints` 五节文档；权限沿用
+审批账本与四挡契约；发件箱由 `custom/server/outbox` 承担。
+
+**Run 收口三态。** 每次后台 Run 结束只允许三种结局（`custom/server/notify/run-outcome`）：
+写发件箱 `outbox`／判定无需通知 `silence`／延迟调用 `deferred`；`reasonCode` 为闭集
+（`delivered/nothing-new/below-threshold/cooldown/quiet-hours/budget-capped/duplicate/
+deferred-window/deferred-approval/deferred-followup/error`），JSONL append-only、环形
+2000 行。沉默因此可审计：earned attention 的接受率/忽略率之外，多一条「系统主动选择
+不打扰」的分母。治理轮与 automation 桶派发即接线点；chat 回合不入三态（用户发起、
+回复即交付，无「不通知」语义可记）。
+
+**发件箱。** `custom/server/outbox` 管待发队列：入队校验 + `dedupeKey` 六小时幂等 +
+环形 500；派发器在派发时复检注意力预算（安静时段/日 8/时 3），critical 豁免；同
+`mergeKey` 的 normal 消息合成一条 digest（≤10 条）；失败按 30s/120s 退避，三次转
+`failed` 死信；通道为 inbox（恒可用，`proactive_notice` 类型）与 matrix（仅
+`OUTBOX_MATRIX_ROOM` 配置时启用）。`OUTBOX_DISPATCH=off` 关闭派发，
+`OUTBOX_TICK_INTERVAL_MS` 缺省 60s。治理裁决因此从「只记账」变为「真发送」：
+`deliver/escalate` 立即入队、`batch` 带合并键、`defer` 带 `notBefore` 到期重投、
+`suppress/hold` 只落收口账本。
+
+落地状态（2026-11-16）：收口三态与发件箱派发链已落地；follow-up / 进度文件全量 /
+空闲 dreaming / 延迟工具调用四项本批进行中（spec `2026-11-16-always-on-agents-absorption.md`）。
+
 ### 3.7 单仓与代码归属
 
 AIStudio 是单一完整项目仓。

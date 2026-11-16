@@ -1,0 +1,23 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -239,6 +239,10 @@
+ import { columnAutomationRoutes } from '../custom/kanban/column-automation-controller'
+ // overlay[inbox]: 注意力队列（multica §六，矩阵 §3.5 P1）
+ import { inboxRoutes } from '../custom/inbox/inbox-controller'
++// overlay[run-outcome/outbox]（Always-on Agents 吸收 P1/P2 2026-11-16）：Run 收口三态账本
++// （/api/hermes/run-outcome）＋待发消息队列与派发（/api/hermes/outbox）。两者 fail-soft。
++import { runOutcomeRouter } from '../custom/notify/run-outcome-controller'
++import { outboxRouter } from '../custom/outbox/outbox-controller'
+ // overlay[ask]: 结构化问卷契约（minimax ask_user，矩阵 §3.4 P1）
+ import { askRoutes } from '../custom/ask/ask-controller'
+ // overlay[escalation]: 权限升级协议（routa §七#7，矩阵 §3.6 P1）
+@@ -642,6 +646,8 @@
+   app.use(reviewRoutes.routes())                  // 评审域：两域/行内评论/三裁决（P0 §3.8）
+   app.use(columnAutomationRoutes.routes())        // 列编排：配置+COLUMN_TRANSITION 匹配（P0 §3.6）
+   app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）
++  app.use(runOutcomeRouter.routes())              // Run 收口三态：outbox/silence/deferred 账本（Always-on P1，fail-soft）
++  app.use(outboxRouter.routes())                  // 发件箱：待发队列+派发（限流/合并/重试，Always-on P2，fail-soft）
+   app.use(askRoutes.routes())                     // 结构化问卷：1-4 步契约/一次定音（P1 §3.4）
+   app.use(escalationRoutes.routes())              // 权限升级：urgency 三档/批准即改沙箱（P1 §3.6）
+   app.use(mcpConfigRoutes.routes())              // MCP 配置：scope 三选一/needs-auth 闭环（P1 §3.3）
