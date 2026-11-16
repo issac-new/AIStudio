@@ -11,6 +11,21 @@
  "changes": [
   {
    "at": "2026-11-16",
+   "delta": "+4 patches（780 follow-up 工具/存储/watcher、781 轮终 checkpoint、782 dreaming、783 延迟工具调用）/ +2 域（无新域；followup/manual 复用既有域）/ +3 watcher（followup/dreaming/deferred-approval）/ +1 账本（deferred.json，复用 ledgers 口径）/ +0 scripts / +0 gates",
+   "reason": "Always-on Agents 吸收 P3-P6（spec 2026-11-16-always-on-agents-absorption）：follow-up 定时器/进度文件全量/空闲 dreaming/延迟工具调用闭环",
+   "pairedRemovals": [
+    "follow-up 与 cron 一次性任务的分工写入工具描述：cron 的「提醒我」用法（cronjob_tools.py:1147 的 in 30m 说明）降级为「独立任务」语义，提醒场景主路径转 followup_manage（机制预算配对降级项）",
+    "deferred_calls 账本与 studio-file-approval 队列并存：后者只保留进程内短时等待，跨小时等待由 deferred.json 唯一承担（enforce-approvals tmpdir 票据路径不再作为持久语义）",
+    "dreaming watcher 若连续两轮推演零 dream 产出即退役，补丁 782 同批移 _skip；follow-up 若两轮推演零 create 调用即退役，补丁 780 同批移 _skip"
+   ],
+   "sunset": {
+    "owner": "always-on 批",
+    "reviewBy": "下两轮推演（run31/run32 复盘面）",
+    "retireWhen": "dreaming 零产出＋follow-up 零 create＋deferred 零记录，三者连续两轮推演均零消费即整批退役（补丁 780-783 与三个 watcher 同批移除）"
+   }
+  },
+  {
+   "at": "2026-11-16",
    "delta": "+1 patch（784 run-outcome/outbox 路由）/ +1 域（outbox）/ +1 账本（run-outcome JSONL，复用 ledgers 口径）/ +0 scripts / +0 gates / +0 npm scripts",
    "reason": "Always-on Agents 吸收 P1/P2（spec 2026-11-16-always-on-agents-absorption）：Run 收口三态账本＋发件箱队列与派发（治理裁决接真实发送）",
    "pairedRemovals": [

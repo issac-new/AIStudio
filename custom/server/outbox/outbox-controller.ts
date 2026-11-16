@@ -7,9 +7,11 @@
  * POST /api/hermes/outbox/dispatch   手动派发一轮（env OUTBOX_DISPATCH=off 时拒绝）
  *
  * 挂载：B 类补丁 784 在 bootstrap/routes.ts（与 run-outcome 同批）。
- * 自动轮：OUTBOX_TICK_INTERVAL_MS 缺省 60000（0=不自动 tick；unref 不阻塞退出）。
+ * 自动轮：OUTBOX_TICK_INTERVAL_MS 缺省 60000（0=不自动 tick；测试环境不启）。
+ * 响应形状统一走 lib/http（K19：新代码不手写响应体/失败字面量）。
  */
 import Router from '@koa/router'
+import { bodyOf, fail, ok } from '../lib/http'
 import {
   enqueueOutbox, isOutboxChannel, isOutboxPriority, isOutboxStatus, listOutbox, outboxStats,
 } from './outbox-store'
@@ -22,31 +24,26 @@ export function outboxDispatchEnabled(): boolean {
 }
 
 router.post('/', async (ctx) => {
-  const body = (ctx.request.body ?? {}) as Record<string, unknown>
+  const body = bodyOf(ctx)
   const recipient = body.recipient as { kind?: unknown; name?: unknown } | undefined
   if (!recipient || (recipient.kind !== 'member' && recipient.kind !== 'agent') || typeof recipient.name !== 'string' || !recipient.name) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'recipient 须为 { kind: member|agent, name }' }
+    fail(ctx, 400, 'recipient 须为 { kind: member|agent, name }')
     return
   }
   if (typeof body.body !== 'string' || !body.body) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'body 必填' }
+    fail(ctx, 400, 'body 必填')
     return
   }
   if (typeof body.source !== 'string' || !body.source) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'source 必填' }
+    fail(ctx, 400, 'source 必填')
     return
   }
   if (body.channel !== undefined && !isOutboxChannel(body.channel)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'channel 须为 inbox|matrix' }
+    fail(ctx, 400, 'channel 须为 inbox|matrix')
     return
   }
   if (body.priority !== undefined && !isOutboxPriority(body.priority)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'priority 须为 critical|high|normal' }
+    fail(ctx, 400, 'priority 须为 critical|high|normal')
     return
   }
   const result = enqueueOutbox({
@@ -60,26 +57,26 @@ router.post('/', async (ctx) => {
     ...(typeof body.mergeKey === 'string' && body.mergeKey ? { mergeKey: body.mergeKey } : {}),
     ...(typeof body.notBefore === 'number' ? { notBefore: body.notBefore } : {}),
   })
-  ctx.status = result.enqueued ? 200 : result.reason === 'duplicate' ? 200 : 400
-  ctx.body = { ok: result.enqueued, ...result }
+  if (!result.enqueued && result.reason !== 'duplicate') {
+    fail(ctx, 400, (result.problems ?? ['入队失败']).join('；'), { problems: result.problems ?? [] })
+    return
+  }
+  ok(ctx, result as unknown as Record<string, unknown>)
 })
 
 router.get('/', async (ctx) => {
   const { status, channel, source, recipient } = ctx.query
   if (status !== undefined && !isOutboxStatus(status)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'status 须为 pending|delivering|delivered|failed|suppressed' }
+    fail(ctx, 400, 'status 须为 pending|delivering|delivered|failed|suppressed')
     return
   }
   if (channel !== undefined && !isOutboxChannel(channel)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'channel 须为 inbox|matrix' }
+    fail(ctx, 400, 'channel 须为 inbox|matrix')
     return
   }
   const limit = ctx.query.limit === undefined ? undefined : Number(ctx.query.limit)
   if (limit !== undefined && !Number.isFinite(limit)) {
-    ctx.status = 400
-    ctx.body = { ok: false, detail: 'limit 须为数字' }
+    fail(ctx, 400, 'limit 须为数字')
     return
   }
   const messages = listOutbox({
@@ -89,20 +86,19 @@ router.get('/', async (ctx) => {
     ...(typeof recipient === 'string' && recipient ? { recipient } : {}),
     ...(limit !== undefined ? { limit } : {}),
   })
-  ctx.body = { ok: true, messages }
+  ok(ctx, { messages })
 })
 
 router.get('/stats', async (ctx) => {
-  ctx.body = { ok: true, ...outboxStats(), backlog: outboxBacklog() }
+  ok(ctx, { ...outboxStats(), backlog: outboxBacklog() })
 })
 
 router.post('/dispatch', async (ctx) => {
   if (!outboxDispatchEnabled()) {
-    ctx.status = 409
-    ctx.body = { ok: false, detail: '派发已关闭（OUTBOX_DISPATCH=off）' }
+    fail(ctx, 409, '派发已关闭（OUTBOX_DISPATCH=off）')
     return
   }
-  ctx.body = { ok: true, ...(await dispatchDue()) }
+  ok(ctx, (await dispatchDue()) as unknown as Record<string, unknown>)
 })
 
 export const outboxRouter = router
@@ -114,7 +110,9 @@ function tickIntervalMs(): number {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 const interval = tickIntervalMs()
-if (interval > 0 && outboxDispatchEnabled()) {
+// 测试环境不启自动轮（先例：sandbox-lease/policy-store 的 NODE_ENV 守卫）——避免导入
+// 路由清单的测试进程落真盘/真外呼；手动 POST /dispatch 仍可测。
+if (interval > 0 && outboxDispatchEnabled() && process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
   const timer = setInterval(() => {
     void dispatchDue().catch(() => { /* 单轮失败等下一轮 */ })
   }, interval)

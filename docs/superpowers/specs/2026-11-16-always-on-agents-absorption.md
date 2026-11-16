@@ -1,7 +1,8 @@
 # Always-on Agents 吸收（Anthropic《Building always-on agents》五组件对账）
 
 日期：2026-11-16
-状态：in-progress
+状态：implemented（P1-P6 全部落地；六补丁 780-785 全量重放绿；全量 npm test 9001/0；
+typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 触发：用户「深入调研 https://mp.weixin.qq.com/s/C8CTefmyZFiTS-lUEJgMXg 完善AIStudio」＋范围裁决「C：最全（含延迟工具调用）」。
 同源轮登记（2026-11-16 立，防重复吸收）：调研对象为 Anthropic 技术指南《Building always-on agents》的中文拆解（模智空间，参考链接 `https://claude.com/resources/articles/building-always-on-agents`）；本仓 `grep -rl -i "always-on|常驻智能体|building-always-on" docs/superpowers/specs/` 仅命中两篇无关 harness 笔记，**无同源轮**。再次收到同一链接时的处置：先读本节与「存量对账」表，不新开吸收轮；剩余挂账只能从「不做的事」节选取且需用户裁决。
 
@@ -110,19 +111,30 @@
 ## 验证
 
 - P1/P2：`npx vitest run custom/server/notify custom/server/outbox custom/server/proactivity custom/server/automations`——纯函数矩阵（收口分类/去重/限流/合并/重试/沉默 reasonCode）＋真 HTTP REST 契约（400/404 负例）。
-- P3/P4/P5/P6：vendor Python 侧测试落 `simharness` 或 `runtime` 对应测试目录（按仓内既有 pytest 布局）；补丁重放：`npm run inject` 后目标测试全绿；`npm run typecheck:harness`。
-- 全量：`npm test`＋`npx vitest run` 目标域＋`node scripts/governance-lint.mjs --budget`＋`node scripts/merge-invariants.mjs --check`＋`gen-doc-indexes --check`。
-- 实测记录随批回填（含未验证项）。
+- P3/P4/P5/P6：vendor Python 测试落 `vendor/hermes-agent/tests/{hermes_cli,tools,agent}`（patch 随批带测试）；补丁重放：`npm run clean && npm run inject` 后目标测试全绿；`npm run typecheck:harness`。
+- 全量：`npm test`＋`node scripts/governance-lint.mjs --budget`＋`node scripts/merge-invariants.mjs --check`＋`node scripts/maintenance/gen-doc-indexes.mjs --check`。
+
+实测记录（2026-11-16 worktree always-on）：
+- P1/P2 域测试 139/139（新增 37：分类矩阵/校验/环形/统计/REST/限流/合并/重试）。
+- P6 custom 收件箱 116/116（含 deferredfile 源：在列/已答不列/过期不列/裁决写响应/二次 404）。
+- Python 新增 53/53：follow-up 存储 11＋工具 12、轮终 checkpoint 5、dreaming 8、deferred 账本 5＋审批接线 8＋批次标记 4。
+- `npm run typecheck:harness` 零错误；`governance-lint --budget` 0 problem；`merge-invariants --check` pass（docs-index 684）；`gen-doc-indexes --write/--check` 684 一致。
+- 补丁重放：780/781/782/783/784/785 全量 `clean && inject` status=complete 逐枚 applied。
+- 实现级修正两例（守门抓出）：
+  1. **补丁 785**：`tests/tools/test_tool_search.py` 目录摘要守门要求工具描述首句不被 80 字符截断——followup_manage 首句压短（lsp/obs_recall 两枚 pre-existing 红非本批引入，主检出单跑同红定谳存量）。
+  2. **K19 棘轮回绿**：全量 `npm test` 首轮抓出新控制器手写 `ctx.body`/`ok:false`（1214>1193、893>874）——三个新控制器全部改走 `lib/http`（ok/fail），inbox-controller 三处成功体顺手收敛（净 ctx.body 1191、ok:false 874，双指标不升）；`writeDeferredResponse` 返回 boolean 避免 Result 联合字面量。
+- 全量 `npm test` 复跑：**9001 passed / 0 failed**（1173 文件含 pristine 全量重放 780-785 六枚逐枚可应用；EXIT=0）。
+- 未验证项：三个 watcher（follow-up/dreaming/deferred）与 outbox 自动轮未做活体端到端（需 gateway/studio 运行态）；单元与函数级已覆盖，活体验证留给下轮推演或手工走查。
 
 ## 设计文档影响
 
 DESIGN_SYNC: touched
 
-- `docs/DESIGN.md`：主动性治理段补「Run 收口三态＋outbox 派发链」；记忆段补「进度文件全量覆盖＋空闲 dreaming」；权限段补「延迟工具调用」。
-- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md` §A 稳定参数：outbox 限流/重试阈值、follow-up watcher 节拍、dreaming 预算、deferred TTL。
-- `config/mechanism-budget.json`：+4 补丁（780-783）、+1 域（outbox）、+2 watcher（followup/dreaming）、+1 账本（deferred_calls）登记 sunset 与配对退役。
-- `docs/manuals/aistudio-design-document-index.md`：`gen-doc-indexes --write` 机械登记。
-- `.swarm-yuan/decisions.jsonl`：D3/D5/D9 三条架构级落账。
+- `docs/DESIGN.md`：新增 §3.6.1「Always-on 运行面（五组件装配）」——收口三态/发件箱/follow-up/进度文件/dreaming/延迟工具调用六件。
+- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md` §A 稳定参数：收口三态闭集、outbox 限流/重试阈值、follow-up watcher 节拍、dreaming 预算、deferred TTL。
+- `config/mechanism-budget.json`：两条登记（P1/P2：+1 补丁＋outbox 域＋run-outcome 账本；P3-P6：+4 补丁＋3 watcher＋deferred 账本），各带 sunset 与配对降级/退役。
+- `docs/manuals/aistudio-design-document-index.md`：`gen-doc-indexes --write` 机械登记（683→684）。
+- `.swarm-yuan/decisions.jsonl`：本批方案 C 裁决一条（含逐件回退面）。
 
 ## 不做的事
 

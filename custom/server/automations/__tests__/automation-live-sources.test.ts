@@ -10,6 +10,8 @@ import { join } from 'path'
 import { AutomationEngine, type AutomationDispatchPort } from '../automation-engine'
 
 const dir = mkdtempSync(join(tmpdir(), 'automations-live-'))
+// Always-on P1：桶派发会写 Run 收口账本——钉临时路径，不落真实 web-ui 根。
+process.env.RUN_OUTCOME_LEDGER_PATH = join(dir, 'run-outcomes.jsonl')
 
 const dispatchCalls: Array<{ workspacePath: string; text: string }> = []
 const port: AutomationDispatchPort = {

@@ -1289,3 +1289,7 @@
 # 784（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
 # /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
 784-server-always-on-routes.patch
+
+# 785（2026-11-16 Always-on Agents P3 修正）：followup_manage 描述首句压到 80 字符内，
+# 满足 tool_search 目录摘要「整句不被截断」守门。
+785-agent-followup-catalog-desc.patch

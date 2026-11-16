@@ -37,6 +37,15 @@ export interface DispatchResult {
   outcomes: DispatchOutcome[]
 }
 
+/** 入队 source → Run 收口 runKind（统计口径；未知来源归 manual，不猜）。 */
+function runKindOf(source: string): 'automation' | 'kanban' | 'loop' | 'followup' | 'manual' {
+  if (source === 'proactivity') return 'kanban'
+  if (source === 'automation') return 'automation'
+  if (source === 'loop') return 'loop'
+  if (source === 'followup') return 'followup'
+  return 'manual'
+}
+
 export interface DispatchDeps {
   now?: number
   env?: Record<string, string | undefined>
@@ -103,7 +112,7 @@ export async function dispatchDue(opts: DispatchDeps = {}): Promise<DispatchResu
         result.deferred += 1
         result.outcomes.push({ id: primary.id, status: 'deferred', reason: 'quiet-hours' })
         recordRunOutcome({
-          runId: primary.runId ?? primary.id, runKind: 'manual', audience: 'human',
+          runId: primary.runId ?? primary.id, runKind: runKindOf(primary.source), audience: 'human',
           outcome: 'deferred', reasonCode: 'quiet-hours', refs: [`outbox:${primary.id}`], at: now,
         })
         return
@@ -114,7 +123,7 @@ export async function dispatchDue(opts: DispatchDeps = {}): Promise<DispatchResu
         result.deferred += 1
         result.outcomes.push({ id: primary.id, status: 'deferred', reason: 'daily-budget' })
         recordRunOutcome({
-          runId: primary.runId ?? primary.id, runKind: 'manual', audience: 'human',
+          runId: primary.runId ?? primary.id, runKind: runKindOf(primary.source), audience: 'human',
           outcome: 'deferred', reasonCode: 'budget-capped', refs: [`outbox:${primary.id}`], at: now,
         })
         return
@@ -124,7 +133,7 @@ export async function dispatchDue(opts: DispatchDeps = {}): Promise<DispatchResu
         result.deferred += 1
         result.outcomes.push({ id: primary.id, status: 'deferred', reason: 'hourly-budget' })
         recordRunOutcome({
-          runId: primary.runId ?? primary.id, runKind: 'manual', audience: 'human',
+          runId: primary.runId ?? primary.id, runKind: runKindOf(primary.source), audience: 'human',
           outcome: 'deferred', reasonCode: 'budget-capped', refs: [`outbox:${primary.id}`], at: now,
         })
         return
@@ -166,7 +175,7 @@ export async function dispatchDue(opts: DispatchDeps = {}): Promise<DispatchResu
         channel: primary.channel,
       })
       recordRunOutcome({
-        runId: primary.runId ?? primary.id, runKind: 'manual', audience: 'human',
+        runId: primary.runId ?? primary.id, runKind: runKindOf(primary.source), audience: 'human',
         outcome: 'outbox', reasonCode: 'delivered', refs: [`outbox:${primary.id}`], at: now,
       })
     } catch (err) {
@@ -180,7 +189,7 @@ export async function dispatchDue(opts: DispatchDeps = {}): Promise<DispatchResu
         channel: primary.channel,
       })
       recordRunOutcome({
-        runId: primary.runId ?? primary.id, runKind: 'manual', audience: 'human',
+        runId: primary.runId ?? primary.id, runKind: runKindOf(primary.source), audience: 'human',
         outcome: next.status === 'failed' ? 'silence' : 'deferred',
         reasonCode: next.status === 'failed' ? 'error' : 'deferred-window',
         refs: [`outbox:${primary.id}`], at: now,

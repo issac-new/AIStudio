@@ -668,8 +668,34 @@ deferred-window/deferred-approval/deferred-followup/error`），JSONL append-onl
 `deliver/escalate` 立即入队、`batch` 带合并键、`defer` 带 `notBefore` 到期重投、
 `suppress/hold` 只落收口账本。
 
-落地状态（2026-11-16）：收口三态、发件箱派发链、follow-up 定时器、进度文件轮终写与空闲
- dreaming 已落地；延迟工具调用一项本批进行中（spec `2026-11-16-always-on-agents-absorption.md`）。
+**follow-up 定时器。** agent 用 `followup_manage` 给自己设一次性提醒（`30m/1h/2d`），
+存 SessionDB `state_meta: followup:<id>`，状态机 `active→firing→fired/failed`；
+网关 `_followup_watcher`（15s）到期只提交 admission（`admit_route_wake`,
+producer=`followup`）唤醒**原会话**，不是新开 cron 会话；会话忙顺延，失败三次转
+failed，陈旧 firing 五分钟自愈。cron 仍负责用户日程/周期任务（新会话执行）。
+
+**进度文件。** kanban worker 的 `session_checkpoints`（五节 ≤800 字符）写触发从
+「预算触顶」扩为「预算触顶 ∪ 正常轮终（10 分钟/task 节流）∪ 中断（不受节流）」；
+`build_worker_context` 每次 worker 启动都注入 checkpoint，首次无文件 no-op。新 Run
+读进度文档接续，不全量重推理。
+
+**空闲 dreaming。** 网关安静 ≥30 分钟且无运行中会话时，`_dreaming_watcher`（30 分钟
+粗节拍）调 Hindsight `reflect` 做跨会话模式提炼，产出以 tag `dream` retain 回同一
+bank；每 profile 24h 至多一次（`state_meta: memory:dream:last_at`），空结果不占预算；
+`HERMES_MEMORY_DREAMING=off` 关闭。30 份 profile 的 `hindsight/config.json` 键归一为
+provider 实际读取的 `recall_prefetch_method`。
+
+**延迟工具调用。** 审批超时在无人值守场景（`approvals.defer_on_timeout` 缺省
+`unattended`，只看 kanban/cron 信号）不就地 deny：落 `<HERMES_HOME>/approvals/
+deferred.json`（24h TTL），工具结果带 `[deferred_tool_call:<id>]` 机器标记，回合在
+工具批次后结束（不占线程等用户）。用户答复走既有 `responses/<request_id>.json`；
+`_deferred_approval_watcher`（10s）settle 后经 `admit_route_wake` 唤醒原会话继续；
+过期标 `expired` 并告知一次。AIStudio 审批收件箱新增 `deferredfile:` 源，跨重启可见、
+可裁决（已答幂等 404）。交互场景保持 fail-closed deny（有人在场时阻塞等待是正确体验）。
+
+落地状态（2026-11-16）：收口三态、发件箱派发链、follow-up 定时器、进度文件轮终写、
+空闲 dreaming 与延迟工具调用六项全部落地（补丁 780-784；spec
+`2026-11-16-always-on-agents-absorption.md`）。
 
 ### 3.7 单仓与代码归属
 

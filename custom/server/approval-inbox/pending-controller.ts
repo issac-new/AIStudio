@@ -157,8 +157,9 @@ function readDeferredQueue(): PendingItem[] {
   return items
 }
 
-/** 写延迟审批响应（无 digest 绑定——delayed 记录本身是事实源；先到先得由 watcher settle）。 */
-function writeDeferredResponse(deferredId: string, choice: string, actor: string): { ok: true } | { ok: false } {
+/** 写延迟审批响应（无 digest 绑定——delayed 记录本身是事实源；先到先得由 watcher settle）。
+ *  返回 boolean（Result 联合的失败字面量会触发 K19 棘轮，新代码不新增）。 */
+function writeDeferredResponse(deferredId: string, choice: string, actor: string): boolean {
   for (const dir of approvalsDirs()) {
     const file = join(dir, 'deferred.json')
     if (!existsSync(file)) continue
@@ -173,9 +174,9 @@ function writeDeferredResponse(deferredId: string, choice: string, actor: string
     atomicWriteJson(respFile, {
       request_id: rec.request_id, choice, decided_at: Date.now(), actor,
     })
-    return { ok: true }
+    return true
   }
-  return { ok: false }
+  return false
 }
 
 // ── mx 审批通道（backlog ③ 审批面统一·产品侧读+裁决，2026-10-06）──
@@ -662,20 +663,18 @@ router.post('/:id/decide', async (ctx) => {
     const deferredId = id.slice('deferredfile:'.length)
     const choice = decision === 'deny' ? 'deny' : decision === 'once' || decision === 'always' || decision === 'session' ? 'once' : ''
     if (!choice) {
-      ctx.status = 400
-      ctx.body = { ok: false, detail: 'deferredfile 决策须为 once|deny' }
+      fail(ctx, 400, 'deferredfile 决策须为 once|deny')
       return
     }
-    if (!writeDeferredResponse(deferredId, choice, actor).ok) {
-      ctx.status = 404
-      ctx.body = { ok: false, detail: '延迟审批不在账本（已裁决/已过期/不存在）' }
+    if (!writeDeferredResponse(deferredId, choice, actor)) {
+      fail(ctx, 404, '延迟审批不在账本（已裁决/已过期/不存在）')
       return
     }
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: deferredId,
       targetTitle: note || deferredId, decision: choice, note,
     })
-    ctx.body = { ok: true, entry }
+    ok(ctx, { entry })
     return
   }
 

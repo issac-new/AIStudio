@@ -1,0 +1,14 @@
+diff --git a/tools/followup_tool.py b/tools/followup_tool.py
+--- a/tools/followup_tool.py
++++ b/tools/followup_tool.py
+@@ -19,8 +19,8 @@
+ FOLLOWUP_SCHEMA = {
+     "name": "followup_manage",
+     "description": (
+-        "Set a one-shot follow-up reminder that wakes THIS SAME conversation later "
+-        "(context preserved), unlike cronjob_manage which starts a fresh isolated session. "
++        "Set a one-shot reminder that wakes this same conversation later. "
++        "Unlike cronjob_manage (fresh isolated session), context is preserved. "
+         "Use for 'remind me / check back in N minutes' self-scheduled follow-ups. "
+         "Actions: create (prompt + delay), list, cancel (id)."
+     ),
