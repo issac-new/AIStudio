@@ -10,18 +10,29 @@
 //             此类型仅是画布语义锚点 + 结构校验）
 //   bo-n-variant  变体节点：向 collectChannel 追加 {variant, payload, score}
 //   converge  Best-of-N 收敛：joinMode 'all' 屏障后收集候选，human 中选 / score 自动选优
-//   gate      R3 质量门禁（编辑器形态）：命令白名单校验，结构占位
-//   agent     画布语义占位：登记 agentRequest（真实派发属 loop-engine 模板域）
+//   gate      R3 质量门禁（编辑器形态）：只执行受信目录中的真实沙箱命令
+//   agent     本批不可执行：起跑预检拒绝，节点工厂亦失败关闭
 //
-// 起跑链路：CustomSpecRuntime.startRun = specStore.get → validateEditorSpec
-// → hydrateGraphSpec（本注册表）→ graphService.registerGraph → startRun。
+// 起跑链路：CustomSpecRuntime.startRun = specStore.get → 深副本 → validateEditorSpec
+// → 能力预检 → hydrateGraphSpec（本注册表）→ registerGraph → GraphService 快照起跑。
 
-import type { NodeDef, NodeResult, StateUpdate, StateValues } from './types'
+import type { NodeResult, StateUpdate, StateValues, GraphDef } from './types'
 import { NodeRegistry } from './node-registry'
 import { hydrateGraphSpec, type GraphSpec } from './graph-spec'
 import { resumeChannel, createHumanApprovalNode } from './phase-nodes'
-import type { GraphService } from './graph-service'
+import type { GraphDefinitionContext, GraphService } from './graph-service'
 import type { GraphSpecStore } from './graph-rest'
+import {
+  executeGraphGate, graphGateNodeTimeoutMs,
+  type GateCommandEntry, type GateExecutorDeps,
+} from './gate-executor'
+import { graphSpecContentHash, type GraphRuntimeKind } from './run-spec-snapshot'
+import {
+  EditorSpecError, preflightSpecCapabilities, type SpecExecutionCapabilities,
+} from './spec-capabilities'
+
+export { EditorSpecError } from './spec-capabilities'
+export type { SpecExecutionCapabilities } from './spec-capabilities'
 
 const now = (): string => new Date().toISOString()
 
@@ -33,7 +44,11 @@ export const PLAN_CHANNELS = ['planResult', 'planDecision', 'planMode'] as const
 // ---------------------------------------------------------------------------
 
 export interface SpecRuntimeOpts {
-  /** gate 节点命令白名单（spec.meta.gateCommands 或装配层注入）；未配置时 gate 有命令即拒 */
+  /** 唯一受信 gate 目录；编辑器 spec.meta.gateCommands 永不并入。 */
+  gateCatalog?: readonly GateCommandEntry[]
+  /** 测试只替换 OS 进程/lease 边界；生产缺省为 Task 3 真实沙箱执行器。 */
+  gateExecutor?: Omit<GateExecutorDeps, 'catalog'>
+  /** @deprecated 旧装配签名兼容；字符串白名单不能映射为真实 argv，故不参与执行。 */
   gateCommands?: string[]
 }
 
@@ -56,31 +71,30 @@ export function createSpecRuntimeRegistry(opts: SpecRuntimeOpts = {}): NodeRegis
     type: 'function' as const,
     label: (config.label as string) ?? (config.id as string),
     execute: async (): Promise<NodeResult> => {
-      // 画布语义占位：登记请求不派发（真实 agent 派发在 loop-engine 五阶段模板域）
-      const channel = (config.channel ?? 'agentRequest') as string
-      return { update: { [channel]: [{ node: config.id as string, ts: now() }] } as StateUpdate }
+      throw new EditorSpecError(
+        'agent_execution_unavailable',
+        `Agent node '${config.id}' has no execution capability in this runtime`,
+      )
     },
     timeout: 60000,
   }))
 
-  registry.register('gate', (config) => ({
-    id: config.id as string,
-    type: 'function' as const,
-    label: (config.label as string) ?? (config.id as string),
-    execute: async (): Promise<NodeResult> => {
-      const command = config.command as string | undefined
-      if (command !== undefined) {
-        const allowed = opts.gateCommands ?? []
-        if (!allowed.includes(command)) {
-          throw new Error(
-            `gate node '${config.id}': command "${command}" not in whitelist [${allowed.join(', ')}]`,
-          )
-        }
-      }
-      return { update: { [`${config.id}.gatePassed`]: true } as StateUpdate }
-    },
-    timeout: 60000,
-  }))
+  registry.register('gate', (config) => {
+    const catalog = opts.gateCatalog ?? []
+    const command = config.command as string | undefined
+    const entry = catalog.find(candidate => candidate.command === command)
+    return {
+      id: config.id as string,
+      type: 'function' as const,
+      label: (config.label as string) ?? (config.id as string),
+      execute: async (_state, ctx): Promise<NodeResult> => executeGraphGate(
+        config as { id: string; command?: string },
+        ctx,
+        { ...opts.gateExecutor, catalog },
+      ),
+      timeout: entry ? graphGateNodeTimeoutMs(entry) : 60000,
+    }
+  })
 
   registry.register('fanout', (config) => ({
     id: config.id as string,
@@ -269,8 +283,6 @@ function registerHuman(registry: NodeRegistry): NodeRegistry {
 // 结构校验（编辑器 spec 专属——hydrate 前给出一针见血的错误）
 // ---------------------------------------------------------------------------
 
-export class EditorSpecError extends Error {}
-
 export function validateEditorSpec(spec: GraphSpec): void {
   const channels = new Set(Object.keys(spec.channels))
   const unconditionalOut = new Map<string, number>()
@@ -332,24 +344,73 @@ export function validateEditorSpec(spec: GraphSpec): void {
 export interface CustomSpecRuntimeDeps {
   specStore: Pick<GraphSpecStore, 'get'>
   graphService: Pick<GraphService, 'registerGraph' | 'startRun'>
+  runtimeKind: GraphRuntimeKind
+  capabilities: SpecExecutionCapabilities
   registry?: NodeRegistry
+  gateExecutor?: Omit<GateExecutorDeps, 'catalog'>
   log?: (msg: string) => void
 }
 
-/** 自建 spec 起跑器：hydrate → registerGraph → startRun（幂等：每次重装配覆盖注册） */
+/** 旧装配尚未声明能力时保持 editor + production + 空目录的失败关闭缺省。 */
+export type CustomSpecRuntimeOptions = Omit<CustomSpecRuntimeDeps, 'runtimeKind' | 'capabilities'> & {
+  runtimeKind?: GraphRuntimeKind
+  capabilities?: SpecExecutionCapabilities
+}
+
+/** 自建 spec 起跑器：读副本 → 校验 → 能力预检 → hydrate → 快照起跑。 */
 export class CustomSpecRuntime {
   private readonly registry: NodeRegistry
-  constructor(private readonly deps: CustomSpecRuntimeDeps) {
-    this.registry = deps.registry ?? createSpecRuntimeRegistry()
+  private readonly deps: CustomSpecRuntimeDeps
+
+  constructor(options: CustomSpecRuntimeOptions) {
+    const capabilities = options.capabilities ?? {
+      gateCatalog: [], hasRealKanbanBridge: false, executionMode: 'production',
+    }
+    this.deps = {
+      ...options,
+      runtimeKind: options.runtimeKind ?? 'editor',
+      capabilities,
+    }
+    this.registry = options.registry ?? createSpecRuntimeRegistry({
+      gateCatalog: capabilities.gateCatalog,
+      gateExecutor: options.gateExecutor,
+    })
   }
 
-  async startRun(specId: string, initialState?: StateValues) {
-    const spec = this.deps.specStore.get(specId)
-    if (!spec) throw new EditorSpecError(`Spec not found: ${specId}`)
+  /** Task 6 快照 loader 与 start 共用本实例的注册表。 */
+  hydrate(spec: GraphSpec): GraphDef {
+    return hydrateGraphSpec(spec, this.registry)
+  }
+
+  async startRun(
+    specId: string,
+    initialState?: StateValues,
+    context?: GraphDefinitionContext,
+  ) {
+    const stored = this.deps.specStore.get(specId)
+    if (!stored) throw new EditorSpecError('spec_not_found', `Spec not found: ${specId}`)
+    const spec = structuredClone(stored)
     validateEditorSpec(spec)
-    const def = hydrateGraphSpec(spec, this.registry)
+    preflightSpecCapabilities(spec, this.deps.capabilities)
+    const def = this.hydrate(spec)
     this.deps.graphService.registerGraph(def)
+    const started = await this.deps.graphService.startRun(spec.id, initialState, undefined, {
+      snapshot: {
+        spec,
+        meta: {
+          specId: spec.id,
+          revision: null,
+          draftVersion: spec.version,
+          runtimeKind: this.deps.runtimeKind,
+          executionMode: this.deps.capabilities.executionMode,
+          contentHash: graphSpecContentHash(spec),
+          createdAt: now(),
+          ...(context?.actor !== undefined ? { createdBy: context.actor } : {}),
+        },
+      },
+      definitionContext: context,
+    })
     this.deps.log?.(`[spec-runtime] spec ${specId} hydrated (${spec.nodes.length} nodes) and run started`)
-    return this.deps.graphService.startRun(spec.id, initialState)
+    return started
   }
 }

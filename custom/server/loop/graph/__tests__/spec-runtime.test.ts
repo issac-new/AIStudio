@@ -1,12 +1,19 @@
 // overlay/custom/server/loop/graph/__tests__/spec-runtime.test.ts
 // P4 T2/T3 — 编辑器节点类型注册表 + 自建 spec 起跑链路（验收门禁：循环内含审批的图成功运行）
-import { describe, it, expect } from 'vitest'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { describe, it, expect, vi } from 'vitest'
 import {
   createSpecRuntimeRegistry, validateEditorSpec, CustomSpecRuntime, EditorSpecError,
 } from '../spec-runtime'
-import type { GraphSpec } from '../graph-spec'
+import type { GraphSpec, NodeSpec } from '../graph-spec'
 import { GraphService } from '../graph-service'
 import { InMemoryEventLogStore } from '../event-log-store'
+import { NodeRegistry } from '../node-registry'
+import {
+  _resetLeaseFileForTests, _useLeaseFileForTests,
+} from '../../../sandbox/sandbox-lease'
 
 function channels(extra: Record<string, { reducer: string; default?: unknown }> = {}): GraphSpec['channels'] {
   return {
@@ -121,13 +128,49 @@ describe('spec-runtime 节点工厂', () => {
     await expect(c.execute({ c: [{}, {}], w: [] }, {} as never)).rejects.toThrow(/expected 3 candidates/)
   })
 
-  it('gate 命令白名单：未配置白名单时有命令即拒；白名单内放行', async () => {
-    const bare = createSpecRuntimeRegistry()
-    await expect(bare.create('gate', { id: 'g', command: 'npm test' }).execute({}, {} as never))
-      .rejects.toThrow(/not in whitelist/)
-    const withList = createSpecRuntimeRegistry({ gateCommands: ['npm test'] })
-    const r = await withList.create('gate', { id: 'g', command: 'npm test' }).execute({}, {} as never)
-    expect(r.update).toEqual({ 'g.gatePassed': true })
+  it('gatePassed 只能由真实 gate 执行器在 ok + exitCode 0 后返回', async () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'spec-runtime-gate-'))
+    const root = join(scratch, 'root')
+    mkdirSync(root, { recursive: true })
+    const oldRoot = process.env.HERMES_SANDBOX_WORKSPACES_ROOT
+    process.env.HERMES_SANDBOX_WORKSPACES_ROOT = root
+    _useLeaseFileForTests(join(scratch, 'leases.json'))
+    const runSandboxed = vi.fn(async () => ({
+      status: 'ok' as const, exitCode: 0, stdout: 'checked', stderr: '',
+      stdoutTruncated: false, stderrTruncated: false,
+    }))
+    try {
+      const gateCatalog = [{
+        command: 'check', argv: ['/bin/echo', 'checked'], cwd: root, timeoutMs: 1_000,
+      }]
+      const registry = createSpecRuntimeRegistry({
+        gateCatalog,
+        gateExecutor: {
+          runSandboxed,
+          detectSandboxSupport: () => ({
+            backend: 'darwin-sandbox-exec', available: true, detail: 'test double',
+          }),
+        },
+      })
+      const result = await registry.create('gate', { id: 'g', command: 'check' }).execute({}, {
+        graphId: 'graph', threadId: 'run-gate', nodeId: 'g', superStep: 0,
+        deps: { emitEvent: () => {} },
+      })
+
+      expect(result.update).toEqual({ 'g.gatePassed': true })
+      expect(result.evidence).toMatchObject({
+        command: 'check', status: 'ok', exitCode: 0, stdout: 'checked',
+      })
+      expect(runSandboxed).toHaveBeenCalledWith({
+        argv: ['/bin/echo', 'checked'], cwd: realpathSync(root), timeoutMs: 1_000,
+        envAllowlist: [], writableRoots: [],
+      })
+    } finally {
+      if (oldRoot === undefined) delete process.env.HERMES_SANDBOX_WORKSPACES_ROOT
+      else process.env.HERMES_SANDBOX_WORKSPACES_ROOT = oldRoot
+      _resetLeaseFileForTests()
+      rmSync(scratch, { recursive: true, force: true })
+    }
   })
 })
 
@@ -194,6 +237,92 @@ describe('CustomSpecRuntime 起跑链路', () => {
     return new GraphService({ eventLog: new InMemoryEventLogStore() })
   }
 
+  const catalogEntry = {
+    command: 'check', argv: ['/bin/echo', 'ok'], cwd: '/unused', timeoutMs: 1_000,
+  }
+
+  function executionCapabilities(
+    executionMode: 'production' | 'shadow' = 'production',
+    hasRealKanbanBridge = false,
+  ) {
+    return { gateCatalog: [catalogEntry], hasRealKanbanBridge, executionMode }
+  }
+
+  /** target 前放置有副作用的 function；旧实现若缺少预检，测试会实际观察到它。 */
+  function sideEffectSpec(
+    target: NodeSpec,
+    terminalType: 'function' | 'gate' = 'gate',
+    meta?: GraphSpec['meta'],
+  ): GraphSpec {
+    return {
+      id: `preflight-${target.type}`, version: 1, origin: 'editor',
+      channels: channels(),
+      nodes: [
+        node('first', 'function', { set: {} }),
+        target,
+        node('terminal', terminalType, terminalType === 'gate'
+          ? { command: 'check' }
+          : { set: { stopMet: true } }),
+      ],
+      edges: [{ from: 'first', to: target.id }, { from: target.id, to: 'terminal' }],
+      entryNode: 'first',
+      endCondition: { op: 'truthy', path: 'stopMet' },
+      limits: { maxSteps: 8 },
+      ...(meta ? { meta } : {}),
+    }
+  }
+
+  function sideEffectRegistry(effects: string[]): NodeRegistry {
+    const registry = new NodeRegistry()
+    for (const type of ['function', 'agent', 'subgraph', 'agent-task', 'gate']) {
+      registry.register(type, config => ({
+        id: config.id as string,
+        type: 'function' as const,
+        label: config.id as string,
+        timeout: 1_000,
+        execute: async () => {
+          effects.push(`${type}:${config.id}`)
+          return {
+            update: config.id === 'terminal' ? { stopMet: true } : {},
+          }
+        },
+      }))
+    }
+    return registry
+  }
+
+  function preflightRuntime(
+    spec: GraphSpec,
+    effects: string[],
+    capabilities = executionCapabilities(),
+  ) {
+    const eventLog = new InMemoryEventLogStore()
+    const service = new GraphService({ eventLog })
+    const store = new Map<string, GraphSpec>([[spec.id, spec]])
+    const runtime = new CustomSpecRuntime({
+      specStore: { get: id => store.get(id) },
+      graphService: service,
+      registry: sideEffectRegistry(effects),
+      runtimeKind: 'editor',
+      capabilities,
+    })
+    return { runtime, service, eventLog }
+  }
+
+  async function expectPreflightRejection(
+    spec: GraphSpec,
+    effects: string[],
+    code: string,
+    capabilities = executionCapabilities(),
+  ): Promise<void> {
+    const { runtime, eventLog } = preflightRuntime(spec, effects, capabilities)
+    const error = await runtime.startRun(spec.id).catch(e => e)
+    expect(error).toBeInstanceOf(EditorSpecError)
+    expect(error).toMatchObject({ code, status: 422, statusCode: 422 })
+    expect(effects).toEqual([])
+    expect(await eventLog.listRuns()).toEqual([])
+  }
+
   /** 验收形状：seed → work → approval(human) → done；done→seed 守卫回边（循环内含审批） */
   function acceptanceSpec(): GraphSpec {
     return {
@@ -220,10 +349,35 @@ describe('CustomSpecRuntime 起跑链路', () => {
 
   it('循环内含审批：interrupt 暂停 → 批准 → 终止条件收敛（spec §10 P4 验收）', async () => {
     const eventLog = new InMemoryEventLogStore()
-    const service = new GraphService({ eventLog })
+    let runtime: CustomSpecRuntime
+    const service = new GraphService({
+      eventLog,
+      loadRunDefinition: async runId => {
+        const row = await eventLog.getRunSpec(runId)
+        if (!row) return null
+        return {
+          def: runtime.hydrate(row.spec),
+          snapshot: {
+            specId: row.specId,
+            revision: null,
+            draftVersion: row.draftVersion,
+            runtimeKind: row.runtimeKind,
+            executionMode: row.executionMode,
+            contentHash: row.contentHash,
+            createdAt: row.createdAt,
+            createdBy: row.createdBy,
+          },
+        }
+      },
+    })
     const spec = acceptanceSpec()
     const store = new Map<string, GraphSpec>([[spec.id, spec]])
-    const runtime = new CustomSpecRuntime({ specStore: { get: id => store.get(id) }, graphService: service })
+    runtime = new CustomSpecRuntime({
+      specStore: { get: id => store.get(id) },
+      graphService: service,
+      runtimeKind: 'editor',
+      capabilities: { gateCatalog: [], hasRealKanbanBridge: false, executionMode: 'production' },
+    })
 
     const { runId, instance } = await runtime.startRun(spec.id)
     expect(instance.status).toBe('awaiting-input') // 审批 interrupt 挂起
@@ -271,6 +425,70 @@ describe('CustomSpecRuntime 起跑链路', () => {
     const final = await service.getRun(runId)
     const winners = (final?.instance.state as Record<string, unknown>)?.['boN.winner'] as Array<unknown>
     expect(winners).toMatchObject([{ pick: 'score', index: 1, winner: { variant: 'B', score: 9 } }])
+  })
+
+  it.each([
+    ['agent', 'shadow', true],
+    ['subgraph', 'shadow', true],
+    ['agent-task', 'production', false],
+  ] as const)('%s 不可执行时任何 function/gate 副作用都未发生', async (type, mode, hasRealBridge) => {
+    const effects: string[] = []
+    const spec = sideEffectSpec(node('target', type))
+    await expectPreflightRejection(
+      spec, effects, 'agent_execution_unavailable', executionCapabilities(mode, hasRealBridge),
+    )
+  })
+
+  it.each([
+    ['显式 shadow 允许 DryRun', 'shadow', false],
+    ['生产模式允许真实 KanbanBridge', 'production', true],
+  ] as const)('agent-task 能力边界：%s', async (_name, mode, hasRealBridge) => {
+    const effects: string[] = []
+    const spec = sideEffectSpec(node('target', 'agent-task'))
+    const { runtime } = preflightRuntime(spec, effects, executionCapabilities(mode, hasRealBridge))
+
+    const { instance } = await runtime.startRun(spec.id)
+
+    expect(instance.status).toBe('completed')
+    expect(effects).toEqual(['function:first', 'agent-task:target', 'gate:terminal'])
+  })
+
+  it('空 gate 在前置 function 执行前拒绝', async () => {
+    const effects: string[] = []
+    const spec = sideEffectSpec(node('target', 'gate', { command: '  ' }), 'function')
+    await expectPreflightRejection(spec, effects, 'gate_command_missing')
+  })
+
+  it('gate 不在服务端目录时在前置 function 执行前拒绝', async () => {
+    const effects: string[] = []
+    const spec = sideEffectSpec(node('target', 'gate', { command: 'editor-only' }), 'function')
+    await expectPreflightRejection(spec, effects, 'gate_command_not_cataloged')
+  })
+
+  it('spec.meta.gateCommands 扩权在前置 function 执行前拒绝', async () => {
+    const effects: string[] = []
+    const spec = sideEffectSpec(
+      node('target', 'gate', { command: 'check' }), 'function', { gateCommands: ['check'] },
+    )
+    await expectPreflightRejection(spec, effects, 'gate_meta_forbidden')
+  })
+
+  it('gate retry 在前置 function 执行前拒绝', async () => {
+    const effects: string[] = []
+    const target = node('target', 'gate', { command: 'check' })
+    target.retry = { maxAttempts: 2, backoffMs: 1 }
+    const spec = sideEffectSpec(target, 'function')
+    await expectPreflightRejection(spec, effects, 'gate_retry_forbidden')
+  })
+
+  it.each([
+    [{ type: 'goto', target: 'terminal' }],
+    [{ type: 'retry-goto', target: 'terminal', maxAttempts: 2 }],
+  ] as const)('gate onError 绕行在前置 function 执行前拒绝', async onError => {
+    const effects: string[] = []
+    const target = { ...node('target', 'gate', { command: 'check' }), onError }
+    const spec = sideEffectSpec(target, 'function')
+    await expectPreflightRejection(spec, effects, 'gate_on_error_forbidden')
   })
 
   it('spec 不存在 / 校验失败抛 EditorSpecError', async () => {
