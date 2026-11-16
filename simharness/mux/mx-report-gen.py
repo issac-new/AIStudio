@@ -4912,7 +4912,7 @@ def _net_pair_table() -> str:
 try:
     _rd_gate = str(state.get('report_done', '') or '')
     if not _rd_gate:
-        # 2026-11-15 全面复盘根治：未收官轮（预检重放/projection）不写仓内指标账——
+        # 2026-11-15 全面复盘根治：未终局轮（预检重放/projection）不写仓内指标账——
         # 每跑一次 prelaunch ⑧ 落一行旧轮假投影行、同预检 ④ 判脏的结构性自污染源。
         raise RuntimeError('run 未收官（report_done 缺席）——指标留档跳过')
     _REPO_GOV = Path(__file__).resolve().parents[2] / 'docs' / 'governance'

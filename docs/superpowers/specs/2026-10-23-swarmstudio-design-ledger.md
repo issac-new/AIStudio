@@ -1,7 +1,7 @@
 # AIStudio 设计事实与容量基线
 
 > 本文是《AIStudio 终态设计文档》的数字附录，不是独立设计正本。
-> 核实日：2026-11-09（v1.0.14 培训课件与相关文档刷新批）。
+> 核实日：2026-11-17（run31 方案同步批——§C 七行随载体真值进位）。
 > 口径：区分稳定设计参数、参考部署和版本快照。
 > 用途：防止同一数字在多处定义，不滚动记录开发轮次。
 
@@ -52,6 +52,7 @@
 | 进度文件轮终写节流 | 10 分钟/task；预算触顶与中断不受节流 | 轮终写 reason=`turn_end`/`interrupted`；`HERMES_SESSION_CHECKPOINT_TURN_END=off` 关闭（同上 P4） |
 | 空闲 dreaming 预算 | 1 次/24h；空闲 ≥30 分钟；`HERMES_MEMORY_DREAMING=off` 关闭 | 只读最近 24h 会话摘要，产出 tag `dream` retain；失败 fail-soft（同上 P5） |
 | 延迟工具调用 TTL | 24h；仅无人值守 principal 默认 defer | 超时→挂起落 `deferred.jsonl`→结束本轮；用户回复经 `responses/<request_id>.json` 唤醒（同上 P6） |
+| 卡级验证三档 | standard／independent／strict:pr | 等级不满足 fail-closed 拒完成（判定器异常也拒）；行级乐观锁 `expected_version` CAS 不匹配 409 `version_conflict`；迁移 envelope 五字段事务级落账（`2026-11-14-superagent-contract-batch2.md`） |
 
 页签、路由、工具、检测器和专题页面属于实现清单。
 其数量由注册表、代码和守门测试给出，不在本文手工维护。
@@ -83,15 +84,15 @@
 
 | 对象 | 核实值 | 版本载体 |
 |---|---|---|
-| hermes-studio 基线 | v0.8.20 | `vendor/VENDOR.md` |
+| hermes-studio 基线 | v0.8.21 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.23.1 | `vendor/VENDOR.md` |
-| zcode 基线谱系 | v3.16.1 系列（包版本 3.18.0 @b95ebaff，2026-11-11 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
-| 驾驶舱模块 | 0.8.20-studio.2 | `RELEASE-NOTES.md` |
-| agent teams 模块 | v0.23.1-team.2 | `team/VERSION` |
-| Ycode 模块 | 3.18.0 | `vendor/zcode/package.json` |
+| zcode 基线谱系 | v3.16.1 系列（包版本 3.18.2 @fec97590，2026-11-13 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
+| 驾驶舱模块 | 0.8.20-studio.3 | `RELEASE-NOTES.md` |
+| agent teams 模块 | v0.23.1-team.3 | `team/VERSION` |
+| Ycode 模块 | 3.18.2 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
-| yuan skill 模块 | v2.100.3 | `skills/swarm-yuan/CHANGELOG.md` |
-| 整体源码包 | 1.0.15-overlay | 仓根 `package.json` 与发布清单 |
+| yuan skill 模块 | v2.100.4 | `skills/swarm-yuan/CHANGELOG.md` |
+| 整体源码包 | 1.0.16-overlay | 仓根 `package.json` 与发布清单 |
 | 平台重写批次（2026-11-05~06） | P0 身份/执行/证据＋P1 注入/交付/发布门＋P2 推演/文档三域核心；补丁 757/758 两枚平台载体（原拟 755/756，让号后落 757/758；755 为 readpool 批占用）；分文未升模块版本号（随下个发布轮进位） | `docs/superpowers/specs/2026-11-05-platform-rewrite-design.md` 及其三段「实施验证」小节 |
 
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
@@ -102,6 +103,7 @@ zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 2026-11-07 版本更新批核对：studio 行随基线升 v0.8.17（35a7158a1，v1.0.9 谱系前进 53 提交、tag 命名回归 0.8.x 线非降级，spec 2026-11-07-vendor-upgrade-studio-v0817）、驾驶舱行随底座换血归 0.8.17-studio.1（扩展序归 1，包不重发）；agent/zcode 行持平（v0.23.0 稳定 tag 口径／a9fe401e=main 同步）。同日风险清单收口（用户令「完成未做」）：zcode-acp-server 引擎面升 0.82.1（coding-delegate 真机冒烟全绿、注记更新，本机 npm 面不入库）；组件台账 openagentontology 转 RETIRED＋ATT&CK v20.1 企业域 STIX-diff 零差量刷新。
 2026-11-09 台账刷新批核对：studio 行随基线升 v0.8.20（cedaceaef，v0.8.17→v0.8.20 三 tag 连发 10 提交，spec 2026-11-09-runtime-deps-refresh）、驾驶舱行随底座换血归 0.8.20-studio.1（扩展序归 1，包不重发）；agent/zcode 行持平（v0.23.0 稳定 tag／a9fe401e=main 同点）。顺带清偿 v1.0.14 发布轮未回写的三行存量漂移：teams team.1→team.2、yuan v2.99.3→v2.100.1、整体包 1.0.13→1.0.14（载体核对 2026-11-09 实测）。
 2026-11-11 v1.0.15 发布轮核对：驾驶舱 studio.1→studio.2（identity-chat/执行内核 P0b-P1/技能存储合一/IDE 收窄等 custom 23 文件＋patches 17 文件实质变更，声明前进包不重发）、teams team.1→team.2（补丁 763-766＋runtime 技能存储＋acp-client P0b）、yuan v2.100.2→v2.100.3（技能根统一批收编＋门禁注释修正）、整体包 1.0.14→1.0.15；zcode/ycode 行持平（3.17.2，活跃补丁 9）。同批清偿 identity-chat 批2 守门债（K19 双棘轮＋raci 白名单，spec 2026-11-10-identity-chat-matrix-batch2 域内）。
+2026-11-17 run31 方案同步批核对：studio 行随基线升 v0.8.21（312425cca，2026-11-13 双升级批）、zcode/ycode 行随同步升 3.18.2（fec97590，同批；**VENDOR.md zcode 表行当批被 merge 撤出漏入**——b8b6202c0 第三次清偿只救回 studio 行，本批随 VENDOR_SYNC=1 第四次清偿补 zcode 行）、驾驶舱/teams/yuan/整体包四行随 v1.0.16 发布轮进位（0.8.20-studio.3／v0.23.1-team.3／v2.100.4／1.0.16-overlay，载体 RELEASE-NOTES/team/VERSION/CHANGELOG/package.json 实测）；agent 行持平 v0.23.1。此前核实日停在 2026-11-09，本批清偿设计导读先行于总账本体的漂移。
 2026-11-09 培训刷新批核对（成文时点在同日台账刷新批之前，所记载体值为当时快照）：hermes-studio 基线维持 v0.8.17；v1.0.14 发布载体已将驾驶舱、agent teams、yuan skill 与整体源码包分别进位到 0.8.17-studio.2、v0.23.0-team.2、v2.100.1、1.0.14-overlay，Ycode 维持 3.17.2。本表只汇总当前载体值，此前核对段保留其成文时点，不回写历史。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。
 桌面安装身份与产物名中的 SwarmStudio 属于兼容标识，

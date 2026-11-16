@@ -400,5 +400,8 @@
 {"at":"2026-11-16T15:08:15Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"6fabb160af5f4d306ca05985159faa7051298f21","commit":"5afb6b79a"}
 {"at":"2026-11-16T07:05:26Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"6213cc8a4b647de3ca3a044cb748254b88f10ff9","commit":"a3076aa9a"}
 {"at":"2026-11-16T12:53:14Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"8c10cbb06243c8d08daa3bcf4e2e5f0c88c19640","commit":"c4b160fc0"}
+{"at":"2026-11-16T16:24:19Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"2ba3768b4225b29296c17d213aedb908c199d5cb","commit":"b1312b8aa"}
 {"at":"2026-11-16T16:26:08Z","spec":"docs/superpowers/specs/2026-11-17-sim-studio-preload-hardening.md","receipt":"309bf0f5326f9cec616366437051b7e8a4de8dc0","commit":"b1312b8aa"}
+{"at":"2026-11-16T16:31:27Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"05098af01a34e2dee28c6a608009adbe0cdc1fcd","commit":"51c550759"}
 {"at":"2026-11-16T16:46:26Z","spec":"docs/superpowers/specs/2026-11-17-sim-probes-run31.md","receipt":"1d0ba2b11c5d1044cfa333191bc9fb74014c73da","commit":"b1312b8aa"}
+{"at":"2026-11-16T16:48:31Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"8817334abdbb12ca146a9614c3f2e32046f4cb47","commit":"595d1b8ff"}
