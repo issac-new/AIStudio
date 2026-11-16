@@ -19,6 +19,8 @@ import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { projectMindAggregated } from './mind-projection'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
+import { buildTrustedGateCatalog, GateCatalogConfigError } from './gate-catalog'
+import type { GateCommandEntry } from './gate-executor'
 import { HttpKanbanBridge, registerSimulationNodeTypes } from '../../graph/node-executors'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
@@ -320,12 +322,17 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     })
   }
 
-  // P4：自建 spec 起跑器（编辑器试跑链路）。gate 命令白名单来自
-  // LOOP_GATE_COMMANDS（逗号分隔；未配置=空表，gate 节点带命令即拒——安全缺省）
-  // 生产只有真实 Kanban REST 桥可执行 agent 节点；shadow 显式 DryRun 并写入快照元数据。
-  const simRegistry = createSpecRuntimeRegistry({
-    gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
-  })
+  // P4+修复轮2：受信 gate 目录（服务端 env 唯一来源，见 gate-catalog.ts）。
+  // 配置非法 → 醒目告警并以空目录 fail-closed（gate 起跑即 not-cataloged），
+  // 绝不回退进程 cwd/编辑器字段；生产只有真实 Kanban REST 桥可执行 agent 节点，
+  // shadow 显式 DryRun 并写入快照元数据。
+  let gateCatalog: GateCommandEntry[] = []
+  try {
+    gateCatalog = buildTrustedGateCatalog()
+  } catch (err) {
+    console.warn(`[graph] gate catalog disabled by invalid config: ${(err as GateCatalogConfigError).message}`)
+  }
+  const simRegistry = createSpecRuntimeRegistry({ gateCatalog })
   // shadow 永不因宿主配置真实地址而写生产看板；on 且配置非空地址才声明真实能力。
   const kanbanBase = process.env.GRAPH_KANBAN_BASE?.trim()
   const executionMode: 'production' | 'shadow' = mode === 'shadow' ? 'shadow' : 'production'
@@ -380,7 +387,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
         registry: simRegistry,
         runtimeKind: 'editor',
         capabilities: {
-          gateCatalog: [],
+          gateCatalog,
           hasRealKanbanBridge,
           executionMode,
         },
@@ -410,7 +417,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   const directorKanbanBase = process.env.GRAPH_KANBAN_BASE?.trim()
     || `http://127.0.0.1:${process.env.PORT?.trim() || '8647'}`
   directorRuntimeFactory = (token?: string) => {
-    const registry = createSpecRuntimeRegistry()
+    const registry = createSpecRuntimeRegistry({ gateCatalog })
     const authToken = token?.trim()
     const hasRealKanbanBridge = Boolean(authToken)
     registerSimulationNodeTypes(registry, {
@@ -432,7 +439,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       registry,
       runtimeKind: 'director',
       capabilities: {
-        gateCatalog: [],
+        gateCatalog,
         hasRealKanbanBridge,
         executionMode: 'production',
       },
