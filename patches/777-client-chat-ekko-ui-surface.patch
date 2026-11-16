@@ -1,0 +1,113 @@
+diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
+--- a/packages/client/src/api/studio/chat.ts
++++ b/packages/client/src/api/studio/chat.ts
+@@ -792,6 +792,30 @@
+     session_id: sessionId,
+     approval_id: approvalId,
+     choice,
++  })
++}
++
++/**
++ * 回填一块声明式界面（ekko-ui/v1 Surface）。payload 只在服务端复验后交给 Agent；
++ * 前端乐观状态由工具结果校正。
++ */
++export function respondUiSurface(
++  sessionId: string,
++  surfaceId: string,
++  revision: number,
++  actionId: string,
++  payload?: unknown,
++  profile?: string,
++  transport: ChatRunTransport = 'chat-run',
++): void {
++  const socket = connectChatRun(null, transport)
++  socket.emit('ui.surface.action', {
++    session_id: sessionId,
++    surface_id: surfaceId,
++    revision,
++    action_id: actionId,
++    ...(profile ? { profile } : {}),
++    ...(payload !== undefined ? { payload } : {}),
+   })
+ }
+ 
+diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -34,6 +34,8 @@
+ import { openSubagentStream, subagentIdFromToolCall } from "@/utils/hermes/subagent-stream";
+ import type { WorkspaceRunChangeSummary } from "@/api/studio/sessions";
+ import { isServerTtsProvider } from "@/api/studio/tts";
++import EkkoUISurfaceCard from "@/custom/chat/components/EkkoUISurfaceCard.vue";
++import { isSurfaceToolName } from "@/custom/chat/ekko-ui/protocol";
+ import type { ProfileAvatar as ProfileAvatarData } from "@/api/hermes/profiles";
+ import ProfileAvatar from "@/components/hermes/profiles/ProfileAvatar.vue";
+ import ImagePreviewOverlay from "./ImagePreviewOverlay.vue";
+@@ -68,6 +70,7 @@
+ const isSystem = computed(() => props.message.role === "system");
+ const isAgentError = computed(() => props.message.role === "assistant" && props.message.systemType === "error");
+ const isGatewayNotice = computed(() => props.message.systemType === "gateway");
++const isEkkoSurfaceTool = computed(() => isSurfaceToolName(props.message.toolName));
+ 
+ const effectiveHeadingIdPrefix = computed(() => props.headingIdPrefix || `msg-${props.message.id}`);
+ const isCommandMessage = computed(() => props.message.role === "command" || props.message.systemType === "command");
+@@ -923,6 +926,7 @@
+   >
+     <TaskPlanCard v-if="message.taskPlan" :plan="message.taskPlan" />
+     <template v-else-if="message.role === 'tool'">
++      <EkkoUISurfaceCard v-if="isEkkoSurfaceTool" :message="message" />
+       <div
+         class="tool-line"
+         :class="{ expandable: hasInlineToolDetails || isSubagentTool, 'subagent-entry': isSubagentTool }"
+diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
+--- a/packages/client/src/components/hermes/chat/MessageList.vue
++++ b/packages/client/src/components/hermes/chat/MessageList.vue
+@@ -18,6 +18,7 @@
+ import VirtualMessageList from "./VirtualMessageList.vue";
+ import MessageItem from "./MessageItem.vue";
+ import { positionTaskPlansAtTurnEnd } from "@/utils/task-plan";
++import { isSurfaceToolName } from "@/custom/chat/ekko-ui/protocol";
+ import { parseContentBlocks, blocksQueuePreview } from "@/utils/content-blocks";
+ import LiveReasoningStatus from "./LiveReasoningStatus.vue";
+ import ToolRunCard from "./ToolRunCard.vue";
+@@ -252,9 +253,12 @@
+   const currentToolIds = new Set(currentToolCalls.value.map((tool) => tool.id));
+   const renderedMessages = messages
+     .filter((m) => {
+-      if (props.hideToolCalls && m.role === "tool") return false;
++      // 交互 Surface 是用户必须看到的界面，不是可隐藏的工具轨迹。
++      const isSurface = m.role === "tool" && isSurfaceToolName(m.toolName);
++      if (props.hideToolCalls && m.role === "tool" && !isSurface) return false;
+       if (m.id === chatStore.focusMessageId && !props.hideReasoning) return true;
+       if (m.role === "tool") {
++        if (isSurface) return true;
+         return toolTraceVisible.value && !!m.toolName && !(isRunIndicatorActive.value && currentToolIds.has(m.id));
+       }
+       if (m.role === "assistant" && !hasRenderableAssistantContent(m)) return false;
+diff --git a/packages/client/src/components/hermes/chat/tool-run-grouping.ts b/packages/client/src/components/hermes/chat/tool-run-grouping.ts
+--- a/packages/client/src/components/hermes/chat/tool-run-grouping.ts
++++ b/packages/client/src/components/hermes/chat/tool-run-grouping.ts
+@@ -1,10 +1,12 @@
+ import type { Message } from '@/stores/hermes/chat'
++import { isSurfaceToolName } from '@/custom/chat/ekko-ui/protocol'
+ 
+ export function groupCompletedToolsByRun(messages: Message[], ungroupedMessageId?: string | null): Message[] {
+   const toolsByRun = new Map<string, Message[]>()
+   for (const message of messages) {
+     const runId = message.runMarker?.trim()
+-    if (message.id === ungroupedMessageId || message.role !== 'tool' || message.toolStatus === 'running' || !runId) continue
++    // 交互 Surface 是界面不是轨迹：永不并入工具折叠组。
++    if (message.id === ungroupedMessageId || message.role !== 'tool' || isSurfaceToolName(message.toolName) || message.toolStatus === 'running' || !runId) continue
+     const tools = toolsByRun.get(runId) || []
+     tools.push(message)
+     toolsByRun.set(runId, tools)
+@@ -14,7 +16,7 @@
+   const emittedRuns = new Set<string>()
+   const grouped: Message[] = []
+   for (const message of messages) {
+-    const runId = message.id !== ungroupedMessageId && message.role === 'tool' && message.toolStatus !== 'running'
++    const runId = message.id !== ungroupedMessageId && message.role === 'tool' && !isSurfaceToolName(message.toolName) && message.toolStatus !== 'running'
+       ? message.runMarker?.trim()
+       : undefined
+     if (!runId) {
