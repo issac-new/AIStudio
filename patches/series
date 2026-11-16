@@ -1279,3 +1279,8 @@
 # 779（2026-11-16）：MCP 工具 ekko_studio_show_surface（阻塞等待提交，
 # context 凭证与 clarify 同链）。
 779-mcp-ekko-studio-show-surface.patch
+
+# 780（2026-11-16 ekko-ui-surface，spec 2026-11-16-ekko-ui-surface-chat-design）：
+# MCP 自动注入不再因前面的托管服务被用户禁用而早退——缺失的
+# ekko-studio-interaction 可补进各 profile（用户自管/禁用同名服务仍不覆盖）。
+780-server-mcp-autoinject-no-early-return.patch

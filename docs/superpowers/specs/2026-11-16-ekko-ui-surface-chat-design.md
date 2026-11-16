@@ -75,7 +75,7 @@ interface EkkoUINode {
 
 - **D8：回填携带会话自身 profile**。工作台会在多 profile 间切换而不总是重连 socket，实测 `ui.surface.action` 被握手 profile 的会话归属校验拒绝（`Profile "pay-orchestrator" is not available on this connection`）。客户端从 `activeSession.profile` 取值随动作上送，服务端仍与 `session.profile` 真值比对，不放宽归属校验。
 - **D9：Surface 不是工具轨迹**。挂起中的工具消息默认被运行指示器从消息流过滤，完成的工具消息默认并入可折叠的「工具调用」组——两者都会藏掉界面。Surface 工具同时豁免这两条过滤（`MessageList.vue`、`tool-run-grouping.ts`），即使「显示工具调用」关闭也始终可见。
-- **D10：工具可用性依赖会话 profile 的 MCP 配置**。`ekko-studio-interaction` 必须在会话所属 profile 的 `mcp_servers` 中启用；缺失时 `mcpCapabilities.interaction=false`，服务端不会创建 turn context，Agent 退回普通对话或 clarify。这是环境前提，不是渲染器缺陷；功能清单已登记。
+- **D10：工具可用性依赖会话 profile 的 MCP 配置，并由自动注入修复**。`ekko-studio-interaction` 必须在会话所属 profile 的 `mcp_servers` 中启用；缺失时 `mcpCapabilities.interaction=false`，Agent 退回普通对话或 clarify。实测 `pay-orchestrator`/`worker-coder` 缺失的根因是 `studio-autoinject` 的早退缺陷：前面的 api/browser/use 被用户禁用时，函数直接返回，后面的 interaction 永远补不进去。补丁 780 改为逐服务跳过而非整份配置早退，服务启动时把缺失的托管服务补进各 profile；用户自管或显式禁用的同名服务仍不覆盖。
 
 ## 任务卡
 
@@ -95,9 +95,9 @@ interface EkkoUINode {
   - `custom/client/chat/__tests__/ekko-ui-card.test.ts`：从工具消息参数解析、running/done 两态、结果损坏时 fallback。
   - `custom/server/ekko-ui/__tests__/surface-runs.test.ts`：begin/request/respond、revision 不匹配、重复提交幂等、超时、abort、单挂起约束、大小限制。
 - 类型：`npm run typecheck:client`（若存在）与 `npm run typecheck:harness`。
-- 补丁：`npm run inject` 全量重放零失败；`npm run clean && npm run inject` 幂等二连。
+- 补丁：`npm run inject` 全量重放 777-780 零失败；`npm run clean && npm run inject` 幂等二连。
 - 实物走查（已完成，2026-11-16）：dev 起服（8647/8649），在真实 Hermes 会话（profile pay-orchestrator，glm-5.3）让 Agent 调用 `ekko_studio_show_surface` 发「团建确认」表单。结果：卡片原生渲染（预算数字 + 饮食偏好单选 + 提交），填写 300/中餐一次提交后工具返回 `{status:"submitted", surface_id:"srf:mu3qq82n7p7f00:team-form", revision:1, action_id:"submit", payload:{budget:300,diet:"中餐"}}`，同一 run 继续并总结；刷新页面后历史仍见只读卡片（输入禁用、值 300/中餐）。首轮曾因 profile 缺 `ekko-studio-interaction` 与回填 profile 校验失败暴露两个接线缺口，均已按 D8/D10 修复。
-- 实测测试结果：新增 4 个测试文件 38 例全绿；`npm run inject` 全量重放 777-779 零失败且幂等；`npm run typecheck:harness` 零错误；`npm run typecheck:client` 基线保持 19 条（本轮零新增）。
+- 实测测试结果：新增 5 个测试文件 43 例全绿（协议 16/渲染器 8/卡片 5/宿主 9/自动注入合并 5）；`npm run inject` 全量重放 777-780 零失败且幂等；`npm run typecheck:harness` 零错误；`npm run typecheck:client` 基线保持 19 条（本轮零新增）。
 - 守门：`npx vitest run custom/client/__tests__/raw-hex-budget.test.ts custom/client/__tests__/wcag-contrast.test.ts`。
 
 ## 设计文档影响
