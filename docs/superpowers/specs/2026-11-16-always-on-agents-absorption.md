@@ -1,7 +1,7 @@
 # Always-on Agents 吸收（Anthropic《Building always-on agents》五组件对账）
 
 日期：2026-11-16
-状态：implemented（P1-P6 全部落地；六补丁 780-785 全量重放绿；全量 npm test 9001/0；
+状态：implemented（P1-P6 全部落地；六补丁 786-791 全量重放绿；全量 npm test 9001/0；
 typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 触发：用户「深入调研 https://mp.weixin.qq.com/s/C8CTefmyZFiTS-lUEJgMXg 完善AIStudio」＋范围裁决「C：最全（含延迟工具调用）」。
 同源轮登记（2026-11-16 立，防重复吸收）：调研对象为 Anthropic 技术指南《Building always-on agents》的中文拆解（模智空间，参考链接 `https://claude.com/resources/articles/building-always-on-agents`）；本仓 `grep -rl -i "always-on|常驻智能体|building-always-on" docs/superpowers/specs/` 仅命中两篇无关 harness 笔记，**无同源轮**。再次收到同一链接时的处置：先读本节与「存量对账」表，不新开吸收轮；剩余挂账只能从「不做的事」节选取且需用户裁决。
@@ -53,7 +53,7 @@ typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 - 接线 `interventions-service`：`deliver`→enqueue(priority=high)；`batch`→enqueue 带 mergeKey；`defer`→enqueue notBefore=nextWindowAtMs；`suppress`/`hold` 不入队（只落 run outcome 沉默）。
 - 机制预算：新域登记 sunset；配对降级=proactivity 的 `SUGGESTION_PROFILE` 静态表维持 fallback（既有降级项，不重复计）。
 
-### P3 follow-up 定时器一等公民（vendor 补丁 780）
+### P3 follow-up 定时器一等公民（vendor 补丁 786）
 
 - 新增 `vendor/hermes-agent/hermes_cli/followups.py`：
   - `FollowupState = { id; prompt; status:'active'|'fired'|'cancelled'; created_at; due_at; fired_at?; route: dict }`；
@@ -64,13 +64,13 @@ typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 - 注册：`gateway/run.py` 启动 watcher；`toolsets.py` 新增 `followup` toolset 并并入 core（coding 姿态也保留——跟进提醒是所有 agent 的通用能力）；工具 schema 说明「恢复原会话，不是新开会话」。
 - 事件收件箱分离：watcher 不直接跑 agent，只提交 admission（对齐文章「定时器不直接启动 agent」）。
 
-### P4 任务进度文件全量覆盖（vendor 补丁 781）
+### P4 任务进度文件全量覆盖（vendor 补丁 787）
 
 - `agent/turn_finalizer.py`：kanban worker 的 checkpoint 写触发从「仅预算触顶」扩为「预算触顶 ∪ 回合中断 ∪ 轮终（节流 10 分钟/task）」；轮终写入 reason 新增 `turn_end`／`interrupted`；env `HERMES_SESSION_CHECKPOINT_TURN_END=off` 关闭轮终写；仍只做状态面（不改任务状态/不派发 next）。
 - `hermes_cli/kanban_db.py`：`build_worker_context` 读 checkpoint 从「重派时」扩为「每次 worker 启动」（首次启动无文件则 no-op，已有逻辑天然兼容）。
 - 目标：每个进行中 kanban 任务在任何时刻都有一份 ≤800 字符的进度文档，新 Run 读它接续而非全量重推理（文章第四类记忆）。
 
-### P5 空闲 dreaming 接 Hindsight（vendor 补丁 782＋配置键归一）
+### P5 空闲 dreaming 接 Hindsight（vendor 补丁 788＋配置键归一）
 
 - `team/profiles/*/hindsight/config.json`（30 份）：配置键归一——`recall_method` 改为 provider 实际读取的 `recall_prefetch_method`（修死键；30/30 现值 `recall`，行为不变）。实现级修正（2026-11-16）：初稿计划改 provider 加别名回退，实测 30 份 profile 插件逐字复制，改 provider 要触 30 个文件；改配置是单事实源方向（provider 的读取契约不动，部署配置服从它）。
 - 新增 `vendor/hermes-agent/agent/memory_dreaming.py`：
@@ -79,7 +79,7 @@ typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 - 新增 `vendor/hermes-agent/gateway/run_dreaming.py`：`_dreaming_watcher(interval=1800s)`，`_running_agents` 空且安静 ≥30 分钟才触发（启动先给 30 分钟门槛）；env `HERMES_MEMORY_DREAMING=off` 关闭；失败 fail-soft 只记日志。
 - 注册 `gateway/run.py`。机制预算：新 watcher 登记 sunset（连续两轮推演零 dream 产出即退役）。
 
-### P6 延迟工具调用闭环（vendor 补丁 783＋custom 收件箱扩展）
+### P6 延迟工具调用闭环（vendor 补丁 789＋custom 收件箱扩展）
 
 把 agent 工具层审批从「线程原地阻塞、超时即 deny、重启即丢」升级为文章语义：结束本轮→持久化挂起→用户回复作为新事件唤醒→恢复执行。
 
@@ -106,7 +106,7 @@ typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 | D8 | P5 dreaming 默认开启但硬预算（1 次/24h/30min 空闲） | 文章建议「空闲复盘」；预算保证不失控；失败 fail-soft | 默认关闭（否决：能力永远不生效）；无预算（否决：静默烧钱） | 是 |
 | D9 | P6 延迟调用采用「结束本轮＋回复唤醒」而非「后台线程守候」 | 文章明确要求 worker 不阻塞；崩溃可恢复的唯一形态是持久化＋新事件 | 延长线程阻塞（否决：重启即丢，且占用线程） | 是 |
 | D10 | P6 只对无人值守 principal 默认 defer | 有人在场的交互会话里阻塞等待是更好体验；无人值守才需要跨小时等待 | 全量默认 defer（否决：交互体感倒退） | 是 |
-| D11 | 补丁起号 780（在途 `ekko-ui-surface` 已占 777-779） | 避免撞号连锁改号（2026-11-14 教训）；`patches/series` 收口时按序合并 | 复用 777（否决：与在途批冲突） | 是 |
+| D11 | 补丁让号 780-785 → 786-791（ekko 批实占 777-780，已入 main 后发现） | 撞号连锁改号全引用同步（series/spec/DESIGN/预算/decisions 一处脚本平移）；改号在分支侧完成，main 无感 | 要求 ekko 批改号（否决：已合入 main，回改面更大） | 是 |
 
 ## 验证
 
@@ -119,11 +119,11 @@ typecheck 零错误；governance-lint 0 problem；merge-invariants pass）
 - P6 custom 收件箱 116/116（含 deferredfile 源：在列/已答不列/过期不列/裁决写响应/二次 404）。
 - Python 新增 53/53：follow-up 存储 11＋工具 12、轮终 checkpoint 5、dreaming 8、deferred 账本 5＋审批接线 8＋批次标记 4。
 - `npm run typecheck:harness` 零错误；`governance-lint --budget` 0 problem；`merge-invariants --check` pass（docs-index 684）；`gen-doc-indexes --write/--check` 684 一致。
-- 补丁重放：780/781/782/783/784/785 全量 `clean && inject` status=complete 逐枚 applied。
+- 补丁重放：786/787/788/789/790/791 全量 `clean && inject` status=complete 逐枚 applied。
 - 实现级修正两例（守门抓出）：
-  1. **补丁 785**：`tests/tools/test_tool_search.py` 目录摘要守门要求工具描述首句不被 80 字符截断——followup_manage 首句压短（lsp/obs_recall 两枚 pre-existing 红非本批引入，主检出单跑同红定谳存量）。
+  1. **补丁 791**：`tests/tools/test_tool_search.py` 目录摘要守门要求工具描述首句不被 80 字符截断——followup_manage 首句压短（lsp/obs_recall 两枚 pre-existing 红非本批引入，主检出单跑同红定谳存量）。
   2. **K19 棘轮回绿**：全量 `npm test` 首轮抓出新控制器手写 `ctx.body`/`ok:false`（1214>1193、893>874）——三个新控制器全部改走 `lib/http`（ok/fail），inbox-controller 三处成功体顺手收敛（净 ctx.body 1191、ok:false 874，双指标不升）；`writeDeferredResponse` 返回 boolean 避免 Result 联合字面量。
-- 全量 `npm test` 复跑：**9001 passed / 0 failed**（1173 文件含 pristine 全量重放 780-785 六枚逐枚可应用；EXIT=0）。
+- 全量 `npm test` 复跑：**9001 passed / 0 failed**（1173 文件含 pristine 全量重放 786-791 六枚逐枚可应用；EXIT=0）。
 - 未验证项：三个 watcher（follow-up/dreaming/deferred）与 outbox 自动轮未做活体端到端（需 gateway/studio 运行态）；单元与函数级已覆盖，活体验证留给下轮推演或手工走查。
 
 ## 设计文档影响

@@ -694,7 +694,7 @@ deferred.json`（24h TTL），工具结果带 `[deferred_tool_call:<id>]` 机器
 可裁决（已答幂等 404）。交互场景保持 fail-closed deny（有人在场时阻塞等待是正确体验）。
 
 落地状态（2026-11-16）：收口三态、发件箱派发链、follow-up 定时器、进度文件轮终写、
-空闲 dreaming 与延迟工具调用六项全部落地（补丁 780-784；spec
+空闲 dreaming 与延迟工具调用六项全部落地（补丁 786-791；spec
 `2026-11-16-always-on-agents-absorption.md`）。
 
 ### 3.7 单仓与代码归属

@@ -1268,28 +1268,28 @@
 # --expected-version，CLI version conflict 文本映射 409 version_conflict。
 776-server-kanban-expected-version.patch
 
-# 780（2026-11-16 Always-on Agents 吸收 P3）：follow-up 定时器一等公民——
+# 786（2026-11-16 Always-on Agents 吸收 P3）：follow-up 定时器一等公民——
 # agent 自设一次性提醒（followup_manage 工具），到期由网关 watcher 注入原会话
 # （不新开 cron 会话）；state_meta 存储＋claim/firing 状态机＋陈旧 firing 自愈。
-780-agent-followup-timer.patch
+786-agent-followup-timer.patch
 
-# 781（2026-11-16 Always-on Agents 吸收 P4）：kanban worker 轮终写进度 checkpoint——
+# 787（2026-11-16 Always-on Agents 吸收 P4）：kanban worker 轮终写进度 checkpoint——
 # 正常轮终 10 分钟节流、中断绕过；读侧 build_worker_context 每次启动已注入。
-781-agent-checkpoint-turn-end.patch
+787-agent-checkpoint-turn-end.patch
 
-# 782（2026-11-16 Always-on Agents 吸收 P5）：空闲 dreaming——网关安静 ≥30 分钟后
+# 788（2026-11-16 Always-on Agents 吸收 P5）：空闲 dreaming——网关安静 ≥30 分钟后
 # 调 Hindsight reflect 提炼跨会话模式并以 tag dream retain；24h 一次，失败 fail-soft。
-782-agent-memory-dreaming.patch
+788-agent-memory-dreaming.patch
 
-# 783（2026-11-16 Always-on Agents 吸收 P6）：延迟工具调用闭环——审批超时在无人值守
+# 789（2026-11-16 Always-on Agents 吸收 P6）：延迟工具调用闭环——审批超时在无人值守
 # 场景挂起落 deferred.json（不阻塞线程），工具结果带机器标记结束本轮；用户答复经
 # responses/<request_id>.json 由 watcher 唤醒原会话。
-783-agent-deferred-tool-calls.patch
+789-agent-deferred-tool-calls.patch
 
-# 784（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
+# 790（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
 # /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
-784-server-always-on-routes.patch
+790-server-always-on-routes.patch
 
-# 785（2026-11-16 Always-on Agents P3 修正）：followup_manage 描述首句压到 80 字符内，
+# 791（2026-11-16 Always-on Agents P3 修正）：followup_manage 描述首句压到 80 字符内，
 # 满足 tool_search 目录摘要「整句不被截断」守门。
-785-agent-followup-catalog-desc.patch
+791-agent-followup-catalog-desc.patch
