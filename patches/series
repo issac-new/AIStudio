@@ -1277,6 +1277,10 @@
 # 正常轮终 10 分钟节流、中断绕过；读侧 build_worker_context 每次启动已注入。
 781-agent-checkpoint-turn-end.patch
 
+# 782（2026-11-16 Always-on Agents 吸收 P5）：空闲 dreaming——网关安静 ≥30 分钟后
+# 调 Hindsight reflect 提炼跨会话模式并以 tag dream retain；24h 一次，失败 fail-soft。
+782-agent-memory-dreaming.patch
+
 # 784（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
 # /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
 784-server-always-on-routes.patch

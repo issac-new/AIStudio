@@ -668,8 +668,8 @@ deferred-window/deferred-approval/deferred-followup/error`），JSONL append-onl
 `deliver/escalate` 立即入队、`batch` 带合并键、`defer` 带 `notBefore` 到期重投、
 `suppress/hold` 只落收口账本。
 
-落地状态（2026-11-16）：收口三态、发件箱派发链、follow-up 定时器与进度文件轮终写已落地；
-空闲 dreaming / 延迟工具调用两项本批进行中（spec `2026-11-16-always-on-agents-absorption.md`）。
+落地状态（2026-11-16）：收口三态、发件箱派发链、follow-up 定时器、进度文件轮终写与空闲
+ dreaming 已落地；延迟工具调用一项本批进行中（spec `2026-11-16-always-on-agents-absorption.md`）。
 
 ### 3.7 单仓与代码归属
 

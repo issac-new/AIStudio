@@ -69,13 +69,13 @@
 - `hermes_cli/kanban_db.py`：`build_worker_context` 读 checkpoint 从「重派时」扩为「每次 worker 启动」（首次启动无文件则 no-op，已有逻辑天然兼容）。
 - 目标：每个进行中 kanban 任务在任何时刻都有一份 ≤800 字符的进度文档，新 Run 读它接续而非全量重推理（文章第四类记忆）。
 
-### P5 空闲 dreaming 接 Hindsight（vendor 补丁 782）
+### P5 空闲 dreaming 接 Hindsight（vendor 补丁 782＋配置键归一）
 
-- `team/profiles/*/plugins/hindsight/__init__.py`：配置键别名——读 `recall_prefetch_method` 失败时回退 `recall_method`（修死键；30/30 profile 现值 `recall`，行为不变）。
+- `team/profiles/*/hindsight/config.json`（30 份）：配置键归一——`recall_method` 改为 provider 实际读取的 `recall_prefetch_method`（修死键；30/30 现值 `recall`，行为不变）。实现级修正（2026-11-16）：初稿计划改 provider 加别名回退，实测 30 份 profile 插件逐字复制，改 provider 要触 30 个文件；改配置是单事实源方向（provider 的读取契约不动，部署配置服从它）。
 - 新增 `vendor/hermes-agent/agent/memory_dreaming.py`：
-  - `run_dreaming(provider, session_db, now, cap)`：选最近 24h 有活动的会话（≥4 回合），拼「跨会话模式提炼」prompt，调 provider `reflect`；产出以 tag `dream` retain 回 bank；若 client 有 `aconsolidate` 则顺带调用（缺能力跳过）。
-  - 预算：每 profile 24h 至多 1 次、空闲 ≥30 分钟、只读会话摘要（不重放全量 transcript）。
-- 新增 `vendor/hermes-agent/gateway/run_dreaming.py`：`_dreaming_watcher(interval=1800s)`，idle gate 复用 `run_idle_gates`（无运行中 agent）；env `HERMES_MEMORY_DREAMING=off` 关闭；失败 fail-soft 只记日志。
+  - `run_dreaming(now, db, provider, force)`：调 provider `hindsight_reflect`（跨记忆综合，不重放 transcript），产出以 tag `dream` retain 回同一 bank；若 provider 底层 client 暴露 `aconsolidate` 则顺带调用（缺能力跳过）。
+  - 预算：每 profile 24h 至多 1 次（`state_meta: memory:dream:last_at`）；空结果不 retain、不占预算。
+- 新增 `vendor/hermes-agent/gateway/run_dreaming.py`：`_dreaming_watcher(interval=1800s)`，`_running_agents` 空且安静 ≥30 分钟才触发（启动先给 30 分钟门槛）；env `HERMES_MEMORY_DREAMING=off` 关闭；失败 fail-soft 只记日志。
 - 注册 `gateway/run.py`。机制预算：新 watcher 登记 sunset（连续两轮推演零 dream 产出即退役）。
 
 ### P6 延迟工具调用闭环（vendor 补丁 783＋custom 收件箱扩展）
