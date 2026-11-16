@@ -3000,3 +3000,16 @@ run30（20261113-v8-run30，21h08m，A2 二段式停机收官；六闸 delivery 
 6. **A1 标定定案（D1 修正）**：director 通道 51 笔 success 3（5.9%）且全落日间、深夜 100% 失败（timeout/send-failed 混合）——**director 默认 preset 常态化，标定轮仅在日间活跃窗开**（§5.13 第 8 条折中方案的实测修正）；标定数据按 director-metrics.jsonl 留档口径不变。
 7. **指标留档收官门**：O1 留档（run-metrics.jsonl 追加）仅 `report_done` 在位的收官轮写——预检重放未收官轮不再产假投影行（run30 开跑轮「④自污染」结构性根治）。
 8. **采集预检排查序**：预检 FAIL 提示按序指路 docker/synapse(8008)→studio(8802)→gateway(8801)→npm(playwright)→channel——2026-11-14 夜三连败真因是 docker daemon 停→synapse 断，旧提示只指 npm 误导修复方向。
+
+### 5.15 run31 开跑前吸收条款（2026-11-17 立；run31 起生效）
+
+run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能体批二／6dab0115a Ekko UI Surface／40d1affc8 Always-on 五组件／b1312b8aa LoopForge 可信 SOP 执行地板）的能力面进推演验收与判读口径，同步批随批（spec `2026-11-17-run31-plan-sync.md`）：
+
+1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——起跑后与收官各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空。outbox/run-outcome REST 面进 §5.11 探针表新增组。
+2. **proactive 三端点探针**（§5.11 表新增组）：earned-autonomy/apply 只做保证被拒负例（loosen/hold→409，非破坏）；lineage 三源聚合形状（sources＋未覆盖面声明在位）；standingagenda `?cardId=` 卡级过滤生效。
+3. **complete 语义新口径（批二）**：行级乐观锁 expected_version CAS 不匹配 409 `version_conflict`、卡级 verification 三档不满足 fail-closed 拒完成（判定器异常也拒）——探针负例覆盖 409；**run31 任务书不强制 verification 档位卡**（验收环不叠加二次验证依赖，档位卡活体留 run32 可选标定）；值守与审计判读「旧快照写回 409」为新正确行为不计缺陷。
+4. **LoopForge 完成判读口径**：graph 面 archived 不算成功（DONE_STATUSES 收窄）、DryRun 仅显式 shadow 可注入、不可执行节点 422 稳定码、pinned run 缺快照 fail-closed；RunSpawner/ShadowRunner 维持 legacy-unpinned 兼容态。run31 缺省 preset 派发（§5.14 第 6 条），判读遇 409/422 稳定码按新语义解读。
+5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——起跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
+6. **studio preload 安全加固收口**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，收口后 digest 变化由 N31-4 重烧覆盖。
+7. **数字总账 §C 随批对齐**（v0.8.21／3.18.2／v1.0.16 族，核实日 2026-11-17）＋VENDOR.md zcode 台账行补正（merge 撤出漏入第四次清偿）——数字滞后是设计复盘「补账抬位」的载体面清偿。
+8. **N31 开跑门衔接**：N31-4（重烧收据 verify-latest pass，WAIVED 不认跨 digest）＋N31-5（起跑窗 09:00-11:00）为 run31 开跑硬门；N31-1/2/3 为收官回写项（N31-2a 已修族 run31 验证归零、N31-3 任务书警告 4/4 验证），不阻塞开跑。

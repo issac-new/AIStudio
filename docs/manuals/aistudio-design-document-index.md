@@ -473,7 +473,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（235 份）
+## 2026-11（236 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -710,6 +710,7 @@
 - [2026-11-16-ekko-ui-surface-chat-design.md](../superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md)
 - [2026-11-16-ide-toolbar-clarity.md](../superpowers/specs/2026-11-16-ide-toolbar-clarity.md)
 - [2026-11-16-loopforge-sop-trust.md](../superpowers/specs/2026-11-16-loopforge-sop-trust.md)
+- [2026-11-17-run31-plan-sync.md](../superpowers/specs/2026-11-17-run31-plan-sync.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
@@ -717,8 +718,8 @@
 - [README.md](../superpowers/specs/archive/README.md)
 ## 维护口径
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
-- 当前工作树根目录：**688 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 235 份；合计 688 份。
+- 当前工作树根目录：**689 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 236 份；合计 689 份。
 - 当前工作树根目录：**681 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 228 份；合计 681 份。
 - 当前工作树根目录：**678 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
