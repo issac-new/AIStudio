@@ -46,6 +46,12 @@
 | earned autonomy 建议阈值 | 冷启动 <20 hold／收紧：人介入 >30% 或积压 >50%／放宽：≥50 样本零介入且自动放行 >90% | advisory-only 不动档；放宽永须人确认（同上 P4） |
 | 发现测试判据 | 无锚点判 unsupported／正确沉默＝对已解决集零重复报告／验证负担＝超 maxFindings 比例 | discovery 形态评测四指标，指纹并入 discovery 字段且存量逐字节兼容（同上 P1） |
 | 偏差复利信号阈值 | 同话题高不确定投递 ≥3 次＝1 信号 | evidenceChain.uncertainty 驱动，机制层读数；无链不倒填（同上 P5） |
+| Run 收口三态 | outbox／silence／deferred 三态闭集＋11 个 reasonCode；JSONL 环形 2000 | 每个后台 Run 只允许三种结局，沉默必须点名原因；chat 回合不入三态（`2026-11-16-always-on-agents-absorption.md` P1） |
+| 发件箱队列 | 环形 500；dedupeKey 幂等 6h；退避 30s/120s×3 转死信；合并上限 10 条 | 派发时复检注意力预算（日 8/时 3/安静时段），critical 豁免；matrix 通道仅 `OUTBOX_MATRIX_ROOM` 配置时启用（同上 P2） |
+| follow-up 定时器 | watcher 节拍 15s；到期只提交 admission，不直接跑 agent | 唤醒原会话（不是 cron 新开会话）；CLI/TUI 无路由时拒绝（同上 P3） |
+| 进度文件轮终写节流 | 10 分钟/task；预算触顶与中断不受节流 | 轮终写 reason=`turn_end`/`interrupted`；`HERMES_SESSION_CHECKPOINT_TURN_END=off` 关闭（同上 P4） |
+| 空闲 dreaming 预算 | 1 次/24h；空闲 ≥30 分钟；`HERMES_MEMORY_DREAMING=off` 关闭 | 只读最近 24h 会话摘要，产出 tag `dream` retain；失败 fail-soft（同上 P5） |
+| 延迟工具调用 TTL | 24h；仅无人值守 principal 默认 defer | 超时→挂起落 `deferred.jsonl`→结束本轮；用户回复经 `responses/<request_id>.json` 唤醒（同上 P6） |
 
 页签、路由、工具、检测器和专题页面属于实现清单。
 其数量由注册表、代码和守门测试给出，不在本文手工维护。

@@ -1,0 +1,394 @@
+diff --git a/agent/memory_dreaming.py b/agent/memory_dreaming.py
+new file mode 100644
+--- /dev/null
++++ b/agent/memory_dreaming.py
+@@ -0,0 +1,161 @@
++"""空闲 dreaming：跨会话记忆复盘（Always-on Agents P5，2026-11-16）。
++
++语义来源（Anthropic《Building always-on agents》记忆）：agent 空闲时复盘历史会话，
++提炼/更新记忆、淘汰过时信息、挖掘跨会话模式。
++
++实现要点：
++- 只读记忆银行（Hindsight reflect），不重放 transcript；
++- 产出以 tag ``dream`` retain 回同一 bank（可被后续 recall 命中，也可按 tag 审计/清理）；
++- 24h 至多一次（``state_meta: memory:dream:last_at``）；失败 fail-soft，绝不阻断网关；
++- 若底层 client 暴露 ``aconsolidate`` 则顺带合并 observation 层（缺能力跳过——Hindsight
++  服务端版本不承诺该端点）。
++"""
++
++from __future__ import annotations
++
++import logging
++import time
++from typing import Any, Optional
++
++logger = logging.getLogger(__name__)
++
++DREAM_META_KEY = "memory:dream:last_at"
++DREAM_MIN_INTERVAL_SECONDS = 24 * 3600
++DREAM_QUERY = (
++    "复盘最近的工作会话与长期记忆：提炼跨会话重复出现的模式、用户偏好、稳定的约定与"
++    "未完成事项；淘汰已被新信息取代的过时结论。只输出可复用于后续工作的稳定结论，"
++    "不要罗列过程，不要编造未出现过的信息。"
++)
++
++
++def dreaming_enabled() -> bool:
++    import os
++
++    return os.environ.get("HERMES_MEMORY_DREAMING", "1").strip().lower() not in (
++        "0", "false", "off", "no",
++    )
++
++
++def _active_provider_name() -> Optional[str]:
++    try:
++        from plugins.memory import _get_active_memory_provider
++
++        return _get_active_memory_provider()
++    except Exception:  # pragma: no cover - config read failures mean "no provider"
++        return None
++
++
++def _last_dream_at(db: Any) -> float:
++    if db is None:
++        return 0.0
++    try:
++        raw = db.get_meta(DREAM_META_KEY)
++        return float(raw) if raw else 0.0
++    except Exception:
++        return 0.0
++
++
++def _mark_dreamed(db: Any, at: float) -> None:
++    if db is None:
++        return
++    try:
++        db.set_meta(DREAM_META_KEY, str(at))
++    except Exception:
++        logger.debug("dreaming: could not stamp last-dream time", exc_info=True)
++
++
++def _consolidate_if_supported(provider: Any) -> bool:
++    """Hindsight client 有 aconsolidate 才调用；任何异常都跳过（能力探测非承诺）。"""
++    op = getattr(provider, "_run_hindsight_operation", None)
++    bank = getattr(provider, "_bank_id", "")
++    if not callable(op) or not bank:
++        return False
++    try:
++        def _call(client):
++            fn = getattr(client, "aconsolidate", None)
++            return fn(bank_id=bank) if callable(fn) else None
++
++        op(_call)
++        return True
++    except Exception as exc:  # noqa: BLE001 - optional capability
++        logger.debug("dreaming: consolidate skipped: %s", exc)
++        return False
++
++
++def run_dreaming(
++    *,
++    now: Optional[float] = None,
++    db: Any = None,
++    provider: Any = None,
++    force: bool = False,
++) -> dict[str, Any]:
++    """跑一次 dream。返回 ``{dreamed, reason, retained_chars?, consolidated?}``。
++
++    ``db`` 提供 24h 预算（SessionDB 的 get_meta/set_meta）；``provider`` 缺省时按
++    当前 profile 的 ``memory.provider`` 加载（团队部署为 hindsight）。
++    """
++    at = now if now is not None else time.time()
++    if not dreaming_enabled() and not force:
++        return {"dreamed": False, "reason": "disabled"}
++    if not force and at - _last_dream_at(db) < DREAM_MIN_INTERVAL_SECONDS:
++        return {"dreamed": False, "reason": "budget"}
++
++    owns_provider = provider is None
++    if provider is None:
++        name = _active_provider_name()
++        if not name:
++            return {"dreamed": False, "reason": "no-provider"}
++        try:
++            from plugins.memory import load_memory_provider
++
++            provider = load_memory_provider(name, register_skills=False)
++        except Exception as exc:  # noqa: BLE001 - plugin load failures are fail-soft
++            logger.debug("dreaming: provider load failed: %s", exc)
++            return {"dreamed": False, "reason": "provider-load-failed"}
++    if provider is None:
++        return {"dreamed": False, "reason": "provider-unavailable"}
++
++    try:
++        try:
++            provider.initialize(session_id=f"dream-{int(at)}", platform="dreaming")
++        except Exception as exc:  # noqa: BLE001 - some providers initialize lazily
++            logger.debug("dreaming: provider initialize failed (continuing): %s", exc)
++        try:
++            reflect = provider.handle_tool_call("hindsight_reflect", {"query": DREAM_QUERY})
++        except Exception as exc:  # noqa: BLE001 - reflect unsupported/failed
++            logger.debug("dreaming: reflect failed: %s", exc)
++            return {"dreamed": False, "reason": "reflect-failed"}
++        text = str(reflect or "").strip()
++        if not text or text == "No relevant memories found.":
++            return {"dreamed": False, "reason": "empty"}
++        try:
++            provider.handle_tool_call("hindsight_retain", {
++                "content": text,
++                "context": "dreaming",
++                "tags": ["dream"],
++            })
++        except Exception as exc:  # noqa: BLE001 - retain failure means no dream record
++            logger.debug("dreaming: retain failed: %s", exc)
++            return {"dreamed": False, "reason": "retain-failed"}
++        consolidated = _consolidate_if_supported(provider)
++        _mark_dreamed(db, at)
++        logger.info("dreaming: retained %d chars (consolidated=%s)", len(text), consolidated)
++        return {"dreamed": True, "reason": "ok", "retained_chars": len(text), "consolidated": consolidated}
++    finally:
++        if owns_provider:
++            try:
++                provider.shutdown()
++            except Exception:  # noqa: BLE001 - best-effort cleanup
++                logger.debug("dreaming: provider shutdown failed", exc_info=True)
++
++
++def run_dreaming_for_profile(now: Optional[float] = None) -> dict[str, Any]:
++    """watcher 入口：取当前 profile scope 的 SessionDB 与 provider。"""
++    db = None
++    try:
++        from hermes_cli.goals import _get_session_db as _goals_db
++
++        db = _goals_db()
++    except Exception:
++        db = None
++    return run_dreaming(now=now, db=db)
+diff --git a/gateway/run_dreaming.py b/gateway/run_dreaming.py
+new file mode 100644
+--- /dev/null
++++ b/gateway/run_dreaming.py
+@@ -0,0 +1,56 @@
++"""Dreaming watcher：空闲时跨会话记忆复盘（Always-on Agents P5，2026-11-16）。
++
++只在网关无运行中会话（``_running_agents`` 空）且已安静 ≥30 分钟时触发；30 分钟粗节拍
+++ provider 侧 24h 预算（``agent/memory_dreaming.py``）。失败 fail-soft：dreaming 是
++锦上添花，永不阻断消息处理。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import logging
++import time
++from typing import Optional
++
++logger = logging.getLogger("gateway.run")
++
++IDLE_MIN_SECONDS = 30 * 60
++
++
++class GatewayDreamingMixin:
++    async def _dreaming_watcher(self, interval: float = 1800.0) -> None:
++        from gateway.run import _async_profile_runtime_scope, _resolve_handoff_watch_scopes
++
++        await asyncio.sleep(60)  # let platforms connect before considering idleness
++        # 启动即视为「刚忙过」：给首轮 30 分钟门槛，避免重启风暴里立刻复盘。
++        last_busy = time.time()
++
++        def _scope(profile_home):
++            if profile_home is not None:
++                return _async_profile_runtime_scope(profile_home)
++            from tui_gateway.launch_profile_policy import async_launch_profile_scope_if_multiplexed
++            return async_launch_profile_scope_if_multiplexed()
++
++        while self._running:
++            try:
++                now = time.time()
++                if getattr(self, "_running_agents", None):
++                    last_busy = now
++                elif now - last_busy >= IDLE_MIN_SECONDS:
++                    from agent.memory_dreaming import dreaming_enabled, run_dreaming_for_profile
++
++                    if dreaming_enabled():
++                        for profile_name, profile_home in await _resolve_handoff_watch_scopes(self):
++                            async with _scope(profile_home):
++                                result = await self._run_in_executor_with_context(
++                                    run_dreaming_for_profile, now,
++                                )
++                                if isinstance(result, dict) and result.get("dreamed"):
++                                    logger.info(
++                                        "dreaming: profile=%s retained=%s chars (consolidated=%s)",
++                                        profile_name, result.get("retained_chars"),
++                                        result.get("consolidated"),
++                                    )
++            except Exception as exc:  # noqa: BLE001 - dreaming must never break the gateway
++                logger.debug("dreaming watcher error: %s", exc)
++            await asyncio.sleep(interval)
+diff --git a/tests/agent/test_memory_dreaming.py b/tests/agent/test_memory_dreaming.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_memory_dreaming.py
+@@ -0,0 +1,130 @@
++"""Tests for agent/memory_dreaming.py — idle cross-session consolidation (Always-on P5)."""
++
++from __future__ import annotations
++
++import pytest
++
++from agent.memory_dreaming import (
++    DREAM_META_KEY, DREAM_MIN_INTERVAL_SECONDS, run_dreaming,
++)
++
++
++class FakeDB:
++    def __init__(self):
++        self.meta: dict[str, str] = {}
++
++    def get_meta(self, key):
++        return self.meta.get(key)
++
++    def set_meta(self, key, value):
++        self.meta[key] = value
++
++
++class FakeProvider:
++    def __init__(self, reflect_text="stable insight", consolidate=False):
++        self.reflect_text = reflect_text
++        self.calls: list[tuple[str, dict]] = []
++        self.initialized = None
++        self.shutdown_called = False
++        self._bank_id = "bank-1"
++        if consolidate:
++            assert hasattr(self, "_run_hindsight_operation")
++
++    def initialize(self, **kwargs):
++        self.initialized = kwargs
++
++    def handle_tool_call(self, name, args, **kwargs):
++        self.calls.append((name, dict(args)))
++        if name == "hindsight_reflect":
++            return self.reflect_text
++        if name == "hindsight_retain":
++            return "Memory stored successfully."
++        raise AssertionError(f"unexpected tool {name}")
++
++    def shutdown(self):
++        self.shutdown_called = True
++
++
++class ConsolidatingProvider(FakeProvider):
++    def _run_hindsight_operation(self, fn):
++        class Client:
++            def aconsolidate(self, bank_id):
++                Client.bank = bank_id
++                return {"ok": True}
++
++        return fn(Client())
++
++
++@pytest.fixture(autouse=True)
++def _env(monkeypatch):
++    monkeypatch.setenv("HERMES_MEMORY_DREAMING", "1")
++    yield
++
++
++def test_dream_retains_with_tag_and_stamps_budget():
++    db = FakeDB()
++    provider = FakeProvider()
++    result = run_dreaming(now=10_000_000, db=db, provider=provider)
++    assert result["dreamed"] is True
++    assert result["retained_chars"] == len("stable insight")
++    assert db.meta[DREAM_META_KEY] == "10000000"
++    names = [n for n, _ in provider.calls]
++    assert names == ["hindsight_reflect", "hindsight_retain"]
++    retain_args = dict(provider.calls)["hindsight_retain"]
++    assert retain_args["tags"] == ["dream"]
++    assert retain_args["context"] == "dreaming"
++    # provider 由调用方传入：不 shutdown（由调用方管理）
++    assert provider.shutdown_called is False
++
++
++def test_budget_skips_within_24h():
++    db = FakeDB()
++    db.meta[DREAM_META_KEY] = str(1_000_000)
++    provider = FakeProvider()
++    result = run_dreaming(now=1_000_000 + DREAM_MIN_INTERVAL_SECONDS - 1, db=db, provider=provider)
++    assert result == {"dreamed": False, "reason": "budget"}
++    assert provider.calls == []
++
++
++def test_force_bypasses_budget():
++    db = FakeDB()
++    db.meta[DREAM_META_KEY] = str(1_000_000)
++    result = run_dreaming(now=1_000_001, db=db, provider=FakeProvider(), force=True)
++    assert result["dreamed"] is True
++
++
++def test_empty_reflect_does_not_retain_or_stamp():
++    db = FakeDB()
++    provider = FakeProvider(reflect_text="No relevant memories found.")
++    result = run_dreaming(now=10_000_000, db=db, provider=provider)
++    assert result == {"dreamed": False, "reason": "empty"}
++    assert [n for n, _ in provider.calls] == ["hindsight_reflect"]
++    assert DREAM_META_KEY not in db.meta
++
++
++def test_disabled_env(monkeypatch):
++    monkeypatch.setenv("HERMES_MEMORY_DREAMING", "off")
++    result = run_dreaming(now=1, db=FakeDB(), provider=FakeProvider())
++    assert result == {"dreamed": False, "reason": "disabled"}
++
++
++def test_no_provider_configured(monkeypatch):
++    monkeypatch.setattr("agent.memory_dreaming._active_provider_name", lambda: None)
++    result = run_dreaming(now=DREAM_MIN_INTERVAL_SECONDS + 1, db=FakeDB())
++    assert result == {"dreamed": False, "reason": "no-provider"}
++
++
++def test_consolidate_called_when_supported():
++    db = FakeDB()
++    result = run_dreaming(now=10_000_000, db=db, provider=ConsolidatingProvider())
++    assert result["dreamed"] is True
++    assert result["consolidated"] is True
++
++
++def test_reflect_exception_is_fail_soft():
++    class Broken(FakeProvider):
++        def handle_tool_call(self, name, args, **kwargs):
++            raise RuntimeError("backend down")
++
++    result = run_dreaming(now=10_000_000, db=FakeDB(), provider=Broken())
++    assert result == {"dreamed": False, "reason": "reflect-failed"}
+diff --git a/gateway/run.py b/gateway/run.py
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -2188,6 +2188,7 @@
+ from gateway.run_inbound import GatewayInboundMixin
+ from gateway.run_goals import GatewayGoalsMixin
+ from gateway.run_followups import GatewayFollowupsMixin
++from gateway.run_dreaming import GatewayDreamingMixin
+ from gateway.run_agent_cache import GatewayAgentCacheMixin
+ from gateway.run_profile_reconcile import GatewayProfileReconcileMixin
+ from gateway.run_plugin_rewire import GatewayPluginRewireMixin
+@@ -3318,7 +3319,7 @@
+     GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, GatewaySlashCommandsMixin,
+     GatewayVoiceMixin, GatewayAdapterLifecycleMixin, GatewayTopicThreadsMixin, GatewayTurnMixin,
+     GatewayShutdownMixin, GatewayBusySessionMixin, GatewayConfigLoadersMixin, GatewayStartupMixin,
+-    GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin, GatewayFollowupsMixin,
++    GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin, GatewayFollowupsMixin, GatewayDreamingMixin,
+     GatewayAgentCacheMixin, GatewayRuntimeInitMixin, GatewayProfileReconcileMixin, GatewayPluginRewireMixin):
+     """Main gateway controller: manages adapter lifecycles, routes messages to/from the agent."""
+ 
+diff --git a/gateway/run_startup.py b/gateway/run_startup.py
+--- a/gateway/run_startup.py
++++ b/gateway/run_startup.py
+@@ -1668,7 +1668,7 @@
+         "_kanban_notifier_watcher", "_kanban_dispatcher_watcher",
+     )
+     _POST_RECONNECT_WATCHERS = (
+-        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher",
++        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher", "_dreaming_watcher",
+         "_profile_reconcile_watcher",
+     )
+ 

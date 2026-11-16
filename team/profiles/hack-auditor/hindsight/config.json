@@ -3,7 +3,7 @@
   "api_url": "http://localhost:8888",
   "bank_id": "hermes-b24d7ac5d9c4-hack",
   "recall_budget": "mid",
-  "recall_method": "recall",
+  "recall_prefetch_method": "recall",
   "auto_recall": true,
   "auto_retain": true,
   "retain_async": true,

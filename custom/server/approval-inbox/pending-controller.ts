@@ -109,6 +109,76 @@ function readPendingFileQueue(): PendingItem[] {
   return outAll
 }
 
+// ── 延迟工具调用审批源（Always-on Agents P6，2026-11-16）──
+// 审批超时的挂起记录落 <HERMES_HOME>/approvals/deferred.json；本端只列 pending，
+// 裁决写 responses/<request_id>.json（gateway watcher 轮询后唤醒原会话）。
+interface DeferredRecord {
+  id: string
+  session_key?: string
+  session_id?: string
+  request_id: string
+  tool?: string
+  preview?: string
+  risk?: string
+  created_at?: number
+  expires_at?: number
+  status?: string
+}
+
+function readDeferredQueue(): PendingItem[] {
+  const items: PendingItem[] = []
+  const now = Date.now()
+  for (const dir of approvalsDirs()) {
+    const file = join(dir, 'deferred.json')
+    if (!existsSync(file)) continue
+    let rows: DeferredRecord[]
+    try { rows = JSON.parse(readFileSync(file, 'utf8')) as DeferredRecord[] } catch { continue }
+    if (!Array.isArray(rows)) continue
+    for (const r of rows) {
+      if (!r || r.status !== 'pending' || !r.id || !r.request_id) continue
+      if (typeof r.expires_at === 'number' && r.expires_at * 1000 <= now) continue
+      // 已答（响应文件在）不再列——watcher settle 前的窗口不重复呈现
+      if (existsSync(join(dir, 'responses', `${r.request_id}.json`))) continue
+      const created = typeof r.created_at === 'number' ? Math.round(r.created_at * 1000) : now
+      const detail = r.preview || r.tool || r.request_id
+      items.push({
+        id: `deferredfile:${r.id}`,
+        kind: 'command',
+        title: `延迟审批（${r.tool || '工具'}）`,
+        detail,
+        ...(r.session_id ? { sessionId: r.session_id } : {}),
+        choices: ['once', 'deny'],
+        createdAt: created,
+        risk: classifyApprovalRisk({ kind: 'command', detail }),
+        impact: analyzeCommandImpact(detail),
+      })
+    }
+  }
+  return items
+}
+
+/** 写延迟审批响应（无 digest 绑定——delayed 记录本身是事实源；先到先得由 watcher settle）。
+ *  返回 boolean（Result 联合的失败字面量会触发 K19 棘轮，新代码不新增）。 */
+function writeDeferredResponse(deferredId: string, choice: string, actor: string): boolean {
+  for (const dir of approvalsDirs()) {
+    const file = join(dir, 'deferred.json')
+    if (!existsSync(file)) continue
+    let rows: DeferredRecord[]
+    try { rows = JSON.parse(readFileSync(file, 'utf8')) as DeferredRecord[] } catch { continue }
+    const rec = Array.isArray(rows) ? rows.find((r) => r.id === deferredId && r.status === 'pending') : undefined
+    if (!rec) continue
+    const respDir = join(dir, 'responses')
+    const respFile = join(respDir, `${rec.request_id}.json`)
+    if (existsSync(respFile)) continue // 已答：幂等拒绝（先到先得）
+    mkdirSync(respDir, { recursive: true })
+    atomicWriteJson(respFile, {
+      request_id: rec.request_id, choice, decided_at: Date.now(), actor,
+    })
+    return true
+  }
+  return false
+}
+
 // ── mx 审批通道（backlog ③ 审批面统一·产品侧读+裁决，2026-10-06）──
 // harness（Matrix/推演）审批请求经 <approvals>/mx-requests.jsonl 入队（每行
 // {eid,title,detail,sessionId?,profile?,createdAt}，eid=Matrix $event_id 全局幂等锚）；
@@ -275,6 +345,8 @@ function collectPendingItems(): PendingItem[] {
   const items: PendingItem[] = []
   // 文件队列源（patch 490 unattended 传输；读失败不阻断其余聚合）
   try { items.push(...readPendingFileQueue()) } catch { /* 队列不可读忽略 */ }
+  // 延迟工具调用源（Always-on P6）：审批超时挂起项，跨重启可见
+  try { items.push(...readDeferredQueue()) } catch { /* deferred 账本不可读忽略 */ }
 
   // HumanGate 前置批准源（run22 复盘②）：发布评审前置发起的人工批准请求——
   // 批准与评判决词解耦，环形依赖（评审等批准/批准等评审）产品面断根。
@@ -584,6 +656,25 @@ router.post('/:id/decide', async (ctx) => {
       targetTitle: note || eid, decision, note,
     })
     ctx.body = { ok: true, entry }
+    return
+  }
+
+  if (id.startsWith('deferredfile:')) {
+    const deferredId = id.slice('deferredfile:'.length)
+    const choice = decision === 'deny' ? 'deny' : decision === 'once' || decision === 'always' || decision === 'session' ? 'once' : ''
+    if (!choice) {
+      fail(ctx, 400, 'deferredfile 决策须为 once|deny')
+      return
+    }
+    if (!writeDeferredResponse(deferredId, choice, actor)) {
+      fail(ctx, 404, '延迟审批不在账本（已裁决/已过期/不存在）')
+      return
+    }
+    const entry = await appendApprovalLog({
+      id, actor, targetKind: 'command', targetId: deferredId,
+      targetTitle: note || deferredId, decision: choice, note,
+    })
+    ok(ctx, { entry })
     return
   }
 

@@ -1284,3 +1284,29 @@
 # MCP 自动注入不再因前面的托管服务被用户禁用而早退——缺失的
 # ekko-studio-interaction 可补进各 profile（用户自管/禁用同名服务仍不覆盖）。
 780-server-mcp-autoinject-no-early-return.patch
+
+# 786（2026-11-16 Always-on Agents 吸收 P3）：follow-up 定时器一等公民——
+# agent 自设一次性提醒（followup_manage 工具），到期由网关 watcher 注入原会话
+# （不新开 cron 会话）；state_meta 存储＋claim/firing 状态机＋陈旧 firing 自愈。
+786-agent-followup-timer.patch
+
+# 787（2026-11-16 Always-on Agents 吸收 P4）：kanban worker 轮终写进度 checkpoint——
+# 正常轮终 10 分钟节流、中断绕过；读侧 build_worker_context 每次启动已注入。
+787-agent-checkpoint-turn-end.patch
+
+# 788（2026-11-16 Always-on Agents 吸收 P5）：空闲 dreaming——网关安静 ≥30 分钟后
+# 调 Hindsight reflect 提炼跨会话模式并以 tag dream retain；24h 一次，失败 fail-soft。
+788-agent-memory-dreaming.patch
+
+# 789（2026-11-16 Always-on Agents 吸收 P6）：延迟工具调用闭环——审批超时在无人值守
+# 场景挂起落 deferred.json（不阻塞线程），工具结果带机器标记结束本轮；用户答复经
+# responses/<request_id>.json 由 watcher 唤醒原会话。
+789-agent-deferred-tool-calls.patch
+
+# 790（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
+# /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
+790-server-always-on-routes.patch
+
+# 791（2026-11-16 Always-on Agents P3 修正）：followup_manage 描述首句压到 80 字符内，
+# 满足 tool_search 目录摘要「整句不被截断」守门。
+791-agent-followup-catalog-desc.patch

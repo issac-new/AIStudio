@@ -22,7 +22,9 @@ import { underWebUi } from '../lib/paths'
 export const INBOX_SEVERITIES = ['action_required', 'attention', 'info'] as const
 export type InboxSeverity = (typeof INBOX_SEVERITIES)[number]
 
-export const INBOX_TYPES = ['new_comment', 'mentioned', 'task_failed', 'quick_create_failed', 'task_assigned'] as const
+// proactive_notice：outbox 派发的主动通知（Always-on Agents 吸收 P2，2026-11-16）——
+// 与「任务事件」类型区分，消费者可按类型过滤主动打扰面。
+export const INBOX_TYPES = ['new_comment', 'mentioned', 'task_failed', 'quick_create_failed', 'task_assigned', 'proactive_notice'] as const
 export type InboxType = (typeof INBOX_TYPES)[number]
 
 export interface InboxItem {

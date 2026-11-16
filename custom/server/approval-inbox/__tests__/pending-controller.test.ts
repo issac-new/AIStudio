@@ -446,6 +446,69 @@ describe('pending-summary 计数契约', () => {
       await new Promise<void>((r) => srv.close(() => r()))
     }
   })
+
+  it('deferredfile 源：pending 在列、decide 写 responses、二次裁决 404（Always-on P6）', async () => {
+    const dir = process.env.HERMES_APPROVALS_QUEUE_DIR!
+    const { writeFileSync, mkdirSync } = await import('fs')
+    mkdirSync(dir, { recursive: true })
+    const nowSec = Date.now() / 1000
+    writeFileSync(join(dir, 'deferred.json'), JSON.stringify([
+      { id: 'd-live', session_key: 'kanban:b:t1', request_id: 'rq-d1', tool: 'terminal', preview: 'rm -rf build', risk: 'high', created_at: nowSec, expires_at: nowSec + 3600, status: 'pending' },
+      { id: 'd-answered', request_id: 'rq-d2', tool: 'terminal', preview: 'x', status: 'pending', expires_at: nowSec + 3600 },
+      { id: 'd-expired', request_id: 'rq-d3', tool: 'terminal', preview: 'y', status: 'pending', expires_at: nowSec - 10 },
+      { id: 'd-done', request_id: 'rq-d4', tool: 'terminal', preview: 'z', status: 'approved', expires_at: nowSec + 3600 },
+    ]), 'utf8')
+    mkdirSync(join(dir, 'responses'), { recursive: true })
+    writeFileSync(join(dir, 'responses', 'rq-d2.json'), JSON.stringify({ request_id: 'rq-d2', choice: 'deny' }))
+
+    // 本 describe 无共享 base：自建 server（与执法桥用例同款）
+    const { approvalsRoutes } = await import('../pending-controller')
+    const app = new Koa()
+    app.use(async (ctx, next) => {
+      ;(ctx.state as { user?: PlatformPrincipal }).user = { id: 1, username: 'qa-lead', role: 'super_admin', status: 'active' }
+      await next()
+    })
+    app.use(async (ctx, next) => {
+      if (ctx.method === 'POST') {
+        const chunks: Buffer[] = []
+        for await (const c of ctx.req) chunks.push(c as Buffer)
+        try { ctx.request.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') } catch { ctx.request.body = {} }
+      }
+      await next()
+    })
+    app.use(approvalsRoutes.routes())
+    const srv = createServer(app.callback())
+    await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r))
+    const localBase = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`
+    try {
+      const pending = await fetchJson(localBase, '/api/approvals/pending')
+      const ids = (pending.body.items as Array<{ id: string }>).map(i => i.id)
+      expect(ids).toContain('deferredfile:d-live')
+      expect(ids).not.toContain('deferredfile:d-answered')
+      expect(ids).not.toContain('deferredfile:d-expired')
+      expect(ids).not.toContain('deferredfile:d-done')
+
+      const decide = await fetchJson(localBase, '/api/approvals/deferredfile:d-live/decide', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ decision: 'once', note: '演示批准' }),
+      })
+      expect(decide.status).toBe(200)
+      const resp = JSON.parse(readFileSync(join(dir, 'responses', 'rq-d1.json'), 'utf8')) as { request_id: string; choice: string; actor: string }
+      expect(resp.request_id).toBe('rq-d1')
+      expect(resp.choice).toBe('once')
+      expect(resp.actor).toBe('qa-lead')
+      // 已答不再在列；二次裁决 404（先到先得）
+      const after = await fetchJson(localBase, '/api/approvals/pending')
+      expect((after.body.items as Array<{ id: string }>).map(i => i.id)).not.toContain('deferredfile:d-live')
+      const again = await fetchJson(localBase, '/api/approvals/deferredfile:d-live/decide', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ decision: 'deny' }),
+      })
+      expect(again.status).toBe(404)
+    } finally {
+      await new Promise<void>((r) => srv.close(() => r()))
+    }
+  })
 })
 
 describe('执法审批桥入收件箱（H3 收口轮：enf: 聚合+裁决）', () => {

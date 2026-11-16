@@ -8,6 +8,7 @@
  * 挂载：B 类 patch 418 在 bootstrap/routes.ts。
  */
 import Router from '@koa/router'
+import { ok } from '../lib/http'
 import {
   deliver, isInboxSeverity, isInboxType, markItems, queryInbox, type InboxItem, type InboxSeverity,
 } from './inbox-store'
@@ -33,7 +34,7 @@ router.post('/', async (ctx) => {
     body: text, at: Date.now(), read: false, archived: false,
   }
   const result = deliver(item)
-  ctx.body = { ok: true, ...result }
+  ok(ctx, result)
 })
 
 router.get('/:kind/:recipient', async (ctx) => {
@@ -55,7 +56,7 @@ router.get('/:kind/:recipient', async (ctx) => {
     severity: severity as InboxSeverity | undefined,
     limit: Number(ctx.query.limit ?? 50),
   })
-  ctx.body = { ok: true, items }
+  ok(ctx, { items })
 })
 
 router.post('/:kind/:recipient/mark', async (ctx) => {
@@ -81,7 +82,7 @@ router.post('/:kind/:recipient/mark', async (ctx) => {
     return
   }
   const changed = markItems(kind, ctx.params.recipient, ids.map(String), patch)
-  ctx.body = { ok: true, changed }
+  ok(ctx, { changed })
 })
 
 export const inboxRoutes = router

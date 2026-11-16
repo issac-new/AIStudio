@@ -1,227 +1,256 @@
 {
-  "recordedAt": "2026-11-06",
-  "limits": {
-    "gates": 48,
-    "patches": 562,
-    "zcodePatches": 14,
-    "scripts": 138,
-    "ledgers": 6,
-    "npmScripts": 52
+ "recordedAt": "2026-11-06",
+ "limits": {
+  "gates": 48,
+  "patches": 562,
+  "zcodePatches": 14,
+  "scripts": 138,
+  "ledgers": 6,
+  "npmScripts": 52
+ },
+ "changes": [
+  {
+   "at": "2026-11-16",
+   "delta": "+4 patches（786 follow-up 工具/存储/watcher、787 轮终 checkpoint、788 dreaming、789 延迟工具调用）/ +2 域（无新域；followup/manual 复用既有域）/ +3 watcher（followup/dreaming/deferred-approval）/ +1 账本（deferred.json，复用 ledgers 口径）/ +0 scripts / +0 gates",
+   "reason": "Always-on Agents 吸收 P3-P6（spec 2026-11-16-always-on-agents-absorption）：follow-up 定时器/进度文件全量/空闲 dreaming/延迟工具调用闭环",
+   "pairedRemovals": [
+    "follow-up 与 cron 一次性任务的分工写入工具描述：cron 的「提醒我」用法（cronjob_tools.py:1147 的 in 30m 说明）降级为「独立任务」语义，提醒场景主路径转 followup_manage（机制预算配对降级项）",
+    "deferred_calls 账本与 studio-file-approval 队列并存：后者只保留进程内短时等待，跨小时等待由 deferred.json 唯一承担（enforce-approvals tmpdir 票据路径不再作为持久语义）",
+    "dreaming watcher 若连续两轮推演零 dream 产出即退役，补丁 788 同批移 _skip；follow-up 若两轮推演零 create 调用即退役，补丁 786 同批移 _skip"
+   ],
+   "sunset": {
+    "owner": "always-on 批",
+    "reviewBy": "下两轮推演（run31/run32 复盘面）",
+    "retireWhen": "dreaming 零产出＋follow-up 零 create＋deferred 零记录，三者连续两轮推演均零消费即整批退役（补丁 786-789 与三个 watcher 同批移除）"
+   }
   },
-  "changes": [
-    {
-      "at": "2026-11-14",
-      "delta": "+2 patches（773 standing-agenda 路由/774 earned-autonomy 路由）/ +0 scripts / +0 npm scripts / +0 gates / +1 域（standingagenda，无新账本类目——JSONL 复用 ledgers 口径不增）/ +1 建议器（executioncontract/earned-autonomy，advisory-only 只读端点非新门）",
-      "reason": "Proactive AI 二轮吸收（spec 2026-11-14-proactive-ai-round2）：P1 发现测试（eval 域扩展）/P2 反事实差值/P3 standing agenda/P4 earned autonomy/P5 偏差复利信号",
-      "pairedRemovals": [
-        "P2 落地后 SUGGESTION_PROFILE（interventions-service）从主路径降级为 fail-open fallback——机制预算配对降级项（spec D10）",
-        "standing-agenda 域若两轮推演无消费（match 端点调用为零）即随 sunset 退役，补丁 773 同批移 _skip",
-        "earned-autonomy 建议器若 track record 冷启动持续（approval-ledger 无按 profile 数据积累）即退役，补丁 774 同批移 _skip"
-      ],
-      "sunset": {
-        "owner": "proactive-ai-round2 批",
-        "reviewBy": "下两轮推演（run31/run32 复盘面）",
-        "retireWhen": "standingagenda match 端点与 earned-autonomy 端点连续两轮推演零消费即退役（补丁与域文件同批移除）"
-      }
-    },
-    {
-      "at": "2026-11-13",
-      "delta": "+3 patches（770 看板写授权/771 归档 fail-through/772 delegate 严格 output_schema）/ +0 scripts / +0 npm scripts / +0 gates / +0 ledgers（patches 实测 466 ≤ 562 cap，不动 limits.patches）",
-      "reason": "超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure）：交接合同与证据完整性三修复，均为既有面收口非新机制",
-      "pairedRemovals": [
-        "第二批任务级 version/统一迁移 envelope 落地时，与 770 的授权检查合并评估收编",
-        "evidence reducer 按其 sunset 触发退役时，614/771 一并退役"
-      ]
-    },
-    {
-      "at": "2026-11-13",
-      "delta": "+1 script / scripts 137→138（补账抬位）",
-      "reason": "scripts/ensure-vitest-birpc-patch.mjs 系 v1.0.16 发布批（766a92847，2026-11-12 birpc 超时根治）合入时未同步预算册——git log --diff-filter=A 实证；本批对账补记，责任归属原批",
-      "pairedRemovals": [
-        "补账性质：本批零新增脚本；该脚本的 sunset 随 birpc 超时根治批（junit reporter 盲区已由其守门覆盖）评估归档"
-      ]
-    },
-    {
-      "at": "2026-11-12",
-      "delta": "+1 script / −1 script（org-governance-walkthrough 按登记 sunset 退役；capability-matrix 新增）；npmScripts +0（并入 release:preflight 链内联调用，不新增条目）",
-      "reason": "设计复盘 P0-5：能力验收矩阵进发布门。配对退役=org-governance-walkthrough（2026-11-05 一次性走查已完成 12/12，sunset 登记在册、reviewBy 2026-12-05，全仓零引用）",
-      "pairedRemovals": [
-        "删除 scripts/regression/org-governance-walkthrough.mjs（sunset 条目同步移出册；其历史证据在 spec 2026-11-05-org-governance-closeout.md）"
-      ]
-    },
-    {
-      "at": "2026-11-12",
-      "delta": "+1 script / scripts 136→137（补账抬位）",
-      "reason": "expdual 收尾批清偿（spec 2026-11-12-expdual-closeout 债1）：scripts/maintenance/ekko-skill-store-migration.mjs 系 2026-11-10 ekko-skill-store 批（8acb7d202）合入时未同步预算册——git log --diff-filter=A 实证其为最后一个新增 .mjs；本批按 2026-11-07 hrgov-seed/patch-touched 补账先例抬位至实测值 137，governance-lint --budget 由 FAIL 转 PASS",
-      "pairedRemovals": [
-        "一次性迁移工具随原批 sunset：ekko 技能存储迁移完成并验收后归档 scripts/maintenance/（责任归属原批，本批只补账不动脚本）"
-      ]
-    },
-    {
-      "at": "2026-11-07",
-      "delta": "+2 脚本（补账登记：scripts/maintenance/hrgov-seed.mjs（3295a16d4 hrgov 种子批）＋scripts/platform/deploy/patch-touched.mjs（f3696d98e N-1 派生根治批）——两批合入时漏登预算，R143 收口批对账补记）",
-      "reason": "预算对账补账非本轮新增机制；两脚本各自的 sunset/配对责任归属原批（hrgov-seed=种子一次性工具候选降级归档；patch-touched=deploy 派生链常驻由 N-1 spec 承载）",
-      "pairedRemovals": [
-        "补账性质：本轮零新增脚本；配对减项随原批挂账——hrgov-seed 跑完种子轮后归档 scripts/maintenance/ 为首项"
-      ]
-    },
-    {
-      "at": "2026-11-05",
-      "delta": "+0 门/钩子/脚本（managedsettings 域模块＋role-tool-matrix 治理正本 yaml＋默认策略包 json，均不在计数类目）",
-      "reason": "D1 权限最小化实施：总闸默认开＋默认策略包回落＋managed 锁定面＋角色工具矩阵＋路径沙箱补强",
-      "pairedRemovals": [
-        "D1 挂账 N01 清偿（pending-batch 台账 resolved）——机制为清偿既有缺口非新增治理面"
-      ]
-    },
-    {
-      "at": "2026-11-05",
-      "delta": "+2 gate 文件净-1（重复 id 退役） / +2 scripts / +1 npm script / +1 patch",
-      "reason": "AI Native 五篇吸收批：spec-fidelity L3 门、harness-doctor/spec-archive 脚本、doctor npm script、墙钟硬闸补丁 753；配对退役=删 api.contract-alignment 旧版重复 gate（0.1.0）与 dispatchpreview/prefixreuse 两零消费者域（探查+复核零引用后执行）",
-      "pairedRemovals": [
-        "删除 api.contract-alignment 旧版重复 gate（custom/qgate/gate-packs/api-contract/gates/contract-alignment.yaml，0.1.0；保留 contract/gates/api-alignment.yaml 0.2.0）",
-        "删除无生产消费者的 custom/server/dispatchpreview/ 与 custom/server/prefixreuse/ 两域（探查确认零消费者）",
-        "org-governance-walkthrough 登记 sunset 待退役：该一次性走查脚本当前仍在册（2026-11-06 修订不实声明）"
-      ]
-    },
-    {
-      "at": "2026-11-05",
-      "delta": "+8 scripts / +2 npm scripts / +2 ledgers",
-      "reason": "治理可信度修复 P0-P2：qgate-health、governance-lint、recurrence-report、merge-invariants、audit-sample、mutation-probe、coverage-changed、gen-doc-indexes；release:preflight、test:coverage；recurrence/spec-coverage 账本",
-      "pairedRemovals": [
-        "silent-return 基线棘轮（只许减）",
-        "附录 A/手工索引改为机器检查（减少手工维护）",
-        "run26 台账双源合一（减少一份副本）"
-      ]
-    },
-    {
-      "at": "2026-11-05",
-      "delta": "+1 script",
-      "reason": "org-governance-closeout 合入 scripts/regression/org-governance-walkthrough.mjs（已推 origin/main，机制预算同步 +1）",
-      "pairedRemovals": [
-        "该脚本为一次性走查入口，三页签由产品巡检器覆盖后退役"
-      ]
-    },
-    {
-      "at": "2026-11-06",
-      "delta": "+0 scripts / +0 npm scripts / +0 gates / +0 ledgers / +4 守门测试文件（.test.ts 不在计数类目）",
-      "reason": "cognition-lattice 复盘 P0 落地：上游根解析收敛到 inject.mjs 既有导出面、inject --check 全链干跑、release 二次开发资产对账、退役机三类失真检测、专题开关语义诚实标注",
-      "pairedRemovals": [
-        "删除 build-dmg/build/serve-server/ensure-injected 四处内联上游根解析副本（4 份重复实现降为 1 份共享函数）",
-        "删除 build-dmg 缺省回落兄弟 upstream 的必坏路径（单仓检出修复）",
-        "修订 RELEASE-MANIFEST buildCommand 与机制预算 changes 的不实声明（文档/台账与实现对齐）"
-      ]
-    },
-    {
-      "at": "2026-11-06",
-      "delta": "scripts 123→134 / npmScripts 49→52（补账抬位）",
-      "reason": "平台重写 P1 批二（Task 6-10：scripts/platform/ 统一根/资源/产物身份/发布门/验收 11 件＋docs:check/docs:sync/release:gate 三个 npm script）与 AI-Friendly CLI 契约批（scripts/lib/cli-contract*.mjs 2 件）合入时未同步本预算册，governance-lint --budget 在 v1.0.13 发布轮实测超限（134>123、52>49）。本轮如实抬位至实测值补账；配对说明＝platform/ 新结构按设计收敛旧内联实现（build-dmg/build/serve-server 内联根解析副本已随 cognition P0 批删除），无独立退役动作",
-      "pairedRemovals": [
-        "cognition P0 批已删 4 处内联上游根解析副本与 build-dmg 必坏回落（0aee3bf），platform/* 与其共享收敛目标，不重复计退役"
-      ]
-    },
-    {
-      "at": "2026-11-12",
-      "delta": "+0 scripts / +0 npm scripts / +0 gates / +0 ledgers（检查函数并入既有 gen-doc-indexes.mjs）",
-      "reason": "守卫测试迁 lint 首批（spec 2026-11-12-guard-tests-migration-plan）：docs-ssot-guard 的 README 唯一正本指针、附录 A 冻结声明句、附录 A 标题计数互洽三组纯文本断言并入 gen-doc-indexes --check（失败信息带修复指引，pre-push merge-invariants 同点拦截），不新增机制文件",
-      "pairedRemovals": [
-        "docs-ssot-guard.test.ts 削 3 个纯文本断言测试（守卫面迁 --check 生成校验，测试套件只留解析器行为与结构完整性）"
-      ]
-    }
-  ],
-  "sunset": [
-    {
-      "id": "qgate-health",
-      "owner": "quality",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "qgate health 并入 status 且 status 默认输出 DEGRADED 后"
-    },
-    {
-      "id": "governance-lint",
-      "owner": "quality",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "pre-push 内联校验且不再需要独立报告后"
-    },
-    {
-      "id": "recurrence-report",
-      "owner": "quality",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "复发率连续两轮下降并并入复盘模板后"
-    },
-    {
-      "id": "merge-invariants",
-      "owner": "release",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "CI 覆盖合并后不变量检查后"
-    },
-    {
-      "id": "audit-sample",
-      "owner": "audit",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "独立审计代理接管抽样调度后"
-    },
-    {
-      "id": "mutation-probe",
-      "owner": "quality",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "门健康度连续 3 轮全绿后降为季度抽检"
-    },
-    {
-      "id": "coverage-changed",
-      "owner": "quality",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "vitest 原生 changed-line 阈值可用后"
-    },
-    {
-      "id": "gen-doc-indexes",
-      "owner": "docs",
-      "reviewBy": "2026-12-05",
-      "retireWhen": "索引由 docs-ssot-guard 自动生成后"
-    },
-    {
-      "id": "spec-fidelity",
-      "owner": "quality",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "spec 质量检查并入 L2 提交钩子且存量基线清空后"
-    },
-    {
-      "id": "harness-doctor",
-      "owner": "harness",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "nine-layers 端点覆盖同等检查且 CI 消费后"
-    },
-    {
-      "id": "spec-archive",
-      "owner": "docs",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "主规格库 registry 由状态机自动维护后"
-    },
-    {
-      "id": "ai-native-scorecard",
-      "owner": "harness",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "四套成熟度自检合一后"
-    },
-    {
-      "id": "context-overhead",
-      "owner": "observability",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "token 口径成本账覆盖上下文比值后"
-    },
-    {
-      "id": "termination-codes",
-      "owner": "loop",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "四族终止词表统一为单一枚举后"
-    },
-    {
-      "id": "capability-matrix",
-      "owner": "release",
-      "reviewBy": "2027-02-12",
-      "retireWhen": "能力读数并入产品端点 /api/harness/capability-matrix 且 release:preflight 直接消费端点时降级为薄壳",
-      "check": {
-        "type": "filePresent",
-        "path": "scripts/capability-matrix.mjs"
-      }
-    }
-  ]
+  {
+   "at": "2026-11-16",
+   "delta": "+1 patch（790 run-outcome/outbox 路由）/ +1 域（outbox）/ +1 账本（run-outcome JSONL，复用 ledgers 口径）/ +0 scripts / +0 gates / +0 npm scripts",
+   "reason": "Always-on Agents 吸收 P1/P2（spec 2026-11-16-always-on-agents-absorption）：Run 收口三态账本＋发件箱队列与派发（治理裁决接真实发送）",
+   "pairedRemovals": [
+    "outbox 派发链落地后，proactivity 的 batch 决策由「只记账」降级为「出队合并」唯一来源（机制预算配对降级项）",
+    "run-outcome 若连续两轮推演零消费（stats 端点无调用且 outbox 无终态写入）即随 sunset 退役，补丁 790 同批移 _skip"
+   ],
+   "sunset": {
+    "owner": "always-on 批",
+    "reviewBy": "下两轮推演（run31/run32 复盘面）",
+    "retireWhen": "outbox 派发与 run-outcome stats 连续两轮推演零消费即退役（域与补丁同批移除）"
+   }
+  },
+  {
+   "at": "2026-11-14",
+   "delta": "+2 patches（773 standing-agenda 路由/774 earned-autonomy 路由）/ +0 scripts / +0 npm scripts / +0 gates / +1 域（standingagenda，无新账本类目——JSONL 复用 ledgers 口径不增）/ +1 建议器（executioncontract/earned-autonomy，advisory-only 只读端点非新门）",
+   "reason": "Proactive AI 二轮吸收（spec 2026-11-14-proactive-ai-round2）：P1 发现测试（eval 域扩展）/P2 反事实差值/P3 standing agenda/P4 earned autonomy/P5 偏差复利信号",
+   "pairedRemovals": [
+    "P2 落地后 SUGGESTION_PROFILE（interventions-service）从主路径降级为 fail-open fallback——机制预算配对降级项（spec D10）",
+    "standing-agenda 域若两轮推演无消费（match 端点调用为零）即随 sunset 退役，补丁 773 同批移 _skip",
+    "earned-autonomy 建议器若 track record 冷启动持续（approval-ledger 无按 profile 数据积累）即退役，补丁 774 同批移 _skip"
+   ],
+   "sunset": {
+    "owner": "proactive-ai-round2 批",
+    "reviewBy": "下两轮推演（run31/run32 复盘面）",
+    "retireWhen": "standingagenda match 端点与 earned-autonomy 端点连续两轮推演零消费即退役（补丁与域文件同批移除）"
+   }
+  },
+  {
+   "at": "2026-11-13",
+   "delta": "+3 patches（770 看板写授权/771 归档 fail-through/772 delegate 严格 output_schema）/ +0 scripts / +0 npm scripts / +0 gates / +0 ledgers（patches 实测 466 ≤ 562 cap，不动 limits.patches）",
+   "reason": "超级智能体吸收批一（spec 2026-11-13-superagent-contract-closure）：交接合同与证据完整性三修复，均为既有面收口非新机制",
+   "pairedRemovals": [
+    "第二批任务级 version/统一迁移 envelope 落地时，与 770 的授权检查合并评估收编",
+    "evidence reducer 按其 sunset 触发退役时，614/771 一并退役"
+   ]
+  },
+  {
+   "at": "2026-11-13",
+   "delta": "+1 script / scripts 137→138（补账抬位）",
+   "reason": "scripts/ensure-vitest-birpc-patch.mjs 系 v1.0.16 发布批（766a92847，2026-11-12 birpc 超时根治）合入时未同步预算册——git log --diff-filter=A 实证；本批对账补记，责任归属原批",
+   "pairedRemovals": [
+    "补账性质：本批零新增脚本；该脚本的 sunset 随 birpc 超时根治批（junit reporter 盲区已由其守门覆盖）评估归档"
+   ]
+  },
+  {
+   "at": "2026-11-12",
+   "delta": "+1 script / −1 script（org-governance-walkthrough 按登记 sunset 退役；capability-matrix 新增）；npmScripts +0（并入 release:preflight 链内联调用，不新增条目）",
+   "reason": "设计复盘 P0-5：能力验收矩阵进发布门。配对退役=org-governance-walkthrough（2026-11-05 一次性走查已完成 12/12，sunset 登记在册、reviewBy 2026-12-05，全仓零引用）",
+   "pairedRemovals": [
+    "删除 scripts/regression/org-governance-walkthrough.mjs（sunset 条目同步移出册；其历史证据在 spec 2026-11-05-org-governance-closeout.md）"
+   ]
+  },
+  {
+   "at": "2026-11-12",
+   "delta": "+1 script / scripts 136→137（补账抬位）",
+   "reason": "expdual 收尾批清偿（spec 2026-11-12-expdual-closeout 债1）：scripts/maintenance/ekko-skill-store-migration.mjs 系 2026-11-10 ekko-skill-store 批（8acb7d202）合入时未同步预算册——git log --diff-filter=A 实证其为最后一个新增 .mjs；本批按 2026-11-07 hrgov-seed/patch-touched 补账先例抬位至实测值 137，governance-lint --budget 由 FAIL 转 PASS",
+   "pairedRemovals": [
+    "一次性迁移工具随原批 sunset：ekko 技能存储迁移完成并验收后归档 scripts/maintenance/（责任归属原批，本批只补账不动脚本）"
+   ]
+  },
+  {
+   "at": "2026-11-07",
+   "delta": "+2 脚本（补账登记：scripts/maintenance/hrgov-seed.mjs（3295a16d4 hrgov 种子批）＋scripts/platform/deploy/patch-touched.mjs（f3696d98e N-1 派生根治批）——两批合入时漏登预算，R143 收口批对账补记）",
+   "reason": "预算对账补账非本轮新增机制；两脚本各自的 sunset/配对责任归属原批（hrgov-seed=种子一次性工具候选降级归档；patch-touched=deploy 派生链常驻由 N-1 spec 承载）",
+   "pairedRemovals": [
+    "补账性质：本轮零新增脚本；配对减项随原批挂账——hrgov-seed 跑完种子轮后归档 scripts/maintenance/ 为首项"
+   ]
+  },
+  {
+   "at": "2026-11-05",
+   "delta": "+0 门/钩子/脚本（managedsettings 域模块＋role-tool-matrix 治理正本 yaml＋默认策略包 json，均不在计数类目）",
+   "reason": "D1 权限最小化实施：总闸默认开＋默认策略包回落＋managed 锁定面＋角色工具矩阵＋路径沙箱补强",
+   "pairedRemovals": [
+    "D1 挂账 N01 清偿（pending-batch 台账 resolved）——机制为清偿既有缺口非新增治理面"
+   ]
+  },
+  {
+   "at": "2026-11-05",
+   "delta": "+2 gate 文件净-1（重复 id 退役） / +2 scripts / +1 npm script / +1 patch",
+   "reason": "AI Native 五篇吸收批：spec-fidelity L3 门、harness-doctor/spec-archive 脚本、doctor npm script、墙钟硬闸补丁 753；配对退役=删 api.contract-alignment 旧版重复 gate（0.1.0）与 dispatchpreview/prefixreuse 两零消费者域（探查+复核零引用后执行）",
+   "pairedRemovals": [
+    "删除 api.contract-alignment 旧版重复 gate（custom/qgate/gate-packs/api-contract/gates/contract-alignment.yaml，0.1.0；保留 contract/gates/api-alignment.yaml 0.2.0）",
+    "删除无生产消费者的 custom/server/dispatchpreview/ 与 custom/server/prefixreuse/ 两域（探查确认零消费者）",
+    "org-governance-walkthrough 登记 sunset 待退役：该一次性走查脚本当前仍在册（2026-11-06 修订不实声明）"
+   ]
+  },
+  {
+   "at": "2026-11-05",
+   "delta": "+8 scripts / +2 npm scripts / +2 ledgers",
+   "reason": "治理可信度修复 P0-P2：qgate-health、governance-lint、recurrence-report、merge-invariants、audit-sample、mutation-probe、coverage-changed、gen-doc-indexes；release:preflight、test:coverage；recurrence/spec-coverage 账本",
+   "pairedRemovals": [
+    "silent-return 基线棘轮（只许减）",
+    "附录 A/手工索引改为机器检查（减少手工维护）",
+    "run26 台账双源合一（减少一份副本）"
+   ]
+  },
+  {
+   "at": "2026-11-05",
+   "delta": "+1 script",
+   "reason": "org-governance-closeout 合入 scripts/regression/org-governance-walkthrough.mjs（已推 origin/main，机制预算同步 +1）",
+   "pairedRemovals": [
+    "该脚本为一次性走查入口，三页签由产品巡检器覆盖后退役"
+   ]
+  },
+  {
+   "at": "2026-11-06",
+   "delta": "+0 scripts / +0 npm scripts / +0 gates / +0 ledgers / +4 守门测试文件（.test.ts 不在计数类目）",
+   "reason": "cognition-lattice 复盘 P0 落地：上游根解析收敛到 inject.mjs 既有导出面、inject --check 全链干跑、release 二次开发资产对账、退役机三类失真检测、专题开关语义诚实标注",
+   "pairedRemovals": [
+    "删除 build-dmg/build/serve-server/ensure-injected 四处内联上游根解析副本（4 份重复实现降为 1 份共享函数）",
+    "删除 build-dmg 缺省回落兄弟 upstream 的必坏路径（单仓检出修复）",
+    "修订 RELEASE-MANIFEST buildCommand 与机制预算 changes 的不实声明（文档/台账与实现对齐）"
+   ]
+  },
+  {
+   "at": "2026-11-06",
+   "delta": "scripts 123→134 / npmScripts 49→52（补账抬位）",
+   "reason": "平台重写 P1 批二（Task 6-10：scripts/platform/ 统一根/资源/产物身份/发布门/验收 11 件＋docs:check/docs:sync/release:gate 三个 npm script）与 AI-Friendly CLI 契约批（scripts/lib/cli-contract*.mjs 2 件）合入时未同步本预算册，governance-lint --budget 在 v1.0.13 发布轮实测超限（134>123、52>49）。本轮如实抬位至实测值补账；配对说明＝platform/ 新结构按设计收敛旧内联实现（build-dmg/build/serve-server 内联根解析副本已随 cognition P0 批删除），无独立退役动作",
+   "pairedRemovals": [
+    "cognition P0 批已删 4 处内联上游根解析副本与 build-dmg 必坏回落（0aee3bf），platform/* 与其共享收敛目标，不重复计退役"
+   ]
+  },
+  {
+   "at": "2026-11-12",
+   "delta": "+0 scripts / +0 npm scripts / +0 gates / +0 ledgers（检查函数并入既有 gen-doc-indexes.mjs）",
+   "reason": "守卫测试迁 lint 首批（spec 2026-11-12-guard-tests-migration-plan）：docs-ssot-guard 的 README 唯一正本指针、附录 A 冻结声明句、附录 A 标题计数互洽三组纯文本断言并入 gen-doc-indexes --check（失败信息带修复指引，pre-push merge-invariants 同点拦截），不新增机制文件",
+   "pairedRemovals": [
+    "docs-ssot-guard.test.ts 削 3 个纯文本断言测试（守卫面迁 --check 生成校验，测试套件只留解析器行为与结构完整性）"
+   ]
+  }
+ ],
+ "sunset": [
+  {
+   "id": "qgate-health",
+   "owner": "quality",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "qgate health 并入 status 且 status 默认输出 DEGRADED 后"
+  },
+  {
+   "id": "governance-lint",
+   "owner": "quality",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "pre-push 内联校验且不再需要独立报告后"
+  },
+  {
+   "id": "recurrence-report",
+   "owner": "quality",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "复发率连续两轮下降并并入复盘模板后"
+  },
+  {
+   "id": "merge-invariants",
+   "owner": "release",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "CI 覆盖合并后不变量检查后"
+  },
+  {
+   "id": "audit-sample",
+   "owner": "audit",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "独立审计代理接管抽样调度后"
+  },
+  {
+   "id": "mutation-probe",
+   "owner": "quality",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "门健康度连续 3 轮全绿后降为季度抽检"
+  },
+  {
+   "id": "coverage-changed",
+   "owner": "quality",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "vitest 原生 changed-line 阈值可用后"
+  },
+  {
+   "id": "gen-doc-indexes",
+   "owner": "docs",
+   "reviewBy": "2026-12-05",
+   "retireWhen": "索引由 docs-ssot-guard 自动生成后"
+  },
+  {
+   "id": "spec-fidelity",
+   "owner": "quality",
+   "reviewBy": "2026-12-20",
+   "retireWhen": "spec 质量检查并入 L2 提交钩子且存量基线清空后"
+  },
+  {
+   "id": "harness-doctor",
+   "owner": "harness",
+   "reviewBy": "2026-12-20",
+   "retireWhen": "nine-layers 端点覆盖同等检查且 CI 消费后"
+  },
+  {
+   "id": "spec-archive",
+   "owner": "docs",
+   "reviewBy": "2026-12-20",
+   "retireWhen": "主规格库 registry 由状态机自动维护后"
+  },
+  {
+   "id": "ai-native-scorecard",
+   "owner": "harness",
+   "reviewBy": "2026-12-20",
+   "retireWhen": "四套成熟度自检合一后"
+  },
+  {
+   "id": "context-overhead",
+   "owner": "observability",
+   "reviewBy": "2026-12-20",
+   "retireWhen": "token 口径成本账覆盖上下文比值后"
+  },
+  {
+   "id": "termination-codes",
+   "owner": "loop",
+   "reviewBy": "2026-12-20",
+   "retireWhen": "四族终止词表统一为单一枚举后"
+  },
+  {
+   "id": "capability-matrix",
+   "owner": "release",
+   "reviewBy": "2027-02-12",
+   "retireWhen": "能力读数并入产品端点 /api/harness/capability-matrix 且 release:preflight 直接消费端点时降级为薄壳",
+   "check": {
+    "type": "filePresent",
+    "path": "scripts/capability-matrix.mjs"
+   }
+  }
+ ]
 }

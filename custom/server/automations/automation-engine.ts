@@ -16,6 +16,8 @@ import {
   type AutomationEvent, type AutomationRule, type RuleValidationErrors,
 } from './automation-rules'
 import { atomicWriteJson } from '../lib/fs-store'
+// Always-on Agents 吸收 P1（2026-11-16）：automation 桶派发 = 一次后台 Run，收口三态入账。
+import { recordRunOutcome } from '../notify/run-outcome'
 
 export interface AutomationDispatchPort {
   /** 返回 outcome 数组（mention 总线语义；空数组=无 mention 可派发=配置错）。 */
@@ -187,15 +189,39 @@ export class AutomationEngine {
       const outcomes = await this.opts.port.dispatch({ workspacePath: rule.workspacePath, text })
       if (outcomes.length === 0) {
         entry.reason = 'no_mention_target'
+        // 收口：无派发目标 = 判定无需通知（沉默可审计，不进发件箱）。
+        recordRunOutcome({
+          runId: `${ruleId}-${entry.at}`, runKind: 'automation', audience: 'none',
+          outcome: 'silence', reasonCode: 'nothing-new',
+          refs: [`rule:${ruleId}`, `events:${bucket.events.length}`], at: entry.at,
+        })
       } else {
         const first = outcomes[0]
         entry.reason = first.reason
         entry.sessionId = first.sessionId
         entry.commandId = first.commandId
+        // 收口：派发到 agent 会话 = 写发件箱（outbox），证据锚点带 session/command。
+        recordRunOutcome({
+          runId: `${ruleId}-${entry.at}`, runKind: 'automation', audience: 'agent',
+          outcome: 'outbox', reasonCode: 'delivered',
+          refs: [
+            `rule:${ruleId}`,
+            `events:${bucket.events.length}`,
+            ...(entry.sessionId ? [`session:${entry.sessionId}`] : []),
+            ...(entry.commandId ? [`command:${entry.commandId}`] : []),
+          ],
+          ...(entry.sessionId ? { sessionId: entry.sessionId } : {}),
+          at: entry.at,
+        })
       }
     } catch (err) {
       entry.reason = 'dispatch_error'
       entry.commandId = err instanceof Error ? err.message.slice(0, 120) : String(err).slice(0, 120)
+      recordRunOutcome({
+        runId: `${ruleId}-${entry.at}`, runKind: 'automation', audience: 'none',
+        outcome: 'silence', reasonCode: 'error',
+        refs: [`rule:${ruleId}`, `error:${entry.commandId}`], at: entry.at,
+      })
     }
     this.history.push(entry)
     this.persistHistory()

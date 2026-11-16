@@ -649,6 +649,60 @@ E2EE 房不在支持范围（明文发送在加密房会显示不可解密）。
 汇总（只为有订阅的线程生成，生成后推进订阅游标；纯列变更静默但游标照推）→ 投递。
 任一步失败记入 `errors` 并继续其余步骤。定时轮取代了原来单独的投递定时器。
 
+#### 3.6.1 Always-on 运行面（五组件装配）
+
+常驻智能体的运行语义按 Anthropic《Building always-on agents》的五组件对账装配，不新造
+第六套运行时：事件收件箱由 `session_admissions` 承担（六源汇入、去重、按会话单活跃
+claim）；定时器分 cron（外部日程）与 follow-up（agent 自设跟进，唤醒原会话）；持久
+记忆走 Hindsight 唯一 provider，任务进度用 `session_checkpoints` 五节文档；权限沿用
+审批账本与四挡契约；发件箱由 `custom/server/outbox` 承担。
+
+**Run 收口三态。** 每次后台 Run 结束只允许三种结局（`custom/server/notify/run-outcome`）：
+写发件箱 `outbox`／判定无需通知 `silence`／延迟调用 `deferred`；`reasonCode` 为闭集
+（`delivered/nothing-new/below-threshold/cooldown/quiet-hours/budget-capped/duplicate/
+deferred-window/deferred-approval/deferred-followup/error`），JSONL append-only、环形
+2000 行。沉默因此可审计：earned attention 的接受率/忽略率之外，多一条「系统主动选择
+不打扰」的分母。治理轮与 automation 桶派发即接线点；chat 回合不入三态（用户发起、
+回复即交付，无「不通知」语义可记）。
+
+**发件箱。** `custom/server/outbox` 管待发队列：入队校验 + `dedupeKey` 六小时幂等 +
+环形 500；派发器在派发时复检注意力预算（安静时段/日 8/时 3），critical 豁免；同
+`mergeKey` 的 normal 消息合成一条 digest（≤10 条）；失败按 30s/120s 退避，三次转
+`failed` 死信；通道为 inbox（恒可用，`proactive_notice` 类型）与 matrix（仅
+`OUTBOX_MATRIX_ROOM` 配置时启用）。`OUTBOX_DISPATCH=off` 关闭派发，
+`OUTBOX_TICK_INTERVAL_MS` 缺省 60s。治理裁决因此从「只记账」变为「真发送」：
+`deliver/escalate` 立即入队、`batch` 带合并键、`defer` 带 `notBefore` 到期重投、
+`suppress/hold` 只落收口账本。
+
+**follow-up 定时器。** agent 用 `followup_manage` 给自己设一次性提醒（`30m/1h/2d`），
+存 SessionDB `state_meta: followup:<id>`，状态机 `active→firing→fired/failed`；
+网关 `_followup_watcher`（15s）到期只提交 admission（`admit_route_wake`,
+producer=`followup`）唤醒**原会话**，不是新开 cron 会话；会话忙顺延，失败三次转
+failed，陈旧 firing 五分钟自愈。cron 仍负责用户日程/周期任务（新会话执行）。
+
+**进度文件。** kanban worker 的 `session_checkpoints`（五节 ≤800 字符）写触发从
+「预算触顶」扩为「预算触顶 ∪ 正常轮终（10 分钟/task 节流）∪ 中断（不受节流）」；
+`build_worker_context` 每次 worker 启动都注入 checkpoint，首次无文件 no-op。新 Run
+读进度文档接续，不全量重推理。
+
+**空闲 dreaming。** 网关安静 ≥30 分钟且无运行中会话时，`_dreaming_watcher`（30 分钟
+粗节拍）调 Hindsight `reflect` 做跨会话模式提炼，产出以 tag `dream` retain 回同一
+bank；每 profile 24h 至多一次（`state_meta: memory:dream:last_at`），空结果不占预算；
+`HERMES_MEMORY_DREAMING=off` 关闭。30 份 profile 的 `hindsight/config.json` 键归一为
+provider 实际读取的 `recall_prefetch_method`。
+
+**延迟工具调用。** 审批超时在无人值守场景（`approvals.defer_on_timeout` 缺省
+`unattended`，只看 kanban/cron 信号）不就地 deny：落 `<HERMES_HOME>/approvals/
+deferred.json`（24h TTL），工具结果带 `[deferred_tool_call:<id>]` 机器标记，回合在
+工具批次后结束（不占线程等用户）。用户答复走既有 `responses/<request_id>.json`；
+`_deferred_approval_watcher`（10s）settle 后经 `admit_route_wake` 唤醒原会话继续；
+过期标 `expired` 并告知一次。AIStudio 审批收件箱新增 `deferredfile:` 源，跨重启可见、
+可裁决（已答幂等 404）。交互场景保持 fail-closed deny（有人在场时阻塞等待是正确体验）。
+
+落地状态（2026-11-16）：收口三态、发件箱派发链、follow-up 定时器、进度文件轮终写、
+空闲 dreaming 与延迟工具调用六项全部落地（补丁 786-791；spec
+`2026-11-16-always-on-agents-absorption.md`）。
+
 ### 3.7 单仓与代码归属
 
 AIStudio 是单一完整项目仓。
