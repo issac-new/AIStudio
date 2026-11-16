@@ -1,8 +1,10 @@
-// 推演期新能力探测脚本的端到端守门（方案 §5.11，2026-11-04 扩组至十三组；同日 W4 扩至十四组）：
+// 推演期新能力探测脚本的端到端守门（方案 §5.11，2026-11-04 扩组至十三组；同日 W4 扩至十四组；
+// 2026-11-17 run31 扩至十七组——proactive 二轮/always-on/kanban version，spec 2026-11-17-sim-probes-run31）：
 // 真起 Koa（handoff + proactivity + 精简 workbench 面 + governance/lifecycle + trust +
-// projectworkflow + execution-records + userenv + userperms + vendor 技能路由），
-// 跑 mx-capability-probes.mjs，断言十四组探测全绿且产物落盘。脚本本身是 run 期取证
-// 工装（驱动 testpass 步自动调用），若它坏了，G4 的新能力证据就没人取。
+// projectworkflow + execution-records + userenv + userperms + vendor 技能路由 +
+// earned-autonomy/standing-agenda/run-outcome/outbox），跑 mx-capability-probes.mjs，
+// 断言十七组探测全绿且产物落盘。脚本本身是 run 期取证工装（驱动 testpass 步自动调用），
+// 若它坏了，G4 的新能力证据就没人取。
 // vendor 技能路由依赖注入态树（src/custom/skillgov 由 inject 生成）——与仓内其他
 // 跨树测试同前提：worktree 内先 npm run inject。
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
@@ -68,7 +70,11 @@ beforeAll(async () => {
     // W4 组 14（harness 路由整挂）：审计账/执法批单/运行清单/govbus 事件四源全部隔离进临时目录
     'TOOL_EXEC_AUDIT_DIR', 'HERMES_ENFORCE_APPROVALS_DIR', 'RUN_MANIFEST_DIR', 'HERMES_GOV_EVENT_DIR',
     // 发现测试面（Proactive AI 二轮 P1 探测接线）：eval 集 store 与 discovery 运行账隔离进临时目录
-    'EVAL_STORE', 'HERMES_DISCOVERY_RUN_DIR']) {
+    'EVAL_STORE', 'HERMES_DISCOVERY_RUN_DIR',
+    // run31 组 15-16：standing-agenda/run-outcome/outbox/approval-ledger/evidence 的缺省根
+    // 全部解析自 web-ui 根（lib/paths underWebUi）——隔离进临时目录，杜绝读写真机 ~/.hermes-web-ui；
+    // 会话档目录同步隔离（earned-autonomy 只读面不写档，防渗漏）
+    'HERMES_WEB_UI_HOME', 'HERMES_SESSION_MODES_DIR']) {
     prevEnv[k] = process.env[k]
   }
   process.env.HERMES_HOME = join(dir, 'home')
@@ -85,6 +91,24 @@ beforeAll(async () => {
   process.env.HERMES_GOV_EVENT_DIR = join(dir, 'govbus')
   process.env.EVAL_STORE = join(dir, 'eval-store')
   process.env.HERMES_DISCOVERY_RUN_DIR = join(dir, 'eval-store', 'discovery-runs')
+  process.env.HERMES_WEB_UI_HOME = join(dir, 'webui')
+  process.env.HERMES_SESSION_MODES_DIR = join(dir, 'session-modes')
+
+  // run31 组 15 夹具：standing-agenda 种子记录（带 cardId+status）——使 cardId/status
+  // 过滤正例在单测里真实命中（活体板无记录时探针如实 skip，夹具保证判据可验）。
+  const agendaDir = join(dir, 'webui', 'standing-agenda')
+  mkdirSync(agendaDir, { recursive: true })
+  writeFileSync(join(agendaDir, 'standing-agenda.jsonl'), `${JSON.stringify({
+    id: 'sa-probe-fixture-1',
+    title: '探针夹具议程（cardId/status 过滤面判据）',
+    mandateGoal: '验证 standing-agenda 过滤端点：cardId 命中与空集语义',
+    evidence: ['file:simharness/tests/capability-probes.test.ts'],
+    resumeCondition: { type: 'file' },
+    parkedAt: 1,
+    status: 'parked',
+    resumeCount: 0,
+    cardId: 't-probe-agenda-card',
+  })}\n`)
 
   // userenv 夹具：default 档在册＋一个敏感键（脱敏回显面可读）
   const profileDir = join(dir, 'home', 'profiles', 'default')
@@ -113,6 +137,12 @@ beforeAll(async () => {
   const { harnessRoutes } = await import('../../custom/server/harness/harness-controller')
   // 发现测试探测（组 1 续）：eval 域路由（evalRoutes 自带 /api/hermes/eval prefix）
   const { evalRoutes } = await import('../../custom/server/eval/controller')
+  // run31 组 15-16：proactive 二轮＋always-on 域路由（均自带完整 prefix，挂根即可；
+  // lineage 随既有 harnessRoutes 已挂）。outbox 自动轮在 VITEST 下不启动（控制器内守卫）。
+  const { earnedAutonomyRouter } = await import('../../custom/server/executioncontract/earned-autonomy')
+  const { standingAgendaRouter } = await import('../../custom/server/standingagenda/agenda-controller')
+  const { runOutcomeRouter } = await import('../../custom/server/notify/run-outcome-controller')
+  const { outboxRouter } = await import('../../custom/server/outbox/outbox-controller')
   // vendor 技能面的生产装配：profile-config 等依赖注入在 import 时接线（与 studio
   // 启动同源），不接则 readConfigYamlForProfile 抛「not been configured」→全 500
   await import('../../vendor/hermes-studio/packages/server/src/bootstrap/agent-profile-adapter')
@@ -133,6 +163,10 @@ beforeAll(async () => {
   root.use(userPermsAuditRoutes.routes(), userPermsAuditRoutes.allowedMethods())
   root.use(harnessRoutes.routes(), harnessRoutes.allowedMethods())
   root.use(evalRoutes.routes(), evalRoutes.allowedMethods())
+  root.use(earnedAutonomyRouter.routes(), earnedAutonomyRouter.allowedMethods())
+  root.use(standingAgendaRouter.routes(), standingAgendaRouter.allowedMethods())
+  root.use(runOutcomeRouter.routes(), runOutcomeRouter.allowedMethods())
+  root.use(outboxRouter.routes(), outboxRouter.allowedMethods())
   root.use(skillRoutes.routes(), skillRoutes.allowedMethods())
   const app = new Koa()
   app.use(bodyParser())
@@ -160,7 +194,7 @@ afterAll(() => {
 })
 
 describe('mx-capability-probes', () => {
-  it('十四组探测全绿，产物 capability-probes.json 落盘且计数自洽', async () => {
+  it('十七组探测全绿，产物 capability-probes.json 落盘且计数自洽', async () => {
     const out = join(dir, 'evidence')
     const r = await runProbe(['--base', base, '--out', out])
     expect(r.code, `probe 退出码非 0：${r.stderr || r.stdout}`).toBe(0)
@@ -175,11 +209,13 @@ describe('mx-capability-probes', () => {
     }
     expect(report.failed).toBe(0)
     expect(report.passed).toBe(report.total)
-    expect(report.total).toBeGreaterThanOrEqual(34)
-    // 十四组齐全（组名是方案 §5.11 的十四条验证面；W4 扩组 harness-contract）
+    expect(report.total).toBeGreaterThanOrEqual(46)
+    // 十七组齐全（组名是方案 §5.11 的十四条验证面；W4 扩组 harness-contract；
+    // run31 扩组 proactive-r2/always-on/kanban-version——方案 §5.15）
     const groups = [
       'proactivity', 'handoff', 'acceptance', 'claims', 'workbench', 'schedule', 'dispatch',
       'fourgap', 'projectworkflow', 'execution-records', 'userenv', 'userperms', 'skills', 'harness-contract',
+      'proactive-r2', 'always-on', 'kanban-version',
     ]
     for (const g of groups) {
       expect(report.byGroup[g], `缺组 ${g}`).toBeTruthy()
@@ -195,6 +231,26 @@ describe('mx-capability-probes', () => {
     for (const n of hcNegatives) expect(n.ok, `harness-contract 负例未过：${n.detail}`).toBe(true)
     const hcVersion = report.results.find((x) => x.group === 'harness-contract' && x.name.includes('版本'))
     expect(hcVersion?.ok, `契约版本锚未过：${hcVersion?.detail}`).toBe(true)
+    // run31 组 15：三负例必须真红绿（apply 400/409、lineage 400、agenda 空集/404）
+    const pr2Negatives = report.results.filter((x) => x.group === 'proactive-r2' && x.name.includes('负例'))
+    expect(pr2Negatives.length, 'proactive-r2 负例数不足').toBeGreaterThanOrEqual(3)
+    for (const n of pr2Negatives) expect(n.ok, `proactive-r2 负例未过：${JSON.stringify(n.detail)}`).toBe(true)
+    // 夹具种了带 cardId 的议程：过滤正例必须真命中（不得走 skip 分支）
+    const saFilter = report.results.find((x) => x.group === 'proactive-r2' && x.name.includes('过滤生效'))
+    expect(saFilter?.ok, `standing-agenda 过滤正例未过：${saFilter?.detail}`).toBe(true)
+    expect(JSON.stringify(saFilter?.detail), '夹具有带 cardId 记录，过滤正例不得走 skip 分支').not.toContain('skipped')
+    // run31 组 16：always-on 两负例必须真红绿（词表外 400／非法 recipient 400，先于落账）
+    const aoNegatives = report.results.filter((x) => x.group === 'always-on' && x.name.includes('负例'))
+    expect(aoNegatives.length, 'always-on 负例数不足').toBeGreaterThanOrEqual(1)
+    for (const n of aoNegatives) expect(n.ok, `always-on 负例未过：${JSON.stringify(n.detail)}`).toBe(true)
+    // run31 组 17：kanban REST 面依赖 Python CLI 子进程，单测 Koa 不挂该路由——
+    // 两探针必须绿且如实 skip（活体 studio 上 CAS 负例按条件执行，spec D2/D3）
+    const kvProbes = report.results.filter((x) => x.group === 'kanban-version')
+    expect(kvProbes.length, 'kanban-version 探针数不足').toBe(2)
+    for (const p of kvProbes) {
+      expect(p.ok, `kanban-version 探针未过：${JSON.stringify(p.detail)}`).toBe(true)
+      expect(JSON.stringify(p.detail), '单测环境 kanban 面未挂，必须 skip 而非误判').toContain('skipped')
+    }
   })
 
   it('服务不可达时仍写产物并退出 2（run27 分型：环境态≠能力失效，不静默不误冻）', async () => {

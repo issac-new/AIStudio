@@ -2103,7 +2103,7 @@ if step_reached testpass && [[ -z "$(sget testpass_done)" ]]; then
     fail "G4 能力探测基座不可达（网关/studio 停摆）——等基座恢复后断点重进自动重判"
   fi
   if (( _cap_rc == 0 )); then
-    note "[G4] 新能力探测十四组全绿（evidence/capability-probes.json）"
+    note "[G4] 新能力探测十七组全绿（evidence/capability-probes.json）"
   else
     note "[G4] 新能力探测 rc=${_cap_rc}——g4_pass 不置位（详见 evidence/capability-probes.json）"
   fi
