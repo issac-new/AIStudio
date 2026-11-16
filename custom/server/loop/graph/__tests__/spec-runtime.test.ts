@@ -131,7 +131,8 @@ describe('spec-runtime 节点工厂', () => {
   it('gatePassed 只能由真实 gate 执行器在 ok + exitCode 0 后返回', async () => {
     const scratch = mkdtempSync(join(tmpdir(), 'spec-runtime-gate-'))
     const root = join(scratch, 'root')
-    mkdirSync(root, { recursive: true })
+    const work = join(root, 'work')
+    mkdirSync(work, { recursive: true })
     const oldRoot = process.env.HERMES_SANDBOX_WORKSPACES_ROOT
     process.env.HERMES_SANDBOX_WORKSPACES_ROOT = root
     _useLeaseFileForTests(join(scratch, 'leases.json'))
@@ -140,8 +141,9 @@ describe('spec-runtime 节点工厂', () => {
       stdoutTruncated: false, stderrTruncated: false,
     }))
     try {
+      // cwd 必须是根内子目录：沙箱根本身自根边界收紧起拒绝（防读兄弟 lease 工作区）
       const gateCatalog = [{
-        command: 'check', argv: ['/bin/echo', 'checked'], cwd: root, timeoutMs: 1_000,
+        command: 'check', argv: ['/bin/echo', 'checked'], cwd: work, timeoutMs: 1_000,
       }]
       const registry = createSpecRuntimeRegistry({
         gateCatalog,
@@ -162,7 +164,7 @@ describe('spec-runtime 节点工厂', () => {
         command: 'check', status: 'ok', exitCode: 0, stdout: 'checked',
       })
       expect(runSandboxed).toHaveBeenCalledWith({
-        argv: ['/bin/echo', 'checked'], cwd: realpathSync(root), timeoutMs: 1_000,
+        argv: ['/bin/echo', 'checked'], cwd: realpathSync(work), timeoutMs: 1_000,
         envAllowlist: [], writableRoots: [],
       })
     } finally {

@@ -191,6 +191,26 @@ describe('executeGraphGate 路径边界', () => {
     expect(runSandboxedMock).not.toHaveBeenCalled()
   })
 
+  it('cwd 等于沙箱根本身时拒绝（根不可作为工作目录，防读兄弟 lease 工作区）', async () => {
+    deps.catalog = [{ ...entry, cwd: root }]
+    await expect(executeGraphGate({ id: 'g', command: 'test' }, context(), deps))
+      .rejects.toMatchObject({ code: 'gate_path_invalid' })
+    expect(runSandboxedMock).not.toHaveBeenCalled()
+  })
+
+  it('writableRoots 含沙箱根本身时拒绝（根不可整体可写）', async () => {
+    deps.catalog = [{ ...entry, writableRoots: [root] }]
+    await expect(executeGraphGate({ id: 'g', command: 'test' }, context(), deps))
+      .rejects.toMatchObject({ code: 'gate_path_invalid' })
+    expect(runSandboxedMock).not.toHaveBeenCalled()
+  })
+
+  it('root 下 gate-<digest> 一层的 lease 工作区不受根本身拒绝影响', async () => {
+    // 正常目录用例回归锚：root 直系子目录（lease workspace 同层）仍然放行
+    await executeGraphGate({ id: 'g', command: 'test' }, context(), deps)
+    expect(runSandboxedMock).toHaveBeenCalledTimes(1)
+  })
+
   it('cwd 在根外时拒绝', async () => {
     const outside = join(scratch, 'outside')
     mkdirSync(outside)

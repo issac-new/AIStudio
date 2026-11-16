@@ -13,6 +13,9 @@ import type { EventLogStore, GraphLogEvent } from './event-log-store'
 import type { StoredGraphRunSpec } from './run-spec-snapshot'
 import type { RunSpawner } from './run-spawner'
 import { validateGraphSpec, type GraphSpec } from './graph-spec'
+// 能力预检错误类型：startRun 抛出的 EditorSpecError 自带 status=422 + 稳定 code，
+// REST 面透传而非按 message 猜（spec §5.1）。spec-runtime 仅类型引用本文件，无运行时环。
+import { EditorSpecError } from './spec-capabilities'
 import { appendContractsById } from './phase-nodes'
 import { notifyDirectorEvent } from './director-notify'
 import { compileRequirementToGraph, DEFAULT_SIMULATION_SCENARIO, type RequirementInput } from '../../graph/simulation-graph-template'
@@ -649,8 +652,18 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
       ctx.body = { runId, instance }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      ctx.status = message.includes('not found') ? 404 : 400
-      ctx.body = { error: message }
+      // spec §5.1 错误映射：'not found' 保持 404 优先；EditorSpecError（或任何带
+      // status 的错误对象）透传其 status 并在 body 附稳定 code；其余维持 400。
+      const errFields = err as { status?: unknown; statusCode?: unknown; code?: unknown } | null
+      const status = err instanceof EditorSpecError ? err.status
+        : typeof errFields?.status === 'number' ? errFields.status
+        : typeof errFields?.statusCode === 'number' ? errFields.statusCode
+        : undefined
+      const code = typeof errFields?.code === 'string' ? errFields.code : undefined
+      if (message.includes('not found')) ctx.status = 404
+      else if (status !== undefined) ctx.status = status
+      else ctx.status = 400
+      ctx.body = { error: message, ...(code !== undefined ? { code } : {}) }
     }
   })
 

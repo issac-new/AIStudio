@@ -80,9 +80,11 @@ function validateCommand(entry: GateCommandEntry): void {
   validateTimeout(entry.timeoutMs)
 }
 
+/** 目标必须严格位于根内：rel === ''（目标==根本身）同样拒绝——
+ *  cwd/writableRoots 指向根会放行全部 lease 工作区（读兄弟 run / 全根可写）。 */
 function within(root: string, target: string): boolean {
   const rel = relative(root, target)
-  return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel))
+  return !!rel && !rel.startsWith('..') && !isAbsolute(rel)
 }
 
 type CanonicalRoot = { configured: string; canonical: string }
@@ -107,9 +109,10 @@ function canonicalDirectoryWithin(root: CanonicalRoot, input: string): string {
   const candidate = resolve(input)
   if (!within(root.configured, candidate)) fail('gate_path_invalid')
   try {
+    // within 已保证 rel 非空（根本身在此前被拒），逐组件拒绝 symlink 并要求全目录。
     const rel = relative(root.configured, candidate)
     let current = root.configured
-    for (const segment of rel ? rel.split(/[\\/]/) : []) {
+    for (const segment of rel.split(/[\\/]/)) {
       current = join(current, segment)
       const stat = lstatSync(current)
       if (stat.isSymbolicLink()) fail('gate_path_invalid')

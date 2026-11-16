@@ -251,9 +251,16 @@ describe('createGraphAssembly', () => {
       await a.specStore.save(agentTaskSpec('production-no-bridge'))
       const ctx = await invoke(a.router, 'post', '/api/graph/specs/production-no-bridge/runs')
 
-      expect(ctx.status).toBe(400)
+      // spec §3.1/§5.1：执行能力不可用 → 422 + 稳定码，不再吞成 400
+      expect(ctx.status).toBe(422)
       expect((ctx.body as { error: string }).error).toContain('unavailable agent execution capability')
+      expect((ctx.body as { code?: string }).code).toBe('agent_execution_unavailable')
       expect(await eventLog.listRuns()).toEqual([])
+
+      // spec 不存在仍 404：EditorSpecError 自带 status=422 不得覆盖 not-found 语义
+      const miss = await invoke(a.router, 'post', '/api/graph/specs/never-saved-spec/runs')
+      expect(miss.status).toBe(404)
+      expect((miss.body as { error: string }).error).toContain('not found')
     } finally {
       a.stop()
       vi.unstubAllEnvs()
@@ -391,7 +398,7 @@ describe('createGraphAssembly', () => {
     }
   })
 
-  it('gate 目录配置非法：装配存活、醒目告警、gate 起跑 400 not-cataloged（不静默放行）', async () => {
+  it('gate 目录配置非法：装配存活、醒目告警、gate 起跑 422 not-cataloged（不静默放行）', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.stubEnv('GRAPH_KANBAN_BASE', '')
     vi.stubEnv('LOOP_GATE_COMMANDS', 'sh -c "echo hi"')
@@ -401,8 +408,10 @@ describe('createGraphAssembly', () => {
       await a.specStore.save(gateSpec('gate-catalog-invalid-config', 'sh -c "echo hi"'))
       const ctx = await invoke(a.router, 'post', '/api/graph/specs/gate-catalog-invalid-config/runs')
 
-      expect(ctx.status).toBe(400)
+      // spec-capabilities 的 not-cataloged 也是 EditorSpecError → 422 + 稳定码
+      expect(ctx.status).toBe(422)
       expect((ctx.body as { error: string }).error).toContain('not in the trusted catalog')
+      expect((ctx.body as { code?: string }).code).toBe('gate_command_not_cataloged')
       expect(warn).toHaveBeenCalledTimes(1)
       expect(String(warn.mock.calls[0]?.[0])).toContain('gate catalog')
       expect(await eventLog.listRuns()).toEqual([])
