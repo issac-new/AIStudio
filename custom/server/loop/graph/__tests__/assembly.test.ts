@@ -357,6 +357,40 @@ describe('createGraphAssembly', () => {
     }
   })
 
+  it.skipIf(!sandboxSupport.available)('Director 与 editor 共享同一受信目录：gate spec 经导演 runtime 真实执行', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'task7r2-gate-root-'))
+    const cwd = join(root, 'work')
+    mkdirSync(cwd, { recursive: true })
+    vi.stubEnv('GRAPH_KANBAN_BASE', 'http://director.test')
+    vi.stubEnv('HERMES_SANDBOX_WORKSPACES_ROOT', root)
+    vi.stubEnv('LOOP_GATE_COMMANDS', '/usr/bin/true')
+    vi.stubEnv('LOOP_GATE_CWD', cwd)
+    const eventLog = new InMemoryEventLogStore()
+    const routerFactory = vi.mocked(createGraphRunRouter)
+    routerFactory.mockClear()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy', eventLog }))
+    try {
+      await a.specStore.save(gateSpec('gate-catalog-director', '/usr/bin/true'))
+      const deps = routerFactory.mock.calls.at(-1)?.[0]
+      const runtime = deps?.directorRuntimeFactory?.('director-gate-token')
+      expect(runtime).toBeDefined()
+
+      const { runId, instance } = await runtime!.startRun('gate-catalog-director')
+
+      // capabilities/registry 任一侧目录缺失都会在此显形：预检 422 或执行 not-cataloged
+      expect(instance.status).toBe('completed')
+      expect((instance.state as Record<string, unknown>)['gate-1.gatePassed']).toBe(true)
+      expect(await eventLog.getRunSpec(runId)).toMatchObject({ runtimeKind: 'director', executionMode: 'production' })
+      const events = await eventLog.query(runId, { kind: 'node.completed' })
+      const evidence = (events.find(e => e.nodeId === 'gate-1')?.payload as { evidence?: { exitCode?: number } }).evidence
+      expect(evidence?.exitCode).toBe(0)
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it('gate 目录配置非法：装配存活、醒目告警、gate 起跑 400 not-cataloged（不静默放行）', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.stubEnv('GRAPH_KANBAN_BASE', '')
