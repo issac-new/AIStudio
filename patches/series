@@ -1273,6 +1273,10 @@
 # （不新开 cron 会话）；state_meta 存储＋claim/firing 状态机＋陈旧 firing 自愈。
 780-agent-followup-timer.patch
 
+# 781（2026-11-16 Always-on Agents 吸收 P4）：kanban worker 轮终写进度 checkpoint——
+# 正常轮终 10 分钟节流、中断绕过；读侧 build_worker_context 每次启动已注入。
+781-agent-checkpoint-turn-end.patch
+
 # 784（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
 # /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
 784-server-always-on-routes.patch

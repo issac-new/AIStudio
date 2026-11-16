@@ -1,0 +1,194 @@
+diff --git a/tests/agent/test_session_checkpoint_turn_end.py b/tests/agent/test_session_checkpoint_turn_end.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_session_checkpoint_turn_end.py
+@@ -0,0 +1,76 @@
++"""Tests for session_checkpoint 轮终写（Always-on Agents P4）。"""
++
++from __future__ import annotations
++
++import os
++import time
++
++import pytest
++
++from agent.session_checkpoint import (
++    maybe_write_turn_end_checkpoint, checkpoint_age_seconds, load_checkpoint,
++)
++
++VALID = """## goal
++Ship the follow-up timer.
++## done
++- Added follow-up store to `agent/session_checkpoint.py:60` (anchor).
++## next
++Run the targeted pytest file.
++## blockers
++none
++## artifacts
++- patches/780-agent-followup-timer.patch
++"""
++
++
++def _writer(system, prompt):
++    return VALID
++
++
++@pytest.fixture(autouse=True)
++def _env(monkeypatch):
++    monkeypatch.setenv("HERMES_SESSION_CHECKPOINT", "1")
++    monkeypatch.setenv("HERMES_SESSION_CHECKPOINT_TURN_END", "1")
++    yield
++
++
++def test_first_turn_end_writes_checkpoint(tmp_path):
++    path = maybe_write_turn_end_checkpoint("t1", 3, final_response="did work", call_fn=_writer, memory_root=tmp_path)
++    assert path is not None and path.exists()
++    text = path.read_text(encoding="utf-8")
++    assert "reason=turn_end" in text.splitlines()[0]
++    sections = load_checkpoint("t1", memory_root=tmp_path)
++    assert sections is not None
++    assert "follow-up" in sections["goal"]
++
++
++def test_throttle_suppresses_second_normal_write(tmp_path):
++    first = maybe_write_turn_end_checkpoint("t1", 1, final_response="a", call_fn=_writer, memory_root=tmp_path)
++    assert first is not None
++    second = maybe_write_turn_end_checkpoint("t1", 2, final_response="b", call_fn=_writer, memory_root=tmp_path)
++    assert second is None
++    # mtime 变老 → 允许再写
++    old = time.time() - 700
++    os.utime(first, (old, old))
++    third = maybe_write_turn_end_checkpoint("t1", 3, final_response="c", call_fn=_writer, memory_root=tmp_path)
++    assert third is not None
++
++
++def test_interrupted_bypasses_throttle(tmp_path):
++    first = maybe_write_turn_end_checkpoint("t1", 1, final_response="a", call_fn=_writer, memory_root=tmp_path)
++    assert first is not None
++    second = maybe_write_turn_end_checkpoint(
++        "t1", 2, interrupted=True, final_response="stopped", call_fn=_writer, memory_root=tmp_path,
++    )
++    assert second is not None
++    assert "reason=interrupted" in second.read_text(encoding="utf-8").splitlines()[0]
++
++
++def test_env_switch_disables(tmp_path, monkeypatch):
++    monkeypatch.setenv("HERMES_SESSION_CHECKPOINT_TURN_END", "off")
++    assert maybe_write_turn_end_checkpoint("t1", 1, final_response="a", call_fn=_writer, memory_root=tmp_path) is None
++
++
++def test_age_none_when_missing(tmp_path):
++    assert checkpoint_age_seconds("absent", memory_root=tmp_path) is None
+diff --git a/agent/session_checkpoint.py b/agent/session_checkpoint.py
+--- a/agent/session_checkpoint.py
++++ b/agent/session_checkpoint.py
+@@ -25,6 +25,7 @@
+ import logging
+ import os
+ import re
++import time
+ from pathlib import Path
+ from typing import Any, Callable, Dict, List, Optional
+ 
+@@ -61,6 +62,62 @@
+     return os.environ.get("HERMES_SESSION_CHECKPOINT", "1").strip().lower() not in ("0", "false", "off", "no")
+ 
+ 
++# Always-on Agents P4（2026-11-16）：轮终也写 checkpoint（不只预算触顶）。
++# 节流：同一 task 10 分钟内不重复写（写手是 LLM 调用）；中断不受节流（用户主动停止
++# 时状态最需要落盘）。
++TURN_END_THROTTLE_SECONDS = 600
++
++
++def turn_end_checkpoint_enabled() -> bool:
++    return os.environ.get("HERMES_SESSION_CHECKPOINT_TURN_END", "1").strip().lower() not in (
++        "0", "false", "off", "no",
++    )
++
++
++def checkpoint_age_seconds(task_id: str, memory_root: Optional[Path] = None) -> Optional[float]:
++    """现有 checkpoint 的年龄（秒）；文件缺席/不可读返回 None。"""
++    path = checkpoints_dir(memory_root) / f"{task_id}.md"
++    try:
++        return max(0.0, time.time() - path.stat().st_mtime)
++    except OSError:
++        return None
++
++
++def maybe_write_turn_end_checkpoint(
++    task_id: str,
++    generation: int,
++    *,
++    interrupted: bool = False,
++    final_response: str = "",
++    call_fn: Optional[Callable[[str, str], str]] = None,
++    memory_root: Optional[Path] = None,
++) -> Optional[Path]:
++    """轮终写 checkpoint（P4）：首次立即写；正常轮终 10 分钟节流；中断绕过节流。
++
++    只做状态面（不改任务状态/不派发 next）；写手故障走 write_checkpoint 兜底，
++    绝不阻断收尾链。返回写入路径或 None（关闭/节流/失败）。
++    """
++    if not checkpoint_enabled() or not turn_end_checkpoint_enabled() or not task_id:
++        return None
++    if not interrupted:
++        age = checkpoint_age_seconds(task_id, memory_root)
++        if age is not None and age < TURN_END_THROTTLE_SECONDS:
++            return None
++    reason = "interrupted" if interrupted else "turn_end"
++    digest = (final_response or "").strip()
++    if not digest:
++        digest = "(回合在最终回复前结束/中断)" if interrupted else "(回合无最终回复文本)"
++    return write_checkpoint(
++        task_id,
++        generation,
++        reason=reason,
++        goal_hint=f"kanban task {task_id}",
++        trajectory_digest=digest[:1200],
++        call_fn=call_fn,
++        memory_root=memory_root,
++    )
++
++
+ def checkpoints_dir(memory_root: Optional[Path] = None) -> Path:
+     if memory_root is not None:
+         return Path(memory_root) / "checkpoints"
+diff --git a/agent/turn_finalizer.py b/agent/turn_finalizer.py
+--- a/agent/turn_finalizer.py
++++ b/agent/turn_finalizer.py
+@@ -175,9 +175,11 @@
+     # dispatcher-owned worker owns the task: an in-process delegate_task child or cron run
+     # inherits ``HERMES_KANBAN_TASK`` via os.environ but exhausting ITS budget must not
+     # close the parent's run and release its claim (#112817).
++    _kanban_task_env = os.environ.get("HERMES_KANBAN_TASK")
++    _kanban_worker = bool(_kanban_task_env) and is_dispatcher_owned_worker_context()
+     _kanban_task = (
+-        os.environ.get("HERMES_KANBAN_TASK")
+-        if budget_exhausted and is_dispatcher_owned_worker_context() else None
++        _kanban_task_env
++        if budget_exhausted and _kanban_worker else None
+     )
+     # If running as a kanban worker, signal the dispatcher that the worker could not complete (rather than
+     # treating it as a protocol violation). This applies whether the user-facing fallback came from the
+@@ -206,6 +208,21 @@
+             )
+         except Exception:  # noqa: BLE001
+             logger.debug("session-checkpoint: budget-exhausted write skipped", exc_info=True)
++    # Always-on Agents P4（2026-11-16）：非预算触顶的 kanban worker 轮终也落进度快照——
++    # 正常轮终 10 分钟节流、中断绕过节流。任务在任何时刻都有一份 ≤800 字符进度文档，
++    # 新 Run 读它续跑而非全量重推理（文章第四类记忆）。
++    if _kanban_worker and not budget_exhausted:
++        try:
++            from agent.session_checkpoint import default_call_fn, maybe_write_turn_end_checkpoint
++
++            maybe_write_turn_end_checkpoint(
++                _kanban_task_env, api_call_count,
++                interrupted=bool(interrupted),
++                final_response=str(getattr(final_response, "content", "") or ""),
++                call_fn=default_call_fn,
++            )
++        except Exception:  # noqa: BLE001 - 写手故障不阻断收尾链
++            logger.debug("session-checkpoint: turn-end write skipped", exc_info=True)
+     return final_response, _turn_exit_reason, preserved_verification_fallback, interrupted
+ 
+ 
