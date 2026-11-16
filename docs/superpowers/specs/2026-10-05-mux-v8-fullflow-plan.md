@@ -3011,5 +3011,5 @@ run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能�
 4. **LoopForge 完成判读口径**：graph 面 archived 不算成功（DONE_STATUSES 收窄）、DryRun 仅显式 shadow 可注入、不可执行节点 422 稳定码、pinned run 缺快照 fail-closed；RunSpawner/ShadowRunner 维持 legacy-unpinned 兼容态。run31 缺省 preset 派发（§5.14 第 6 条），判读遇 409/422 稳定码按新语义解读。
 5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——开跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
 6. **studio preload 安全加固入仓**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，入仓后 digest 变化由 N31-4 重烧覆盖。
-7. **数字总账 §C 随批对齐**（v0.8.21／3.18.2／v1.0.16 族，核实日 2026-11-17）＋VENDOR.md zcode 台账行补正（merge 撤出漏入第四次清偿）——数字滞后是设计复盘「补账抬位」的载体面清偿。
+7. **数字总账 §C 随批进位**（v0.8.21／3.18.2／v1.0.16 族，核实日 2026-11-17）＋VENDOR.md zcode 台账行补正（merge 撤出漏入第四次清偿）——数字滞后是设计复盘「补账抬位」的载体面清偿。
 8. **N31 开跑门衔接**：N31-4（重烧收据 verify-latest pass，WAIVED 不认跨 digest）＋N31-5（开跑窗 09:00-11:00）为 run31 开跑硬门；N31-1/2/3 为终局回写项（N31-2a 已修族 run31 验证归零、N31-3 任务书警告 4/4 验证），不阻塞开跑。
