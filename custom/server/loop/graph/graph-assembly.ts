@@ -161,8 +161,38 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     }
   }
 
+  // 快照 loader 延迟读取两个 runtime：graphService 先于 runtime 构造，调用发生在装配完成后。
+  let specRuntime: CustomSpecRuntime | null = null
+  let directorRuntimeFactory: ((token?: string) => CustomSpecRuntime) | null = null
   const graphService = new GraphService({
     eventLog,
+    loadRunDefinition: async (runId, context) => {
+      const stored = await eventLog.getRunSpec(runId)
+      if (!stored) return null
+      let runtime: CustomSpecRuntime | null
+      if (stored.runtimeKind === 'director') {
+        // Director 每次恢复都使用当前请求 JWT 新建独立 registry，永不回落 editor/DryRun。
+        if (!context.authToken?.trim()) throw new Error('current_jwt_required')
+        runtime = directorRuntimeFactory?.(context.authToken) ?? null
+      } else {
+        runtime = specRuntime
+      }
+      if (!runtime) throw new Error(`graph_runtime_unavailable: ${stored.runtimeKind}`)
+      const def = runtime.hydrate(structuredClone(stored.spec))
+      return {
+        def,
+        snapshot: {
+          specId: stored.specId,
+          revision: null,
+          draftVersion: stored.draftVersion,
+          runtimeKind: stored.runtimeKind,
+          executionMode: stored.executionMode,
+          contentHash: stored.contentHash,
+          createdAt: stored.createdAt,
+          createdBy: stored.createdBy,
+        },
+      }
+    },
     deps: {
       // loop.* 桥接事件分流：投影进 loop 事件存储 + loop socket 房间；graph.* 原样留给订阅方
       emitEvent: (e) => {
@@ -343,7 +373,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     setCapabilitiesProvider((assignee) => (assignee ? (table[assignee] as never) : undefined))
   } catch { /* 注册表面不可用→合成层空转，模板地板兜底 */ }
   })()
-  const specRuntime = mode === 'on' || mode === 'shadow'
+  specRuntime = mode === 'on' || mode === 'shadow'
     ? new CustomSpecRuntime({
         specStore,
         graphService,
@@ -379,7 +409,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   // 每次起跑按请求 JWT 构造真实 kanban 桥；无 token 保持 unavailable，不得回退 DryRun。
   const directorKanbanBase = process.env.GRAPH_KANBAN_BASE?.trim()
     || `http://127.0.0.1:${process.env.PORT?.trim() || '8647'}`
-  const directorRuntimeFactory = (token?: string) => {
+  directorRuntimeFactory = (token?: string) => {
     const registry = createSpecRuntimeRegistry()
     const authToken = token?.trim()
     const hasRealKanbanBridge = Boolean(authToken)

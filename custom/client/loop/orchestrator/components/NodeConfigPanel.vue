@@ -8,6 +8,7 @@
 import { nextTick, ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { CanvasNode } from '../adapters/editor'
+import { useOrchestratorText } from '../i18n'
 
 const props = defineProps<{
   node: CanvasNode | null
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const executionText = useOrchestratorText()
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '')
 const num = (v: unknown, fallback: number): number =>
@@ -307,15 +309,16 @@ const nodeName = (type: string): string => t(`ia2.orchestrate.editor.node.${type
         {{ t('ia2.orchestrate.editor.config.cfg.command') }}
         <input v-model="command" data-cfg-command class="ncp__input">
       </label>
-      <p class="ncp__hint">{{ t('ia2.orchestrate.editor.config.cfg.gateHint') }}</p>
+      <p class="ncp__hint">{{ executionText.gateHint }}</p>
     </template>
 
-    <!-- agent：占位 -->
+    <!-- agent：本批无执行能力，明确拒绝而非假装已派发 -->
     <template v-else-if="props.node.type === 'agent'">
       <label class="ncp__field">
         {{ t('ia2.orchestrate.editor.config.cfg.channel') }}
         <input v-model="channel" data-cfg-channel class="ncp__input" placeholder="agentRequest">
       </label>
+      <p class="ncp__hint">{{ executionText.agentHint }}</p>
     </template>
 
     <button class="ncp__remove" data-remove-node @click="emit('remove', props.node.id)">

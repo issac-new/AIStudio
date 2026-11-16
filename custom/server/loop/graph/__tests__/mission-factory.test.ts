@@ -40,14 +40,35 @@ function handlerOf(router: any, path: string, method: string): (ctx: any) => Pro
 
 const run = (status: string) => ({ runId: 'r1', graphId: 'g1', instance: { status, updatedAt: '2026-10-10T00:00:00Z' } })
 
+/** 成功沉淀必须来自 pinned run；无快照 legacy 的拒绝契约由 graph-rest-snapshot.test.ts 承担。 */
+const pinnedRun = (status: string) => ({
+  ...run(status),
+  instance: {
+    ...run(status).instance,
+    specSource: 'run-snapshot',
+    specSnapshot: {
+      specId: 'g1', revision: null, draftVersion: 1, runtimeKind: 'editor',
+      executionMode: 'production', contentHash: 'mission-test-hash',
+      createdAt: '2026-10-10T00:00:00Z',
+    },
+  },
+})
+const pinnedEventLog = {
+  getRunSpec: async () => ({
+    runId: 'r1', specId: 'g1', revision: null, draftVersion: 1,
+    runtimeKind: 'editor', executionMode: 'production', contentHash: 'mission-test-hash',
+    createdAt: '2026-10-10T00:00:00Z', spec: baseSpec('g1'),
+  }),
+}
+
 describe('任务工厂 deposit-template', () => {
   it('完成 run：模板落库（origin=factory+溯源）、台账行追加、registered=true', async () => {
     const { specs, specStore } = stubStores()
     specs.set('g1', baseSpec('g1'))
     const rows: string[][] = []
     const router: any = createGraphRunRouter({
-      graphService: { getRun: () => run('completed') } as any,
-      eventLog: {} as any,
+      graphService: { getRun: () => pinnedRun('completed') } as any,
+      eventLog: pinnedEventLog as any,
       specStore,
       missionRegistry: { appendRow: async (row, message) => { rows.push(row); expect(message).toContain('r1') } },
     })
@@ -94,7 +115,7 @@ describe('任务工厂 deposit-template', () => {
     const { specs, specStore } = stubStores()
     specs.set('g1', baseSpec('g1'))
     const router: any = createGraphRunRouter({
-      graphService: { getRun: () => run('completed') } as any, eventLog: {} as any, specStore,
+      graphService: { getRun: () => pinnedRun('completed') } as any, eventLog: pinnedEventLog as any, specStore,
       missionRegistry: { appendRow: async () => { throw new Error('git 不可用') } },
     })
     const handler = handlerOf(router, '/api/graph/runs/:id/deposit-template', 'POST')

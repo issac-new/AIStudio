@@ -8,8 +8,9 @@
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { promises as fs } from 'fs'
-import type { GraphService } from './graph-service'
+import type { GraphDefinitionContext, GraphService } from './graph-service'
 import type { EventLogStore, GraphLogEvent } from './event-log-store'
+import type { StoredGraphRunSpec } from './run-spec-snapshot'
 import type { RunSpawner } from './run-spawner'
 import { validateGraphSpec, type GraphSpec } from './graph-spec'
 import { appendContractsById } from './phase-nodes'
@@ -138,6 +139,61 @@ function approvalActor(ctx: Context): string | null {
   }
 }
 
+/** 当前请求身份只作本次定义解析的调用上下文；不得写入 run、事件或 checkpoint。 */
+function requestDefinitionContext(ctx: Context): GraphDefinitionContext {
+  const user = (ctx.state as { user?: { username?: unknown; id?: unknown } } | undefined)?.user
+  const actor = typeof user?.username === 'string' && user.username.trim()
+    ? user.username.trim()
+    : typeof user?.id === 'string' && user.id.trim() ? user.id.trim() : undefined
+  const authorization = String(ctx.headers?.authorization ?? '')
+  const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : ''
+  return {
+    ...(actor !== undefined ? { actor } : {}),
+    ...(bearer ? { authToken: bearer } : {}),
+  }
+}
+
+/** Director 必须同时具有上游认证主体与当前 Bearer；只有头而没有 ctx.state.user 视为无效 JWT。 */
+function directorDefinitionContext(ctx: Context): GraphDefinitionContext | null {
+  const context = requestDefinitionContext(ctx)
+  if (!context.actor || !context.authToken) {
+    ctx.status = 401
+    ctx.body = { error: 'Director 操作需要当前有效登录 JWT', code: 'current_jwt_required' }
+    return null
+  }
+  return context
+}
+
+function runDefinitionContext(
+  ctx: Context,
+  rec: NonNullable<ReturnType<GraphService['getRun']>>,
+): GraphDefinitionContext | null {
+  return rec.instance.specSnapshot?.runtimeKind === 'director'
+    ? directorDefinitionContext(ctx)
+    : requestDefinitionContext(ctx)
+}
+
+function snapshotMeta(row: StoredGraphRunSpec) {
+  return {
+    specId: row.specId,
+    revision: null,
+    draftVersion: row.draftVersion,
+    runtimeKind: row.runtimeKind,
+    executionMode: row.executionMode,
+    contentHash: row.contentHash,
+    createdAt: row.createdAt,
+    createdBy: row.createdBy,
+  }
+}
+
+function snapshotMissing(ctx: Context, runId: string): void {
+  ctx.status = 409
+  ctx.body = {
+    error: `run_spec_snapshot_missing: ${runId}`,
+    code: 'run_spec_snapshot_missing',
+  }
+}
+
 /** 台账 #11（顺延 P4 清偿）：旧 JSON 文件灌入的完成标记 id（specs 表内保留行，
  *  不进 GraphSpecStore 内存表 / REST 列表）。灌入中途崩溃的半态 = 表有部分行而无标记——
  *  重载时逐 spec 先查 getSpec 已存在则跳过（重启续跑语义），补落剩余后写标记；
@@ -236,13 +292,25 @@ export interface GraphRestDeps {
   spawner?: RunSpawner | null
   specStore?: GraphSpecStore | null
   /** P4：自建 spec 起跑器（编辑器"试跑"链路；缺省时 specs/:id/runs 返回 501） */
-  specRuntime?: { startRun(specId: string, initialState?: unknown): Promise<{ runId: string; instance: unknown }> } | null
+  specRuntime?: {
+    startRun(
+      specId: string,
+      initialState?: unknown,
+      context?: GraphDefinitionContext,
+    ): Promise<{ runId: string; instance: unknown }>
+  } | null
   /** 任务工厂（2026-10-10）：模板台账追加入口（治理注册表 mission-templates，保存即提交）。
    *  缺省时 deposit 仍存 spec，仅跳过台账登记（响应 registered=false 如实告示）。 */
   missionRegistry?: { appendRow(row: string[], message: string, actor?: string): Promise<void> } | null
   /** 产品内导演：按请求 JWT 构造独立 spec runtime（真实 kanban 桥），
    *  不依赖 GRAPH_ENGINE=on 的全局调度接管。缺省时导演 start 返回 501。 */
-  directorRuntimeFactory?: ((token?: string) => { startRun(specId: string, initialState?: unknown): Promise<{ runId: string; instance: unknown }> } | null) | null
+  directorRuntimeFactory?: ((token?: string) => {
+    startRun(
+      specId: string,
+      initialState?: unknown,
+      context?: GraphDefinitionContext,
+    ): Promise<{ runId: string; instance: unknown }>
+  } | null) | null
 }
 
 export function createGraphRunRouter(deps: GraphRestDeps): Router {
@@ -263,7 +331,17 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
   router.get('/api/graph/runs/:id', async (ctx) => {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
     const rec = deps.graphService.getRun(ctx.params.id)
-    if (rec) { ctx.body = { runId: ctx.params.id, graphId: rec.graphId, instance: rec.instance }; return }
+    if (rec) {
+      const pinned = rec.instance.specSource === 'run-snapshot'
+      ctx.body = {
+        runId: ctx.params.id,
+        graphId: rec.graphId,
+        instance: rec.instance,
+        specSnapshot: pinned ? rec.instance.specSnapshot ?? null : null,
+        specSource: pinned ? 'run-snapshot' : 'legacy-current-draft',
+      }
+      return
+    }
     // 外部源 run（sim-* 等：无内存实例、只有事件骨架）：按事件流回放骨架应答，
     // 不再 404——「列表有、详情 404」半截态根治（backlog②；列表本就由事件日志派生）。
     // 前端 RunDetailView 对 graphDefId 缺席有空图兜底（specMissing），时间轴直接吃事件。
@@ -271,6 +349,8 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (!events.length) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
     // status/updatedAt 经 summarizeExternalRun 与列表同源（Task 6：两端零分裂）
     const summary = summarizeExternalRun(ctx.params.id, events, events[0].graphId)
+    const started = events.find(event => event.kind === 'run.started')
+    const pinned = started?.payload.specSource === 'run-snapshot'
     ctx.body = {
       runId: summary.runId,
       graphId: summary.graphId,
@@ -281,6 +361,8 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
         external: true,
         eventCount: events.length,
       },
+      specSnapshot: pinned ? started?.payload.specSnapshot ?? null : null,
+      specSource: pinned ? 'run-snapshot' : 'legacy-current-draft',
     }
   })
 
@@ -294,12 +376,15 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     const needsHumanActor = isDecisionResume(body.interruptId, body.value)
     const authenticatedUsername = needsHumanActor ? approvalActor(ctx) : undefined
     if (needsHumanActor && !authenticatedUsername) return
+    const rec = deps.graphService.getRun(ctx.params.id)
+    const definitionContext = rec ? runDefinitionContext(ctx, rec) : requestDefinitionContext(ctx)
+    if (!definitionContext) return
     try {
       // 审批身份盖章：见 stampApproverIdentity 注释——决策者身份以认证主体为准
       const username = authenticatedUsername
         ?? (ctx.state as { user?: { username?: string } }).user?.username
       const value = username !== undefined ? stampApproverIdentity(body.value, username) : body.value
-      const instance = await deps.graphService.resumeRun(ctx.params.id, body.interruptId, value)
+      const instance = await deps.graphService.resumeRun(ctx.params.id, body.interruptId, value, definitionContext)
       // 导演台事件通知（2026-10-21）：批准/打回真实落痕到观察房间；未配置跳过。
       const decisionText = String((value as { decision?: string } | null)?.decision ?? body.value ?? '')
       const kind = /reject|false|deny|打回/i.test(decisionText) ? 'gate-rejected' : 'gate-approved'
@@ -365,14 +450,28 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     }
     const rec = deps.graphService.getRun(ctx.params.id)
     if (!rec) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
-    const spec = deps.specStore?.get(rec.graphId) ?? null
+    const pinned = rec.instance.specSource === 'run-snapshot'
+    let spec: GraphSpec | null = null
+    let specSnapshot: ReturnType<typeof snapshotMeta> | null = null
+    if (pinned) {
+      const stored = await deps.eventLog.getRunSpec(ctx.params.id)
+      if (!stored) { snapshotMissing(ctx, ctx.params.id); return }
+      spec = stored.spec
+      specSnapshot = snapshotMeta(stored)
+    } else {
+      // 旧 run 没有起跑快照：保留当前草稿导出的兼容面，但显式标注非 pinned。
+      spec = deps.specStore?.get(rec.graphId) ?? null
+    }
     const events = await deps.eventLog.query(ctx.params.id, { limit })
     const eventsTotal = await deps.eventLog.count(ctx.params.id)
     ctx.set('Content-Disposition', `attachment; filename=run-${ctx.params.id}.json`)
     ctx.type = 'application/json'
     ctx.body = {
       run: { runId: rec.runId, graphId: rec.graphId, instance: rec.instance },
-      spec, events,
+      spec,
+      specSnapshot,
+      specSource: pinned ? 'run-snapshot' : 'legacy-current-draft',
+      events,
       eventsTotal, eventsTruncated: eventsTotal > events.length,
     }
   })
@@ -394,28 +493,28 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     const note = typeof body?.note === 'string' ? body.note.trim().slice(0, 200) : ''
 
     const rec = deps.graphService.getRun(ctx.params.id)
-    let sourceSpec: GraphSpec | null = null
     let status: string | null = null
+    let specSource: 'run-snapshot' | 'legacy-current-draft' = 'legacy-current-draft'
     if (rec) {
       status = rec.instance.status ?? null
-      sourceSpec = deps.specStore.get(rec.graphId) ?? null
+      if (rec.instance.specSource === 'run-snapshot') specSource = 'run-snapshot'
     } else {
-      // 外部源 run（sim-*）：事件流推导状态；spec 以首事件 graphId 回查
+      // 外部源 run（sim-*）：事件流推导状态；只有显式 pinned 起跑事件才允许读快照沉淀。
       const events = await deps.eventLog.query(ctx.params.id, { limit: 50 })
       if (events.length === 0) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
       status = externalRunStatus(events)
-      sourceSpec = deps.specStore.get(events[0].graphId) ?? null
+      const started = events.find(event => event.kind === 'run.started')
+      if (started?.payload.specSource === 'run-snapshot') specSource = 'run-snapshot'
     }
     if (!status || status !== 'completed') {
       ctx.status = 409
       ctx.body = { error: `只有已完成的 run 才能沉淀为模板（当前状态：${status ?? 'unknown'}）` }
       return
     }
-    if (!sourceSpec) {
-      ctx.status = 409
-      ctx.body = { error: 'Run 对应的图规格不存在（specs 表无此 id），无法沉淀' }
-      return
-    }
+    if (specSource !== 'run-snapshot') { snapshotMissing(ctx, ctx.params.id); return }
+    const stored = await deps.eventLog.getRunSpec(ctx.params.id)
+    if (!stored) { snapshotMissing(ctx, ctx.params.id); return }
+    const sourceSpec = stored.spec
 
     const username = (ctx.state as { user?: { username?: string } }).user?.username
     const depositedAt = new Date().toISOString()
@@ -519,7 +618,11 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid spec id' }; return }
     if (!deps.specRuntime) { ctx.status = 501; ctx.body = { error: 'Spec runtime not configured (GRAPH_ENGINE=on required)' }; return }
     try {
-      const { runId, instance } = await deps.specRuntime.startRun(ctx.params.id)
+      const { runId, instance } = await deps.specRuntime.startRun(
+        ctx.params.id,
+        undefined,
+        requestDefinitionContext(ctx),
+      )
       // 任务工厂复用计数：命中 factory 模板起跑即 +1（best-effort——计数失败不影响已起跑的 run）
       try {
         const spec = deps.specStore?.get(ctx.params.id)
@@ -620,16 +723,15 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (parsed.ok === false) { ctx.status = 400; ctx.body = { error: parsed.error }; return }
     if (!deps.specStore) { ctx.status = 501; ctx.body = { error: 'Spec store not configured' }; return }
     if (!deps.directorRuntimeFactory) { ctx.status = 501; ctx.body = { error: 'Director runtime not configured' }; return }
-    const auth = String(ctx.headers.authorization ?? '')
-    const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
-    if (!token) { ctx.status = 401; ctx.body = { error: '导演启动需要登录 JWT' }; return }
-    const runtime = deps.directorRuntimeFactory(token)
+    const definitionContext = directorDefinitionContext(ctx)
+    if (!definitionContext) return
+    const runtime = deps.directorRuntimeFactory(definitionContext.authToken)
     if (!runtime) { ctx.status = 501; ctx.body = { error: 'Director runtime not configured' }; return }
     try {
-      const username = (ctx.state as { user?: { username?: string } }).user?.username
+      const username = definitionContext.actor
       const spec = compiledDirectorSpec(parsed.value, username)
       await deps.specStore.save(spec)
-      const { runId, instance } = await runtime.startRun(spec.id)
+      const { runId, instance } = await runtime.startRun(spec.id, undefined, definitionContext)
       // 导演台事件通知（2026-10-21）：启动事件落观察房间；未配置跳过。
       const notify = await notifyDirectorEvent('started', {
         runId,
@@ -648,8 +750,12 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     if (!ID_RE.test(ctx.params.id)) { ctx.status = 400; ctx.body = { error: 'Invalid run id' }; return }
     const rec = deps.graphService.getRun(ctx.params.id)
     if (!rec) { ctx.status = 404; ctx.body = { error: 'Run not found' }; return }
+    const definitionContext = runDefinitionContext(ctx, rec)
+    if (!definitionContext) return
     try {
-      const { instance } = await deps.graphService.startRun(rec.graphId, undefined, ctx.params.id)
+      const { instance } = await deps.graphService.startRun(rec.graphId, undefined, ctx.params.id, {
+        definitionContext,
+      })
       ctx.body = { runId: ctx.params.id, instance }
     } catch (err) {
       ctx.status = 409

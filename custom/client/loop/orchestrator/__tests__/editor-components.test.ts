@@ -351,6 +351,23 @@ describe('NodeConfigPanel — 表单镜像', () => {
     expect(panel.text()).toContain('ia2.orchestrate.editor.config.cfg.fanoutHint')
   })
 
+  it('Agent/gate 如实说明执行边界，不暗示 Agent 已派发或 meta 可配命令', async () => {
+    const { wrapper } = await mountEditor()
+    await wrapper.find('[data-editor-name]').setValue('my-graph')
+    await addViaPalette(wrapper, 'agent')
+    await wrapper.find('[data-node-id="agent-1"]').trigger('click')
+    const agentPanel = wrapper.find('[data-config-panel]')
+    expect(agentPanel.text()).toContain('Agent 节点在本批次不可执行')
+    expect(agentPanel.text()).not.toContain('已派发')
+
+    await addViaPalette(wrapper, 'gate')
+    await wrapper.find('[data-node-id="gate-1"]').trigger('click')
+    const gatePanel = wrapper.find('[data-config-panel]')
+    expect(gatePanel.text()).toContain('真实服务端受信目录')
+    expect(gatePanel.text()).toContain('sandbox')
+    expect(gatePanel.text()).not.toContain('spec.meta.gateCommands')
+  })
+
   it('converge 表单改 expect/pick → config 上抛（joinMode 由序列化补）', async () => {
     const { wrapper } = await mountEditor()
     await wrapper.find('[data-editor-name]').setValue('my-graph')
