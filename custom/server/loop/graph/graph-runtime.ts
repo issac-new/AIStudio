@@ -30,7 +30,7 @@ import type {
   GraphDef, GraphInstance, NodeDef, NodeResult, StateValues, StateUpdate,
   GraphEvent, GraphDeps, NodeContext, GraphRunVerification,
 } from './types'
-import { NodeExecutionError } from './types'
+import { NODE_EVIDENCE_LIMITS, NodeExecutionError } from './types'
 import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
 import { evaluatePredicate } from './predicate'
@@ -93,13 +93,43 @@ const NODE_EVIDENCE_KEYS = [
   'stdoutTruncated', 'stderrTruncated',
 ] as const
 
+function boundedArgv(value: unknown[]): string[] {
+  const out: string[] = []
+  let total = 0
+  for (const item of value.slice(0, NODE_EVIDENCE_LIMITS.argvItems)) {
+    if (typeof item !== 'string') continue
+    const remaining = NODE_EVIDENCE_LIMITS.argvTotal - total
+    if (remaining <= 0) break
+    const arg = item.slice(0, Math.min(NODE_EVIDENCE_LIMITS.argvElement, remaining))
+    out.push(arg)
+    total += arg.length
+  }
+  return out
+}
+
 /** 事件只接收 gate 白名单证据；env/token/detail 等字段即使误入 NodeResult 也不外发。 */
 function nodeEvidence(value: unknown): Record<string, unknown> | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
   const source = value as Record<string, unknown>
   const out: Record<string, unknown> = {}
   for (const key of NODE_EVIDENCE_KEYS) {
-    if (Object.hasOwn(source, key)) out[key] = source[key]
+    if (!Object.hasOwn(source, key)) continue
+    const item = source[key]
+    if ((key === 'command' || key === 'cwd') && typeof item === 'string') {
+      out[key] = item.slice(0, NODE_EVIDENCE_LIMITS[key])
+    } else if (key === 'argv' && Array.isArray(item)) {
+      out[key] = boundedArgv(item)
+    } else if ((key === 'stdout' || key === 'stderr') && typeof item === 'string') {
+      out[key] = item.slice(-NODE_EVIDENCE_LIMITS.output)
+    } else {
+      out[key] = item
+    }
+  }
+  for (const key of ['stdout', 'stderr'] as const) {
+    const item = source[key]
+    if (typeof item === 'string' && item.length > NODE_EVIDENCE_LIMITS.output) {
+      out[`${key}Truncated`] = true
+    }
   }
   return Object.keys(out).length > 0 ? out : undefined
 }
@@ -691,7 +721,7 @@ export class GraphRuntime {
       // 各子任务用独立 ChannelStore 派生，完成后统一 apply 回主 store；
       // 子任务补发 node-complete / node-error（F5）
       if (sendTasks.length > 0) {
-        const sendUpdates = await Promise.all(sendTasks.map(async (task) => {
+        const sendResults = await Promise.all(sendTasks.map(async (task) => {
           const targetNode = graphDef.nodes.get(task.node)
           if (!targetNode) return undefined
           const taskStore = new ChannelStore(graphDef.stateSchema, { ...store.getValues(), ...task.state })
@@ -715,7 +745,8 @@ export class GraphRuntime {
               ...(evidence ? { evidence } : {}),
               ts: new Date().toISOString(),
             })
-            return undefined
+            // 普通 Send 失败维持忽略语义；gate 失败必须回到主循环 fatal 路径。
+            return isGateExecutionError(taskResult) ? taskResult : undefined
           }
           const eventResult = resultForEvent(taskResult)
           this.emitEvent({
@@ -727,8 +758,24 @@ export class GraphRuntime {
           })
           return taskResult.update
         }))
-        for (const update of sendUpdates) {
-          if (update) store.apply(update)
+        const gateFailures = sendResults.filter((result): result is NodeExecutionError =>
+          result instanceof NodeExecutionError && isGateExecutionError(result))
+        if (gateFailures.length > 0) {
+          nodeOutcomes.failed += gateFailures.length
+          instance.status = 'failed'
+          this.emitEvent({
+            type: 'graph.failed',
+            graphId,
+            threadId,
+            error: gateFailures.map(error => `Send gate: ${error.message}`).join('; '),
+            finishReason: 'node-error',
+            verification: verificationOf(),
+            ts: new Date().toISOString(),
+          })
+          return instance
+        }
+        for (const update of sendResults) {
+          if (update && !(update instanceof Error)) store.apply(update)
         }
       }
 

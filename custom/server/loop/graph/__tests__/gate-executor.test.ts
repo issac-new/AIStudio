@@ -246,12 +246,12 @@ describe('executeGraphGate 路径边界', () => {
 })
 
 describe('gate 证据、GraphRuntime 终止与禁止绕行', () => {
-  function graph(overrides: Partial<NodeDef> = {}, log?: InMemoryEventLogStore) {
+  function graph(overrides: Partial<NodeDef> = {}, log?: InMemoryEventLogStore, command = 'test') {
     const events: GraphEvent[] = []
     let nextRuns = 0
     const gate: NodeDef = {
       id: 'g', type: 'function', label: 'g', timeout: graphGateNodeTimeoutMs(entry),
-      execute: async (_state, ctx) => executeGraphGate({ id: 'g', command: 'test' }, ctx, deps),
+      execute: async (_state, ctx) => executeGraphGate({ id: 'g', command }, ctx, deps),
       ...overrides,
     }
     const def: GraphDef = new GraphBuilder('graph', 'Graph')
@@ -302,6 +302,56 @@ describe('gate 证据、GraphRuntime 终止与禁止绕行', () => {
     const persisted = entries.find(e => e.kind === 'node.completed')
     expect(persisted?.payload.evidence).toMatchObject({ status: 'ok', exitCode: 0 })
     expect(JSON.stringify(persisted?.payload)).not.toContain('gate-secret-value')
+  })
+
+  it('秘密值位于 cwd 时实时事件与持久化日志都只保留脱敏路径', async () => {
+    const secretCwd = join(root, 'gate-secret-value', 'project')
+    mkdirSync(secretCwd, { recursive: true })
+    deps.catalog = [{ ...entry, cwd: secretCwd }]
+    const log = new InMemoryEventLogStore()
+    const { def, events, runtime } = graph({}, log)
+    const instance = await runtime.start(def, 'run-1')
+    expect(instance.status).toBe('completed')
+
+    const complete = events.find(e => e.type === 'graph.node-complete' && e.nodeId === 'g')
+    expect(complete?.type === 'graph.node-complete' ? complete.evidence?.cwd : '').toContain('<redacted>')
+    expect(JSON.stringify(events)).not.toContain('gate-secret-value')
+    const persisted = (await log.query('run-1')).find(e => e.kind === 'node.completed' && e.nodeId === 'g')
+    expect(JSON.stringify(persisted?.payload)).not.toContain('gate-secret-value')
+    expect(persisted?.payload.evidence).toMatchObject({ cwd: expect.stringContaining('<redacted>') })
+  })
+
+  it('command/cwd/argv 在事件与日志中有固定字符和元素数上限', async () => {
+    const longCommand = 'c'.repeat(400)
+    const longCwd = join(root, ...Array.from({ length: 5 }, (_, i) => `${i}-${'d'.repeat(100)}`))
+    mkdirSync(longCwd, { recursive: true })
+    deps.catalog = [{
+      ...entry,
+      command: longCommand,
+      cwd: longCwd,
+      argv: ['/bin/echo', 'a'.repeat(900), ...Array.from({ length: 40 }, () => 'b'.repeat(200))],
+    }]
+    const log = new InMemoryEventLogStore()
+    const { def, events, runtime } = graph({}, log, longCommand)
+    const instance = await runtime.start(def, 'run-1')
+    expect(instance.status).toBe('completed')
+
+    const complete = events.find(e => e.type === 'graph.node-complete' && e.nodeId === 'g')
+    const evidence = complete?.type === 'graph.node-complete' ? complete.evidence : undefined
+    expect(String(evidence?.command)).toHaveLength(256)
+    expect(String(evidence?.cwd).length).toBeLessThanOrEqual(512)
+    expect((evidence?.argv as string[]).length).toBeLessThanOrEqual(64)
+    for (const arg of evidence?.argv as string[]) expect(arg.length).toBeLessThanOrEqual(512)
+    expect((evidence?.argv as string[]).join('').length).toBeLessThanOrEqual(4_096)
+
+    const persisted = (await log.query('run-1')).find(e => e.kind === 'node.completed' && e.nodeId === 'g')
+    expect(persisted?.payload.evidence).toEqual(evidence)
+    expect(String((persisted?.payload.evidence as Record<string, unknown>).command)).toHaveLength(256)
+    expect(String((persisted?.payload.evidence as Record<string, unknown>).cwd).length).toBeLessThanOrEqual(512)
+
+    deps.catalog = [{ ...entry, argv: ['/bin/echo', ...Array.from({ length: 80 }, () => 'x')] }]
+    const manyArgs = await executeGraphGate({ id: 'g', command: 'test' }, context(), deps)
+    expect((manyArgs.evidence?.argv as string[]).length).toBeLessThanOrEqual(64)
   })
 
   it('真实非零退出后下一节点未执行，失败事件带 exitCode 证据', async () => {
@@ -369,5 +419,62 @@ describe('gate 证据、GraphRuntime 终止与禁止绕行', () => {
     const lease = listLeases()[0]
     expect(lease.expiresAt - lease.createdAt).toBeGreaterThanOrEqual(120_000)
     expect(graphGateNodeTimeoutMs(entry)).toBeGreaterThan(120_000)
+  })
+})
+
+describe('Send 子任务 gate 失败终止语义', () => {
+  function sendGraph(target: NodeDef) {
+    const events: GraphEvent[] = []
+    let afterRuns = 0
+    const def = new GraphBuilder('send-graph', 'Send Graph')
+      .addChannel('afterRuns', { reducer: reducers.overwrite(), default: 0 })
+      .addNode(fnNode('dispatch', async () => ({ send: [{ node: target.id, state: {} }] })))
+      .addNode(target)
+      .addNode(fnNode('after', async () => {
+        afterRuns += 1
+        return { update: { afterRuns: 1 } }
+      }))
+      .setEntry('dispatch')
+      .addEdge('dispatch', 'after')
+      .build()
+    const runtime = new GraphRuntime({ emitEvent: event => events.push(event) })
+    return { def, events, runtime, afterRuns: () => afterRuns }
+  }
+
+  function gateTarget(): NodeDef {
+    return {
+      id: 'g', type: 'function', label: 'g', timeout: graphGateNodeTimeoutMs(entry),
+      execute: async (_state, ctx) => executeGraphGate({ id: 'g', command: 'test' }, ctx, deps),
+    }
+  }
+
+  it.each([
+    ['非零 gate', ok({ exitCode: 1, stdout: '', stderr: 'failed' }), 'ok', 1],
+    ['timeout gate', ok({ status: 'timeout', exitCode: null, stdout: '', stderr: '' }), 'timeout', null],
+  ])('%s 必须终止 run，后续节点不得执行', async (_name, result, status, exitCode) => {
+    runSandboxedMock.mockResolvedValue(result)
+    const { def, events, runtime, afterRuns } = sendGraph(gateTarget())
+    const instance = await runtime.start(def, 'run-1')
+    expect(instance.status).toBe('failed')
+    expect(afterRuns()).toBe(0)
+    expect(events.find(e => e.type === 'graph.node-error' && e.nodeId === 'g')).toMatchObject({
+      evidence: { status, exitCode },
+    })
+    expect(events.find(e => e.type === 'graph.failed')).toMatchObject({
+      finishReason: 'node-error', verification: { nodesFailed: 1 },
+    })
+  })
+
+  it('普通非 gate Send 失败仍保持既有忽略语义', async () => {
+    const ordinary: NodeDef = {
+      id: 'ordinary', type: 'function', label: 'ordinary',
+      execute: async () => { throw new Error('ordinary boom') },
+    }
+    const { def, events, runtime, afterRuns } = sendGraph(ordinary)
+    const instance = await runtime.start(def, 'run-1')
+    expect(instance.status).toBe('completed')
+    expect(afterRuns()).toBe(1)
+    expect(events.some(e => e.type === 'graph.node-error' && e.nodeId === 'ordinary')).toBe(true)
+    expect(events.some(e => e.type === 'graph.failed')).toBe(false)
   })
 })

@@ -6,7 +6,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path'
 import { detectSandboxSupport, runSandboxed, type SandboxRunOptions, type SandboxRunResult, type SandboxSupport } from '../../sandbox/exec-sandbox.ts'
 import { registerLease } from '../../sandbox/sandbox-lease'
 import { redactSensitive } from '../../toolcontract/contract'
-import { NodeExecutionError, type NodeContext, type NodeResult } from './types'
+import { NODE_EVIDENCE_LIMITS, NodeExecutionError, type NodeContext, type NodeResult } from './types'
 
 export type GateCommandEntry = {
   command: string
@@ -44,7 +44,7 @@ export interface GateExecutorDeps {
   now?: () => number
 }
 
-export const GATE_EVIDENCE_OUTPUT_LIMIT = 4_096
+export const GATE_EVIDENCE_OUTPUT_LIMIT = NODE_EVIDENCE_LIMITS.output
 export const GATE_NODE_TIMEOUT_GRACE_MS = 1_000
 const MAX_TIMER_MS = 2_147_483_647
 const SHELL_CONTROL = /["'`\\;&|<>$\n\r\0]/
@@ -151,16 +151,27 @@ function boundedOutput(
   }
 }
 
+function boundedText(value: string, limit: number): string {
+  return value.length > limit ? value.slice(0, limit) : value
+}
+
 function evidenceArgv(argv: readonly string[], secretValues: readonly string[]): string[] {
   const out: string[] = []
   let redactNext = false
-  for (const arg of argv) {
+  let total = 0
+  for (const arg of argv.slice(0, NODE_EVIDENCE_LIMITS.argvItems)) {
+    let text: string
     if (redactNext) {
-      out.push('<redacted>')
+      text = '<redacted>'
       redactNext = false
-      continue
+    } else {
+      text = redactText(arg, secretValues)
     }
-    out.push(redactText(arg, secretValues))
+    const remaining = NODE_EVIDENCE_LIMITS.argvTotal - total
+    if (remaining <= 0) break
+    const bounded = boundedText(boundedText(text, NODE_EVIDENCE_LIMITS.argvElement), remaining)
+    out.push(bounded)
+    total += bounded.length
     if (/^(?:--?)?(?:api[_-]?key|token|secret|password|authorization|cookie|credential|access[_-]?key)$/i.test(arg)) {
       redactNext = true
     }
@@ -272,9 +283,9 @@ export async function executeGraphGate(
   const stdout = boundedOutput(result.stdout, result.stdoutTruncated === true, secretValues)
   const stderr = boundedOutput(result.stderr, result.stderrTruncated === true, secretValues)
   const evidence: GateExecutionEvidence = {
-    command: redactText(entry.command, secretValues),
+    command: boundedText(redactText(entry.command, secretValues), NODE_EVIDENCE_LIMITS.command),
     argv: evidenceArgv(entry.argv, secretValues),
-    cwd,
+    cwd: boundedText(redactText(cwd, secretValues), NODE_EVIDENCE_LIMITS.cwd),
     backend: support.backend,
     leaseId,
     status,

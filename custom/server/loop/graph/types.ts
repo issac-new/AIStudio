@@ -121,6 +121,16 @@ export class NodeExecutionError extends Error {
   }
 }
 
+/** gate 构造证据与 GraphRuntime 事件出口共用的有界投影阈值（字符数/元素数）。 */
+export const NODE_EVIDENCE_LIMITS = {
+  command: 256,
+  cwd: 512,
+  argvElement: 512,
+  argvTotal: 4_096,
+  argvItems: 64,
+  output: 4_096,
+} as const
+
 export interface NodeResult {
   /** 状态部分更新（经 reducer 合并） */
   update?: StateUpdate
