@@ -1,5 +1,9 @@
 // Task 6：REST 快照投影、Director 当前请求身份与装配 loader 的注册表边界。
 import { describe, expect, it, vi } from 'vitest'
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import Koa from 'koa'
+import bodyParser from '@koa/bodyparser'
 import type { Router } from '@koa/router'
 import { createGraphRunRouter, GraphSpecStore } from '../graph-rest'
 import { GraphService, type GraphDefinitionContext } from '../graph-service'
@@ -14,6 +18,29 @@ import { createGraphAssembly, type GraphAssemblyOpts } from '../graph-assembly'
 import { registerSimulationNodeTypes } from '../../../graph/node-executors'
 import type { LoopStateStore } from '../../store/state-store'
 import type { TaskContract } from '../../types'
+
+const VENDOR_STUDIO = '../../../../../vendor/hermes-studio/packages/server/src/modules/studio'
+const DATABASE_MODULE = `${VENDOR_STUDIO}/infrastructure/database/index`
+const PROFILE_CONFIG_MODULE = `${VENDOR_STUDIO}/public/profile-config`
+
+/** 真实上游认证链使用内存账号库；token 由上游自己的签发函数生成，不在 Graph 层另造校验器。 */
+async function initVendorAuthChain() {
+  vi.resetModules()
+  vi.stubEnv('AUTH_JWT_SECRET', 'graph-rest-chain-secret')
+  const { DatabaseSync } = await import('node:sqlite')
+  const db = new DatabaseSync(':memory:')
+  vi.doMock(DATABASE_MODULE, () => ({
+    getDb: () => db,
+    getStoragePath: () => ':memory:',
+    isSqliteAvailable: () => true,
+  }))
+  vi.doMock(PROFILE_CONFIG_MODULE, () => ({ listProfileNamesFromDisk: () => ['default', 'alice'] }))
+  const schemas = await import(`${VENDOR_STUDIO}/infrastructure/database/schemas`)
+  schemas.initAllHermesTables()
+  const users = await import(`${VENDOR_STUDIO}/repositories/users-store`)
+  const auth = await import(`${VENDOR_STUDIO}/middleware/auth`)
+  return { db, users, auth }
+}
 
 function functionSpec(id: string, description = 'snapshot-v1'): GraphSpec {
   return {
@@ -234,7 +261,7 @@ describe('REST run 快照投影', () => {
 })
 
 describe('Director 当前请求身份', () => {
-  it('无/错 JWT 拒绝；resume/fork-start 每次传当前 actor/JWT，凭据不落响应或持久层', async () => {
+  it('缺少认证主体或 Bearer 拒绝；resume/fork-start 每次传当前 actor/JWT，凭据不落响应或持久层', async () => {
     vi.stubEnv('AISTUDIO_LOCAL_OPERATOR', '')
     const eventLog = new InMemoryEventLogStore()
     const specStore = new GraphSpecStore(eventLog)
@@ -259,18 +286,18 @@ describe('Director 当前请求身份', () => {
     const noJwt = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`,
       { interruptId, value: 'approved' })
     expect(noJwt.ctx.status).toBe(401)
-    const wrongJwt = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`,
-      { interruptId, value: 'approved' }, { headers: { authorization: 'Bearer wrong-jwt' } })
-    expect(wrongJwt.ctx.status).toBe(401)
+    const bearerWithoutActor = await invoke(router, 'post', `/api/graph/runs/${runId}/resume`,
+      { interruptId, value: 'approved' }, { headers: { authorization: 'Bearer bearer-without-actor' } })
+    expect(bearerWithoutActor.ctx.status).toBe(401)
     expect(contexts).toEqual([])
 
     const forked = await invoke(router, 'post', `/api/graph/runs/${runId}/fork`, {})
     const forkedId = forked.ctx.body.runId as string
     const noForkJwt = await invoke(router, 'post', `/api/graph/runs/${forkedId}/start`, {})
     expect(noForkJwt.ctx.status).toBe(401)
-    const wrongForkJwt = await invoke(router, 'post', `/api/graph/runs/${forkedId}/start`, {},
-      { headers: { authorization: 'Bearer wrong-fork-jwt' } })
-    expect(wrongForkJwt.ctx.status).toBe(401)
+    const forkBearerWithoutActor = await invoke(router, 'post', `/api/graph/runs/${forkedId}/start`, {},
+      { headers: { authorization: 'Bearer fork-bearer-without-actor' } })
+    expect(forkBearerWithoutActor.ctx.status).toBe(401)
 
     const forkStarted = await invoke(router, 'post', `/api/graph/runs/${forkedId}/start`, {}, {
       headers: { authorization: 'Bearer fork-start-jwt' },
@@ -310,6 +337,99 @@ describe('Director 当前请求身份', () => {
     expect(persistedAndResponses).not.toContain('authToken')
     expect(persistedAndResponses).not.toContain('Authorization')
     vi.unstubAllEnvs()
+  })
+
+  it('无内存 rec 时仍按持久化 Director 快照要求认证主体，非审批 resume 返回 401', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const spec = approvalSpec('director-missing-rec')
+    await eventLog.saveRunSpec({
+      runId: 'missing-director-rec', specId: spec.id, revision: null, draftVersion: spec.version,
+      runtimeKind: 'director', executionMode: 'production', contentHash: 'missing-rec-hash',
+      createdAt: '2026-11-16T00:00:00Z', spec,
+    })
+    const loader = vi.fn()
+    const graphService = new GraphService({ eventLog, loadRunDefinition: loader })
+    expect(graphService.getRun('missing-director-rec')).toBeNull()
+    const router = createGraphRunRouter({ graphService, eventLog })
+
+    const resumed = await invoke(router, 'post', '/api/graph/runs/missing-director-rec/resume',
+      { interruptId: 'director-resume', value: 'continue' },
+      { headers: { authorization: 'Bearer nonempty-without-actor' }, state: {} })
+
+    expect(resumed.ctx.status).toBe(401)
+    expect(resumed.ctx.body.code).toBe('current_jwt_required')
+    expect(loader).not.toHaveBeenCalled()
+  })
+
+  it('真实上游认证链拒绝错误签名/过期 token，即使预置 state.user；有效 token 才进入 resume', async () => {
+    const { db, users, auth } = await initVendorAuthChain()
+    let server: Server | undefined
+    try {
+      const user = users.createSuperAdmin('director-root', 'secret')!
+      const validToken = auth.signUserJwt(user, 'graph-rest-chain-secret')
+      const wrongSignatureToken = auth.signUserJwt(user, 'wrong-signing-secret')
+      const expiredToken = auth.signUserJwt(user, 'graph-rest-chain-secret', Date.now() - 60_000, -1)
+      const eventLog = new InMemoryEventLogStore()
+      const specStore = new GraphSpecStore(eventLog)
+      const spec = approvalSpec('director-real-auth-chain')
+      await specStore.save(spec)
+      const contexts: Array<{ runId: string; context: GraphDefinitionContext }> = []
+      const runtimeHolder: { current?: CustomSpecRuntime } = {}
+      const graphService = new GraphService({
+        eventLog,
+        loadRunDefinition: async (runId, context) => {
+          contexts.push({ runId, context: { ...context } })
+          const stored = await eventLog.getRunSpec(runId)
+          if (!stored) return null
+          return { def: runtimeHolder.current!.hydrate(stored.spec), snapshot: snapshotMeta(stored) }
+        },
+      })
+      runtimeHolder.current = runtimeFor('director', specStore, graphService)
+      const { runId } = await runtimeHolder.current.startRun(spec.id)
+      const router = createGraphRunRouter({ graphService, eventLog, specStore })
+      const app = new Koa()
+      app.use(bodyParser())
+      // 对抗性预置：即便路由前已有 user，上游也必须自行判 token，而不是被既有 user 欺骗。
+      app.use((ctx, next) => {
+        ctx.state.user = { id: user.id, username: user.username, role: user.role }
+        return next()
+      })
+      for (const middleware of auth.userAuthMiddleware) app.use(middleware)
+      app.use(router.routes())
+      server = createServer(app.callback())
+      await new Promise<void>(resolve => server!.listen(0, '127.0.0.1', resolve))
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+      const postResume = (token: string) => fetch(`${base}/api/graph/runs/${runId}/resume`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ interruptId: 'approval:approval@0', value: 'approved' }),
+      })
+
+      const wrongSignature = await postResume(wrongSignatureToken)
+      expect(wrongSignature.status).toBe(401)
+      expect(await wrongSignature.json()).toMatchObject({ error: 'Unauthorized' })
+      const expired = await postResume(expiredToken)
+      expect(expired.status).toBe(401)
+      expect(await expired.json()).toMatchObject({ error: 'Unauthorized' })
+      expect(contexts).toEqual([])
+
+      const valid = await postResume(validToken)
+      expect(valid.status).toBe(200)
+      const validBody = await valid.json() as { instance: { status: string } }
+      expect(validBody.instance.status).toBe('completed')
+      expect(contexts).toEqual([{
+        runId,
+        context: { actor: 'director-root', authToken: validToken },
+      }])
+      expect(JSON.stringify(validBody)).not.toContain(validToken)
+    } finally {
+      if (server) await new Promise<void>(resolve => server!.close(() => resolve()))
+      db.close()
+      vi.doUnmock(DATABASE_MODULE)
+      vi.doUnmock(PROFILE_CONFIG_MODULE)
+      vi.unstubAllEnvs()
+      vi.resetModules()
+    }
   })
 })
 
@@ -361,6 +481,13 @@ describe('装配 snapshot loader', () => {
         { interruptId: 'approval:approval@0', value: 'approved' },
         { state: { user: { username: 'editor-user', role: 'user' } } })
       expect(editorResume.ctx.status).toBe(200)
+      await expect(second.graphService.resumeRun(
+        directorRun.runId,
+        'approval:approval@0',
+        'approved',
+        { authToken: 'token-without-actor' },
+      )).rejects.toThrow('current_jwt_required')
+      expect(hydratedKinds).toEqual(['editor'])
       const directorResume = await invoke(second.router, 'post', `/api/graph/runs/${directorRun.runId}/resume`,
         { interruptId: 'approval:approval@0', value: 'approved' }, {
           headers: { authorization: 'Bearer director-current-jwt' },

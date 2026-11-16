@@ -172,7 +172,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       let runtime: CustomSpecRuntime | null
       if (stored.runtimeKind === 'director') {
         // Director 每次恢复都使用当前请求 JWT 新建独立 registry，永不回落 editor/DryRun。
-        if (!context.authToken?.trim()) throw new Error('current_jwt_required')
+        if (!context.actor?.trim() || !context.authToken?.trim()) throw new Error('current_jwt_required')
         runtime = directorRuntimeFactory?.(context.authToken) ?? null
       } else {
         runtime = specRuntime

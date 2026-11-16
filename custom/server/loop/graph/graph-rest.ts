@@ -173,6 +173,18 @@ function runDefinitionContext(
     : requestDefinitionContext(ctx)
 }
 
+/** 重启重建前的 rec 空窗也不能降级：runtimeKind 以持久化快照为准。 */
+async function missingRunDefinitionContext(
+  ctx: Context,
+  eventLog: EventLogStore,
+  runId: string,
+): Promise<GraphDefinitionContext | null> {
+  const stored = await eventLog.getRunSpec(runId)
+  return stored?.runtimeKind === 'director'
+    ? directorDefinitionContext(ctx)
+    : requestDefinitionContext(ctx)
+}
+
 function snapshotMeta(row: StoredGraphRunSpec) {
   return {
     specId: row.specId,
@@ -377,7 +389,9 @@ export function createGraphRunRouter(deps: GraphRestDeps): Router {
     const authenticatedUsername = needsHumanActor ? approvalActor(ctx) : undefined
     if (needsHumanActor && !authenticatedUsername) return
     const rec = deps.graphService.getRun(ctx.params.id)
-    const definitionContext = rec ? runDefinitionContext(ctx, rec) : requestDefinitionContext(ctx)
+    const definitionContext = rec
+      ? runDefinitionContext(ctx, rec)
+      : await missingRunDefinitionContext(ctx, deps.eventLog, ctx.params.id)
     if (!definitionContext) return
     try {
       // 审批身份盖章：见 stampApproverIdentity 注释——决策者身份以认证主体为准
