@@ -15,12 +15,21 @@ import { InMemoryEventLogStore } from '../event-log-store'
 import { GraphBuilder, fnNode } from '../graph-definition'
 import { reducers } from '../types'
 import { compileLoopToDef } from '../graph-compiler'
+import type { GraphSpec } from '../graph-spec'
 import { appendContractsById } from '../phase-nodes'
+// @ts-expect-error 本仓 harness 未开 allowImportingTsExtensions；显式 .ts 防止同名 CJS 镜像抢占（同 gate-executor 先例）。
+import { detectSandboxSupport } from '../../../sandbox/exec-sandbox.ts'
 import { BudgetGuard } from '../../engine/budget-guard'
 import type { Router } from '@koa/router'
 import type { LoopInstance, TaskContract, LoopEvent } from '../../types'
 import type { LoopStateStore } from '../../store/state-store'
 import type { GraphLogEvent } from '../event-log-store'
+
+// 保留真实路由行为，仅捕获装配依赖以直接验收 Director runtime；不断言 mock 本身。
+vi.mock('../graph-rest', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../graph-rest')>()
+  return { ...actual, createGraphRunRouter: vi.fn(actual.createGraphRunRouter) }
+})
 
 // ---------------------------------------------------------------------------
 // fixtures
@@ -93,6 +102,37 @@ function assemblyOpts(over: Partial<GraphAssemblyOpts> = {}): GraphAssemblyOpts 
     shadowEventLog: new InMemoryEventLogStore(),
     specStorePath: undefined,
     ...over,
+  }
+}
+
+function functionOnlySpec(id: string): GraphSpec {
+  return {
+    id, version: 1, origin: 'editor',
+    channels: {
+      result: { reducer: 'overwrite', default: '' },
+      stopMet: { reducer: 'overwrite', default: false },
+    },
+    nodes: [{ id: 'only', type: 'function', config: { set: { result: 'function-ok', stopMet: true } } }],
+    edges: [], entryNode: 'only',
+    endCondition: { op: 'truthy', path: 'stopMet' },
+    limits: { maxSteps: 4 },
+  }
+}
+
+function agentTaskSpec(id: string): GraphSpec {
+  return {
+    id, version: 1, origin: 'editor',
+    channels: {
+      agentRequest: { reducer: 'append', default: [] },
+      stopMet: { reducer: 'overwrite', default: false },
+    },
+    nodes: [
+      { id: 'work', type: 'agent-task', config: { title: '真实工作卡', channel: 'agentRequest' } },
+      { id: 'done', type: 'function', config: { set: { stopMet: true } } },
+    ],
+    edges: [{ from: 'work', to: 'done' }], entryNode: 'work',
+    endCondition: { op: 'truthy', path: 'stopMet' },
+    limits: { maxSteps: 4 },
   }
 }
 
@@ -201,6 +241,288 @@ describe('createGraphAssembly', () => {
     expect(a.spawner).toBeNull()
     expect(a.interruptScanner).toBeNull() // shadow 只读双跑，不自动处置审批超时
     expect(a.briefJob).toBeNull()
+  })
+
+  it('生产 editor 无真实 bridge：agent-task 起跑失败且不产生 run', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(agentTaskSpec('production-no-bridge'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/production-no-bridge/runs')
+
+      // spec §3.1/§5.1：执行能力不可用 → 422 + 稳定码，不再吞成 400
+      expect(ctx.status).toBe(422)
+      expect((ctx.body as { error: string }).error).toContain('unavailable agent execution capability')
+      expect((ctx.body as { code?: string }).code).toBe('agent_execution_unavailable')
+      expect(await eventLog.listRuns()).toEqual([])
+
+      // spec 不存在仍 404：EditorSpecError 自带 status=422 不得覆盖 not-found 语义
+      const miss = await invoke(a.router, 'post', '/api/graph/specs/never-saved-spec/runs')
+      expect(miss.status).toBe(404)
+      expect((miss.body as { error: string }).error).toContain('not found')
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('生产 editor 无 bridge：function-only spec 仍真实完成并记录 production 快照', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(functionOnlySpec('production-function-only'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/production-function-only/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string; state: Record<string, unknown> } }
+      expect(body.instance.status).toBe('completed')
+      expect(body.instance.state.result).toBe('function-ok')
+      expect(await eventLog.getRunSpec(body.runId)).toMatchObject({
+        runtimeKind: 'editor', executionMode: 'production',
+      })
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  // gate 目录装配（修复轮 2）：受信 env 目录贯通 registry 与 capabilities，
+  // 产品路径上零退出 gate 真实执行成功、非零退出 run 失败且带证据、非法配置 fail-closed。
+  function gateSpec(id: string, command: string): GraphSpec {
+    return {
+      id, version: 1, origin: 'editor',
+      channels: {
+        stopMet: { reducer: 'overwrite', default: false },
+      },
+      nodes: [
+        { id: 'gate-1', type: 'gate', config: { command } },
+        { id: 'done', type: 'function', config: { set: { stopMet: true } } },
+      ],
+      edges: [{ from: 'gate-1', to: 'done' }], entryNode: 'gate-1',
+      endCondition: { op: 'truthy', path: 'stopMet' },
+      limits: { maxSteps: 4 },
+    }
+  }
+
+  const sandboxSupport = detectSandboxSupport()
+
+  it.skipIf(!sandboxSupport.available)('受信目录零退出 gate 经产品装配真实执行成功', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'task7r2-gate-root-'))
+    const cwd = join(root, 'work')
+    mkdirSync(cwd, { recursive: true })
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    vi.stubEnv('HERMES_SANDBOX_WORKSPACES_ROOT', root)
+    vi.stubEnv('LOOP_GATE_COMMANDS', '/usr/bin/true')
+    vi.stubEnv('LOOP_GATE_CWD', cwd)
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(gateSpec('gate-catalog-zero-exit', '/usr/bin/true'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/gate-catalog-zero-exit/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string } }
+      expect(body.instance.status).toBe('completed')
+      const events = await eventLog.query(body.runId, { kind: 'node.completed' })
+      const gateEvidence = (events.find(e => e.nodeId === 'gate-1')?.payload as { evidence?: { exitCode?: number; backend?: string } }).evidence
+      expect(gateEvidence?.exitCode).toBe(0)
+      expect(gateEvidence?.backend).toBe(sandboxSupport.backend)
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it.skipIf(!sandboxSupport.available)('受信目录非零退出 gate 经产品装配 run 失败且后续节点未执行', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'task7r2-gate-root-'))
+    const cwd = join(root, 'work')
+    mkdirSync(cwd, { recursive: true })
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    vi.stubEnv('HERMES_SANDBOX_WORKSPACES_ROOT', root)
+    vi.stubEnv('LOOP_GATE_COMMANDS', '/usr/bin/false')
+    vi.stubEnv('LOOP_GATE_CWD', cwd)
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(gateSpec('gate-catalog-nonzero', '/usr/bin/false'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/gate-catalog-nonzero/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string } }
+      expect(body.instance.status).toBe('failed')
+      const events = await eventLog.query(body.runId)
+      expect(events.some(e => e.kind === 'node.completed' && e.nodeId === 'done')).toBe(false)
+      const gateError = events.find(e => e.kind === 'node.failed' && e.nodeId === 'gate-1')?.payload as { evidence?: { exitCode?: number } } | undefined
+      expect(gateError?.evidence?.exitCode).toBe(1)
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it.skipIf(!sandboxSupport.available)('Director 与 editor 共享同一受信目录：gate spec 经导演 runtime 真实执行', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'task7r2-gate-root-'))
+    const cwd = join(root, 'work')
+    mkdirSync(cwd, { recursive: true })
+    vi.stubEnv('GRAPH_KANBAN_BASE', 'http://director.test')
+    vi.stubEnv('HERMES_SANDBOX_WORKSPACES_ROOT', root)
+    vi.stubEnv('LOOP_GATE_COMMANDS', '/usr/bin/true')
+    vi.stubEnv('LOOP_GATE_CWD', cwd)
+    const eventLog = new InMemoryEventLogStore()
+    const routerFactory = vi.mocked(createGraphRunRouter)
+    routerFactory.mockClear()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy', eventLog }))
+    try {
+      await a.specStore.save(gateSpec('gate-catalog-director', '/usr/bin/true'))
+      const deps = routerFactory.mock.calls.at(-1)?.[0]
+      const runtime = deps?.directorRuntimeFactory?.('director-gate-token')
+      expect(runtime).toBeDefined()
+
+      const { runId, instance } = await runtime!.startRun('gate-catalog-director')
+
+      // capabilities/registry 任一侧目录缺失都会在此显形：预检 422 或执行 not-cataloged
+      expect(instance.status).toBe('completed')
+      expect((instance.state as Record<string, unknown>)['gate-1.gatePassed']).toBe(true)
+      expect(await eventLog.getRunSpec(runId)).toMatchObject({ runtimeKind: 'director', executionMode: 'production' })
+      const events = await eventLog.query(runId, { kind: 'node.completed' })
+      const evidence = (events.find(e => e.nodeId === 'gate-1')?.payload as { evidence?: { exitCode?: number } }).evidence
+      expect(evidence?.exitCode).toBe(0)
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('gate 目录配置非法：装配存活、醒目告警、gate 起跑 422 not-cataloged（不静默放行）', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    vi.stubEnv('LOOP_GATE_COMMANDS', 'sh -c "echo hi"')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'on', eventLog }))
+    try {
+      await a.specStore.save(gateSpec('gate-catalog-invalid-config', 'sh -c "echo hi"'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/gate-catalog-invalid-config/runs')
+
+      // spec-capabilities 的 not-cataloged 也是 EditorSpecError → 422 + 稳定码
+      expect(ctx.status).toBe(422)
+      expect((ctx.body as { error: string }).error).toContain('not in the trusted catalog')
+      expect((ctx.body as { code?: string }).code).toBe('gate_command_not_cataloged')
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(String(warn.mock.calls[0]?.[0])).toContain('gate catalog')
+      expect(await eventLog.listRuns()).toEqual([])
+    } finally {
+      warn.mockRestore()
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('shadow editor 显式 DryRun：agent-task 完成且快照保留 shadow executionMode', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', '')
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'shadow', eventLog }))
+    try {
+      await a.specStore.save(agentTaskSpec('shadow-agent-task'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/shadow-agent-task/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string; state: Record<string, unknown> } }
+      expect(body.instance.status).toBe('completed')
+      expect(body.instance.state.agentRequest).toMatchObject([{ node: 'work', task: 'dry-t1' }])
+      expect(await eventLog.getRunSpec(body.runId)).toMatchObject({
+        runtimeKind: 'editor', executionMode: 'shadow',
+      })
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('shadow editor 配置非空 GRAPH_KANBAN_BASE 仍只用显式 DryRun，零真实 HTTP', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', 'http://shadow-must-not-call.test')
+    const fetchImpl = vi.fn(async () => { throw new Error('shadow_real_http_forbidden') })
+    vi.stubGlobal('fetch', fetchImpl)
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'shadow', eventLog }))
+    try {
+      await a.specStore.save(agentTaskSpec('shadow-nonempty-base'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/shadow-nonempty-base/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string; state: Record<string, unknown> } }
+      expect(body.instance.status).toBe('completed')
+      expect(body.instance.state.agentRequest).toMatchObject([{ node: 'work', task: 'dry-t1' }])
+      expect(await eventLog.getRunSpec(body.runId)).toMatchObject({
+        runtimeKind: 'editor', executionMode: 'shadow',
+      })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('Director 有 token 才声明真实桥能力，快照 runtimeKind=director/production', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', 'http://director.test')
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'POST') {
+        return new Response(JSON.stringify({ task: { id: 'director-task-1', status: 'todo' } }), { status: 200 })
+      }
+      if (url.endsWith('/api/hermes/kanban/director-task-1')) {
+        return new Response(JSON.stringify({ id: 'director-task-1', status: 'done' }), { status: 200 })
+      }
+      return new Response('not found', { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchImpl)
+    const eventLog = new InMemoryEventLogStore()
+    const routerFactory = vi.mocked(createGraphRunRouter)
+    routerFactory.mockClear()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy', eventLog }))
+    try {
+      const deps = routerFactory.mock.calls.at(-1)?.[0]
+      const runtime = deps?.directorRuntimeFactory?.('director-test-token')
+      expect(runtime).toBeDefined()
+      await a.specStore.save(agentTaskSpec('director-real-bridge'))
+
+      const { runId, instance } = await runtime!.startRun('director-real-bridge')
+
+      expect(instance.status).toBe('completed')
+      expect(instance.state.agentRequest).toMatchObject([{ node: 'work', task: 'director-task-1' }])
+      expect(await eventLog.getRunSpec(runId)).toMatchObject({
+        runtimeKind: 'director', executionMode: 'production',
+      })
+      expect(fetchImpl).toHaveBeenCalledTimes(2)
+      expect(fetchImpl.mock.calls[0]?.[1]?.headers).toMatchObject({
+        Authorization: 'Bearer director-test-token',
+      })
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('Director 无 token 直接拒绝，不落 spec/run 也不隐式 DryRun', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'legacy', eventLog }))
+    try {
+      const ctx = await invoke(a.router, 'post', '/api/graph/sim-director/start', {
+        title: '匿名导演', description: '没有 token 不能生成假完成运行', modules: ['pay'],
+      })
+
+      expect(ctx.status).toBe(401)
+      expect(a.specStore.list()).toEqual([])
+      expect(await eventLog.listRuns()).toEqual([])
+    } finally {
+      a.stop()
+    }
   })
 })
 

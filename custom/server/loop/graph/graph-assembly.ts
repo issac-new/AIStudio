@@ -19,7 +19,9 @@ import { computeNextTick } from './next-tick'
 import { createGraphRunRouter, GraphSpecStore, resumeApprovalForContract } from './graph-rest'
 import { projectMindAggregated } from './mind-projection'
 import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
-import { DryRunKanbanBridge, HttpKanbanBridge, registerSimulationNodeTypes } from '../../graph/node-executors'
+import { buildTrustedGateCatalog, GateCatalogConfigError } from './gate-catalog'
+import type { GateCommandEntry } from './gate-executor'
+import { HttpKanbanBridge, registerSimulationNodeTypes } from '../../graph/node-executors'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
@@ -161,8 +163,38 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     }
   }
 
+  // 快照 loader 延迟读取两个 runtime：graphService 先于 runtime 构造，调用发生在装配完成后。
+  let specRuntime: CustomSpecRuntime | null = null
+  let directorRuntimeFactory: ((token?: string) => CustomSpecRuntime) | null = null
   const graphService = new GraphService({
     eventLog,
+    loadRunDefinition: async (runId, context) => {
+      const stored = await eventLog.getRunSpec(runId)
+      if (!stored) return null
+      let runtime: CustomSpecRuntime | null
+      if (stored.runtimeKind === 'director') {
+        // Director 每次恢复都使用当前请求 JWT 新建独立 registry，永不回落 editor/DryRun。
+        if (!context.actor?.trim() || !context.authToken?.trim()) throw new Error('current_jwt_required')
+        runtime = directorRuntimeFactory?.(context.authToken) ?? null
+      } else {
+        runtime = specRuntime
+      }
+      if (!runtime) throw new Error(`graph_runtime_unavailable: ${stored.runtimeKind}`)
+      const def = runtime.hydrate(structuredClone(stored.spec))
+      return {
+        def,
+        snapshot: {
+          specId: stored.specId,
+          revision: null,
+          draftVersion: stored.draftVersion,
+          runtimeKind: stored.runtimeKind,
+          executionMode: stored.executionMode,
+          contentHash: stored.contentHash,
+          createdAt: stored.createdAt,
+          createdBy: stored.createdBy,
+        },
+      }
+    },
     deps: {
       // loop.* 桥接事件分流：投影进 loop 事件存储 + loop socket 房间；graph.* 原样留给订阅方
       emitEvent: (e) => {
@@ -290,17 +322,21 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     })
   }
 
-  // P4：自建 spec 起跑器（编辑器试跑链路）。gate 命令白名单来自
-  // LOOP_GATE_COMMANDS（逗号分隔；未配置=空表，gate 节点带命令即拒——安全缺省）
-  // 一期对接层：26 步模板六种节点类型注册（agent-task 等；KanbanBridge 缺省
-  // DryRun——真桥（REST/进程内）二期按 GRAPH_KANBAN_BASE 接线；设计正本
-  // 2026-10-08-team-parallel-dev-capability.md）
-  const simRegistry = createSpecRuntimeRegistry({
-    gateCommands: (process.env.LOOP_GATE_COMMANDS ?? '').split(',').map(s => s.trim()).filter(Boolean),
-  })
-  // 真桥接线（二期）：GRAPH_KANBAN_BASE 指向 AIStudio 自身 base（如
-  // http://127.0.0.1:8802）即走 REST 建卡/查卡；未设=DryRun（shadow 安全缺省）
-  const kanbanBase = process.env.GRAPH_KANBAN_BASE
+  // P4+修复轮2：受信 gate 目录（服务端 env 唯一来源，见 gate-catalog.ts）。
+  // 配置非法 → 醒目告警并以空目录 fail-closed（gate 起跑即 not-cataloged），
+  // 绝不回退进程 cwd/编辑器字段；生产只有真实 Kanban REST 桥可执行 agent 节点，
+  // shadow 显式 DryRun 并写入快照元数据。
+  let gateCatalog: GateCommandEntry[] = []
+  try {
+    gateCatalog = buildTrustedGateCatalog()
+  } catch (err) {
+    console.warn(`[graph] gate catalog disabled by invalid config: ${(err as GateCatalogConfigError).message}`)
+  }
+  const simRegistry = createSpecRuntimeRegistry({ gateCatalog })
+  // shadow 永不因宿主配置真实地址而写生产看板；on 且配置非空地址才声明真实能力。
+  const kanbanBase = process.env.GRAPH_KANBAN_BASE?.trim()
+  const executionMode: 'production' | 'shadow' = mode === 'shadow' ? 'shadow' : 'production'
+  const hasRealKanbanBridge = mode === 'on' && Boolean(kanbanBase)
   // report-gen 注入源（三期）：GRAPH_REPORT_MODULE=JS 模块路径（export reportFns）
   // 未设=默认建卡报告器（bridge 建「报告编写」卡+等完成，产品语义五类工作面之一）。
   // run13 图执行轮经此把 harness/CLI 报告生成器接进来，不动 node-executors。
@@ -319,7 +355,10 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     }
   }
   registerSimulationNodeTypes(simRegistry, {
-    ...(kanbanBase ? { bridge: new HttpKanbanBridge({ baseUrl: kanbanBase, log: (m) => log?.(`[sim-kanban] ${m}`) }) } : {}),
+    ...(hasRealKanbanBridge
+      ? { bridge: new HttpKanbanBridge({ baseUrl: kanbanBase!, log: (m) => log?.(`[sim-kanban] ${m}`) }) }
+      : {}),
+    allowDryRun: executionMode === 'shadow',
     ...(reportFns ? { reportFns } : {}),
     log: (msg) => log?.(`[sim-node] ${msg}`),
   })
@@ -341,11 +380,17 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     setCapabilitiesProvider((assignee) => (assignee ? (table[assignee] as never) : undefined))
   } catch { /* 注册表面不可用→合成层空转，模板地板兜底 */ }
   })()
-  const specRuntime = mode === 'on'
+  specRuntime = mode === 'on' || mode === 'shadow'
     ? new CustomSpecRuntime({
         specStore,
         graphService,
         registry: simRegistry,
+        runtimeKind: 'editor',
+        capabilities: {
+          gateCatalog,
+          hasRealKanbanBridge,
+          executionMode,
+        },
         log,
       })
     : null
@@ -368,22 +413,38 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
   }
 
   // 产品内导演：独立 spec runtime（不依赖 GRAPH_ENGINE=on 的全局调度接管）。
-  // 每次起跑按请求 JWT 构造真实 kanban 桥；无 token 时回退 DryRun（仅测试/预览）。
+  // 每次起跑按请求 JWT 构造真实 kanban 桥；无 token 保持 unavailable，不得回退 DryRun。
   const directorKanbanBase = process.env.GRAPH_KANBAN_BASE?.trim()
     || `http://127.0.0.1:${process.env.PORT?.trim() || '8647'}`
-  const directorRuntimeFactory = (token?: string) => {
-    const registry = createSpecRuntimeRegistry()
+  directorRuntimeFactory = (token?: string) => {
+    const registry = createSpecRuntimeRegistry({ gateCatalog })
+    const authToken = token?.trim()
+    const hasRealKanbanBridge = Boolean(authToken)
     registerSimulationNodeTypes(registry, {
-      bridge: token
-        ? new HttpKanbanBridge({
-            baseUrl: directorKanbanBase,
-            authToken: token,
-            log: (m) => log?.(`[sim-director] ${m}`),
-          })
-        : new DryRunKanbanBridge(),
+      ...(authToken
+        ? {
+            bridge: new HttpKanbanBridge({
+              baseUrl: directorKanbanBase,
+              authToken,
+              log: (m) => log?.(`[sim-director] ${m}`),
+            }),
+          }
+        : {}),
+      allowDryRun: false,
       log: (msg) => log?.(`[sim-director-node] ${msg}`),
     })
-    return new CustomSpecRuntime({ specStore, graphService, registry, log })
+    return new CustomSpecRuntime({
+      specStore,
+      graphService,
+      registry,
+      runtimeKind: 'director',
+      capabilities: {
+        gateCatalog,
+        hasRealKanbanBridge,
+        executionMode: 'production',
+      },
+      log,
+    })
   }
   const router = createGraphRunRouter({ graphService, eventLog, spawner, specStore, specRuntime, missionRegistry, directorRuntimeFactory })
 

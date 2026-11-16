@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { detectSandboxSupport, runSandboxed } from '../exec-sandbox'
+import { detectSandboxSupport, runSandboxed } from '../exec-sandbox.ts'
 
 let scratch: string
 
@@ -49,8 +49,10 @@ describe('runSandboxed', () => {
       expect(r.status).toBe('ok')
       expect(r.exitCode).toBe(0)
       expect(r.stdout).toContain('sandboxed-ok')
+      expect(r.stdoutTruncated).toBe(false)
+      expect(r.stderrTruncated).toBe(false)
     } else {
-      expect(r).toMatchObject({ status: 'unavailable' })
+      expect(r).toMatchObject({ status: 'unavailable', stdoutTruncated: false, stderrTruncated: false })
       expect(r.stdout).toBe('')
     }
   }, 20_000)
@@ -91,6 +93,25 @@ describe('runSandboxed', () => {
     } else {
       expect(r).toMatchObject({ status: 'unavailable' })
       expect(existsSync(join(scratch, 'allowed.txt'))).toBe(false)
+    }
+  }, 20_000)
+
+  it(sandboxReady
+    ? 'stdout/stderr 超过 64000 字符时有界截断并分别置 truncated'
+    : '沙箱后端缺席：截断用例同判 unavailable，truncated 均为 false', async () => {
+    const chunk100 = 'x'.repeat(100)
+    const err100 = 'e'.repeat(100)
+    const script = `i=0; while [ "$i" -lt 650 ]; do printf "${chunk100}"; printf "${err100}" >&2; i=$((i+1)); done`
+    const r = await runSandboxed({ argv: ['/bin/sh', '-c', script], cwd: scratch, timeoutMs: 10_000 })
+    if (sandboxReady) {
+      expect(r.status).toBe('ok')
+      expect(r.exitCode).toBe(0)
+      expect(r.stdout).toHaveLength(64_000)
+      expect(r.stderr).toHaveLength(64_000)
+      expect(r.stdoutTruncated).toBe(true)
+      expect(r.stderrTruncated).toBe(true)
+    } else {
+      expect(r).toMatchObject({ status: 'unavailable', stdoutTruncated: false, stderrTruncated: false })
     }
   }, 20_000)
 

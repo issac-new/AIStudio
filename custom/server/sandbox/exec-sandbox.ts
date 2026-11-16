@@ -21,6 +21,9 @@ export interface SandboxRunResult {
   exitCode?: number | null
   stdout: string
   stderr: string
+  /** additive：达到 64k 上限后仍有输出被丢弃时为 true。 */
+  stdoutTruncated: boolean
+  stderrTruncated: boolean
   detail?: string
 }
 
@@ -107,7 +110,10 @@ function sanitizedEnv(allowlist: string[]): Record<string, string> {
 export async function runSandboxed(opts: SandboxRunOptions, deps: SandboxDeps = {}): Promise<SandboxRunResult> {
   const support = detectSandboxSupport(deps)
   if (!support.available) {
-    return { status: 'unavailable', stdout: '', stderr: '', detail: support.detail }
+    return {
+      status: 'unavailable', stdout: '', stderr: '',
+      stdoutTruncated: false, stderrTruncated: false, detail: support.detail,
+    }
   }
   const env = sanitizedEnv(opts.envAllowlist ?? [])
   let argv: string[]
@@ -122,23 +128,47 @@ export async function runSandboxed(opts: SandboxRunOptions, deps: SandboxDeps = 
     try {
       child = spawn(argv[0], argv.slice(1), { cwd: opts.cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
     } catch (e) {
-      resolve({ status: 'error', stdout: '', stderr: '', detail: `spawn failed: ${(e as Error).message}` })
+      resolve({
+        status: 'error', stdout: '', stderr: '', stdoutTruncated: false, stderrTruncated: false,
+        detail: `spawn failed: ${(e as Error).message}`,
+      })
       return
     }
     let stdout = ''
     let stderr = ''
+    let stdoutTruncated = false
+    let stderrTruncated = false
     let timedOut = false
     const timer = setTimeout(() => {
       timedOut = true
       child.kill('SIGKILL')
     }, opts.timeoutMs ?? 120_000)
-    child.stdout?.on('data', (c) => { if (stdout.length < 64_000) stdout += String(c) })
-    child.stderr?.on('data', (c) => { if (stderr.length < 64_000) stderr += String(c) })
-    child.on('error', (e) => { clearTimeout(timer); resolve({ status: 'error', stdout, stderr, detail: e.message }) })
+    child.stdout?.on('data', (c) => {
+      const text = String(c)
+      const remaining = 64_000 - stdout.length
+      if (remaining > 0) stdout += text.slice(0, remaining)
+      if (text.length > remaining) stdoutTruncated = true
+    })
+    child.stderr?.on('data', (c) => {
+      const text = String(c)
+      const remaining = 64_000 - stderr.length
+      if (remaining > 0) stderr += text.slice(0, remaining)
+      if (text.length > remaining) stderrTruncated = true
+    })
+    child.on('error', (e) => {
+      clearTimeout(timer)
+      resolve({ status: 'error', stdout, stderr, stdoutTruncated, stderrTruncated, detail: e.message })
+    })
     child.on('close', (code) => {
       clearTimeout(timer)
-      if (timedOut) resolve({ status: 'timeout', stdout, stderr, detail: `timed out after ${opts.timeoutMs ?? 120_000}ms` })
-      else resolve({ status: 'ok', exitCode: code, stdout, stderr })
+      if (timedOut) {
+        resolve({
+          status: 'timeout', stdout, stderr, stdoutTruncated, stderrTruncated,
+          detail: `timed out after ${opts.timeoutMs ?? 120_000}ms`,
+        })
+      } else {
+        resolve({ status: 'ok', exitCode: code, stdout, stderr, stdoutTruncated, stderrTruncated })
+      }
     })
   })
 }

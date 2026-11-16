@@ -30,6 +30,7 @@ import type {
   GraphDef, GraphInstance, NodeDef, NodeResult, StateValues, StateUpdate,
   GraphEvent, GraphDeps, NodeContext, GraphRunVerification,
 } from './types'
+import { NODE_EVIDENCE_LIMITS, NodeExecutionError } from './types'
 import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
 import { evaluatePredicate } from './predicate'
@@ -44,6 +45,15 @@ export interface GraphRuntimeOptions {
 }
 
 type PendingInterrupt = { nodeId: string; value: unknown; id: string; raisedAtMs?: number }
+type GraphSpecBinding = Pick<GraphInstance, 'specSnapshot' | 'specSource'>
+
+/** runtime-defined 明确标记 legacy；pinned 只投影元数据，GraphSpec 本体由 RunSpecStore 持久化。 */
+function specBindingFields(binding?: GraphSpecBinding): GraphSpecBinding {
+  return {
+    specSource: binding?.specSource ?? 'legacy-unpinned',
+    ...(binding?.specSnapshot ? { specSnapshot: { ...binding.specSnapshot } } : {}),
+  }
+}
 
 /** GraphEvent.type → 事件日志 kind（未列出者 kind = type 原样落盘） */
 /** GraphEvent.type → 事件日志 kind（导出供 shadow 对比等装配层复用） */
@@ -77,6 +87,66 @@ function jsonSafe(value: unknown): unknown {
   }
 }
 
+const NODE_EVIDENCE_KEYS = [
+  'command', 'argv', 'cwd', 'backend', 'leaseId', 'status', 'exitCode',
+  'durationMs', 'startedAt', 'finishedAt', 'stdout', 'stderr',
+  'stdoutTruncated', 'stderrTruncated',
+] as const
+
+function boundedArgv(value: unknown[]): string[] {
+  const out: string[] = []
+  let total = 0
+  for (const item of value.slice(0, NODE_EVIDENCE_LIMITS.argvItems)) {
+    if (typeof item !== 'string') continue
+    const remaining = NODE_EVIDENCE_LIMITS.argvTotal - total
+    if (remaining <= 0) break
+    const arg = item.slice(0, Math.min(NODE_EVIDENCE_LIMITS.argvElement, remaining))
+    out.push(arg)
+    total += arg.length
+  }
+  return out
+}
+
+/** 事件只接收 gate 白名单证据；env/token/detail 等字段即使误入 NodeResult 也不外发。 */
+function nodeEvidence(value: unknown): Record<string, unknown> | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const source = value as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const key of NODE_EVIDENCE_KEYS) {
+    if (!Object.hasOwn(source, key)) continue
+    const item = source[key]
+    if ((key === 'command' || key === 'cwd') && typeof item === 'string') {
+      out[key] = item.slice(0, NODE_EVIDENCE_LIMITS[key])
+    } else if (key === 'argv' && Array.isArray(item)) {
+      out[key] = boundedArgv(item)
+    } else if ((key === 'stdout' || key === 'stderr') && typeof item === 'string') {
+      out[key] = item.slice(-NODE_EVIDENCE_LIMITS.output)
+    } else {
+      out[key] = item
+    }
+  }
+  for (const key of ['stdout', 'stderr'] as const) {
+    const item = source[key]
+    if (typeof item === 'string' && item.length > NODE_EVIDENCE_LIMITS.output) {
+      out[`${key}Truncated`] = true
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
+function resultForEvent(result: NodeResult): NodeResult {
+  const evidence = nodeEvidence(result.evidence)
+  if (evidence) return { ...result, evidence }
+  if (!Object.hasOwn(result, 'evidence')) return result
+  const copy = { ...result }
+  delete copy.evidence
+  return copy
+}
+
+function isGateExecutionError(error: Error): error is NodeExecutionError {
+  return error instanceof NodeExecutionError && error.code.startsWith('gate_')
+}
+
 export class GraphRuntime {
   private checkpointManager?: CheckpointManager
   private eventLog?: EventLogStore
@@ -97,7 +167,12 @@ export class GraphRuntime {
   }
 
   /** 启动一个图实例 */
-  async start(graphDef: GraphDef, threadId: string, initialState?: StateValues): Promise<GraphInstance> {
+  async start(
+    graphDef: GraphDef,
+    threadId: string,
+    initialState?: StateValues,
+    specBinding?: GraphSpecBinding,
+  ): Promise<GraphInstance> {
     const instance: GraphInstance = {
       id: `${graphDef.id}-${threadId}`,
       graphDefId: graphDef.id,
@@ -108,6 +183,7 @@ export class GraphRuntime {
       totalCost: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     }
 
     const store = new ChannelStore(graphDef.stateSchema, initialState)
@@ -117,6 +193,7 @@ export class GraphRuntime {
       graphId: graphDef.id,
       threadId,
       ts: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     })
 
     return this.runLoop(graphDef, instance, store, 0, [graphDef.entryNode], [], {}, Date.now())
@@ -133,8 +210,9 @@ export class GraphRuntime {
     checkpoint: StoredCheckpoint,
     resumeValue: unknown,
     interruptId: string,
+    specBinding?: GraphSpecBinding,
   ): Promise<GraphInstance> {
-    return this.restoreAndRun(graphDef, checkpoint, { interruptId, value: resumeValue })
+    return this.restoreAndRun(graphDef, checkpoint, { interruptId, value: resumeValue }, specBinding)
   }
 
   /**
@@ -145,8 +223,9 @@ export class GraphRuntime {
   async continueFromCheckpoint(
     graphDef: GraphDef,
     checkpoint: StoredCheckpoint,
+    specBinding?: GraphSpecBinding,
   ): Promise<GraphInstance> {
-    return this.restoreAndRun(graphDef, checkpoint)
+    return this.restoreAndRun(graphDef, checkpoint, undefined, specBinding)
   }
 
   /**
@@ -154,12 +233,13 @@ export class GraphRuntime {
    * fork 产物被 startRun 消费时由 GraphService 调用：日志落 run.started
    * （rebuildRegistryFromLog 据此判别 fork 是否已起跑），onEvent 订阅方同步可见。
    */
-  emitStarted(graphDef: GraphDef, threadId: string): void {
+  emitStarted(graphDef: GraphDef, threadId: string, specBinding?: GraphSpecBinding): void {
     this.emitEvent({
       type: 'graph.started',
       graphId: graphDef.id,
       threadId,
       ts: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     })
   }
 
@@ -168,6 +248,7 @@ export class GraphRuntime {
     graphDef: GraphDef,
     checkpoint: StoredCheckpoint,
     resume?: { interruptId: string; value: unknown },
+    specBinding?: GraphSpecBinding,
   ): Promise<GraphInstance> {
     const threadId = checkpoint.runId
     const instance: GraphInstance = {
@@ -180,6 +261,7 @@ export class GraphRuntime {
       totalCost: checkpoint.totalCost,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...specBindingFields(specBinding),
     }
 
     const store = new ChannelStore(graphDef.stateSchema, checkpoint.state)
@@ -470,6 +552,7 @@ export class GraphRuntime {
         if (result instanceof Error) {
           failedNodes.push({ nodeId, error: result })
           nodeOutcomes.failed += 1
+          const evidence = result instanceof NodeExecutionError ? nodeEvidence(result.evidence) : undefined
           this.emitEvent({
             type: 'graph.node-error',
             graphId,
@@ -477,19 +560,22 @@ export class GraphRuntime {
             nodeId,
             step,
             error: result.message,
+            ...(evidence ? { evidence } : {}),
             ts: new Date().toISOString(),
           })
           continue
         }
         succeeded.push(nodeId)
         nodeOutcomes.completed += 1
+        const eventResult = resultForEvent(result)
         this.emitEvent({
           type: 'graph.node-complete',
           graphId,
           threadId,
           nodeId,
           step,
-          result,
+          result: eventResult,
+          ...(eventResult.evidence ? { evidence: eventResult.evidence } : {}),
           ts: new Date().toISOString(),
         })
         if (result.update) orderedUpdates.push(result.update)
@@ -524,7 +610,10 @@ export class GraphRuntime {
       const fatalErrors: string[] = []
       for (const { nodeId, error } of failedNodes) {
         const route = graphDef.nodes.get(nodeId)?.onError
-        if (route?.type === 'goto') {
+        if (isGateExecutionError(error) && route && route.type !== 'fail') {
+          // gate 副作用不得借 fail-branch 变成成功完成；本批一律终止 run。
+          fatalErrors.push(`${nodeId}: gate_on_error_forbidden`)
+        } else if (route?.type === 'goto') {
           errorRoutedTargets.push(route.target)
           nodeOutcomes.errorRouted += 1
           this.emitEvent({
@@ -632,7 +721,7 @@ export class GraphRuntime {
       // 各子任务用独立 ChannelStore 派生，完成后统一 apply 回主 store；
       // 子任务补发 node-complete / node-error（F5）
       if (sendTasks.length > 0) {
-        const sendUpdates = await Promise.all(sendTasks.map(async (task) => {
+        const sendResults = await Promise.all(sendTasks.map(async (task) => {
           const targetNode = graphDef.nodes.get(task.node)
           if (!targetNode) return undefined
           const taskStore = new ChannelStore(graphDef.stateSchema, { ...store.getValues(), ...task.state })
@@ -648,24 +737,45 @@ export class GraphRuntime {
             wrappedDeps,
           ).catch(err => (err instanceof Error ? err : new Error(String(err))))
           if (taskResult instanceof Error) {
+            const evidence = taskResult instanceof NodeExecutionError ? nodeEvidence(taskResult.evidence) : undefined
             this.emitEvent({
               type: 'graph.node-error',
               graphId, threadId: taskThreadId, nodeId: task.node, step,
               error: taskResult.message,
+              ...(evidence ? { evidence } : {}),
               ts: new Date().toISOString(),
             })
-            return undefined
+            // 普通 Send 失败维持忽略语义；gate 失败必须回到主循环 fatal 路径。
+            return isGateExecutionError(taskResult) ? taskResult : undefined
           }
+          const eventResult = resultForEvent(taskResult)
           this.emitEvent({
             type: 'graph.node-complete',
             graphId, threadId: taskThreadId, nodeId: task.node, step,
-            result: taskResult,
+            result: eventResult,
+            ...(eventResult.evidence ? { evidence: eventResult.evidence } : {}),
             ts: new Date().toISOString(),
           })
           return taskResult.update
         }))
-        for (const update of sendUpdates) {
-          if (update) store.apply(update)
+        const gateFailures = sendResults.filter((result): result is NodeExecutionError =>
+          result instanceof NodeExecutionError && isGateExecutionError(result))
+        if (gateFailures.length > 0) {
+          nodeOutcomes.failed += gateFailures.length
+          instance.status = 'failed'
+          this.emitEvent({
+            type: 'graph.failed',
+            graphId,
+            threadId,
+            error: gateFailures.map(error => `Send gate: ${error.message}`).join('; '),
+            finishReason: 'node-error',
+            verification: verificationOf(),
+            ts: new Date().toISOString(),
+          })
+          return instance
+        }
+        for (const update of sendResults) {
+          if (update && !(update instanceof Error)) store.apply(update)
         }
       }
 
@@ -721,6 +831,8 @@ export class GraphRuntime {
       nodeId: node.id,
       superStep: ctx.superStep,
       deps,
+      retry: node.retry,
+      onError: node.onError,
     }
 
     this.emitEvent({
@@ -741,6 +853,8 @@ export class GraphRuntime {
       return result
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
+      // gate 的失败策略在 executeGraphGate 中先于副作用拒绝；这里再阻断任何自动重放。
+      if (isGateExecutionError(error)) return error
       if (!node.retry || node.retry.maxAttempts <= 0) return error
 
       // 2026-10-18 Harness 可靠性轮：错误分类 → 只重试瞬时/限流类；
@@ -758,6 +872,7 @@ export class GraphRuntime {
       let lastError: unknown = error
 
       for (let attempt = 1; attempt <= policy.maxAttempts; attempt++) {
+        if (lastError instanceof Error && isGateExecutionError(lastError)) return lastError
         const info = classifyToolError(lastError)
         const blocked = node.retry.nonRetryable?.includes(info.category) ?? false
         if (blocked || !policy.retryOn.includes(info.category)) {
@@ -982,6 +1097,11 @@ export class GraphRuntime {
   /** 日志 payload：JSON 安全子集（delta 键名与路由事实；完整 state 由 checkpoint 承载，不进日志） */
   private logPayload(event: GraphEvent): Record<string, unknown> {
     switch (event.type) {
+      case 'graph.started':
+        return {
+          specSource: event.specSource ?? 'legacy-unpinned',
+          ...(event.specSnapshot ? { specSnapshot: jsonSafe(event.specSnapshot) } : {}),
+        }
       case 'graph.node-complete': {
         const r = event.result
         return {
@@ -989,10 +1109,14 @@ export class GraphRuntime {
           goto: r.goto ?? [],
           hasEnd: r.end !== undefined,
           hasInterrupt: r.interrupt !== undefined,
+          ...(event.evidence ? { evidence: jsonSafe(event.evidence) } : {}),
         }
       }
       case 'graph.node-error':
-        return { error: event.error }
+        return {
+          error: event.error,
+          ...(event.evidence ? { evidence: jsonSafe(event.evidence) } : {}),
+        }
       case 'graph.node-start':
         return {}
       case 'graph.interrupt':

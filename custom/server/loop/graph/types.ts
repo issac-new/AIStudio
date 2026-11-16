@@ -15,6 +15,7 @@
 
 import type { PredicateExpr } from './predicate'
 import type { ErrorCategory } from '../../toolcontract/contract'
+import type { GraphSpecSnapshotMeta } from './run-spec-snapshot'
 
 /** 回边守卫：有限终止的循环级安全网 */
 export interface LoopGuard {
@@ -104,7 +105,31 @@ export interface NodeContext {
   superStep: number
   /** 依赖注入：store / emitEvent 等 */
   deps: GraphDeps
+  /** runtime 投影的节点失败策略；gate 据此在副作用前拒绝自动重试/失败绕行。 */
+  retry?: NodeDef['retry']
+  onError?: NodeErrorRoute
 }
+
+export class NodeExecutionError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly evidence?: Record<string, unknown>,
+  ) {
+    super(message)
+    this.name = 'NodeExecutionError'
+  }
+}
+
+/** gate 构造证据与 GraphRuntime 事件出口共用的有界投影阈值（字符数/元素数）。 */
+export const NODE_EVIDENCE_LIMITS = {
+  command: 256,
+  cwd: 512,
+  argvElement: 512,
+  argvTotal: 4_096,
+  argvItems: 64,
+  output: 4_096,
+} as const
 
 export interface NodeResult {
   /** 状态部分更新（经 reducer 合并） */
@@ -117,6 +142,8 @@ export interface NodeResult {
   end?: unknown
   /** 发送 map-reduce 子任务（LangGraph Send API 模式） */
   send?: Array<{ node: string; state: StateUpdate }>
+  /** 节点执行证据；GraphRuntime 只把白名单字段写入完成/失败事件。 */
+  evidence?: Record<string, unknown>
 }
 
 // ============================================================================
@@ -182,6 +209,10 @@ export interface GraphInstance {
   createdAt: string
   updatedAt: string
   parentThreadId?: string  // fork 来源
+  /** 起跑时绑定的不可变 GraphSpec 元数据；不含 Director 凭据。 */
+  specSnapshot?: GraphSpecSnapshotMeta
+  /** pinned 快照与旧 registry 回退显式分流，旧事件缺省按 legacy-unpinned。 */
+  specSource?: 'run-snapshot' | 'legacy-unpinned'
 }
 
 // ============================================================================
@@ -199,11 +230,13 @@ export interface GraphRunVerification {
 }
 
 export type GraphEvent =
-  | { type: 'graph.started'; graphId: string; threadId: string; ts: string }
+  | { type: 'graph.started'; graphId: string; threadId: string; ts: string
+      specSnapshot?: GraphSpecSnapshotMeta
+      specSource?: 'run-snapshot' | 'legacy-unpinned' }
   | { type: 'graph.step-start'; graphId: string; threadId: string; step: number; nodes: string[]; ts: string }
   | { type: 'graph.node-start'; graphId: string; threadId: string; nodeId: string; step: number; ts: string }
-  | { type: 'graph.node-complete'; graphId: string; threadId: string; nodeId: string; step: number; result: NodeResult; ts: string }
-  | { type: 'graph.node-error'; graphId: string; threadId: string; nodeId: string; step: number; error: string; ts: string }
+  | { type: 'graph.node-complete'; graphId: string; threadId: string; nodeId: string; step: number; result: NodeResult; evidence?: Record<string, unknown>; ts: string }
+  | { type: 'graph.node-error'; graphId: string; threadId: string; nodeId: string; step: number; error: string; evidence?: Record<string, unknown>; ts: string }
   | { type: 'graph.interrupt'; graphId: string; threadId: string; nodeId: string; value: unknown; interruptId: string; ts: string }
   | { type: 'graph.resume'; graphId: string; threadId: string; interruptId: string; resumeValue: unknown; ts: string }
   | { type: 'graph.step-complete'; graphId: string; threadId: string; step: number; state: StateValues; ts: string }

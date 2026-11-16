@@ -3,8 +3,11 @@
 // scenarios/plan/start 的入参校验、JWT 闸、runtime 工厂注入与 spec 落库溯源。
 import { describe, expect, it } from 'vitest'
 import { InMemoryEventLogStore } from '../event-log-store'
+import { GraphService } from '../graph-service'
+import { CustomSpecRuntime } from '../spec-runtime'
 import { createGraphRunRouter } from '../graph-rest'
 import { DEFAULT_SIMULATION_SCENARIO } from '../../../graph/simulation-graph-template'
+import type { GraphSpec } from '../graph-spec'
 
 function handlerOf(router: any, path: string, method = 'GET'): (ctx: any) => Promise<void> {
   const layer = router.stack.find((l: any) => l.path === path && l.methods.includes(method))
@@ -87,6 +90,42 @@ describe('sim-director start', () => {
     const ctx: any = { headers: { authorization: 'Bearer tok' }, request: { body: VALID_INPUT }, state: {} }
     await handler(ctx)
     expect(ctx.status).toBe(501)
+  })
+
+  it('完整 Director 模板在真实预检中拒绝 gate_meta_forbidden，不产生 run', async () => {
+    const eventLog = new InMemoryEventLogStore()
+    const graphService = new GraphService({ eventLog })
+    const specs = new Map<string, GraphSpec>()
+    const specStore = {
+      save: async (spec: GraphSpec) => { specs.set(spec.id, structuredClone(spec)) },
+      get: (id: string) => specs.get(id),
+    }
+    const runtime = new CustomSpecRuntime({
+      specStore,
+      graphService,
+      runtimeKind: 'director',
+      capabilities: {
+        gateCatalog: [], hasRealKanbanBridge: true, executionMode: 'production',
+      },
+    })
+    const router = makeRouter({
+      graphService, eventLog, specStore,
+      directorRuntimeFactory: () => runtime,
+    })
+    const handler = handlerOf(router, '/api/graph/sim-director/start', 'POST')
+    const ctx: any = {
+      headers: { authorization: 'Bearer jwt-abc' },
+      request: { body: VALID_INPUT },
+      state: { user: { username: 'tester' } },
+    }
+
+    await handler(ctx)
+
+    expect(ctx.status).toBe(400)
+    expect(ctx.body.error).toBe('spec.meta.gateCommands cannot expand the trusted gate catalog')
+    expect([...specs.values()]).toHaveLength(1)
+    expect([...specs.values()][0].meta?.gateCommands).toEqual(['qgate run --profile feature-close'])
+    expect(await eventLog.listRuns()).toEqual([])
   })
 
   it('完整起跑：spec 落库（meta.director.scenario+createdBy）且 JWT 透传 runtime 工厂', async () => {

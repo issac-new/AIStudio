@@ -15,15 +15,42 @@ import {
 } from '../node-executors'
 import { defaultSimulationGraph } from '../simulation-graph-template'
 
-/** 便捷：注册好六类型的 registry + 可断言的桥 */
+/** 便捷：注册好六类型的 registry + 可断言的桥；DryRun 必须显式声明。 */
 function makeRegistry(bridge?: KanbanBridge) {
   const registry = new NodeRegistry()
   const dry = bridge ?? new DryRunKanbanBridge()
-  registerSimulationNodeTypes(registry, { bridge: dry, pollIntervalMs: 1, pollMaxIntervalMs: 1, taskTimeoutMs: 50 })
+  registerSimulationNodeTypes(registry, {
+    bridge: dry,
+    allowDryRun: true,
+    pollIntervalMs: 1,
+    pollMaxIntervalMs: 1,
+    taskTimeoutMs: 20,
+  })
   return { registry, dry: dry as DryRunKanbanBridge }
 }
 
 describe('registerSimulationNodeTypes', () => {
+  it('生产无 bridge 的真实 agent-task 工厂不得隐式 DryRun', async () => {
+    const registry = new NodeRegistry()
+    registerSimulationNodeTypes(registry, { allowDryRun: false })
+    const agentTaskNode = registry.create('agent-task', { id: 'production-task', title: '真实执行' })
+
+    await expect(agentTaskNode.execute({}, { threadId: 'production-run' } as never))
+      .rejects.toMatchObject({ code: 'agent_execution_unavailable' })
+  })
+
+  it('显式 allowDryRun 且无 bridge 时才使用即建即完桥', async () => {
+    const registry = new NodeRegistry()
+    registerSimulationNodeTypes(registry, { allowDryRun: true })
+    const agentTaskNode = registry.create('agent-task', {
+      id: 'shadow-task', title: '影子执行', channel: 'shadow.done',
+    })
+
+    const result = await agentTaskNode.execute({}, { threadId: 'shadow-run' } as never)
+    const update = result.update as unknown as Record<string, Array<{ node: string; task: string }>>
+    expect(update['shadow.done']).toMatchObject([{ node: 'shadow-task', task: 'dry-t1' }])
+  })
+
   it('注册全部七种模板节点类型', () => {
     const { registry } = makeRegistry()
     for (const t of SIMULATION_NODE_TYPES) {
@@ -82,6 +109,17 @@ describe('registerSimulationNodeTypes', () => {
     await expect(node.execute({}, { threadId: 't' } as never)).rejects.toThrow(/blocked/)
   })
 
+  it.each(['queued', 'message', 'archived'])('%s 只是投递/归档信号，真实 agent-task 不得假完成', async (status) => {
+    const bridge: KanbanBridge = {
+      createTask: async () => ({ id: 'tk-pending', status }),
+      getTask: async () => ({ id: 'tk-pending', status }),
+    }
+    const { registry } = makeRegistry(bridge)
+    const node = registry.create('agent-task', { id: `pending-${status}`, title: '等待真实完成' })
+
+    await expect(node.execute({}, { threadId: `run-${status}` } as never)).rejects.toThrow(/超时/)
+  })
+
   it('human-gate 返回 interrupt；dispatch 直通并记派发时刻', async () => {
     const { registry } = makeRegistry()
     const gate = registry.create('human-gate', { id: 'g1', gate: 'G2' })
@@ -119,6 +157,7 @@ describe('registerSimulationNodeTypes', () => {
     const calls: string[] = []
     registerSimulationNodeTypes(registry, {
       bridge: new DryRunKanbanBridge(),
+      allowDryRun: true,
       pollIntervalMs: 1, pollMaxIntervalMs: 1, taskTimeoutMs: 50,
       reportFns: { reportGen: async () => { calls.push('injected'); return { update: {} } as never } },
     })
@@ -127,7 +166,13 @@ describe('registerSimulationNodeTypes', () => {
     expect(calls).toEqual(['injected']) // 注入表赢
 
     const registry2 = new NodeRegistry()
-    registerSimulationNodeTypes(registry2, { bridge: new DryRunKanbanBridge(), pollIntervalMs: 1, pollMaxIntervalMs: 1, taskTimeoutMs: 50 })
+    registerSimulationNodeTypes(registry2, {
+      bridge: new DryRunKanbanBridge(),
+      allowDryRun: true,
+      pollIntervalMs: 1,
+      pollMaxIntervalMs: 1,
+      taskTimeoutMs: 50,
+    })
     const node2 = registry2.create('report-gen', { id: 'rep2', command: 'custom' })
     await node2.execute({}, { threadId: 't', deps: { fnTable: { custom: async () => { calls.push('dyn2'); return { update: {} } as never } } } } as never)
     expect(calls).toEqual(['injected', 'dyn2']) // 未注入该 key 时动态表接管

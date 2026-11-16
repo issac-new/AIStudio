@@ -5,7 +5,7 @@
 // 哲学：kanban 卡状态是唯一完成真值（spawn 是建议、卡是事实）；本模块不自己 spawn，
 // 只建卡/等卡（并发帽/熔断/心跳全归现有派发器，单一事实源）。
 // DI：KanbanBridge 由装配方注入（graph-assembly factory-DI 哲学，不 import 上游代码）；
-// 缺省 DryRunKanbanBridge（shadow 冒烟用：即建即完，不真派发）。
+// 未注入且未显式 allowDryRun 时使用失败关闭桥，生产不得静默假完成。
 
 import type { NodeRegistry } from '../../loop/graph/node-registry'
 import type { CustomReducers } from '../../loop/graph/graph-spec'
@@ -55,8 +55,8 @@ export interface KanbanBridge {
   getTask(id: string): Promise<KanbanTaskRef>
 }
 
-/** 卡终态（与 hermes_cli/kanban_db.py 状态机对齐；review 留给 gate 类节点） */
-const DONE_STATUSES = new Set(['done', 'archived'])
+/** 卡完成只认 done；archived 是归档动作，queued/message 只是投递信号。 */
+const DONE_STATUSES = new Set(['done'])
 const FAILED_STATUSES = new Set(['blocked'])
 
 /**
@@ -82,6 +82,23 @@ export class DryRunKanbanBridge implements KanbanBridge {
       if (ref.id === id) return ref
     }
     throw new Error(`DryRunKanbanBridge: unknown task ${id}`)
+  }
+}
+
+/** 未配置真实执行桥时失败关闭；只有显式 shadow/test 才能选择 DryRun。 */
+class UnavailableKanbanBridge implements KanbanBridge {
+  private unavailable(): never {
+    const error = new Error('Agent execution requires a real Kanban bridge') as Error & { code: string }
+    error.code = 'agent_execution_unavailable'
+    throw error
+  }
+
+  async createTask(_req: KanbanCreateRequest): Promise<KanbanTaskRef> {
+    return this.unavailable()
+  }
+
+  async getTask(_id: string): Promise<KanbanTaskRef> {
+    return this.unavailable()
   }
 }
 
@@ -172,6 +189,8 @@ import { applyBoundary } from './task-boundaries'
 
 export interface SimulationNodeOpts {
   bridge?: KanbanBridge
+  /** 仅测试/shadow 可显式开启；未注入 bridge 且未开启时使用 unavailable bridge。 */
+  allowDryRun?: boolean
   /** agent-task 等卡轮询间隔 ms（缺省 15s；测试注小值） */
   pollIntervalMs?: number
   /** 轮询退避上限 ms（缺省 60s） */
@@ -217,7 +236,7 @@ function agentTaskNodeResult(cfg: AgentTaskConfig, taskId: string, ts: number): 
   }
 }
 
-/** 等卡完成：done→返回；blocked→抛错走 onError；超时→抛错。轮询指数退避。 */
+/** 等卡完成：仅 done→返回；blocked→抛错走 onError；其余状态轮询至超时。轮询指数退避。 */
 async function waitForCard(
   bridge: KanbanBridge,
   taskId: string,
@@ -259,7 +278,9 @@ export function registerSimulationNodeTypes(
   registry: NodeRegistry,
   opts: SimulationNodeOpts = {},
 ): NodeRegistry {
-  const bridge = opts.bridge ?? new DryRunKanbanBridge()
+  const bridge = opts.bridge ?? (opts.allowDryRun === true
+    ? new DryRunKanbanBridge()
+    : new UnavailableKanbanBridge())
   const poll = {
     pollIntervalMs: opts.pollIntervalMs ?? 15_000,
     pollMaxIntervalMs: opts.pollMaxIntervalMs ?? 60_000,
@@ -364,7 +385,8 @@ export function registerSimulationNodeTypes(
       const name = (config.command as string) ?? 'reportGen'
       // 三层解析（三期）：注入表（reportFns）→ 运行时 deps.fnTable → 默认建卡报告器。
       // 默认=「报告编写」工作卡（五类工作面之一）：建卡+等完成，与 agent-task 同真值
-      // 口径；DryRun 桥即建即完。彻底未接线（无桥场景不可能，保留兜底）才大声失败。
+      // 口径；DryRun 桥即建即完。未接真实桥且未显式 allowDryRun 时由 unavailable
+      // bridge 抛出 agent_execution_unavailable，不能把未接线伪装成报告完成。
       const injected = opts.reportFns?.[name]
       if (typeof injected === 'function') {
         return injected(_state, ctx)
