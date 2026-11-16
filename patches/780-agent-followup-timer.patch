@@ -1,0 +1,834 @@
+diff --git a/hermes_cli/followups.py b/hermes_cli/followups.py
+new file mode 100644
+--- /dev/null
++++ b/hermes_cli/followups.py
+@@ -0,0 +1,271 @@
++"""Agent 自设 follow-up 定时器（Always-on Agents 吸收 P3，2026-11-16）。
++
++语义来源（Anthropic《Building always-on agents》定时器）：follow-up 是 agent 给自己
++设的一次性提醒（“一小时后检查对方是否回复”），与用户日程（cron）分开治理。到期后
++**不新开会话**，而是唤醒原会话继续——这是与 cron 一次性任务的本质区别。
++
++存储：SessionDB ``state_meta``，键 ``followup:<id>``（JSON）；扫描走
++``list_meta_prefix``（与 /loop 同构，loops.py:307）。单一写者假设同 /loop：网关是
++唯一 watcher；跨进程并发由 active-session lease 兜底。
++
++状态机：active → firing（claim，attempts+1）→ fired / failed；cancelled 为终态。
++崩溃恢复：watcher 启动时把超过 5 分钟仍 firing 的行重置为 active（at-most-once 注入
++的代价是可能丢一次，rather than 无限重放）。
++"""
++
++from __future__ import annotations
++
++import json
++import logging
++import time
++import uuid
++from dataclasses import asdict, dataclass, field
++from typing import Any, Optional
++
++logger = logging.getLogger(__name__)
++
++_META_PREFIX = "followup:"
++MAX_ACTIVE_PER_SESSION = 20
++MAX_PROMPT_CHARS = 2000
++MIN_DELAY_SECONDS = 60
++MAX_DELAY_SECONDS = 30 * 86400
++STALE_FIRING_SECONDS = 300
++
++
++@dataclass
++class FollowupState:
++    """一条 follow-up 的持久状态。"""
++
++    id: str
++    session_id: str
++    prompt: str
++    status: str = "active"  # active | firing | fired | cancelled | failed
++    created_at: float = 0.0
++    due_at: float = 0.0
++    fired_at: float = 0.0
++    attempts: int = 0
++    last_error: str = ""
++    # 网关路由（platform/chat_id/chat_type/thread_id/user_id/user_name/scope_id），
++    # 创建时捕获；空 route = CLI/TUI 无路由，watcher 不注入。
++    route: dict[str, str] = field(default_factory=dict)
++
++    def to_json(self) -> str:
++        return json.dumps(asdict(self), ensure_ascii=False)
++
++    @classmethod
++    def from_json(cls, raw: str) -> "FollowupState":
++        data = json.loads(raw)
++        route = data.get("route")
++        return cls(
++            id=str(data.get("id", "")),
++            session_id=str(data.get("session_id", "")),
++            prompt=str(data.get("prompt", "")),
++            status=str(data.get("status", "active")),
++            created_at=float(data.get("created_at") or 0.0),
++            due_at=float(data.get("due_at") or 0.0),
++            fired_at=float(data.get("fired_at") or 0.0),
++            attempts=int(data.get("attempts") or 0),
++            last_error=str(data.get("last_error") or ""),
++            route={str(k): str(v) for k, v in route.items() if v} if isinstance(route, dict) else {},
++        )
++
++
++def _meta_key(followup_id: str) -> str:
++    return f"{_META_PREFIX}{followup_id}"
++
++
++def _get_session_db() -> Optional[Any]:
++    """与 goals/loops 共用同一 SessionDB 连接（冷启动 bootstrap 不在 watcher 线程跑）。"""
++    try:
++        from hermes_cli.goals import _get_session_db as _goals_db
++    except Exception as exc:  # pragma: no cover - defensive
++        logger.debug("Followups: SessionDB bootstrap failed (%s)", exc)
++        return None
++    return _goals_db()
++
++
++def _db_op(label: str, fn, default=None):
++    try:
++        return fn()
++    except Exception as exc:  # pragma: no cover - defensive
++        logger.debug("Followups: %s failed: %s", label, exc)
++        return default
++
++
++def _parse(raw: str, followup_id: str = "") -> Optional[FollowupState]:
++    try:
++        state = FollowupState.from_json(raw)
++    except Exception as exc:
++        if followup_id:
++            logger.warning("Followups: could not parse stored follow-up %s: %s", followup_id, exc)
++        return None
++    return state if state.id else None
++
++
++def _save(state: FollowupState) -> bool:
++    db = _get_session_db()
++    if db is None:
++        return False
++    try:
++        db.set_meta(_meta_key(state.id), state.to_json())
++        return True
++    except Exception as exc:  # pragma: no cover - defensive
++        logger.debug("Followups: set_meta failed: %s", exc)
++        return False
++
++
++def _iter_stored() -> list[FollowupState]:
++    db = _get_session_db()
++    if db is None:
++        return []
++    rows = _db_op("list_meta_prefix", lambda: db.list_meta_prefix(_META_PREFIX), []) or []
++    out: list[FollowupState] = []
++    for key, raw in rows:
++        fid = key[len(_META_PREFIX):]
++        state = _parse(raw, fid) if fid and raw else None
++        if state is not None:
++            out.append(state)
++    return out
++
++
++def capture_route() -> Optional[dict[str, str]]:
++    """从当前回合的会话环境捕获可回访路由；无 platform/chat_id（CLI/TUI）= None。"""
++    from gateway.session_context import get_session_env
++
++    platform = (get_session_env("HERMES_SESSION_PLATFORM", "") or "").strip()
++    chat_id = (get_session_env("HERMES_SESSION_CHAT_ID", "") or "").strip()
++    if not (platform and chat_id):
++        return None
++    route = {
++        "platform": platform,
++        "chat_id": chat_id,
++        "chat_type": (get_session_env("HERMES_SESSION_CHAT_TYPE", "") or "").strip(),
++        "thread_id": (get_session_env("HERMES_SESSION_THREAD_ID", "") or "").strip(),
++        "user_id": (get_session_env("HERMES_SESSION_USER_ID", "") or "").strip(),
++        "user_name": (get_session_env("HERMES_SESSION_USER_NAME", "") or "").strip(),
++        "scope_id": (get_session_env("HERMES_SESSION_SCOPE_ID", "") or "").strip(),
++    }
++    return {k: v for k, v in route.items() if v}
++
++
++def create_followup(
++    session_id: str,
++    prompt: str,
++    delay_seconds: float,
++    route: Optional[dict[str, str]] = None,
++    now: Optional[float] = None,
++) -> FollowupState:
++    """创建一条 follow-up（校验失败抛 ValueError，由工具层转成用户可见错误）。"""
++    if not session_id:
++        raise ValueError("session_id 缺失")
++    text = (prompt or "").strip()
++    if not text:
++        raise ValueError("prompt 必填")
++    if len(text) > MAX_PROMPT_CHARS:
++        raise ValueError(f"prompt 超长（>{MAX_PROMPT_CHARS} 字符）")
++    delay = float(delay_seconds)
++    if not (MIN_DELAY_SECONDS <= delay <= MAX_DELAY_SECONDS):
++        raise ValueError(f"delay 须在 {MIN_DELAY_SECONDS}s..{MAX_DELAY_SECONDS}s 之间")
++    if not route:
++        raise ValueError("当前会话没有可回访路由（CLI/TUI）；请改用 cronjob_manage 创建独立任务")
++    active = [s for s in _iter_stored() if s.session_id == session_id and s.status in ("active", "firing")]
++    if len(active) >= MAX_ACTIVE_PER_SESSION:
++        raise ValueError(f"同一会话活跃 follow-up 已达上限 {MAX_ACTIVE_PER_SESSION}")
++
++    at = now if now is not None else time.time()
++    state = FollowupState(
++        id=uuid.uuid4().hex[:12],
++        session_id=session_id,
++        prompt=text,
++        created_at=at,
++        due_at=at + delay,
++        route=dict(route),
++    )
++    if not _save(state):
++        raise ValueError("follow-up 存储不可用（SessionDB 未就绪）")
++    logger.info("Followup created %s for session %s due in %.0fs", state.id, session_id, delay)
++    return state
++
++
++def list_followups(session_id: str) -> list[FollowupState]:
++    return [s for s in _iter_stored() if s.session_id == session_id]
++
++
++def list_due_followups(now: Optional[float] = None) -> list[FollowupState]:
++    at = now if now is not None else time.time()
++    return [s for s in _iter_stored() if s.status == "active" and 0 < s.due_at <= at]
++
++
++def claim_followup(followup_id: str) -> Optional[FollowupState]:
++    """active → firing（attempts+1）；已被别人 claim/非 active 返回 None。"""
++    for s in _iter_stored():
++        if s.id != followup_id:
++            continue
++        if s.status != "active":
++            return None
++        s.status = "firing"
++        s.attempts += 1
++        return s if _save(s) else None
++    return None
++
++
++def mark_fired(followup_id: str, now: Optional[float] = None) -> Optional[FollowupState]:
++    at = now if now is not None else time.time()
++    for s in _iter_stored():
++        if s.id != followup_id:
++            continue
++        s.status = "fired"
++        s.fired_at = at
++        s.last_error = ""
++        return s if _save(s) else None
++    return None
++
++
++def release_followup(followup_id: str, error: str = "", max_attempts: int = 3) -> Optional[FollowupState]:
++    """注入失败：未到上限回 active（下一 tick 重试），到上限转 failed（死信）。"""
++    for s in _iter_stored():
++        if s.id != followup_id:
++            continue
++        s.last_error = (error or "")[:300]
++        s.status = "failed" if s.attempts >= max_attempts else "active"
++        return s if _save(s) else None
++    return None
++
++
++def cancel_followup(followup_id: str, session_id: Optional[str] = None) -> bool:
++    for s in _iter_stored():
++        if s.id != followup_id:
++            continue
++        if session_id is not None and s.session_id != session_id:
++            return False
++        if s.status in ("fired", "cancelled"):
++            return False
++        s.status = "cancelled"
++        return _save(s)
++    return False
++
++
++def recover_stale_firing(now: Optional[float] = None, older_than_seconds: float = STALE_FIRING_SECONDS) -> int:
++    """watcher 启动自愈：把崩溃遗留的 firing 行重置为 active（超时窗口外）。"""
++    at = now if now is not None else time.time()
++    fixed = 0
++    for s in _iter_stored():
++        if s.status != "firing":
++            continue
++        # firing 没有单独时间戳，用 due_at 近似（claim 发生在到期后）。
++        if at - s.due_at >= older_than_seconds:
++            s.status = "active"
++            if _save(s):
++                fixed += 1
++    if fixed:
++        logger.info("Followups: recovered %d stale firing row(s)", fixed)
++    return fixed
++
++
++def store_has_active_followup(db: Any) -> bool:
++    """idle gate：该库有 active/firing 行（或无法解析的未知行）→ True。"""
++    for key, raw in db.list_meta_prefix(_META_PREFIX):
++        state = _parse(raw, key[len(_META_PREFIX):]) if raw else None
++        if state is None or state.status in ("active", "firing"):
++            return True
++    return False
+diff --git a/tools/followup_tool.py b/tools/followup_tool.py
+new file mode 100644
+--- /dev/null
++++ b/tools/followup_tool.py
+@@ -0,0 +1,149 @@
++"""Follow-up 工具：agent 给自己设定时提醒，到期唤醒原会话（Always-on Agents P3）。
++
++与 ``cronjob_manage`` 的分工（写入工具描述，防模型混用）：
++- cron：用户日程/周期任务，在新 cron 会话中执行，结果投递回来源聊天；
++- follow-up：agent 自设的一次性跟进（“一小时后检查对方是否回复”），到期把提醒
++  注入**原会话**继续（transcript 上下文不丢）。
++
++存储与状态机在 ``hermes_cli/followups.py``；注入 watcher 在 ``gateway/run_followups.py``。
++"""
++
++from __future__ import annotations
++
++import json
++import re
++from typing import Any, Optional
++
++from tools.registry import registry, tool_error
++
++FOLLOWUP_SCHEMA = {
++    "name": "followup_manage",
++    "description": (
++        "Set a one-shot follow-up reminder that wakes THIS SAME conversation later "
++        "(context preserved), unlike cronjob_manage which starts a fresh isolated session. "
++        "Use for 'remind me / check back in N minutes' self-scheduled follow-ups. "
++        "Actions: create (prompt + delay), list, cancel (id)."
++    ),
++    "parameters": {
++        "type": "object",
++        "properties": {
++            "action": {
++                "type": "string",
++                "enum": ["create", "list", "cancel"],
++                "description": "create|list|cancel",
++            },
++            "prompt": {
++                "type": "string",
++                "description": "create: the reminder text injected into this conversation when due.",
++            },
++            "delay": {
++                "type": "string",
++                "description": "create: delay from now, e.g. '30m', '1h', '2d', 'in 45m' (60s..30d).",
++            },
++            "id": {
++                "type": "string",
++                "description": "cancel: follow-up id returned by create/list.",
++            },
++        },
++        "required": ["action"],
++    },
++}
++
++_UNIT_SECONDS = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
++_DELAY_RE = re.compile(r"^\s*(?:in\s+)?(\d+(?:\.\d+)?)\s*([smhdw])\s*$", re.IGNORECASE)
++
++
++def parse_delay(text: str) -> float:
++    """'30m' / 'in 2h' / '1d' → 秒；纯数字按分钟；非法抛 ValueError。"""
++    raw = (text or "").strip()
++    if not raw:
++        raise ValueError("delay 必填，例如 '30m' 或 'in 2h'")
++    m = _DELAY_RE.match(raw)
++    if m:
++        return float(m.group(1)) * _UNIT_SECONDS[m.group(2).lower()]
++    if re.fullmatch(r"\d+(?:\.\d+)?", raw):
++        return float(raw) * 60
++    raise ValueError(f"无法解析 delay：{raw}（支持 30m / 1h / 2d / in 45m）")
++
++
++def _dumps(obj: Any) -> str:
++    return json.dumps(obj, ensure_ascii=False)
++
++
++def _session_id(kw: dict[str, Any]) -> str:
++    sid = str(kw.get("session_id") or "").strip()
++    if sid:
++        return sid
++    from gateway.session_context import get_session_env
++    return (get_session_env("HERMES_SESSION_ID", "") or "").strip()
++
++
++def _handler(args: dict[str, Any], **kw: Any) -> str:
++    from hermes_cli.followups import (
++        capture_route, cancel_followup, create_followup, list_followups,
++    )
++
++    action = str(args.get("action") or "").strip()
++    session_id = _session_id(kw)
++    if not session_id:
++        return tool_error("没有会话上下文（session_id 缺失），follow-up 无法绑定原会话", success=False)
++
++    if action == "create":
++        try:
++            delay_s = parse_delay(str(args.get("delay") or ""))
++            state = create_followup(
++                session_id=session_id,
++                prompt=str(args.get("prompt") or ""),
++                delay_seconds=delay_s,
++                route=capture_route(),
++            )
++        except ValueError as exc:
++            return tool_error(str(exc), success=False)
++        note = None
++        from utils import env_var_enabled
++        if not (env_var_enabled("HERMES_GATEWAY_SESSION") or env_var_enabled("HERMES_EXEC_ASK")):
++            note = ("当前会话未标记网关上下文：follow-up 只在 gateway 进程运行时到期注入；"
++                    "无网关时它不会触发。")
++        return _dumps({
++            "success": True,
++            "action": "create",
++            "id": state.id,
++            "due_at": state.due_at,
++            "delay_seconds": delay_s,
++            "message": f"Follow-up {state.id} 已设定，将在 {int(delay_s)} 秒后唤醒本会话。",
++            **({"note": note} if note else {}),
++        })
++
++    if action == "list":
++        rows = list_followups(session_id)
++        return _dumps({
++            "success": True,
++            "action": "list",
++            "count": len(rows),
++            "followups": [
++                {"id": s.id, "status": s.status, "prompt": s.prompt, "due_at": s.due_at,
++                 "attempts": s.attempts, "last_error": s.last_error}
++                for s in rows
++            ],
++        })
++
++    if action == "cancel":
++        fid = str(args.get("id") or "").strip()
++        if not fid:
++            return tool_error("cancel 需要 id", success=False)
++        ok = cancel_followup(fid, session_id=session_id)
++        if not ok:
++            return tool_error(f"取消失败：{fid} 不存在、不属于本会话或已是终态", success=False)
++        return _dumps({"success": True, "action": "cancel", "id": fid})
++
++    return tool_error("action 须为 create|list|cancel", success=False)
++
++
++registry.register(
++    name="followup_manage",
++    toolset="followup",
++    schema=FOLLOWUP_SCHEMA,
++    handler=_handler,
++    check_fn=lambda: True,
++    emoji="⏳",
++)
+diff --git a/gateway/run_followups.py b/gateway/run_followups.py
+new file mode 100644
+--- /dev/null
++++ b/gateway/run_followups.py
+@@ -0,0 +1,123 @@
++"""Follow-up watcher：到期的 agent 自设提醒注入原会话（Always-on Agents P3，2026-11-16）。
++
++镜像 ``/loop`` watcher（gateway/run_goals.py:_loop_wakeup_watcher）的结构：
++- 粗节拍扫描（默认 15s），按 profile 分 scope；
++- 到期只提交 admission（``admit_route_wake``），不直接跑 agent——定时器与执行解耦；
++- 会话忙则顺延（下一 tick 重试），不排队抢跑；
++- claim（active→firing）先于注入，崩溃恢复把陈旧 firing 重置为 active（at-most-once 注入，
++  避免无限重放重复打扰）。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import logging
++import time
++from contextlib import suppress
++from typing import Optional
++
++logger = logging.getLogger("gateway.run")
++
++
++class GatewayFollowupsMixin:
++    async def _followup_watcher(self, interval: float = 15.0) -> None:
++        """Fire due follow-ups for idle gateway sessions into their ORIGINAL conversation.
++
++        A follow-up is one-shot: claim → inject → fired. Failures retry up to 3 attempts,
++        then park as ``failed`` (never spin forever). Multiplex: scans every served profile's
++        store under its own runtime scope, like the loop watcher."""
++        from gateway.run import _async_profile_runtime_scope, _resolve_handoff_watch_scopes
++        from gateway.run_idle_gates import profile_has_active_followup
++        from hermes_cli.followups import recover_stale_firing
++
++        await asyncio.sleep(5)  # let platforms finish connecting
++        warned_no_route: set = set()
++
++        # 崩溃遗留的 firing 行重置为 active（否则永远卡在 firing）。
++        try:
++            await self._run_in_executor_with_context(recover_stale_firing)
++        except Exception:  # noqa: BLE001 - recovery is best-effort
++            logger.debug("followup: stale-firing recovery failed", exc_info=True)
++
++        def _scope(profile_home):
++            if profile_home is not None:
++                return _async_profile_runtime_scope(profile_home)
++            from tui_gateway.launch_profile_policy import async_launch_profile_scope_if_multiplexed
++            return async_launch_profile_scope_if_multiplexed()
++
++        async def _scan_one_store(profile_name: Optional[str]) -> None:
++            from hermes_cli.followups import list_due_followups
++
++            await self._warm_goals_session_db("followup wakeup")
++            due = await self._run_in_executor_with_context(list_due_followups)
++            for state in due:
++                await self._followup_fire_one(state, warned_no_route, profile_name)
++
++        while self._running:
++            try:
++                for profile_name, profile_home in await _resolve_handoff_watch_scopes(self):
++                    if profile_home is not None and not await self._run_in_executor_with_context(
++                            profile_has_active_followup, profile_home):
++                        continue
++                    async with _scope(profile_home):
++                        await _scan_one_store(profile_name)
++            except Exception as exc:  # noqa: BLE001 - one bad store must not stop the watcher
++                logger.debug("followup watcher error: %s", exc)
++            await asyncio.sleep(interval)
++
++    async def _followup_fire_one(self, state, warned_no_route: set, profile: Optional[str] = None) -> None:
++        """Inject one due follow-up into its original session, applying every deferral rule."""
++        from hermes_cli.followups import claim_followup, mark_fired, release_followup
++
++        route = state.route or {}
++        platform_name = route.get("platform", "")
++        chat_id = route.get("chat_id", "")
++        if not platform_name or not chat_id:
++            return  # 无路由（CLI/TUI 创建时已拒绝，防御旧数据）
++        profile = route.get("profile") or profile
++        adapters = self._adapters_for_profile(profile)
++        adapter = next((a for p, a in adapters.items() if p.value == platform_name), None)
++        if adapter is None:
++            if state.id not in warned_no_route:
++                warned_no_route.add(state.id)
++                logger.debug(
++                    "followup: no adapter for platform %r (session %s, profile %s)",
++                    platform_name, state.session_id, profile,
++                )
++            return
++
++        source = self._build_process_event_source({
++            "session_key": "",
++            "platform": platform_name,
++            "chat_id": chat_id,
++            **{k: route.get(k, "") for k in ("chat_type", "thread_id", "user_id", "user_name")},
++        })
++        if source is None:
++            return
++        if profile and not getattr(source, "profile", None):
++            source.profile = profile
++        session_key = None
++        with suppress(Exception):
++            session_key = self._session_key_for_source(source)
++        if session_key and session_key in self._running_agents:
++            return  # busy — stays due, next scan retries
++
++        claimed = await self._run_in_executor_with_context(claim_followup, state.id)
++        if claimed is None:
++            return  # already claimed/fired/cancelled
++        try:
++            from gateway.session_automation import admit_route_wake
++
++            logger.info(
++                "followup %s firing — session=%s platform=%s chat=%s",
++                claimed.id, claimed.session_id, platform_name, source.chat_id,
++            )
++            if not await admit_route_wake(
++                    self, adapter, source, claimed.prompt, "followup",
++                    metadata={"followup_id": claimed.id, "followup_session": claimed.session_id}):
++                await adapter.handle_message(self._synthetic_prompt_event(source, claimed.prompt, internal=True))
++            await self._run_in_executor_with_context(mark_fired, claimed.id)
++        except Exception as exc:  # noqa: BLE001 - release and retry next tick
++            logger.warning("followup injection failed for %s: %s", claimed.id, exc)
++            with suppress(Exception):
++                await self._run_in_executor_with_context(release_followup, claimed.id, str(exc))
+diff --git a/tests/hermes_cli/test_followups.py b/tests/hermes_cli/test_followups.py
+new file mode 100644
+--- /dev/null
++++ b/tests/hermes_cli/test_followups.py
+@@ -0,0 +1,114 @@
++"""Tests for hermes_cli/followups.py — agent self-set follow-up timers (Always-on P3)."""
++
++from __future__ import annotations
++
++import time
++from pathlib import Path
++
++import pytest
++
++
++@pytest.fixture
++def hermes_home(tmp_path, monkeypatch):
++    """Isolated HERMES_HOME so SessionDB.state_meta writes don't clobber the real one."""
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    monkeypatch.setenv("HERMES_HOME", str(home))
++
++    from hermes_cli import goals
++
++    goals._DB_CACHE.clear()
++    yield home
++    goals._DB_CACHE.clear()
++
++
++ROUTE = {"platform": "telegram", "chat_id": "42", "chat_type": "dm", "user_id": "u1"}
++
++
++class TestCreateAndList:
++    def test_create_persists_and_lists(self, hermes_home):
++        from hermes_cli.followups import create_followup, list_followups
++
++        now = 1_000_000.0
++        st = create_followup("sess-1", "check the reply", 3600, ROUTE, now=now)
++        assert st.status == "active"
++        assert st.due_at == now + 3600
++        rows = list_followups("sess-1")
++        assert [r.id for r in rows] == [st.id]
++        assert rows[0].route["platform"] == "telegram"
++
++    def test_rejects_bad_input(self, hermes_home):
++        from hermes_cli.followups import create_followup
++
++        with pytest.raises(ValueError):
++            create_followup("s", "p", 30, ROUTE)  # < 60s
++        with pytest.raises(ValueError):
++            create_followup("s", "p", 31 * 86400, ROUTE)  # > 30d
++        with pytest.raises(ValueError):
++            create_followup("s", "", 60, ROUTE)
++        with pytest.raises(ValueError):
++            create_followup("s", "p", 60, None)  # no route
++
++    def test_per_session_cap(self, hermes_home):
++        from hermes_cli.followups import MAX_ACTIVE_PER_SESSION, create_followup
++
++        for i in range(MAX_ACTIVE_PER_SESSION):
++            create_followup("s", f"p{i}", 60, ROUTE)
++        with pytest.raises(ValueError):
++            create_followup("s", "one-too-many", 60, ROUTE)
++
++
++class TestDueAndFiring:
++    def test_list_due_filters_status_and_time(self, hermes_home):
++        from hermes_cli.followups import create_followup, list_due_followups, mark_fired
++
++        a = create_followup("s", "a", 60, ROUTE, now=1000)
++        b = create_followup("s", "b", 600, ROUTE, now=1000)
++        assert [x.id for x in list_due_followups(now=1100)] == [a.id]
++        assert {x.id for x in list_due_followups(now=2000)} == {a.id, b.id}
++        mark_fired(a.id, now=1101)
++        assert [x.id for x in list_due_followups(now=2000)] == [b.id]
++
++    def test_claim_is_one_shot(self, hermes_home):
++        from hermes_cli.followups import claim_followup, create_followup
++
++        st = create_followup("s", "p", 60, ROUTE, now=1000)
++        first = claim_followup(st.id)
++        assert first is not None and first.status == "firing" and first.attempts == 1
++        assert claim_followup(st.id) is None  # already firing
++
++    def test_release_retries_then_fails(self, hermes_home):
++        from hermes_cli.followups import claim_followup, create_followup, release_followup
++
++        st = create_followup("s", "p", 60, ROUTE, now=1000)
++        for expected in (1, 2):
++            claimed = claim_followup(st.id)
++            assert claimed is not None and claimed.attempts == expected
++            released = release_followup(st.id, "boom")
++            assert released is not None and released.status == "active"
++        claimed = claim_followup(st.id)
++        assert claimed is not None and claimed.attempts == 3
++        failed = release_followup(st.id, "boom")
++        assert failed is not None and failed.status == "failed"
++
++    def test_recover_stale_firing(self, hermes_home):
++        from hermes_cli.followups import claim_followup, create_followup, recover_stale_firing
++
++        st = create_followup("s", "p", 60, ROUTE, now=1000)
++        claim_followup(st.id)
++        # due_at=1060; at 1100 it is only 40s stale → untouched
++        assert recover_stale_firing(now=1100) == 0
++        # at 2000 it is 940s stale → reset to active
++        assert recover_stale_firing(now=2000) == 1
++
++
++class TestCancel:
++    def test_cancel_requires_owner_and_terminal_semantics(self, hermes_home):
++        from hermes_cli.followups import cancel_followup, create_followup, list_followups
++
++        st = create_followup("s", "p", 60, ROUTE)
++        assert cancel_followup(st.id, session_id="other") is False
++        assert cancel_followup(st.id, session_id="s") is True
++        assert cancel_followup(st.id, session_id="s") is False  # terminal
++        assert list_followups("s")[0].status == "cancelled"
+diff --git a/tests/tools/test_followup_tool.py b/tests/tools/test_followup_tool.py
+new file mode 100644
+--- /dev/null
++++ b/tests/tools/test_followup_tool.py
+@@ -0,0 +1,84 @@
++"""Tests for tools/followup_tool.py — followup_manage tool surface (Always-on P3)."""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++from unittest.mock import patch
++
++import pytest
++
++
++@pytest.fixture
++def hermes_home(tmp_path, monkeypatch):
++    home = tmp_path / ".hermes"
++    home.mkdir()
++    monkeypatch.setattr(Path, "home", lambda: tmp_path)
++    monkeypatch.setenv("HERMES_HOME", str(home))
++    from hermes_cli import goals
++
++    goals._DB_CACHE.clear()
++    yield home
++    goals._DB_CACHE.clear()
++
++
++ROUTE = {"platform": "telegram", "chat_id": "42"}
++
++
++class TestParseDelay:
++    @pytest.mark.parametrize("text,seconds", [
++        ("30m", 1800), ("1h", 3600), ("2d", 172800), ("1w", 604800),
++        ("in 45m", 2700), ("15s", 15), ("90", 5400),
++    ])
++    def test_parse(self, text, seconds):
++        from tools.followup_tool import parse_delay
++
++        assert parse_delay(text) == seconds
++
++    @pytest.mark.parametrize("text", ["", "soon", "2 fortnights", "30 m extra"])
++    def test_rejects(self, text):
++        from tools.followup_tool import parse_delay
++
++        with pytest.raises(ValueError):
++            parse_delay(text)
++
++
++class TestHandler:
++    def test_create_list_cancel(self, hermes_home):
++        from tools.followup_tool import _handler
++
++        with patch("hermes_cli.followups.capture_route", return_value=ROUTE):
++            created = json.loads(_handler({"action": "create", "prompt": "ping", "delay": "30m"},
++                                          session_id="sess-1"))
++        assert created["success"] is True
++        fid = created["id"]
++
++        listed = json.loads(_handler({"action": "list"}, session_id="sess-1"))
++        assert listed["count"] == 1
++        assert listed["followups"][0]["id"] == fid
++
++        cancelled = json.loads(_handler({"action": "cancel", "id": fid}, session_id="sess-1"))
++        assert cancelled["success"] is True
++
++        listed2 = json.loads(_handler({"action": "list"}, session_id="sess-1"))
++        assert listed2["followups"][0]["status"] == "cancelled"
++
++    def test_create_without_route_fails_closed(self, hermes_home):
++        from tools.followup_tool import _handler
++
++        with patch("hermes_cli.followups.capture_route", return_value=None):
++            out = json.loads(_handler({"action": "create", "prompt": "p", "delay": "1h"}, session_id="s"))
++        assert out["success"] is False
++        assert "路由" in out["error"] or "cronjob" in out["error"]
++
++    def test_missing_session_fails(self):
++        from tools.followup_tool import _handler
++
++        out = json.loads(_handler({"action": "list"}, session_id=""))
++        assert out["success"] is False
++
++    def test_unknown_action(self, hermes_home):
++        from tools.followup_tool import _handler
++
++        out = json.loads(_handler({"action": "explode"}, session_id="s"))
++        assert out["success"] is False
+diff --git a/toolsets.py b/toolsets.py
+--- a/toolsets.py
++++ b/toolsets.py
+@@ -23,6 +23,7 @@
+     "clarify",
+     "execute_code", "delegate_task",
+     "cronjob_manage",
++    "followup_manage",  # 自设 follow-up 定时器（到期唤醒原会话，Always-on P3）
+     "kanban_show", "kanban_list",
+     "kanban_complete", "kanban_block", "kanban_request_review",
+     "kanban_request_changes",
+@@ -148,6 +149,7 @@
+         platforms=frozenset({"desktop"}),
+     ),
+     "clarify": _ts("Ask the user clarifying questions (multiple-choice or open-ended)", ["clarify"]),
++    "followup": _ts("Self-set one-shot follow-up reminder that wakes THIS conversation (not a fresh cron session)", ["followup_manage"]),
+     "code_execution": _ts("Run Python scripts that call tools programmatically (reduces LLM round trips)", ["execute_code"]),
+     "delegation": _ts("Spawn subagents with isolated context for complex subtasks", ["delegate_task"]),
+     "kanban": _ts(
+diff --git a/gateway/run.py b/gateway/run.py
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -2187,6 +2187,7 @@
+ from gateway.run_notifications import GatewayNotificationsMixin
+ from gateway.run_inbound import GatewayInboundMixin
+ from gateway.run_goals import GatewayGoalsMixin
++from gateway.run_followups import GatewayFollowupsMixin
+ from gateway.run_agent_cache import GatewayAgentCacheMixin
+ from gateway.run_profile_reconcile import GatewayProfileReconcileMixin
+ from gateway.run_plugin_rewire import GatewayPluginRewireMixin
+@@ -3317,7 +3318,7 @@
+     GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, GatewaySlashCommandsMixin,
+     GatewayVoiceMixin, GatewayAdapterLifecycleMixin, GatewayTopicThreadsMixin, GatewayTurnMixin,
+     GatewayShutdownMixin, GatewayBusySessionMixin, GatewayConfigLoadersMixin, GatewayStartupMixin,
+-    GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin,
++    GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin, GatewayFollowupsMixin,
+     GatewayAgentCacheMixin, GatewayRuntimeInitMixin, GatewayProfileReconcileMixin, GatewayPluginRewireMixin):
+     """Main gateway controller: manages adapter lifecycles, routes messages to/from the agent."""
+ 
+diff --git a/gateway/run_startup.py b/gateway/run_startup.py
+--- a/gateway/run_startup.py
++++ b/gateway/run_startup.py
+@@ -1668,7 +1668,8 @@
+         "_kanban_notifier_watcher", "_kanban_dispatcher_watcher",
+     )
+     _POST_RECONNECT_WATCHERS = (
+-        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_profile_reconcile_watcher",
++        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher",
++        "_profile_reconcile_watcher",
+     )
+ 
+     def _start_spawn_background_watchers(self) -> None:
+diff --git a/gateway/run_idle_gates.py b/gateway/run_idle_gates.py
+--- a/gateway/run_idle_gates.py
++++ b/gateway/run_idle_gates.py
+@@ -53,6 +53,12 @@
+     return _gate(profile_home, store_has_active_loop)
+ 
+ 
++def profile_has_active_followup(profile_home: Path) -> bool:
++    from hermes_cli.followups import store_has_active_followup
++
++    return _gate(profile_home, store_has_active_followup)
++
++
+ def profile_has_pending_handoff(profile_home: Path) -> bool:
+     return _gate(profile_home, lambda db: db.has_pending_handoffs())
+ 
