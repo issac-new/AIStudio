@@ -7,6 +7,7 @@ import { useIdeStore, ideAgentToChatAgent } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { fetchSessionMessagesPage } from '@/api/studio/sessions'
 import { askBtw, refreshBtw, btwNoteText, btwSessionOf, btwStateView } from '../store/btw'
+import IdePanelShell from './IdePanelShell.vue'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const chatStore = useChatStore()
@@ -69,13 +70,11 @@ watch(() => chatStore.activeSessionId, refresh)
 </script>
 
 <template>
-  <div class="ide-btw" data-testid="ide-btw">
-    <div class="ide-btw__head">
-      <span>⇋ 侧问（不打断主任务）</span>
+  <IdePanelShell title="⇋ 侧问（不打断主任务）" variant="panel" testid="ide-btw" class="ide-btw" @close="emit('close')">
+    <template #tools>
       <button type="button" data-testid="ide-btw-open" title="打开侧问会话" @click="openBtwSession">↗</button>
       <button type="button" data-testid="ide-btw-refresh" title="刷新回答" @click="refresh">↻</button>
-      <button type="button" data-testid="ide-btw-close" @click="emit('close')">✕</button>
-    </div>
+    </template>
     <div class="ide-btw__ask">
       <textarea v-model="question" rows="2" data-testid="ide-btw-input" placeholder="小问题旁路问一句（如：这个函数的边界条件？）" />
       <button type="button" data-testid="ide-btw-send" :disabled="btwStateView.asking || !question.trim()" @click="submit">
@@ -99,19 +98,17 @@ watch(() => chatStore.activeSessionId, refresh)
         >{{ copiedId === x.exchangeId ? '✓ 已复制' : '⧉ 复制旁注' }}</button>
       </div>
     </div>
-  </div>
+  </IdePanelShell>
 </template>
 
 <style scoped lang="scss">
+/* 浮动停靠样式挂到外壳根（scoped 属性会落到子组件根元素）；标题栏由 IdePanelShell 统一。 */
 .ide-btw {
   position: absolute; top: 44px; right: 16px; z-index: 60; width: 320px; max-height: 60vh;
-  display: flex; flex-direction: column;
   background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); font-size: 12px;
 }
-.ide-btw__head { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid var(--border-color); }
-.ide-btw__head span { flex: 1; }
-.ide-btw__head button { border: none; background: none; cursor: pointer; }
+.ide-btw :deep(.ide-panel-shell__tools button) { border: none; background: none; cursor: pointer; }
 .ide-btw__ask { display: flex; gap: 6px; padding: 8px 10px; }
 .ide-btw__ask textarea { flex: 1; border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 6px; font-size: 12px; resize: vertical; }
 .ide-btw__ask button { border: 1px solid var(--primary-color); color: var(--primary-color); background: none; border-radius: 6px; padding: 2px 10px; cursor: pointer; align-self: flex-end; }

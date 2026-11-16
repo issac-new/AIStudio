@@ -18,6 +18,7 @@ import { useIdeStore } from '../store/ide'
 import { authFetch } from '../utils/auth-fetch'
 import { useMsgSurfaceText } from '@/custom/ia2/i18n-msg-surface'
 import { forkGatewaySession } from '@/custom/shared/api/runtime-caps'
+import IdePanelShell from './IdePanelShell.vue'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
@@ -111,21 +112,15 @@ async function forkSession(): Promise<void> {
     forkBusy.value = false
   }
 }
-
-function onKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') { e.preventDefault(); emit('close') }
-}
+// Esc 关闭由 IdePanelShell 统一接管（2026-11-16 清晰化批）。
 </script>
 
 <template>
-  <div class="ihb" data-testid="ide-history-browser" @keydown="onKeydown">
-    <div class="ihb__head">
-      <span class="ihb__title">🕘 {{ tx.historyTitle }}</span>
+  <IdePanelShell :title="`🕘 ${tx.historyTitle}`" variant="panel" testid="ide-history-browser" @close="emit('close')">
+    <template #tools>
       <span class="ihb__count">{{ rows.length }}</span>
       <span v-if="isStreaming" class="ihb__lock" :title="tx.historyLockedHint">🔒 {{ tx.historyLocked }}</span>
-      <span class="ihb__spacer" />
-      <button type="button" class="ihb__close" data-testid="ide-history-close" @click="emit('close')">×</button>
-    </div>
+    </template>
     <input
       v-model="query" type="text" class="ihb__query"
       :placeholder="tx.historySearchHint" data-testid="ide-history-query"
@@ -150,32 +145,28 @@ function onKeydown(e: KeyboardEvent): void {
     </div>
     <div v-if="forkMsg" class="ihb__forkmsg" data-testid="ide-history-fork-msg">↪ {{ forkMsg }}</div>
     <div v-if="forkErr" class="ihb__forkerr" data-testid="ide-history-fork-err">{{ forkErr }}</div>
-  </div>
+  </IdePanelShell>
 </template>
 
 <style scoped lang="scss">
-.ihb {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
+/* 停靠样式挂到外壳根（scoped 属性会落到子组件根元素）；标题栏由 IdePanelShell 统一。 */
+.ide-panel-shell--panel {
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   max-height: 40%;
 }
 
-.ihb__head { display: flex; align-items: center; gap: 6px; }
-.ihb__title { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.ide-panel-shell--panel :deep(.ide-panel-shell__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .ihb__count {
   min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; text-align: center;
   background: var(--bg-card); color: var(--text-muted); font-size: 10px; line-height: 16px;
 }
 .ihb__lock { font-size: 10px; color: var(--text-muted); }
-.ihb__spacer { flex: 1; }
-.ihb__close {
-  border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0 4px;
-  &:hover { color: var(--text-primary); }
-}
 
 .ihb__query {
   height: 26px; padding: 0 8px; border: 1px solid var(--border-color); border-radius: 4px;

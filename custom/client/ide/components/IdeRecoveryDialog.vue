@@ -10,6 +10,7 @@ import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { fetchEngineRows, type EngineRow } from '../utils/zcode-fork'
 import { authFetch } from '../utils/auth-fetch'
+import IdePanelShell from './IdePanelShell.vue'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -91,53 +92,44 @@ async function recover(mode: string): Promise<void> {
 </script>
 
 <template>
-  <div v-if="open" class="ide-recovery" data-testid="ide-recovery-dialog" role="dialog">
-    <div class="ide-recovery__mask" @click="emit('close')" />
-    <div class="ide-recovery__panel">
-      <header class="ide-recovery__head">
-        <span>⏎ 恢复到历史点</span>
-        <button type="button" class="ide-recovery__close" data-testid="ide-recovery-close" @click="emit('close')">✕</button>
-      </header>
-      <p v-if="!selectable.length" class="ui-empty-state">无可恢复的行（需会话已有消息）</p>
-      <ul v-else class="ide-recovery__rows" data-testid="ide-recovery-rows">
-        <li
-          v-for="row in selectable"
-          :key="row.rowId"
-          class="ide-recovery__row"
-          :class="{ 'is-selected': selectedRow?.rowId === row.rowId }"
-          :data-testid="`ide-recovery-row-${row.rowId}`"
-          @click="selectedRow = row"
-        >
-          <span class="ide-recovery__kind">{{ row.kind === 'userInput' ? '问' : '答' }}</span>
-          <span class="ide-recovery__text">{{ row.text }}</span>
-        </li>
-      </ul>
-      <div class="ide-recovery__modes" data-testid="ide-recovery-modes">
-        <button
-          v-for="m in MODES"
-          :key="m.key"
-          type="button"
-          class="ide-recovery__mode"
-          :data-testid="`ide-recovery-mode-${m.key}`"
-          :disabled="!selectedRow || busy"
-          :title="m.hint"
-          @click="recover(m.key)"
-        >{{ m.label }}</button>
-      </div>
+  <IdePanelShell
+    v-if="open"
+    title="⏎ 恢复到历史点"
+    variant="dialog"
+    testid="ide-recovery-dialog"
+    @close="emit('close')"
+  >
+    <p v-if="!selectable.length" class="ui-empty-state">无可恢复的行（需会话已有消息）</p>
+    <ul v-else class="ide-recovery__rows" data-testid="ide-recovery-rows">
+      <li
+        v-for="row in selectable"
+        :key="row.rowId"
+        class="ide-recovery__row"
+        :class="{ 'is-selected': selectedRow?.rowId === row.rowId }"
+        :data-testid="`ide-recovery-row-${row.rowId}`"
+        @click="selectedRow = row"
+      >
+        <span class="ide-recovery__kind">{{ row.kind === 'userInput' ? '问' : '答' }}</span>
+        <span class="ide-recovery__text">{{ row.text }}</span>
+      </li>
+    </ul>
+    <div class="ide-recovery__modes" data-testid="ide-recovery-modes">
+      <button
+        v-for="m in MODES"
+        :key="m.key"
+        type="button"
+        class="ide-recovery__mode"
+        :data-testid="`ide-recovery-mode-${m.key}`"
+        :disabled="!selectedRow || busy"
+        :title="m.hint"
+        @click="recover(m.key)"
+      >{{ m.label }}</button>
     </div>
-  </div>
+  </IdePanelShell>
 </template>
 
 <style scoped lang="scss">
-.ide-recovery { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; }
-.ide-recovery__mask { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
-.ide-recovery__panel {
-  position: relative; width: 480px; max-height: 60vh; display: flex; flex-direction: column;
-  background: var(--card-color); border-radius: 10px; padding: 12px 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-}
-.ide-recovery__head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-.ide-recovery__close { border: none; background: transparent; cursor: pointer; color: var(--text-muted); }
+/* 容器/遮罩/标题栏由 IdePanelShell 统一承载（2026-11-16 清晰化批）；此处只留业务样式。 */
 .ide-recovery__rows { overflow-y: auto; margin: 8px 0; padding: 0; list-style: none; }
 .ide-recovery__row {
   display: flex; gap: 6px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 12px;

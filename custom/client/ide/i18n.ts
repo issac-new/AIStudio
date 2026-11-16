@@ -33,6 +33,10 @@ export const IDE_LOCAL_TEXT = {
       computerUseTip: '会话级电脑操作闸（真实生效）：开启后本会话的编码引擎放行 computer-use 工具面（鼠标/键盘/截图，受权限档约束）；默认关闭=运行时不可用（fail-closed）。',
       cuaFloatTitle: '电脑操作截图证据',
     },
+    // 会话头部工具栏清晰化批（2026-11-16）：高频动作短文字 + 分组名。
+    chatActions: {
+      newLabel: '新建', recoveryLabel: '恢复', findLabel: '查找',
+    },
     cua: {
       title: 'CUA 截图', empty: '本会话还没有电脑操作截图。开启电脑操作后，让 agent「截个图」即可在此查看证据。',
       shot: '截图', enlarge: '放大', shrink: '缩小', save: '保存',
@@ -186,6 +190,10 @@ export const IDE_LOCAL_TEXT = {
       autoTitle: 'Pick a cost tier by task complexity (0.5×/1×/2×) — rationale shown after click',
       computerUseTip: 'Real per-session computer-use gate: when on, this session\'s coding engine exposes the computer-use toolset (mouse/keyboard/screenshot, gated by permission mode); default off = runtime unavailable (fail-closed).',
       cuaFloatTitle: 'Computer-use screenshots',
+    },
+    // Chat header toolbar clarity batch (2026-11-16): high-frequency short labels.
+    chatActions: {
+      newLabel: 'New', recoveryLabel: 'Restore', findLabel: 'Find',
     },
     cua: {
       title: 'CUA shots', empty: 'No computer-use screenshots yet. Turn computer use on and ask the agent to take one.',
