@@ -181,6 +181,9 @@ const {
   toggleToolTraceVisible,
   root,
 } = useIdeChatPane()
+
+// 工具栏清晰化批（2026-11-16）：高频动作短文字（tx 绑 composer，此处单取 chatActions）。
+const chatActionLabels = computed(() => IDE_LOCAL_TEXT[ideLocaleOf(locale)].chatActions)
 </script>
 
 
@@ -195,35 +198,40 @@ const {
       <!-- R5 goal 预算浮层（zcode goal stats 语义：工具/迭代/上下文消耗面） -->
       <IdeGoalBudgetFloat />
       <div class="ide-chat__actions">
-        <button
-          type="button"
-          class="ide-chat__action"
-          data-testid="ide-chat-new"
-          :title="t('ide.chatNewSession')"
-          @click="newSession"
-        >＋</button>
-        <button
-          type="button"
-          class="ide-chat__action"
-          data-testid="ide-chat-recovery"
-          :disabled="!chatStore.activeSessionId"
-          :title="t('ide.chatRecovery')"
-          @click="recoveryOpen = true"
-        >⏎</button>
-        <button
-          type="button"
-          class="ide-chat__action"
-          data-testid="ide-chat-video-frames"
-          title="视频抽帧入会话（按路径抽帧投喂，agent 录屏产物适用）"
-          @click="videoFramesOpen = true"
-        >🎞</button>
-        <button
-          type="button"
-          class="ide-chat__action"
-          data-testid="ide-chat-find"
+        <!-- 工具栏清晰化批（2026-11-16）：三组分隔 + 高频动作带短文字，消除“看不出按钮干啥”。 -->
+        <div class="ide-chat__group" role="group" aria-label="会话">
+          <button
+            type="button"
+            class="ide-chat__action ide-chat__action--label"
+            data-testid="ide-chat-new"
+            :title="t('ide.chatNewSession')"
+            @click="newSession"
+          >＋ {{ chatActionLabels.newLabel }}</button>
+          <button
+            type="button"
+            class="ide-chat__action ide-chat__action--label"
+            data-testid="ide-chat-recovery"
+            :disabled="!chatStore.activeSessionId"
+            :title="t('ide.chatRecovery')"
+            @click="recoveryOpen = true"
+          >⏎ {{ chatActionLabels.recoveryLabel }}</button>
+          <button
+            type="button"
+            class="ide-chat__action"
+            data-testid="ide-chat-video-frames"
+            title="视频抽帧入会话（按路径抽帧投喂，agent 录屏产物适用）"
+            @click="videoFramesOpen = true"
+          >🎞</button>
+        </div>
+        <span class="ide-chat__group-divider" aria-hidden="true" />
+        <div class="ide-chat__group" role="group" aria-label="查找与回顾">
+          <button
+            type="button"
+            class="ide-chat__action ide-chat__action--label"
+            data-testid="ide-chat-find"
           title="会话内查找（跳转定位；行内高亮待上游 MessageList 补丁）"
           @click="openFind"
-        >🔍</button>
+        >🔍 {{ chatActionLabels.findLabel }}</button>
         <button
           type="button"
           class="ide-chat__action"
@@ -232,6 +240,9 @@ const {
           title="历史提示浏览器（搜索过往提示：定位/复制/编辑重发；运行中只读）"
           @click="historyOpen = !historyOpen"
         >🕘</button>
+        </div>
+        <span class="ide-chat__group-divider" aria-hidden="true" />
+        <div class="ide-chat__group" role="group" aria-label="工具">
         <button
           type="button"
           class="ide-chat__action"
@@ -309,6 +320,9 @@ const {
             <path d="M3 12h4l2-6 4 12 2-6h6" />
           </svg>
         </button>
+        </div>
+        <span class="ide-chat__group-divider" aria-hidden="true" />
+        <div class="ide-chat__group" role="group" aria-label="诊断">
         <div class="ide-chat__debug">
           <button
             type="button"
@@ -338,6 +352,7 @@ const {
         </div>
         <!-- R4 活动收件箱（claude-code 通知耗时 + codex-product 三态语义） -->
         <IdeActivityInbox />
+        </div>
       </div>
     </header>
 
@@ -784,6 +799,21 @@ const {
 .ide-chat__actions {
   display: flex;
   gap: 6px;
+  align-items: center;
+}
+
+/* 工具栏清晰化批（2026-11-16）：分组容器与竖分隔线 */
+.ide-chat__group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ide-chat__group-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+  flex: none;
 }
 
 .ide-chat__action {
@@ -799,6 +829,17 @@ const {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
+
+  /* 高频动作：图标 + 短文字（宽度自适应，覆盖 26px 方块缺省）。
+     终审 IMPORTANT 1：嵌套成复合选择器（.ide-chat__action.ide-chat__action--label）抬高
+     特异性，width/font-size 不再被 base 同特异性压制（原独立规则写在 base 之前会失效）。 */
+  &.ide-chat__action--label {
+    width: auto;
+    gap: 4px;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
 
   &:hover:not(:disabled) {
     color: var(--text-primary);

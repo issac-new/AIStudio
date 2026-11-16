@@ -12,6 +12,7 @@ import { useIdeStore } from '../store/ide'
 import { useIdeWorkspace } from '../composables/useIdeWorkspace'
 import { useNowTick } from '@/custom/ia2/composables/useNowTick'
 import { authFetch } from '../utils/auth-fetch'
+import IdePanelShell from './IdePanelShell.vue'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const chat = useChatStore()
@@ -84,12 +85,10 @@ const STATUS_TEXT: Record<string, string> = {
 </script>
 
 <template>
-  <div class="ide-bgt" data-testid="ide-bgtasks">
-    <div class="ide-bgt__head">
-      <span>⏱ 后台任务</span>
+  <IdePanelShell title="⏱ 后台任务" variant="panel" testid="ide-bgtasks" class="ide-bgt" @close="emit('close')">
+    <template #tools>
       <button type="button" data-testid="ide-bgt-refresh" title="刷新队列与工作流" @click="() => { void loadQueue(); void loadWorkflowRuns() }">↻</button>
-      <button type="button" data-testid="ide-bgt-close" @click="emit('close')">✕</button>
-    </div>
+    </template>
 
     <section class="ide-bgt__section" data-testid="ide-bgt-subagents">
       <div class="ide-bgt__sectitle">后台子代理 · {{ subagents.length }}</div>
@@ -127,19 +126,18 @@ const STATUS_TEXT: Record<string, string> = {
         {{ r.name ?? r.runId }}
       </button>
     </section>
-  </div>
+  </IdePanelShell>
 </template>
 
 <style scoped lang="scss">
+/* 浮动停靠样式挂到外壳根；标题栏由 IdePanelShell 统一。 */
 .ide-bgt {
   position: absolute; top: 44px; right: 16px; z-index: 60; width: 340px; max-height: 66vh;
-  display: flex; flex-direction: column; overflow-y: auto;
   background: var(--card-color); border: 1px solid var(--border-color);
   border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); font-size: 12px;
 }
-.ide-bgt__head { display: flex; gap: 6px; align-items: center; padding: 8px 10px; font-weight: 600; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: inherit; }
-.ide-bgt__head span { flex: 1; }
-.ide-bgt__head button { border: none; background: none; cursor: pointer; }
+.ide-bgt :deep(.ide-panel-shell__head) { position: sticky; top: 0; background: inherit; }
+.ide-bgt :deep(.ide-panel-shell__tools button) { border: none; background: none; cursor: pointer; }
 .ide-bgt__section { padding: 6px 10px; }
 .ide-bgt__sectitle { font-weight: 600; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
 .ide-bgt__error { color: var(--error-color); font-size: 11px; }

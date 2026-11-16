@@ -6,6 +6,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useChatStore } from '@/stores/hermes/chat'
 import { fetchSessionMessagesPage } from '@/api/studio/sessions'
+import IdePanelShell from './IdePanelShell.vue'
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 const chat = useChatStore()
@@ -61,16 +62,14 @@ watch(() => chat.activeSessionId, () => {
 </script>
 
 <template>
-  <div class="ide-side-sess" data-testid="ide-side-session">
-    <div class="ide-side-sess__head">
-      <span class="ide-side-sess__t">⇔ 对照</span>
+  <IdePanelShell title="⇔ 对照" variant="panel" testid="ide-side-session" class="ide-side-sess" @close="emit('close')">
+    <template #tools>
       <select v-model="selectedId" class="ide-side-sess__sel" data-testid="ide-side-session-select">
         <option value="">（选择对照会话）</option>
         <option v-for="c in candidates" :key="c.id" :value="c.id">{{ (c.title || c.id).slice(0, 28) }}</option>
       </select>
       <button type="button" data-testid="ide-side-session-refresh" title="立即刷新" @click="load">↻</button>
-      <button type="button" data-testid="ide-side-session-close" @click="emit('close')">✕</button>
-    </div>
+    </template>
     <div class="ide-side-sess__body">
       <div v-if="!selectedId" class="ide-side-sess__hint">选择另一会话作只读对照——主屏不动，边看边干。</div>
       <div v-else-if="state === 'loading'" class="ide-side-sess__hint">载入中…</div>
@@ -83,22 +82,22 @@ watch(() => chat.activeSessionId, () => {
         >{{ String(typeof m.content === 'string' ? m.content : '').slice(0, 500) }}</div>
       </template>
     </div>
-  </div>
+  </IdePanelShell>
 </template>
 
 <style scoped lang="scss">
+/* 停靠样式挂到外壳根；标题栏由 IdePanelShell 统一。 */
 .ide-side-sess {
   position: absolute; top: 0; right: 0; bottom: 0; z-index: 40;
-  display: flex; flex-direction: column; width: 340px;
+  width: 340px;
   border-left: 1px solid var(--border-color);
   background: var(--bg-secondary); font-size: 12px;
   box-shadow: -4px 0 16px rgba(0,0,0,0.18);
 }
-.ide-side-sess__head { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border-color); }
-.ide-side-sess__t { font-weight: 600; color: var(--text-secondary); }
 .ide-side-sess__sel { flex: 1; border: 1px solid var(--border-color); background: none; color: var(--text-primary); border-radius: 4px; padding: 2px 4px; font-size: 11px; min-width: 0; }
-.ide-side-sess__head button { border: none; background: none; color: var(--text-secondary); cursor: pointer; }
-.ide-side-sess__body { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
+.ide-side-sess :deep(.ide-panel-shell__tools) { flex: 1; min-width: 0; }
+.ide-side-sess :deep(.ide-panel-shell__tools button) { border: none; background: none; color: var(--text-secondary); cursor: pointer; }
+.ide-side-sess__body { overflow-y: auto; padding: 8px; min-height: 0; }
 .ide-side-sess__hint { color: var(--text-muted); padding: 8px 4px; }
 .ide-side-sess__msg {
   margin: 6px 0; padding: 6px 8px; border-radius: 8px; white-space: pre-wrap; word-break: break-word;

@@ -5,6 +5,7 @@
 // 抽帧原生覆盖）。产出=PNG File 列表，经 ChatInput defineExpose(addFiles) 入输入框。
 import { ref } from 'vue'
 import { authFetch } from '../utils/auth-fetch'
+import IdePanelShell from './IdePanelShell.vue'
 
 const props = defineProps<{ workspace?: string | null }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'frames', files: File[]): void }>()
@@ -54,27 +55,23 @@ async function extract(): Promise<void> {
 </script>
 
 <template>
-  <div class="ide-vf__backdrop" data-testid="ide-vf" @click.self="emit('close')">
-    <div class="ide-vf__dialog">
-      <div class="ide-vf__head">视频抽帧入会话<span class="ide-vf__hint">（按路径抽帧为 PNG 帧序列，作为图片附件投喂）</span></div>
-      <div class="ide-vf__row">
-        <input v-model="videoPath" data-testid="ide-vf-path" placeholder="视频路径（相对 workspace 或绝对路径）" />
-      </div>
-      <div class="ide-vf__row">
-        <label>帧数 <input v-model.number="framesCount" type="number" min="1" max="32" data-testid="ide-vf-frames" /></label>
-        <button type="button" data-testid="ide-vf-extract" :disabled="busy || !videoPath.trim()" @click="extract">{{ busy ? '抽帧中…' : '抽帧' }}</button>
-      </div>
-      <div v-if="error" class="ide-vf__error" data-testid="ide-vf-error">{{ error }}</div>
-      <div class="ide-vf__foot"><button type="button" data-testid="ide-vf-close" @click="emit('close')">取消</button></div>
+  <IdePanelShell title="🎞 视频抽帧入会话" variant="dialog" testid="ide-vf" @close="emit('close')">
+    <p class="ide-vf__hint">按路径抽帧为 PNG 帧序列，作为图片附件投喂</p>
+    <div class="ide-vf__row">
+      <input v-model="videoPath" data-testid="ide-vf-path" placeholder="视频路径（相对 workspace 或绝对路径）" />
     </div>
-  </div>
+    <div class="ide-vf__row">
+      <label>帧数 <input v-model.number="framesCount" type="number" min="1" max="32" data-testid="ide-vf-frames" /></label>
+      <button type="button" data-testid="ide-vf-extract" :disabled="busy || !videoPath.trim()" @click="extract">{{ busy ? '抽帧中…' : '抽帧' }}</button>
+    </div>
+    <div v-if="error" class="ide-vf__error" data-testid="ide-vf-error">{{ error }}</div>
+    <div class="ide-vf__foot"><button type="button" data-testid="ide-vf-close" @click="emit('close')">取消</button></div>
+  </IdePanelShell>
 </template>
 
 <style scoped lang="scss">
-.ide-vf__backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 500; display: flex; align-items: center; justify-content: center; }
-.ide-vf__dialog { width: 460px; background: var(--card-color); border-radius: 10px; padding: 14px 16px; font-size: 12px; }
-.ide-vf__head { font-weight: 600; margin-bottom: 8px; }
-.ide-vf__hint { font-weight: 400; font-size: 10px; color: var(--text-muted); }
+/* 容器/遮罩/标题栏由 IdePanelShell 统一承载（2026-11-16 清晰化批）。 */
+.ide-vf__hint { margin: 0 0 4px; font-size: 10px; color: var(--text-muted); }
 .ide-vf__row { display: flex; gap: 8px; margin: 8px 0; align-items: center; }
 .ide-vf__row input[type], .ide-vf__row input:not([type]) { flex: 1; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
 .ide-vf__row input[type="number"] { flex: 0 0 64px; }
