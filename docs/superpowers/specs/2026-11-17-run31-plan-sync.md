@@ -17,6 +17,7 @@ run30 后五个产品批（main 52ec7f384 proactive 清偿／950655d05 超级智
 3. **Mechanical·LoopForge 判读口径以 graph 新语义为准**：archived 不算成功（DONE_STATUSES 收窄）、DryRun 仅显式 shadow 可注入、RunSpawner/ShadowRunner 维持 legacy-unpinned 兼容态——run31 缺省 preset 派发（§5.14 第 6 条），遇 422/409 稳定码按新口径解读。
 4. **Mechanical·总账 §C 滞后清偿**：核实日停在 2026-11-09（v0.8.20/1.0.15 时代），设计导读已先于总账本体指向 v0.8.21——按维护规则 3「先载体后本表」本批随载体真值对齐，并在核对尾注记录 zcode 台账行补正的来龙去脉。
 5. **UserChallenge·范围确认**：用户 2026-11-17 指令「根据近期设计及实现变化，更新整体设计、全流程推演方案及推演程序，然后启动下一轮全流程推演（设置定时轮询值守）」——整体设计面经查五批已随批同步无欠账（本批仅总账滞后与 VENDOR.md 漏行），无需改 `docs/DESIGN.md` 正文。
+6. **Mechanical·kanban 版本读面断点挂账**：探针批实测发现 `_TASK_DICT_FIELDS`（`vendor/hermes-agent/hermes_cli/kanban_output.py:16`）未序列化 version/verification 两列——批二的 CAS 语义客户端无法从 REST 构造 `expected_version`（写面有锁读面无钥）。run31 以组 17 的 409 CAS 负例证能力；读面扩列涉及 vendor 补丁，不塞开跑窗，立项下批。
 
 ## 验证
 

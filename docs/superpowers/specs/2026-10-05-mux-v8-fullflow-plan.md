@@ -2944,8 +2944,11 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 12 | 权限变更审计（N02） | `GET /api/userperms/audit?limit=5` 回 `{entries,total,hasMore}`（空流合法——无变更即无审计行） | `?action=bogus` → 400 `invalid_action`（白名单外不得 200） |
 | 13 | 技能导出三道限 | `GET /api/hermes/skills?target=hermes` 回 `categories` 数组 | 导出不存在技能 → 404。413 超限／403 外部源分支由 `custom/__tests__/skills-export-contract.test.ts` 契约断言把守（组 7 先例：造 >200MB 目录不可行，常量与分支在补丁文本断言） |
 | 14 | Harness 契约面（W1-W4） | `GET /api/harness/execution-join?runId=x` 回 `ok:true` 且四源各带 `{available,reason?}`（缺席必须带原因——fail-soft 不猜数）；`GET /api/harness/tool-contracts` 回契约表（≥40 条）且 `version=2026-11-04.1`（W1 执法轮版本锚）；taskmodel 正例：有卡回 `schemaVersion=1`＋`available` 四细项（空板如实缺省记 skip，组 9 先例） | ①execution-join 无 runId/taskId → 400；②taskmodel 不存在任务 → 404；③taskmodel 缺 board → 400（快道按板库直读） |
+| 15 | Proactive 二轮端点（2026-11-17 组） | earned-autonomy 建议面 `enforcement='advisory-only'`；lineage 三源聚合四数组＋coverage 计数＋未覆盖声明在位（路径 `/api/harness/lineage`）；standing-agenda `?cardId=`/`?status=` 过滤命中回显 | apply 缺 profile→400；冷启动 hold→409 `no_tighten`（零写入）；lineage 无 key→400 `invalid_key`；agenda 未知 cardId→空集 200、未知 id→404 |
+| 16 | Always-on 账面（2026-11-17 组） | run-outcome 账本/stats（total=0 时 `silenceShare=null` 不猜数）；outbox 只读端点＋backlog 读数 | 词表外 runKind→400（校验先于落账）；非法 recipient→400（校验先于入队＋零痕迹复核）；dispatch 类 POST 不探（会真派发通知） |
+| 17 | kanban 行级版本（2026-11-17 组） | 任务列表形状断言（version/verification 两列在 CLI JSON 面缺席＝如实取证——`_TASK_DICT_FIELDS` 未扩列，批二读面断点挂账下批补丁） | `expectedVersion=-1` 提交 complete→409 `version_conflict`（构造性永不匹配，事务回滚）＋拒后卡面状态未变复核；无在册卡 skip-safe |
 
-**准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。十四组里第 4 组若无真实证据台账、第 9 组若无带 project_id 的未终结项目，允许只跑可得例并在报告写明缺省理由，属如实缺省而非跳过。**生产方**：testpass 步驱动自动执行（2026-11-04 接线；此前立法无生产方、每轮证据缺席），退出码非 0 → `g4_capability_blocked`＋g4_pass 不置位。
+**准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。十七组里第 4 组若无真实证据台账、第 9 组若无带 project_id 的未终结项目、第 17 组若无在册卡，允许只跑可得例并在报告写明缺省理由，属如实缺省而非跳过。**生产方**：testpass 步驱动自动执行（2026-11-04 接线；此前立法无生产方、每轮证据缺席），退出码非 0 → `g4_capability_blocked`＋g4_pass 不置位。
 
 ### 5.10 run25 复盘条款（2026-11-03 立，七条）
 
@@ -3005,9 +3008,9 @@ run30（20261113-v8-run30，21h08m，A2 二段式停机终局；六闸 delivery 
 
 run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能体批二／6dab0115a Ekko UI Surface／40d1affc8 Always-on 五组件／b1312b8aa LoopForge 可信 SOP 执行地板）的能力面进推演验收与判读口径，同步批随批（spec `2026-11-17-run31-plan-sync.md`）：
 
-1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——开跑后与终局各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空。outbox/run-outcome REST 面进 §5.11 探针表新增组。
-2. **proactive 三端点探针**（§5.11 表新增组）：earned-autonomy/apply 只做保证被拒负例（loosen/hold→409，非破坏）；lineage 三源聚合形状（sources＋未覆盖面声明在位）；standingagenda `?cardId=` 卡级过滤生效。
-3. **complete 语义新口径（批二）**：行级乐观锁 expected_version CAS 不匹配 409 `version_conflict`、卡级 verification 三档不满足 fail-closed 拒完成（判定器异常也拒）——探针负例覆盖 409；**run31 任务书不强制 verification 档位卡**（验收环不叠加二次验证依赖，档位卡活体留 run32 可选标定）；值守与审计判读「旧快照写回 409」为新正确行为不计缺陷。
+1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——开跑后与终局各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空。outbox/run-outcome REST 面进 §5.11 探针表组 16。
+2. **proactive 三端点探针**（§5.11 表组 15）：earned-autonomy/apply 只做保证被拒负例（缺 profile→400、冷启动 hold→409 `no_tighten`，非破坏零写入）；lineage 三源聚合形状（sources＋未覆盖面声明在位）；standingagenda `?cardId=` 卡级过滤生效。
+3. **complete 语义新口径（批二）**：行级乐观锁 expected_version CAS 不匹配 409 `version_conflict`、卡级 verification 三档不满足 fail-closed 拒完成（判定器异常也拒）——组 17 探针负例证 CAS 能力（正例受读面断点限制：version/verification 两列未进 `_TASK_DICT_FIELDS` CLI JSON 序列化面，客户端无法从 REST 构造 expected_version，读面扩列挂账下批补丁）；**run31 任务书不强制 verification 档位卡**（验收环不叠加二次验证依赖，档位卡活体留 run32 可选标定）；值守与审计判读「旧快照写回 409」为新正确行为不计缺陷。
 4. **LoopForge 完成判读口径**：graph 面 archived 不算成功（DONE_STATUSES 收窄）、DryRun 仅显式 shadow 可注入、不可执行节点 422 稳定码、pinned run 缺快照 fail-closed；RunSpawner/ShadowRunner 维持 legacy-unpinned 兼容态。run31 缺省 preset 派发（§5.14 第 6 条），判读遇 409/422 稳定码按新语义解读。
 5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——开跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
 6. **studio preload 安全加固入仓**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，入仓后 digest 变化由 N31-4 重烧覆盖。
