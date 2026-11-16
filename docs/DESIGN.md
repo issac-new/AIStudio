@@ -1689,7 +1689,7 @@ npm run serve
 | 真实 ACP 回合 | 技能生成与发现已验证；装载、编码前调用和真实 ACP 回合未验证 | 以 Skill 调用日志和真实回合补证 |
 | 长期记忆 | 写入、保留和受控注入的全链未验证；统一口径已立（Hindsight 唯一 provider）；Ekko 存量实测零数据、M1 空集收口，随 P3 退役未执行 | 保持目标契约，不宣称已生效；退役验收按记忆统一批 M2 |
 | 长程可信执行 | 三态审计、双准入、完整性栅栏和断点已有实现与测试，真实长任务全链未复验 | 真实长任务和断点恢复证据 |
-| 图运行联动 | 图引擎、事件日志与卡片派发已接线，真实多轮运行未复验 | 以真实 run 证据核对 |
+| 图执行可信地板（2026-11-16） | 编辑器 gate 复用 `runSandboxed`，只有 `status=ok + exitCode=0` 通过并保留脱敏有界证据；通用 `agent`、`subgraph` 与无真桥 `agent-task` 在节点副作用前 fail-closed，DryRun 仅显式 shadow；`CustomSpecRuntime` 每 run 先持久化 GraphSpec、contentHash 与 runtimeKind，resume/重启/fork/export/deposit-template 读快照，`legacy-unpinned/runtime-defined` 保持兼容回退，legacy export 明示 `legacy-current-draft`、deposit 拒绝；本批未开放通用 Agent、subgraph 或 publish | macOS `sandbox-exec` 零/非零退出、v1/v2 恢复导出和 Director 无 JWT/完整模板拒绝已实测；Linux 真执行未验证。当前 editor/director 装配的 gateCatalog 为空，成功/失败 gate 的 UI 执行未验证，不得据 OS 层证据宣称 UI 已开放 |
 | 主动性执行 | 两轴判定与页签已接线，执法门默认关闭 | 显式开启后的拦截与豁免审计 |
 | 桌面安装 | 未逐平台构建和安装验收 | mac/win 分别构建、安装、启动核对 |
 | 运行面新增模块 | 未逐项列为稳定契约，避免把未验证实现写死 | 以代码、测试和专题文档为准 |

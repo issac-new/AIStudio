@@ -300,6 +300,31 @@ describe('createGraphAssembly', () => {
     }
   })
 
+  it('shadow editor 配置非空 GRAPH_KANBAN_BASE 仍只用显式 DryRun，零真实 HTTP', async () => {
+    vi.stubEnv('GRAPH_KANBAN_BASE', 'http://shadow-must-not-call.test')
+    const fetchImpl = vi.fn(async () => { throw new Error('shadow_real_http_forbidden') })
+    vi.stubGlobal('fetch', fetchImpl)
+    const eventLog = new InMemoryEventLogStore()
+    const a = createGraphAssembly(assemblyOpts({ mode: 'shadow', eventLog }))
+    try {
+      await a.specStore.save(agentTaskSpec('shadow-nonempty-base'))
+      const ctx = await invoke(a.router, 'post', '/api/graph/specs/shadow-nonempty-base/runs')
+
+      expect(ctx.status).toBe(200)
+      const body = ctx.body as { runId: string; instance: { status: string; state: Record<string, unknown> } }
+      expect(body.instance.status).toBe('completed')
+      expect(body.instance.state.agentRequest).toMatchObject([{ node: 'work', task: 'dry-t1' }])
+      expect(await eventLog.getRunSpec(body.runId)).toMatchObject({
+        runtimeKind: 'editor', executionMode: 'shadow',
+      })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    } finally {
+      a.stop()
+      vi.unstubAllEnvs()
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('Director 有 token 才声明真实桥能力，快照 runtimeKind=director/production', async () => {
     vi.stubEnv('GRAPH_KANBAN_BASE', 'http://director.test')
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

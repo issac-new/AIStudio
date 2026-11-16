@@ -321,8 +321,8 @@ sandboxResult.status === 'ok' && sandboxResult.exitCode === 0
 
 ## 10. 设计文档影响
 
-- DESIGN_SYNC: none（Task 1 仅新增 additive 内部快照存储与内容指纹，尚未接入图执行链；全批设计同步由 Task 7 声明并同批修订，不在本任务扩大提交范围）
-  - 后续 Task 7 修订 `docs/DESIGN.md` 的图执行能力行：真实 sandbox gate、不可执行节点 fail-closed、每 run GraphSpec 快照与 legacy 兼容边界；明确本批未开放通用 Agent/subgraph/publish。
+- DESIGN_SYNC: touched（Task 7 已同批修订 `docs/DESIGN.md` 图执行能力行，并由既有生成器更新设计索引）
+  - 设计正本记录真实 sandbox gate、不可执行节点 fail-closed、`CustomSpecRuntime` 每 run GraphSpec 快照与 legacy 兼容边界；明确本批未开放通用 Agent、subgraph 和 publish。
   - 数字总账不触及：无新增补丁、治理门、依赖或机制预算条目；spec 索引由既有生成器随实现批更新。
 
 ## 11. 实现者可以自行决定的事项
