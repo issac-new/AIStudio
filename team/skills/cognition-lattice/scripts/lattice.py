@@ -291,25 +291,51 @@ def print_audit(report: dict) -> None:
     print(f"SKILL.md frontmatter: {'通过' if report['frontmatter_ok'] else '缺失字段'}")
 
 
+# 查询变体 -> 等价词（2026-11-16 覆盖探针实测的检索盲区；只做检索扩展，不改条目本体）
+SEARCH_SYNONYMS: dict[str, list[str]] = {
+    "反馈回路": ["反馈循环"],
+    "均值回归": ["回归均值"],
+    "基本比率": ["基础比率"],
+    "基率": ["基础比率"],
+    "五个为什么": ["5why", "五问法"],
+    "针锋相对": ["以牙还牙"],
+    "劣币驱逐良币": ["格雷欣法则"],
+    "破坏性创新": ["颠覆性创新", "颠覆式创新"],
+    "诉诸权威": ["不相干权威", "权威偏差"],
+    "系统一": ["系统1", "双系统"],
+    "达克": ["邓宁-克鲁格"],
+}
+
+
+def _term_score(term: str, h: dict, full: bool) -> int | None:
+    if term == h["name"]:
+        return 100
+    if h["name"].startswith(term):
+        return 85
+    if term in h["name"]:
+        return 70
+    if term in h["aliases"]:
+        return 60
+    if term in h["category"]:
+        return 35
+    if full and term in h["body"]:
+        return 10
+    return None
+
+
 def score_entry(e: Entry, queries: list[str], full: bool) -> int | None:
     h = e.haystack()
     total = 0
     for q in queries:
-        if q == h["name"]:
-            s = 100
-        elif h["name"].startswith(q):
-            s = 85
-        elif q in h["name"]:
-            s = 70
-        elif q in h["aliases"]:
-            s = 60
-        elif q in h["category"]:
-            s = 35
-        elif full and q in h["body"]:
-            s = 10
-        else:
+        variants = [q] + SEARCH_SYNONYMS.get(q, [])
+        best = None
+        for term in variants:
+            s = _term_score(term, h, full)
+            if s is not None and (best is None or s > best):
+                best = s
+        if best is None:
             return None
-        total += s
+        total += best
     return total
 
 
