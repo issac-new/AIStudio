@@ -653,6 +653,28 @@ ensure_spawn_health() { # 执行面预检（run20 00:30 瘫痪实录：宿主拆
   fi
 }
 
+ensure_studio_preload_files() { # preload 供给闭环（drill r004 收口，spec 2026-11-17-sim-studio-preload-hardening）：
+  # 仓内正本 mux/preload/ → CREDS_DIR 幂等投放。preload 件仓外独存=fresh 环境
+  # S-L2 预检 fail-closed 必拒启——本函数在 ensure_studio_up 预检前调用自愈
+  # （mx-setup/mx-up 两入口同款，防顺序问题砖死）。密钥不入仓：auth-jwt-secret
+  # 缺位才现场生成（openssl rand -hex 32，0600）——已存在（非空）绝不覆盖：
+  # 换钥=在途 JWT 全部失效（打翻已签发 token），收益为零。
+  local src f dst
+  src="$MX_SCRIPT_DIR/preload"
+  mkdir -p "$CREDS_DIR" && chmod 700 "$CREDS_DIR" 2>/dev/null || true
+  for f in jwt-secret-preload.cjs studio-access-log-preload.cjs; do
+    dst="$CREDS_DIR/$f"
+    # 缺失则补 / 与正本漂移则同步回正（cmp 判同）；相同不动（不重写，保 mtime/inode）
+    if [[ ! -f "$dst" ]] || ! cmp -s "$src/$f" "$dst"; then
+      cp -f "$src/$f" "$dst"
+    fi
+  done
+  if [[ ! -s "$CREDS_DIR/auth-jwt-secret" ]]; then
+    openssl rand -hex 32 > "$CREDS_DIR/auth-jwt-secret"
+    chmod 600 "$CREDS_DIR/auth-jwt-secret"
+  fi
+}
+
 ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/health/ready 只看自身 bootstrap，
   # 不探 gateway；env 与 mx-up 同款，单一事实源=本函数，mx-up 亦调用）
   curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
@@ -661,6 +683,20 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   # 子壳优化后 node 成调用者直子、studio.pid 误记外层 pid，mx-up 收口 wait4 挂死
   # （仅 kill 外层可解，studio 无恙）。内层 bash 托孤 launchd，$! 即 node 真身。
   mx_sync_ledger_link
+  # preload 供给自愈（2026-11-17 r004 收口）：先投放再预检——fresh 环境 creds 空目录
+  # 由本调用补齐两 preload＋密钥，S-L2 fail-closed 不因 mx-setup/mx-up 顺序砖死。
+  ensure_studio_preload_files
+  # S-L2 定位参数修复（t_8d68f11e 续，2026-11-16 00:23）：原补丁把 JWT_PRELOAD_CJS 同时
+  # 用作 env 前缀与位置参数——set -u 下位置参数展开时该变量未绑定（unbound）拒启。
+  # 改为直接展开 $CREDS_DIR（L147 顶层已绑定）。缺 preload/密钥文件时显式拒启，免 120s 盲等。
+  [[ -r "$CREDS_DIR/jwt-secret-preload.cjs" && -r "$CREDS_DIR/auth-jwt-secret" ]] || {
+    echo "[ensure_studio_up] S-L2 fail-closed: creds/jwt-secret-preload.cjs 或 creds/auth-jwt-secret 不可读" >&2
+    return 1
+  }
+  # G-004-part 请求级遥测（t_4d59c9d0，2026-11-16）：access-log 预加载器缺位只告警不拒启
+  # （fail-open：遥测缺失=观测退化≠安全回归，与上方 S-L2 fail-closed 刻意对照）。
+  [[ -r "$CREDS_DIR/studio-access-log-preload.cjs" ]] || \
+    echo "[ensure_studio_up] ⚠ creds/studio-access-log-preload.cjs 不可读：请求级遥测将缺失（服务照常）" >&2
   ( cd "$SIM_ROOT" && \
   NODE_ENV=production PORT="$STUDIO_PORT" HERMES_HOME="$HERMES_ROOT" OBS_SIM_ROOT="$SIM_ROOT" \
   ORGLOOP_LEDGER_TSV="${ORGLOOP_LEDGER_TSV:-$MX_LEDGER_LINK}" \
@@ -680,8 +716,17 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   CLUSTER_INSPECTOR_NUDGE_REPO="${MX_CI_NUDGE_REPO:-$SIM_ROOT/central/aipaydev}" \
   CLUSTER_INSPECTOR_STUCK_MS="${MX_CI_STUCK_MS:-900000}" \
   CLUSTER_INSPECTOR="${MX_CI:-on}" \
-    /bin/bash -c 'nohup node "$1" > "$2" 2>&1 < /dev/null & echo $! > "$3"' _ \
-    "$STUDIO_DIST/server/index.js" "$LOGS_DIR/studio.log" "$PIDS_DIR/studio.pid" )
+    /bin/bash -c 'nohup node -r "$4" -r "$5" "$1" > "$2" 2>&1 < /dev/null & echo $! > "$3"' _ \
+    "$STUDIO_DIST/server/index.js" "$LOGS_DIR/studio.log" "$PIDS_DIR/studio.pid" "$CREDS_DIR/jwt-secret-preload.cjs" "$CREDS_DIR/studio-access-log-preload.cjs" )
+  # ↑ S-L2 加固（t_8d68f11e，drill r004 前置①，2026-11-16）：node -r 预加载器在 exec 后
+  #   读 creds/auth-jwt-secret（0600）注入 AUTH_JWT_SECRET——与 .token 服务 token 分置；
+  #   setenv 不进 procargs，ps eww 不可见。fail-closed：密钥文件缺失/畸形时加载器 exit 78，
+  #   studio 拒启（上方预检先行拦截），绝不静默回落服务 token 签名（r003 S-L2 铸造链）。
+  # ↑ G-004-part 请求级遥测（t_4d59c9d0，2026-11-16）：第二个 -r 挂 creds/studio-access-log-preload.cjs
+  #   ——hook http.Server.prototype.emit 记 JSON 行访问日志至 logs/studio-access.log
+  #   （ts/method/path/query 剥离/status/dur_ms/auth 派生/raddr），不记任何 header 值与
+  #   token；fail-open。r004 蓝方 misses 2 条根因（应用层零请求痕迹）自此闭合。
+  #   正本在仓内 mux/preload/（2026-11-17 收口），ensure_studio_preload_files 幂等投放。
   local deadline=$(( $(date +%s) + 120 ))
   while (( $(date +%s) < deadline )); do
     curl -sf "http://127.0.0.1:$STUDIO_PORT/health/ready" -m 2 >/dev/null 2>&1 && return 0
