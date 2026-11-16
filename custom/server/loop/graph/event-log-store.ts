@@ -12,6 +12,7 @@ import { DatabaseSync } from 'node:sqlite'
 import type { SQLInputValue } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
+import type { GraphRunSpecStamp, StoredGraphRunSpec } from './run-spec-snapshot'
 
 export interface GraphLogEvent {
   seq: number
@@ -91,12 +92,39 @@ export interface EventLogStore {
   listSpecs(): Promise<StoredGraphSpecMeta[]>
   /** P4：删除自建 spec（编辑器 origin=editor 专用） */
   deleteSpec(id: string): Promise<void>
+  /** 每 run 不可变 GraphSpec 快照；重复 runId 必须拒绝而不是覆盖 */
+  saveRunSpec(row: StoredGraphRunSpec): Promise<void>
+  getRunSpec(runId: string): Promise<StoredGraphRunSpec | null>
+  copyRunSpec(sourceRunId: string, targetRunId: string, stamp: GraphRunSpecStamp): Promise<StoredGraphRunSpec>
+}
+
+function cloneRunSpec(row: StoredGraphRunSpec): StoredGraphRunSpec {
+  return JSON.parse(JSON.stringify(row)) as StoredGraphRunSpec
+}
+
+async function copyStoredRunSpec(
+  store: EventLogStore,
+  sourceRunId: string,
+  targetRunId: string,
+  stamp: GraphRunSpecStamp,
+): Promise<StoredGraphRunSpec> {
+  const source = await store.getRunSpec(sourceRunId)
+  if (!source) throw new Error(`Graph run spec not found: ${sourceRunId}`)
+  const copied: StoredGraphRunSpec = {
+    ...source,
+    runId: targetRunId,
+    createdAt: stamp.createdAt,
+    createdBy: stamp.createdBy,
+  }
+  await store.saveRunSpec(copied)
+  return cloneRunSpec(copied)
 }
 
 export class InMemoryEventLogStore implements EventLogStore {
   private events: GraphLogEvent[] = []
   private checkpoints = new Map<string, StoredCheckpoint[]>()
   private specs = new Map<string, StoredGraphSpec & { updatedAt: string }>()
+  private runSpecs = new Map<string, StoredGraphRunSpec>()
 
   async append(e: Omit<GraphLogEvent, 'seq'>): Promise<number> {
     const seq = this.events.length + 1
@@ -166,6 +194,20 @@ export class InMemoryEventLogStore implements EventLogStore {
   async deleteSpec(id: string): Promise<void> {
     this.specs.delete(id)
   }
+
+  async saveRunSpec(row: StoredGraphRunSpec): Promise<void> {
+    if (this.runSpecs.has(row.runId)) throw new Error(`Graph run spec already exists: ${row.runId}`)
+    this.runSpecs.set(row.runId, cloneRunSpec(row))
+  }
+
+  async getRunSpec(runId: string): Promise<StoredGraphRunSpec | null> {
+    const row = this.runSpecs.get(runId)
+    return row ? cloneRunSpec(row) : null
+  }
+
+  async copyRunSpec(sourceRunId: string, targetRunId: string, stamp: GraphRunSpecStamp): Promise<StoredGraphRunSpec> {
+    return copyStoredRunSpec(this, sourceRunId, targetRunId, stamp)
+  }
 }
 
 /** node:sqlite 实现（Node 内置 DatabaseSync，零新依赖；schema 见 spec §3.1，checkpoints 同库另表） */
@@ -190,6 +232,12 @@ class SqliteEventLogStore implements EventLogStore {
       CREATE TABLE IF NOT EXISTS graph_specs (
         id TEXT PRIMARY KEY, version INTEGER NOT NULL,
         spec_json TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS graph_run_specs (
+        run_id TEXT PRIMARY KEY, spec_id TEXT NOT NULL, revision TEXT,
+        draft_version INTEGER NOT NULL, runtime_kind TEXT NOT NULL,
+        execution_mode TEXT NOT NULL, spec_json TEXT NOT NULL,
+        content_hash TEXT NOT NULL, created_at TEXT NOT NULL, created_by TEXT
       );
     `)
     // 已存在旧表（无 join_ledger 列）时容错升级；新表走 CREATE 带列，ALTER 必失败则忽略
@@ -305,6 +353,42 @@ class SqliteEventLogStore implements EventLogStore {
 
   async deleteSpec(id: string): Promise<void> {
     this.db.prepare(`DELETE FROM graph_specs WHERE id = ?`).run(id)
+  }
+
+  async saveRunSpec(row: StoredGraphRunSpec): Promise<void> {
+    this.db.prepare(
+      `INSERT INTO graph_run_specs
+       (run_id, spec_id, revision, draft_version, runtime_kind, execution_mode, spec_json, content_hash, created_at, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(row.runId, row.specId, row.revision, row.draftVersion, row.runtimeKind, row.executionMode,
+      JSON.stringify(row.spec), row.contentHash, row.createdAt, row.createdBy ?? null)
+  }
+
+  async getRunSpec(runId: string): Promise<StoredGraphRunSpec | null> {
+    const row = this.db.prepare(
+      `SELECT run_id, spec_id, revision, draft_version, runtime_kind, execution_mode, spec_json, content_hash, created_at, created_by
+       FROM graph_run_specs WHERE run_id = ?`,
+    ).get(runId) as Record<string, unknown> | undefined
+    return row ? rowToRunSpec(row) : null
+  }
+
+  async copyRunSpec(sourceRunId: string, targetRunId: string, stamp: GraphRunSpecStamp): Promise<StoredGraphRunSpec> {
+    return copyStoredRunSpec(this, sourceRunId, targetRunId, stamp)
+  }
+}
+
+function rowToRunSpec(r: Record<string, unknown>): StoredGraphRunSpec {
+  return {
+    runId: r.run_id as string,
+    specId: r.spec_id as string,
+    revision: null,
+    draftVersion: r.draft_version as number,
+    runtimeKind: r.runtime_kind as StoredGraphRunSpec['runtimeKind'],
+    executionMode: r.execution_mode as StoredGraphRunSpec['executionMode'],
+    contentHash: r.content_hash as string,
+    createdAt: r.created_at as string,
+    createdBy: (r.created_by as string | null) ?? undefined,
+    spec: JSON.parse(r.spec_json as string),
   }
 }
 

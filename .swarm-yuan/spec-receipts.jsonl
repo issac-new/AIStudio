@@ -398,3 +398,4 @@
 {"at":"2026-11-16T13:23:28Z","spec":"docs/superpowers/specs/2026-11-16-always-on-live-verification.md","receipt":"245b66f9c5acfb46abb87aa66d3be91f36196b5c","commit":"0bfa401ff"}
 {"at":"2026-11-16T13:48:19Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"28064503a2d6f9464b367690baee09108bc267eb","commit":"6dab0115a"}
 {"at":"2026-11-16T15:08:15Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"6fabb160af5f4d306ca05985159faa7051298f21","commit":"5afb6b79a"}
+{"at":"2026-11-16T07:05:26Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"6213cc8a4b647de3ca3a044cb748254b88f10ff9","commit":"a3076aa9a"}
