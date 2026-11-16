@@ -30,6 +30,7 @@ import type {
   GraphDef, GraphInstance, NodeDef, NodeResult, StateValues, StateUpdate,
   GraphEvent, GraphDeps, NodeContext, GraphRunVerification,
 } from './types'
+import { NodeExecutionError } from './types'
 import { ChannelStore } from './channel-store'
 import { CheckpointManager } from './checkpoint-manager'
 import { evaluatePredicate } from './predicate'
@@ -84,6 +85,36 @@ function jsonSafe(value: unknown): unknown {
   } catch {
     return String(value)
   }
+}
+
+const NODE_EVIDENCE_KEYS = [
+  'command', 'argv', 'cwd', 'backend', 'leaseId', 'status', 'exitCode',
+  'durationMs', 'startedAt', 'finishedAt', 'stdout', 'stderr',
+  'stdoutTruncated', 'stderrTruncated',
+] as const
+
+/** 事件只接收 gate 白名单证据；env/token/detail 等字段即使误入 NodeResult 也不外发。 */
+function nodeEvidence(value: unknown): Record<string, unknown> | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const source = value as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const key of NODE_EVIDENCE_KEYS) {
+    if (Object.hasOwn(source, key)) out[key] = source[key]
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
+function resultForEvent(result: NodeResult): NodeResult {
+  const evidence = nodeEvidence(result.evidence)
+  if (evidence) return { ...result, evidence }
+  if (!Object.hasOwn(result, 'evidence')) return result
+  const copy = { ...result }
+  delete copy.evidence
+  return copy
+}
+
+function isGateExecutionError(error: Error): error is NodeExecutionError {
+  return error instanceof NodeExecutionError && error.code.startsWith('gate_')
 }
 
 export class GraphRuntime {
@@ -491,6 +522,7 @@ export class GraphRuntime {
         if (result instanceof Error) {
           failedNodes.push({ nodeId, error: result })
           nodeOutcomes.failed += 1
+          const evidence = result instanceof NodeExecutionError ? nodeEvidence(result.evidence) : undefined
           this.emitEvent({
             type: 'graph.node-error',
             graphId,
@@ -498,19 +530,22 @@ export class GraphRuntime {
             nodeId,
             step,
             error: result.message,
+            ...(evidence ? { evidence } : {}),
             ts: new Date().toISOString(),
           })
           continue
         }
         succeeded.push(nodeId)
         nodeOutcomes.completed += 1
+        const eventResult = resultForEvent(result)
         this.emitEvent({
           type: 'graph.node-complete',
           graphId,
           threadId,
           nodeId,
           step,
-          result,
+          result: eventResult,
+          ...(eventResult.evidence ? { evidence: eventResult.evidence } : {}),
           ts: new Date().toISOString(),
         })
         if (result.update) orderedUpdates.push(result.update)
@@ -545,7 +580,10 @@ export class GraphRuntime {
       const fatalErrors: string[] = []
       for (const { nodeId, error } of failedNodes) {
         const route = graphDef.nodes.get(nodeId)?.onError
-        if (route?.type === 'goto') {
+        if (isGateExecutionError(error) && route && route.type !== 'fail') {
+          // gate 副作用不得借 fail-branch 变成成功完成；本批一律终止 run。
+          fatalErrors.push(`${nodeId}: gate_on_error_forbidden`)
+        } else if (route?.type === 'goto') {
           errorRoutedTargets.push(route.target)
           nodeOutcomes.errorRouted += 1
           this.emitEvent({
@@ -669,18 +707,22 @@ export class GraphRuntime {
             wrappedDeps,
           ).catch(err => (err instanceof Error ? err : new Error(String(err))))
           if (taskResult instanceof Error) {
+            const evidence = taskResult instanceof NodeExecutionError ? nodeEvidence(taskResult.evidence) : undefined
             this.emitEvent({
               type: 'graph.node-error',
               graphId, threadId: taskThreadId, nodeId: task.node, step,
               error: taskResult.message,
+              ...(evidence ? { evidence } : {}),
               ts: new Date().toISOString(),
             })
             return undefined
           }
+          const eventResult = resultForEvent(taskResult)
           this.emitEvent({
             type: 'graph.node-complete',
             graphId, threadId: taskThreadId, nodeId: task.node, step,
-            result: taskResult,
+            result: eventResult,
+            ...(eventResult.evidence ? { evidence: eventResult.evidence } : {}),
             ts: new Date().toISOString(),
           })
           return taskResult.update
@@ -742,6 +784,8 @@ export class GraphRuntime {
       nodeId: node.id,
       superStep: ctx.superStep,
       deps,
+      retry: node.retry,
+      onError: node.onError,
     }
 
     this.emitEvent({
@@ -762,6 +806,8 @@ export class GraphRuntime {
       return result
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
+      // gate 的失败策略在 executeGraphGate 中先于副作用拒绝；这里再阻断任何自动重放。
+      if (isGateExecutionError(error)) return error
       if (!node.retry || node.retry.maxAttempts <= 0) return error
 
       // 2026-10-18 Harness 可靠性轮：错误分类 → 只重试瞬时/限流类；
@@ -779,6 +825,7 @@ export class GraphRuntime {
       let lastError: unknown = error
 
       for (let attempt = 1; attempt <= policy.maxAttempts; attempt++) {
+        if (lastError instanceof Error && isGateExecutionError(lastError)) return lastError
         const info = classifyToolError(lastError)
         const blocked = node.retry.nonRetryable?.includes(info.category) ?? false
         if (blocked || !policy.retryOn.includes(info.category)) {
@@ -1015,10 +1062,14 @@ export class GraphRuntime {
           goto: r.goto ?? [],
           hasEnd: r.end !== undefined,
           hasInterrupt: r.interrupt !== undefined,
+          ...(event.evidence ? { evidence: jsonSafe(event.evidence) } : {}),
         }
       }
       case 'graph.node-error':
-        return { error: event.error }
+        return {
+          error: event.error,
+          ...(event.evidence ? { evidence: jsonSafe(event.evidence) } : {}),
+        }
       case 'graph.node-start':
         return {}
       case 'graph.interrupt':
