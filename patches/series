@@ -1267,3 +1267,15 @@
 # 776（2026-11-14 超级智能体吸收批二）：studio complete/block/patch 透传
 # --expected-version，CLI version conflict 文本映射 409 version_conflict。
 776-server-kanban-expected-version.patch
+
+# 777（2026-11-16 ekko-ui-surface，spec 2026-11-16-ekko-ui-surface-chat-design）：
+# 聊天时间线按工具参数渲染声明式界面卡片（ekko-ui/v1）；新增 respondUiSurface 回填。
+777-client-chat-ekko-ui-surface.patch
+
+# 778（2026-11-16）：SurfaceRuns 挂起/超时/回填宿主＋/api/studio/surfaces/request
+# ＋ui.surface.action 回填＋任务卡/澄清指令补 show_surface 一句话。
+778-server-chat-ekko-ui-surface.patch
+
+# 779（2026-11-16）：MCP 工具 ekko_studio_show_surface（阻塞等待提交，
+# context 凭证与 clarify 同链）。
+779-mcp-ekko-studio-show-surface.patch
