@@ -1,0 +1,698 @@
+diff --git a/tools/deferred_calls.py b/tools/deferred_calls.py
+new file mode 100644
+--- /dev/null
++++ b/tools/deferred_calls.py
+@@ -0,0 +1,170 @@
++"""延迟工具调用持久账本（Always-on Agents P6，2026-11-16）。
++
++语义来源（Anthropic《Building always-on agents》权限·Deferred tool calls）：需要用户
++确认的工具调用不再原地阻塞——结束本轮、把请求落盘、用户回复作为新事件唤醒会话继续。
++
++契约：
++- 记录落 ``<HERMES_HOME>/approvals/deferred.json``（JSON 数组，原子写，环形 200）；
++- 用户答复走既有 studio-file-approval 协议：``responses/<request_id>.json``
++  （``{request_id, choice: once|session|always|deny, by?}``）；
++- 网关 watcher（``gateway/run_deferred.py``）轮询答复文件，settle 后向原会话注入
++  「用户已答复」事件；
++- 超时（缺省 24h）转 ``expired``，watcher 唤醒一次告知未批准。
++
++工具结果的机器标记：``[deferred_tool_call:<id>]``——``agent/turn_tool_round.py`` 据此
++结束本轮（结束 Run 而不是占用线程等用户）。
++"""
++
++from __future__ import annotations
++
++import json
++import logging
++import os
++import time
++import uuid
++from pathlib import Path
++from typing import Any, Optional
++
++logger = logging.getLogger(__name__)
++
++DEFERRED_MARKER_PREFIX = "[deferred_tool_call:"
++DEFAULT_TTL_SECONDS = 24 * 3600
++MAX_RECORDS = 200
++STATUSES = ("pending", "approved", "denied", "expired")
++
++
++def deferred_root() -> Path:
++    home = os.environ.get("HERMES_HOME") or os.path.expanduser("~/.hermes")
++    return Path(home) / "approvals"
++
++
++def deferred_file() -> Path:
++    return deferred_root() / "deferred.json"
++
++
++def responses_dir() -> Path:
++    return deferred_root() / "responses"
++
++
++def _read_all() -> list[dict[str, Any]]:
++    path = deferred_file()
++    if not path.exists():
++        return []
++    try:
++        raw = json.loads(path.read_text(encoding="utf-8"))
++    except Exception:
++        logger.debug("deferred_calls: unreadable ledger", exc_info=True)
++        return []
++    return [r for r in raw if isinstance(r, dict) and isinstance(r.get("id"), str)] if isinstance(raw, list) else []
++
++
++def _write_all(records: list[dict[str, Any]]) -> bool:
++    path = deferred_file()
++    try:
++        path.parent.mkdir(parents=True, exist_ok=True)
++        tmp = path.with_name(path.name + ".tmp")
++        tmp.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
++        os.replace(tmp, path)
++        return True
++    except Exception:
++        logger.warning("deferred_calls: ledger write failed", exc_info=True)
++        return False
++
++
++def record_deferred(
++    *,
++    session_key: str,
++    session_id: str = "",
++    request_id: str = "",
++    tool: str = "",
++    preview: str = "",
++    risk: str = "",
++    route: Optional[dict[str, str]] = None,
++    ttl_seconds: float = DEFAULT_TTL_SECONDS,
++    now: Optional[float] = None,
++) -> dict[str, Any]:
++    """落一条 pending 延迟调用；返回记录（含 id）。"""
++    at = now if now is not None else time.time()
++    rid = request_id or uuid.uuid4().hex
++    record = {
++        "id": uuid.uuid4().hex[:12],
++        "session_key": session_key,
++        "session_id": session_id,
++        "request_id": rid,
++        "tool": tool,
++        "preview": (preview or "")[:500],
++        "risk": risk,
++        "route": dict(route or {}),
++        "created_at": at,
++        "expires_at": at + max(60.0, float(ttl_seconds)),
++        "status": "pending",
++    }
++    records = _read_all()
++    records.append(record)
++    if len(records) > MAX_RECORDS:
++        records = records[-MAX_RECORDS:]
++    _write_all(records)
++    logger.info("deferred_calls: recorded %s (session=%s tool=%s)", record["id"], session_key, tool)
++    return record
++
++
++def list_deferred(status: Optional[str] = None) -> list[dict[str, Any]]:
++    records = _read_all()
++    if status is None:
++        return records
++    return [r for r in records if r.get("status") == status]
++
++
++def settle_deferred(deferred_id: str, decision: str, *, now: Optional[float] = None, by: str = "") -> Optional[dict[str, Any]]:
++    """裁决一条 pending 记录；非 pending 返回 None（幂等：先到先得）。"""
++    choice = (decision or "").strip().lower()
++    if choice not in ("once", "session", "always", "deny"):
++        return None
++    at = now if now is not None else time.time()
++    records = _read_all()
++    for r in records:
++        if r.get("id") != deferred_id:
++            continue
++        if r.get("status") != "pending":
++            return None
++        r["status"] = "denied" if choice == "deny" else "approved"
++        r["decision"] = choice
++        r["decided_at"] = at
++        if by:
++            r["decided_by"] = by
++        _write_all(records)
++        return r
++    return None
++
++
++def expire_deferred(*, now: Optional[float] = None) -> list[dict[str, Any]]:
++    """把过期 pending 标 expired；返回本次过期的记录（供 watcher 唤醒告知）。"""
++    at = now if now is not None else time.time()
++    records = _read_all()
++    expired: list[dict[str, Any]] = []
++    for r in records:
++        if r.get("status") == "pending" and float(r.get("expires_at") or 0) <= at:
++            r["status"] = "expired"
++            r["decided_at"] = at
++            expired.append(r)
++    if expired:
++        _write_all(records)
++    return expired
++
++
++def read_response(request_id: str) -> Optional[dict[str, Any]]:
++    """读 studio-file-approval 响应文件；不存在/非法返回 None。"""
++    if not request_id:
++        return None
++    path = responses_dir() / f"{request_id}.json"
++    try:
++        data = json.loads(path.read_text(encoding="utf-8"))
++    except Exception:
++        return None
++    if not isinstance(data, dict) or data.get("request_id") != request_id:
++        return None
++    return data
++
++
++def deferred_marker(deferred_id: str) -> str:
++    return f"{DEFERRED_MARKER_PREFIX}{deferred_id}]"
+diff --git a/gateway/run_deferred.py b/gateway/run_deferred.py
+new file mode 100644
+--- /dev/null
++++ b/gateway/run_deferred.py
+@@ -0,0 +1,119 @@
++"""Deferred-approval watcher：用户答复延迟审批后唤醒原会话（Always-on Agents P6）。
++
++数据源：``tools/deferred_calls``（``<HERMES_HOME>/approvals/deferred.json``）＋
++studio-file-approval 响应文件（``responses/<request_id>.json``）。每次 tick：
++1) 过期 pending → 标 expired 并向原会话注入一次「未批准」告知；
++2) 已答复 pending → settle（先到先得）→ 注入「用户已批准/拒绝」事件。
++
++注入走 ``admit_route_wake``（与 followup/loop 同构）：不直接跑 turn，交给会话 authority 排队。
++"""
++
++from __future__ import annotations
++
++import asyncio
++import logging
++from contextlib import suppress
++from typing import Optional
++
++logger = logging.getLogger("gateway.run")
++
++
++class GatewayDeferredApprovalMixin:
++    async def _deferred_approval_watcher(self, interval: float = 10.0) -> None:
++        from gateway.run import _async_profile_runtime_scope, _resolve_handoff_watch_scopes
++        from tools.deferred_calls import expire_deferred, list_deferred, read_response, settle_deferred
++
++        await asyncio.sleep(5)
++        warned_no_route: set = set()
++
++        def _scope(profile_home):
++            if profile_home is not None:
++                return _async_profile_runtime_scope(profile_home)
++            from tui_gateway.launch_profile_policy import async_launch_profile_scope_if_multiplexed
++            return async_launch_profile_scope_if_multiplexed()
++
++        async def _scan_one_store(profile_name: Optional[str]) -> None:
++            # 1) 过期处置（标记 + 一次告知）
++            expired = await self._run_in_executor_with_context(expire_deferred)
++            for record in expired or []:
++                await self._deferred_wake(
++                    record, "expired",
++                    f"此前的审批请求已超时未被回答（{record.get('tool') or '操作'}："
++                    f"{record.get('preview') or ''}）。不要重试该操作；继续其他工作或等待用户指示。",
++                    warned_no_route, profile_name,
++                )
++            # 2) 答复处置
++            for record in await self._run_in_executor_with_context(list_deferred, "pending"):
++                response = await self._run_in_executor_with_context(
++                    read_response, str(record.get("request_id") or ""),
++                )
++                if not response:
++                    continue
++                choice = str(response.get("choice") or "").strip().lower()
++                settled = await self._run_in_executor_with_context(
++                    settle_deferred, record["id"], choice, by=str(response.get("by") or ""),
++                )
++                if settled is None:
++                    continue  # 已被别处裁决
++                approved = settled.get("status") == "approved"
++                text = (
++                    f"用户已批准你此前挂起的操作（{settled.get('tool') or '操作'}："
++                    f"{settled.get('preview') or ''}，决定={settled.get('decision')}）。"
++                    "可继续执行；若已不再需要，说明并跳过。"
++                    if approved else
++                    f"用户拒绝了此前挂起的操作（{settled.get('tool') or '操作'}："
++                    f"{settled.get('preview') or ''}）。不要重试；说明影响并给出替代方案或等待用户指示。"
++                )
++                await self._deferred_wake(settled, settled.get("status", ""), text, warned_no_route, profile_name)
++
++        while self._running:
++            try:
++                for profile_name, profile_home in await _resolve_handoff_watch_scopes(self):
++                    async with _scope(profile_home):
++                        await _scan_one_store(profile_name)
++            except Exception as exc:  # noqa: BLE001 - one bad store must not stop the watcher
++                logger.debug("deferred-approval watcher error: %s", exc)
++            await asyncio.sleep(interval)
++
++    async def _deferred_wake(self, record: dict, outcome: str, text: str,
++                             warned_no_route: set, profile: Optional[str] = None) -> None:
++        """向记录的原会话注入答复事件（无路由/无 adapter 时只告警一次）。"""
++        route = record.get("route") or {}
++        platform_name = route.get("platform", "")
++        chat_id = route.get("chat_id", "")
++        if not platform_name or not chat_id:
++            if record.get("id") not in warned_no_route:
++                warned_no_route.add(record.get("id"))
++                logger.debug("deferred-approval: no route (id=%s)", record.get("id"))
++            return
++        profile = route.get("profile") or profile
++        adapters = self._adapters_for_profile(profile)
++        adapter = next((a for p, a in adapters.items() if p.value == platform_name), None)
++        if adapter is None:
++            if record.get("id") not in warned_no_route:
++                warned_no_route.add(record.get("id"))
++                logger.debug("deferred-approval: no adapter for %r", platform_name)
++            return
++        source = self._build_process_event_source({
++            "session_key": "",
++            "platform": platform_name,
++            "chat_id": chat_id,
++            **{k: route.get(k, "") for k in ("chat_type", "thread_id", "user_id", "user_name")},
++        })
++        if source is None:
++            return
++        if profile and not getattr(source, "profile", None):
++            source.profile = profile
++        try:
++            from gateway.session_automation import admit_route_wake
++
++            if not await admit_route_wake(
++                    self, adapter, source, text, "deferred-approval",
++                    metadata={"deferred_id": record.get("id", ""), "outcome": outcome}):
++                await adapter.handle_message(self._synthetic_prompt_event(source, text, internal=True))
++            logger.info("deferred-approval %s woke session %s (%s)",
++                        record.get("id"), record.get("session_key"), outcome)
++        except Exception as exc:  # noqa: BLE001 - wake failure is logged, not retried
++            logger.warning("deferred-approval wake failed for %s: %s", record.get("id"), exc)
++            with suppress(Exception):
++                pass
+diff --git a/tests/tools/test_deferred_calls.py b/tests/tools/test_deferred_calls.py
+new file mode 100644
+--- /dev/null
++++ b/tests/tools/test_deferred_calls.py
+@@ -0,0 +1,73 @@
++"""Tests for tools/deferred_calls.py — deferred approval ledger (Always-on P6)."""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++import pytest
++
++
++@pytest.fixture
++def home(tmp_path, monkeypatch):
++    h = tmp_path / ".hermes"
++    h.mkdir()
++    monkeypatch.setenv("HERMES_HOME", str(h))
++    yield h
++
++
++def test_record_and_list(home):
++    from tools.deferred_calls import deferred_file, deferred_marker, list_deferred, record_deferred
++
++    rec = record_deferred(
++        session_key="kanban:board:t1", session_id="s1", request_id="rq1",
++        tool="terminal", preview="rm -rf build", risk="high",
++        route={"platform": "matrix", "chat_id": "room1"}, now=1000,
++    )
++    assert rec["status"] == "pending"
++    assert rec["expires_at"] == 1000 + 24 * 3600
++    assert deferred_file().exists()
++    assert [r["id"] for r in list_deferred("pending")] == [rec["id"]]
++    assert deferred_marker(rec["id"]) == f"[deferred_tool_call:{rec['id']}]"
++    raw = json.loads(deferred_file().read_text(encoding="utf-8"))
++    assert raw[0]["route"]["platform"] == "matrix"
++
++
++def test_settle_first_wins(home):
++    from tools.deferred_calls import list_deferred, record_deferred, settle_deferred
++
++    rec = record_deferred(session_key="s", request_id="rq", tool="t", now=1000)
++    settled = settle_deferred(rec["id"], "once", now=1001, by="alice")
++    assert settled is not None and settled["status"] == "approved" and settled["decision"] == "once"
++    assert settle_deferred(rec["id"], "deny", now=1002) is None  # already settled
++    assert list_deferred("pending") == []
++
++
++def test_settle_deny_and_invalid_choice(home):
++    from tools.deferred_calls import record_deferred, settle_deferred
++
++    rec = record_deferred(session_key="s", request_id="rq", tool="t")
++    assert settle_deferred(rec["id"], "maybe") is None
++    settled = settle_deferred(rec["id"], "deny")
++    assert settled is not None and settled["status"] == "denied"
++
++
++def test_expire(home):
++    from tools.deferred_calls import expire_deferred, record_deferred
++
++    rec = record_deferred(session_key="s", request_id="rq", tool="t", ttl_seconds=60, now=1000)
++    assert expire_deferred(now=1059) == []
++    expired = expire_deferred(now=1061)
++    assert [r["id"] for r in expired] == [rec["id"]]
++    assert expired[0]["status"] == "expired"
++
++
++def test_read_response(home):
++    from tools.deferred_calls import read_response, responses_dir
++
++    responses_dir().mkdir(parents=True, exist_ok=True)
++    (responses_dir() / "rq9.json").write_text(json.dumps({"request_id": "rq9", "choice": "deny"}), encoding="utf-8")
++    assert read_response("rq9") == {"request_id": "rq9", "choice": "deny"}
++    assert read_response("missing") is None
++    (responses_dir() / "bad.json").write_text("{oops", encoding="utf-8")
++    assert read_response("bad") is None
+diff --git a/tests/tools/test_approval_deferred.py b/tests/tools/test_approval_deferred.py
+new file mode 100644
+--- /dev/null
++++ b/tests/tools/test_approval_deferred.py
+@@ -0,0 +1,92 @@
++"""Tests for approval defer-on-timeout wiring (Always-on P6)."""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++from unittest.mock import patch
++
++import pytest
++
++
++@pytest.fixture
++def home(tmp_path, monkeypatch):
++    h = tmp_path / ".hermes"
++    h.mkdir()
++    monkeypatch.setenv("HERMES_HOME", str(h))
++    yield h
++
++
++def _should_defer(config_value, kanban=False, cron=False):
++    from tools import approval
++
++    with patch("tools.approval.approval_context._get_approval_config",
++               return_value={"defer_on_timeout": config_value} if config_value is not None else {}):
++        with patch.dict("os.environ", {
++            **({"HERMES_KANBAN_TASK": "t1"} if kanban else {}),
++            **({"HERMES_CRON_SESSION": "1"} if cron else {}),
++        }, clear=False):
++            if not kanban:
++                import os
++                os.environ.pop("HERMES_KANBAN_TASK", None)
++            if not cron:
++                import os
++                os.environ.pop("HERMES_CRON_SESSION", None)
++            return approval._should_defer_approval()
++
++
++class TestShouldDefer:
++    def test_unattended_default_kanban(self):
++        assert _should_defer(None, kanban=True) is True
++
++    def test_unattended_default_cron(self):
++        assert _should_defer(None, cron=True) is True
++
++    def test_unattended_default_interactive(self):
++        assert _should_defer(None) is False
++
++    def test_always(self):
++        assert _should_defer("always") is True
++
++    def test_never(self):
++        assert _should_defer("never", kanban=True) is False
++
++
++class TestDeferredResult:
++    def test_result_carries_marker_and_ids(self):
++        from tools.approval import _deferred_approval_result
++
++        class Spec:
++            noun = "command"
++
++        result = _deferred_approval_result(
++            Spec, pattern_key="rm:*", command="rm -rf build", description="destructive",
++            deferred={"id": "d1", "request_id": "rq1"},
++        )
++        assert result["deferred"] is True
++        assert result["status"] == "deferred_approval"
++        assert result["deferred_id"] == "d1"
++        assert "[deferred_tool_call:d1]" in result["message"]
++
++    def test_record_uses_captured_route(self, home):
++        from tools.approval import _record_deferred_approval
++        from tools.deferred_calls import list_deferred
++
++        with patch("hermes_cli.followups.capture_route",
++                   return_value={"platform": "matrix", "chat_id": "room1"}):
++            rec = _record_deferred_approval(
++                session_key="kanban:b:t1", request_id="rq1", tool="terminal",
++                preview="rm -rf build", risk="destructive",
++            )
++        assert rec is not None
++        rows = list_deferred("pending")
++        assert rows[0]["id"] == rec["id"]
++        assert rows[0]["route"]["platform"] == "matrix"
++
++    def test_record_without_route_returns_none(self, home):
++        from tools.approval import _record_deferred_approval
++
++        with patch("hermes_cli.followups.capture_route", return_value=None):
++            assert _record_deferred_approval(
++                session_key="s", request_id="rq", tool="t", preview="p", risk="r",
++            ) is None
+diff --git a/tests/agent/test_turn_tool_round_deferred.py b/tests/agent/test_turn_tool_round_deferred.py
+new file mode 100644
+--- /dev/null
++++ b/tests/agent/test_turn_tool_round_deferred.py
+@@ -0,0 +1,41 @@
++"""Tests for the deferred-tool-call batch detector (Always-on P6)."""
++
++from __future__ import annotations
++
++from agent.turn_tool_round import _detect_deferred_tool_call
++
++
++def _tool(content):
++    return {"role": "tool", "content": content}
++
++
++def _assistant():
++    return {"role": "assistant", "content": "", "tool_calls": []}
++
++
++def test_detects_marker_in_current_batch():
++    messages = [
++        {"role": "user", "content": "do it"},
++        _assistant(),
++        _tool('{"status":"deferred_approval","message":"... [deferred_tool_call:abc123]"}'),
++    ]
++    assert _detect_deferred_tool_call(messages) == "abc123"
++
++
++def test_marker_before_assistant_boundary_is_ignored():
++    messages = [
++        _tool("old [deferred_tool_call:old1]"),
++        _assistant(),
++        _tool("plain result"),
++    ]
++    assert _detect_deferred_tool_call(messages) is None
++
++
++def test_no_marker():
++    messages = [_assistant(), _tool("ok"), _tool("done")]
++    assert _detect_deferred_tool_call(messages) is None
++
++
++def test_non_dict_messages_ignored():
++    messages = [None, "junk", _assistant(), _tool("x [deferred_tool_call:id9]")]
++    assert _detect_deferred_tool_call(messages) == "id9"
+diff --git a/tools/approval.py b/tools/approval.py
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -609,8 +609,71 @@
+     key = f"approval.summary.{outcome}" if outcome in _USER_SUMMARY_OUTCOMES else "approval.summary.default"
+     noun_text = t(f"approval.noun.{noun}") if noun in _USER_SUMMARY_NOUNS else noun
+     return t(key, noun=noun_text, window=window)
++
+ 
++def _should_defer_approval() -> bool:
++    """P6：超时是否改为延迟调用。approvals.defer_on_timeout = unattended(缺省)|always|never。
+ 
++    unattended 只看「无人在场」信号：kanban worker 与 cron 会话。交互会话/桌面端保持
++    fail-closed deny（有人在场时阻塞等待是正确体验，D10）。"""
++    try:
++        raw = str(approval_context._get_approval_config().get("defer_on_timeout", "unattended")).strip().lower()
++    except Exception:
++        raw = "unattended"
++    if raw == "never":
++        return False
++    if raw == "always":
++        return True
++    return bool(os.environ.get("HERMES_KANBAN_TASK") or os.environ.get("HERMES_CRON_SESSION"))
++
++
++def _record_deferred_approval(*, session_key: str, request_id: str, tool: str,
++                              preview: str, risk: str):
++    """落 deferred.json；路由从当前回合环境捕获（无路由=唤醒不了，返回 None）。"""
++    try:
++        from hermes_cli.followups import capture_route
++        from tools.deferred_calls import record_deferred
++
++        route = capture_route()
++        if not route:
++            return None
++        session_id = approval_context._session_env("HERMES_SESSION_ID") or ""
++        return record_deferred(
++            session_key=session_key,
++            session_id=session_id,
++            request_id=request_id,
++            tool=tool,
++            preview=preview,
++            risk=risk,
++            route=route,
++        )
++    except Exception:  # noqa: BLE001 - deferral must never break the approval gate
++        logger.debug("deferred approval record failed; falling back to deny", exc_info=True)
++        return None
++
++
++def _deferred_approval_result(spec, *, pattern_key: str, command: str, description: str,
++                              deferred: dict) -> dict:
++    """延迟调用的工具结果：instruction 要求结束本轮，机器标记供 turn_tool_round 识别。"""
++    marker = f"[deferred_tool_call:{deferred['id']}]"
++    return {
++        "approved": False,
++        "pattern_key": pattern_key,
++        "status": "deferred_approval",
++        "approval_pending": True,
++        "deferred": True,
++        "deferred_id": deferred["id"],
++        "request_id": deferred.get("request_id", ""),
++        "command": command,
++        "description": description,
++        "message": (
++            f"⏸ {description}. 用户批准等待超时，已挂起为延迟调用（id={deferred['id']}）。"
++            f"本轮到此结束：不要重试、改写或重新发起该 {spec.noun}；用户答复后会话会被新"
++            f"事件唤醒继续。（审批可在 AIStudio 收件箱裁决） {marker}"
++        ),
++    }
++
++
+ def _denied(message: str, *, pattern_key: str, description: str, outcome: str, noun: str = "command",
+             **extra) -> dict:
+     """Standard non-consent result: the agent must not retry or rephrase. ``user_summary`` is the
+@@ -999,6 +1062,22 @@
+                             reason=f"approval was withdrawn before the user answered ({decision['cancelled']})",
+                             reason_addendum="", timeout_addendum="", deny_reason=None)
+             if not decision["resolved"]:
++                # Always-on Agents P6（2026-11-16）：无人值守场景超时不直接 deny，而是挂起为
++                # 延迟调用（落 deferred.json → 结束本轮 → 用户答复唤醒）。交互场景保持原
++                # fail-closed deny（有人在场时阻塞等待是正确体验）。
++                if _should_defer_approval():
++                    deferred_rec = _record_deferred_approval(
++                        session_key=session_key,
++                        request_id=str((entry.data or {}).get("request_id") or ""),
++                        tool=str((entry.data or {}).get("pattern_key") or ""),
++                        preview=display_command,
++                        risk=str((entry.data or {}).get("description") or ""),
++                    )
++                    if deferred_rec is not None:
++                        return _deferred_approval_result(
++                            spec, pattern_key=pattern_key, command=display_command,
++                            description=description, deferred=deferred_rec,
++                        )
+                 return deny(spec.gateway_refused, "timeout", reason="timed out without user response",
+                             reason_addendum="", timeout_addendum=" Silence is not consent.",
+                             deny_reason=deny_reason)
+diff --git a/agent/turn_tool_round.py b/agent/turn_tool_round.py
+--- a/agent/turn_tool_round.py
++++ b/agent/turn_tool_round.py
+@@ -46,6 +46,28 @@
+     result: Optional[dict[str, Any]] = None
+ 
+ 
++def _detect_deferred_tool_call(messages: Any) -> Optional[str]:
++    """扫本批工具结果里的延迟调用机器标记（Always-on P6）。
++
++    只扫到最近一条 assistant 消息为止（本批 staged 的 tool-call 行），不翻历史——
++    历史里的旧挂起不应结束新回合。
++    """
++    import re
++
++    for message in reversed(list(messages or [])):
++        if not isinstance(message, dict):
++            continue
++        role = message.get("role")
++        if role == "assistant":
++            break
++        if role != "tool":
++            continue
++        match = re.search(r"\[deferred_tool_call:([A-Za-z0-9_-]+)\]", str(message.get("content") or ""))
++        if match:
++            return match.group(1)
++    return None
++
++
+ def run_tool_round(
+     agent: Any, *, assistant_message: Any, finish_reason: Any, messages: Any,
+     conversation_history: Any, api_call_count: Any, effective_task_id: Any, user_message: Any,
+@@ -173,6 +195,15 @@
+ 
+     finish_tool_round(agent)
+ 
++    # Always-on Agents P6（2026-11-16）：有工具被批准超时挂起 → 结束本轮（Run 收口），
++    # 不占用线程等用户；答复由 gateway watcher 以新事件唤醒。
++    _deferred_id = _detect_deferred_tool_call(messages)
++    if _deferred_id:
++        agent._deferred_tool_call = _deferred_id
++        _turn_exit_reason = "deferred_tool_call"
++        final_response = "⏸ 已挂起等待用户批准；用户答复后本会话会继续。"
++        return _verdict("break")
++
+     if getattr(agent, "_incremental_persistence_failed", False):
+         # Tool result could not be made canonical: never send the in-memory result to
+         # the model or project later events from this turn.
+diff --git a/gateway/run.py b/gateway/run.py
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -2189,6 +2189,7 @@
+ from gateway.run_goals import GatewayGoalsMixin
+ from gateway.run_followups import GatewayFollowupsMixin
+ from gateway.run_dreaming import GatewayDreamingMixin
++from gateway.run_deferred import GatewayDeferredApprovalMixin
+ from gateway.run_agent_cache import GatewayAgentCacheMixin
+ from gateway.run_profile_reconcile import GatewayProfileReconcileMixin
+ from gateway.run_plugin_rewire import GatewayPluginRewireMixin
+@@ -3319,7 +3320,7 @@
+     GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, GatewaySlashCommandsMixin,
+     GatewayVoiceMixin, GatewayAdapterLifecycleMixin, GatewayTopicThreadsMixin, GatewayTurnMixin,
+     GatewayShutdownMixin, GatewayBusySessionMixin, GatewayConfigLoadersMixin, GatewayStartupMixin,
+-    GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin, GatewayFollowupsMixin, GatewayDreamingMixin,
++    GatewaySessionWatchersMixin, GatewayNotificationsMixin, GatewayInboundMixin, GatewayGoalsMixin, GatewayFollowupsMixin, GatewayDreamingMixin, GatewayDeferredApprovalMixin,
+     GatewayAgentCacheMixin, GatewayRuntimeInitMixin, GatewayProfileReconcileMixin, GatewayPluginRewireMixin):
+     """Main gateway controller: manages adapter lifecycles, routes messages to/from the agent."""
+ 
+diff --git a/gateway/run_startup.py b/gateway/run_startup.py
+--- a/gateway/run_startup.py
++++ b/gateway/run_startup.py
+@@ -1668,7 +1668,7 @@
+         "_kanban_notifier_watcher", "_kanban_dispatcher_watcher",
+     )
+     _POST_RECONNECT_WATCHERS = (
+-        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher", "_dreaming_watcher",
++        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher", "_dreaming_watcher", "_deferred_approval_watcher",
+         "_profile_reconcile_watcher",
+     )
+ 

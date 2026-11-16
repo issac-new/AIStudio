@@ -1281,6 +1281,11 @@
 # 调 Hindsight reflect 提炼跨会话模式并以 tag dream retain；24h 一次，失败 fail-soft。
 782-agent-memory-dreaming.patch
 
+# 783（2026-11-16 Always-on Agents 吸收 P6）：延迟工具调用闭环——审批超时在无人值守
+# 场景挂起落 deferred.json（不阻塞线程），工具结果带机器标记结束本轮；用户答复经
+# responses/<request_id>.json 由 watcher 唤醒原会话。
+783-agent-deferred-tool-calls.patch
+
 # 784（2026-11-16 Always-on Agents 吸收 P1/P2）：bootstrap/routes.ts 挂载
 # /api/hermes/run-outcome（收口三态账本）与 /api/hermes/outbox（发件箱队列+派发）。
 784-server-always-on-routes.patch
