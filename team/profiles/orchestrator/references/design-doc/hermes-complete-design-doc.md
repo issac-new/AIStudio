@@ -3029,5 +3029,6 @@ flowchart LR
 | `gap-20261102-codescan-artex` | CodeScan-Artex 二开增量 12 项裁决（吸收4/收缩3/等效印证4/不吸收1）：pentest-methodology-fusion v2.1.0 §12 / fp-check / evidence-governed-execution 三处落地验收 grep 全过，2026-11-02 |
 | `gap-20261102-design-doc-sync` | 1031-1102 窗口复盘 → 设计文档口径刷新：规模计数复测（807→889/90→95/77→74）、底座三件套换装（swarm-yuan v2.98.2/hermes 0.22.5/studio v1.0.9）、组件台账 42 行、归档卷缺失定性与重建，2026-11-02 |
 | `gap-20261114-proactive-6a` | Proactive AI 6A 综述全量融合（概念7+机制43簇：干预五档/打断预算/挣得自主权/条件锚失效重访/主动性评测）：新 skill proactive-6a-orchestration + alert-triage §七 + delegation-brief §4.1 + agent-eval §6 + capability-ladder §13 五落点，2026-11-14 |
+| `gap-20261117-wechat-delta-pipeline` | 微信增量调研战役：15 篇精读 8 项落地 + 搜狗批次终局（签名链墙死/马赛克 B 级）+ 三论文一手源裁决 + 读书通道与双 cron 巡检管道接线 + 重试恢复率探针基线 94.6%，2026-11-17 |
 
 > 拆分纪律：本条索引不复制归档正文，避免双事实源；归档卷只增不改，修订以新条目追加。

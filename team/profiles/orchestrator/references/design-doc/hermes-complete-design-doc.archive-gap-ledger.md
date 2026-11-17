@@ -6,6 +6,17 @@
 
 ---
 
+## gap-20261117-wechat-delta-pipeline：微信增量调研战役（15 篇精读 8 项落地 + 搜狗终局 + 论文升级 + 巡检管道）
+
+- **来源**：用户令「跟进主要公众号的更新文章，完善 hermes agent teams」。存档 `~/.hermes/shared/research/20261116-wechat-delta/`（DELTA-FUSION-REPORT §一-§七 + corpus + sweep.py 管道 + 台账 wechat-accounts-ledger.yaml）。
+- **深度批次（§一-§五，11-16）**：T1 四号合集通道（免墙）15 篇全文精读，8 项机制落地（死循环判定/评测成本工程/裁判偏见对抗/R1-R4/故障矩阵模板/R2 成本判据/五问/蜂群蓝图登记）。
+- **搜狗批次（§六，11-17 凌晨）**：29/29 号穿透 0 墙、增量 10 篇；签名链（/link→s?src=11）被微信 poc 墙死（curl+真浏览器双实测 wappoc_appmsgcaptcha）；马赛克兜底 7 篇全为认知级/等效级（芯联汇/PaperAgent 均导流号，印证 8 月 readsemi 定性）。
+- **论文升级（§七）**：EvoTeam（2610.39813）/ReflectPO（2610.30933）/Agent-Reflex（2610.17953）取 arxiv 一手源裁决——「技能跨板共享+板级规则隔离」获外部印证；Agent-Reflex 印证 flywheel 同构。
+- **管道基建**：we-mp-rss 读书通道基建就绪（Cookie 有效/容器健康/cover 增量模式），待用户手机订阅 20 号激活；两个载体 cron job（wechat-patrol-t1 `08148fe72375` 每周一合集巡检 / wechat-sweep-t2 `cb2d52baacb6` 双周节流搜狗巡检）接入 unified_nightly_loop 周一门；顺手修复 skill-mining/ttvv 两载体 job 的过期 pin（hermes 新版凭据安全检查封杀 custom:cc-switch+base_url 旧形状，正确形状=cc-switch-route+glm-5.3+无 base_url，cron-job-management 技能已更新）。
+- **挂账②当场转 done**：重试恢复率探针 `~/.hermes/evals/retry-recovery-rate.py`（ReflectPO 度量迁移，只读 immutable 零副作用），首基线：任务恢复率 94.6%（74 失败任务 70 恢复，30 天 9 板）；swarm run 级恢复率 22.4% 最低（147 失败 run 均摊 ~5 次/任务，连环崩特征，供 kanban-hostile-env-supervision 对账）。
+- **挂账待派**：① 团队协作规则从执行痕迹演化（EvoTeam 机制候选：steer/comment/打回模式→per-board 协作规则修订回流，研究级不动手）；③ 用户手机微信读书订阅 20 号（人工，激活读书通道后增量全自动）。
+- **状态**：调研/落地/管道 done；挂账①③ open（2026-11-17）。
+
 ## gap-20261114-proactive-6a：Proactive AI 6A 综述全量融合（干预五档/打断预算/挣得自主权/主动性评测）
 
 - **来源**：微信文《下一代 Agent 到底需要什么能力？UIUC、Google、斯坦福等联合推出 Proactive AI 综述》→ 回源一手三件套：论文 PDF 204 页（storage.googleapis.com/gweb-research2023-media/pubtools/1048480.pdf，pdftotext 105 万字符）+ GitHub README 215K + 项目主页，全部存档 `~/.hermes/shared/research/20261114-proactive-ai-6a/`（FUSION-VERDICT-20261114.md + digest×8 + hermes-6a-mapping.md）。防重复扫描零命中=首次融合。
