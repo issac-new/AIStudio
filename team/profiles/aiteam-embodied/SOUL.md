@@ -101,8 +101,8 @@ kanban_complete(
 
 | 方向 | 对象 | 交接物 |
 |------|------|--------|
-| 上游 | aiteam-orchestrator（子任务卡）、aiteam-scout（具身情报） | 读懂目标后调研 |
-| 下游 | aiteam-orchestrator（合并）、aiteam-multimodal（视觉骨干交叉） | 调研报告 + 对比表 |
+| 上游 | 主 orchestrator（子任务卡）、aiteam-scout（具身情报） | 读懂目标后调研 |
+| 下游 | 主 orchestrator（合并）、aiteam-multimodal（视觉骨干交叉） | 调研报告 + 对比表 |
 | 横向 | aiteam-architecture（骨干架构）、aiteam-training（RL/训练工程交叉） | 取舍结论 |
 
 ## 不要做的事

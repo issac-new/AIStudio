@@ -1,10 +1,5 @@
 version: 1
-updated: '2026-10-26'
-# 板归属正本：每块看板 = 一个领域团队 + 一位本机人类员工。
-# - profiles: 派发围栏（dispatcher 只允许该板团队认领；board.json profile_scope 同源）
-# - owner_label: 人类负责人的岗位标签（人读）
-# - owner_account_env: 本机账号环境变量名（部署时在 profile .env 配真实 Matrix/studio 账号；
-#   仓内不落账号原值，符合脱敏纪律）
+updated: '2026-09-17'
 domains:
 - domain: swarm
   board: swarm
@@ -17,8 +12,6 @@ domains:
   - ~/.hermes/delivery/（软件开发交付标准工作模板 v1.0.0，2026-09-17 起；六阶段×六门禁，工具无关）
   target_skill: null
   owner_of_domain: orchestrator
-  owner_label: 主管
-  owner_account_env: BOARD_OWNER_SWARM
 - domain: ops
   board: ops
   profiles:
@@ -29,33 +22,25 @@ domains:
   knowledge: []
   target_skill: pending
   owner_of_domain: ops-devops
-  owner_label: 运维负责人
-  owner_account_env: BOARD_OWNER_OPS
 - domain: pay
   board: pay
   profiles:
-  - pay-orchestrator
   - pay-fintech
   - pay-infra
   - pay-clearing
   knowledge:
-  - ~/.hermes/profiles/pay-orchestrator/references/ (pay-kb, tag pay-kb-v20260903)
+  - ~/.hermes/shared/domain-knowledge/pay/ (pay-kb, tag pay-kb-v20260903; 20261117 迁居)
   target_skill: pending
-  owner_of_domain: pay-orchestrator
-  owner_label: 支付域负责人
-  owner_account_env: BOARD_OWNER_PAY
+  owner_of_domain: orchestrator  # 20261117 域网关并入
 - domain: data
   board: data
   profiles:
-  - data-orchestrator
   - data-arch
   - data-flink
   - data-infra
   knowledge: []
   target_skill: pending
-  owner_of_domain: data-orchestrator
-  owner_label: 数据域负责人
-  owner_account_env: BOARD_OWNER_DATA
+  owner_of_domain: orchestrator  # 20261117 域网关并入
 - domain: hack
   board: hack
   profiles:
@@ -67,8 +52,6 @@ domains:
   - 网安知识库（hack 团队 references/）
   target_skill: pending
   owner_of_domain: hack-auditor
-  owner_label: 安全负责人
-  owner_account_env: BOARD_OWNER_HACK
 - domain: product
   board: product
   profiles:
@@ -77,8 +60,6 @@ domains:
   knowledge: []
   target_skill: null
   owner_of_domain: product-manager
-  owner_label: 产品负责人
-  owner_account_env: BOARD_OWNER_PRODUCT
 - domain: platform
   board: platform
   profiles:
@@ -87,12 +68,9 @@ domains:
   knowledge: []
   target_skill: null
   owner_of_domain: platform-ontology-curator
-  owner_label: 平台负责人
-  owner_account_env: BOARD_OWNER_PLATFORM
 - domain: aiteam
   board: aiteam
   profiles:
-  - aiteam-orchestrator
   - aiteam-architecture
   - aiteam-multimodal
   - aiteam-embodied
@@ -100,17 +78,38 @@ domains:
   - aiteam-scout
   knowledge: []
   target_skill: pending
-  owner_of_domain: aiteam-orchestrator
-  owner_label: AI 研究负责人
-  owner_account_env: BOARD_OWNER_AITEAM
+  owner_of_domain: orchestrator  # 20261117 域网关并入
 - domain: eda
   board: eda
   profiles:
   - orchestrator
+  - eda-arch
+  - eda-ipcore
+  - eda-dv
+  - eda-backend
+  - eda-ams
+  - eda-physics
+  - eda-toolchain
+  - eda-pdk
+  - eda-packtest
+  - eda-ai
   knowledge: []
   target_skill: null
-  status: retired
-  note: 2026-10-28 退役（用户裁决）：原 EDA 11 个 profile 已不在 team/profiles，本域仅剩 orchestrator 成员、无领域执行者；保留条目作历史锚，不再作为活跃看板。整体设计文档不体现该域（用户口径）。
-  owner_of_domain: orchestrator
-  owner_label: EDA 负责人
-  owner_account_env: BOARD_OWNER_EDA
+  status: active
+  owner_of_domain: eda-arch
+  note: 在整体设计文档中不体现（用户口径），运行态活跃
+- domain: k12edu
+  board: k12edu
+  profiles:
+  - k12edu-orchestrator
+  - k12-chinese
+  - k12-stem
+  - k12-language
+  - k12-arts
+  - k12-character
+  - k12-physical
+  knowledge: []
+  target_skill: null
+  status: active
+  owner_of_domain: k12edu-orchestrator
+  note: 在整体设计文档中不体现（用户口径），运行态活跃

@@ -18,12 +18,11 @@ profiles:
     skills_enabled:
     - research
     - software-development
+    - github
+    - productivity
+    - autonomous-ai-agents
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -47,12 +46,11 @@ profiles:
     skills_enabled:
     - research
     - software-development
+    - github
+    - productivity
+    - autonomous-ai-agents
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -76,41 +74,11 @@ profiles:
     skills_enabled:
     - research
     - software-development
+    - github
+    - productivity
+    - autonomous-ai-agents
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
-    toolsets:
-    - hermes-cli
-    - kanban
-    - memory
-  aiteam-orchestrator:
-    api_server:
-      enabled: false
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    environment_hint: ~/.hermes/profiles/aiteam-orchestrator/SOUL.md
-    kanban:
-      default_assignee: aiteam-orchestrator
-    matrix:
-      enabled: false
-    plugins:
-    - acp-client
-    - hindsight
-    - memtensor
-    - observability/langfuse
-    - run-trace
-    skills_enabled:
-    - research
-    - software-development
-    skills_pinned:
-    - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -134,12 +102,11 @@ profiles:
     skills_enabled:
     - research
     - software-development
+    - github
+    - productivity
+    - autonomous-ai-agents
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -165,12 +132,137 @@ profiles:
     - software-development
     - mlops
     - autonomous-ai-agents
+    - github
+    - productivity
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-ai:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-ai/SOUL.md
+    kanban:
+      default_assignee: eda-ai
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - mlops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-ipcore:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-ipcore/SOUL.md
+    kanban:
+      default_assignee: eda-ipcore
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mlops
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-physics:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-physics/SOUL.md
+    kanban:
+      default_assignee: eda-physics
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - mlops
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-toolchain:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-toolchain/SOUL.md
+    kanban:
+      default_assignee: eda-toolchain
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
     toolsets:
     - hermes-cli
     - acp
@@ -208,10 +300,6 @@ profiles:
     - wechat-article-extractor
     - wechat-article-search
     - hack-team
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -248,10 +336,6 @@ profiles:
     - wechat-article-extractor
     - wechat-article-search
     - hack-team
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -290,10 +374,63 @@ profiles:
     - wechat-article-extractor
     - wechat-article-search
     - hack-team
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  hack-referee:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/hack-referee/SOUL.md
+    kanban:
+      default_assignee: hack-referee
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - devops
+    - note-taking
+    skills_pinned:
+    - hack-team
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  hack-soc:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/hack-soc/SOUL.md
+    kanban:
+      default_assignee: hack-soc
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - cybersecurity
+    - autonomous-ai-agents
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - cognition-lattice
+    - computer-use
+    - cybersecurity-detection
+    - hack-team
     toolsets:
     - hermes-cli
     - kanban
@@ -330,14 +467,231 @@ profiles:
     - wechat-article-extractor
     - wechat-article-search
     - hack-team
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
     - memory
+  k12-arts:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12-arts/SOUL.md
+    kanban:
+      default_assignee: k12-arts
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  k12-character:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12-character/SOUL.md
+    kanban:
+      default_assignee: k12-character
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  k12-chinese:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12-chinese/SOUL.md
+    kanban:
+      default_assignee: k12-chinese
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  k12-language:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12-language/SOUL.md
+    kanban:
+      default_assignee: k12-language
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  k12-physical:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12-physical/SOUL.md
+    kanban:
+      default_assignee: k12-physical
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  k12-stem:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12-stem/SOUL.md
+    kanban:
+      default_assignee: k12-stem
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+  k12edu-orchestrator:
+    api_server:
+      enabled: false
+      host: 127.0.0.1
+      port: 8651
+    email:
+      enabled: false
+      gateway_restart_notification: false
+    env_extra:
+      WEIXIN_ACCOUNT_ID: efeb83c9e62a@im.bot
+      WEIXIN_DM_POLICY: pairing
+      WEIXIN_GROUP_POLICY: disabled
+      WEIXIN_TOKEN: efeb83c9e62a@im.bot:060000bd5f6bf3219849f5e226179ed00aee48
+      API_SERVER_ENABLED: 'false'
+      HERMES_KANBAN_BOARD: k12edu
+    environment_hint: ~/.hermes/profiles/k12edu-orchestrator/SOUL.md
+    kanban:
+      default_assignee: ''
+    matrix:
+      enabled: false
+    plugins:
+    - hindsight
+    - run-trace
+    skills_enabled:
+    - autonomous-ai-agents
+    - research
+    - productivity
+    - note-taking
+    skills_pinned:
+    - skill-recall
+    - apikey-image-gen
+    - grok-image-to-video
+    - k12-lesson-design
+    - markdown-viewer
+    - cognition-lattice
+    - hermes-ops
+    toolsets:
+    - hermes-cli
+    - kanban
+    - memory
+    - messaging
   ops-devops:
     api_server:
       enabled: false
@@ -364,10 +718,6 @@ profiles:
     - devops-rd
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -398,10 +748,6 @@ profiles:
     skills_pinned:
     - skill-recall
     - cognition-lattice
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -432,10 +778,6 @@ profiles:
     skills_pinned:
     - skill-recall
     - cognition-lattice
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -465,10 +807,6 @@ profiles:
     - mcp
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -483,19 +821,21 @@ profiles:
       enabled: false
       gateway_restart_notification: false
     env_extra:
-      WEIXIN_ACCOUNT_ID: ${WEIXIN_ACCOUNT_ID}
+      WEIXIN_ACCOUNT_ID: 8267e9b73b55@im.bot
       WEIXIN_DM_POLICY: pairing
       WEIXIN_GROUP_POLICY: disabled
-      WEIXIN_TOKEN: ${WEIXIN_TOKEN}
-      MATRIX_PASSWORD: ${MATRIX_PASSWORD}
+      HERMES_CRON_SCRIPT_TIMEOUT: '7200'
+      WEIXIN_TOKEN: 8267e9b73b55@im.bot:060000ed8858918cd6bd451ee104a87e73d249
+      MATRIX_PASSWORD: 8gNpLiBfUOOgEOwESl3ifxw84pg3wceL
       MATRIX_HOMESERVER: http://localhost:8008
-      MATRIX_HOME_ROOM: <matrix-room-id>
+      MATRIX_HOME_ROOM: '!ejpuWQrZOTfhjBWbLu:matrix.test'
       MATRIX_HOME_ROOM_THREAD_ID: ''
       MATRIX_USER_ID: '@swarm:matrix.test'
       MATRIX_DEVICE_ID: 6FAD0F
     environment_hint: ~/.hermes/profiles/orchestrator/SOUL.md
     gateway_extra:
-      multiplex_profile_allowlist: []
+      multiplex_profile_allowlist:
+      - k12edu-orchestrator
       multiplex_profiles: true
     kanban:
       default_assignee: ''
@@ -519,6 +859,11 @@ profiles:
     skills_pinned:
     - skill-recall
     - cognition-lattice
+    - nightly-ops-orch
+    - reverse-engineer-anything
+    - teamai-session-to-task
+    - teamai-share-session
+    - zzz-e2e-skill
     toolsets:
     - hermes-cli
     - kanban
@@ -548,10 +893,6 @@ profiles:
     - devops-rd
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -581,10 +922,6 @@ profiles:
     - devops-rd
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -615,48 +952,11 @@ profiles:
     - autonomous-ai-agents
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
     - kanban
     - memory
-  pay-orchestrator:
-    api_server:
-      enabled: false
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    environment_hint: ~/.hermes/profiles/pay-orchestrator/SOUL.md
-    kanban:
-      default_assignee: ''
-    matrix:
-      enabled: false
-    plugins:
-    - acp-client
-    - hindsight
-    - observability/langfuse
-    - run-trace
-    skills_enabled:
-    - devops
-    - research
-    - productivity
-    - note-taking
-    - autonomous-ai-agents
-    - devops-rd
-    skills_pinned:
-    - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
-    toolsets:
-    - hermes-cli
-    - kanban
-    - memory
-    - messaging
   platform-ontology-curator:
     api_server:
       enabled: false
@@ -684,10 +984,6 @@ profiles:
     skills_pinned:
     - skill-recall
     - cognition-self-check
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -720,10 +1016,6 @@ profiles:
     skills_pinned:
     - skill-recall
     - cognition-lattice
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -755,10 +1047,6 @@ profiles:
     skills_pinned:
     - skill-recall
     - cognition-lattice
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -787,10 +1075,6 @@ profiles:
     - mcp
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - kanban
@@ -824,10 +1108,7 @@ profiles:
     - devops-worker
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
+    - multi-role-cr
     toolsets:
     - hermes-cli
     - acp
@@ -862,10 +1143,6 @@ profiles:
     - devops-worker
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
@@ -898,47 +1175,11 @@ profiles:
     - devops-worker
     skills_pinned:
     - skill-recall
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
     toolsets:
     - hermes-cli
     - acp
     - kanban
     - memory
-  data-orchestrator:
-    api_server:
-      enabled: false
-    env_extra:
-      API_SERVER_ENABLED: 'false'
-    kanban:
-      default_assignee: ''
-    matrix:
-      enabled: false
-    plugins:
-    - hindsight
-    - run-trace
-    skills_pinned:
-    - skill-recall
-    environment_hint: ~/.hermes/profiles/data-orchestrator/SOUL.md
-    skills_enabled:
-    - devops
-    - research
-    - productivity
-    - note-taking
-    - autonomous-ai-agents
-    - devops-rd
-    - software-development
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
-    toolsets:
-    - hermes-cli
-    - kanban
-    - memory
-    - messaging
   data-arch:
     api_server:
       enabled: false
@@ -954,7 +1195,7 @@ profiles:
     skills_pinned:
     - skill-recall
     environment_hint: ~/.hermes/profiles/data-arch/SOUL.md
-    skills_enabled:
+    skills_enabled: &id006
     - software-development
     - devops
     - research
@@ -962,11 +1203,7 @@ profiles:
     - productivity
     - devops-rd
     - autonomous-ai-agents
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
-    toolsets:
+    toolsets: &id007
     - hermes-cli
     - acp
     - kanban
@@ -986,23 +1223,8 @@ profiles:
     skills_pinned:
     - skill-recall
     environment_hint: ~/.hermes/profiles/data-flink/SOUL.md
-    skills_enabled:
-    - software-development
-    - devops
-    - research
-    - note-taking
-    - productivity
-    - devops-rd
-    - autonomous-ai-agents
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
-    toolsets:
-    - hermes-cli
-    - acp
-    - kanban
-    - memory
+    skills_enabled: *id006
+    toolsets: *id007
   data-infra:
     api_server:
       enabled: false
@@ -1018,23 +1240,229 @@ profiles:
     skills_pinned:
     - skill-recall
     environment_hint: ~/.hermes/profiles/data-infra/SOUL.md
+    skills_enabled: *id006
+    toolsets: *id007
+  eda-arch:
+    api_server: &id010
+      enabled: false
+    env_extra: &id011
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-arch/SOUL.md
+    kanban: &id012
+      default_assignee: eda-rev
+    matrix: &id013
+      enabled: false
+    plugins: &id014
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: &id008
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mlops
+    skills_pinned: &id015
+    - skill-recall
+    - eda-platform-development
+    toolsets: &id016
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-dv:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-dv/SOUL.md
+    kanban:
+      default_assignee: eda-dv
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
     skills_enabled:
     - software-development
     - devops
+    - github
     - research
+    - autonomous-ai-agents
     - note-taking
     - productivity
-    - devops-rd
-    - autonomous-ai-agents
-    fallback_providers:
-    - provider: custom:cc-switch
-      model: aim
-      api_mode: anthropic_messages
+    - mlops
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
     toolsets:
     - hermes-cli
     - acp
     - kanban
     - memory
+  eda-backend:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-backend/SOUL.md
+    kanban:
+      default_assignee: eda-backend
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: *id008
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-ams:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-ams/SOUL.md
+    kanban:
+      default_assignee: eda-ams
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: &id009
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mlops
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-pdk:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-pdk/SOUL.md
+    kanban:
+      default_assignee: eda-pdk
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled: *id009
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-packtest:
+    api_server:
+      enabled: false
+    env_extra:
+      API_SERVER_ENABLED: 'false'
+    environment_hint: ~/.hermes/profiles/eda-packtest/SOUL.md
+    kanban:
+      default_assignee: eda-packtest
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - observability/langfuse
+    - run-trace
+    skills_enabled:
+    - software-development
+    - devops
+    - github
+    - research
+    - autonomous-ai-agents
+    - note-taking
+    - productivity
+    - mlops
+    skills_pinned:
+    - skill-recall
+    - eda-platform-development
+    toolsets:
+    - hermes-cli
+    - acp
+    - kanban
+    - memory
+  eda-rev:
+    api_server: *id010
+    env_extra: *id011
+    environment_hint: ~/.hermes/profiles/eda-rev/SOUL.md
+    kanban: *id012
+    matrix: *id013
+    plugins: *id014
+    skills_enabled: *id008
+    skills_pinned: *id015
+    toolsets: *id016
+  lcm-dev-test:
+    api_server:
+      enabled: false
+    environment_hint: ~/.hermes/profiles/lcm-dev-test/SOUL.md
+    kanban:
+      default_assignee: lcm-dev-test
+    matrix:
+      enabled: false
+    plugins:
+    - acp-client
+    - hindsight
+    - langfuse
+    - matrix-chat-info
+    skills_enabled:
+    - apikey-image-gen
+    - apple
+    - autonomous-ai-agents
+    - creative
+    - devops
+    - email
+    - grok-image-to-video
+    - hyperframes
+    - markdown-viewer
+    - media
+    - minimax-image-to-video
+    - note-taking
+    - productivity
+    - remotion
+    - research
+    - social-media
+    - software-development
+    - web
+    skills_pinned: []
+    toolsets:
+    - hermes-cli
 shared_config:
   agent:
     environment_probe: false
@@ -1044,40 +1472,53 @@ shared_config:
     task_completion_guidance: true
     tool_use_enforcement: auto
   approvals:
-    mode: "off"
+    mode: 'off'
   auxiliary:
     approval:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     background_review:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     compression:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     goal_judge:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     kanban_decomposer:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     moa_aggregator:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     moa_reference:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     profile_describer:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     session_search:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     title_generation:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     triage_specifier:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     vision:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
     web_extract:
-      provider: auto
+      model: glm-5.3-flash
+      provider: custom:cc-switch-route
   compression:
     enabled: true
     target_ratio: 0.15
     threshold: 0.35
   custom_providers:
-  - api_key: ${BIGMODEL_API_KEY}
+  - api_key: 231c28642c534da3b3f90785a140c0dc.jxXO6WIFg6oRRN4z
     api_mode: anthropic_messages
     base_url: https://open.bigmodel.cn/api/anthropic
     context_length: 1003520
@@ -1087,7 +1528,7 @@ shared_config:
       glm-5.3-flash:
         name: glm-5.3-flash
     name: moa-mglm
-  - api_key: ${KIMI_API_KEY}
+  - api_key: sk-kimi-bVe93BOmFPga1vaSwV6XucxfVSfrRGrfiJ0Fl02GHQkSqqOFHD4lhTJMgtwZsGPW
     api_mode: anthropic_messages
     base_url: https://api.kimi.com/coding
     context_length: 1048576
@@ -1095,7 +1536,7 @@ shared_config:
       k3:
         name: k3
     name: moa-mk256
-  - api_key: ${TOKEN_PLAN_API_KEY}
+  - api_key: tp-cppgfzgehrzi5p83uvetbcyb2etguvqbc94okmccfwhjxng2
     api_mode: anthropic_messages
     base_url: https://token-plan-cn.xiaomimimo.com/anthropic
     context_length: 1048576
@@ -1105,7 +1546,7 @@ shared_config:
     name: moa-mimo
   - name: moa-stepfun
     base_url: https://api.stepfun.com/step_plan
-    api_key: ${STEPFUN_API_KEY}
+    api_key: 23f3j5z8GvGkin63xSyLRmtAJfG4N8n74fYo5Has5MF3rBGwV37rJMj7cJufQBTx2
     api_mode: anthropic_messages
     context_length: 1048576
     models:
@@ -1116,7 +1557,7 @@ shared_config:
         effort: high
   - name: moa-minimax
     base_url: https://api.minimax.cn/anthropic
-    api_key: ${MINIMAX_API_KEY}
+    api_key: sk-cp-cUu18Io2uRTQTJUaHv_o1qKzz0CxEUD9gtbY4uIDuLwWR9hH7x5ufskaRQ-k7mUKsEt8OC439B6x5GqxPbs3px1cNXYksTg-gwIXMX2n23QCZxDr8dREtIU
     api_mode: anthropic_messages
     context_length: 1048576
     models:
@@ -1127,7 +1568,7 @@ shared_config:
         type: adaptive
   - name: moa-deepseek
     base_url: https://api.deepseek.com/anthropic
-    api_key: ${DEEPSEEK_API_KEY}
+    api_key: sk-ccd1368fcb184ca0b6ffbe10b2ece496
     api_mode: anthropic_messages
     context_length: 128000
     models:
@@ -1143,6 +1584,8 @@ shared_config:
     session_affinity_header: session_id
     models:
       glm-5.3:
+        context_length: 1048576
+      glm-5.3-flash:
         context_length: 1048576
     model: glm-5.3
   - name: cc-switch
@@ -1162,10 +1605,6 @@ shared_config:
   display:
     language: zh
     skin: daylight
-  fallback_providers:
-  - provider: custom:cc-switch
-    model: aim
-    api_mode: anthropic_messages
   kanban:
     auto_decompose: false
     board_concurrency: 5
@@ -1192,4 +1631,4 @@ shared_config:
     cwd: ~/hermes-docker-sandbox/workspace
     persistent_shell: true
     timeout: 180
-updated: '2026-10-03'
+updated: '2026-11-09T13:58:50'

@@ -105,7 +105,7 @@ kanban_complete(
 
 | 方向 | 对象 | 交接物 |
 |------|------|--------|
-| 上游 | aiteam-orchestrator（监测任务卡） | 读懂范围/周期/格式后执行 |
+| 上游 | 主 orchestrator（监测任务卡） | 读懂范围/周期/格式后执行 |
 | 下游 | aiteam-architecture / multimodal / embodied / training（情报消费方） | 结构化周报/月报 + 深挖清单 |
 | 横向 | 其他板 scout 类角色 | radar 口径对齐（不强制） |
 

@@ -131,13 +131,13 @@ kanban_complete()                  # 5. 结构化 handoff
 ## 共享知识库
 > ⚠️ **必读**: `standards/known-conflicts.md`——引用任何限额/阈值/版本/份额数据前，先查冲突裁决
 
-> 完整索引与引用路由：`~/.hermes/profiles/pay-orchestrator/references/pay-knowledge-index.md`
+> 完整索引与引用路由：`~/.hermes/shared/domain-knowledge/pay/pay-knowledge-index.md`
 
-- **支付知识索引（总入口）**: `~/.hermes/profiles/pay-orchestrator/references/pay-knowledge-index.md`
-- **知识内核框架（任务前必读）**: `~/.hermes/profiles/pay-orchestrator/references/chentianyu-kernel-frameworks.md`（123457口诀/46图内核/二清七步+引用路由表）
-- **陈天宇宙文章全文 50 篇**: `~/.hermes/profiles/pay-orchestrator/references/fulltext/`（grep -rln "关键词" 检索）
-- **《支付之门》14章全文**: `~/.hermes/profiles/pay-orchestrator/references/books/chapters/ZF001_*`（25.4万字符）
-- **《跨境支付及金融服务》7章全文**: `~/.hermes/profiles/pay-orchestrator/references/books/chapters/ZF002_*`（15.5万字符）
+- **支付知识索引（总入口）**: `~/.hermes/shared/domain-knowledge/pay/pay-knowledge-index.md`
+- **知识内核框架（任务前必读）**: `~/.hermes/shared/domain-knowledge/pay/chentianyu-kernel-frameworks.md`（123457口诀/46图内核/二清七步+引用路由表）
+- **陈天宇宙文章全文 50 篇**: `~/.hermes/shared/domain-knowledge/pay/fulltext/`（grep -rln "关键词" 检索）
+- **《支付之门》14章全文**: `~/.hermes/shared/domain-knowledge/pay/books/chapters/ZF001_*`（25.4万字符）
+- **《跨境支付及金融服务》7章全文**: `~/.hermes/shared/domain-knowledge/pay/books/chapters/ZF002_*`（15.5万字符）
 - **监管知识**: `中国支付清算体系知识文档.md` + `支付清算国际视角与前沿趋势知识文档.md`
 - **agent 支付安全（合规/风控方案设计前必读）**: `~/.hermes/profiles/_shared/knowledge/agent-payment-security-knowledge.md`——意图层（mandate 三段式+可信面确认）/运行时层（逐调用授权+金额上限+consume-once）/身份层（DID/VC/TEE）三层防护 + agent 钱包低余额+日上限+JIT 充值原则
 - **两书框架与文章对应**: `books/BOOKS-KNOWLEDGE-FRAMEWORK.md`
@@ -179,8 +179,8 @@ kanban_complete()                  # 5. 结构化 handoff
 
 ```bash
 # 本域标准文件清单与成色（提纲级勿冒充全文）
-ls ~/.hermes/profiles/pay-orchestrator/references/standards/ 2>/dev/null
-grep -l "⚠️提纲级" ~/.hermes/profiles/pay-orchestrator/references/standards/*.md 2>/dev/null
+ls ~/.hermes/shared/domain-knowledge/pay/standards/ 2>/dev/null
+grep -l "⚠️提纲级" ~/.hermes/shared/domain-knowledge/pay/standards/*.md 2>/dev/null
 
 # 查看同队 profile 健康状态（clearances/模型路由）
 python3 -c "import yaml; c=yaml.safe_load(open(f'$HOME/.hermes/profiles/{prof}/config.yaml')); print(c.get('model'), c.get('clearances'))"
@@ -194,10 +194,10 @@ python3 -c "import yaml; c=yaml.safe_load(open(f'$HOME/.hermes/profiles/{prof}/c
 
 ```bash
 # 读取支付知识索引
-cat ~/.hermes/profiles/pay-orchestrator/references/pay-knowledge-index.md
+cat ~/.hermes/shared/domain-knowledge/pay/pay-knowledge-index.md
 
 # 搜索陈天宇宙文章中的监管知识
-grep -i "监管\|合规\|反洗钱\|牌照\|备付金" ~/.hermes/profiles/pay-orchestrator/references/chentianyu-articles.md
+grep -i "监管\|合规\|反洗钱\|牌照\|备付金" ~/.hermes/shared/domain-knowledge/pay/chentianyu-articles.md
 
 # 查看 pay 看板我的任务
 sqlite3 ~/.hermes/kanban/boards/pay/kanban.db \

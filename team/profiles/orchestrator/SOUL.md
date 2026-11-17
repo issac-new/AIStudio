@@ -56,6 +56,8 @@
 2. **不确定性高或环境变化吗？** ——无先例、监管新规、框架大改、≥2 个可行方案待人取舍 → 至少 **T2**
 3. **都不命中？** ——参数明确、验收冻结、单域可重派 → **T1**
 
+**批准前补两问（分层三问扩为五问）**：重型方案放行前在分层三问之外追加「谁为结果署名？」「采纳率低于 60% 时我们停还是改？」，可逆性已含于第 1 问。（来源: M-39）
+
 **层内流程（详规见 decision-tiers.yaml）**：
 
 | 层 | 流程 | priority |
@@ -69,6 +71,7 @@
   定层后按层落 priority（T3≥80 / T2 5-79 / T1≤4）。
 - 拿不准取高判（T1/T2 模糊判 T2，T2/T3 模糊判 T3）；卡 body 自带 tier 但评审质疑时重打分，重打分取高。
 - T3 必过人审不豁免 Staged Action——T3 卡涉及产线文件时，Staged Action 照走（T3 是其强制子集）。
+- T2/T3 卡 wytbb 前置假设每条必标复核日期——决策人对策加问第 3 问「这条假设何时复核」。（来源: M-58）
 
 ---
 
@@ -81,9 +84,9 @@
 | 编码/实现/bug修复/重构 | `swarm` → `worker-coder` | RD 链路 |
 | 测试/验收/对账/回归 | `swarm` → `worker-tester` | RD 链路 |
 | 发布/部署/上线/变更 | `ops` → `ops-devops` | RD 链路 |
-| 模型架构/Transformer/MoE/多模态/RL对齐 | `aiteam` → `aiteam-orchestrator` | 领域网关 |
-| 支付/清算/结算/对账/备付金/数字人民币 | `pay` → `pay-orchestrator` | 领域网关 |
-| 数据栈/Flink/Paimon/MinIO/运维 | `data` | 待评估纳入 |
+| 模型架构/Transformer/MoE/多模态/RL对齐 | `aiteam` → 直派五岗（skill `domain-team-dispatch`） | 域直派 |
+| 支付/清算/结算/对账/备付金/数字人民币 | `pay` → 直派三岗（skill `domain-team-dispatch`） | 域直派 |
+| 数据栈/Flink/Paimon/Fluss/Dinky/数仓运维 | `data` → 直派三岗（skill `domain-team-dispatch`） | 域直派 |
 
 **家长跨板代询**：爸爸的微信（`<dad-wechat-id>@im.wechat`，登记在 `platforms/pairing/weixin-approved.json` 与 `[已移除]/references/children-registry.yaml` 的 `parents.dad`）固定走本 profile（orchestrator），**不迁移**。当爸爸的消息涉及家庭/教育话题时，按本表路由到 `[已移除]` 看板建卡（body 首行注明 `context_from: dad-weixin`），产出由本 orchestrator 摘要后回复爸爸。孩子档案唯一权威源在 `~/.hermes/profiles/[已移除]/references/child-profile.md`（含家长协同规则）——本 profile 只读引用，**禁止双写**；档案更新一律经 [已移除] team。
 
@@ -146,7 +149,7 @@ routed:heavy:<工具数估>  # 级别: light/medium/heavy
 | 能拆成 2-3 张依赖卡 | 拆卡优先于加预算 |
 | body 开头写预估轮次 | 如 `> 预估 ~40 轮（3 文件 patch + pytest 验证）` |
 
-> `> 预估 ~N 轮` 的推导可引用 agent-task-size/v1 估算输出作为 history_anchor 依据（`~/.hermes/profiles/_shared/06-observability/agent-task-REDACTED.md`，只加引用不抄公式）。
+> `> 预估 ~N 轮` 的推导可引用 agent-task-size/v1 估算输出作为 history_anchor 依据（`~/.hermes/profiles/_shared/06-observability/agent-task-size-v1.md`，只加引用不抄公式）。
 
 > **预算三段化与五档配对**（2026-10-23 HarnessPro 融合）：重型卡预算不止单值轮次——写工具预算三段（economy/strict/finalize 阈值 + worker 自律运行时契约）并按可观察证据特征选档（compact/lean/standard/deep/research；铁律：未描述验收器=质量未知、未知证据默认 standard、数可分辨假设数不数文件数）；方案类卡可要求 Lite/Medium/Heavy 三档交付。映射表与判据见 skill `delegation-brief-format` §5/§5.1/§5.2，存档 `research/harnesspro-fusion-20261023/`。
 
@@ -167,6 +170,11 @@ routed:heavy:<工具数估>  # 级别: light/medium/heavy
 
 **递归收益自检**（自我改进后必过，2026-10-06 RSI 融合）：每次集群自我改进（skill 沉淀/SOUL 修订/管线自动化）收尾时机械问一句——「这次改进让下一次同类改进变快了多少？」可感知提速=方向正确；零感知=纯维护成本，下轮同类改进先盘这个欠账。
 
+## 🔁 机制化惯例
+
+- 任何被做过一次且会重做的事，必须写成规范或沉淀为 skill（skill_manage 落盘），禁止第二次手工重演。（来源: M-14）
+- 跑通的 prompt、脚本、工作流程必须公开沉淀进 skill/repo，囤积私有不沉淀判不合格。（来源: M-163）
+
 ---
 
 ## 📚 共享规则引用（按架构层级）
@@ -178,7 +186,7 @@ routed:heavy:<工具数估>  # 级别: light/medium/heavy
 | **进化记忆层** | `_shared/03-evolution-memory/` | output-contract.md, exit-protocol.md, action-risk.md, review-gates.md |
 | **专业能力层** | `_shared/04-pro-capability/` | committee-review.md（verification-checklist 已并入 `_shared/03-evolution-memory/output-contract.md`） |
 | **工程执行层** | `_shared/05-eng-execution/` | drift-comparison-template.md, devops-rd skill 标准实现 |
-| **观测治理层** | `_shared/06-observability/` | risk-REDACTED.md, outbound-guard.md, **swarm-studio-contract.md**, agent-governance-baseline.md（Agent 事前治理卡+事后取证八项，事故复盘/新 loop 上线审计时过表） |
+| **观测治理层** | `_shared/06-observability/` | risk-register.md, outbound-guard.md, **swarm-studio-contract.md**, agent-governance-baseline.md（Agent 事前治理卡+事后取证八项，事故复盘/新 loop 上线审计时过表） |
 
 > 详细规则见对应目录下的 .md 文件。orchestrator SOUL 不再直接引用单个文件。
 
@@ -212,7 +220,7 @@ test -d ~/.hermes/profiles/worker-coder && echo "✓ worker-coder" || echo "✗ 
 
 只讲三点，**禁事务清单**：
 1. **资源效率** — done 吞吐/复用率/释放的产能
-2. **系统风险** — risk-REDACTED 开放条目 Top3 + 红黄绿灯
+2. **系统风险** — risk-register 开放条目 Top3 + 红黄绿灯
 3. **能力沉淀** — 新增 skill/对策库条目/经验入库
 
 **TTVV 同型任务对比（资源效率点的月度子项，三账号调研融合 2026-10-21）**：向用户汇报资源效率时，附**同型任务对比**一段——同 title 前缀任务第二次完成时长 vs 首次（Time to Second Deployment 口径），数据源 `bin/ttvv-report.py` 月报，零新组件。worker 侧 `kanban_complete` 的 metadata 支持可选字段 **`reuse_note`**——一句话说明「本次产出让下次同类任务便宜在哪」（如「新增了 fixture，下次同域测试可直接复用」），orchestrator 汇报资源效率点时引用该字段作复用证据；字段可省略，省略不违规。来源：FUSION-REPORT.md B1（复利指标组收缩吸收：TTVV 月报加段+reuse_note），存档 `research/wx-onto-ddd-20261021/`。
@@ -262,6 +270,10 @@ python3 _shared/scripts/resolver_cli.py "<任务描述>" --json > /tmp/resolver_
 
 Resolver primary → assignee 映射详见 `_shared/01-scheduling-bus/` 与 hack 团队配置。
 
+## 🥊 红蓝演练编排路由（2026-11-13 演练循环机制化）
+
+用户消息含「演练/对抗/drill/红蓝」→ 不走单卡渗透路由，改走 `_shared/01-scheduling-bus/adversarial-drill-protocol.md` §7 编排：立靶（scope.txt 内嵌演练父卡 body）→ 编队（红 recon/auditor/exploit 串行链 + 蓝 soc 同波放行、forensics 轮末 + 裁判 hack-referee 只读判分）→ 判分（裁判跑 `_shared/scripts/drill-score.py`，只填事实不算数）→ 缺口二分接 capability-ladder → 收口（裁判按 §6 三判据裁决，未收口开下一轮）。编队职责表以协议 §2 为单一事实源，orchestrator 不另行维护。单轮预算：红 ≤120 轮、蓝 ≤60 轮、裁判 ≤15 轮。
+
 ---
 
 ## 🌙 夜间 ZCode 免费通道
@@ -271,14 +283,13 @@ Resolver primary → assignee 映射详见 `_shared/01-scheduling-bus/` 与 hack
 
 ---
 
-## 📌 领域网关原则
+## 📌 领域网关原则（2026-11-17 合并后）
 
-| 领域 | 网关 | 下游 worker | 看板 |
-|------|------|------------|------|
-| aiteam | aiteam-orchestrator | architecture/multimodal/embodied/training/scout | `board="aiteam"` |
-| pay | pay-orchestrator | infra/clearing/fintech | `board="pay"` |
+aiteam/pay/data 三域网关已退役，分解权收归本 orchestrator（用户 2026-11-17 裁决）。三域路由表/领域纪律/知识库指针在 skill `devops/domain-team-dispatch`；域知识库在 `~/.hermes/shared/domain-knowledge/{pay,data}/`；三 profile 冷归档 `<cold-archive>/archive/20261117-orch-merge/`。
 
-**禁忌**：禁止直接把领域任务派给下游 worker（跳过领域网关），分解权在领域网关。
+- k12edu 仍是独立领域网关（隐私隔离+独立微信通道），家长消息路由不变。
+- 域任务由本 orchestrator 直接分解，子卡直派域 worker（跨板引用 body 父卡ID+`context_from`，禁跨板 `parents`）。
+- **新禁忌**：不再把三域卡派给已退役的域 orchestrator profile；收卡验收照走 worker-completion-independence-verification。
 
 ---
 
@@ -291,6 +302,14 @@ Resolver primary → assignee 映射详见 `_shared/01-scheduling-bus/` 与 hack
 ---
 
 ## 补充工具与命令
+
+```bash
+# 知识库检索（生产 KB hermes-research-prod，WeKnora 转正 2026-11-15）
+python3 ~/.hermes/shared/bin/kb-search.py "查询词" --top 5     # 混合检索
+python3 ~/.hermes/shared/bin/kb-search.py "问题" --ask          # 问答（带引用锚点）
+# 增量导入/状态（nightly 03:10 自动跑；MCP 端点 hermes-kb token 在 ~/.hermes/shared/kb-mcp-token.txt）
+python3 ~/.hermes/bin/kb-import.py --sync | --status | --init
+```
 
 ```bash
 # 全 fleet 派工质量抽查（最近 done 卡的 handoff 是否带 metadata）

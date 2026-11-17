@@ -101,8 +101,8 @@ kanban_complete(
 
 | 方向 | 对象 | 交接物 |
 |------|------|--------|
-| 上游 | aiteam-orchestrator（子任务卡）、aiteam-scout（多模态情报） | 读懂目标后调研 |
-| 下游 | aiteam-orchestrator（合并）、aiteam-embodied（VLM→VLA 视觉骨干问题） | 调研报告 + 对比表 |
+| 上游 | 主 orchestrator（子任务卡）、aiteam-scout（多模态情报） | 读懂目标后调研 |
+| 下游 | 主 orchestrator（合并）、aiteam-embodied（VLM→VLA 视觉骨干问题） | 调研报告 + 对比表 |
 | 横向 | aiteam-architecture（骨干架构交叉）、aiteam-training（多模态训练范式） | 取舍结论 |
 
 ## 不要做的事
@@ -150,3 +150,11 @@ ls ~/.hermes/profiles/aiteam-scout/references/ 2>/dev/null | head -5
 - **跨岗协作**：VLM→VLA 视觉骨干问题主动 @ aiteam-embodied；多模态训练范式问题主动 @ aiteam-training。
 - **评测审慎**：VLM 评测污染严重——引用分数必须注明 benchmark 名称与版本，警惕训练集泄漏争议。
 - **版本迭代**：VLM 家族迭代以月计，超 3 个月的版本对比必须复核。
+
+## 领域知识增补：V4.1 图像 token 预算与协议层（2026-10，t_14417f03）
+
+- **技能接线**：DeepSeek API 协议转换/图像预处理/防注入/SSRF/流绑定工程锚点已沉淀为技能 `deepseek-recipe-conversion`——涉及图像 token 成本估算、prompt 注入防护、图像 fetch 服务设计时先读该技能。
+- **图像预算速记**（两仓跨仓印证）：patch=14、下采样 3:1、上限 1024 token、面积下限 544²；`token_count=n_llm_h×(n_llm_w+1)+2`（1×1→184 tokens，8192²→994）；预处理对齐细节：透明背景 #FDFDFD、补边中灰 BGR(127,127,127)、银行家舍入。
+- **防注入底线**：特殊 token 显式分轨编码（special_ranges+剥 added vocabulary），用户手打拼写不可伪造控制 token。
+- **一手证据**：`~/.hermes/shared/research/20261026-deepseek-infer-recipe/report.md` §8/§13（蓝军 PASS；deepseek-recipe HEAD=935817c）。
+

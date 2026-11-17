@@ -6,7 +6,7 @@
 #     Analysis runs on AI time, but judgment still runs on human time.
 #   痛点实证: FUSION-VERDICT-20261016.md §2/§3 —— 全部卡同质处理（tasks 表
 #     41 列无 tier/risk 字段，2026-10-16 实测），低 reliability profile
-#     （ops-eval 0.0 / data-orchestrator 0.2 / aiteam-orchestrator 0.246）
+#     （ops-eval 0.0；data-orchestrator 0.2 / aiteam-orchestrator 0.246 已于 20261117 并入主 orchestrator 退役）
 #     反复 crashed 与「无决策分层 + 无多视角复核 + 单兵自报 done」同构。
 # 消费方: orchestrator 及各域网关（派卡定层）；审计 cron（T1 抽样）
 # 维护方: platform 域（platform-ontology-curator）。修改走提案制。
@@ -17,8 +17,9 @@
 # =====================================================================
 
 meta:
-  version: "1.0"
+  version: "1.1"
   created: "2026-10-16"
+  updated: "2026-11-14"
   owner_profile: platform-ontology-curator
   source_task: t_dd27ac01
   change_rule: 只由 platform 域 profile 改；破坏性变更升大版本号并附迁移说明
@@ -112,7 +113,7 @@ tiers:
       - 删除性操作（删 object type / 删数据 / 删共享规则）
       - 发布放行（对外发布、公开仓 release、外发推送）
       - 资金相关（pay 域通道参数/备付金/清算规则变更）
-      - 儿童相关外发（涉儿童数据出域一律 T3——多租户通则）
+      - 儿童相关外发（k12edu 域任何儿童数据出域，含档案下发——多租户通则：涉儿童外发一律 T3）
       - 全 fleet 共享态变更（profiles.yaml / 共享规则文件 / ontology schema）
     process:
       - 单一决策责任人：orchestrator 或域网关（记卡 created_by），责任人可挑战假设并承担决策
@@ -160,6 +161,11 @@ examples:
     - {task: t_6de75e96, tier: T2, why: GENIUS Act 提案映射清算通道设计约束——监管新规环境变化，uncertainty 高，产出仅信息制品（人主导定取舍）}
     - {task: t_190bf533, tier: T2, note: '教学例——priority=90 但无外发/资金后果，判 T2；priority 高≠T3，分层看后果不看热度'}
     - {task: null, tier: T3, note: 'pay 板当前无在案资金操作卡；若出现清算通道参数变更/备付金规则上线类卡，命中 triggers 自动 T3'}
+  k12edu:
+    - {task: t_c77997a3, tier: T1, why: 网关会话过期运维留痕——单域运维通则操作，无儿童数据出域}
+    - {task: t_107e9786, tier: T2, why: 认知灵活性活动设计——教育方案不确定性高，家长主导选向，产出待家长采用}
+    - {task: t_5b257a44, tier: T3, why: '儿童档案下发类卡——命中「儿童相关外发」trigger 一律 T3 必过家长人审（该卡当前 blocked 待人审即 T3 形态；多租户通则，不锚定任何具体家庭）'}
+
 # ---------------------------------------------------------------------
 # 现状差距（本机制要修什么，详见 ws-c1-decision/REPORT.md）
 # ---------------------------------------------------------------------
@@ -167,3 +173,103 @@ gap_evidence:
   - tasks 表 41 列无 tier/risk 字段（PRAGMA table_info 实测，2026-10-16）
   - priority 使用无契约：swarm 板 220 卡挤在 priority=0；儿童相关 blocked 卡仅 priority=7
   - 无分层流程：高风险卡（跨板/共享态）与冒烟问答卡走同一 complete 流程
+
+# =====================================================================
+# 增补节 2026-11-05：组织治理 L2 批（8 条，只增不改；用户已批「执行A」）
+# =====================================================================
+# 来源: wx-fusion-20261105 卡 t_c5790bc2；裁决正本
+#   shared/research/20261105-org-rewrite-fusion/FUSION-VERDICT-20261105.md §4 L2 行
+#   机制源文: 硅基物种宣言《组织重写》系列 +《生成未来》系列（batch-A/B 存档）
+# 落地纪律: 本节只追加，既有键零改动（diff 仅新增）；
+#   转述的外部运营数据不入正文（裁决 §4.2 隔离声明）；
+#   AL1-AL4 逐级定义源文未给出，本节不发明（见 autonomy_level.scale_note）
+# =====================================================================
+
+org_governance_20261105:           # L2 批增补（8 条机制单父键收拢，防顶层键碰撞；整节可独立回退）
+  meta:
+    batch: L2
+    verdict_task: t_c5790bc2
+    verdict_doc: shared/research/20261105-org-rewrite-fusion/FUSION-VERDICT-20261105.md
+    rule: 只增不改；转述的外部运营数据不入正文（裁决 §4.2 隔离声明）；语义并入以引用锚表达，不改写既有节本体
+
+  autonomy_level:                   # AI 干活程度刻度（AL0-AL5 + 零 AL5 红线）
+    # 来源: M-05 (FUSION-VERDICT-20261105)
+    purpose: 把「AI 干到什么程度」从感受层面变成可分级、可审计、可公开讨论的刻度——没有刻度，感受永远无法被管理
+    quote: 用 AL0-AL5 六级衡量「AI 到底干了多少活」，并设零 AL5 红线（不允许任何任务完全脱离人工策略扫描与抽样审计）
+    scale_note: 源文（batch-B 存档）仅给出六级刻度名与 AL5 边界（完全脱离人工策略扫描与抽样审计），未给 AL0-AL4 逐级定义；本文件不发明逐级定义，落档只标档位、无把握时降档
+    zero_al5_redline: 集群任何任务不允许完全脱离人工策略扫描与抽样审计——与 T1 audit_automation_bias 互为表里（该节管怎么审计，本条管不允许无审计）
+    relation_to_tiers: AL 档与 T1/T2/T3 正交：tier 是流程契约（谁拍板），AL 档是同一层内的自动化深度标尺
+    usage: 卡 body 可选标 AL 档（机制落地候选，非强制）；跨档提升须经 T2 及以上
+    excluded: 转述的外部运营数据（合并代码比例/AL4 占比/发布节奏）不入正文，机构名与数字详见裁决正本 §2 引文列与 §4.2 隔离声明
+
+  stop_criteria:                    # 停掉判据（自动化流程须事前声明失败条件）
+    # 来源: M-27 (FUSION-VERDICT-20261105)
+    principle: 任何一个自动化流程，如果拿不出「它在什么条件下应该被停掉」的判据，它就已经是假自动化
+    quote: 任何一个 AI 项目，如果拿不出『它在什么条件下应该被停掉』的判据，它就已经是假 AI 化
+    blame_test: 辅助判句——如果这个环节的 AI 明天停掉，谁会挨骂？答案永远是「人」，说明该环节未真正自动化、没有沉淀组织能力
+    requirement: T1 全自动类卡的验收标准应含 stop-condition（在什么信号下停用/回退该自动化）；机制落地候选，与 audit_automation_bias 抽样复核配套
+
+  ai_supervising_ai:                # AI 监督 AI（表述强化，并入 T1 审计执行口径）
+    # 来源: M-33 (FUSION-VERDICT-20261105)
+    quote: AI 监督 AI：用更强的模型做审计与异常检测，把人的注意力留给例外与价值判断
+    landing: 并入 T1 audit_automation_bias 与三视角复核（risk/red/fact）的执行口径——审计侧模型档位不低于执行侧，人只看例外与价值判断；不另建独立新机制
+
+  boundary_definition_ownership:    # 人机分工定义权归属注释
+    # 来源: M-50 (FUSION-VERDICT-20261105)
+    principle: 唯一无法被技术侧接管、也无法被业务侧替代的，是「人机分工的定义权」
+    landing: 集群内该定义权的归属载体即本文件本身——三轴判据/分层阈值/本增补节就是人机边界的成文定义；修改走提案制（meta.change_rule），不随执行侧自行变更
+
+  task_level_annotation:            # 任务级三分类标注说明（T1/T2/T3 的任务级细化）
+    # 来源: M-52 (FUSION-VERDICT-20261105)
+    principle: 人机分工不停留在原则宣示——落地法是把工作流拆到任务粒度，逐个标注：人主导 / AI 辅助 / AI 执行
+    quote: 把工作流拆到 20—50 个任务，逐个标注：人主导 / AI 辅助 / AI 执行
+    relation_to_tiers: 三分类与 T1/T2/T3 同构但粒度不同（决策级 vs 任务级）：tier 定层后，层内任务可再标 human-lead / AI-assist / AI-exec（机制落地候选：卡 body 标注）
+    scope_limit: 不吸收企业工作流重设计叙事（整流程拆 20—50 任务重设计）；只吸收按卡标注法
+    per_task_factors: 源文四项评估因子（错误代价/例外频率/协作依赖/可解释性要求）可作标注时的参考判据，原文经验数，供参考不写死
+
+  counter_consensus_discipline:     # 反共识配小成本试验
+    # 来源: M-71 (FUSION-VERDICT-20261105)
+    principle: 反共识要配小成本试验，而不是配大额承诺（重要方向早期常不符合共识，但绝大多数反共识都会失败，卓越只能事后被证明）
+    landing: 集群决策纪律——非常规方法（新工具/新流程/新路由）先走 spike 类小成本验证（同向技能 software-development/spike），验证通过再扩量；与决策分层合用：反共识方向本身按 tiers 打分定层，试验规模按 T1 级控制
+    scope_limit: 不吸收投资叙事
+
+  judgment_anchor:                  # 判断锚定责任（长期全自动无复盘 = 判断钝化）
+    # 来源: M-73 (FUSION-VERDICT-20261105)
+    quote: 责任是判断的锚：一个不必承担后果的决策者，判断会逐渐失去锐度
+    fleet_risk: 长期全 T1 自动且无复盘的领域，判断质量会钝化——无人为结果负责的环节，决策依据会漂移
+    requirement: 周期抽样复盘锚定——T1 audit_automation_bias 的抽样审计结论须有人读、有异议时回溯卡（防「抽样报告产出但无人消费」）；与 M-03 反馈回流互补
+    scope_limit: 吸收原则句+周期复盘要求，不吸收用人叙事
+
+  delegation_pacing:                # 时序三条件（放权节奏辅助判据）
+    # 来源: M-78 (FUSION-VERDICT-20261105)
+    quote: 判断依据不是胆子大小，而是三个条件：这个场景的反馈周期有多长、反馈是否可逆、组织能否承受一次公开的失败
+    three_conditions:
+      - 反馈周期长短（周期长 = 先小步放权，缩短反馈回路再扩）
+      - 失败是否可逆（不可逆 = 按 reversibility 轴打分，reversibility=3 直入 T3）
+      - 组织能否承受一次公开失败（集群版：错一个 worker/一板的代价是否可控——外发/资金/儿童相关公开失败代价不可控，已被 triggers 覆盖）
+    landing: 放权节奏的辅助判据，不替代三轴打分——三轴定层，三条件定同层内先放哪步
+
+# =====================================================================
+# 增补节 2026-11-14：渐进放权判例（只增不改；整节可独立回退）
+# =====================================================================
+# 来源: openexec-delta-20261113 必吸收 B2（落地卡 t_18bd0ab1）
+#   报告: workspace/research/openexec-delta-20261113/openexec-delta-20261113.md §四.2/§六 B2
+#   机制源文: SenteLabs/OpenExecutive main@f76e5095
+#     orchestrator/go_on_its_own.py:1-18（offers: approved SUGGEST_AFTER times unchanged → offer）
+#     + orchestrator/take_the_lead.py:99（SUGGEST_AFTER=3）+ #780@e53f7f38
+# 执行程序载体: devops/kanban-decision-gate-dispatch skill v1.3.0 增节
+# =====================================================================
+
+progressive_delegation_20261114:    # 单父键收拢（沿用 org_governance_20261105 模式），防顶层键碰撞
+  meta:
+    landing_task: t_18bd0ab1
+    source_report: workspace/research/openexec-delta-20261113/openexec-delta-20261113.md
+    upstream_anchor: "OpenExecutive@f76e5095 orchestrator/go_on_its_own.py:1-18 + take_the_lead.py:99 (SUGGEST_AFTER=3) + #780@e53f7f38"
+    rule: 只增不改；整节可独立回退
+  suggest_after:
+    principle: 同类 T2/T3 卡连续 3 次无改动放行（SUGGEST_AFTER=3）→ 登记提议「此类转 T1 常规化」，人裁决后升档
+    count_reset: 放行后人改动（改 choice/改边界/打回）即清零重计；人选「继续逐卡审批」后须再攒 3 次无改动放行才允许重新提议（Keep asking 语义）
+    guard: 提议不开后门——升档前该类卡仍按原层走完整审批；升档由人裁决，agent 不得自批
+    data_source: 放行留痕即计数数据源（human-gate entry 的 note 字段），提议引 entry id 为证
+    evidence_example: openexec delta 调研类卡已三次顺利交付（2026-10-18/10-28/11-13 三份报告链，报告 §六 B2 判定）；此类再上门卡即符合提议条件，落地卡 t_18bd0ab1 自身即该类 wave1 T1 卡
+    relation_to_existing: 与 delegation_pacing（M-78 放权三条件）同层配套——三轴定层，三条件定放权节奏，本判例定「何时提议降层」；与 audit_automation_bias 互为表里——升档后仍受 T1 抽样审计兜底

@@ -19,11 +19,6 @@ nodes:
       skills_count: 2
       runs: {done: 9, failed: 9, timed_out: 0, crashed: 8}
       reliability: 0.5
-    - name: aiteam-orchestrator
-      toolsets: [hermes-cli, kanban, memory]
-      skills_count: 2
-      runs: {done: 17, failed: 52, timed_out: 0, crashed: 48}
-      reliability: 0.246
     - name: aiteam-scout
       toolsets: [hermes-cli, kanban, memory]
       skills_count: 2
@@ -49,11 +44,56 @@ nodes:
       skills_count: 7
       runs: {done: 3, failed: 1, timed_out: 0, crashed: 1}
       reliability: 0.75
-    - name: data-orchestrator
-      toolsets: [hermes-cli, kanban, memory, messaging]
+    - name: eda-ai
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 5, failed: 18, timed_out: 1, crashed: 16}
+      reliability: 0.217
+    - name: eda-ams
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-arch
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 1, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: eda-backend
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-dv
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-ipcore
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-packtest
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-pdk
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-physics
+      toolsets: [hermes-cli, acp, kanban, memory]
+      skills_count: 8
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
+    - name: eda-toolchain
+      toolsets: [hermes-cli, acp, kanban, memory]
       skills_count: 7
-      runs: {done: 7, failed: 28, timed_out: 2, crashed: 25}
-      reliability: 0.2
+      runs: {done: 0, failed: 0, timed_out: 0, crashed: 0}
+      reliability: null
     - name: hack-auditor
       capabilities: [compliance-audit, iam-audit, vuln-management, supply-chain, zero-trust]
       substitutes: [ops-devops(partial)]
@@ -81,6 +121,43 @@ nodes:
       skills_count: 9
       runs: {done: 11, failed: 11, timed_out: 2, crashed: 9}
       reliability: 0.5
+    - name: k12-arts
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 3, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: k12-character
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 15, failed: 4, timed_out: 0, crashed: 4}
+      reliability: 0.789
+    - name: k12-chinese
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 3, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: k12-language
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 3, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: k12-physical
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 4, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: k12-stem
+      toolsets: [hermes-cli, kanban, memory]
+      skills_count: 4
+      runs: {done: 2, failed: 0, timed_out: 0, crashed: 0}
+      reliability: 1.0
+    - name: k12edu-orchestrator
+      capabilities: [k12-routing, child-context, teacher-dispatch, parent-feedback, domain-gateway]
+      substitutes: [orchestrator(partial)]
+      toolsets: [hermes-cli, kanban, memory, messaging]
+      skills_count: 4
+      runs: {done: 48, failed: 17, timed_out: 2, crashed: 14}
+      reliability: 0.738
     - name: ops-devops
       capabilities: [ci-cd, container-orchestration, iac, deployment, infra-automation]
       substitutes: [worker-coder(partial)]
@@ -110,6 +187,7 @@ nodes:
       reliability: 0.524
     - name: orchestrator
       capabilities: [routing, decomposition, dispatch, priority-judgment, cross-board-coordination]
+      substitutes: [k12edu-orchestrator(partial)]
       toolsets: [hermes-cli, kanban, memory, messaging]
       skills_count: 8
       runs: {done: 87, failed: 32, timed_out: 2, crashed: 26}
@@ -129,11 +207,6 @@ nodes:
       skills_count: 7
       runs: {done: 3, failed: 4, timed_out: 0, crashed: 4}
       reliability: 0.429
-    - name: pay-orchestrator
-      toolsets: [hermes-cli, kanban, memory, messaging]
-      skills_count: 6
-      runs: {done: 2, failed: 0, timed_out: 0, crashed: 0}
-      reliability: 1.0
     - name: platform-ontology-curator
       capabilities: [ontology-design, marking-rules, cq-regression, soul-audit, schema-evolution]
       toolsets: [hermes-cli, acp, kanban, memory]
