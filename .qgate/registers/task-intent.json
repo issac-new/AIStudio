@@ -1,0 +1,32 @@
+{
+  "taskId": "t_bb362922",
+  "statement": "orch-merge-20261117 镜像同步：三域 orchestrator 退役对齐 live；pay-references 344 文件删除为刻意决策（版权资产清除，知识迁居 live 侧不入公开仓）；12 SOUL 同步；shared 四台账；新技能 domain-team-dispatch；附带 qgate 门接线修复（intent 登记+scope-check 门包 pin）",
+  "scope": [
+    "team/profiles/**",
+    "team/shared/**",
+    "team/skills/devops/domain-team-dispatch/**",
+    ".qgate/registers/**",
+    "custom/qgate/gate-packs/**"
+  ],
+  "acceptance": [
+    "When 检查镜像三退役目录 Then 不存在且 git 记录删除",
+    "When grep 本批文件的真名与盘符 Then /Users/cuishi 与 /Volumes/nvme2230 零命中",
+    "When 运行 node scripts/merge-invariants.mjs --check Then 0 problem"
+  ],
+  "confirmedBy": "用户 2026-11-17 TUI 会话裁决",
+  "confirmedAt": "2026-11-17T17:59:23.946Z",
+  "revisions": [
+    {
+      "at": "2026-11-17T17:55:26.297Z",
+      "reason": "补 acknowledgedSha256 防篡改 pin——首次登记缺 pin 致 L0.scope-check tamper check 无法执行"
+    },
+    {
+      "at": "2026-11-17T17:58:33.303Z",
+      "reason": "scope 数组修复：花括号逗号展开被拆碎为无效条目，改为三个无逗号 glob"
+    },
+    {
+      "at": "2026-11-17T17:59:23.946Z",
+      "reason": "scope 增补门接线足迹（registers+gate-packs pin）"
+    }
+  ]
+}
