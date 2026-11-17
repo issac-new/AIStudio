@@ -21,7 +21,10 @@ _stdin=$(mktemp "${TMPDIR:-/tmp}/qgate-prepush.XXXXXX" 2>/dev/null) || _stdin=""
 trap 'rm -f "$_stdin"' EXIT INT TERM
 if [ -n "$_stdin" ]; then cat > "$_stdin"; fi
 
-_changed=""
+# 变更路径累积走临时文件逐行存取：文件名含空格时 tr+词切分会拆碎路径
+# （2026-11-17 orch-merge 删 fulltext/05_ct_[课程] 2天线下… 实锤）。
+_changed_tmp="${TMPDIR:-/tmp}/qgate-prepush-changed.$$"
+: > "$_changed_tmp"
 _has_commit=0
 if [ -n "$_stdin" ]; then
   while read -r _local_ref _local_sha _remote_ref _remote_sha; do
@@ -33,11 +36,14 @@ if [ -n "$_stdin" ]; then
       _base=$(git merge-base "$_local_sha" origin/main 2>/dev/null || true)
     fi
     if [ -n "$_base" ] && git cat-file -e "$_base^{commit}" 2>/dev/null; then
-      _changed="$_changed $(git diff --name-only "$_base" "$_local_sha" 2>/dev/null | tr '\n' ' ')"
+      # core.quotepath=off：中文名文件否则被 git 转义为带引号八进制串（"\344\270\255…"），
+      # globMatch 对其永不匹配 → 误报 out-of-scope（2026-11-17 orch-merge 删中文名文件实锤）。
+      git -c core.quotepath=off diff --name-only "$_base" "$_local_sha" 2>/dev/null >> "$_changed_tmp"
     fi
   done < "$_stdin"
 fi
-_changed=$(printf '%s\n' $_changed | sed '/^[[:space:]]*$/d' | sort -u | paste -sd, -)
+_changed=$(awk 'NF' "$_changed_tmp" | sort -u | paste -sd, -)
+rm -f "$_changed_tmp"
 
 if [ "${QGATE_PREPUSH_SKIP:-0}" != "1" ] && [ -f "$ROOT/custom/qgate/src/cli.ts" ]; then
   QG="$ROOT/custom/qgate/dist/cli.js"
