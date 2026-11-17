@@ -14,7 +14,7 @@ metadata:
 
 > 背景：2026-11-17 用户裁决，aiteam-orchestrator / pay-orchestrator / data-orchestrator
 > 三 profile 退役，分解权收归主 orchestrator。本 skill 是三域 SOUL 的蒸馏残留
-> （全文存 references/，冷归档在 <cold-archive>/archive/20261117-orch-merge/）。
+> （全文存 references/，冷归档在 <external-volume>/lab/archive/20261117-orch-merge/）。
 > k12edu-orchestrator 不在合并范围（隐私隔离+独立微信通道）。
 
 ## 派发速查
@@ -71,6 +71,16 @@ SLO 编排/治理卡把关/事故取证编排，正本 alert-triage-rules.md + d
 4. 收卡不信自述：抽验产出物路径存在 + 验收命令退出码。
 5. 整库同步入湖类跨领域任务：arch 出表设计 → flink 写作业 → infra 保环境，
    `parents=[...]` 串行。
+
+## 团队记忆库（资产存活指针）
+
+三域记忆在 per-team hindsight bank（daemon :8888），退役前即与 worker 共库，合并后照常存活：
+`hermes-b24d7ac5d9c4-{aiteam,pay,data}`。worker 侧 recall/retain 不变；主 orchestrator
+做域分解/合并需要跨库检索历史结论时，直接 POST daemon `/v1/default/banks/<bank>/memories/recall`。
+
+分解纪律细则（3-5 子卡为宜/先侦察后拆解/决策前置/markings 继承合取）：
+`references/aiteam-orchestrator-rules.md`（原 aiteam 域网关 rules 文件全文，2026-11-17 从
+AIStudio git 历史 36df007ea^ 取回，pay/data 无同类文件）。
 
 ## Related Skills
 - `devops/kanban-orchestrator` — 分解 playbook 全量
