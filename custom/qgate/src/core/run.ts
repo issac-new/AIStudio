@@ -86,6 +86,9 @@ export function gitContext(workspace: string): { commit?: string; treeHash?: str
         .filter((l) => l.length > 0)
         .map(toProjectRelative)
         .filter((p): p is string => p !== null)
+        // 2026-11-18 二轮复核根治：vendor/** 注入态（pre-commit 撤出后落脏）非提交面——
+        // scope 门以提交面判定，vendor 注入态文件被误判为「变更」致 scope FAIL（469 文件实锤）。
+        .filter((p) => !p.startsWith('vendor/'))
     : []
   return out
 }
