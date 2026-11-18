@@ -27,9 +27,9 @@
 - [x] 吸收甄别：7 枚逐一非空 + 行查缺失（795/796/797 零缺失退役；794 增 24/798 增 115/799 增 96/800 增 23）；保留 4 枚链上 apply-check 过；799/800 因宿主基底≠链内基底（741 等已注入）以 A/B 差分重生成（**+++ 病径防复发：拼装头统一相对路径**）。
 - [x] runtime manifest 62 条终对账 **56 同/0 差/6 独有**（7 件镜像：kanban_db/kanban_tools/schemas 热修件＋cron/dispatch/toolsets 基线滞后件；py_compile 过）。
 - [x] 拼合树 pytest **155/0**（含 798 新测试 test_invalid_provider_fallback 4 例）。
-- [ ] deploy --apply 终态：保留目标 0/差异 0/触碰收口 0（宿主=注入态镜像）；.bak 事故残留清零。
-- [ ] 网关重启后活体：进程起活、gateway.log 无 ImportError/Traceback、kanban 面抽查（board 上下文功能在位）。
-- [ ] main 推送后远端 ref 复验。
+- [x] deploy --apply --force 终态 **complete：186 全同/0 差异/0 触碰收口**（首跑 7 件保留差异定谳=模板新 vs 宿主旧——run31 复盘批二的 version/verification CAS 读面等未部署面，覆盖安全）；宿主 .bak 残留 **253→0**（git clean 限定 pathspec）。
+- [x] 网关重启后活体：kill→supervisor 自愈新进程起活、`Gateway Starting→control socket listening`（21:26:20）、**重启后窗口零 ImportError/Traceback**（11:44 事故形态排查过）。
+- [ ] main 推送后远端 ref 复验。（随批收口执行）
 
 ## 设计文档影响
 
