@@ -141,7 +141,7 @@ def test_capacity_rejected_event_retries_when_slot_frees(monkeypatch):
         runner._delivery_adapter_for = lambda _source: adapter
         # free the slot before the pump's next poll
         runner._running_agents.pop(busy_key, None)
-        runner._running_agents_ts.pop(busy_key, None)
+        # v0.23.2 适配：上游移除 _running_agents_ts legacy 垫片（8→4）；_running_agents 垫片保留且为 live view，pop 即清底层 session state。
         for _ in range(100):
             if re_dispatched:
                 break

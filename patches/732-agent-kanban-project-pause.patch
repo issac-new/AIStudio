@@ -1,5 +1,5 @@
 diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
-index 66d0c65a1..816698b2a 100644
+index aef2866f9..985d70449 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
 @@ -26,6 +26,7 @@ from typing import Mapping
@@ -8,8 +8,12 @@ index 66d0c65a1..816698b2a 100644
  
 +from hermes_cli.kanban_projects_pause import paused_project_ids
  from hermes_cli.quiet_single_query import KANBAN_WORKER_EXIT_TRAILER
+ from hermes_cli._startup_fast import project_root_str
  
- if TYPE_CHECKING:
+diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
+index 66d0c65a1..816698b2a 100644
+--- a/hermes_cli/kanban_db_dispatch.py
++++ b/hermes_cli/kanban_db_dispatch.py
 @@ -158,6 +159,10 @@ class DispatchResult:
      """Memory pressure that restricted this tick: ``"critical"`` (no new
      workers), ``"elevated"`` (at most one), ``None`` (no restriction).

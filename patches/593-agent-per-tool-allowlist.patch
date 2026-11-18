@@ -1,11 +1,11 @@
 diff --git a/model_tools.py b/model_tools.py
-index b9864a454b..6a274ddaaa 100644
+index 21df65298..dd04d1c8c 100644
 --- a/model_tools.py
 +++ b/model_tools.py
 @@ -294,6 +294,7 @@ def _tool_defs_cache_key(
-         frozenset(disabled_toolsets) if disabled_toolsets else None, registry._generation, cfg_fp,
          bool(os.environ.get("HERMES_KANBAN_TASK")), bool(skip_tool_search_assembly),
          _is_delegated_child_context(), _is_dispatcher_owned_worker(), profile_scope, check_fn_cache_epoch(),
+         hosted_scope() is not None,
 +        _profile_tool_filter(),
      )
  

@@ -804,18 +804,20 @@ diff --git a/gateway/run.py b/gateway/run.py
      """Main gateway controller: manages adapter lifecycles, routes messages to/from the agent."""
  
 diff --git a/gateway/run_startup.py b/gateway/run_startup.py
+index 000000000..111111111 100644
 --- a/gateway/run_startup.py
 +++ b/gateway/run_startup.py
-@@ -1668,7 +1668,8 @@
+@@ -1615,7 +1615,8 @@ class GatewayStartupMixin:
          "_kanban_notifier_watcher", "_kanban_dispatcher_watcher",
      )
      _POST_RECONNECT_WATCHERS = (
 -        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_profile_reconcile_watcher",
 +        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher",
 +        "_profile_reconcile_watcher",
-     )
+         "_delegation_auto_resume_watcher")
  
      def _start_spawn_background_watchers(self) -> None:
+
 diff --git a/gateway/run_idle_gates.py b/gateway/run_idle_gates.py
 --- a/gateway/run_idle_gates.py
 +++ b/gateway/run_idle_gates.py

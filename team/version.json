@@ -1,9 +1,9 @@
 {
-  "version": "v0.23.1-team.3",
-  "base": "0.23.1",
+  "version": "v0.23.2-team.1",
+  "base": "0.23.2",
   "extension": "team",
-  "extN": 3,
-  "upstreamCommit": "3b4215785",
+  "extN": 1,
+  "upstreamCommit": "ae2a81ccc",
   "carrierOf": "agent-teams 模块",
-  "note": "机器可读载体（2026-10-28 K4）：与 team/VERSION 首行、vendor/VENDOR.md 的 hermes-agent 行互为对账；release:check 三方交叉校验。真源仍是 team/VERSION，本文件供程序读取。v1.0.16 发布轮进位 team.3（补丁 768 lock 根依赖修复＋team/shared 技术组件台账随 zcode 3.18.0 进位）。"
+  "note": "机器可读载体（2026-10-28 K4）：与 team/VERSION 首行、vendor/VENDOR.md 的 hermes-agent 行互为对账；release:check 三方交叉校验。真源仍是 team/VERSION，本文件供程序读取。v0.23.2 换血批进位 team.1（底座 v0.23.1→v0.23.2，扩展序随底座升级归 1；runtime 覆盖层 20 件重镜像）。"
 }

@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
-index 1e01999a2f..5669b71049 100644
+index aef2866f9..e293588ea 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
-@@ -1687,11 +1687,71 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
+@@ -1692,10 +1692,70 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
      return bool(to) and "from" in data and data["from"] != to
  
  
@@ -62,9 +62,8 @@ index 1e01999a2f..5669b71049 100644
 +
 +
 +def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], bool]]:
-     """``hermes_cli.profiles.profile_exists``, or ``None`` when it cannot be
-     imported (local import avoids a cycle; callers fall back to trusting the
-     assignee).
+     """``profile_exists`` from ``hermes_cli.profiles``; ``None`` when it cannot be
+     imported and no allowlist is set (callers then trust the assignee).
  
 +    HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
 +    list in its ``board.json``, the predicate additionally requires the assignee
@@ -72,12 +71,12 @@ index 1e01999a2f..5669b71049 100644
 +    agent team mounted on its board. Health probes pass no board and stay
 +    unfenced (historic fail-open telemetry).
 +
-     When ``kanban.dispatch_profiles`` is set (#110995) the returned predicate
-     additionally requires the assignee to be listed, fail-closed — so a card
-     assigned to ``default`` is only claimable by homes that opted into it.
-@@ -1702,7 +1762,8 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
-     except Exception:
-         return None
+     With ``kanban.dispatch_profiles`` set (#110995) the predicate also requires the
+     assignee to be listed, fail-closed: a ``default`` card is only claimable by homes that
+     opted in, and a set allowlist whose gate cannot be built claims nothing (#147531)."""
+@@ -1707,7 +1767,8 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
+         _kb._log.warning("kanban: hermes_cli.profiles unimportable — claiming no cards", exc_info=True)
+         return lambda _name: False
      allowlist = _dispatch_profile_allowlist(normalize_profile_name)
 -    if allowlist is None:
 +    team = _board_team_allowlist(normalize_profile_name, board)
@@ -85,7 +84,7 @@ index 1e01999a2f..5669b71049 100644
          return profile_exists
  
      def _gated(name: str) -> bool:
-@@ -1710,7 +1771,11 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
+@@ -1715,7 +1776,11 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
              canon = normalize_profile_name(name)
          except ValueError:
              return False
@@ -98,7 +97,7 @@ index 1e01999a2f..5669b71049 100644
  
      return _gated
  
-@@ -2069,7 +2134,7 @@ def _dispatch_lane_task(
+@@ -2073,7 +2138,7 @@ def _dispatch_lane_task(
      # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
      # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
      # it by assigning a profile, and health telemetry suppresses "stuck" for it.
@@ -107,7 +106,7 @@ index 1e01999a2f..5669b71049 100644
      if profile_exists is not None and not profile_exists(assignee):
          result.skipped_nonspawnable.append(task_id)
          # Per-task diagnostic so ``show``/``tail`` name the missing profile instead of leaving
-@@ -2304,6 +2369,7 @@ def _any_spawnable_review(
+@@ -2277,6 +2342,7 @@ def _any_spawnable_review(
      *,
      per_profile_cap: Optional[int] = None,
      per_profile_running: Optional[dict[str, int]] = None,
@@ -115,7 +114,7 @@ index 1e01999a2f..5669b71049 100644
  ) -> bool:
      """Mirror review dispatch gates before reserving ready-lane capacity.
  
-@@ -2315,7 +2381,7 @@ def _any_spawnable_review(
+@@ -2288,7 +2354,7 @@ def _any_spawnable_review(
      """
      if not review_rows:
          return False
@@ -124,7 +123,7 @@ index 1e01999a2f..5669b71049 100644
      running = per_profile_running or {}
      for row in review_rows:
          assignee = row["assignee"]
-@@ -2330,7 +2396,7 @@ def _any_spawnable_review(
+@@ -2303,7 +2369,7 @@ def _any_spawnable_review(
      return False
  
  
@@ -133,8 +132,8 @@ index 1e01999a2f..5669b71049 100644
      """``kanban.default_assignee`` when it names a real profile this home may
      claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
      gate). Otherwise ``None`` so an unassigned shared-board card is never
-@@ -2339,7 +2405,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
-     as nonspawnable."""
+@@ -2312,7 +2378,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
+     else ``None`` — the fail-closed gate claims nothing (#147531)."""
      name = (default_assignee or "").strip() or None
      if name:
 -        profile_exists = _profile_exists_fn()
@@ -142,7 +141,7 @@ index 1e01999a2f..5669b71049 100644
          if profile_exists is not None and not profile_exists(name):
              return None
      return name
-@@ -2411,6 +2477,7 @@ def _dispatch_once_locked(
+@@ -2384,6 +2450,7 @@ def _dispatch_once_locked(
      if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
          conn, review_rows,
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
@@ -150,7 +149,7 @@ index 1e01999a2f..5669b71049 100644
      ):
          ready_budget = max(spawn_budget - 1, 0)
      lane_kwargs: dict[str, Any] = dict(
-@@ -2418,7 +2485,7 @@ def _dispatch_once_locked(
+@@ -2391,7 +2458,7 @@ def _dispatch_once_locked(
          failure_limit=failure_limit, spawn_fn=spawn_fn,
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
      )
