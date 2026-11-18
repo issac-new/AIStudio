@@ -2547,7 +2547,10 @@ if [ "$(posture)" = "strict" ]; then
     body=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
     local gaps
-    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[^，。；)]*[:：]?//' | cut -c1-120)
+    # N32-5 缺项显示完整性（2026-11-18 run31 复盘）：原 `缺项[^，。；)]*` 在首个右括号即停，
+    # 留下 `)。））` 残片（run31 21:08:40 driver.log 实锤）。改为：取「缺项」后内容至行尾，
+    # 仅剥末尾闭合括号与句读，截断 240 字符防歧义；多缺项含括注时保留完整段。
+    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[:：]?//' | sed -E 's/[）)]+$//' | cut -c1-240)
     [[ -z "$gaps" ]] && gaps=$(printf '%s' "$body" | grep -oE 'R-[0-9]+' | sort -u | tr '\n' ' ' | cut -c1-120)
     [[ -z "$gaps" ]] && gaps="回滚阈值/灰度/发布说明（缺省文案——卡面未见显式缺项，以评审卡 GAP/缺项节为准）"
     printf '%s' "$gaps"
