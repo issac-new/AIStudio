@@ -324,7 +324,9 @@ describe('门包 YAML 与 profile 裁剪（v0.3 新门接线）', () => {
     const rtm = parseGateSpec(parseYaml(readYaml(join(packsRoot, 'l0/gates/requirement-trace.yaml'), 'utf8')))!
     expect(rtm.spec.meta).toBe(true)
     const intent = parseGateSpec(parseYaml(readYaml(join(packsRoot, 'l0/gates/intent-drift.yaml'), 'utf8')))!
-    expect(intent.spec.executors[0].taskIntent?.require).toBe(true)
+    // 2026-11-18 require:false（任务注销后不再阻断推送——require:true 与注销语义冲突的机制修复）：
+    // 显式断言 false 钉住新语义，防止回归为「注销卡即 FAIL 死锁」。
+    expect(intent.spec.executors[0].taskIntent?.require).toBe(false)
     const regs = parseGateSpec(parseYaml(readYaml(join(packsRoot, 'l0/gates/registers.yaml'), 'utf8')))!
     expect(regs.spec.executors[0].register).toEqual(['assumptions', 'decisions'])
   })
