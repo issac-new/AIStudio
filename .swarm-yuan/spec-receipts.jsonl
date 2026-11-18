@@ -405,4 +405,5 @@
 {"at":"2026-11-16T16:31:27Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"05098af01a34e2dee28c6a608009adbe0cdc1fcd","commit":"51c550759"}
 {"at":"2026-11-16T16:46:26Z","spec":"docs/superpowers/specs/2026-11-17-sim-probes-run31.md","receipt":"1d0ba2b11c5d1044cfa333191bc9fb74014c73da","commit":"b1312b8aa"}
 {"at":"2026-11-16T16:48:31Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"8817334abdbb12ca146a9614c3f2e32046f4cb47","commit":"595d1b8ff"}
+{"at":"2026-11-18T03:21:50Z","spec":"docs/superpowers/specs/2026-11-18-retro-resume-provision.md","receipt":"e2a087339abef78118f70143a78a38d57ef29ba7","commit":"fbaf5eef8"}
 {"at":"2026-11-18T03:25:10Z","spec":"docs/superpowers/specs/2026-11-18-retro-disp-writer.md","receipt":"52f2f787eab39ce014dbde18bbd25f621db84d3c","commit":"fbaf5eef8"}

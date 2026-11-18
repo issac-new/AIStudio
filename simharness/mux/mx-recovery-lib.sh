@@ -43,6 +43,62 @@ mx_defer_restart_policy() {
   [ "$deferred" -lt "$cap" ] && return 0 || return 1
 }
 
+# mx_resume_start_step <state.env> → 缺省恢复步骤
+# 只信固定流程中首个缺失的关键键；后段 done 键不能补证前段闸门。键不存在或值为空
+# 都视为未完成。state.env 缺席=净环境首发；UAT 的有条件终态与全过终态同等参与定位。
+mx_resume_start_step() {
+  local state="${1:-}" rule step keys key
+  [[ -f "$state" ]] || { printf 'smoke\n'; return 0; }
+  local rules=(
+    'smoke:smoke_done'
+    'appinit:appinit_done'
+    'people:people_done'
+    'ba:ba_dm_marker'
+    'reqgate:g1_frozen'
+    'room:room_analysis'
+    'dispatch:dispatch_marker'
+    'register:register_done'
+    'analysis:analysis_done'
+    'triage:triage_done'
+    'anexec:anexec_done'
+    'review:review_done'
+    'archgate:g2_arch_pass'
+    'close:close_done'
+    'plan:plan_done'
+    'devimpl:devimpl_done g3_code_pass'
+    'defect:defect_done'
+    'testpass:testpass_done g4_pass'
+    'ready:ready_done g5_ready'
+    'release:release_done'
+  )
+  for rule in "${rules[@]}"; do
+    step="${rule%%:*}"; keys="${rule#*:}"
+    for key in $keys; do
+      if ! grep -q "^${key}=." "$state" 2>/dev/null; then
+        printf '%s\n' "$step"; return 0
+      fi
+    done
+  done
+  if ! grep -q '^uat_done=.' "$state" 2>/dev/null \
+      && ! grep -q '^uat_conditional=.' "$state" 2>/dev/null; then
+    printf 'uat\n'; return 0
+  fi
+  local tail_rules=(
+    'workmgr:workmgr_done'
+    'audit:audit_done'
+    'retro:retro_done'
+    'ide:ide_done'
+  )
+  for rule in "${tail_rules[@]}"; do
+    step="${rule%%:*}"; key="${rule#*:}"
+    if ! grep -q "^${key}=." "$state" 2>/dev/null; then
+      printf '%s\n' "$step"; return 0
+    fi
+  done
+  # report_done 已落键时监督器会在启动驱动前自退，返回 report 不会制造重跑。
+  printf 'report\n'
+}
+
 # mx_fail_fingerprint <text> → 失败指纹（12 位哈希）；无实质失败行时输出空串
 # 纯函数：run25 空指纹误判（grep 空输出→shasum 空串哈希 da39a3ee→5 轮误判确定性
 # 失败自退）的判定核心，行为测试直调。

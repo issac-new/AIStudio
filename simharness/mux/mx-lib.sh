@@ -802,21 +802,49 @@ _mx_provenance() { # <file> <k=v>…：写/读快照来源档案
   done
   printf '\n}\n' >> "$f"
 }
+# 运行源码内容面：只覆盖快照执行语义白名单。逐文件读取 Git 跟踪文件的当前工作态，
+# 因而提交号变化本身不换键，白名单文件的已提交/未提交内容变化都会换键；删除显式入指纹。
+mx_agent_source_content_fp() { # <host-tree> → 12 位内容指纹
+  local host_tree="${1:-}" rel
+  git -C "$host_tree" ls-files -z -- agent gateway hermes_cli tools plugins \
+    | while IFS= read -r -d '' rel; do
+        printf '%s\0' "$rel"
+        if [[ -L "$host_tree/$rel" ]]; then
+          printf 'symlink:%s\0' "$(readlink "$host_tree/$rel")"
+        elif [[ -f "$host_tree/$rel" ]]; then
+          shasum < "$host_tree/$rel"
+        else
+          printf 'deleted\0'
+        fi
+      done | shasum | cut -c1-12
+}
+
+# 补丁面与源码面同口径：series、补丁路径与实际字节入指纹，不取 mtime/大小替身。
+mx_agent_patch_content_fp() { # <patch-dir> → 12 位内容指纹
+  local patch_dir="${1:-}" pf
+  {
+    for pf in "$patch_dir/series" "$patch_dir"/*.patch; do
+      [[ -f "$pf" ]] || continue
+      printf '%s\0' "${pf##*/}"
+      shasum < "$pf"
+    done
+  } | shasum | cut -c1-12
+}
+
+mx_agent_provision_key() { # <host-tree> <patch-dir> → 快照幂等键
+  local source_fp patch_fp
+  source_fp="$(mx_agent_source_content_fp "$1")"
+  patch_fp="$(mx_agent_patch_content_fp "$2")"
+  printf 's%s+p%s\n' "$source_fp" "$patch_fp"
+}
+
 mx_provision_agent_src() {
   local host_tree="${HERMES_AGENT_SRC_FROM:-$HOME/.hermes/hermes-agent}"
   [[ -d "$host_tree/.git" ]] || { log "⚠ 宿主 hermes-agent 非 git 仓（${host_tree}）——跳过源码快照供给，执行面维持回落态"; return 0; }
   local head; head=$(git -C "$host_tree" rev-parse HEAD)
-  # 快照键=HEAD+工作树脏态指纹：宿主补丁态即工作树态（存在 8+ 文件未提交的实跑态），
-  # 只取 HEAD 会漏（隔离轮实锤：archive HEAD 缺 StdioServerParameters 等运行态，
-  # 网关卡 MCP 连接环）。快照源=git 跟踪文件的工作态（含未提交改动，天然排除
-  # venv/node_modules 等非跟踪重物）。
-  local dirty; dirty=$( { git -C "$host_tree" diff HEAD; git -C "$host_tree" status --porcelain; } 2>/dev/null | shasum | cut -c1-12)
-  # 快照键=宿主 HEAD+工作树脏态指纹 + **补丁清单指纹**（2026-10-30 run23 复盘补）：
-  # 宿主树没变而 patches/ 或 series 变了（新增 705/707 这类）时，旧键会误判「已同步」
-  # 而跳过供给——run23 实录 705 因此从未进 SIM 树，只能手工 git apply。清单指纹取
-  # series 内容 + 清单内每个补丁文件的 mtime/大小（够抓增删改，零解析成本）。
-  local _plist_fp; _plist_fp=$( { cat "$PATCH_DIR/series" 2>/dev/null; ls -l "$PATCH_DIR"/*.patch 2>/dev/null | awk '{print $5, $9}'; } | shasum | cut -c1-12)
-  local key="${head:0:9}+${dirty}+p${_plist_fp}"
+  # 快照键只取运行源码白名单与补丁实际内容。HEAD 是来源档案，不再作为换键条件；
+  # docs-only 提交/脏态不得重灌并抹掉快照内补丁创建文件（run31 15:30 事故）。
+  local key; key="$(mx_agent_provision_key "$host_tree" "$PATCH_DIR")"
   local cur; cur=$(_mx_provenance "$AGENT_SRC.provenance.json" --read | sed -n 's/.*"snapshot_key": "\([^"]*\)".*/\1/p')
   if [[ "$cur" == "$key" && -x "$SIM_ROOT/bin/hermes-sim" && -d "$AGENT_SRC/gateway" ]]; then
     log "agent 源码快照已在位且同步（key=${key}）——跳过"
@@ -872,7 +900,7 @@ WRAPPY
 exec "$venv_py" -I "$SIM_ROOT/bin/hermes-sim.py" "\$@"
 WRAP
   chmod +x "$SIM_ROOT/bin/hermes-sim"
-  _mx_provenance "$AGENT_SRC.provenance.json" "snapshot_key=$key" "source_head=$head" "dirty=$dirty" "source_tree=$host_tree" "harness_commit=$(git -C "$HARNESS_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  _mx_provenance "$AGENT_SRC.provenance.json" "snapshot_key=$key" "source_head=$head" "source_tree=$host_tree" "harness_commit=$(git -C "$HARNESS_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   log "✓ agent 源码快照就绪（wrapper=$SIM_ROOT/bin/hermes-sim）"
   # V8.29 垫片供给（巡检官卡面聚合器）：bin/hermes 无板 list/diagnostics 归一——
   # 产品巡检官卡类采集面依赖；mx-clean 重建后自动恢复（供给源=mux/mx-hermes-shim.py）
