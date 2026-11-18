@@ -634,7 +634,7 @@ PART1_RUN31 = """
 <p>15 名 AI 员工在 G-d 日间窗（09-11 时）开跑——<b>前段 62 分钟完成到评审（上轮同段约 4.5 小时，日间窗效应首个实测锚）</b>；devimpl 六路同刻即派、G3 代码门 13:09 过。终局如实：<b>G2 涉敏安全环全轮未合拢</b>（安全评审 FAIL 判词在案，真堵点＝修复执行组织面——研发工作区 148 处修复改动停 13 小时无人提交；判词/闸门/熔断全对，执行无人接单），断点续跑从 devimpl 接续推进后段；G4 探针首轮 12 红（旧构建产物/agent 树重灌/写门三堵墙）值守当轮根治后 51 探测全绿；G5 三轮熔断后按「补过」口径放行（缺项为真，如实呈现）；报告审计环 13 轮不收敛（降级凭证写入器断链）由值守按配对格式落凭证破局，02:14 report_done 写入。token 真值 4065 调用/18.84M 入/4.77M 出。<b>本轮价值＝§5.15 新验收面全过＋组织面失效定谳＋三项报告链机制缺陷当日修复</b>（复盘 main 1d7fdce20，N32 台账七项）。
 
 <h2>研发全流程治理有效性（实测统计）</h2>
-<table style="font-size:12px;margin-top:8px"><tr><th>实测项</th><th>值</th></tr><tr><td>时长</td><td>17h12m</td></tr><tr><td>六闸</td><td>G1/G3/G4/G5 落键；G2 未闭环</td></tr><tr><td>审计</td><td>0 FAIL/37 WARN</td></tr></table></p></div>
+<table style="font-size:12px;margin-top:8px"><tr><th>实测项</th><th>值</th></tr><tr><td>时长</td><td>17h12m</td></tr><tr><td>六闸</td><td>G1/G3/G4/G5 写入通过标记；G2 未合拢</td></tr><tr><td>审计</td><td>0 FAIL/37 WARN</td></tr></table></p></div>
 """
 PART1_BY_RUN = {
     '20261103-v8-run26': PART1_RUN26,

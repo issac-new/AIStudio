@@ -3481,7 +3481,7 @@ def issues_stats():
                     desc[k] = p4[3] if len(p4) > 3 else ''
 
     order = [r['key'] for r in pairing]
-    # 2026-11-18 二轮复核根治：键集一致性（行数对齐≠键集一致——快照后新增键消失且待处置=0 失真）。
+    # 2026-11-18 二轮复核根治：键集一致性（行数一致≠键集一致——快照后新增键消失且待处置=0 失真）。
     # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
     try:
         _ik = set()
@@ -3502,7 +3502,7 @@ def issues_stats():
                 if _mk not in order: order.append(_mk)
     except Exception:
         pass
-    # 2026-11-18 二轮复核根治：键集一致性（行数对齐≠键集一致——快照后新增键消失且待处置=0 失真）。
+    # 2026-11-18 二轮复核根治：键集一致性（行数一致≠键集一致——快照后新增键消失且待处置=0 失真）。
     # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
     try:
         _ik = set()
