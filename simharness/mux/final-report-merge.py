@@ -689,6 +689,12 @@ def count_issues(evid: Path):
                     keys.append(f'{p[1]}·{p[2]}')
             elif line.startswith('DISP|'):
                 n_disp += 1
+                # 2026-11-18 三轮复核：唯一键口径=ISSUE∪DISP（DISP-only 键也是台账键，
+                # 如值守代记 DISP|frame-capture-failed|r18 无对应 ISSUE）——与生成器 order 同源，
+                # 此前仅数 ISSUE 致 PART1 头「63 keys」与本报告第 4 章「64 键」自相矛盾。
+                p = line.split('|')
+                if len(p) >= 3:
+                    keys.append(f'{p[1]}·{p[2]}')
     return n_issue, len(set(keys)), n_disp
 
 

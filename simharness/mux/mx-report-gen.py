@@ -3501,28 +3501,33 @@ def issues_stats():
             for _mk in _missing_keys:
                 if _mk not in order: order.append(_mk)
     except Exception:
-        pass
-    # 2026-11-18 二轮复核根治：键集一致性（行数一致≠键集一致——快照后新增键消失且待处置=0 失真）。
-    # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
+        _missing_keys = []
+    # 2026-11-18 三轮复核：配对快照滞后键按 issues.log 实读分桶（不一刀切）——
+    # 有 DISP 行=按其首词归桶（观察/延后/已修）；无 DISP 行=真待处置。
+    # （64 键 vs 51+10=61 实锤：3 键落在真空而报告写「待处置 0」为失真）
+    _missing_disp = {}
     try:
-        _ik = set()
         for _l in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines():
-            if _l.startswith(('ISSUE|','DISP|')):
+            if _l.startswith('DISP|'):
                 _p = _l.split('|', 3)
-                if len(_p) >= 3:
-                    _ik.add(_p[1] + '·' + _p[2])
-        _pk = set()
-        for _r in (pairing or []):
-            _kk = _r.get('key','')
-            if '·' in _kk: _pk.add(_kk)
-        _missing_keys = sorted(_ik - _pk)
-        if _missing_keys:
-            import sys as _sys_k
-            print(f'[pairing-keyset] 键集不一致：issues.log 有而配对无 {_missing_keys}——刷新配对后再出报告', file=_sys_k.stderr)
-            for _mk in _missing_keys:
-                if _mk not in order: order.append(_mk)
-    except Exception:
+                if len(_p) >= 4:
+                    _mk = _p[1] + '·' + _p[2]
+                    _word = _p[3].strip()[:2]
+                    _missing_disp[_mk] = _word
+    except OSError:
         pass
+    # 桶判定：无 DISP=待处置；首词观察/延后/已修=对应桶；其他首词=表外词（如实三分外再分）。
+    def _bucket_of(_k):
+        _w = _missing_disp.get(_k)
+        if _w is None:
+            return '待处置'
+        for _b in ('观察', '延后', '已修'):
+            if _w.startswith(_b):
+                return _b
+        return '表外词'
+    _missing_keys_pending = [k for k in (_missing_keys or []) if k not in order[:len(pairing)]]
+    _missing_keys_open = [k for k in _missing_keys_pending if _bucket_of(k) == '待处置']
+    _missing_bucket = {k: _bucket_of(k) for k in _missing_keys_pending}
 
 
 
@@ -3532,7 +3537,7 @@ def issues_stats():
     observed = [r['key'] for r in by_bucket('观察')]
     deferred = [r['key'] for r in by_bucket('延后')]
     nonstd = [r['key'] for r in by_bucket('表外词')]
-    open_k = [r['key'] for r in by_bucket('待处置')]
+    open_k = [r['key'] for r in by_bucket('待处置')] + [k for k in _missing_keys_open if k not in [r['key'] for r in by_bucket('待处置')]]
     exact_paired = len(by_mode('exact'))
     bcast_paired = len(by_mode('generic')) + len(by_mode('single'))
     dangling = len(dto.get('danglingDispTypes') or [])
@@ -3562,10 +3567,20 @@ def issues_stats():
         rows.append(f'<tr><td>{H.escape(k)}</td><td style="white-space:nowrap">{r.get("freq", 1)} 次</td>'
                     f'<td style="white-space:nowrap">{_issue_level(r["type"])}</td>'
                     f'<td>{H.escape(desc.get(k, "")[:100])}</td><td class="{cls}">{H.escape(d[:130])}</td></tr>')
+    # 2026-11-18 三轮复核：配对快照滞后键如实渲为「待处置」（ISSUE 在案无 DISP 回写）
+    for _mk, _bkt in sorted(_missing_bucket.items()):
+        _cls = 'd-ok' if _bkt == '已修' else 'd-warn'
+        _tail = '待处置（ISSUE 在案无 DISP 回写——配对快照滞后，如实呈现）' if _bkt == '待处置' else f'{_bkt}（按 issues.log 实读归桶——配对快照滞后）'
+        rows.append(f'<tr><td>{H.escape(_mk)}</td><td style="white-space:nowrap">1 次</td>'
+                    f'<td style="white-space:nowrap">{_issue_level(_mk.split("·",1)[0])}</td>'
+                    f'<td>{H.escape(desc.get(_mk, "")[:100])}</td>'
+                    f'<td class="{_cls}">{_tail}</td></tr>')
     if not rows:
         rows.append('<tr><td colspan="5" class="d-warn">本轮零处置记账（如实呈现——DISP 回写缺口见 retro-open-items 记入问题清单）</td></tr>')
-    stat = (f'唯一键 {len(order)}：已修 {len(closed)} · 观察 {len(observed)} · 延后 {len(deferred)}'
-            f' · 表外词 {len(nonstd)} · 待处置 {len(open_k)}')
+    _mb = [v for v in _missing_bucket.values()]
+    stat = (f'唯一键 {len(order)}：已修 {len(closed) + _mb.count("已修")} · 观察 {len(observed) + _mb.count("观察")}'
+            f' · 延后 {len(deferred) + _mb.count("延后")} · 表外词 {len(nonstd) + _mb.count("表外词")}'
+            f' · 待处置 {len(open_k)}')
     if nonstd:
         stat += '（表外词=DISP 首词非三态分桶词——台账卫生缺陷，§4.3-28；收尾链补记三态 DISP 行后归桶）'
     note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑；口径时点=本报告生成时刻，复盘文档若引用事件流计数须标注其冻结时点——G6 与 report 段之间 DISP 归桶仍在推进，O5），复盘文档按事件流全表列出；本节按唯一键去重收尾。' + (_snap_note or '')
