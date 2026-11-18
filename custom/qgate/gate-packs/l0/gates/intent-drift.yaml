@@ -29,7 +29,9 @@ spec:
       mode: scope
       taskIntent:
         file: ".qgate/registers/task-intent.json"
-        require: true
+        # require:false（2026-11-18 机制缺陷修复）：任务完成后注销 task-intent 卡属正常收口，
+        # require:true 会让「注销后任何推送都 FAIL」——卡缺席时本门跳过（scope-check 独立判面不变）。
+        require: false
         acknowledgedSha256: "23891ecefd714a0862753b9af169fe38575248b44c0b96d8030e7ee4c5d2df8c"
       evidenceType: intent-drift-result
   evidence:
