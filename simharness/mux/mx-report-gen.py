@@ -2172,6 +2172,16 @@ _NOTE_G5['20261028-v8-run23'] = ('步 20 发布准出：多轮真实打回全留
 
 if RUN_ID in _DOMAINS_BY_RUN:
     DOMAINS = [_DOMAINS_BY_RUN[RUN_ID].get(i, d) for i, d in enumerate(DOMAINS)]
+else:
+    # 2026-11-18 二轮复核根治：未注册轮（含 run31）不得沿用默认静态旧账（26/26 UI 图、
+    # 问题单 6 键、28 passed 等与本页 14 图/63 键直接冲突）——未注册=如实缺证呈现。
+    DOMAINS = [
+        (d[0], d[1], d[2], 'warn',
+         f'本轮（{RUN_ID}）六域未注册实测节——如实呈现：当前步档案与问题单为准，不沿用旧轮静态账',
+         f'实测：本轮未注册（_DOMAINS_BY_RUN 无 {RUN_ID}）——证据以 state.env/问题单/审计侧柜为准',
+         d[6])
+        for d in DOMAINS
+    ]
 
 # ── 六域台账（真实产品功能产出，治理中心「六域体检」运行落账）──
 # 有台账：判定/证据取最新轮（真实流程中运行的检查器输出）；
@@ -3455,6 +3465,7 @@ def issues_stats():
     except json.JSONDecodeError as e:
         sys.exit(f'[report-gen] 治理指标快照不可读：{e}')
     pairing = dto.get('pairing')
+
     if not isinstance(pairing, list):
         sys.exit('[report-gen] 治理指标快照 pairing 缺席——配对正本未到位，拒出报告（空数组=零台账合法形态）')
 
@@ -3470,6 +3481,51 @@ def issues_stats():
                     desc[k] = p4[3] if len(p4) > 3 else ''
 
     order = [r['key'] for r in pairing]
+    # 2026-11-18 二轮复核根治：键集一致性（行数对齐≠键集一致——快照后新增键消失且待处置=0 失真）。
+    # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
+    try:
+        _ik = set()
+        for _l in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines():
+            if _l.startswith(('ISSUE|','DISP|')):
+                _p = _l.split('|', 3)
+                if len(_p) >= 3:
+                    _ik.add(_p[1] + '·' + _p[2])
+        _pk = set()
+        for _r in (pairing or []):
+            _kk = _r.get('key','')
+            if '·' in _kk: _pk.add(_kk)
+        _missing_keys = sorted(_ik - _pk)
+        if _missing_keys:
+            import sys as _sys_k
+            print(f'[pairing-keyset] 键集不一致：issues.log 有而配对无 {_missing_keys}——刷新配对后再出报告', file=_sys_k.stderr)
+            for _mk in _missing_keys:
+                if _mk not in order: order.append(_mk)
+    except Exception:
+        pass
+    # 2026-11-18 二轮复核根治：键集一致性（行数对齐≠键集一致——快照后新增键消失且待处置=0 失真）。
+    # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
+    try:
+        _ik = set()
+        for _l in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines():
+            if _l.startswith(('ISSUE|','DISP|')):
+                _p = _l.split('|', 3)
+                if len(_p) >= 3:
+                    _ik.add(_p[1] + '·' + _p[2])
+        _pk = set()
+        for _r in (pairing or []):
+            _kk = _r.get('key','')
+            if '·' in _kk: _pk.add(_kk)
+        _missing_keys = sorted(_ik - _pk)
+        if _missing_keys:
+            import sys as _sys_k
+            print(f'[pairing-keyset] 键集不一致：issues.log 有而配对无 {_missing_keys}——刷新配对后再出报告', file=_sys_k.stderr)
+            for _mk in _missing_keys:
+                if _mk not in order: order.append(_mk)
+    except Exception:
+        pass
+
+
+
     by_mode = lambda m: [r for r in pairing if r['mode'] == m]
     by_bucket = lambda b: [r for r in pairing if r['bucket'] == b]
     closed = [r['key'] for r in by_bucket('已修')]
@@ -5228,7 +5284,7 @@ def checkpoints_html():
         for cid, name, semantics, who, img, evidence in CHECKPOINTS:
             g = _CP_GATE_OF.get(cid)
             chip = f'{g} {"✓" if _gate_passed(g) else "○"}' if g else '闸间'
-            rows.append(f'<tr><td>{name}</td><td>{chip}</td><td>{semantics}</td><td>{who}</td><td style="font-size:12px">{evidence}</td></tr>')
+            rows.append(f'<tr id="{cid}"><td>{name}</td><td>{chip}</td><td>{semantics}</td><td>{who}</td><td style="font-size:12px">{evidence}</td></tr>')
         return ('<details class="audit" style="margin-top:8px"><summary>▶ 闸间人工确认点（与六闸互补，紧凑视图）</summary>'
                 '<table style="margin-top:8px"><tr><th>卡点</th><th>闸</th><th>把关什么</th><th>把关人</th><th>证据锚</th></tr>'
                 + ''.join(rows) + '</table></details>')
@@ -5295,7 +5351,9 @@ def gate_cards():
     for g, keys in _gate_issue_hits.items():
         if keys and g not in rejected:
             uniq = sorted(set(keys))
-            rejected[g] = f'打回/缺口记入问题清单 {len(keys)} 起（{"、".join(uniq[:3])}），回灌复补后过闸——台账可反查'
+            # 2026-11-18 二轮复核：G2 未达却称「复补后过闸」实锤——按 _gate_passed 分态。
+            _tail = '回灌复补后过闸——台账可反查' if _gate_passed(g) else '该闸仍未放行（如实呈现，非过闸）——台账可反查'
+            rejected[g] = f'打回/缺口记入问题清单 {len(keys)} 起（{"、".join(uniq[:3])}），{_tail}'
     # 实测统计：state 打回轮次计数键（如 g5_fail_rounds）
     for g, fk in (('G5', 'g5_fail_rounds'),):
         fr = state.get(fk, '')
@@ -5340,6 +5398,15 @@ def gate_cards():
         else:
             cls = 'gpass' if passed else 'gpending'
             badge = '✓ 已通过（沿用源轮）' if (passed and g in _fixture_gates) else ('✓ 已通过' if passed else '○ 未达')
+            # 2026-11-18 二轮复核：G5 补过口径进卡面（state g5_supplement=1 实读）
+            if g == 'G5' and passed and str(state.get('g5_supplement','')).strip() == '1':
+                badge += '（补过口径：GAP 残留如实呈现，不计首过）'
+            # 2026-11-18 二轮复核：G4 三缺口进卡面（三键实读，对称显形）
+            if g == 'G4' and passed:
+                _gaps = [k for k in ('g4_evidence_gap','g4_contract_gap','g4_eval_gap')
+                         if str(state.get(k,'')).strip() not in ('','0')]
+                if _gaps:
+                    badge += '（带缺口通过：' + '、'.join(k.replace('g4_','').replace('_gap','') for k in _gaps) + ' gap=1，非全绿）'
         rej = f'<span class="gate-rej">打回环：{rejected[g]}</span>' if g in rejected else '<span class="gate-rej ok1">一次通过</span>'
         rej += (f'<span class="gate-rej">{annot[g]}</span>' if g in annot else '')
         cards.append(f'''<div class="gate-card {cls}">
@@ -5764,6 +5831,9 @@ def _staffing_utilization() -> dict:
                         continue
                     if ts < started:
                         continue
+                    # 2026-11-18 二轮复核：分子与分母同右界——终局后新增响应不计入。
+                    if ts > _end:
+                        continue
                     try:
                         total += float(m.group(1))
                     except ValueError:
@@ -5830,8 +5900,14 @@ def _readfirst_html() -> str:
                       f'　<code>{H.escape(_path)}</code></li>')
     _deliv.append(f'<li>四个应用的代码与测试证据：集成基线 <code>integration/{RFD_ID}</code>'
                   f'（每支改动都有提交号与卡号可回查）</li>')
-    _deliv.append('<li>安全条件与等保材料：<code>evidence/security-conditions.md</code>，逐条处置结论在案</li>')
+    # 2026-11-18 二轮复核：安全材料实查——本轮 evidence/security-conditions.md 存在才列入已交付；
     _open = []
+    # 缺席=如实缺件（G2 安全环未合拢时不得写「已交付」；中央仓同名文件系 run23 旧账不得冒充）。
+    _sec_md = EVID / 'security-conditions.md'
+    if _sec_md.exists() and _sec_md.stat().st_size > 0:
+        _deliv.append('<li>安全条件与等保材料：security-conditions.md 在本轮证据目录在案（G5 第 8 项复核输入）')
+    else:
+        _open.append('<li>安全条件与等保材料：本轮 evidence/security-conditions.md 缺件——G2 安全环未合拢时如实缺件呈现，不得写「已交付」</li>')
     if not state.get('ready_done'):
         _open.append('<li><b>发布准出（G5）未放行</b>：评审被连续退回并逐项指出缺什么，'
                      '缺项正在清偿；<u>这不是拖延，是闸门在起作用</u>。</li>')

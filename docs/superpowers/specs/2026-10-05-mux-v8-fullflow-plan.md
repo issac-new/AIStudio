@@ -2979,7 +2979,7 @@ run28（20261107-v8-run28，14h29m 六闸全过，report_done=1794090918）结�
 
 ### 5.13 run29 复盘条款（2026-11-12 立，N29-14~23 清偿；run30 起生效）
 
-run29（20261111-v8-run29，27h20m 六闸全过，审计零 FAIL/46 WARN）值守与审计环收敛过程暴露的工装缺口，根治批 main 随批：
+run29（20261111-v8-run29，27h19m 六闸全过，审计零 FAIL/46 WARN）值守与审计环收敛过程暴露的工装缺口，根治批 main 随批：
 
 1. **滞锚提醒的真做判据**：wait_alive_truth 系（单发 cur_work＋multi 分桶 _w）的工作判据用「真做」（tool completed/API call#≥2）——单轮嘴炮回合不续命提醒计时；稀疏滴流（每小时一条嘴炮）不再永久压制滞锚提醒（xiao 78min/bella 2.3h 静默值守人工私信的自动化替代）。
 2. **降级消息保留交付锚**：director 移交超时/SEND-FAILED 的降级「自主组织」消息追加原任务书要点（800 字截断）——交付物锚点与验收行不再被通用文整体替换丢失。
@@ -3015,7 +3015,7 @@ run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能�
 5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——开跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
 6. **studio preload 安全加固入仓**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，digest 变化须重烧或合规豁免（run31 实走 WAIVED 通道清偿）。
 7. **数字总账 §C 随批进位**（v0.8.21／3.18.2／v1.0.16 族，核实日 2026-11-17）＋VENDOR.md zcode 台账行补正（merge 撤出漏入第四次清偿）——数字滞后是设计复盘「补账抬位」的载体面清偿。
-8. **N31 台账终局回写（已清账）**：N31-4（WAIVED 通道清偿，digest 2b242687、豁免 02:21 留档）＋N31-5（开跑窗内）已清偿；N31-1/2/3 终局对账见 `2026-11-18-run31-full-retrospective.md` §四（N31-2a 部分归零——新现 g3-local-gate-missing×12、g4-contract-breaking×10 大族；N31-3 警告生效未复现）。
+8. **N31 台账终局回写（已清账）**：N31-4（WAIVED 通道清偿，digest 2b242687、豁免 02:21 留档）＋N31-5（开跑窗内）已清偿；N31-1/2/3 终局对账见 `2026-11-18-run31-full-retrospective.md` §四（N31-2a 部分归零——新现 g3-local-gate-missing 6 起 ISSUE、g4-contract-breaking 9 起 ISSUE（12/10 为 ISSUE+DISP 总提及口径）；N31-3 警告生效未复现）。
 
 ### 5.16 run31 复盘条款（2026-11-18 立；run32 起生效）
 
@@ -3028,4 +3028,4 @@ run31（20261117-v8-run31，17h12m，report_done 正常终局；审计 0 FAIL/37
 5. **G2 判词缺项显示完整性**：gate-verdicts 缺项序列化截断（`)。））`）为执法链缺陷，owner 无法解析缺项将空转（N32-5）；fanfan 复核实测维持 FAIL 判词专业正确为同轮对照。
 6. **dreaming sunset 判据执行面**：dream 产出计数两轮观察窗第一轮=0（run31 终局取证）；run32 若再零产出即执行退役裁决（机制预算 sunset 判据）。
 7. **安全修复链组织面失效定谳**（全轮头条）：判词/闸门/熔断/提醒全对，修复执行全天未落地（chen 148 文件 WIP 终未提交、bella 四卡 blocked）——与 run30 凌晨深睡不同型（日间同发），凌晨豁免归因非唯一因；修复接单与落地组织机制重构属产品面新立项，非 harness 批。
-8. **§5.15 验收面全过在案**：探针组 15-17 活体 51/51；token 198.04M/3501 回合（转录级估算，usage 真值持久化补丁挂账 N32-1）；run-metrics 终局行由终局门写入（O1 合规）。
+8. **§5.15 验收面全过在案**：探针组 15-17 活体 51/51；token 真值 4065 调用/输入 18.84M/输出 4.77M/缓存读 197.77M（session_model_usage 口径，provider 回报非估算；转录级估算口径已退役）；run-metrics 终局行由终局门写入（O1 合规）。
