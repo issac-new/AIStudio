@@ -141,7 +141,9 @@ function parseExecutor(raw: unknown): ExecutorSpec | null {
       out.taskIntent = {
         file,
         ...(acknowledgedSha256 !== undefined ? { acknowledgedSha256 } : {}),
-        ...(raw.taskIntent.require === true ? { require: true } : {}),
+        // 2026-11-18：require 显式三态透传——false（注销卡跳过语义）此前被吞成 undefined，
+        // executor 只认 truthy 导致 yaml 写 false 无效、测试断言 undefined。
+        ...(typeof raw.taskIntent.require === 'boolean' ? { require: raw.taskIntent.require } : {}),
       }
     }
   } else if (type === 'traceability') {
