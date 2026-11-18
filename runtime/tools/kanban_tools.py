@@ -533,6 +533,27 @@ def _board(board: Optional[str], *, quiet_close: bool = False):
                 raise
 
 
+# >>> swarm:kanban-session-board-context >>>
+def _landed_board_slug(kb, board_arg) -> str:
+    """Slug of the board a call's connection actually targets (t_747a6eb2).
+
+    ``default``'s DB is the legacy top-level ``<root>/kanban.db`` by
+    back-compat, so derive from the resolved path instead of guessing:
+    ``<root>/kanban.db`` → ``default``; ``<boards>/<slug>/kanban.db`` → the
+    dir name; anything else (a ``HERMES_KANBAN_DB`` env pin in a worker)
+    reports its absolute path. Never raises — the echo is bookkeeping."""
+    try:
+        path = kb.kanban_db_path(board=board_arg)
+        if path.name == "kanban.db":
+            if path.parent == kb.kanban_home():
+                return kb.DEFAULT_BOARD
+            return path.parent.name
+        return str(path)
+    except Exception:
+        return kb.DEFAULT_BOARD
+# <<< swarm:kanban-session-board-context <<<
+
+
 def _existing_task(kb, conn, tid: str):
     task = kb.get_task(conn, tid)
     _check(task is not None, f"task {tid} not found")
@@ -1352,7 +1373,7 @@ def _handle_create(args: dict, **kw) -> str:
         raise ValueError(
             "workspace_kind='dir' requires workspace_path — an unpathed dir card "
             "can never spawn a worker. Pass workspace_path, or omit workspace_kind "
-            "to get a fresh per-task worktree."
+            "to get a managed per-task dir (no git checkout)."
         )
     # See #67567. ``project=""`` is an explicit "no project" (no ``or`` collapse, #106342).
     project_id = args["project"] if "project" in args else args.get("project_id")
@@ -1385,7 +1406,18 @@ def _handle_create(args: dict, **kw) -> str:
             assignee=str(assignee),
             parents=tuple(parents), tenant=args.get("tenant") or os.environ.get("HERMES_TENANT"),
             priority=_opt_int(args.get("priority"), 0),
-            workspace_kind=str(workspace_kind if workspace_kind is not None else "worktree"),
+            # >>> swarm:kanban-tool-default-dir >>>
+            # Omitted workspace_kind passes None through so create_task's
+            # overlay decides: plain board -> managed per-task dir (created
+            # under the board's workspaces root, no git checkout); project
+            # board -> project repo worktree via _resolve_project_link. The
+            # old hard "worktree" fallback forced EVERY unspecified card into
+            # a full `git worktree add` checkout of the board default_workdir
+            # repo (~626MB / ~5s on the external-disk sandbox anchor) even
+            # for research/doc tasks that never touch git. Explicit
+            # workspace_kind is untouched: worktree callers keep worktrees.
+            workspace_kind=(str(workspace_kind) if workspace_kind is not None else None),
+            # <<< swarm:kanban-tool-default-dir <<<
             workspace_path=workspace_path, project_id=project_id,
             # Board-project inheritance must read the board this call opened, not the
             # session's current board.
@@ -1404,8 +1436,15 @@ def _handle_create(args: dict, **kw) -> str:
         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)
         wait = [e for e in kb.list_events(conn, new_tid) if e.kind == "dependency_wait"]
         gate = {"gated": True, "gated_by": wait[-1].payload["parent"]} if wait else {"gated": False}
-        return _ok(task_id=new_tid, **landed, **gate,
-                   subscribed=_maybe_auto_subscribe(conn, new_tid))
+        # >>> swarm:kanban-session-board-context >>>
+        # t_747a6eb2: echo the board the card actually landed on — a create
+        # that resolved through the fallback chain used to return ok with no
+        # landing-board signal, so callers misread wrong-board cards as
+        # "silently lost" and re-created them (again wrong).
+        landed_board = _landed_board_slug(kb, args.get("board"))
+        # <<< swarm:kanban-session-board-context <<<
+        return _ok(task_id=new_tid, board=landed_board, **landed, **gate,
+                   subscribed=_maybe_auto_subscribe(conn, new_tid, landed_board=landed_board))
 
 
 def _live_tui_session_key(session_key: str, profile: Optional[str]) -> str:
@@ -1480,7 +1519,7 @@ def _resolve_notify_target() -> Optional[dict[str, Any]]:
         delivery_metadata=delivery_metadata or None)
 
 
-def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
+def _maybe_auto_subscribe(conn: Any, task_id: str, landed_board: Optional[str] = None) -> bool:
     """Subscribe the calling session to completion/block events; True iff a row was
     written (surfaced as ``subscribed`` so an orchestrator can fall back to explicit
     ``kanban_notify-subscribe``). Gated by ``kanban.auto_subscribe_on_create`` (default
@@ -1495,6 +1534,19 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
         target = _resolve_notify_target()
         if target is None:
             return False  # CLI / cron / test — no persistent channel
+        # >>> swarm:kanban-session-board-context >>>
+        # t_747a6eb2: a create landing on a board OTHER than the calling
+        # session's home board used to auto-bind this session to the foreign
+        # board's status events — internal churn (gave_up / crashed /
+        # dispatcher retries) then woke the parent-visible chat stream.
+        # Skip the auto-subscribe on cross-board creates; an orchestrator
+        # that really wants foreign-board tracking calls
+        # kanban_notify-subscribe explicitly.
+        if landed_board is not None:
+            from hermes_cli import kanban_db as _kb_home
+            if _landed_board_slug(_kb_home, None) != landed_board:
+                return False
+        # <<< swarm:kanban-session-board-context <<<
         from hermes_cli import kanban_db_notify as _kbn
         # Inheritance and explicit subscriptions already encode the delivery policy.
         # Auto-subscribe must not turn a passive destination into an agent wake.

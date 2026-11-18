@@ -49,7 +49,7 @@ DESIGN_SYNC: touched —— `vendor/VENDOR.md`（台账正本：表行 commit/�
 
 | # | 项 | 处置建议 |
 |---|---|---|
-| N-1 | 宿主 `~/.hermes/hermes-agent` 基线仍 v0.23.1 线 | run31 收官后独立批：宿主 checkout v0.23.2＋在途热修重锚→真树 deploy→网关重启（v0231 批 N-2 配方）；须用户明示 |
+| N-1 | ~~宿主 `~/.hermes/hermes-agent` 基线仍 v0.23.1 线~~ **已清偿（2026-11-18）**：宿主 git 树基底已 v0.23.2＋7 热修 reanchor；热修回灌批 `2026-11-18-agent-hotfix-backport-deploy.md` 接续部署收口 |
 | N-2 | SIM 42 profile 基线盖章仍 v0.23.1 面 | 宿主升级（N-1）落地后独立批重盖章（sim-v0230-alignment 配方） |
 | N-3 | `~/.hermes/host-sim-v0232` 验证残留目录 | 下次宿主升级部署时以真树为准后可清 |
-| N-4' | runtime/ 覆盖层与 v0.23.2 注入态 33 件漂移（含 expect_assignee 无补丁热修） | 宿主升级批（N-1）一体处理：热修回灌 patches/→runtime 镜像跟进→宿主部署；属主=091f8f97e 回灌会话/安全门热修属主协调 |
+| N-4' | ~~runtime/ 覆盖层与 v0.23.2 注入态 33 件漂移~~ **已清偿（2026-11-18）**：热修回灌批 4 枚补丁承载后 7 件镜像，终对账 56/0/6（spec `2026-11-18-agent-hotfix-backport-deploy.md`） |

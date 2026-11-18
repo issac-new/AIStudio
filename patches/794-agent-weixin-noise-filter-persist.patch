@@ -1,0 +1,46 @@
+diff --git a/plugins/platforms/weixin/adapter.py b/plugins/platforms/weixin/adapter.py
+index 998c7108e..562a334ad 100644
+--- a/plugins/platforms/weixin/adapter.py
++++ b/plugins/platforms/weixin/adapter.py
+@@ -535,6 +535,26 @@ def _coerce_bool(value: Any, default: bool = True) -> bool:
+     return True if text in {"1", "true", "yes", "on"} else False if text in {"0", "false", "no", "off"} else default
+ 
+ 
++
++# >>> swarm:noise-filter >>>
++# 2026-10-23 重建接线：通用逻辑在共享 util gateway/noise_filter.py（单一事实源），
++# 平台适配包装与 matrix 版对齐（plugins/platforms/matrix/adapter.py）。
++# 开关：WEIXIN_NOISE_FILTER（总开关，默认开）；家庭渠道保守——只拦高置信度噪声。
++from gateway.noise_filter import noise_reason as _shared_noise_reason
++
++
++def _weixin_noise_reason(body: str) -> Optional[str]:
++    """Weixin 噪声判定：委托共享 util，关闭 matrix 特有类，开启 stt_failure（家庭语音）。"""
++    return _shared_noise_reason(
++        body,
++        "weixin",
++        enable_decrypt=False,      # weixin 非 E2EE，无加密占位符噪声
++        enable_sync_replay=False,  # weixin 轮询模式，无同步重放
++        enable_stt_failure=True,   # weixin 语音转文字失败占位符常见
++        enable_recall=False,       # weixin 撤回走系统事件，非文本噪声
++    )
++# <<< swarm:noise-filter <<<
++
+ def _extract_text(item_list: list[dict[str, Any]]) -> str:
+     for item in item_list:
+         if item.get("type") == ITEM_TEXT:
+@@ -916,6 +936,14 @@ class WeixinAdapter(OwnAccessPolicyMixin, BasePlatformAdapter):
+                 await self._collect_media(candidate, media_paths, media_types)
+         if not text and not media_paths:
+             return
++        # >>> swarm:noise-filter >>>
++        # 基础设施环境噪声过滤（agent turn 之前拦截，省 token；误杀用 WEIXIN_NOISE_FILTER=false 关闭）。
++        if text:
++            _noise = _weixin_noise_reason(text)
++            if _noise:
++                logger.debug("[%s] dropping %s noise from %s: %.40r", self.name, _noise, sender_id, text)
++                return
++        # <<< swarm:noise-filter <<<
+         source = self.build_source(chat_id=effective_chat_id, chat_type=chat_type, user_id=sender_id, user_name=sender_id)
+         event = MessageEvent(
+             text=text, message_type=_message_type_from_media(media_types, text), source=source, raw_message=message,
