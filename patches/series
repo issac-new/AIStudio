@@ -1316,3 +1316,4 @@
 # dreaming 活体 E2E（env+解释器门控，真实 :8888＋scratch bank）＋
 # reflect 工具信封 unwrap 修复（防转义 JSON 入库）＋ _deferred_scan_one 提为方法。
 792-agent-always-on-live-verify.patch
+793-agent-kanban-read-version-verification.patch
