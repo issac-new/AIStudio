@@ -12,6 +12,7 @@
 set -uo pipefail
 export LC_ALL=C
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/mx-recovery-lib.sh"  # 断点定位与监督器共用同一映射
 SIM_ROOT="${SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 
 RUN_ID="" START_STEP="" RFD_ID="" NO_SUP=0
@@ -44,13 +45,12 @@ if [[ -f "$STOPF" ]]; then
 fi
 
 SUP_ARGS=(--run "$RUN_ID")
-# 起点自动判（2026-11-03 run26 首发事故立法）：未显式给 --start-step 时——本 RUN 的
-# state.env 不存在＝净环境首发，起点 smoke（监督器缺省 devimpl 是断点续跑语义，净环境
-# 会跳过 smoke→plan 十四步直发开发派单，devimpl on fresh 全 SEND-FAILED 实锤）；
-# state.env 在位＝续跑，保持监督器缺省 devimpl（各步 done 键幂等跳过）。
+# 起点自动判：显式 --start-step 优先；未显式给时按 state.env 首个缺失关键键定位，
+# 防后段 done 键掩盖前段缺闸。state.env 不存在由同一函数返回 smoke，净环境语义不变。
 if [[ -z "$START_STEP" ]]; then
   if [[ -f "$SIM_ROOT/runs/$RUN_ID/state.env" ]]; then
-    :   # 续跑：不传，走监督器缺省 devimpl
+    START_STEP="$(mx_resume_start_step "$SIM_ROOT/runs/$RUN_ID/state.env")"
+    echo "[mx-run] 断点定位：START_STEP=$START_STEP（state.env 首个缺失关键键）"
   else
     START_STEP="smoke"
     echo "[mx-run] 净环境首发：起点自动定为 smoke（state.env 缺席）"
@@ -59,6 +59,6 @@ fi
 [[ -n "$START_STEP" ]] && SUP_ARGS+=(--start-step "$START_STEP")
 SUP_LOG="$SIM_ROOT/logs/$RUN_ID-supervisor.log"
 cd "$SCRIPT_DIR" || exit 1
-echo "[mx-run] 拉起监督器（RUN=$RUN_ID START_STEP=${START_STEP:-devimpl}；监督器自拉驱动、report_done 自退）"
+echo "[mx-run] 拉起监督器（RUN=$RUN_ID START_STEP=$START_STEP；监督器自拉驱动、report_done 自退）"
 nohup bash "$SCRIPT_DIR/run-driver-supervisor.sh" "${SUP_ARGS[@]}" >> "$SUP_LOG" 2>&1 &
 echo "[mx-run] supervisor pid=$! log=$SUP_LOG"

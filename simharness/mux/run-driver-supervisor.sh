@@ -6,14 +6,14 @@
 # 让击杀失效——驱动死亡后 30s 内自动按断点续跑（START_STEP 各段 done 键幂等跳过，
 # 天然防重派），直到 report_done 落键才退出。
 #
-# 用法: nohup bash mux/run-driver-supervisor.sh --run <RUN_ID> [--start-step devimpl] \
+# 用法: nohup bash mux/run-driver-supervisor.sh --run <RUN_ID> [--start-step <step>] \
 #         [--sim-root /Users/cuishi/lab/ncwk-sim-mux] > <sim-root>/logs/<RUN>-supervisor.log 2>&1 &
 # 停止: touch <sim-root>/var/<RUN>-supervisor.stop（优雅退）或 kill 监督器（勿 kill 驱动——
 #       会被拉起；真要停驱动先 touch stop 文件让监督器退场）
 set -uo pipefail
 export LC_ALL=C
 
-RUN_ID="" START_STEP="devimpl" SIM_ROOT="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
+RUN_ID="" START_STEP="" SIM_ROOT="${AIPAY_SIM_ROOT:-/Users/cuishi/lab/ncwk-sim-mux}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --run) RUN_ID="${2:-}"; shift 2 ;;
@@ -56,6 +56,12 @@ monitor_events() {
 }
 
 note() { echo "[supervisor $(date '+%F %H:%M:%S')] $*"; }
+
+# 显式 --start-step 优先；缺省按首个缺失关键键定位，禁止后段键掩盖前段缺闸。
+if [[ -z "$START_STEP" ]]; then
+  START_STEP="$(mx_resume_start_step "$STATE")"
+  note "缺省断点定位：START_STEP=$START_STEP（state.env 首个缺失关键键；文件缺席=smoke）"
+fi
 
 # 熔断证据指纹（纪律 8 复位判据的监督器侧投影）：integration tip + G5 评审卡 body 哈希
 # + 分析群最新判词结论行哈希。任一变化=「新提交/新判词/卡 body 更新/房间结论行重发」成立，
