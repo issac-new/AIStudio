@@ -1,5 +1,7 @@
 # run31 开跑前挂账台账（N31 起；来源=run30 复盘 D 类）
 
+> **收官回写（2026-11-18）**：N31-4/N31-5 清偿；N31-1 已定谳；N31-2a 部分归零（新现 g3-local-gate-missing×12、g4-contract-breaking×10 大族）；N31-3 merge-conflict 警告生效未复现；N31-2b 部分仍发。终局对账见 `2026-11-18-run31-full-retrospective.md` §四；后续挂账归 N32 台账。
+
 ## 待办（run31 前处置）
 
 | # | 项 | 锚点 | 根因层 | 验收判据 | 状态 |
