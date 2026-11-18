@@ -18,7 +18,9 @@ run15 实证：80 条 DISP 的处置文本全部缺三态分桶词前缀（已�
 快照缺席=幂等安静退出（报告步前 gov_report 未跑过/服务不可达——不盲写）。
 """
 import argparse
+import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -37,6 +39,81 @@ STRUCTURAL_TYPES = frozenset({
     'g5-ready-fail', 'g2-design-review-fail',
 })
 
+# run31 N32-2：审计器 R18 两种帧缺口 FAIL 的机器可读原文。主体、类型与正文栏位严格
+# 对齐 mx-report-audit.py 的 ISSUE|frame-capture-failed|step-<n>|… 配对契约；不从
+# WARN 或其他 R18 族推导凭证，避免把未达标证据洗成全过。
+_R18_FRAME_MISSING_RE = re.compile(r'^R18 步 (\d+) 操作序列存在缺帧（(\d+) 处）')
+_R18_FRAME_SHORT_RE = re.compile(
+    r'^R18 步 (\d+) 操作序列帧数不足（.*?当前渲染 (\d+) 帧/期望 ≥(\d+)）')
+
+
+def backfill_r18_frame_gap_credentials(evid, run_id, lines):
+    """把上一轮审计的 R18 帧缺口 FAIL 写成可配对 ISSUE＋观察 DISP。
+
+    返回实际追加的行；侧柜缺席、跨轮或不可读时不盲写。每步只写一条凭证，正文合并
+    该步全部缺帧观测，重复重试凭既有 ISSUE 键幂等跳过。
+    """
+    findings_path = evid / 'report-audit-findings.json'
+    if not findings_path.exists():
+        return []
+    try:
+        findings = json.loads(findings_path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f'[tri-disp] R18 帧缺口侧柜不可读——跳过自动凭证（不盲写）：{exc}')
+        return []
+    if not isinstance(findings, dict) or findings.get('run') != run_id:
+        print('[tri-disp] R18 帧缺口侧柜轮次不一致——跳过自动凭证（不盲写）')
+        return []
+
+    observed = {}
+    fails = findings.get('fails')
+    for finding in fails if isinstance(fails, list) else []:
+        if not isinstance(finding, str):
+            continue
+        missing = _R18_FRAME_MISSING_RE.match(finding)
+        short = _R18_FRAME_SHORT_RE.match(finding)
+        if missing:
+            step = int(missing.group(1))
+            detail = f'操作序列存在缺帧 {int(missing.group(2))} 处'
+        elif short:
+            step = int(short.group(1))
+            detail = (f'操作序列帧数不足（当前渲染 {int(short.group(2))} 帧／'
+                      f'期望 ≥{int(short.group(3))} 帧）')
+        else:
+            continue
+        if not 1 <= step <= 26:
+            continue
+        observed.setdefault(step, [])
+        if detail not in observed[step]:
+            observed[step].append(detail)
+
+    existing = {
+        (parts[1], parts[2])
+        for parts in (line.split('|', 3) for line in lines)
+        if len(parts) >= 4 and parts[0] == 'ISSUE'
+    }
+    appended = []
+    for step in sorted(observed):
+        subject = f'step-{step}'
+        if ('frame-capture-failed', subject) in existing:
+            continue
+        detail = '；'.join(observed[step])
+        appended.append(
+            f'ISSUE|frame-capture-failed|{subject}|R18 审计实测：{detail}——采集失败，'
+            '真实缺口保留；按 §5.6 采集纪律⑩登记降级，复扫仅将该步 FAIL 降为 WARN，'
+            '不冒充补拍或达标（run31 N32-2 自动写入）')
+        appended.append(
+            f'DISP|frame-capture-failed|{subject}|观察（R18 帧缺口审计自动降级：'
+            '缺口与实测帧数见同键 ISSUE；采集面修复并复核后人工升桶，禁脚本自动升桶）')
+    if appended:
+        with open(evid / 'issues.log', 'a', encoding='utf-8') as log:
+            log.write('\n'.join(appended) + '\n')
+        lines.extend(appended)
+        print(f'[tri-disp] R18 帧缺口凭证补记 {len(appended) // 2} 步'
+              '（ISSUE＋观察 DISP；真实缺口保留，复扫降 WARN）')
+    return appended
+
+
 ap = argparse.ArgumentParser()
 # 2026-10-13 扩展（fix/lite-closeout）：ISSUE 键完全无 DISP 行时补观察桶行——纪律 28
 # 「无锚点处置一律降为观察或待处置」的机制兑现（run18 实锤：20 键零 DISP 全 FAIL；
@@ -48,17 +125,19 @@ a = ap.parse_args()
 SIM = Path(os.environ.get('AIPAY_SIM_ROOT') or '/Users/cuishi/lab/ncwk-sim-mux')
 EVID = SIM / 'runs' / a.run / 'evidence'
 ilog = EVID / 'issues.log'
-if not ilog.exists():
-    sys.exit(0)  # 无台账=无事可做（幂等安静退出，非阻断）
+lines = ilog.read_text(encoding='utf-8').splitlines() if ilog.exists() else []
 
-lines = ilog.read_text(encoding='utf-8').splitlines()
+# 报告审计失败后的断点重试会先回到本脚本：先消费上一轮缺口侧柜，再进入既有归桶。
+# 新 ISSUE 同步带精确主体观察 DISP，后续 gov_report 刷新快照时不会新增 R5 待处置键。
+backfill_r18_frame_gap_credentials(EVID, a.run, lines)
+if not ilog.exists():
+    sys.exit(0)  # 无台账且无有效审计侧柜=无事可做（幂等安静退出，非阻断）
 
 # 配对取产品 DTO 快照（gov_report 落件；缺席=安静退出不盲写）
 dto_path = EVID / 'governance-metrics.json'
 if not dto_path.exists():
     print('[tri-disp] 治理指标快照缺席（governance-metrics.json）——配对正本未到位，本轮跳过归桶（不盲写）')
     sys.exit(0)
-import json
 try:
     pairing = json.loads(dto_path.read_text(encoding='utf-8')).get('pairing') or []
 except json.JSONDecodeError:
