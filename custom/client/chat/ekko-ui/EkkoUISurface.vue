@@ -246,6 +246,11 @@ defineExpose({
 
 <style scoped>
 .ekko-surface {
+  /* 皮肤交互色：宿主定义（Agent 不可控，spec D2 修订）；青蓝系科技感 */
+  --ekko-skin-accent: #0891b2;
+  --ekko-skin-accent-hover: #0e7490;
+  --ekko-skin-on-accent: #ffffff;
+
   --ekko-space-xs: calc(4px * var(--spacing-scale));
   --ekko-space-sm: calc(8px * var(--spacing-scale));
   --ekko-space-md: calc(12px * var(--spacing-scale));
@@ -258,7 +263,24 @@ defineExpose({
   min-width: 0;
 }
 .ekko-surface-head { display: flex; align-items: center; justify-content: space-between; }
-.ekko-surface-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.02em; }
+.ekko-surface-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+/* 标题前缀：accent 发光短线 */
+.ekko-surface-title::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--ekko-skin-accent, var(--accent-primary)), transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 60%, transparent);
+}
 .ekko-surface-actions { display: flex; justify-content: flex-end; gap: var(--ekko-space-sm); padding-top: var(--ekko-space-xs); }
 .ekko-surface-btn {
   padding: 6px 14px;
@@ -269,13 +291,22 @@ defineExpose({
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
-.ekko-surface-btn.primary { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--text-on-accent); }
+.ekko-surface-btn.primary {
+  background: linear-gradient(135deg, var(--ekko-skin-accent, var(--accent-primary)), var(--ekko-skin-accent-hover, var(--accent-hover, var(--ekko-skin-accent, var(--accent-primary)))));
+  border-color: transparent;
+  color: var(--ekko-skin-on-accent, var(--text-on-accent));
+}
+.ekko-surface-btn.primary:hover {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 40%, transparent);
+}
 .ekko-surface-btn.ghost { background: transparent; color: var(--text-secondary); }
-.ekko-surface-btn:hover { background: var(--bg-card-hover); }
-.ekko-surface-btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.ekko-surface-btn:hover { background: var(--bg-card-hover); border-color: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 35%, var(--border-color)); }
+.ekko-surface-btn.primary:hover { background: linear-gradient(135deg, var(--ekko-skin-accent, var(--accent-primary)), var(--ekko-skin-accent-hover, var(--accent-hover, var(--ekko-skin-accent, var(--accent-primary))))); }
 .ekko-surface-error { margin: 0; color: var(--error); font-size: 12px; }
 .ekko-surface-fallback { margin: 0; white-space: pre-wrap; color: var(--text-secondary); }
 .ekko-surface-issues { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 11px; }
 .ekko-surface-issues code { font-family: var(--font-mono, monospace); }
+.dark .ekko-surface { --ekko-skin-accent: #22d3ee; --ekko-skin-accent-hover: #67e8f9; --ekko-skin-on-accent: #052e3a; }
 </style>
