@@ -3019,13 +3019,13 @@ run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能�
 
 ### 5.16 run31 复盘条款（2026-11-18 立；run32 起生效）
 
-run31（20261117-v8-run31，17h12m，report_done 正常收官；审计 0 FAIL/37 WARN）暴露的工装与组织面缺口，复盘正本 `2026-11-18-run31-full-retrospective.md`：
+run31（20261117-v8-run31，17h12m，report_done 正常终局；审计 0 FAIL/37 WARN）暴露的工装与组织面缺口，复盘正本 `2026-11-18-run31-full-retrospective.md`：
 
-1. **审计 DISP 降级写入器必须闭环**：帧缺口（操作序列缺帧/帧数不足）触发时驱动须自动落 `ISSUE|frame-capture-failed|step-<n>` 凭证（mx-report-audit.py:130/197/220 配对格式——DISP 形态不被认，族名＋step 键缺一不可）——run31 实测 13 轮重试零收敛根因＝写入侧断链；值守手工落凭证一轮即过证明配对成立。守门测试锚＝步 23/25 缺帧例（rootfix N32-2）。
-2. **断点续跑定位「最近闸前段」**：archgate/close/plan 任一 done 键缺失时禁止从 devimpl 起——run31 实录 g2_arch_pass 缺位下 START_STEP=devimpl 推进到 report（闸门未绕但时间窗空耗）。断点判据与守门测试锚＝闸前段定位（N32-3）。
+1. **审计 DISP 降级写入器必须补齐**：帧缺口（操作序列缺帧/帧数不足）触发时驱动须自动落 `ISSUE|frame-capture-failed|step-<n>` 凭证（mx-report-audit.py:130/197/220 配对格式——DISP 形态不被认，族名＋step 键缺一不可）——run31 实测 13 轮重试零收敛根因＝写入侧断链；值守手工落凭证一轮即过证明配对成立。把关测试锚＝步 23/25 缺帧例（rootfix N32-2）。
+2. **断点续跑定位「最近闸前段」**：archgate/close/plan 任一 done 键缺失时禁止从 devimpl 起——run31 实录 g2_arch_pass 缺位下 START_STEP=devimpl 推进到 report（闸门未绕但时间窗空耗）。断点判据与把关测试锚＝闸前段定位（N32-3）。
 3. **agent 源重灌 stamp 按内容面**：供给触发源＝vendor 树＋补丁集真实内容变更（非 overlay HEAD）——run31 实录他会话 docs-only 提交（fc051ed28）即触发重灌抹 80+ 补丁创建文件致 CLI 崩（kanban 500×2）。
 4. **断点重放从最近闸位起**：G2 环每循环全链重放（12.5min/轮×9 轮）产生无效回合与 token 空耗——重放起点＝最近未过闸，不从头。
 5. **G2 判词缺项显示完整性**：gate-verdicts 缺项序列化截断（`)。））`）为执法链缺陷，owner 无法解析缺项将空转（N32-5）；fanfan 复核实测维持 FAIL 判词专业正确为同轮对照。
 6. **dreaming sunset 判据执行面**：dream 产出计数两轮观察窗第一轮=0（run31 终局取证）；run32 若再零产出即执行退役裁决（机制预算 sunset 判据）。
-7. **安全修复链组织面失效定谳**（全轮头条）：判词/闸门/熔断/催办全对，修复执行全天未落地（chen 148 文件 WIP 终未提交、bella 四卡 blocked）——与 run30 凌晨深睡不同型（日间同发），凌晨豁免归因非唯一因；修复接单与落地组织机制重构属产品面新立项，非 harness 批。
-8. **§5.15 验收面全过在案**：探针组 15-17 活体 51/51；token 198.04M/3501 回合（转录级估算，usage 真值持久化补丁挂账 N32-1）；run-metrics 收官行由终局门写入（O1 合规）。
+7. **安全修复链组织面失效定谳**（全轮头条）：判词/闸门/熔断/提醒全对，修复执行全天未落地（chen 148 文件 WIP 终未提交、bella 四卡 blocked）——与 run30 凌晨深睡不同型（日间同发），凌晨豁免归因非唯一因；修复接单与落地组织机制重构属产品面新立项，非 harness 批。
+8. **§5.15 验收面全过在案**：探针组 15-17 活体 51/51；token 198.04M/3501 回合（转录级估算，usage 真值持久化补丁挂账 N32-1）；run-metrics 终局行由终局门写入（O1 合规）。
