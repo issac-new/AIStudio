@@ -59,6 +59,176 @@ source "$SCRIPT_DIR/mux/mx-delivery-lib.sh"
 # 执行单元责任台账接线（2026-11-06 第一增量）：G1/G2/G5/报告段四处共用署名与六问动作。
 # 全 fail-soft：身份册/端点缺席记问题单继续跑，不拖垮主链（spec 2026-11-06-workunit-responsibility-ledger §10）。
 source "$SCRIPT_DIR/mux/mx-workunit-lib.sh"
+
+# ORG_EXECUTION_HELPERS_BEGIN
+# run31 组织执行闭环：所有缺项修复共用同一验收锚，禁止把回执当提交。
+org_fix_acceptance_anchor() { # <branch> <done-line> <review-card> → 任务书强制尾段
+  local _br="${1:-main}" _done="${2:-FIX-DONE}" _card="${3:-${RFD_ID:-RFD-001}}"
+  printf '\n【强制验收锚】\n完成定义=git commit 并 git push origin %s；随后回结论行 %s commit=<提交号> card=%s。\n验收锚=分支名=%s＋提交号=<提交号>＋评审卡号=%s。\n无提交=未完成：只回执、只改本地工作区或只留 WIP 均不算完成，禁止只回执不落地。\n' \
+    "$_br" "$_done" "$_card" "$_br" "$_card"
+}
+
+org_g2_replay_start() { # <requested> <review_done> <g2_pass> [full] [until] → 最近未过闸位
+  local _req="${1:-smoke}" _review="${2:-}" _pass="${3:-}" _full="${4:-0}" _until="${5:-}"
+  [[ "$_full" == "1" || -z "$_review" || -n "$_pass" ]] && { printf '%s\n' "$_req"; return 0; }
+  # 区间执行截止于 G2 前时尊重原区间，避免映射后形成空执行集。
+  case "$_until" in smoke|appinit|people|ba|reqgate|room|dispatch|register|analysis|triage|anexec|review)
+    printf '%s\n' "$_req"; return 0 ;;
+  esac
+  case "$_req" in
+    smoke|appinit|people|ba|reqgate|room|dispatch|register|analysis|triage|anexec|review) printf 'archgate\n' ;;
+    *) printf '%s\n' "$_req" ;;
+  esac
+}
+
+org_wip_timeout_should_escalate() { # <dirty 0|1> <now> <head-ts> <dirty-since> <threshold>
+  local _dirty="${1:-0}" _now="${2:-0}" _head="${3:-0}" _since="${4:-0}" _thr="${5:-1800}"
+  [[ "$_dirty" == "1" && "$_now" =~ ^[0-9]+$ && "$_head" =~ ^[0-9]+$ && "$_since" =~ ^[0-9]+$ && "$_thr" =~ ^[0-9]+$ ]] || return 1
+  # 双时钟缺一不可：旧基线上刚出现的脏改不立即误报，持续编辑也不会重置超时。
+  (( _now - _head >= _thr && _now - _since >= _thr ))
+}
+
+org_review_timeout_should_delegate() { # <status> <now> <created-at> <threshold>
+  local _status="${1:-}" _now="${2:-0}" _created="${3:-0}" _thr="${4:-1800}"
+  [[ "$_status" == "todo" && "$_now" =~ ^[0-9]+$ && "$_created" =~ ^[0-9]+$ && "$_thr" =~ ^[0-9]+$ ]] || return 1
+  (( _created > 0 && _now - _created >= _thr ))
+}
+
+org_now() { printf '%s\n' "${MX_ORG_NOW:-$(date +%s)}"; }
+
+org_dm_agent() { # <owner> <text>：直达 owner 的 agent 账号，而非仅通知其人类账号
+  local _owner="$1" _text="$2"
+  mx_dm_send "$(load_token fanfan)" "$(agent_mxid "$_owner")" "$_text"
+}
+
+org_current_review_card() {
+  local _cid=""
+  if [[ -z "$(sget security_review_done)" ]]; then _cid="$(sget security_rgid)"; fi
+  [[ -n "$_cid" ]] || _cid="$(sget card_arch_g2)"
+  [[ -n "$_cid" ]] || _cid="$(sget g5_rgid)"
+  printf '%s\n' "${_cid:-${RFD_ID:-RFD-001}}"
+}
+
+org_review_todo_created() { # <board> <card> → 仅 todo 卡的 created_at；其他状态/缺席=0
+  local _board="$1" _cid="$2"
+  HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$_board" list --status todo --json 2>/dev/null \
+    | jq -r --arg id "$_cid" '.[]? | select(.id == $id) | (.created_at // 0)' 2>/dev/null | head -1 || true
+}
+
+org_review_delegate_card() { # <owner> <board> <card> <profile> <gate> <branch> <now> <threshold>
+  local _owner="$1" _board="$2" _cid="$3" _profile="$4" _gate="$5" _branch="$6" _now="$7" _thr="$8"
+  [[ -n "$_cid" ]] || return 0
+  local _created _dkey _delegated _head _msg _dm
+  _created="$(org_review_todo_created "$_board" "$_cid")"
+  org_review_timeout_should_delegate todo "$_now" "${_created:-0}" "$_thr" || return 0
+  _dkey="org_review_delegated_${_cid}"
+  _delegated="$(sget "$_dkey")"
+  [[ "$_delegated" == "$_created" ]] && return 0
+  _head="$(git -C "$DIRECTOR_CLONE" rev-parse --short=9 "origin/${_branch}" 2>/dev/null || true)"
+  [[ -n "$_head" ]] || _head="unknown"
+  issue_once review-todo-timeout "$_cid" "复审卡 ${_cid}@${_board} todo 已超 ${_thr}s——导演台代位指派 ${_profile}；验收锚=分支 ${_branch}＋提交 ${_head}＋评审卡 ${_cid}"
+  if ! HERMES_HOME="$HERMES_ROOT" "$HERMES_BIN" kanban --board "$_board" assign "$_cid" "$_profile" >/dev/null 2>&1; then
+    issue_once review-todo-assign-failed "$_cid" "复审卡 ${_cid} 代位 assign ${_profile} 失败，下拍重试（不代写判词、不走 done）"
+    return 0
+  fi
+  _msg="$(agent_mxid "$_owner") 【复评代位·导演台指派】评审卡 ${_cid}@${_board} 已 todo 超 ${_thr}s，现指派你为复评 owner（profile=${_profile}）。请立即读取卡面缺项与当前材料，独立复评并更新卡 body/result，分析群同步结论行 ${_gate}-PASS 或 ${_gate}-FAIL（附证据）；不得由导演代写判词，卡面未更新前闸不放行。验收锚=分支名=${_branch}＋提交号=${_head}＋评审卡号=${_cid}。"
+  _dm="$(org_dm_agent "$_owner" "$_msg")"
+  if [[ -n "$_dm" && "$_dm" != "SEND-FAILED" ]]; then
+    sset "$_dkey" "$_created"
+    note "[组织执行] 复审卡 ${_cid} todo 超 ${_thr}s——已代位 ${_profile} 并 DM ${_owner}（提交锚 ${_head}）"
+  else
+    issue_once review-todo-dm-failed "$_cid" "复审卡 ${_cid} 已代位 ${_profile} 但 DM 未送达，下拍重试（卡仍 ${_owner} 复评责任链）"
+  fi
+  return 0
+}
+
+org_review_delegate_scan() { # <now> <threshold>：只扫本轮三类复审卡，不代评不放闸
+  local _now="$1" _thr="$2" _spec _owner _board _cid _profile _gate _branch
+  for _spec in \
+    "secops|secops-audit-trail|$(sget security_rgid)|secops-auditor|SECURITY-GATE|main" \
+    "arch|arch-governance|$(sget card_arch_g2)|arch-governance-reviewer|ARCH-GATE|main" \
+    "fanfan|fanfan-review|$(sget g5_rgid)|fanfan-researcher|READY-GATE|integration/${RFD_ID}"; do
+    IFS='|' read -r _owner _board _cid _profile _gate _branch <<< "$_spec"
+    org_review_delegate_card "$_owner" "$_board" "$_cid" "$_profile" "$_gate" "$_branch" "$_now" "$_thr" || true
+  done
+  return 0
+}
+
+org_wip_scan_workspace() { # <owner> <worktree> <now> <threshold>：同 HEAD 持续脏态才判超时
+  local _owner="$1" _wt="$2" _now="$3" _thr="$4"
+  git -C "$_wt" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  local _key _seen_key _head_key _alert_key _status _head _head_ts _stored_head _since _fp _alert _branch _card _msg _dm_admin _dm_owner
+  _key="$(printf '%s' "$_wt" | shasum | cut -c1-16)"
+  _seen_key="org_wip_seen_${_key}"; _head_key="org_wip_head_${_key}"; _alert_key="org_wip_alert_${_key}"
+  _status="$(git -C "$_wt" status --porcelain=v1 2>/dev/null || true)"
+  if [[ -z "$_status" ]]; then
+    [[ -z "$(sget "$_seen_key")" && -z "$(sget "$_alert_key")" && -z "$(sget "$_head_key")" ]] || {
+      sset "$_seen_key" ""; sset "$_alert_key" ""; sset "$_head_key" "";
+    }
+    return 0
+  fi
+  _head="$(git -C "$_wt" rev-parse HEAD 2>/dev/null || true)"
+  _head_ts="$(git -C "$_wt" log -1 --format=%ct HEAD 2>/dev/null || true)"
+  [[ "$_head" =~ ^[0-9a-fA-F]+$ && "$_head_ts" =~ ^[0-9]+$ ]] || return 0
+  _stored_head="$(sget "$_head_key")"
+  if [[ "$_stored_head" != "$_head" ]]; then
+    sset "$_head_key" "$_head"; sset "$_seen_key" "$_now"; sset "$_alert_key" ""
+    return 0  # 新提交后的首个脏态观察点，只武装不立即告警
+  fi
+  _since="$(sget "$_seen_key")"
+  if [[ ! "$_since" =~ ^[0-9]+$ ]]; then sset "$_seen_key" "$_now"; return 0; fi
+  _fp="$( { printf '%s\n%s\n' "$_head" "$_status"; git -C "$_wt" diff --stat HEAD 2>/dev/null || true; } | shasum | cut -c1-16)"
+  _alert="$(sget "$_alert_key")"
+  [[ "$_alert" == "$_fp" ]] && return 0
+  org_wip_timeout_should_escalate 1 "$_now" "$_head_ts" "$_since" "$_thr" || return 0
+  _branch="$(git -C "$_wt" symbolic-ref --short -q HEAD 2>/dev/null || git -C "$_wt" rev-parse --short HEAD 2>/dev/null || printf 'unknown')"
+  _card="$(org_current_review_card)"
+  issue_once wip-timeout "${_key}-${_fp}" "修复工作区 ${_wt}（属主 ${_owner}）未提交改动持续 ≥${_thr}s 且 HEAD 超 ${_thr}s 未提交——分支 ${_branch}，HEAD ${_head:0:9}，评审卡 ${_card}，指纹 ${_fp}"
+  _msg="【WIP 超时升级】属主=${_owner}，工作区=${_wt}，未提交改动已持续 ≥${_thr}s，禁止继续只写不提交。请立即提交并推送当前修复，按原任务书结论行收口。验收锚=分支名=${_branch}＋提交号=${_head:0:9}（提交后更新为最新）＋评审卡号=${_card}。无提交=未完成，禁止只回执不落地。"
+  _dm_admin="$(org_dm_agent admin "${_msg}")"
+  _dm_owner="not-needed"
+  [[ "$_owner" == "admin" ]] || _dm_owner="$(org_dm_agent "$_owner" "${_msg}")"
+  if [[ -z "$_dm_admin" || "$_dm_admin" == "SEND-FAILED" || -z "$_dm_owner" || "$_dm_owner" == "SEND-FAILED" ]]; then
+    issue_once wip-timeout-dm-failed "${_key}-${_fp}" "WIP 超时工作区 ${_wt} 的导演台/属主 DM 至少一路未送达（admin=${_dm_admin:-empty}，owner=${_dm_owner:-empty}）；issue 已在案，同指纹不重复轰炸"
+  fi
+  sset "$_alert_key" "$_fp"  # issue/DM 均有自身失败留痕；同指纹不重复轰炸
+  note "[组织执行] WIP 超时升级：${_owner} ${_wt}（分支 ${_branch}，卡 ${_card}，指纹 ${_fp}）"
+  return 0
+}
+
+org_wip_scan_owner() { # <owner> <now> <threshold>：主工作区及其所有 linked worktree
+  local _owner="$1" _now="$2" _thr="$3" _root _wt
+  _root="$(workspace "$_owner")"
+  [[ -d "$_root" ]] || return 0
+  git -C "$_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  while IFS= read -r _wt; do
+    [[ -n "$_wt" ]] && org_wip_scan_workspace "$_owner" "$_wt" "$_now" "$_thr" || true
+  done < <(git -C "$_root" worktree list --porcelain 2>/dev/null | awk '/^worktree /{sub(/^worktree /, ""); print}')
+  return 0
+}
+
+org_execution_watch_once() { # 复用现有等待 tick；60s 节流，无新增守护进程
+  local _now _last _ival _wip_thr _review_thr _owner
+  _now="$(org_now)"; _last="${_ORG_WATCH_LAST_TS:-0}"; _ival="${MX_ORG_WATCH_IVAL:-60}"
+  (( _now - _last < _ival )) && return 0
+  _ORG_WATCH_LAST_TS="$_now"
+  _wip_thr="${MX_ORG_WIP_TIMEOUT:-1800}"; _review_thr="${MX_ORG_REVIEW_TIMEOUT:-1800}"
+  org_review_delegate_scan "$_now" "$_review_thr" || true
+  for _owner in chen hu lin xiao qi fei bella fanfan wei mei; do
+    org_wip_scan_owner "$_owner" "$_now" "$_wip_thr" || true
+  done
+  return 0
+}
+# ORG_EXECUTION_HELPERS_END
+
+# G2 失败续跑只回最近未过闸位；前序 review_done 已完成的派发/采集不再烧回合。
+_G2_REQUESTED_START="$START_STEP"
+START_STEP="$(org_g2_replay_start "$START_STEP" "$(sget review_done)" "$(sget g2_arch_pass)" "${MX_FULL_REPLAY:-0}" "$UNTIL_STEP")"
+if [[ "$START_STEP" != "$_G2_REQUESTED_START" ]]; then
+  note "[G2] 续跑起点=${START_STEP}（原 ${_G2_REQUESTED_START}；系分评审已成，跳过前序全链重放）"
+fi
+unset _G2_REQUESTED_START
+
 if ! dlv_enabled; then
   echo "ISSUE|product-surface-degraded|delivery-cases|MX_DELIVERY=0 显式关闭 delivery 协议面（R29：§5.6 采集纪律⑩ 降级口径记录，禁静默关旗标跑全程）" >> "$EVID_DIR/issues.log"
 fi
@@ -388,7 +558,7 @@ if step_reached reqgate; then
       # run23 挂账①：回灌 DM 旧形态 `mx_send ... >/dev/null 2>&1 || true` 全静默——
       # 消息未达即死信、无单无重试，run23 G1 阶段实录后只能人工回灌。改走
       # dm_send_tracked：回读确认+网关丢弃检测+自动重发（幂等：重发内嵌去重锚）。
-      _g1dm=$(dm_send_tracked bella fanfan "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。")
+      _g1dm=$(dm_send_tracked bella fanfan "@$(human_mxid bella) G1 准入退回：${RFD_DOC} 缺 ${JUDGE}请按 templates/prd.md 结构补齐（验收标准逐条 AC 编号且机械化可判）后重推。$(org_fix_acceptance_anchor main PRD-FIX-DONE "$RFD_ID")")
       note "[G1] 回灌 DM 送达结果：${_g1dm}"
       # 二轮：等待补齐（导演侧重拉重判，900s×2）
       ok2=""
@@ -850,6 +1020,9 @@ fi
 # 套模板：templates/design.md（五要素/备选方案）+ review-record.md（评审记录）。
 # 硬闸：G2 未过，close/plan（L2）不得执行。
 if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
+  _ORG_PREV_TICK="${MX_TICK_FN:-}"
+  MX_TICK_FN=org_execution_watch_once
+  org_execution_watch_once
   mx_gate_breaker_check g2 "G2 架构治理评审"   # 熔断：两轮未过不得开始 L2（跨调用持久）
   # ── 涉敏需求安全评审卡前置（run15 前置 P3-7①，审计 B 案：安全合规最薄的强制面）──
   # freeze 涉敏段非「无/否」时，G2 放行前须有 secops 安全评审卡+结论行——缺卡即拦，
@@ -910,7 +1083,7 @@ if step_reached archgate && [[ -z "$(sget g2_arch_pass)" ]]; then
           # 卡面已显式 FAIL：立即派上游修订（缺项清单在卡 result），闸保持不放行
           sset security_dispatched 1
           echo "ISSUE|security-review-card-fail|secops-agent|V8.28：卡面 result 已 done+FAIL——缺项清单即刻派上游修订（产品经理A 组织+应用研发AI 分工），闸不放行，等复审 PASS。锚：aipay-scenario.sh:789-804" >> "$EVID_DIR/issues.log"
-          dispatch_in_room fanfan "@fanfan-agent:matrix.test 安全评审 FAIL 退回：评审卡 ${SGID} result 已判 FAIL（缺项清单见卡）。请组织修订概设 docs/design/${RFD_ID}-architecture-design.md 对应缺项，修订 push origin main 后 @secops-agent 复审；复审 SECURITY-GATE-PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
+          dispatch_in_room fanfan "@fanfan-agent:matrix.test 安全评审 FAIL 退回：评审卡 ${SGID} result 已判 FAIL（缺项清单见卡）。请组织修订概设 docs/design/${RFD_ID}-architecture-design.md 对应缺项，修订 push origin main 后 @secops-agent 复审；复审 SECURITY-GATE-PASS 前 G2 不放行。禁谎报。$(org_fix_acceptance_anchor main SEC-FIX-DONE "$SGID")" "$(agent_mxid fanfan)" || true
         fi
         if [[ "$(mx_gate_verdict_combined "$(sget room_analysis)" "$(agent_mxid secops)" SECURITY-GATE "$SEC_TS" secops "${RFD_ID} 安全评审")" == "PASS" ]]; then
 if [ "$(posture)" = "strict" ]; then
@@ -980,7 +1153,7 @@ if [ "$(posture)" = "strict" ]; then
                 if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 1800 ]]; then
                   sset security_nudge_up $((_up_n + 1))
                   sset security_up_last_ts "$_now"
-                  dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_up_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：${_rr_result}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
+                  dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（第 $((_up_n + 1))/3 次）：head ${_rr_head} 的复审结论=FAIL（卡 ${SGID} result：${_rr_result}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审（闸依赖闭环）。复审 PASS 前 G2 不放行。禁谎报。$(org_fix_acceptance_anchor main SEC-FIX-DONE "$SGID")" "$(agent_mxid fanfan)" || true
                   note "[安全] 复审 FAIL 球在上游——催产品经理A 组织修订（第 $((_up_n + 1))/3 次，30min 间隔）"
                   if [[ "$_up_n" -eq 2 ]]; then
                     echo "ISSUE|security-upstream-escalate|director|闸依赖闭环升级（V8.29 修正③）：复审 FAIL 后催产品经理A 3 次（30min 间隔）仍无修订入仓——high 记录点名主管A 介入。闸不放行。锚：aipay-scenario.sh 复审超时分支" >> "$EVID_DIR/issues.log"
@@ -1012,6 +1185,7 @@ if [ "$(posture)" = "strict" ]; then
         if [[ "$(sget security_dispatched)" != "1" ]]; then
           sset security_dispatched 1
           echo "ISSUE|security-review-timeout|secops-agent|V8.28：secops 复审窗口超时未达结论——缺项修订已派上游（产品经理A 组织+4 名应用研发AI），闸不放行，等修订入仓+复审 PASS。锚：aipay-scenario.sh:848-861" >> "$EVID_DIR/issues.log"
+          dispatch_in_room fanfan "@fanfan-agent:matrix.test 安全评审超时缺项修复：评审卡 ${SGID} 未回结论，请按卡面已有缺项组织修订概设 docs/design/${RFD_ID}-architecture-design.md；无结论不等于无缺项，未明项须先在卡面补齐，不得空等。修订推送后由驱动派 secops 复审，SECURITY-GATE-PASS 前 G2 不放行。$(org_fix_acceptance_anchor main SEC-FIX-DONE "$SGID")" "$(agent_mxid fanfan)" || true
         fi
         # V8.29 hoist 补丁（12:4x 实录：闭环困在 FAIL 分支而流程走缺失分支=自愈死码）：
         # 缺失分支同样执行复审闭环三件套（修订落地检测/派复审/球位催办）——与 FAIL 分支
@@ -1062,7 +1236,7 @@ for c in json.load(sys.stdin):
     done
     if [[ "$_sub_dispatched" -gt 0 ]]; then
       sset subrev_auto_dispatched 1
-      dispatch_in_room fanfan "@fanfan-agent:matrix.test 派单补救（V8.29 驱动自持）：你建的 ${_sub_dispatched} 张 G2SREV-r1 子卡已由驱动按 D-项分派到对应研发 AI 并复制到研发板。子卡 body（12 项设计条款）需你手动补——按 arch 评审 r6/r7 缺项清单；补完后推 origin/main、驱动自动派复审。注：你的 profile 缺 worktree=0，唤不起新回合——hermes 已报「No home channel」。本轮 v8.29 自动派单已 12 子卡体填 patch，请你 check body 是否按 D-项补齐；缺 body 我会 30min 后重催。禁谎报。" "$(agent_mxid fanfan)" || true
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test 派单补救（V8.29 驱动自持）：你建的 ${_sub_dispatched} 张 G2SREV-r1 子卡已由驱动按 D-项分派到对应研发 AI 并复制到研发板。子卡 body（12 项设计条款）需你手动补——按 arch 评审 r6/r7 缺项清单；补完后推 origin/main、驱动自动派复审。注：你的 profile 缺 worktree=0，唤不起新回合——hermes 已报「No home channel」。本轮 v8.29 自动派单已 12 子卡体填 patch，请你 check body 是否按 D-项补齐；缺 body 我会 30min 后重催。禁谎报。$(org_fix_acceptance_anchor main G2SREV-DONE "$(org_current_review_card)")" "$(agent_mxid fanfan)" || true
       echo "ISSUE|subrev-auto-dispatched|director|闸依赖闭环第二刀（V8.29）：G2 总闸等待段驱动自持调 mx_dispatch_subrev 按 D-项拆派到 4 研发 AI+跨板复制（${_sub_dispatched} 张，幂等键 subrev_auto_dispatched=1）。产品经理 profile 缺 worktree=0 + home channel 丢失=子卡 body 补不进来，下轮须修。锚：aipay-scenario.sh G2 总闸" >> "$EVID_DIR/issues.log"
       note "[G2] r3 派单补救：驱动自持拆派 ${_sub_dispatched} 张子卡到 4 研发 AI（产品经理醒来仍要补 12 项 body）"
     fi
@@ -1096,7 +1270,7 @@ for a in last.get("anomalies", []):
       done
       if [[ "$_sub_dispatched" -gt 0 ]]; then
         sset subrev_auto_dispatched 1
-        dispatch_in_room fanfan "@fanfan-agent:matrix.test 派单补救（巡检官告警联动·驱动自持）：巡检官报 ${_sub_dispatched} 张 G2SREV 子卡未认领，驱动已按 D-项分派到 4 研发 AI。子卡 body 需你补 12 项设计条款（按 arch 评审缺项清单）；推 origin/main 后驱动自动派复审。禁谎报。" "$(agent_mxid fanfan)" || true
+        dispatch_in_room fanfan "@fanfan-agent:matrix.test 派单补救（巡检官告警联动·驱动自持）：巡检官报 ${_sub_dispatched} 张 G2SREV 子卡未认领，驱动已按 D-项分派到 4 研发 AI。子卡 body 需你补 12 项设计条款（按 arch 评审缺项清单）；推 origin/main 后驱动自动派复审。禁谎报。$(org_fix_acceptance_anchor main G2SREV-DONE "$(org_current_review_card)")" "$(agent_mxid fanfan)" || true
         echo "ISSUE|inspector-unassigned-dispatched|director|巡检官告警联动（V8.29）：card.unassigned-stale 告警触发驱动自持派单（${_sub_dispatched} 张子卡）。锚：aipay-scenario.sh G2 总闸" >> "$EVID_DIR/issues.log"
         note "[G2] 巡检官告警联动：${_sub_dispatched} 张子卡已由驱动自持派单（研发 AI 认领中）"
       fi
@@ -1111,7 +1285,7 @@ for a in last.get("anomalies", []):
         if [[ "$_up_n" -lt 3 && $(( _now - _up_last )) -ge 1800 ]]; then
           sset security_nudge_up $((_up_n + 1))
           sset security_up_last_ts "$_now"
-          dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（巡检官告警联动，第 $((_up_n + 1))/3 次）：复审环老化超阈（卡 t_f5cc53c5 result=FAIL，head ${_rr_head}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审。复审 PASS 前 G2 不放行。禁谎报。" "$(agent_mxid fanfan)" || true
+          dispatch_in_room fanfan "@fanfan-agent:matrix.test 修订组织催办（巡检官告警联动，第 $((_up_n + 1))/3 次）：复审环老化超阈（卡 t_f5cc53c5 result=FAIL，head ${_rr_head}）。请按卡面未过项组织下一轮修订并推 origin/main；合入后驱动将自动派复审。复审 PASS 前 G2 不放行。禁谎报。$(org_fix_acceptance_anchor main SEC-FIX-DONE "$(sget security_rgid)")" "$(agent_mxid fanfan)" || true
           note "[安全] 复审环老化告警联动：催产品经理A 组织修订（第 $((_up_n + 1))/3 次，30min 间隔）"
         fi
       else
@@ -1165,7 +1339,7 @@ if [ "$(posture)" = "strict" ]; then
       echo "ISSUE|g2-design-review-fail|arch-agent|${RFD_ID} G2 评审 FAIL（缺项见评审卡），回灌修订" >> "$EVID_DIR/issues.log"
       mx_gate_breaker_trip g2 "G2 架构治理评审" 1
       G2_RETRY_TS=$(( $(date +%s) * 1000 ))
-      dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评（复评结论行须同步更新评审卡 body 判词，卡面与房间行一致才放行）。" "$(agent_mxid fanfan)"
+      dispatch_in_room fanfan "@fanfan-agent:matrix.test G2 架构评审退回：请按评审卡 ${AGID} 的缺项清单修订概设并重推，修订后 @arch-agent 复评（复评结论行须同步更新评审卡 body 判词，卡面与房间行一致才放行）。$(org_fix_acceptance_anchor main ARCH-FIX-DONE "$AGID")" "$(agent_mxid fanfan)"
       # 复评触发权归驱动（2026-11-04 run26 复盘根治）：原设计把「修完喊复评」押在
       # 被退回者身上——run26 实锤 fanfan 01:18 已把修订稿推进 origin/main 却没 @
       # 复评人，arch 全程零回合，闸空等 81 分钟。驱动持有「修订落仓」这一事实，
@@ -1234,6 +1408,8 @@ if [ "$(posture)" = "strict" ]; then
     echo "ISSUE|g2-review-missing|arch-agent|G2 结论行 1800s 未达" >> "$EVID_DIR/issues.log"
     fail "G2 架构治理评审超时，中止（V3 硬闸；supervisor 续跑重入重评，闸语义保持）"
   fi
+  if [[ -n "$_ORG_PREV_TICK" ]]; then MX_TICK_FN="$_ORG_PREV_TICK"; else unset MX_TICK_FN; fi
+  unset _ORG_PREV_TICK
 fi
 
 # ══ 步骤 14：主任务归档关闭 ═══════════════════════════
@@ -1597,7 +1773,7 @@ DEVSPECS
   done
   if [[ -n "$_g3_miss" && "$(sget lite_round)" != "1" ]]; then
     note "[G3] 缺证分支[${_g3_miss} ]——派补证单并等待（run18 复盘 F4：缺证禁静默落键）"
-    dispatch_in_room chen "@chen-agent:matrix.test G3 补证：以下分支缺本地测试输出 docs/evidence/<任务>-testlog.txt（测试命令+结果原样落档后 push 各自 feat 分支）：${_g3_miss}。补齐回执结论行 G3-EVIDENCE-DONE。注意 testlog 属分支本地门禁证据，须由该分支 owner 补（@hu-agent @lin-agent @xiao-agent 如涉你们分支请各自补）。" "$(agent_mxid chen),$(agent_mxid hu),$(agent_mxid lin),$(agent_mxid xiao)"
+    dispatch_in_room chen "@chen-agent:matrix.test G3 补证：以下分支缺本地测试输出 docs/evidence/<任务>-testlog.txt（测试命令+结果原样落档后 push 各自 feat 分支）：${_g3_miss}。补齐回执结论行 G3-EVIDENCE-DONE。注意 testlog 属分支本地门禁证据，须由该分支 owner 补（@hu-agent @lin-agent @xiao-agent 如涉你们分支请各自补）。$(org_fix_acceptance_anchor 'feat/<任务分支>' G3-EVIDENCE-DONE "$RFD_ID")" "$(agent_mxid chen),$(agent_mxid hu),$(agent_mxid lin),$(agent_mxid xiao)"
     g3_testlogs_complete() {
       local b _rt
       for b in DEV-PAYCORE-C DEV-PAYCORE-S DEV-PAYCORE-N DEV-CHWX DEV-CHALI DEV-MP; do
@@ -1648,9 +1824,9 @@ fi
 # run24 复盘驱动面批（2026-11-02）等待期 tick：任何等待环（wait_truth/wait_alive_truth*）
 # 每拍调它——②复测预启动（新 [LEAD-MERGE] 合入即令 qi/fei 增量复测）+ ④跨域依赖看护
 # （fix/* 未合入即催域 lead）。两者自带节流（120s/300s）与幂等键，重复调用零动作。
-_stage_tick() { pretest_prestart_once; dependency_watch_once; }
+_stage_tick() { pretest_prestart_once; dependency_watch_once; org_execution_watch_once; }
 # G5 阶段 tick（run24 复盘批③）：在预热两件之外加派 early-start 预备步三键。
-_g5_tick() { mx_prep_early_start_tick; pretest_prestart_once; dependency_watch_once; }
+_g5_tick() { mx_prep_early_start_tick; pretest_prestart_once; dependency_watch_once; org_execution_watch_once; }
 if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
   # 段界锚：并行度实测以「── devimpl → ── defect」取窗，本行须最先落
   note "── defect：集成合并+测试执行+缺陷闭环段起（devimpl 段收尾分界锚）"
@@ -1831,34 +2007,34 @@ if step_reached defect && [[ -z "$(sget defect_done)" ]]; then
 _m19=$(    dispatch_task qi "执行测试任务 TEST-BE-S1（后端集成测试·支付核心片，与 S2/S3 并行各自会话）" \
       "TEST-PASS-TEST-BE-S1 或 TEST-FAIL-TEST-BE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S1 条目+docs/design/${RFD_ID}-architecture-design.md 契约；test-drafts/TEST-BE-draft.md 草稿核对；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S1 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复完成定义=提交并推送 fix/<DEF-X> 后回 FIX-DONE-<DEF-X> commit=<提交号> card=<缺陷卡号>（验收锚=分支名＋提交号＋评审卡号；无提交=未完成，禁止只回执不落地）；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)")
     dispatch_task qi "执行测试任务 TEST-BE-S2（后端集成测试·渠道回调片，与 S1/S3 并行各自会话）" \
       "TEST-PASS-TEST-BE-S2 或 TEST-FAIL-TEST-BE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S2 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S2 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复完成定义=提交并推送 fix/<DEF-X> 后回 FIX-DONE-<DEF-X> commit=<提交号> card=<缺陷卡号>（验收锚=分支名＋提交号＋评审卡号；无提交=未完成，禁止只回执不落地）；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task qi "执行测试任务 TEST-BE-S3（后端集成测试·调起参数片，与 S1/S2 并行各自会话）" \
       "TEST-PASS-TEST-BE-S3 或 TEST-FAIL-TEST-BE-S3（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-BE-S3 条目+概设契约；工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE-S3 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复完成定义=提交并推送 fix/<DEF-X> 后回 FIX-DONE-<DEF-X> commit=<提交号> card=<缺陷卡号>（验收锚=分支名＋提交号＋评审卡号；无提交=未完成，禁止只回执不落地）；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid qi),$(agent_mxid wei)"
     dispatch_task fei "执行测试任务 TEST-FE-S1（前端测试·逻辑层动态片）" \
       "TEST-PASS-TEST-FE-S1 或 TEST-FAIL-TEST-FE-S1（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S1 条目+概设契约；test-drafts/TEST-FE-draft.md 草稿核对；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S1 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复完成定义=提交并推送 fix/<DEF-X> 后回 FIX-DONE-<DEF-X> commit=<提交号> card=<缺陷卡号>（验收锚=分支名＋提交号＋评审卡号；无提交=未完成，禁止只回执不落地）；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     dispatch_task fei "执行测试任务 TEST-FE-S2（前端测试·静态守卫片，与 S1 并行各自会话）" \
       "TEST-PASS-TEST-FE-S2 或 TEST-FAIL-TEST-FE-S2（附用例数，行首）${FRESH_NOTE:-}" \
       "docs/plan/${RFD_ID}-schedule.md 测试任务表 TEST-FE-S2 条目+概设契约；工作区 $(workspace fei)：git fetch && git checkout -b test/TEST-FE-S2 origin/integration/${RFD_ID}" \
-      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复回执 FIX-DONE-<DEF-X>；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
+      "testlog 随分支提交（G3 证据；途中锚：首个用例跑通即 commit 一次——勿攒到最后一把推，run21 四复发立法）；缺陷走 defect-loop 流程（群内【缺陷】@对应研发带 P级/复现/期望实际/分支commit+affected=；建卡后群内一行 DEF-NEW-<DEF-X> card=<卡；FIX-DONE 契约强化（run27 O6）：FE 侧缺陷修复须由 fei 复测签名（FIX-DONE 行附「复测=fei TEST-PASS 附 commit」）；单项修复超 30 迭代未竟即先交付已完成部分并如实报进度（禁 60 迭代烧尽零提交——run27 xiao 实锤 2/6 未提交）ID> @研发档案；修复完成定义=提交并推送 fix/<DEF-X> 后回 FIX-DONE-<DEF-X> commit=<提交号> card=<缺陷卡号>（验收锚=分支名＋提交号＋评审卡号；无提交=未完成，禁止只回执不落地）；缺陷修复分支纪律（2026-10-18 冲突实录立法）：修复一律 push 自己的 fix/DEF-X 分支并 @你的域 lead 合并 integration（lead 守门消化冲突，合并提交带 [LEAD-MERGE] 标记）——禁止 fixer 直推 integration（并行修复撞分支无人解冲突）；大件修复增量提交纪律：每完成一类文件/一个子步即 commit+push 一次（WIP 版亦可）——在途必须有 checkpoint，防会话中断全部重来；复测回 FIX-DONE-VERIFIED-<DEF-X> 或 FAILED+原因；缺陷卡纪律（2026-10-29 run23 依赖图锁死立法）：DEF 卡为叶子工作——建卡不得挂父依赖（不 link 到复审/迁移/阻塞卡，防父链锁死结卡）；修复合入 integration 后 fixer 立即结卡（complete --result 注明 fix 分支与合并 commit），不得留 todo 挂账；每组完成即 push+群内一行 PROGRESS-<任务ID>-<组>" \
       "$(agent_mxid fei),$(agent_mxid mei)"
     else
     _m19=$(dispatch_in_room qi "@qi-agent:matrix.test 执行测试任务 TEST-BE（后端三应用集成测试）。
 （预备轮衔接：若你工作区 test-drafts/TEST-BE-draft.md 已有用例草稿，核对契约后补齐执行，未起草则从零写——两态均正常。）
 工作区 $(workspace qi)：git fetch && git checkout -b test/TEST-BE origin/integration/${RFD_ID}
 1) 按概设契约编写接口/集成测试（vitest 放 apps/test-integration/）：下单幂等、双渠道调起参数、回调验签拒绝、重复回调幂等、超时关单
-2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复回执 FIX-DONE-<DEF-X> commit=<id> branch=<名>（须已推送）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
+2) 执行全量测试；发现缺陷走 defect-loop 技能：本群发【缺陷】消息 @对应研发-agent（P级/复现/期望实际/分支commit+affected=<文件路径>——同文件缺陷串行修，异文件并行）；建缺陷卡后群内一行 DEF-NEW-<DEF-X> card=<卡ID> @<研发档案>（研发收到即开工不等提醒）；研发修复完成定义=提交并推送 fix/<DEF-X> 后回 FIX-DONE-<DEF-X> commit=<提交号> branch=fix/<DEF-X> card=<缺陷卡号>（验收锚=分支名＋提交号＋评审卡号；无提交=未完成，禁止只回执不落地）；复测通过回 FIX-DONE-VERIFIED-<DEF-X>、不通过回 FAILED+原因
 3) 结论行 TEST-PASS-TEST-BE 或 TEST-FAIL-TEST-BE（附用例数）。不许谎报。
 3b) 测试报告须含「跨模块契约用例清单」一节（列：用例编号/契约点/覆盖模块/结论）——审计判据 17 机械核对，缺节即不通过（2026-11-04 run26 复盘前移）。
 【dev_signal·V8.33 持续改进】上轮 review 关注点（最近 done 卡 result 抽 2 条）：$(dev_signal wei 2 2>/dev/null | tr '\n' ';' | head -c 300)
@@ -2371,7 +2547,10 @@ if [ "$(posture)" = "strict" ]; then
     body=$(kanban_list fanfan 2>/dev/null | jq -r --arg n "${RFD_ID} 发布准出" \
       '[.. | objects | select(has("title")) | select(((.title // "") + (.body // "")) | contains($n)) | .body][0] // ""' 2>/dev/null || true)
     local gaps
-    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[^，。；)]*[:：]?//' | cut -c1-120)
+    # N32-5 缺项显示完整性（2026-11-18 run31 复盘）：原 `缺项[^，。；)]*` 在首个右括号即停，
+    # 留下 `)。））` 残片（run31 21:08:40 driver.log 实锤）。改为：取「缺项」后内容至行尾，
+    # 仅剥末尾闭合括号与句读，截断 240 字符防歧义；多缺项含括注时保留完整段。
+    gaps=$(printf '%s' "$body" | grep -E '结论行.*READY-GATE-FAIL' | tail -1 | sed -E 's/.*缺项[:：]?//' | sed -E 's/[）)]+$//' | cut -c1-240)
     [[ -z "$gaps" ]] && gaps=$(printf '%s' "$body" | grep -oE 'R-[0-9]+' | sort -u | tr '\n' ' ' | cut -c1-120)
     [[ -z "$gaps" ]] && gaps="回滚阈值/灰度/发布说明（缺省文案——卡面未见显式缺项，以评审卡 GAP/缺项节为准）"
     printf '%s' "$gaps"
@@ -2405,7 +2584,7 @@ if [ "$(posture)" = "strict" ]; then
       for u in ${targets}; do
         rkey="g5_fanout_${rn#R-}_${u}"
         [[ -n "$(sget "${rkey}")" ]] && continue
-        m="@${u}-agent:matrix.test G5 退回自动分派（评审卡 ${RGID} 翻绿路径 ${rn}，只做这一件事）：${line}。完成后把产物推上 integration/${RFD_ID} 或更新评审卡对应节；与他人并行互不等待，勿扩权勿重复他人部分。"
+        m="@${u}-agent:matrix.test G5 退回自动分派（评审卡 ${RGID} 翻绿路径 ${rn}，只做这一件事）：${line}。完成后把产物推上 integration/${RFD_ID} 并更新评审卡对应节；与他人并行互不等待，勿扩权勿重复他人部分。$(org_fix_acceptance_anchor "integration/${RFD_ID}" "G5-FIX-DONE-${rn}" "$RGID")"
         dispatch_in_room "${u}" "${m}" "$(agent_mxid "${u}")" || true
         sset "${rkey}" "$(date +%s)"
         sent=$((sent+1))
@@ -2485,7 +2664,7 @@ if [ "$(posture)" = "strict" ]; then
           fail "G5 评审结论稳定（FAIL·缺项 ${_G5GAPS}），等待修复链证据变化后复位（V3 硬闸+run19 复盘根治）"
         fi
         G5_RETRY_TS=$(( $(date +%s) * 1000 ))
-        dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 真实缺项（${_G5GAPS}）补齐后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行；卡面已补项勿重做——如认为缺项不成立请按卡面证据改判）。" "$(agent_mxid fanfan)"
+        dispatch_in_room fanfan "@fanfan-agent:matrix.test G5 退回：按评审卡 ${RGID} 真实缺项（${_G5GAPS}）补齐后重报结论行（须同步更新评审卡 body 判词，卡面与房间行一致才放行；卡面已补项勿重做——如认为缺项不成立请按卡面证据改判）。$(org_fix_acceptance_anchor "integration/${RFD_ID}" READY-GATE-PASS "$RGID")" "$(agent_mxid fanfan)"
         # 2026-10-29 值守兜底：卡面 0 条 R-n 行时 grep 无匹配退出码会击穿错误管道杀驱动
         # （两实录）——分派 0 是合法结果；函数任何内部非零在此吞掉并如实记 0 条。
         g5_gap_fanout "${RGID}" || note "[G5] 退回自动分派跳过（fanout 内部异常，按 0 条如实记；run 后修复批根治）"
