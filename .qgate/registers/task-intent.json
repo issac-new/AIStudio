@@ -1,20 +1,32 @@
 {
-  "taskId": "retro-run31-impl-20261118",
-  "statement": "run31 复盘实施批：DISP 写入器闭环/断点闸前段/重灌 stamp 内容面/组织面三机制/缺项显示/kanban 读面/token 真值口径＋runtime 回灌＋索引补账",
+  "taskId": "vendor-v0232-hotfix-closeout-20261118",
+  "statement": "v0.23.2 换血批合入＋宿主热修回灌 4 枚＋3 退役＋runtime 镜像＋宿主部署收口（挂账 N-1/N-3/N-4' 清偿；用户令「完成挂账」）",
   "scope": [
-    "docs/**",
-    "simharness/**",
+    "vendor/**",
     "patches/**",
     "runtime/**",
-    ".swarm-yuan/**",
+    "docs/**",
+    "team/**",
+    "custom/__tests__/**",
     ".qgate/**",
-    "custom/qgate/**"
+    ".swarm-yuan/**",
+    ".archived-patches/**",
+    "AGENTS.md",
+    "README.md",
+    "RELEASE-MANIFEST.json",
+    "runtime-manifest.json"
   ],
   "acceptance": [
-    "When 运行 npm test Then 9194 全过",
-    "When 运行 bash simharness/tests/run-gates.sh Then EXIT=0",
-    "When 运行 npm run inject Then status=complete"
+    "When 运行 npm run inject Then status=complete 496 applied",
+    "When 运行 PYTHONPATH=vendor/hermes-agent:runtime python3.14 -m pytest runtime/tests Then 155 passed 0 failed",
+    "When 运行 node scripts/deploy-agent-runtime.mjs Then RESULT status=complete 0 差异"
   ],
-  "confirmedBy": "用户 2026-11-18 令「按照建议实施完成」",
-  "confirmedAt": "2026-11-18T04:43:45.340Z"
+  "confirmedBy": "用户 2026-11-18 令「完成挂账」",
+  "confirmedAt": "2026-11-18T13:29:54.742Z",
+  "revisions": [
+    {
+      "at": "2026-11-18T13:29:54.742Z",
+      "reason": "挂账收口批换登记：retro-run31 批已推送收口（origin/main 含其提交），其 intent 残留拦住本批；本批为 v0232+热修回灌批按用户令「完成挂账」重新登记 scope"
+    }
+  ]
 }
