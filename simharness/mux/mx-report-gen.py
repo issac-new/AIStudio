@@ -2228,7 +2228,7 @@ CHECKPOINTS = [
     ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全完整循环', '人 · 测试工程师A/测试工程师B 独立执行', 'ui-gov-test', _CP_G4.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；scenario.log/评审卡可反查）')),
     ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', _CP_G5.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；评审卡/approved.events 可反查）')),
     ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · 需求分析师A 验收', 'ui-gov-uat', _CP_UAT.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；验收书/房间证据行可反查）')),
-    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入跨轮记忆库', '人 · 全员 + 治理', 'ui-gov-retro', _CP_G6.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；治理报告/记忆探针可反查）')),
+    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账（人工复核升桶进行中），经验入跨轮记忆库', '人 · 全员 + 治理', 'ui-gov-retro', _CP_G6.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；治理报告/记忆探针可反查）')),
 ]
 
 # 卡点证据行按轮覆写（2026-10-07 修复：静态行写死旧轮锚——"T-101~T-108"系 run9 前编号、
@@ -2282,7 +2282,7 @@ GATE_DESC = {
     'G3': '编码门禁：测试证据随分支，无设计不编码',
     'G4': '独立验证：测试≠编码，缺陷全完整循环',
     'G5': '发布准出：七项检查+人工批准才上线',
-    'G6': '复盘：问题单 100% 处置，经验入记忆库',
+    'G6': '复盘：问题单 100% 记账（人工复核升桶进行中），经验入记忆库',
 }
 # R16 操作入口（V5 补遗⑥）：轮次无关的产品事实，报告内可复现路径
 try:
@@ -5059,6 +5059,40 @@ _gov_verdict_body = (
 ) + f' 姿态口径（V8.29 §5.9）：本轮 posture={_posture_value()}，代偿台账 open {sum(1 for r in _ledger_rows() if r["status"] == "open")} 笔——本结论属含代偿口径，净额口径见「推演姿态与代偿净额对账」节。'
 _gov_ev2, _gov_ev3 = _gov_evidence()
 
+def _token_usage_card():
+    """run31 复盘 N33-2：token 真值入报告（数据源=各 profile state.db.session_model_usage，
+    provider 回报口径；表缺席=不渲染不猜数）。分「调用/输入/输出/缓存读/成本」五列。"""
+    import glob as _g, sqlite3 as _sq, os as _os
+    started = 0
+    try:
+        started = int(float(state.get('run_started_at') or 0))
+    except (TypeError, ValueError):
+        started = 0
+    rows = []
+    for db in sorted(_g.glob(str(SIM / 'hermes' / 'profiles' / '*' / 'state.db'))):
+        try:
+            c = _sq.connect(f'file:{db}?mode=ro', uri=True)
+            r = c.execute("SELECT COALESCE(SUM(api_call_count),0),COALESCE(SUM(input_tokens),0),COALESCE(SUM(output_tokens),0),COALESCE(SUM(cache_read_tokens),0),COALESCE(SUM(estimated_cost_usd),0) FROM session_model_usage WHERE last_seen >= ?", (started,)).fetchone()
+            c.close()
+            if r and r[0]:
+                rows.append((db.split('/')[-2], *r))
+        except Exception:
+            continue
+    if not rows:
+        return ''
+    t_calls = sum(r[1] for r in rows)
+    t_in = sum(r[2] for r in rows)
+    t_out = sum(r[3] for r in rows)
+    t_cr = sum(r[4] for r in rows)
+    t_cost = sum(r[5] for r in rows)
+    return (f'<div class="card" style="margin:14px 0"><h3>本轮 token 能耗（真值口径）</h3>'
+            f'<table style="font-size:13px"><tr><th>API 调用</th><th>输入 tokens</th><th>输出 tokens</th>'
+            f'<th>缓存读</th><th>估算成本</th></tr>'
+            f'<tr><td>{t_calls:,}</td><td>{t_in:,}</td><td>{t_out:,}</td>'
+            f'<td>{t_cr:,}</td><td>${t_cost:.2f}</td></tr></table>'
+            f'<div style="font-size:12px;color:#6b7280">数据源=各 profile state.db 的 session_model_usage 表'
+            f'（provider 回报，非转录估算）；统计窗=run_started_at 至今；{len(rows)} 个 profile 有产出。</div></div>')
+
 def gov_final_rows():
     rows = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
@@ -6229,7 +6263,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
 
   <h2 class="section-hd" id="ch9-gov">第 5 章 · 治理系统工作了吗？</h2>
-  <p class="stat-note">本章回答一个问题：AIStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 处置、经验积累、度量可追踪）。</p>
+  <p class="stat-note">本章回答一个问题：AIStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 记账、经验积累、度量可追踪——记账≠已修复，人工复核升桶进行中）。</p>
 
   <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid {_gov_verdict_color}">
     <b style="color:{_gov_verdict_color}">结论：{_gov_verdict_title}</b>——{_gov_verdict_body}
@@ -6239,6 +6273,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <div class="govgrid">
     <table><tr><th>度量</th><th>终态值</th><th>含义</th></tr>
     {gov_metrics_rows}
+  </div>
+  {_token_usage_card()}
+  <div class="govgrid">
     <tr><td>修复率（已修 ÷ 唯一键）</td><td>{n_fixed}/{n_issue_keys}（{f'{n_fixed * 100 // n_issue_keys}%' if n_issue_keys else '0%'}）</td><td>run27 复盘新增（2026-11-06）：记账完成≠修复——观察/延后桶不计修复，此项才是「缺陷报→修→验」口径</td></tr>
     <tr><td>发布基线</td><td>aipaydev main {main_sha}</td><td>构建可复现的锚点</td></tr>
     <tr><td>记账完成率（DISP 分桶）</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失（≠已修复）；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
