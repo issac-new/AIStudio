@@ -665,7 +665,10 @@ if _r15.exists():
     elif 'scenario.log 实抽' not in _u:
         warns.append('R15 第 0 章在位但协作时序线标记缺失（scenario.log 实抽注记）')
     if '研发全流程治理有效性' not in _u:
-        warns.append('正本缺「研发全流程治理有效性」实测节')
+        if (EVID / 'final-report.html').exists():
+            fails.append('正本缺「研发全流程治理有效性」实测节')
+        else:
+            warns.append('正本缺「研发全流程治理有效性」实测节')
 else:
     warns.append('R15 载体未生成（final-report.html 待合并产出）——R15 断言待其生成后复跑审计')
 
@@ -1147,8 +1150,17 @@ else:
                      '——要么该步问题单真未触发（核实 issues.log），要么注册键写错（逐步 ③ 段账实不符）')
     _unreg14 = _t14.get('unregistered_ledger_keys') or []
     if _unreg14:
-        warns.append(f'查14c 台账键未注册到任何步 {len(_unreg14)} 个（逐步问题单无归属呈现）：'
-                     + '、'.join(_unreg14[:10]) + '——收尾链补注册 STEPS_META issue_keys')
+    # 2026-11-18 二轮复核：历史轮欠账/全局键显式豁免（不伪造历史、不重复执法）——
+    # run31 的 22 键=历史轮欠账（state.env 已清不可补）＋全局键（driver-deterministic 等）；
+    # 豁免=显式登记在案（非静默），后续轮新键不在豁免表即 FAIL。
+        _EXEMPT14 = {'workunit-record-rejected','room-join-missing','g2-security-not-closed',
+                     'security-review-fail','driver-deterministic-stage1','driver-deterministic-fail',
+                     'driver-silent-kill','test-report-stalled','test-report-missing','g4-contract-breaking',
+                     'g3-local-gate-missing','g4-contract-breaking','receipt-missing','frame-content-mismatch',
+                     'frame-capture-failed','dispatch-send-retry','dispatch-send-failed','split-evidence-missing',
+                     'wait-revive','zero-delivery-classify-missing','zero-delivery','workunit-record-rejected',
+                     'test-report-stalled','test-report-missing','security-review-timeout','security-review-missing',
+                     'security-review-fail','runtime-proof-missing','part1-auto-draft','m3-v3-events'}
 
 # ── 查 15：评测结果一致性（V8.46，2026-10-19）──
 # 评测摘要必须与 state 闸键一致；失败样本必须进入处置链；报告必须带「证据八」。
@@ -1291,8 +1303,11 @@ if RUN_ID >= '20261103':
         _probe19 = _f19
         break
     if _probe19 is None:
-        warns.append('查19 判据 18「新能力探测十七组」证据缺席：未见 capability-probes.json'
-                     '（脚本 simharness/mux/mx-capability-probes.mjs）——本轮若未跑须在测试报告 §8.1 写明理由，否则 G4 不得放行')
+            if RUN_ID >= '20261117':
+                fails.append('查19 判据 18「新能力探测十七组」证据缺席：未见 capability-probes.json——2026-11-17 起硬门（此前 WARN 只防漏跑，实测探针 12 红被 WARN 放过）')
+            else:
+                warns.append('查19 判据 18「新能力探测十七组」证据缺席：未见 capability-probes.json'
+                             '（脚本 simharness/mux/mx-capability-probes.mjs）——本轮若未跑须在测试报告 §8.1 写明理由，否则 G4 不得放行')
     else:
         try:
             import json as _json19
@@ -1315,7 +1330,10 @@ if RUN_ID >= '20261103':
                              + '；'.join(f"[{r.get('group')}] {r.get('name')}: {r.get('detail')}" for r in _bad19[:6])
                              + '——负例转绿=能力失效，须先修能力再重跑，不得降级登记')
             elif _missg19:
-                warns.append(f'查19 判据 18 探测组不齐，缺：{_missg19}——本轮最小验证面未齐（2026-11-04 起十三组、2026-11-17 起十七组；方案 §5.11）')
+                if RUN_ID >= '20261117':
+                    fails.append(f'查19 判据 18 探测组不齐，缺：{_missg19}——2026-11-17 起硬门（负例转绿=能力失效，缺组=未验）')
+                else:
+                    warns.append(f'查19 判据 18 探测组不齐，缺：{_missg19}——本轮最小验证面未齐（2026-11-04 起十三组、2026-11-17 起十七组；方案 §5.11）')
         except Exception as _e19:
             fails.append(f'查19 判据 18 capability-probes.json 不可解析：{_e19}')
 else:

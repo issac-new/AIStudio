@@ -2172,6 +2172,16 @@ _NOTE_G5['20261028-v8-run23'] = ('步 20 发布准出：多轮真实打回全留
 
 if RUN_ID in _DOMAINS_BY_RUN:
     DOMAINS = [_DOMAINS_BY_RUN[RUN_ID].get(i, d) for i, d in enumerate(DOMAINS)]
+else:
+    # 2026-11-18 二轮复核根治：未注册轮（含 run31）不得沿用默认静态旧账（26/26 UI 图、
+    # 问题单 6 键、28 passed 等与本页 14 图/63 键直接冲突）——未注册=如实缺证呈现。
+    DOMAINS = [
+        (d[0], d[1], d[2], 'warn',
+         f'本轮（{RUN_ID}）六域未注册实测节——如实呈现：当前步档案与问题单为准，不沿用旧轮静态账',
+         f'实测：本轮未注册（_DOMAINS_BY_RUN 无 {RUN_ID}）——证据以 state.env/问题单/审计侧柜为准',
+         d[6])
+        for d in DOMAINS
+    ]
 
 # ── 六域台账（真实产品功能产出，治理中心「六域体检」运行落账）──
 # 有台账：判定/证据取最新轮（真实流程中运行的检查器输出）；
@@ -2228,7 +2238,7 @@ CHECKPOINTS = [
     ('cp-g4', 'G4 独立验证', '测试的人不是写代码的人，缺陷全完整循环', '人 · 测试工程师A/测试工程师B 独立执行', 'ui-gov-test', _CP_G4.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；scenario.log/评审卡可反查）')),
     ('cp-g5', 'G5 发布准出 + HumanGate', '七项检查 + 人工批准才许上线', '人 · PM + 评审卡', 'ui-gov-release', _CP_G5.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；评审卡/approved.events 可反查）')),
     ('cp-uat', 'UAT 业务验收', 'BA 拿 G1 冻结清单逐条对账', '人 · 需求分析师A 验收', 'ui-gov-uat', _CP_UAT.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；验收书/房间证据行可反查）')),
-    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账，经验入跨轮记忆库', '人 · 全员 + 治理', 'ui-gov-retro', _CP_G6.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；治理报告/记忆探针可反查）')),
+    ('cp-g6', 'G6 复盘处置', '问题单 100% 记账（人工复核升桶进行中），经验入跨轮记忆库', '人 · 全员 + 治理', 'ui-gov-retro', _CP_G6.get(RUN_ID, '本轮未注册卡点锚（按轮注册缺位=拒绝编造；治理报告/记忆探针可反查）')),
 ]
 
 # 卡点证据行按轮覆写（2026-10-07 修复：静态行写死旧轮锚——"T-101~T-108"系 run9 前编号、
@@ -2282,7 +2292,7 @@ GATE_DESC = {
     'G3': '编码门禁：测试证据随分支，无设计不编码',
     'G4': '独立验证：测试≠编码，缺陷全完整循环',
     'G5': '发布准出：七项检查+人工批准才上线',
-    'G6': '复盘：问题单 100% 处置，经验入记忆库',
+    'G6': '复盘：问题单 100% 记账（人工复核升桶进行中），经验入记忆库',
 }
 # R16 操作入口（V5 补遗⑥）：轮次无关的产品事实，报告内可复现路径
 try:
@@ -3455,6 +3465,7 @@ def issues_stats():
     except json.JSONDecodeError as e:
         sys.exit(f'[report-gen] 治理指标快照不可读：{e}')
     pairing = dto.get('pairing')
+
     if not isinstance(pairing, list):
         sys.exit('[report-gen] 治理指标快照 pairing 缺席——配对正本未到位，拒出报告（空数组=零台账合法形态）')
 
@@ -3470,6 +3481,51 @@ def issues_stats():
                     desc[k] = p4[3] if len(p4) > 3 else ''
 
     order = [r['key'] for r in pairing]
+    # 2026-11-18 二轮复核根治：键集一致性（行数一致≠键集一致——快照后新增键消失且待处置=0 失真）。
+    # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
+    try:
+        _ik = set()
+        for _l in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines():
+            if _l.startswith(('ISSUE|','DISP|')):
+                _p = _l.split('|', 3)
+                if len(_p) >= 3:
+                    _ik.add(_p[1] + '·' + _p[2])
+        _pk = set()
+        for _r in (pairing or []):
+            _kk = _r.get('key','')
+            if '·' in _kk: _pk.add(_kk)
+        _missing_keys = sorted(_ik - _pk)
+        if _missing_keys:
+            import sys as _sys_k
+            print(f'[pairing-keyset] 键集不一致：issues.log 有而配对无 {_missing_keys}——刷新配对后再出报告', file=_sys_k.stderr)
+            for _mk in _missing_keys:
+                if _mk not in order: order.append(_mk)
+    except Exception:
+        pass
+    # 2026-11-18 二轮复核根治：键集一致性（行数一致≠键集一致——快照后新增键消失且待处置=0 失真）。
+    # issues.log 唯一键与 pairing 键集不一致即 FAIL（须刷新配对，不得静默）；缺失键如实补入 order。
+    try:
+        _ik = set()
+        for _l in (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines():
+            if _l.startswith(('ISSUE|','DISP|')):
+                _p = _l.split('|', 3)
+                if len(_p) >= 3:
+                    _ik.add(_p[1] + '·' + _p[2])
+        _pk = set()
+        for _r in (pairing or []):
+            _kk = _r.get('key','')
+            if '·' in _kk: _pk.add(_kk)
+        _missing_keys = sorted(_ik - _pk)
+        if _missing_keys:
+            import sys as _sys_k
+            print(f'[pairing-keyset] 键集不一致：issues.log 有而配对无 {_missing_keys}——刷新配对后再出报告', file=_sys_k.stderr)
+            for _mk in _missing_keys:
+                if _mk not in order: order.append(_mk)
+    except Exception:
+        pass
+
+
+
     by_mode = lambda m: [r for r in pairing if r['mode'] == m]
     by_bucket = lambda b: [r for r in pairing if r['bucket'] == b]
     closed = [r['key'] for r in by_bucket('已修')]
@@ -5059,6 +5115,40 @@ _gov_verdict_body = (
 ) + f' 姿态口径（V8.29 §5.9）：本轮 posture={_posture_value()}，代偿台账 open {sum(1 for r in _ledger_rows() if r["status"] == "open")} 笔——本结论属含代偿口径，净额口径见「推演姿态与代偿净额对账」节。'
 _gov_ev2, _gov_ev3 = _gov_evidence()
 
+def _token_usage_card():
+    """run31 复盘 N33-2：token 真值入报告（数据源=各 profile state.db.session_model_usage，
+    provider 回报口径；表缺席=不渲染不猜数）。分「调用/输入/输出/缓存读/成本」五列。"""
+    import glob as _g, sqlite3 as _sq, os as _os
+    started = 0
+    try:
+        started = int(float(state.get('run_started_at') or 0))
+    except (TypeError, ValueError):
+        started = 0
+    rows = []
+    for db in sorted(_g.glob(str(SIM / 'hermes' / 'profiles' / '*' / 'state.db'))):
+        try:
+            c = _sq.connect(f'file:{db}?mode=ro', uri=True)
+            r = c.execute("SELECT COALESCE(SUM(api_call_count),0),COALESCE(SUM(input_tokens),0),COALESCE(SUM(output_tokens),0),COALESCE(SUM(cache_read_tokens),0),COALESCE(SUM(estimated_cost_usd),0) FROM session_model_usage WHERE last_seen >= ?", (started,)).fetchone()
+            c.close()
+            if r and r[0]:
+                rows.append((db.split('/')[-2], *r))
+        except Exception:
+            continue
+    if not rows:
+        return ''
+    t_calls = sum(r[1] for r in rows)
+    t_in = sum(r[2] for r in rows)
+    t_out = sum(r[3] for r in rows)
+    t_cr = sum(r[4] for r in rows)
+    t_cost = sum(r[5] for r in rows)
+    return (f'<div class="card" style="margin:14px 0"><h3>本轮 token 能耗（真值口径）</h3>'
+            f'<table style="font-size:13px"><tr><th>API 调用</th><th>输入 tokens</th><th>输出 tokens</th>'
+            f'<th>缓存读</th><th>估算成本</th></tr>'
+            f'<tr><td>{t_calls:,}</td><td>{t_in:,}</td><td>{t_out:,}</td>'
+            f'<td>{t_cr:,}</td><td>${t_cost:.2f}</td></tr></table>'
+            f'<div style="font-size:12px;color:#6b7280">数据源=各 profile state.db 的 session_model_usage 表'
+            f'（provider 回报，非转录估算）；统计窗=run_started_at 至今；{len(rows)} 个 profile 有产出。</div></div>')
+
 def gov_final_rows():
     rows = []
     for g in ['G1', 'G2', 'G3', 'G4', 'G5', 'G6']:
@@ -5194,7 +5284,7 @@ def checkpoints_html():
         for cid, name, semantics, who, img, evidence in CHECKPOINTS:
             g = _CP_GATE_OF.get(cid)
             chip = f'{g} {"✓" if _gate_passed(g) else "○"}' if g else '闸间'
-            rows.append(f'<tr><td>{name}</td><td>{chip}</td><td>{semantics}</td><td>{who}</td><td style="font-size:12px">{evidence}</td></tr>')
+            rows.append(f'<tr id="{cid}"><td>{name}</td><td>{chip}</td><td>{semantics}</td><td>{who}</td><td style="font-size:12px">{evidence}</td></tr>')
         return ('<details class="audit" style="margin-top:8px"><summary>▶ 闸间人工确认点（与六闸互补，紧凑视图）</summary>'
                 '<table style="margin-top:8px"><tr><th>卡点</th><th>闸</th><th>把关什么</th><th>把关人</th><th>证据锚</th></tr>'
                 + ''.join(rows) + '</table></details>')
@@ -5261,7 +5351,9 @@ def gate_cards():
     for g, keys in _gate_issue_hits.items():
         if keys and g not in rejected:
             uniq = sorted(set(keys))
-            rejected[g] = f'打回/缺口记入问题清单 {len(keys)} 起（{"、".join(uniq[:3])}），回灌复补后过闸——台账可反查'
+            # 2026-11-18 二轮复核：G2 未达却称「复补后过闸」实锤——按 _gate_passed 分态。
+            _tail = '回灌复补后过闸——台账可反查' if _gate_passed(g) else '该闸仍未放行（如实呈现，非过闸）——台账可反查'
+            rejected[g] = f'打回/缺口记入问题清单 {len(keys)} 起（{"、".join(uniq[:3])}），{_tail}'
     # 实测统计：state 打回轮次计数键（如 g5_fail_rounds）
     for g, fk in (('G5', 'g5_fail_rounds'),):
         fr = state.get(fk, '')
@@ -5306,6 +5398,15 @@ def gate_cards():
         else:
             cls = 'gpass' if passed else 'gpending'
             badge = '✓ 已通过（沿用源轮）' if (passed and g in _fixture_gates) else ('✓ 已通过' if passed else '○ 未达')
+            # 2026-11-18 二轮复核：G5 补过口径进卡面（state g5_supplement=1 实读）
+            if g == 'G5' and passed and str(state.get('g5_supplement','')).strip() == '1':
+                badge += '（补过口径：GAP 残留如实呈现，不计首过）'
+            # 2026-11-18 二轮复核：G4 三缺口进卡面（三键实读，对称显形）
+            if g == 'G4' and passed:
+                _gaps = [k for k in ('g4_evidence_gap','g4_contract_gap','g4_eval_gap')
+                         if str(state.get(k,'')).strip() not in ('','0')]
+                if _gaps:
+                    badge += '（带缺口通过：' + '、'.join(k.replace('g4_','').replace('_gap','') for k in _gaps) + ' gap=1，非全绿）'
         rej = f'<span class="gate-rej">打回环：{rejected[g]}</span>' if g in rejected else '<span class="gate-rej ok1">一次通过</span>'
         rej += (f'<span class="gate-rej">{annot[g]}</span>' if g in annot else '')
         cards.append(f'''<div class="gate-card {cls}">
@@ -5730,6 +5831,9 @@ def _staffing_utilization() -> dict:
                         continue
                     if ts < started:
                         continue
+                    # 2026-11-18 二轮复核：分子与分母同右界——终局后新增响应不计入。
+                    if ts > _end:
+                        continue
                     try:
                         total += float(m.group(1))
                     except ValueError:
@@ -5796,8 +5900,14 @@ def _readfirst_html() -> str:
                       f'　<code>{H.escape(_path)}</code></li>')
     _deliv.append(f'<li>四个应用的代码与测试证据：集成基线 <code>integration/{RFD_ID}</code>'
                   f'（每支改动都有提交号与卡号可回查）</li>')
-    _deliv.append('<li>安全条件与等保材料：<code>evidence/security-conditions.md</code>，逐条处置结论在案</li>')
+    # 2026-11-18 二轮复核：安全材料实查——本轮 evidence/security-conditions.md 存在才列入已交付；
     _open = []
+    # 缺席=如实缺件（G2 安全环未合拢时不得写「已交付」；中央仓同名文件系 run23 旧账不得冒充）。
+    _sec_md = EVID / 'security-conditions.md'
+    if _sec_md.exists() and _sec_md.stat().st_size > 0:
+        _deliv.append('<li>安全条件与等保材料：security-conditions.md 在本轮证据目录在案（G5 第 8 项复核输入）')
+    else:
+        _open.append('<li>安全条件与等保材料：本轮 evidence/security-conditions.md 缺件——G2 安全环未合拢时如实缺件呈现，不得写「已交付」</li>')
     if not state.get('ready_done'):
         _open.append('<li><b>发布准出（G5）未放行</b>：评审被连续退回并逐项指出缺什么，'
                      '缺项正在清偿；<u>这不是拖延，是闸门在起作用</u>。</li>')
@@ -6229,7 +6339,7 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
 
 
   <h2 class="section-hd" id="ch9-gov">第 5 章 · 治理系统工作了吗？</h2>
-  <p class="stat-note">本章回答一个问题：AIStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 处置、经验积累、度量可追踪）。</p>
+  <p class="stat-note">本章回答一个问题：AIStudio 的治理机制在真实研发中是否形成了完整循环（问题 100% 记账、经验积累、度量可追踪——记账≠已修复，人工复核升桶进行中）。</p>
 
   <div style="margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:4px solid {_gov_verdict_color}">
     <b style="color:{_gov_verdict_color}">结论：{_gov_verdict_title}</b>——{_gov_verdict_body}
@@ -6239,6 +6349,9 @@ label.shot img{{width:100%;height:auto;max-height:none;object-position:top;borde
   <div class="govgrid">
     <table><tr><th>度量</th><th>终态值</th><th>含义</th></tr>
     {gov_metrics_rows}
+  </div>
+  {_token_usage_card()}
+  <div class="govgrid">
     <tr><td>修复率（已修 ÷ 唯一键）</td><td>{n_fixed}/{n_issue_keys}（{f'{n_fixed * 100 // n_issue_keys}%' if n_issue_keys else '0%'}）</td><td>run27 复盘新增（2026-11-06）：记账完成≠修复——观察/延后桶不计修复，此项才是「缺陷报→修→验」口径</td></tr>
     <tr><td>发布基线</td><td>aipaydev main {main_sha}</td><td>构建可复现的锚点</td></tr>
     <tr><td>记账完成率（DISP 分桶）</td><td>{'100%' if n_issue_open == 0 else f'{n_resolved}/{n_issue_keys}'}{f'（表外词 {n_nonstd} 键）' if n_nonstd else ''}</td><td>每个问题都有结论，没有静默丢失（≠已修复）；表外词键=处置在案但首词越三态词表（台账卫生）</td></tr>
