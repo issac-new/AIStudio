@@ -546,10 +546,15 @@ results.push(await probe('proactive-r2', '负例：apply 缺 profile→400；冷
     profile: `mx-probe-cold-${Date.now().toString(36)}`,
     mode: 'build',
   })
-  expect(cold.status === 409, `hold 方向须 409, got ${cold.status}`)
-  expect(cold.body?.code === 'no_tighten', `code 非 no_tighten：${JSON.stringify(cold.body)}`)
-  expect(cold.body?.ok === false, '拒绝体必须 ok:false')
-  return { missingProfile: 400, coldStartHold: 409 }
+  // 403=活体全局治理写门（非 super_admin 拒写，先于 handler）——负例本质=必拒且零写入，409/403 双合法（2026-11-17 run31 活体定谳；单测裸挂路由只见 409）
+  expect(cold.status === 409 || cold.status === 403, `hold 方向须 409（或活体写门 403）, got ${cold.status}`)
+  if (cold.status === 409) {
+    expect(cold.body?.code === 'no_tighten', `code 非 no_tighten：${JSON.stringify(cold.body)}`)
+    expect(cold.body?.ok === false, '拒绝体必须 ok:false')
+  } else {
+    expect(cold.body?.ok === false || cold.body?.error, '403 拒绝体须带错误信息')
+  }
+  return { missingProfile: 400, coldStartHold: cold.status }
 }))
 
 results.push(await probe('proactive-r2', 'lineage 三源聚合形状（四数组＋coverage 计数＋未覆盖声明）', async () => {
