@@ -112,7 +112,7 @@ function onCancel(value: { actionId: string }): void {
 <template>
   <section class="ekko-surface-card" :data-surface-id="surfaceId">
     <header class="ekko-surface-card-head">
-      <span class="ekko-surface-card-icon" aria-hidden="true">▤</span>
+      <span class="ekko-surface-card-dot" :class="statusTone" aria-hidden="true" />
       <span class="ekko-surface-card-title">{{ validation.ok ? (validation.spec?.title || '交互界面') : '交互界面' }}</span>
       <span class="ekko-surface-card-status" :class="statusTone">{{ statusLabel }}</span>
     </header>
@@ -150,38 +150,97 @@ function onCancel(value: { actionId: string }): void {
 </template>
 
 <style scoped>
+/* 科技感皮肤：全部视觉从 Pure Ink token 用 color-mix 派生（spec D2），亮暗主题自动成立 */
 .ekko-surface-card {
+  /* 皮肤交互色：宿主定义（Agent 不可控，spec D2 修订）；青蓝系科技感 */
+  --ekko-skin-accent: #0891b2;
+  --ekko-skin-accent-hover: #0e7490;
+  --ekko-skin-on-accent: #ffffff;
+
+  position: relative;
   margin: 6px 0;
-  border: 1px solid var(--border-color);
+  border: 1px solid color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 32%, var(--border-color));
   border-radius: var(--radius-component);
-  background: var(--msg-assistant-bg);
+  /* 玻璃拟态：半透明底 + 背景模糊 */
+  background: color-mix(in srgb, var(--msg-assistant-bg) 72%, transparent);
+  backdrop-filter: blur(12px);
   overflow: hidden;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 10%, transparent),
+    0 0 24px color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 8%, transparent),
+    0 8px 24px rgb(0 0 0 / 10%);
+}
+/* 顶部 accent 渐变光带 */
+.ekko-surface-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 4%, color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 85%, transparent), transparent 96%);
+  pointer-events: none;
 }
 .ekko-surface-card-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border-light);
-  background: var(--bg-tertiary);
+  padding: 7px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 12%, var(--border-light));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 9%, transparent), transparent 58%);
 }
-.ekko-surface-card-icon { color: var(--text-muted); font-size: 12px; }
-.ekko-surface-card-title { flex: 1; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.ekko-surface-card-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--text-muted);
+}
+.ekko-surface-card-dot.pending {
+  background: var(--ekko-skin-accent, var(--accent-primary));
+  animation: ekko-ping 1.8s ease-out infinite;
+}
+.ekko-surface-card-dot.ok { background: var(--success); box-shadow: 0 0 6px color-mix(in srgb, var(--success) 55%, transparent); }
+.ekko-surface-card-dot.bad { background: var(--error); box-shadow: 0 0 6px color-mix(in srgb, var(--error) 55%, transparent); }
+.ekko-surface-card-title { flex: 1; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-secondary); }
 .ekko-surface-card-status {
-  font-size: 11px;
-  padding: 1px 8px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 2px 9px;
   border-radius: var(--radius-pill, 999px);
-  border: 1px solid var(--border-color);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
   color: var(--text-muted);
   white-space: nowrap;
 }
-.ekko-surface-card-status.pending { color: var(--accent-primary); border-color: var(--accent-primary); }
-.ekko-surface-card-status.ok { color: var(--success); border-color: var(--success); }
-.ekko-surface-card-status.bad { color: var(--error); border-color: var(--error); }
+.ekko-surface-card-status.pending {
+  color: var(--ekko-skin-accent, var(--accent-primary));
+  border-color: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 55%, transparent);
+  background: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 12%, transparent);
+}
+.ekko-surface-card-status.ok {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+.ekko-surface-card-status.bad {
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 55%, transparent);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+}
 .ekko-surface-card-body { padding: 12px; }
 .ekko-surface-card-fallback { margin: 0; white-space: pre-wrap; color: var(--text-secondary); }
 .ekko-surface-card-details { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
 .ekko-surface-card-details code { font-family: var(--font-mono, monospace); }
 .ekko-surface-card-note { margin: 8px 0 0; font-size: 11px; color: var(--text-muted); }
 .ekko-surface-card-error { margin: 8px 0 0; font-size: 11px; color: var(--error); }
+
+@keyframes ekko-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 45%, transparent); }
+  75%, 100% { box-shadow: 0 0 0 6px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ekko-surface-card-dot.pending { animation: none; }
+}
+.dark .ekko-surface-card { --ekko-skin-accent: #22d3ee; --ekko-skin-accent-hover: #67e8f9; --ekko-skin-on-accent: #052e3a; }
 </style>

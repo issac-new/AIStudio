@@ -1,416 +1,417 @@
-{"at":"2026-10-30T07:30:05Z","spec":"docs/superpowers/specs/2026-10-30-helixharness-absorption.md","receipt":"75d5893aeeaad117be5ec6bffad3a2eaae7702dd","commit":"19beba797"}
-{"at":"2026-10-30T07:41:45Z","spec":"docs/superpowers/specs/2026-10-30-helixharness-absorption.md","receipt":"5eeeebbb4b2269b2f2498de54cba1254f7db73a1","commit":"c1057dc60"}
-{"at":"2026-10-30T08:40:26Z","spec":"docs/superpowers/specs/2026-10-30-governance-doc-candidates.md","receipt":"24bd4afd9624ac39ae8009766e1b995072157438","commit":"110a6d6be"}
-{"at":"2026-10-30T08:43:31Z","spec":"docs/superpowers/specs/2026-10-30-helix-followup-debts.md","receipt":"e6cd089c90fe7212b921edd41ab022cb55c971b2","commit":"110a6d6be"}
-{"at":"2026-10-30T09:30:38Z","spec":"docs/superpowers/specs/2026-10-30-release-v1.0.3-overlay.md","receipt":"400c1e56752d0bcd42174be5eb2a27b5f6f4ec76","commit":"3dae6ff28"}
-{"at":"2026-10-30T11:24:28Z","spec":"docs/superpowers/specs/2026-10-30-chat-timeline-race-fix.md","receipt":"dea8b3baab0583506a041e7d55d7911dbe7b3a9a","commit":"f84994d21"}
-{"at":"2026-10-30T11:26:23Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"d23118751"}
-{"at":"2026-10-30T16:12:23Z","spec":"docs/superpowers/specs/2026-10-31-ide-workspace-regression-fixes.md","receipt":"eabf9487e3b39e28f138969c5214024c31fc2fd1","commit":"cef650b77"}
-{"at":"2026-10-30T16:45:16Z","spec":"docs/superpowers/specs/2026-10-31-run23-plan-report-retro-revision.md","receipt":"b1fc79cae6970c3337881db8b4b4be4bff232e16","commit":"cef650b77"}
-{"at":"2026-10-30T17:28:57Z","spec":"docs/superpowers/specs/2026-10-31-kanban-detail-fast-path.md","receipt":"3bae65e6ca93399e8a283eae12438850d380292d","commit":"0a83fb67e"}
-{"at":"2026-10-31T00:17:59Z","spec":"docs/superpowers/specs/2026-10-31-run23-clearance-g5-decide.md","receipt":"4c12c8df976bf7541a6fd56a0974884ec712f3dc","commit":"1946c2dc9"}
-{"at":"2026-10-31T00:34:58Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-regression.md","receipt":"61d6a4e72fd9f7e95b78402b6f0aca6ce9504aec","commit":"1e1156381"}
-{"at":"2026-10-31T00:36:41Z","spec":"docs/superpowers/specs/2026-10-31-humangate-store-unify.md","receipt":"8534a4637a7556c3791c11f86c3565a454b3064c","commit":"ad932661e"}
-{"at":"2026-10-31T00:42:35Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"ae0cb23042666c282edd806aca56e83c1b843e4b","commit":"b2d87226d"}
-{"at":"2026-10-31T00:48:31Z","spec":"docs/superpowers/specs/2026-10-31-product-capability-finalize.md","receipt":"189a1c88f211c841c9c23ec28b1378db7de40a7b","commit":"ad932661e"}
-{"at":"2026-10-31T00:52:48Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"958d87caad29810e595beddfb26d47eed65b334b","commit":"6ff125d27"}
-{"at":"2026-10-31T00:52:50Z","spec":"docs/superpowers/specs/2026-10-31-matrix-autologin-deviceid.md","receipt":"1cb907dd6c8f34cbe6b2f1c25c75e147764d3216","commit":"6ba60444b"}
-{"at":"2026-10-31T00:53:47Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"debb32456899673794cfd4f1487a1cd811807e0f","commit":"82cc9c2da"}
-{"at":"2026-10-31T00:58:36Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"a5212440e014e419b91740f2f640de1bffcf8043","commit":"41ccf9803"}
-{"at":"2026-10-31T01:03:14Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"354a17acc10072ae565aad4fcbb55beef9b54cb4","commit":"afeaef393"}
-{"at":"2026-10-31T01:06:10Z","spec":"docs/superpowers/specs/2026-10-31-daily-walkthrough-probe-e2-close.md","receipt":"bc798117ef20dfb76bce9bb90ce1ebdfa2384b37","commit":"bd99cdbed"}
-{"at":"2026-10-31T01:23:01Z","spec":"docs/superpowers/specs/2026-10-31-daily-walkthrough-probe-e5-e6.md","receipt":"364400ff5585ceb9087e9eab86a7ab29ee92832a","commit":"e73eb6a4c"}
-{"at":"2026-10-31T01:26:04Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"9e4660cdb5b89d0aafc0f0df4db7f9b1e11cc514","commit":"5712f6b02"}
-{"at":"2026-10-31T01:44:17Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"90365a009875c3700354f589c7f77696e7b9906b","commit":"310001eec"}
-{"at":"2026-10-31T01:52:44Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"8fb9e7f374bd87f33e570de28540903cf7e357c0","commit":"57b8817d7"}
-{"at":"2026-10-31T01:57:08Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"e61db47d56c04d9b6c169c559f09c4039aae96ee","commit":"85d7059d7"}
-{"at":"2026-10-31T01:57:09Z","spec":"docs/superpowers/specs/2026-10-31-ide-workspace-regression-fixes.md","receipt":"06a8aa0c34eabd2160fddf1f0baa96daa21ea3fb","commit":"85d7059d7"}
-{"at":"2026-10-31T02:00:05Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"5fe18fecd9e1ab98066e08a9511e0bdf4e770a0c","commit":"4b2fdaa8e"}
-{"at":"2026-10-31T02:06:50Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"4146ea226407cc768503bd918257ee5214ecdc4d","commit":"a04a9e635"}
-{"at":"2026-10-31T02:11:42Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"d4221bc51e9ecb17e3f77dea4c161963d190cb61","commit":"925caf9d2"}
-{"at":"2026-10-31T02:20:44Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"4d9ebe303af0d47bc7e0c787718a406d1570ed16","commit":"a04a9e635"}
-{"at":"2026-10-31T02:24:17Z","spec":"docs/superpowers/specs/2026-10-31-live-verification-closure.md","receipt":"4a71f060981a5341a326e292873fc6d4ee630e57","commit":"8afa60250"}
-{"at":"2026-10-31T02:26:58Z","spec":"docs/superpowers/specs/2026-10-31-daily-research-absorption.md","receipt":"5df9bdb093a553833671ffe4daf184e039d03b16","commit":"8afa60250"}
-{"at":"2026-10-31T02:27:56Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"53584ade84b33111951310245e5e2868bf24e6bc","commit":"735146a3e"}
-{"at":"2026-10-31T02:29:29Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"8bb001252fd98b259cf35616baab217cd255cd5c","commit":"a04a9e635"}
-{"at":"2026-10-31T02:33:14Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"c2b9eee1c97523287e1dabf559dc04c0372b149a","commit":"fea1ac939"}
-{"at":"2026-10-31T02:42:24Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"0c500ddf992a3520172e2aedb9e9eeed9463eb3c","commit":"68b61fafc"}
-{"at":"2026-10-31T02:43:32Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"cfbf29512d4c5d572a2ce3953b2928522ebdd4b1","commit":"80fe3e6a2"}
-{"at":"2026-10-31T02:47:37Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"1f255d32d375c1adb230af207fcafbca74e15177","commit":"941803603"}
-{"at":"2026-10-31T02:51:30Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"d05dbd5f9a58e8c53f763751b91d89d2c37df6f5","commit":"8e8ca2431"}
-{"at":"2026-10-31T03:00:14Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"ca8b8131e43ec2aa16d9dcf42817560e79f169d7","commit":"353cad6a4"}
-{"at":"2026-10-31T03:05:05Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"de767d0b29484291bb7124217f669d100762c9c6","commit":"729c66811"}
-{"at":"2026-10-31T03:10:14Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"d55f83001860b5c52874260b88b71d90ce9fadb3","commit":"e14e187db"}
-{"at":"2026-10-31T03:15:25Z","spec":"docs/superpowers/specs/2026-10-31-daily-workbench-closing.md","receipt":"36391bd5126b109c76669eef3d4c32d8864939cc","commit":"4df05c885"}
-{"at":"2026-10-31T03:24:47Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md","receipt":"a8965f480d1863cbc0cbd6be2ab81633f1fcb127","commit":"910db93cd"}
-{"at":"2026-10-31T03:42:18Z","spec":"docs/superpowers/specs/2026-10-31-hanging-items-closure.md","receipt":"dfa80459c6712ed6717c7505efa9cdadae8da6b8","commit":"d575df606"}
-{"at":"2026-10-31T03:45:35Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"46690a51581440084b3c498475fc15ac9785b916","commit":"d575df606"}
-{"at":"2026-10-31T03:47:45Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md","receipt":"87368527617463ce4d1804ea24c76e565c4b103b","commit":"7b544c898"}
-{"at":"2026-10-31T03:49:31Z","spec":"docs/superpowers/specs/2026-10-31-loop-graph-task-ledger.md","receipt":"4fc96a0b72cf3fc5ed7fb31d21e20b8128368e8a","commit":"d575df606"}
-{"at":"2026-10-31T03:57:44Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"3ee88c1d3f6680cda8fac00f24266f5b1e990db3","commit":"78065af29"}
-{"at":"2026-10-31T04:00:53Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"d7de492cfb48ef9cec39b5bfa9d47c1ba382b768","commit":"899983ada"}
-{"at":"2026-10-31T04:06:54Z","spec":"docs/superpowers/specs/2026-10-31-studio-v080-upgrade.md","receipt":"7a983805d925912b5fe45aa70dbbcb43ccc42ab8","commit":"8c78fce3d"}
-{"at":"2026-10-31T04:16:46Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"aa80bb4a2aed44eeb380e240ab9b13b7a2d9f373","commit":"d575df606"}
-{"at":"2026-10-31T04:20:07Z","spec":"docs/superpowers/specs/2026-10-31-full-regression-fixes.md","receipt":"6af0adee5b3bbb19dc441435d4558d5adf207504","commit":"206b67a60"}
-{"at":"2026-10-31T05:11:42Z","spec":"docs/superpowers/specs/2026-10-31-k19-ghost-closeout.md","receipt":"054d24b10fcd690fb48e4c7ff3e600f609fc3f82","commit":"227f81410"}
-{"at":"2026-10-31T05:22:19Z","spec":"docs/superpowers/specs/2026-10-31-studio-v080-upgrade.md","receipt":"084236cfcb2eb5a8912f99fcfd0e02311d12cd64","commit":"1c7e6aebe"}
-{"at":"2026-10-31T05:28:03Z","spec":"docs/superpowers/specs/2026-10-31-studio-v080-upgrade.md","receipt":"094a209e9f025f3d6b2e86aca951da053de90d10","commit":"96b11a5bb"}
-{"at":"2026-10-31T05:39:19Z","spec":"docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md","receipt":"d3759f18f95b077bd1fc1219f7054c7a7156608c","commit":"dac80bb75"}
-{"at":"2026-10-31T08:43:30Z","spec":"docs/superpowers/specs/2026-10-31-rsi-d2d3-frontend.md","receipt":"f331d566bb9970b707eb5f57f2af3f10e61bb4a4","commit":"507a290eb"}
-{"at":"2026-10-31T08:52:19Z","spec":"docs/superpowers/specs/2026-10-31-brand-v080-new-faces.md","receipt":"f319c047a4b1d934ccade4b01eb8b475e87e9a12","commit":"1012ad05e"}
-{"at":"2026-10-31T09:03:44Z","spec":"docs/superpowers/specs/2026-10-31-zcode-3171-sync.md","receipt":"1bc0cd735391b65b8dbe883bf03e5eeb7e48f63f","commit":"771add087"}
-{"at":"2026-10-31T09:14:07Z","spec":"docs/superpowers/specs/2026-10-31-zcode-3171-sync.md","receipt":"35732fc5058f4c329d86e04480a38fbd179ddb8c","commit":"9066a492a"}
-{"at":"2026-10-31T09:33:54Z","spec":"docs/superpowers/specs/2026-10-31-rsi-p2-batch.md","receipt":"ae90bca4a55f552846376d7955dd7cc23f13512d","commit":"146a4138a"}
-{"at":"2026-10-31T09:36:03Z","spec":"docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md","receipt":"3a2f69f99713a6951335a49622ab71aab5b13565","commit":"146a4138a"}
-{"at":"2026-10-31T09:41:41Z","spec":"docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md","receipt":"a827cc86848b0e5cc7e1d9c90b504853a7513f28","commit":"4380d1e98"}
-{"at":"2026-10-31T10:19:03Z","spec":"docs/superpowers/specs/2026-10-31-package-lock-version-unify.md","receipt":"3df13c251bc33a63947ad84b5ac77d9e465a47ec","commit":"7aa1a7354"}
-{"at":"2026-10-31T11:22:04Z","spec":"docs/superpowers/specs/2026-10-31-run24-plan-realign.md","receipt":"4269696c2e9ec01fb48428a3da67aec1bd682b6f","commit":"d597b4d90"}
-{"at":"2026-10-31T13:42:22Z","spec":"docs/superpowers/specs/2026-10-31-prelaunch-crossrun-residue-gate.md","receipt":"70d2e2e6bf1d5ae64c8aa5a62309893d499e1d6f","commit":"fbe3e1483"}
-{"at":"2026-10-31T14:06:38Z","spec":"docs/superpowers/specs/2026-10-31-superagent-domain-auth.md","receipt":"5c08252fcab73e75e2958f31cacc5d6a6e8e1ada","commit":"fbe3e1483"}
-{"at":"2026-10-31T14:07:07Z","spec":"docs/superpowers/specs/2026-10-31-rsi-improvement-plan.md","receipt":"9919dad1cc26fd995271f4a9231c0cd799eaba3a","commit":"6f9d9f8ca"}
-{"at":"2026-10-31T14:07:27Z","spec":"docs/superpowers/specs/2026-10-31-cockpit-attention-panel.md","receipt":"e67077b5955ea9ac1157b3da81d05292aea2aba0","commit":"fbe3e1483"}
-{"at":"2026-10-31T14:16:19Z","spec":"docs/superpowers/specs/2026-10-31-superagent-domain-auth.md","receipt":"3e5d02b2048e4b008a007079155866e82682faa0","commit":"59573b910"}
-{"at":"2026-10-31T14:27:02Z","spec":"docs/superpowers/specs/2026-10-31-rsi-improvement-plan.md","receipt":"0f9c1c92cead41200cfd115a44f70194ea386293","commit":"955785959"}
-{"at":"2026-10-31T14:30:42Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"d378f6e035f8eedf0aca07ccb3efa4c4a71140d2","commit":"1cb6aff0e"}
-{"at":"2026-10-31T14:58:05Z","spec":"docs/superpowers/specs/2026-10-31-approval-proxy-dedup.md","receipt":"d980b280c97fd64db5b92f457c1545fd434c92bc","commit":"1cb6aff0e"}
-{"at":"2026-10-31T15:04:49Z","spec":"docs/superpowers/specs/2026-10-31-superagent-router.md","receipt":"c384d17c450722447bbc99320edc8c1b5d89286f","commit":"ecc018043"}
-{"at":"2026-10-31T15:21:15Z","spec":"docs/superpowers/specs/2026-10-31-orchestrator-delivery.md","receipt":"9d033384c08d7a5b530f4b07f3d8a90731435d58","commit":"bd74f0b90"}
-{"at":"2026-10-31T15:50:08Z","spec":"docs/superpowers/specs/2026-10-31-model-resilience-hardening.md","receipt":"e6e2410c399d93bf9d093428d7a258b0d25e327b","commit":"c92966e90"}
-{"at":"2026-10-31T15:54:24Z","spec":"docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md","receipt":"0736d904a2b56d6aa83b29a9962b353b3003e89e","commit":"556355892"}
-{"at":"2026-10-31T16:06:13Z","spec":"docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md","receipt":"aac974d3ec23d76434be500e1d29161ade89ed49","commit":"f25c50c65"}
-{"at":"2026-10-31T16:20:27Z","spec":"docs/superpowers/specs/2026-11-01-runtime-backfill-session-rotation-plugin-api.md","receipt":"671d07926df0469c10a4d9c816846f36058ac166","commit":"735f66d63"}
-{"at":"2026-10-31T16:23:05Z","spec":"docs/superpowers/specs/2026-10-31-rsi-exec-batch1.md","receipt":"ec994dc88b9a78459abd6e78dce3a9d09e6564d5","commit":"735f66d63"}
-{"at":"2026-10-31T16:54:43Z","spec":"docs/superpowers/specs/2026-11-01-dod-session-context-wiring.md","receipt":"d34262c8df295606e10e92092016efdf53402d38","commit":"8d9c22460"}
-{"at":"2026-10-31T17:26:24Z","spec":"docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md","receipt":"650b39a938322b84a3775cfa32a6360bc84118ce","commit":"960010471"}
-{"at":"2026-10-31T18:12:00Z","spec":"docs/superpowers/specs/2026-11-01-sim-dod-sync.md","receipt":"1cca59cf44828699b6c255af6a5430b72d710867","commit":"c875a9281"}
-{"at":"2026-10-31T18:21:16Z","spec":"docs/superpowers/specs/2026-11-01-sim-resilience-sync.md","receipt":"da2d0e71693590153c0945600f7ded1a53a7de9c","commit":"4503b0cbf"}
-{"at":"2026-10-31T18:26:20Z","spec":"docs/superpowers/specs/2026-11-01-sim-resilience-sync.md","receipt":"f1f83f09fbbcb6496e5335a8da0d423e10e5881b","commit":"cf7874d6f"}
-{"at":"2026-11-01T00:41:10Z","spec":"docs/superpowers/specs/2026-11-01-sim-resilience-sync.md","receipt":"0a7f17ebf151225c5ad16265f8a799676fb60e16","commit":"6239fef81"}
-{"at":"2026-11-01T02:03:52Z","spec":"docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md","receipt":"6d8540d4193d7a3d0b31f7423bfdf2f976271024","commit":"0305dc3a7"}
-{"at":"2026-11-01T15:32:18Z","spec":"docs/superpowers/specs/2026-11-01-run24-closure.md","receipt":"ffbac656c20a8cd65d30b7b49168d3a7990c2932","commit":"dc328f84c"}
-{"at":"2026-11-01T16:44:24Z","spec":"docs/superpowers/specs/2026-11-02-run24-retro-driver-batch.md","receipt":"f41f43bb220016b10c2ddd1a17efbf9b35251c0e","commit":"47681be25"}
-{"at":"2026-11-01T17:39:08Z","spec":"docs/superpowers/specs/2026-10-31-orchestrator-tick.md","receipt":"5ef35c6495cb68550b15669f59528de7b7c72a5c","commit":"62bcd8351"}
-{"at":"2026-11-01T17:56:53Z","spec":"docs/superpowers/specs/2026-10-31-orchestrator-tick.md","receipt":"57cdf769e7704e81f5434be8b24a5af62c8a755d","commit":"9d186f7e1"}
-{"at":"2026-11-01T17:58:37Z","spec":"docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md","receipt":"fee6fc1521808c4bf35bb2a4401d800a243a698c","commit":"62bcd8351"}
-{"at":"2026-11-01T17:59:08Z","spec":"docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md","receipt":"03f9545c90dc2fa5c88bb4179c7c05c5c6b89288","commit":"478dc920a"}
-{"at":"2026-11-01T18:11:58Z","spec":"docs/superpowers/specs/2026-11-02-run24-runtime-closeout.md","receipt":"b51ae9c4ef728a69115cea64193d60af820cf843","commit":"2396f267a"}
-{"at":"2026-11-02T01:27:42Z","spec":"docs/superpowers/specs/2026-11-02-chat-turn-recovery.md","receipt":"431b65e38a6d3038887082239a83cf559348648e","commit":"ad37434dc"}
-{"at":"2026-11-02T03:29:10Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"7c4dce6e5946ce871a05b83e7408165eaec7e3aa","commit":"2043294e1"}
-{"at":"2026-11-02T03:47:23Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"7c30a11835ed21380e32f2f9429733a37b375ec5","commit":"06a6256fb"}
-{"at":"2026-11-02T04:31:52Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"5b74f6d7a7ebb2f1fd539e57999264c5b1cbcdd0","commit":"23ae18bd3"}
-{"at":"2026-11-02T04:51:06Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"cad7390b8fc24d2ed4ccb24f7b35cb3a29eb24b4","commit":"4abc321ed"}
-{"at":"2026-11-02T04:53:09Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"ecd1a308a6cdaa72ac7cf3c0c5212f7bec285332","commit":"cfa98aa2b"}
-{"at":"2026-11-02T05:37:07Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"ddcee08dc748f18e202335bfa56127b7abb5f5ec","commit":"334fc4d28"}
-{"at":"2026-11-02T05:57:34Z","spec":"docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md","receipt":"43e40411daa685812665dcea8e81eb7943d5d580","commit":"0c2c1752c"}
-{"at":"2026-11-02T06:26:40Z","spec":"docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md","receipt":"b44a09aa16b389025fbe8eff89aa639eec98b89c","commit":"e26a620d7"}
-{"at":"2026-11-02T06:43:32Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"a6df2e7f00dfcd18bb24471c1ecd7a7cf2c2c175","commit":"0c2c1752c"}
-{"at":"2026-11-02T06:53:49Z","spec":"docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md","receipt":"37bf58e841ca478cb277cc4b20d95f505611db6b","commit":"624b8f5a2"}
-{"at":"2026-11-02T07:29:07Z","spec":"docs/superpowers/specs/2026-11-02-offline-windows-package.md","receipt":"f69ea184832076bf7b033f7632276203223c1fd7","commit":"d0395af5c"}
-{"at":"2026-11-02T07:43:40Z","spec":"docs/superpowers/specs/2026-11-02-agent-debt-recheck.md","receipt":"e431e758690c6a9b622853b3a2eb5b75ce5413a4","commit":"d0395af5c"}
-{"at":"2026-11-02T07:54:36Z","spec":"docs/superpowers/specs/2026-11-02-test-stability-dsl.md","receipt":"64e0ffc559d736f0664df5a248945b512f65a551","commit":"0aab81368"}
-{"at":"2026-11-02T08:02:06Z","spec":"docs/superpowers/specs/2026-11-02-failure-taxonomy.md","receipt":"02929ee3488119a8dddd6eb803370921e4bc459e","commit":"0aab81368"}
-{"at":"2026-11-02T08:30:56Z","spec":"docs/superpowers/specs/2026-11-02-maet-retrieval-ladder.md","receipt":"931cf307a663f6a82420c68726b07738f91be7cf","commit":"5296cac62"}
-{"at":"2026-11-02T08:37:01Z","spec":"docs/superpowers/specs/2026-11-02-skill-grader.md","receipt":"68684c0a9184be95ba7f7e87714aa1e45a09e93f","commit":"f24f305a1"}
-{"at":"2026-11-02T08:37:06Z","spec":"docs/superpowers/specs/2026-11-02-test-vocab.md","receipt":"cffb1b7d51bcf2461831d3fe9af5308c570669de","commit":"f24f305a1"}
-{"at":"2026-11-02T08:40:38Z","spec":"docs/superpowers/specs/2026-11-02-plan-program-latest-sync.md","receipt":"f1c839c94c9b11111e3eca1714b0c7ff1aaa0ef8","commit":"f24f305a1"}
-{"at":"2026-11-02T09:15:10Z","spec":"docs/superpowers/specs/2026-11-02-release-carrier-reconcile.md","receipt":"17bf22b35760e6a15cde5072b7829698c32d98f4","commit":"755f54514"}
-{"at":"2026-11-02T09:17:41Z","spec":"docs/superpowers/specs/2026-11-02-eval-skill-panel.md","receipt":"3402d0a83fb4f0140f3e2c21ccbd1dc19ba44895","commit":"755f54514"}
-{"at":"2026-11-02T09:42:09Z","spec":"docs/superpowers/specs/2026-11-02-eval-skill-grade-plan-sync.md","receipt":"7ec3e8ca0deff8fe38eb00bce9aaaa4152f2f62f","commit":"1e24d02db"}
-{"at":"2026-11-02T12:18:00Z","spec":"docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md","receipt":"83154228a4dcc7d84fd949c6501ae9902ec0c7fe","commit":"782b4768b"}
-{"at":"2026-11-02T12:33:48Z","spec":"docs/superpowers/specs/2026-11-02-scenario-gate-resilience.md","receipt":"78158a869d0225e090cae172dc6f2e93f70b0ec5","commit":"1e0663365"}
-{"at":"2026-11-02T14:02:43Z","spec":"docs/superpowers/specs/2026-11-02-sens-unbound-replay-fix.md","receipt":"6ba5b3879418428436042d89eae8d3559c4145af","commit":"43df7b4ef"}
-{"at":"2026-11-02T14:59:46Z","spec":"docs/superpowers/specs/2026-11-02-supervisor-nudge-gate-aware.md","receipt":"1cf18a314093fbe0de3e4c4da373d1d35fc16ff2","commit":"c734ce7e7"}
-{"at":"2026-11-02T15:44:54Z","spec":"docs/superpowers/specs/2026-11-02-mechanism-governance.md","receipt":"68523ead0280090401cc5157b7b68badca260f08","commit":"3993beb69"}
-{"at":"2026-11-02T23:56:15Z","spec":"docs/superpowers/specs/2026-11-03-run25-full-retro.md","receipt":"310a9a131752debd3f4e9b93a9f11f6d8df5c257","commit":"f58c1562b"}
-{"at":"2026-11-02T23:59:40Z","spec":"docs/superpowers/specs/2026-11-03-run25-full-retro.md","receipt":"17029e315b50604bd3998890124358c82c6f5fa0","commit":"33f701f2b"}
-{"at":"2026-11-03T00:13:37Z","spec":"docs/superpowers/specs/2026-11-03-release-v1.0.9-overlay.md","receipt":"8fddf774f20b5ad1b69d90046bd76d8843713bfd","commit":"2a36ea852"}
-{"at":"2026-11-03T01:03:51Z","spec":"docs/superpowers/specs/2026-10-28-aistudio-interactive-training.md","receipt":"ce3930d6c8eabcc791ab311a623ccf7ccb1debe1","commit":"e30f0cd0f"}
-{"at":"2026-11-03T01:17:04Z","spec":"docs/superpowers/specs/2026-11-03-offline-everything-complete.md","receipt":"4acab327e22cb765d2be1563020f6f9340468fea","commit":"9062b976a"}
-{"at":"2026-11-03T01:26:57Z","spec":"docs/superpowers/specs/2026-11-03-offline-everything-complete.md","receipt":"753512a049c7936c9d1b88d0dd9f6d4d90e03dab","commit":"ea88ed424"}
-{"at":"2026-11-03T02:09:51Z","spec":"docs/superpowers/specs/2026-11-03-run25-collection-gaps-backfill.md","receipt":"847ad37425ce93471fafcc93433ff04bdbf199db","commit":"c2c18b896"}
-{"at":"2026-11-03T02:26:00Z","spec":"docs/superpowers/specs/2026-11-03-bundle-tracked-only.md","receipt":"6a955410eb64e3c6a817da729731ea29c1b3b5e3","commit":"5269614f4"}
-{"at":"2026-11-03T03:06:03Z","spec":"docs/superpowers/specs/2026-11-03-tar-pax-gnu-repack.md","receipt":"862520b20717439748b3d6692b3b7876c9b4de73","commit":"2670dc184"}
-{"at":"2026-11-03T03:09:54Z","spec":"docs/superpowers/specs/2026-11-03-run26-pending-clearance.md","receipt":"246529cd13300fc4360d061a7fe41259e3ed5fef","commit":"2670dc184"}
-{"at":"2026-11-03T06:06:47Z","spec":"docs/superpowers/specs/2026-11-03-swarm-yuan-absorption-pstack-evals.md","receipt":"bb6a801c2097c67ff967c769631fab49c2c320a7","commit":"e300df9f8"}
-{"at":"2026-11-03T06:11:44Z","spec":"docs/superpowers/specs/2026-11-03-proactive-intervention-governance.md","receipt":"02f5ce1167a8c275934efd0c5737a4f9b24e8f5a","commit":"e300df9f8"}
-{"at":"2026-11-03T06:28:36Z","spec":"docs/superpowers/specs/2026-11-03-proactive-intervention-governance.md","receipt":"7ea0d9cffb10fe572f7ce5e3a281725efe8f9db1","commit":"2777cc9d9"}
-{"at":"2026-11-03T06:45:25Z","spec":"docs/superpowers/specs/2026-11-03-proactive-intervention-governance.md","receipt":"b5590957a70db39cc48df39afde9e106b07b3167","commit":"fc1ff153e"}
-{"at":"2026-11-03T06:54:22Z","spec":"docs/superpowers/specs/2026-11-03-swarm-yuan-budget-tier3.md","receipt":"b1afb60ffaaa2c29e1f5172b1f821962381ee88e","commit":"fc1ff153e"}
-{"at":"2026-11-03T07:03:24Z","spec":"docs/superpowers/specs/2026-11-03-harmony-multiobjective.md","receipt":"4e334ad68f186e33fc7c3101085b6e7806fee9cb","commit":"69cfef114"}
-{"at":"2026-11-03T07:17:42Z","spec":"docs/superpowers/specs/2026-11-03-harmony-multiobjective.md","receipt":"238c5580b4a202a798e84c9ba3090d84dc555730","commit":"2980ca8e0"}
-{"at":"2026-11-03T07:28:03Z","spec":"docs/superpowers/specs/2026-11-03-harmony-multiobjective.md","receipt":"1c9a8251d3516f4dbf50862938108ef3398f8c66","commit":"5144659a7"}
-{"at":"2026-11-03T07:36:46Z","spec":"docs/superpowers/specs/2026-11-03-harmony-multiobjective.md","receipt":"27c6f77249c9a6d4dd117efa008561e1cea49805","commit":"0438da08b"}
-{"at":"2026-11-03T07:54:55Z","spec":"docs/superpowers/specs/2026-11-03-four-gap-capabilities.md","receipt":"69fdb619a23273702921fae06e42a998575da9f7","commit":"10fe56b8b"}
-{"at":"2026-11-03T08:21:16Z","spec":"docs/superpowers/specs/2026-11-03-four-gap-completion.md","receipt":"2ce1b3b44d83cf33f3da3f690384571eccc540a6","commit":"bddb8b71e"}
-{"at":"2026-11-03T08:21:27Z","spec":"docs/superpowers/specs/2026-11-03-handoff-quality-ledger.md","receipt":"a11db87ed38f91abc5d3f4ce240b4de37cd6b376","commit":"bddb8b71e"}
-{"at":"2026-11-03T08:26:52Z","spec":"docs/superpowers/specs/2026-11-03-deerflow-source-verification.md","receipt":"36652fbd956fdca474154801b5561ecb89e73dfc","commit":"b259349b7"}
-{"at":"2026-11-03T08:38:05Z","spec":"docs/superpowers/specs/2026-11-03-acceptance-checks.md","receipt":"e199ef4c42c3db8ade18f0a74668e22f13bf8b1a","commit":"20d143fa8"}
-{"at":"2026-11-03T08:50:18Z","spec":"docs/superpowers/specs/2026-11-03-claim-receipts-and-dispatch-capacity.md","receipt":"984b4f50eee9a484a582844ea47fe76b09016e1b","commit":"2c24320c4"}
-{"at":"2026-11-03T09:28:24Z","spec":"docs/superpowers/specs/2026-11-03-component-library.md","receipt":"6d409ca168529706915c40b9d54d172a754337f1","commit":"294109bed"}
-{"at":"2026-11-03T11:25:03Z","spec":"docs/superpowers/specs/2026-11-03-sim-capability-refresh.md","receipt":"836aaa5d5edac6f0f895519477da898ca2c18e11","commit":"401fb4225"}
-{"at":"2026-11-03T11:53:15Z","spec":"docs/superpowers/specs/2026-11-03-aistudio-comprehensive-training-manual.md","receipt":"9679b1450117dfcd48964a04287b79726a76059f","commit":"e300df9f8"}
-{"at":"2026-11-03T15:55:09Z","spec":"docs/superpowers/specs/2026-11-03-runtime-deps-refresh.md","receipt":"3d2ecde5ba46262319a44166a917f9d6d8c40e83","commit":"dcf24c35a"}
-{"at":"2026-11-03T16:38:30Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"20aea2b3ec680f82a9670d820a287da1513178de","commit":"70175e34d"}
-{"at":"2026-11-03T16:44:15Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"7776c9b5ddcbc9b0c936a14e0a02fadc457aec34","commit":"4b895da3a"}
-{"at":"2026-11-03T16:45:53Z","spec":"docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md","receipt":"9e87fad8fc053214f26182dcdcd4fd6f5d92b4ca","commit":"64320210b"}
-{"at":"2026-11-04T01:11:24Z","spec":"docs/superpowers/specs/2026-11-04-run26-retro-hardening.md","receipt":"dd81fe8b69917fe80a889295e7b0169e5a4e38ba","commit":"097bfe830"}
-{"at":"2026-11-04T01:38:59Z","spec":"docs/superpowers/specs/2026-11-04-ledger-clearance.md","receipt":"304f3ce923337314d08747eedc6c6319c4548850","commit":"4d5cf118d"}
-{"at":"2026-11-04T04:47:03Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-project-workflow.md","receipt":"44e84f277d3f9e0b16b0f37dc44fa1e435d2c37d","commit":"2a01090e7"}
-{"at":"2026-11-04T04:48:05Z","spec":"docs/superpowers/specs/2026-11-04-ide-workspace-bugs.md","receipt":"80a2f4257f41b8cdd94982fb830fb8d3fa3ad807","commit":"2a01090e7"}
-{"at":"2026-11-04T05:21:19Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-execution-records.md","receipt":"ca7243cfe47fed522d272f31619e9bf96a5cfd67","commit":"35a46643e"}
-{"at":"2026-11-04T05:22:12Z","spec":"docs/superpowers/specs/2026-11-04-composer-popups.md","receipt":"b07239bcdab14fda732a953d135325d39d1232b2","commit":"76170b420"}
-{"at":"2026-11-04T05:22:44Z","spec":"docs/superpowers/specs/2026-11-04-composer-popups.md","receipt":"c963ef282967f0ff74f5e0cefc351ed404921c9a70e054065d638376af1cee61","commit":"63542a14e"}
-{"at":"2026-11-04T05:24:51Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-project-graph.md","receipt":"307d145028f89e232704b6957bc22ce8c690c80a","commit":"35a46643e"}
-{"at":"2026-11-04T05:25:21Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-skill-export.md","receipt":"edb4ed396aee6fc6655eb45eca7913a88bb589b1","commit":"35a46643e"}
-{"at":"2026-11-04T06:32:13Z","spec":"docs/superpowers/specs/2026-11-04-composer-popups.md","receipt":"8ba34e0f1f665885521562cfbe5ac79fdb6ca19b","commit":"a8515a50d"}
-{"at":"2026-11-04T07:12:08Z","spec":"docs/superpowers/specs/2026-11-04-message-area-collapse.md","receipt":"8e852a7c198e4634d1d8cd1d75c08bb0bc6b06f3","commit":"967840ba6"}
-{"at":"2026-11-04T07:37:34Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-ledger-items.md","receipt":"66cd2506bd2c3c6c1c88b8a7da9f4a0e60957ccd","commit":"a8515a50d"}
-{"at":"2026-11-04T07:42:32Z","spec":"docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md","receipt":"0bf1b9262fe3cfa2f85f3c006878887aa25933f9","commit":"271b5eff0"}
-{"at":"2026-11-04T08:10:37Z","spec":"docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md","receipt":"dd1f86b3b0598376005f36d57a39044830af13e7","commit":"b9595fc32"}
-{"at":"2026-11-04T08:14:45Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md","receipt":"789d3c6d92fc9c8eef9098b9a8ec72e183aa3b66","commit":"a8515a50d"}
-{"at":"2026-11-04T08:17:15Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md","receipt":"585d7b1f5db661cc52d2cdb0d16621bc2e4bbb5e","commit":"226b9dbb0"}
-{"at":"2026-11-04T08:34:46Z","spec":"docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md","receipt":"390c6c9064b8dd74bc52c1985b3ff03f9c8bbe54","commit":"19f97af2d"}
-{"at":"2026-11-04T10:06:42Z","spec":"docs/superpowers/specs/2026-11-04-sim-capability-refresh-round2.md","receipt":"778e43ff220a2de319cfc19443efb10682bd6b75","commit":"0a0d0104f"}
-{"at":"2026-11-04T10:23:13Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"207cf7257e4f0140dfa08b9c71d57a806a90ccdf","commit":"0a0d0104f"}
-{"at":"2026-11-04T10:36:32Z","spec":"docs/superpowers/specs/2026-11-04-userenv-route-mount.md","receipt":"13320455b796a42b639a6126f71a47b57154e41d","commit":"d9c82dc63"}
-{"at":"2026-11-04T10:56:55Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"5f67b036c177147f6715ff88cb89e73ce0e3ddfb","commit":"729cae521"}
-{"at":"2026-11-04T10:57:55Z","spec":"docs/superpowers/specs/2026-11-04-regression-tooling-r26.md","receipt":"bf5cce0cb982ec41ae0173e61f06bfdd7976842b","commit":"d9c82dc63"}
-{"at":"2026-11-04T11:30:55Z","spec":"docs/superpowers/specs/2026-11-04-shell-form-control-text-baseline.md","receipt":"b10407c94dc0271c2b48d5d178fdaa661d24c138","commit":"0a0d0104f"}
-{"at":"2026-11-04T11:39:26Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"969f27103219004195338021b9124acf3b5d31d8","commit":"79c3b957a"}
-{"at":"2026-11-04T11:42:54Z","spec":"docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md","receipt":"0ed1c33fbdef760479a0e84e12050954b8160058","commit":"dd74f32ec"}
-{"at":"2026-11-04T11:45:56Z","spec":"docs/superpowers/specs/2026-11-04-regression-tooling-r26.md","receipt":"7101c6d78816fa2b49848c383314653e952450c2","commit":"8b8d1c9e6"}
-{"at":"2026-11-04T12:13:49Z","spec":"docs/superpowers/specs/2026-11-04-regression-tooling-r26.md","receipt":"c82bbe31d34561d89a9ba5f5806b42c791a346ba","commit":"f19201834"}
-{"at":"2026-11-04T12:49:09Z","spec":"docs/superpowers/specs/2026-11-04-regression-prod-chain.md","receipt":"fc79257b5b60f562703a4f893d74405441bb930a","commit":"6e8c990de"}
-{"at":"2026-11-04T13:21:12Z","spec":"docs/superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md","receipt":"4a1fdec17a8d5ce35cc6b9cd7171733a1b520ab0","commit":"d5201dedc"}
-{"at":"2026-11-04T13:32:19Z","spec":"docs/superpowers/specs/2026-11-04-harness-w2-result-approval.md","receipt":"cd355442353b9c07d839cdac117ece7da868c8bb","commit":"d5201dedc"}
-{"at":"2026-11-04T13:49:24Z","spec":"docs/superpowers/specs/2026-11-04-harness-w3-observability-taskmodel.md","receipt":"d872b198f5b89188538e3d950028c2a5b2b39ca6","commit":"d5201dedc"}
-{"at":"2026-11-04T15:13:23Z","spec":"docs/superpowers/specs/2026-11-04-harness-w4-closeout.md","receipt":"7a11b3bab9d7cfaf2e9edfbd79d69deefdfee94c","commit":"813219c3a"}
-{"at":"2026-11-04T16:20:34Z","spec":"docs/superpowers/specs/2026-11-05-teardown-void-type-fix.md","receipt":"a9bb2aa6709b2868b0e452c77dccdc2fe229e72f","commit":"585858a8f"}
-{"at":"2026-11-04T16:26:12Z","spec":"docs/superpowers/specs/2026-11-05-teardown-void-type-fix.md","receipt":"f8b6228ca4f20d69a5884d7add8fb17ab8f4f4e2","commit":"d56903598"}
-{"at":"2026-11-04T16:35:42Z","spec":"docs/superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md","receipt":"d72c16fef3f162fffa336ab4b4618c243700eb97","commit":"26608571f"}
-{"at":"2026-11-05T02:29:56Z","spec":"docs/superpowers/specs/2026-11-05-review-anchor-pin.md","receipt":"d87c0ed68206b6f7df3d0524a2b2b1da36306b07","commit":"1edc24bab"}
-{"at":"2026-11-05T03:44:15Z","spec":"docs/superpowers/specs/2026-11-05-org-governance-autonomy-scale.md","receipt":"9b0685f37f6e6c3e955c1b909c238d60a7a63a4c","commit":"430054e88"}
-{"at":"2026-11-05T04:21:45Z","spec":"docs/superpowers/specs/2026-11-05-governance-truth-restoration.md","receipt":"ed54bcac5ee96e1c71d0e6e3afa17ae50535cae3","commit":"054c81770"}
-{"at":"2026-11-05T04:25:57Z","spec":"docs/superpowers/specs/2026-11-05-governance-truth-restoration.md","receipt":"9965e025bb5c1d455a6370dd8950d5bb6d725880","commit":"855854075"}
-{"at":"2026-11-05T04:28:37Z","spec":"docs/superpowers/specs/2026-11-05-org-governance-closeout.md","receipt":"82f8533b7af1dbca2243847d57c2b87bd363054b","commit":"7fb068b9a"}
-{"at":"2026-11-05T04:37:16Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"033250b4d6e9dfacfaf5ca3283767c10b4ce7749","commit":"fd550c1e6"}
-{"at":"2026-11-05T04:39:43Z","spec":"docs/superpowers/specs/2026-11-05-org-governance-closeout.md","receipt":"be84f4b734c7580fb89a49927a43b957865425bd","commit":"8f10dde3f"}
-{"at":"2026-11-05T04:49:26Z","spec":"docs/superpowers/specs/2026-11-05-governance-truth-restoration.md","receipt":"b65f85750f7fd5c48aefb78e8d2c4668b9937436","commit":"32bf92b02"}
-{"at":"2026-11-05T04:53:33Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"a07e46f44e678733e7c9244ccdebcd74609ce910","commit":"32bf92b02"}
-{"at":"2026-11-05T04:59:46Z","spec":"docs/superpowers/specs/2026-11-05-governance-truth-restoration.md","receipt":"651eea48abfdfb595028afed0930c76c76d3f1b5","commit":"1f81d2d9d"}
-{"at":"2026-11-05T05:14:48Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"eb1ffd1a04e320e8588f9785aaed3ddc26ee05ec","commit":"3cd3ed1aa"}
-{"at":"2026-11-05T05:26:27Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"816ed4aba8d1f0be98faee103dd6a0c409072136","commit":"ce38f88ac"}
-{"at":"2026-11-05T05:35:52Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"6043d9559c4676c26425bf1eaf45362e14ed4d14","commit":"1c3417b4f"}
-{"at":"2026-11-05T05:51:49Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"18d1abd3e923072e3ef52a7c8b110cc48119c2cb","commit":"5741e7a95"}
-{"at":"2026-11-05T05:55:17Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"477140897d9a7f3cd75eafd0cd8d68485946333d","commit":"0336ac10e"}
-{"at":"2026-11-05T05:56:37Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"fc4917defd301675476ee8180e0a524f5f7ce23a","commit":"f5002a4b3"}
-{"at":"2026-11-05T05:57:30Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"ea5e9075d2abad22e56705d67dcf1c154b45255b","commit":"4fd5fcde8"}
-{"at":"2026-11-05T06:13:34Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"e2a3d9c9c59e6794a27f74b8be1388cb3a98de48","commit":"da04b7f19"}
-{"at":"2026-11-05T06:31:05Z","spec":"docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md","receipt":"112f3dd7950d0a9fcd97d456a15f79f56559cea6","commit":"35e7b7890"}
-{"at":"2026-11-05T08:23:10Z","spec":"docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md","receipt":"9b02aa8e907bbfbb3f81f110ab7129817d942caa","commit":"ef937f75b"}
-{"at":"2026-11-05T08:39:45Z","spec":"docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md","receipt":"891a4b39b41c17156ae11264b90699d27e73628f","commit":"438559c49"}
-{"at":"2026-11-05T09:13:12Z","spec":"docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md","receipt":"a31434121a090ead6d1daff59b59434512330885","commit":"ef937f75b"}
-{"at":"2026-11-05T09:19:28Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"c2c2b728232b078aa3dfeaec73ca56e8a2733905","commit":"51eeb2d3a"}
-{"at":"2026-11-05T09:33:30Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"607621e466a5b87408a0a31fa995409e32e88fd4","commit":"af3e2909c"}
-{"at":"2026-11-05T09:59:27Z","spec":"docs/superpowers/specs/2026-11-05-nvme-mount-guards.md","receipt":"2444b41d84b19c1b005c1baaadaae46b9556d01f","commit":"0de003745"}
-{"at":"2026-11-05T09:59:56Z","spec":"docs/superpowers/specs/2026-11-05-nvme-mount-guards.md","receipt":"88125fbd604d3fd038904c90592db4aebc9c773a","commit":"609cb2408"}
-{"at":"2026-11-05T10:10:29Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"2ef52c13eb30b480eef370e5a77e6db19ce43fe8","commit":"7d9b2b4b8"}
-{"at":"2026-11-05T11:10:20Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"fe8553623a4968f567b11b674375f8132472a19a","commit":"9d9d9b65f"}
-{"at":"2026-11-05T11:12:19Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"f626a7faae436ff02a15e0688a3c1ff8255f972a","commit":"9d9d9b65f"}
-{"at":"2026-11-05T11:45:49Z","spec":"docs/superpowers/specs/2026-11-05-sim-direct-llm-channel.md","receipt":"ab3ed1aba974732c23f958854e11e2d25aaa8ee8","commit":"9d9d9b65f"}
-{"at":"2026-11-05T11:47:18Z","spec":"docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md","receipt":"0dc7dac4393117806206fa6fe5afc113c7423b0a","commit":"0a860e5f9"}
-{"at":"2026-11-05T11:51:05Z","spec":"docs/superpowers/specs/2026-11-05-ainative-absorption.md","receipt":"c6bcf86316a14bb913d3de882d984402fd10f278","commit":"8e4ccb700"}
-{"at":"2026-11-05T12:52:45Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"99045b37b4196a8a0bb9b5ebdf0d0aa46875090b","commit":"e8186dba6"}
-{"at":"2026-11-05T13:15:29Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"7109211fbe6ccdcfafe0f58341b1fd347b66f688","commit":"2f99b4624"}
-{"at":"2026-11-05T14:30:27Z","spec":"docs/superpowers/specs/2026-11-05-g4-probe-profile-fix.md","receipt":"4015404412fe1c10cf43d3a1876201035ee75b5e","commit":"7d5b9ddd3"}
-{"at":"2026-11-05T14:47:16Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"38589e1491776c45ebbf4fb382f63dd3013acaad","commit":"5887bf865"}
-{"at":"2026-11-05T15:05:46Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"c9e9f9c4b872ca7831a68a50792597620857eecc","commit":"001db4138"}
-{"at":"2026-11-05T15:22:33Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"549398be82d0d0b5936e833fdc985ed4f5207e25","commit":"bb0da7ef6"}
-{"at":"2026-11-05T15:31:34Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"7353207bafc5ecff09a0b3217a41a3d4a8e246f0","commit":"60a44fdd0"}
-{"at":"2026-11-05T15:50:36Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"2d2938acd8aa097b2463383ef96c8915a501ebbe","commit":"6287b179b"}
-{"at":"2026-11-05T16:37:09Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"43fcc7e2c77ee330e14c42a6be556cbf08df54c9","commit":"06a30b7d7"}
-{"at":"2026-11-05T17:12:49Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"ded8c031333c74522ad857443ef52452a4942eb1","commit":"08dee0156"}
-{"at":"2026-11-05T17:50:17Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"1e6c949c38ce7f4b130b5249f1c98a36a13f26af","commit":"568384e44"}
-{"at":"2026-11-05T23:49:00Z","spec":"docs/superpowers/specs/2026-11-06-run27-steps-ledger-keys.md","receipt":"e6ba800d3ca85ab2f86e4933b745071e39814421","commit":"7c921dc9b"}
-{"at":"2026-11-06T00:24:46Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"89813208b80e4224aaf89c66fafc292cb8b3b996","commit":"78e6aceea"}
-{"at":"2026-11-06T00:34:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-gap-rootfix.md","receipt":"70348f736ce3755a701bc42f323a4e903c4fa15d","commit":"d38cfe8d1"}
-{"at":"2026-11-06T00:50:10Z","spec":"docs/superpowers/specs/2026-11-06-run27-design-optimizations.md","receipt":"c94d7cfab8182b974a078f3e5a2acfe08cfaca47","commit":"e3c402fb1"}
-{"at":"2026-11-06T01:08:09Z","spec":"docs/superpowers/specs/2026-11-06-frame-program-revision.md","receipt":"6c445f20c6c42be411c20197a54c6a05793611b9","commit":"08183ab02"}
-{"at":"2026-11-06T01:10:51Z","spec":"docs/superpowers/specs/2026-11-05-platform-rewrite-design.md","receipt":"30ca9e0cbf3467c190254321c237945846906685","commit":"42daf7159"}
-{"at":"2026-11-06T01:13:03Z","spec":"docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md","receipt":"077fa519bc97eb8cf9cb56bc8bf85560945d841b","commit":"08183ab02"}
-{"at":"2026-11-06T02:00:45Z","spec":"docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md","receipt":"b8812cbc23159c043e8021e8f28b71664a12eacb","commit":"66cd3bb43"}
-{"at":"2026-11-06T05:45:46Z","spec":"docs/superpowers/specs/2026-11-06-release-v1.0.13-overlay.md","receipt":"c40f26ac199e5a0e7874c37e1dded1cc30bc5cf8","commit":"283e3f0e1"}
-{"at":"2026-11-06T06:04:38Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"8c65f3e207b4d83219a14efa2bea314d07be89d0","commit":"b4770a21d"}
-{"at":"2026-11-06T06:10:47Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"f37cf1b62469f34294056e37cac36ec911ea3da5","commit":"6e57ade47"}
-{"at":"2026-11-06T06:22:10Z","spec":"docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md","receipt":"3be89810ea073676e8bb0b124a1f646341fd0332","commit":"91664a5d7"}
-{"at":"2026-11-06T06:38:30Z","spec":"docs/superpowers/specs/2026-11-06-inject-seam-restore.md","receipt":"e0f176a6623f30986c9c6f6ec569db314ff46ab5","commit":"4e3228ab4"}
-{"at":"2026-11-06T07:01:05Z","spec":"docs/superpowers/specs/2026-11-06-platform-wiring-restore.md","receipt":"b39cdb6cbb6fd2cae47cf68883db97ddebaa5125","commit":"ba492bd13"}
-{"at":"2026-11-06T07:28:03Z","spec":"docs/superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md","receipt":"ae58a29b5b2e18208796afa37a17fca0a3283257","commit":"9b4ad890f"}
-{"at":"2026-11-06T09:19:01Z","spec":"docs/superpowers/specs/2026-11-06-eval-golden-gate.md","receipt":"1ee39ae0227385680ae8ac2b44c3d4648fce7965","commit":"03bc31be7"}
-{"at":"2026-11-06T09:35:27Z","spec":"docs/superpowers/specs/2026-11-06-eval-golden-gate.md","receipt":"769be05006a945b91c0f93c730b6e9ae00c1b579","commit":"f3f5b477d"}
-{"at":"2026-11-06T11:14:01Z","spec":"docs/superpowers/specs/2026-11-06-director-dispatch.md","receipt":"62459acc6da3f5579a484fdc4368f41f297bf9aa","commit":"363a3a619"}
-{"at":"2026-11-06T11:19:45Z","spec":"docs/superpowers/specs/2026-11-06-director-dispatch.md","receipt":"177d7a47a8c2b875db8012fae644bafca6726a1f","commit":"c3360d0a5"}
-{"at":"2026-11-06T13:33:16Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-restructure.md","receipt":"c7909c7b7fc95e2f94ee3ed4aec90e83ec40e98b","commit":"355aa9ab6"}
-{"at":"2026-11-06T13:42:58Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-stable-name.md","receipt":"05d518b90e4eec4c31c2e74ed8303ee24d0cc277","commit":"30e975f32"}
-{"at":"2026-11-06T14:43:08Z","spec":"docs/superpowers/specs/2026-11-06-design-doc-descaffold.md","receipt":"648b5fb24188af899d8b6b5b796c26a2f53348c6","commit":"5b8562f83"}
-{"at":"2026-11-06T15:11:02Z","spec":"docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md","receipt":"93779753b2e9670b0c61fd392141a3b9b7494666","commit":"1d10c15db"}
-{"at":"2026-11-06T15:11:17Z","spec":"docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md","receipt":"18ec711741a14792dc3fdfe6aa300bbb90a87dba","commit":"c58bf84a5"}
-{"at":"2026-11-06T15:14:45Z","spec":"docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md","receipt":"b12d1afe217d6f0f7f4d8b7c1e7d51ebdc920474","commit":"886b76364"}
-{"at":"2026-11-06T22:21:11Z","spec":"docs/superpowers/specs/2026-11-07-sim-config-schema-align.md","receipt":"7f1d0bb3f91c56a5ffceb13661c2224343d4fef3","commit":"efebda426"}
-{"at":"2026-11-07T00:13:28Z","spec":"docs/superpowers/specs/2026-11-07-zcode-patches-pristine-replay.md","receipt":"d3fd82950b995cb63a3b45acfcf9d6b0cb43b66d","commit":"4f4eff9b8"}
-{"at":"2026-11-07T00:21:38Z","spec":"docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md","receipt":"138408fa753fcbcfa20cfd8e5bc1c770b47119d4","commit":"fc3ecbcca"}
-{"at":"2026-11-07T01:01:54Z","spec":"docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md","receipt":"0557c4dba815f71b68e697897c79025a9ec629a0","commit":"e2df2ddd3"}
-{"at":"2026-11-07T01:27:08Z","spec":"docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md","receipt":"79c879ad4201c5af4a22e8be30a3eda14c30b7dc","commit":"4b1fff6a1"}
-{"at":"2026-11-07T01:49:29Z","spec":"docs/superpowers/specs/2026-11-07-ponytail-headroom-absorption.md","receipt":"9ac5f9f5b2dfdbbf2b733a0c62871281b131bad2","commit":"c433c33ab"}
-{"at":"2026-11-07T01:54:53Z","spec":"docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md","receipt":"9efd1df6a98bd062263040969733711ba6c7637a","commit":"c433c33ab"}
-{"at":"2026-11-07T02:44:58Z","spec":"docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md","receipt":"623d468d6091c69f9e341ec646ece7ba33cc7c0e","commit":"9207c29c8"}
-{"at":"2026-11-07T02:45:22Z","spec":"docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md","receipt":"2188c761e6b9d54ee2ac2bb32aa160048bbe0edf","commit":"cb0f64755"}
-{"at":"2026-11-07T07:24:22Z","spec":"docs/superpowers/specs/2026-11-07-run28-prelaunch-fixes.md","receipt":"474d1496840d9f581a13383605d3c496c22463a6","commit":"45e419149"}
-{"at":"2026-11-07T08:23:29Z","spec":"docs/superpowers/specs/2026-11-07-run28-burn-fixes.md","receipt":"2edbf7abd3a2567e586bc5692dca16d00665264a","commit":"b9a051bad"}
-{"at":"2026-11-08T00:02:00Z","spec":"docs/superpowers/specs/2026-11-07-run28-burn-fixes.md","receipt":"8b860bcb05f5f2e00a9c8613739be1fa189c100f","commit":"1c26ed468"}
-{"at":"2026-11-08T00:06:12Z","spec":"docs/superpowers/specs/2026-11-08-n283-p1-director.md","receipt":"3eb031191954bd19f4aac2f8774c5a4682d59c60","commit":"5665e2fac"}
-{"at":"2026-11-08T11:54:40Z","spec":"docs/superpowers/specs/2026-11-08-n283-p1-director.md","receipt":"1bb7c1c9af383ae64440c25827f80410ae214305","commit":"9adeadb9f"}
-{"at":"2026-11-08T11:57:49Z","spec":"docs/superpowers/specs/2026-11-08-frame-verify-error-markers.md","receipt":"7cc4e0c287ec973934adc170132655a587e7a735","commit":"9adeadb9f"}
-{"at":"2026-11-08T12:09:28Z","spec":"docs/superpowers/specs/2026-11-08-deny-hygiene.md","receipt":"470c5ee8e1aed92b6ad47c28993daef5753fae12","commit":"17c7fe885"}
-{"at":"2026-11-08T13:25:11Z","spec":"docs/superpowers/specs/2026-11-08-frame-verify-error-markers.md","receipt":"81f53181b10a363099dd35a442d985cff7059fdc","commit":"d636895ab"}
-{"at":"2026-11-08T13:50:59Z","spec":"docs/superpowers/specs/2026-11-08-gate-restore-batch.md","receipt":"5c91c8da1ee7b3c50abf794cd5ac44cf15fa642e","commit":"3ebd3f20f"}
-{"at":"2026-11-08T13:59:57Z","spec":"docs/superpowers/specs/2026-11-08-team-library-evolution.md","receipt":"05fbad57c714b0fd84addbe91f33eedfec3da4f1","commit":"b135730b7"}
-{"at":"2026-11-08T14:17:39Z","spec":"docs/superpowers/specs/2026-11-08-run28-retro-rootfix.md","receipt":"bc481ff546b1e8441c1d28c45a33567df721d06c","commit":"9adeadb9f"}
-{"at":"2026-11-08T14:18:29Z","spec":"docs/superpowers/specs/2026-11-08-gate-restore-batch.md","receipt":"35173af942f4bf823c3a734e1ea6e5945ec8be17","commit":"dc6874f03"}
-{"at":"2026-11-08T14:44:43Z","spec":"docs/superpowers/specs/2026-11-08-evoteam-followup.md","receipt":"bc2f0ef1b74dff6cdd7e60f58a8cf73da90ecde5","commit":"27cccee6a"}
-{"at":"2026-11-08T15:06:35Z","spec":"docs/superpowers/specs/2026-11-08-evoteam-followup.md","receipt":"ec13d11b989049f47054632266354572db5f3005","commit":"5d0f1ee26"}
-{"at":"2026-11-09T08:19:46Z","spec":"docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md","receipt":"427355b19ef1b51ff07e51ba94d1fa6921549a76","commit":"5e68bb2b6"}
-{"at":"2026-11-09T09:36:40Z","spec":"docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md","receipt":"a5748d3132030cd85f5c5f27f7802c918caddb0a","commit":"1a717a07f"}
-{"at":"2026-11-09T09:37:28Z","spec":"docs/superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md","receipt":"17040cae440046dd30df9a60bf3fbd49cf187b75","commit":"5e68bb2b6"}
-{"at":"2026-11-09T09:42:21Z","spec":"docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md","receipt":"a04dc586b1c85f6be3902f72dd19c9024438681c","commit":"9da83e927"}
-{"at":"2026-11-09T10:29:19Z","spec":"docs/superpowers/specs/2026-11-09-ledger-judgment-followup.md","receipt":"ad4cb216fcc7951962aabae8cb8d7ba52d2e666a","commit":"1fbb4b1a8"}
-{"at":"2026-11-10T07:43:11Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-unification.md","receipt":"054cf924db537fb67d99a28b8b70147e065c60d5","commit":"6733836b5"}
-{"at":"2026-11-10T08:04:03Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-unification.md","receipt":"5af32b809d610ed770b512e74b5bf48f874064de","commit":"020ca7018"}
-{"at":"2026-11-10T08:26:43Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-unification.md","receipt":"dfeef70f275912401a3925941b7901e7b60799cb","commit":"62c10655b"}
-{"at":"2026-11-10T09:20:23Z","spec":"docs/superpowers/specs/2026-11-10-memory-unification-hindsight.md","receipt":"6cfb9fbc9f614280ffaafefdfc50859ff295aef3","commit":"10c6fd1d6"}
-{"at":"2026-11-10T09:20:24Z","spec":"docs/superpowers/specs/2026-11-10-ide-devtools-trim.md","receipt":"b23e3f1524fa0ed216eb1f4f533916dc12755c8b","commit":"10c6fd1d6"}
-{"at":"2026-11-10T09:45:57Z","spec":"docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md","receipt":"4aa1e3e5d8ab42ade9671a8a59e8a5c824e4fc88","commit":"10c6fd1d6"}
-{"at":"2026-11-10T09:46:35Z","spec":"docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md","receipt":"e5848f7d9d5016f690834d2d87cbfdd593762240","commit":"10c6fd1d6"}
-{"at":"2026-11-10T09:55:13Z","spec":"docs/superpowers/specs/2026-11-10-memory-unification-hindsight.md","receipt":"fbb5b5037d3d2d61b9f9bcae4774c914b007096d","commit":"b306daccb"}
-{"at":"2026-11-10T10:09:17Z","spec":"docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md","receipt":"4df420b169be7f33d4e8d4722f7d6f4d6e051b23","commit":"9128904ee"}
-{"at":"2026-11-10T10:23:42Z","spec":"docs/superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md","receipt":"11287882ea6679fa094d65888cd78fd1b1140efd","commit":"c078e719e"}
-{"at":"2026-11-10T10:38:35Z","spec":"docs/superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md","receipt":"daa67b8245fb94b56fcb3e02c676ae6dca05bc40","commit":"10c6fd1d6"}
-{"at":"2026-11-10T13:02:55Z","spec":"docs/superpowers/specs/2026-11-10-interaction-walkthrough-round.md","receipt":"2feb5a3cdc403d98c961d8c1bbdb88042b8917f3","commit":"801fc8480"}
-{"at":"2026-11-10T13:42:00Z","spec":"docs/superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md","receipt":"c69ed9165a14d47789cf8da850551216e9bf117f","commit":"5c771b596"}
-{"at":"2026-11-10T13:59:52Z","spec":"docs/superpowers/specs/2026-11-10-ide-devtools-task-cwd.md","receipt":"ea12f670a3a74ca89c5a016a8f6e2787a567da68","commit":"745376cd3"}
-{"at":"2026-11-10T14:33:51Z","spec":"docs/superpowers/specs/2026-11-10-zcode-openfile-workspace.md","receipt":"5fef27388bfe3e5723696d7ac968ae0427af1c9d","commit":"8a97ffc15"}
-{"at":"2026-11-10T16:07:47Z","spec":"docs/superpowers/specs/2026-11-10-identity-chat-matrix-batch2.md","receipt":"33bf5b5747c2cb7542bac3b66d5b725f570bcbe0","commit":"04d6f04cc"}
-{"at":"2026-11-10T16:18:27Z","spec":"docs/superpowers/specs/2026-11-09-training-v1.0.14-refresh.md","receipt":"7f4c4f66243132ec6c62ec611d8193f5fad936d3","commit":"5e68bb2b6"}
-{"at":"2026-11-10T16:33:37Z","spec":"docs/superpowers/specs/2026-11-11-run29-prelude.md","receipt":"5a914d09c209bf2f7edcf6c1a0b56eb682a0bef1","commit":"3285fc707"}
-{"at":"2026-11-10T18:08:47Z","spec":"docs/superpowers/specs/2026-11-11-g2-completion-summary-channel.md","receipt":"6c73b4b5d2f9a2a96aa29dc3d7585976b0c4ad88","commit":"39de89e2e"}
-{"at":"2026-11-10T20:06:08Z","spec":"docs/superpowers/specs/2026-11-11-burn-resume-attempts.md","receipt":"799217c0cb5b1d62fce6da521da3956cf7ea6ade","commit":"6c44987b4"}
-{"at":"2026-11-11T05:38:02Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"c1ef287c06f73b911c184b491ee4068843d0ab73","commit":"f7eb68330"}
-{"at":"2026-11-11T05:46:43Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"0ed9eb7f4da70cad05130b40f38d0898e99d52bb","commit":"67267e3ac"}
-{"at":"2026-11-11T06:34:42Z","spec":"docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md","receipt":"32fe804499df9bead2deeffdaa5f0401d678440c","commit":"762e64acb"}
-{"at":"2026-11-11T15:25:10Z","spec":"docs/superpowers/specs/2026-11-11-g4-principal-status-backfill.md","receipt":"1ef94562a1fa330df660996ccbbe7b4a08d7329d","commit":"eb6e9e7ae"}
-{"at":"2026-11-11T15:43:55Z","spec":"docs/superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md","receipt":"0076ad6ab2b40022f5814aa41684cf7ccdcd8072","commit":"14d9fd661"}
-{"at":"2026-11-12T01:06:51Z","spec":"docs/superpowers/specs/2026-11-12-expdual-ttse.md","receipt":"deba18480435b377d416d3cae9fcd3c9957862f6","commit":"67e149ad3"}
-{"at":"2026-11-12T01:07:15Z","spec":"docs/superpowers/specs/2026-11-12-expdual-ttse.md","receipt":"68b10cff52a6d9b374c0b37eec2499ede409dd11","commit":"d442fb6f2"}
-{"at":"2026-11-12T01:07:42Z","spec":"docs/superpowers/specs/2026-11-12-expdual-ttse.md","receipt":"e0bbdc9faa5e327d5a349df6f730c99991c9b419","commit":"2bb836d50"}
-{"at":"2026-11-12T02:27:06Z","spec":"docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md","receipt":"8e3a3d38a41f008f16aec9c996456dc737173443","commit":"295a3bfb7"}
-{"at":"2026-11-12T02:29:10Z","spec":"docs/superpowers/specs/2026-11-12-run29-retro-rootfix.md","receipt":"1f877f01777ae296c8abcfad7cfec231fd6e1e74","commit":"295a3bfb7"}
-{"at":"2026-11-12T02:30:36Z","spec":"docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md","receipt":"4f36bf37554ed32cf02fc3c1ec82be25eb083615","commit":"2d91e3f99"}
-{"at":"2026-11-12T02:46:54Z","spec":"docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md","receipt":"3afeaaf97061de79c11c4453b51c5bfa247550aa","commit":"b1d1e9450"}
-{"at":"2026-11-12T02:50:40Z","spec":"docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md","receipt":"d5e5f6af5e49648141c2fc6ae9caf8b4a316069a","commit":"11ccba54f"}
-{"at":"2026-11-12T02:52:27Z","spec":"docs/superpowers/specs/2026-11-12-run29-full-retrospective.md","receipt":"0f68dc274fe1395e6a9ff41c085c25e434d5db12","commit":"4e8d253cf"}
-{"at":"2026-11-12T03:02:15Z","spec":"docs/superpowers/specs/2026-11-12-run30-actions.md","receipt":"24fe8422813842d8e365516f57fc82524e2ccda8","commit":"0a898cb36"}
-{"at":"2026-11-12T03:19:58Z","spec":"docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md","receipt":"ff36a7c959d37b03de1b198b3f9753551547c427","commit":"043960307"}
-{"at":"2026-11-12T03:26:58Z","spec":"docs/superpowers/specs/2026-11-12-expdual-closeout.md","receipt":"50cc3851fce8c8921bcc21aa6ac1fb1371e9875a","commit":"295a3bfb7"}
-{"at":"2026-11-12T04:29:40Z","spec":"docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md","receipt":"76e9f354747086b80dd3908681807b5923348820","commit":"358dc08f2"}
-{"at":"2026-11-12T04:44:35Z","spec":"docs/superpowers/specs/2026-11-12-handbook-debt-clearance.md","receipt":"2331efabc73b2d0535f6a2c623d21a83a5ebbdc5","commit":"358dc08f2"}
-{"at":"2026-11-12T04:58:23Z","spec":"docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md","receipt":"e0499ee2574b386b5b2a855da6381ac9fd5ceeae","commit":"a30704f38"}
-{"at":"2026-11-12T05:02:34Z","spec":"docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md","receipt":"13e76634c6c465c4f738a6b1a779d1ae9c77452f","commit":"a8002fd55"}
-{"at":"2026-11-12T05:13:38Z","spec":"docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md","receipt":"6cf87fd781cb0a487da2fdb6e1aac9f775be7211","commit":"d858eec92"}
-{"at":"2026-11-12T05:16:58Z","spec":"docs/superpowers/specs/2026-11-12-doc-canon-single-source.md","receipt":"66755b8366cebca0cbb9104810fc2c7627ec43ba","commit":"a8002fd55"}
-{"at":"2026-11-12T05:17:20Z","spec":"docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md","receipt":"b1a1b434c60ec9f6d41ce011ceb3e49cf57c4fde","commit":"d0b149944"}
-{"at":"2026-11-12T05:17:49Z","spec":"docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md","receipt":"0a3941e87f0f470a5accdf2c13c80464173cfe08","commit":"009f8b82d"}
-{"at":"2026-11-12T05:19:18Z","spec":"docs/superpowers/specs/2026-11-12-runtime-ledgers-out-of-git.md","receipt":"ed40e625b119ecda29e00cf1dd2897b5728aabc6","commit":"a8002fd55"}
-{"at":"2026-11-12T05:28:15Z","spec":"docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md","receipt":"3b8f3463951c4e3f6731fbbf636a2e65beb30e71","commit":"ea9f58be6"}
-{"at":"2026-11-12T05:28:40Z","spec":"docs/superpowers/specs/2026-11-12-scope-gate-area-fence.md","receipt":"89a7dbeeb515b558d658c7ca5f08f99cc37b1f5f","commit":"1fa2c9add"}
-{"at":"2026-11-12T05:37:01Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"d8c835920b0e7ed770bfe06e363236e154094359","commit":"734bb1238"}
-{"at":"2026-11-12T05:41:13Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"5a64bf822b66cc309ba5c5a0ceb3aadcd2d10e22","commit":"7d38a9580"}
-{"at":"2026-11-12T05:45:10Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"d551dba66a40ed3e89fc95bf58513fb3a4acabb2","commit":"1c11608cd"}
-{"at":"2026-11-12T05:57:46Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"67568aca4519bbfab1c20130edd0360538d0b3f8","commit":"167b2f15b"}
-{"at":"2026-11-12T05:59:34Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"090a686622d51ed5eb66ef8a3f1537ada2667671","commit":"d5f21ab93"}
-{"at":"2026-11-12T06:08:47Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"249c59254273fd2b2093c0e86d3791cf2b6946f6","commit":"faa45cbc6"}
-{"at":"2026-11-12T06:14:13Z","spec":"docs/superpowers/specs/2026-11-12-capability-acceptance-matrix.md","receipt":"6730dbb7d2581010729b0b7701ace0042ae45986","commit":"c60381055"}
-{"at":"2026-11-12T06:16:16Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"21d3f9b15e2aa353d4967692f672deb5c782ed7d","commit":"3ec942755"}
-{"at":"2026-11-12T06:19:08Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"c504b213ea66ca65343888e5d046fcd84df45670","commit":"de36cef1c"}
-{"at":"2026-11-12T06:23:52Z","spec":"docs/superpowers/specs/2026-11-12-ci-product-tests.md","receipt":"199fd467e3d50c1578932c8da5374790c812e7a4","commit":"c60381055"}
-{"at":"2026-11-12T06:25:21Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"192eb499a91ea68a079f36d35e5286e65dd395ac","commit":"898860d2a"}
-{"at":"2026-11-12T06:29:14Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"06854977839ffd4401b8208613e631dcf5b325f4","commit":"a1a45db3b"}
-{"at":"2026-11-12T06:38:39Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"da22abe95702b93c33ee7ca06cf08a11fc540c83","commit":"c27b5fc62"}
-{"at":"2026-11-12T06:43:31Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"cf7af4ca334e33fbc12f520ac6977084e614c7bd","commit":"c56fa9d64"}
-{"at":"2026-11-12T06:48:31Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"8213c37f52da81baf72b04da9e320782909a0773","commit":"a701936f8"}
-{"at":"2026-11-12T06:55:42Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"acb0e943d9b221303af54db8e92904a089101fa7","commit":"e30f890c7"}
-{"at":"2026-11-12T07:09:32Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"28c6c52b71f01692c33c7548dcfff9778ad3947d","commit":"61f459b4c"}
-{"at":"2026-11-12T07:14:15Z","spec":"docs/superpowers/specs/2026-11-12-sim-stage-snapshot.md","receipt":"87ab295f73f1d02639fedb31a709f60c5506302f","commit":"034e94138"}
-{"at":"2026-11-12T07:15:29Z","spec":"docs/superpowers/specs/2026-11-12-typecheck-full-tree.md","receipt":"d40a61755e431032be0374b117a35a6f499046dc","commit":"034e94138"}
-{"at":"2026-11-12T07:22:27Z","spec":"docs/superpowers/specs/2026-11-12-domain-retirement-inventory.md","receipt":"80bfae628ec9df738c08569ea07f2e251c68624b","commit":"034e94138"}
-{"at":"2026-11-12T07:23:26Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"34532908f2b3da25879ab52496736927c0444009","commit":"21bc0a328"}
-{"at":"2026-11-12T07:23:53Z","spec":"docs/superpowers/specs/2026-11-12-ci-typecheck-into-product-tests.md","receipt":"70feff4dcb512e5f7cc3045868bbc27ae84f0c8b","commit":"f3f2129c4"}
-{"at":"2026-11-12T07:31:44Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"e30dae467a4b7be71d42cdabb06396f46e2b35c3","commit":"53a153df3"}
-{"at":"2026-11-12T07:34:59Z","spec":"docs/superpowers/specs/2026-11-12-yuan-facts-freshness.md","receipt":"450deaa2ade923a7cfcdd04aca6f136772146a1a","commit":"034e94138"}
-{"at":"2026-11-12T07:52:17Z","spec":"docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md","receipt":"9b119dfcfedb81776ba77ffe2ad454945ecef488","commit":"34785ac31"}
-{"at":"2026-11-12T08:00:14Z","spec":"docs/superpowers/specs/2026-11-12-ci-deps-order.md","receipt":"a7761bf38fc1fd0cc7a78642a5166ef2e583a9cc","commit":"18d29bf31"}
-{"at":"2026-11-12T08:04:35Z","spec":"docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md","receipt":"624593a06d96a2a097a8c31a2f66a5d182cdf15e","commit":"9684540d9"}
-{"at":"2026-11-12T08:08:58Z","spec":"docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md","receipt":"7e046bac07ca3277c8edfee2360b23d1d115a2b4","commit":"34e96eb77"}
-{"at":"2026-11-12T09:26:23Z","spec":"docs/superpowers/specs/2026-11-11-training-plain-language.md","receipt":"0503d690979ccbfe620ffe1ece050b6406b4029c","commit":"eb6e9e7ae"}
-{"at":"2026-11-12T09:47:43Z","spec":"docs/superpowers/specs/2026-11-12-lock-root-deps.md","receipt":"1e950de3819a6c3fe67420228792db909367360d","commit":"d064043fa"}
-{"at":"2026-11-12T09:51:32Z","spec":"docs/superpowers/specs/2026-11-12-domain-retirement-execution.md","receipt":"3f8cb3e629a84f9d39c4882789f0415681827a73","commit":"d064043fa"}
-{"at":"2026-11-12T10:07:18Z","spec":"docs/superpowers/specs/2026-11-12-ci-platform-gaps.md","receipt":"99640ec873167ed908696db80bc402c3ed3e2841","commit":"d064043fa"}
-{"at":"2026-11-12T10:39:18Z","spec":"docs/superpowers/specs/2026-11-12-yuan-linux-and-branchgate.md","receipt":"b65b8089a8656ae1f62bf84bdba98f40a9896de7","commit":"d064043fa"}
-{"at":"2026-11-12T12:10:48Z","spec":"docs/superpowers/specs/2026-11-12-domain-retirement-execution.md","receipt":"5262e4520ddb53893bb6e0efe0447b2b22307541","commit":"c1879572a"}
-{"at":"2026-11-13T02:01:20Z","spec":"docs/superpowers/specs/2026-11-13-burn-verify-robustness.md","receipt":"c24c48741f4bf4760d4cdacdb4b35a239350911f","commit":"b5bb25164"}
-{"at":"2026-11-13T08:45:13Z","spec":"docs/superpowers/specs/2026-11-13-burn-waive-gate.md","receipt":"6a2ea84491560546bd4a254fee78a2a527f07799","commit":"b5bb25164"}
-{"at":"2026-11-13T12:31:16Z","spec":"docs/superpowers/specs/2026-11-13-tech-ledger-refresh-vendor-upgrade.md","receipt":"d0244742563739bdb866307e210e99497e975678","commit":"6de3db4c8"}
-{"at":"2026-11-13T13:10:37Z","spec":"docs/superpowers/specs/2026-11-13-matrix-account-switch.md","receipt":"b09a61adfb47e65bbc89675c32e59bf1e89c2c24","commit":"6de3db4c8"}
-{"at":"2026-11-13T15:53:40Z","spec":"docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md","receipt":"72f268b34a138148c42c9b12a35bfe71740f2650","commit":"5ff989603"}
-{"at":"2026-11-13T15:56:28Z","spec":"docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md","receipt":"5a67ccf116e3c863cf5d6027d68b50bfd0e54816","commit":"687fc9374"}
-{"at":"2026-11-13T15:57:15Z","spec":"docs/superpowers/specs/2026-11-13-matrix-account-switch-batch2.md","receipt":"fd0e69c5317c4cbe0919604193eeaa972c24f0c0","commit":"b819d91a5"}
-{"at":"2026-11-13T15:59:07Z","spec":"docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md","receipt":"8f0cae66eb04ea5c72382319f49a7bba53d87249","commit":"8857a772c"}
-{"at":"2026-11-13T16:08:46Z","spec":"docs/superpowers/specs/2026-11-13-superagent-contract-closure.md","receipt":"b5f5543c3ad167bf612c849c6722be19ffb11f49","commit":"5ff989603"}
-{"at":"2026-11-13T16:13:34Z","spec":"docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md","receipt":"237d17e1bcff89aed2dc57ec61df19b6946e514e","commit":"d1f536863"}
-{"at":"2026-11-13T16:37:54Z","spec":"docs/superpowers/specs/2026-11-13-superagent-contract-closure.md","receipt":"56cef495b0ace7fb1576f9f81cd897cec8f6abea","commit":"02662dce3"}
-{"at":"2026-11-13T16:47:45Z","spec":"docs/superpowers/specs/2026-11-13-superagent-contract-closure.md","receipt":"4e92425f097602c55c66076f6be1cd887bf88f97","commit":"279640b2a"}
-{"at":"2026-11-13T16:53:06Z","spec":"docs/superpowers/specs/2026-11-13-superagent-contract-closure.md","receipt":"0d95ef62013c3904f1e76e2bd5a8d967b6480aa4","commit":"3133bbe41"}
-{"at":"2026-11-13T17:10:30Z","spec":"docs/superpowers/specs/2026-11-13-superagent-contract-closure.md","receipt":"544e55b95d56da1c9f7329e2b6d5d9883af28ef9","commit":"215abad11"}
-{"at":"2026-11-14T01:04:17Z","spec":"docs/superpowers/specs/2026-11-12-run30-prelaunch-actions.md","receipt":"c321ad3ca68f794e8aa7a189279e80bd3786f977","commit":"1bc799ca4"}
-{"at":"2026-11-14T03:43:11Z","spec":"docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md","receipt":"f2472ce647f8cd1bf07202ccf0bdd0f5454b83da","commit":"1bc799ca4"}
-{"at":"2026-11-14T08:18:27Z","spec":"docs/superpowers/specs/2026-11-14-run30-full-retrospective.md","receipt":"cfa2664f9aff7d13ffd16bdd7d0991eeec4fdf93","commit":"1de52a936"}
-{"at":"2026-11-14T14:53:25Z","spec":"docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md","receipt":"d642680a213be44692003cb2479bf84ce9d925f0","commit":"2aa595ec8"}
-{"at":"2026-11-15T08:38:50Z","spec":"docs/superpowers/specs/2026-11-14-proactive-ai-round2.md","receipt":"62544aec62a26114309eb3b81e8c3722c41e5867","commit":"45daf6722"}
-{"at":"2026-11-15T08:52:12Z","spec":"docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md","receipt":"97be966efa393a7a3880c4deca2646125d197515","commit":"7693ce1e6"}
-{"at":"2026-11-15T08:56:52Z","spec":"docs/superpowers/specs/2026-11-15-proactive-deferrals.md","receipt":"253390f2613865cbccc402c689942dc87c19a3cb","commit":"d1b173d2a"}
-{"at":"2026-11-15T09:35:13Z","spec":"docs/superpowers/specs/2026-11-15-plan-sync-and-latent.md","receipt":"9a7af3063611e6efee10cc00e4aeef2ef1c76849","commit":"950655d05"}
-{"at":"2026-11-16T07:05:26Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"6213cc8a4b647de3ca3a044cb748254b88f10ff9","commit":"a3076aa9a"}
-{"at":"2026-11-16T10:37:16Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"22dd459faa9a87818be1dc4c8a514a5f58f00965","commit":"93bd0ac33"}
-{"at":"2026-11-16T10:46:17Z","spec":"docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md","receipt":"c844cec5b11255bc7535fba03e66403df3fc90af","commit":"93bd0ac33"}
-{"at":"2026-11-16T10:46:29Z","spec":"docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md","receipt":"218d19545e12d62f1ce4ea2457bf2388c081e546","commit":"dc35fa059"}
-{"at":"2026-11-16T10:49:22Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"ca3cc15a10a15b316a1a563a2583df46995c535b","commit":"1553a3f5b"}
-{"at":"2026-11-16T10:57:52Z","spec":"docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md","receipt":"5476eb8661c1bd782857afa912b0f761e81074c5","commit":"684a85052"}
-{"at":"2026-11-16T11:11:30Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"874d68d068309131558d161893f4dbd70daf99f4","commit":"7eef8a4be"}
-{"at":"2026-11-16T11:14:35Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"4fe201eaba202548a6ebd5b269850d22c7c982e0","commit":"ad3e5b589"}
-{"at":"2026-11-16T12:53:14Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"8c10cbb06243c8d08daa3bcf4e2e5f0c88c19640","commit":"c4b160fc0"}
-{"at":"2026-11-16T13:23:28Z","spec":"docs/superpowers/specs/2026-11-16-always-on-live-verification.md","receipt":"245b66f9c5acfb46abb87aa66d3be91f36196b5c","commit":"0bfa401ff"}
-{"at":"2026-11-16T13:48:19Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"28064503a2d6f9464b367690baee09108bc267eb","commit":"6dab0115a"}
-{"at":"2026-11-16T15:08:15Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"6fabb160af5f4d306ca05985159faa7051298f21","commit":"5afb6b79a"}
-{"at":"2026-11-16T16:24:19Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"2ba3768b4225b29296c17d213aedb908c199d5cb","commit":"b1312b8aa"}
-{"at":"2026-11-16T16:26:08Z","spec":"docs/superpowers/specs/2026-11-17-sim-studio-preload-hardening.md","receipt":"309bf0f5326f9cec616366437051b7e8a4de8dc0","commit":"b1312b8aa"}
-{"at":"2026-11-16T16:31:27Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"05098af01a34e2dee28c6a608009adbe0cdc1fcd","commit":"51c550759"}
-{"at":"2026-11-16T16:46:26Z","spec":"docs/superpowers/specs/2026-11-17-sim-probes-run31.md","receipt":"1d0ba2b11c5d1044cfa333191bc9fb74014c73da","commit":"b1312b8aa"}
-{"at":"2026-11-16T16:48:31Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"8817334abdbb12ca146a9614c3f2e32046f4cb47","commit":"595d1b8ff"}
-{"at":"2026-11-18T03:21:50Z","spec":"docs/superpowers/specs/2026-11-18-retro-resume-provision.md","receipt":"e2a087339abef78118f70143a78a38d57ef29ba7","commit":"fbaf5eef8"}
-{"at":"2026-11-18T03:25:10Z","spec":"docs/superpowers/specs/2026-11-18-retro-disp-writer.md","receipt":"52f2f787eab39ce014dbde18bbd25f621db84d3c","commit":"fbaf5eef8"}
-{"at":"2026-11-18T03:32:44Z","spec":"docs/superpowers/specs/2026-11-18-retro-org-execution.md","receipt":"2af0e8921e6d7d3b0d04252515f91fa14b6384f1","commit":"fbaf5eef8"}
-{"at":"2026-11-18T03:38:14Z","spec":"docs/superpowers/specs/2026-11-18-retro-vendor-collect.md","receipt":"d359a870247ea5fa28394a3d5eb0a4d09f8d1d26","commit":"fbaf5eef8"}
-{"at":"2026-11-18T09:01:01Z","spec":"docs/superpowers/specs/2026-11-18-retro-report-plan.md","receipt":"62c23df04f6d4af44b25cd89fd0970451fe23ee0","commit":"d6ca596b3"}
-{"at":"2026-11-18T12:33:23Z","spec":"docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md","receipt":"956b1806875c3324ec0b4b3bce94623645c6c68f","commit":"a381993f9"}
-{"at":"2026-11-18T12:39:26Z","spec":"docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md","receipt":"44f5dc3509634e7931254fc5f4c3ee7dfc05526d","commit":"fb18590fc"}
-{"at":"2026-11-18T12:44:28Z","spec":"docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md","receipt":"64c3577b9a1955b8e9519b9150d1d00932ca549c","commit":"6fa6d3638"}
-{"at":"2026-11-18T14:39:11Z","spec":"docs/superpowers/specs/2026-11-18-retro-round2.md","receipt":"01b5282d2781ae452065e19c78eff54c62fb2ccf","commit":"7d4110148"}
+{"at": "2026-10-30T07:30:05Z", "spec": "docs/superpowers/specs/2026-10-30-helixharness-absorption.md", "receipt": "75d5893aeeaad117be5ec6bffad3a2eaae7702dd", "commit": "19beba797"}
+{"at": "2026-10-30T07:41:45Z", "spec": "docs/superpowers/specs/2026-10-30-helixharness-absorption.md", "receipt": "5eeeebbb4b2269b2f2498de54cba1254f7db73a1", "commit": "c1057dc60"}
+{"at": "2026-10-30T08:40:26Z", "spec": "docs/superpowers/specs/2026-10-30-governance-doc-candidates.md", "receipt": "24bd4afd9624ac39ae8009766e1b995072157438", "commit": "110a6d6be"}
+{"at": "2026-10-30T08:43:31Z", "spec": "docs/superpowers/specs/2026-10-30-helix-followup-debts.md", "receipt": "e6cd089c90fe7212b921edd41ab022cb55c971b2", "commit": "110a6d6be"}
+{"at": "2026-10-30T09:30:38Z", "spec": "docs/superpowers/specs/2026-10-30-release-v1.0.3-overlay.md", "receipt": "400c1e56752d0bcd42174be5eb2a27b5f6f4ec76", "commit": "3dae6ff28"}
+{"at": "2026-10-30T11:24:28Z", "spec": "docs/superpowers/specs/2026-10-30-chat-timeline-race-fix.md", "receipt": "dea8b3baab0583506a041e7d55d7911dbe7b3a9a", "commit": "f84994d21"}
+{"at": "2026-10-30T11:26:23Z", "spec": "docs/superpowers/specs/2026-06-21-overlay-architecture-design.md", "receipt": "33905a2269f04b3d898f66ec8e8a39bdde07e57f", "commit": "d23118751"}
+{"at": "2026-10-30T16:12:23Z", "spec": "docs/superpowers/specs/2026-10-31-ide-workspace-regression-fixes.md", "receipt": "eabf9487e3b39e28f138969c5214024c31fc2fd1", "commit": "cef650b77"}
+{"at": "2026-10-30T16:45:16Z", "spec": "docs/superpowers/specs/2026-10-31-run23-plan-report-retro-revision.md", "receipt": "b1fc79cae6970c3337881db8b4b4be4bff232e16", "commit": "cef650b77"}
+{"at": "2026-10-30T17:28:57Z", "spec": "docs/superpowers/specs/2026-10-31-kanban-detail-fast-path.md", "receipt": "3bae65e6ca93399e8a283eae12438850d380292d", "commit": "0a83fb67e"}
+{"at": "2026-10-31T00:17:59Z", "spec": "docs/superpowers/specs/2026-10-31-run23-clearance-g5-decide.md", "receipt": "4c12c8df976bf7541a6fd56a0974884ec712f3dc", "commit": "1946c2dc9"}
+{"at": "2026-10-31T00:34:58Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-regression.md", "receipt": "61d6a4e72fd9f7e95b78402b6f0aca6ce9504aec", "commit": "1e1156381"}
+{"at": "2026-10-31T00:36:41Z", "spec": "docs/superpowers/specs/2026-10-31-humangate-store-unify.md", "receipt": "8534a4637a7556c3791c11f86c3565a454b3064c", "commit": "ad932661e"}
+{"at": "2026-10-31T00:42:35Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "ae0cb23042666c282edd806aca56e83c1b843e4b", "commit": "b2d87226d"}
+{"at": "2026-10-31T00:48:31Z", "spec": "docs/superpowers/specs/2026-10-31-product-capability-finalize.md", "receipt": "189a1c88f211c841c9c23ec28b1378db7de40a7b", "commit": "ad932661e"}
+{"at": "2026-10-31T00:52:48Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "958d87caad29810e595beddfb26d47eed65b334b", "commit": "6ff125d27"}
+{"at": "2026-10-31T00:52:50Z", "spec": "docs/superpowers/specs/2026-10-31-matrix-autologin-deviceid.md", "receipt": "1cb907dd6c8f34cbe6b2f1c25c75e147764d3216", "commit": "6ba60444b"}
+{"at": "2026-10-31T00:53:47Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "debb32456899673794cfd4f1487a1cd811807e0f", "commit": "82cc9c2da"}
+{"at": "2026-10-31T00:58:36Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "a5212440e014e419b91740f2f640de1bffcf8043", "commit": "41ccf9803"}
+{"at": "2026-10-31T01:03:14Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "354a17acc10072ae565aad4fcbb55beef9b54cb4", "commit": "afeaef393"}
+{"at": "2026-10-31T01:06:10Z", "spec": "docs/superpowers/specs/2026-10-31-daily-walkthrough-probe-e2-close.md", "receipt": "bc798117ef20dfb76bce9bb90ce1ebdfa2384b37", "commit": "bd99cdbed"}
+{"at": "2026-10-31T01:23:01Z", "spec": "docs/superpowers/specs/2026-10-31-daily-walkthrough-probe-e5-e6.md", "receipt": "364400ff5585ceb9087e9eab86a7ab29ee92832a", "commit": "e73eb6a4c"}
+{"at": "2026-10-31T01:26:04Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "9e4660cdb5b89d0aafc0f0df4db7f9b1e11cc514", "commit": "5712f6b02"}
+{"at": "2026-10-31T01:44:17Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "90365a009875c3700354f589c7f77696e7b9906b", "commit": "310001eec"}
+{"at": "2026-10-31T01:52:44Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "8fb9e7f374bd87f33e570de28540903cf7e357c0", "commit": "57b8817d7"}
+{"at": "2026-10-31T01:57:08Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "e61db47d56c04d9b6c169c559f09c4039aae96ee", "commit": "85d7059d7"}
+{"at": "2026-10-31T01:57:09Z", "spec": "docs/superpowers/specs/2026-10-31-ide-workspace-regression-fixes.md", "receipt": "06a8aa0c34eabd2160fddf1f0baa96daa21ea3fb", "commit": "85d7059d7"}
+{"at": "2026-10-31T02:00:05Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "5fe18fecd9e1ab98066e08a9511e0bdf4e770a0c", "commit": "4b2fdaa8e"}
+{"at": "2026-10-31T02:06:50Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "4146ea226407cc768503bd918257ee5214ecdc4d", "commit": "a04a9e635"}
+{"at": "2026-10-31T02:11:42Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "d4221bc51e9ecb17e3f77dea4c161963d190cb61", "commit": "925caf9d2"}
+{"at": "2026-10-31T02:20:44Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "4d9ebe303af0d47bc7e0c787718a406d1570ed16", "commit": "a04a9e635"}
+{"at": "2026-10-31T02:24:17Z", "spec": "docs/superpowers/specs/2026-10-31-live-verification-closure.md", "receipt": "4a71f060981a5341a326e292873fc6d4ee630e57", "commit": "8afa60250"}
+{"at": "2026-10-31T02:26:58Z", "spec": "docs/superpowers/specs/2026-10-31-daily-research-absorption.md", "receipt": "5df9bdb093a553833671ffe4daf184e039d03b16", "commit": "8afa60250"}
+{"at": "2026-10-31T02:27:56Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "53584ade84b33111951310245e5e2868bf24e6bc", "commit": "735146a3e"}
+{"at": "2026-10-31T02:29:29Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md", "receipt": "8bb001252fd98b259cf35616baab217cd255cd5c", "commit": "a04a9e635"}
+{"at": "2026-10-31T02:33:14Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "c2b9eee1c97523287e1dabf559dc04c0372b149a", "commit": "fea1ac939"}
+{"at": "2026-10-31T02:42:24Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "0c500ddf992a3520172e2aedb9e9eeed9463eb3c", "commit": "68b61fafc"}
+{"at": "2026-10-31T02:43:32Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "cfbf29512d4c5d572a2ce3953b2928522ebdd4b1", "commit": "80fe3e6a2"}
+{"at": "2026-10-31T02:47:37Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md", "receipt": "1f255d32d375c1adb230af207fcafbca74e15177", "commit": "941803603"}
+{"at": "2026-10-31T02:51:30Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md", "receipt": "d05dbd5f9a58e8c53f763751b91d89d2c37df6f5", "commit": "8e8ca2431"}
+{"at": "2026-10-31T03:00:14Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "ca8b8131e43ec2aa16d9dcf42817560e79f169d7", "commit": "353cad6a4"}
+{"at": "2026-10-31T03:05:05Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "de767d0b29484291bb7124217f669d100762c9c6", "commit": "729c66811"}
+{"at": "2026-10-31T03:10:14Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md", "receipt": "d55f83001860b5c52874260b88b71d90ce9fadb3", "commit": "e14e187db"}
+{"at": "2026-10-31T03:15:25Z", "spec": "docs/superpowers/specs/2026-10-31-daily-workbench-closing.md", "receipt": "36391bd5126b109c76669eef3d4c32d8864939cc", "commit": "4df05c885"}
+{"at": "2026-10-31T03:24:47Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-r2.md", "receipt": "a8965f480d1863cbc0cbd6be2ab81633f1fcb127", "commit": "910db93cd"}
+{"at": "2026-10-31T03:42:18Z", "spec": "docs/superpowers/specs/2026-10-31-hanging-items-closure.md", "receipt": "dfa80459c6712ed6717c7505efa9cdadae8da6b8", "commit": "d575df606"}
+{"at": "2026-10-31T03:45:35Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md", "receipt": "46690a51581440084b3c498475fc15ac9785b916", "commit": "d575df606"}
+{"at": "2026-10-31T03:47:45Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-regression-fixes.md", "receipt": "87368527617463ce4d1804ea24c76e565c4b103b", "commit": "7b544c898"}
+{"at": "2026-10-31T03:49:31Z", "spec": "docs/superpowers/specs/2026-10-31-loop-graph-task-ledger.md", "receipt": "4fc96a0b72cf3fc5ed7fb31d21e20b8128368e8a", "commit": "d575df606"}
+{"at": "2026-10-31T03:57:44Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md", "receipt": "3ee88c1d3f6680cda8fac00f24266f5b1e990db3", "commit": "78065af29"}
+{"at": "2026-10-31T04:00:53Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md", "receipt": "d7de492cfb48ef9cec39b5bfa9d47c1ba382b768", "commit": "899983ada"}
+{"at": "2026-10-31T04:06:54Z", "spec": "docs/superpowers/specs/2026-10-31-studio-v080-upgrade.md", "receipt": "7a983805d925912b5fe45aa70dbbcb43ccc42ab8", "commit": "8c78fce3d"}
+{"at": "2026-10-31T04:16:46Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "aa80bb4a2aed44eeb380e240ab9b13b7a2d9f373", "commit": "d575df606"}
+{"at": "2026-10-31T04:20:07Z", "spec": "docs/superpowers/specs/2026-10-31-full-regression-fixes.md", "receipt": "6af0adee5b3bbb19dc441435d4558d5adf207504", "commit": "206b67a60"}
+{"at": "2026-10-31T05:11:42Z", "spec": "docs/superpowers/specs/2026-10-31-k19-ghost-closeout.md", "receipt": "054d24b10fcd690fb48e4c7ff3e600f609fc3f82", "commit": "227f81410"}
+{"at": "2026-10-31T05:22:19Z", "spec": "docs/superpowers/specs/2026-10-31-studio-v080-upgrade.md", "receipt": "084236cfcb2eb5a8912f99fcfd0e02311d12cd64", "commit": "1c7e6aebe"}
+{"at": "2026-10-31T05:28:03Z", "spec": "docs/superpowers/specs/2026-10-31-studio-v080-upgrade.md", "receipt": "094a209e9f025f3d6b2e86aca951da053de90d10", "commit": "96b11a5bb"}
+{"at": "2026-10-31T05:39:19Z", "spec": "docs/superpowers/specs/2026-10-31-three-zone-undone-closure.md", "receipt": "d3759f18f95b077bd1fc1219f7054c7a7156608c", "commit": "dac80bb75"}
+{"at": "2026-10-31T08:43:30Z", "spec": "docs/superpowers/specs/2026-10-31-rsi-d2d3-frontend.md", "receipt": "f331d566bb9970b707eb5f57f2af3f10e61bb4a4", "commit": "507a290eb"}
+{"at": "2026-10-31T08:52:19Z", "spec": "docs/superpowers/specs/2026-10-31-brand-v080-new-faces.md", "receipt": "f319c047a4b1d934ccade4b01eb8b475e87e9a12", "commit": "1012ad05e"}
+{"at": "2026-10-31T09:03:44Z", "spec": "docs/superpowers/specs/2026-10-31-zcode-3171-sync.md", "receipt": "1bc0cd735391b65b8dbe883bf03e5eeb7e48f63f", "commit": "771add087"}
+{"at": "2026-10-31T09:14:07Z", "spec": "docs/superpowers/specs/2026-10-31-zcode-3171-sync.md", "receipt": "35732fc5058f4c329d86e04480a38fbd179ddb8c", "commit": "9066a492a"}
+{"at": "2026-10-31T09:33:54Z", "spec": "docs/superpowers/specs/2026-10-31-rsi-p2-batch.md", "receipt": "ae90bca4a55f552846376d7955dd7cc23f13512d", "commit": "146a4138a"}
+{"at": "2026-10-31T09:36:03Z", "spec": "docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md", "receipt": "3a2f69f99713a6951335a49622ab71aab5b13565", "commit": "146a4138a"}
+{"at": "2026-10-31T09:41:41Z", "spec": "docs/superpowers/specs/2026-10-31-release-v1.0.4-overlay.md", "receipt": "a827cc86848b0e5cc7e1d9c90b504853a7513f28", "commit": "4380d1e98"}
+{"at": "2026-10-31T10:19:03Z", "spec": "docs/superpowers/specs/2026-10-31-package-lock-version-unify.md", "receipt": "3df13c251bc33a63947ad84b5ac77d9e465a47ec", "commit": "7aa1a7354"}
+{"at": "2026-10-31T11:22:04Z", "spec": "docs/superpowers/specs/2026-10-31-run24-plan-realign.md", "receipt": "4269696c2e9ec01fb48428a3da67aec1bd682b6f", "commit": "d597b4d90"}
+{"at": "2026-10-31T13:42:22Z", "spec": "docs/superpowers/specs/2026-10-31-prelaunch-crossrun-residue-gate.md", "receipt": "70d2e2e6bf1d5ae64c8aa5a62309893d499e1d6f", "commit": "fbe3e1483"}
+{"at": "2026-10-31T14:06:38Z", "spec": "docs/superpowers/specs/2026-10-31-superagent-domain-auth.md", "receipt": "5c08252fcab73e75e2958f31cacc5d6a6e8e1ada", "commit": "fbe3e1483"}
+{"at": "2026-10-31T14:07:07Z", "spec": "docs/superpowers/specs/2026-10-31-rsi-improvement-plan.md", "receipt": "9919dad1cc26fd995271f4a9231c0cd799eaba3a", "commit": "6f9d9f8ca"}
+{"at": "2026-10-31T14:07:27Z", "spec": "docs/superpowers/specs/2026-10-31-cockpit-attention-panel.md", "receipt": "e67077b5955ea9ac1157b3da81d05292aea2aba0", "commit": "fbe3e1483"}
+{"at": "2026-10-31T14:16:19Z", "spec": "docs/superpowers/specs/2026-10-31-superagent-domain-auth.md", "receipt": "3e5d02b2048e4b008a007079155866e82682faa0", "commit": "59573b910"}
+{"at": "2026-10-31T14:27:02Z", "spec": "docs/superpowers/specs/2026-10-31-rsi-improvement-plan.md", "receipt": "0f9c1c92cead41200cfd115a44f70194ea386293", "commit": "955785959"}
+{"at": "2026-10-31T14:30:42Z", "spec": "docs/superpowers/specs/2026-10-31-superagent-router.md", "receipt": "d378f6e035f8eedf0aca07ccb3efa4c4a71140d2", "commit": "1cb6aff0e"}
+{"at": "2026-10-31T14:58:05Z", "spec": "docs/superpowers/specs/2026-10-31-approval-proxy-dedup.md", "receipt": "d980b280c97fd64db5b92f457c1545fd434c92bc", "commit": "1cb6aff0e"}
+{"at": "2026-10-31T15:04:49Z", "spec": "docs/superpowers/specs/2026-10-31-superagent-router.md", "receipt": "c384d17c450722447bbc99320edc8c1b5d89286f", "commit": "ecc018043"}
+{"at": "2026-10-31T15:21:15Z", "spec": "docs/superpowers/specs/2026-10-31-orchestrator-delivery.md", "receipt": "9d033384c08d7a5b530f4b07f3d8a90731435d58", "commit": "bd74f0b90"}
+{"at": "2026-10-31T15:50:08Z", "spec": "docs/superpowers/specs/2026-10-31-model-resilience-hardening.md", "receipt": "e6e2410c399d93bf9d093428d7a258b0d25e327b", "commit": "c92966e90"}
+{"at": "2026-10-31T15:54:24Z", "spec": "docs/superpowers/specs/2026-10-31-prepush-push-range-fix.md", "receipt": "0736d904a2b56d6aa83b29a9962b353b3003e89e", "commit": "556355892"}
+{"at": "2026-10-31T16:06:13Z", "spec": "docs/superpowers/specs/2026-11-01-k19-new-endpoint-response-shape.md", "receipt": "aac974d3ec23d76434be500e1d29161ade89ed49", "commit": "f25c50c65"}
+{"at": "2026-10-31T16:20:27Z", "spec": "docs/superpowers/specs/2026-11-01-runtime-backfill-session-rotation-plugin-api.md", "receipt": "671d07926df0469c10a4d9c816846f36058ac166", "commit": "735f66d63"}
+{"at": "2026-10-31T16:23:05Z", "spec": "docs/superpowers/specs/2026-10-31-rsi-exec-batch1.md", "receipt": "ec994dc88b9a78459abd6e78dce3a9d09e6564d5", "commit": "735f66d63"}
+{"at": "2026-10-31T16:54:43Z", "spec": "docs/superpowers/specs/2026-11-01-dod-session-context-wiring.md", "receipt": "d34262c8df295606e10e92092016efdf53402d38", "commit": "8d9c22460"}
+{"at": "2026-10-31T17:26:24Z", "spec": "docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md", "receipt": "650b39a938322b84a3775cfa32a6360bc84118ce", "commit": "960010471"}
+{"at": "2026-10-31T18:12:00Z", "spec": "docs/superpowers/specs/2026-11-01-sim-dod-sync.md", "receipt": "1cca59cf44828699b6c255af6a5430b72d710867", "commit": "c875a9281"}
+{"at": "2026-10-31T18:21:16Z", "spec": "docs/superpowers/specs/2026-11-01-sim-resilience-sync.md", "receipt": "da2d0e71693590153c0945600f7ded1a53a7de9c", "commit": "4503b0cbf"}
+{"at": "2026-10-31T18:26:20Z", "spec": "docs/superpowers/specs/2026-11-01-sim-resilience-sync.md", "receipt": "f1f83f09fbbcb6496e5335a8da0d423e10e5881b", "commit": "cf7874d6f"}
+{"at": "2026-11-01T00:41:10Z", "spec": "docs/superpowers/specs/2026-11-01-sim-resilience-sync.md", "receipt": "0a7f17ebf151225c5ad16265f8a799676fb60e16", "commit": "6239fef81"}
+{"at": "2026-11-01T02:03:52Z", "spec": "docs/superpowers/specs/2026-11-01-gate-verdict-hardening.md", "receipt": "6d8540d4193d7a3d0b31f7423bfdf2f976271024", "commit": "0305dc3a7"}
+{"at": "2026-11-01T15:32:18Z", "spec": "docs/superpowers/specs/2026-11-01-run24-closure.md", "receipt": "ffbac656c20a8cd65d30b7b49168d3a7990c2932", "commit": "dc328f84c"}
+{"at": "2026-11-01T16:44:24Z", "spec": "docs/superpowers/specs/2026-11-02-run24-retro-driver-batch.md", "receipt": "f41f43bb220016b10c2ddd1a17efbf9b35251c0e", "commit": "47681be25"}
+{"at": "2026-11-01T17:39:08Z", "spec": "docs/superpowers/specs/2026-10-31-orchestrator-tick.md", "receipt": "5ef35c6495cb68550b15669f59528de7b7c72a5c", "commit": "62bcd8351"}
+{"at": "2026-11-01T17:56:53Z", "spec": "docs/superpowers/specs/2026-10-31-orchestrator-tick.md", "receipt": "57cdf769e7704e81f5434be8b24a5af62c8a755d", "commit": "9d186f7e1"}
+{"at": "2026-11-01T17:58:37Z", "spec": "docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md", "receipt": "fee6fc1521808c4bf35bb2a4401d800a243a698c", "commit": "62bcd8351"}
+{"at": "2026-11-01T17:59:08Z", "spec": "docs/superpowers/specs/2026-11-02-agent-patch-injection-list.md", "receipt": "03f9545c90dc2fa5c88bb4179c7c05c5c6b89288", "commit": "478dc920a"}
+{"at": "2026-11-01T18:11:58Z", "spec": "docs/superpowers/specs/2026-11-02-run24-runtime-closeout.md", "receipt": "b51ae9c4ef728a69115cea64193d60af820cf843", "commit": "2396f267a"}
+{"at": "2026-11-02T01:27:42Z", "spec": "docs/superpowers/specs/2026-11-02-chat-turn-recovery.md", "receipt": "431b65e38a6d3038887082239a83cf559348648e", "commit": "ad37434dc"}
+{"at": "2026-11-02T03:29:10Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "7c4dce6e5946ce871a05b83e7408165eaec7e3aa", "commit": "2043294e1"}
+{"at": "2026-11-02T03:47:23Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "7c30a11835ed21380e32f2f9429733a37b375ec5", "commit": "06a6256fb"}
+{"at": "2026-11-02T04:31:52Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "5b74f6d7a7ebb2f1fd539e57999264c5b1cbcdd0", "commit": "23ae18bd3"}
+{"at": "2026-11-02T04:51:06Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "cad7390b8fc24d2ed4ccb24f7b35cb3a29eb24b4", "commit": "4abc321ed"}
+{"at": "2026-11-02T04:53:09Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "ecd1a308a6cdaa72ac7cf3c0c5212f7bec285332", "commit": "cfa98aa2b"}
+{"at": "2026-11-02T05:37:07Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "ddcee08dc748f18e202335bfa56127b7abb5f5ec", "commit": "334fc4d28"}
+{"at": "2026-11-02T05:57:34Z", "spec": "docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md", "receipt": "43e40411daa685812665dcea8e81eb7943d5d580", "commit": "0c2c1752c"}
+{"at": "2026-11-02T06:26:40Z", "spec": "docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md", "receipt": "b44a09aa16b389025fbe8eff89aa639eec98b89c", "commit": "e26a620d7"}
+{"at": "2026-11-02T06:43:32Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "a6df2e7f00dfcd18bb24471c1ecd7a7cf2c2c175", "commit": "0c2c1752c"}
+{"at": "2026-11-02T06:53:49Z", "spec": "docs/superpowers/specs/2026-11-02-vendor-upgrade-studio-v109.md", "receipt": "37bf58e841ca478cb277cc4b20d95f505611db6b", "commit": "624b8f5a2"}
+{"at": "2026-11-02T07:29:07Z", "spec": "docs/superpowers/specs/2026-11-02-offline-windows-package.md", "receipt": "f69ea184832076bf7b033f7632276203223c1fd7", "commit": "d0395af5c"}
+{"at": "2026-11-02T07:43:40Z", "spec": "docs/superpowers/specs/2026-11-02-agent-debt-recheck.md", "receipt": "e431e758690c6a9b622853b3a2eb5b75ce5413a4", "commit": "d0395af5c"}
+{"at": "2026-11-02T07:54:36Z", "spec": "docs/superpowers/specs/2026-11-02-test-stability-dsl.md", "receipt": "64e0ffc559d736f0664df5a248945b512f65a551", "commit": "0aab81368"}
+{"at": "2026-11-02T08:02:06Z", "spec": "docs/superpowers/specs/2026-11-02-failure-taxonomy.md", "receipt": "02929ee3488119a8dddd6eb803370921e4bc459e", "commit": "0aab81368"}
+{"at": "2026-11-02T08:30:56Z", "spec": "docs/superpowers/specs/2026-11-02-maet-retrieval-ladder.md", "receipt": "931cf307a663f6a82420c68726b07738f91be7cf", "commit": "5296cac62"}
+{"at": "2026-11-02T08:37:01Z", "spec": "docs/superpowers/specs/2026-11-02-skill-grader.md", "receipt": "68684c0a9184be95ba7f7e87714aa1e45a09e93f", "commit": "f24f305a1"}
+{"at": "2026-11-02T08:37:06Z", "spec": "docs/superpowers/specs/2026-11-02-test-vocab.md", "receipt": "cffb1b7d51bcf2461831d3fe9af5308c570669de", "commit": "f24f305a1"}
+{"at": "2026-11-02T08:40:38Z", "spec": "docs/superpowers/specs/2026-11-02-plan-program-latest-sync.md", "receipt": "f1c839c94c9b11111e3eca1714b0c7ff1aaa0ef8", "commit": "f24f305a1"}
+{"at": "2026-11-02T09:15:10Z", "spec": "docs/superpowers/specs/2026-11-02-release-carrier-reconcile.md", "receipt": "17bf22b35760e6a15cde5072b7829698c32d98f4", "commit": "755f54514"}
+{"at": "2026-11-02T09:17:41Z", "spec": "docs/superpowers/specs/2026-11-02-eval-skill-panel.md", "receipt": "3402d0a83fb4f0140f3e2c21ccbd1dc19ba44895", "commit": "755f54514"}
+{"at": "2026-11-02T09:42:09Z", "spec": "docs/superpowers/specs/2026-11-02-eval-skill-grade-plan-sync.md", "receipt": "7ec3e8ca0deff8fe38eb00bce9aaaa4152f2f62f", "commit": "1e24d02db"}
+{"at": "2026-11-02T12:18:00Z", "spec": "docs/superpowers/specs/2026-11-02-chat-recovery-kwarg-fix.md", "receipt": "83154228a4dcc7d84fd949c6501ae9902ec0c7fe", "commit": "782b4768b"}
+{"at": "2026-11-02T12:33:48Z", "spec": "docs/superpowers/specs/2026-11-02-scenario-gate-resilience.md", "receipt": "78158a869d0225e090cae172dc6f2e93f70b0ec5", "commit": "1e0663365"}
+{"at": "2026-11-02T14:02:43Z", "spec": "docs/superpowers/specs/2026-11-02-sens-unbound-replay-fix.md", "receipt": "6ba5b3879418428436042d89eae8d3559c4145af", "commit": "43df7b4ef"}
+{"at": "2026-11-02T14:59:46Z", "spec": "docs/superpowers/specs/2026-11-02-supervisor-nudge-gate-aware.md", "receipt": "1cf18a314093fbe0de3e4c4da373d1d35fc16ff2", "commit": "c734ce7e7"}
+{"at": "2026-11-02T15:44:54Z", "spec": "docs/superpowers/specs/2026-11-02-mechanism-governance.md", "receipt": "68523ead0280090401cc5157b7b68badca260f08", "commit": "3993beb69"}
+{"at": "2026-11-02T23:56:15Z", "spec": "docs/superpowers/specs/2026-11-03-run25-full-retro.md", "receipt": "310a9a131752debd3f4e9b93a9f11f6d8df5c257", "commit": "f58c1562b"}
+{"at": "2026-11-02T23:59:40Z", "spec": "docs/superpowers/specs/2026-11-03-run25-full-retro.md", "receipt": "17029e315b50604bd3998890124358c82c6f5fa0", "commit": "33f701f2b"}
+{"at": "2026-11-03T00:13:37Z", "spec": "docs/superpowers/specs/2026-11-03-release-v1.0.9-overlay.md", "receipt": "8fddf774f20b5ad1b69d90046bd76d8843713bfd", "commit": "2a36ea852"}
+{"at": "2026-11-03T01:03:51Z", "spec": "docs/superpowers/specs/2026-10-28-aistudio-interactive-training.md", "receipt": "ce3930d6c8eabcc791ab311a623ccf7ccb1debe1", "commit": "e30f0cd0f"}
+{"at": "2026-11-03T01:17:04Z", "spec": "docs/superpowers/specs/2026-11-03-offline-everything-complete.md", "receipt": "4acab327e22cb765d2be1563020f6f9340468fea", "commit": "9062b976a"}
+{"at": "2026-11-03T01:26:57Z", "spec": "docs/superpowers/specs/2026-11-03-offline-everything-complete.md", "receipt": "753512a049c7936c9d1b88d0dd9f6d4d90e03dab", "commit": "ea88ed424"}
+{"at": "2026-11-03T02:09:51Z", "spec": "docs/superpowers/specs/2026-11-03-run25-collection-gaps-backfill.md", "receipt": "847ad37425ce93471fafcc93433ff04bdbf199db", "commit": "c2c18b896"}
+{"at": "2026-11-03T02:26:00Z", "spec": "docs/superpowers/specs/2026-11-03-bundle-tracked-only.md", "receipt": "6a955410eb64e3c6a817da729731ea29c1b3b5e3", "commit": "5269614f4"}
+{"at": "2026-11-03T03:06:03Z", "spec": "docs/superpowers/specs/2026-11-03-tar-pax-gnu-repack.md", "receipt": "862520b20717439748b3d6692b3b7876c9b4de73", "commit": "2670dc184"}
+{"at": "2026-11-03T03:09:54Z", "spec": "docs/superpowers/specs/2026-11-03-run26-pending-clearance.md", "receipt": "246529cd13300fc4360d061a7fe41259e3ed5fef", "commit": "2670dc184"}
+{"at": "2026-11-03T06:06:47Z", "spec": "docs/superpowers/specs/2026-11-03-swarm-yuan-absorption-pstack-evals.md", "receipt": "bb6a801c2097c67ff967c769631fab49c2c320a7", "commit": "e300df9f8"}
+{"at": "2026-11-03T06:11:44Z", "spec": "docs/superpowers/specs/2026-11-03-proactive-intervention-governance.md", "receipt": "02f5ce1167a8c275934efd0c5737a4f9b24e8f5a", "commit": "e300df9f8"}
+{"at": "2026-11-03T06:28:36Z", "spec": "docs/superpowers/specs/2026-11-03-proactive-intervention-governance.md", "receipt": "7ea0d9cffb10fe572f7ce5e3a281725efe8f9db1", "commit": "2777cc9d9"}
+{"at": "2026-11-03T06:45:25Z", "spec": "docs/superpowers/specs/2026-11-03-proactive-intervention-governance.md", "receipt": "b5590957a70db39cc48df39afde9e106b07b3167", "commit": "fc1ff153e"}
+{"at": "2026-11-03T06:54:22Z", "spec": "docs/superpowers/specs/2026-11-03-swarm-yuan-budget-tier3.md", "receipt": "b1afb60ffaaa2c29e1f5172b1f821962381ee88e", "commit": "fc1ff153e"}
+{"at": "2026-11-03T07:03:24Z", "spec": "docs/superpowers/specs/2026-11-03-harmony-multiobjective.md", "receipt": "4e334ad68f186e33fc7c3101085b6e7806fee9cb", "commit": "69cfef114"}
+{"at": "2026-11-03T07:17:42Z", "spec": "docs/superpowers/specs/2026-11-03-harmony-multiobjective.md", "receipt": "238c5580b4a202a798e84c9ba3090d84dc555730", "commit": "2980ca8e0"}
+{"at": "2026-11-03T07:28:03Z", "spec": "docs/superpowers/specs/2026-11-03-harmony-multiobjective.md", "receipt": "1c9a8251d3516f4dbf50862938108ef3398f8c66", "commit": "5144659a7"}
+{"at": "2026-11-03T07:36:46Z", "spec": "docs/superpowers/specs/2026-11-03-harmony-multiobjective.md", "receipt": "27c6f77249c9a6d4dd117efa008561e1cea49805", "commit": "0438da08b"}
+{"at": "2026-11-03T07:54:55Z", "spec": "docs/superpowers/specs/2026-11-03-four-gap-capabilities.md", "receipt": "69fdb619a23273702921fae06e42a998575da9f7", "commit": "10fe56b8b"}
+{"at": "2026-11-03T08:21:16Z", "spec": "docs/superpowers/specs/2026-11-03-four-gap-completion.md", "receipt": "2ce1b3b44d83cf33f3da3f690384571eccc540a6", "commit": "bddb8b71e"}
+{"at": "2026-11-03T08:21:27Z", "spec": "docs/superpowers/specs/2026-11-03-handoff-quality-ledger.md", "receipt": "a11db87ed38f91abc5d3f4ce240b4de37cd6b376", "commit": "bddb8b71e"}
+{"at": "2026-11-03T08:26:52Z", "spec": "docs/superpowers/specs/2026-11-03-deerflow-source-verification.md", "receipt": "36652fbd956fdca474154801b5561ecb89e73dfc", "commit": "b259349b7"}
+{"at": "2026-11-03T08:38:05Z", "spec": "docs/superpowers/specs/2026-11-03-acceptance-checks.md", "receipt": "e199ef4c42c3db8ade18f0a74668e22f13bf8b1a", "commit": "20d143fa8"}
+{"at": "2026-11-03T08:50:18Z", "spec": "docs/superpowers/specs/2026-11-03-claim-receipts-and-dispatch-capacity.md", "receipt": "984b4f50eee9a484a582844ea47fe76b09016e1b", "commit": "2c24320c4"}
+{"at": "2026-11-03T09:28:24Z", "spec": "docs/superpowers/specs/2026-11-03-component-library.md", "receipt": "6d409ca168529706915c40b9d54d172a754337f1", "commit": "294109bed"}
+{"at": "2026-11-03T11:25:03Z", "spec": "docs/superpowers/specs/2026-11-03-sim-capability-refresh.md", "receipt": "836aaa5d5edac6f0f895519477da898ca2c18e11", "commit": "401fb4225"}
+{"at": "2026-11-03T11:53:15Z", "spec": "docs/superpowers/specs/2026-11-03-aistudio-comprehensive-training-manual.md", "receipt": "9679b1450117dfcd48964a04287b79726a76059f", "commit": "e300df9f8"}
+{"at": "2026-11-03T15:55:09Z", "spec": "docs/superpowers/specs/2026-11-03-runtime-deps-refresh.md", "receipt": "3d2ecde5ba46262319a44166a917f9d6d8c40e83", "commit": "dcf24c35a"}
+{"at": "2026-11-03T16:38:30Z", "spec": "docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md", "receipt": "20aea2b3ec680f82a9670d820a287da1513178de", "commit": "70175e34d"}
+{"at": "2026-11-03T16:44:15Z", "spec": "docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md", "receipt": "7776c9b5ddcbc9b0c936a14e0a02fadc457aec34", "commit": "4b895da3a"}
+{"at": "2026-11-03T16:45:53Z", "spec": "docs/superpowers/specs/2026-11-04-runtime-rebase-v0226.md", "receipt": "9e87fad8fc053214f26182dcdcd4fd6f5d92b4ca", "commit": "64320210b"}
+{"at": "2026-11-04T01:11:24Z", "spec": "docs/superpowers/specs/2026-11-04-run26-retro-hardening.md", "receipt": "dd81fe8b69917fe80a889295e7b0169e5a4e38ba", "commit": "097bfe830"}
+{"at": "2026-11-04T01:38:59Z", "spec": "docs/superpowers/specs/2026-11-04-ledger-clearance.md", "receipt": "304f3ce923337314d08747eedc6c6319c4548850", "commit": "4d5cf118d"}
+{"at": "2026-11-04T04:47:03Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-project-workflow.md", "receipt": "44e84f277d3f9e0b16b0f37dc44fa1e435d2c37d", "commit": "2a01090e7"}
+{"at": "2026-11-04T04:48:05Z", "spec": "docs/superpowers/specs/2026-11-04-ide-workspace-bugs.md", "receipt": "80a2f4257f41b8cdd94982fb830fb8d3fa3ad807", "commit": "2a01090e7"}
+{"at": "2026-11-04T05:21:19Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-execution-records.md", "receipt": "ca7243cfe47fed522d272f31619e9bf96a5cfd67", "commit": "35a46643e"}
+{"at": "2026-11-04T05:22:12Z", "spec": "docs/superpowers/specs/2026-11-04-composer-popups.md", "receipt": "b07239bcdab14fda732a953d135325d39d1232b2", "commit": "76170b420"}
+{"at": "2026-11-04T05:22:44Z", "spec": "docs/superpowers/specs/2026-11-04-composer-popups.md", "receipt": "c963ef282967f0ff74f5e0cefc351ed404921c9a70e054065d638376af1cee61", "commit": "63542a14e"}
+{"at": "2026-11-04T05:24:51Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-project-graph.md", "receipt": "307d145028f89e232704b6957bc22ce8c690c80a", "commit": "35a46643e"}
+{"at": "2026-11-04T05:25:21Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-skill-export.md", "receipt": "edb4ed396aee6fc6655eb45eca7913a88bb589b1", "commit": "35a46643e"}
+{"at": "2026-11-04T06:32:13Z", "spec": "docs/superpowers/specs/2026-11-04-composer-popups.md", "receipt": "8ba34e0f1f665885521562cfbe5ac79fdb6ca19b", "commit": "a8515a50d"}
+{"at": "2026-11-04T07:12:08Z", "spec": "docs/superpowers/specs/2026-11-04-message-area-collapse.md", "receipt": "8e852a7c198e4634d1d8cd1d75c08bb0bc6b06f3", "commit": "967840ba6"}
+{"at": "2026-11-04T07:37:34Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-ledger-items.md", "receipt": "66cd2506bd2c3c6c1c88b8a7da9f4a0e60957ccd", "commit": "a8515a50d"}
+{"at": "2026-11-04T07:42:32Z", "spec": "docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md", "receipt": "0bf1b9262fe3cfa2f85f3c006878887aa25933f9", "commit": "271b5eff0"}
+{"at": "2026-11-04T08:10:37Z", "spec": "docs/superpowers/specs/2026-11-04-vendor-upgrade-agent-v0227.md", "receipt": "dd1f86b3b0598376005f36d57a39044830af13e7", "commit": "b9595fc32"}
+{"at": "2026-11-04T08:14:45Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md", "receipt": "789d3c6d92fc9c8eef9098b9a8ec72e183aa3b66", "commit": "a8515a50d"}
+{"at": "2026-11-04T08:17:15Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md", "receipt": "585d7b1f5db661cc52d2cdb0d16621bc2e4bbb5e", "commit": "226b9dbb0"}
+{"at": "2026-11-04T08:34:46Z", "spec": "docs/superpowers/specs/2026-11-04-agentteams-dispatch-debt-backport.md", "receipt": "390c6c9064b8dd74bc52c1985b3ff03f9c8bbe54", "commit": "19f97af2d"}
+{"at": "2026-11-04T10:06:42Z", "spec": "docs/superpowers/specs/2026-11-04-sim-capability-refresh-round2.md", "receipt": "778e43ff220a2de319cfc19443efb10682bd6b75", "commit": "0a0d0104f"}
+{"at": "2026-11-04T10:23:13Z", "spec": "docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md", "receipt": "207cf7257e4f0140dfa08b9c71d57a806a90ccdf", "commit": "0a0d0104f"}
+{"at": "2026-11-04T10:36:32Z", "spec": "docs/superpowers/specs/2026-11-04-userenv-route-mount.md", "receipt": "13320455b796a42b639a6126f71a47b57154e41d", "commit": "d9c82dc63"}
+{"at": "2026-11-04T10:56:55Z", "spec": "docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md", "receipt": "5f67b036c177147f6715ff88cb89e73ce0e3ddfb", "commit": "729cae521"}
+{"at": "2026-11-04T10:57:55Z", "spec": "docs/superpowers/specs/2026-11-04-regression-tooling-r26.md", "receipt": "bf5cce0cb982ec41ae0173e61f06bfdd7976842b", "commit": "d9c82dc63"}
+{"at": "2026-11-04T11:30:55Z", "spec": "docs/superpowers/specs/2026-11-04-shell-form-control-text-baseline.md", "receipt": "b10407c94dc0271c2b48d5d178fdaa661d24c138", "commit": "0a0d0104f"}
+{"at": "2026-11-04T11:39:26Z", "spec": "docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md", "receipt": "969f27103219004195338021b9124acf3b5d31d8", "commit": "79c3b957a"}
+{"at": "2026-11-04T11:42:54Z", "spec": "docs/superpowers/specs/2026-11-04-win-regression-p1-fixes.md", "receipt": "0ed1c33fbdef760479a0e84e12050954b8160058", "commit": "dd74f32ec"}
+{"at": "2026-11-04T11:45:56Z", "spec": "docs/superpowers/specs/2026-11-04-regression-tooling-r26.md", "receipt": "7101c6d78816fa2b49848c383314653e952450c2", "commit": "8b8d1c9e6"}
+{"at": "2026-11-04T12:13:49Z", "spec": "docs/superpowers/specs/2026-11-04-regression-tooling-r26.md", "receipt": "c82bbe31d34561d89a9ba5f5806b42c791a346ba", "commit": "f19201834"}
+{"at": "2026-11-04T12:49:09Z", "spec": "docs/superpowers/specs/2026-11-04-regression-prod-chain.md", "receipt": "fc79257b5b60f562703a4f893d74405441bb930a", "commit": "6e8c990de"}
+{"at": "2026-11-04T13:21:12Z", "spec": "docs/superpowers/specs/2026-11-04-harness-w1-toolcontract-enforcement.md", "receipt": "4a1fdec17a8d5ce35cc6b9cd7171733a1b520ab0", "commit": "d5201dedc"}
+{"at": "2026-11-04T13:32:19Z", "spec": "docs/superpowers/specs/2026-11-04-harness-w2-result-approval.md", "receipt": "cd355442353b9c07d839cdac117ece7da868c8bb", "commit": "d5201dedc"}
+{"at": "2026-11-04T13:49:24Z", "spec": "docs/superpowers/specs/2026-11-04-harness-w3-observability-taskmodel.md", "receipt": "d872b198f5b89188538e3d950028c2a5b2b39ca6", "commit": "d5201dedc"}
+{"at": "2026-11-04T15:13:23Z", "spec": "docs/superpowers/specs/2026-11-04-harness-w4-closeout.md", "receipt": "7a11b3bab9d7cfaf2e9edfbd79d69deefdfee94c", "commit": "813219c3a"}
+{"at": "2026-11-04T16:20:34Z", "spec": "docs/superpowers/specs/2026-11-05-teardown-void-type-fix.md", "receipt": "a9bb2aa6709b2868b0e452c77dccdc2fe229e72f", "commit": "585858a8f"}
+{"at": "2026-11-04T16:26:12Z", "spec": "docs/superpowers/specs/2026-11-05-teardown-void-type-fix.md", "receipt": "f8b6228ca4f20d69a5884d7add8fb17ab8f4f4e2", "commit": "d56903598"}
+{"at": "2026-11-04T16:35:42Z", "spec": "docs/superpowers/specs/2026-11-05-frame-expect-dash-keys-fix.md", "receipt": "d72c16fef3f162fffa336ab4b4618c243700eb97", "commit": "26608571f"}
+{"at": "2026-11-05T02:29:56Z", "spec": "docs/superpowers/specs/2026-11-05-review-anchor-pin.md", "receipt": "d87c0ed68206b6f7df3d0524a2b2b1da36306b07", "commit": "1edc24bab"}
+{"at": "2026-11-05T03:44:15Z", "spec": "docs/superpowers/specs/2026-11-05-org-governance-autonomy-scale.md", "receipt": "9b0685f37f6e6c3e955c1b909c238d60a7a63a4c", "commit": "430054e88"}
+{"at": "2026-11-05T04:21:45Z", "spec": "docs/superpowers/specs/2026-11-05-governance-truth-restoration.md", "receipt": "ed54bcac5ee96e1c71d0e6e3afa17ae50535cae3", "commit": "054c81770"}
+{"at": "2026-11-05T04:25:57Z", "spec": "docs/superpowers/specs/2026-11-05-governance-truth-restoration.md", "receipt": "9965e025bb5c1d455a6370dd8950d5bb6d725880", "commit": "855854075"}
+{"at": "2026-11-05T04:28:37Z", "spec": "docs/superpowers/specs/2026-11-05-org-governance-closeout.md", "receipt": "82f8533b7af1dbca2243847d57c2b87bd363054b", "commit": "7fb068b9a"}
+{"at": "2026-11-05T04:37:16Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "033250b4d6e9dfacfaf5ca3283767c10b4ce7749", "commit": "fd550c1e6"}
+{"at": "2026-11-05T04:39:43Z", "spec": "docs/superpowers/specs/2026-11-05-org-governance-closeout.md", "receipt": "be84f4b734c7580fb89a49927a43b957865425bd", "commit": "8f10dde3f"}
+{"at": "2026-11-05T04:49:26Z", "spec": "docs/superpowers/specs/2026-11-05-governance-truth-restoration.md", "receipt": "b65f85750f7fd5c48aefb78e8d2c4668b9937436", "commit": "32bf92b02"}
+{"at": "2026-11-05T04:53:33Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "a07e46f44e678733e7c9244ccdebcd74609ce910", "commit": "32bf92b02"}
+{"at": "2026-11-05T04:59:46Z", "spec": "docs/superpowers/specs/2026-11-05-governance-truth-restoration.md", "receipt": "651eea48abfdfb595028afed0930c76c76d3f1b5", "commit": "1f81d2d9d"}
+{"at": "2026-11-05T05:14:48Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "eb1ffd1a04e320e8588f9785aaed3ddc26ee05ec", "commit": "3cd3ed1aa"}
+{"at": "2026-11-05T05:26:27Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "816ed4aba8d1f0be98faee103dd6a0c409072136", "commit": "ce38f88ac"}
+{"at": "2026-11-05T05:35:52Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "6043d9559c4676c26425bf1eaf45362e14ed4d14", "commit": "1c3417b4f"}
+{"at": "2026-11-05T05:51:49Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "18d1abd3e923072e3ef52a7c8b110cc48119c2cb", "commit": "5741e7a95"}
+{"at": "2026-11-05T05:55:17Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "477140897d9a7f3cd75eafd0cd8d68485946333d", "commit": "0336ac10e"}
+{"at": "2026-11-05T05:56:37Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "fc4917defd301675476ee8180e0a524f5f7ce23a", "commit": "f5002a4b3"}
+{"at": "2026-11-05T05:57:30Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "ea5e9075d2abad22e56705d67dcf1c154b45255b", "commit": "4fd5fcde8"}
+{"at": "2026-11-05T06:13:34Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "e2a3d9c9c59e6794a27f74b8be1388cb3a98de48", "commit": "da04b7f19"}
+{"at": "2026-11-05T06:31:05Z", "spec": "docs/superpowers/specs/2026-11-05-file-size-refactor-ledger.md", "receipt": "112f3dd7950d0a9fcd97d456a15f79f56559cea6", "commit": "35e7b7890"}
+{"at": "2026-11-05T08:23:10Z", "spec": "docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md", "receipt": "9b02aa8e907bbfbb3f81f110ab7129817d942caa", "commit": "ef937f75b"}
+{"at": "2026-11-05T08:39:45Z", "spec": "docs/superpowers/specs/2026-11-05-pending-ledgers-closeout.md", "receipt": "891a4b39b41c17156ae11264b90699d27e73628f", "commit": "438559c49"}
+{"at": "2026-11-05T09:13:12Z", "spec": "docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md", "receipt": "a31434121a090ead6d1daff59b59434512330885", "commit": "ef937f75b"}
+{"at": "2026-11-05T09:19:28Z", "spec": "docs/superpowers/specs/2026-11-05-ainative-absorption.md", "receipt": "c2c2b728232b078aa3dfeaec73ca56e8a2733905", "commit": "51eeb2d3a"}
+{"at": "2026-11-05T09:33:30Z", "spec": "docs/superpowers/specs/2026-11-05-ainative-absorption.md", "receipt": "607621e466a5b87408a0a31fa995409e32e88fd4", "commit": "af3e2909c"}
+{"at": "2026-11-05T09:59:27Z", "spec": "docs/superpowers/specs/2026-11-05-nvme-mount-guards.md", "receipt": "2444b41d84b19c1b005c1baaadaae46b9556d01f", "commit": "0de003745"}
+{"at": "2026-11-05T09:59:56Z", "spec": "docs/superpowers/specs/2026-11-05-nvme-mount-guards.md", "receipt": "88125fbd604d3fd038904c90592db4aebc9c773a", "commit": "609cb2408"}
+{"at": "2026-11-05T10:10:29Z", "spec": "docs/superpowers/specs/2026-11-05-ainative-absorption.md", "receipt": "2ef52c13eb30b480eef370e5a77e6db19ce43fe8", "commit": "7d9b2b4b8"}
+{"at": "2026-11-05T11:10:20Z", "spec": "docs/superpowers/specs/2026-11-05-ainative-absorption.md", "receipt": "fe8553623a4968f567b11b674375f8132472a19a", "commit": "9d9d9b65f"}
+{"at": "2026-11-05T11:12:19Z", "spec": "docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md", "receipt": "f626a7faae436ff02a15e0688a3c1ff8255f972a", "commit": "9d9d9b65f"}
+{"at": "2026-11-05T11:45:49Z", "spec": "docs/superpowers/specs/2026-11-05-sim-direct-llm-channel.md", "receipt": "ab3ed1aba974732c23f958854e11e2d25aaa8ee8", "commit": "9d9d9b65f"}
+{"at": "2026-11-05T11:47:18Z", "spec": "docs/superpowers/specs/2026-11-05-kanban-junk-runid-tolerance.md", "receipt": "0dc7dac4393117806206fa6fe5afc113c7423b0a", "commit": "0a860e5f9"}
+{"at": "2026-11-05T11:51:05Z", "spec": "docs/superpowers/specs/2026-11-05-ainative-absorption.md", "receipt": "c6bcf86316a14bb913d3de882d984402fd10f278", "commit": "8e4ccb700"}
+{"at": "2026-11-05T12:52:45Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "99045b37b4196a8a0bb9b5ebdf0d0aa46875090b", "commit": "e8186dba6"}
+{"at": "2026-11-05T13:15:29Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "7109211fbe6ccdcfafe0f58341b1fd347b66f688", "commit": "2f99b4624"}
+{"at": "2026-11-05T14:30:27Z", "spec": "docs/superpowers/specs/2026-11-05-g4-probe-profile-fix.md", "receipt": "4015404412fe1c10cf43d3a1876201035ee75b5e", "commit": "7d5b9ddd3"}
+{"at": "2026-11-05T14:47:16Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "38589e1491776c45ebbf4fb382f63dd3013acaad", "commit": "5887bf865"}
+{"at": "2026-11-05T15:05:46Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "c9e9f9c4b872ca7831a68a50792597620857eecc", "commit": "001db4138"}
+{"at": "2026-11-05T15:22:33Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "549398be82d0d0b5936e833fdc985ed4f5207e25", "commit": "bb0da7ef6"}
+{"at": "2026-11-05T15:31:34Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "7353207bafc5ecff09a0b3217a41a3d4a8e246f0", "commit": "60a44fdd0"}
+{"at": "2026-11-05T15:50:36Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "2d2938acd8aa097b2463383ef96c8915a501ebbe", "commit": "6287b179b"}
+{"at": "2026-11-05T16:37:09Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "43fcc7e2c77ee330e14c42a6be556cbf08df54c9", "commit": "06a30b7d7"}
+{"at": "2026-11-05T17:12:49Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "ded8c031333c74522ad857443ef52452a4942eb1", "commit": "08dee0156"}
+{"at": "2026-11-05T17:50:17Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "1e6c949c38ce7f4b130b5249f1c98a36a13f26af", "commit": "568384e44"}
+{"at": "2026-11-05T23:49:00Z", "spec": "docs/superpowers/specs/2026-11-06-run27-steps-ledger-keys.md", "receipt": "e6ba800d3ca85ab2f86e4933b745071e39814421", "commit": "7c921dc9b"}
+{"at": "2026-11-06T00:24:46Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "89813208b80e4224aaf89c66fafc292cb8b3b996", "commit": "78e6aceea"}
+{"at": "2026-11-06T00:34:10Z", "spec": "docs/superpowers/specs/2026-11-06-run27-design-gap-rootfix.md", "receipt": "70348f736ce3755a701bc42f323a4e903c4fa15d", "commit": "d38cfe8d1"}
+{"at": "2026-11-06T00:50:10Z", "spec": "docs/superpowers/specs/2026-11-06-run27-design-optimizations.md", "receipt": "c94d7cfab8182b974a078f3e5a2acfe08cfaca47", "commit": "e3c402fb1"}
+{"at": "2026-11-06T01:08:09Z", "spec": "docs/superpowers/specs/2026-11-06-frame-program-revision.md", "receipt": "6c445f20c6c42be411c20197a54c6a05793611b9", "commit": "08183ab02"}
+{"at": "2026-11-06T01:10:51Z", "spec": "docs/superpowers/specs/2026-11-05-platform-rewrite-design.md", "receipt": "30ca9e0cbf3467c190254321c237945846906685", "commit": "42daf7159"}
+{"at": "2026-11-06T01:13:03Z", "spec": "docs/superpowers/specs/2026-11-06-frame-capture-accuracy.md", "receipt": "077fa519bc97eb8cf9cb56bc8bf85560945d841b", "commit": "08183ab02"}
+{"at": "2026-11-06T02:00:45Z", "spec": "docs/superpowers/specs/2026-11-06-ai-friendly-cli-contract.md", "receipt": "b8812cbc23159c043e8021e8f28b71664a12eacb", "commit": "66cd3bb43"}
+{"at": "2026-11-06T05:45:46Z", "spec": "docs/superpowers/specs/2026-11-06-release-v1.0.13-overlay.md", "receipt": "c40f26ac199e5a0e7874c37e1dded1cc30bc5cf8", "commit": "283e3f0e1"}
+{"at": "2026-11-06T06:04:38Z", "spec": "docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md", "receipt": "8c65f3e207b4d83219a14efa2bea314d07be89d0", "commit": "b4770a21d"}
+{"at": "2026-11-06T06:10:47Z", "spec": "docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md", "receipt": "f37cf1b62469f34294056e37cac36ec911ea3da5", "commit": "6e57ade47"}
+{"at": "2026-11-06T06:22:10Z", "spec": "docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md", "receipt": "3be89810ea073676e8bb0b124a1f646341fd0332", "commit": "91664a5d7"}
+{"at": "2026-11-06T06:38:30Z", "spec": "docs/superpowers/specs/2026-11-06-inject-seam-restore.md", "receipt": "e0f176a6623f30986c9c6f6ec569db314ff46ab5", "commit": "4e3228ab4"}
+{"at": "2026-11-06T07:01:05Z", "spec": "docs/superpowers/specs/2026-11-06-platform-wiring-restore.md", "receipt": "b39cdb6cbb6fd2cae47cf68883db97ddebaa5125", "commit": "ba492bd13"}
+{"at": "2026-11-06T07:28:03Z", "spec": "docs/superpowers/specs/2026-11-06-runtime-patch-touched-deploy.md", "receipt": "ae58a29b5b2e18208796afa37a17fca0a3283257", "commit": "9b4ad890f"}
+{"at": "2026-11-06T09:19:01Z", "spec": "docs/superpowers/specs/2026-11-06-eval-golden-gate.md", "receipt": "1ee39ae0227385680ae8ac2b44c3d4648fce7965", "commit": "03bc31be7"}
+{"at": "2026-11-06T09:35:27Z", "spec": "docs/superpowers/specs/2026-11-06-eval-golden-gate.md", "receipt": "769be05006a945b91c0f93c730b6e9ae00c1b579", "commit": "f3f5b477d"}
+{"at": "2026-11-06T11:14:01Z", "spec": "docs/superpowers/specs/2026-11-06-director-dispatch.md", "receipt": "62459acc6da3f5579a484fdc4368f41f297bf9aa", "commit": "363a3a619"}
+{"at": "2026-11-06T11:19:45Z", "spec": "docs/superpowers/specs/2026-11-06-director-dispatch.md", "receipt": "177d7a47a8c2b875db8012fae644bafca6726a1f", "commit": "c3360d0a5"}
+{"at": "2026-11-06T13:33:16Z", "spec": "docs/superpowers/specs/2026-11-06-design-doc-restructure.md", "receipt": "c7909c7b7fc95e2f94ee3ed4aec90e83ec40e98b", "commit": "355aa9ab6"}
+{"at": "2026-11-06T13:42:58Z", "spec": "docs/superpowers/specs/2026-11-06-design-doc-stable-name.md", "receipt": "05d518b90e4eec4c31c2e74ed8303ee24d0cc277", "commit": "30e975f32"}
+{"at": "2026-11-06T14:43:08Z", "spec": "docs/superpowers/specs/2026-11-06-design-doc-descaffold.md", "receipt": "648b5fb24188af899d8b6b5b796c26a2f53348c6", "commit": "5b8562f83"}
+{"at": "2026-11-06T15:11:02Z", "spec": "docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md", "receipt": "93779753b2e9670b0c61fd392141a3b9b7494666", "commit": "1d10c15db"}
+{"at": "2026-11-06T15:11:17Z", "spec": "docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md", "receipt": "18ec711741a14792dc3fdfe6aa300bbb90a87dba", "commit": "c58bf84a5"}
+{"at": "2026-11-06T15:14:45Z", "spec": "docs/superpowers/specs/2026-11-06-workunit-responsibility-ledger.md", "receipt": "b12d1afe217d6f0f7f4d8b7c1e7d51ebdc920474", "commit": "886b76364"}
+{"at": "2026-11-06T22:21:11Z", "spec": "docs/superpowers/specs/2026-11-07-sim-config-schema-align.md", "receipt": "7f1d0bb3f91c56a5ffceb13661c2224343d4fef3", "commit": "efebda426"}
+{"at": "2026-11-07T00:13:28Z", "spec": "docs/superpowers/specs/2026-11-07-zcode-patches-pristine-replay.md", "receipt": "d3fd82950b995cb63a3b45acfcf9d6b0cb43b66d", "commit": "4f4eff9b8"}
+{"at": "2026-11-07T00:21:38Z", "spec": "docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md", "receipt": "138408fa753fcbcfa20cfd8e5bc1c770b47119d4", "commit": "fc3ecbcca"}
+{"at": "2026-11-07T01:01:54Z", "spec": "docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md", "receipt": "0557c4dba815f71b68e697897c79025a9ec629a0", "commit": "e2df2ddd3"}
+{"at": "2026-11-07T01:27:08Z", "spec": "docs/superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md", "receipt": "79c879ad4201c5af4a22e8be30a3eda14c30b7dc", "commit": "4b1fff6a1"}
+{"at": "2026-11-07T01:49:29Z", "spec": "docs/superpowers/specs/2026-11-07-ponytail-headroom-absorption.md", "receipt": "9ac5f9f5b2dfdbbf2b733a0c62871281b131bad2", "commit": "c433c33ab"}
+{"at": "2026-11-07T01:54:53Z", "spec": "docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md", "receipt": "9efd1df6a98bd062263040969733711ba6c7637a", "commit": "c433c33ab"}
+{"at": "2026-11-07T02:44:58Z", "spec": "docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md", "receipt": "623d468d6091c69f9e341ec646ece7ba33cc7c0e", "commit": "9207c29c8"}
+{"at": "2026-11-07T02:45:22Z", "spec": "docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md", "receipt": "2188c761e6b9d54ee2ac2bb32aa160048bbe0edf", "commit": "cb0f64755"}
+{"at": "2026-11-07T07:24:22Z", "spec": "docs/superpowers/specs/2026-11-07-run28-prelaunch-fixes.md", "receipt": "474d1496840d9f581a13383605d3c496c22463a6", "commit": "45e419149"}
+{"at": "2026-11-07T08:23:29Z", "spec": "docs/superpowers/specs/2026-11-07-run28-burn-fixes.md", "receipt": "2edbf7abd3a2567e586bc5692dca16d00665264a", "commit": "b9a051bad"}
+{"at": "2026-11-08T00:02:00Z", "spec": "docs/superpowers/specs/2026-11-07-run28-burn-fixes.md", "receipt": "8b860bcb05f5f2e00a9c8613739be1fa189c100f", "commit": "1c26ed468"}
+{"at": "2026-11-08T00:06:12Z", "spec": "docs/superpowers/specs/2026-11-08-n283-p1-director.md", "receipt": "3eb031191954bd19f4aac2f8774c5a4682d59c60", "commit": "5665e2fac"}
+{"at": "2026-11-08T11:54:40Z", "spec": "docs/superpowers/specs/2026-11-08-n283-p1-director.md", "receipt": "1bb7c1c9af383ae64440c25827f80410ae214305", "commit": "9adeadb9f"}
+{"at": "2026-11-08T11:57:49Z", "spec": "docs/superpowers/specs/2026-11-08-frame-verify-error-markers.md", "receipt": "7cc4e0c287ec973934adc170132655a587e7a735", "commit": "9adeadb9f"}
+{"at": "2026-11-08T12:09:28Z", "spec": "docs/superpowers/specs/2026-11-08-deny-hygiene.md", "receipt": "470c5ee8e1aed92b6ad47c28993daef5753fae12", "commit": "17c7fe885"}
+{"at": "2026-11-08T13:25:11Z", "spec": "docs/superpowers/specs/2026-11-08-frame-verify-error-markers.md", "receipt": "81f53181b10a363099dd35a442d985cff7059fdc", "commit": "d636895ab"}
+{"at": "2026-11-08T13:50:59Z", "spec": "docs/superpowers/specs/2026-11-08-gate-restore-batch.md", "receipt": "5c91c8da1ee7b3c50abf794cd5ac44cf15fa642e", "commit": "3ebd3f20f"}
+{"at": "2026-11-08T13:59:57Z", "spec": "docs/superpowers/specs/2026-11-08-team-library-evolution.md", "receipt": "05fbad57c714b0fd84addbe91f33eedfec3da4f1", "commit": "b135730b7"}
+{"at": "2026-11-08T14:17:39Z", "spec": "docs/superpowers/specs/2026-11-08-run28-retro-rootfix.md", "receipt": "bc481ff546b1e8441c1d28c45a33567df721d06c", "commit": "9adeadb9f"}
+{"at": "2026-11-08T14:18:29Z", "spec": "docs/superpowers/specs/2026-11-08-gate-restore-batch.md", "receipt": "35173af942f4bf823c3a734e1ea6e5945ec8be17", "commit": "dc6874f03"}
+{"at": "2026-11-08T14:44:43Z", "spec": "docs/superpowers/specs/2026-11-08-evoteam-followup.md", "receipt": "bc2f0ef1b74dff6cdd7e60f58a8cf73da90ecde5", "commit": "27cccee6a"}
+{"at": "2026-11-08T15:06:35Z", "spec": "docs/superpowers/specs/2026-11-08-evoteam-followup.md", "receipt": "ec13d11b989049f47054632266354572db5f3005", "commit": "5d0f1ee26"}
+{"at": "2026-11-09T08:19:46Z", "spec": "docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md", "receipt": "427355b19ef1b51ff07e51ba94d1fa6921549a76", "commit": "5e68bb2b6"}
+{"at": "2026-11-09T09:36:40Z", "spec": "docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md", "receipt": "a5748d3132030cd85f5c5f27f7802c918caddb0a", "commit": "1a717a07f"}
+{"at": "2026-11-09T09:37:28Z", "spec": "docs/superpowers/specs/2026-11-09-swarm-yuan-agents-skills-root.md", "receipt": "17040cae440046dd30df9a60bf3fbd49cf187b75", "commit": "5e68bb2b6"}
+{"at": "2026-11-09T09:42:21Z", "spec": "docs/superpowers/specs/2026-11-09-runtime-deps-refresh.md", "receipt": "a04dc586b1c85f6be3902f72dd19c9024438681c", "commit": "9da83e927"}
+{"at": "2026-11-09T10:29:19Z", "spec": "docs/superpowers/specs/2026-11-09-ledger-judgment-followup.md", "receipt": "ad4cb216fcc7951962aabae8cb8d7ba52d2e666a", "commit": "1fbb4b1a8"}
+{"at": "2026-11-10T07:43:11Z", "spec": "docs/superpowers/specs/2026-11-10-execution-kernel-unification.md", "receipt": "054cf924db537fb67d99a28b8b70147e065c60d5", "commit": "6733836b5"}
+{"at": "2026-11-10T08:04:03Z", "spec": "docs/superpowers/specs/2026-11-10-execution-kernel-unification.md", "receipt": "5af32b809d610ed770b512e74b5bf48f874064de", "commit": "020ca7018"}
+{"at": "2026-11-10T08:26:43Z", "spec": "docs/superpowers/specs/2026-11-10-execution-kernel-unification.md", "receipt": "dfeef70f275912401a3925941b7901e7b60799cb", "commit": "62c10655b"}
+{"at": "2026-11-10T09:20:23Z", "spec": "docs/superpowers/specs/2026-11-10-memory-unification-hindsight.md", "receipt": "6cfb9fbc9f614280ffaafefdfc50859ff295aef3", "commit": "10c6fd1d6"}
+{"at": "2026-11-10T09:20:24Z", "spec": "docs/superpowers/specs/2026-11-10-ide-devtools-trim.md", "receipt": "b23e3f1524fa0ed216eb1f4f533916dc12755c8b", "commit": "10c6fd1d6"}
+{"at": "2026-11-10T09:45:57Z", "spec": "docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md", "receipt": "4aa1e3e5d8ab42ade9671a8a59e8a5c824e4fc88", "commit": "10c6fd1d6"}
+{"at": "2026-11-10T09:46:35Z", "spec": "docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md", "receipt": "e5848f7d9d5016f690834d2d87cbfdd593762240", "commit": "10c6fd1d6"}
+{"at": "2026-11-10T09:55:13Z", "spec": "docs/superpowers/specs/2026-11-10-memory-unification-hindsight.md", "receipt": "fbb5b5037d3d2d61b9f9bcae4774c914b007096d", "commit": "b306daccb"}
+{"at": "2026-11-10T10:09:17Z", "spec": "docs/superpowers/specs/2026-11-10-ekko-hermes-skill-store-unification.md", "receipt": "4df420b169be7f33d4e8d4722f7d6f4d6e051b23", "commit": "9128904ee"}
+{"at": "2026-11-10T10:23:42Z", "spec": "docs/superpowers/specs/2026-11-10-execution-kernel-p0b2-p1.md", "receipt": "11287882ea6679fa094d65888cd78fd1b1140efd", "commit": "c078e719e"}
+{"at": "2026-11-10T10:38:35Z", "spec": "docs/superpowers/specs/2026-11-10-page-walkthrough-import-meta-fix.md", "receipt": "daa67b8245fb94b56fcb3e02c676ae6dca05bc40", "commit": "10c6fd1d6"}
+{"at": "2026-11-10T13:02:55Z", "spec": "docs/superpowers/specs/2026-11-10-interaction-walkthrough-round.md", "receipt": "2feb5a3cdc403d98c961d8c1bbdb88042b8917f3", "commit": "801fc8480"}
+{"at": "2026-11-10T13:42:00Z", "spec": "docs/superpowers/specs/2026-11-10-governance-docmeta-ref-isolation.md", "receipt": "c69ed9165a14d47789cf8da850551216e9bf117f", "commit": "5c771b596"}
+{"at": "2026-11-10T13:59:52Z", "spec": "docs/superpowers/specs/2026-11-10-ide-devtools-task-cwd.md", "receipt": "ea12f670a3a74ca89c5a016a8f6e2787a567da68", "commit": "745376cd3"}
+{"at": "2026-11-10T14:33:51Z", "spec": "docs/superpowers/specs/2026-11-10-zcode-openfile-workspace.md", "receipt": "5fef27388bfe3e5723696d7ac968ae0427af1c9d", "commit": "8a97ffc15"}
+{"at": "2026-11-10T16:07:47Z", "spec": "docs/superpowers/specs/2026-11-10-identity-chat-matrix-batch2.md", "receipt": "33bf5b5747c2cb7542bac3b66d5b725f570bcbe0", "commit": "04d6f04cc"}
+{"at": "2026-11-10T16:18:27Z", "spec": "docs/superpowers/specs/2026-11-09-training-v1.0.14-refresh.md", "receipt": "7f4c4f66243132ec6c62ec611d8193f5fad936d3", "commit": "5e68bb2b6"}
+{"at": "2026-11-10T16:33:37Z", "spec": "docs/superpowers/specs/2026-11-11-run29-prelude.md", "receipt": "5a914d09c209bf2f7edcf6c1a0b56eb682a0bef1", "commit": "3285fc707"}
+{"at": "2026-11-10T18:08:47Z", "spec": "docs/superpowers/specs/2026-11-11-g2-completion-summary-channel.md", "receipt": "6c73b4b5d2f9a2a96aa29dc3d7585976b0c4ad88", "commit": "39de89e2e"}
+{"at": "2026-11-10T20:06:08Z", "spec": "docs/superpowers/specs/2026-11-11-burn-resume-attempts.md", "receipt": "799217c0cb5b1d62fce6da521da3956cf7ea6ade", "commit": "6c44987b4"}
+{"at": "2026-11-11T05:38:02Z", "spec": "docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md", "receipt": "c1ef287c06f73b911c184b491ee4068843d0ab73", "commit": "f7eb68330"}
+{"at": "2026-11-11T05:46:43Z", "spec": "docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md", "receipt": "0ed9eb7f4da70cad05130b40f38d0898e99d52bb", "commit": "67267e3ac"}
+{"at": "2026-11-11T06:34:42Z", "spec": "docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md", "receipt": "32fe804499df9bead2deeffdaa5f0401d678440c", "commit": "762e64acb"}
+{"at": "2026-11-11T15:25:10Z", "spec": "docs/superpowers/specs/2026-11-11-g4-principal-status-backfill.md", "receipt": "1ef94562a1fa330df660996ccbbe7b4a08d7329d", "commit": "eb6e9e7ae"}
+{"at": "2026-11-11T15:43:55Z", "spec": "docs/superpowers/specs/2026-11-11-userenv-escape-400-preauthz.md", "receipt": "0076ad6ab2b40022f5814aa41684cf7ccdcd8072", "commit": "14d9fd661"}
+{"at": "2026-11-12T01:06:51Z", "spec": "docs/superpowers/specs/2026-11-12-expdual-ttse.md", "receipt": "deba18480435b377d416d3cae9fcd3c9957862f6", "commit": "67e149ad3"}
+{"at": "2026-11-12T01:07:15Z", "spec": "docs/superpowers/specs/2026-11-12-expdual-ttse.md", "receipt": "68b10cff52a6d9b374c0b37eec2499ede409dd11", "commit": "d442fb6f2"}
+{"at": "2026-11-12T01:07:42Z", "spec": "docs/superpowers/specs/2026-11-12-expdual-ttse.md", "receipt": "e0bbdc9faa5e327d5a349df6f730c99991c9b419", "commit": "2bb836d50"}
+{"at": "2026-11-12T02:27:06Z", "spec": "docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md", "receipt": "8e3a3d38a41f008f16aec9c996456dc737173443", "commit": "295a3bfb7"}
+{"at": "2026-11-12T02:29:10Z", "spec": "docs/superpowers/specs/2026-11-12-run29-retro-rootfix.md", "receipt": "1f877f01777ae296c8abcfad7cfec231fd6e1e74", "commit": "295a3bfb7"}
+{"at": "2026-11-12T02:30:36Z", "spec": "docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md", "receipt": "4f36bf37554ed32cf02fc3c1ec82be25eb083615", "commit": "2d91e3f99"}
+{"at": "2026-11-12T02:46:54Z", "spec": "docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md", "receipt": "3afeaaf97061de79c11c4453b51c5bfa247550aa", "commit": "b1d1e9450"}
+{"at": "2026-11-12T02:50:40Z", "spec": "docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md", "receipt": "d5e5f6af5e49648141c2fc6ae9caf8b4a316069a", "commit": "11ccba54f"}
+{"at": "2026-11-12T02:52:27Z", "spec": "docs/superpowers/specs/2026-11-12-run29-full-retrospective.md", "receipt": "0f68dc274fe1395e6a9ff41c085c25e434d5db12", "commit": "4e8d253cf"}
+{"at": "2026-11-12T03:02:15Z", "spec": "docs/superpowers/specs/2026-11-12-run30-actions.md", "receipt": "24fe8422813842d8e365516f57fc82524e2ccda8", "commit": "0a898cb36"}
+{"at": "2026-11-12T03:19:58Z", "spec": "docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md", "receipt": "ff36a7c959d37b03de1b198b3f9753551547c427", "commit": "043960307"}
+{"at": "2026-11-12T03:26:58Z", "spec": "docs/superpowers/specs/2026-11-12-expdual-closeout.md", "receipt": "50cc3851fce8c8921bcc21aa6ac1fb1371e9875a", "commit": "295a3bfb7"}
+{"at": "2026-11-12T04:29:40Z", "spec": "docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md", "receipt": "76e9f354747086b80dd3908681807b5923348820", "commit": "358dc08f2"}
+{"at": "2026-11-12T04:44:35Z", "spec": "docs/superpowers/specs/2026-11-12-handbook-debt-clearance.md", "receipt": "2331efabc73b2d0535f6a2c623d21a83a5ebbdc5", "commit": "358dc08f2"}
+{"at": "2026-11-12T04:58:23Z", "spec": "docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md", "receipt": "e0499ee2574b386b5b2a855da6381ac9fd5ceeae", "commit": "a30704f38"}
+{"at": "2026-11-12T05:02:34Z", "spec": "docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md", "receipt": "13e76634c6c465c4f738a6b1a779d1ae9c77452f", "commit": "a8002fd55"}
+{"at": "2026-11-12T05:13:38Z", "spec": "docs/superpowers/specs/2026-11-12-worktree-host-write-isolation.md", "receipt": "6cf87fd781cb0a487da2fdb6e1aac9f775be7211", "commit": "d858eec92"}
+{"at": "2026-11-12T05:16:58Z", "spec": "docs/superpowers/specs/2026-11-12-doc-canon-single-source.md", "receipt": "66755b8366cebca0cbb9104810fc2c7627ec43ba", "commit": "a8002fd55"}
+{"at": "2026-11-12T05:17:20Z", "spec": "docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md", "receipt": "b1a1b434c60ec9f6d41ce011ceb3e49cf57c4fde", "commit": "d0b149944"}
+{"at": "2026-11-12T05:17:49Z", "spec": "docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md", "receipt": "0a3941e87f0f470a5accdf2c13c80464173cfe08", "commit": "009f8b82d"}
+{"at": "2026-11-12T05:19:18Z", "spec": "docs/superpowers/specs/2026-11-12-runtime-ledgers-out-of-git.md", "receipt": "ed40e625b119ecda29e00cf1dd2897b5728aabc6", "commit": "a8002fd55"}
+{"at": "2026-11-12T05:28:15Z", "spec": "docs/superpowers/specs/2026-11-12-swarm-yuan-training-manual-design.md", "receipt": "3b8f3463951c4e3f6731fbbf636a2e65beb30e71", "commit": "ea9f58be6"}
+{"at": "2026-11-12T05:28:40Z", "spec": "docs/superpowers/specs/2026-11-12-scope-gate-area-fence.md", "receipt": "89a7dbeeb515b558d658c7ca5f08f99cc37b1f5f", "commit": "1fa2c9add"}
+{"at": "2026-11-12T05:37:01Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "d8c835920b0e7ed770bfe06e363236e154094359", "commit": "734bb1238"}
+{"at": "2026-11-12T05:41:13Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "5a64bf822b66cc309ba5c5a0ceb3aadcd2d10e22", "commit": "7d38a9580"}
+{"at": "2026-11-12T05:45:10Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "d551dba66a40ed3e89fc95bf58513fb3a4acabb2", "commit": "1c11608cd"}
+{"at": "2026-11-12T05:57:46Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "67568aca4519bbfab1c20130edd0360538d0b3f8", "commit": "167b2f15b"}
+{"at": "2026-11-12T05:59:34Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "090a686622d51ed5eb66ef8a3f1537ada2667671", "commit": "d5f21ab93"}
+{"at": "2026-11-12T06:08:47Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "249c59254273fd2b2093c0e86d3791cf2b6946f6", "commit": "faa45cbc6"}
+{"at": "2026-11-12T06:14:13Z", "spec": "docs/superpowers/specs/2026-11-12-capability-acceptance-matrix.md", "receipt": "6730dbb7d2581010729b0b7701ace0042ae45986", "commit": "c60381055"}
+{"at": "2026-11-12T06:16:16Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "21d3f9b15e2aa353d4967692f672deb5c782ed7d", "commit": "3ec942755"}
+{"at": "2026-11-12T06:19:08Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "c504b213ea66ca65343888e5d046fcd84df45670", "commit": "de36cef1c"}
+{"at": "2026-11-12T06:23:52Z", "spec": "docs/superpowers/specs/2026-11-12-ci-product-tests.md", "receipt": "199fd467e3d50c1578932c8da5374790c812e7a4", "commit": "c60381055"}
+{"at": "2026-11-12T06:25:21Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "192eb499a91ea68a079f36d35e5286e65dd395ac", "commit": "898860d2a"}
+{"at": "2026-11-12T06:29:14Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "06854977839ffd4401b8208613e631dcf5b325f4", "commit": "a1a45db3b"}
+{"at": "2026-11-12T06:38:39Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "da22abe95702b93c33ee7ca06cf08a11fc540c83", "commit": "c27b5fc62"}
+{"at": "2026-11-12T06:43:31Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "cf7af4ca334e33fbc12f520ac6977084e614c7bd", "commit": "c56fa9d64"}
+{"at": "2026-11-12T06:48:31Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "8213c37f52da81baf72b04da9e320782909a0773", "commit": "a701936f8"}
+{"at": "2026-11-12T06:55:42Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "acb0e943d9b221303af54db8e92904a089101fa7", "commit": "e30f890c7"}
+{"at": "2026-11-12T07:09:32Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "28c6c52b71f01692c33c7548dcfff9778ad3947d", "commit": "61f459b4c"}
+{"at": "2026-11-12T07:14:15Z", "spec": "docs/superpowers/specs/2026-11-12-sim-stage-snapshot.md", "receipt": "87ab295f73f1d02639fedb31a709f60c5506302f", "commit": "034e94138"}
+{"at": "2026-11-12T07:15:29Z", "spec": "docs/superpowers/specs/2026-11-12-typecheck-full-tree.md", "receipt": "d40a61755e431032be0374b117a35a6f499046dc", "commit": "034e94138"}
+{"at": "2026-11-12T07:22:27Z", "spec": "docs/superpowers/specs/2026-11-12-domain-retirement-inventory.md", "receipt": "80bfae628ec9df738c08569ea07f2e251c68624b", "commit": "034e94138"}
+{"at": "2026-11-12T07:23:26Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "34532908f2b3da25879ab52496736927c0444009", "commit": "21bc0a328"}
+{"at": "2026-11-12T07:23:53Z", "spec": "docs/superpowers/specs/2026-11-12-ci-typecheck-into-product-tests.md", "receipt": "70feff4dcb512e5f7cc3045868bbc27ae84f0c8b", "commit": "f3f2129c4"}
+{"at": "2026-11-12T07:31:44Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "e30dae467a4b7be71d42cdabb06396f46e2b35c3", "commit": "53a153df3"}
+{"at": "2026-11-12T07:34:59Z", "spec": "docs/superpowers/specs/2026-11-12-yuan-facts-freshness.md", "receipt": "450deaa2ade923a7cfcdd04aca6f136772146a1a", "commit": "034e94138"}
+{"at": "2026-11-12T07:52:17Z", "spec": "docs/superpowers/specs/2026-11-12-aistudio-complete-training-manual.md", "receipt": "9b119dfcfedb81776ba77ffe2ad454945ecef488", "commit": "34785ac31"}
+{"at": "2026-11-12T08:00:14Z", "spec": "docs/superpowers/specs/2026-11-12-ci-deps-order.md", "receipt": "a7761bf38fc1fd0cc7a78642a5166ef2e583a9cc", "commit": "18d29bf31"}
+{"at": "2026-11-12T08:04:35Z", "spec": "docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md", "receipt": "624593a06d96a2a097a8c31a2f66a5d182cdf15e", "commit": "9684540d9"}
+{"at": "2026-11-12T08:08:58Z", "spec": "docs/superpowers/specs/2026-11-12-frame-reshoot-0tasks-granularity.md", "receipt": "7e046bac07ca3277c8edfee2360b23d1d115a2b4", "commit": "34e96eb77"}
+{"at": "2026-11-12T09:26:23Z", "spec": "docs/superpowers/specs/2026-11-11-training-plain-language.md", "receipt": "0503d690979ccbfe620ffe1ece050b6406b4029c", "commit": "eb6e9e7ae"}
+{"at": "2026-11-12T09:47:43Z", "spec": "docs/superpowers/specs/2026-11-12-lock-root-deps.md", "receipt": "1e950de3819a6c3fe67420228792db909367360d", "commit": "d064043fa"}
+{"at": "2026-11-12T09:51:32Z", "spec": "docs/superpowers/specs/2026-11-12-domain-retirement-execution.md", "receipt": "3f8cb3e629a84f9d39c4882789f0415681827a73", "commit": "d064043fa"}
+{"at": "2026-11-12T10:07:18Z", "spec": "docs/superpowers/specs/2026-11-12-ci-platform-gaps.md", "receipt": "99640ec873167ed908696db80bc402c3ed3e2841", "commit": "d064043fa"}
+{"at": "2026-11-12T10:39:18Z", "spec": "docs/superpowers/specs/2026-11-12-yuan-linux-and-branchgate.md", "receipt": "b65b8089a8656ae1f62bf84bdba98f40a9896de7", "commit": "d064043fa"}
+{"at": "2026-11-12T12:10:48Z", "spec": "docs/superpowers/specs/2026-11-12-domain-retirement-execution.md", "receipt": "5262e4520ddb53893bb6e0efe0447b2b22307541", "commit": "c1879572a"}
+{"at": "2026-11-13T02:01:20Z", "spec": "docs/superpowers/specs/2026-11-13-burn-verify-robustness.md", "receipt": "c24c48741f4bf4760d4cdacdb4b35a239350911f", "commit": "b5bb25164"}
+{"at": "2026-11-13T08:45:13Z", "spec": "docs/superpowers/specs/2026-11-13-burn-waive-gate.md", "receipt": "6a2ea84491560546bd4a254fee78a2a527f07799", "commit": "b5bb25164"}
+{"at": "2026-11-13T12:31:16Z", "spec": "docs/superpowers/specs/2026-11-13-tech-ledger-refresh-vendor-upgrade.md", "receipt": "d0244742563739bdb866307e210e99497e975678", "commit": "6de3db4c8"}
+{"at": "2026-11-13T13:10:37Z", "spec": "docs/superpowers/specs/2026-11-13-matrix-account-switch.md", "receipt": "b09a61adfb47e65bbc89675c32e59bf1e89c2c24", "commit": "6de3db4c8"}
+{"at": "2026-11-13T15:53:40Z", "spec": "docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md", "receipt": "72f268b34a138148c42c9b12a35bfe71740f2650", "commit": "5ff989603"}
+{"at": "2026-11-13T15:56:28Z", "spec": "docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md", "receipt": "5a67ccf116e3c863cf5d6027d68b50bfd0e54816", "commit": "687fc9374"}
+{"at": "2026-11-13T15:57:15Z", "spec": "docs/superpowers/specs/2026-11-13-matrix-account-switch-batch2.md", "receipt": "fd0e69c5317c4cbe0919604193eeaa972c24f0c0", "commit": "b819d91a5"}
+{"at": "2026-11-13T15:59:07Z", "spec": "docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md", "receipt": "8f0cae66eb04ea5c72382319f49a7bba53d87249", "commit": "8857a772c"}
+{"at": "2026-11-13T16:08:46Z", "spec": "docs/superpowers/specs/2026-11-13-superagent-contract-closure.md", "receipt": "b5f5543c3ad167bf612c849c6722be19ffb11f49", "commit": "5ff989603"}
+{"at": "2026-11-13T16:13:34Z", "spec": "docs/superpowers/specs/2026-11-13-ledger-judgment-followup.md", "receipt": "237d17e1bcff89aed2dc57ec61df19b6946e514e", "commit": "d1f536863"}
+{"at": "2026-11-13T16:37:54Z", "spec": "docs/superpowers/specs/2026-11-13-superagent-contract-closure.md", "receipt": "56cef495b0ace7fb1576f9f81cd897cec8f6abea", "commit": "02662dce3"}
+{"at": "2026-11-13T16:47:45Z", "spec": "docs/superpowers/specs/2026-11-13-superagent-contract-closure.md", "receipt": "4e92425f097602c55c66076f6be1cd887bf88f97", "commit": "279640b2a"}
+{"at": "2026-11-13T16:53:06Z", "spec": "docs/superpowers/specs/2026-11-13-superagent-contract-closure.md", "receipt": "0d95ef62013c3904f1e76e2bd5a8d967b6480aa4", "commit": "3133bbe41"}
+{"at": "2026-11-13T17:10:30Z", "spec": "docs/superpowers/specs/2026-11-13-superagent-contract-closure.md", "receipt": "544e55b95d56da1c9f7329e2b6d5d9883af28ef9", "commit": "215abad11"}
+{"at": "2026-11-14T01:04:17Z", "spec": "docs/superpowers/specs/2026-11-12-run30-prelaunch-actions.md", "receipt": "c321ad3ca68f794e8aa7a189279e80bd3786f977", "commit": "1bc799ca4"}
+{"at": "2026-11-14T03:43:11Z", "spec": "docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md", "receipt": "f2472ce647f8cd1bf07202ccf0bdd0f5454b83da", "commit": "1bc799ca4"}
+{"at": "2026-11-14T08:18:27Z", "spec": "docs/superpowers/specs/2026-11-14-run30-full-retrospective.md", "receipt": "cfa2664f9aff7d13ffd16bdd7d0991eeec4fdf93", "commit": "1de52a936"}
+{"at": "2026-11-14T14:53:25Z", "spec": "docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md", "receipt": "d642680a213be44692003cb2479bf84ce9d925f0", "commit": "2aa595ec8"}
+{"at": "2026-11-15T08:38:50Z", "spec": "docs/superpowers/specs/2026-11-14-proactive-ai-round2.md", "receipt": "62544aec62a26114309eb3b81e8c3722c41e5867", "commit": "45daf6722"}
+{"at": "2026-11-15T08:52:12Z", "spec": "docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md", "receipt": "97be966efa393a7a3880c4deca2646125d197515", "commit": "7693ce1e6"}
+{"at": "2026-11-15T08:56:52Z", "spec": "docs/superpowers/specs/2026-11-15-proactive-deferrals.md", "receipt": "253390f2613865cbccc402c689942dc87c19a3cb", "commit": "d1b173d2a"}
+{"at": "2026-11-15T09:35:13Z", "spec": "docs/superpowers/specs/2026-11-15-plan-sync-and-latent.md", "receipt": "9a7af3063611e6efee10cc00e4aeef2ef1c76849", "commit": "950655d05"}
+{"at": "2026-11-16T07:05:26Z", "spec": "docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md", "receipt": "6213cc8a4b647de3ca3a044cb748254b88f10ff9", "commit": "a3076aa9a"}
+{"at": "2026-11-16T10:37:16Z", "spec": "docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md", "receipt": "22dd459faa9a87818be1dc4c8a514a5f58f00965", "commit": "93bd0ac33"}
+{"at": "2026-11-16T10:46:17Z", "spec": "docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md", "receipt": "c844cec5b11255bc7535fba03e66403df3fc90af", "commit": "93bd0ac33"}
+{"at": "2026-11-16T10:46:29Z", "spec": "docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md", "receipt": "218d19545e12d62f1ce4ea2457bf2388c081e546", "commit": "dc35fa059"}
+{"at": "2026-11-16T10:49:22Z", "spec": "docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md", "receipt": "ca3cc15a10a15b316a1a563a2583df46995c535b", "commit": "1553a3f5b"}
+{"at": "2026-11-16T10:57:52Z", "spec": "docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md", "receipt": "5476eb8661c1bd782857afa912b0f761e81074c5", "commit": "684a85052"}
+{"at": "2026-11-16T11:11:30Z", "spec": "docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md", "receipt": "874d68d068309131558d161893f4dbd70daf99f4", "commit": "7eef8a4be"}
+{"at": "2026-11-16T11:14:35Z", "spec": "docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md", "receipt": "4fe201eaba202548a6ebd5b269850d22c7c982e0", "commit": "ad3e5b589"}
+{"at": "2026-11-16T12:53:14Z", "spec": "docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md", "receipt": "8c10cbb06243c8d08daa3bcf4e2e5f0c88c19640", "commit": "c4b160fc0"}
+{"at": "2026-11-16T13:23:28Z", "spec": "docs/superpowers/specs/2026-11-16-always-on-live-verification.md", "receipt": "245b66f9c5acfb46abb87aa66d3be91f36196b5c", "commit": "0bfa401ff"}
+{"at": "2026-11-16T13:48:19Z", "spec": "docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md", "receipt": "28064503a2d6f9464b367690baee09108bc267eb", "commit": "6dab0115a"}
+{"at": "2026-11-16T15:08:15Z", "spec": "docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md", "receipt": "6fabb160af5f4d306ca05985159faa7051298f21", "commit": "5afb6b79a"}
+{"at": "2026-11-16T16:24:19Z", "spec": "docs/superpowers/specs/2026-11-17-run31-plan-sync.md", "receipt": "2ba3768b4225b29296c17d213aedb908c199d5cb", "commit": "b1312b8aa"}
+{"at": "2026-11-16T16:26:08Z", "spec": "docs/superpowers/specs/2026-11-17-sim-studio-preload-hardening.md", "receipt": "309bf0f5326f9cec616366437051b7e8a4de8dc0", "commit": "b1312b8aa"}
+{"at": "2026-11-16T16:31:27Z", "spec": "docs/superpowers/specs/2026-11-17-run31-plan-sync.md", "receipt": "05098af01a34e2dee28c6a608009adbe0cdc1fcd", "commit": "51c550759"}
+{"at": "2026-11-16T16:46:26Z", "spec": "docs/superpowers/specs/2026-11-17-sim-probes-run31.md", "receipt": "1d0ba2b11c5d1044cfa333191bc9fb74014c73da", "commit": "b1312b8aa"}
+{"at": "2026-11-16T16:48:31Z", "spec": "docs/superpowers/specs/2026-11-17-run31-plan-sync.md", "receipt": "8817334abdbb12ca146a9614c3f2e32046f4cb47", "commit": "595d1b8ff"}
+{"at": "2026-11-18T03:21:50Z", "spec": "docs/superpowers/specs/2026-11-18-retro-resume-provision.md", "receipt": "e2a087339abef78118f70143a78a38d57ef29ba7", "commit": "fbaf5eef8"}
+{"at": "2026-11-18T03:25:10Z", "spec": "docs/superpowers/specs/2026-11-18-retro-disp-writer.md", "receipt": "52f2f787eab39ce014dbde18bbd25f621db84d3c", "commit": "fbaf5eef8"}
+{"at": "2026-11-18T03:32:44Z", "spec": "docs/superpowers/specs/2026-11-18-retro-org-execution.md", "receipt": "2af0e8921e6d7d3b0d04252515f91fa14b6384f1", "commit": "fbaf5eef8"}
+{"at": "2026-11-18T03:38:14Z", "spec": "docs/superpowers/specs/2026-11-18-retro-vendor-collect.md", "receipt": "d359a870247ea5fa28394a3d5eb0a4d09f8d1d26", "commit": "fbaf5eef8"}
+{"at": "2026-11-18T09:01:01Z", "spec": "docs/superpowers/specs/2026-11-18-retro-report-plan.md", "receipt": "62c23df04f6d4af44b25cd89fd0970451fe23ee0", "commit": "d6ca596b3"}
+{"at": "2026-11-18T12:33:23Z", "spec": "docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md", "receipt": "956b1806875c3324ec0b4b3bce94623645c6c68f", "commit": "a381993f9"}
+{"at": "2026-11-18T12:39:26Z", "spec": "docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md", "receipt": "44f5dc3509634e7931254fc5f4c3ee7dfc05526d", "commit": "fb18590fc"}
+{"at": "2026-11-18T12:44:28Z", "spec": "docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md", "receipt": "64c3577b9a1955b8e9519b9150d1d00932ca549c", "commit": "6fa6d3638"}
+{"at": "2026-11-18T14:39:11Z", "spec": "docs/superpowers/specs/2026-11-18-retro-round2.md", "receipt": "01b5282d2781ae452065e19c78eff54c62fb2ccf", "commit": "7d4110148"}
+{"at": "2026-11-18T15:44:35Z", "spec": "docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md", "receipt": "b9995a034f562d5750535e75ccd9588e31b4d4b5", "commit": "37210b622"}
