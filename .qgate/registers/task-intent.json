@@ -1,0 +1,20 @@
+{
+  "taskId": "retro-run31-impl-20261118",
+  "statement": "run31 复盘实施批：DISP 写入器闭环/断点闸前段/重灌 stamp 内容面/组织面三机制/缺项显示/kanban 读面/token 真值口径＋runtime 回灌＋索引补账",
+  "scope": [
+    "docs/**",
+    "simharness/**",
+    "patches/**",
+    "runtime/**",
+    ".swarm-yuan/**",
+    ".qgate/**",
+    "custom/qgate/**"
+  ],
+  "acceptance": [
+    "When 运行 npm test Then 9194 全过",
+    "When 运行 bash simharness/tests/run-gates.sh Then EXIT=0",
+    "When 运行 npm run inject Then status=complete"
+  ],
+  "confirmedBy": "用户 2026-11-18 令「按照建议实施完成」",
+  "confirmedAt": "2026-11-18T04:43:45.340Z"
+}
