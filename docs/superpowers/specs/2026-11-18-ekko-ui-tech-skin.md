@@ -25,8 +25,11 @@
 
 - [x] 目标测试：`npx vitest run custom/client/chat` → 5 文件 48 用例全绿（ekko-ui-card/renderer/protocol 三套不红——类名与行为未动）
 - [x] 浏览器实物走查（2026-11-18）：worktree dev server（vite :8648 + serve :8647，避让宿主常驻 :8649/:8650）挂走查页（vendor 注入态临时文件，不入库），亮/暗/已提交三态全组件渲染。亮色特写复核＝霓虹描边+外围微光+顶部光线+统一青蓝控件体系，科技感 8.5/10，无渲染缺陷；暗色段发光滑块/进度条/开关胶囊/玻璃底全部落地；已提交态徽章绿色+状态点无脉冲（DOM 计算色复核 rgb(46,125,50)，推翻视觉评估的误读）。亮色初版发光偏弱，当场上调（描边 22→32%、外光 6→10%+24px 层、光线 70→85%）后复核通过
-- [ ] 全量 `npm test`（合并前）
+- [x] 全量 `npm test`（合并前，2026-11-19）：9205 例 9187 绿 / 7 failed 全定谳清偿——①docs 索引 2 处=新增 spec 未重建索引，`gen-doc-indexes --write` 随批补账转绿；②raw-hex-budget 1 处=外壳阴影 `#000` 裸 hex，换等值 `rgb(0 0 0 / 10%)` 转绿（token 定义行与 var() fallback 本就免税，皮肤交互色定义合规）；③overlay-pristine-replay=本轮 8647 临时 serve 挡 clean 守卫，停服后绿；④route-manifest 3 处=worktree node_modules 半套实体环境病（主检出 4/4 绿定谳），按配方 mv 隔离+ln 主检出后 4/4 绿。rebase 到 8442e7553 后目标面 77/77 复验绿
 
 ## 设计文档影响
 
-- **touched**：`docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md` 补 D10 决策（宿主默认皮肤＝科技感玻璃拟态，token 派生，Agent 侧零变更），D4 原则不变、本批是其职权内的视觉演进。
+DESIGN_SYNC: touched
+
+- `docs/DESIGN.md` §2.3「协作、审批与检索」：Ekko UI Surface 句内补默认皮肤说明（皮肤交互色 `--ekko-skin-accent` 宿主定义、亮 #0891b2/暗 #22d3ee、Agent 无控制面）——正批 d785ffb20 与验证段补账批两段兑现。
+- `docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md` 补 D11 决策（宿主默认皮肤＝科技感玻璃拟态职权），D4「Agent 不能指定颜色」原则不变。
