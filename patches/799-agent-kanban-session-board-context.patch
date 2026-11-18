@@ -1,0 +1,195 @@
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index 000000000..111111111 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -534,11 +534,73 @@ def _home_default_board() -> str:
+     return ""
+ 
+ 
++# >>> swarm:kanban-session-board-context >>>
++# t_747a6eb2 (2026-11-18): a gateway process serves dozens of profiles and
++# cannot hold their per-profile HERMES_KANBAN_BOARD pins in its one
++# os.environ (that env var only reaches CLI/cron via load_hermes_dotenv).
++# Without this step, a model kanban_create call that omitted board= resolved
++# to DEFAULT_BOARD whose DB is the legacy top-level <root>/kanban.db — 4/6
++# creates from the k12edu-orchestrator desktop session silently landed on
++# the wrong board (assignee was a real profile → default dispatcher claimed
++# the cards, workers crashed on slow-disk worktree timeouts, and the
++# auto-subscribed session got internal churn notifications).
++_SESSION_PROFILE_ENV_BOARD_CACHE: dict = {}
++
++
++def _session_profile_env_board() -> str:
++    """The SERVED profile's own ``.env`` ``HERMES_KANBAN_BOARD`` — the board
++    intent of the interactive session currently executing. Read-only (never
++    mutates ``os.environ``); empty outside a session that names a profile,
++    for a profile without the key, or on any read failure. A declared board
++    that no longer exists is dropped by the caller's ``_existing`` gate,
++    preserving the legacy chain. Dispatcher-owned workers and delegated
++    children never get here: their ``HERMES_KANBAN_DB`` pin outranks this
++    whole chain in ``_board_path``."""
++    try:
++        from gateway.session_context import get_session_env
++        profile = (get_session_env("HERMES_SESSION_PROFILE", "") or "").strip()
++    except Exception:
++        return ""
++    if not profile or profile == "default":
++        return ""
++    try:
++        from hermes_cli.profiles import get_profile_dir
++        env_path = get_profile_dir(profile) / ".env"
++    except Exception:
++        return ""
++    try:
++        mtime = env_path.stat().st_mtime
++    except OSError:
++        return ""
++    key = str(env_path)
++    cached = _SESSION_PROFILE_ENV_BOARD_CACHE.get(key)
++    if cached is not None and cached[0] == mtime:
++        return cached[1]
++    value = ""
++    try:
++        for line in env_path.read_text(encoding="utf-8-sig").splitlines():
++            line = line.strip()
++            if line.startswith("export "):
++                line = line[7:].strip()
++            if line.startswith("#") or "=" not in line:
++                continue
++            name, _, raw = line.partition("=")
++            if name.strip() == "HERMES_KANBAN_BOARD":
++                value = raw.strip().strip('"').strip("'")
++                break
++    except OSError:
++        value = ""
++    _SESSION_PROFILE_ENV_BOARD_CACHE[key] = (mtime, value)
++    return value
++# <<< swarm:kanban-session-board-context <<<
++
++
+ def get_current_board() -> str:
+-    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> per-home
+-    ``kanban.default_board`` -> ``<root>/kanban/current`` (only while that board
+-    exists) -> ``DEFAULT_BOARD``. A malformed/stale slug falls through — the
+-    dispatcher must never crash on a hand-edited file."""
++    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> the serving
++    profile's own ``.env`` ``HERMES_KANBAN_BOARD`` (interactive sessions) ->
++    per-home ``kanban.default_board`` -> ``<root>/kanban/current`` (only while
++    that board exists) -> ``DEFAULT_BOARD``. A malformed/stale slug falls
++    through — the dispatcher must never crash on a hand-edited file."""
+     def _existing(candidate: str) -> Optional[str]:
+         if not candidate:
+             return None
+@@ -558,6 +620,9 @@ def get_current_board() -> str:
+     for candidate in (
+         (_CURRENT_BOARD_OVERRIDE.get() or "").strip(),
+         os.environ.get("HERMES_KANBAN_BOARD", "").strip(),
++        # swarm:kanban-session-board-context (t_747a6eb2): in-gateway sessions
++        # resolve the SERVED profile's .env pin before the home-wide default.
++        _session_profile_env_board(),
+         _home_default_board(),
+     ):
+         found = _existing(candidate)
+
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index 000000000..111111111 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -533,6 +533,27 @@ def _board(board: Optional[str], *, quiet_close: bool = False):
+                 raise
+ 
+ 
++# >>> swarm:kanban-session-board-context >>>
++def _landed_board_slug(kb, board_arg) -> str:
++    """Slug of the board a call's connection actually targets (t_747a6eb2).
++
++    ``default``'s DB is the legacy top-level ``<root>/kanban.db`` by
++    back-compat, so derive from the resolved path instead of guessing:
++    ``<root>/kanban.db`` → ``default``; ``<boards>/<slug>/kanban.db`` → the
++    dir name; anything else (a ``HERMES_KANBAN_DB`` env pin in a worker)
++    reports its absolute path. Never raises — the echo is bookkeeping."""
++    try:
++        path = kb.kanban_db_path(board=board_arg)
++        if path.name == "kanban.db":
++            if path.parent == kb.kanban_home():
++                return kb.DEFAULT_BOARD
++            return path.parent.name
++        return str(path)
++    except Exception:
++        return kb.DEFAULT_BOARD
++# <<< swarm:kanban-session-board-context <<<
++
++
+ def _existing_task(kb, conn, tid: str):
+     task = kb.get_task(conn, tid)
+     _check(task is not None, f"task {tid} not found")
+@@ -1404,8 +1425,15 @@ def _handle_create(args: dict, **kw) -> str:
+         landed = _fields(kb.get_task(conn, new_tid), _CREATED_FIELDS)
+         wait = [e for e in kb.list_events(conn, new_tid) if e.kind == "dependency_wait"]
+         gate = {"gated": True, "gated_by": wait[-1].payload["parent"]} if wait else {"gated": False}
+-        return _ok(task_id=new_tid, **landed, **gate,
+-                   subscribed=_maybe_auto_subscribe(conn, new_tid))
++        # >>> swarm:kanban-session-board-context >>>
++        # t_747a6eb2: echo the board the card actually landed on — a create
++        # that resolved through the fallback chain used to return ok with no
++        # landing-board signal, so callers misread wrong-board cards as
++        # "silently lost" and re-created them (again wrong).
++        landed_board = _landed_board_slug(kb, args.get("board"))
++        # <<< swarm:kanban-session-board-context <<<
++        return _ok(task_id=new_tid, board=landed_board, **landed, **gate,
++                   subscribed=_maybe_auto_subscribe(conn, new_tid, landed_board=landed_board))
+ 
+ 
+ def _live_tui_session_key(session_key: str, profile: Optional[str]) -> str:
+@@ -1480,7 +1508,7 @@ def _resolve_notify_target() -> Optional[dict[str, Any]]:
+         delivery_metadata=delivery_metadata or None)
+ 
+ 
+-def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
++def _maybe_auto_subscribe(conn: Any, task_id: str, landed_board: Optional[str] = None) -> bool:
+     """Subscribe the calling session to completion/block events; True iff a row was
+     written (surfaced as ``subscribed`` so an orchestrator can fall back to explicit
+     ``kanban_notify-subscribe``). Gated by ``kanban.auto_subscribe_on_create`` (default
+@@ -1495,6 +1523,19 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
+         target = _resolve_notify_target()
+         if target is None:
+             return False  # CLI / cron / test — no persistent channel
++        # >>> swarm:kanban-session-board-context >>>
++        # t_747a6eb2: a create landing on a board OTHER than the calling
++        # session's home board used to auto-bind this session to the foreign
++        # board's status events — internal churn (gave_up / crashed /
++        # dispatcher retries) then woke the parent-visible chat stream.
++        # Skip the auto-subscribe on cross-board creates; an orchestrator
++        # that really wants foreign-board tracking calls
++        # kanban_notify-subscribe explicitly.
++        if landed_board is not None:
++            from hermes_cli import kanban_db as _kb_home
++            if _landed_board_slug(_kb_home, None) != landed_board:
++                return False
++        # <<< swarm:kanban-session-board-context <<<
+         from hermes_cli import kanban_db_notify as _kbn
+         # Inheritance and explicit subscriptions already encode the delivery policy.
+         # Auto-subscribe must not turn a passive destination into an agent wake.
+
+diff --git a/tools/kanban_tools_schemas.py b/tools/kanban_tools_schemas.py
+index 000000000..111111111 100644
+--- a/tools/kanban_tools_schemas.py
++++ b/tools/kanban_tools_schemas.py
+@@ -15,10 +15,12 @@ _DESC_TASK_ID_DEFAULT = (
+ _DESC_BOARD = (
+     "Kanban board slug to target. When omitted, the call resolves the "
+     "active board the usual way: HERMES_KANBAN_DB env → "
+-    "HERMES_KANBAN_BOARD env → the 'current' symlink under the kanban "
+-    "home → 'default'. Pass an explicit slug only when the caller (e.g. "
+-    "a Telegram routing layer) needs to override the env-pinned active "
+-    "board for this one call."
++    "HERMES_KANBAN_BOARD env → the serving profile's own .env "
++    "HERMES_KANBAN_BOARD (interactive sessions) → the 'current' symlink "
++    "under the kanban home → 'default' (whose DB is the legacy top-level "
++    "kanban.db). When your board differs from the resolution result, pass "
++    "the explicit slug — kanban_create echoes the board the card actually "
++    "landed on."
+ )
+ 
+ 
+

@@ -15,10 +15,12 @@ _DESC_TASK_ID_DEFAULT = (
 _DESC_BOARD = (
     "Kanban board slug to target. When omitted, the call resolves the "
     "active board the usual way: HERMES_KANBAN_DB env → "
-    "HERMES_KANBAN_BOARD env → the 'current' symlink under the kanban "
-    "home → 'default'. Pass an explicit slug only when the caller (e.g. "
-    "a Telegram routing layer) needs to override the env-pinned active "
-    "board for this one call."
+    "HERMES_KANBAN_BOARD env → the serving profile's own .env "
+    "HERMES_KANBAN_BOARD (interactive sessions) → the 'current' symlink "
+    "under the kanban home → 'default' (whose DB is the legacy top-level "
+    "kanban.db). When your board differs from the resolution result, pass "
+    "the explicit slug — kanban_create echoes the board the card actually "
+    "landed on."
 )
 
 
@@ -457,9 +459,16 @@ KANBAN_CREATE_SCHEMA = _schema(
             "type": "string",
             "enum": ["scratch", "dir", "worktree"],
             "description": (
-                "Workspace flavor: 'scratch' (fresh tmp dir, "
-                "default), 'dir' (shared directory, requires "
-                "absolute workspace_path), 'worktree' (git worktree)."
+                # >>> swarm:kanban-tool-default-dir >>>
+                # Omitted -> managed per-task dir under the board workspaces
+                # root (persistent, no git checkout); on project boards the
+                # project repo worktree instead.
+                # <<< swarm:kanban-tool-default-dir <<<
+                "Workspace flavor. OMIT it for a managed per-task dir (no "
+                "git checkout; project boards use the project repo worktree "
+                "instead). 'scratch' = fresh dir deleted at completion; "
+                "'dir' = shared directory, requires absolute workspace_path; "
+                "'worktree' = git worktree (full repo checkout)."
             ),
         },
         "workspace_path": _prop("string", (

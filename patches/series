@@ -1317,3 +1317,11 @@
 # reflect 工具信封 unwrap 修复（防转义 JSON 入库）＋ _deferred_scan_one 提为方法。
 792-agent-always-on-live-verify.patch
 793-agent-kanban-read-version-verification.patch
+# 794-agent-weixin-noise-filter-persist（宿主热修回灌 2026-11-18，源提交 645b3d906a5）
+794-agent-weixin-noise-filter-persist.patch
+# 798-agent-runtime-provider-fallback（宿主热修回灌 2026-11-18，源提交 ded1a5eb0a4）
+798-agent-runtime-provider-fallback.patch
+# 799-agent-kanban-session-board-context（宿主热修回灌 2026-11-18，源提交 c0694401542）
+799-agent-kanban-session-board-context.patch
+# 800-agent-kanban-workspace-kind-omit（宿主热修回灌 2026-11-18，源提交 5b35f969ab0）
+800-agent-kanban-workspace-kind-omit.patch

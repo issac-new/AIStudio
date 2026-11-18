@@ -1,0 +1,160 @@
+diff --git a/hermes_cli/runtime_provider.py b/hermes_cli/runtime_provider.py
+index ed8b0732347..9992395689a 100644
+--- a/hermes_cli/runtime_provider.py
++++ b/hermes_cli/runtime_provider.py
+@@ -1212,8 +1212,54 @@ def _openrouter_fallback(requested_provider, explicit_api_key, explicit_base_url
+                                             explicit_base_url=explicit_base_url), requested_provider)
+ 
+ 
++# >>> swarm:invalid-provider-fallback >>>
++# t_cd3f31e5 / gap-20261030-038 root fix: a session receipt frozen around a provider name that
++# no longer resolves (2026-10-22 custom:cc-switch→cc-switch-route half-rename) hard-failed every
++# turn with AuthError "Unknown provider" — frozen_runtime_config pins the dead name, so live-config
++# heals cannot reach the session. That one failure mode now degrades: resolve the LIVE profile
++# default provider+model with a visible WARNING. Fail-closed everywhere else (see wrapper docstring).
++_INVALID_PROVIDER_FALLBACK_ACTIVE: ContextVar[bool] = ContextVar("_INVALID_PROVIDER_FALLBACK_ACTIVE", default=False)
++
++
+ def resolve_runtime_provider(*, requested: Optional[str] = None, explicit_api_key: Optional[str] = None,
+                              explicit_base_url: Optional[str] = None, target_model: Optional[str] = None) -> dict[str, Any]:
++    """``_resolve_runtime_provider_once`` plus the frozen-session invalid_provider fallback.
++
++    Only a resolution running inside ``frozen_runtime_config`` (a session receipt route) with
++    ``AuthError(code="invalid_provider")`` falls back to the LIVE profile default provider+model:
++    the frozen snapshot is the broken half and cannot be healed in place. The dead route's
++    explicit key/base_url are dropped (they belong to it), a WARNING naming both ends is logged,
++    and the runtime is stamped ``invalid_provider_fallback={"from", "to_model"}``.
++    Fail-closed: a non-frozen (live) resolution still raises the original AuthError (a live typo
++    is operator-fixable and must stay visible), and when the default route also fails the
++    ORIGINAL dead-provider error is re-raised — the fallback never masks a second real fault.
++    """
++    try:
++        return _resolve_runtime_provider_once(requested=requested, explicit_api_key=explicit_api_key,
++                                              explicit_base_url=explicit_base_url, target_model=target_model)
++    except AuthError as exc:
++        if (getattr(exc, "code", None) != "invalid_provider" or _INVALID_PROVIDER_FALLBACK_ACTIVE.get()
++                or _FROZEN_RUNTIME_CONFIG.get() is None):
++            raise  # fail-closed: live scope, retry already active, or a non-invalid_provider fault
++        dead = (requested or "").strip() or str(_get_model_config().get("provider") or "").strip() or "(auto)"
++        fb_token = _INVALID_PROVIDER_FALLBACK_ACTIVE.set(True)
++        frozen_token = _FROZEN_RUNTIME_CONFIG.set(None)  # the frozen receipt is the broken half; heal from live config
++        try:
++            runtime = resolve_runtime_provider()  # live profile default provider + default model
++        except Exception:
++            raise exc  # default route broken too: surface the ORIGINAL dead-provider AuthError
++        finally:
++            _FROZEN_RUNTIME_CONFIG.reset(frozen_token)
++            _INVALID_PROVIDER_FALLBACK_ACTIVE.reset(fb_token)
++        fallback_model = str(_get_model_config().get("default") or "").strip()
++        runtime["invalid_provider_fallback"] = {"from": dead, "to_model": fallback_model}
++        logger.warning("fallback: %s→%s (invalid_provider)", dead, fallback_model or runtime.get("provider"))
++        return runtime
++# <<< swarm:invalid-provider-fallback <<<
++
++
++def _resolve_runtime_provider_once(*, requested: Optional[str] = None, explicit_api_key: Optional[str] = None,
++                                   explicit_base_url: Optional[str] = None, target_model: Optional[str] = None) -> dict[str, Any]:
+     """Resolve runtime provider credentials for agent execution. Ladder (order is behavior — each
+     rung returns or raises, else falls to the next):
+       1. disabled-provider guard (``providers.<name>.enabled: false``)
+diff --git a/tests/hermes_cli/test_invalid_provider_fallback.py b/tests/hermes_cli/test_invalid_provider_fallback.py
+new file mode 100644
+index 00000000000..444db67b33d
+--- /dev/null
++++ b/tests/hermes_cli/test_invalid_provider_fallback.py
+@@ -0,0 +1,95 @@
++"""Frozen-receipt invalid_provider fallback — t_cd3f31e5 / gap-20261030-038 root fix.
++
++2026-10-22 provider rename custom:cc-switch→cc-switch-route was a half migration: new dm
++sessions froze the dead provider name into their receipts (state_meta key
++``gateway.local_policy.v1:<id>``), and every turn hard-failed with
++``AuthError "Unknown provider 'custom:cc-switch'"`` until a manual heal —
++``frozen_runtime_config`` pins the receipt snapshot, so live-config fixes cannot reach the
++session (worker-coder agent.log 2026-10-24 L1778/L1813).
++
++These tests pin the runtime fallback: a FROZEN route naming a dead provider resolves to the
++LIVE profile default provider+model with a visible WARNING, and stays fail-closed everywhere
++else (live-scope typos raise the original AuthError; a broken default re-raises the ORIGINAL
++dead-provider error instead of masking a second fault).
++"""
++import copy
++import logging
++
++import pytest
++
++from hermes_cli import config as config_mod
++from hermes_cli import runtime_provider as rp
++
++# Live config as healed on 2026-10-26: the custom:cc-switch alias entry is back and the
++# profile default route (model aim) goes through it.
++_LIVE = {
++    "model": {"provider": "custom:cc-switch", "default": "aim"},
++    "custom_providers": [
++        {"name": "custom:cc-switch", "base_url": "http://127.0.0.1:15721",
++         "api_mode": "anthropic_messages"},
++    ],
++}
++# A 10-23..10-26 receipt snapshot: taken AFTER the rename, so the dead name is gone from
++# custom_providers (only cc-switch-route remains) while the frozen route still points at it.
++_FROZEN_DEAD = {
++    "model": {"provider": "custom:cc-switch", "default": "aim"},
++    "custom_providers": [
++        {"name": "cc-switch-route", "base_url": "http://127.0.0.1:15721",
++         "api_mode": "anthropic_messages"},
++    ],
++}
++
++
++@pytest.fixture
++def live_config(monkeypatch):
++    # Patch ONLY the underlying config-module loader: rp.load_config must stay real so the
++    # frozen contextvar keeps serving the frozen snapshot to the first (failing) pass.
++    for var in ("CUSTOM_BASE_URL", "OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENROUTER_API_KEY"):
++        monkeypatch.delenv(var, raising=False)
++    monkeypatch.setattr(config_mod, "load_config", lambda *a, **k: copy.deepcopy(_LIVE))
++
++
++def test_frozen_dead_provider_falls_back_to_live_default(live_config, caplog):
++    """The incident shape: frozen receipt names a provider absent from its own snapshot."""
++    with rp.frozen_runtime_config(copy.deepcopy(_FROZEN_DEAD)):
++        with caplog.at_level(logging.WARNING, logger=rp.logger.name):
++            runtime = rp.resolve_runtime_provider(requested="custom:cc-switch")
++    assert runtime["provider"] == "custom"
++    assert runtime["base_url"] == "http://127.0.0.1:15721"
++    assert runtime["api_mode"] == "anthropic_messages"
++    assert runtime["invalid_provider_fallback"] == {"from": "custom:cc-switch", "to_model": "aim"}
++    assert "fallback: custom:cc-switch→aim (invalid_provider)" in caplog.text
++
++
++def test_frozen_dead_provider_from_receipt_default_falls_back(live_config, caplog):
++    """Same trap with no explicit request: the dead name comes from the frozen model.provider."""
++    with rp.frozen_runtime_config(copy.deepcopy(_FROZEN_DEAD)):
++        with caplog.at_level(logging.WARNING, logger=rp.logger.name):
++            runtime = rp.resolve_runtime_provider()
++    assert runtime["invalid_provider_fallback"]["from"] == "custom:cc-switch"
++    assert runtime["invalid_provider_fallback"]["to_model"] == "aim"
++    assert "fallback: custom:cc-switch→aim (invalid_provider)" in caplog.text
++
++
++def test_live_scope_dead_provider_still_raises(live_config, caplog):
++    """Fail-closed counterexample: outside a frozen receipt the typo must stay visible."""
++    with caplog.at_level(logging.WARNING, logger=rp.logger.name):
++        with pytest.raises(rp.AuthError, match="Unknown provider 'custom:cc-switch-dead'"):
++            rp.resolve_runtime_provider(requested="custom:cc-switch-dead")
++    assert "fallback:" not in caplog.text
++
++
++def test_broken_live_default_reraises_original_error(monkeypatch, caplog):
++    """Fail-closed counterexample: when the live default is broken too, the ORIGINAL
++    dead-provider error surfaces — the fallback never masks a second real fault."""
++    for var in ("CUSTOM_BASE_URL", "OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENROUTER_API_KEY"):
++        monkeypatch.delenv(var, raising=False)
++    monkeypatch.setattr(
++        config_mod, "load_config",
++        lambda *a, **k: {"model": {"provider": "custom:also-dead", "default": "aim"},
++                         "custom_providers": []})
++    with rp.frozen_runtime_config(copy.deepcopy(_FROZEN_DEAD)):
++        with caplog.at_level(logging.WARNING, logger=rp.logger.name):
++            with pytest.raises(rp.AuthError, match="Unknown provider 'custom:cc-switch'"):
++                rp.resolve_runtime_provider(requested="custom:cc-switch")
++    assert "fallback:" not in caplog.text

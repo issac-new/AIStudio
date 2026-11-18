@@ -534,11 +534,73 @@ def _home_default_board() -> str:
     return ""
 
 
+# >>> swarm:kanban-session-board-context >>>
+# t_747a6eb2 (2026-11-18): a gateway process serves dozens of profiles and
+# cannot hold their per-profile HERMES_KANBAN_BOARD pins in its one
+# os.environ (that env var only reaches CLI/cron via load_hermes_dotenv).
+# Without this step, a model kanban_create call that omitted board= resolved
+# to DEFAULT_BOARD whose DB is the legacy top-level <root>/kanban.db — 4/6
+# creates from the k12edu-orchestrator desktop session silently landed on
+# the wrong board (assignee was a real profile → default dispatcher claimed
+# the cards, workers crashed on slow-disk worktree timeouts, and the
+# auto-subscribed session got internal churn notifications).
+_SESSION_PROFILE_ENV_BOARD_CACHE: dict = {}
+
+
+def _session_profile_env_board() -> str:
+    """The SERVED profile's own ``.env`` ``HERMES_KANBAN_BOARD`` — the board
+    intent of the interactive session currently executing. Read-only (never
+    mutates ``os.environ``); empty outside a session that names a profile,
+    for a profile without the key, or on any read failure. A declared board
+    that no longer exists is dropped by the caller's ``_existing`` gate,
+    preserving the legacy chain. Dispatcher-owned workers and delegated
+    children never get here: their ``HERMES_KANBAN_DB`` pin outranks this
+    whole chain in ``_board_path``."""
+    try:
+        from gateway.session_context import get_session_env
+        profile = (get_session_env("HERMES_SESSION_PROFILE", "") or "").strip()
+    except Exception:
+        return ""
+    if not profile or profile == "default":
+        return ""
+    try:
+        from hermes_cli.profiles import get_profile_dir
+        env_path = get_profile_dir(profile) / ".env"
+    except Exception:
+        return ""
+    try:
+        mtime = env_path.stat().st_mtime
+    except OSError:
+        return ""
+    key = str(env_path)
+    cached = _SESSION_PROFILE_ENV_BOARD_CACHE.get(key)
+    if cached is not None and cached[0] == mtime:
+        return cached[1]
+    value = ""
+    try:
+        for line in env_path.read_text(encoding="utf-8-sig").splitlines():
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[7:].strip()
+            if line.startswith("#") or "=" not in line:
+                continue
+            name, _, raw = line.partition("=")
+            if name.strip() == "HERMES_KANBAN_BOARD":
+                value = raw.strip().strip('"').strip("'")
+                break
+    except OSError:
+        value = ""
+    _SESSION_PROFILE_ENV_BOARD_CACHE[key] = (mtime, value)
+    return value
+# <<< swarm:kanban-session-board-context <<<
+
+
 def get_current_board() -> str:
-    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> per-home
-    ``kanban.default_board`` -> ``<root>/kanban/current`` (only while that board
-    exists) -> ``DEFAULT_BOARD``. A malformed/stale slug falls through — the
-    dispatcher must never crash on a hand-edited file."""
+    """Active slug: context override -> ``HERMES_KANBAN_BOARD`` -> the serving
+    profile's own ``.env`` ``HERMES_KANBAN_BOARD`` (interactive sessions) ->
+    per-home ``kanban.default_board`` -> ``<root>/kanban/current`` (only while
+    that board exists) -> ``DEFAULT_BOARD``. A malformed/stale slug falls
+    through — the dispatcher must never crash on a hand-edited file."""
     def _existing(candidate: str) -> Optional[str]:
         if not candidate:
             return None
@@ -558,6 +620,9 @@ def get_current_board() -> str:
     for candidate in (
         (_CURRENT_BOARD_OVERRIDE.get() or "").strip(),
         os.environ.get("HERMES_KANBAN_BOARD", "").strip(),
+        # swarm:kanban-session-board-context (t_747a6eb2): in-gateway sessions
+        # resolve the SERVED profile's .env pin before the home-wide default.
+        _session_profile_env_board(),
         _home_default_board(),
     ):
         found = _existing(candidate)

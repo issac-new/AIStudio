@@ -1,0 +1,59 @@
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index 000000000..111111111 100644
+--- a/tools/kanban_tools.py
++++ b/tools/kanban_tools.py
+@@ -1373,7 +1373,7 @@ def _handle_create(args: dict, **kw) -> str:
+         raise ValueError(
+             "workspace_kind='dir' requires workspace_path — an unpathed dir card "
+             "can never spawn a worker. Pass workspace_path, or omit workspace_kind "
+-            "to get a fresh per-task worktree."
++            "to get a managed per-task dir (no git checkout)."
+         )
+     # See #67567. ``project=""`` is an explicit "no project" (no ``or`` collapse, #106342).
+     project_id = args["project"] if "project" in args else args.get("project_id")
+@@ -1406,7 +1406,18 @@ def _handle_create(args: dict, **kw) -> str:
+             assignee=str(assignee),
+             parents=tuple(parents), tenant=args.get("tenant") or os.environ.get("HERMES_TENANT"),
+             priority=_opt_int(args.get("priority"), 0),
+-            workspace_kind=str(workspace_kind if workspace_kind is not None else "worktree"),
++            # >>> swarm:kanban-tool-default-dir >>>
++            # Omitted workspace_kind passes None through so create_task's
++            # overlay decides: plain board -> managed per-task dir (created
++            # under the board's workspaces root, no git checkout); project
++            # board -> project repo worktree via _resolve_project_link. The
++            # old hard "worktree" fallback forced EVERY unspecified card into
++            # a full `git worktree add` checkout of the board default_workdir
++            # repo (~626MB / ~5s on the external-disk sandbox anchor) even
++            # for research/doc tasks that never touch git. Explicit
++            # workspace_kind is untouched: worktree callers keep worktrees.
++            workspace_kind=(str(workspace_kind) if workspace_kind is not None else None),
++            # <<< swarm:kanban-tool-default-dir <<<
+             workspace_path=workspace_path, project_id=project_id,
+             # Board-project inheritance must read the board this call opened, not the
+             # session's current board.
+
+diff --git a/tools/kanban_tools_schemas.py b/tools/kanban_tools_schemas.py
+index 000000000..111111111 100644
+--- a/tools/kanban_tools_schemas.py
++++ b/tools/kanban_tools_schemas.py
+@@ -459,9 +459,16 @@ KANBAN_CREATE_SCHEMA = _schema(
+             "type": "string",
+             "enum": ["scratch", "dir", "worktree"],
+             "description": (
+-                "Workspace flavor: 'scratch' (fresh tmp dir, "
+-                "default), 'dir' (shared directory, requires "
+-                "absolute workspace_path), 'worktree' (git worktree)."
++                # >>> swarm:kanban-tool-default-dir >>>
++                # Omitted -> managed per-task dir under the board workspaces
++                # root (persistent, no git checkout); on project boards the
++                # project repo worktree instead.
++                # <<< swarm:kanban-tool-default-dir <<<
++                "Workspace flavor. OMIT it for a managed per-task dir (no "
++                "git checkout; project boards use the project repo worktree "
++                "instead). 'scratch' = fresh dir deleted at completion; "
++                "'dir' = shared directory, requires absolute workspace_path; "
++                "'worktree' = git worktree (full repo checkout)."
+             ),
+         },
+         "workspace_path": _prop("string", (
+
