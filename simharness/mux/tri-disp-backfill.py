@@ -195,6 +195,15 @@ for row in pairing:
         if k in disp_seen:
             n_ok += 1
             continue
+        # 2026-11-18 run31 对账根治：同键 ISSUE 行若已在 issues.log（含值守代记等人工处置描述），
+        # 不再落「无人工处置在案」行——run31 实锤 step-23/25 键上 ISSUE 与自动 DISP 互相矛盾。
+        _same_key_issue = any(
+            ln.startswith('ISSUE|') and ln.split('|')[1:3] == [t, s]
+            for ln in ilog.read_text(encoding='utf-8', errors='replace').splitlines()
+        ) if ilog.exists() else False
+        if _same_key_issue:
+            n_ok += 1   # 已有 ISSUE 在案=凭证已立，观察行冗余——跳过不落账
+            continue
         if t in STRUCTURAL_TYPES:
             appendix.append(
                 f'DISP|{t}|{s}|延后（结构性缺陷类别禁自动观察归桶——须下轮开跑前人工处置并带锚点回写，纪律 28/46）')

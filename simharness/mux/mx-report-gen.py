@@ -1800,8 +1800,68 @@ STEPS_META_20261021_V8_RUN22 = {
             narrative='总报告与审计收敛战 4.9h：审计器 NameError 崩溃×2 修+评测链实跑（verdict=gap 耦合过查 15）+黑话渗漏八层生产者全清（记单→登记→记录两轮连环坑）+帧补拍标注通道；final-report.html 1.06MB（PART1+165 单入正本）、report_done 05:32:17，全程 19.5h 六闸 6/6。', imgs=[]),
 }
 
+
+
+# ── run31（20261117-v8-run31）逐歩叙事（2026-11-18 复盘回填：R17 骨架兜底自引入以来
+#    首轮正式注册——素材=driver.log 时间线＋state.env 秒锚＋值守 45 轮实录；⑪b 门的锚轮）。──
+STEPS_META_20261117_V8_RUN31 = {
+    1: dict(keys=['smoke_done'], ts_override='1',
+            narrative='开跑 09:02:26（G-d 日间窗 09-11 立法后首轮）：30 个账号 token 真值核验一次过。', imgs=[]),
+    2: dict(keys=['smoke_done'], ts_override='1',
+            narrative='单网关（:8801 多路复用）＋单工作台（:8802）健康检查通过——开跑前 mx-clean/mx-setup/mx-up 重建面首验。', imgs=[]),
+    3: dict(keys=['smoke_done'], ts_override='1',
+            narrative='14 账号 matrix 登录＋账号板可达；自动登录通道端点按契约应答。', imgs=[]),
+    4: dict(keys=['smoke_done'], ts_override='1',
+            narrative='驾驶舱 headless 回归在线：gateway_state=running、connected_platforms=15。', imgs=[]),
+    5: dict(keys=['appinit_done'], ts_override='1794877427',
+            narrative='09:03:47 应用初始化；M2b 身份册 0 新建＋14 复用（事故报告身份面判据源就位）。', imgs=[]),
+    6: dict(keys=['people_done'], ts_override='1794877439',
+            narrative='09:03:59 人员身份注册（identity_registered）。', imgs=[]),
+    7: dict(keys=['g1_frozen'], ts_override='1794877446',
+            narrative='bella 09:04:01 把 RFD-001 提交中央仓（email 通道禁用改 matrix 送达），09:04:06 G1 冻结——需求到冻结 4 分钟。', imgs=[]),
+    8: dict(keys=['room_analysis'], ts_override='!gAIQmaMVBwixmbvObZ:matrix.test',
+            narrative='分析房建立；开跑首窗曾出现补邀 2 人失败（真值核验把关在案）。', imgs=[]),
+    9: dict(keys=['dispatch_marker'], ts_override='1',
+            narrative='09:19:58 fanfan 账号板出现 RFD-001 卡；09:24:39-47 chen/hu/lin/xiao 四路分诊卡齐。', imgs=[]),
+    10: dict(keys=['register_done'], ts_override='1',
+            narrative='任务清单 docs/analysis/RFD-001-tasklist.md 09:20:14 入仓；09:24:35 完成凭证反向核验（commit 真在 origin 且含分析稿）通过。', imgs=[]),
+    11: dict(keys=['analysis_done', 'analysis_verified'], ts_override='1',
+            narrative='系分四路（AN-PAYCORE/AN-MP/AN-CHWX/AN-CHALI）入库；主卡带结构化 raci（responsible/approver 双列）。', imgs=[]),
+    12: dict(keys=['triage_done'], ts_override='1',
+            narrative='分诊台四路记录齐（各域账号板在册）。', imgs=[]),
+    13: dict(keys=['anexec_done'], ts_override='1',
+            narrative='09:24:51 四路研发同刻即派（run11 以来流水线形态）；62 分钟完成到评审——上轮同段约 4.5 小时，G-d 日间窗效应的首个实测锚。', imgs=[]),
+    14: dict(keys=['review_done'], ts_override='1',
+            narrative='应用执行评审过（review_prewrote=1，概设预写首份入库即派骨架的阈值修正生效）。', imgs=[]),
+    15: dict(keys=['g2_arch_pass'], ts_override='',
+            narrative='如实记：本闸未放行。架构侧 PASS 判词在案；涉敏安全评审 10:15 判 FAIL（真缺项 D1-D9 安全门禁），改判窗 10:37/10:50/11:02 三轮 600s 无新判词超时，12:07 监督器二段式停机。真堵点=修复执行组织面（研发工作区 148 处修复改动停留 13 小时无人提交）——判词/闸/熔断全部判对、执行无人落地；断点续跑从 devimpl 段接续的跳段缺陷已由复盘批根治（断点回退最近缺闸段）。', imgs=[]),
+    16: dict(keys=['close_done'], ts_override='',
+            narrative='如实记：close_done 未写入（G2 段未过、续跑自 devimpl 起——该形态即上条跳段缺陷的实证，步键留空不补写）。', imgs=[]),
+    17: dict(keys=['plan_done'], ts_override='',
+            narrative='如实记：plan_done 未写入（同上；排期计划文档属缺件不在仓清单，见完备性检查）。', imgs=[]),
+    18: dict(keys=['devimpl_done'], ts_override='1',
+            narrative='值守 12:44 断点接力后（run27 配方重启监督器）六路开发同刻即派（DEV-PAYCORE-C/S/N、DEV-MP、DEV-CHWX、DEV-CHALI）；13:09:28 G3 代码门过（g3_code_pass），integration 合并提交 4f3e1e8 在案。', imgs=[]),
+    19: dict(keys=['defect_done', 'testpass_done'], ts_override='1',
+            narrative='13:11 缺陷段起、15:05 defect_done；testpass 段 G4 能力探测首轮 12 探测红——三堵墙（旧构建产物 404 族×12／agent 树重灌致 kanban 500×2／治理写门 403）值守当轮根治（全量重建热换＋树补件＋判据 409/403 双合法），18:59 复跑 51 探测全绿、18:59:30 g4_pass 写入（evidence/contract/eval 三缺口=1 如实显形，非全绿通过）。', imgs=[]),
+    20: dict(keys=['ready_done', 'release_done'], ts_override='1',
+            narrative='G5 发布准出：20:26 首轮 FAIL→21:06 两轮熔断→21:34 三轮硬停（fanfan 复核实测维持 FAIL 判词，缺项为真）；23:2x 用户裁决点杀双令（研发交付令＋修复链解锁令）→00:22:59 g5_ready 按「补过」记账口径写入（g5_supplement=1，GAP 残留如实呈现不计首过）；release 推进。', imgs=[]),
+    21: dict(keys=['uat_done', 'uat_conditional'], ts_override='1794932975',
+            narrative='00:29:35 UAT 验收完成（AC 对数；uat_conditional 条件项在案）。', imgs=[]),
+    22: dict(keys=['workmgr_done'], ts_override='1794932999',
+            narrative='00:29:59 研发工作管理收尾。', imgs=[]),
+    23: dict(keys=['audit_done'], ts_override='1794933043',
+            narrative='00:30:43 合规审计步完成（机器审计环另见步 26 叙事）。', imgs=[]),
+    24: dict(keys=['retro_done'], ts_override='1794933078',
+            narrative='00:31:18 复盘步完成——retro_done 即 G6 闸键（V8.46 语义）。', imgs=[]),
+    25: dict(keys=['ide_done'], ts_override='1',
+            narrative='00:31:18 起 IDE 段：核验任务→IDE 跳转与简报生成能力（ide_done 写入）。', imgs=[]),
+    26: dict(keys=['report_done'], ts_override='1794939240',
+            narrative='00:32 DISP 三态归桶起；审计环在 R18 步 23/25 帧缺口上 13 轮不收敛（根因=降级凭证写入器断链）——值守按审计配对格式手工落 ISSUE 凭证后 02:14:00 report_done 写入，审计终态 0 FAIL／37 WARN；PART1 当轮走 auto-part1 起草（复盘批补注册人工正本与逐歩叙事，即本注册）。', imgs=[]),
+}
+
 _NARR={'20261028-v8-run23':_NARR_RUN23} if _NARR_RUN23 else {}
 if _NARR_RUN24: _NARR['20261031-v8-run24']=_NARR_RUN24
+_NARR['20261117-v8-run31']=STEPS_META_20261117_V8_RUN31  # 2026-11-18 复盘回填（run25-30 逐歩叙事仍欠账，见 N33 台账）
 _NARR.update({'20261021-v8-run22':STEPS_META_20261021_V8_RUN22,'20261017-v8-run21':STEPS_META_20261017_V8_RUN21,'20261015-v8-run20':STEPS_META_20261015_V8_RUN20,'20261013-v8-run19':STEPS_META_20261013_V8_RUN19,'20261013-v8-run18-lite-acp':STEPS_META_20261013_V8_RUN18_LITE,'20261012-v8-run16':STEPS_META_20261012_V8_RUN16,'20261011-v8-run15':STEPS_META_RUN15,'20261010-v8-run14':STEPS_META_RUN14,'20261010-v8-run13':STEPS_META_RUN13,'20261009-v8-run12':STEPS_META_RUN12,'20261007-v8-run11':STEPS_META_RUN11,'20261007-v8-run10':STEPS_META_RUN10,'20261006-v8-run9':STEPS_META_RUN9,'20261004-v7-run8':STEPS_META_RUN8,'20260928-v4-run1':STEPS_META_RUN1,'20260929-v4-run2':STEPS_META_RUN2,'20260929-v5-run4':STEPS_META_RUN4,'20260930-v5-run5':STEPS_META_RUN5,'20261001-v5-run6':STEPS_META_RUN6,'20261002-v5-run7':STEPS_META_RUN7})
 def _narrative_fallback_skeleton(run_id):
     """R17 骨架兜底（run16 起修订）：未注册轮按 state.env 已落步键渲染骨架——全部步
@@ -1946,6 +2006,25 @@ _NOTE_G5={'20261017-v8-run21':('步 20 G5 四轮往返全留痕：r1 12:01 文�
 '20260929-v4-run2':('步 20 两件缺「回滚/灰度/观察窗」如实红标：G5 发布计划/发布说明 r7 实物在评审卡 t_ea68c462 附件（文件域未落正本，卡面 review-record 可反查）——列 backlog 补文件域正本。')}
 _BASELINE_NOTE={'20261013-v8-run18-lite-acp':('run18 基线=run16 收尾态续建（lite_fixtures_from=20261012-v8-run16，g2 夹具时刻=源轮真值种子）；本轮=ACP→Ycode 编码后端首个实跑验证轮：coding-delegate 技能委托链（nohup 后台化根治件后）全链首验。',),'20261012-v8-run16':('run16 基线=run15 收尾态续建；本轮=V8.16 饱和并行+V8.17 复盘纪律版首验轮；监控驱动修复链首战（G5 熔断处置全流程）。',),'20261011-v8-run15':('run15 基线=run14 收尾态续建（中央仓 main 谱系收敛后）；上轮遗留 feat/DEV-PAYCORE-S 陈旧分支踩雷当场根治并立预检⑩+mx-clean 3c 默认清理。本轮=V8.10（预检九项/涉敏评审/六域当轮/契约影子）+V8.11-15（七幕方案/认知加固/交付形态感知）全栈首验轮；运行中四类根治件（09c07f9/bf9a955/c1e507d/36c7701）以 80 秒收敛与零白等实证。',),'20261010-v8-run14':('run14 基线=mx-clean 20261010-134331 三旗标全清 0→1 重建（中央仓清空提交 bd887da 推 origin/main）；上轮基线=run13 回归轮（V8.5 打回判词语义口径勘误后 G3/G5 记首过、闸段问题单另列）。本轮=V8.5 条款+G1-G4 产品面（overlay main ea56a101 构建）+F1-F18 harness 修复的首个全量验证轮；GRAPH_ENGINE=on 全程。',),'20261010-v8-run13':('run13 基线=run12 收尾态续建（lite_fixtures_from=20261009-v8-run12；中央仓 main 已修至 origin/main 零分叉 2026-10-10）。lite 轮首航：跳过需求/分析/评审/概设/G1/G2（夹具带如实呈现，g1_frozen/g2_arch_pass=源轮门禁真值种子）；当轮执行 devimpl→report；过度交付守卫六路边界纪律首次实战；GRAPH_ENGINE=on 接管调度（loop-graph 自驱动，shadow 武装后切 on）。',),'20261009-v8-run12':('run12 基线=run11 收尾态续建（集成分支 RFD-001 增量链 e8f5cbe→bc2cb9f→31db77a 祖先关系实测）；对照 run11：G5 从六轮长跑收敛为两轮+复审（结论行污染为新问题），网关事故从单点转为四起连环，诚实账（如实报告未执行→追责→真实执行完整循环）是本轮新的治理样本。',),'20261004-v7-run8':('run8 基线=mx-clean 20261004-065954 三旗标全清 0→1；对照 run7：事故面从通道类转 bash 坑型+投递丢弃型，全部当场根治并入库。'),'20260928-v4-run1':'','20260929-v4-run2':'；本轮 integration 基线 0ab43de 为强制重建产物（bebfd2d 非祖先，丢线 23 提交——R-A3 回补中）','20260929-v5-run4':'；本轮 0→1 清环境：中央仓 RFD 工件经 mx-clean --reset-central 重置（快照 tag mx-clean-20260929-232127 可回滚），基线自 G1 冻结重建','20260930-v5-run5':'；本轮 0→1 清环境：mx-clean 双档归档（20260930-154424/154715）后重建；远端历史工件仍在——plan/devimpl/testpass 门禁按文件存在即过，报告侧以 RUN 标记锚定本轮真值并如实披露'}.get(RUN_ID,'')
 
+# ── run31 补注册（2026-11-18 报告对账批：L3-A/L3-B/CP-G5/NOTE-G5 四注册表补 run31 条目，
+#    与 STEPS_META/PART1 同批清偿——素材=state.env 秒锚＋driver.log 时间线）。──
+_L3_A['20261117-v8-run31'] = ('进行中（G-d 日间窗首验＋组织面失效定谳轮）：26 步完成 23 步——前段 62 分钟到评审'
+    '（上轮同段约 4.5h，日间窗效应首锚）；G2 涉敏安全环全轮未合拢（判词/闸/熔断全对、修复执行无人落地——'
+    '148 处修复改动停 13h）；断点续跑跳段推进后段；G4 探针 12→0 三堵墙值守当轮修复；G5 三轮熔断后按补过口径放行；'
+    '审计 13 轮不收敛由值守按配对格式落凭证破局，report_done 02:14 正常写入、审计 0 FAIL/37 WARN。')
+_L3_B['20261117-v8-run31'] = ('实测（全锚）：开跑 09:02:26 · G1 冻结 09:04:06 · 任务卡 09:19:58 · 四系分齐 09:24 · '
+    'anexec 09:24:51 · review 过（G2 安全环未合拢 10:15-12:07）· 断点接力 12:44 · devimpl 六路 12:45 · '
+    'G3 13:09:28 · defect 15:05 · G4 探针修复环 15:30-18:59 · g4_pass 18:59:30 · G5 首轮 FAIL 20:26 · '
+    '熔断 21:34 · 双令点杀 23:2x · g5_ready 00:22:59 · UAT 00:29:35 · G6 00:31:18 · 审计环 00:32-02:14 · '
+    'report_done 02:14:00（全程 17h12m）')
+_CP_G5['20261117-v8-run31'] = ('三轮熔断全留痕：r1 20:26 FAIL→r2 21:06 两轮未过→21:34 三轮硬停（fanfan 复核实测维持'
+    ' FAIL，缺项为真）→23:2x 双令点杀→00:22:59 补过口径放行（g5_supplement=1，GAP 残留如实呈现不计首过）；'
+    'REL 推进、缺件不在仓 3 项如实入完备性检查')
+_NOTE_G5['20261117-v8-run31'] = ('步 20 G5 发布准出三轮熔断与破局全留痕：首轮 FAIL 缺项=安全门禁 D1-D9 未销＋SC 复审未翻绿'
+    '（与 G2 同根）；21:34 三轮硬停后 fanfan 复核实测维持 FAIL 判词（判词专业正确、执行面失效）；用户裁决双令'
+    '点杀（研发交付令＋修复链解锁令）→00:22:59 按「补过」记账口径写入；缺件不在仓 3 项（排期计划/商户接入文档/'
+    '完备性检查）如实入完备性检查清单，不冒充齐备。',)
+
 
 
 # ── 六域审计（每域各自回答一个交付问题）──
@@ -1987,6 +2066,7 @@ _DOMAINS_RUN9 = {
     4: ('L4', '架构、非功能与安全', '实现方式是否可接受？', 'pass', '可接受。564 响应投递兜底全程在位（relay 每拍自愈+reverse-check 实证，自动检查⑬过）；假停摆零复发（run8 五起→零）。', '实测：564 全程在位 · 假停摆 0 · dropped=0', 'cp-gate,cp-g3'),
     5: ('L5', '交付与治理', '是否能部署、运营和追责？', 'warn', '可追责。问题单 10 起三族在案（RACI 双@/越序抢跑/AN-MP 超时/推送未达/NVMe 卷脱挂/runs 注册表空态/retro-open-items 等），DISP 记账收尾链补齐；产品侧 runs 注册表空态缺口如实记入问题清单（运行中心列表空+详情 404）。', '实测：issues 10 起在案 · DISP 收尾补记 · runs-registry-empty 记入问题清单', 'cp-g5,cp-g6'),
 }
+
 _DOMAINS_RUN10 = {
     0: ('L0', '范围与需求', '是否漏做、误做或擅自假设？', 'pass',
         '无漏做。AC 7 条 G1 冻结 01:23 一次过；四路系分两稿在 origin/main（CHWX/CHALI），PAYCORE/MP 两稿缺件记入问题清单（anexec-missing×2，概设以 main 祖先版如实声明）；REL-DELIVER 商户接入文档缺件记入问题清单（audit-finding）。',
@@ -3402,6 +3482,19 @@ def issues_stats():
     dangling = len(dto.get('danglingDispTypes') or [])
     raw_i = dto.get('issuesTotal') or 0
     raw_d = dto.get('dispTotal') or 0
+    # 2026-11-18 run31 对账根治：终局后重生成复用旧治理快照，hero（实时）与本章（快照）
+    # 自相矛盾（74 vs 72 实锤）——事件流计数以 issues.log 生成时刻实数为准，快照差注记。
+    _snap_note = ''
+    try:
+        _ls = (EVID / 'issues.log').read_text(encoding='utf-8', errors='replace').splitlines()
+        _li = sum(1 for _l in _ls if _l.startswith('ISSUE|'))
+        _ld = sum(1 for _l in _ls if _l.startswith('DISP|'))
+        if (_li, _ld) != (raw_i, raw_d):
+            _snap_note = (f'（治理快照计数 {raw_i}/{raw_d} 早于本次生成，'
+                          f'本表按 issues.log 生成时刻实数 {_li}/{_ld}）')
+            raw_i, raw_d = _li, _ld
+    except OSError:
+        pass
 
     rows = []
     for r in pairing:
@@ -3419,8 +3512,8 @@ def issues_stats():
             f' · 表外词 {len(nonstd)} · 待处置 {len(open_k)}')
     if nonstd:
         stat += '（表外词=DISP 首词非三态分桶词——台账卫生缺陷，§4.3-28；收尾链补记三态 DISP 行后归桶）'
-    note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑；口径时点=本报告生成时刻，复盘文档若引用事件流计数须标注其冻结时点——G6 与 report 段之间 DISP 归桶仍在推进，O5），复盘文档按事件流全表列出；本节按唯一键去重收尾。'
-            '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。配对/分桶判定=治理服务 run-metrics（快照取件）。')
+    note = (f'台账事件流 {raw_i} 行 ISSUE / {raw_d} 行 DISP（含同一问题多次发生与多轮重跑；口径时点=本报告生成时刻，复盘文档若引用事件流计数须标注其冻结时点——G6 与 report 段之间 DISP 归桶仍在推进，O5），复盘文档按事件流全表列出；本节按唯一键去重收尾。' + (_snap_note or '')
+            + '级别按类型码族派生（闸门级/采集级/过程级），闸门族正则与审计器闸键判定同源。配对/分桶判定=治理服务 run-metrics（快照取件）。')
     if open_k:
         stat += f'（{", ".join(open_k[:3])} 属下轮跟进项）'
     return (stat, note, '\n'.join(rows), len(closed) + len(observed) + len(deferred), len(order),
@@ -4976,8 +5069,19 @@ def gov_final_rows():
             cls, verdict = 'ok', '✓'
         else:
             cls, verdict = 'gpending', '○ 未达'
+        # 2026-11-18 run31 对账补：G4 三缺口键与 G5「补过」口径卡面可见（对称显形，
+        # 不再只藏于时间线/问题单）。缺口键=state 实读；补过=方案 §2.6-5 g5_supplement 语义。
+        _extra = ''
+        if g == 'G4':
+            _gaps = [k for k in ('g4_evidence_gap', 'g4_contract_gap', 'g4_eval_gap')
+                     if str(state.get(k, '')).strip() not in ('', '0')]
+            if _gaps:
+                _extra = (f' <span style="font-size:11px;color:#b45309">（带缺口通过：'
+                          f'{"、".join(k.replace("g4_", "").replace("_gap", "") for k in _gaps)} gap=1，非全绿）</span>')
+        elif g == 'G5' and str(state.get('g5_supplement', '')).strip() == '1':
+            _extra = ' <span style="font-size:11px;color:#b45309">（补过口径：GAP 残留如实呈现，不计首过——方案 §2.6-5）</span>'
         rows.append(f'<tr><td><b>{g}</b></td><td style="font-size:13px">{GATE_DESC[g]}</td>'
-                    f'<td class="{cls}">{verdict}</td><td>{_gate_ts(g) or "—"}</td></tr>')
+                    f'<td class="{cls}">{verdict}{_extra}</td><td>{_gate_ts(g) or "—"}</td></tr>')
     return ''.join(rows)
 
 # 图数真值（run23 复盘修「自相矛盾」）：旧口径只数「叙事 imgs 显式注册」——骨架兜底
@@ -5601,8 +5705,10 @@ def _staffing_utilization() -> dict:
     if not profiles:
         out['reason'] = f'在编编制目录缺席（{prof_root}）'
         return out
-    now = int(_time.time())
-    window = max(now - started, 1)
+    # 2026-11-18 run31 对账根治：终局轮重生成时 wall-clock 会把停摆 idle 计入分母
+    # （run31 实录 7.8%→5.2% 漂移）——report_done 在位时窗口右端锚=终局时刻。
+    _end = int(float(state.get('report_done') or 0) or _time.time())
+    window = max(_end - started, 1)
     total = 0.0
     lines = 0
     for d in profiles:
@@ -5700,10 +5806,15 @@ def _readfirst_html() -> str:
                      '它们排在发布准出之后，属流程顺序，不是漏做。</li>')
     if n_issue_open:
         _open.append(f'<li>问题单尚有 <b>{n_issue_open}</b> 条没有处置结论（共 {n_issue_keys} 键）。</li>')
-    if not _open:
+    # 2026-11-18 run31 对账根治：骨架轮「无未完成项」与同页「G2 ⏳ 未放行」自相矛盾——
+    # 完成态按 STEPS_META×state 计算，未达步如实列出（报告不再替未注册叙事圆谎）。
+    _undone = [_n for _n in sorted(STEPS_META) if not _step_done(_n)]
+    if _undone:
+        _open.append(f'<li><b>{len(_undone)} 个主步未达完成态</b>（步号 {"、".join(map(str, _undone))}）——以六闸面板与逐步档案为准；未完成是事实陈述，不是漏报。</li>')
+    elif not _open:
         _open.append('<li>无未完成项。</li>')
     _guide = ('<li><b>只看结论</b>：本页 + 第 1 章六道关卡。</li>'
-              '<li><b>核对证据</b>：第 2 章 26 步实录——每步有界面实拍与交付物实物。</li>'
+              '<li><b>核对证据</b>：第 2 章 26 步实录——逐步帧况以各步档案标注为准（实拍／降级登记／缺帧如实呈现），交付物实物可对中央仓核验。</li>'
               '<li><b>查问题与缺口</b>：第 3 章六域审计、第 4 章问题单、第 5 章交付物全景。</li>'
               '<li><b>看方法口径</b>：附录 A–E（数据口径 / 独立审计 / 意图通路 / 成效细分 / 产品能力说明）。</li>')
     # 编制利用率（run24 复盘批）：分子/分母定义见 _staffing_utilization 上方注释；
