@@ -1788,8 +1788,9 @@ def _board_team_allowlist(normalize_profile_name, board: Optional[str]) -> Optio
 
 
 def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], bool]]:
-    """``profile_exists`` from ``hermes_cli.profiles``; ``None`` when it cannot be
-    imported and no allowlist is set (callers then trust the assignee).
+    """``hermes_cli.profiles.profile_exists``, or ``None`` when it cannot be
+    imported (local import avoids a cycle; callers fall back to trusting the
+    assignee).
 
     HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
     list in its ``board.json``, the predicate additionally requires the assignee
@@ -1797,9 +1798,11 @@ def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], 
     agent team mounted on its board. Health probes pass no board and stay
     unfenced (historic fail-open telemetry).
 
-    With ``kanban.dispatch_profiles`` set (#110995) the predicate also requires the
-    assignee to be listed, fail-closed: a ``default`` card is only claimable by homes that
-    opted in, and a set allowlist whose gate cannot be built claims nothing (#147531)."""
+    When ``kanban.dispatch_profiles`` is set (#110995) the returned predicate
+    additionally requires the assignee to be listed, fail-closed — so a card
+    assigned to ``default`` is only claimable by homes that opted into it.
+    Foreign assignees land in the existing ``skipped_nonspawnable`` bucket.
+    """
     try:
         from hermes_cli.profiles import normalize_profile_name, profile_exists
     except Exception:

@@ -58,22 +58,10 @@ def build_kanban_policy(connection, params, config):
     if policy.model is None:
         from gateway.run import _resolve_gateway_model
         policy = replace(policy, model=_resolve_gateway_model(policy.config()))
-    # DoD 完成契约（模型波动加固 A，2026-11-01）：在会话策略构建（=派发）瞬间从
-    # task.body 派生并冻进 kanban_json——worker 内层 agent 进程 env 不继承外层
-    # 派发进程，契约必须随会话策略走（bind_worker_context 导出）。mode=off 不占键。
-    dod_contract = None
-    try:
-        from completion_contract import derive_contract
-        _dod = derive_contract(task.body or "")
-        if _dod.get("mode") != "off":
-            dod_contract = _dod
-    except Exception:
-        dod_contract = None
     context = dict(params, workspace=cwd, branch=task.branch_name, tenant=task.tenant,
         profile=task.assignee, workspaces_root=str(kb.workspaces_root(board=board).resolve()),
         skills=skills, goal_mode=task.goal_mode, goal_max_turns=task.goal_max_turns,
         goal_text='\n\n'.join(p for p in (task.title, task.body) if p), context=context,
-        **({"dod_contract": dod_contract} if dod_contract else {}),
         max_runtime_seconds=task.max_runtime_seconds, accept_hooks=True)
     context['db'] = str(path)
     request = json.loads(policy.request_json)
@@ -182,12 +170,6 @@ def bind_worker_context(frame):
             env[key] = value
     if context['goal_mode']:
         env['HERMES_KANBAN_GOAL_MODE'] = '1'
-    # DoD 契约随会话策略到内层 agent（内核完成门 complete_task 读这两个 env）。
-    dod = context.get('dod_contract')
-    if isinstance(dod, dict):
-        env['HERMES_KANBAN_DOD_CONTRACT'] = json.dumps(dod, ensure_ascii=False, separators=(',', ':'))
-        if dod.get('sourceSha256'):
-            env['HERMES_KANBAN_DOD_SOURCE_SHA256'] = dod['sourceSha256']
     from hermes_cli.kanban_db_dispatch import _worker_terminal_timeout_env
     for key in ('TERMINAL_TIMEOUT', 'TERMINAL_MAX_FOREGROUND_TIMEOUT'):
         value = _worker_terminal_timeout_env(context['max_runtime_seconds'], os.environ.get(key))

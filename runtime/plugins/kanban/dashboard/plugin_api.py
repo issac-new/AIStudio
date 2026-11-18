@@ -477,7 +477,7 @@ class CreateTaskBody(BaseModel):
     assignee: Optional[str] = None
     tenant: Optional[str] = None
     priority: int = 0
-    workspace_kind: Optional[str] = None  # None = the board project's worktree when scoped, else dir (overlay fallback)
+    workspace_kind: Optional[str] = None  # None = scratch, or the board project's worktree when scoped
     workspace_path: Optional[str] = None
     parents: list[str] = Field(default_factory=list)
     triage: bool = False
@@ -732,9 +732,8 @@ def _open_parent_refusal(conn, task_id: str, s: str) -> Optional[str]:
 
 
 def _patch_title_body(conn, task_id: str, payload: UpdateTaskBody, board: Optional[str]) -> None:
-    """PATCH title/body phase: 单条更新语句加 ``edited`` 事件，随后提交后观察器
-    （仅字段名——值不经此载荷离开数据库）。docstring 措辞 2026-11-08 改写：原英文
-    "one UPDATE + …" 的加号撞安全门拼接正则（d636895ab approval 注释同族先例）。"""
+    """PATCH title/body phase: one UPDATE + ``edited`` event, then the post-commit observer
+    (field names only — values never leave the DB via this payload)."""
     with kanban_db.write_txn(conn):
         sets, vals = [], []
         if payload.title is not None:

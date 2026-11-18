@@ -21,9 +21,6 @@ _TASK_DICT_FIELDS = (
     "reasoning_effort",  # HERMES_CUSTOM[v020]
     "raci",  # HERMES_CUSTOM[raci]
     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
-    # 批二 CAS 读面（2026-11-18 run31 复盘 N32-6）：version/verification 进 CLI JSON 序列化——
-    # 此前写面有乐观锁读面无钥（客户端无法从 REST 构造 expected_version；探针组 17 正例降级取证）。
-    "version", "verification",
 )
 _SHOW_RUN_FIELDS = (
     "id", "profile", "step_key", "status", "outcome", "summary", "error",
