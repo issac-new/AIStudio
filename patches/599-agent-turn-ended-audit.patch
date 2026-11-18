@@ -1,8 +1,8 @@
 diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
-index 7fc2420d46..f34e92551b 100644
+index b4948b6c5..27de518a1 100644
 --- a/agent/conversation_loop.py
 +++ b/agent/conversation_loop.py
-@@ -1912,6 +1912,13 @@ def run_conversation(
+@@ -1860,6 +1860,13 @@ def run_conversation(
                  prelude=prelude,
              )
          finally:
@@ -14,5 +14,5 @@ index 7fc2420d46..f34e92551b 100644
 +            except Exception:
 +                pass
              end_voice_turn_route(agent)
-     settle_held_final(agent, result)
-     result = export_current_turn_boundary(agent, result, user_message)
+     fence_result_reply(result)
+     # Joined before settle_held_final so a held transform sees the lead, unless a collapsed partial already ran it.

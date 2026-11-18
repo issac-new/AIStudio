@@ -1,7 +1,8 @@
 diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
+index 000000000..111111111 100644
 --- a/tools/delegate_tool.py
 +++ b/tools/delegate_tool.py
-@@ -49,6 +49,7 @@
+@@ -50,6 +50,7 @@ from tools.delegate_tool_registry import (
  )
  from tools.delegate_tool_tasks import (
      _MAX_TASK_IMAGES, _coerce_task_images, _coerce_task_schemas, _normalize_task_images, _normalize_task_list,
@@ -9,15 +10,15 @@ diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
  )
  from tools.delegate_tool_tuning import pin_child_service_tier
  from tools.delegate_tool_toolsets import (
-@@ -465,6 +466,7 @@
-     task_list: list[dict[str, Any]], task_schemas: list[Optional[dict[str, Any]]], routes: list[Any], *,
+@@ -489,6 +490,7 @@ def _build_children(
      top_role: str, max_iterations: int, parent_agent,
      live_deleg_id: Optional[str], live_writers: list, task_images: Optional[list[Optional[list[str]]]] = None,
+     rebuild: Optional[list[dict[str, Any]]] = None,
 +    task_strict: Optional[list[bool]] = None,
  ) -> tuple[list[tuple], Optional[str]]:
      """Build every child on the main thread (construction is not thread-safe), each on its task's route;
-     ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure."""
-@@ -496,6 +498,10 @@
+     ``(children, None)`` or ``([], error)`` on an explicit-pin preflight failure. ``rebuild`` (action='continue')
+@@ -524,6 +526,10 @@ def _build_children(
          if _task_schema is not None:
              with _quiet("Could not attach output schema to child %d", i):
                  child._delegate_output_schema = _task_schema
@@ -28,7 +29,7 @@ diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
          # Validated per-task images; absent on image-less tasks, which keep the text-only goal turn.
          _t_images = task_images[i] if task_images and i < len(task_images) else None
          if _t_images:
-@@ -617,6 +623,11 @@
+@@ -651,6 +657,11 @@ def delegate_task(
      task_list, err = _normalize_task_list(goal, context, tasks, output_schema, top_role, max_children)
      if not err:
          task_schemas, err = _coerce_task_schemas(task_list, output_schema)
@@ -40,7 +41,7 @@ diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
      if not err:
          task_images, err = _coerce_task_images(task_list, images)
      if not err:
-@@ -668,6 +679,7 @@
+@@ -704,6 +715,7 @@ def delegate_task(
      children, err = _build_children(
          task_list, task_schemas, routes, top_role=top_role, max_iterations=default_max_iter, parent_agent=parent_agent,
          live_deleg_id=live_deleg_id, live_writers=live_writers, task_images=task_images,
@@ -48,7 +49,7 @@ diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
      )
      if err:
          return tool_error(err)
-@@ -830,6 +842,14 @@
+@@ -870,6 +882,14 @@ DELEGATE_TASK_SCHEMA = {
                              "schema_valid, plus schema_errors on failure — the child's raw text is still returned "
                              "as summary, never discarded). Keep it forgiving — require only fields you will read.",
                          ),
@@ -62,7 +63,42 @@ diff --git a/tools/delegate_tool.py b/tools/delegate_tool.py
 +                        ),
                          "images": _p(
                              "array",
-                             "Optional images this child must SEE (max 8): local file paths or http(s) URLs — e.g. a "
+                             "Images this child must SEE (max 8): local file paths or http(s) URLs — e.g. a "
+
+diff --git a/tools/delegate_tool_child_run.py b/tools/delegate_tool_child_run.py
+index 000000000..111111111 100644
+--- a/tools/delegate_tool_child_run.py
++++ b/tools/delegate_tool_child_run.py
+@@ -680,6 +680,16 @@ def _build_result_entry(
+         # for validated output.
+         exit_reason = "completed" if result.get("completed", False) else "max_iterations"
+         status = "completed" if usable_summary else "failed"
++        # 补丁 772（2026-11-13 超级智能体吸收批一）：strict_output_schema=true 的显式
++        # 严格合同失败关闭——仅翻转「正常完成（result.completed）且 schema 不合格」
++        # 的结果为 failed；预算耗尽（completed=False，状态语义=completed+truncated）、
++        # 中断与执行错误的原始终止原因不被 output_schema_invalid 覆盖，机器消费者以
++        # truncated/schema_valid 双旗识别不可解析。
++        if (result.get("completed", False) and usable_summary
++                and bool(getattr(child, "_delegate_strict_output", False))
++                and isinstance(schema.schema, dict) and schema.valid is False):
++            status = "failed"
++            exit_reason = "output_schema_invalid"
+ 
+     _cost = getattr(child, "session_estimated_cost_usd", 0.0)
+     _cost_status = getattr(child, "session_cost_status", None)
+@@ -719,6 +729,11 @@ def _build_result_entry(
+         _failure_reason = result.get("failure_reason")
+         if isinstance(_failure_reason, str) and _failure_reason:
+             entry["failure_reason"] = _failure_reason
++        if exit_reason == "output_schema_invalid":
++            # 严格合同失败的专属判词：summary 是未验证原文，机器消费者不得当 JSON 解析。
++            entry["error"] = ("strict_output_schema: declared output_schema not satisfied after the "
++                              "correction retry; summary is the child's raw unvalidated final text "
++                              "(see schema_errors)")
+         # When the limit resets (and the plan window it hit): what a resume is scheduled from.
+         _resets_at = result.get("failure_resets_at")
+         if isinstance(_resets_at, (int, float)) and not isinstance(_resets_at, bool):
+
 diff --git a/tools/delegate_tool_tasks.py b/tools/delegate_tool_tasks.py
 --- a/tools/delegate_tool_tasks.py
 +++ b/tools/delegate_tool_tasks.py
@@ -95,38 +131,6 @@ diff --git a/tools/delegate_tool_tasks.py b/tools/delegate_tool_tasks.py
  def _coerce_task_schemas(
      task_list: list[dict[str, Any]], output_schema: Optional[dict[str, Any]]
  ) -> tuple[list[Optional[dict[str, Any]]], Optional[str]]:
-diff --git a/tools/delegate_tool_child_run.py b/tools/delegate_tool_child_run.py
---- a/tools/delegate_tool_child_run.py
-+++ b/tools/delegate_tool_child_run.py
-@@ -654,6 +654,16 @@
-         # for validated output.
-         exit_reason = "completed" if result.get("completed", False) else "max_iterations"
-         status = "completed" if usable_summary else "failed"
-+        # 补丁 772（2026-11-13 超级智能体吸收批一）：strict_output_schema=true 的显式
-+        # 严格合同失败关闭——仅翻转「正常完成（result.completed）且 schema 不合格」
-+        # 的结果为 failed；预算耗尽（completed=False，状态语义=completed+truncated）、
-+        # 中断与执行错误的原始终止原因不被 output_schema_invalid 覆盖，机器消费者以
-+        # truncated/schema_valid 双旗识别不可解析。
-+        if (result.get("completed", False) and usable_summary
-+                and bool(getattr(child, "_delegate_strict_output", False))
-+                and isinstance(schema.schema, dict) and schema.valid is False):
-+            status = "failed"
-+            exit_reason = "output_schema_invalid"
- 
-     _cost = getattr(child, "session_estimated_cost_usd", 0.0)
-     _cost_status = getattr(child, "session_cost_status", None)
-@@ -693,6 +703,11 @@
-         _failure_reason = result.get("failure_reason")
-         if isinstance(_failure_reason, str) and _failure_reason:
-             entry["failure_reason"] = _failure_reason
-+        if exit_reason == "output_schema_invalid":
-+            # 严格合同失败的专属判词：summary 是未验证原文，机器消费者不得当 JSON 解析。
-+            entry["error"] = ("strict_output_schema: declared output_schema not satisfied after the "
-+                              "correction retry; summary is the child's raw unvalidated final text "
-+                              "(see schema_errors)")
-     elif interrupt_note:
-         entry["error"] = interrupt_note
- 
 diff --git a/tests/tools/test_delegate_strict_output_schema.py b/tests/tools/test_delegate_strict_output_schema.py
 new file mode 100644
 --- /dev/null

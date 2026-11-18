@@ -12,15 +12,20 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 ### Version
 
-Current: **v0.23.1-team.1** (base bumped 2026-11-10 with the vendor upgrade to hermes-agent v0.23.1; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.23.0-team.2.
+Current: **v0.23.2-team.1** (base bumped 2026-11-18 with the vendor upgrade to hermes-agent v0.23.2; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.23.1-team.3.
 
-### What changed in this release (v0.23.1-team.1)
+### What changed in this release (v0.23.2-team.1)
+
+- **Base bump + runtime re-mirror**: hermes-agent base v0.23.1 → v0.23.2 (vendor upgrade 2026-11-18, spec `docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md`); extension counter reset to 1. No profile content changes; runtime/ overlay re-mirrored 20 files against the new injected baseline (upstream plugin-catalog/gateway/approval/redact streams). 16 patches hand-reanchored onto the new baseline; full replay 491/491.
+- Previous releases in the 0.23.1 base line: v0.23.1-team.1..team.3 (below).
+
+### What changed in v0.23.1-team.1 (2026-11-10)
 
 - **Base bump + runtime re-mirror**: hermes-agent base v0.23.0 → v0.23.1 (vendor upgrade 2026-11-10, spec `docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md`); extension counter reset to 1. No profile content changes; runtime/ overlay re-mirrored 12 files against the new injected baseline (upstream plugin-catalog/telegram/gateway streams).
 - Previous releases in the 0.23.0 base line: v0.23.0-team.1..team.2 (below).
 
 ### What changed in v0.23.0-team.1 (2026-11-06)
-The current AIStudio **1.0.16-overlay** distribution carries agent teams **v0.23.1-team.3**, hermes-agent upstream **0.23.1**, yuan **v2.100.4**, and Ycode **3.18.0**. These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
+The current AIStudio **1.0.16-overlay** distribution carries agent teams **v0.23.2-team.1** (repo head; the published 1.0.16 assets carry v0.23.1-team.3), hermes-agent upstream **0.23.2** (repo head), yuan **v2.100.4**, and Ycode **3.18.2**. These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
 
 - **Base bump only**: hermes-agent base v0.22.7 → v0.23.0 (vendor upgrade 2026-11-06, spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`); extension counter reset to 1. No profile content changes.
 

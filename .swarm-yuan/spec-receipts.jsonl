@@ -388,6 +388,7 @@
 {"at":"2026-11-15T08:52:12Z","spec":"docs/superpowers/specs/2026-11-14-superagent-contract-batch2.md","receipt":"97be966efa393a7a3880c4deca2646125d197515","commit":"7693ce1e6"}
 {"at":"2026-11-15T08:56:52Z","spec":"docs/superpowers/specs/2026-11-15-proactive-deferrals.md","receipt":"253390f2613865cbccc402c689942dc87c19a3cb","commit":"d1b173d2a"}
 {"at":"2026-11-15T09:35:13Z","spec":"docs/superpowers/specs/2026-11-15-plan-sync-and-latent.md","receipt":"9a7af3063611e6efee10cc00e4aeef2ef1c76849","commit":"950655d05"}
+{"at":"2026-11-16T07:05:26Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"6213cc8a4b647de3ca3a044cb748254b88f10ff9","commit":"a3076aa9a"}
 {"at":"2026-11-16T10:37:16Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"22dd459faa9a87818be1dc4c8a514a5f58f00965","commit":"93bd0ac33"}
 {"at":"2026-11-16T10:46:17Z","spec":"docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md","receipt":"c844cec5b11255bc7535fba03e66403df3fc90af","commit":"93bd0ac33"}
 {"at":"2026-11-16T10:46:29Z","spec":"docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md","receipt":"218d19545e12d62f1ce4ea2457bf2388c081e546","commit":"dc35fa059"}
@@ -395,11 +396,10 @@
 {"at":"2026-11-16T10:57:52Z","spec":"docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md","receipt":"5476eb8661c1bd782857afa912b0f761e81074c5","commit":"684a85052"}
 {"at":"2026-11-16T11:11:30Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"874d68d068309131558d161893f4dbd70daf99f4","commit":"7eef8a4be"}
 {"at":"2026-11-16T11:14:35Z","spec":"docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md","receipt":"4fe201eaba202548a6ebd5b269850d22c7c982e0","commit":"ad3e5b589"}
+{"at":"2026-11-16T12:53:14Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"8c10cbb06243c8d08daa3bcf4e2e5f0c88c19640","commit":"c4b160fc0"}
 {"at":"2026-11-16T13:23:28Z","spec":"docs/superpowers/specs/2026-11-16-always-on-live-verification.md","receipt":"245b66f9c5acfb46abb87aa66d3be91f36196b5c","commit":"0bfa401ff"}
 {"at":"2026-11-16T13:48:19Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"28064503a2d6f9464b367690baee09108bc267eb","commit":"6dab0115a"}
 {"at":"2026-11-16T15:08:15Z","spec":"docs/superpowers/specs/2026-11-16-ide-toolbar-clarity.md","receipt":"6fabb160af5f4d306ca05985159faa7051298f21","commit":"5afb6b79a"}
-{"at":"2026-11-16T07:05:26Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"6213cc8a4b647de3ca3a044cb748254b88f10ff9","commit":"a3076aa9a"}
-{"at":"2026-11-16T12:53:14Z","spec":"docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md","receipt":"8c10cbb06243c8d08daa3bcf4e2e5f0c88c19640","commit":"c4b160fc0"}
 {"at":"2026-11-16T16:24:19Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"2ba3768b4225b29296c17d213aedb908c199d5cb","commit":"b1312b8aa"}
 {"at":"2026-11-16T16:26:08Z","spec":"docs/superpowers/specs/2026-11-17-sim-studio-preload-hardening.md","receipt":"309bf0f5326f9cec616366437051b7e8a4de8dc0","commit":"b1312b8aa"}
 {"at":"2026-11-16T16:31:27Z","spec":"docs/superpowers/specs/2026-11-17-run31-plan-sync.md","receipt":"05098af01a34e2dee28c6a608009adbe0cdc1fcd","commit":"51c550759"}
@@ -410,3 +410,6 @@
 {"at":"2026-11-18T03:32:44Z","spec":"docs/superpowers/specs/2026-11-18-retro-org-execution.md","receipt":"2af0e8921e6d7d3b0d04252515f91fa14b6384f1","commit":"fbaf5eef8"}
 {"at":"2026-11-18T03:38:14Z","spec":"docs/superpowers/specs/2026-11-18-retro-vendor-collect.md","receipt":"d359a870247ea5fa28394a3d5eb0a4d09f8d1d26","commit":"fbaf5eef8"}
 {"at":"2026-11-18T09:01:01Z","spec":"docs/superpowers/specs/2026-11-18-retro-report-plan.md","receipt":"62c23df04f6d4af44b25cd89fd0970451fe23ee0","commit":"d6ca596b3"}
+{"at":"2026-11-18T12:33:23Z","spec":"docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md","receipt":"956b1806875c3324ec0b4b3bce94623645c6c68f","commit":"a381993f9"}
+{"at":"2026-11-18T12:39:26Z","spec":"docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md","receipt":"44f5dc3509634e7931254fc5f4c3ee7dfc05526d","commit":"fb18590fc"}
+{"at":"2026-11-18T12:44:28Z","spec":"docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md","receipt":"64c3577b9a1955b8e9519b9150d1d00932ca549c","commit":"6fa6d3638"}

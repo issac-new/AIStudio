@@ -1,13 +1,13 @@
 diff --git a/hermes_cli/cron.py b/hermes_cli/cron.py
-index df4678041f..416ad37438 100644
+index 87dde757b..3edc9a387 100644
 --- a/hermes_cli/cron.py
 +++ b/hermes_cli/cron.py
-@@ -779,7 +779,8 @@ _JOB_ARG_FIELDS = (("name", "name"), ("deliver", "deliver"), ("failure_deliver",
-                    ("monitor_script", "monitor_script"), ("monitor_url", "monitor_url"),
+@@ -783,7 +783,8 @@ _JOB_ARG_FIELDS = (("name", "name"), ("deliver", "deliver"), ("failure_deliver",
                     ("continuity", "continuity"), ("reasoning_effort", "reasoning_effort"),
                     ("interpreter", "interpreter"), ("timezone", "timezone"),
--                   ("grace_minutes", "grace_minutes"), ("catch_up", "catch_up"))
-+                   ("grace_minutes", "grace_minutes"), ("catch_up", "catch_up"),
+                    ("grace_minutes", "grace_minutes"), ("catch_up", "catch_up"),
+-                   ("wrap_response", "wrap_response"))
++                   ("wrap_response", "wrap_response"),
 +                   ("base_url", "base_url"))
  
  

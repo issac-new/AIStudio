@@ -390,5 +390,5 @@ diff --git a/gateway/run_startup.py b/gateway/run_startup.py
 -        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher",
 +        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher", "_dreaming_watcher",
          "_profile_reconcile_watcher",
-     )
+         "_delegation_auto_resume_watcher")
  

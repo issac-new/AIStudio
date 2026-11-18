@@ -446,7 +446,11 @@ index 1eb9e47..5e2892d 100644
          + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
  
  
-@@ -434,11 +459,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
+diff --git a/tools/tool_result_storage.py b/tools/tool_result_storage.py
+index 000000000..111111111 100644
+--- a/tools/tool_result_storage.py
++++ b/tools/tool_result_storage.py
+@@ -461,11 +461,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
      persisted_content = _pageable_text(content)
      filename = _safe_result_filename(tool_use_id)
      preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)
@@ -465,5 +469,6 @@ index 1eb9e47..5e2892d 100644
 +            archive=os.path.basename(path))
 +        return message
  
-     # Always persist host-side first: cache/spillover is the single canonical home.
-     host_path = _write_to_spillover(persisted_content, filename)
+     if (hosted_path := _persist_hosted(persisted_content, tool_use_id, env)) is not None:
+         return _persisted(hosted_path) if hosted_path else _inline_truncated(preview, tool_name, content)
+
