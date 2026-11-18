@@ -32,7 +32,7 @@ spec:
         # require:false（2026-11-18 机制缺陷修复）：任务完成后注销 task-intent 卡属正常收口，
         # require:true 会让「注销后任何推送都 FAIL」——卡缺席时本门跳过（scope-check 独立判面不变）。
         require: false
-        acknowledgedSha256: "9fa975b2494f535e7bccab1d895d6568135fbc7405111bc2decb3f444ae2510a"
+        acknowledgedSha256: "fc406d40ea1192597666a2faf9b2e8cfbda14e18454f1b9f9f81c17433074782"
       evidenceType: intent-drift-result
   evidence:
     required:
