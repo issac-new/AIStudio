@@ -2298,7 +2298,7 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | G1 需求上锁 | ①逐条 AC 可机械化判定（≥3，禁空话）②范围外清单③影响面（模块/接口/数据）④涉敏评估（涉敏出 ISO27001 摘要）⑤两轮不齐不得开工 | freeze 文件四要素+AC 编号清单 |
 | G2 架构治理评审 | ①设计五要素（背景/方案/接口/数据/风险）②爆炸半径排查（对照三清单）③验证计划前移④备选方案≥2 且有取舍⑤历史偏差硬性拦截（命中项已显式回应；检索由分组记忆与问题台账面执行） | 评审记录结构化留痕+检索结论 |
 | G3 编码门禁 | ①无设计不编码②需求-代码-测试一一对应③pay-core≥8/其余≥6 全绿④金额分 int64⑤渠道本地 mock⑥testlog 随分支脚本实际核验⑦**前端工程类交付目标运行时可运行**：真实开发者工具自动化通道编译+启动+首帧，runtime-proof（launchOk/screenshot/checkedAt）随分支提交，产品能力=POST /api/hermes/runtime-verify/miniprogram（单测全绿不等于可运行——run14 教训：小程序网络层无基址注入，单测测不到）⑧写入关卡标志 g3_code_pass | DEV 分支+testlog+runtime-proof+标志写入时间戳 |
-| G4 独立验证 | ①测试者≠写码者②缺陷报→修→验全关③只认本轮记录④测试报告六要素⑤执行输出证明实际执行⑥实跑 commit 与基线同祖⑦**跨模块契约测试**：服务应用↔核心模块接口双向实测（方法名/参数形态/返回形状；被消费接口逐条契约用例；测试未执行=缺陷非声明态——run14 实锤 merchant-api↔pay-core 漂移漏网）；**判据 17 执法器**=报告审计器机械检查测试报告含「契约用例」清单（缺失即 FAIL，run 编号 20261102 起适用——run24 实锤：模板已立法而审计器从未检查，G4 通过但报告全文零契约用例）⑧前端工程类运行冒烟（真工具首帧，与 runtime-proof 同源）⑨**评测子门 G4-E**：评测运行+红队（良性误报 ≤20%）+评估器三角（裁判离线不得有 S1 判词）+能力维度覆盖（0/7 记 gap）+集锚点（漂移判 FAIL）；PASS 置 g4_eval_pass，GAP 记录缺口并放行，FAIL 不置 g4_pass；⑩增线上证据回填与失败样本处置链（未关项只记问题单，不改 G4-E 三态）；⑪**新能力探测十四组**：`capability-probes.json` 在场且 `failed=0`，负例全红（判据见 §5.11；2026-11-04 起由驱动 testpass 步自动生成——failed>0 即 g4_pass 不置位，不靠报告期追认） | 测试报告+契约用例清单+commit 回填关联卡+eval-summary.json+remediations.json |
+| G4 独立验证 | ①测试者≠写码者②缺陷报→修→验全关③只认本轮记录④测试报告六要素⑤执行输出证明实际执行⑥实跑 commit 与基线同祖⑦**跨模块契约测试**：服务应用↔核心模块接口双向实测（方法名/参数形态/返回形状；被消费接口逐条契约用例；测试未执行=缺陷非声明态——run14 实锤 merchant-api↔pay-core 漂移漏网）；**判据 17 执法器**=报告审计器机械检查测试报告含「契约用例」清单（缺失即 FAIL，run 编号 20261102 起适用——run24 实锤：模板已立法而审计器从未检查，G4 通过但报告全文零契约用例）⑧前端工程类运行冒烟（真工具首帧，与 runtime-proof 同源）⑨**评测子门 G4-E**：评测运行+红队（良性误报 ≤20%）+评估器三角（裁判离线不得有 S1 判词）+能力维度覆盖（0/7 记 gap）+集锚点（漂移判 FAIL）；PASS 置 g4_eval_pass，GAP 记录缺口并放行，FAIL 不置 g4_pass；⑩增线上证据回填与失败样本处置链（未关项只记问题单，不改 G4-E 三态）；⑪**新能力探测十七组**：`capability-probes.json` 在场且 `failed=0`，负例全红（判据见 §5.11；2026-11-04 起由驱动 testpass 步自动生成——failed>0 即 g4_pass 不置位，不靠报告期追认） | 测试报告+契约用例清单+commit 回填关联卡+eval-summary.json+remediations.json |
 | G5 发布准出 | ①测试证据挂卡②构建同 commit 可复现③依赖无新增④回滚具体化（数字阈值+命令级+72h 观察窗）⑤灰度三档各档观察期⑥发布说明面向用户收益⑦HumanGate 批准可反查；⑧G4-E 已过或 gap 已登记（g4_eval_pass/g4_eval_gap 二选一）；判词只认评审卡结构化字段；FAIL 即冻结；⑨发布门台账 append-only（台账与评审卡不一致以评审卡为准） | 七项结论行+评审卡 body+批准事件+eval-summary.json+release-gate.jsonl |
 | G6 复盘 | ①三段式②行动项四要素③治理度量实测④问题单 100% DISP 回写⑤经验入分组记忆库；⑥闸键=`retro_done`（步 24），`report_done` 只作步 26 完成键 | 复盘文档+治理报告+台账+gate 键 retro_done |
 
@@ -2911,7 +2911,19 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 
 成功判定口径随 §2.6.5 激励反转：standard/strict 姿态轮的有效性=新发现并根治缺陷数+证据链完整性；「六闸全绿+26 步走完」不构成 standard/strict 轮的充分成功条件。
 
-### 5.10.x run26 复盘条款（2026-11-04 立，四条）
+### 5.10 run25 复盘条款（2026-11-03 立，七条）
+
+run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露的流程与工装缺陷，按下列七条固化。每条都有 run25 实测锚点，不是预设。
+
+1. **采集位与步键是单一事实源，必须双向完备**：每个 capture 步键须在 `r18-collect.py` 的 `STEP_KEY_TO_NUM` 映射内（缺一即采集器 die，run25 `ready_inbox` 实锤）；每个有产品承载承诺的步须有 `capture_step` 调用（run25 步 9 无采集位→审计三红线每轮必炸→靠降级登记才过）。两道把关由 `tests/mechanism-behavior.test.ts` 机械断言（「每个 capture 键都在映射内」＋「六闸都有 delivery 事件落点」），新增采集位漏映射在提交前即红。
+2. **报告审计环收敛三分法**：审计缺口分三类处置，禁「同一 FAIL 反复重跑等它自己好」——①可自动修复（计数时效、载体未生成）→ 修审计器/生成器；②可合规降级（采集链失效、夹具未执行）→ 按 §5.6 纪律⑩ 登记，审计自动转黄标；③需内容补齐（缺证、缺清单）→ 派单补证。**同一缺口连续 3 轮不收敛即升级人工**（run25 实测 36 轮，其中 16 轮是我方重启起点错误导致的空转，7 轮是 PART1 未注册）。
+3. **收尾必做件清单（报告步准出前逐项核）**：①`final-report-merge.py` 的 `PART1_BY_RUN` 已注册本轮（缺注册即合并失败，run25 撞 7 次）；②人读层行话体检 HARD=0（「落地/收口/口径/催办」等词表词禁入正文，run25 撞 1 次）；③步 26 载荷在首次审计前已在场（采集位前移）；④报告数字与 issues.log 同刻快照对齐。四项任一缺失，report_done 不得落。
+4. **计数口径解耦与词面隔离**：报告内计数取「生成时刻快照」，审计比对须带同一时刻语义；审计判据的取数必须锚定报告自身的计数主张位（如「问题单终态」表单元格），**不得全文首匹配**——run25 撞上审计意见书引文里的历史数字（「issues.log 35 行（唯一键 26）」），R8 与 A3a 两个执行点各撞一次，容差 5 被穿透。引文内容属真实产物不得改写，改的是审计取数口径。
+5. **重启起点纪律**：报告审计 FAIL 后的断点续跑，`START_STEP` 必须覆盖缺口步的**上游采集位**（缺步 9 帧即从 dispatch 起），不得从缺口下游段起——run25 用 `START_STEP=release` 重启，步 9 采集位永远不进，审计空转 16 轮、25 分钟。
+6. **六闸事件化完备**：G1-G6 每道闸落键时必须派发 delivery gate 事件（`dlv_gate_try` 安全包装：dlv 关闭/无案例房跳过并记 note，缺参不得 exit——run12 缺参击杀驱动实锤）。run25 M3 断言「缺 pass 的门=G2」，交付面板只有 G5 一盏灯亮，即本缺陷。
+7. **方案文档改名/归档后必须全仓清扫引用**：V3 主文归档后，驱动/生成器/库仍引用旧路径 4 处，活跃代码的「方案正本」指向一个不存在的文件（单一事实源实质失效）。改名提交必须同批 `grep` 全仓活跃面（排除 `runtime/hermes-records/research/retired-docs`），把关测试钉住三份活跃文件只引用现行正本。
+
+### 5.10.1 run26 复盘条款（2026-11-04 立，四条；原占位号 5.10.x 于 2026-11-18 结构审计落定）
 
 > 立条依据：run26 六闸全过、总时长 7h57m，但时间账本显示三段可避免损耗合计约 187 分钟（占全程四成），且都不是「能力不足」而是「没人触发／没人发现」。四条分别对准这四类：**触发权错位、失联不可见、采集缺口后置、人工件末步卡死**。
 
@@ -2920,13 +2932,13 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 3. **采集缺口在步内暴露**：R18 必采证据（对话全文／操作前后帧／环节效果／skill 过程帧／门禁灯帧）的采集失败不得静默（禁 `|| true` 吞错）；每必采步末用 `r18_matrix.step_ok`（与报告审计器同一事实源）复判一次，未达标当场登记 `r18-required-missing`——审计环只做终审，不做首次发现。
 4. **人工件前移到最早可判定点**：逐轮人工正本（PART1 一页读懂）未注册时，收尾链按实测时间线与闸键自动起草（数据真实、标签明示「自动起草·待人工润色」、落 `part1-auto-draft` 问题单），人工注册仍优先——禁止让「缺一个人工件」在末步卡住整轮（run26 白等 58 分钟）。
 
-### 5.11 新能力验证面（2026-11-03 立；2026-11-04 扩组至十三组并接驱动；同日 W4 扩至十四组）
+### 5.11 新能力验证面（2026-11-03 立；2026-11-04 扩组至十三组并接驱动；同日 W4 扩至十四组；2026-11-17 run31 扩至十七组）
 
 > 立条背景：2026-11-03 一天内落了七组新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／组件库与多目标搜索／探测并发与调度面／派单容量准入），其中多数**只有 HTTP 面、没有独立 UI 承载**——`capture-plan.env` 的截图采集位采不到。若推演不取证，这些能力就是「写完了没人验」，下一轮又变成新的存量债。
 >
 > 2026-11-04 扩组：四性四格判据（姿态准入／AC 追溯／阶段交接键／模型指纹，spec 2026-11-03-four-gap-*）与 AgentTeams 吸收四批＋挂账清偿（项目一级状态机与拓扑／编码执行记录／技能导出三道限／profile 环境变量编辑面／权限变更审计，spec 2026-11-04-agentteams-*）同样只有 HTTP 面，并入本表成十三组。同轮补上上轮遗留缺口：探测脚本已立而驱动未接（每轮证据缺席只落审计 WARN）——现由 testpass 步自动对生效 studio 全量探测一次，失败即拦 G4。
 >
-> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（十三组齐、失败可见）。
+> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（十七组齐、失败可见）。
 
 | # | 能力 | 正例判据（必须可机械核对） | 负例判据（必须红） |
 |---|---|---|---|
@@ -2949,18 +2961,6 @@ G1(5min) → 派发(2min) → 最慢模块分析(45min) → 该模块 G2(15min) 
 | 17 | kanban 行级版本（2026-11-17 组） | 任务列表形状断言（version/verification 两列在 CLI JSON 面缺席＝如实取证——`_TASK_DICT_FIELDS` 未扩列，批二读面断点挂账下批补丁） | `expectedVersion=-1` 提交 complete→409 `version_conflict`（构造性永不匹配，事务回滚）＋拒后卡面状态未变复核；无在册卡 skip-safe |
 
 **准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。十七组里第 4 组若无真实证据台账、第 9 组若无带 project_id 的未终结项目、第 17 组若无在册卡，允许只跑可得例并在报告写明缺省理由，属如实缺省而非跳过。**生产方**：testpass 步驱动自动执行（2026-11-04 接线；此前立法无生产方、每轮证据缺席），退出码非 0 → `g4_capability_blocked`＋g4_pass 不置位。
-
-### 5.10 run25 复盘条款（2026-11-03 立，七条）
-
-run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露的流程与工装缺陷，按下列七条固化。每条都有 run25 实测锚点，不是预设。
-
-1. **采集位与步键是单一事实源，必须双向完备**：每个 capture 步键须在 `r18-collect.py` 的 `STEP_KEY_TO_NUM` 映射内（缺一即采集器 die，run25 `ready_inbox` 实锤）；每个有产品承载承诺的步须有 `capture_step` 调用（run25 步 9 无采集位→审计三红线每轮必炸→靠降级登记才过）。两道把关由 `tests/mechanism-behavior.test.ts` 机械断言（「每个 capture 键都在映射内」＋「六闸都有 delivery 事件落点」），新增采集位漏映射在提交前即红。
-2. **报告审计环收敛三分法**：审计缺口分三类处置，禁「同一 FAIL 反复重跑等它自己好」——①可自动修复（计数时效、载体未生成）→ 修审计器/生成器；②可合规降级（采集链失效、夹具未执行）→ 按 §5.6 纪律⑩ 登记，审计自动转黄标；③需内容补齐（缺证、缺清单）→ 派单补证。**同一缺口连续 3 轮不收敛即升级人工**（run25 实测 36 轮，其中 16 轮是我方重启起点错误导致的空转，7 轮是 PART1 未注册）。
-3. **收尾必做件清单（报告步准出前逐项核）**：①`final-report-merge.py` 的 `PART1_BY_RUN` 已注册本轮（缺注册即合并失败，run25 撞 7 次）；②人读层行话体检 HARD=0（「落地/收口/口径/催办」等词表词禁入正文，run25 撞 1 次）；③步 26 载荷在首次审计前已在场（采集位前移）；④报告数字与 issues.log 同刻快照对齐。四项任一缺失，report_done 不得落。
-4. **计数口径解耦与词面隔离**：报告内计数取「生成时刻快照」，审计比对须带同一时刻语义；审计判据的取数必须锚定报告自身的计数主张位（如「问题单终态」表单元格），**不得全文首匹配**——run25 撞上审计意见书引文里的历史数字（「issues.log 35 行（唯一键 26）」），R8 与 A3a 两个执行点各撞一次，容差 5 被穿透。引文内容属真实产物不得改写，改的是审计取数口径。
-5. **重启起点纪律**：报告审计 FAIL 后的断点续跑，`START_STEP` 必须覆盖缺口步的**上游采集位**（缺步 9 帧即从 dispatch 起），不得从缺口下游段起——run25 用 `START_STEP=release` 重启，步 9 采集位永远不进，审计空转 16 轮、25 分钟。
-6. **六闸事件化完备**：G1-G6 每道闸落键时必须派发 delivery gate 事件（`dlv_gate_try` 安全包装：dlv 关闭/无案例房跳过并记 note，缺参不得 exit——run12 缺参击杀驱动实锤）。run25 M3 断言「缺 pass 的门=G2」，交付面板只有 G5 一盏灯亮，即本缺陷。
-7. **方案文档改名/归档后必须全仓清扫引用**：V3 主文归档后，驱动/生成器/库仍引用旧路径 4 处，活跃代码的「方案正本」指向一个不存在的文件（单一事实源实质失效）。改名提交必须同批 `grep` 全仓活跃面（排除 `runtime/hermes-records/research/retired-docs`），把关测试钉住三份活跃文件只引用现行正本。
 
 ### 5.12 run28 复盘条款（2026-11-11 立，N28/N29 全量吸收；run29 起生效）
 
@@ -2988,7 +2988,7 @@ run29（20261111-v8-run29，27h20m 六闸全过，审计零 FAIL/46 WARN）值�
 5. **交付物真值取代豁免**：/archive/ 归档件不计跨轮冒充；同目录存在本轮声明件=旧档被取代不计罪（无取代者维持硬判）。
 6. **热部署纪律**（run29 实操记录）：product-dist 供给在 mx-setup 不在 mx-up；mx-up「studio 已在跑跳过」不重载新 bundle——热换链=build:full→mx-setup→kill 8802→mx-up；mx-up etime 前导零八进制陷阱（10# 修复）曾致供给段静默炸断。
 7. **审计收敛纪律（一次处置完再复扫）**：审计 FAIL 后先读 `evidence/report-audit-findings.json` 全量清单（驱动同步生成 `evidence/audit-fix-checklist.md` 分族清单），把当前全部缺口按族一次处置完（补登记/真值更正/降级），再触发复扫；禁止「修一类→复扫→看下一类」的逐族推进。run29 实测 24 轮 FAIL／4.18 小时，其中约 6 轮源于凭证族名写错（审计只认 `r18-collection-missing`/`frame-capture-failed`）、约 10 轮卡在推送被拒（中央裸仓内嵌 worktree 占持 main）。验收判据：下一轮审计 FAIL 轮次 ≤3。
-8. **director 派发模式处置（折中）**：默认 preset 派发；director 仅用于标定轮（显式设 `MX_DISPATCH_MODE=director`）。开启时必带两条：①派发正文含「无派发容量请回 `DIRECTOR-DEGRADED reason=<原因>`」的声明式降级通道（双信号等待，声明即降级不空等）；②`evidence/director-metrics.jsonl` 逐次留档（outcome=success/degraded、reason=ok/declared/timeout/send-failed、耗时）。run29 实测 51 次派发仅 5 次走通（9.8%），无指标时只能事后翻台账。【run30 标定定案见 §5.14 第 6 条：success 5.9% 全落日间，D1 修正=默认 preset＋仅日间标定】
+8. **director 派发模式处置（折中）**：默认 preset 派发；director 仅用于标定轮（显式设 `MX_DISPATCH_MODE=director`）。开启时必带两条：①派发正文含「无派发容量请回 `DIRECTOR-DEGRADED reason=<原因>`」的声明式降级通道（双信号等待，声明即降级不空等）；②`evidence/director-metrics.jsonl` 逐次留档（outcome=success/degraded、reason=ok/declared/timeout/send-failed、耗时）。run29 实测 51 次派发仅 5 次走通（9.8%；run30 复计重归类后 success 3 笔/5.9%，见 §5.14 第 6 条——同分母两口径，以复计为准），无指标时只能事后翻台账。【run30 标定定案见 §5.14 第 6 条：success 5.9% 全落日间，D1 修正=默认 preset＋仅日间标定】
 9. **确定性失败二段式**：监督器判「连续 N 次同指纹失败」时，第 1 次自动重挂（60 秒退避＋计数重置＋`evidence/alerts.jsonl` 告警＋issues 记 `driver-deterministic-stage1`），第 2 次才停止自愈（`driver-deterministic-fail`）。run29 实测直接退出 5 次，每次停在「等人工重挂」——无人值守即永久停滞。
 
 ### 5.14 run30 复盘条款（2026-11-15 立；run31 起生效）
@@ -3008,14 +3008,14 @@ run30（20261113-v8-run30，21h08m，A2 二段式停机终局；六闸 delivery 
 
 run30 后五个产品批（52ec7f384 proactive 清偿／950655d05 超级智能体批二／6dab0115a Ekko UI Surface／40d1affc8 Always-on 五组件／b1312b8aa LoopForge 可信 SOP 执行地板）的能力面进推演验收与判读口径，同步批随批（spec `2026-11-17-run31-plan-sync.md`）：
 
-1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——开跑后与终局各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空。outbox/run-outcome REST 面进 §5.11 探针表组 16。
+1. **Always-on 三 watcher 运行态取证**：followup（15s 节拍）／dreaming（1800s 节拍、空转 ≥30min 触发）／deferred（10s 轮询）在推演 gateway 进程内常驻——开跑后与终局各取证一次（进程/轮询证据落 `evidence/always-on-watchers.jsonl` 或等价件）；**报告必带 dream 产出计数**（缺席如实记 0，不猜数）——dreaming 机制预算 sunset 判据=连续两轮推演零产出即退役，无取证即裁决悬空（观察窗第一轮=run31 计 0 在案、第二轮=run32——两轮零产出即执行退役，衔接 §5.16 第 6 条）。outbox/run-outcome REST 面进 §5.11 探针表组 16。
 2. **proactive 三端点探针**（§5.11 表组 15）：earned-autonomy/apply 只做保证被拒负例（缺 profile→400、冷启动 hold→409 `no_tighten`，非破坏零写入）；lineage 三源聚合形状（sources＋未覆盖面声明在位）；standingagenda `?cardId=` 卡级过滤生效。
 3. **complete 语义新口径（批二）**：行级乐观锁 expected_version CAS 不匹配 409 `version_conflict`、卡级 verification 三档不满足 fail-closed 拒完成（判定器异常也拒）——组 17 探针负例证 CAS 能力（正例受读面断点限制：version/verification 两列未进 `_TASK_DICT_FIELDS` CLI JSON 序列化面，客户端无法从 REST 构造 expected_version，读面扩列挂账下批补丁）；**run31 任务书不强制 verification 档位卡**（验收环不叠加二次验证依赖，档位卡活体留 run32 可选标定）；值守与审计判读「旧快照写回 409」为新正确行为不计缺陷。
 4. **LoopForge 完成判读口径**：graph 面 archived 不算成功（DONE_STATUSES 收窄）、DryRun 仅显式 shadow 可注入、不可执行节点 422 稳定码、pinned run 缺快照 fail-closed；RunSpawner/ShadowRunner 维持 legacy-unpinned 兼容态。run31 缺省 preset 派发（§5.14 第 6 条），判读遇 409/422 稳定码按新语义解读。
 5. **Ekko autoinject 影响面（补丁 780）**：fleet 托管 MCP 装配从「整份早退」改「逐服务合并」——开跑后抽 1 个 profile 取证 api/browser/use/interaction 四服务齐备（配置或 studio 日志证据）；缺件记问题单不静默。
-6. **studio preload 安全加固入仓**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，入仓后 digest 变化由 N31-4 重烧覆盖。
+6. **studio preload 安全加固入仓**（S-L2 JWT 预载 fail-closed＋G-004 访问遥测 fail-open，批 `fix/sim-studio-preload-hardening`）：preload 件入仓＋幂等供给，fresh 环境 mx-up 自愈不再砖死；mx-lib 属机制面，digest 变化须重烧或合规豁免（run31 实走 WAIVED 通道清偿）。
 7. **数字总账 §C 随批进位**（v0.8.21／3.18.2／v1.0.16 族，核实日 2026-11-17）＋VENDOR.md zcode 台账行补正（merge 撤出漏入第四次清偿）——数字滞后是设计复盘「补账抬位」的载体面清偿。
-8. **N31 开跑门衔接**：N31-4（重烧收据 verify-latest pass，WAIVED 不认跨 digest）＋N31-5（开跑窗 09:00-11:00）为 run31 开跑硬门；N31-1/2/3 为终局回写项（N31-2a 已修族 run31 验证归零、N31-3 任务书警告 4/4 验证），不阻塞开跑。
+8. **N31 台账终局回写（已清账）**：N31-4（WAIVED 通道清偿，digest 2b242687、豁免 02:21 留档）＋N31-5（开跑窗内）已清偿；N31-1/2/3 终局对账见 `2026-11-18-run31-full-retrospective.md` §四（N31-2a 部分归零——新现 g3-local-gate-missing×12、g4-contract-breaking×10 大族；N31-3 警告生效未复现）。
 
 ### 5.16 run31 复盘条款（2026-11-18 立；run32 起生效）
 

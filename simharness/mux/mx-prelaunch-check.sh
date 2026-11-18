@@ -105,7 +105,13 @@ ck "⑩ 推演域分支无上轮残留" "[ -z \"\$(git -C '$SR/central/aipaydev'
 # ⑪ 按轮叙事注册与骨架兜底在位（run15 复盘：连续两轮漏预写注册的机制化收口——
 #    ①上一完成轮已注册进合并器（每轮收官后推进键位，漏注册此处即红）②生成器 R17
 #    骨架兜底在位（未注册轮不再一票否决，防报告步失败循环）③骨架工具语法可用）。
-ck "⑪ 叙事注册与骨架兜底" "grep -q '20261012-v8-run16' '$HERE/mux/final-report-merge.py' && grep -q '骨架占位·待补注册' '$HERE/mux/mx-report-gen.py' && python3 -m py_compile '$HERE/mux/mx-narrative-skeleton.py'" "上轮 PART1 未注册（进 final-report-merge.py 的 PART1_BY_RUN）或骨架兜底符号缺失——按轮补注册后再跑"
+# ⑪（2026-11-18 报告对账批修订）：键动态化——取 run-metrics 收官行的最新 RUN_ID（此前钉死
+#    run16，run27-31 五轮漏注册零拦截实锤）；检查=该轮在 PART1_BY_RUN 在册＋生成器注册表在册。
+_prev_run=$(grep -oE '"run_id": "[0-9]{8}-v[0-9]+-run[0-9]+"' "$OV/docs/governance/run-metrics.jsonl" 2>/dev/null | grep -oE '[0-9]{8}-v[0-9]+-run[0-9]+' | tail -1)
+ck "⑪ 叙事注册与骨架兜底（最新收官轮 ${_prev_run:-缺席}）" "[ -z '\$_prev_run' ] && echo 'WARN: run-metrics 无收官行（首跑豁免）' || { grep -q "'\$_prev_run'" '$HERE/mux/final-report-merge.py' && grep -q "\$_prev_run" '$HERE/mux/mx-report-gen.py'; } && grep -q '骨架占位·待补注册' '$HERE/mux/mx-report-gen.py' && python3 -m py_compile '$HERE/mux/mx-narrative-skeleton.py'" "最新收官轮 PART1（final-report-merge.py 的 PART1_BY_RUN）或逐歩叙事（mx-report-gen.py 的 _NARR）未注册——骨架兜底只防拒出不防欠账；按轮补注册后再跑（R17 起草→润色→注册正道）"
+# ⑪b（2026-11-18 新立）：上一收官轮报告不得残留骨架占位（叙事债不可滚动）——
+#    run31 实锤 28 处占位出厂、五轮欠账无人拦。
+ck "⑪b 上轮报告零骨架占位" "[ -z '\$_prev_run' ] || ! [ -d "\$SR/runs/\$_prev_run/evidence" ] || { _fr=\$SR/runs/\$_prev_run/evidence/final-report.html; [ -f "\$_fr" ] && ! grep -q '骨架占位·待补注册' "\$_fr"; }" "上轮终局报告含骨架占位（逐歩叙事未注册即出厂）——mx-narrative-skeleton.py 起稿→润色→注册 _NARR 后重跑 mx-report-gen＋final-report-merge，再回来重跑预检"
 echo "  ↳ 起跑后第一收获窗内用 mx-narrative-skeleton.py 起稿本轮注册（R17 骨架兜底只防拒出报告，不替代真实叙事）"
 
 # ⑫ 账号板供给在位（run16 首跑实锤：mx-clean --apply 归档清走全部账号板，板供给在
