@@ -4,11 +4,26 @@
   "gates": 48,
   "patches": 562,
   "zcodePatches": 14,
-  "scripts": 138,
+  "scripts": 139,
   "ledgers": 6,
   "npmScripts": 52
  },
  "changes": [
+  {
+   "at": "2026-11-19",
+   "delta": "+1 域（capabilitypool 只读投影）/ +1 script（capability-registry-seed 一次性种子）/ +0 patch / +0 gate / +0 ledger / +0 npm script；同域内 2 个客户端区块与 1 组候选/供需 API",
+   "reason": "AI 原生组织 C 方案·批二点五能力池地基（spec 2026-11-19-capability-pool-foundation）：能力标签进入派单准入、供需只读投影、三项指标；不新建调度器",
+   "pairedRemovals": [
+    "graph-assembly 能力注册表静默空表 catch 降级为显式告警（本轮已改）",
+    "能力注册表种子脚本为一次性工具，首次写入并人工复核后归档 scripts/maintenance/",
+    "三项能力指标未绑定实际决策前仍按装饰计数，不进入主位"
+   ],
+   "sunset": {
+    "owner": "能力池地基批（批二点五）",
+    "reviewBy": "批三组织工作台开工前",
+    "retireWhen": "批次合并后连续两轮真实任务无消费（供需端点无调用且候选准入零 warn/block）即退役；注册表种子脚本随首次生成完成归档"
+   }
+  },
   {
    "at": "2026-11-19",
    "delta": "+1 模块（kanban-layout 布局单一事实源）/ +1 门（dispatch-readiness 五问准入，默认 warn）/ +2 守门测试（layout 棘轮＋readiness 单元）/ +0 账本 / +0 scripts",

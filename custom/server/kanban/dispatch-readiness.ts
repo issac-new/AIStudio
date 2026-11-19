@@ -91,14 +91,44 @@ export function enforceOrWarnReadiness(findings: DispatchReadinessFinding[]): vo
     + missing.map(f => `${f.dimension}=${f.detail}`).join('；'))
 }
 
-/** 按 taskId 跨板取任务标题+正文（只读主键查询，毫秒级；查不到返回 null 不猜）。 */
-export async function fetchTaskTitleAndBodyByTaskId(taskId: string): Promise<{ title: string | null; body: string | null } | null> {
+/** 按 taskId 跨板取任务标题/正文/assignee/技能声明（只读主键查询，毫秒级；查不到返回 null 不猜）。 */
+export async function fetchTaskTitleAndBodyByTaskId(taskId: string): Promise<{
+  title: string | null
+  body: string | null
+  assignee: string | null
+  skills: string[]
+} | null> {
   for (const dbPath of kanbanDbFiles()) {
     let db: Awaited<ReturnType<typeof openReadonly>> | undefined
     try {
       db = await openReadonly(dbPath)
-      const row = db.prepare('SELECT title, body FROM tasks WHERE id = ?').get(taskId) as { title?: string | null; body?: string | null } | undefined
-      if (row) return { title: row.title ?? null, body: row.body ?? null }
+      // 旧库无 skills 列时回落到三列查询：标题/正文/assignee 仍可取，能力声明按空处理。
+      let row: {
+        title?: string | null
+        body?: string | null
+        assignee?: string | null
+        skills?: string | null
+      } | undefined
+      try {
+        row = db.prepare('SELECT title, body, assignee, skills FROM tasks WHERE id = ?').get(taskId) as typeof row
+      } catch {
+        row = db.prepare('SELECT title, body, assignee FROM tasks WHERE id = ?').get(taskId) as typeof row
+      }
+      if (row) {
+        let skills: string[] = []
+        try {
+          const parsed = row.skills ? (JSON.parse(row.skills) as unknown) : []
+          if (Array.isArray(parsed)) skills = parsed.filter((value): value is string => typeof value === 'string')
+        } catch {
+          skills = []
+        }
+        return {
+          title: row.title ?? null,
+          body: row.body ?? null,
+          assignee: row.assignee?.trim() ? row.assignee.trim() : null,
+          skills,
+        }
+      }
     } catch {
       // 单板读失败继续下一板（fail-soft）
     } finally {

@@ -7,6 +7,11 @@ import { existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
+import {
+  CAPABILITY_REUSE_RATE_DEFINITION,
+  CAPABILITY_SUPPLY_LEAD_TIME_DEFINITION,
+  HUMAN_AI_TEAM_SUCCESS_DEFINITION,
+} from '../capabilitypool/metric-defs'
 import type { MetricDef } from './types'
 
 function storeDir(): string {
@@ -87,6 +92,51 @@ export const BUILTIN_METRICS: MetricDef[] = [
     definition: '每个任务为取上下文需要跨越的系统数均值（越小越好）',
     sources: [],
     consumers: [],
+    version: 1,
+    builtin: true,
+  },
+  {
+    key: 'measure/capability-supply-lead-time',
+    namespace: 'measure',
+    title: '能力供给时效',
+    definition: CAPABILITY_SUPPLY_LEAD_TIME_DEFINITION,
+    sources: ['kanban tasks.skills', 'kanban task_runs.started_at'],
+    consumers: [],
+    consumerPlan: {
+      decision: '能力缺口复核（P95 超阈值开复核）',
+      threshold: 'P95 > 24h',
+      owner: 'orchestrator',
+    },
+    version: 1,
+    builtin: true,
+  },
+  {
+    key: 'measure/capability-reuse-rate',
+    namespace: 'measure',
+    title: '能力复用率',
+    definition: CAPABILITY_REUSE_RATE_DEFINITION,
+    sources: ['kanban tasks.skills', 'kanban boards'],
+    consumers: [],
+    consumerPlan: {
+      decision: '能力退役复核（零调用或低复用标签进入复核）',
+      threshold: '复用率 < 20%',
+      owner: 'orchestrator',
+    },
+    version: 1,
+    builtin: true,
+  },
+  {
+    key: 'measure/human-ai-team-success',
+    namespace: 'measure',
+    title: '人机团队成功率',
+    definition: HUMAN_AI_TEAM_SUCCESS_DEFINITION,
+    sources: ['outcome/team', 'outcome/settlement'],
+    consumers: [],
+    consumerPlan: {
+      decision: '团队组合复核（低于基线调整组合）',
+      threshold: '成功率 < 基线',
+      owner: '结果责任人',
+    },
     version: 1,
     builtin: true,
   },

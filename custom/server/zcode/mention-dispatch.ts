@@ -33,6 +33,8 @@ import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-re
 import { evaluateTeamStop, type TeamStopFacts } from './team-stop'
 import { collectTeamStopFacts } from './team-stop-facts'
 import { registerEntry } from '../taskledger/taskledger-store'
+import { fetchTaskTitleAndBodyByTaskId } from '../kanban/dispatch-readiness'
+import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
 import {
   resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation,
   type SquadDefinition,
@@ -276,6 +278,15 @@ export class MentionDispatchService {
    * 成功路径同步登记统一任务生命周期账本（wx 挂账 #7 接线；fail-soft 不阻断派发）。
    */
   async dispatch(params: DispatchParams): Promise<MentionOutcome[]> {
+    if (params.taskId) {
+      const snapshot = await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null)
+      if (snapshot?.skills?.length) {
+        const readiness = assessTaskCapabilityReadiness({ requiredTags: snapshot.skills, assignee: snapshot.assignee })
+        if (readiness.decision !== 'pass') {
+          console.warn(`[mention-dispatch] 能力准入 ${readiness.decision}（warn，不阻断）：${readiness.reasons.join('；')}`)
+        }
+      }
+    }
     const tokens = parseMentions(params.text)
     const outcomes: MentionOutcome[] = []
     for (const token of tokens) {

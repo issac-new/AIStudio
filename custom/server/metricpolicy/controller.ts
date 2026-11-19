@@ -10,6 +10,7 @@ import { auditRegistry, inspectMetric, namespaceOfKey, validateMetricInput } fro
 import {
   autonomyRate, humanMachineRatio, humanMinutesPerTask, interfaceCount, reworkRate, skillUsage,
 } from './derive'
+import { capabilityMetrics } from '../capabilitypool/metrics'
 import { getMetric, listMetrics, putMetric, removeMetric } from './store'
 import type { MetricDef, MetricNamespace } from './types'
 
@@ -129,6 +130,15 @@ metricPolicyRoutes.get('/core', async (ctx) => {
     readings: [autonomy, ratio, minutes, rework, interfaces],
     skillUsage: skills,
   })
+})
+
+/** 能力组指标（批二点五）：供给时效/复用率/人机团队成功率；未落地项 available:false。 */
+metricPolicyRoutes.get('/capability', async (ctx) => {
+  try {
+    ok(ctx, { readings: await capabilityMetrics() })
+  } catch (e) {
+    fail(ctx, 500, e instanceof Error ? e.message : String(e), { code: 'capability_metrics_failed' })
+  }
 })
 
 /** 装饰化清单（无消费者决策的指标）。 */

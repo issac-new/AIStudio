@@ -55,7 +55,9 @@ export function inspectMetric(def: MetricDef, prev?: MetricDef | null): MetricIs
     issues.push({
       severity: 'warn',
       code: 'empty-consumers',
-      detail: '无消费者决策——「过去一个季度，有哪个决策因为这个数字而改变？」答不出即装饰',
+      detail: def.consumerPlan
+        ? `尚无实际消费者决策（计划：${def.consumerPlan.decision}；阈值：${def.consumerPlan.threshold}；owner：${def.consumerPlan.owner}）——未发生前仍按装饰处理`
+        : '无消费者决策——「过去一个季度，有哪个决策因为这个数字而改变？」答不出即装饰',
     })
   }
 

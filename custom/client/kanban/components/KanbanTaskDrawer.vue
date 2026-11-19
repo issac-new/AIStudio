@@ -18,6 +18,7 @@ import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
 // HERMES_CUSTOM[P3 Task 7] 来源 run 关联区块（任务 → run 反查，ia2/adapters/traceability 纯函数投影）
 import RunLinks from '@/custom/ia2/components/RunLinks.vue'
 import KanbanHandoffSection from './KanbanHandoffSection.vue'
+import CapabilityReadinessBadge from './CapabilityReadinessBadge.vue'
 import { defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 // HERMES_CUSTOM[loop-multiview] 任务↔群弱锚点（ia2/adapters/manage 纯函数）
@@ -325,6 +326,12 @@ const {
             <span class="meta-label">{{ t('kanban.skills', 'Skills') }}</span>
             <span class="meta-value">{{ task.skills.join(', ') }}</span>
           </div>
+          <CapabilityReadinessBadge
+            v-if="task.skills?.length"
+            :task-id="task.id"
+            :skills="task.skills"
+            :assignee="task.assignee ?? null"
+          />
 
           <div v-if="(task as any).goal_mode" class="meta-row">
             <span class="meta-label">{{ t('kanban.goalMode', 'Goal mode') }}</span>

@@ -19,6 +19,8 @@ import ObsSignalsSection from '@/custom/governance/components/ObsSignalsSection.
 import HarnessRunOpsSection from '@/custom/governance/components/HarnessRunOpsSection.vue'
 // 2026-11-05 组织治理能力批：度量纪律（双轨登记簿/四类核心派生/装饰化判据/技能计量缺口）
 import MetricDisciplineSection from '@/custom/governance/components/MetricDisciplineSection.vue'
+// 2026-11-19 能力池地基（批二点五）：能力供需表（需求/供给/缺口/跨板复用/供给时效）
+import CapabilitySupplySection from '@/custom/governance/components/CapabilitySupplySection.vue'
 // 2026-11-06 执行单元责任台账第一增量：六问完成判据（unknown 必带缺口，不作排序）
 import SixQuestionsSection from '@/custom/governance/components/SixQuestionsSection.vue'
 import { governanceMessages } from '@/custom/governance/i18n'
@@ -45,6 +47,7 @@ const L = computed(() => {
     </header>
     <div class="gov-view__body">
       <MetricDisciplineSection />
+      <CapabilitySupplySection />
       <SixQuestionsSection />
       <EfficiencyRuntimeSection />
       <CapabilityCatalogSection />

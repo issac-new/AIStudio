@@ -21,6 +21,13 @@ export interface MetricConsumer {
   note?: string
 }
 
+/** 计划消费者：尚无实际决策时只登记“计划由谁、按什么阈值、触发什么复核”，不冒充已发生。 */
+export interface MetricConsumerPlan {
+  decision: string
+  threshold: string
+  owner: string
+}
+
 export interface MetricDef {
   /** 形如 measure/autonomy-rate；命名空间由前缀决定，二者必须一致 */
   key: string
@@ -30,6 +37,8 @@ export interface MetricDef {
   definition: string
   sources: string[]
   consumers: MetricConsumer[]
+  /** 计划消费者（未发生实际决策时登记；不算 consumers，不改变装饰化判定） */
+  consumerPlan?: MetricConsumerPlan
   /** 派生自哪些指标 key（双轨隔离检查用） */
   derivedFrom?: string[]
   version: number
