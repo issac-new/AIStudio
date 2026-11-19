@@ -24,7 +24,7 @@
 - `custom/server/enginemodels/routing-config.ts`：只读 engine 配置投影（route + defaultModel id，mtime 缓存）。
 - `custom/server/loop/graph/judge-client.ts`：OpenAI-compatible judge 客户端（超时、diff 截断、失败转 pending）。
 - `custom/server/modelcap/from-eval.ts`：eval run → capability observations 的确定性投影。
-- `scripts/maintenance/modelcap-build-cli.ts` + `modelcap-build.mjs`：矩阵生产者（默认 dry-run，`--write` 落盘）。
+- `scripts/maintenance/modelcap-build-cli.ts`：矩阵生产者（默认 dry-run，`--write` 落盘）。不新增 `.mjs` 薄壳，避免机制预算 scripts +1；运行方式：`node node_modules/vite-node/vite-node.mjs scripts/maintenance/modelcap-build-cli.ts [--write]`。
 - 测试：node-resolve 6、judge-client 6、from-eval 5、node-executors 2、verifier-bridge 3。
 
 **修改**

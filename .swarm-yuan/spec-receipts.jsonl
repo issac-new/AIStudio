@@ -431,3 +431,4 @@
 {"at":"2026-11-19T13:59:01Z","spec":"docs/superpowers/specs/2026-11-19-skill-call-authorization.md","receipt":"8780ea2285334e40328a655dce0b5e7f20364c2b","commit":"700c98bf8"}
 {"at":"2026-11-19T14:09:27Z","spec":"docs/superpowers/specs/2026-11-19-delivery-version-binding.md","receipt":"5d07f5aab4b1b4f1a2f6f4d69a9cbbe70fefd718","commit":"4f137a4d2"}
 {"at":"2026-11-19T14:16:07Z","spec":"docs/superpowers/specs/2026-11-19-acp-harness-catalog.md","receipt":"394c5c202d66c92f6c7b1e781039fbc1eb2e480c","commit":"878d8c7fe"}
+{"at":"2026-11-19T14:20:19Z","spec":"docs/superpowers/specs/2026-11-19-mechanism-budget-closeout.md","receipt":"b63383ef628f7bcbb3928d00424c5eee4f9d68a0","commit":"1a74a955a"}
