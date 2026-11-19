@@ -28,6 +28,7 @@ import { appendEvidence } from '../evidence/evidence-store'
 import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/fewshot-rerank'
 import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 import { registerEntry } from '../taskledger/taskledger-store'
+import { assessDispatchReadiness, enforceOrWarnReadiness, fetchTaskTitleAndBodyByTaskId, type DispatchReadinessFinding } from './dispatch-readiness'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -56,6 +57,10 @@ export interface ColumnDispatchResult {
   /** 交接规则选择面（EvoTeam 批 P5 可观测，2026-11-08）：逐 entry 触发列的选择结果——
    *  ruleId=null 即 NONE/歧义/关闭（reason 给因）；台账侧 handoffRule 字段跨调用积累命中率。 */
   handoffRules: Array<{ column: string; familyId: string | null; ruleId: string | null; version: number | null; reason: string }>
+  /** AI 五问准入读数（批二，2026-11-19）：信息/规则/目标/可控/可验证——机械启发式
+   *  判据（见 dispatch-readiness.ts 注释），默认 warn；
+   *  HERMES_DISPATCH_READINESS_ENFORCE=1 时缺项在任何 step 派发前抛错。 */
+  readiness: DispatchReadinessFinding[]
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -205,13 +210,23 @@ export async function dispatchColumnTransition(
   const ruleEvals: RuleEvaluation[] = []
   const precedents: Array<{ stepId: string; line: string | null }> = []
   const deduped: ColumnDispatchResult['deduped'] = []
-  // P1：taskId → 任务标题（一次解析，全 step 复用）——fewshot 召回语境源；
-  // 查不到/无 taskId 保持 null，回落无语境现状（fail-soft 不阻断派发）。
-  // C2（挂账清偿批二）：标题就绪后跑 LLM 重排（query=标题，与词面召回同语境；
-  // 独立限时 3s、off/离线/超时零负担回落——重排行注入简报，结果随 REST 透出）。
-  const taskTitle = params.taskId ? await fetchTaskTitleByTaskId(params.taskId).catch(() => null) : null
+  // P1：taskId → 任务快照（一次查询全 step 复用）——标题作 fewshot 召回语境源，
+  // body 供五问准入的「结果可验证」判据；查不到/无 taskId 保持 null，回落现状。
+  const taskSnapshot = params.taskId ? await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null) : null
+  const taskTitle = taskSnapshot?.title ?? null
   const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
+  // AI 五问准入（批二）：在任一 step 派发前求值；默认 warn，enforce 抛错。
+  // 规则面聚合=目标列交接规则命中∨列证据契约∨step 授权要素（与注入面同源查询一次）。
+  const readiness = assessDispatchReadiness({
+    workspacePath: params.workspacePath,
+    taskId: params.taskId,
+    task: taskSnapshot,
+    handoffRuleLine: selectHandoffRuleForDispatch(params.from, params.to).line,
+    columnRequiredArtifacts: [...new Set(triggers.flatMap(t => t.requiredArtifacts ?? []))],
+    stepsRuleCoverage: triggers.some(t => t.steps.some(s => (s.autonomy?.length ?? 0) > 0 || (s.constraints?.length ?? 0) > 0)),
+  })
+  enforceOrWarnReadiness(readiness)
   // B4 在途键：并发重入的同键派发合并（进程内；跨进程靠台账窗口）
   const inflight = new Set<string>()
   // 交接规则选择面（P5 可观测）：逐 entry 触发列记录选择结果（命中/NONE/歧义原因），
@@ -306,7 +321,7 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness }
 }
 
 

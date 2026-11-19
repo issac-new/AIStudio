@@ -16,6 +16,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { readdirSync } from 'node:fs'
 import { hermesHome, underHermes } from '../../lib/paths'
+import { allBoardDbsOf, mainDbCandidateOf } from '../../services/hermes/kanban-layout'
 
 /** 大脑思想核（kanban task 投影） */
 export interface MindThought {
@@ -95,7 +96,7 @@ function toIso(epochSec: number | null | undefined): string | null {
  * 单库入口保留（测试/单库部署兼容）；装配面改走 projectMindAggregated。
  */
 export function projectMindFromKanban(dbPath?: string): MindProjection {
-  const file = dbPath ?? underHermes('kanban.db')
+  const file = dbPath ?? mainDbCandidateOf(hermesHome())
   const single = projectMindFromDbFile(file, null)
   if (!single) return { thoughts: [], runs: [], relations: [], available: false }
   return { ...single, available: true }
@@ -167,16 +168,10 @@ function projectMindFromDbFile(file: string, boardSlug: string | null): DbProjec
  */
 export function projectMindAggregated(homeDir?: string): MindProjection {
   const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || hermesHome()
-  const sources: Array<{ file: string; slug: string | null }> = [
-    { file: join(home, 'kanban.db'), slug: null },
-  ]
-  const boardsRoot = join(home, 'kanban', 'boards')
-  try {
-    for (const slug of readdirSync(boardsRoot, { withFileTypes: true })) {
-      if (!slug.isDirectory()) continue
-      sources.push({ file: join(boardsRoot, slug.name, 'kanban.db'), slug: slug.name })
-    }
-  } catch { /* boards 目录缺失（单库部署）→ 只读 root */ }
+  // 库清单收口（批二）：kanban-layout 单一事实源——default 主库映射 slug:null，
+  // 命名板带 slug（runId 防跨板撞键）；顺带获得旧布局 <home>/boards 支持。
+  const sources: Array<{ file: string; slug: string | null }> = allBoardDbsOf(home)
+    .map(e => ({ file: e.dbPath, slug: e.slug === 'default' ? null : e.slug }))
 
   const thoughts: MindThought[] = []
   const runs: MindRun[] = []

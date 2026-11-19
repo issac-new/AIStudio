@@ -8,6 +8,8 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { TaskLite } from './matrix'
 import type { EventLite } from './digest'
+// 布局解析收口（批二）：分板枚举走单一事实源（双布局全枚举，收敛前只认单个目录）。
+import { namedBoardDbsOf, mainDbOf } from '../services/hermes/kanban-layout'
 
 export interface BoardRead {
   slug: string
@@ -40,20 +42,10 @@ function queryDb(dbPath: string, fn: (db: { prepare: (sql: string) => { all: () 
   }
 }
 
-/** 分板目录列表（slug 与库路径；目录缺席空数组） */
+/** 分板目录列表（slug 与库路径；目录缺席空数组）。双布局全枚举（批二收口：
+ *  旧布局板此前只在 delivery 单板解析可见，枚举面看不见）。 */
 export function boardDbPaths(home: string): Array<{ slug: string; dbPath: string }> {
-  const dir1 = join(home, 'kanban', 'boards')
-  const dir2 = join(home, 'boards')
-  const dir = existsSync(dir1) ? dir1 : existsSync(dir2) ? dir2 : null
-  const out: Array<{ slug: string; dbPath: string }> = []
-  if (!dir) return out
-  try {
-    for (const name of readdirSync(dir)) {
-      const dbPath = join(dir, name, 'kanban.db')
-      if (existsSync(dbPath)) out.push({ slug: name, dbPath })
-    }
-  } catch { /* 读目录失败如实空表 */ }
-  return out
+  return namedBoardDbsOf(home)
 }
 
 function taskOfRow(slug: string, r: Record<string, unknown>): TaskLite {
@@ -109,9 +101,7 @@ export function readBoard(slug: string, dbPath: string): BoardRead {
 
 /** 主库（default 板）读取；主库缺席返回 available:false */
 export function readMainBoard(home: string): BoardRead {
-  const p1 = join(home, 'kanban.db')
-  const p2 = join(home, 'kanban', 'kanban.db')
-  const dbPath = existsSync(p1) ? p1 : existsSync(p2) ? p2 : null
+  const dbPath = mainDbOf(home)
   if (!dbPath) return { slug: 'default', available: false, tasks: [], events: [], error: '主库缺席' }
   return readBoard('default', dbPath)
 }

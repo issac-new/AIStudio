@@ -11,6 +11,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { hermesHome } from '../lib/paths'
+// 布局解析收口（批二）：主库/分板目录/单板路径不再本域手拼，单一事实源见
+// services/hermes/kanban-layout.ts；新增字面量由 kanban-layout-ratchet 拦截。
+import { mainDbOf, boardsDirsOf, boardDbPathOf } from '../services/hermes/kanban-layout'
 
 export interface BoardStatusEntry {
   slug: string
@@ -42,20 +45,6 @@ function queryDb(dbPath: string, fn: (db: any) => unknown): unknown {
   }
 }
 
-function mainDb(home: string): string | null {
-  const p1 = join(home, 'kanban.db')
-  if (existsSync(p1)) return p1
-  const p2 = join(home, 'kanban', 'kanban.db')
-  return existsSync(p2) ? p2 : null
-}
-
-function boardsDir(home: string): string | null {
-  const p1 = join(home, 'kanban', 'boards')
-  if (existsSync(p1)) return p1
-  const p2 = join(home, 'boards')
-  return existsSync(p2) ? p2 : null
-}
-
 function entryOf(slug: string, name: string, dbPath: string | null): BoardStatusEntry {
   if (!dbPath || !existsSync(dbPath)) {
     return { slug, name, available: false, total: 0, statuses: {}, wip: 0 }
@@ -81,9 +70,10 @@ function entryOf(slug: string, name: string, dbPath: string | null): BoardStatus
 
 export function collectBoardStatus(homeDir = process.env.HERMES_HOME?.trim() || hermesHome()): BoardStatusResult {
   const boards: BoardStatusEntry[] = []
-  const main = mainDb(homeDir)
+  const main = mainDbOf(homeDir)
   if (main) boards.push(entryOf('default', 'Default', main))
-  const dir = boardsDir(homeDir)
+  // 枚举目录取首个在位布局（与收敛前同语义：单目录）；单板库路径走双布局解析。
+  const dir = boardsDirsOf(homeDir)[0] ?? null
   if (dir) {
     for (const slug of readdirSync(dir)) {
       // 与 kanban-overview 快道同判：下划线前缀=特殊/归档目录；default 残根跳过
@@ -93,7 +83,7 @@ export function collectBoardStatus(homeDir = process.env.HERMES_HOME?.trim() || 
         const meta = JSON.parse(readFileSync(join(dir, slug, 'board.json'), 'utf8'))
         name = meta.name || slug
       } catch { /* board.json 缺席用 slug */ }
-      boards.push(entryOf(slug, name, join(dir, slug, 'kanban.db')))
+      boards.push(entryOf(slug, name, boardDbPathOf(slug, homeDir)))
     }
   }
   boards.sort((a, b) => a.slug.localeCompare(b.slug))

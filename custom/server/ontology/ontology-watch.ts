@@ -20,6 +20,7 @@ import { openReadonly } from '../governance/governance-analytics'
 import { appendConflictInbox, listConflictInbox } from '../knowledge/board-graph'
 import { loadInstances, loadSpec, replaceIngested } from './ontology-store'
 import { validateInstances } from './ontology-validate'
+import { allBoardDbsOf, boardDbCandidateOf, mainDbCandidateOf } from '../services/hermes/kanban-layout'
 import type { OntologyInstance, Violation } from './ontology-types'
 import { hermesHome, underWebUi } from '../lib/paths'
 import { atomicWriteJson } from '../lib/fs-store'
@@ -43,7 +44,8 @@ function defaultHome(): string {
 
 function boardDbPath(slug: string, homeDir?: string): string {
   const home = homeDir?.trim() || defaultHome()
-  return slug === 'main' ? join(home, 'kanban.db') : join(home, 'kanban', 'boards', slug, 'kanban.db')
+  // 布局收口（批二）：候选路径走 kanban-layout（本域 slug 词表用 'main' 指主库）。
+  return slug === 'main' ? mainDbCandidateOf(home) : boardDbCandidateOf(slug, home)
 }
 
 /** 单任务 → 实例（与全量摄取同映射：九态/estimate_days/taskRef/task_links 边） */
@@ -203,19 +205,10 @@ class OntologyWatcher {
       let lastId = readLastEventId()
       let maxId = lastId
       // 各板独立序（task_events.id 全库自增）；扫全部板取增量，状态记全局最大 id
-      // ——跨板重扫的代价=重复摄取同任务（幂等），不漏事件的优先级更高
+      // ——跨板重扫的代价=重复摄取同任务（幂等），不漏事件的优先级更高。
+      // 库清单收口（批二）：kanban-layout 单一事实源，顺带获得旧布局 <home>/boards 支持。
       const home = defaultHome()
-      const boardsRoot = join(home, 'kanban', 'boards')
-      const dbs: string[] = []
-      if (existsSync(join(home, 'kanban.db'))) dbs.push(join(home, 'kanban.db'))
-      try {
-        const { readdirSync } = require('node:fs') as typeof import('node:fs')
-        for (const slug of readdirSync(boardsRoot, { withFileTypes: true })) {
-          if (!slug.isDirectory()) continue
-          const f = join(boardsRoot, slug.name, 'kanban.db')
-          if (existsSync(f)) dbs.push(f)
-        }
-      } catch { /* boards 目录缺席=单库形态 */ }
+      const dbs: string[] = allBoardDbsOf(home).map(e => e.dbPath)
 
       for (const dbPath of dbs) {
         const slug = slugOfDb(dbPath)

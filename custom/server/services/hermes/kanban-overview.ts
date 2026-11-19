@@ -20,6 +20,7 @@ import type { Server as HttpServer, IncomingMessage } from 'http'
 import type { Duplex } from 'stream'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { mainDbOf, boardsDirsOf, boardDbPathOf } from './kanban-layout'
 import { projectOverviewForUser } from './overview-access'
 
 export interface KanbanOverviewDeps {
@@ -107,18 +108,12 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     }
   }
 
-  /** 布局候选解析（性能批二轮）：主库/分板目录按现行→旧布局依次探测 */
+  /** 布局候选解析（性能批二轮；批二收口：委托 kanban-layout 单一事实源） */
   function fastMainDb(home: string): string | null {
-    const p1 = join(home, 'kanban.db')
-    if (existsSync(p1)) return p1
-    const p2 = join(home, 'kanban', 'kanban.db')
-    return existsSync(p2) ? p2 : null
+    return mainDbOf(home)
   }
   function fastBoardsDir(home: string): string | null {
-    const p1 = join(home, 'kanban', 'boards')
-    if (existsSync(p1)) return p1
-    const p2 = join(home, 'boards')
-    return existsSync(p2) ? p2 : null
+    return boardsDirsOf(home)[0] ?? null
   }
 
   /** 快道 boards 列表：default（主库）+ boards/<slug>/（board.json + tasks 计数）。失败返回 null。 */
@@ -146,8 +141,8 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
         // 其库不可读会误触「任一板读不了→整体回落」，实测快道因此全关——
         // 性能批二轮）
         if (slug.startsWith('_') || slug === 'default') continue
-        const dbPath = join(boardsDir, slug, 'kanban.db')
-        if (!existsSync(dbPath)) continue
+        const dbPath = boardDbPathOf(slug, home)
+        if (!dbPath) continue
         let name = slug
         let archived = false
         let team: { profiles?: unknown; profile_scope?: unknown } = {}
@@ -175,7 +170,7 @@ export function createKanbanOverview(deps: KanbanOverviewDeps) {
     if (!home) return null
     const dbPath = board === 'default'
       ? fastMainDb(home)
-      : (() => { const d = fastBoardsDir(home); return d ? join(d, board, 'kanban.db') : null })()
+      : boardDbPathOf(board, home)
     // 主库缺失一律回落 CLI（2026-10-14 回归轮 D2 根治）：default 板曾在此返回权威空
     // 数组，与 listBoardsFast 的「缺失→null→回落 CLI」不一致——当 HERMES_KANBAN_HOME
     // 与 HERMES_HOME 分叉（或新 home 首写前）时，boards 计数走 CLI 见 N、任务快道见

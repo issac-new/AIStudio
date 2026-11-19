@@ -25,6 +25,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { ok, unavailable } from '../../lib/http'
+import { boardDbPathOf } from '../../services/hermes/kanban-layout'
 
 /** 停滞阈值（小时）：blocked 超过该时长且仍有在途子卡 → 停滞父卡（run23 T06 实录 26h）。 */
 export const DEFAULT_STALE_HOURS = 2
@@ -65,11 +66,9 @@ export function boardDbPathOrNull(board: string, env: NodeJS.ProcessEnv = proces
   if (pin) return existsSync(pin) ? pin : null
   const root = (env.OBS_SIM_ROOT ?? env.SIM_ROOT ?? '').trim()
   if (!root) return null
-  const slug = board && board !== 'default' ? board : ''
-  const db = slug
-    ? join(root, 'hermes', 'kanban', 'boards', slug, 'kanban.db')
-    : join(root, 'hermes', 'kanban.db')
-  return existsSync(db) ? db : null
+  // 布局解析收口（批二）：default 三态/命名板双布局走单一事实源。
+  const slug = board && board !== 'default' ? board.trim() : 'default'
+  return boardDbPathOf(slug, join(root, 'hermes'))
 }
 
 /** 停滞检测（纯读聚合，测试面）：单板库 → 停滞父卡清单。

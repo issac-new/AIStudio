@@ -5,6 +5,7 @@
 import Router from '@koa/router'
 import { execFile } from 'node:child_process'
 import { hermesHomeDefault, enrichCardsWithLastEventAt } from './collectors'
+import { namedBoardDbsOf } from '../services/hermes/kanban-layout'
 import { ensureInspector, type InspectorDeps } from './inspector'
 
 /** kanban 诊断接线（v1 缺口补齐）：CLI 桥（kanban-service 同款先例），fail-soft。 */
@@ -60,30 +61,25 @@ function unassignedCardsProvider(): (() => Promise<Array<Record<string, unknown>
 function expectedWorkCardsProvider(): (() => Promise<Array<Record<string, unknown>>>) | undefined {
   const home = () => process.env.HERMES_HOME || hermesHomeDefault()
   return async () => {
-    const { readdirSync } = await import('node:fs')
-    const { join } = await import('node:path')
-    let boards: string[] = []
-    // `_` 前缀目录（_archive/_archived）是带时间戳副本的归档容器，无 tasks 表——
-    // 扫它们=每轮巡检两枚「no such table: tasks」噪音（2026-10-26 走查轮实锤）。
-    try { boards = readdirSync(join(home(), 'kanban', 'boards'), { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('_')).map((d) => d.name) } catch { return [] }
-    if (boards.length === 0) return []
+    // 板库枚举收口（批二）：kanban-layout 单一事实源（`_` 归档目录跳过口径保留）。
+    const entries = namedBoardDbsOf(home(), { skipUnderscored: true })
+    if (entries.length === 0) return []
     let DatabaseSync: typeof import('node:sqlite').DatabaseSync
     try { ({ DatabaseSync } = await import('node:sqlite')) } catch { return [] }
-    const boardsDir = join(home(), 'kanban', 'boards')
     const out: Array<Record<string, unknown>> = []
     const errs: string[] = []
     const q = `SELECT id,title,assignee,status,body,created_at FROM tasks WHERE status='ready' OR status='todo'`
-    for (const b of boards) {
+    for (const { slug: b, dbPath } of entries) {
       let db: InstanceType<typeof DatabaseSync> | null = null
       try {
         // 不传 readOnly：本仓 node 版本不接受该选项（抛错→整面恒空）。
-        db = new DatabaseSync(join(boardsDir, b, 'kanban.db'))
+        db = new DatabaseSync(dbPath)
         for (const r of db.prepare(q).all() as Array<Record<string, unknown>>) out.push({ ...r, board: b })
       } catch (e) { errs.push(`${b}:${(e as Error).message.slice(0, 80)}`) }
       finally { try { db?.close() } catch { /* noop */ } }
     }
     // 采集可观测性（run20 批2.2 排查：期望对账 0 触发需采集面证据）
-    console.error(`[clusterinspector] expectedWorkCards 采集: ${out.length} 卡 / ${boards.length} 板 / 失败[${errs.length}] ${errs.slice(0, 2).join(' | ')}`)
+    console.error(`[clusterinspector] expectedWorkCards 采集: ${out.length} 卡 / ${entries.length} 板 / 失败[${errs.length}] ${errs.slice(0, 2).join(' | ')}`)
     return out
   }
 }

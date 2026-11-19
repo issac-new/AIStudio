@@ -1329,3 +1329,5 @@
 801-theme-accent-tech-skin.patch
 # 802-text-muted-wcag-aa（走查清偿批：全局 muted 亮 #999→#767676 / 暗 #888→#9a9a9a 过 AA，与 ia2 壳层对齐；spec 2026-11-19-tech-skin-closeout）
 802-text-muted-wcag-aa.patch
+# 803-agent-unmarked-tier-default（流程解耦批二，spec 2026-11-19-process-decoupling-batch2：未标层 tier 缺省 T1→T2 对齐 completion-contract.md 立法；KANBAN_UNMARKED_TIER 逃生、非法回落 T2；与 decision-grant.ts 同边界同 env）
+803-agent-unmarked-tier-default.patch

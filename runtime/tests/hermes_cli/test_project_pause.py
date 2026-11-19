@@ -62,8 +62,10 @@ def _uncap_board(home: Path) -> None:
 
 def _make_task(conn, title: str, assignee: str, *, project_id=None, status="ready") -> str:
     """建卡后直接改 status/project_id——project_id 无 projects.db 背书时
-    create_task 会丢弃链接，故用 UPDATE 落列（tasks 表本就带该列）。"""
-    tid = kb.create_task(conn, title=title, assignee=assignee)
+    create_task 会丢弃链接，故用 UPDATE 落列（tasks 表本就带该列）。
+    body 首行标 tier=T1：本文件测暂停过滤，不测决策分层门——未标层按 T2
+    （批二立法）会在 spawn 前等人发 grant，与本文件断言无关，显式标 T1 隔离。"""
+    tid = kb.create_task(conn, title=title, assignee=assignee, body="tier=T1")
     conn.execute(
         "UPDATE tasks SET status = ?, project_id = ? WHERE id = ?",
         (status, project_id, tid),

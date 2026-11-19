@@ -1,4 +1,4 @@
-version: 2
+version: 3
 updated: '2026-11-19'
 # 团队作用域交接规则（EvoTeam 吸收，spec 2026-11-08-team-library-evolution）
 #
@@ -40,8 +40,7 @@ families:
         status: active
 
       # 原 review→verify-regression。九态无 verify 列，且把复测并入 review 会改变
-      # review 进入时的派发步数（行为变更），不在缺陷修复批内猜测。保留历史与证据要求，
-      # 待裁决：新增板列，或并入 review 的某一步。裁决后改 status: active 并填真实 to。
+      # review 进入时的派发步数（行为变更），不在缺陷修复批内猜测。保留历史与证据要求。
       # 台账见 docs/superpowers/specs/2026-11-19-kanban-process-baseline.md 决策 D4。
       - rule_id: review-to-verify-regression
         from: review
@@ -53,4 +52,20 @@ families:
         fallback: 缺项退回评审方补齐，不进入复测
         version: 2
         status: retired
+
+      # v3（批二，2026-11-19）：verify 意图收口——原「复测」证据契约在打回返工流转上
+      # 存活。review→ready 是九态内真实可达且会触发列编排（ready entry → implement
+      # step）的返工流转，交接行随派单注入（advisory）。「自动复测派发」维持退役
+      # （并入 review 步骤会改变进入列派发步数，行为变更不猜；新增板列待产品裁决）。
+      # 台账见 docs/superpowers/specs/2026-11-19-process-decoupling-batch2.md 决策 D5。
+      - rule_id: review-to-ready-rework
+        from: review
+        to: ready
+        trigger: 评审打回返工重做
+        instruction: 返工交接必须带评审判词、失败证据与残余风险；口头“打回”不构成返工依据
+        required_evidence: [review_verdict, test_evidence, residual_risks]
+        verification: 返工方按判词逐项修复，修复后逐条回执对应证据；对不上再退回评审
+        fallback: 缺项退回评审方补齐判词与证据，不进入返工
+        version: 1
+        status: active
 

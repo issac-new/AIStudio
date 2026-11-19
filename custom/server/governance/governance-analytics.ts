@@ -17,6 +17,9 @@ import { join, resolve } from 'node:path'
 import type { LedgerDoc, MetricsDoc } from './governance-ledger'
 import type { DispatchLedgerEntry } from './dispatch-ledger'
 import { hermesHome, underWebUi } from '../lib/paths'
+// 布局解析收口（批二）：库清单不再本域手拼——单一事实源 services/hermes/kanban-layout.ts，
+// 顺带获得旧布局 <home>/boards 支持（此前旧布局部署下治理面读空，批一调研 P0 项）。
+import { allBoardDbsOf } from '../services/hermes/kanban-layout'
 
 // ---------- kanban 实耗 ----------
 
@@ -41,18 +44,7 @@ interface KanbanTaskRow {
 
 export function kanbanDbFiles(homeDir?: string): string[] {
   const home = homeDir?.trim() || process.env.HERMES_HOME?.trim() || hermesHome()
-  const files: string[] = []
-  const root = join(home, 'kanban.db')
-  if (existsSync(root)) files.push(root)
-  const boardsRoot = join(home, 'kanban', 'boards')
-  try {
-    for (const slug of readdirSync(boardsRoot, { withFileTypes: true })) {
-      if (!slug.isDirectory()) continue
-      const f = join(boardsRoot, slug.name, 'kanban.db')
-      if (existsSync(f)) files.push(f)
-    }
-  } catch { /* boards 目录缺失即单库形态 */ }
-  return files
+  return allBoardDbsOf(home).map(e => e.dbPath)
 }
 
 export async function openReadonly(dbPath: string) {

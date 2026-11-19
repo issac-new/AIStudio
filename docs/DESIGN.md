@@ -760,6 +760,7 @@ Electron 桌面构建是可选发布能力。
 | 数据 | 权威来源 | 产品面的使用方式 |
 |---|---|---|
 | 任务与责任 | kanban SQLite | 通过看板服务读取和提交命令 |
+| 看板库布局 | `custom/server/services/hermes/kanban-layout.ts` | 主库三态/分板双布局/板名推导的唯一解析器；server 非测试面不得自拼路径，字面量由棘轮守门（允许清单只减不增，存量见挂账台账 N02） |
 | Matrix 协作消息 | Matrix 房间与事件 | 按房间和身份读取，不复制消息真值 |
 | Studio/IDE 会话消息 | 产品 SQLite 的会话与消息表 | 按会话持久化，按授权范围读取 |
 | 统一身份聊天窗消息 | 产品 SQLite 的群聊消息表 | 本地消息可按受控桥接投影到 Matrix |
@@ -920,6 +921,12 @@ dispatcher 按名册派发，worker 隔离执行，独立验证收口。
 产品不为看板另造事件名，客户端适配器（`custom/client/shared/adapters/event-adapter.ts`）
 负责把上游 kind 翻译成产品文案。没有配置列门的板不发 `column_transition`，
 这是「没启用」而不是「没发生」，不能据此判断流转未生效。
+
+决策分层未标层的卡按 T2 执行（从严默认，防漏标绕过 T2/T3 HumanGate）——
+Python 与 TS 同边界同 env（`KANBAN_UNMARKED_TIER`，非法值回落 T2）。列编排派单
+先过 AI 五问准入（信息可获取/规则明确/目标清晰/过程可控/结果可验证；机械启发式
+判据见 `custom/server/kanban/dispatch-readiness.ts`）：默认 warn 缺口可见，
+`HERMES_DISPATCH_READINESS_ENFORCE=1` 时缺项在派发前以 422 拦截。
 
 看板 done 表示任务完成；发布类任务还要经过 4.5 的观察窗，
 才能对外收口。

@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { hermesHome } from '../lib/paths'
 import { compactThreshold } from '../compactthreshold/compact-threshold'
+import { namedBoardDbsOf } from '../services/hermes/kanban-layout'
 import type { ProfileToolUsageFace } from './profile-tool-usage'
 import type { ProcessScanFace } from './process-scan'
 import type { McpDriftFace } from '../mcpcatalog/mcp-drift'
@@ -227,14 +228,13 @@ export async function enrichCardsWithLastEventAt(
   if (cards.length === 0) return cards
   let DatabaseSync: typeof import('node:sqlite').DatabaseSync
   try { ({ DatabaseSync } = await import('node:sqlite')) } catch { return cards }
-  const boardsDir = join(hermesHomeDefault(), 'kanban', 'boards')
-  let boards: string[]
-  try { boards = readdirSync(boardsDir, { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith('_')).map((d) => d.name) } catch { return cards }
+  // 板库枚举收口（批二）：kanban-layout 单一事实源（`_` 归档目录跳过口径保留）。
+  const entries = namedBoardDbsOf(hermesHomeDefault(), { skipUnderscored: true })
   const lastEvent = new Map<string, number>()
-  for (const b of boards) {
+  for (const { dbPath } of entries) {
     let db: InstanceType<typeof DatabaseSync> | null = null
     try {
-      db = new DatabaseSync(join(boardsDir, b, 'kanban.db'))
+      db = new DatabaseSync(dbPath)
       const rows = db.prepare(
         `SELECT task_id, MAX(ts) AS ts FROM (
            SELECT task_id, created_at AS ts FROM task_events
