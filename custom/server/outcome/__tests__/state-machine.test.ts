@@ -139,7 +139,7 @@ describe('transitionGuards 拒绝路径', () => {
     const broken = {} as OutcomeContract
     const r = transitionGuards(broken, 'active', { allTasksTerminal: false })
     expect(r.ok).toBe(false)
-    expect(r.problems.length).toBeGreaterThan(0)
+    if (!r.ok) expect(r.problems.length).toBeGreaterThan(0)
   })
 })
 
