@@ -18,11 +18,12 @@
 //
 // 归属边界：与 evidence 域同为单租户信任模型（登录用户凭 outcomeId 可读写），多租户归属待接。
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs'
+import { appendFileSync, closeSync, existsSync, fstatSync, openSync, readdirSync, readFileSync, readSync, renameSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { appendJsonl, atomicWriteJson, readJsonl } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 import { MEASURE_AVAILABILITIES } from './types'
+import type { OutcomeContextSnapshot } from './snapshot'
 import type { OutcomeContract, OutcomeMeasurement } from './types'
 import { validateContractInput } from './validate'
 
@@ -440,4 +441,124 @@ export function appendMeasurement(
   const ev = appendEvent(m.outcomeId, 'measurement_appended', { measurement: m }, who, m.contractVersion)
   if (!ev.ok) return { ok: false, added: false, code: 'write_failed' }
   return { ok: true, added: true, measurement: m, event: ev.event }
+}
+
+// ---------- 写侧：上下文快照（Task 6，spec §4.4） ----------
+
+export interface AppendSnapshotResult {
+  ok: boolean
+  added: boolean
+  code?: Extract<OutcomeStoreErrorCode, 'invalid_input' | 'not_found' | 'write_failed'>
+  problems?: string[]
+  snapshot?: OutcomeContextSnapshot
+}
+
+const snapshotsFileOf = (outcomeId: string): string => join(outcomeDirOf(outcomeId), 'snapshots.jsonl')
+
+/** 读快照账：坏行（append 半行/损坏）跳过并告警；行身份字段缺失视同坏行丢弃。 */
+function readSnapshotsAt(outcomeId: string, file: string): OutcomeContextSnapshot[] {
+  const { rows, skipped } = readJsonl<OutcomeContextSnapshot>(file)
+  if (skipped > 0) {
+    console.warn(`[outcome-store] ${outcomeId} snapshots.jsonl 有 ${skipped} 行无法解析（append 半行/损坏），已跳过`)
+  }
+  return rows.filter(
+    (s) => s && typeof s === 'object' && nonEmpty(s.snapshotId) && nonEmpty(s.sha256),
+  )
+}
+
+/** 写前防粘行：断电半行残片无换行结尾时，下一条 appendJsonl 会直接接在残片后，
+ *  「残片＋新行」粘成一条坏行被 readJsonl 跳过——未损坏的新快照被静默吞掉。
+ *  追加前检查尾字节、非 \n 结尾先补换行，把残片隔离成独立坏行（读侧 skipped 告警），
+ *  后续每行独立可解析。只在本域快照面启用；events.jsonl 面同问题挂账见文件头注。 */
+function ensureLineTerminated(file: string): void {
+  if (!existsSync(file)) return
+  let fd: number | null = null
+  try {
+    fd = openSync(file, 'r')
+    const size = fstatSync(fd).size
+    if (size === 0) return
+    const last = Buffer.alloc(1)
+    const read = readSync(fd, last, 0, 1, size - 1) // readSync 返回 bytesRead（number）
+    if (read === 1 && last[0] !== 0x0a) appendFileSync(file, '\n')
+  } catch {
+    /* 读尾失败不阻断追加——最坏退回粘行形态，读侧仍自愈 */
+  } finally {
+    if (fd !== null) closeSync(fd)
+  }
+}
+
+/**
+ * 追加上下文快照（幂等键=内容 sha256，作用域=outcome）：同 hash 重放返回原快照 added:false，
+ * 不重复落账（spec §4.4「每个相关 Agent 接收同一 snapshotId」；哈希不含 createdAt 等易变字段，
+ * 跨时刻的同语义快照天然同键）。
+ *
+ * 与测量事实的落账形态有意不同：快照 content 可至 1 MiB，全量进哈希链事件账会撑爆
+ * events.jsonl——物化正身落独立 snapshots.jsonl，事件只落引用（snapshotId/sha256，
+ * type='context_snapshot_created'，spec §4.2 事件类型清单成员）。写序仍先账后物：
+ * 事件写失败→快照零落盘；反向残留（事件已落、快照行写失败）时账上多一条未生效引用，
+ * 重试自愈（幂等扫描只认 snapshots.jsonl，重放会补落快照行，与 create 的撕裂容忍同款）。
+ *
+ * 撕裂自愈形态对快照面无额外影响：断电半行残片由追加前的 ensureLineTerminated 补换行
+ * 隔离成独立坏行（读侧 readJsonl 跳过＋skipped 告警），不吞后续好行；残片对应的快照
+ * 本就未写完整，其 sha256 幂等保护仍在——重放按内容同键补落新行。已知挂账：
+ * appendJsonl 不支持 fsync 选项（lib/fs-store 头注「调用方可自行 flush」但未提供通道），
+ * 断电下先账后物序仍有「事件引用已落而快照行丢失/半行」残余风险；公共库不改、挂账待
+ * lib/fs-store appendJsonl 增加 fsync 可选参数后对 snapshots.jsonl 启用。
+ */
+export function appendSnapshot(
+  snapshot: OutcomeContextSnapshot,
+  actor: string,
+): AppendSnapshotResult {
+  if (snapshot === null || typeof snapshot !== 'object')
+    return { ok: false, added: false, code: 'invalid_input', problems: ['snapshot 须为对象'] }
+  const s = snapshot as OutcomeContextSnapshot
+  const problems: string[] = []
+  if (!nonEmpty(s.snapshotId)) problems.push('snapshotId 必填')
+  if (!nonEmpty(s.outcomeId)) problems.push('outcomeId 必填')
+  else if (!isSafeOutcomeId(s.outcomeId)) problems.push('outcomeId 非法（须字母数字开头，仅含 ._\\-，≤128 字符）')
+  if (typeof s.contractVersion !== 'number' || !Number.isInteger(s.contractVersion) || s.contractVersion < 1)
+    problems.push('contractVersion 须为正整数')
+  if (s.teamVersion !== null && typeof s.teamVersion !== 'number') problems.push('teamVersion 须为数值或 null')
+  if (!nonEmpty(s.decisionPolicyVersion)) problems.push('decisionPolicyVersion 必填')
+  if (s.content === null || typeof s.content !== 'object' || Array.isArray(s.content))
+    problems.push('content 须为对象')
+  if (!Array.isArray(s.sourceRefs)) problems.push('sourceRefs 须为数组')
+  if (!Array.isArray(s.approvedExperienceVersions)) problems.push('approvedExperienceVersions 须为数组')
+  if (!Array.isArray(s.excludedSources)) problems.push('excludedSources 须为数组')
+  if (typeof s.createdAt !== 'number' || !Number.isFinite(s.createdAt)) problems.push('createdAt 须为有限数值')
+  if (!nonEmpty(s.sha256)) problems.push('sha256 必填')
+  if (!nonEmpty(actor)) problems.push('actor 必填')
+  if (problems.length) return { ok: false, added: false, code: 'invalid_input', problems }
+
+  if (!getContract(s.outcomeId)) return { ok: false, added: false, code: 'not_found' }
+
+  // 幂等按内容 sha256：同 hash 返回原快照（重放不同 createdAt 不覆盖、不重复落账）
+  const existing = readSnapshotsAt(s.outcomeId, snapshotsFileOf(s.outcomeId)).find(
+    (x) => x.sha256 === s.sha256,
+  )
+  if (existing) return { ok: true, added: false, snapshot: existing }
+
+  // 先账后物：事件（引用载荷）先行，快照物化行随后
+  const ev = appendEvent(
+    s.outcomeId,
+    'context_snapshot_created',
+    { snapshotId: s.snapshotId, sha256: s.sha256 },
+    actor,
+    s.contractVersion,
+  )
+  if (!ev.ok) return { ok: false, added: false, code: 'write_failed' }
+  try {
+    ensureLineTerminated(snapshotsFileOf(s.outcomeId))
+    appendJsonl(snapshotsFileOf(s.outcomeId), s)
+  } catch (err) {
+    console.warn(`[outcome-store] 快照写入失败（${s.outcomeId}/${s.snapshotId}）：${describeErr(err)}`)
+    return { ok: false, added: false, code: 'write_failed' }
+  }
+  return { ok: true, added: true, snapshot: s }
+}
+
+/** 列快照（追加序）。未知 outcome 返回 []；坏行跳过（见 readSnapshotsAt）。 */
+export function listSnapshots(outcomeId: string): OutcomeContextSnapshot[] {
+  if (!isSafeOutcomeId(outcomeId)) return []
+  return readSnapshotsAt(outcomeId, snapshotsFileOf(outcomeId))
 }
