@@ -117,7 +117,8 @@ describe('transitionGuards 拒绝路径', () => {
       ['observing', 'draft'],
       ['active', 'active'],
       ['draft', 'draft'],
-      ['active', 'done'],
+      // 'done' 不在 OUTCOME_STATUSES 内，as 收窄类型以保留「未知目标态拒」的用例意图
+      ['active', 'done' as OutcomeStatus],
     ]
     for (const [from, to] of cases) {
       const r = transitionGuards(at(from), to, { allTasksTerminal: true, reason: '理由' })
