@@ -31,7 +31,8 @@ swarm-yuan 是一个生成器。对任意代码仓库跑一次生成流程，产
 - **拼装式开发**：新功能 = 既有稳定单元拼装 + 最小新增胶水，禁止重复造轮子、侵入式重构。探查产出的组件库清单就是拼装零件的总目录。
 - **先能工作再做对**：最小改动跑通 → 指标达标 → 留痕提交；测试断言行为不绑实现；新增前先减复杂度。
 - **特征卡立法、门禁执法、验证器司法**：特征卡定义项目应然。门禁核验代码实然。独立验证器证明门禁有效。
-- **诚实降级**：运行时未安装不阻塞，但显式披露。权限边界一律 fail-closed。
+- **诚实降级**：运行时未安装不阻塞，但显式披露。权限边界一律 fail-closed。**例外：审查独立性是质量不变量，不是可选运行时**——无子代理时审查停机记 `not run`，不得同上下文自审冒充。
+- **产物落盘优先（Artifact-First）**：大段 proposal/design/spec/审查报告一律写文件，聊天只回文件路径、2-3 个关键决策与"请审阅"；不在聊天窗口铺大段草稿。spec 起草按"目标与边界 → 方案与取舍 → 验证设计"三处停顿等反馈；执行类任务仍按任务间不停顿。见 references/context-engineering-layering.md §11.3 与 references/independent-review-protocol.md §七。
 - **AI 全自动、零手动配置**：生成由 AI 一键完成。使用时用户对 AI 说话。
 - **左移**：测试设计、变更影响、可观测性在 spec/plan 阶段就写入约束（spec 模板相应节），编码先测试后实现。
 - **决策留痕**：决策三级分类（Mechanical 直接做 / Taste 给方案+推荐 / UserChallenge 必停问用户），用 `assets/trace-log.sh --decision` 落盘 decisions.jsonl。
@@ -95,11 +96,14 @@ swarm-yuan 是一个生成器。对任意代码仓库跑一次生成流程，产
 
   强制面以 L2-L4 为准，能力状态三态明示。
 - rules.d 三值规则（allow/prompt/forbid 取最严，forbid 必带替代方案）在每次 Bash/Edit 实时匹配。
+- 独立审查按 references/independent-review-protocol.md 执行：冷读子代理（只给文档+被引用源码+标准）、S1 全局审视/S2 理解度/S3 设计批判/S4 实现就绪、`not run`≠零发现、连续两轮 clean 才算 converged、反谄媚禁词机检。`REVIEW_RECORD_REQUIRED=1` 时 check_review 核验 `references/review-record.md` 的协议字段，缺失/禁词/not-run 与 clean 矛盾均 fail。
 - 门禁按序列执行，分核心/架构/合规/advisory 四族（执行序列与口径数字见 facts.conf）。拦截落 gate-deny.jsonl 可复盘。
 
 ## 反馈回路（技能随项目生长）
 
 SessionStart hook（lite 档由 AI 主动）跑 `scripts/project-fingerprint.sh <proj> --diff` 得变化范围。按 exploration-guide §D 局部重探查，清单单条更新。条目骤降超 50% 拒写保留旧版。过期条目三态处置见 references/knowledge-lifecycle-methodology.md §五。之后 `generate-skill.sh --upgrade`（项目内容文件保留），落新基线。结构变化走指纹 --diff，**内容演化走 git diff/--stable-diff**——指纹只看结构。
+
+**内容漂移补位**：指纹看不见同路径文件的原地修改。每轮反馈或发布前，按 references/living-docs-drift-methodology.md 抽文档做断言级比对（缺失功能/模型不全/逻辑捷径/架构分歧四类），报告落 `docs/reviews/YYYY-MM-DD-drift-report.md`（模板 assets/drift-report-template.md）；漂移只报差异，改文档或改代码二选一并说明理由，不自动改。
 
 ## 用户使用
 
@@ -140,7 +144,7 @@ SessionStart hook（lite 档由 AI 主动）跑 `scripts/project-fingerprint.sh 
 | 生成主干（Step 1-13 消费） | exploration-guide、generation-flow、template-spec、agent-skills-methodology、context-engineering-layering、task-methodology-router、cost-estimation-methodology、domain-knowledge、code-graph-tools、togaf-metamodel-methodology、frontend-design-methodology、diagram-production-methodology |
 | 拼装与知识消费（探查与编码节点） | clean-code-metrics-methodology、lazy-generation-methodology、cordis-composability-methodology、knowledge-lifecycle-methodology、knowledge-retrieval-ladder（四层检索协议：L1 边集→L2 索引→L3 语义→L4 实现，由近及远命中即止）、mattpocock-skills-methodology、memory-persistence、cognition-framework、cognitive-bias、logic-razor、four-theories-methodology、mea-loop-methodology |
 | 编排与治理（全程纪律） | governance-agents、subagent-orchestration、gsd-patterns、decision-governance、dsh-engineering-methodology、codex-methodology、claude-code-capabilities、mcp-governance、codex-security-methodology、controlled-language-methodology（人面输出纪律） |
-| 验证与过程资产 | review-methodology、pstack-methodology（验证即生成物/arena 与 swarm 分工/证据强度五级）、canary-monitoring、ai-process-records、quality-management-standards、rsi-evidence-methodology、bugfix-runbook（fix 任务连研发环境排障六步流水线）、remote-debug-jvm（JDWP 经堡垒机隧道远程调试）、failure-taxonomy（失败根因六类：ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 先归类再处置） |
+| 验证与过程资产 | review-methodology、independent-review-protocol（冷读隔离/四阶段/反谄媚/收敛/无子代理停机）、living-docs-drift-methodology（文档断言 vs 源码事实四类漂移）、pstack-methodology（验证即生成物/arena 与 swarm 分工/证据强度五级）、canary-monitoring、ai-process-records、quality-management-standards、rsi-evidence-methodology、bugfix-runbook（fix 任务连研发环境排障六步流水线）、remote-debug-jvm（JDWP 经堡垒机隧道远程调试）、failure-taxonomy（失败根因六类：ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 先归类再处置） |
 | 安全合规与行业 | security-spec、crypto-spec、cwe-database、security-certification-profiles、standards-compliance、compliance-checkpoints（监管执法检查点库：五步判断法/罚则库/智能体安全/采购 AI/机检映射）、regulatory-checkpoint-table（执法检查主表 173 条）、行业 profile 八档（`--industry` 加载：finance/gov/medical/telecom/automotive/energy/industrial/payment） |
 | 业务与领域本体 | business-ontology-methodology（业务本体工程方法论：五步流程、术语纪律、七个语义模式、十四项校验）、fibo-financial-ontology（FIBO `master_2026Q3` 源码级术语与 IRI 参考） |
 

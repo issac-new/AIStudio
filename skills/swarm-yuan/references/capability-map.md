@@ -77,6 +77,8 @@
 | 档 | 来源（证据） | 消费节点 | 触发 |
 |----|-------------|---------|------|
 | review-methodology | gstack review + cso（A） | ⑦ 独立审查 rubric | 代码审查执行 |
+| independent-review-protocol | google/elephant-goldfish-model（B，Apache-2.0，技能/角色原文逐条读取） | ⑦ 独立审查强制口径 + 生成流程 Step 11 + review-record 字段/禁词/收敛机检 | 执行独立审查/派发冷读子代理/填写审查记录 |
+| living-docs-drift-methodology | google/elephant-goldfish-model 的 egm-drift-report（B，Apache-2.0） | 反馈回路内容漂移对账 + ⑨ 发布前文档核对 | 文档断言与源码不一致/项目变化后维护技能 |
 | canary-monitoring | check_canary 降档保留（A） | ⑨ 发布后监控（setup-loop --verify） | 发布后基线对比 |
 | ai-process-records | GB/T 8566 扩展（B） | trace/decisions 留痕口径 | 审计/复盘/交接 |
 | quality-management-standards | ISO 9001/CMMI 映射（B） | 认证过程资产引用 | 组织级标准对齐 |

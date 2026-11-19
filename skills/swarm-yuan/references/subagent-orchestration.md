@@ -51,6 +51,7 @@ dispatch prompt 应含：(1) 一句话说明任务位置；(2) brief 路径；(3
 - 与本文档既有"第 4-5 轮 fresh dispatch + 升模型"不冲突：那是**修复环内**的升级策略（前 3 轮刻意 resume 保连续性），本条说的是**起点**。
 - 需要连续性时用"上下文指针"补，不要用 fork 补：spec 路径、票号、研究笔记、先前提交——指针能表达"接着做"，上下文继承会带来"以为什么都记得"。
 - 与 doubt 协议（对抗评审只给 ARTIFACT + CONTRACT）同根：**评审者的价值来自它不知道你的结论**。
+- **审查类活动额外硬规则**：节点⑦、生成流程 Step 11、spec/plan 评审必须冷读——审阅者只拿待审文档、被引用源码、审查标准，不拿会话历史与作者推理。没有子代理能力时**停机**并记 `not run`，不得用同上下文自审冒充；完整派发阶梯与停机判据见 `independent-review-protocol.md` §二/§三。探查、实施等非审查并行可内联降级，但须标 `degraded` 并在交付说明披露。
 
 ## swarm 与 arena 分工 + 缺口不计为通过（来源 pstack）
 
@@ -121,6 +122,16 @@ implementer 回报**仅**短状态 + 提交 + 一行测试摘要 + concerns + re
 2. **第 4-5 轮才 fresh + 升模型**--前 3 轮未解决是能力信号，换更强模型 + fresh 视角。
 3. **熔断后 controller adjudicate，不静默丢弃**--"silent discards are forbidden"（来源：superpowers v6.2.0）。每个 open finding 须有显式裁决入 ledger（`decisions.jsonl`，type=Taste，附 rationale）。
 4. **不在第 5 轮前提前熔断**--"Adjudicating earlier to end a loop is pre-judging with a different name"（来源：superpowers v6.2.0）。提前 adjudicate 等于用 controller 的主观判断替代修复努力。
+5. **`not run` 不计为通过**：审阅者超时、崩溃、读不到角色或标准，重试一次仍失败记 `not run`；该轮不 clean，也不得折算为零发现。**连续两轮 clean 才算 converged**（首轮 clean 不够），与五轮熔断并存：熔断管修复预算，收敛管证据充分性。
+
+### 收敛记账（not run / 连续 clean）
+
+每轮审查在 progress ledger 追加一行：`round N: clean=yes|no, consecutive_clean=M, not_run=<列表>`。
+
+- `clean` = 必需阶段全部 completed + 零 must-fix + 零 should-fix（或已明确处置）+ 零 `not run`。
+- `not_run_count > 0` 时 `clean` 必为 no；门禁会核验这条矛盾（`REVIEW_RECORD_REQUIRED=1` 时 fail）。
+- 三态处置：`settled`（用户已接受的取舍，不重开）、`fixed`（已修复，再现即重开并标 churn）、`churn`（新发现可回退修复环）。
+- 第 5 轮仍不 clean → 升级用户裁决，不自行放行。
 
 ### Scoped Re-review（只验修复 diff）
 
@@ -160,6 +171,8 @@ implementer 回报**仅**短状态 + 提交 + 一行测试摘要 + concerns + re
 - 所有任务完成
 
 > "'Should I continue?' prompts and progress summaries waste their time."
+
+**例外：spec/design 起草不停在"任务之间"，但停在"关键节之间"。** 起草规格时按三处停顿等用户反馈——目标与边界 → 方案与取舍 → 验证设计；每节写完落盘，聊天只回文件路径与关键决策（Artifact-First，见 `independent-review-protocol.md` §七与 `context-engineering-layering.md` §11.3）。执行类任务仍按本节不停顿，两者不冲突：停的是设计决策点，不是执行进度。
 
 ## 模型选择
 

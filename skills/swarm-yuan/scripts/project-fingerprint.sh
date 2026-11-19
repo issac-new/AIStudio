@@ -244,7 +244,7 @@ if [[ "${_dc_a}" != "${_dc_b}" ]]; then
   done
   # cksum 变化：两边都有但值不同
   LC_ALL=C join -j 1 "$_da_t" "$_db_t" 2>/dev/null | LC_ALL=C awk '$2 != $3 {print $1}' | while IFS= read -r k; do
-    [[ -n "$k" ]] && echo "    ~ ${k}（内容变化——重探查该 scope 的新增/消失/改名组件）"
+    [[ -n "$k" ]] && echo "    ~ ${k}（目录内路径集变化——结构信号，不代表文件内容已变；内容漂移按 references/living-docs-drift-methodology.md 对账）"
   done
   rm -f "$_da_t" "$_db_t"
 fi

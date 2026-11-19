@@ -1,5 +1,15 @@
 # Changelog
 
+## [v2.101.0] - 2026-11-19
+EGM 吸收批：独立审查协议 + 活文档漂移（B 档）。门禁数不变（59），无新增 check_*；脚本行数 9988→10080，references 61→63，内容预算按台账第 35/36 次登记上调。
+- **独立审查协议**（references/independent-review-protocol.md）：三角色（作者/冷读审阅者/裁决人）、冷读输入白名单/黑名单、S1 全局审视/S2 理解度/S3 设计批判/S4 实现就绪、反谄媚中英禁词表、`not run` ≠ 零发现、连续两轮 clean 才算 converged、无子代理停机阶梯。
+- **机检**：check_review 第二段扩展（`REVIEW_RECORD_REQUIRED=1` 时）——协议字段缺失、degraded 却通过、`not_run_count>0` 却 clean、禁词命中、未填写模板五类 fail；默认档仍 warn。gates-strict 与域源 assets/gates/quality/review.sh 同步。
+- **审查模板**：review-record-template.md 增 `reviewer_context`、冷读输入清单、阶段完成表、理解度结论、收敛声明（clean/not_run_count/converged）、未运行项。
+- **活文档漂移**（references/living-docs-drift-methodology.md + assets/drift-report-template.md）：与结构指纹分工、四类漂移、比对程序、报告格式与双向修复口径；反馈回路与 knowledge-lifecycle 接线；project-fingerprint 措辞修正。
+- **Artifact-First**：SKILL.md 工作原则/模板节点③、context-engineering-layering §11.3——大段产物落盘，聊天只回路径与关键决策；spec 起草三处停顿，执行任务不停。
+- **登记面**：FACT_REFERENCES 61→63、references.tsv/dist.tsv/capability-map/usage-manual 同步；UNIVERSAL_FILES 由 `--dist` 重生成；gate-enforce-level 由生成器重算 check_review fail 数 6→12。
+- **测试**：新增 tests/test-review-protocol.sh（15 断言，合规样本 + 五类反例）。
+
 ## [v2.100.4] - 2026-11-12
 AIStudio v1.0.16 发布轮随批（Linux CI 修复＋登记错位清偿＋计数锁传导）。门禁数与预算均不变：本轮无新增门禁、无预算上调。
 - **Linux CI 四安装族测试修复**：bash 3.x `local` 同语句引用语义（赋值与引用拆行）＋install dry-run 输出排序稳定性；四安装族 Linux 全绿。
