@@ -59,6 +59,11 @@
       "note": "A 层完成契约：AC/dod 派生、源哈希、回执校验、TAP/JUnit 重算（2026-10-31 模型波动加固）"
     },
     {
+      "source": "hermes_cli/acceptance_report.py",
+      "dest": "hermes_cli/acceptance_report.py",
+      "note": "结果交付批（2026-11-19）：逐条 AC 验收报告 schema/校验/结构化 blockers——independent 档完成门依赖"
+    },
+    {
       "source": "hermes_cli/subcommands/cron.py",
       "dest": "hermes_cli/subcommands/cron.py",
       "note": "450: cron create/edit 加 --base-url 参数面（R1）"
@@ -287,6 +292,21 @@
       "source": "tests/hermes_cli/test_project_pause.py",
       "dest": "tests/hermes_cli/test_project_pause.py",
       "note": "732 项目暂停拦派单行为测试（随 notifier/pause 模块部署，安装树可就地回归）"
+    },
+    {
+      "source": "tests/hermes_cli/test_acceptance_report.py",
+      "dest": "tests/hermes_cli/test_acceptance_report.py",
+      "note": "结果交付批纯函数回归（随 acceptance_report 模块部署）"
+    },
+    {
+      "source": "tests/hermes_cli/test_acceptance_gate.py",
+      "dest": "tests/hermes_cli/test_acceptance_gate.py",
+      "note": "结果交付批内核集成回归（independent 门/返修轮次）"
+    },
+    {
+      "source": "tests/hermes_cli/test_kanban_verification_levels.py",
+      "dest": "tests/hermes_cli/test_kanban_verification_levels.py",
+      "note": "结果交付批：independent 放行判据升级为逐条 AC 报告；覆盖 patch 775 旧版时序判据测试"
     },
     {
       "source": "locales/en.yaml",
