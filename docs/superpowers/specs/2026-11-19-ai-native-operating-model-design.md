@@ -258,7 +258,7 @@ interface DecisionProfile {
 执行顺序：
 
 1. 既有 hardline/user-deny/sudo/沙箱 floors 先判；拒绝即终局。
-2. `plan` 对非只读动作拒绝。
+2. `plan` 对非只读动作拒绝。实施备忘（批一 Task 5 审查 M2）：outcome 授权矩阵对 `plan` 挡无条件 deny（含 low+reversible，向量已钉死）——比「非只读」字面更严，属有意收紧，后续读者勿当 bug 放宽。
 3. outcome-scoped 动作按合同版本、身份、角色与下表裁决。
 4. 所有结果写统一审批账；批准绑定 action、合同版本、上下文快照、批准人和过期时间。
 
