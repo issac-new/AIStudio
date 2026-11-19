@@ -1,0 +1,84 @@
+diff --git a/packages/client/src/styles/theme.ts b/packages/client/src/styles/theme.ts
+--- a/packages/client/src/styles/theme.ts
++++ b/packages/client/src/styles/theme.ts
+@@ -9,10 +9,10 @@
+ 
+ export const lightThemeOverrides: GlobalThemeOverrides = {
+   common: {
+-    primaryColor: '#333333',
+-    primaryColorHover: '#1a1a1a',
+-    primaryColorPressed: '#000000',
+-    primaryColorSuppl: '#333333',
++    primaryColor: '#0891b2',
++    primaryColorHover: '#0e7490',
++    primaryColorPressed: '#155e75',
++    primaryColorSuppl: '#0891b2',
+     bodyColor: '#fafafa',
+     cardColor: '#ffffff',
+     modalColor: '#ffffff',
+@@ -94,10 +94,10 @@
+ 
+ export const darkThemeOverrides: GlobalThemeOverrides = {
+   common: {
+-    primaryColor: '#e0e0e0',
+-    primaryColorHover: '#f5f5f5',
+-    primaryColorPressed: '#ffffff',
+-    primaryColorSuppl: '#e0e0e0',
++    primaryColor: '#22d3ee',
++    primaryColorHover: '#67e8f9',
++    primaryColorPressed: '#a5f3fc',
++    primaryColorSuppl: '#22d3ee',
+     bodyColor: '#1a1a1a',
+     cardColor: '#2a2a2a',
+     modalColor: '#2a2a2a',
+diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
+--- a/packages/client/src/styles/variables.scss
++++ b/packages/client/src/styles/variables.scss
+@@ -35,9 +35,9 @@
+   --border-light: #ebebeb;
+ 
+   // Accent
+-  --accent-primary: #333333;
+-  --accent-hover: #1a1a1a;
+-  --accent-muted: #888888;
++  --accent-primary: #0891b2;
++  --accent-hover: #0e7490;
++  --accent-muted: #6fb4c8;
+ 
+   // Text
+   --text-primary: #1a1a1a;
+@@ -111,9 +111,9 @@
+   --border-light: #333333;
+ 
+   // Accent
+-  --accent-primary: #e0e0e0;
+-  --accent-hover: #f5f5f5;
+-  --accent-muted: #888888;
++  --accent-primary: #22d3ee;
++  --accent-hover: #67e8f9;
++  --accent-muted: #2f8fa3;
+ 
+   // Text
+   --text-primary: #e0e0e0;
+@@ -75,8 +75,8 @@
+   --accent-info: #4a90d9;
+ 
+   // HERMES_CUSTOM[Branding] BEGIN: RGB component variables for rgba() usage
+-  --accent-primary-rgb: 51, 51, 51;
+-  --accent-hover-rgb: 26, 26, 26;
++  --accent-primary-rgb: 8, 145, 178;
++  --accent-hover-rgb: 14, 116, 144;
+   --text-primary-rgb: 26, 26, 26;
+   --text-secondary-rgb: 102, 102, 102;
+   --text-muted-rgb: 153, 153, 153;
+@@ -147,8 +147,8 @@
+   --accent-info: #6ba3d6;
+ 
+   // RGB components
+-  --accent-primary-rgb: 224, 224, 224;
+-  --accent-hover-rgb: 245, 245, 245;
++  --accent-primary-rgb: 34, 211, 238;
++  --accent-hover-rgb: 103, 232, 249;
+   --text-primary-rgb: 224, 224, 224;
+   --text-secondary-rgb: 160, 160, 160;
+   --text-muted-rgb: 136, 136, 136;

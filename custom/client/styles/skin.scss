@@ -1,0 +1,100 @@
+// overlay/custom/client/styles/skin.scss
+// 全站科技感皮肤基座（spec 2026-11-19-ui-tech-skin-global，批 A+B）——
+// 皮肤色正本在补丁 801（theme.ts/variables.scss 的 accent/primary 青蓝化），
+// 本层只做全局无损叠加：发光反馈/玻璃底/光线/过渡。克制纪律沿用 polish.scss D22：
+// 只加视觉，不动布局/间距/字号；选择器走元素级+稳定骨架类，不打业务域类（域类归批 C 逐域）。
+
+/* ── ① 皮肤变量锚点（A2UI 层与后续域皮肤统一引用；值随主题自动切换） ── */
+:root {
+  --ekko-skin-accent: var(--accent-primary);
+  --ekko-skin-accent-hover: var(--accent-hover);
+  --ekko-skin-accent-rgb: var(--accent-primary-rgb);
+  --skin-glow-sm: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.16);
+  --skin-glow-md: 0 0 16px rgba(var(--accent-primary-rgb), 0.22);
+  --skin-edge: rgba(var(--accent-primary-rgb), 0.28);
+}
+
+/* ── ② 全局交互反馈（元素级，全站覆盖） ── */
+// 按钮 hover 起光：皮肤色描边+外光（不改变按钮自身配色，只叠加）
+button:not(:disabled):hover {
+  border-color: var(--skin-edge);
+}
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+[role='tab']:focus-visible {
+  outline: none;
+  box-shadow: var(--skin-glow-sm);
+  border-radius: var(--radius-standard, 6px);
+}
+// 输入控件聚焦外光
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--skin-glow-sm);
+}
+// 交互过渡平滑（150ms 是 A2UI 批实测手感值）
+button,
+a,
+[role='button'],
+[role='tab'] {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+/* ── ③ 骨架玻璃底 + 光带（studio-* 自研骨架体系，类名取自实测 DOM） ── */
+// 侧导航：玻璃拟态（微渐变底显性化玻璃感）+ 右缘发光线 + 纵向光晕
+.studio-navigation-rail {
+  background: linear-gradient(180deg,
+    rgba(var(--accent-primary-rgb), 0.055),
+    rgba(var(--accent-primary-rgb), 0.012) 62%,
+    rgba(var(--accent-primary-rgb), 0.04));
+  backdrop-filter: blur(14px);
+  border-right: 1px solid var(--skin-edge);
+  box-shadow: 1px 0 18px -8px rgba(var(--accent-primary-rgb), 0.35);
+}
+// 顶栏：微渐变底 + 底部光线（增强）
+.studio-page-header {
+  position: relative;
+  background: linear-gradient(90deg, rgba(var(--accent-primary-rgb), 0.05), transparent 40%);
+}
+.studio-page-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 2%, rgba(var(--accent-primary-rgb), 0.75), transparent 98%);
+  pointer-events: none;
+}
+// 导航 active 项：左侧发光指示条（子项自带 active 态样式，此处只加光）
+.studio-navigation-rail__nav [aria-current='page'],
+.studio-navigation-rail__nav .router-link-active,
+.studio-navigation-rail__nav .active {
+  box-shadow: inset 2px 0 8px -3px rgba(var(--accent-primary-rgb), 0.8);
+}
+
+/* ── ④ naive-ui 少量控件面（主按钮光晕/开关染色自动跟随 primary） ── */
+.n-button.n-button--primary-type:not(:disabled):hover {
+  box-shadow: var(--skin-glow-md);
+}
+// 通用卡片面：hover 青色 glow 边（自研卡片类模式匹配 + naive-ui 卡片）
+.n-card:hover,
+[class*='card']:not([class*='card-']):hover {
+  border-color: var(--skin-edge);
+  box-shadow: var(--skin-glow-md);
+}
+
+/* ── ⑤ 减少动效偏好：过渡全部关停（发光为静态允许保留） ── */
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a,
+  [role='button'],
+  [role='tab'],
+  input,
+  select,
+  textarea {
+    transition: none;
+  }
+}

@@ -395,6 +395,14 @@ Legacy Loop 的定时、自治与预算能力保留；①搭建的主动性编�
 ⑥治理视图为只读投影；模型、记忆、看板、审批与 Matrix 的作用域
 不强行合并。
 
+### 2.9 全局视觉皮肤（2026-11-19）
+
+全站视觉皮肤＝科技感青蓝系（亮 #0891b2 / 暗 #22d3ee），与聊天内 Ekko UI Surface 卡片同源同值。
+皮肤色正本在 theme.ts / variables.scss 的 accent/primary base（补丁 801）；
+用户 accentColor 定制仍优先于皮肤 base（上游 resolveThemeCustomization 通道不冲突）。
+custom 的 skin.scss 只做全局无损叠加（发光反馈/骨架玻璃/光带），不动布局与字号——克制纪律沿用 polish.scss D22。
+Agent 侧（A2UI 协议）依旧无任何颜色/主题控制面，视觉全归宿主。
+
 ## 3、架构
 
 本章描述系统怎样分层、由哪些组件构成、跨层与跨域靠什么契约连接。
