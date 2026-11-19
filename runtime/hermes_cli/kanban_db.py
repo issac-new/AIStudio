@@ -3020,10 +3020,15 @@ class VersionConflictError(ValueError):
 
 class VerificationLevelBlocked(ValueError):
     """批二：卡声明的 verification 等级未满足——完成被拒（fail-closed），错误
-    文本指引下一步（request_review / 待 PR 转绿），不自动改任务状态。"""
+    文本指引下一步（request_review / 待 PR 转绿 / 补验收报告），不自动改任务状态。
 
-    def __init__(self, level: str, detail: str):
+    ``blockers`` 是结构化拒绝原因（``{code,title,detail,action}``），供 UI 与重试
+    策略按 code 分支；旧调用方只读 ``detail`` 也兼容。
+    """
+
+    def __init__(self, level: str, detail: str, blockers: Optional[list[dict]] = None):
         self.level, self.detail = level, detail
+        self.blockers = list(blockers or [])
         super().__init__(f"verification level '{level}' not satisfied: {detail}")
 
 
@@ -3136,6 +3141,19 @@ def _gate_completion_contract(
 # 批二（2026-11-14 superagent-contract-batch2）：卡级完成验证等级。
 VALID_VERIFICATION_LEVELS = frozenset({"standard", "independent", "strict:pr"})
 
+DEFAULT_MAX_REWORK_ROUNDS = 5
+
+
+def _max_rework_rounds() -> int:
+    """返修轮次上限：默认 5（对齐 SoduWork 自动返修上限）；env 可调，0/负值关闭。"""
+    raw = os.environ.get("HERMES_KANBAN_MAX_REWORK_ROUNDS", "").strip()
+    if not raw:
+        return DEFAULT_MAX_REWORK_ROUNDS
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return DEFAULT_MAX_REWORK_ROUNDS
+
 
 def _pr_acceptance_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
     """strict:pr 判据：最新 ``pr_acceptance`` 事件的 receipt.ok（kanban 库内
@@ -3155,40 +3173,118 @@ def _pr_acceptance_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
     return bool(receipt.get("ok"))
 
 
-def _review_verdict_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
-    """independent 判据：走过评审闭环——存在 ``review_requested`` 且其后有
-    reviewer 侧活动证据：批准路径＝reviewer 在 review 态的 ``completed``、
-    驳回路径＝``changes_requested``（两者都构成"独立看过"）；``review_verdict``
-    为预留扩展位。防伪：时序必须晚于 review_requested。"""
-    req = conn.execute(
-        "SELECT id FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
-        "ORDER BY id LIMIT 1",
+def _latest_review_cycle(conn: sqlite3.Connection, task_id: str) -> tuple[Optional[int], Optional[str]]:
+    """当前评审周期：最新 ``review_requested`` 的 ``(event_id, implementer)``。
+
+    没有 handoff 时返回 ``(None, None)``。取最新（DESC）而不是最早：返修后重新
+    request_review 会开新周期，验收报告只能绑定当前这次交付。
+    """
+    row = conn.execute(
+        "SELECT id, payload FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
+        "ORDER BY id DESC LIMIT 1",
         (task_id,),
     ).fetchone()
-    if req is None:
-        return False
-    verdict = conn.execute(
-        "SELECT id FROM task_events WHERE task_id = ? AND kind IN "
-        "('changes_requested', 'review_verdict', 'completed') AND id > ? LIMIT 1",
-        (task_id, req["id"]),
-    ).fetchone()
-    return verdict is not None
+    if row is None:
+        return None, None
+    payload = _json_dict(row["payload"])
+    return int(row["id"]), _nonblank_str(payload.get("implementer"))
 
 
-def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None) -> None:
+def _acceptance_override_enabled() -> bool:
+    """显式环境闸：只在操作员确认紧急放行时使用；放行本身落 acceptance_override 事件。"""
+    return os.environ.get("HERMES_KANBAN_ACCEPTANCE_OVERRIDE", "").strip() == "1"
+
+
+def _independent_acceptance(
+    conn: sqlite3.Connection, task_id: str, metadata: Optional[dict],
+) -> tuple[bool, str, list[dict], Optional[dict]]:
+    """校验 independent 档的逐条 AC 验收报告。
+
+    返回 ``(ok, detail, blockers, normalized_report)``。报告来源固定为
+    ``complete_task(metadata=...)`` 的 ``acceptance_report`` 键；AC 来源固定为
+    任务 body 经 ``completion_contract.derive_contract`` 派生的 criteria——不新增
+    第二套卡面格式。任何模块/DB 异常都按 fail-closed 返回 blocker，不静默放行。
+    """
+    try:
+        from completion_contract import derive_contract
+        from hermes_cli.acceptance_report import (
+            AcceptanceReportViolation, expected_criteria_ids, validate_report,
+        )
+    except ImportError as exc:  # 部署缺模块：与完成契约门同哲学，宁可拒完成
+        return False, f"acceptance-report module unavailable ({exc})", [{
+            "code": "verifier_unavailable",
+            "title": "验收模块不可用",
+            "detail": str(exc)[:300],
+            "action": "修复 runtime 部署后重试；不要用完成动作绕过验收",
+        }], None
+
+    row = conn.execute("SELECT body FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    body = (row["body"] if row is not None else "") or ""
+    criteria = derive_contract(body).get("criteria") or []
+    cycle_id, implementer = _latest_review_cycle(conn, task_id)
+    # 周期闭合：最新 changes_requested 晚于 review_requested，说明这一轮评审已被
+    # 打回；实现方必须先重新 request_review，旧周期上补一份通过报告不成立。
+    if cycle_id is not None:
+        last_change = conn.execute(
+            "SELECT id FROM task_events WHERE task_id = ? AND kind = 'changes_requested' "
+            "ORDER BY id DESC LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        if last_change is not None and int(last_change["id"]) > int(cycle_id):
+            return False, (
+                "review cycle already closed by changes_requested; request a new review "
+                "handoff before submitting another acceptance report"
+            ), [{
+                "code": "review_cycle_closed",
+                "title": "评审周期已关闭",
+                "detail": "最新 changes_requested 晚于 review_requested，这一轮已判不通过",
+                "action": "实现方返修后重新 kanban_request_review，再提交新报告",
+            }], None
+    report = (metadata or {}).get("acceptance_report") if isinstance(metadata, dict) else None
+    if not isinstance(report, dict):
+        return False, (
+            "missing metadata.acceptance_report; verification=independent requires a "
+            "per-AC reviewer report"
+        ), [{
+            "code": "acceptance_report_missing",
+            "title": "缺少验收报告",
+            "detail": "完成调用必须携带 metadata.acceptance_report",
+            "action": "按 spec 形状提交逐条 AC 报告后重试",
+        }], None
+    try:
+        normalized = validate_report(
+            report,
+            expected_ids=expected_criteria_ids(criteria),
+            implementer=implementer,
+            current_review_event_id=cycle_id,
+        )
+    except AcceptanceReportViolation as exc:
+        return False, str(exc), exc.blockers, None
+    return True, "", [], normalized
+
+
+def _gate_verification_level(
+    conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None,
+    metadata: Optional[dict] = None,
+) -> Optional[dict]:
     """complete_task 单点等级门（在既有 gates/DoD 门之后）。
 
     - NULL/standard：现状零成本路径直接过。
-    - independent：需评审闭环证据（review handoff＋verdict）。
+    - independent：需当前评审周期的逐条 AC 验收报告；reviewer 必须独立于
+      implementer，报告与契约 AC 一一对应且证据可核验（见 acceptance_report.py）。
     - strict:pr：需 PR acceptance 事件 ok。
     判定器异常 fail-closed（verifier_unavailable），不猜通过；拒绝落
-    ``verification_level_result`` 事件（事务外小事务，同 gate_transition 先例）。
+    ``acceptance_blocked`` / ``verification_level_result`` 事件（事务外小事务，
+    同 gate_transition 先例）。
+
+    返回 independent 通过时的 ``{"level", "acceptance_report"}``（由 complete_task
+    在完成事务内落 ``acceptance_report`` 事件）；其余档返回 None。
     """
     row = conn.execute("SELECT verification FROM tasks WHERE id = ?", (task_id,)).fetchone()
     level = (row["verification"] if row else None) or "standard"
     if level == "standard":
-        return
-    detail, satisfied = None, None
+        return None
+    detail, satisfied, blockers = None, None, []
     try:
         if level == "strict:pr":
             # 本次 complete 的 PR 检查结果优先（green 即过）；None=无 PR 契约
@@ -3200,11 +3296,31 @@ def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_recei
                 "to go green, then complete again"
             )
         elif level == "independent":
-            satisfied = _review_verdict_satisfied(conn, task_id)
-            detail = "review handoff with a verdict on record" if satisfied else (
-                "no review handoff verdict found; call request_review and let "
-                "the reviewer run decide before completing"
+            satisfied, detail, blockers, normalized = _independent_acceptance(
+                conn, task_id, metadata,
             )
+            if not satisfied and _acceptance_override_enabled():
+                with contextlib.suppress(Exception):
+                    with write_txn(conn):
+                        _append_event(conn, task_id, "acceptance_override", {
+                            "level": level,
+                            "detail": (detail or "")[:600],
+                            "blockers": blockers,
+                        })
+                satisfied, detail, blockers, normalized = (
+                    True, "acceptance override enabled (HERMES_KANBAN_ACCEPTANCE_OVERRIDE=1)",
+                    [], None,
+                )
+            if satisfied:
+                return {"level": level, "acceptance_report": normalized}
+            with contextlib.suppress(Exception):
+                with write_txn(conn):
+                    _append_event(conn, task_id, "acceptance_blocked", {
+                        "level": level,
+                        "blockers": blockers,
+                        "detail": (detail or "")[:600],
+                    })
+            raise VerificationLevelBlocked(level, detail or "acceptance report rejected", blockers)
         else:
             # 未知值在建/改时已拒；库内直写的畸形值按 fail-closed 处理。
             raise ValueError(f"unknown verification level {level!r}")
@@ -3225,6 +3341,7 @@ def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_recei
                 _append_event(conn, task_id, "verification_level_result",
                               {"level": level, "satisfied": False, "reason": detail})
         raise VerificationLevelBlocked(level, detail)
+    return None
 
 
 def complete_task(
@@ -3286,12 +3403,13 @@ def complete_task(
     # 门序在 prepare_acceptance 之后：strict:pr 优先用本次 PR 检查结果
     # （acceptance.ok），无 PR 契约的卡回落库内最新 pr_acceptance 事件——
     # 先门后查会让 strict 卡首次 complete 必拒且 acceptance 永不落库（死锁）。
-    _gate_verification_level(
+    verification_gate = _gate_verification_level(
         conn, task_id,
         # prepare 返回 (snapshot, receipt)；receipt.ok=本次 PR required checks 实测
         pr_receipt_ok=(acceptance[1].get("ok")
                        if isinstance(acceptance, tuple) and len(acceptance) == 2
                        and isinstance(acceptance[1], dict) else None),
+        metadata=metadata,
     )
     if acceptance is False:
         return False
@@ -3359,6 +3477,13 @@ def complete_task(
                     synth_metadata = {"source_status": "review", "approval": "manual"}
                 run_id = _synthesize_ended_run(
                     conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
+                )
+            if verification_gate and verification_gate.get("acceptance_report"):
+                # 逐条 AC 验收报告与完成状态同事务落账：回滚则报告不存在，
+                # 不存在「报告已落但任务没完成」的中间态。
+                _append_event(
+                    conn, task_id, "acceptance_report",
+                    verification_gate["acceptance_report"], run_id=run_id,
                 )
             event_summary = handoff_summary
             if prior_status == "review" and not event_summary:
@@ -3956,6 +4081,27 @@ def request_review(
 
     summary = redact_review_value(summary)
     metadata = redact_review_value(metadata)
+    # 返修轮次上限（SoduWork 结果交付吸收）：changes_requested 计数达到上限后
+    # 拒绝再请求评审，防止同一张卡无限「退回—重做—再审」。force=True 越过并留痕。
+    max_rounds = _max_rework_rounds()
+    if max_rounds and not force:
+        prior = conn.execute(
+            "SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND kind = 'changes_requested'",
+            (task_id,),
+        ).fetchone()
+        rounds = int(prior["n"] if prior is not None else 0)
+        if rounds >= max_rounds:
+            with contextlib.suppress(Exception):
+                with write_txn(conn):
+                    _append_event(conn, task_id, "rework_exhausted", {
+                        "rounds": rounds, "maxRounds": max_rounds,
+                        "summary": _first_line(summary, 300) or None,
+                    })
+            return _ret(
+                False,
+                f"rework rounds exhausted ({rounds}/{max_rounds}); pass force=True "
+                "to request another review or re-scope the card",
+            )
     # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
     # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）；拒绝/告警
     # 事件留在事务外，通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
@@ -4143,6 +4289,11 @@ def request_changes(
         run_id = _end_run(
             conn, task_id, outcome="changes_requested", status=new_status, summary=reason,
         )
+        prior_rounds = conn.execute(
+            "SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND kind = 'changes_requested'",
+            (task_id,),
+        ).fetchone()
+        rework_round = int(prior_rounds["n"] if prior_rounds is not None else 0) + 1
         _append_event(
             conn,
             task_id,
@@ -4152,6 +4303,7 @@ def request_changes(
                 "implementer": implementer,
                 "reviewer": reviewer,
                 "status": new_status,
+                "reworkRound": rework_round,
             },
             run_id=run_id,
         )
