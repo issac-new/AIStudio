@@ -20,6 +20,7 @@ const SOURCE_LABELS: Record<string, string> = {
   'skill-provisioning': '技能清单',
   profiles: 'profile 声明',
   'fleet-directory': '舰队上报',
+  'external-experts': '外部专家',
 }
 
 const TOP_N = 20
@@ -76,6 +77,9 @@ onMounted(refresh)
     <div class="cp__bar">
       <h3 class="cp__title">能力供需</h3>
       <span class="cp__hint">能力标签是调度单元——有需求、有供给、有缺口，才谈得上能力调度</span>
+      <span v-if="report?.demandSource === 'skills-fallback'" class="cp__hint" data-testid="cp-demand-source">
+        需求来源：任务 skills 过渡口径（required_capabilities 落地前）
+      </span>
     </div>
 
     <div v-if="errorMsg" class="cp__err" data-testid="cp-error">{{ errorMsg }}</div>

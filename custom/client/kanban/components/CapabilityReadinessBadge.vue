@@ -52,7 +52,7 @@ watch(
   { immediate: true },
 )
 
-const DECISION_LABEL: Record<string, string> = { pass: '通过', warn: '警告', block: '缺供给' }
+const DECISION_LABEL: Record<string, string> = { pass: '通过', warn: '警告', block: '缺供给', unknown: '无法判定' }
 </script>
 
 <template>
@@ -87,6 +87,7 @@ const DECISION_LABEL: Record<string, string> = { pass: '通过', warn: '警告',
 .cr__decision.is-pass { color: var(--success, #18a058); }
 .cr__decision.is-warn { color: var(--warning, #d08a00); }
 .cr__decision.is-block { color: var(--danger, #d03050); }
+.cr__decision.is-unknown { color: var(--text-muted, #888); border-style: dashed; }
 .cr__reason { font-size: 11px; color: var(--text-muted); line-height: 1.35; }
 .cr__candidates { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 11px; }
 .cr__candidate { display: inline-flex; gap: 4px; align-items: baseline; }

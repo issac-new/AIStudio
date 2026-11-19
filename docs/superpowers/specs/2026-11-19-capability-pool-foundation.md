@@ -88,7 +88,7 @@
 ### 3.1 增量一：统一词表与登记补齐
 
 - 词表单一源：能力台账 L2/L3 的 `capability` 与 `skills` 标签，校验复用 `custom/server/governance/governance-ledger.ts:21` 的 `SKILL_TAG_RE`。新增标签必须挂到有效 L2 或已注册技能；无主标签不进入派单。
-- 登记补齐：新增维护脚本 `scripts/maintenance/capability-registry-seed.mjs`，从 `team/shared/profiles.yaml`、`team/profiles/_shared/skill-provisioning.json`、`team/shared/capability-graph.yaml` 生成 `agent-capabilities.md` 的行；只写有证据的声明，未声明的 Agent 标 `unknown`，不填默认能力。脚本通过既有 `registry-admin` 写通道落盘，不直写治理仓文件。
+- 登记补齐：新增维护脚本 `scripts/maintenance/capability-registry-seed.mjs`，从 `team/shared/profiles.yaml`、`team/profiles/_shared/skill-provisioning.json`、`team/shared/capability-graph.yaml`、`team/shared/role-tool-matrix.yaml` 生成 `agent-capabilities.md` 的候选行；只写有证据的声明，未声明的 Agent 标 `unknown`，不填默认能力。脚本默认 dry-run（stdout），`--write` 直写目标文件——它是生成器不是编辑器；交互编辑与 git 审计仍走 registry-admin 通道（审查修正：原文"经 registry-admin 写通道落盘"与实现不符）。
 - 能力图：手工区补齐核心 profile 的 `capabilities`（orchestrator、worker-coder、worker-tester、reviewer、ops、product 等）；未声明者保留 `unknown`，不以空数组冒充“无能力”。
 - Matrix 生产端：`custom/server/matrix/chat-bridge.ts:427-439` 输出 `schemaVersion: 2`、`updatedBy/updatedAt` 与每 Agent 的 `capabilities`；不改协议，只修生产端。客户端解析器保持现状。
 - 退役：删除 `graph-assembly.ts:369-386` 的静默空表 catch，改为显式 `available:false` 并记录缺口；这是本增量配对的退役项。
@@ -96,13 +96,15 @@
 ### 3.2 增量二：能力供需读模型与派单准入
 
 - 新增只读投影 `custom/server/capabilitypool/`（`types.ts`、`derive.ts`、`controller.ts`），不建存储、不复制事实源。
-- 需求侧：优先读任务 `required_capabilities`（增量三落地前的过渡期读 `skills`，并在输出标注 `source='skills-fallback'`）；按标签、板、状态、年龄聚合。
-- 供给侧：读能力台账（L3 单元与 skills）、能力图（capabilities/substitutes/reliability）、技能供给清单（角色到技能）、`profiles.yaml`（skills_enabled/skills_pinned/toolsets）、舰队能力目录（多机 profile×角色×技能数）。
-- 输出每标签一行：`demand`、`supplyUnits`、`supplyAgents`、`gap`、`distinctBoards`、`supplyLeadTimeMedian`、`lastUsedAt`、`sources`、`evidenceRefs`。每个源独立 `available`；源缺席返回 `null` 并标 unknown，不猜 0。
-- 派单准入：在 `custom/server/kanban/dispatch-readiness.ts:47-81` 增加纯函数 `assessCapabilityReadiness(task, supply, candidates)`：
-  - 需求技能包在技能目录中不存在：`block`，原因 `skill_not_installed`。
-  - 有 assignee 但未声明该能力：`warn`，原因 `assignee_undeclared`，允许 `will_force_load`，不阻断。
-  - 无 assignee：返回候选 Agent（按能力覆盖、`reliability`、在途负载排序），`decision='warn'`，候选只作建议。
+- 需求侧：优先读任务 `required_capabilities`（增量三落地前的过渡期读 `skills`，供需报告顶层标注 `demandSource='skills-fallback'`，治理页显示"需求来源：任务 skills 过渡口径"）；按标签、板、状态、年龄聚合。
+- 供给侧：读能力台账（L3 单元与 skills）、能力图（capabilities/substitutes/reliability）、技能供给清单（角色到技能）、`profiles.yaml`（只取 `skills_pinned` 个体声明——`skills_enabled` 是分类白名单不是能力标签）、舰队能力目录（多机 profile×角色×技能名）；外部专家池 v1 不建模，sources 中恒 `external-experts: available:false` 占位（D7）。
+- 输出每标签一行：`demand`、`supplyUnits`、`supplyAgents`、`supplySkills`、`gap`、`distinctBoards`、`supplyLeadTimeMedian`、`lastUsedAt`、`sources`、`evidenceRefs`。每个源独立 `available`；源缺席返回 `null` 并标 unknown，不猜 0。
+- 派单准入：纯函数 `assessCapabilityReadiness`（实现在 `custom/server/capabilitypool/derive.ts`，任务级包装 `readiness.ts`）：
+  - 供给源全部缺席：`unknown`，原因 `supply_sources_unavailable`——源故障不冒充“缺供给”（审查修正，原案未定义此态）。
+  - 需求标签在五源供给并集中不存在：`block`，原因 `capability_not_supplied:<tag>`（原案的 `skill_not_installed` 原因码未采用——判定面是供给并集不是技能目录）。
+  - 能力图缺席时 assignee 声明不可判：`warn`，原因 `assignee_unverifiable`——与“图在位但未声明”区分。
+  - 有 assignee 但未声明该能力：`warn`，原因 `assignee_undeclared:<tag>`，不阻断。
+  - 无 assignee：返回候选 Agent（按能力覆盖、`reliability`、在途负载排序），`decision='warn'`，候选只作建议。派单热路径的候选 load 恒 0（同步纯函数不读看板库）；真实在途负载只在 REST `/candidates` 接入，两路径排序依据差异登记在未决事项。
   - 无需求：`pass`，存量卡行为不变。
 - 准入接线：列编排在既有 readiness 链后调用，mention 派单在入口调用同一纯函数；默认只 warn，不阻断、不改派；不修改内核 claim 权威。若需要内核层强制，另立补丁并在本 spec 的增量三评审后再定。
 
@@ -111,7 +113,7 @@
 - 任务字段：新增 `required_capabilities`（JSON 数组，可选，旧行 NULL）。语义是“完成该任务需要的能力标签”，与 `skills` 的强制加载语义分离。内核迁移随批一 `tasks.outcome_id` 同一枚补丁批次落地，避免两次迁移；补丁号等 series 尾稳定后分配，不抢先占用 804-806。
 - 采集：任务创建、修订、派发各写一条结构化事件，带 `requiredCapabilities`、`source`、`declaredAt`、`actor`；不记敏感原值。
 - 三项指标，全部放 `measure/`：
-  - `measure/capability-supply-lead-time`：带能力需求的任务从 `created` 到首次 `run started`（或团队 active）的中位/ P95 时长。消费者：超过阈值触发能力缺口复核。
+  - `measure/capability-supply-lead-time`：带能力需求的任务从 `created` 到首次 `run started` 的中位时长。消费者：中位超过 24h 触发能力缺口复核（P95 分位留待有足够样本后另行登记，不引用不存在的统计量）。
   - `measure/capability-reuse-rate`：被两个及以上板调用过的能力标签数 ÷ 至少被调用一次的能力标签数。消费者：零调用与低复用标签进入退役复核。
   - `measure/human-ai-team-success`：同时含 person 与 agent 成员的 OutcomeTeam，其结算 verdict 为成功的比例。消费者：团队组合复核。批三结算口径落地前返回 `available:false`，不写 0 或 100。
 - 每项指标在 `metricpolicy` 登记 `consumerPlan`（计划决策/阈值/owner）；实际决策发生后才写 `consumers.decisionRef`。未发生前 consumers 为空，仍按装饰处理，不伪造决策锚。
@@ -169,7 +171,7 @@ interface CapabilityReadinessCandidate {
 }
 
 interface CapabilityReadiness {
-  decision: 'pass' | 'warn' | 'block'
+  decision: 'pass' | 'warn' | 'block' | 'unknown'   // unknown=供给源全部缺席，无法判定
   reasons: string[]
   candidates: CapabilityReadinessCandidate[]
   evidenceRefs: string[]
@@ -198,7 +200,7 @@ interface CapabilityReadiness {
 | 界面 | `custom/client/governance/components/`、`custom/client/kanban/components/` | 既有区块扩展 |
 | 治理页供需表 | `custom/client/governance/components/CapabilitySupplySection.vue` | 挂 `GovHarnessView`，只读 |
 | 任务抽屉准入 | `custom/client/kanban/components/CapabilityReadinessBadge.vue` | 挂 `KanbanTaskDrawer`，只读建议 |
-| 注册表种子 | `scripts/maintenance/capability-registry-seed.mjs` | 一次性维护脚本，经 registry-admin 写 |
+| 注册表种子 | `scripts/maintenance/capability-registry-seed.mjs` | 一次性生成器：默认 dry-run，`--write` 直写目标文件；编辑与审计走 registry-admin |
 
 ## 6. 决策记录
 
@@ -247,7 +249,13 @@ interface CapabilityReadiness {
 - 生产构建：`npm run build` 退出 0，`verify-dist` 通过。
 - 真实走查：隔离服务 18647 + Vite 18649，临时 `HERMES_HOME`，真实任务 `walk-t1` 声明 `skills=["coding","review"]`。治理页能力供需显示供给时效 3,500ms、复用率 50.0%、人机团队成功率 `—`；`coding` 需求 2/单元 8/Agent 1/跨板 2，`review` 需求 1/单元 5/跨板 1；任务抽屉显示“警告 / no_assignee / 候选 worker-coder 可靠度 0.474”。
 - 走查抓出并修复两处真实问题：供需同名标签被误报 `duplicate`（改为只校验需求侧每条任务）；`profiles.skills_enabled` 分类白名单混入供给（改为只计 `skills_pinned`，标签数 144→124）。
-- 未做：`required_capabilities` 内核字段（Task 8，等补丁号）；独立审查（非实现者复核）尚未进行。
+- 独立审查（2026-11-19，冷读子代理，非实现者）：P0×0 / P1×5 / P2×11。五条 P1 全部当轮修复：
+  1. spec 承诺的 `skill_not_installed`/`will_force_load` 原因码与实现不符 → §3.2 改按实现口径（`capability_not_supplied:<tag>`，判定面=五源供给并集）。
+  2. 种子脚本实际直写而非 registry-admin 通道 → spec 改为“生成器 dry-run/--write，编辑审计走 registry-admin”。
+  3. `skills-fallback` 口径标注未落地 → 供需报告顶层 `demandSource` 字段＋治理页“需求来源”提示行。
+  4. consumerPlan 阈值引用不存在的 P95 → 改“中位 > 24h”（spec 与 store 同步）。
+  5. 准入路径五源全故障误报 block → 新增 `unknown` 决策（`supply_sources_unavailable`），REST 与派单两路同修；另修图缺席时 assignee 误报 `assignee_undeclared` → `assignee_unverifiable`。
+  P2 修复：复用率样本下限 2（单标签 0%/100% 是单点误导）；metrics median 空数组守卫；供给侧未声明判定改用词法过滤后长度；种子脚本 skills 列剔除 skills_enabled（与 derive 同口径）；chat-bridge 标签长度改用 `SKILL_TAG_MAX`；readiness 头注释四源→五源；UI 复用率 0-1×100 渲染加守门断言。未修（登记）：派单热路径候选 load 恒 0（见未决事项 6）、供给侧词法问题未进 tagIssues、派单路径非法标签静默放行（REST 422，两路口径差异接受）。
 
 ## 8. 设计文档影响
 
@@ -290,3 +298,6 @@ DESIGN_DOCS: docs/DESIGN.md
 3. 能力图的 27 个未声明 Agent 是否在本批补齐，取决于 owner 是否愿意提供有证据的声明；不以推测填充。
 4. 外部专家池是否在未来建模，需单独立项；本批只保留 `available:false` 占位语义。
 5. 批三 `OutcomeTeam` 消费本批供需表的接口形态，需在批三增量 spec 中确认。
+6. 候选排序的 load 键在两条路径依据不一致（审查 S2）：派单热路径（列编排/mention）是同步纯函数、候选 load 恒 0；真实在途负载只在 REST `/candidates` 经 `collectAgentLoads` 接入。若两路排序差异造成实际误排，再评估把负载快照注入派单路径的成本。
+7. 供给侧词法问题（如台账单元声明了非法标签）目前静默丢弃、不进 `tagIssues`；量小且治理面有 unknowns 兜底，出现实际污染再收口。
+8. 派单路径对非法需求标签静默按“无需求”放行（不抛错），REST `/candidates` 则 422——两路口径差异是有意的（派单热路径禁抛），已用注释与测试固化。

@@ -11,6 +11,7 @@ profiles:
     skills_pinned: [skill-recall]
   worker-tester:
     skills_enabled: [testing]
+    skills_pinned: [unit-test]
   unknown-profile:
     skills_enabled: []
 `,
@@ -52,7 +53,8 @@ describe('buildRegistrySeed', () => {
     expect(byName.get('worker-tester')).toMatchObject({
       roleTemplate: 'tester',
       capabilities: 'unknown',
-      skills: 'testing',
+      // skills_enabled 分类白名单（testing）不入列，只列个体声明（审查 S4 修复）
+      skills: 'unit-test',
     })
     expect(byName.get('aiteam-scout')).toMatchObject({
       roleTemplate: 'analyst',

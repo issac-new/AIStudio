@@ -30,6 +30,8 @@ export interface CapabilityTagIssueDto {
 
 export interface CapabilitySupplyReportDto {
   generatedAt: number
+  /** 需求侧口径：skills-fallback=任务 skills 过渡口径（Task 8 落地后切 declared） */
+  demandSource: 'declared' | 'skills-fallback'
   rows: CapabilityGapRowDto[]
   tagIssues: CapabilityTagIssueDto[]
   sources: Record<string, CapabilitySourceAvailabilityDto>
@@ -53,7 +55,7 @@ export interface CapabilityReadinessCandidateDto {
 }
 
 export interface CapabilityReadinessDto {
-  decision: 'pass' | 'warn' | 'block'
+  decision: 'pass' | 'warn' | 'block' | 'unknown'
   reasons: string[]
   candidates: CapabilityReadinessCandidateDto[]
   evidenceRefs: string[]

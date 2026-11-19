@@ -31,7 +31,7 @@ import {
 } from './task-protocol'
 import { atomicWriteJson } from '../lib/fs-store'
 import { collectGraph } from '../capabilitypool/collect'
-import { SKILL_TAG_RE } from '../governance/governance-ledger'
+import { SKILL_TAG_MAX, SKILL_TAG_RE } from '../governance/governance-ledger'
 
 export interface BridgeMatrixEnv { homeserverUrl: string; accessToken: string; userId: string }
 export interface BridgeMapping { matrixRoomId: string; gcRoomId: string }
@@ -470,7 +470,7 @@ export class ChatBridge {
             ? declared.capabilities
             : viewCapabilities
           const capabilities = rawCapabilities
-            .filter((tag) => SKILL_TAG_RE.test(tag) && tag.length <= 64)
+            .filter((tag) => SKILL_TAG_RE.test(tag) && tag.length <= SKILL_TAG_MAX)
             .slice(0, 10)
           const viewMaxParallel = typeof v.maxParallel === 'number' && Number.isInteger(v.maxParallel) && v.maxParallel >= 1
             ? v.maxParallel

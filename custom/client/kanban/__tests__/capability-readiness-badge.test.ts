@@ -41,6 +41,24 @@ describe('CapabilityReadinessBadge', () => {
     expect(api.fetchCapabilityCandidates).not.toHaveBeenCalled()
   })
 
+  it('供给源全缺席时显示“无法判定”，不显示红色“缺供给”', async () => {
+    api.fetchCapabilityCandidates.mockResolvedValue({
+      ok: true,
+      readiness: {
+        decision: 'unknown',
+        reasons: ['supply_sources_unavailable'],
+        candidates: [],
+        evidenceRefs: [],
+      },
+    })
+    const { default: Badge } = await import('../components/CapabilityReadinessBadge.vue')
+    const w = mount(Badge, { props: { taskId: 't1', skills: ['coding'], assignee: null } })
+    await flushPromises()
+    expect(w.text()).toContain('无法判定')
+    expect(w.text()).not.toContain('缺供给')
+    expect(w.find('.cr__decision').classes()).toContain('is-unknown')
+  })
+
   it('接口返回失败显示错误文本，不显示“通过”', async () => {
     api.fetchCapabilityCandidates.mockResolvedValue({
       ok: false,

@@ -32,6 +32,11 @@ describe('CapabilitySupplySection', () => {
           sample: 2, available: true, definition: '中位时长 / 同口径任务数', sources: [],
         },
         {
+          // 0-1 分数 × 100 渲染守门（审查 S3：复用率口径与 autonomy-rate 同约定）
+          key: 'measure/capability-reuse-rate', title: '能力复用率', value: 0.5, unit: '%',
+          sample: 2, available: true, definition: '被 ≥2 板调用的标签数 / 有需求标签数', sources: [],
+        },
+        {
           key: 'measure/human-ai-team-success', title: '人机团队成功率', value: null, unit: '%',
           sample: 0, available: false, gap: '批三 OutcomeTeam/Settlement 未落地', definition: '成功团队数 / 已结算团队数', sources: [],
         },
@@ -41,6 +46,7 @@ describe('CapabilitySupplySection', () => {
       ok: true,
       report: {
         generatedAt: 1,
+        demandSource: 'skills-fallback',
         rows: [
           {
             tag: 'coding', demand: 2, supplyUnits: 1, supplyAgents: 1, supplySkills: 0, gap: 0,
@@ -65,7 +71,9 @@ describe('CapabilitySupplySection', () => {
 
     expect(w.find('[data-testid="capability-supply-section"]').exists()).toBe(true)
     expect(w.find('[data-testid="cp-metrics"]').text()).toContain('1,500 ms')
+    expect(w.find('[data-testid="cp-metrics"]').text()).toContain('50.0%')
     expect(w.find('[data-testid="cp-metrics"]').text()).toContain('批三 OutcomeTeam/Settlement 未落地')
+    expect(w.find('[data-testid="cp-demand-source"]').text()).toContain('skills 过渡口径')
     expect(w.find('[data-testid="cp-row-missing"]').classes()).toContain('is-gap')
     expect(w.find('[data-testid="cp-table"]').text()).toContain('missing')
     expect(w.find('[data-testid="cp-sources"]').text()).toContain('能力图 未知')

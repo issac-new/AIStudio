@@ -103,8 +103,8 @@ export const BUILTIN_METRICS: MetricDef[] = [
     sources: ['kanban tasks.skills', 'kanban task_runs.started_at'],
     consumers: [],
     consumerPlan: {
-      decision: '能力缺口复核（P95 超阈值开复核）',
-      threshold: 'P95 > 24h',
+      decision: '能力缺口复核（中位超阈值开复核）',
+      threshold: '中位 > 24h',
       owner: 'orchestrator',
     },
     version: 1,

@@ -53,6 +53,8 @@ export type CapabilitySupplySource =
   | 'skill-provisioning'
   | 'profiles'
   | 'fleet-directory'
+  /** D7：外部专家池 v1 不建模，恒 available:false 占位——不伪造供给 */
+  | 'external-experts'
 
 export interface CapabilitySupplyEntry {
   tag: string
@@ -102,7 +104,8 @@ export interface CapabilityReadinessCandidate {
 }
 
 export interface CapabilityReadiness {
-  decision: 'pass' | 'warn' | 'block'
+  /** unknown=供给源全部缺席，无法判定（不得当成缺供给报 block） */
+  decision: 'pass' | 'warn' | 'block' | 'unknown'
   reasons: string[]
   candidates: CapabilityReadinessCandidate[]
   evidenceRefs: string[]
@@ -191,10 +194,14 @@ export interface SupplyDemandInput {
   profiles: ProfilesSnapshot
   fleet: FleetSnapshot
   now?: number
+  /** 需求侧口径标注：required_capabilities 落地前恒为 skills-fallback（Task 8 后切 declared） */
+  demandSource?: 'declared' | 'skills-fallback'
 }
 
 export interface SupplyDemandReport {
   generatedAt: number
+  /** 需求侧口径：当前为 skills 过渡口径；消费者须知道这不是结构化能力声明 */
+  demandSource: 'declared' | 'skills-fallback'
   rows: CapabilityGapRow[]
   tagIssues: CapabilityTagIssue[]
   sources: Record<CapabilitySupplySource, SourceAvailability>

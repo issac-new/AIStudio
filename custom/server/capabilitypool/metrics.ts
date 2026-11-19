@@ -17,10 +17,14 @@ export {
 } from './metric-defs'
 
 function median(values: readonly number[]): number {
+  if (values.length === 0) throw new Error('median: 空样本（调用方须先做 length 守卫）')
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
 }
+
+/** 复用率样本下限：分母标签数 <2 时 0%/100% 都是单点误导，按既有指标纪律报 unavailable。 */
+const REUSE_MIN_SAMPLE = 2
 
 /** 能力供给时效：创建 → 首次 run started 的中位时长。分母=同口径任务数。 */
 export async function capabilitySupplyLeadTime(): Promise<DerivedReading> {
@@ -75,6 +79,19 @@ export async function capabilityReuseRate(): Promise<DerivedReading> {
       sample: 0,
       available: false,
       gap: '未找到带 skills 声明的任务',
+      definition: CAPABILITY_REUSE_RATE_DEFINITION,
+      sources: ['kanban tasks.skills', 'kanban boards'],
+    }
+  }
+  if (usedTags < REUSE_MIN_SAMPLE) {
+    return {
+      key: 'measure/capability-reuse-rate',
+      title: '能力复用率',
+      value: null,
+      unit: '%',
+      sample: usedTags,
+      available: false,
+      gap: `有需求的标签仅 ${usedTags} 个，低于样本下限 ${REUSE_MIN_SAMPLE}——单标签 0%/100% 是单点误导`,
       definition: CAPABILITY_REUSE_RATE_DEFINITION,
       sources: ['kanban tasks.skills', 'kanban boards'],
     }

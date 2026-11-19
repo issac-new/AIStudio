@@ -1,7 +1,7 @@
 # 能力池地基实施计划（AI 原生组织 C 方案·批二点五）
 
 > 对应 spec：`docs/superpowers/specs/2026-11-19-capability-pool-foundation.md`
-> 状态：计划（2026-11-19）。进度：Task 1/2/3/4/5/6/7/9/10/11 已实现；Task 8 未开工（等批一 804-806 补丁号稳定）。验证：目标套件 210 例、全量 9250 例（排除环境阻塞 overlay-pristine-replay：8647 活服拒绝 clean）、生产构建、`typecheck:harness`、`governance-lint --budget` 全绿；真实走查（隔离 18647+Vite 18649，真实 task skills）治理页与任务抽屉均按预期显示。走查抓出并修复两处真实问题：同名标签误报 duplicate、`skills_enabled` 分类白名单混入供给。未做：独立审查、提交、推送。
+> 状态：计划（2026-11-19）。进度：Task 1/2/3/4/5/6/7/9/10/11 已实现（提交 9059f9e）；独立审查（冷读子代理）P0×0/P1×5/P2×11，五条 P1 与主要 P2 已当轮修复（准入 unknown 态、assignee_unverifiable、demandSource 标注、P95→中位、种子写通道口径、复用率样本下限等），修复后目标套件 120 例全绿。Task 8 未开工（等批一 804-806 补丁号稳定）。未推送；收口按用户裁决等批一合并。
 > 依赖：批一（结果与授权地基）正在 `feat/ai-native-operating-model` 分支实施，未合 main；本批的内核任务字段补丁须等批一 804-806 稳定后分配号段。
 
 ## Global Constraints

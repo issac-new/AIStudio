@@ -19,7 +19,13 @@ const SOURCE_ORDER: readonly CapabilitySupplySource[] = [
   'skill-provisioning',
   'profiles',
   'fleet-directory',
+  'external-experts',
 ]
+
+const EXTERNAL_EXPERTS_PLACEHOLDER: { available: boolean; note: string } = {
+  available: false,
+  note: '外部专家池 v1 不建模——占位声明，不伪造供给',
+}
 
 function availabilityOf(input: SupplyDemandInput): Record<CapabilitySupplySource, { available: boolean; note?: string }> {
   return {
@@ -28,6 +34,7 @@ function availabilityOf(input: SupplyDemandInput): Record<CapabilitySupplySource
     'skill-provisioning': { available: input.skillProvisioning.available, ...(input.skillProvisioning.note ? { note: input.skillProvisioning.note } : {}) },
     profiles: { available: input.profiles.available, ...(input.profiles.note ? { note: input.profiles.note } : {}) },
     'fleet-directory': { available: input.fleet.available, ...(input.fleet.note ? { note: input.fleet.note } : {}) },
+    'external-experts': EXTERNAL_EXPERTS_PLACEHOLDER,
   }
 }
 
@@ -101,7 +108,8 @@ export function deriveSupplyDemand(input: SupplyDemandInput): SupplyDemandReport
           acc.lastUsedAt = unit.lastUsedAt
         }
       }
-      if (unit.skills.length === 0) unknowns.push(`capability-ledger:${unit.id} 未声明技能标签`)
+      // 判"未声明"用词法过滤后的列表：全非法标签（既不进供给也不算已声明）同样落 unknown
+      if (valid.length === 0) unknowns.push(`capability-ledger:${unit.id} 未声明技能标签`)
     }
   }
 
@@ -112,7 +120,7 @@ export function deriveSupplyDemand(input: SupplyDemandInput): SupplyDemandReport
         const acc = accFor(map, tag)
         acc.graphAgents.add(agent.name)
       }
-      if (agent.capabilities.length === 0) unknowns.push(`capability-graph:${agent.name} 未声明能力（unknown，不按无能力处理）`)
+      if (valid.length === 0) unknowns.push(`capability-graph:${agent.name} 未声明能力（unknown，不按无能力处理）`)
     }
   }
 
@@ -184,7 +192,7 @@ export function deriveSupplyDemand(input: SupplyDemandInput): SupplyDemandReport
   }
   if (input.demands.length === 0) unknowns.push('demand: 未找到带能力需求的任务')
 
-  return { generatedAt, rows, tagIssues, sources, unknowns }
+  return { generatedAt, demandSource: input.demandSource ?? 'skills-fallback', rows, tagIssues, sources, unknowns }
 }
 
 function sortCandidates(
@@ -212,18 +220,30 @@ function sortCandidates(
 /**
  * 派单前能力准入纯函数。
  *
- * 决策顺序：无需求放行；需求标签没有任何供给→block；有需求但无 assignee→warn（给候选）；
+ * 决策顺序：无需求放行；供给源全部缺席→unknown（源故障不冒充"缺供给"）；
+ * 需求标签没有任何供给→block（原因 capability_not_supplied:<tag>）；有需求但无 assignee→warn（给候选）；
  * assignee 未声明覆盖→warn；全部覆盖→pass。block 只用于确定性缺失，避免误阻断。
  */
 export function assessCapabilityReadiness(input: {
   requiredTags: readonly string[]
   supplyTags: readonly string[]
-  assignee: { agentId: string; tags: readonly string[] } | null
+  assignee: { agentId: string; tags: readonly string[] | null } | null
   candidates: readonly CapabilityReadinessCandidate[]
+  /** 供给侧至少一个源可用时才允许判 block；全缺席时判 unknown（fail-soft，不猜数） */
+  anySourceAvailable?: boolean
 }): CapabilityReadiness {
   const { valid: required } = validateCapabilityTags(input.requiredTags)
   if (required.length === 0) {
     return { decision: 'pass', reasons: ['no_capability_requirement'], candidates: [], evidenceRefs: [] }
+  }
+
+  if (input.anySourceAvailable === false) {
+    return {
+      decision: 'unknown',
+      reasons: ['supply_sources_unavailable'],
+      candidates: [],
+      evidenceRefs: [],
+    }
   }
 
   const supply = new Set(input.supplyTags)
@@ -242,6 +262,16 @@ export function assessCapabilityReadiness(input: {
 
   if (!input.assignee) {
     return { decision: 'warn', reasons: ['no_assignee'], candidates, evidenceRefs: candidateRefs }
+  }
+
+  if (input.assignee.tags === null) {
+    // 能力图缺席时 assignee 声明不可判：源故障与"真的未声明"不可区分，用独立原因
+    return {
+      decision: 'warn',
+      reasons: ['assignee_unverifiable'],
+      candidates,
+      evidenceRefs: [`agent:${input.assignee.agentId}`, ...candidateRefs],
+    }
   }
 
   const assigned = new Set(input.assignee.tags)

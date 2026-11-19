@@ -71,6 +71,28 @@ describe('能力组指标', () => {
     })
   })
 
+  it('复用率样本低于下限时 unavailable——单标签 0%/100% 是单点误导（审查 S3 修复）', async () => {
+    const singleHome = mkdtempSync(join(tmpdir(), 'capability-metrics-single-'))
+    const db = new DatabaseSync(join(singleHome, 'kanban.db'))
+    db.exec('CREATE TABLE tasks (id TEXT PRIMARY KEY, status TEXT, created_at INTEGER, skills TEXT)')
+    db.exec('CREATE TABLE task_runs (task_id TEXT NOT NULL, started_at INTEGER NOT NULL)')
+    db.prepare('INSERT INTO tasks VALUES (?,?,?,?)').run('t9', 'ready', 1, '["coding"]')
+    db.close()
+    const prev = process.env.HERMES_HOME
+    process.env.HERMES_HOME = singleHome
+    try {
+      const reading = await capabilityReuseRate()
+      expect(reading.available).toBe(false)
+      expect(reading.value).toBeNull()
+      expect(reading.sample).toBe(1)
+      expect(reading.gap).toContain('样本下限')
+    } finally {
+      if (prev === undefined) delete process.env.HERMES_HOME
+      else process.env.HERMES_HOME = prev
+      rmSync(singleHome, { recursive: true, force: true })
+    }
+  })
+
   it('人机团队成功率在批三结算口径前明确 unknown，不写 0/100', () => {
     const reading = humanAiTeamSuccess()
     expect(reading).toMatchObject({

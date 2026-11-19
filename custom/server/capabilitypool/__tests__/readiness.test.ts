@@ -62,6 +62,27 @@ describe('assessTaskCapabilityReadiness', () => {
     expect(r.reasons).toEqual(['capability_not_supplied:missing'])
   })
 
+  it('五源全缺席时判 unknown，不把源故障当成缺供给（审查 S3 修复）', () => {
+    const allDown = {
+      ledger: { available: false, units: [] as never[] },
+      graph: { available: false, agents: [] as never[] },
+      skillProvisioning: { available: false, roles: [] as never[] },
+      profiles: { available: false, profiles: [] as never[] },
+      fleet: { available: false, entries: [] as never[] },
+    }
+    const r = assessTaskCapabilityReadiness({ requiredTags: ['coding'], assignee: null, supply: allDown })
+    expect(r.decision).toBe('unknown')
+    expect(r.reasons).toEqual(['supply_sources_unavailable'])
+  })
+
+  it('能力图缺席时 assignee 声明不可判：assignee_unverifiable 而非 assignee_undeclared', () => {
+    const graphDown = { ...supply, graph: { available: false, agents: [] as never[] } }
+    const r = assessTaskCapabilityReadiness({ requiredTags: ['coding'], assignee: 'worker', supply: graphDown })
+    // 台账/技能清单/profiles 仍在位 → 供给可判（coding 有台账供给）→ 走 assignee 分支
+    expect(r.decision).toBe('warn')
+    expect(r.reasons).toEqual(['assignee_unverifiable'])
+  })
+
   it('非法标签被忽略；只有非法标签等同无需求', () => {
     const r = assessTaskCapabilityReadiness({ requiredTags: ['Bad Tag'], assignee: null, supply })
     expect(r.decision).toBe('pass')

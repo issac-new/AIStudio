@@ -57,19 +57,21 @@ capabilityPoolRoutes.get('/candidates', async (ctx) => {
       load: loads.get(agent.name) ?? 0,
       evidenceRefs: [`graph:${agent.name}`],
     }))
+    const anySourceAvailable = Object.entries(report.sources)
+      .filter(([key]) => key !== 'external-experts')
+      .some(([, source]) => source.available)
     const assigneeName = typeof ctx.query.assignee === 'string' ? ctx.query.assignee.trim() : ''
     const assigneeAgent = assigneeName ? graph.agents.find((agent) => agent.name === assigneeName) : undefined
-    const assignee = assigneeAgent
-      ? { agentId: assigneeAgent.name, tags: assigneeAgent.capabilities }
-      : assigneeName
-        ? { agentId: assigneeName, tags: [] }
-        : null
+    const assignee = assigneeName
+      ? { agentId: assigneeName, tags: graph.available ? (assigneeAgent?.capabilities ?? []) : null }
+      : null
 
     const readiness = assessCapabilityReadiness({
       requiredTags: parsed.valid,
       supplyTags,
       assignee,
       candidates,
+      anySourceAvailable,
     })
     ok(ctx, {
       readiness,

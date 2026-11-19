@@ -89,6 +89,9 @@ describe('deriveSupplyDemand', () => {
 
     expect(report.sources['capability-ledger'].available).toBe(true)
     expect(report.sources['fleet-directory'].available).toBe(true)
+    // D7 外部专家池：恒 available:false 占位，不伪造供给
+    expect(report.sources['external-experts']).toEqual({ available: false, note: '外部专家池 v1 不建模——占位声明，不伪造供给' })
+    expect(report.demandSource).toBe('skills-fallback')
     expect(report.unknowns).toContain('capability-graph:agent-2 未声明能力（unknown，不按无能力处理）')
     expect(report.unknowns).toContain('capability-ledger:unit-2 未声明技能标签')
     expect(report.unknowns.some((note) => note.includes('fleet-directory 技能名按 skill 计入供给'))).toBe(true)
@@ -163,6 +166,30 @@ describe('assessCapabilityReadiness', () => {
     })
     expect(r.decision).toBe('block')
     expect(r.reasons).toEqual(['capability_not_supplied:rare-skill'])
+  })
+
+  it('供给源全部缺席时判 unknown，不把源故障当成缺供给（审查 S3 修复）', () => {
+    const r = assessCapabilityReadiness({
+      requiredTags: ['coding'],
+      supplyTags: [],
+      assignee: null,
+      candidates,
+      anySourceAvailable: false,
+    })
+    expect(r.decision).toBe('unknown')
+    expect(r.reasons).toEqual(['supply_sources_unavailable'])
+    expect(r.candidates).toEqual([])
+  })
+
+  it('assignee 声明不可判（tags null）时警告 assignee_unverifiable，不误报未声明', () => {
+    const r = assessCapabilityReadiness({
+      requiredTags: ['coding'],
+      supplyTags: ['coding'],
+      assignee: { agentId: 'assigned', tags: null },
+      candidates,
+    })
+    expect(r.decision).toBe('warn')
+    expect(r.reasons).toEqual(['assignee_unverifiable'])
   })
 
   it('有供给但无 assignee 时警告并给候选', () => {

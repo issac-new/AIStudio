@@ -85,7 +85,9 @@ export function buildRegistrySeed(input) {
     const role = String(profileRoles[name] ?? '').trim()
     const roleTemplate = ROLE_TEMPLATE[role] ?? 'generic'
     const capabilities = list(graph.capabilities)
-    const profileSkills = [...list(profile.skills_enabled), ...list(profile.skills_pinned)]
+    // skills_enabled 是分类白名单（如 software-development），不是能力标签——与
+    // capabilitypool/derive.ts 同口径，只列个体技能声明 skills_pinned（审查 S4 修复）。
+    const profileSkills = list(profile.skills_pinned)
     const manifestSkills = exactRoleSkills(name, skillProvisioning)
     const skills = manifestSkills.length > 0 ? manifestSkills : profileSkills
     return {
