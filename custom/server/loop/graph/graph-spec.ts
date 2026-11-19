@@ -6,11 +6,14 @@ import type { GraphDef, EdgeDef, LoopGuard, NodeErrorRoute, JoinMode, StateSchem
 import { reducers } from './types'
 import { evaluatePredicate, type PredicateExpr } from './predicate'
 import type { NodeRegistry } from './node-registry'
+import type { NodeExecutionSpec } from '../../modelroute/node-resolve'
 
 export interface NodeSpec {
   id: string
   type: string
   config: Record<string, unknown>
+  /** 节点级执行规格（模型/档位/思考强度）；hydrate 时并入工厂 config.execution。 */
+  execution?: NodeExecutionSpec
   retry?: { maxAttempts: number; backoffMs: number }
   timeoutMs?: number
   onError?: NodeErrorRoute
@@ -315,7 +318,11 @@ export function hydrateGraphSpec(spec: GraphSpec, registry: NodeRegistry, custom
   }
   const nodes = new Map()
   for (const n of spec.nodes) {
-    const def = registry.create(n.type, { ...n.config, id: n.id })
+    const def = registry.create(n.type, {
+      ...n.config,
+      id: n.id,
+      ...(n.execution ? { execution: n.execution } : {}),
+    })
     nodes.set(n.id, {
       ...def,
       retry: n.retry ?? def.retry,

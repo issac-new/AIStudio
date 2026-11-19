@@ -22,6 +22,8 @@ import { CustomSpecRuntime, createSpecRuntimeRegistry } from './spec-runtime'
 import { buildTrustedGateCatalog, GateCatalogConfigError } from './gate-catalog'
 import type { GateCommandEntry } from './gate-executor'
 import { HttpKanbanBridge, registerSimulationNodeTypes } from '../../graph/node-executors'
+import { resolveNodeExecution, type NodeExecutionSpec, type ResolvedNodeExecution } from '../../modelroute/node-resolve'
+import { readEngineRoutingConfig } from '../../enginemodels/routing-config'
 import { setupGraphSocketNamespace, type SocketIOLike } from './graph-socket'
 import { ShadowRunner } from './shadow-runner'
 import { InterruptTimeoutScanner, DEFAULT_INTERRUPT_TIMEOUT_MS, ESCALATION_RESEND_INTERVAL_MS } from './interrupt-timeout'
@@ -43,6 +45,14 @@ export function readEngineMode(env: Record<string, string | undefined> = process
     console.warn(`[graph] unknown GRAPH_ENGINE="${v}" — falling back to legacy`)
   }
   return 'legacy'
+}
+
+/** 节点级执行规格解析（2026-11-19 调度智能批）：装配方注入到 simulation 节点工厂。 */
+function resolveNodeExecutionFromConfig(
+  spec: NodeExecutionSpec | undefined,
+): ResolvedNodeExecution {
+  const cfg = readEngineRoutingConfig()
+  return resolveNodeExecution(spec, { routeMap: cfg.route, defaultModel: cfg.defaultModel })
 }
 
 /** io 可为实例或惰性工厂（上游 Socket.IO server 可能晚于装配就绪） */
@@ -359,6 +369,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
       ? { bridge: new HttpKanbanBridge({ baseUrl: kanbanBase!, log: (m) => log?.(`[sim-kanban] ${m}`) }) }
       : {}),
     allowDryRun: executionMode === 'shadow',
+    resolveExecution: resolveNodeExecutionFromConfig,
     ...(reportFns ? { reportFns } : {}),
     log: (msg) => log?.(`[sim-node] ${msg}`),
   })
@@ -431,6 +442,7 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
           }
         : {}),
       allowDryRun: false,
+      resolveExecution: resolveNodeExecutionFromConfig,
       log: (msg) => log?.(`[sim-director-node] ${msg}`),
     })
     return new CustomSpecRuntime({

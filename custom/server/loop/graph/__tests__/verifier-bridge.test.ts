@@ -4,7 +4,7 @@
 // judge 显式声明降级（不注入假 judge——VerificationRecord 无 judge pending 态，
 // 恒失败的假 judge 会让 judge 意图契约永远 fail → repair 烧穿 escalated，生产死锁）。
 // 全程 mock，不跑真实子进程（programmatic checks 留空数组即不执行命令）。
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { createProductionVerifierDeps } from '../verifier-bridge'
 import { Verifier } from '../../engine/verifier'
 import type { TaskContract, LoopInstance } from '../../types'
@@ -33,6 +33,8 @@ function makeContract(over: Partial<TaskContract> = {}): TaskContract {
 }
 
 describe('createProductionVerifierDeps (I5)', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   it('requestHumanApproval defers to the graph interrupt by returning pending', async () => {
     const logs: string[] = []
     const deps = createProductionVerifierDeps({ log: m => logs.push(m) })
@@ -52,10 +54,36 @@ describe('createProductionVerifierDeps (I5)', () => {
     expect(record.contractId).toBe('task/a')
   })
 
-  it('declares the judge degradation once at construction (explicit, not silent)', () => {
+  it('declares judge disabled once when env is absent (explicit, not silent)', () => {
+    vi.stubEnv('GRAPH_JUDGE_BASE_URL', '')
+    vi.stubEnv('GRAPH_JUDGE_MODEL', '')
+    vi.stubEnv('GRAPH_JUDGE_ENFORCE', '0')
     const logs: string[] = []
     createProductionVerifierDeps({ log: m => logs.push(m) })
-    expect(logs.filter(l => l.includes('judge NOT configured'))).toHaveLength(1)
+    expect(logs.filter(l => l.includes('judge disabled'))).toHaveLength(1)
+  })
+
+  it('enables callJudge and defaultJudge when env is configured', () => {
+    vi.stubEnv('GRAPH_JUDGE_BASE_URL', 'http://judge.local/v1')
+    vi.stubEnv('GRAPH_JUDGE_MODEL', 'judge-model')
+    vi.stubEnv('GRAPH_JUDGE_ENFORCE', '1')
+    const deps = createProductionVerifierDeps({ log: () => {} })
+    expect(typeof deps.callJudge).toBe('function')
+    expect(deps.defaultJudge).toEqual({
+      model: 'judge-model', rubric: expect.any(String), minScore: 0.7,
+    })
+  })
+
+  it('defaultJudge applies to contracts without an explicit judge intent', async () => {
+    const verifier = new Verifier({
+      callJudge: async () => ({ score: 0.9, reasoning: 'looks good' }),
+      defaultJudge: { model: 'judge-model', rubric: 'rubric', minScore: 0.7 },
+    })
+    const record = await verifier.verify(makeContract(), makeLoop())
+    expect(record.results.judge).toMatchObject({
+      model: 'judge-model', status: 'passed', score: 0.9,
+    })
+    expect(record.overall).toBe('passed')
   })
 
   it('judge-intent contract without callJudge skips judge and passes on programmatic+guard (documented P1 posture)', async () => {

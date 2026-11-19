@@ -10,6 +10,7 @@
 import type { NodeRegistry } from '../../loop/graph/node-registry'
 import type { CustomReducers } from '../../loop/graph/graph-spec'
 import type { NodeResult, StateUpdate } from '../../loop/graph/types'
+import type { NodeExecutionSpec, ResolvedNodeExecution } from '../../modelroute/node-resolve'
 
 // ============================================================================
 // 模板域 reducer——26 步模板通道声明 appendById（先例：graph-compiler 的
@@ -48,6 +49,10 @@ export interface KanbanCreateRequest {
   board?: string
   /** 幂等键（复用 kanban tasks.idempotency_key 列）：graph_node:<runId>:<nodeId> */
   idempotencyKey: string
+  /** 节点级执行规格（2026-11-19 调度智能批）：顶层 model/provider/reasoning。 */
+  model?: string
+  provider?: string
+  reasoning?: string
 }
 
 export interface KanbanBridge {
@@ -166,6 +171,10 @@ export class HttpKanbanBridge implements KanbanBridge {
       idempotencyKey: req.idempotencyKey,
     }
     if (this.board) payload.board = this.board
+    // 上游 REST 顶层 model/provider/reasoning（不是 model_override）；provider 必伴随 model。
+    if (req.model) payload.model = req.model
+    if (req.provider && req.model) payload.provider = req.provider
+    if (req.reasoning) payload.reasoning = req.reasoning
     this.log(`createTask POST ${this.base}/api/hermes/kanban (${req.title})`)
     return this.normalize(await this.json(`${this.base}/api/hermes/kanban`, {
       method: 'POST',
@@ -199,6 +208,11 @@ export interface SimulationNodeOpts {
   taskTimeoutMs?: number
   log?: (msg: string) => void
   /**
+   * 节点级执行规格解析（2026-11-19 调度智能批）：装配方注入（graph-assembly），
+   * 把 NodeSpec.execution 解析成 model/provider/reasoning。缺省不 pin。
+   */
+  resolveExecution?: (spec: NodeExecutionSpec | undefined) => ResolvedNodeExecution
+  /**
    * report-gen 注入表（三期）：key=节点 config.command（缺省 'reportGen'）。
    * 未注入或 key 未命中时走默认建卡报告器（bridge 建「报告编写」卡+等完成，
    * 产品语义=五类工作面之「报告编写」）；桥=DryRun 时即建即完（shadow 冒烟）。
@@ -222,6 +236,8 @@ interface AgentTaskConfig {
   channel?: string
   /** 测试/评审预设（specialist-presets 六闸守门员 prompt 资产二期接线） */
   kind?: 'task' | 'review' | 'test'
+  /** 节点级执行规格（hydrate 从 NodeSpec.execution 注入）。 */
+  execution?: NodeExecutionSpec
   timeoutMs?: number
 }
 
@@ -287,6 +303,8 @@ export function registerSimulationNodeTypes(
     taskTimeoutMs: opts.taskTimeoutMs ?? 4 * 3600_000,
   }
   const log = opts.log ?? (() => {})
+  const resolveExecution = opts.resolveExecution
+    ?? ((): ResolvedNodeExecution => ({ source: 'none' }))
 
   const agentTaskFactory = (kind: 'task' | 'review' | 'test') => (config: Record<string, unknown>) => {
     const cfg = { kind, ...(config as unknown as AgentTaskConfig) }
@@ -297,6 +315,11 @@ export function registerSimulationNodeTypes(
       // joinMode/onError 由 hydrate 按 spec 层值合并（graph-spec.ts:301-306），工厂不设
       execute: async (_state: unknown, ctx: { threadId: string }): Promise<NodeResult> => {
         const title = cfg.title ?? cfg.id ?? 'untitled'
+        const routing = resolveExecution(cfg.execution)
+        if (routing.source !== 'none') {
+          log(`agent-${kind} '${cfg.id}': routing source=${routing.source} model=${routing.model ?? '-'}`
+            + ` tier=${routing.tier ?? '-'} unmapped=${routing.unmapped === true}`)
+        }
         const ref = await bridge.createTask({
           title,
           body: {
@@ -309,10 +332,25 @@ export function registerSimulationNodeTypes(
             raci: cfg.raci,
             graph_node: cfg.id,
             graph_kind: kind,
+            ...(routing.source !== 'none'
+              ? {
+                  routing: {
+                    model: routing.model,
+                    provider: routing.provider,
+                    reasoning: routing.reasoning,
+                    source: routing.source,
+                    tier: routing.tier,
+                    unmapped: routing.unmapped,
+                  },
+                }
+              : {}),
           },
           assignee: cfg.assignee,
           board: cfg.board,
           idempotencyKey: `graph_node:${ctx.threadId}:${cfg.id}`,
+          ...(routing.model ? { model: routing.model } : {}),
+          ...(routing.provider && routing.model ? { provider: routing.provider } : {}),
+          ...(routing.reasoning ? { reasoning: routing.reasoning } : {}),
         })
         log(`agent-${kind} '${cfg.id}': card ${ref.id} created (${title})`)
         await waitForCard(bridge, ref.id, poll, `agent-${kind} '${cfg.id}'`, log)
