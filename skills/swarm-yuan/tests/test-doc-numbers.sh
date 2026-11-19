@@ -132,7 +132,7 @@ facts_eq FACT_FEATURE_CARDS_P1 11
 facts_eq FACT_CONF_VARS 205
 facts_eq FACT_CONF_VARS_CORE 31
 facts_eq FACT_CONF_VARS_ARCH 126
-facts_eq FACT_REFERENCES 61
+facts_eq FACT_REFERENCES 63
 facts_eq FACT_SPEC_SECTIONS 26
 # 合规检查点库（compliance 档随发）：主表/罚则库条数机械计数对账（口径见 facts.conf 合规检查点库段）
 facts_eq FACT_INSPECTION_CHECKPOINTS 173
@@ -144,7 +144,7 @@ present "compliance-checkpoints 口径头引用 173/21" "references/compliance-c
 facts_eq FACT_SKILLMD_BYTES_BUDGET "${FACT_SKILLMD_BYTES_BUDGET}"
 facts_eq FACT_SKILLMD_BYTES_HARD_CAP 20000
 present "README SKILL.md 硬顶 20000" "README.md" '20000B 硬顶'
-facts_eq FACT_ARTIFACT_BYTES_BUDGET 618496
+facts_eq FACT_ARTIFACT_BYTES_BUDGET 624640
 # R126 补登（悬空引用根治）：两键此前被文档头引用为口径权威源但 facts.conf 缺位
 facts_eq FACT_CWE_ENTRIES 60
 facts_eq FACT_CERT_PROFILES 5
@@ -313,7 +313,7 @@ absent "four-theories 预算旧值" "references/four-theories-methodology.md" \
 present "README SKILL.md 预算（facts 联动）" "README.md" \
   "${FACT_SKILLMD_BYTES_BUDGET}B（≈11KiB 锚）"
 present "README references 预算真值（facts 联动）" "README.md" \
-  "${FACT_ARTIFACT_BYTES_BUDGET:-618496}B（$(( ${FACT_ARTIFACT_BYTES_BUDGET:-618496} / 1024 ))KiB"
+  "${FACT_ARTIFACT_BYTES_BUDGET:-624640}B（$(( ${FACT_ARTIFACT_BYTES_BUDGET:-624640} / 1024 ))KiB"
 present "usage-manual SKILL.md 预算（facts 联动）" "docs/usage-manual.md" \
   "${FACT_SKILLMD_BYTES_BUDGET}B，约 11KiB"
 present "four-theories 预算（facts 联动）" \
@@ -405,7 +405,7 @@ present "生成器模板标准计数=facts" "scripts/generate-skill.sh" "标准 
 # frameworks/ 与 case-studies/ 子目录另有配对/路径锁（self-check 守），不在本清单面。
 # business-ontology-methodology / fibo-financial-ontology 的 3060/948/265 等数字是
 # FIBO 外部基线（随上游发布变），不是 facts.conf 口径；锚点由 test-ontology-knowledge.sh 锁定。
-TDN_EXEMPT=" clean-code-metrics-methodology.md business-ontology-methodology.md bugfix-runbook.md fibo-financial-ontology.md agent-skills-methodology.md ai-process-records.md canary-monitoring.md capability-map.md claude-code-capabilities.md code-graph-tools.md codex-security-methodology.md cognition-framework.md cognitive-bias.md controlled-language-methodology.md cordis-composability-methodology.md cost-estimation-methodology.md crypto-spec.md cwe-database.md decision-governance.md diagram-production-methodology.md domain-knowledge.md dsh-engineering-methodology.md frontend-design-methodology.md governance-agents.md gsd-patterns.md industry-profile-automotive.md industry-profile-energy.md industry-profile-finance.md industry-profile-gov.md industry-profile-industrial.md industry-profile-medical.md industry-profile-payment.md industry-profile-telecom.md logic-razor.md mattpocock-skills-methodology.md mcp-governance.md mea-loop-methodology.md memory-persistence.md remote-debug-jvm.md review-methodology.md rsi-evidence-methodology.md security-certification-profiles.md security-spec.md subagent-orchestration.md task-methodology-router.md failure-taxonomy.md knowledge-retrieval-ladder.md pstack-methodology.md "
+TDN_EXEMPT=" clean-code-metrics-methodology.md business-ontology-methodology.md bugfix-runbook.md fibo-financial-ontology.md agent-skills-methodology.md ai-process-records.md canary-monitoring.md capability-map.md claude-code-capabilities.md code-graph-tools.md codex-security-methodology.md cognition-framework.md cognitive-bias.md controlled-language-methodology.md cordis-composability-methodology.md cost-estimation-methodology.md crypto-spec.md cwe-database.md decision-governance.md diagram-production-methodology.md domain-knowledge.md dsh-engineering-methodology.md frontend-design-methodology.md governance-agents.md gsd-patterns.md industry-profile-automotive.md industry-profile-energy.md industry-profile-finance.md industry-profile-gov.md industry-profile-industrial.md industry-profile-medical.md industry-profile-payment.md industry-profile-telecom.md logic-razor.md mattpocock-skills-methodology.md mcp-governance.md mea-loop-methodology.md memory-persistence.md remote-debug-jvm.md review-methodology.md rsi-evidence-methodology.md security-certification-profiles.md security-spec.md subagent-orchestration.md task-methodology-router.md failure-taxonomy.md knowledge-retrieval-ladder.md pstack-methodology.md independent-review-protocol.md living-docs-drift-methodology.md "
 # 备注：cwe-database.md / security-certification-profiles.md 虽在豁免列（不携带跨档口径
 # 手抄数），其条目计数已由上方 0b 节 count_eq 机器对账（豁免=无手抄漂移面，非无锁）。
 # domain-knowledge.md 的「核心 10 规则集」是框架 fixture 分级轴（非门禁计数轴），不归本锁。

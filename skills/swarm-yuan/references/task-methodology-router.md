@@ -53,7 +53,7 @@ swarm-yuan 的 13 步生成流程是线性的（Step 1-13，唯一编号口径�
 | **fix（缺陷修复）** | 分支 fix/*、报障 | ②【必】knowledge-lifecycle（影响面查法）+【按·连研发环境取证】bugfix-runbook（六步流水线；需断点级取证加 remote-debug-jvm）→ ⑤【必】lazy-generation +【按·硬 bug】mattpocock-skills-methodology（诊断回路 §四：反馈回路先行/red-capable/可证伪假设）→ ⑦【必】review-methodology（回归面=修复点+相邻路径）；全程 codex-methodology（执行纪律）+ ai-process-records |
 | **refactor（重构）** | 分支 refactor/* | ②【必】knowledge-lifecycle（影响面）→ ③【按·架构类】togaf-metamodel-methodology（§24）/ cordis-composability-methodology（可组合性）→ ⑤ lazy-generation +【按】clean-code-metrics-methodology（重构后复杂度是否真降）→ ⑦【必】review-methodology |
 | **test（测试）** | 分支 test/* | ⑦【必】review-methodology（测试有效性判定）+【按·判测试是否有效】clean-code-metrics-methodology（复杂度/重复度/变异口径）+ 回归分级（template-spec §19【生成器侧】，目标技能侧载体是 spec §19 本身）；长测试计划 mea-loop-methodology |
-| **docs（文档）** | 分支 docs/* | ②【必】knowledge-lifecycle（知识四阶段协议，文档即知识）→ ⑦ review-methodology（三方一致核对） |
+| **docs（文档）** | 分支 docs/* | ②【必】knowledge-lifecycle（知识四阶段协议，文档即知识）→ ⑦ review-methodology（三方一致核对）+【按·文档与源码不一致】living-docs-drift-methodology（四类漂移/报告格式） |
 | **chore（杂务/依赖）** | 分支 chore/* | ⑤【必】codex-methodology（版本锁定例外四条件）；全程 ai-process-records |
 | **exp（实验）** | 分支 exp/* | 全程【必】ai-process-records（实验不入 main 须留痕）；长实验 mea-loop-methodology |
 | **架构设计/演进类** | 触服务划分/数据模型/选型 | ③【必】togaf-metamodel-methodology + four-theories-methodology（【生成器侧】系统建模/划边界）→ ⑤ cordis-composability-methodology → ⑦【必】review-methodology |

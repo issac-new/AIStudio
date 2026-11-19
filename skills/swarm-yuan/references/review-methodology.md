@@ -1,10 +1,20 @@
-> **何时读我**：执行代码审查或设计门禁输出格式时。审查方法论——rubric 判定/P0-P3/规则溯源。
+> **何时读我**：执行代码审查或设计门禁输出格式时。审查方法论——rubric 判定/P0-P3/规则溯源。本文件是审查的**内容检查表**；强制口径（冷读隔离/收敛语义/反谄媚/无子代理停机）见 `independent-review-protocol.md`。
 
 # 代码审查方法论 (Code Review Methodology)
 
 > 来源：[gstack](https://github.com/garrytan/gstack)（审查清单/specialist 模式）与 [open-code-review](https://github.com/alibaba/open-code-review)（5 维度/规则链/严重度分级）。
 > 本文件指导目标技能的 check 段如何集成代码审查。
 > **仅引用方法与 `ocr` 命令，不复制源码。**
+
+## 零、审查独立性（强制前置）
+
+本节只列判据；完整派发模板、阶段与留痕见 `independent-review-protocol.md`。
+
+- **独立性来自信息不对称**：审阅者只拿待审文档、被引用源码、审查标准；不拿会话历史、作者推理、先前结论。同上下文里的"请严格审查"不构成独立审查。
+- **无子代理就停机**：审查类活动记 `not run`，门禁不得通过；同上下文自审不得冒充。非审查类并行可内联降级但须披露。
+- **`not run` ≠ 零发现**：有 not run 的轮次不 clean；连续两轮 clean 才算 converged，上限 5 轮。
+- **反谄媚**：findings 在前；禁用词命中即不合格；每个方案至少一条最强反方论据；零发现写"未发现（已检查范围）"。
+- **留痕**：审查记录必须声明 `reviewer_context`（fresh/degraded/unavailable）、冷读输入、阶段完成表、理解度结论、收敛声明与未运行项。
 
 ## 五个审查维度（open-code-review 基线）
 
@@ -460,7 +470,7 @@ ocr 新增 LLM provider 支持：
 **与 review 的整合**：
 - `--review` 审查代码质量维度时，对新增/修改的测试用本纪律审查：答不出"什么改动会让它失败"的测试，判 Important（建议补 mutation check 或重写）。
 - pre-emit 引用门（§pre-emit 引用门）的"未验证 finding 不进主报告"原则同样适用于测试审查--未做 mutation check 的测试质量断言降级 warn。
-- **测试质量证据链**：审查测试覆盖结论时必须引用可核对证据（覆盖率报告路径与数值、接口端点→测试映射、断言密度/负向用例统计、可选 mutation score）；无证据不得写"覆盖充分"。证据填入 `references/review-record.md` 的「测试质量审查」表。
+- **测试质量证据链**：审查测试覆盖结论时必须引用可核对证据（覆盖率报告路径与数值、接口端点→测试映射、断言密度/负向用例统计、可选 mutation score）；无证据不得写"覆盖充分"。证据填入目标技能 `references/review-record.md`（模板：`assets/review-record-template.md`）的「测试质量审查」表。
 - **不新增 check_* 门禁**（守决策 26 预算）；本纪律是 AI 审查的结构化指引，由 `--review` 的代码质量维度承载。
 
 **对脚本/技能/prompt 测试的特殊提醒**：swarm-yuan 自身的脚本（precheck.sh/state-machine.sh/trace-log.sh）和生成的技能 prompt 不宜用 grep 式测试（string-presence trap）。可观察的是行为（exit code / 输出结构 / 副作用），不是文本存在性。fixture 正反例测试（violating/compliant）是行为测试的正解--它断言门禁在违规项目 fail、在合规项目 pass，而非断言脚本"含有某段代码"。
@@ -622,7 +632,7 @@ ocr 新增 LLM provider 支持：
 
 - **被测模型与裁判模型分离**（v1.91.144 #3275）：付费门禁的 model under test 换为 Opus 5.5，**judge 保持 Fable 不动**——评测中被测对象与评分者是两个角色，同轮只能动一个（同时换裁判与被测，分数变化无法归因）。本仓 ⑦独立审查节点的「第三方视角」按此口径：审查模型/审查者与编码方分离，且换栈时不同时换审查口径。
 - **需远端的项在完成前视为未完成**（v1.91.133 #3261 coordinator-contract）：Before done 把 `requires-remote` 当 unfinished——依赖远端执行/远端确认的项目，本地再绿也不得宣告完成；与「未验证维度不得报通过」同根，把「待远端」从「已完成」词表里剔除。本仓 ⑧合入节点对 CI 远端结果的态度同此：本地 sweep 全绿 ≠ 合入条件满足，远端 CI 未归位的提交在 CHANGELOG 中标「待 CI」。
-- **报告只含有实证影响的候选**（v1.91.141 #3283）：cso 日报略去未展示 in-scope 影响的候选——没有「在范围内造成影响」证据的发现不进报告，宁漏不虚；与 v1.91.125/136「daily precision 计已确认的附带问题、排除声明为夹具仪表的项」「falsely-tested 计数剔除仪表声明，附带声明须经签名包回放通过方可认证」同族：**计数口径只收经证实的项，声明不算证据**。本仓审查意见落 review-record 时同此：每条 finding 带影响面证据（file:line + 触发路径），无证据项入「待核」不入「发现」。
+- **报告只含有实证影响的候选**（v1.91.141 #3283）：cso 日报略去未展示 in-scope 影响的候选——没有「在范围内造成影响」证据的发现不进报告，宁漏不虚；与 v1.91.125/136「daily precision 计已确认的附带问题、排除声明为夹具仪表的项」「falsely-tested 计数剔除仪表声明，附带声明须经签名包回放通过方可认证」同族：**计数口径只收经证实的项，声明不算证据**。本仓审查意见落目标技能 `references/review-record.md` 时同此：每条 finding 带影响面证据（file:line + 触发路径），无证据项入「待核」不入「发现」。
 - **扫描错误即 fail-closed + 每轮成本上报**（v1.91.129 #3257 pr-selection）：扫描 shebang 与 `.ts` import，扫描出错不降级为「无发现」而是 fail closed；每轮报告自身成本——门禁的自身故障不得伪装成被测物干净，门禁的开销要可见（与 claude-code「credit 计费面」同族成本守门）。
 - **影子模式先观察再执法**（v1.91.130 #3259）：exercised-path consumer map 以 shadow mode 上线，先记 `MAP_GAP` 与 census refresh 不阻断——新门禁判据先并行观察、积累误报面，再切阻断。本仓新增门禁的 advisory→warn→strict 三级升档与此同构（`check_diagram` 由 advisory 升 warn 走的即此路）。
 - **大小写冲突路径 hold 不报 ok**（v1.91.126 #3254 brain-sync）：工件路径仅大小写不同时置 hold 而非报同步成功——大小写不敏感文件系统上的「同名」是数据丢失隐患，不确定态要显式 hold；与「跳过的升级永不说 ok」同族。

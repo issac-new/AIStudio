@@ -190,6 +190,8 @@ Anthropic 对 Context Engineering 的定义：**minimal 并不必然 short，关
 
 电报体只压**对话层**，以下持久产物**永不压缩**（可读性是一等属性）：proposal / design doc / spec / tasks / 实施计划 / 验证报告 / 归档注记 / commit message / PR description。目标技能同口径：`.swarm-yuan/` 落盘产物全保真，对话层才允许短。上游诚实警告一并登记：简洁任务上电报体净收益可能为负（每轮多消耗规则 token）——swarm-yuan 不引入话术层，只吸收边界清单。
 
+**Artifact-First（产物落盘优先，来源 Google `elephant-goldfish-model` `skills/egm-review/SKILL.md:32-37`）**：大段 proposal、草稿、总结、计划**不进聊天窗口**，必须写入工作目录，聊天里只回文件路径、2-3 个关键决策与"请审阅"。理由是聊天越往后越挤，长文本会污染后面每一轮的上下文；把产物落到文件里，聊天只承担"索引 + 决策"两件事。落地形态：spec 起草按三处停顿（目标与边界 → 方案与取舍 → 验证设计），每节写完落盘再看下一节；审查报告与 findings 表同样落盘。执行类任务的进度汇报不受此限——停的是设计决策点，不是执行流水。
+
 ### 11.4 不引用部分
 
 - RTK 的代理整合与命令改写路由表（宿主层工具，目标技能不整合；crates.io 存在同名无关包，注意甄别）

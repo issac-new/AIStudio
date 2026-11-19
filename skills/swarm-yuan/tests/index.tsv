@@ -139,3 +139,4 @@ test-integrity-guard.sh	2	yes	general	-
 test-spec-template-maet.sh	1	yes	general	2026-11-02
 test-r143-decisions-grandfathering.sh	2	yes	general	R143
 test-lessons-preserve.sh	2	yes	general	-
+test-review-protocol.sh	2	yes	general	2026-11-19

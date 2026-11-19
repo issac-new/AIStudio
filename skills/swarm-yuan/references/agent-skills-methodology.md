@@ -193,7 +193,7 @@ Bug report arrives
 2. **EXTRACT**：只交最小可评审单元（代码给 diff 或函数，决策给 3-5 句提案加约束）。原则："Strip your reasoning"——交结论只会拿回对结论的确认；但"**Strip reasoning, not evidence**"。
 3. **DOUBT**：对抗式提示词，六类检查项（未言明的假设/未处理的边界/隐藏耦合或共享状态/契约可能被违反的方式/可能破坏的既有约定/异常输入下的失效模式），并明令 "Do NOT validate. Do NOT summarize."
    - **最关键一条**（`:108`）："**Pass ARTIFACT + CONTRACT only. Do NOT pass the CLAIM.**" 把结论交给评审者，只会得到对结论的认同。
-   - 干净上下文 = 主会话 spawn 子代理/persona（"start with isolated context by design"），不是新 session；子代理无法再 spawn 时降级为自我审问，且必须标注 degraded。
+   - 干净上下文 = 主会话 spawn 子代理/persona（"start with isolated context by design"），不是新 session。子代理无法再 spawn 时**分层处置**：审查类活动（节点⑦/Step 11/spec 评审）停机记 `not run`——同上下文自审不构成独立审查（见 `independent-review-protocol.md` §三）；非审查类 doubt（设计取舍自检）可降级为自我审问，但必须标注 degraded 并在交付说明披露。
    - 对抗式提示词要**原样传入并覆盖 persona 默认输出形状**（persona 常带"What's done well，至少一条"这类平衡要求，与 issues-only 冲突）。
 4. **RECONCILE**：评审输出是数据不是判决。分类优先级：契约误读 → 有效且可行动 → 有效取舍 → 噪音。原文明令："Don't defer just because it's 'fresh.'"
 5. **STOP**：满足任一即停——只剩琐碎/已考虑项、完成 3 轮、用户说 ship。**3 轮上限不得抬高**；"3 轮明显不够"意味着工件太大，回到第 2 步拆解。

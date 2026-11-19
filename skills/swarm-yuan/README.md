@@ -180,7 +180,7 @@
 验证有三件：
 
 - **测试真跑且有效**：执行项目测试命令看退出码，检出"零用例空跑通过"的假阳性通过（`TEST_QUALITY_STRICT=1` 时直接失败）；配了覆盖率阈值后解析 lcov/cobertura/jacoco/clover/coverage-summary/coverage.out，低于阈值即失败；再扫测试源核验零断言、断言密度、负向/边界用例占比与聚焦测试（`.only`/`fdescribe`/`fit`）。可选配置变异命令，低于 mutation score 阈值即失败。接口测试按 HTTP 方法 × 路径模板枚举端点（OpenAPI YAML/JSON、proto 与常见路由声明均可枚举），要求测试调用中的方法与路径匹配；路径参数按真实值匹配，不能用集合路径代答；启用状态码要求后，每个已覆盖端点的请求附近都须有自己的状态码/错误路径断言。阈值未配置时明示"未启用"，不假装已覆盖。测试文件本身进清单维度做计数核验。测试体系存在而没配执行命令会显式提示。
-- **独立审查**：以第三方视角重看产物。审查记录落盘才算数，口头"已审查"不算。
+- **独立审查**：以第三方视角重看产物，审查记录落盘才算数，口头"已审查"不算。审查按 `references/independent-review-protocol.md` 执行：审阅者必须是干净上下文的子代理，只拿待审文档、被引用源码与审查标准，不拿会话历史与作者推理——独立性由信息不对称产生，不由"请严格审查"产生。阶段为 S1 全局审视、S2 理解度审查（新人能否复述要做什么/不做什么/边界/怎么验证）、S3 设计批判（五维清单）、S4 实现就绪；反谄媚词表机检，findings 在前，零发现必须写"未发现（已检查范围）"。无子代理能力时审查**停机**记 `not run`，不得用同上下文自审冒充；`not run` 不计为零发现，连续两轮 clean 才算 converged，上限五轮。审查记录须声明 `reviewer_context`（fresh/degraded/unavailable）与未运行项，`REVIEW_RECORD_REQUIRED=1` 时由 check_review 机检。
 - **独立验证器**：直接运行与验证器共用一个框架夹具执行器，违规侧必须检出指定问题，合规侧检查禁止出现的告警 ID；advisory 门禁不以非零退出码作为唯一判据。ShellCheck 错误、工具故障、夹具准备或清理失败都使整体失败，日志按运行隔离。同时锁定命令行行为逐字节等价。样例全绿证明不了真实项目全覆盖；真实项目回归矩阵与连续运行稳定性要求见附录 D。本轮构造夹具验证不能替代该矩阵。
 
 验证依赖留痕。调用、决策、门禁执行、拦截分别记账。决策写入互斥保护序号与前驱，文本按 JSON 转义；`trace-log.sh --verify-chain` 核验决策账本内部顺序与校验码，旧格式只允许位于链首之前。现用 `cksum` 是一致性校验，不是密码学防篡改证明；缺少外部可信锚时无法发现整链重写或末尾截断。`ref_trace_hash` 只记录调用末行引用，目前没有跨账本自动核验，不能宣称全链防篡改。审计按"一个用户目标 + 一个验收边界"逐项对账。
@@ -205,7 +205,8 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 
 成长有两条通道：
 
-- **结构通道**：项目指纹（文件数、扩展名分布、目录哈希）在会话开始时自动比对。变了就给出变化范围，只对该范围局部重探查，单条更新清单，落新基线。更新有保险线：条目骤降过半视为探查失败，保留旧清单。受影响条目按三态处置：仍成立则更新。证据源已变但新证据不足，降级标注待核。证据源已消失，归档保留可追溯（见 references/knowledge-lifecycle-methodology.md §五）。
+- **结构通道**：项目指纹（文件数、扩展名分布、目录哈希）在会话开始时自动比对。变了就给出变化范围，只对该范围局部重探查，单条更新清单，落新基线。更新有保险线：条目骤降过半视为探查失败，保留旧清单。受影响条目按三态处置：仍成立则更新。证据源已变但新证据不足，降级标注待核。证据源已消失，归档保留可追溯（见 references/knowledge-lifecycle-methodology.md §五）。指纹只看结构，同路径文件的原地内容修改它看不见。
+- **内容通道**：按 `references/living-docs-drift-methodology.md` 对文档做断言级比对——提取文档里的路径/符号/行为/数字断言，逐条对源码判定，分缺失功能、模型不全、逻辑捷径、架构分歧四类漂移；反向也查"代码有而文档没覆盖"。报告落 `docs/reviews/YYYY-MM-DD-drift-report.md`（模板 `assets/drift-report-template.md`），只报差异，改文档或改代码二选一并说明理由，不自动改。
 - **问题通道**：使用中解决的新问题按三选一归位（进清单、进配方、进规则），每次留决策记录。新问题包括新的复用解法、新发现的约束、踩过的坑。前者防"项目变了技能没变"，后者兑现"按具体问题迭代成长"。
 
 会话续传只读取最后完整的 journal 快照。阶段恢复先校验阶段、行数和快照前决策校验码，再把恢复前状态与完整决策账本存入 `restore-backups/`，最后替换状态文件与决策前缀；它不恢复源码。恢复与决策写入共用互斥锁，残留锁必须先确认没有活跃写入进程再清理。
@@ -300,7 +301,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 框架规则集 | 81（规则文档与门禁片段 1:1 配对） |
 | 配置变量 / 上限 | 205 / 210 |
 | 执行面代码行数 / 上限 | 引擎域源 ≤FACT_ENGINE_CODE_LOC_MAX（8600）；框架门禁注入 ≤FACT_FRAMEWORK_GATE_LOC_MAX（18469）；逐例上调登记见 facts.conf 键注记 |
-| 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤618496B（604KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
+| 目标技能预算 | SKILL.md ≤11392B（≈11KiB 锚，硬顶 20000B——宿主压缩重挂载截断防线，预算可再登记、硬顶不可越）、组件库清单 ≤32KiB、上下文预算 ≤624640B（610KiB，例外逐例登记于 docs/budget-exception-ledger.md 台账）、概念体系 ≤5 |
 | 外部运行时 | 15 个整合（深度 4 + CLI 6 + 方法论 5；CLI 第 5/6 项 mattpocock-skills/diagram-design 为仓内物化运行时）。登记 22（含图谱备选 codegraph、两宿主、机制源 pua/semantica/pi 等）。自动检测 11 |
 | 类型目录 | 实体 17 / 关系 10 / 动作 11（assets/ontology/ 三份） |
 | 生成流程 | 13 步（唯一编号口径在 generation-flow.md）。目标技能工作流九节点 × 4 要素；研发四阶段＝分支开发→分支测试→主干合并→主干回归（⑤-⑦ 在 feature 分支、⑧ 合 main、⑨ 发布前主干全量回归） |
@@ -314,6 +315,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 来源 | 吸收形式 | 落点 |
 |---|---|---|
 | 深度整合四件（GitNexus / graphify / claude-mem / ocr） | 门禁内真实子进程 + 多级降级链。记忆类插件经 memory-backends.sh 适配层接入（绑定后端契约、可替换） | references/code-graph-tools.md 等（图谱第三备选 codegraph 同文件，watch 未整合） |
+| google/elephant-goldfish-model（Apache-2.0，2026-11-19 全仓技能与角色原文逐条调研） | 冷读隔离/四阶段审查/反谄媚词表/收敛语义/无子代理停机 + Artifact-First + 文档漂移对账（B，源文件逐条核对） | references/independent-review-protocol.md、references/living-docs-drift-methodology.md、assets/drift-report-template.md |
 | CLI 六件（OpenSpec / comet / gsd-core / codex-security / mattpocock-skills / diagram-design） | 按需调用 CLI，降级自带载体；后两件为仓内物化运行时（非 command -v 型，读技能原文执行） | references/ 各 methodology；物化面 runtime/mattpocock-skills/ + runtime/diagram-design/（各自 MANIFEST 登记来源）+ references/mattpocock-skills-methodology.md / diagram-production-methodology.md |
 | 方法论五件（superpowers / gstack / Ruflo / ECC / impeccable） | AI 按工作流节点引用模式 | references/subagent-orchestration.md |
 | 外部方法论文档与能力档（capability-map 登记 52 档） | 蒸馏为 references 方法论，全带"何时读我"路由头 | references/ 同名文件。逐档整合清单（来源/证据分级/消费节点/触发）见 references/capability-map.md，self-check 做双向一致性校验 |
@@ -365,7 +367,7 @@ fix 任务在验证层还有一条研发环境取证支线（存量项目排障�
 | 3 | 冷启动到读项目代码动作数 | ≤3 步 | mark-active 后新会话到首个读码动作 |
 | 4 | 门禁可达率 | 100% | 默认执行序列可触达 / facts.conf 对账 |
 | 5 | 组件库清单预算 | 32KiB 硬顶 | self-check 断言 |
-| 6 | description ≤1024 字符 / SKILL.md 正文 ≤11776B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
+| 6 | description ≤1024 字符 / SKILL.md 正文 ≤12032B（≈11KiB 锚）/ 20000B 硬顶 | 达标 | gen-e2e 断言（锚定目标技能产物） |
 | 7 | 上下文预算体积（references 拷贝） | ≤FACT_ARTIFACT_BYTES_BUDGET（当前值见附录 A，例外逐例登记于 docs/budget-exception-ledger.md） | self-check 断言 |
 | 8 | 结构性：反向引用数 | 0 | self-check G19 |
 | 9 | 连接性：孤儿资产数 | 0 | self-check G18 |

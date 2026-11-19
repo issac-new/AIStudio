@@ -1392,9 +1392,62 @@ check_review() {
         fail "gate_review_record_tbd: ${_rr_path} 含待定项——审查结论必须完整"
         found=1
       fi
+
+      # ── 独立审查协议字段核验（EGM 吸收批：冷读/收敛/反谄媚）──
+      # 只在 REVIEW_RECORD_REQUIRED=1 时进入本段；默认档 warn 不 fail，存量生成物不批量转红。
+      local _proto_miss=""
+      grep -qE 'reviewer_context' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}reviewer_context "
+      grep -qE '冷读输入|TargetFile' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}冷读输入 "
+      grep -qE '阶段完成|S1[[:space:]]*全局审视' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}阶段完成表 "
+      grep -qE '理解度|复述' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}理解度结论 "
+      grep -qE '收敛声明' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}收敛声明 "
+      grep -qE 'clean[:：][[:space:]]*(yes|no)' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}clean 取值 "
+      grep -qE 'not_run_count[:：][[:space:]]*[0-9]+' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}not_run_count 取值 "
+      grep -qE '未运行项' "$_rr_path" 2>/dev/null || _proto_miss="${_proto_miss}未运行项 "
+      if [[ -n "$_proto_miss" ]]; then
+        fail "gate_review_protocol_fields: ${_rr_path} 缺独立审查协议字段或取值：${_proto_miss}（见 references/independent-review-protocol.md §七）"
+        found=1
+      fi
+
+      # 未填写的模板不得通过：关键键仍带 <占位符> 即视为未完成
+      if grep -qE 'reviewer_context.*<|clean[:：][[:space:]]*<|not_run_count[:：][[:space:]]*<' "$_rr_path" 2>/dev/null; then
+        fail "gate_review_protocol_unfilled: ${_rr_path} 独立审查字段仍含占位符——须填写 reviewer_context/clean/not_run_count 真实取值"
+        found=1
+      fi
+
+      # 评审上下文：degraded/unavailable 不得给通过结论
+      local _ctx=""
+      _ctx=$(grep -E 'reviewer_context' "$_rr_path" 2>/dev/null | grep -oE 'fresh|degraded|unavailable' | head -1 || true)
+      if [[ -z "$_ctx" ]]; then
+        fail "gate_review_context_missing: ${_rr_path} 未声明 reviewer_context（fresh/degraded/unavailable）"
+        found=1
+      elif [[ "$_ctx" != "fresh" ]]; then
+        local _concl=""
+        _concl=$(grep -E '^\|?[[:space:]]*结论' "$_rr_path" 2>/dev/null | head -1 || true)
+        if [[ -n "$_concl" && "$_concl" != *"不通过"* && "$_concl" == *"通过"* ]]; then
+          fail "gate_review_context_not_fresh: ${_rr_path} reviewer_context=${_ctx} 却给通过结论——同上下文/无子代理不构成独立审查，须记 not run 或用户豁免"
+          found=1
+        fi
+      fi
+
+      # not run 与 clean/converged 矛盾
+      if grep -qE 'not_run_count[:：][[:space:]]*[1-9]' "$_rr_path" 2>/dev/null; then
+        if grep -qE 'clean[:：][[:space:]]*yes' "$_rr_path" 2>/dev/null || grep -qE 'converged[:：][[:space:]]*yes' "$_rr_path" 2>/dev/null; then
+          fail "gate_review_notrun_clean: ${_rr_path} not_run_count>0 却声明 clean/converged——not run 不得折算为零发现"
+          found=1
+        fi
+      fi
+
+      # 反谄媚禁词（排除说明行与命令自身：含 禁词/banned/grep -nEi 的行不判）
+      local _banned_hit=""
+      _banned_hit=$(grep -nEi 'brilliant|great|smart|perfect|excellent|spot-on|seamless|robust|blazingly fast|完美|优秀|很棒|天衣无缝|显然' "$_rr_path" 2>/dev/null | grep -vE '禁词|banned|grep -nEi' | head -3 || true)
+      if [[ -n "$_banned_hit" ]]; then
+        fail "gate_review_banned_words: ${_rr_path} 命中评审禁词（反谄媚契约）：$(printf '%s' "$_banned_hit" | tr '\n' ';')"
+        found=1
+      fi
     fi
   fi
-  [[ $found -eq 0 ]] && pass "独立审查留痕核验通过（${_rr_path} 存在且含 5 维审查点 + findings 表，零待定项）"
+  [[ $found -eq 0 ]] && pass "独立审查留痕核验通过（${_rr_path} 存在且含 5 维审查点 + findings 表 + 协议字段，零待定项）"
   fi
 }
 # gate: reuse

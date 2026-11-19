@@ -1,4 +1,4 @@
-# references.tsv — authoritative registry (61 rows; 60 map rows + capability-map itself).
+# references.tsv — authoritative registry (63 rows; 62 map rows + capability-map itself).
 # id	family	source	evidence	consumer_node	distributed	claim	overlap_group	trigger
 exploration-guide	generation	内生 + semantica/graphify（A）	A	生成流程 Step 2/Step 4 探查（含 §D.0.6/矛盾裁决）	gen_only	M1	generation	执行任何探查
 generation-flow	generation	内生	B	生成流程 Step 1-13 详解	gen_only	M1	generation	生成流程逐步执行
@@ -60,4 +60,6 @@ regulatory-checkpoint-table	security	执法检查底稿调研（B，主表 173 �
 capability-map	meta	内生（A）	A	SKILL.md 路由表 + self-check G25	none	M1	meta	路由与对账
 failure-taxonomy	verification	MTSC2026 AI Native 测试工程（极智嘉）六类根因（B）	B	开发工作流 ⑤⑥ 失败处置 + failure-detector.sh _classify_failure 规则表	standard	M1	verification	命令/测试/走查失败后的处置决策
 knowledge-retrieval-ladder	assembly	MTSC2026 四层知识检索本仓化（B）	B	开发工作流 ② 探查 + ⑤ 编码的检索起点（L1 边集→L2 索引→L3 语义→L4 实现）	standard	M1	assembly	查实现/查依赖/查语义/查影响面
+independent-review-protocol	verification	google/elephant-goldfish-model（B，Apache-2.0，技能与角色原文逐条读取）	B	开发工作流 ⑦ 审查 + 生成流程 Step 11 + review-record 协议字段/禁词/收敛机检	standard	M1	verification	执行独立审查/派发冷读子代理/填写审查记录
+living-docs-drift-methodology	verification	google/elephant-goldfish-model 的 egm-drift-report（B，Apache-2.0）	B	反馈回路内容漂移对账 + 发布前文档核对 + knowledge-lifecycle 过期治理	standard	M1	verification	文档断言与源码不一致/项目变化后维护技能
 pstack-methodology	verification	cursor/plugins · pstack v0.15.36（A）	A	开发工作流 ⑦ 审查 + 生成流程 Step 7 目标技能产物规范（验证技能/原则卡/拒答库）	gen_only	M1	verification	设计验证产物/选择并行范式/写原则卡或审查证据强度
