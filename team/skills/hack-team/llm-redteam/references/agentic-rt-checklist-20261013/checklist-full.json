@@ -3,7 +3,8 @@
   "source": "infosecravi.com Agentic-AI-Red-Team-Checklist.xlsx",
   "sha256": "37483ddf09bb88a42f25a66999fccfb0517a49cd48a6d7831b26459aa466d463",
   "fetched": "2026-10-13",
-  "total": 377
+  "total": 377,
+  "framework_mapping_baseline": "LLM01-10 prefixes anchored to OWASP LLM Top 10 2025 edition; 2026 edition (released 2026-08-03) per-entry mapping NOT yet applied — sync rule in llm-redteam SKILL.md v1.8 'OWASP LLM Top 10 2025->2026' section. ASI01-10 anchored to OWASP Top 10 for Agentic Applications 2026 (2025-12 release)."
  },
  "tests": [
   {

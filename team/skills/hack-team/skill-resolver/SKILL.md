@@ -172,9 +172,10 @@ FTS5 不可用时 resolver 直接对全量索引打分（410 条打分是毫秒�
 
 ## 6. 落地与测试
 
-- **实现位置**：`scripts/resolver.py`（单文件，stdlib-only，目标 ≤300 行）
-- **skill 索引构建**：扫描 skill 目录 frontmatter → 内存 `Index`；构建是一次性 IO，打分零 IO
-- **测试**：每个路由规则至少一个 case；黄金集（task → 期望 primary/supports）回归；平局确定性测试（同一输入跑 100 次结果一致）
+- **实现位置**：resolver 本体 = `~/.hermes/profiles/_shared/scripts/resolver_cli.py`（dispatch 单接口，orchestrator SOUL 分解前置调用）；技能目录 `scripts/` 只持测试资产
+- **回归基准（2026-11-02 落地；2026-11-09 CK-Fusion T5 重锚 t_26d0efb0）**：`scripts/golden.json` 52 case（48 路由 + 4 abstain，37 个不同 primary，期望值全部实测锚定——先跑 resolver 记录实际输出、人工确认合理才入集，防把 bug 锁进黄金集；T5 变更：rea-apk 期望 rea-reverse-engineering→android-apk-hunt，reverse-ecosystem-index 补注册修复存量断点）；`scripts/run_regression.py` 任一 mismatch 即 exit 1；`scripts/test_determinism.py` 4 探针 × 10 次全一致；**契约：路由规则/frontmatter 元数据改动后必跑 run_regression，rc=0 才算改完**
+- **黄金集再生**：`scripts/build_golden.py`（含逐 case 冲突注释）+ `scripts/capture_actual.json`（实测捕获基线）——改期望值时用它重锚，禁手编 golden.json
+- **已知 spec 冲突 12 项**：resolver 行为与本文档 spec 的偏差（词典镜像缺失/alias 门禁忽略/fmt 单复数错配/子串误路由如 chain→ai→llm 等）**未修本体**，逐项记录在 golden.json 各 case note 与 build_golden.py 注释（搜「见findings」）；黄金集按现状锁定行为，修复须走独立卡并同轮重锚黄金集
 - **接入点**：orchestrator 派单前调用；`confidence < 0.3` 时才允许 LLM 顾问介入，且 LLM 的选择必须走同一 provenance 通道（`reason` 标注 `llm-override`）
 
 ## 7. 反模式（明确不做）

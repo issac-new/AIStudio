@@ -2,7 +2,7 @@
 name: wechat-article-research
 description: >-
   Fetch and extract content from WeChat Official Account (mp.weixin.qq.com) articles using curl + regex parsing, then produce structured analysis reports. Use when the user provides WeChat article URLs and asks for research, analysis, or content extraction.
-version: 1.3.0
+version: 1.4.0
 platforms: [macos, linux]
 metadata:
   hermes:
@@ -61,6 +61,7 @@ if content_match:
 - **X 长文登录墙的镜像通道**：x.com 直抓与 firecrawl 均失败时，试 `https://threadnavigator.com/thread/<status_id>`——纯 curl + 浏览器 UA + 去标签即可拿到接近全文（实测 ~25K chars），status_id 取 x.com URL 路径段（`/status/<id>` 或 `/article/<id>`）。
 - **逐节保真度对照**：回源后将原文全文落盘存档（如 `research/<topic>/original-*.txt`），分析/融合引用以原文锚点为准，转述差异显式声明。
 - **GitHub 开源项目回源（2026-10-21 Cloudflare 实证）**：转述对象是开源 repo（非博客长文）时，回源正典=**repo 的 README（含分支结构/版本/数字/机制清单）+ 官方博客全文**，比 X 镜像/聚合站更全更稳——README 可 curl 直抓 raw.githubusercontent.com，博客用 web_extract 通读落盘（含结语/免责/附注尾节）。核心数字（星数/版本/机制数）以 repo 页为锚，禁只凭转述文写进裁决矩阵。
+- **二次源挖掘（2026-11-19 ppt-studio 实证）**：调研某技能/产品时，先看其 references 层（设计规则/参数表/来源声明）——上游来源声明里常挂着**同域更深的资产**：ppt-studio 的 sources.md 无私有语料，但调研其公文域对标时，从 gongwen-suite 的 review-checklists 引用层挖到 super-official-writer repo，其内含国标全文 txt + lieflat-gongwen 量化参数表 + 配套检查器，一次回源同时拿到「方法论+数据+代码」三层。回源时 repo 的 references/sources* 是宝藏索引，逐行读完再撤。
 
 ### Batch fetching
 
@@ -84,14 +85,15 @@ When the user names a WeChat account (e.g. `readsemi`) and wants the **whole acc
 
 - Search URL: `https://weixin.sogou.com/weixin?type=2&query=<account>&page=<N>&ie=utf8`
 - Paginate `page=1..N` (readsemi had 10 pages, 43 results). Collect anchors whose `href` contains `/link?url=`.
-- Selector that worked: `#wrapper a` filtered by `textContent.length > 10 && href.includes('/link?url=')`.
-- Sogou result DOM loads via JS; the `browser_exec` helper + `goto_url` + `wait_for_load()` each page is the reliable path (curl on Sogou returns a redirect/anti-bot wall).
+- **curl 直连搜索页通道（2026-11-14 实测，与旧结论相反）**：搜索页对 curl 敞开（桌面 UA + `Referer: https://weixin.sogou.com/` 即可，无 JS 要求），同一 IP 下浏览器反被 antispider 拦——反爬判指纹/cookie，不判 IP。批量枚举优先 curl：结果卡内联 `timeConvert('<unix_ts>')` 即发布日期，`d="<docId>"` 可作去重锚点；`class="all-time-y2"` 是账号名。单查询约 3 页封顶，关键词矩阵轮查（账号名+主题词，40 组量级）扩大覆盖；连续多组零新增 = 枚举枯竭。
+- Selector that worked (browser path, only when curl is walled): `#wrapper a` filtered by `textContent.length > 10 && href.includes('/link?url=')`.
 - Account name appears in the result card (e.g. "芯联汇" for readsemi) — verify the named account matches before fetching.
 
 ### Step 2 — Resolve each Sogou link to the real article (click-through)
 
-- **捷径（2026-09-06 FDE 18-20 补充调研实证）**：`m.sogou.com/web/searchList.jsp` 结果页 HTML 的跳转链接 `url=` 参数里**已内嵌完整签名的 mp.weixin.qq.com URL**（~200 字符，含 timestamp/ver/signature）——无需打开浏览器点击跳转，直接 unquote 提取后 **curl 直抓微信文章页即可**（桌面 UA，间隔 10-15s，3/3 成功未触发反爬）。仅当 curl 抓回环境错误页（「链接已过期/环境异常」）时才退回浏览器点击通道。
-- A Sogou `link?url=` href does **not** redirect via curl — it must be opened in a browser. Inside `browser_exec`, navigate to the sogou link; it auto-jumps to `mp.weixin.qq.com/s?src=...&signature=...`.
+- **捷径（2026-09-06 实证；⚠️ 2026-11-14 判死其直抓环节）**：`m.sogou.com/web/searchList.jsp` 结果页 HTML 的 `urlEncrypt` 字段仍内嵌完整签名 mp.weixin URL（切片提取：定位 `"urlEncrypt":"` 取到下一个 `"`，`\\\\/`→`/` 反转义）——**但该签名 URL 直抓已失效**：微信对 sogou 源签名链路（`/s?src=11&timestamp&ver&signature`）全面启用 poc 墙（`secitptpage/verify` + TCaptcha，cap_appid 2003810213），curl 全变体（±Referer/±UA/±参数裁剪/cookie 重放）与浏览器（302→wappoc_appmsgcaptcha，TCaptcha 在 CDP 不渲染）实测全拦截。签名 URL 现只用于确认标题/新鲜度，不作内容抓取通道。
+- **/link 解析的 curl 通道（2026-11-14 实证）**：先 `curl -c jar` 打搜索页种 cookie，再带 `-b jar` + **完整 href**（`/link?url=...&type=2&query=...&token=...` 一并带上，token 来自搜索响应）请求 `/link`——返回 ~800B JS 拼接跳转页，`url += '...'` 行串起来即目标 URL。裸 `/link` 不带 cookie/token = 验证码页。
+- A Sogou `link?url=` href does not redirect via curl — it must be opened in a browser. Inside `browser_exec`, navigate to the sogou link; it auto-jumps to `mp.weixin.qq.com/s?src=...&signature=...`.
 - **Pacing**: Sogou blocks bursts (~403/anti-bot). Empirically safe cadence: `time.sleep(10)` between article fetches, `time.sleep(2.5)` between page turns. Going faster (e.g. 2s) triggers sogou_blocked (final URL stays on sogou, not mp.weixin).
 - Per-article extraction in-browser:
   ```python
@@ -116,19 +118,44 @@ When the user names a WeChat account (e.g. `readsemi`) and wants the **whole acc
 ### Anti-403 / pacing hard rules
 
 - Never fetch more than 1 article per ~10s. Never turn pages faster than ~2.5s. Burning Sogou blocks the account-name search — but it is NOT the only discovery path: 有种子 URL 时先走下方合集/互链通道，零反爬拿全列表，Sogou 只是无种子时的兜底。
-- Sogou 被墙且手里无种子 URL 时，勿用 `site:` / 关键词搜索兜底——微信文章 URL 不含账号名，结构上搜不出「某账号的全部文章」（实证全空）。直接向用户要一篇该号种子文章，走合集/互链通道；聚合镜像站（今天看啥等）专栏需登录，同样不作发现通道。
+- **连撞保温陷阱（2026-11-16 实证）**：被墙后持续重试（尤其多进程并行重试）会让 IP 永不冷却——单日 11:33-15:14 连续 4h 撞墙 0 穿透，杀掉全部探测进程静默 ≥1-2h 后才可能恢复。正确姿势：每账号 ≤2 次尝试退避 75/150s，连续 3 号撞墙即全局熔断退出改时段重跑（sweep.py 已内置文件锁+熔断，防多实例加倍探测）。
+- Sogou 被墙且手里无种子 URL 时，勿用 `site:` / 关键词搜索兜底——微信文章 URL 不含账号名，结构上搜不出「某账号的全部文章」（实证全空）。直接向用户要一篇该号种子文章，走合集/互链通道；聚合镜像站（今天看啥等）专栏需登录，同样不作发现通道。搜索引擎兜底同理挖不到 `__biz`：Bing 对 mp.weixin 索引弱，结果链接（含 base64 跳转链 `u=a1..` 解码后）不带 biz 参数——biz 只能从活文章页采。
 - If a fetch returns `sogou_blocked`, fall back to the title/keyword re-search in Step 3 — do NOT hammer the same sogou link.
+
+## 站点直连通道 — 公众号有同名站点时零反爬全量枚举（2026-11-19 模安局实证）
+
+公众号运营方常同步运营同名网站（模安局→moanju.org）。**发现公众号调研任务先花一次 curl 探站点**，命中则整条微信/搜狗反爬栈全绕开：
+
+1. **站点探测**：`curl -s <猜的域名>/sitemap.xml`（200 且是 sitemapindex 即命中）；域名从转述文内链/文末落款/搜狗摘要线索找。
+2. **全量枚举权威 = 子 sitemap**（如 `/sitemap-0.xml`）：一次拿全 post URL（模安局 310 篇）。陷阱：列表页与归档页常是 JS 渲染（curl 只见壳），`?page=` 分页多数无效——**勿在列表页上耗**，直接 sitemap。
+3. **feed.xml 滚动窗陷阱**：RSS 常只含最近 30 条且带 `content:encoded` 全文——当「近期增量」速查可以，当全量枚举不行。
+4. **文章页日期元素**：用语义 class（模安局 `post-header-date`）取发布日；裸 `<span>(日期)</span>` 正则会误抓「最新文章侧栏」日期（实证 29/30 篇全错成侧栏日期）——抓完抽 2 篇与 feed pubDate 对账再批量用。
+5. **增量判定**：sitemap URL 集合 − 上轮落库 slug 集 = 增量；比 msgid 判新更稳（站点 slug 稳定）。
+6. **文章页本身无墙**，4~5s 限速批量直抓正文（`<article>` 区去标签）；manifest 状态机 + 文件锁 + 死锁清理照旧。
 
 ## 合集/互链发现 — 有种子 URL 时首选通道（Sogou 被墙的替代路）
 
 Sogou 对代理出口 IP 会连续弹点选验证码：连解 2-3 轮仍换新图 = 该 IP 已被标记，**立即弃通道**（继续点选是无限循环）。用户给了种子文章 URL 时直接走种子自带的两条通道——零反爬、一次拿全列表，实测一个 110 篇合集 + 一个 19 篇合集全部枚举成功。
 
 ### 通道 1：合集（album）——同系列全量枚举，首选
-1. 在种子文章 HTML 源码（正文互链或页面内联变量）里找 `album_id=<数字>`；同页可取 `var biz` 与 `var nickname`（账号名）。
-2. 合集页 `https://mp.weixin.qq.com/mp/album?__biz=<biz>&album_id=<id>` 是 JS 动态渲染——curl 只拿到壳，须 browser 打开读 DOM。
+1. 在种子文章 HTML 源码（正文互链或页面内联变量）里找 `album_id=<数字>`；同页可取 `var biz` 与 `var nickname`（账号名）。**biz 采集窗口**：只有活着打开的文章页带 `var biz`——搜狗签转链（`src=11&timestamp=&signature=`）限时且不含 biz，归档的 final_url 事后挖不出；补采 biz 必须趁签名有效现场打开文章页提取。
+2. 合集页 `https://mp.weixin.qq.com/mp/album?__biz=<biz>&album_id=<id>` 是 JS 动态渲染——curl 只拿到壳，须 browser 打开读 DOM。**但浏览器直开该 URL 会撞「🐴 Verify」环境墙（2026-11-16 实证）**；改用 **appmsgalbum JSON 端点 curl 直连**（无墙、服务端渲染出条目）：
+   ```bash
+   curl -sL -A "<桌面UA>" "https://mp.weixin.qq.com/mp/appmsgalbum?action=getalbum&__biz=<biz>&album_id=<id>&count=30"
+   # 返回 ~370KB HTML，li 开标签内联属性: data-msgid / data-itemidx / data-link / data-title
+   # 解析正则: r'<li[^>]*class="album__list-item[^"]*"[^>]*>' 后逐属性取 data-*
+   ```
 3. 条目**不是 `<a>` 锚点**（innerText 有全部标题但 `querySelector('a')` 为空）：每条是 `li[data-link="..."]`，取 `data-link` 属性即完整 mp.weixin URL。
-4. 列表懒加载：在页面内滚动到页底直至条目数连续两次不变（单合集可上百篇）。
-5. data-link 里的 URL 用 curl 直抓正文即可——反爬墙只挡「列表发现」层，微信文章页本身无墙。
+4. **msgid 判新（增量巡检核心，2026-11-16 实证）**：mid 在账号内单调递增——首次全量抓后记 `baseline_mid`，此后巡检 `mid > baseline_mid` 即增量，**无需解析日期**（合集页日期由 JS 加载，静态 HTML 无日期文本）。
+5. 列表懒加载：在页面内滚动到页底直至条目数连续两次不变（单合集可上百篇）——浏览器路径；curl 路径 count=30 默认返回最新 20 条，增量巡检够用。
+6. data-link 里的 URL 用 curl 直抓正文即可——反爬墙只挡「列表发现」层，微信文章页本身无墙。
+
+### 通道 1b：增量巡检 sweep（台账驱动，2026-11-16 机制化）
+- **源台账单一事实源**：`~/.hermes/shared/research/wechat-accounts-ledger.yaml`（T1 深度号带 biz+album_id+baseline_mid 走合集通道；T2 活跃号走搜狗矩阵；T3 存量低频）。
+- **巡检脚本**：用本技能模板 `templates/sogou-sweep.py`，拷到当次工作目录改路径即用——勿引用某次会话目录里的副本（会话产物会被归档清理）。状态机 `sogou-delta.json` 幂等续跑（只跳过 status=ok），顺带累计 `candidate-accounts.json` 候选池。
+- **sweep 设计契约（后台反爬跑批四件套，缺一即失控）**：① 文件锁 `sweep.lock` 防多实例——两个进程对同一搜狗 IP 加倍探测，墙永不冷却；② 每账号重试上限 ≤2 次、退避 75/150s，禁 6 连撞式长退避；③ 全局熔断——连续 3 个账号撞墙即退出，静默 ≥1-2 小时后改时段重跑（IP 被标记期间继续撞只保温）；④ 进度输出 `[k/N] 账号: delta=x (累计Xs, 预计剩余~Ys)` 加结束汇总（ok/增量/未穿透清单）——看日志的人必须随时知道还剩多少、何时结束，只输出 sleep 行即违此条。
+- **候选晋升规则**：sweep 结果卡里非目标账号按近期发布频次累计；同域频次≥5 且近 30 天有发布 → 人工判定入 T2；禁自动入账。
+- **合集页浏览器墙 ≠ curl 墙**：album 页浏览器打开撞 Verify，appmsgalbum 端点 curl 敞开——两者通道独立。
 
 ### 通道 2：系列互链——无合集时逐级爬
 - 系列文正文带往期链接（`?__biz=...&mid=N&idx=N&sn=...` 形式）与「下一篇预告」；顺链逐级走，`mid-idx` 可当文件 slug。
@@ -172,6 +199,14 @@ Break the technology into implementable modules with clear boundaries. Each modu
 ```
 
 ## Pitfalls
+
+### 全文被墙时的片段马赛克兜底（2026-11-14 实证）
+
+签名 URL 与 /link 全被封时，搜狗摘要本身可榨：摘要按查询词偏置——同一篇文章用「标题片段 + 不同关键词」（为什么/怎样/边界/缺陷/温度等）多次探测，每篇可拼 1-5 段不同窗口的正文片段（26 篇实例得 39 段 2,449 字符）。纪律：① 马赛克只作 B 级证据，报告标注 [摘要级]，不得冒充全文调研；② 增量落盘走 manifest 状态机，断点续跑（300s kernel 限制下分批 ≤6 篇/批）。
+
+### 公众号迁移导致历史文章去索引（2026-11-14 实证）
+
+搜狗结果里出现「🐴 账号已迁移」条目 = 高危信号：迁移后该号历史文章整体退出搜狗索引（旧文一篇都搜不到），「搜不到 ≠ 不存在」。覆盖声明必须区分「窗口内零发布」与「窗口内索引丢失」两种解释，拿合集/互链通道补验前不得断言停更。
 
 ### 验收侧：调研/亲读类卡的锚点对账（2026-10-21 实证）
 

@@ -39,6 +39,13 @@
 - 供应链安全
 - WebSec 工具箱（websec-toolbox，2026-09 新增）
 - AD CS 攻击链检测基线（adcs-detection-baseline，2026-10 新增，gap-20260925-003：FreeBuf 501589 的 R1-R9 检测规则 + AuditFilter 审计陷阱 + AI 攻击时序预算蒸馏）
+- CVE-2026-98432 Linux 内核 MPTCP UAF 远程 root（cve-2026-98432，2026-11 新增，gap-20261030-003：Linux 4.4 起 IPv4 TCP 握手 UAF + MPTCP 监听前置 + Claude 53min 武器化 + EPSS 0.0076 实测，详见 knowledge/cve-2026-98432-linux-mptcp-uaf-root.md）
+- Telegram Android 语音通话 RCE（telegram-android-tgcalls-mediastate-rce，2026-11 新增，gap-20261030-004：接听即触发，tgcalls MediaState 解析 find() 守卫-解引用迭代器错配，8.6.2–12.10.3 受影响，无 CVE 以 fix commit a6ea40eb 为差分锚 + 跨平台补丁时滞 Android 晚 5 个月 + Semgrep 固化规则回归 4/0/4/0 零误报，详见 knowledge/telegram-android-tgcalls-mediastate-rce.md）
+- Zyxel GS1900 补丁失效二次利用（zyxel-gs1900-patch-bypass，2026-11 新增，gap-20261104-008：CVE-2026-107441 dispatcher.cgi 预认证 RCE 9.8，旧补丁 CWE-807 先复制后校验致 10 个已修固件全灭，Kapibala 在野 996 台/48 国收割配置+root 哈希，JITTERLY 后门/SIXZUT rootkit IOC 齐备；N-day 差分后必须走 patch-diff-exploit S4b 补丁充分性三判据，详见 knowledge/zyxel-gs1900-cve-2026-107441-patch-bypass.md）
+- OpenAI 948 Linux LPE 单次运行（openai-948-linux-lpe-pipeline，2026-11 新增，gap-20261031-001：五阶段流水线 $1.21M 出 948 LPE（$1,279/个）+ 阶段成本模型 + 20/200"错误 0-day 致胜"归因教训（已固化进 fp-check Gate 5 因果归因），详见 knowledge/openai-948-linux-lpe-pipeline.md）
+- OpenSSH *sshhole musl 认证绕过（sshhole-musl-authbypass，2026-11 新增，gap-20261110-001：CVE-2026-123158 CVSS 8.1，musl+非PAM sshd 以 257-1024 字节任意密码登录 shadow=`*` 密钥专用账户，2016 起存在，11-05 披露当日修 10.6p2+Alpine 全分支，11-05/06 蜜罐 232/713 次在野尝试；五条件缺一免疫 + 反向移植补丁 banner 陷阱，详见 knowledge/cve-2026-123158-sshhole-musl-auth-bypass.md）
+- iOS worse_query 容器沙盒逃逸（ios-worse-query-container-escape，2026-11 新增，gap-20261111-002：App Group 一条 entitlement 即向 containermanagerd 私有查询 API 领任意应用容器 sandbox extension，侧载应用无越狱无内核洞读取钱包助记词/私钥，bad_query(08-11)→worse_query(11-08) 逐版本跟进；一手纠偏=27.3 beta 2 已修而稳定版 27.2.1/26.7.3 仍带洞（FreeBuf/THN "暂无修复"已滞后）；审计指纹=application-groups entitlement + container_query_create/sandbox_extension_consume dlsym 组合，详见 knowledge/ios-worse-query-container-escape.md）
+- Chrome XML UAF 在野 0Day 沙箱内 RCE（cve-2026-125350，2026-11 新增，gap-20261111-003：KEV 2026-11-10 收录 dueDate 11-24，构造网页即渲染进程内任意代码执行，2026 年第 8 个在野 Chrome 0Day；官方帖纠偏=双报告者（Hardarson 10-12 + 匿名 11-06，媒体只写匿名）；本机 Chrome 156.0.8078.48 实测暴露于在野利用（< ES 修复线 156.0.8078.96），agent 自动化浏览舰队版本须挂 tool-inventory-baseline 周期盘点，详见 knowledge/cve-2026-125350-chromium-xml-uaf-itw.md）
 
 ### 7. Web安全工具库 公众号蒸馏（websec-toolbox，2026-09-09 新增）
 - 来源：微信公众号「Web安全工具库」推荐工具（2026-03 ~ 2026-09 窗口）

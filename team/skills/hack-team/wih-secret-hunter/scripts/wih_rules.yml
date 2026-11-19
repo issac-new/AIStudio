@@ -136,6 +136,20 @@ rules:
   - id: app_key
     enabled: true
     pattern: \b(?:VUE|APP|REACT)_[A-Z_0-9]{1,15}_(?:KEY|PASS|PASSWORD|TOKEN|APIKEY)['"]*[:=]"(?:[A-Za-z0-9_\-]{15,50}|[a-z0-9/+]{50,100}==?)"
+  # ===== 水坑/第三方 JS 投毒 IOC（2026-11 Sekoia APT29 案例锚定，详见 references/wateringhole-apt29-202611.md）=====
+  # 命中即 Candidate 级：需人工回源确认数据流后才可入报告（反幻觉纪律）
+  # 投毒投递/回传/负载均衡域名（Sekoia 2026-11-04 公开 IOC）
+  - id: wateringhole_ioc_domain
+    enabled: true
+    pattern: \b(?:flux-telemetry|clouds-stacks|starx-net|ads-it-assets|adv-static|wpvortex-mod|assets-int|adsprism-stat)\.com\b
+  # APT29 利用链防重放标记 cookie（Class A/B 固定硬编码值）
+  - id: wateringhole_vdgh_token
+    enabled: true
+    pattern: \bVDGH_TOKEN_REF\b
+  # UltimateFingerprinter 指纹脚本固定特征（文件名后缀 / 内部命名）
+  - id: wateringhole_temfp
+    enabled: true
+    pattern: '(?:-temfp\.js|UltimateFingerprinter)'
 
 # 排除规则， 支持字段 id, content, target , source 逻辑为 and ，如果是正则匹配，需要使用 regex: 开头
 exclude_rules:

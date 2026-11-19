@@ -1,7 +1,7 @@
 ---
 name: llm-redteam
 description: "OWASP LLM Top 10 红队测试 — 对 LLM 应用进行主动攻击性安全测试，覆盖 prompt injection/jailbreak/data leakage/agentic 攻击面。参考 LLMrecon 设计。"
-version: 1.7.0
+version: 1.9.0
 author: Hermes Agent (inspired by LLMrecon)
 license: MIT
 platforms: [linux, macos]
@@ -13,7 +13,7 @@ metadata:
 
 # LLM Red Team — OWASP LLM Top 10 攻击性安全测试
 
-> **定位**：对 LLM 自身做主动攻击性安全测试（红队视角），完整覆盖 OWASP LLM Top 10 2025。
+> **定位**：对 LLM 自身做主动攻击性安全测试（红队视角），完整覆盖 OWASP LLM Top 10 2025，报告期框架名称按 2026 版口径引用（见「OWASP LLM Top 10 2025 覆盖」节的 2025→2026 映射说明）。
 > **核心观念**（v1.1 引入）：LLM 应用是一张攻击图，而非单一终端节点。危害最大的漏洞不止于"输出不安全回答"，而是被操纵的输入跨越信任边界、波及检索系统/身份控制/工具/数据管道/业务交易。评估必须覆盖完整攻击路径。
 
 ## When to Use
@@ -48,7 +48,17 @@ metadata:
 | LLM07 | System Prompt Leakage | 系统提示提取、内部指令泄露 |
 | LLM08 | Vector/Embedding Weakness | RAG 投毒、跨租户检索泄露、检索前授权过滤绕过、嵌入逆向（见「RAG 与向量库深度测试」） |
 | LLM09 | Misinformation | 幻觉诱导、虚假信息生成 |
-| LLM10 | Unbounded Consumption | 资源耗尽、拒绝服务、付费额度消耗 |
+| LLM10 | Unbounded Consumption | 资源耗尽、拒绝服务、付费额度消耗；推理服务层数据面机理（KV Cache 池挤占/长上下文放大/抢占重算）见 `redteam-ai-serving` v1.5 数据面节 |
+
+### OWASP LLM Top 10 2025→2026 映射（v1.8）
+
+**2026 版发布事实**（来源 notes-C-aihack.md §2.1，照抄不回源）：OWASP GenAI Security Project 2026 波次——LLM Top 10 **2026 版**发布（官方新闻稿 2026-09-02：https://genai.owasp.org/2026/09/01/owasp-genai-security-project-unveils-2026-top-10-for-llm-applications-new-agent-control-standard/ ；CSA 研究注记佐证发布日 2026-08-03：https://labs.cloudsecurityalliance.org/research/csa-research-note-owasp-genai-top10-2026-agent-control-standard/ ）。官方要点：更新排名、扩威胁覆盖、映射 NIST/MITRE ATLAS/CWE/Agentic Top 10，48 小时下载破 1 万。同波次首发 **Agent Control Standard（ACS）**——运行时控制 agent 行为的开放线上协议（初版，条目可能变动，仅作 action-gate 语义的对照借鉴，不做硬依赖）。另有 AIUC-1 与 OWASP Top 10 for Agentic Applications (2026) 双向对照表（2026-05，https://genai.owasp.org/download/54627 ）。
+
+**本 skill 的编号策略**（执行层锚 2025，引用层升 2026）：
+
+- **执行层不动**：攻击模板库、377 条清单 Framework_Mapping（`LLM01-10` 前缀）仍按 2025 编号执行与切片——checklist-full.json 已在 `meta.framework_mapping_baseline` 声明锚定版本；
+- **引用层升级**：报告期引用框架条目名称时按 2026 版口径，旧编号括注（如「LLM07 系统提示泄露（2025 编号；2026 版排名/名称有更新）」）；
+- **映射固化待办**：2026 版逐条条目清单未入库 **[未验证：2026 逐条编号对照表——调研源 notes-C 未收录，取得官方条目清单后补映射表并同步 checklist Framework_Mapping]**。对照表固化前，**禁止**凭印象改写 LLM01-10 编号或名称。
 
 ## 攻击模板库（YAML 格式）
 
@@ -149,9 +159,48 @@ cat ~/.hermes/skills/hack-team/llm-redteam/templates/rag-vector-testing.yaml
 | 沙箱逃逸 | symlink/路径包含突破目录限制 | CVE-2025-53109 / CVE-2025-53110 文件系统 MCP |
 | 记忆投毒持久化 | 注入载荷静默写入长期记忆，跨会话自动执行 | Windsurf SpAIware（复测触发器：任何记忆写入路径变更） |
 
+### MCP 安全扫描工具链（v1.8，试跑占位——实跑在另一张卡，本节不装不跑）
+
+> 来源 notes-C-aihack.md §2.4（GitHub 仓库 README+元数据级证据）。照抄注意事项：该品类名目多、质量参差，stars 数普遍不高，采纳前需逐个试跑验证 **[未验证：各工具检出率]**。
+
+| 工具 | 供给方 | 定位 | 仓库 |
+|------|--------|------|------|
+| mcp-audit | veloxlabsio | 检测工具投毒/提示注入（2026-04 由 mcp-scan 更名） | https://github.com/veloxlabsio/mcp-audit |
+| mcp-scanner | cisco-ai-defense（Cisco） | Python，扫 MCP server 工具的安全发现 | https://github.com/cisco-ai-defense/mcp-scanner |
+| mcp-safeguard | Apeironics | Semgrep 基静态分析+运行时防护+MCP 专属规则集 | https://github.com/Apeironics/mcp-safeguard |
+| mcpnuke | babywyrm | MCP 红队+扫描器（静态元数据+主动行为探测） | https://github.com/babywyrm/mcpnuke |
+| MCPRadar | yatuk | 工具投毒/提示注入/不安全配置/依赖漏洞/行为漂移检测 | https://github.com/yatuk/mcpradar |
+
+**本机试跑步骤占位**（派卡时按此骨架执行，实跑卡负责填结果）：
+
+1. scope-gate 授权先行：mcpnuke 类主动探测会触碰生产 MCP server，授权书须显式点名目标清单；
+2. 选 2-3 个扫描器（静态类 mcp-audit / Cisco mcp-scanner 优先，mcp-safeguard 做静态规则对照）扫本机全部 MCP server 配置；
+3. 产出基线报告（每 server 一行：工具数/检出项/误报初判），登记入 `_shared/hack-knowledge-index.md` §四事实台账；
+4. mcpnuke 主动探测仅在授权范围内跑，结果只作红队验证不并入基线。
+
 ### 多 Agent 攻击
 - 测试 agent 间信任关系滥用
 - 测试 toxic agent flow（一个 agent 被攻破后影响其他）
+
+### LLM Web 客户端攻击面（共享内容沙箱逃逸，v1.9）
+
+LLM 产品的 Web 前端是与模型层正交的攻击面：用户生成内容（共享对话、artifacts、canvas、交互图表、HTML 预览）在独立源沙箱 iframe 渲染，沙箱逃逸 = 以主站源执行 JS → 直接调用受害者已认证会话 API（读私密对话/邮件/文件）→ 单链接劫持，无需凭据窃取。原子技术（postMessage source→sink、srcdoc、JSONP/CSP 绕过）在 `redteam-xss` 已有 L1-L5 阶梯；本节只收 LLM 产品特有入口与验证清单。
+
+**逃逸链锚点（ChatGPT 实测，Parameter 披露 2026-10-28，OpenAI 定级 P1/$5K，2026-10-26 已修复）**：
+1. 恶意共享对话携带交互图表 → HTML Preview 在独立源 iframe 渲染（隔离本身有效——预览读不到父页才是基线，测的是"别的路"）；
+2. 图表引用的第三方库 MathLive 在**主页面**注册 `mathlive#virtual-keyboard-message` 监听器，顶层控制器 origin policy=`none` 且不要求已批准源窗口 → 沙箱内 `top.postMessage({action:"update-setting", layouts:[含攻击 HTML]})` + `{action:"show"}` 两条消息即可投递；
+3. MathLive 把布局拼成 HTML 串，经 `createHTML`（标记 trusted、不消毒）赋给主页面 `innerHTML` → HTML 注入成立；
+4. 注入 `<iframe srcdoc>` 且无 sandbox 属性 → 继承主站源；CSP 拦内联但放行 YouTube → YouTube oEmbed 端点把任意 callback 参数原样作为 JS 返回（JSONP）→ 以主站源执行 JS；
+5. payload 调已认证对话 API 读取与共享链接无关的私密对话，经图片请求外传；最终版自动打开 Preview，开链 ~4.5s 触发，跨账号复现三次。
+
+**红队验证清单（对目标 LLM Web 产品逐项）**：
+- 枚举共享内容渲染面（分享对话/artifact/图表/HTML 预览），记录每个 iframe 的 origin、`sandbox` 属性、`allow` 列表；
+- 对预览 iframe 引用的每个第三方库（虚拟键盘/富文本编辑器/图表库高发），审其**主页面 message 监听器**的 origin 校验——查库自身的 origin policy 配置，不止审自家代码（MathLive 教训：漏洞在依赖库的监听器里）；
+- 验证动态创建 iframe（含 `srcdoc`）是否带 `sandbox` 属性；
+- 解析 CSP `script-src` 白名单域，逐域枚举 JSONP/oEmbed 回显端点（callback 参数原样出现在返回 JS 中即命中）;
+- 同一载体两个测试面都要跑：共享对话链接既是本节 XSS 入口，也是 LLM01 间接注入通道——受害者分别是"点了链接的人"与"消化了链接内容的 Agent"。
+
+**同平台先例（攻击面连续性证据）**：ChatGPT 沙箱共享存储泄露 Gmail（cybersecuritynews.com/chatgpt-sandbox-gmail-data/，走共享内部存储）；ChatGPT GitHub connector flaw（仓库指令驱动，属 agentic/LLM01 面，非本节 web 客户端面）。
 
 ## RAG 与向量库深度测试（LLM08 展开）
 
@@ -182,6 +231,19 @@ RAG 系统引入独立决策层——决定模型能看到哪些内容。检索�
 3. **整体回滚实测**：可靠回滚必须能把提示词、检索索引、工具策略与模型版本作为**统一整体**恢复——实测验证，不看文档。
 4. **密钥专项**：在 Notebook、提示词模板、环境变量、调用链路与模型日志中搜索凭证或敏感上下文；用诱饵数据做提取测试；证据只展示泄露路径。
 5. 非生产语料库中开展可控投毒，验证目标恶意行为在重训练、重索引或回滚后是否依然存在。
+
+## 检测手册目录（v1.8：references/detection/，一漏洞类一 md）
+
+> 模式参照 GCP reference-harness（github.com/GoogleCloudPlatform/reference-harness，repo 创建 2026-08-05，Apache-2.0，仅 3 commits——**借「skill 目录一漏洞类一 md + 按需装载，新增漏洞类不改提示只加文件」的工程形态，不依赖其代码**；来源 notes-C-aihack.md 候选 2，上游成熟度低仅借模式）。
+
+| 手册 | 覆盖 | LLM/agentic 特化点 |
+|------|------|--------------------|
+| `references/detection/csrf.md` | CSRF | 计费型端点烧额度（LLM10）、审批劫持（LLM06）、SSE 跨域 |
+| `references/detection/idor-bola.md` | IDOR/BOLA | 会话历史/RAG 文档越权读、会话换绑、mass assignment、检索前授权过滤 |
+| `references/detection/ssrf.md` | SSRF | LLM fetch 工具、URL 预览、RAG 摄入器、间接注入→SSRF 链、IMDS |
+| `references/detection/deserialization-xxe.md` | 反序列化/XXE | pickle 权重加载（AI-MDL-001）、记忆持久化交汇、safetensors 对照 |
+
+用法：worker 按目标类型切片引用（Web 面→csrf/idor；目标有出网能力→ssrf；ML 管道→deserialization）；每册自带测试矩阵 / 判定标准（对齐 v1.5 Detection_Mode 三分法）/ 证据要求 / 误报清单（fp-check 对接）/ 框架映射。**扩展纪律：新漏洞类 = 新增一个 md + 本表加一行，不改攻击流程主文**（reference-harness 同款增量形态）。
 
 ## 输出格式
 
@@ -227,6 +289,10 @@ RAG 系统引入独立决策层——决定模型能看到哪些内容。检索�
 8. **送达性核验先于防御结论**：载荷未产生预期响应时，先核验载荷是否真正到达了模型上下文（字段名/参数名/端点是否正确），再下"防御成功"结论。侦察失败（载荷未送达）与防御成功（载荷被拦截/拒绝）必须分开统计——实证：41 载荷中 18 个因字段名猜错从未到达 LLM，若混入分母会把真实 CSR 严重稀释。
 9. **误报率必须随报告量化**：LLM 拒绝话术本身常含敏感词（"I cannot provide the API key..."），基于关键词的自动判定会大量误报（实证：10 次自动 COMP 中 8 次为误报，误报率 80%）。自动判定仅为初筛，每个 COMP 结论必须人工复核响应语义（区分"拒绝"与"泄露"）后才可写入报告——此为 fp-check 六门审查在 LLM 红队场景的强制适用点。
 10. **攻击者模型须证据选型，报告须披露攻击者模型**（v1.4，蒸馏自 gap-20260927-001）：自动化红队的 ASR 是「攻击者模型 × 攻击技术 × 评分器」的函数——微软 AIRT 用 PyRIT AdversarialBenchmark 实测：Grok 4.3 62.0% vs 旧 GPT-4o 42.5%（50 个 HarmBench 目标 ×4 攻击技术，19.5pp 差距），且 ASR 排序随攻击技术变化（"最好攻击者模型"不存在）。操作纪律：①自动化攻击链启用前先跑 AdversarialBenchmark 选型（或等价小样对比），报告必须披露攻击者模型名+版本与基准条件，缺披露的 ASR 数字不得跨基准对比；②安全评估（蓝队侧）同理——用弱攻击者模型跑评估会把安全水位测虚高（假阴性），评估基线须与本纪律同源；③结合 §9：攻击者模型本身也是评分器/转换器时，其偏差叠加误报风险，双重披露。来源：PyRIT 官方博客 https://microsoft.github.io/PyRIT/latest/blog/2026-09-03-adversarial-model-selection （2026-09-03）+ PyRIT 1.1.0（PyPI 2026-09-04）+ 微软 Command Line 博客（2026-09-10，四入口 CoPyRIT GUI/Scanner CLI/Python 框架/RAMPART agent 测试框架）。
+11. **ASR 报告双口径（v1.8）**：单一事实源 = `~/.hermes/skills/devops/eval-calibration/SKILL.md`「ASR 测量效度」节（arXiv 2609.25173 Attack Success Rate Is Not a Number + arXiv 2610.23254 Ignored, Not Refused）；本 skill 只写消费规则，不复制口径定义：
+    - **分布化报告**：红队报告中的攻击成功率禁单点数字——必须报分布 + 尝试次数 + 按条件分层（提示模板/模型版本/防御配置各层分别报）。与 §2「概率性必须量化」分工：§2 定量化义务，本条定分布形态。
+    - **ignored/refused 三率分报**：攻击尝试三分——成功 / 拒绝（refused，模型明确拒绝攻击）/ 忽略（ignored，模型没做任务也没拒绝——答非所问/静默/偏题），三率分报。低 ASR 结论必须先排除「ignored 主导」：小型工具型 agent 的低注入成功率常因模型**忽略任务**而非**拒绝攻击**（arXiv 2610.23254）。误把 ignored 当 refused = 防御水位虚高（假阴性）；refused 判定须人工复核响应语义（区分「明确拒绝」与「没做」），与 §9 误报纪律同向。
+    - **叠加义务**：分布化报告的每个分层都须披露攻击者模型（§10），否则跨分层不可比；分层数据直接进 eval-calibration 侧的校准体检（ECE/Brier/κ），本 skill 不重复定义。
 
 ## 防御建议（给蓝队）
 
@@ -235,6 +301,19 @@ RAG 系统引入独立决策层——决定模型能看到哪些内容。检索�
 3. **权限控制**：最小权限原则、工具白名单、人工确认、权限感知检索（授权过滤先于内容进入上下文）
 4. **监控告警**：异常输入检测、攻击模式识别、速率限制、不可篡改检索日志
 5. **架构防护**：prompt firewall、agent 沙箱、网络隔离、提示词+索引+工具策略+模型版本整体回滚
+
+## prompt injection 防御工程（v1.8：攻击面的防御对照）
+
+> 来源 notes-C-aihack.md §2.2。此前本 skill 只有攻击面与「防御建议」清单级对照；本节收四类**工程机制级**防御——红队侧价值是「目标部署了哪类机制 → 用什么方法验证它真有效」。
+
+| 机制 | 一句话原理 | 适用条件 | 红队验证方法 |
+|------|-----------|----------|--------------|
+| SkillGuard（arXiv 2608.30041，2026-08-30） | harness 层能力圈禁：技能摘要+策略→Skill Impact Graph，内联参考监视器拦截调用；不可信数据进入状态即标污染，按可达性切断到禁态能力（binary/fractional/fractional-flow 三种限权策略），无需辅助 LLM。AgentDojo 4 套件中 3 套 ASR 归零（Gemini 2.5 Flash/Llama3.3-70B 双后端），Slack 套件降至 4.8%/14.3%；组合攻击下 Llama 上优于全部基线（Spotlighting/CaMeL/AttriGuard） | harness 可插拔参考监视器；能为每技能提供摘要与策略；预算不允许副模型 | ①污染传播绕过：找未进 Impact Graph 的能力（新挂载工具/动态生成技能）走污染态调用；②fractional 限权可达性：部分限权下聚合多次低权调用凑出高危效果；③目标若只部署提示层防御（Spotlighting 类），按论文基线预期高 ASR——这是机制级差距，报告按修复观给机制升级建议 |
+| CaMeL 系（arXiv 2610.05640 多 agent 扩展、2505.22852 企业化精简） | 权限分离架构：控制流与数据流分离，特权组件与不可信数据隔离；2610.05640 把 CaMeL 扩到多 agent 系统防间接注入，2505.22852 做企业化精简 | 架构可重构期引入；可接受双组件延迟与成本；多 agent 拓扑可显式建模 | ①跨权限通道测试：所有「不可信数据→特权动作」路径是否都经控制流校验（找旁路：日志/缓存/监控管道里的数据回流）；②多 agent 场景：agent 间转发的内容是否继承污染标记（2610.05640 面） |
+| CounterSteer（arXiv 2609.36570） | 激活转向（activation steering）推理时压制间接注入——训练无关的模型内层路线 | 白盒/推理端可控（激活访问）；无法改 harness 时的模型层选项 | ①转向强度-能力 trade-off：高强度转向下正常任务成功率下降多少（对照测）；②对抗后缀绕过：换注入家族复测是否只压特定模式；③分层判定：harness 层注入（工具描述投毒类）不在其防护面内 |
+| 有状态策略引擎（arXiv 2610.00797，2026-10） | 合成任务级策略并在工具调用层强制执行 | 工具调用是主攻击面；任务可形式化描述 | ①策略合成覆盖度：跨任务泛化盲区（策略未覆盖的任务变体）；②策略绕过：任务描述与实际意图不一致时策略是否仍正确限制；③策略引擎自身成为单点（对照 v1.6 节 ASI05/ASI08 action-gate 实测判据：校验器故障放大面） |
+
+**选型顺序**（防御侧参考/红队侧预期基线）：harness 层机制（SkillGuard 类/策略引擎类）先于模型内层（CounterSteer 类）；架构级（CaMeL 系）适合新建系统。目标只有提示层防御时，参照上表「红队验证方法」第 ③ 列直接给出机制级升级方向，不停留在「加强提示词」。
 
 ## Agentic 平台级测试面（v1.5，377 条测试/25 类别）
 
@@ -345,6 +424,28 @@ OWASP 官方在十大风险之外提出 **Least Agency（最小自主性）**原
 
 - **ASI05 命中判据（门禁自身成为 RCE 面）**：当「校验器可执行体」与「被校验对象」共享同一解释器依赖，且该依赖未在主依赖清单声明时，一次依赖缺失即从「校验器不可用」放大为「全工具不可用」。此时 RCE 面不是「模型输出变成代码」，而是「控制面与业务面同生共死」。
 - **ASI08 命中判据（fail-closed 的放大面）**：fail-closed 把单点错误放大为全量阻断是**设计正确**，但放大量级 = 被该门覆盖的动作总数。本节建议给门禁自身设独立故障域（门禁依赖独立于业务依赖），使「门坏了」退化为「门放行/门关闭」二选一而非「全工具拒绝」。
+
+### ASI07 补缺：agent 间通信仿冒测试项（v1.8 增补）
+
+> 缺口登记见上方对位表 ASI07 行（全链无消息签名/nonce/时间戳/重放防护的机械载体）。上游素材照抄 notes-C-aihack.md §2.1：NIST AI Agent Standards Initiative（https://www.nist.gov/artificial-intelligence/ai-agent-standards-initiative ）+ Agent 身份管理系统设计原则（2026-10-27 发布，共 10 条原则，https://www.nist.gov/blogs/cybersecurity-insights/design-tenets-agent-identity-management-systems ）+ NCCoE「Agentic SI Identity and Authorization」项目（实践导向指南在建，https://pages.nist.gov/nccoe-ai-identity/ ）。**[未验证：10 条原则逐条内容——调研源未收录，引用前回源核对]**。
+
+**通道 × 测试项矩阵**（消息完整性验证 + 身份鉴别 + 重放三轴）：
+
+| 通道 | 完整性验证（篡改） | 身份鉴别（仿冒 spoofing） | 重放 |
+|------|-------------------|--------------------------|------|
+| kanban（本机 SQLite 同库） | T1：授权测试库中修改在途 comment/handoff body（模拟中间人篡改），消费 worker 是否检测哈希/签名缺失 | T2 跨 worker 仿冒见下 | T3：捕获合法 completion handoff 原样重放，验证 nonce/时间戳是否缺失 |
+| Matrix（跨机协作，外部 homeserver） | T4：测试 homeserver 上伪造房间事件内容，校验链是否拒绝 | T5：伪造 sender（mxid 与发送设备不一致） | T6：同 event_id 重发 |
+| A2A（agent-to-agent 直连） | T7：篡改任务转发载荷 | T8：伪造 Agent Card 声明的身份/公钥（与真实 key 不匹配） | T9：重放历史任务消息 |
+
+**T2 跨 worker 仿冒（spoofing）红队用例**（本集群主用例，kanban 通道）：
+
+1. 前提：授权测试板 + 两个测试 profile（A=编排者视角，B=工作者视角）；
+2. 步骤：以 A 的执行上下文构造一条**声称来自 B** 的消息（comment / steer / completion handoff：字段 `created_by` 或声称身份=B，实际写入者=A）；
+3. 判定锚：①消费方（dispatcher / 父卡 worker）是否校验「声称身份 == 实际写入身份」——无校验 = ASI07 命中；②CompletionHandoff 契约字段校验通过 ≠ 身份鉴别通过（对位表现状：类型化有、防伪造无）；
+4. 升级：仿冒人类操作者身份（伪造用户 unblock/approve 消息）→ 叠加 ASI09 人机信任利用；
+5. 报告落点：`framework: ASI07`，severity 起报 High（跨 worker 仿冒可直接污染任务分派与完成判定链）。
+
+**与 v1.6 对位表的接口**：本节是**测试项**补缺，不是**载体**补缺——测试项命中后对位表 ASI07 行三态仍为「缺口」，直到本机落地签名/nonce 机械载体；finding 不因「有 kanban 契约」降级（契约校验 ≠ 消息防伪造，OWASP 原文明示「连接问题不等于信任问题」）。
 
 ## 经验进化红队与执行环境测试面（v1.7）
 
@@ -462,6 +563,18 @@ v1.7 增量蒸馏自（orchestrator TUI 直执行，2026-10-23/24，裁决 `~/.h
 - 显式不吸收：GCG/AutoDAN/AmpleGCG 白盒实现（需代理模型基础设施）、经典越狱 prompt 库（既有模板已覆盖）、transport 自动检测执行代码（集群已有等价工具链）、ASB/AgentHarm 评测管线（无此评测场景）
 - 存档：references/redevoagent-20261023/（论文全文+转述文+仓库产物 8 件+MANIFEST sha256+how-to-use.txt）
 
+v1.8 增量蒸馏自（hack 看板 t_c7f1f368，2026-11-10，源=第五波安全调研笔记 `20261110-rsi-org-harness-evolution/notes-C-aihack.md`，照抄不回源）：
+- 一手源照抄：OWASP 2026 波次官方新闻稿（2026-09-02）+ CSA 研究注记（发布日 2026-08-03）；NIST Agent 身份 10 原则（2026-10-27）+ NCCoE Agentic SI 项目；SkillGuard（arXiv 2608.30041）/CaMeL 系（2610.05640、2505.22852）/CounterSteer（2609.36570）/有状态策略引擎（2610.00797）；ASR 效度（arXiv 2609.25173）+ Ignored, Not Refused（2610.23254）；MCP 扫描器五件（mcp-audit / Cisco mcp-scanner / mcp-safeguard / mcpnuke / MCPRadar）；GCP reference-harness 模式（仅 3 commits，借模式不依赖代码）
+- 新增六项：①OWASP LLM Top 10 2025→2026 映射节（执行层锚 2025 / 引用层升 2026 / 逐条对照 [未验证] 待固化）+ checklist-full.json `meta.framework_mapping_baseline` 同步；②ASI07 补缺节（三通道完整性/鉴别/重放矩阵 + T2 跨 worker spoofing 用例）；③「prompt injection 防御工程」节（四类机制适用条件与红队验证方法）；④references/detection/ 检测手册目录（CSRF/IDOR/SSRF/反序列化四册落地）；⑤MCP 安全扫描工具链节（五件 + 试跑占位）；⑥报告纪律 §11 ASR 双口径（分布化 + ignored/refused 三率分报，单一事实源=eval-calibration「ASR 测量效度」节）
+- 显式不吸收：MCP 扫描器实跑（另卡执行）；ACS 协议细则（初版条目可能变动，仅对照借鉴）；NIST 10 原则逐条内容（[未验证] 未回源）；OWASP 2026 逐条编号对照（调研源未收录，禁凭印象改写）
+- 改前备份：`backups/SKILL.md.bak-20261110-v18`（v1.7.0 原件，471 行）
+
+v1.9 增量蒸馏自（hack 看板 t_e4a9abfd / gap-20261104-006，2026-11-12，FreeBuf 早报 510427 雷达触发）：
+- 一手回源三源核验：Parameter 披露原文 parameter.ai/labs/we-found-a-gap-at-openai（MathLive `mathlive#virtual-keyboard-message` origin policy=none / `createHTML` 不消毒 / srcdoc 无 sandbox / YouTube oEmbed JSONP / 开链 ~4.5s 自动触发）+ CybersecurityNews 转述（P1/$5K/10-26 修复）+ FreeBuf 早报 510427；一手全文存档 gap 工作区 `ws/src/parameter-openai.md`
+- 新增「LLM Web 客户端攻击面（共享内容沙箱逃逸）」节：五步逃逸链锚点 + 红队验证清单 + 同平台先例；postMessage/srcdoc/JSONP 原子技术显式引用 `redteam-xss` 不重复建设
+- 显式不吸收：MathLive/ChatGPT 具体 PoC 代码（漏洞已修复无重放价值）；OpenAI 安全冲刺/赏金池上调新闻（事件性无方法论）；西门子 Node-RED 条（OT/未授权面，落 `unauth-path-key-hunt`，与本技能正交）
+- 改前备份：`backups/SKILL.md.bak-20261112-v19`（v1.8.0 原件）
+
 ## Related Skills
 
 - `exploit-payload-escalation` — L0-L4 payload 渐进升级
@@ -469,3 +582,4 @@ v1.7 增量蒸馏自（orchestrator TUI 直执行，2026-10-23/24，裁决 `~/.h
 - `skillguard` — Skill 安全扫描
 - `red-teaming-llms-with-garak` — 模型层自动化探测基线（garak 命中率扫描，与本 skill 的应用层攻击链测试互补）
 - `fp-check` — 安全审计发现六门审查（误报消除）
+- `eval-calibration` — ASR 测量效度单一事实源（「ASR 测量效度」节；本 skill §11 消费其口径）

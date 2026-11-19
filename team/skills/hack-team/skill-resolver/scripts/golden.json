@@ -1,0 +1,423 @@
+[
+ {
+  "id": "sqli-en",
+  "hint": "Test SQL injection on https://target.com/api/users, union based injection point, mysql backend",
+  "expect_primary": "redteam-sqli",
+  "expect_supports_contains": [
+   "owasp-security"
+  ],
+  "expect_abstain": false,
+  "note": "typed: exploit+web+api; alias union; fmt injection-point"
+ },
+ {
+  "id": "sqli-cn",
+  "hint": "对 http://shop.example.com 做sqli报错注入，mysql数据库注入点测试",
+  "expect_primary": "redteam-sqli",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "中文混合英文token：sqli/mysql 可命中；纯中文'注入'词不进 vuln 维（词典镜像缺失，见findings）"
+ },
+ {
+  "id": "sqli-blind",
+  "hint": "blind sqli time-based oracle 测试 cookie 参数注入点",
+  "expect_primary": "redteam-sqli",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln: sqli+time-based… 实际命中 sqli; fmt injection-point"
+ },
+ {
+  "id": "xss-reflected",
+  "hint": "XSS 测试 https://chat.example.com/search?q= 反射型XSS，尝试 CSP bypass",
+  "expect_primary": "redteam-xss",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln xss + tech csp + fmt reflection-point"
+ },
+ {
+  "id": "xss-stored",
+  "hint": "stored XSS in comment field, angular application dom-xss",
+  "expect_primary": "redteam-xss",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln xss/stored/dom; tech angular"
+ },
+ {
+  "id": "ssti-jinja2",
+  "hint": "SSTI 模板注入测试 jinja2 {{7*7}} payload 验证",
+  "expect_primary": "redteam-ssti",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln ssti; tech jinja2; fmt template-input"
+ },
+ {
+  "id": "ssti-twig",
+  "hint": "twig 模板注入 template-injection 检测",
+  "expect_primary": "redteam-ssti",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "别名路径：alias ssti/template-injection/jinja2 类"
+ },
+ {
+  "id": "ssrf-metadata",
+  "hint": "SSRF 测试 http://169.254.169.254/ 云元数据访问拿临时凭据",
+  "expect_primary": "redteam-ssrf",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln ssrf + cloud metadata; task cloud-metadata"
+ },
+ {
+  "id": "ssrf-blind",
+  "hint": "blind ssrf oob 检测 dnslog 回显",
+  "expect_primary": "redteam-ssrf",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "alias blind-ssrf"
+ },
+ {
+  "id": "auth-jwt",
+  "hint": "jwt none 算法混淆攻击 oauth 授权码劫持测试",
+  "expect_primary": "redteam-auth",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "tech jwt+oauth2; fmt auth-endpoint"
+ },
+ {
+  "id": "auth-kerberoast",
+  "hint": "kerberoast 攻击域控 kerberos 服务账户票据",
+  "expect_primary": "redteam-auth",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln kerberoast + target ad(kerberos)"
+ },
+ {
+  "id": "blv-idor",
+  "hint": "idor 与业务逻辑漏洞测试：api 价格篡改 竞态条件，按 swagger 规格逐接口攻击",
+  "expect_primary": "business-logic-vulnerabilities",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln idor; target api; fmt api-spec(swagger)"
+ },
+ {
+  "id": "blv-price-tamper",
+  "hint": "测一下下单接口的价格篡改和 race condition 业务逻辑",
+  "expect_primary": "business-logic-vulnerabilities",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "中文vuln词(价格篡改/竞态)在词典但metadata用price-tamper/race-condition连字符形——仅 alias race 路径可达"
+ },
+ {
+  "id": "bola-detect",
+  "hint": "bola 越权检测：web 流量日志中找会话级对象级授权缺陷",
+  "expect_primary": "bola-session-detection",
+  "expect_supports_contains": [
+   "business-logic-vulnerabilities"
+  ],
+  "expect_abstain": false,
+  "note": "vuln bola; blv 作 support（35%门槛内）"
+ },
+ {
+  "id": "scope-gate",
+  "hint": "scope-check 授权校验：执行渗透命令前先确认目标在授权 scope 清单内",
+  "expect_primary": "scope-gate",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "alias scope-check/scope; fmt command; phase exploit——纯scope词会abstain（门禁忽略alias，见findings）"
+ },
+ {
+  "id": "methodology",
+  "hint": "渗透测试方法论 playbook pentesterflow 流程",
+  "expect_primary": "pentest-methodology-fusion",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "broad知识库: phase exploit + alias×2 胜出"
+ },
+ {
+  "id": "owasp-top10",
+  "hint": "OWASP Top 10 web 安全评估 owasp asvs top10",
+  "expect_primary": "owasp-security",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "broad: alias owasp/top10/asvs + target web"
+ },
+ {
+  "id": "audit-orchestration",
+  "hint": "并行编排多路扫描加权评分：scope 范围内统一汇总交付",
+  "expect_primary": "audit-orchestration",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "broad间平局→id字典序裁决链（锁平局行为）；audit-team alias 因含audit子串反致误路由（见findings）"
+ },
+ {
+  "id": "fp-check",
+  "hint": "复核 finding 是否误报：false-positive review-gate 六门审查后交付",
+  "expect_primary": "fp-check",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase report + alias×2; 注意 fmt 'findings'复数与FORMAT字典'finding'单数错配（见findings）"
+ },
+ {
+  "id": "sarif",
+  "hint": "把扫描结果导出 SARIF 报告上传 github code scanning",
+  "expect_primary": "sarif-output",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase report + task report + tech github + alias sarif/code-scanning"
+ },
+ {
+  "id": "llm-redteam",
+  "hint": "LLM prompt injection jailbreak 测试，大模型红队评估",
+  "expect_primary": "llm-redteam",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "target llm + vuln jailbreak"
+ },
+ {
+  "id": "llm-owasp",
+  "hint": "OWASP LLM Top 10 assessment for our chatbot, data leakage",
+  "expect_primary": "llm-redteam",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "英文表述; target llm/ai/api"
+ },
+ {
+  "id": "llm-egress",
+  "hint": "llm-egress 排查：检测网络出口的 relay-detection 转发链路",
+  "expect_primary": "llm-egress-governance",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase 'defense'不可产出（见findings），仅 target network + alias 可达；避用'内网'(→post)与'url'子串(→web)"
+ },
+ {
+  "id": "skillguard",
+  "hint": "skillguard 扫描 skill 目录：审计技能包是否藏 lethal trifecta 工具投毒",
+  "expect_primary": "skillguard",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "alias+fmt skill-dir；'lethal trifecta'空格形与metadata连字符形错配（见findings）；避用'prompt'词(→target llm)"
+ },
+ {
+  "id": "toxic-flow",
+  "hint": "toxic-flow 分析：审计这个智能体 config 的工具组合风险",
+  "expect_primary": "toxic-flow-analysis",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "alias + fmt agent-config(智能体) + phase audit"
+ },
+ {
+  "id": "tf04",
+  "hint": "tf04 缓解审计 skill-security 技能加固方案",
+  "expect_primary": "tf04-mitigation",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "alias tf04/skill-security + fmt skill-dir + phase audit"
+ },
+ {
+  "id": "supply-chain",
+  "hint": "供应链安全审计：typosquatting 恶意依赖检测 requirements.txt 依赖扫描",
+  "expect_primary": "supply-chain-security",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln typosquatting; fmt package-lock(requirements.txt); phase audit"
+ },
+ {
+  "id": "supply-npm",
+  "hint": "npm 供应链 排查 dependency-confusion typosquatting sbom",
+  "expect_primary": "supply-chain-security",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "tech npm + alias×4；中文'供应链'在词典但metadata无此token（见findings）"
+ },
+ {
+  "id": "sast",
+  "hint": "Python 代码安全审计 SAST secret-scan 密钥扫描 IaC 审计",
+  "expect_primary": "security-auditor",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "tech python; fmt source-code; alias sast/secret-scan"
+ },
+ {
+  "id": "iac-terraform",
+  "hint": "terraform IaC 配置审计 iac-scan 基线检查",
+  "expect_primary": "security-auditor",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "tech terraform"
+ },
+ {
+  "id": "wih-js",
+  "hint": "wih js分析：目标 https://shop.example.com 的 js chunk 里找 ak泄露 密钥泄露 敏感信息",
+  "expect_primary": "wih-secret-hunter",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "vuln js chunk/ak泄露/密钥泄露（词典↔metadata全对齐的正例）+ alias wih"
+ },
+ {
+  "id": "rea-macho",
+  "hint": "用 rea reap 逆向分析 mach-o 固件样本",
+  "expect_primary": "rea-reverse-engineering",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "中文alias(逆向)+rea/reap; tech mach-o"
+ },
+ {
+  "id": "rea-apk",
+  "hint": "android apk 逆向反编译分析签名校验",
+  "expect_primary": "android-apk-hunt",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "CK-Fusion T5 重锚(t_26d0efb0)：android-apk-hunt 注册后 typed 命中 target mobile+binary + tech android+apk(12.0) 压过 rea(4.0)，APK 专用狩猎技能比通用 RE 工具箱更贴合，rea 降为 support；旧名 android-security-audit/apk-reversing/asc-fast-hunt 进其 aliases 保历史路由"
+ },
+ {
+  "id": "eco-index",
+  "hint": "逆向成果检索 侦察 awesome-reverse-engineered re_index 查现成客户端逆向",
+  "expect_primary": "reverse-ecosystem-index",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "知识类: phase recon + target binary + alias re_index/awesome-reverse-engineered"
+ },
+ {
+  "id": "exploit-chain",
+  "hint": "多步利用链编排：先拿 web getshell，再串行推进 serial-chain",
+  "expect_primary": "exploit-chain-runner",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase exploit + target web + alias serial-chain；避用'chain-runner'('chain'含'ai'→target llm，见findings)"
+ },
+ {
+  "id": "payload-escalation",
+  "hint": "WAF 绕过 payload 升级 l0-l4 cloudflare modsecurity",
+  "expect_primary": "exploit-payload-escalation",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "tech waf/cloudflare/modsecurity×3 + alias waf-bypass? 实际alias l0-l4/waf-bypass"
+ },
+ {
+  "id": "godmode",
+  "hint": "全自动 web 端到端渗透 godmode full-surface 自动化",
+  "expect_primary": "autonomous-godmode-hunter",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "broad但分数压制: phase exploit + target web + alias godmode"
+ },
+ {
+  "id": "stun-c2",
+  "hint": "stun检测：Cling 僵尸网络流量的 C2 协议伪装威胁狩猎",
+  "expect_primary": "stun-c2-detection",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "tech stun + task hunt(威胁狩猎) + target network + alias×N"
+ },
+ {
+  "id": "agent-fingerprint",
+  "hint": "tool-fingerprint：判断这批网络流量是否出自 autonomous agent 工具，提取 ua-fingerprint 时序特征",
+  "expect_primary": "agentic-tool-fingerprint",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "仅alias可达（phase 'defense'死维）; target network"
+ },
+ {
+  "id": "poc-evidence",
+  "hint": "PoC 证据快照 evidence-snapshot：sha256 内容寻址，网络资产利用留痕归档",
+  "expect_primary": "poc-evidence-snapshot",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase exploit+target network + alias evidence-snapshot"
+ },
+ {
+  "id": "deadend-index",
+  "hint": "侦察阶段先查 dead-end-index 死路台账，避免重复踩坑",
+  "expect_primary": "failure-trace-index",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase recon + alias dead-end-index；'failure-ledger/what-failed'含'ai'子串会误触llm（见findings）"
+ },
+ {
+  "id": "workspace",
+  "hint": "建 target workspace 工作区目录结构 侦察阶段 workspace 规范",
+  "expect_primary": "target-scoped-workspace",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase recon + alias workspace/target-workspace + fmt target-slug(目录)"
+ },
+ {
+  "id": "resolver-self",
+  "hint": "审计前 skill 选型：resolver routing 确定性派单",
+  "expect_primary": "skill-resolver",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "自指: phase audit + alias resolver/routing"
+ },
+ {
+  "id": "incident-ir",
+  "hint": "应急响应 取证 事件响应 playbook ir 遏制",
+  "expect_primary": "incident-response",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "task ir(取证/应急) + alias playbook"
+ },
+ {
+  "id": "cybermes",
+  "hint": "cybermes smart-pipe 输出过滤 secret-scan 报告汇总工具",
+  "expect_primary": "cybermes-tools",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "alias cybermes/smart-pipe/secret-scan + phase report"
+ },
+ {
+  "id": "attack-path",
+  "hint": "attack-graph 攻击路径图谱：从 recon notes 推导横向 pivot 路径",
+  "expect_primary": "attack-path-graph",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase post(横向) + task pivot + fmt recon-notes + alias attack-graph"
+ },
+ {
+  "id": "asset-topo",
+  "hint": "asset-graph 资产拓扑图：整理侦察阶段发现的资产清单 dual-graph",
+  "expect_primary": "asset-topology-graph",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "note": "phase recon(侦察/资产发现) + alias asset-graph/dual-graph"
+ },
+ {
+  "id": "explicit-invocation",
+  "hint": "例行检查一下",
+  "expect_primary": "skillguard",
+  "expect_supports_contains": null,
+  "expect_abstain": false,
+  "explicit_skill": "skillguard",
+  "note": "explicit 显式调用短路：五维全空但 explicit 非空不 abstain"
+ },
+ {
+  "id": "abstain-speech",
+  "hint": "帮我写一份婚礼致辞演讲稿",
+  "expect_primary": null,
+  "expect_supports_contains": null,
+  "expect_abstain": true,
+  "note": "五维全空→abstain"
+ },
+ {
+  "id": "abstain-books",
+  "hint": "推荐几本适合孩子读的绘本",
+  "expect_primary": null,
+  "expect_supports_contains": null,
+  "expect_abstain": true,
+  "note": "五维全空→abstain"
+ },
+ {
+  "id": "abstain-errand",
+  "hint": "明天早上提醒我去邮局寄包裹",
+  "expect_primary": null,
+  "expect_supports_contains": null,
+  "expect_abstain": true,
+  "note": "五维全空→abstain"
+ },
+ {
+  "id": "abstain-recipe",
+  "hint": "这道红烧肉的做法步骤是什么",
+  "expect_primary": null,
+  "expect_supports_contains": null,
+  "expect_abstain": true,
+  "note": "五维全空→abstain"
+ }
+]

@@ -1,0 +1,1786 @@
+{
+  "sqli-1": {
+    "hint": "对 https://target.com/product.php?id=1 做 sqli 注入点测试，尝试 union 联合查询",
+    "result": {
+      "primary": {
+        "id": "redteam-sqli",
+        "score": 12.5,
+        "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['sqli']+3.0; alias:['sqli', 'union']+2.0; format:injection-point+1.5"
+      },
+      "supports": [
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 10.5,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['sqli']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "owasp-security",
+          "score": 7.5,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; format:target-url+1.5"
+        }
+      ],
+      "confidence": 0.833,
+      "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['sqli']+3.0; alias:['sqli', 'union']+2.0; format:injection-point+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "web"
+          ],
+          "technologies": [
+            "php"
+          ],
+          "vuln_hints": [
+            "sqli"
+          ],
+          "task_types": [],
+          "keywords": [
+            "https",
+            "id",
+            "product.php",
+            "sqli",
+            "target.com",
+            "union"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url",
+            "injection-point"
+          ]
+        },
+        "evaluated": 24
+      }
+    }
+  },
+  "sqli-bad-space": {
+    "hint": "对 https://target.com/login.php 做布尔盲注 SQL 注入测试",
+    "result": {
+      "primary": {
+        "id": "autonomous-godmode-hunter",
+        "score": 7.5,
+        "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; format:target-url+1.5"
+      },
+      "supports": [
+        {
+          "id": "owasp-security",
+          "score": 7.5,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "attack-path-graph",
+          "score": 6.0,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0"
+        }
+      ],
+      "confidence": 0.5,
+      "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; format:target-url+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "web"
+          ],
+          "technologies": [
+            "php"
+          ],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "https",
+            "login.php",
+            "sql",
+            "target.com"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url",
+            "raw-output"
+          ]
+        },
+        "evaluated": 25
+      }
+    }
+  },
+  "xss-1": {
+    "hint": "测试 https://target.com/search?q=test 的反射型 xss，评估 csp-bypass 可行性",
+    "result": {
+      "primary": {
+        "id": "redteam-xss",
+        "score": 15.5,
+        "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; technologies:['csp']+3.0; vuln_hints:['xss']+3.0; alias:['csp-bypass', 'xss']+2.0; format:reflection-point+1.5"
+      },
+      "supports": [
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 10.5,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['xss']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "owasp-security",
+          "score": 7.5,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; format:target-url+1.5"
+        }
+      ],
+      "confidence": 1.0,
+      "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; technologies:['csp']+3.0; vuln_hints:['xss']+3.0; alias:['csp-bypass', 'xss']+2.0; format:reflection-point+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "web"
+          ],
+          "technologies": [
+            "csp"
+          ],
+          "vuln_hints": [
+            "xss"
+          ],
+          "task_types": [],
+          "keywords": [
+            "csp-bypass",
+            "https",
+            "search",
+            "target.com",
+            "test",
+            "xss"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url",
+            "reflection-point"
+          ]
+        },
+        "evaluated": 24
+      }
+    }
+  },
+  "ssti-1": {
+    "hint": "对 https://target.com/render 的 ssti 模板注入测试，payload 用 jinja2 语法",
+    "result": {
+      "primary": {
+        "id": "redteam-ssti",
+        "score": 12.5,
+        "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['ssti']+3.0; alias:['jinja2', 'ssti']+2.0; format:template-input+1.5"
+      },
+      "supports": [
+        {
+          "id": "attack-path-graph",
+          "score": 9.0,
+          "reason": "phase:['exploit']+3.0; target_type:['ad', 'web']+6.0"
+        },
+        {
+          "id": "exploit-chain-runner",
+          "score": 9.0,
+          "reason": "phase:['exploit']+3.0; target_type:['ad', 'web']+6.0"
+        }
+      ],
+      "confidence": 0.833,
+      "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['ssti']+3.0; alias:['jinja2', 'ssti']+2.0; format:template-input+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "web",
+            "ad"
+          ],
+          "technologies": [],
+          "vuln_hints": [
+            "ssti",
+            "模板注入"
+          ],
+          "task_types": [],
+          "keywords": [
+            "https",
+            "jinja2",
+            "payload",
+            "render",
+            "ssti",
+            "target.com"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url",
+            "template-input"
+          ]
+        },
+        "evaluated": 24
+      }
+    }
+  },
+  "ssrf-1": {
+    "hint": "测试 https://target.com/proxy?url= 的 ssrf，盲打云元数据 169.254.169.254",
+    "result": {
+      "primary": {
+        "id": "redteam-ssrf",
+        "score": 14.0,
+        "reason": "phase:['exploit']+3.0; target_type:['cloud', 'web']+6.0; vuln_hints:['ssrf']+3.0; alias:['169.254.169.254', 'ssrf']+2.0"
+      },
+      "supports": [
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 10.5,
+          "reason": "phase:['exploit']+3.0; target_type:['web']+3.0; vuln_hints:['ssrf']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "attack-path-graph",
+          "score": 9.0,
+          "reason": "phase:['exploit']+3.0; target_type:['cloud', 'web']+6.0"
+        }
+      ],
+      "confidence": 0.933,
+      "reason": "phase:['exploit']+3.0; target_type:['cloud', 'web']+6.0; vuln_hints:['ssrf']+3.0; alias:['169.254.169.254', 'ssrf']+2.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "web",
+            "cloud"
+          ],
+          "technologies": [],
+          "vuln_hints": [
+            "ssrf"
+          ],
+          "task_types": [],
+          "keywords": [
+            "169.254.169.254",
+            "https",
+            "proxy",
+            "ssrf",
+            "target.com",
+            "url"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url"
+          ]
+        },
+        "evaluated": 25
+      }
+    }
+  },
+  "auth-1": {
+    "hint": "对 https://auth.target.com 的 jwt 做 algorithm confusion 认证绕过测试",
+    "result": {
+      "primary": {
+        "id": "redteam-auth",
+        "score": 8.5,
+        "reason": "target_type:['web']+3.0; technologies:['jwt']+3.0; alias:['jwt']+1.0; format:auth-endpoint+1.5"
+      },
+      "supports": [
+        {
+          "id": "wih-secret-hunter",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        }
+      ],
+      "confidence": 0.567,
+      "reason": "target_type:['web']+3.0; technologies:['jwt']+3.0; alias:['jwt']+1.0; format:auth-endpoint+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "web"
+          ],
+          "technologies": [
+            "jwt"
+          ],
+          "vuln_hints": [
+            "认证绕过"
+          ],
+          "task_types": [],
+          "keywords": [
+            "algorithm",
+            "auth.target.com",
+            "confusion",
+            "https",
+            "jwt"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url",
+            "auth-endpoint"
+          ]
+        },
+        "evaluated": 21
+      }
+    }
+  },
+  "auth-2": {
+    "hint": "测试 oauth2 流程缺陷导致的 mfa bypass",
+    "result": {
+      "primary": {
+        "id": "redteam-auth",
+        "score": 4.5,
+        "reason": "technologies:['oauth2']+3.0; format:auth-endpoint+1.5"
+      },
+      "supports": [
+        {
+          "id": "pentest-methodology-fusion",
+          "score": 3.0,
+          "reason": "task_types:['methodology']+3.0"
+        }
+      ],
+      "confidence": 0.3,
+      "reason": "technologies:['oauth2']+3.0; format:auth-endpoint+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [
+            "oauth2"
+          ],
+          "vuln_hints": [
+            "mfa bypass"
+          ],
+          "task_types": [
+            "methodology"
+          ],
+          "keywords": [
+            "bypass",
+            "mfa",
+            "oauth2"
+          ],
+          "explicit": [],
+          "formats": [
+            "auth-endpoint"
+          ]
+        },
+        "evaluated": 2
+      }
+    }
+  },
+  "scope-1": {
+    "hint": "动手前先过 scope 授权范围校验，确认 targets 在授权书内",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "scope",
+            "targets"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-scope"
+          ]
+        }
+      }
+    }
+  },
+  "llmredteam-1": {
+    "hint": "对 https://llm.target.com 的 LLM 应用做 prompt injection 与 jailbreak 红队测试",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 8.5,
+        "reason": "target_type:['llm']+3.0; vuln_hints:['jailbreak']+3.0; alias:['jailbreak']+1.0; format:llm-endpoint+1.5"
+      },
+      "supports": [
+        {
+          "id": "redteam-sqli",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:injection-point+1.5"
+        },
+        {
+          "id": "wih-secret-hunter",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        }
+      ],
+      "confidence": 0.567,
+      "reason": "target_type:['llm']+3.0; vuln_hints:['jailbreak']+3.0; alias:['jailbreak']+1.0; format:llm-endpoint+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "web",
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [
+            "jailbreak",
+            "prompt injection"
+          ],
+          "task_types": [],
+          "keywords": [
+            "https",
+            "injection",
+            "jailbreak",
+            "llm",
+            "llm.target.com",
+            "prompt"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url",
+            "injection-point",
+            "llm-endpoint"
+          ]
+        },
+        "evaluated": 22
+      }
+    }
+  },
+  "llmegress-1": {
+    "hint": "审计受管 LLM 应用的 api egress，检测 base-url 中继外发",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 10.5,
+        "reason": "phase:['audit']+3.0; target_type:['api', 'llm']+6.0; format:llm-endpoint+1.5"
+      },
+      "supports": [
+        {
+          "id": "owasp-security",
+          "score": 9.0,
+          "reason": "phase:['audit']+3.0; target_type:['api', 'web']+6.0"
+        },
+        {
+          "id": "bola-session-detection",
+          "score": 6.0,
+          "reason": "target_type:['api', 'web']+6.0"
+        }
+      ],
+      "confidence": 0.7,
+      "reason": "phase:['audit']+3.0; target_type:['api', 'llm']+6.0; format:llm-endpoint+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "audit"
+          ],
+          "target_type": [
+            "web",
+            "api",
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "audit"
+          ],
+          "keywords": [
+            "api",
+            "base-url",
+            "egress",
+            "llm"
+          ],
+          "explicit": [],
+          "formats": [
+            "llm-endpoint"
+          ]
+        },
+        "evaluated": 28
+      }
+    }
+  },
+  "llmfailover-1": {
+    "hint": "给 LLM provider 池配置 failover 熔断 circuit-breaker",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 4.5,
+        "reason": "target_type:['llm']+3.0; format:llm-endpoint+1.5"
+      },
+      "supports": [
+        {
+          "id": "stun-c2-detection",
+          "score": 3.0,
+          "reason": "task_types:['ir']+3.0"
+        },
+        {
+          "id": "incident-response",
+          "score": 3.0,
+          "reason": "task_types:['ir']+3.0"
+        }
+      ],
+      "confidence": 0.3,
+      "reason": "target_type:['llm']+3.0; format:llm-endpoint+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [
+            "ci"
+          ],
+          "vuln_hints": [],
+          "task_types": [
+            "ir"
+          ],
+          "keywords": [
+            "circuit-breaker",
+            "failover",
+            "llm",
+            "provider"
+          ],
+          "explicit": [],
+          "formats": [
+            "llm-endpoint"
+          ]
+        },
+        "evaluated": 4
+      }
+    }
+  },
+  "sc-1": {
+    "hint": "扫描 package-lock.json 供应链依赖并生成 SBOM",
+    "result": {
+      "primary": {
+        "id": "supply-chain-security",
+        "score": 2.5,
+        "reason": "alias:['sbom']+1.0; format:package-lock+1.5"
+      },
+      "supports": [],
+      "confidence": 0.167,
+      "reason": "alias:['sbom']+1.0; format:package-lock+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [
+            "供应链"
+          ],
+          "task_types": [
+            "scan"
+          ],
+          "keywords": [
+            "package-lock.json",
+            "sbom"
+          ],
+          "explicit": [],
+          "formats": [
+            "package-lock"
+          ]
+        },
+        "evaluated": 1
+      }
+    }
+  },
+  "sast-1": {
+    "hint": "对 ./src 源码做 sast 代码审计，重点查密钥泄露",
+    "result": {
+      "primary": {
+        "id": "security-auditor",
+        "score": 5.5,
+        "reason": "phase:['audit']+3.0; alias:['sast']+1.0; format:source-code+1.5"
+      },
+      "supports": [
+        {
+          "id": "llm-redteam",
+          "score": 3.0,
+          "reason": "phase:['audit']+3.0"
+        },
+        {
+          "id": "rea-reverse-engineering",
+          "score": 3.0,
+          "reason": "phase:['audit']+3.0"
+        }
+      ],
+      "confidence": 0.367,
+      "reason": "phase:['audit']+3.0; alias:['sast']+1.0; format:source-code+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "audit"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [
+            "密钥泄露"
+          ],
+          "task_types": [
+            "audit"
+          ],
+          "keywords": [
+            "sast",
+            "src"
+          ],
+          "explicit": [],
+          "formats": [
+            "source-code"
+          ]
+        },
+        "evaluated": 10
+      }
+    }
+  },
+  "audit-orch-1": {
+    "hint": "8-agent 并行安全审计编排，多 agent 漏洞扫描加权评分",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 6.0,
+        "reason": "phase:['audit']+3.0; target_type:['llm']+3.0"
+      },
+      "supports": [
+        {
+          "id": "toxic-flow-analysis",
+          "score": 4.5,
+          "reason": "phase:['audit']+3.0; format:agent-config+1.5"
+        },
+        {
+          "id": "rea-reverse-engineering",
+          "score": 3.0,
+          "reason": "phase:['audit']+3.0"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['audit']+3.0; target_type:['llm']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "audit"
+          ],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "scan",
+            "audit"
+          ],
+          "keywords": [
+            "8-agent",
+            "agent"
+          ],
+          "explicit": [],
+          "formats": [
+            "finding",
+            "agent-config"
+          ]
+        },
+        "evaluated": 10
+      }
+    }
+  },
+  "binary-1": {
+    "hint": "用 REA 对这个 so 文件做逆向工程，反编译定位校验函数",
+    "result": {
+      "primary": {
+        "id": "rea-reverse-engineering",
+        "score": 4.0,
+        "reason": "target_type:['binary']+3.0; alias:['rea']+1.0"
+      },
+      "supports": [
+        {
+          "id": "scope-gate",
+          "score": 3.0,
+          "reason": "target_type:['binary']+3.0"
+        },
+        {
+          "id": "audit-orchestration",
+          "score": 3.0,
+          "reason": "target_type:['binary']+3.0"
+        }
+      ],
+      "confidence": 0.267,
+      "reason": "target_type:['binary']+3.0; alias:['rea']+1.0",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "binary"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "rea",
+            "so"
+          ],
+          "explicit": [],
+          "formats": []
+        },
+        "evaluated": 3
+      }
+    }
+  },
+  "skillguard-1": {
+    "hint": "扫描这个 agent 的 skill 目录，排查 skillguard 关注的 lethal-trifecta 组合",
+    "result": {
+      "primary": {
+        "id": "skillguard",
+        "score": 3.5,
+        "reason": "alias:['lethal-trifecta', 'skillguard']+2.0; format:skill-dir+1.5"
+      },
+      "supports": [
+        {
+          "id": "llm-redteam",
+          "score": 3.0,
+          "reason": "target_type:['llm']+3.0"
+        },
+        {
+          "id": "toxic-flow-analysis",
+          "score": 2.5,
+          "reason": "alias:['lethal-trifecta']+1.0; format:agent-config+1.5"
+        }
+      ],
+      "confidence": 0.233,
+      "reason": "alias:['lethal-trifecta', 'skillguard']+2.0; format:skill-dir+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "scan"
+          ],
+          "keywords": [
+            "agent",
+            "lethal-trifecta",
+            "skill",
+            "skillguard"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-slug",
+            "agent-config",
+            "skill-dir"
+          ]
+        },
+        "evaluated": 5
+      }
+    }
+  },
+  "toxicflow-1": {
+    "hint": "审计这个 agent config 的 toxic-flow，检查工具组合致命三要素",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 6.0,
+        "reason": "phase:['audit']+3.0; target_type:['llm']+3.0"
+      },
+      "supports": [
+        {
+          "id": "toxic-flow-analysis",
+          "score": 5.5,
+          "reason": "phase:['audit']+3.0; alias:['toxic-flow']+1.0; format:agent-config+1.5"
+        },
+        {
+          "id": "rea-reverse-engineering",
+          "score": 3.0,
+          "reason": "phase:['audit']+3.0"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['audit']+3.0; target_type:['llm']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "audit"
+          ],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "audit"
+          ],
+          "keywords": [
+            "agent",
+            "config",
+            "toxic-flow"
+          ],
+          "explicit": [],
+          "formats": [
+            "agent-config"
+          ]
+        },
+        "evaluated": 9
+      }
+    }
+  },
+  "tf04-1": {
+    "hint": "缓解 TF-04 skill 持久化注入风险 skill-injection",
+    "result": {
+      "primary": {
+        "id": "attack-path-graph",
+        "score": 6.0,
+        "reason": "phase:['exploit', 'post']+6.0"
+      },
+      "supports": [
+        {
+          "id": "business-logic-vulnerabilities",
+          "score": 6.0,
+          "reason": "phase:['exploit', 'post']+6.0"
+        },
+        {
+          "id": "poc-evidence-snapshot",
+          "score": 6.0,
+          "reason": "phase:['exploit', 'post']+6.0"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['exploit', 'post']+6.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit",
+            "post"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "skill",
+            "skill-injection",
+            "tf-04"
+          ],
+          "explicit": [],
+          "formats": [
+            "injection-point",
+            "skill-dir"
+          ]
+        },
+        "evaluated": 21
+      }
+    }
+  },
+  "sarif-1": {
+    "hint": "把审计 findings 转成 sarif 格式导出，供 code-scanning 用",
+    "result": {
+      "primary": {
+        "id": "sarif-output",
+        "score": 8.0,
+        "reason": "phase:['report']+3.0; task_types:['report']+3.0; alias:['code-scanning', 'sarif']+2.0"
+      },
+      "supports": [
+        {
+          "id": "skill-resolver",
+          "score": 6.0,
+          "reason": "phase:['audit', 'report']+6.0"
+        },
+        {
+          "id": "owasp-security",
+          "score": 6.0,
+          "reason": "phase:['audit', 'report']+6.0"
+        }
+      ],
+      "confidence": 0.533,
+      "reason": "phase:['report']+3.0; task_types:['report']+3.0; alias:['code-scanning', 'sarif']+2.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "report",
+            "audit"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "scan",
+            "audit",
+            "report"
+          ],
+          "keywords": [
+            "code-scanning",
+            "findings",
+            "sarif"
+          ],
+          "explicit": [],
+          "formats": [
+            "finding"
+          ]
+        },
+        "evaluated": 18
+      }
+    }
+  },
+  "stun-1": {
+    "hint": "从 pcap 检测 cling 僵尸网络的 stun 协议伪装 C2",
+    "result": {
+      "primary": {
+        "id": "attack-path-graph",
+        "score": 6.0,
+        "reason": "phase:['post']+3.0; target_type:['network']+3.0"
+      },
+      "supports": [
+        {
+          "id": "poc-evidence-snapshot",
+          "score": 6.0,
+          "reason": "phase:['post']+3.0; target_type:['network']+3.0"
+        },
+        {
+          "id": "scope-gate",
+          "score": 6.0,
+          "reason": "phase:['post']+3.0; target_type:['network']+3.0"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['post']+3.0; target_type:['network']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "post"
+          ],
+          "target_type": [
+            "network"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "c2",
+            "cling",
+            "pcap",
+            "stun"
+          ],
+          "explicit": [],
+          "formats": []
+        },
+        "evaluated": 18
+      }
+    }
+  },
+  "wih-1": {
+    "hint": "对 https://target.com 做 js 敏感信息挖掘，分析 js chunk 瀑布",
+    "result": {
+      "primary": {
+        "id": "wih-secret-hunter",
+        "score": 7.5,
+        "reason": "target_type:['web']+3.0; vuln_hints:['js chunk']+3.0; format:target-url+1.5"
+      },
+      "supports": [
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "owasp-security",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        }
+      ],
+      "confidence": 0.5,
+      "reason": "target_type:['web']+3.0; vuln_hints:['js chunk']+3.0; format:target-url+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "web"
+          ],
+          "technologies": [],
+          "vuln_hints": [
+            "js chunk",
+            "敏感信息",
+            "敏感信息挖掘"
+          ],
+          "task_types": [],
+          "keywords": [
+            "chunk",
+            "https",
+            "js",
+            "target.com"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url"
+          ]
+        },
+        "evaluated": 21
+      }
+    }
+  },
+  "fp-1": {
+    "hint": "对 findings 做误报复核审计，逐条过 false-positive 六门",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 3.0,
+        "reason": "phase:['audit']+3.0"
+      },
+      "supports": [
+        {
+          "id": "rea-reverse-engineering",
+          "score": 3.0,
+          "reason": "phase:['audit']+3.0"
+        },
+        {
+          "id": "security-auditor",
+          "score": 3.0,
+          "reason": "phase:['audit']+3.0"
+        }
+      ],
+      "confidence": 0.2,
+      "reason": "phase:['audit']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "audit"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "audit"
+          ],
+          "keywords": [
+            "false-positive",
+            "findings"
+          ],
+          "explicit": [],
+          "formats": [
+            "finding"
+          ]
+        },
+        "evaluated": 11
+      }
+    }
+  },
+  "failtrace-1": {
+    "hint": "查 failure-trace-index 死路账本，确认这个坑是否已记录",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 3.0,
+        "reason": "target_type:['llm']+3.0"
+      },
+      "supports": [],
+      "confidence": 0.2,
+      "reason": "target_type:['llm']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "failure-trace-index"
+          ],
+          "explicit": [],
+          "formats": []
+        },
+        "evaluated": 1
+      }
+    }
+  },
+  "evidence-1": {
+    "hint": "把已验证 PoC 做内容寻址 evidence-snapshot 存证",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "evidence-snapshot",
+            "poc"
+          ],
+          "explicit": [],
+          "formats": []
+        }
+      }
+    }
+  },
+  "resolver-1": {
+    "hint": "为这个渗透任务做 skill 选型，跑确定性 resolver",
+    "result": {
+      "primary": {
+        "id": "skill-resolver",
+        "score": 5.5,
+        "reason": "phase:['exploit']+3.0; alias:['resolver']+1.0; format:task-desc+1.5"
+      },
+      "supports": [
+        {
+          "id": "attack-path-graph",
+          "score": 3.0,
+          "reason": "phase:['exploit']+3.0"
+        },
+        {
+          "id": "business-logic-vulnerabilities",
+          "score": 3.0,
+          "reason": "phase:['exploit']+3.0"
+        }
+      ],
+      "confidence": 0.367,
+      "reason": "phase:['exploit']+3.0; alias:['resolver']+1.0; format:task-desc+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "resolver",
+            "skill"
+          ],
+          "explicit": [],
+          "formats": [
+            "skill-dir",
+            "task-desc"
+          ]
+        },
+        "evaluated": 19
+      }
+    }
+  },
+  "bola-1": {
+    "hint": "从 traffic jsonl 会话级检测 bola 越权行为 IDOR 基线对比",
+    "result": {
+      "primary": {
+        "id": "business-logic-vulnerabilities",
+        "score": 7.0,
+        "reason": "vuln_hints:['bola', 'idor']+6.0; alias:['idor']+1.0"
+      },
+      "supports": [
+        {
+          "id": "bola-session-detection",
+          "score": 6.0,
+          "reason": "vuln_hints:['bola', 'idor']+6.0"
+        },
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 3.0,
+          "reason": "vuln_hints:['idor']+3.0"
+        }
+      ],
+      "confidence": 0.467,
+      "reason": "vuln_hints:['bola', 'idor']+6.0; alias:['idor']+1.0",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [
+            "bola",
+            "idor",
+            "越权"
+          ],
+          "task_types": [],
+          "keywords": [
+            "bola",
+            "idor",
+            "jsonl",
+            "traffic"
+          ],
+          "explicit": [],
+          "formats": []
+        },
+        "evaluated": 3
+      }
+    }
+  },
+  "bizlogic-1": {
+    "hint": "对 api 做 业务逻辑漏洞审计：竞态条件 + 价格篡改",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 6.0,
+        "reason": "phase:['audit']+3.0; target_type:['api']+3.0"
+      },
+      "supports": [
+        {
+          "id": "owasp-security",
+          "score": 6.0,
+          "reason": "phase:['audit']+3.0; target_type:['api']+3.0"
+        },
+        {
+          "id": "exploit-payload-escalation",
+          "score": 4.5,
+          "reason": "target_type:['api']+3.0; format:finding+1.5"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['audit']+3.0; target_type:['api']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "audit"
+          ],
+          "target_type": [
+            "api"
+          ],
+          "technologies": [],
+          "vuln_hints": [
+            "业务逻辑",
+            "价格篡改",
+            "竞态"
+          ],
+          "task_types": [
+            "audit"
+          ],
+          "keywords": [
+            "api"
+          ],
+          "explicit": [],
+          "formats": [
+            "finding"
+          ]
+        },
+        "evaluated": 17
+      }
+    }
+  },
+  "topology-1": {
+    "hint": "把多轮 recon 的 findings 汇成资产拓扑图，构建 exploration-graph",
+    "result": {
+      "primary": {
+        "id": "asset-topology-graph",
+        "score": 4.0,
+        "reason": "phase:['recon']+3.0; alias:['exploration-graph']+1.0"
+      },
+      "supports": [
+        {
+          "id": "failure-trace-index",
+          "score": 3.0,
+          "reason": "phase:['recon']+3.0"
+        },
+        {
+          "id": "rea-reverse-engineering",
+          "score": 3.0,
+          "reason": "phase:['recon']+3.0"
+        }
+      ],
+      "confidence": 0.267,
+      "reason": "phase:['recon']+3.0; alias:['exploration-graph']+1.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "recon"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "exploration-graph",
+            "findings",
+            "recon"
+          ],
+          "explicit": [],
+          "formats": [
+            "recon-notes",
+            "finding"
+          ]
+        },
+        "evaluated": 13
+      }
+    }
+  },
+  "attackpath-1": {
+    "hint": "从 recon notes 推导 pivot 攻击路径图",
+    "result": {
+      "primary": {
+        "id": "attack-path-graph",
+        "score": 7.5,
+        "reason": "phase:['exploit']+3.0; task_types:['pivot']+3.0; format:recon-notes+1.5"
+      },
+      "supports": [
+        {
+          "id": "scope-gate",
+          "score": 6.0,
+          "reason": "phase:['exploit', 'recon']+6.0"
+        },
+        {
+          "id": "skill-resolver",
+          "score": 6.0,
+          "reason": "phase:['exploit', 'recon']+6.0"
+        }
+      ],
+      "confidence": 0.5,
+      "reason": "phase:['exploit']+3.0; task_types:['pivot']+3.0; format:recon-notes+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "recon",
+            "exploit"
+          ],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "pivot"
+          ],
+          "keywords": [
+            "notes",
+            "pivot",
+            "recon"
+          ],
+          "explicit": [],
+          "formats": [
+            "recon-notes"
+          ]
+        },
+        "evaluated": 23
+      }
+    }
+  },
+  "methodology-1": {
+    "hint": "按 pentest-methodology 框架做覆盖跟踪与 finding 确认纪律",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "finding",
+            "pentest-methodology"
+          ],
+          "explicit": [],
+          "formats": [
+            "finding",
+            "raw-output"
+          ]
+        }
+      }
+    }
+  },
+  "owasp-1": {
+    "hint": "对 https://target.com 跑 owasp top10 全项测试",
+    "result": {
+      "primary": {
+        "id": "owasp-security",
+        "score": 6.5,
+        "reason": "target_type:['web']+3.0; alias:['owasp', 'top10']+2.0; format:target-url+1.5"
+      },
+      "supports": [
+        {
+          "id": "wih-secret-hunter",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        },
+        {
+          "id": "autonomous-godmode-hunter",
+          "score": 4.5,
+          "reason": "target_type:['web']+3.0; format:target-url+1.5"
+        }
+      ],
+      "confidence": 0.433,
+      "reason": "target_type:['web']+3.0; alias:['owasp', 'top10']+2.0; format:target-url+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [
+            "web"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "https",
+            "owasp",
+            "target.com",
+            "top10"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-url"
+          ]
+        },
+        "evaluated": 21
+      }
+    }
+  },
+  "payload-esc-1": {
+    "hint": "注入 payload 被 waf 拦截，做 l0-l4 渐进升级绕过",
+    "result": {
+      "primary": {
+        "id": "exploit-payload-escalation",
+        "score": 7.0,
+        "reason": "phase:['exploit']+3.0; technologies:['waf']+3.0; alias:['l0-l4']+1.0"
+      },
+      "supports": [
+        {
+          "id": "attack-path-graph",
+          "score": 6.0,
+          "reason": "phase:['exploit']+3.0; target_type:['ad']+3.0"
+        },
+        {
+          "id": "exploit-chain-runner",
+          "score": 6.0,
+          "reason": "phase:['exploit']+3.0; target_type:['ad']+3.0"
+        }
+      ],
+      "confidence": 0.467,
+      "reason": "phase:['exploit']+3.0; technologies:['waf']+3.0; alias:['l0-l4']+1.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "ad"
+          ],
+          "technologies": [
+            "waf"
+          ],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "l0-l4",
+            "payload",
+            "waf"
+          ],
+          "explicit": [],
+          "formats": []
+        },
+        "evaluated": 20
+      }
+    }
+  },
+  "chain-1": {
+    "hint": "编排多步 exploit 链：串行执行 chain-runner 步骤清单",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 6.0,
+        "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0"
+      },
+      "supports": [
+        {
+          "id": "scope-gate",
+          "score": 4.5,
+          "reason": "phase:['exploit']+3.0; format:command+1.5"
+        },
+        {
+          "id": "exploit-chain-runner",
+          "score": 4.0,
+          "reason": "phase:['exploit']+3.0; alias:['chain-runner']+1.0"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "exploit"
+          ],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "chain-runner",
+            "exploit"
+          ],
+          "explicit": [],
+          "formats": [
+            "command"
+          ]
+        },
+        "evaluated": 17
+      }
+    }
+  },
+  "fingerprint-1": {
+    "hint": "从流量 jsonl 识别 autonomous agent 攻击工具指纹 tool-fingerprint",
+    "result": {
+      "primary": {
+        "id": "llm-redteam",
+        "score": 6.0,
+        "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0"
+      },
+      "supports": [
+        {
+          "id": "scope-gate",
+          "score": 6.0,
+          "reason": "phase:['exploit', 'recon']+6.0"
+        },
+        {
+          "id": "skill-resolver",
+          "score": 6.0,
+          "reason": "phase:['exploit', 'recon']+6.0"
+        }
+      ],
+      "confidence": 0.4,
+      "reason": "phase:['exploit']+3.0; target_type:['llm']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [
+            "recon",
+            "exploit"
+          ],
+          "target_type": [
+            "llm"
+          ],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "agent",
+            "autonomous",
+            "jsonl",
+            "tool-fingerprint"
+          ],
+          "explicit": [],
+          "formats": [
+            "agent-config"
+          ]
+        },
+        "evaluated": 25
+      }
+    }
+  },
+  "cybermes-1": {
+    "hint": "用 smart-pipe 对工具输出做过滤脱敏",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "smart-pipe"
+          ],
+          "explicit": [],
+          "formats": [
+            "raw-output"
+          ]
+        }
+      }
+    }
+  },
+  "workspace-1": {
+    "hint": "按 target slug 建立目标范围工作区目录结构",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [
+            "slug",
+            "target"
+          ],
+          "explicit": [],
+          "formats": [
+            "target-scope",
+            "target-slug"
+          ]
+        }
+      }
+    }
+  },
+  "ir-1": {
+    "hint": "对安全告警做应急响应与事件处置 playbook",
+    "result": {
+      "primary": {
+        "id": "incident-response",
+        "score": 5.5,
+        "reason": "task_types:['ir']+3.0; alias:['playbook']+1.0; format:incident-alert+1.5"
+      },
+      "supports": [
+        {
+          "id": "stun-c2-detection",
+          "score": 3.0,
+          "reason": "task_types:['ir']+3.0"
+        },
+        {
+          "id": "pentest-methodology-fusion",
+          "score": 3.0,
+          "reason": "task_types:['methodology']+3.0"
+        }
+      ],
+      "confidence": 0.367,
+      "reason": "task_types:['ir']+3.0; alias:['playbook']+1.0; format:incident-alert+1.5",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "ir",
+            "methodology"
+          ],
+          "keywords": [
+            "playbook"
+          ],
+          "explicit": [],
+          "formats": [
+            "incident-alert"
+          ]
+        },
+        "evaluated": 3
+      }
+    }
+  },
+  "godmode-1": {
+    "hint": "全自动漏洞狩猎：godmode 端到端 pipeline",
+    "result": {
+      "primary": {
+        "id": "stun-c2-detection",
+        "score": 3.0,
+        "reason": "task_types:['hunt']+3.0"
+      },
+      "supports": [
+        {
+          "id": "exploit-payload-escalation",
+          "score": 1.5,
+          "reason": "format:finding+1.5"
+        }
+      ],
+      "confidence": 0.2,
+      "reason": "task_types:['hunt']+3.0",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [
+            "hunt"
+          ],
+          "keywords": [
+            "godmode",
+            "pipeline"
+          ],
+          "explicit": [],
+          "formats": [
+            "finding"
+          ]
+        },
+        "evaluated": 3
+      }
+    }
+  },
+  "abstain-1": {
+    "hint": "帮我写一首关于秋天的诗",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [],
+          "explicit": [],
+          "formats": []
+        }
+      }
+    }
+  },
+  "abstain-2": {
+    "hint": "推荐三部适合周末看的悬疑电影",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [],
+          "explicit": [],
+          "formats": []
+        }
+      }
+    }
+  },
+  "abstain-3": {
+    "hint": "帮我订一张明天去上海的高铁票",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [],
+          "explicit": [],
+          "formats": []
+        }
+      }
+    }
+  },
+  "abstain-4": {
+    "hint": "给朋友写一封生日祝福短信",
+    "result": {
+      "primary": null,
+      "supports": [],
+      "confidence": 0.0,
+      "reason": "non-pentest input, abstain",
+      "provenance": {
+        "sig": {
+          "phase": [],
+          "target_type": [],
+          "technologies": [],
+          "vuln_hints": [],
+          "task_types": [],
+          "keywords": [],
+          "explicit": [],
+          "formats": []
+        }
+      }
+    }
+  }
+}

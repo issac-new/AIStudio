@@ -16,6 +16,14 @@
       ],
       "last_verified": "2026-10-13",
       "source": "web/src/config/app-config.ts:10"
+    },
+    "tls_default_cert": {
+      "field": "tls_cert_issuer",
+      "patterns": [
+        "pentagi ca"
+      ],
+      "last_verified": "2026-11-19",
+      "source": "PentAGI 默认自签 CA ssl.cert.issuer.cn:\"PentAGI CA\"（Shodan 240 命中）；GitGuardian 45 框架普查（FreeBuf 511701 转述，数据锚 2026-11-07，二手未回源）"
     }
   },
   "weak": {
@@ -23,11 +31,16 @@
       "field": "port",
       "values": [
         8787,
-        8788
+        8788,
+        8790,
+        9137,
+        5080,
+        50080,
+        3333
       ],
       "pair_mode": true,
-      "last_verified": "2026-10-13",
-      "source": "cmd/artex/main.go:55-57"
+      "last_verified": "2026-11-19",
+      "source": "cmd/artex/main.go:55-57 源码默认；Censys 2026-11-05 公网实测频次 8787(1931 endpoints)→8790→443→80，8790 为第二常见（gap-20261107-001）；v1.7.0 增 Xalgorix:9137 / Agent Zero:5080,50080 / T3MP3ST:3333（GitGuardian 45 框架普查（FreeBuf 511701 转述，数据锚 2026-11-07，二手未回源））；PentAGI 8666/8765 与 Decepticon/RedAmon:3000、Cairn:8000、Strix:8080 等泛端口仅记 SKILL.md 查询表不入规则"
     },
     "custom_session_header": {
       "field": "header_names",
@@ -43,6 +56,77 @@
       "patterns": [],
       "note": "事件实证域名入库需人工确认",
       "last_verified": "2026-10-13"
+    },
+    "console_title_prefix": {
+      "field": "title",
+      "patterns": [
+        "artex",
+        "scopeweaver"
+      ],
+      "prefix_sep": true,
+      "last_verified": "2026-11-15",
+      "source": "Censys 官方检测规则 html_title=~\"^ARTEX[ :—]\"（gap-20261107-001）；ScopeWeaver=ARTEX rebrand，前缀锚定防 SmartArtEXplorer 类误报；本地化/改名变体 ARTEX MX、ARTEX v2 · Agent Security Workbench 均命中"
+    },
+    "next_static_asset": {
+      "field": "path",
+      "patterns": [
+        "_next/static"
+      ],
+      "last_verified": "2026-11-15",
+      "source": "Censys 官方检测规则 body 含 _next/static（Next.js 控制台静态资源，gap-20261107-001）；与 console_title_prefix 双弱交叉立案，单命中不告警"
+    },
+    "family_console_title": {
+      "field": "title",
+      "patterns": [
+        "pentagi",
+        "agent zero",
+        "xalgorix",
+        "decepticon",
+        "redcell",
+        "redamon",
+        "t3mp3st",
+        "incalmo",
+        "cyberstrike",
+        "forang",
+        "pentestcode",
+        "pentest-swarm",
+        "鸾鸟",
+        "月落",
+        "nebula 3",
+        "pentest-ai · dashboard",
+        "mergen — arsenal"
+      ],
+      "note": "泛词 token（sage/apex/ares/virga/echidna/cairn）与 mergen 裸词不入匹配器（emergence 含 mergen 子串、单词 title 误报高），只进 SKILL.md 查询表；单命中=below-threshold，须与端口/favicon/html 交叉",
+      "last_verified": "2026-11-19",
+      "source": "GitGuardian 45 框架普查（FreeBuf 511701 转述，数据锚 2026-11-07，二手未回源）"
+    },
+    "family_favicon_hash": {
+      "field": "favicon_hash",
+      "patterns": [
+        "-1596753120",
+        "964522141",
+        "248472114",
+        "-566184040",
+        "-1814445533",
+        "-196523122"
+      ],
+      "note": "PentAGI/RedAmon/Xalgorix/Strix查看器/Decepticon/PentestCode 六家族 favicon 哈希",
+      "last_verified": "2026-11-19",
+      "source": "GitGuardian 45 框架普查（FreeBuf 511701 转述，数据锚 2026-11-07，二手未回源）"
+    },
+    "console_html_snippet": {
+      "field": "body",
+      "patterns": [
+        "console for an llm-driven autonomous penetration testing system",
+        "autonomous red team platform",
+        "security reconnaissance and vulnerability assessment dashboard",
+        "xalgorix.theme",
+        "rc-theme",
+        "cyber-theme",
+        "incalmo c2 server api"
+      ],
+      "last_verified": "2026-11-19",
+      "source": "GitGuardian 45 框架普查（FreeBuf 511701 转述，数据锚 2026-11-07，二手未回源）"
     }
   }
 }

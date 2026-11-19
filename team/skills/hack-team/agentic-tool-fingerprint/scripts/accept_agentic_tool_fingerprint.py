@@ -21,6 +21,12 @@ def main():
                                 "header_names": ["x-session-key", "accept"]}) + "\n")
             f.write(json.dumps({"event_id": "e3", "ua": "curl/8.4", "port": 8787}) + "\n")
             f.write(json.dumps({"event_id": "e4", "ua": "Mozilla/5.0", "port": 443, "title": "Home"}) + "\n")
+            f.write(json.dumps({"event_id": "e5", "ua": "Mozilla/5.0", "port": 443,
+                                "title": "ARTEX MX — 控制台", "path": "/_next/static/chunks/app.js"}) + "\n")
+            f.write(json.dumps({"event_id": "e6", "ua": "Mozilla/5.0", "port": 443,
+                                "title": "SmartArtEXplorer Dashboard", "path": "/_next/static/x.js"}) + "\n")
+            f.write(json.dumps({"event_id": "e7", "ua": "Mozilla/5.0", "port": 443,
+                                "title": "ARTEXDocs", "path": "/docs/"}) + "\n")
 
         p = subprocess.run([sys.executable, os.path.join(ws, "fp_match.py"), "--events", ev],
                            capture_output=True, text=True)
@@ -41,6 +47,16 @@ def main():
 
         assert results["e4"]["verdict"] == "clean", f"T4: {results['e4']}"
         print("T4 OK 无关事件 clean")
+
+        assert results["e5"]["verdict"] == "match-cross" and set(results["e5"]["hits"]) == {"console_title_prefix", "next_static_asset"}, f"T5: {results['e5']}"
+        print("T5 OK rebrand/改名变体（title 前缀 ARTEX MX + _next/static）双弱交叉 match-cross（Censys ^ARTEX[ :—]+_next/static 规则）")
+
+        assert results["e6"]["verdict"] == "below-threshold" and results["e6"]["hits"] == ["next_static_asset"], f"T6: {results['e6']}"
+        print("T6 OK 前缀锚定防误报（SmartArtEXplorer 中部命中不触发）+ 单 _next/static 不放行")
+
+        assert results["e7"]["verdict"] == "clean", f"T7: {results['e7']}"
+        print("T7 OK 无分隔符前缀（ARTEXDocs）不命中 title 前缀规则")
+
         print("ALL GREEN agentic-tool-fingerprint acceptance exit=0")
         return 0
     finally:

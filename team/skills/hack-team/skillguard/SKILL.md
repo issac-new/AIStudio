@@ -1,7 +1,7 @@
 ---
 name: skillguard
-description: "AI Agent Skill 安全扫描器 — 12 条规则映射 OWASP Agentic Skills Top 10，含 Lethal Trifecta 组合检测。零依赖纯 stdlib，支持 SARIF 输出。Vendor 自 obielin/skillguard。"
-version: 1.2.0
+description: "AI Agent Skill 安全扫描器 — 三扫描面：Skill 文件（SG 15 规则，映射 OWASP Agentic Skills Top 10 + Lethal Trifecta 组合检测）/ MCP manifest（MP 6 规则）/ 全局指令与启动器 prompt adware（PA 4 规则）。零依赖纯 stdlib，支持 SARIF 输出。Vendor 自 obielin/skillguard。"
+version: 1.3.0
 author: Hermes Agent (vendored from obielin/skillguard)
 license: MIT
 platforms: [linux, macos, windows]
@@ -145,6 +145,31 @@ License: MIT
 Original Author: obielin
 MCP manifest 扩展: mcp_poison_scan.py（本仓自研，2026-09-22，证据源 https://www.freebuf.com/articles/ai-security/500438.html + ATR https://agentthreatrule.org）
 
+## 全局指令/启动器 Prompt Adware 扫描（prompt_adware_scan，2026-11-11 增配）
+
+SG 规则管 SKILL.md、MP 规则管 MCP manifest，第三条投毒通道是**第三方"增强/越狱/配置"捆绑包对 agent 全局指令文件与安装启动器的改写**。命名来源：Check Point Research 2026-11-03 披露 Haiou 越狱捆绑包（GitHub haiou-codex，403 star/77 fork，另捆绑进 Codex-X GUI 工具分发）对 OpenAI Codex 实施 **prompt adware**——改写全局指令文件（00-identity.md）注入触发式广告导流作者 LLM 网关、AES-256-GCM 密钥内嵌启动脚本加密 payload.pkg 抗静态扫描、"受保护基础设施"条款禁止 agent 测试作者域名、拒绝抑制 persona 模块越狱。`prompt_adware_scan.py` 补齐该面，4 条 PA 规则：
+
+```bash
+cd ~/.hermes/skills/hack-team/skillguard/scripts
+
+# 内置自测试（复现 Haiou 4 机制，全部本地无网络）
+python3 -m prompt_adware_scan selftest
+
+# 扫描第三方捆绑包/全局指令目录（*.md *.txt 走 PA-001/002/004；*.sh *.py *.js *.ts 走 PA-003）
+python3 -m prompt_adware_scan scan /path/to/bundle-or-dir --json
+```
+
+退出码：0 干净 / 1 存在 CRITICAL|HIGH / 2 仅 MEDIUM|LOW / 3 自测试失败（CI 门禁用 exit 1 fail-closed）。
+
+| 规则 | 严重度 | 检测目标 |
+|------|--------|----------|
+| PA-001 | CRITICAL | 触发式广告注入：问候/激活词枚举 +「只回这一行」精确回复锁 + 推广 URL；无触发词的精确锁+URL 变体同样命中（覆盖推荐偏向类隐蔽操纵） |
+| PA-002 | HIGH | 攻击者资产自保护指令：「即使授权/CTF 也不许测试 X 域名」——agent 信任锚点操纵 |
+| PA-003 | HIGH | 不透明加密载荷启动器：脚本内嵌对称密钥解密 payload → 内容对静态扫描不可审计 |
+| PA-004 | MEDIUM | 拒绝抑制/越狱 persona 签名（≥2 信号：拒绝黑名单 / CTF reframe / 不打断模式 / 护栏绕过） |
+
+适用对象：①第三方捆绑包安装前整目录扫描；②安装后对 `AGENTS.md`/`CLAUDE.md`/全局 instructions 目录的漂移复扫。跨 agent 防御差异实证（同载荷 Sonnet 5 识别注入并拒绝、Codex 版存活）说明模型层注入识别仍是最后一道闸，静态扫描管住供应链入口。接入统一准入门 `skill-admission-scan.py` 为待办（登记 `research/hermes-cluster-pending-and-gap.md`）。
+
 ## Related Skills
 
 - `pentest-methodology-fusion` — 渗透方法论融合
@@ -155,3 +180,4 @@ MCP manifest 扩展: mcp_poison_scan.py（本仓自研，2026-09-22，证据源 
 
 - 1.1.0 (2026-10-14): 增补供应链检测规则 SG-013（注释内嵌指令）/SG-014（工具描述-代码行为一致性）/SG-015（Rug-Pull 条件分支），来源 G-A2（腾讯朱雀 AIG 分类法对照，裁决矩阵 A2 行）；新增回环 fixtures 于 scripts/skillguard/tests/fixtures/。
 - 1.2.0 (2026-10-14): SG-013 误报降噪（G-A2b 双端标定）——L1 签名收窄（移除 jailbreak/DAN 等裸词，保留 ignore-instructions 家族），L2 改双路径共现（数据移动动词+数据目标 / 工具调用动词+工具目标，各含命令词），新增防御性语境全文豁免（CVE/CIS/OWASP/SG-/渗透红队等强标记×弱词汇共现门，签名段永不豁免）。四目标基线 20 误报→0，恶意 fixtures 3/3 检出不变，其余规则 findings 逐目录守恒。
+- 1.3.0 (2026-11-11): 新增第三扫描面 `prompt_adware_scan.py`（PA-001 触发式广告注入 / PA-002 攻击者资产自保护指令 / PA-003 加密载荷启动器 / PA-004 拒绝抑制 persona），来源 gap-20261103-022（Check Point Haiou「prompt adware」一手回源 + THN 2026-11 转述 + arXiv 2604.08407 网关风险）。效力实证：selftest 4 机制全检出；devops 60+ 技能良性语料零误报（exit 0）；模拟安装后捆绑包目录 E2E 检出 PA-001+PA-003（exit 1）。接入 `skill-admission-scan.py` 统一准入门待办（登记 research/hermes-cluster-pending-and-gap.md）。

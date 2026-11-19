@@ -8,14 +8,36 @@ DEFAULT_RULES = {
                           "last_verified": "2026-10-13", "source": "selfupdate/github.go:101"},
         "console_title": {"field": "title", "patterns": ["Autonomous Penetration Testing Console"],
                           "last_verified": "2026-10-13", "source": "web/src/config/app-config.ts:10"},
+        "tls_default_cert": {"field": "tls_cert_issuer", "patterns": ["pentagi ca"], "last_verified": "2026-11-19", "source": "PentAGI 默认自签 CA ssl.cert.issuer.cn:\"PentAGI CA\"（Shodan 240 命中）；GitGuardian 45 框架普查（FreeBuf 511701 转述，数据锚 2026-11-07，二手未回源）"},
     },
     "weak": {
-        "default_ports": {"field": "port", "values": [8787, 8788], "pair_mode": True,
-                          "last_verified": "2026-10-13", "source": "cmd/artex/main.go:55-57"},
+        "default_ports": {"field": "port", "values": [8787, 8788, 8790, 9137, 5080, 50080, 3333], "pair_mode": True,
+                          "last_verified": "2026-11-19", "source": "cmd/artex/main.go:55-57 源码默认；Censys 2026-11-05 公网实测 8787→8790→443→80；v1.7.0 增 Xalgorix:9137/Agent Zero:5080,50080/T3MP3ST:3333（GitGuardian 普查）"},
         "custom_session_header": {"field": "header_names", "patterns": ["x-session-key", "x-session-id"],
                                   "last_verified": "2026-10-13", "source": "agent/provider.go:79-86 模式"},
         "relay_domain": {"field": "domain", "patterns": [], "note": "事件实证域名入库需人工确认",
                          "last_verified": "2026-10-13"},
+        "console_title_prefix": {"field": "title", "patterns": ["artex", "scopeweaver"], "prefix_sep": True,
+                                 "last_verified": "2026-11-15", "source": "Censys ^ARTEX[ :—] 前缀锚定；ScopeWeaver rebrand"},
+        "next_static_asset": {"field": "path", "patterns": ["_next/static"],
+                              "last_verified": "2026-11-15", "source": "Censys Next.js 控制台静态资源指纹"},
+        "family_console_title": {"field": "title",
+                                 "patterns": ["pentagi", "agent zero", "xalgorix", "decepticon", "redcell",
+                                              "redamon", "t3mp3st", "incalmo", "cyberstrike", "forang",
+                                              "pentestcode", "pentest-swarm", "鸾鸟", "月落", "nebula 3",
+                                              "pentest-ai · dashboard", "mergen — arsenal"],
+                                 "last_verified": "2026-11-19", "source": "GitGuardian 普查/FreeBuf 511701"},
+        "family_favicon_hash": {"field": "favicon_hash",
+                                "patterns": ["-1596753120", "964522141", "248472114", "-566184040",
+                                             "-1814445533", "-196523122"],
+                                "last_verified": "2026-11-19", "source": "GitGuardian 普查/FreeBuf 511701"},
+        "console_html_snippet": {"field": "body",
+                                 "patterns": ["console for an llm-driven autonomous penetration testing system",
+                                              "autonomous red team platform",
+                                              "security reconnaissance and vulnerability assessment dashboard",
+                                              "xalgorix.theme", "rc-theme", "cyber-theme",
+                                              "incalmo c2 server api"],
+                                 "last_verified": "2026-11-19", "source": "GitGuardian 普查/FreeBuf 511701"},
     },
 }
 
@@ -32,13 +54,23 @@ def match_event(ev, rules):
                 hits_weak.append(cat)
             continue
         v = ev.get(rule["field"])
+        seps = rule.get("prefix_seps", [" ", ":", "—", "-", "·"])
         if isinstance(v, list):
             names = [str(x).lower() for x in v]
-            if any(p.lower() in n for p in rule.get("patterns", []) for n in names):
+            if rule.get("prefix_sep"):
+                # 前缀锚定：title 以 pattern 开头且紧跟分隔符（Censys ^ARTEX[ :—] 语义），防 SmartArtEXplorer 类中部命中
+                if any(n.startswith(p.lower()) and (len(n) == len(p) or n[len(p)] in seps)
+                       for p in rule.get("patterns", []) for n in names):
+                    hits_weak.append(cat)
+            elif any(p.lower() in n for p in rule.get("patterns", []) for n in names):
                 hits_weak.append(cat)
         elif v is not None:
             s = str(v).lower()
-            if any(p.lower() in s for p in rule.get("patterns", [])):
+            if rule.get("prefix_sep"):
+                if any(s.startswith(p.lower()) and (len(s) == len(p) or s[len(p)] in seps)
+                       for p in rule.get("patterns", [])):
+                    hits_weak.append(cat)
+            elif any(p.lower() in s for p in rule.get("patterns", [])):
                 hits_weak.append(cat)
     if hits_strong:
         return {"verdict": "match-strong", "hits": hits_strong}
