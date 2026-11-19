@@ -58,7 +58,10 @@ export function validateContractInput(v: unknown): ContractValidation {
   }
 
   if (!Array.isArray(c.measures)) problems.push('measures 须为数组')
-  else
+  else {
+    // measureId 是测量记录的绑定键（spec §4.1：定义未变时按 measureId 追加观测），
+    // 重复 ID 会让测量挂错定义，必须唯一。
+    const seenMeasureIds = new Set<string>()
     c.measures.forEach((m, i) => {
       const mm = asRecord(m)
       if (!mm) {
@@ -66,6 +69,9 @@ export function validateContractInput(v: unknown): ContractValidation {
         return
       }
       if (!nonEmpty(mm.measureId)) problems.push(`measures[${i}].measureId 必填`)
+      else if (seenMeasureIds.has(mm.measureId))
+        problems.push(`measures[${i}].measureId 重复（${mm.measureId}）`)
+      else seenMeasureIds.add(mm.measureId)
       if (!nonEmpty(mm.name)) problems.push(`measures[${i}].name 必填`)
       if (!nonEmpty(mm.definition)) problems.push(`measures[${i}].definition 必填`)
       if (!nonEmpty(mm.unit)) problems.push(`measures[${i}].unit 必填`)
@@ -77,6 +83,7 @@ export function validateContractInput(v: unknown): ContractValidation {
       if (!isFiniteNumber(mm.target)) problems.push(`measures[${i}].target 须为有限数值`)
       if (!nonEmpty(mm.sourceRef)) problems.push(`measures[${i}].sourceRef 必填`)
     })
+  }
 
   const acc = asRecord(c.acceptance)
   if (!acc) problems.push('acceptance 须为对象')

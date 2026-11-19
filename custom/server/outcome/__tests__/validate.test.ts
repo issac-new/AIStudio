@@ -148,6 +148,19 @@ describe('validateContractInput', () => {
     expect(joined).toContain('baseline')
   })
 
+  it('measures 内 measureId 重复被拒；measureId 唯一时通过', () => {
+    const dup = [
+      { ...base.measures[0] },
+      { ...base.measures[0], measureId: 'm-2' },
+      { ...base.measures[0], measureId: 'm-1' },
+    ]
+    const joined = validateContractInput(variant({ measures: dup })).problems.join()
+    expect(joined).toContain('重复')
+    expect(joined).toContain('m-1')
+    const uniq = [{ ...base.measures[0] }, { ...base.measures[0], measureId: 'm-2' }]
+    expect(validateContractInput(variant({ measures: uniq })).problems).toEqual([])
+  })
+
   it('acceptance/scope/contextPolicy 容器与数组字段校验', () => {
     for (const patch of [
       { acceptance: 'x' },
