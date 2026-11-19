@@ -66,6 +66,7 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
   let tmpPeople: string
   let currentUser: PlatformPrincipal | undefined
   let allTasksTerminal = false
+  let rootTaskOwnership: 'proved' | 'null' | 'false' = 'proved'
   const taskSummary = { id: 'task-root-1', title: '根任务', status: 'done' }
   // 动态导入的模块引用（beforeEach 完成后各用例使用）
   let routes: import('@koa/router').default<Koa.DefaultState, Koa.DefaultContext>
@@ -115,6 +116,7 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
     tmpOutcome = mkdtempSync(join(tmpdir(), 'outcome-ctl-store-'))
     tmpPeople = mkdtempSync(join(tmpdir(), 'outcome-ctl-people-'))
     allTasksTerminal = false
+    rootTaskOwnership = 'proved'
     asUser('owner-1')
     process.env.OUTCOME_WORKBENCH = '1'
 
@@ -132,6 +134,8 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       tasksTerminalOf: () => allTasksTerminal,
       taskSummaryOf: (rootTaskId) =>
         rootTaskId === taskSummary.id ? { ...taskSummary } : null,
+      verifyRootTask: () =>
+        rootTaskOwnership === 'proved' ? { ok: true } : rootTaskOwnership === 'false' ? { ok: false } : null,
     })
     reopenOutcome = controller.reopenOutcome
 
@@ -165,6 +169,7 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
     rmSync(tmpOutcome, { recursive: true, force: true })
     rmSync(tmpPeople, { recursive: true, force: true })
     delete process.env.OUTCOME_WORKBENCH
+    delete process.env.OUTCOME_ALLOW_UNVERIFIED_ROOT
     const { _useOutcomeStoreForTests } = await import('../outcome-store')
     _useOutcomeStoreForTests(null)
     const people = await import('../../agentidentity/people')
@@ -614,6 +619,95 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(unknownContract.status).toBe(404)
       const unknownSnap = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=snap-nope`)
       expect(unknownSnap.status).toBe(404)
+    })
+  })
+
+  describe('审查修复轮（C1/I1/I2/I3）', () => {
+    it('C1：非 owner 重放他人 settlementId → 403（鉴权先于幂等扫描，结算正身不可被读取）', async () => {
+      const id = await seedContract('settled')
+      asUser('verifier-1')
+      const v = await post(base, `/api/hermes/outcomes/${id}/settlement`, { settlementId: `set-${id}` })
+      expect(v.status).toBe(403)
+      expect(v.body.code).toBe('forbidden')
+      asUser('other-1')
+      const o = await post(base, `/api/hermes/outcomes/${id}/settlement`, { settlementId: `set-${id}` })
+      expect(o.status).toBe(403)
+    })
+
+    it('I1：transitions 撕裂自愈——事件在账、合同未写时重放补写合同', async () => {
+      const id = await seedContract('draft')
+      // 手工造撕裂：事件落账但不写 contract.json（模拟先账后物的「物」半边失败）
+      const ev = storeMod.appendEvent(id, 'status_changed', { from: 'draft', to: 'active', eventId: 'te-tear' }, 'owner-1', 1)
+      expect(ev.ok).toBe(true)
+      expect(storeMod.getContract(id)?.status).toBe('draft') // 撕裂现场：账已迁、合同未迁
+      const res = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'active', eventId: 'te-tear' })
+      expect(res.status).toBe(200)
+      expect(res.body.replayed).toBe(true)
+      expect(res.body.healed).toBe(true)
+      expect(storeMod.getContract(id)?.status).toBe('active')
+      // 补写不重复落账
+      expect(storeMod.listEvents(id, 'status_changed').length).toBe(1)
+    })
+
+    it('I1：settlement 撕裂自愈——结算事件在账、合同仍 observing 时重放补迁移＋补写', async () => {
+      const id = await seedContract('observing')
+      const settlement = {
+        settlementId: 'set-tear',
+        outcomeId: id,
+        contractVersion: 1,
+        verdict: 'achieved',
+        rationale: '撕裂自愈测试专用的结算理由陈述，超过二十个字',
+        measurementIds: [],
+        signedBy: 'owner-1',
+        signedAt: Date.now(),
+      }
+      const ev = storeMod.appendEvent(id, 'settlement_signed', { settlementId: 'set-tear', verdict: 'achieved', settlement }, 'owner-1', 1)
+      expect(ev.ok).toBe(true)
+      expect(storeMod.getContract(id)?.status).toBe('observing') // 撕裂现场
+      const res = await post(base, `/api/hermes/outcomes/${id}/settlement`, { settlementId: 'set-tear' })
+      expect(res.status).toBe(200)
+      expect(res.body.healed).toBe(true)
+      expect(storeMod.getContract(id)?.status).toBe('settled')
+      expect(
+        storeMod.listEvents(id, 'status_changed').some((e) => (e.payload as { to?: string }).to === 'settled'),
+      ).toBe(true)
+      expect(storeMod.listEvents(id, 'settlement_signed').length).toBe(1) // 补迁移不重复结算
+    })
+
+    it('I2：异 actor 同 clientRequestId 不命中——幂等键作用域收敛到 actor', async () => {
+      asUser('owner-1')
+      const first = await post(base, '/api/hermes/outcomes', contractBody({ clientRequestId: 'shared-creq' }))
+      expect(first.status).toBe(201)
+      asUser('other-1')
+      const second = await post(base, '/api/hermes/outcomes', contractBody({ clientRequestId: 'shared-creq', rootTaskId: 'task-other-actor' }))
+      expect(second.status).toBe(201) // 未命中 owner-1 的合同，全新创建
+      expect(second.body.replayed).toBeUndefined()
+      expect((second.body.contract as { outcomeId: string }).outcomeId).not.toBe(
+        (first.body.contract as { outcomeId: string }).outcomeId,
+      )
+      // 原 actor 重放仍命中自己的合同
+      asUser('owner-1')
+      const replay = await post(base, '/api/hermes/outcomes', contractBody({ clientRequestId: 'shared-creq' }))
+      expect(replay.status).toBe(200)
+      expect(replay.body.replayed).toBe(true)
+    })
+
+    it('I3：归属不可证明（null）→ 422 ownership_unavailable；env 放行仅限 null；ok:false 永不放行', async () => {
+      rootTaskOwnership = 'null'
+      const denied = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'task-own-1' }))
+      expect(denied.status).toBe(422)
+      expect(denied.body.code).toBe('ownership_unavailable')
+      process.env.OUTCOME_ALLOW_UNVERIFIED_ROOT = '1'
+      const allowed = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'task-own-2' }))
+      expect(allowed.status).toBe(201)
+      delete process.env.OUTCOME_ALLOW_UNVERIFIED_ROOT
+      rootTaskOwnership = 'false'
+      const rejected = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'task-own-3' }))
+      expect(rejected.status).toBe(422)
+      expect(rejected.body.code).toBe('ownership_unavailable')
+      process.env.OUTCOME_ALLOW_UNVERIFIED_ROOT = '1'
+      const stillRejected = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'task-own-4' }))
+      expect(stillRejected.status).toBe(422) // 明确不归属：env 不豁免
     })
   })
 

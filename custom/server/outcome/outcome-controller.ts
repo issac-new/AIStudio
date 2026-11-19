@@ -23,8 +23,15 @@
 //   停用的人不得操作（spec §4.6「人员必须 active」）。
 // - 不可变消费：applyReopen 返回新对象，本控制器不就地改嵌套；重开无专门路由（简报未列），
 //   以导出函数 reopenOutcome 提供可调用面，由 Task 10 根任务重开外部触发。
-// - 撕裂容忍：先账后物写序下「事件已落、contract.json 未写」重试自愈（幂等扫描先于
-//   一切写检查；store 头注同款语义）。
+// - 撕裂自愈：先账后物写序下「事件已落、contract.json 未写」由重放命中自愈——
+//   eventId/settlementId 命中时校验合同状态与事件结果一致，撕裂（合同停在事件
+//   from 态）则补写合同完成自愈（对齐 store create/快照的撕裂自愈语义）；合同已
+//   演进到其他状态（如重开回 active）则如实返回原事件不回滚。
+// - 幂等键作用域：clientRequestId 以 `${actor}:${clientRequestId}` 组合键落账与查定
+//   （I2 裁决）——异 actor 重放同键不得命中他人合同；存量无组合键数据无需迁移。
+// - 归属证明（spec §4.6）：opts.verifyRootTask 注入面返回 null（不可证明）默认
+//   422 ownership_unavailable，env OUTCOME_ALLOW_UNVERIFIED_ROOT=1 显式放行（批一
+//   试点/测试用，Task 10 接真实现后不再需要）；{ok:false}=可证明且不归属，永不放行。
 import Router from '@koa/router'
 import type { Context } from 'koa'
 import { readdirSync } from 'fs'
@@ -57,6 +64,10 @@ import type { OutcomeContract, OutcomeMeasurement, OutcomeStatus } from './types
 export interface OutcomeControllerOptions {
   tasksTerminalOf?: (outcomeId: string) => boolean
   taskSummaryOf?: (rootTaskId: string) => SnapshotTaskSummary | null
+  /** 根任务归属证明（spec §4.6）：null=不可证明（默认 422 ownership_unavailable，
+   *  env OUTCOME_ALLOW_UNVERIFIED_ROOT=1 显式放行，批一试点/测试用，Task 10 接
+   *  真实现后不再需要）；{ok:false}=可证明且不归属当前部署，永不放行。 */
+  verifyRootTask?: (rootTaskId: string) => { ok: boolean } | null
   /** 政策版本标识：批一无政策存储，缺省固定标识；接正身后由调用方注入。 */
   decisionPolicyVersion?: string
 }
@@ -234,7 +245,9 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     const body = bodyOf(ctx)
     const now = Date.now()
     const input = pickFields(body, CONTRACT_INPUT_FIELDS)
-    const clientRequestId = nonEmpty(body.clientRequestId) ? body.clientRequestId.trim() : undefined
+    // I2 裁决：幂等键作用域收敛到 actor——组合键落账与查定，异 actor 同键不命中
+    const rawClientRequestId = nonEmpty(body.clientRequestId) ? body.clientRequestId.trim() : undefined
+    const clientRequestId = rawClientRequestId ? `${actor}:${rawClientRequestId}` : undefined
     const outcomeId = nonEmpty(body.outcomeId) ? body.outcomeId.trim() : `oc-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`
     const contract: Record<string, unknown> = {
       ...input,
@@ -250,6 +263,22 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     )
     if (activeProblems.length) {
       fail(ctx, 422, 'owner/verifier 未在人员名单激活', { code: 'invalid_input', problems: activeProblems })
+      return
+    }
+    // 归属证明（spec §4.6）：null=不可证明默认拒（env 显式放行试点）；ok:false=明确不归属永不放行
+    const ownership = opts.verifyRootTask ? opts.verifyRootTask(String(input.rootTaskId ?? '')) : null
+    if (ownership?.ok === true) {
+      /* 已证明归属，放行 */
+    } else if (ownership?.ok === false) {
+      fail(ctx, 422, `根任务（${String(input.rootTaskId)}）归属证明失败：不属于当前部署`, {
+        code: 'ownership_unavailable',
+      })
+      return
+    } else if (process.env.OUTCOME_ALLOW_UNVERIFIED_ROOT !== '1') {
+      fail(ctx, 422, `根任务（${String(input.rootTaskId)}）归属不可证明`, {
+        code: 'ownership_unavailable',
+        problems: ['根任务归属不可证明（批一未接任务系统）；试点可设 OUTCOME_ALLOW_UNVERIFIED_ROOT=1 显式放行'],
+      })
       return
     }
     const result = createContract({ ...contract, ...(clientRequestId ? { clientRequestId } : {}) } as never, actor)
@@ -340,13 +369,25 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       fail(ctx, 403, to === 'observing' ? '仅 owner 或验证责任人可发起 observing 迁移' : '仅结果责任人（ownerPersonId）可执行该迁移', { code: 'forbidden' })
       return
     }
-    // eventId 幂等：命中 status_changed 账上同 eventId 即返回原事件（重放不重复落账）
+    // eventId 幂等：命中 status_changed 账上同 eventId 即返回原事件（重放不重复落账）；
+    // 撕裂自愈（I1 裁决）：事件在账而合同停在事件 from 态 → 补写合同完成自愈；
+    // 合同已演进到其他状态（如后续再迁移/重开）→ 如实返回原事件不回滚。
     const eventId = nonEmpty(body.eventId) ? body.eventId.trim() : undefined
     if (eventId) {
       const hit = listEvents(id, 'status_changed').find(
         (e) => (e.payload as { eventId?: unknown }).eventId === eventId,
       )
       if (hit) {
+        const p = hit.payload as { from?: string; to?: string }
+        if (contract.status === p.from && p.to) {
+          const healed: OutcomeContract = { ...contract, status: p.to as OutcomeStatus, updatedAt: Date.now() }
+          if (!persistContract(healed)) {
+            fail(ctx, 500, '合同落盘失败（重放同 eventId 自愈）', { code: 'write_failed' })
+            return
+          }
+          ok(ctx, { replayed: true, healed: true, event: hit, contract: healed })
+          return
+        }
         ok(ctx, { replayed: true, event: hit })
         return
       }
@@ -439,20 +480,53 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     const body = bodyOf(ctx)
-    // settlementId 幂等：命中账上同 id 即返回原结算（重放不重复落账、不重复迁移）
+    // C1 裁决：鉴权先于幂等扫描——重放读取结算正身同样受 owner-only 约束，
+    // 任何登录用户拿可猜 settlementId 不得读他人结算。
+    if (!authz(contract, actor, 'owner')) {
+      fail(ctx, 403, '仅结果责任人（ownerPersonId）可签署业务裁决，验证责任人不得代签（spec §4.6）', { code: 'forbidden' })
+      return
+    }
+    // settlementId 幂等：命中账上同 id 即返回原结算（重放不重复落账、不重复迁移）；
+    // 撕裂自愈（I1 裁决）：结算事件在账而合同仍 observing（status_changed/contract.json
+    // 未落）→ 补迁移事件＋补写合同完成自愈；合同已到 settled=一致；其他状态（重开回
+    // active 等）=已演进，如实返回原结算不回滚。
     const settlementId = nonEmpty(body.settlementId) ? body.settlementId.trim() : undefined
     if (settlementId) {
       const hit = listEvents(id, 'settlement_signed').find(
         (e) => (e.payload as { settlementId?: unknown }).settlementId === settlementId,
       )
       if (hit) {
-        ok(ctx, { replayed: true, settlement: (hit.payload as { settlement?: unknown }).settlement })
+        const original = (hit.payload as { settlement?: unknown }).settlement
+        if (contract.status === 'observing') {
+          const moved = listEvents(id, 'status_changed').some(
+            (e) =>
+              (e.payload as { to?: unknown; settlementId?: unknown }).to === 'settled' &&
+              (e.payload as { settlementId?: unknown }).settlementId === settlementId,
+          )
+          if (!moved) {
+            const heal = appendEvent(
+              id,
+              'status_changed',
+              { from: 'observing', to: 'settled', settlementId },
+              actor,
+              contract.version,
+            )
+            if (!heal.ok) {
+              fail(ctx, 500, '自愈迁移事件写入失败（重放同 settlementId 自愈）', { code: 'write_failed' })
+              return
+            }
+          }
+          const healed: OutcomeContract = { ...contract, status: 'settled', updatedAt: Date.now() }
+          if (!persistContract(healed)) {
+            fail(ctx, 500, '合同落盘失败（重放同 settlementId 自愈）', { code: 'write_failed' })
+            return
+          }
+          ok(ctx, { replayed: true, healed: true, settlement: original, contract: healed })
+          return
+        }
+        ok(ctx, { replayed: true, settlement: original })
         return
       }
-    }
-    if (!authz(contract, actor, 'owner')) {
-      fail(ctx, 403, '仅结果责任人（ownerPersonId）可签署业务裁决，验证责任人不得代签（spec §4.6）', { code: 'forbidden' })
-      return
     }
     if (contract.status !== 'observing') {
       fail(ctx, 422, `仅 observing 合同可结算（当前 ${contract.status}）`, {
