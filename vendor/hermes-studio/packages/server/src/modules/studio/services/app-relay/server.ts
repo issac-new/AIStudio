@@ -97,7 +97,8 @@ const ALLOWED_WORKFLOW_CLIENT_EVENTS = new Set([
   'workflow.status.unsubscribe',
 ])
 const ALLOWED_TERMINAL_CLIENT_EVENTS = new Set(['terminal.capabilities', 'terminal.list', 'terminal.create', 'terminal.attach', 'terminal.read', 'terminal.input', 'terminal.resize', 'terminal.detach', 'terminal.close'])
-const ALLOWED_SOCKET_NAMESPACES = new Set(['/terminal', '/chat-run', '/group-chat', '/workflow', '/person-presence'])
+const ALLOWED_PLUGIN_CLIENT_EVENTS = new Set(['session.open', 'session.command', 'session.close'])
+const ALLOWED_SOCKET_NAMESPACES = new Set(['/plugins', '/terminal', '/chat-run', '/group-chat', '/workflow', '/person-presence'])
 const NON_STREAMING_SUPPRESSED_EVENTS = new Set([
   'message.delta',
   'message.interim',
@@ -377,7 +378,8 @@ export class LocalAppRelayServer {
       role: 'app',
       machineId,
       hostConnected: true,
-      capabilities: ['http.request', 'http.download.chunked', 'socket.chat-run', 'socket.group-chat', 'socket.workflow', 'app.entitlement', 'p2p.direct.v1'],
+      chatResumeOnOpen: true,
+      capabilities: ['http.request', 'http.download.chunked', 'socket.chat-run', 'socket.group-chat', 'socket.workflow', 'socket.plugins', 'app.entitlement', 'p2p.direct.v1'],
     })
     if (socket.data.localUserToken) this.scheduleTokenExpiry(socket)
     if (socket.data.appEntitlement) this.scheduleEntitlementExpiry(socket)
@@ -587,6 +589,13 @@ export class LocalAppRelayServer {
     localSocket.onAny((event: string, ...args: unknown[]) => {
       this.handleLocalSocketEvent(socket, bridge, event, args.length <= 1 ? args[0] : args)
     })
+    const resume = request.chatResume
+    if (namespace === '/chat-run' && String(request.query?.session_state) !== '1'
+      && resume && typeof resume.session_id === 'string' && resume.session_id.length > 0 && resume.session_id.length <= 256
+      && typeof resume.id === 'string' && resume.id.length <= 128) {
+      localSocket.emit('app.resume', { session_id: resume.session_id, id: resume.id, timeline: resume.timeline === true })
+      return { id, ok: true, namespace, stream: bridge.stream, chatResumeAccepted: true }
+    }
     return { id, ok: true, namespace: bridge.namespace, stream: bridge.stream }
   }
 
@@ -1063,6 +1072,7 @@ function isMediaHttpRequest(request: AppRelayHttpRequest): boolean {
 }
 
 function isAllowedSocketEvent(namespace: string, event: string): boolean {
+  if (namespace === '/plugins') return ALLOWED_PLUGIN_CLIENT_EVENTS.has(event)
   if (namespace === '/person-presence') return event === 'person.activity'
   if (namespace === '/terminal') return ALLOWED_TERMINAL_CLIENT_EVENTS.has(event)
   if (namespace === '/chat-run') return ALLOWED_CHAT_RUN_CLIENT_EVENTS.has(event)

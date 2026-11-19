@@ -3,13 +3,18 @@ import { deploymentUrl } from '@/utils/deployment-url'
 import { agentMetadata } from '@/utils/agent-catalog'
 import PageLoading from '@/components/common/PageLoading.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import PluginAgentsPanel from '@/components/plugins/PluginAgentsPanel.vue'
+import AgentManagerCard from '@/components/coding-agents/AgentManagerCard.vue'
+import AgentAutoUpdateControl from '@/components/coding-agents/AgentAutoUpdateControl.vue'
+import DshManagementStatus from '@/components/coding-agents/dsh/DshManagementStatus.vue'
+import { studioAgentAction, type AgentUpdate } from '@/api/studio/agents'
+import type { RouteLocationRaw } from 'vue-router'
 import { getAgentUpdatePolicies, setAgentAutoUpdate, type AgentUpdatePolicyState } from '@/api/coding-agents'
 import { computed, defineAsyncComponent, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { NAlert, NButton, NDrawer, NDrawerContent, NPopconfirm, NSwitch, NTag, useDialog, useMessage } from 'naive-ui'
+import { NAlert, NButton, NDrawer, NDrawerContent, NDropdown, NPopconfirm, NTag, useDialog, useMessage } from 'naive-ui'
 import {
-  checkCodingAgentUpdate,
   deleteCodingAgent,
   fetchCodingAgentsStatus,
   installCodingAgent,
@@ -103,7 +108,17 @@ const codingAgents: CodingAgentCard[] = [
 const updatePolicies = ref<Record<string, AgentUpdatePolicyState>>({})
 let policyTimer: ReturnType<typeof setInterval> | undefined
 async function refreshPolicies() {
-  try { updatePolicies.value = (await getAgentUpdatePolicies()).agents } catch { /* unavailable to non-admin/old server */ }
+  try {
+    updatePolicies.value = (await getAgentUpdatePolicies()).agents
+    // Background updates can finish while the drawer is closed. Refresh the
+    // actual CLI/compatibility snapshot, not just the policy's version string.
+    const policy = updatePolicies.value.dsh
+    if (policy?.currentVersion && policy.status !== 'updating' && toolStatus('dsh')?.installed
+      && policy.currentVersion !== toolStatus('dsh')?.version && !installing.value.dsh && !deleting.value.dsh) {
+      const tool = (await fetchCodingAgentsStatus()).tools.find(tool => tool.id === 'dsh')
+      if (tool) replaceTool(tool)
+    }
+  } catch { /* unavailable to non-admin/old server */ }
 }
 function availableUpdateVersion(id: CodingAgentId): string {
   const policy = updatePolicies.value[id]
@@ -111,7 +126,16 @@ function availableUpdateVersion(id: CodingAgentId): string {
   return updateInfo.value[id]?.updateAvailable ? updateInfo.value[id]?.latestVersion || '' : ''
 }
 async function toggleAutoUpdate(id: CodingAgentId, enabled: boolean) {
-  try { updatePolicies.value = (await setAgentAutoUpdate(id, enabled)).agents } catch (error) { message.error(String(error)) }
+  if (id === 'dsh') {
+    if (dshBusy.value) return
+    dshOperation.value = 'policy'
+    dshError.value = ''
+  }
+  try { updatePolicies.value = (await setAgentAutoUpdate(id, enabled)).agents }
+  catch (error) {
+    if (id === 'dsh') dshError.value = errorMessage(error)
+    message.error(errorMessage(error))
+  } finally { if (id === 'dsh') dshOperation.value = '' }
 }
 onMounted(() => { void refreshPolicies(); policyTimer = setInterval(() => void refreshPolicies(), 15000) })
 onUnmounted(() => { if(policyTimer) clearInterval(policyTimer) })
@@ -134,6 +158,23 @@ const hermesRuntimeStatus = ref<RuntimeVersionStatus | null>(null)
 const aiHelpDrawerVisible = ref(false)
 const aiHelpPrompt = ref('')
 const legacyDataMigrationChecked = ref(false)
+const dshVersionsVisible = ref(false)
+const dshMoreVisible = ref(false)
+const dshVersionDraft = ref('')
+const dshOperation = ref<'' | 'install' | 'rollback' | 'delete' | 'check' | 'policy'>('')
+const dshError = ref('')
+const dshBusy = computed(() => Boolean(dshOperation.value) || ['checking', 'updating'].includes(updatePolicies.value.dsh?.status || ''))
+const dshPinLabel = computed(() => {
+  const status = toolStatus('dsh')
+  const pinned = status?.compatibility?.pinnedVersion
+  return !pinned ? t('dshVersions.notPinned') : pinned === status?.version
+    ? t('dshVersions.fixed') : t('dshVersions.pinned', { version: pinned })
+})
+const dshVerified = computed(() => {
+  const status = toolStatus('dsh')
+  return status?.installed && Boolean(status.compatibility?.verifiedVersion)
+    && status.compatibility?.verifiedVersion === status.version
+})
 const installing = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
 const deleting = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
 const checkingUpdate = ref<Record<CodingAgentId, boolean>>({ 'claude-code': false, codex: false, pi: false, grok: false, opencode: false, dsh: false, cursor: false, antigravity: false, qwen: false, kimi: false, codebuddy: false, qoder: false, copilot: false, zcode: false })
@@ -259,6 +300,7 @@ function offerAiHelp(id: CodingAgentId, operation: AgentManagementOperation, err
 
 function handleMutationError(id: CodingAgentId, operation: AgentManagementOperation, error: unknown) {
   const detail = errorMessage(error)
+  if (id === 'dsh') dshError.value = detail
   message.error(detail)
   offerAiHelp(id, operation, detail)
 }
@@ -419,10 +461,25 @@ async function maybePromptLegacyWindowsDataMigration() {
 }
 
 async function handleInstall(id: CodingAgentId, options: { version?: string; rollback?: boolean } = {}) {
+  if (id === 'dsh') {
+    if (dshBusy.value) return
+    dshOperation.value = options.rollback ? 'rollback' : 'install'
+    dshError.value = ''
+  }
   installing.value[id] = true
   try {
     if ((id === 'cursor' || id === 'antigravity' || agentMetadata(id)?.installation.method === 'manual') && typeof window !== 'undefined') {
       window.open(agentMetadata(id)?.installation.docsUrl || (id === 'antigravity' ? 'https://antigravity.google/docs/cli/install' : 'https://cursor.com/install'), '_blank', 'noopener,noreferrer')
+    }
+    const installed = toolStatus(id)
+    const target = options.version || availableUpdateVersion(id)
+    if (installed?.installed && target && !options.rollback) {
+      await studioAgentAction(id, 'upgrade', { version: target, expectedVersion: installed.version })
+      tools.value = (await fetchCodingAgentsStatus()).tools
+      updateInfo.value[id] = null
+      await refreshPolicies()
+      message.success(t('codingAgents.installSuccess'))
+      return
     }
     const result = await installCodingAgent(id, options)
     tools.value = result.tools
@@ -433,16 +490,23 @@ async function handleInstall(id: CodingAgentId, options: { version?: string; rol
     }
     if (!result.success) throw new Error(result.message || t('codingAgents.installFailed'))
     updateInfo.value[id] = null
+    if (id === 'dsh' && !result.updateState) await refreshPolicies()
     message.success(t('codingAgents.installSuccess'))
   } catch (error) {
     handleMutationError(id, 'install', error)
   } finally {
     installing.value[id] = false
+    if (id === 'dsh') dshOperation.value = ''
     if (externalInstallationRefreshPending) void checkExternalCliInstallation()
   }
 }
 
 async function handleDelete(id: CodingAgentId) {
+  if (id === 'dsh') {
+    if (dshBusy.value) return
+    dshOperation.value = 'delete'
+    dshError.value = ''
+  }
   deleting.value[id] = true
   try {
     const result = await deleteCodingAgent(id)
@@ -454,13 +518,39 @@ async function handleDelete(id: CodingAgentId) {
     handleMutationError(id, 'delete', error)
   } finally {
     deleting.value[id] = false
+    if (id === 'dsh') dshOperation.value = ''
   }
 }
 
+function confirmDshDelete() {
+  if (dshBusy.value) return
+  dialog.warning({
+    title: t('codingAgents.deleteNow'),
+    content: t('agentManager.deleteConfirm', { name: 'DeepSeek Harness' }),
+    positiveText: t('common.confirm'),
+    negativeText: t('common.cancel'),
+    onPositiveClick: () => handleDelete('dsh'),
+  })
+}
+
+async function openAgentSettings(id: CodingAgentId) {
+  try { await router.push(await studioAgentAction<RouteLocationRaw>(id, 'settings')) }
+  catch (error) { message.error(errorMessage(error)) }
+}
+
 async function handleCheckUpdate(id: CodingAgentId) {
+  if (id === 'dsh') {
+    if (dshBusy.value) return
+    dshOperation.value = 'check'
+    dshError.value = ''
+  }
   checkingUpdate.value[id] = true
   try {
-    const result = await checkCodingAgentUpdate(id)
+    const checked = await studioAgentAction<AgentUpdate>(id, 'check-update')
+    const currentTool = id === 'dsh'
+      ? (await fetchCodingAgentsStatus()).tools.find(tool => tool.id === id) || toolStatus(id)!
+      : toolStatus(id)!
+    const result: CodingAgentUpdateResult = { success: true, tool: currentTool, ...checked }
     if (!result.success) throw new Error(result.message || t('codingAgents.checkUpdateFailed'))
     replaceTool(result.tool)
     updateInfo.value[id] = result
@@ -471,9 +561,11 @@ async function handleCheckUpdate(id: CodingAgentId) {
       status: result.tool.installed && result.updateAvailable ? 'available' : 'current', error: undefined,
     }
   } catch (error) {
+    if (id === 'dsh') dshError.value = errorMessage(error)
     message.error(errorMessage(error))
   } finally {
     checkingUpdate.value[id] = false
+    if (id === 'dsh') dshOperation.value = ''
   }
 }
 
@@ -524,20 +616,9 @@ onUnmounted(() => {
           </NAlert>
 
           <div class="coding-agent-grid">
-            <section class="agent-card coding-agent-card" data-testid="agent-card-ekko">
-              <header class="agent-card-header compact">
-                <div class="agent-identity">
-                  <img :src="deploymentUrl('/coding-agents/ekko-agent.png')" alt="" class="agent-logo" />
-                  <div>
-                    <div class="agent-name-row">
-                      <h3>Ekko</h3>
-                      <NTag type="success" size="small" :bordered="false">{{ t('agentManager.builtIn') }}</NTag>
-                    </div>
-                    <p class="agent-version">Studio {{ formatVersion(appStore.serverVersion) }}</p>
-                  </div>
-                </div>
-              </header>
-              <div class="agent-actions">
+            <AgentManagerCard name="Ekko" :logo="deploymentUrl('/coding-agents/ekko-agent.png')" :version="`Studio ${formatVersion(appStore.serverVersion)}`" data-testid="agent-card-ekko">
+              <template #badges><NTag type="success" size="small" :bordered="false">{{ t('agentManager.builtIn') }}</NTag></template>
+              <template #actions>
                 <NButton
                   secondary
                   size="small"
@@ -545,105 +626,90 @@ onUnmounted(() => {
                 >
                   {{ t('sidebar.settings') }}
                 </NButton>
-              </div>
-            </section>
+              </template>
+            </AgentManagerCard>
 
-          <section class="agent-card coding-agent-card hermes-card" data-testid="agent-card-hermes">
-            <header class="agent-card-header compact">
-              <div class="agent-identity">
-                <img :src="deploymentUrl('/coding-agents/hermes.png')" alt="" class="agent-logo" />
-                <div>
-                  <div class="agent-name-row">
-                    <h3>Hermes</h3>
-                    <NTag
-                      v-if="hermesDetected && hermesType"
-                      data-testid="hermes-source-type"
-                      type="info"
-                      size="small"
-                      :bordered="false"
-                    >
-                      {{ hermesType }}
-                    </NTag>
-                    <NTag :type="hermesDetected ? 'success' : 'warning'" size="small" :bordered="false">
-                      {{ hermesDetected ? t('codingAgents.installed') : t('codingAgents.notInstalled') }}
-                    </NTag>
-                  </div>
-                  <p v-if="hermesDetected" class="agent-version">{{ hermesVersion }}</p>
-                  <p v-else>{{ t('agentManager.hermesDescription') }}</p>
-                </div>
-              </div>
-            </header>
+            <AgentManagerCard name="Hermes" :logo="deploymentUrl('/coding-agents/hermes.png')" :version="hermesDetected ? hermesVersion : undefined" :description="t('agentManager.hermesDescription')" data-testid="agent-card-hermes">
+              <template #badges>
+                <NTag
+                  v-if="hermesDetected && hermesType"
+                  data-testid="hermes-source-type"
+                  type="info"
+                  size="small"
+                  :bordered="false"
+                >
+                  {{ hermesType }}
+                </NTag>
+                <NTag :type="hermesDetected ? 'success' : 'warning'" size="small" :bordered="false">
+                  {{ hermesDetected ? t('codingAgents.installed') : t('codingAgents.notInstalled') }}
+                </NTag>
+              </template>
 
-            <div class="agent-actions">
-              <NButton
-                v-if="hermesDetected"
-                secondary
-                size="small"
-                @click="router.push({ name: 'hermes.configSettings' })"
-              >
-                {{ t('sidebar.settings') }}
-              </NButton>
-              <NButton
-                v-if="hermesDetected && hermesType === 'CLI'"
-                data-testid="view-hermes-cli-details"
-                secondary
-                size="small"
-                :loading="hermesCliDetailsLoading"
-                @click="openHermesCliDetails"
-              >
-                {{ t('runtimeVersions.viewCliDetails') }}
-              </NButton>
-              <NButton
-                v-if="!hermesDetected || hermesType === 'Runtime'"
-                type="primary"
-                secondary
-                size="small"
-                @click="runtimeManagerVisible = true"
-              >
-                {{ hermesDetected ? t('agentManager.manageRuntime') : t('codingAgents.installNow') }}
-              </NButton>
-            </div>
-          </section>
+              <template #actions>
+                <NButton
+                  v-if="hermesDetected"
+                  secondary
+                  size="small"
+                  @click="router.push({ name: 'hermes.configSettings' })"
+                >
+                  {{ t('sidebar.settings') }}
+                </NButton>
+                <NButton
+                  v-if="hermesDetected && hermesType === 'CLI'"
+                  data-testid="view-hermes-cli-details"
+                  secondary
+                  size="small"
+                  :loading="hermesCliDetailsLoading"
+                  @click="openHermesCliDetails"
+                >
+                  {{ t('runtimeVersions.viewCliDetails') }}
+                </NButton>
+                <NButton
+                  v-if="!hermesDetected || hermesType === 'Runtime'"
+                  type="primary"
+                  secondary
+                  size="small"
+                  @click="runtimeManagerVisible = true"
+                >
+                  {{ hermesDetected ? t('agentManager.manageRuntime') : t('codingAgents.installNow') }}
+                </NButton>
+              </template>
+            </AgentManagerCard>
 
-            <section
+            <AgentManagerCard
               v-for="agent in codingAgents"
               :key="agent.id"
-              class="agent-card coding-agent-card"
+              :name="agent.name"
+              :logo="agent.logo"
+              :version="toolStatus(agent.id)?.installed ? installedVersion(agent.id) : undefined"
+              :description="agent.id === 'antigravity' ? t('agentManager.antigravityDescription') : agent.id === 'cursor' ? t('agentManager.cursorDescription') : t('agentManager.codingAgentDescription')"
               :data-testid="`agent-card-${agent.id}`"
             >
-              <header class="agent-card-header compact">
-                <div class="agent-identity">
-                  <img :src="agent.logo" alt="" class="agent-logo" />
-                  <div>
-                    <div class="agent-name-row">
-                      <h3>{{ agent.name }}</h3>
-                      <NTag size="small" :bordered="false">{{ agent.provider }}</NTag>
-                      <NTag
-                        :type="toolStatus(agent.id)?.installed ? 'success' : 'warning'"
-                        size="small"
-                        :bordered="false"
-                      >
-                        {{ toolStatus(agent.id)?.installed ? t('codingAgents.installed') : t('codingAgents.notInstalled') }}
-                      </NTag>
-                    </div>
-                    <p v-if="toolStatus(agent.id)?.installed" class="agent-version">
-                      {{ installedVersion(agent.id) }}
-                    </p>
-                    <p v-else>{{ agent.id === 'antigravity' ? t('agentManager.antigravityDescription') : agent.id === 'cursor' ? t('agentManager.cursorDescription') : t('agentManager.codingAgentDescription') }}</p>
-                  </div>
-                </div>
-              </header>
+              <template #badges>
+                <NTag size="small" :bordered="false">{{ agent.provider }}</NTag>
+                <NTag
+                  :type="toolStatus(agent.id)?.installed ? 'success' : 'warning'"
+                  size="small"
+                  :bordered="false"
+                >
+                  {{ toolStatus(agent.id)?.installed ? t('codingAgents.installed') : t('codingAgents.notInstalled') }}
+                </NTag>
+              </template>
 
-              <div class="agent-actions">
+              <template #summary>
+                <div v-if="agent.id === 'dsh'" class="dsh-version-summary" data-testid="dsh-version-summary">
+                  <span :title="t('dshVersions.pinned', { version: toolStatus('dsh')?.compatibility?.pinnedVersion || t('dshVersions.notPinned') })">{{ dshPinLabel }}</span>
+                  <span :title="t('dshVersions.verified', { version: toolStatus('dsh')?.compatibility?.verifiedVersion || '—' })">{{ t(dshVerified ? 'dshVersions.verifiedSummary' : 'dshVersions.unverified') }}</span>
+                </div>
+              </template>
+
+              <template #actions>
                 <NButton
                   secondary
                   size="small"
                   v-if="agentMetadata(agent.id)?.config.mcp || agentMetadata(agent.id)?.config.settings"
                   :data-testid="`agent-settings-${agent.id}`"
-                  @click="router.push({
-                    name: 'codingAgent.config',
-                    params: { agentId: agent.id, section: agentMetadata(agent.id)?.config.settings || agentMetadata(agent.id)?.config.memory ? 'settings' : 'mcp' },
-                  })"
+                  @click="openAgentSettings(agent.id)"
                 >
                   {{ t('sidebar.settings') }}
                 </NButton>
@@ -653,6 +719,7 @@ onUnmounted(() => {
                   secondary
                   size="small"
                   :loading="installing[agent.id]"
+                  :disabled="agent.id === 'dsh' && dshBusy"
                   @click="handleInstall(agent.id)"
                 >
                   {{ (agentMetadata(agent.id)?.installation.method === 'manual') ? t('codingAgents.cursorInstallGuide') : t('codingAgents.installNow') }}
@@ -663,6 +730,7 @@ onUnmounted(() => {
                   secondary
                   size="small"
                   :loading="installing[agent.id]"
+                  :disabled="agent.id === 'dsh' && dshBusy"
                   @click="handleInstall(agent.id)"
                 >
                   {{ t('agentManager.updateToVersion', { version: formatVersion(availableUpdateVersion(agent.id)) }) }}
@@ -672,14 +740,22 @@ onUnmounted(() => {
                   secondary
                   size="small"
                   :loading="checkingUpdate[agent.id]"
-                  :disabled="installing[agent.id] || deleting[agent.id]"
+                  :disabled="installing[agent.id] || deleting[agent.id] || (agent.id === 'dsh' && dshBusy)"
                   @click="handleCheckUpdate(agent.id)"
                 >
                   {{ t('codingAgents.checkUpdate') }}
                 </NButton>
 
+                <NButton v-if="agent.id === 'dsh'" secondary size="small" data-testid="dsh-version-manager-open" @click="dshVersionsVisible = true">
+                  {{ t('dshVersions.manage') }}
+                </NButton>
+                <NDropdown v-if="agent.id === 'dsh' && toolStatus('dsh')?.installed" v-model:show="dshMoreVisible" trigger="click" :disabled="dshBusy"
+                  :menu-props="() => ({ role: 'menu' })" :node-props="() => ({ role: 'menuitem' })"
+                  :options="[{ key: 'delete', label: t('codingAgents.deleteNow') }]" @select="confirmDshDelete">
+                  <NButton secondary size="small" :disabled="dshBusy" aria-haspopup="menu" :aria-expanded="dshMoreVisible">{{ t('dshVersions.more') }}</NButton>
+                </NDropdown>
                 <NPopconfirm
-                  v-if="(agentMetadata(agent.id)?.installation.updates) && toolStatus(agent.id)?.installed"
+                  v-if="agent.id !== 'dsh' && (agentMetadata(agent.id)?.installation.updates) && toolStatus(agent.id)?.installed"
                   @positive-click="handleDelete(agent.id)"
                 >
                   <template #trigger>
@@ -695,19 +771,26 @@ onUnmounted(() => {
                   </template>
                   {{ t('agentManager.deleteConfirm', { name: agent.name }) }}
                 </NPopconfirm>
-              </div>
-              <DshVersions v-if="agent.id === 'dsh'" :info="toolStatus(agent.id)?.compatibility" :busy="installing.dsh || deleting.dsh" @install="handleInstall('dsh', $event)" />
-              <div v-if="toolStatus(agent.id)?.installed && updatePolicies[agent.id]" class="agent-update-policy">
-                <div class="agent-update-policy-row"><span>{{ t('agentAutoUpdate.label') }}</span><NSwitch class="agent-update-switch" size="small" :theme-overrides="{ railHeightSmall: '16px', railWidthSmall: '28px', buttonHeightSmall: '12px', buttonWidthSmall: '12px' }" :disabled="!updatePolicies[agent.id]?.autoUpdateSupported" :value="updatePolicies[agent.id]?.autoUpdate" @update:value="toggleAutoUpdate(agent.id, $event)" /></div>
-
-                <small v-if="updatePolicies[agent.id]?.autoUpdateSupported && updatePolicies[agent.id]?.error" class="agent-update-error">{{ t('codingAgents.checkUpdateFailed') }}</small>
-              </div>
-            </section>
+              </template>
+              <DshManagementStatus v-if="agent.id === 'dsh'" compact :operation="dshOperation" :error="dshError" :state="toolStatus('dsh')?.installed ? updatePolicies.dsh : undefined" />
+              <AgentAutoUpdateControl v-if="toolStatus(agent.id)?.installed && updatePolicies[agent.id]" :state="updatePolicies[agent.id]!" :disabled="agent.id === 'dsh' && dshBusy" @change="toggleAutoUpdate(agent.id, $event)" />
+            </AgentManagerCard>
+            <PluginAgentsPanel />
           </div>
         </div>
       </div>
 
     <VersionManagementModal v-model:show="runtimeManagerVisible" />
+
+    <NDrawer v-model:show="dshVersionsVisible" class="dsh-version-drawer" placement="right" width="var(--studio-drawer-width)">
+      <NDrawerContent :title="`DeepSeek Harness · ${t('dshVersions.manage')}`" closable>
+        <div class="dsh-version-manager" data-testid="dsh-version-manager">
+          <DshManagementStatus :operation="dshOperation" :error="dshError" :state="toolStatus('dsh')?.installed ? updatePolicies.dsh : undefined" />
+          <DshVersions v-model:version="dshVersionDraft" :info="toolStatus('dsh')?.compatibility" :current-version="toolStatus('dsh')?.installed ? installedVersion('dsh') : t('codingAgents.notInstalled')"
+            :busy="dshBusy" @install="handleInstall('dsh', $event)" />
+        </div>
+      </NDrawerContent>
+    </NDrawer>
 
     <NDrawer
       v-model:show="hermesCliDetailsVisible"
@@ -841,10 +924,7 @@ onUnmounted(() => {
 }
 
 .agent-manager-header-left,
-.agent-manager-header-actions,
-.agent-identity,
-.agent-name-row,
-.agent-actions {
+.agent-manager-header-actions {
   display: flex;
   align-items: center;
 }
@@ -880,73 +960,18 @@ onUnmounted(() => {
   padding: calc(24px * var(--spacing-scale, 1));
 }
 
-.agent-card {
-  padding: calc(18px * var(--spacing-scale, 1));
-  border: var(--border-width, 1px) solid $border-color;
-  border-radius: var(--radius-component, 14px);
-  background: var(--theme-card-bg, $bg-card);
-  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.05);
-}
-
-.agent-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: calc(18px * var(--spacing-scale, 1));
-
-  &.compact {
-    align-items: center;
-  }
-}
-
-.agent-identity {
-  min-width: 0;
-  align-items: flex-start;
-  gap: calc(12px * var(--spacing-scale, 1));
-
-  h3 {
-    margin: 0;
-    font-size: calc(var(--font-size-base, 14px) * 17 / 14);
-  }
-
-  p {
-    max-width: 720px;
-    margin: 5px 0 0;
-    color: $text-secondary;
-    font-size: calc(var(--font-size-base, 14px) * 12 / 14);
-    line-height: var(--line-height, 1.55);
-
-    &.agent-version {
-      color: $text-primary;
-      font-size: calc(var(--font-size-base, 14px) * 13 / 14);
-      font-weight: 650;
-      letter-spacing: 0.01em;
-    }
-  }
-}
-
-.agent-name-row {
-  flex-wrap: wrap;
-  gap: calc(8px * var(--spacing-scale, 1));
-}
-
-.agent-logo {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
-  padding: calc(4px * var(--spacing-scale, 1));
-  border: var(--border-width, 1px) solid $border-color;
-  border-radius: var(--radius-component, 11px);
-  background: rgba(255, 255, 255, 0.92);
-  object-fit: contain;
-}
-
 .coding-agent-grid {
   display: grid;
   grid-template-columns: 1fr;
+  // Equal implicit rows keep every Agent card aligned, including across rows.
+  grid-auto-rows: 1fr;
   align-items: stretch;
   gap: calc(16px * var(--spacing-scale, 1));
 }
+
+.dsh-version-summary { display: flex; flex-wrap: wrap; column-gap: calc(10px * var(--spacing-scale, 1)); margin-top: 5px; font-size: calc(var(--font-size-base, 14px) * 12 / 14); color: $text-secondary; overflow-wrap: anywhere; }
+.dsh-version-manager { display: flex; flex-direction: column; gap: calc(16px * var(--spacing-scale, 1)); min-width: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.dsh-version-drawer { max-height: 100dvh; }
 
 // Keep cards at least 340px wide when showing multiple columns, including 16px gaps.
 @container agent-manager (min-width: 696px) {
@@ -961,19 +986,6 @@ onUnmounted(() => {
   }
 }
 
-.coding-agent-card {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: calc(15px * var(--spacing-scale, 1));
-}
-
-.agent-actions {
-  flex-wrap: wrap;
-  gap: calc(8px * var(--spacing-scale, 1));
-  margin-top: auto;
-}
-
 @media (max-width: $breakpoint-mobile) {
   .agent-manager-content {
     padding: calc(16px * var(--spacing-scale, 1));
@@ -983,22 +995,5 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .agent-card-header,
-  .agent-card-header.compact {
-    align-items: stretch;
-  }
-
-  .agent-card-header,
-  .agent-card-header.compact {
-    flex-direction: column;
-  }
-
 }
-</style>
-
-<style scoped>
-.agent-update-policy { min-width: 0; width: 100%; box-sizing: border-box; padding-top: calc(10px * var(--spacing-scale, 1)); border-top: var(--border-width, 1px) solid var(--border-color, #eee); }
-.agent-update-policy-row { display: flex; justify-content: space-between; align-items: center; gap: calc(12px * var(--spacing-scale, 1)); font-size: calc(var(--font-size-base, 14px) * 12 / 14); }
-.agent-update-policy small { display: block; margin-top: 6px; overflow-wrap: anywhere; }
-.agent-update-error { color: #c44; }
 </style>

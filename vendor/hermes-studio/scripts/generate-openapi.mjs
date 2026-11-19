@@ -76,6 +76,8 @@ const tagMappings = {
   'modules/ekko/routes/mcp.ts': { name: 'Ekko MCP', description: 'Ekko MCP server management' },
   'modules/ekko/routes/config.ts': { name: 'Ekko Config', description: 'Ekko runtime configuration management' },
   'modules/studio/routes/workflows.ts': { name: 'Workflows', description: 'Cross-agent workflow orchestration' },
+  'modules/studio/routes/plugins.ts': { name: 'Studio Plugins', description: 'Studio plugin installation, lifecycle, configuration, frontend API bridge, tools, commands, events and automation actions' },
+  'modules/studio/routes/agents.ts': { name: 'Studio Agents', description: 'Native and plugin Agent availability, settings, engine installation, removal and automatic update policy' },
   'modules/studio/routes/sessions.ts': { name: 'Sessions', description: 'Cross-agent chat session management' },
   'modules/studio/routes/model-api.ts': { name: 'Model API', description: 'OpenAI Responses-compatible inference across configured providers; external usage accounting' },
   'modules/studio/routes/session-shares.ts': { name: 'Session Shares', description: 'App-bound single-session share tokens, first claim, permissions and revocation' },
@@ -100,6 +102,7 @@ const tagMappings = {
   'modules/studio/routes/mcu-devices.ts': { name: 'MCU Devices', description: 'Microcontroller device management' },
   'modules/studio/routes/mcu-firmware.ts': { name: 'MCU Firmware', description: 'Microcontroller firmware distribution' },
   'modules/studio/routes/theme.ts': { name: 'Theme', description: 'Per-user appearance settings and background image' },
+  'modules/studio/routes/navigation.ts': { name: 'Navigation', description: 'Per-user navigation entries, ordering and explicit plugin opt-in' },
   'modules/studio/routes/announcements.ts': { name: 'Announcements', description: 'Published Studio desktop announcements, newest first' },
   'modules/studio/routes/api-docs.ts': { name: 'API Docs', description: 'OpenAPI route catalog' },
   'modules/studio/routes/agent-status.ts': { name: 'Agent Status', description: 'In-memory Agent installation, version, and source status' },
@@ -301,6 +304,7 @@ function addEndpoint(paths, method, path, controllerMethod, tagInfo, content, ma
     .replace(/:([^/]+)/g, '{$1}')
     .replace(/\{\*([^}]+)\}/g, '{$1}')
     .replace(/\*\*([^/]*)/g, '{$1}')
+    .replace(/\/\*([A-Za-z_][A-Za-z0-9_]*)/g, '/{$1}')
 
   if (!paths[openapiPath]) {
     paths[openapiPath] = {}
@@ -323,6 +327,34 @@ function addEndpoint(paths, method, path, controllerMethod, tagInfo, content, ma
   }
 
   const parameters = generateParameters(openapiPath, controllerSource)
+  if (openapiPath === '/api/studio/agents/{id}/remove' && method === 'post') {
+    operation.summary = 'Remove an Agent engine'
+    operation.description = 'Interactive super administrator only. Remove the managed Agent engine, retaining the plugin, configuration and conversation data. Active runs, concurrent maintenance and stale versions are rejected.'
+    operation.requestBody = { required: true, content: { 'application/json': { schema: { type: 'object', required: ['expectedVersion'], properties: { expectedVersion: { type: 'string' } }, additionalProperties: false } } } }
+    operation.responses['200'] = { description: 'Agent engine removed', content: { 'application/json': { schema: { type: 'object', required: ['removed'], properties: { removed: { type: 'boolean', enum: [true] } } } } } }
+    operation.responses['400'] = { description: 'Removal is unsupported or the request is invalid.' }
+    operation.responses['403'] = { description: 'Interactive super administrator login required.' }
+    operation.responses['409'] = { description: 'Agent is busy or its installed version changed.' }
+  }
+  if (openapiPath === '/api/studio/agents/{id}/update-policy') {
+    operation.summary = method === 'put' ? 'Set Agent automatic update preference' : 'Read Agent automatic update capability and preference'
+    operation.description = 'Interactive super administrator only. Returns autoUpdate, autoUpdateSupported, status, currentVersion, latestVersion, checkedAt and optional error. Unsupported installations cannot enable automatic updates. Policy is host-wide; scheduled updates use the plugin activation identity and wait for a full idle grace period.'
+    operation.responses['200'] = { description: 'Current Agent update policy', content: { 'application/json': { schema: { type: 'object', required: ['autoUpdate', 'autoUpdateSupported', 'status', 'currentVersion', 'latestVersion', 'checkedAt'], properties: {
+      autoUpdate: { type: 'boolean' }, autoUpdateSupported: { type: 'boolean' }, status: { type: 'string', enum: ['unknown', 'checking', 'current', 'available', 'waiting', 'updating', 'failed'] },
+      currentVersion: { type: 'string' }, latestVersion: { type: 'string' }, checkedAt: { type: 'string' }, error: { type: 'string' },
+    } } } } }
+    if (method === 'put') operation.requestBody = { required: true, content: { 'application/json': { schema: { type: 'object', required: ['autoUpdate'], properties: { autoUpdate: { type: 'boolean' } }, additionalProperties: false } } } }
+    operation.responses['400'] = { description: 'Invalid preference or automatic updates are unsupported.' }
+    operation.responses['403'] = { description: 'Interactive super administrator login required.' }
+    operation.responses['409'] = { description: 'Agent plugin is disabled or unavailable.' }
+  }
+  if (openapiPath === '/api/studio/plugins/{id}/development' && method === 'delete') {
+    operation.summary = 'Unlink development plugin'
+    operation.description = 'Super administrator only. Remove the development registration and stop watching source changes. Source files, the installed snapshot and plugin data are retained.'
+    parameters.push({ name: 'revision', in: 'query', required: true, schema: { type: 'integer', minimum: 0 }, description: 'Current global plugin catalog revision.' })
+    operation.responses['403'] = { description: 'Interactive super administrator login required.' }
+    operation.responses['409'] = { description: 'Catalog revision changed; refresh before retrying.' }
+  }
   if (openapiPath === '/api/studio/sessions' && method === 'get') {
     operation.responses['200'] = {
       description: 'Session list. Supplying offset also returns pagination metadata and the total matching the same visibility, category, and include/exclude filters before pagination.',
@@ -381,7 +413,7 @@ function addEndpoint(paths, method, path, controllerMethod, tagInfo, content, ma
   }
 
   const requestBody = generateRequestBody(method, controllerSource)
-  if (requestBody) operation.requestBody = requestBody
+  if (requestBody && !operation.requestBody) operation.requestBody = requestBody
 
   paths[openapiPath][method] = operation
 }
@@ -1108,8 +1140,8 @@ openapi.paths['/api/studio/clarifications/request'] = {
 openapi.paths['/api/studio/chat-run/runs'] = {
   post: {
     tags: ['Chat Run'],
-    summary: 'Run chat and wait for completion',
-    description: 'Starts a Ekko Studio chat run through the chat-run transport and waits for a terminal result. Use this from HTTP/MCP callers that cannot consume Socket.IO streams.',
+    summary: 'Start or queue a chat run, optionally waiting for completion',
+    description: 'Starts an Ekko Studio chat run through the authenticated chat-run transport. By default waits for a terminal result; wait=false returns HTTP 202 once started or queued. Existing sessions must belong to the selected Profile. Existing agent and model settings are used when omitted. Use this from HTTP/MCP callers that cannot consume Socket.IO streams.',
     operationId: 'runChatOnce',
     security: [{ BearerAuth: [] }],
     requestBody: {
@@ -1219,6 +1251,7 @@ openapi.paths['/api/studio/chat-run/runs'] = {
                 default: 300000,
                 description: 'Maximum time to wait for run.completed or run.failed.',
               },
+              wait: { type: 'boolean', default: true, description: 'Set false to return when the run starts or queues. Response includes session_id, run_id when started, and queue_id when available. Observe events or history for later results.' },
               include_events: {
                 type: 'boolean',
                 default: false,
@@ -1325,10 +1358,10 @@ const pluginError = description => ({ description, content: { 'application/json'
 } } } })
 const pluginAuth = { security: [{ BearerAuth: [] }], tags: ['Coding Agents'] }
 const codingAgentInstall = openapi.paths['/api/coding-agents/{id}/install'].post
-codingAgentInstall.description = 'Install or update a coding agent. DSH candidates use isolated prefixes and must pass ACP compatibility/startup checks before activation. Empty options honor the current pin. Version/rollback options are DSH-only.'
+codingAgentInstall.description = 'Install or update a coding agent. npm-managed agents accept an exact target version or latest. DSH candidates use isolated prefixes and must pass ACP compatibility/startup checks before activation; empty DSH options honor the current pin. Rollback is DSH-only.'
 codingAgentInstall.requestBody = { required: false, content: { 'application/json': { schema: {
   type: 'object', properties: {
-    version: { type: 'string', description: 'DSH exact npm version, or latest to explicitly remove a pin after successful activation.' },
+    version: { type: 'string', description: 'Exact npm version or latest for npm-managed agents. For DSH, latest explicitly removes a pin after successful activation.' },
     rollback: { type: 'boolean', description: 'DSH only: revalidate and restore the previous working graph, then pin it. Mutually exclusive with version.' },
   },
 } } } }
@@ -1775,7 +1808,7 @@ keyManagementPath.get.description = 'Requires Studio user authentication. Lists 
 keyManagementPath.get.responses = { '200': { description: 'Key metadata', content: { 'application/json': { schema: { type: 'object', properties: { keys: { type: 'array', items: keyMetadata } } } } } }, '401': { description: 'Studio login required' }, '403': { description: 'Profile access denied' } }
 keyManagementPath.post.summary = 'Create an account-wide Model API key'
 keyManagementPath.post.parameters = modelApiParameters
-keyManagementPath.post.description = 'Requires Studio user authentication. Key allows model listing and Responses inference only for the explicitly selected models; valid until revoked. Only the hash is persisted. Limit: 50 keys per account. Cache-Control: no-store.'
+keyManagementPath.post.description = 'Requires Studio user authentication. Key allows model listing and supported protocol inference only for the explicitly selected models; valid until revoked. Only the hash is persisted. Limit: 50 keys per account. Cache-Control: no-store.'
 const modelApiKeySettings = { type: 'object', required: ['name', 'models'], additionalProperties: false, properties: {
   budgetUsd: keyBudgetSchema,
   name: { type: 'string', minLength: 1, maxLength: 80 }, models: { type: 'array', minItems: 1, uniqueItems: true, items: { type: 'string' }, description: 'Currently accessible, callable provider-qualified model IDs. New models are not granted automatically.' },
@@ -1796,7 +1829,7 @@ editKeyOperation.responses = { '200': { description: 'Updated key metadata witho
 const modelListOperation = openapi.paths['/api/ekko-studio/models/v1/models'].get
 modelListOperation.summary = 'List configured models with provider-qualified IDs'
 modelListOperation.parameters = modelApiParameters
-modelListOperation.description = 'Model API keys see only their explicitly allowed model IDs; Studio user JWTs see the full account catalog. Aggregates all accessible Profiles as provider/model and deduplicates IDs, preserving slashes inside native model IDs. Callable configurations win over disabled/unsupported duplicates, then default Profile, then Profile names in lexical order. Caller Profile selectors are ignored. Never returns credentials. MoA presets and self-referencing Model API providers using a locally issued Model API key are excluded from this catalog. responses_supported=false marks disabled models and providers requiring Bedrock or Codex app-server runtimes.'
+modelListOperation.description = 'Model API keys see only their explicitly allowed model IDs; Studio user JWTs see the full account catalog. Providers are stored once per account and shared by all Profiles, preserving slashes inside model IDs. Identical imported Providers merge; same-name Providers with different configurations retain separate stable IDs and credentials. Earlier Profile-derived model IDs remain compatibility aliases. Caller Profile selectors are ignored. Never returns credentials. MoA presets and self-referencing Model API providers using a locally issued Model API key are excluded from this catalog. responses_supported=false marks disabled models and providers requiring Bedrock or Codex app-server runtimes.'
 modelListOperation.responses = { ...modelApiErrors, '200': { description: 'OpenAI-compatible model list', content: { 'application/json': { schema: { type: 'object', properties: {
   object: { type: 'string', enum: ['list'] }, data: { type: 'array', items: { type: 'object', properties: {
     id: { type: 'string', example: 'glm/glm-5.3' }, object: { type: 'string', enum: ['model'] }, created: { type: 'integer' },
@@ -1806,22 +1839,51 @@ modelListOperation.responses = { ...modelApiErrors, '200': { description: 'OpenA
 const modelResponseOperation = openapi.paths['/api/ekko-studio/models/v1/responses'].post
 modelResponseOperation.summary = 'Request a configured model using OpenAI Responses format'
 modelResponseOperation.parameters = modelApiParameters
-modelResponseOperation.description = 'Model API keys enforce their saved lifetime USD budget against settled request costs. Exhausted keys and limited keys with unpriced requests return 429 before inference; already-running calls can exceed the cap. Costs follow the usage ledger pricing rules. Studio user JWTs are outside key budgets. Model API key requests must name an allowed model; ungranted IDs return 404 before any provider request. Stateless JSON or SSE inference through existing provider adapters. Supports text, base64 images on vision models, reasoning and function-tool continuations. Send full input history, including returned reasoning encrypted_content, unchanged. Protocol and credentials resolve server-side from the same unified catalog as GET /models. No Profile selector is required. Every attempted upstream request records external usage under the authenticated user. Does not execute tools or create chat sessions. See docs/model-api.md for supported features and limitations.'
+modelResponseOperation.description = 'Model API keys enforce their saved lifetime USD budget against settled request costs. Exhausted keys and limited keys with unpriced requests return 429 before inference; already-running calls can exceed the cap. Costs follow the usage ledger pricing rules. Studio user JWTs are outside key budgets. Model API key requests must name an allowed model; ungranted IDs return 404 before any provider request. Stateless JSON or SSE inference through existing provider adapters. Supports text, base64 images on vision models, reasoning and function-tool continuations. Send full input history, including returned reasoning encrypted_content, unchanged. Protocol and credentials resolve server-side from the same unified catalog as GET /models. No Profile selector is required. External requests record usage once under the authenticated user. Internal Agent credentials retain existing run accounting. Does not execute tools or create chat sessions. See docs/model-api.md for supported features and limitations.'
 modelResponseOperation.requestBody = { required: true, content: { 'application/json': { schema: {
   type: 'object', required: ['model', 'input'], properties: {
     model: { type: 'string', example: 'glm/glm-5.3' },
     input: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'object', description: 'Responses message, reasoning, function_call or function_call_output item.' } }] },
-    instructions: { type: 'string' }, stream: { type: 'boolean', default: false }, store: { type: 'boolean', enum: [false], default: false },
+    instructions: { type: 'string' }, stream: { type: 'boolean', default: false }, store: { type: 'boolean', default: false },
     max_output_tokens: { type: 'integer', minimum: 1 }, temperature: { type: 'number', minimum: 0, maximum: 2 },
     reasoning: { type: 'object', properties: { effort: { type: 'string', enum: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] }, summary: { type: 'string', enum: ['auto', 'concise', 'detailed'] } } },
-    tools: { type: 'array', items: { type: 'object', required: ['type', 'name'], properties: { type: { type: 'string', enum: ['function'] }, name: { type: 'string' }, description: { type: 'string' }, parameters: { type: 'object' }, strict: { type: 'boolean', enum: [false] } } } },
-    tool_choice: { type: 'string', enum: ['auto', 'none', 'required'] }, metadata: { type: 'object', maxProperties: 16, additionalProperties: { type: 'string', maxLength: 512 } },
+    tools: { type: 'array', items: { type: 'object', required: ['type', 'name'], properties: { type: { type: 'string', enum: ['function'] }, name: { type: 'string' }, description: { type: 'string' }, parameters: { type: 'object' }, strict: { type: 'boolean' } } } },
+    tool_choice: { oneOf: [{ type: 'string', enum: ['auto', 'none', 'required'] }, { type: 'object' }] }, metadata: { type: 'object', maxProperties: 16, additionalProperties: { type: 'string', maxLength: 512 } },
   },
 } } } }
 modelResponseOperation.responses = { ...modelApiErrors, '200': { description: 'Response object, or named Responses SSE events ending in response.completed, response.incomplete or response.failed. Usage may be null if the upstream did not report it.', headers: { 'x-request-id': { schema: { type: 'string' } } }, content: {
   'application/json': { schema: { type: 'object', properties: { id: { type: 'string' }, object: { type: 'string', enum: ['response'] }, model: { type: 'string' }, status: { type: 'string', enum: ['completed', 'incomplete', 'failed'] }, output: { type: 'array', items: { type: 'object' } }, usage: { type: 'object', nullable: true }, error: { type: 'object', nullable: true } } } },
   'text/event-stream': { schema: { type: 'string' } },
 } } }
+
+// The account gateway accepts each client's native request protocol.
+openapi.components.securitySchemes.ModelApiKey = { type: 'apiKey', in: 'header', name: 'x-api-key' }
+openapi.components.securitySchemes.GeminiApiKey = { type: 'apiKey', in: 'header', name: 'x-goog-api-key' }
+for (const [path, item] of Object.entries(openapi.paths)) {
+  if (!path.startsWith('/api/ekko-studio/models/') || !item.post) continue
+  const operation = item.post
+  operation.parameters = modelApiParameters
+  operation.security = [{ BearerAuth: [] }, { ModelApiKey: [] }, { GeminiApiKey: [] }]
+  operation.description = modelResponseOperation.description + ' Same-protocol vendor fields are retained; translated features depend on the selected upstream adapter. See docs/model-api.md.'
+  if (path.endsWith('/responses')) continue
+  const counting = path.endsWith('/count_tokens')
+  const gemini = path.includes('/v1beta/')
+  operation.operationId = counting ? 'modelApiCountTokens' : path.endsWith('/messages') ? 'modelApiMessages' : path.endsWith('/chat/completions') ? 'modelApiChatCompletions' : gemini ? 'modelApiGemini' : operation.operationId
+  operation.summary = counting ? 'Count message input tokens (native or explicitly estimated)' : gemini ? 'Generate Gemini Contents through the account gateway' : path.endsWith('/messages') ? 'Request a model using Anthropic Messages' : 'Request a model using OpenAI Chat Completions'
+  const field = gemini ? 'contents' : 'messages'
+  operation.requestBody = { required: true, content: { 'application/json': { schema: {
+    type: 'object', additionalProperties: true, required: gemini ? [field] : ['model', field],
+    properties: { model: { type: 'string', example: 'deepseek/deepseek-v4' }, [field]: { type: 'array', items: { type: 'object', additionalProperties: true } }, stream: { type: 'boolean' } },
+  } } } }
+  operation.responses = { ...modelApiErrors, '200': { description: counting ? 'Input count. x-studio-token-count-estimated=true marks a conservative estimate for non-Anthropic upstreams; no inference usage is recorded.' : 'Native protocol JSON or incremental SSE', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } }, ...(counting ? {} : { 'text/event-stream': { schema: { type: 'string' } } }) } } }
+  if (gemini) {
+    delete openapi.paths[path]
+    for (const verb of ['generateContent', 'streamGenerateContent']) {
+      const named = path.replace('/{operation}', '/{model}:' + verb)
+      openapi.paths[named] = { post: { ...operation, operationId: `modelApiGemini${path.includes('/gemini/') ? 'Alias' : ''}${verb}`, parameters: [...modelApiParameters, { name: 'model', in: 'path', required: true, description: 'Complete Provider/model route, including native model slashes.', schema: { type: 'string' } }] } }
+    }
+  }
+}
 
 // Named user themes use the same customization payload as /api/theme.
 const themeNameSchema = { type: 'string', minLength: 1, maxLength: 80 }
@@ -1886,12 +1948,36 @@ if (browserRelayOperation) {
     type: 'object', required: ['method', 'client_id'], additionalProperties: false,
     properties: {
       client_id: { type: 'string', minLength: 1, maxLength: 200, description: 'Stable browser MCP process identity bound with authenticated token/context to the original Desktop.' },
-      method: { type: 'string', enum: ['state', 'tabs.list', 'tabs.create', 'tabs.activate', 'tabs.close', 'lease.release', 'navigate', 'navigation.action', 'snapshot', 'text.read', 'interact', 'interact.batch', 'screenshot', 'console.read', 'console.clear'] },
+      method: { type: 'string', enum: ['cdp.attach', 'cdp.send', 'cdp.events', 'state', 'tabs.list', 'tabs.create', 'tabs.activate', 'tabs.close', 'lease.release', 'navigate', 'navigation.action', 'snapshot', 'text.read', 'interact', 'interact.batch', 'screenshot', 'console.read', 'console.clear'] },
       params: { type: 'object', additionalProperties: true },
     },
   } } } }
   browserRelayOperation.responses['403'] = { description: 'Identified Studio account required' }
   browserRelayOperation.responses['409'] = { description: 'Unavailable, ambiguous, disconnected, revoked or invalid browser operation' }
+}
+
+const pluginBrowserOperation = openapi.paths['/api/studio/plugins/{id}/browser']?.post
+if (pluginBrowserOperation) {
+  pluginBrowserOperation.summary = 'Call the plugin SDK v1 Desktop browser module'
+  pluginBrowserOperation.description = 'Requires an enabled SDK v1 plugin declaring browser.cdp. Uses the actual caller account/Profile and the original authorized Desktop binding. CDP is scoped to a tab and known iframe sessions; browser-process Browser/Target commands are unavailable. Existing control leases, user takeover, cancellation and remote-control revocation apply. No Studio authentication token or debugging endpoint is returned.'
+  pluginBrowserOperation.requestBody = { required: true, content: { 'application/json': { schema: {
+    type: 'object', required: ['method'], additionalProperties: false,
+    properties: {
+      method: { type: 'string', enum: ['tabs.list', 'tabs.create', 'tabs.close', 'cdp.attach', 'cdp.send', 'cdp.events', 'lease.release'] },
+      sessionId: { type: 'string', description: 'Optional accessible Studio session; never a CDP frame session.' },
+      params: { type: 'object', properties: {
+        tab_id: { type: 'string' }, url: { type: 'string' }, method: { type: 'string', description: 'Tab CDP Domain.command, such as Runtime.evaluate.' },
+        params: { type: 'object', additionalProperties: true }, session_id: { type: 'string', description: 'Known child-frame CDP session returned by attach.' },
+        cursor: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 64, default: 32 },
+      } },
+    },
+  } } } }
+  pluginBrowserOperation.responses = {
+    '200': { description: 'The method result directly: tabs, attach cursor/sessions, raw CDP result, paginated events or release status.' },
+    '401': { $ref: '#/components/responses/Unauthorized' },
+    '403': { description: 'Missing browser.cdp permission or account/Profile access.' },
+    '409': { description: 'Plugin/Desktop unavailable, original target lost, tab owned by another client or control revoked.' },
+  }
 }
 
 // Durable session goals are maintained by the current conversation model, separate from run plans.
@@ -2084,6 +2170,76 @@ openapi.paths['/api/studio/person/clear'].post.responses['409'] = { description:
 
 // Write output
 const outputPath = join(rootDir, 'docs/openapi.json')
+const controlOperations = [
+  ['post', '/api/studio/sessions', 'Sessions', 'createEmptyStudioSession', 'Create an empty session without starting a model run', { title: { type: 'string', maxLength: 500 }, agent: { type: 'string', default: 'ekko-agent' }, mode: { type: 'string', enum: ['scoped', 'global'] } }, []],
+  ['post', '/api/studio/sessions/{id}/stop', 'Sessions', 'stopStudioSession', 'Stop the current run without deleting the session; returns ok, session_id and stopped. Uses the same queue behavior as the chat UI. Workflow/group runs must use their own stop operations.', {}, []],
+  ['get', '/api/studio/group-chat/rooms/{roomId}/messages', 'Group Chat', 'listGroupChatMessages', 'Read persisted group messages with room readership authorization', null, []],
+  ['post', '/api/studio/group-chat/rooms/{roomId}/messages', 'Group Chat', 'sendGroupChatMessage', 'Send a message as the authenticated human member; mention routing uses the normal group transport and permissions', { content: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'object', additionalProperties: true } }] }, mentions: { type: 'array', items: { type: 'object', additionalProperties: true } } }, ['content']],
+  ['post', '/api/studio/group-chat/rooms/{roomId}/stop', 'Group Chat', 'stopGroupChatAgent', 'Interrupt one named Agent using the same ownership checks as the group chat UI', { agentName: { type: 'string', minLength: 1 } }, ['agentName']],
+]
+for (const [method, path, tag, operationId, summary, properties, required] of controlOperations) {
+  const parameters = [...path.matchAll(/\{(\w+)\}/g)].map(([, name]) => ({ name, in: 'path', required: true, schema: { type: 'string' } }))
+  parameters.push({ name: 'profile', in: 'query', schema: { type: 'string' } })
+  if (method === 'get') parameters.push(...['limit', 'offset', 'before'].map(name => ({ name, in: 'query', schema: { type: name === 'before' ? 'string' : 'integer' } })))
+  openapi.paths[path] ||= {}
+  openapi.paths[path][method] = { tags: [tag], operationId, summary, parameters, security: [{ BearerAuth: [] }],
+    responses: { [operationId === 'createEmptyStudioSession' ? 201 : 200]: { description: 'JSON result' }, 400: { description: 'Invalid request' }, 401: { description: 'Studio login required' }, 403: { description: 'Profile, room or operation access denied' }, 404: { description: 'Session or room not found' }, 409: { description: 'Use the owning workflow or group operation' }, 503: { description: 'Runtime unavailable' } },
+    ...(properties ? { requestBody: { required: required.length > 0, content: { 'application/json': { schema: { type: 'object', properties, required } } } } } : {}) }
+}
+openapi.paths['/api/studio/chat-run/runs'].post.responses['202'] = { description: 'Run accepted or queued; JSON includes status, session_id and available run_id/queue_id' }
+const pluginOperations = [
+  ['get', '/development', 'listStudioDevelopmentPlugins', 'List locally registered development projects and build status; super administrator login required', null],
+  ['post', '/{id}/development', 'startStudioPluginDevelopment', 'Trust, build, enable and watch a registered project; existing configuration and data are preserved', { revision: { type: 'integer' }, trusted: { type: 'boolean', enum: [true] } }],
+  ['get', '', 'listStudioPlugins', 'List globally installed plugins and registered tools, commands and actions for every account; no Profile selection required', null],
+  ['post', '/install', 'installStudioPlugin', 'Install or upgrade a trusted compiled plugin; requires a super administrator login', { source: { type: 'string', description: 'Absolute local directory, package@exact-version, github:owner/repo#40-character-commit, or git+https GitLab.com/Gitee repository pinned to a full commit' }, revision: { type: 'integer' }, trusted: { type: 'boolean', enum: [true] }, pluginId: { type: 'string', description: 'Existing plugin id when upgrading' }, expectedVersion: { type: 'string', maxLength: 128, description: 'Optional exact manifest version; a mismatch leaves the existing installation unchanged' } }],
+  ['patch', '/{id}', 'updateStudioPlugin', 'Globally enable, disable, configure, reload, roll back or uninstall a plugin', { revision: { type: 'integer' }, enabled: { type: 'boolean' }, config: { type: 'object', additionalProperties: true }, action: { type: 'string', enum: ['reload', 'rollback', 'uninstall', 'stop-development'] } }],
+  ['get', '/{id}/client', 'getStudioPluginClient', 'Read the enabled plugin frontend module as JSON {source}', null],
+  ['get', '/{id}/logs', 'getStudioPluginLogs', 'Read the latest plugin logs; requires a super administrator login', null],
+  ['get', '/events', 'pollStudioPluginEvents', 'Poll user/profile-scoped plugin events with generation and cursor', null],
+  ['post', '/{id}/invoke', 'invokeStudioPlugin', 'Invoke an enabled plugin RPC, tool, command or automation action', { kind: { type: 'string', enum: ['rpc', 'tool', 'command', 'action'] }, name: { type: 'string' }, input: {}, sessionId: { type: 'string' } }],
+  ['post', '/{id}/api', 'requestStudioPluginApi', 'Call an existing Studio JSON API using the plugin capabilities and current user permissions', { path: { type: 'string' }, options: { type: 'object', properties: { method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }, query: { type: 'object', additionalProperties: true }, body: {} } }, sessionId: { type: 'string' } }],
+  ['post', '/{id}/storage', 'accessStudioPluginStorage', 'Access global plugin JSON storage with optional developer namespaces; requires storage.client; missing keys return present=false', { action: { type: 'string', enum: ['get', 'set', 'delete', 'keys'] }, key: { type: 'string' }, value: {}, namespace: { type: 'array', maxItems: 16, items: { type: 'string', minLength: 1, maxLength: 256 } }, sessionId: { type: 'string' } }],
+]
+delete openapi.paths['/api/studio/plugins/']
+for (const [method, suffix, operationId, summary, properties] of pluginOperations) {
+  const path = `/api/studio/plugins${suffix}`
+  const globalOperation = ['', '/install', '/{id}', '/{id}/logs', '/development', '/{id}/development'].includes(suffix)
+  const parameters = globalOperation ? [] : [{ name: 'profile', in: 'query', schema: { type: 'string' }, description: 'Execution context only; installations and enablement are global. Managed run credentials remain bound to their run Profile.' }]
+  if (suffix.includes('{id}')) parameters.push({ name: 'id', in: 'path', required: true, schema: { type: 'string' } })
+  if (suffix === '/events') parameters.push(...['cursor', 'pluginId', 'sessionId'].map(name => ({ name, in: 'query', schema: { type: name === 'cursor' ? 'integer' : 'string' } })))
+  openapi.paths[path] ||= {}
+  openapi.paths[path][method] = { tags: ['Studio Plugins'], operationId, summary, parameters, security: [{ BearerAuth: [] }],
+    responses: { 200: { description: 'JSON result' }, 403: { description: 'User, Profile or capability denied' }, 409: { description: 'Plugin unavailable, dependency failure or stale revision' } },
+    ...(properties ? { requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties,
+      required: suffix === '/{id}/development' ? ['revision', 'trusted'] : suffix === '/install' ? ['source', 'revision', 'trusted'] : method === 'patch' ? ['revision'] : suffix.endsWith('/invoke') ? ['kind', 'name'] : suffix.endsWith('/api') ? ['path'] : ['action'],
+    } } } } } : {}),
+  }
+}
+const navigationSchema = { type: 'object', additionalProperties: false, required: ['items'], properties: {
+  items: { type: 'array', maxItems: 201, uniqueItems: true, items: { type: 'string' }, description: 'Ordered built-in IDs or plugin:<pluginId>/<viewId>. New plugin selections must target active registered navigation.main entries.' },
+} }
+openapi.paths['/api/navigation'].get.summary = 'Read the signed-in user navigation settings; plugins are excluded by default'
+openapi.paths['/api/navigation'].put.summary = 'Save the signed-in user navigation selection and ordering'
+openapi.paths['/api/navigation'].put.requestBody = { required: true, content: { 'application/json': { schema: navigationSchema } } }
+for (const operation of Object.values(openapi.paths['/api/navigation'])) {
+  operation.responses['200'] = { description: 'Account-scoped navigation settings', content: { 'application/json': { schema: navigationSchema } } }
+  operation.responses['401'] = { description: 'Studio login required; shared sessions cannot change navigation' }
+}
+openapi.paths['/api/navigation'].put.responses['400'] = { description: 'Invalid, duplicate or unregistered navigation entry' }
+for (const base of [
+  '/api/studio/files',
+  '/api/studio/sessions/{id}/workspace-file',
+  '/api/studio/group-chat/rooms/{roomId}/workspace-file',
+]) {
+  const write = openapi.paths[base + '/write'].put
+  const schema = write.requestBody.content['application/json'].schema
+  schema.required = ['path', 'content']
+  schema.properties.path = { type: 'string' }
+  schema.properties.content = { type: 'string' }
+  schema.properties.createOnly = { type: 'boolean', default: false, description: 'Reject an existing destination instead of editing it.' }
+  write.responses['409'] = { description: 'A file or directory already exists at this path.' }
+  openapi.paths[base + '/rename'].post.responses['409'] = { description: 'The destination already exists.' }
+}
 writeFileSync(outputPath, JSON.stringify(openapi, null, 2))
 
 console.log(`✓ Generated OpenAPI spec: ${outputPath}`)

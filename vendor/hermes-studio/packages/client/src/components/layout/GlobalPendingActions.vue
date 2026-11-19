@@ -236,7 +236,8 @@ function approvalButtons(action: Extract<GlobalPendingAction, { kind: 'chat-appr
     size: 'small',
     type: choice === 'deny' ? 'error' : choice === 'once' ? 'primary' : 'default',
     secondary: choice !== 'once',
-    loading: submitting[action.key],
+    loading: submitting[action.key] || ('submitting' in pending && pending.submitting),
+    disabled: submitting[action.key] || ('submitting' in pending && pending.submitting),
     onClick: () => void submitApproval(action, choice),
   }, { default: () => labels[choice] })))
 }
@@ -245,10 +246,10 @@ async function submitApproval(action: Extract<GlobalPendingAction, { kind: 'chat
   if (submitting[action.key]) return
   submitting[action.key] = true
   try {
-    if (action.kind === 'chat-approval') chatStore.respondApprovalFor(action.pending.sessionId, action.pending.approvalId, choice)
+    if (action.kind === 'chat-approval') await chatStore.respondApprovalFor(action.pending.sessionId, action.pending.approvalId, choice)
     else await groupChatStore.respondApprovalFor(action.pending.roomId, action.pending.approvalId, choice)
   } catch (error) {
-    message.error(error instanceof Error ? error.message : String(error))
+    message.error(action.kind === 'chat-approval' ? t('chat.approvalSendFailed') : error instanceof Error ? error.message : String(error))
   } finally {
     submitting[action.key] = false
   }
@@ -284,10 +285,10 @@ async function submitClarify(action: Extract<GlobalPendingAction, { kind: 'chat-
   if (!response || submitting[action.key]) return
   submitting[action.key] = true
   try {
-    if (action.kind === 'chat-clarify') chatStore.respondToClarifyFor(action.pending.sessionId, action.pending.clarifyId, response)
+    if (action.kind === 'chat-clarify') await chatStore.respondToClarifyFor(action.pending.sessionId, action.pending.clarifyId, response)
     else await groupChatStore.respondClarifyFor(action.pending.roomId, action.pending.clarifyId, response)
   } catch (error) {
-    message.error(error instanceof Error ? error.message : String(error))
+    message.error(action.kind === 'chat-clarify' ? t('chat.clarifySendFailed') : error instanceof Error ? error.message : String(error))
   } finally {
     submitting[action.key] = false
   }
@@ -450,6 +451,9 @@ watch(pendingActions, actions => {
   }
   for (const action of actions) {
     if (handles.has(action.key)) continue
+    if (action.kind === 'chat-clarify' && clarifyDrafts[action.key] === undefined) {
+      clarifyDrafts[action.key] = action.pending.initialResponse
+    }
     handles.set(action.key, createGlobalNotification(action))
   }
 }, { deep: true, immediate: true })

@@ -22,7 +22,7 @@ export function createRequestBodyParser() {
  * applying the regular 20 MiB application-wide JSON limit. The proxy still has
  * a bounded ceiling so an authenticated client cannot stream an unlimited body.
  */
-export function createCodexProxyRequestBodyParser(isAuthorized: (ctx: Context) => boolean) {
+export function createCodexProxyRequestBodyParser(isAuthorized: (ctx: Context) => boolean | Promise<boolean>) {
   const parse = bodyParser({
     encoding: 'utf-8',
     enableTypes: ['json'],
@@ -30,13 +30,8 @@ export function createCodexProxyRequestBodyParser(isAuthorized: (ctx: Context) =
     parsedMethods: ['POST'],
   })
   return async (ctx: Context, next: Next) => {
-    if (ctx.method !== 'POST' || !/^\/api\/codex-proxy\/[^/]+\/(?:v1\/responses|gemini\/v1beta\/models\/[^/]+)$/.test(ctx.path)) {
+    if (ctx.method !== 'POST' || !/^(?:\/api\/codex-proxy\/[^/]+|\/api\/ekko-studio\/models)\/(?:v1\/responses|(?:gemini\/)?v1beta\/models\/.+)$/.test(ctx.path) || !await isAuthorized(ctx)) {
       return next()
-    }
-    if (!isAuthorized(ctx)) {
-      ctx.status = 401
-      ctx.body = { error: { type: 'authentication_error', message: 'Invalid Codex proxy token' } }
-      return
     }
     return parse(ctx, next)
   }

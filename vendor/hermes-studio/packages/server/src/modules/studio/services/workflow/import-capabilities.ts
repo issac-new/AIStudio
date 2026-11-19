@@ -1,6 +1,5 @@
 import { isNativeCodingAgent, isGlobalOnlyCodingAgent } from '../../contracts/agents/native-coding-agents'
 import { createHash } from 'crypto'
-import { isScopedCodingAgentAuthProvider } from '../../contracts/provider-compat'
 
 interface CapabilityGroup { provider: string; models: string[]; api_mode?: string }
 
@@ -24,6 +23,7 @@ export function assertWorkflowImportCapabilities(nodes: unknown[], groups: Capab
   for (const raw of nodes) {
     const node = raw && typeof raw === 'object' ? raw as Record<string, any> : {}
     const data = node.data && typeof node.data === 'object' ? node.data as Record<string, any> : {}
+    if (data.pluginAction) continue
     const agent = typeof data.agent === 'string' ? data.agent.trim() : ''
     if (isGlobalOnlyCodingAgent(agent)) continue
     if (data.agentMode === 'global' && (agent === 'codex' || agent === 'claude-code' || agent === 'pi' || agent === 'grok' || (agent === 'antigravity' || isNativeCodingAgent(agent)) || agent === 'cursor' || (agent === 'opencode' || agent === 'dsh'))) continue
@@ -36,12 +36,10 @@ export function assertWorkflowImportCapabilities(nodes: unknown[], groups: Capab
     const hermesTargetAvailable = agent === 'hermes' && configuredProviderModels.has(providerModel)
     const ekkoAgent = agent === 'ekko-agent'
     const scopedExternalCodingAgent = agent === 'codex' || agent === 'claude-code' || agent === 'pi' || agent === 'grok' || (agent === 'cursor' || (agent === 'antigravity' || isNativeCodingAgent(agent))) || (agent === 'opencode' || agent === 'dsh')
-    const scopedCodingAgentProviderBlocked = scopedExternalCodingAgent && isScopedCodingAgentAuthProvider(provider)
     const codingAgentTargetAvailable = (ekkoAgent || scopedExternalCodingAgent)
-      && !scopedCodingAgentProviderBlocked
       && SCOPED_CODING_AGENT_API_MODES.has(apiMode)
       && configuredProviderModels.has(providerModel)
-    if (scopedCodingAgentProviderBlocked || (!configured.has(exact) && !hermesTargetAvailable && !codingAgentTargetAvailable)) {
+    if (!configured.has(exact) && !hermesTargetAvailable && !codingAgentTargetAvailable) {
       throw Object.assign(new Error(`workflow node ${String(node.id || '?')} target capability is unavailable in profile`), { status: 409 })
     }
   }

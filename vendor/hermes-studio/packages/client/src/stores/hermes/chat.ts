@@ -39,9 +39,10 @@ export type ContentBlock = ContentBlockImport
 export const LIVE_CHAT_MESSAGE_PAGE_SIZE = 150
 export const LIVE_CHAT_MAX_LOADED_MESSAGES = 300
 const LEGACY_WORKSPACE_RUN_CHANGE_MESSAGE_PREFIX = 'workspace-run-change:'
-type ChatAgentId = 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' | 'ekko-agent'
+type ChatAgentId = `plugin:${string}/${string}` | 'hermes' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode' | 'ekko-agent'
 
 function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+  if (agent?.startsWith('plugin:')) return agent as `plugin:${string}/${string}`
   if (isNativeCodingAgent(agent)) return agent
   if (agent === 'codex') return 'codex'
   if (agent === 'pi') return 'pi'
@@ -56,6 +57,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
 }
 
 function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
+  if (id?.startsWith('plugin:')) return id as `plugin:${string}/${string}`
   if (isNativeCodingAgent(id)) return id
   if (id === 'codex') return 'codex'
   if (id === 'pi') return 'pi'
@@ -426,6 +428,8 @@ export interface PendingApproval {
   isMemoryWrite: boolean
   requestedAt: number
   countdownDeadline: number
+  submitting?: boolean
+  submissionFailed?: boolean
 }
 
 export interface PendingClarify {
@@ -438,13 +442,15 @@ export interface PendingClarify {
   timeoutMs: number
   requestedAt: number
   countdownDeadline: number
+  submitting?: boolean
+  submissionFailed?: boolean
 }
 
 export interface QueueInsertionState {
   generation: string
   runId?: string
   queueId: string
-  runtime: 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+  runtime: `plugin:${string}/${string}` | 'hermes' | 'ekko' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
   phase: 'requesting' | 'waiting_for_tool_batch' | 'stopping_current_turn'
   guarantee: 'strict' | 'immediate'
   requestedAt: number
@@ -600,7 +606,7 @@ function errorMessageText(error: unknown): string {
   }
 }
 
-export async function uploadFiles(attachments: Attachment[]): Promise<{ name: string; path: string }[]> {
+export async function uploadFiles(attachments: Attachment[], signal?: AbortSignal): Promise<{ name: string; path: string }[]> {
   if (attachments.length === 0) return []
   const formData = new FormData()
   for (const att of attachments) {
@@ -615,6 +621,7 @@ export async function uploadFiles(attachments: Attachment[]): Promise<{ name: st
     method: 'POST',
     body: formData,
     headers,
+    signal,
   })
   if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'))
   const data = await res.json() as { files: { name: string; path: string }[] }
@@ -1343,6 +1350,8 @@ function createChatState(scopedSessionId?: string) {
   const activeSessionId = ref<string | null>(null)
   const focusMessageId = ref<string | null>(null)
   const streamStates = ref<Map<string, { abort: () => void }>>(new Map())
+  const pendingAttachmentSends = new Map<string, { controller: AbortController; messageId: string; content: string; attachments: Attachment[] }>()
+  const cancelledAttachmentDrafts = ref(new Map<string, { content: string; attachments: Attachment[] }>())
   /** sessionId → server-reported isWorking status */
   const serverWorking = ref<Set<string>>(new Set())
   /** Authoritative live delegation counts, never inferred from transcript history. */
@@ -1356,8 +1365,15 @@ function createChatState(scopedSessionId?: string) {
     backgroundPendingBySession.value.clear()
   }
 
+  function clearPendingAttachmentSends() {
+    for (const pending of pendingAttachmentSends.values()) pending.controller.abort()
+    pendingAttachmentSends.clear()
+    cancelledAttachmentDrafts.value.clear()
+  }
+
   const unsubscribeAuthInvalidation = onAuthInvalidated(() => {
     runtimeGeneration += 1
+    clearPendingAttachmentSends()
     clearBackgroundObservers()
     streamStates.value.clear()
     serverWorking.value.clear()
@@ -1369,6 +1385,7 @@ function createChatState(scopedSessionId?: string) {
   onScopeDispose(() => {
     unsubscribeAuthInvalidation()
     runtimeGeneration += 1
+    clearPendingAttachmentSends()
     clearBackgroundObservers()
     if (scopedSessionId) unregisterSessionHandlers(scopedSessionId)
   })
@@ -1566,6 +1583,7 @@ function createChatState(scopedSessionId?: string) {
     activeRuntimeMode = mode
     runtimeMode.value = mode
     runtimeGeneration += 1
+    clearPendingAttachmentSends()
     clearBackgroundObservers()
     sessions.value = []
     pendingRunUsage.clear()
@@ -3280,7 +3298,7 @@ function createChatState(scopedSessionId?: string) {
       generation,
       runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
       queueId,
-      runtime: raw.runtime === 'ekko'
+      runtime: typeof raw.runtime === 'string' && raw.runtime.startsWith('plugin:') ? raw.runtime as `plugin:${string}/${string}` : raw.runtime === 'ekko'
         || raw.runtime === 'claude-code'
         || raw.runtime === 'codex'
         || raw.runtime === 'pi'
@@ -3470,6 +3488,8 @@ function createChatState(scopedSessionId?: string) {
     const sid = evt.session_id
     const approvalId = (evt as any).approval_id as string | undefined
     if (!sid || !approvalId) return
+    const previous = pendingApprovals.value.get(sid)
+    const sameRequest = previous?.approvalId === approvalId ? previous : undefined
     if (pendingApprovalResponseIds.get(sid) !== approvalId) pendingApprovalResponseIds.delete(sid)
     const description = String((evt as any).description || '')
     const normalizedDescription = description.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -3485,6 +3505,8 @@ function createChatState(scopedSessionId?: string) {
     pendingApprovals.value.set(sid, {
       sessionId: sid,
       approvalId,
+      submitting: sameRequest?.submitting,
+      submissionFailed: sameRequest?.submissionFailed,
       command: String((evt as any).command || ''),
       description,
       choices: isMemoryWrite ? ['once', 'deny'] : choices.length ? choices : ['once', 'session', 'deny'],
@@ -3528,13 +3550,17 @@ function createChatState(scopedSessionId?: string) {
     const sid = evt.session_id
     const clarifyId = (evt as any).clarify_id as string | undefined
     if (!sid || !clarifyId) return
+    const previous = pendingClarifies.value.get(sid)
+    const sameQuestion = previous?.clarifyId === clarifyId ? previous : undefined
     if (pendingClarifyResponseIds.get(sid) !== clarifyId) pendingClarifyResponseIds.delete(sid)
     pendingClarifies.value.set(sid, {
       sessionId: sid,
       clarifyId,
       question: String((evt as any).question || ''),
       choices: Array.isArray((evt as any).choices) ? (evt as any).choices : null,
-      initialResponse: String((evt as any).initial_response || ''),
+      initialResponse: sameQuestion?.initialResponse ?? String((evt as any).initial_response || ''),
+      submitting: sameQuestion?.submitting,
+      submissionFailed: sameQuestion?.submissionFailed,
       responseMode: String((evt as any).response_mode || ''),
       timeoutMs: Number((evt as any).timeout_ms) || 300000,
       requestedAt: Date.now(),
@@ -3560,7 +3586,12 @@ function createChatState(scopedSessionId?: string) {
       return
     }
     if (clarifyId && current.clarifyId !== clarifyId) return
-    if ((evt as any).resolved === false) {
+    const expired = ['timeout', 'timed_out', 'cancelled', 'aborted'].includes(evt.reason || '')
+    if ((evt as any).resolved === false || expired) {
+      if (expired) {
+        dismissPendingClarifyFor(sid, current.clarifyId)
+        return
+      }
       if ((evt as any).stale === true || isPendingInteractionExpiredError((evt as any).error || (evt as any).reason)) {
         dismissPendingClarifyFor(sid, current.clarifyId)
         if (attempted) notifyPendingInteractionExpired()
@@ -3603,37 +3634,76 @@ function createChatState(scopedSessionId?: string) {
     pendingClarifies.value = new Map(pendingClarifies.value)
   }
 
-  function respondToClarifyFor(sessionId: string, clarifyId: string, response: string): PendingInteractionSubmitResult {
+  async function respondToClarifyFor(sessionId: string, clarifyId: string, response: string): Promise<PendingInteractionSubmitResult> {
     const pending = pendingClarifies.value.get(sessionId)
-    if (!pending || pending.clarifyId !== clarifyId) return 'missing'
-    respondClarify(sessionId, clarifyId, response, sessionId.startsWith('person-main-') ? 'chat-run' : runtimeTransport())
+    if (!pending || pending.clarifyId !== clarifyId || pending.submitting) return 'missing'
+    pending.submitting = true
+    pending.submissionFailed = false
+    pending.initialResponse = response
     pendingClarifyResponseIds.set(sessionId, clarifyId)
-    return 'submitted'
+    try {
+      const session = sessions.value.find(item => item.id === sessionId)
+      await respondClarify(sessionId, clarifyId, response, sessionId.startsWith('person-main-') ? 'chat-run' : runtimeTransport(), session?.profile)
+      dismissPendingClarifyFor(sessionId, clarifyId)
+      return 'submitted'
+    } catch (error) {
+      if (isPendingInteractionExpiredError(error)) {
+        if (pendingClarifies.value.get(sessionId)?.clarifyId === clarifyId) {
+          dismissPendingClarifyFor(sessionId, clarifyId)
+          notifyPendingInteractionExpired()
+        }
+        return 'expired'
+      }
+      const current = pendingClarifies.value.get(sessionId)
+      if (current?.clarifyId === clarifyId) current.submissionFailed = true
+      throw error
+    } finally {
+      const current = pendingClarifies.value.get(sessionId)
+      if (current?.clarifyId === clarifyId) current.submitting = false
+      if (pendingClarifyResponseIds.get(sessionId) === clarifyId) pendingClarifyResponseIds.delete(sessionId)
+    }
   }
 
-  function respondToClarify(response: string): PendingInteractionSubmitResult {
+  async function respondToClarify(response: string): Promise<PendingInteractionSubmitResult> {
     const pending = activePendingClarify.value
     if (!pending) return 'missing'
-    const result = respondToClarifyFor(pending.sessionId, pending.clarifyId, response)
-    if (result === 'submitted') dismissPendingClarifyFor(pending.sessionId, pending.clarifyId)
-    return result
+    return respondToClarifyFor(pending.sessionId, pending.clarifyId, response)
   }
 
 
-  function respondApprovalFor(sessionId: string, approvalId: string, choice: PendingApproval['choices'][number]): PendingInteractionSubmitResult {
+  async function respondApprovalFor(sessionId: string, approvalId: string, choice: PendingApproval['choices'][number]): Promise<PendingInteractionSubmitResult> {
     const pending = pendingApprovals.value.get(sessionId)
-    if (!pending || pending.approvalId !== approvalId) return 'missing'
-    respondToolApproval(sessionId, approvalId, choice, sessionId.startsWith('person-main-') ? 'chat-run' : runtimeTransport())
+    if (!pending || pending.approvalId !== approvalId || pending.submitting) return 'missing'
+    pending.submitting = true
+    pending.submissionFailed = false
     pendingApprovalResponseIds.set(sessionId, approvalId)
-    return 'submitted'
+    try {
+      const session = sessions.value.find(item => item.id === sessionId)
+      await respondToolApproval(sessionId, approvalId, choice, sessionId.startsWith('person-main-') ? 'chat-run' : runtimeTransport(), session?.profile)
+      dismissPendingApprovalFor(sessionId, approvalId)
+      return 'submitted'
+    } catch (error) {
+      if (isPendingInteractionExpiredError(error)) {
+        if (pendingApprovals.value.get(sessionId)?.approvalId === approvalId) {
+          dismissPendingApprovalFor(sessionId, approvalId)
+          notifyPendingInteractionExpired()
+        }
+        return 'expired'
+      }
+      const current = pendingApprovals.value.get(sessionId)
+      if (current?.approvalId === approvalId) current.submissionFailed = true
+      throw error
+    } finally {
+      const current = pendingApprovals.value.get(sessionId)
+      if (current?.approvalId === approvalId) current.submitting = false
+      if (pendingApprovalResponseIds.get(sessionId) === approvalId) pendingApprovalResponseIds.delete(sessionId)
+    }
   }
 
-  function respondApproval(choice: PendingApproval['choices'][number]): PendingInteractionSubmitResult {
+  async function respondApproval(choice: PendingApproval['choices'][number]): Promise<PendingInteractionSubmitResult> {
     const pending = activePendingApproval.value
     if (!pending) return 'missing'
-    const result = respondApprovalFor(pending.sessionId, pending.approvalId, choice)
-    if (result === 'submitted') dismissPendingApprovalFor(pending.sessionId, pending.approvalId)
-    return result
+    return respondApprovalFor(pending.sessionId, pending.approvalId, choice)
   }
 
   function updateSessionTitle(sessionId: string) {
@@ -3739,32 +3809,7 @@ function createChatState(scopedSessionId?: string) {
   }
 
   function completionNotificationAgent(session: Session): { icon: string } {
-    const codingAgentId = session.codingAgentId || agentToCodingAgentId(session.agent)
-    if (codingAgentId === 'codex') {
-      return { icon: '/coding-agents/codex-openai.png' }
-    }
-    if (codingAgentId === 'claude-code') {
-      return { icon: '/coding-agents/claude-code.svg' }
-    }
-    if (codingAgentId === 'pi') {
-      return { icon: '/coding-agents/pi.svg' }
-    }
-    if (codingAgentId === 'grok') {
-      return { icon: '/coding-agents/grok.svg' }
-    }
-    if (codingAgentId === 'dsh') return { icon: '/coding-agents/deepseek.svg' }
-    if (codingAgentId === 'opencode') {
-      return { icon: '/coding-agents/opencode.png' }
-    }
-    if (isNativeCodingAgent(codingAgentId)) return { icon: chatSessionAgentAvatar(session).src }
-    if (codingAgentId === 'antigravity') return { icon: '/coding-agents/antigravity.png' }
-    if (codingAgentId === 'cursor') {
-      return { icon: '/coding-agents/cursor-logo.png' }
-    }
-    if (codingAgentId === 'ekko-agent') {
-      return { icon: '/coding-agents/ekko-agent.png' }
-    }
-    return { icon: '/coding-agents/hermes.png' }
+    return { icon: chatSessionAgentAvatar(session).src }
   }
 
   function completionNotificationBody(session: Session, message?: Message): string {
@@ -3873,6 +3918,12 @@ function createChatState(scopedSessionId?: string) {
     }
     clearMessageReference(sid)
 
+    // Hermes already shows Stop while an idle chat's attachments are preparing.
+    // Own that local send until dispatch, rather than aborting a nonexistent server run.
+    const pendingAttachmentSend = !shouldQueue && shouldOptimisticallyShowRunStatus && attachments?.length
+      ? { controller: new AbortController(), messageId: userMsg.id, content: submittedContent, attachments: [...attachments] }
+      : undefined
+    if (pendingAttachmentSend) pendingAttachmentSends.set(sid, pendingAttachmentSend)
     let runSubmitted = false
     try {
 
@@ -3881,8 +3932,8 @@ function createChatState(scopedSessionId?: string) {
       let displayInput: string | ContentBlock[] | undefined
       if (attachments && attachments.length > 0) {
         // Has attachments: upload first, then build content blocks
-        const uploaded = await uploadFiles(attachments)
-        if (generation !== runtimeGeneration) return
+        const uploaded = await uploadFiles(attachments, pendingAttachmentSend?.controller.signal)
+        if (generation !== runtimeGeneration || pendingAttachmentSend?.controller.signal.aborted) return
 
         // Update attachment URLs on the user message for display
         const urlMap = new Map(uploaded.map(f => {
@@ -3907,10 +3958,10 @@ function createChatState(scopedSessionId?: string) {
 
         // Build content blocks with uploaded file paths
         input = await buildContentBlocks(submittedContent, attachments, uploaded)
-        if (generation !== runtimeGeneration) return
+        if (generation !== runtimeGeneration || pendingAttachmentSend?.controller.signal.aborted) return
         if (attachments.some(attachment => attachment.context?.trim())) {
           displayInput = await buildContentBlocks(submittedContent, attachments, uploaded, false)
-          if (generation !== runtimeGeneration) return
+          if (generation !== runtimeGeneration || pendingAttachmentSend?.controller.signal.aborted) return
         }
       } else {
         // No attachments: use plain text format
@@ -3919,7 +3970,7 @@ function createChatState(scopedSessionId?: string) {
 
       const appStore = useAppStore()
       await appStore.waitForModelsForRun()
-      if (generation !== runtimeGeneration) return
+      if (generation !== runtimeGeneration || pendingAttachmentSend?.controller.signal.aborted) return
       const sessionModel = activeSession.value?.model || appStore.selectedModel
       const sessionProvider = activeSession.value?.provider || appStore.selectedProvider
       const sessionProfile = activeSession.value?.profile || useProfilesStore().activeProfileName || undefined
@@ -4757,7 +4808,7 @@ function createChatState(scopedSessionId?: string) {
         streamStates.value.set(sid, ctrl)
       }
     } catch (err: any) {
-      if (generation !== runtimeGeneration) return
+      if (generation !== runtimeGeneration || pendingAttachmentSend?.controller.signal.aborted) return
       acknowledgeUserMessage(sid, userMsg.id)
       if (isBridgeForkCommand) {
         const nextPendingForkCommands = new Set(pendingForkCommands.value)
@@ -4776,6 +4827,8 @@ function createChatState(scopedSessionId?: string) {
         content: `Error: ${err.message}`,
         timestamp: Date.now(),
       })
+    } finally {
+      if (pendingAttachmentSends.get(sid) === pendingAttachmentSend) pendingAttachmentSends.delete(sid)
     }
   }
 
@@ -5556,6 +5609,25 @@ function createChatState(scopedSessionId?: string) {
     if (!sid) return
     if (isAborting.value) return
     clearPendingInteractions(sid)
+    const pendingAttachmentSend = pendingAttachmentSends.get(sid)
+    if (pendingAttachmentSend) {
+      pendingAttachmentSend.controller.abort()
+      pendingAttachmentSends.delete(sid)
+      acknowledgeUserMessage(sid, pendingAttachmentSend.messageId)
+      const msgs = getSessionMsgs(sid)
+      const index = msgs.findIndex(message => message.id === pendingAttachmentSend.messageId)
+      if (index !== -1) msgs.splice(index, 1)
+      cancelledAttachmentDrafts.value.set(sid, {
+        content: pendingAttachmentSend.content,
+        attachments: pendingAttachmentSend.attachments,
+      })
+      // A peer may have started a real run while this upload was pending.
+      if (!streamStates.value.has(sid)) {
+        serverWorking.value.delete(sid)
+        clearRunStartedAt(sid)
+        return
+      }
+    }
     const ctrl = streamStates.value.get(sid)
     if (ctrl) {
       setAbortState(sid, { aborting: true, synced: null })
@@ -5820,6 +5892,7 @@ function createChatState(scopedSessionId?: string) {
     isAborting,
     queueLengths,
     queuedUserMessages,
+    cancelledAttachmentDrafts,
     queueInsertionStates,
     activeMessageReference,
     pendingApprovals,

@@ -2,8 +2,9 @@ import { preservedModelKeys } from '../services/models/model-section'
 import { existsSync, readFileSync } from 'fs'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
-import { getActiveProfileName, getProfileDir } from '../services/profiles/profile'
-import { updateConfigYamlForProfile, saveEnvValueForProfile, PROVIDER_ENV_MAP } from '../../studio/public/profile-config'
+import { getActiveProfileName } from '../services/profiles/profile'
+import { getProfileDir } from '../../studio/public/provider-config'
+import { updateConfigYamlForProfile, saveEnvValueForProfile, PROVIDER_ENV_MAP } from '../../studio/public/provider-config'
 import { getCompatibleCustomProviders, normalizeCustomProviderEntry } from '../../studio/contracts/provider-compat'
 import { PROVIDER_PRESETS, isRetiredProvider, RETIRED_PROVIDER_MESSAGE } from '../../studio/contracts/providers'
 import { logger } from '../../studio/public/logging'
@@ -19,6 +20,13 @@ import { refreshProviderModels, restoreProviderModels } from '../services/provid
 import { appendProviderAuditEvent } from '../../studio/public/provider-audit'
 import { invalidateProviderRuntime } from '../../studio/public/provider-runtime'
 import { clearClaudeOAuthCredentials } from '../services/providers/clear-claude-oauth'
+import { removeAccountProvider } from '../../studio/public/provider-management'
+import { readConfigYamlForProfile } from '../../studio/public/provider-config'
+import { providerProfiles } from '../../studio/public/provider-account'
+
+function invalidateAccountProvider(providerId: string): void {
+  for (const profile of providerProfiles()) invalidateProviderRuntime(profile, providerId)
+}
 
 const OPTIONAL_API_KEY_PROVIDERS = new Set(['cliproxyapi', 'xai-oauth', 'openai-codex', 'claude-oauth', 'minimax-oauth'])
 const DIRECT_CONFIG_PROVIDERS = new Set(['xai-oauth', 'openai-codex', 'claude-oauth', 'minimax-oauth'])
@@ -184,7 +192,7 @@ export async function patchEditor(ctx: any) {
       expectedRevision(ctx),
     )
     if (result.changed.some(field => field === 'api_key_replaced' || field === 'api_key_cleared' || field === 'base_url' || field === 'api_mode')) {
-      invalidateProviderRuntime(profile, providerId)
+      invalidateAccountProvider(providerId)
     }
     setRevisionHeader(ctx, result.detail.revision)
     appendAuditSafely({
@@ -325,6 +333,23 @@ export async function create(ctx: any) {
         throw Object.assign(new Error('Provider already exists; choose another name'), { status: 409 })
       }
       if (typeof config.model !== 'object' || config.model === null) { config.model = {} }
+      if (config.studio_provider_pool === 2) {
+        config.providers ||= {}
+        const previous = config.providers[poolKey]
+        if (create_only === true && previous) throw Object.assign(new Error('Provider already exists; choose another name'), { status: 409 })
+        const preset = PROVIDER_PRESETS.find(p => p.value === poolKey)
+        const entry = { ...previous, name: normalizedName, base_url: effectiveBaseUrl, api_key,
+          catalog_provider: poolKey, runtime_provider: previous?.runtime_provider || poolKey,
+          api_mode: customApiMode || previous?.api_mode || preset?.catalog_api_mode || preset?.api_mode || 'chat_completions',
+          model, models: { ...previous?.models, [model]: { ...previous?.models?.[model], ...(context_length && context_length > 0 ? { context_length } : {}) } } }
+        for (const key of ['key_env', 'auth_provider', 'auth_scope']) delete entry[key]
+        config.providers[poolKey] = entry
+        config.model.default = model
+        config.model.provider = poolKey
+        delete config.model.base_url
+        delete config.model.api_key
+        return config
+      }
       if (!isBuiltin) {
         if (!Array.isArray(config.custom_providers)) { config.custom_providers = [] }
         const existing = (config.custom_providers as any[]).find(
@@ -390,6 +415,7 @@ export async function create(ctx: any) {
       delete config.model.api_key
       return config
     })
+    invalidateAccountProvider(poolKey)
     // TODO: Test if provider works without gateway restart
     // try { await hermesCli.restartGateway() } catch (e: any) { logger.error(e, 'Gateway restart failed') }
     ctx.body = { success: true }
@@ -406,6 +432,19 @@ export async function update(ctx: any) {
   const customApiMode = normalizeApiMode(api_mode)
   try {
     const profile = requestedProfile(ctx)
+    if ((await readConfigYamlForProfile(profile)).studio_provider_pool === 2) {
+      const before = await getProviderEditorDetail(profile, poolKey)
+      await updateProviderEditorDetail(profile, poolKey, {
+        ...(name !== undefined ? { label: name } : {}),
+        ...(base_url !== undefined ? { base_url } : {}),
+        ...(model !== undefined ? { preferred_model: model } : {}),
+        ...(api_mode !== undefined ? { api_mode } : {}),
+        ...(api_key !== undefined ? { credential_action: api_key ? 'replace' : 'clear', api_key } : {}),
+      }, before.revision)
+      invalidateAccountProvider(poolKey)
+      ctx.body = { success: true }
+      return
+    }
     const isCustom = poolKey.startsWith('custom:')
     if (isCustom) {
       const found = await updateConfigYamlForProfile(profile, (config) => {
@@ -436,7 +475,7 @@ export async function update(ctx: any) {
     // try { await hermesCli.restartGateway() } catch (e: any) { logger.error(e, 'Gateway restart failed') }
     ctx.body = { success: true }
   } catch (err: any) {
-    ctx.status = 500; ctx.body = { error: err.message }
+    ctx.status = err.status === 409 ? 409 : 500; ctx.body = { error: err.message }
   }
 }
 
@@ -449,6 +488,15 @@ export async function remove(ctx: any) {
   const requestedProviderKey = typeof query?.providerKey === 'string' ? query.providerKey.trim() : ''
   try {
     const profile = requestedProfile(ctx)
+    const accountRemoved = await removeAccountProvider(profile, poolKey)
+    if (accountRemoved !== null) {
+      if (!accountRemoved) {
+        ctx.status = 404; ctx.body = { error: `Provider "${poolKey}" not found` }; return
+      }
+      invalidateAccountProvider(poolKey)
+      ctx.body = { success: true }
+      return
+    }
     const isCustom = poolKey.startsWith('custom:')
     const removed = await updateConfigYamlForProfile(profile, async (config) => {
       if (isCustom) {
@@ -511,6 +559,6 @@ export async function remove(ctx: any) {
     // try { await hermesCli.restartGateway() } catch (e: any) { logger.error(e, 'Gateway restart failed') }
     ctx.body = { success: true }
   } catch (err: any) {
-    ctx.status = 500; ctx.body = { error: err.message }
+    ctx.status = err.status === 409 ? 409 : 500; ctx.body = { error: err.message }
   }
 }

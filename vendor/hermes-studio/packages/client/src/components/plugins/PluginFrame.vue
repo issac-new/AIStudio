@@ -1,0 +1,142 @@
+<script setup lang="ts">
+import { ref, watch, onBeforeUnmount, h } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { NAlert, NInput, useDialog, useMessage } from 'naive-ui'
+import { getStoredUserId } from '@/api/client'
+import { createPluginSessionBridge } from '@/api/studio/plugin-sessions'
+import { pluginApi, pluginInvoke, pluginRequest, type InstalledPlugin, type Json, type PluginEvent } from '@/api/studio/plugins'
+import { pluginThemeSnapshot } from '@/plugins/theme'
+import { generateClientUuid } from '@/utils/client-random'
+import { assertJson } from '../../../../plugin-sdk/src'
+import ModelCascader from '@/components/hermes/models/ModelCascader.vue'
+import { usePluginModelPicker } from '@/composables/usePluginModelPicker'
+import { usePluginWorkspacePicker } from '@/composables/usePluginWorkspacePicker'
+import WorkspacePickerModal from '@/components/common/WorkspacePickerModal.vue'
+
+const props = defineProps<{ plugin: InstalledPlugin; profile: string; view: string; slot: string; sessionId?: string; data?: Json; expanded?: boolean; sidebar?: boolean }>()
+const frame = ref<HTMLIFrameElement>()
+const height = ref(180)
+const error = ref('')
+const router = useRouter(), dialog = useDialog(), message = useMessage(), { t, locale } = useI18n()
+const route = useRoute()
+const frameUrl = `${import.meta.env.BASE_URL}plugin-frame.html`
+const modelPicker = usePluginModelPicker()
+const { request: modelPickerRequest } = modelPicker
+const workspacePicker = usePluginWorkspacePicker()
+const { request: workspacePickerRequest } = workspacePicker
+let release: (() => void) | undefined
+
+watch(() => [frame.value, props.plugin, props.profile, props.view, props.sessionId, props.data, route.fullPath, locale.value] as const, async () => {
+  release?.(); error.value = ''
+  if (!frame.value) return
+  const element = frame.value, controller = new AbortController(), channel = generateClientUuid()
+  const profile = props.profile, plugin = props.plugin, sessionId = props.sessionId
+  let source: string | undefined, ready = false, started = false, timer: ReturnType<typeof setTimeout> | undefined
+  let cursor = 0, generation = ''
+  const send = (value: object) => element.contentWindow?.postMessage(JSON.parse(JSON.stringify({ ...value, channel })), '*')
+  const sessionBridge = createPluginSessionBridge(profile, plugin.manifest.id, controller.signal,
+    (id, event) => send({ type: 'session.event', id, event }))
+  const dialogs = new Set<ReturnType<typeof dialog.create>>()
+  const prompt = (text: string, input: boolean): Promise<string | boolean | null> => new Promise(resolve => {
+    let value = ''
+    const done = (result: string | boolean | null) => { dialogs.delete(instance); resolve(result) }
+    const instance = dialog.create({ title: `${plugin.manifest.name} · ${t('studioPlugins.request')}`, content: () => h('div', [h('p', text), ...(input ? [h(NInput, { onUpdateValue: (text: string) => { value = text } })] : [])]),
+      positiveText: t('common.confirm'), negativeText: t('common.cancel'),
+      onPositiveClick: () => done(input ? value : true), onNegativeClick: () => done(input ? null : false),
+      onClose: () => done(input ? null : false), onMaskClick: () => done(input ? null : false),
+    }); dialogs.add(instance)
+    controller.signal.addEventListener('abort', () => { instance.destroy(); done(input ? null : false) }, { once: true })
+  })
+  async function poll() {
+    try {
+      const result = await pluginRequest<{ cursor: number; generation: string; events: PluginEvent[] }>(profile,
+        `/events?pluginId=${encodeURIComponent(plugin.manifest.id)}&cursor=${cursor}${sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''}`, undefined, 'GET', controller.signal)
+      if (generation && generation !== result.generation) { cursor = 0; generation = result.generation }
+      else { cursor = result.cursor; generation = result.generation; for (const event of result.events) send({ type: 'event', event }) }
+    } catch (cause) { if (!controller.signal.aborted) error.value = String(cause) }
+    if (!controller.signal.aborted) timer = setTimeout(poll, 1500)
+  }
+  function themeSnapshot() {
+    return pluginThemeSnapshot(element)
+  }
+  const appearance = new MutationObserver(() => { if (started) send({ type: 'theme', theme: themeSnapshot() }) })
+  appearance.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] })
+  appearance.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] })
+  function initialize() {
+    if (!ready || source === undefined || started || controller.signal.aborted) return
+    started = true
+    const theme = themeSnapshot()
+    const query = Object.fromEntries(Object.entries(route.query).map(([key, value]) => [key, Array.isArray(value) ? value.map(item => item ?? '') : value ?? '']))
+    send({ type: 'studio.plugin.init', source, theme, context: { plugin: plugin.manifest, config: plugin.config, locale: locale.value, identity: { userId: getStoredUserId(), profile, sessionId, surface: props.slot }, view: props.view, slot: props.slot, data: props.data ?? null, location: { path: route.path, query } } })
+    void poll()
+  }
+  async function receive(event: MessageEvent) {
+    if (event.source !== element.contentWindow || controller.signal.aborted) return
+    if (event.data?.type === 'studio.plugin.ready') { ready = true; initialize(); return }
+    const data = event.data
+    if (!data || data.channel !== channel) return
+    if (data.type === 'error') { error.value = String(data.message); return }
+    if (data.type === 'height') { if (Number.isFinite(data.value)) height.value = Math.max(100, Math.min(1200, data.value)); return }
+    if (data.type !== 'request' || !Number.isSafeInteger(data.id)) return
+    const args = data.args || {}
+    try {
+      // Validate plugin-owned data before HTTP JSON serialization can drop or coerce it.
+      if (data.method === 'rpc') assertJson(args.input ?? null)
+      if (data.method === 'api' && args.options?.body !== undefined) assertJson(args.options.body)
+      if (data.method === 'browser') assertJson(args.params || {})
+      if (data.method === 'storage' && args.action === 'set') assertJson(args.value)
+      if (data.method === 'session-command' && args.method === 'run') {
+        assertJson(args.args?.input)
+        if (args.args?.options !== undefined) assertJson(args.args.options)
+      }
+      let value: unknown
+      switch (data.method) {
+        case 'session-open':
+        case 'session-command':
+        case 'session-close': value = await sessionBridge(data.method, args); break
+        case 'browser': value = await pluginRequest(profile, `/${plugin.manifest.id}/browser`, { method: args.method, params: args.params || {}, sessionId }, 'POST', controller.signal); break
+        case 'api': value = await pluginApi(profile, plugin.manifest.id, args.path, args.options || {}, sessionId, controller.signal); break
+        case 'rpc': value = await pluginInvoke(profile, plugin.manifest.id, 'rpc', args.name, args.input ?? null, sessionId, controller.signal); break
+        case 'storage': value = await pluginRequest(profile, `/${plugin.manifest.id}/storage`, { action: args.action, key: args.key, value: args.value, scope: args.scope, namespace: args.namespace, sessionId }, 'POST', controller.signal); break
+        case 'notify': message[['info', 'success', 'error'].includes(args.level) ? args.level as 'info' : 'info'](`${plugin.manifest.name}: ${String(args.message).slice(0, 2000)}`); value = null; break
+        case 'confirm': value = await prompt(String(args.message).slice(0, 2000), false); break
+        case 'prompt': value = await prompt(String(args.message).slice(0, 2000), true); break
+        case 'select-model': value = await modelPicker.open(profile, args, controller.signal); break
+        case 'select-workspace': value = await workspacePicker.open(profile, args, controller.signal); break
+        case 'navigate':
+          if (typeof args.path !== 'string' || !/^\/(?:hermes|studio|ekko)\//.test(args.path) || args.path.includes('\\')) throw new Error('Invalid Studio route')
+          await router.push(args.path); window.dispatchEvent(new Event('studio.plugin.navigate')); value = null; break
+        default: throw new Error('Unknown plugin bridge operation')
+      }
+      if (!controller.signal.aborted) send({ type: 'response', id: data.id, value })
+    } catch (cause) { send({ type: 'response', id: data.id, error: cause instanceof Error ? cause.message : String(cause) }) }
+  }
+  window.addEventListener('message', receive)
+  release = () => { send({ type: 'dispose' }); controller.abort(); appearance.disconnect(); if (timer) clearTimeout(timer); window.removeEventListener('message', receive); for (const instance of dialogs) instance.destroy() }
+  element.src = frameUrl
+  try { source = (await pluginRequest<{ source: string }>(profile, `/${plugin.manifest.id}/client`, undefined, 'GET', controller.signal)).source; initialize() }
+  catch (cause) { if (!controller.signal.aborted) error.value = String(cause) }
+}, { flush: 'post', immediate: true })
+onBeforeUnmount(() => release?.())
+</script>
+
+<template>
+  <section class="plugin-frame" :class="{ 'plugin-frame--expanded': expanded, 'plugin-frame--sidebar': sidebar }">
+    <NAlert v-if="error" type="error">{{ error }}</NAlert>
+    <iframe :key="locale" ref="frame" :title="`${plugin.manifest.name}: ${view}`" referrerpolicy="no-referrer" :style="expanded ? undefined : { height: `${height}px` }" />
+    <ModelCascader v-if="modelPickerRequest" :show="true" :groups="modelPickerRequest.catalog.groups"
+      :provider="modelPickerRequest.current?.provider" :model="modelPickerRequest.current?.model"
+      :custom-models="modelPickerRequest.catalog.custom_models || {}" :display-name="modelPicker.displayName"
+      :title="`${plugin.manifest.name} · ${t('models.selectModel')}`" :close-on-select="false"
+      @select="modelPicker.choose" @update:show="show => { if (!show) modelPicker.cancel() }" />
+    <WorkspacePickerModal v-if="workspacePickerRequest" :current="workspacePickerRequest.current"
+      :title="`${plugin.manifest.name} · ${t('workflow.workspace.title')}`" @select="workspacePicker.choose" @cancel="workspacePicker.cancel" />
+  </section>
+</template>
+<style scoped lang="scss">
+.plugin-frame { overflow: hidden; min-width: 0; }
+.plugin-frame--expanded { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.plugin-frame--expanded iframe { flex: 1; min-height: 0; height: 100%; }
+iframe { display: block; width: 100%; border: 0; }
+</style>

@@ -36,6 +36,7 @@ should not duplicate server persistence rules.
 - Uploads default to `config.uploadDir`, which is derived from the Web UI home unless `UPLOAD_DIR` is set.
 - Runtime data directories must also live under the Web UI home, not beside built `dist` assets.
 - Profile-scoped Hermes data should use existing profile helpers instead of manually joining paths.
+- Studio Provider state is isolated by account under `providers/users/<user-id>`; all of an account's Profiles share its Provider records, credentials, catalog and internal gateway key. Profile files retain import provenance and runtime model selections only.
 
 ## Server Structure
 
@@ -50,6 +51,9 @@ ownership decisions, allowed dependency matrix, and migration rules.
 - Module `services/` own reusable IO, domain behavior, processes, and integrations.
 - Studio `repositories/` and `infrastructure/` own application persistence.
 - Studio `middleware/legacy-app-api.ts` is the only released App and MCU firmware URL compatibility map.
+- Plugin Agent IDs use `plugin:<plugin-id>/<agent-id>` and retain that identity in chat, group chat, workflow and usage records. Studio owns registration, per-user/Profile run contexts and transport; plugins own their engine and settings UI. Bootstrap adapts existing Coding Agent management and model proxies into the shared Studio registry, preserving native runtime dispatch and released APIs. See `docs/plugins.md` for the runtime contract.
+- Independent plugin projects are registered by `ekko-studio plugins` under the Web UI home in `plugins/development`. Registration does not execute code. Administrator activation starts host-owned source watching, optional builds and snapshot replacement through the ordinary PluginManager; project sources stay outside the Studio checkout. See `docs/plugins.md`.
+- Studio does not bundle or automatically install OMP. It is installed and updated independently through the plugin center or a development link. Existing installations keep their package snapshots and data. The generic `plugins/builtin` catalog is currently empty; demo packages live only in `tests/fixtures/plugins`. Stable `ctx.paths.dataDir` holds plugin-owned engine files independently of package versions, and Studio supplies scoped model proxies through the existing Agent contract.
 
 Architecture rules:
 
@@ -156,12 +160,21 @@ agent-browser packaging path. Generated PM files are excluded through Git's
 local `info/exclude`; tracked upstream files remain unchanged. Packaging checks
 the PM-selected browser again after moving the source into its staging directory.
 
-Copilot activation prepares the `github-copilot` provider plugin when the selected
-Hermes release requires it, then stores the accepted OAuth credential in that
-profile's `.env`. Existing enabled profiles migrate on worker startup; read-only
-token detection does not install plugins. Model catalogs use runtime-readable
-credentials, while explicit Add can discover and accept a gh/VS Code login.
-Startup respects disabled lazy installation and never re-enables a disabled plugin.
+Studio owns imported Provider configuration under the authenticated user's
+`providers/users/<id>` directory in the application home. Hermes receives an
+`ekkostudio` Provider and qualified model IDs for primary inference. Existing
+auxiliary, MoA, fallback and delegation settings retain their native configuration
+and credentials; only slots edited in Studio are projected to the gateway. The
+page continues to use logical Provider/model names. See [Model API](docs/model-api.md)
+for routing, migration boundaries and protocol support.
+
+Hermes, Ekko and scoped Coding/plugin Agents share the model gateway. Ingress
+adapters handle Responses, Chat Completions, Anthropic Messages and Gemini
+Contents. Bootstrap composes the existing protocol codecs with the Studio account
+store, upstream authentication and transport. Run credentials never authenticate
+management APIs. Studio exchanges Copilot OAuth credentials itself, without
+installing a Hermes plugin for the gateway's inference path. Native configurations
+kept for untouched auxiliary models retain their previous behavior.
 
 ## Validation Surface
 

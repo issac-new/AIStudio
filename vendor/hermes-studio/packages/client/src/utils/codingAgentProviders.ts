@@ -2,6 +2,10 @@ import type { ChatCodingAgentId, CodingAgentApiMode } from '@/api/coding-agents'
 import type { AvailableModelGroup } from '@/api/hermes/system'
 import type { ProviderApiMode } from '@/api/studio/provider-api-mode'
 
+export function hasConfiguredProviderApiKey(group?: AvailableModelGroup): boolean {
+  return !!group?.api_key || group?.credential_configured === true
+}
+
 export function providerModelApiMode(group?: AvailableModelGroup, model = ''): ProviderApiMode | undefined {
   return (group?.api_mode_by_model ? group.api_mode_by_model[model] : group?.api_mode) ?? undefined
 }
@@ -27,16 +31,15 @@ export function isAuthModelProvider(provider?: string): boolean {
 }
 
 export function canScopedCodingAgentUseProvider(
-  agentId: ChatCodingAgentId,
+  _agentId: ChatCodingAgentId,
   provider?: string,
 ): boolean {
   return String(provider || '').trim().toLowerCase() !== 'moa'
-    && (agentId === 'ekko-agent' || !isAuthModelProvider(provider))
 }
 
 export function usesServerManagedProviderAuth(
   agentId: ChatCodingAgentId,
   provider?: string,
 ): boolean {
-  return agentId === 'ekko-agent' && isAuthModelProvider(provider)
+  return agentId.startsWith('plugin:') || isAuthModelProvider(provider)
 }

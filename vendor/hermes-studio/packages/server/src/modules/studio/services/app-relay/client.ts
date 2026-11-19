@@ -45,7 +45,8 @@ const ALLOWED_REQUEST_HEADERS = new Set([
   'x-expected-sha256',
 ])
 const ALLOWED_TERMINAL_CLIENT_EVENTS = new Set(['terminal.capabilities', 'terminal.list', 'terminal.create', 'terminal.attach', 'terminal.read', 'terminal.input', 'terminal.resize', 'terminal.detach', 'terminal.close'])
-const ALLOWED_SOCKET_NAMESPACES = new Set(['/terminal', '/chat-run', '/group-chat', '/workflow', '/group-chat-agent-relay', '/person-presence'])
+const ALLOWED_PLUGIN_CLIENT_EVENTS = new Set(['session.open', 'session.command', 'session.close'])
+const ALLOWED_SOCKET_NAMESPACES = new Set(['/plugins', '/terminal', '/chat-run', '/group-chat', '/workflow', '/group-chat-agent-relay', '/person-presence'])
 const ALLOWED_GROUP_AGENT_CLIENT_EVENTS = new Set([
   'run.accepted', 'run.completed', 'run.failed', 'agent.event', 'agent.events', 'agent.config.update', 'attachment.read', 'connector.revoke',
 ])
@@ -157,6 +158,7 @@ export interface AppRelaySocketOpenRequest {
   auth?: Record<string, unknown>
   query?: Record<string, string | number | boolean | undefined>
   stream?: boolean
+  chatResume?: { session_id: string; id: string; timeline?: boolean }
 }
 
 export interface AppRelaySocketEventRequest {
@@ -179,6 +181,7 @@ export interface AppRelaySocketResponse {
   event?: string
   stream?: boolean
   payload?: unknown
+  chatResumeAccepted?: boolean
   error?: { code: string; message: string }
 }
 
@@ -285,6 +288,7 @@ export class AppRelayClient {
           timestamp,
           signature,
           replaceExistingHost: this.options.replaceExistingHost,
+          chatResumeOnOpen: true,
           machine: this.options.machineInfo,
         })
       },
@@ -1258,6 +1262,7 @@ function isMediaHttpRequest(request: AppRelayHttpRequest): boolean {
 }
 
 function isAllowedSocketEvent(namespace: string, event: string): boolean {
+  if (namespace === '/plugins') return ALLOWED_PLUGIN_CLIENT_EVENTS.has(event)
   if (namespace === '/person-presence') return event === 'person.activity'
   if (namespace === '/terminal') return ALLOWED_TERMINAL_CLIENT_EVENTS.has(event)
   if (namespace === '/group-chat-agent-relay') return ALLOWED_GROUP_AGENT_CLIENT_EVENTS.has(event)

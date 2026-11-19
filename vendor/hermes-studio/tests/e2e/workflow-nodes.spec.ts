@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 const node = (page: Page, id: number) => page.locator(`.vue-flow__node[data-id="agent-${id}"]`)
 
-async function openWorkflow(page: Page, { empty = false, protocolMismatch = false, switchable = false, withRun = false } = {}) {
+async function openWorkflow(page: Page, { empty = false, protocolMismatch = false, switchable = false, withRun = false, plugins = false, pluginAgent = false } = {}) {
   const saves: any[] = [], errors: string[] = []
   const workflow = {
     id: 'workflow-fixture', name: '节点编辑验证', profile: 'default', workspace: null,
@@ -49,8 +49,10 @@ async function openWorkflow(page: Page, { empty = false, protocolMismatch = fals
       }], profiles: [], allProviders: [], default: 'fixture-model', default_provider: 'fixture',
     }
     else if (pathname === '/api/agents/availability') json = { revision: 1, updatedAt: '2026-11-03',
-      agents: ['ekko-agent', 'hermes', 'codex'].map(id => ({ id, available: true, installed: true, source: 'built-in' })),
+      agents: [...['ekko-agent', 'hermes', 'codex'].map(id => ({ id, available: true, installed: true, source: 'built-in' })),
+        ...(pluginAgent ? [{ id: 'plugin:omp/omp', name: 'Oh My Pi', icon: '/logo.png', modes: ['scoped', 'global'], surfaces: ['workflow'], actions: {}, available: true, installed: true, source: 'plugin' }] : [])],
     }
+    else if (pathname === '/api/studio/plugins') json = { revision: 1, plugins: plugins ? [{ manifest: { id: 'notebook', name: 'Notebook' }, status: 'active', actions: [{ name: 'capture' }] }] : [] }
     else if (pathname === '/api/studio/workflows') json = { workflows: switchable ? [workflow, other] : [workflow] }
     else if (pathname === '/api/studio/workflows/workflow-fixture' && route.request().method() === 'PATCH') {
       const input = route.request().postDataJSON()
@@ -67,6 +69,10 @@ async function openWorkflow(page: Page, { empty = false, protocolMismatch = fals
       json = { categories: [], archived: [] }
     }
     else if (pathname.startsWith('/api/studio/sessions')) json = { sessions: [] }
+    else if (pathname.startsWith('/api/studio/agents/') && pathname.endsWith('/models')) {
+      expect(route.request().headers()['x-hermes-profile']).toBe('default')
+      json = { status: 'ready', models: [{ id: 'custom/fixture', name: 'OMP native model' }] }
+    }
     else if (pathname.includes('/models')) json = { agents: [] }
     await route.fulfill({ json })
   })
@@ -86,10 +92,35 @@ async function addNode(page: Page, id: number) {
   return node(page, id)
 }
 
+test('saves a plugin action and arguments without requiring a model selection', async ({ page }) => {
+  const { saves, errors } = await openWorkflow(page, { plugins: true })
+  const target = node(page, 1)
+  await target.getByTestId('workflow-plugin-action').click()
+  await page.locator('.n-base-select-option').filter({ hasText: 'Notebook: capture' }).click()
+  await target.getByPlaceholder('JSON 参数；命令支持纯文本').fill('{"input":"A workflow note"}')
+  await page.getByRole('button', { name: '保存', exact: true }).click()
+  await expect.poll(() => saves.length).toBeGreaterThan(0)
+  expect(saves.at(-1).nodes[0].data).toMatchObject({ pluginAction: 'notebook/capture', pluginInput: '{"input":"A workflow note"}' })
+  expect(errors).toEqual([])
+})
+
 async function selectAgent(page: Page, target: Locator, label: string) {
   await target.locator('.n-select').first().click()
   await page.locator('.n-base-select-option').filter({ hasText: new RegExp(`^${label}$`) }).click()
 }
+
+test('offers plugin global mode and saves its identity in the workflow', async ({ page }) => {
+  const { saves, errors } = await openWorkflow(page, { pluginAgent: true })
+  const target = node(page, 1)
+  await selectAgent(page, target, 'Oh My Pi')
+  await target.locator('.n-select').nth(1).click()
+  await page.locator('.n-base-select-option').filter({ hasText: /^全局$/ }).click()
+  await expect(target).toContainText('全局')
+  await page.getByRole('button', { name: '保存', exact: true }).click()
+  await expect.poll(() => saves.length).toBeGreaterThan(0)
+  expect(saves.at(-1).nodes[0].data).toMatchObject({ agent: 'plugin:omp/omp', agentMode: 'global' })
+  expect(errors).toEqual([])
+})
 
 async function connectNodes(page: Page) {
   await node(page, 1).locator('.output-handle').dragTo(node(page, 2).locator('.input-handle'))
