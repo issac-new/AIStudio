@@ -42,6 +42,7 @@ MAX_EVIDENCE = 1000
 MAX_REVIEWER = 120
 
 _AC_DIGITS = re.compile(r"\d+")
+_HEX64 = re.compile(r"^[a-f0-9]{64}$")
 
 
 class AcceptanceReportViolation(ValueError):
@@ -143,6 +144,20 @@ def validate_report(
             "schema_invalid", "reviewerKind 非法",
             f"reviewerKind 只能是 {sorted(VALID_REVIEWER_KINDS)} 或省略",
             "改为 agent/human，或省略该字段",
+        ))
+    delivery_version_id = _clip(report.get("deliveryVersionId"), MAX_REVIEWER)
+    if delivery_version_id and not delivery_version_id.startswith("dv_"):
+        blockers.append(_blocker(
+            "schema_invalid", "deliveryVersionId 非法",
+            f"deliveryVersionId 必须以 dv_ 开头（收到 {delivery_version_id!r}）",
+            "携带当前交付版本的 versionId，或省略该字段",
+        ))
+    artifact_checksum = _clip(report.get("artifactChecksum"), 64).lower()
+    if artifact_checksum and not _HEX64.fullmatch(artifact_checksum):
+        blockers.append(_blocker(
+            "schema_invalid", "artifactChecksum 非法",
+            f"artifactChecksum 必须是 64 位小写 sha256（收到 {artifact_checksum!r}）",
+            "携带当前交付版本的 checksum，或省略该字段",
         ))
 
     implementer_norm = _norm_identity(implementer)
@@ -325,4 +340,6 @@ def validate_report(
         "verdict": verdict,
         "summary": _clip(report.get("summary"), MAX_TEXT),
         "checks": [normalized_checks[cid] for cid in wanted],
+        **({"deliveryVersionId": delivery_version_id} if delivery_version_id else {}),
+        **({"artifactChecksum": artifact_checksum} if artifact_checksum else {}),
     }

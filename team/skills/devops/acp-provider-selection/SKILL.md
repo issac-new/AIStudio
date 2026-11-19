@@ -30,7 +30,7 @@ acp_send(provider="codex", prompt="...", cwd="...")
 acp_send(provider="zcode", prompt="...", cwd="...")
 ```
 
-The `_resolve_provider()` function in `plugins/acp-client/__init__.py` maps provider names to launch commands. **Provider names are hardcoded branches** — adding a new one requires a code patch (Pitfall 6), not just a config entry.
+The `_resolve_provider()` function in `plugins/acp-client/__init__.py` first consults the declarative catalog `team/shared/acp-harness-catalog.yaml` (deployed to `~/.hermes/shared/`). A standard harness is added by appending one `providers` entry (launch strategy/args/cwdArgs/model.envKeys); unknown names still fall back to the built-in four branches, so old deployments keep working.
 
 ## Decision matrix — when to pick which
 
@@ -165,7 +165,7 @@ providers:
 
 5. **Sandbox failure in gateway context** — Codex `workspace-write` sandboxing may fail when invoked from a Hermes gateway/service context (bubblewrap user-namespace errors). Use `--sandbox danger-full-access` in that context, with process boundaries as the safety layer.
 
-6. **New ACP providers need a code patch, not just config** — `_resolve_provider()` in `plugins/acp-client/__init__.py` hardcodes provider branches; unknown names raise `ValueError`. Adding one = new `elif` branch (binary-or-PATH resolution + `args`/`env` from provider_cfg) + error-message update. **Per-profile copies drift**: each profile keeps its own `plugins/acp-client/__init__.py`; re-run the sync after any future branch edit. New `acp_*` tool branches also need a session/gateway reload to be visible to the live tools; test via `python3` + direct `handle_acp_send` import meanwhile.
+6. **New ACP providers are catalog entries, not code branches** — append a `providers.<id>` block to `team/shared/acp-harness-catalog.yaml` (strategy `binary|binary_or_npx|npx|command`; candidates/package/args/cwdArgs; `model.envKeys`), copy it to `~/.hermes/shared/`, and keep the id aligned with `config/execution-contract.json` when it is meant to become an active backend. Unknown names still fall back to the built-in four branches. The 21 per-profile plugin copies remain byte-identical and are guarded by `team/tests/test_acp_harness_catalog.py`; re-run the fleet sync only when the client code itself changes. New `acp_*` tool branches still need a session/gateway reload to be visible to live tools; test via `python3` + direct `handle_acp_send` import meanwhile.
 
 7. **Deploy-log ≠ deployed-artifact (2026-09-07 实证)** — 09-06「全舰队 zcode 部署」记录为成功，但 39 份插件**从未含 zcode 分支**（全为旧 hash `1e28066c…`，此前记录的 `93385533132d` 系虚构/另一时间线），全舰队夜间 `provider="zcode"` 实际全部 Unknown-provider 秒失败并静默回退计费通道。教训：**部署后必须哈希核验落盘产物本身**（`md5` 全量 `sort -u | wc -l` 应为 1），不信任部署脚本的 success 输出。修复记录见 references/zcode-acp.md「Fleet sync」。
 

@@ -13,6 +13,7 @@
 | `team/shared/paradigm-map.yaml` | 30 个 profile 的三范式归属（基座/领域/治理） | 范式事实源（2026-10-28 K11 落库；改判只改此表与 `tests/test_paradigm_map.py`） |
 | `team/shared/owner-registry.yaml` | 模块级 ownership + matrix 号 + backup；当前覆盖 12/30 profile（`scope: legacy-partial`），未覆盖者按 orchestrator 兜底 | 职责事实源（部分覆盖，见文件头） |
 | `~/.hermes/shared/capability-graph.yaml` | 各 profile 能力/可靠度（done/(done+failed) 自动聚合） | 自动生成区勿手改 |
+| `team/shared/acp-harness-catalog.yaml` | ACP harness 启动目录（binary/npx/args/cwdArgs/model.envKeys）；新增标准 harness 只加一条目录项 | 启动规格事实源；准入/退役仍以 `config/execution-contract.json` 为准 |
 | `~/.hermes/profiles/<name>/` | 每 profile：`SOUL.md`（身份，运行时自动注入，不可改名挪位）+ config.yaml + .env | 角色细则事实源 |
 | `~/.hermes/profiles/_shared/` | 跨角色规则六层（调度/组织/进化/评审/执行/观测）+ templates/ + workflows/ | 过程规则事实源；索引在 `shared-rules-reference.md` |
 | `~/.hermes/delivery/` | 软件开发交付标准工作模板 v1.0.0（六阶段×六门禁，工具无关，2026-09-17 起） | 交付流程事实源 |
@@ -25,6 +26,7 @@ python3 ~/.hermes/shared/generate-configs.py --dry-run   # 预览不写入
 python3 ~/.hermes/shared/generate-configs.py --diff      # 与现有差异
 python3 ~/.hermes/shared/generate-configs.py             # 生成全部
 python3 ~/.hermes/shared/generate-configs.py --profile orchestrator
+cp team/shared/acp-harness-catalog.yaml ~/.hermes/shared/  # 部署 ACP 启动目录（插件解析序第二位）
 bash ~/.hermes/patches/apply-acp-client-codex-fix.sh     # 重铺 acp-client 补丁（含 zcode provider）
 ```
 
@@ -32,9 +34,10 @@ bash ~/.hermes/patches/apply-acp-client-codex-fix.sh     # 重铺 acp-client 补
 
 1. 改密钥/通用变量 → `shared/.env.common`
 2. 改 profile 差异（端口/toolsets/assignee 等）→ `shared/profiles.yaml`
-3. 运行生成脚本 → 产出各 profile 的 config.yaml + .env
-4. 重启对应 Gateway → `hermes -p <profile> gateway run --replace`
-5. 改角色行为 → 对应 `profiles/<name>/SOUL.md`（身份文件，运行时自动注入；改动下一次会话生效，无需重启）
+3. 改 ACP harness 启动规格 → `team/shared/acp-harness-catalog.yaml`，复制到 `~/.hermes/shared/`（准入仍改 `config/execution-contract.json`）
+4. 运行生成脚本 → 产出各 profile 的 config.yaml + .env
+5. 重启对应 Gateway → `hermes -p <profile> gateway run --replace`
+6. 改角色行为 → 对应 `profiles/<name>/SOUL.md`（身份文件，运行时自动注入；改动下一次会话生效，无需重启）
 
 ## 设计原理（要点）
 

@@ -132,7 +132,10 @@ KANBAN_COMPLETE_SCHEMA = _schema(
                 "for fail/na'}]}. One check per contract AC; the reviewer must "
                 "differ from the implementer recorded on review_requested; "
                 "completion only accepts verdict=pass (use kanban_request_changes "
-                "to reject)."
+                "to reject). When the card has an active delivery version, the "
+                "report MUST also carry ``deliveryVersionId`` and "
+                "``artifactChecksum`` exactly as shown in the rejection message; "
+                "the kernel binds the report to that immutable delivery snapshot."
         )),
         "result": _prop("string", (
                 "Short result log line (legacy field, maps to "

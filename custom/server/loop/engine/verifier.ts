@@ -4,7 +4,7 @@ import { promisify } from 'util'
 import { existsSync, statSync } from 'fs'
 import { resolve } from 'path'
 import type {
-  TaskContract, LoopInstance, VerificationRecord, AutonomyLevel,
+  TaskContract, LoopInstance, VerificationRecord, AutonomyLevel, JudgeCheck,
 } from '../types'
 import { isJudgeFailed } from '../types'
 import type { JudgeVerdict } from '../types'
@@ -19,6 +19,9 @@ export interface VerifierDeps {
   // 可返回 { status: 'pending', reason }：judge 暂无法裁决（如模型不可用）——
   // verifier 记 status='pending'，该项按跳过处理（overall 由其余项决定），不烧穿 repair。
   callJudge?: (model: string, diff: string, rubric: string) => Promise<JudgeVerdict>
+  /** 缺省 judge 意图（2026-11-19 调度智能批）：合同未显式声明 judge 时使用；
+   *  仅在显式开启（GRAPH_JUDGE_ENFORCE=1）且模型可用时由装配方注入。 */
+  defaultJudge?: JudgeCheck
   // Human: notify and await approval
   requestHumanApproval?: (contractId: string, approvers: string[]) => Promise<'approved' | 'rejected' | 'changes-requested' | 'pending'>
 }
@@ -50,19 +53,21 @@ export class Verifier {
     }
 
     // --- Judge (skip if not configured) ---
+    // 合同显式 judge 优先；否则用装配方注入的 defaultJudge（需显式 env 开启）。
+    const judgeSpec = spec.judge ?? this.deps.defaultJudge ?? null
     let judgeResult: VerificationRecord['results']['judge'] = null
-    if (spec.judge && this.deps.callJudge) {
+    if (judgeSpec && this.deps.callJudge) {
       // Judge only sees the diff, not maker's reasoning trace
       const diff = await this.getWorktreeDiff(contract.worktreeId)
-      const jr = await this.deps.callJudge(spec.judge.model, diff, spec.judge.rubric)
+      const jr = await this.deps.callJudge(judgeSpec.model, diff, judgeSpec.rubric)
       if ('status' in jr) {
         // P2 台账③前置：judge 暂无法裁决 → 记 pending（为 P3 真实 LLM judge 留结构），
         // 语义与无 judge 相同：跳过该项，overall 由其余项决定；不烧穿 repair 循环
-        judgeResult = { model: spec.judge.model, status: 'pending', reason: jr.reason }
+        judgeResult = { model: judgeSpec.model, status: 'pending', reason: jr.reason }
       } else {
-        const passed = jr.score >= spec.judge.minScore
+        const passed = jr.score >= judgeSpec.minScore
         judgeResult = {
-          model: spec.judge.model,
+          model: judgeSpec.model,
           score: jr.score,
           reasoning: jr.reasoning,
           passed,

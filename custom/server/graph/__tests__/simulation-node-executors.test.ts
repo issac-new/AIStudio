@@ -194,11 +194,54 @@ describe('registerSimulationNodeTypes', () => {
     const ref = await bridge.createTask({
       title: 'pay-core', body: { estimate_days: 1 }, assignee: 'chen', board: 'sim',
       idempotencyKey: 'graph_node:r1:n1',
+      model: 'GLM-5.3', provider: 'cc-switch-route', reasoning: 'high',
     })
     expect(ref).toEqual({ id: 'tk-9', status: 'todo' })
     expect(calls[0].url).toBe('http://127.0.0.1:8802/api/hermes/kanban')
-    expect(calls[0].body).toMatchObject({ title: 'pay-core', assignee: 'chen', board: 'sim' })
+    expect(calls[0].body).toMatchObject({
+      title: 'pay-core', assignee: 'chen', board: 'sim',
+      model: 'GLM-5.3', provider: 'cc-switch-route', reasoning: 'high',
+    })
     expect(await bridge.getTask('tk-9')).toEqual({ id: 'tk-9', status: 'done' })
     await expect(bridge.getTask('missing')).rejects.toThrow(/404/)
+  })
+
+  it('agent-task：节点 execution 透传到建卡请求与卡 body.routing', async () => {
+    const registry = new NodeRegistry()
+    const dry = new DryRunKanbanBridge()
+    registerSimulationNodeTypes(registry, {
+      bridge: dry,
+      allowDryRun: true,
+      pollIntervalMs: 1,
+      pollMaxIntervalMs: 1,
+      taskTimeoutMs: 20,
+      resolveExecution: (spec) => (spec
+        ? {
+            model: spec.model,
+            provider: spec.provider,
+            reasoning: spec.reasoning,
+            source: 'explicit',
+          }
+        : { source: 'none' }),
+    })
+    const def = hydrateGraphSpec({
+      id: 'g-exec',
+      version: 1,
+      channels: {},
+      nodes: [{
+        id: 'n1',
+        type: 'agent-task',
+        config: { title: 'T' },
+        execution: { model: 'm1', provider: 'p1', reasoning: 'high' },
+      }],
+      edges: [],
+      entryNode: 'n1',
+      limits: { maxSteps: 1 },
+    }, registry, SIMULATION_REDUCERS)
+    await def.nodes.get('n1')!.execute({}, { threadId: 'run-exec' } as never)
+    expect(dry.created[0]).toMatchObject({ model: 'm1', provider: 'p1', reasoning: 'high' })
+    expect((dry.created[0].body as Record<string, unknown>).routing).toMatchObject({
+      source: 'explicit', model: 'm1', provider: 'p1', reasoning: 'high',
+    })
   })
 })
