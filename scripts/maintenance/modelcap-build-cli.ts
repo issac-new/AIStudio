@@ -2,9 +2,9 @@
 // 能力矩阵生产者（2026-11-19 调度智能批）：eval run → capability observations →
 // matrix.json。默认 dry-run；--write 才原子落盘（MODELCAP_MATRIX_PATH 可覆盖）。
 //
-// 用法：
-//   node scripts/maintenance/modelcap-build.mjs [--write] [--min-samples 5] [--days 30]
-//   node scripts/maintenance/modelcap-build.mjs --category-map '{"task_completion":"coding"}'
+// 用法（不新增 .mjs 薄壳，避免机制预算 +1；直接经 vite-node 跑 TS 主体）：
+//   node node_modules/vite-node/vite-node.mjs scripts/maintenance/modelcap-build-cli.ts [--write] [--min-samples 5] [--days 30]
+//   … --category-map '{"task_completion":"coding"}'
 import { getSet, listRuns } from '../../custom/server/eval/store'
 import { observationsFromEvalRuns } from '../../custom/server/modelcap/from-eval'
 import { buildMatrix } from '../../custom/server/modelcap/matrix'
