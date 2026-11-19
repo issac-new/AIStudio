@@ -27,7 +27,11 @@ beforeEach(() => {
   db.exec('CREATE TABLE task_events (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT, run_id TEXT, kind TEXT, payload TEXT, created_at INTEGER)')
   db.prepare('INSERT INTO tasks VALUES (?, ?, ?, ?, ?)').run('t1', '任务一', 'orchestrator', 'running', 2)
   db.prepare('INSERT INTO tasks VALUES (?, ?, ?, ?, ?)').run('t9', '坏任务', 'orchestrator', 'banana', null)
-  db.prepare('INSERT INTO task_events VALUES (?, ?, ?, ?, ?, ?)').run(1, 't1', null, 'column_transition', JSON.stringify({ status: 'done' }), 100)
+  // 两种 payload 形态都要认（2026-11-19）：
+  //   id=1 用 kernel 真实形态 {to, mode, results}（kanban_gates._eval_gates）
+  //   id=2 用旧投影形态 {status}（历史上被误当作真实形态，保留兼容）
+  // 此前只读 status，真实事件恒被判非 done，结卡后本体校验从不触发。
+  db.prepare('INSERT INTO task_events VALUES (?, ?, ?, ?, ?, ?)').run(1, 't1', null, 'column_transition', JSON.stringify({ to: 'done', mode: 'blocking', results: [] }), 100)
   db.prepare('INSERT INTO task_events VALUES (?, ?, ?, ?, ?, ?)').run(2, 't9', null, 'column_transition', JSON.stringify({ status: 'done' }), 101)
   db.close()
 })

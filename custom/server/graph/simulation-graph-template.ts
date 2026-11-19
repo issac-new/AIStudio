@@ -186,8 +186,11 @@ export function compileRequirementToGraph(req: RequirementInput): GraphSpec {
     endCondition: { op: 'cmp', path: '__resume:g6-final-gate.approved', cmp: 'eq', value: true },
     limits: { maxSteps: 500, maxCost: 100, maxDurationMs: 4 * 60 * 60 * 1000 },
     description: `推演全流程：${req.title}（${modules.length} 模块并行流水）`,
-    meta: { goal: req.title, permissionLevel: 'standard',
-      gateCommands: ['qgate run --profile feature-close'] },
+    // 2026-11-19：不再写 meta.gateCommands。director runtime 不消费该键（gate 由 gate 节点的
+    // config.command + 受信命令目录执行），而 preflightSpecCapabilities 无条件拒绝该键
+    // （gate_meta_forbidden）——留着会让每次 /api/graph/sim-director/start 都在起跑前失败。
+    // 收口门禁的正确接法：运维在 LOOP_GATE_COMMANDS 目录里登记命令，图里用 gate 节点引用。
+    meta: { goal: req.title, permissionLevel: 'standard' },
     origin: 'template',
   }
 }

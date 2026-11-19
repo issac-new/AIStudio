@@ -27,7 +27,8 @@ const zh = computed(() => String((i18nCtx as { locale?: { value?: string } })?.l
 const overview = ref<GovernanceOverview | null>(null)
 // 跨账号板状态分布（G3 2026-10-10）：步 22 工作台账产品面——全板分状态计数+WIP。
 const boardStatus = ref<BoardStatusEntry[] | null>(null)
-const BOARD_COLS = ['todo', 'doing', 'review', 'blocked', 'done'] as const
+// 列名必须是看板真实状态（2026-11-19）：此前含不存在的 `doing`，该列恒显示 0。
+const BOARD_COLS = ['todo', 'running', 'review', 'blocked', 'done'] as const
 const usage = ref<import('@/custom/governance/api/governance').UsageReport | null>(null)
 const error = ref('')
 const loading = ref(false)
