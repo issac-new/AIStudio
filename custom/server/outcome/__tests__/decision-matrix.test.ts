@@ -53,6 +53,30 @@ describe('共享判定向量（decision-vectors.json）', () => {
     expect(dualSignModes).toEqual(new Set(['build', 'guarded', 'yolo']))
   })
 
+  it('分歧面钉死：medium|costly 非严格格（ext=false）build=ask、guarded/yolo=allow，三格×三挡全在向量内', () => {
+    // 审查 I1（2026-11-19）：low/costly 分歧格曾缺失——Python 侧直读向量文件，
+    // 缺格=双侧守门盲区；本断言把 medium|costly 全部非严严格的三挡向量钉成必在。
+    const divergenceCells = [
+      { riskTier: 'medium', reversibility: 'reversible' },
+      { riskTier: 'medium', reversibility: 'costly' },
+      { riskTier: 'low', reversibility: 'costly' },
+    ] as const
+    for (const cell of divergenceCells) {
+      for (const mode of ['build', 'guarded', 'yolo'] as const) {
+        const hit = vectors.find(
+          v => v.mode === mode
+            && v.profile.riskTier === cell.riskTier
+            && v.profile.reversibility === cell.reversibility
+            && v.profile.externalEffect === false,
+        )
+        const label = `${mode} × ${cell.riskTier}/${cell.reversibility}/ext=false`
+        expect(hit, label).toBeDefined()
+        expect(hit?.expected.action, label).toBe(mode === 'build' ? 'ask' : 'allow')
+        expect(hit?.expected.dualSignRequired, label).toBe(false)
+      }
+    }
+  })
+
   it('全量向量逐格与 evaluateOutcomeAction 一致', () => {
     for (const v of vectors) {
       const label = `${v.mode} × ${v.profile.riskTier}/${v.profile.reversibility}/ext=${v.profile.externalEffect}`
