@@ -29,6 +29,7 @@ import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/few
 import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 import { registerEntry } from '../taskledger/taskledger-store'
 import { assessDispatchReadiness, enforceOrWarnReadiness, fetchTaskTitleAndBodyByTaskId, type DispatchReadinessFinding } from './dispatch-readiness'
+import { resolveDispatchOutcome, type DispatchOutcomeContext } from '../outcome/kanban-resolution'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -61,6 +62,11 @@ export interface ColumnDispatchResult {
    *  判据（见 dispatch-readiness.ts 注释），默认 warn；
    *  HERMES_DISPATCH_READINESS_ENFORCE=1 时缺项在任何 step 派发前抛错。 */
   readiness: DispatchReadinessFinding[]
+  /** 结果合同解析门（批一 Task 10，spec §3.3.2）：taskId 反查 outcome——终态合同
+   *  （cancelled/settled）在任何 step 派发前抛 OutcomeDispatchError（REST 422
+   *  outcome_not_active）；活跃合同生成最小快照（关键源失败 422
+   *  outcome_context_unavailable）并幂等补绑定；无合同任务无此字段（原行为）。 */
+  outcome?: DispatchOutcomeContext
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -214,6 +220,13 @@ export async function dispatchColumnTransition(
   // body 供五问准入的「结果可验证」判据；查不到/无 taskId 保持 null，回落现状。
   const taskSnapshot = params.taskId ? await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null) : null
   const taskTitle = taskSnapshot?.title ?? null
+  // 结果合同解析门（批一 Task 10，spec §3.3.2）：任一 step 派发前按 taskId 反查
+  // outcome——终态合同拒派（OutcomeDispatchError→REST 422 outcome_not_active）、
+  // 活跃合同生成最小快照（关键源失败 422 outcome_context_unavailable）并幂等补
+  // 绑定；无合同 null 原行为（readiness 接线同款：门求值在前、语义在
+  // kanban-resolution 单一事实源）。守卫经 findByRootTask 兜底，「合同激活后未
+  // 绑定」窗口不失明。
+  const outcome = params.taskId ? resolveDispatchOutcome(params.taskId) : null
   const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // AI 五问准入（批二）：在任一 step 派发前求值；默认 warn，enforce 抛错。
@@ -321,7 +334,7 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness, ...(outcome ? { outcome } : {}) }
 }
 
 

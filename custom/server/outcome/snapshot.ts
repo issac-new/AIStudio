@@ -107,6 +107,11 @@ export const DECISION_MATRIX_VERSION = `vec-${createHash('sha256')
   .digest('hex')
   .slice(0, 16)}`
 
+/** 批一政策版本标识缺省（控制器注入面与派发门共用单一事实源）：无政策存储，取
+ *  矩阵内容摘要合成固定标识；接政策正身后由控制器注入面替换（Task 10 收敛，
+ *  原 outcome-controller 内联同值字面量改引此处）。 */
+export const DEFAULT_DECISION_POLICY_VERSION = `outcome-policy-batch1/${DECISION_MATRIX_VERSION}`
+
 /**
  * URL userinfo 密码形态脱敏（物化前最小真防线）：`scheme://user:pass@…` → `scheme://user:***@…`，
  * 空 user 的 `scheme://:pass@…`（sourceRef 常见形态）同脱为 `scheme://:***@…`；

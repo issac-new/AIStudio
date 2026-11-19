@@ -64,7 +64,12 @@ router.post('/dispatch', async (ctx) => {
       workspacePath,
       ...(typeof taskId === 'string' && taskId ? { taskId } : {}),
     })
-    ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes, delegation: result.delegation, readiness: result.readiness }
+    ctx.body = {
+      ok: true, triggers: result.triggers.length, outcomes: result.outcomes,
+      delegation: result.delegation, readiness: result.readiness,
+      // 结果合同三元组（批一 Task 10）：无合同任务无此键（原响应形状不变）。
+      ...(result.outcome ? { outcome: result.outcome } : {}),
+    }
   } catch (err) {
     // 错误分类透传（P-D(c)）：配置/校验错误≠引擎不可达≠未预期错误，不一律谎报。
     const detail = err instanceof Error ? err.message : String(err)
@@ -78,6 +83,17 @@ router.post('/dispatch', async (ctx) => {
     // AI 五问准入拦截（批二）：enforce 档缺项=422 语义（前置条件不满足，非配置错误）。
     if ((err as { name?: string } | null)?.name === 'DispatchReadinessError') {
       fail(ctx, 422, detail, { code: 'dispatch_readiness_failed' })
+      return
+    }
+    // 结果合同解析门拦截（批一 Task 10，readiness 422 先例同通道）：终态合同
+    // outcome_not_active／快照关键源 outcome_context_unavailable——同为前置条件
+    // 不满足语义；problems 随信封透出（关键源缺口给人读）。
+    const outcomeErr = err as { name?: string; code?: string; problems?: string[] }
+    if (outcomeErr?.name === 'OutcomeDispatchError') {
+      fail(ctx, 422, detail, {
+        code: outcomeErr.code ?? 'outcome_not_active',
+        ...(Array.isArray(outcomeErr.problems) && outcomeErr.problems.length ? { problems: outcomeErr.problems } : {}),
+      })
       return
     }
     // SLO 预算耗尽（4A 治理层 ③）：enforce 模式的硬冻结，409 冲突语义 + 记档原因。

@@ -38,7 +38,7 @@ import { readdirSync } from 'fs'
 import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
-import { activePersonIds, listPeople } from '../agentidentity/people'
+import { activePersonIds } from '../agentidentity/people'
 import {
   appendEvent,
   appendMeasurement,
@@ -52,8 +52,9 @@ import {
   updateContract,
 } from './outcome-store'
 import { applyReopen, transitionGuards } from './state-machine'
-import { buildMinimalSnapshot, DECISION_MATRIX_VERSION } from './snapshot'
-import type { SnapshotPersonRow, SnapshotTaskSummary } from './snapshot'
+import { buildMinimalSnapshot, DEFAULT_DECISION_POLICY_VERSION } from './snapshot'
+import type { SnapshotTaskSummary } from './snapshot'
+import { rootTaskSummary, snapshotPeopleRows, tasksTerminalOf, verifyRootTask } from './kanban-resolution'
 import { suggestVerdict, validateSettlementInput } from './settlement'
 import { OUTCOME_STATUSES } from './types'
 import type { OutcomeContract, OutcomeMeasurement, OutcomeStatus } from './types'
@@ -133,11 +134,8 @@ function persistContract(next: OutcomeContract): boolean {
   }
 }
 
-/** 身份册快照行（snapshot resolve.people 契约）：裁掉 emails 等非快照面。 */
-function snapshotPeopleRows(ids: string[]): SnapshotPersonRow[] {
-  const want = new Set(ids)
-  return listPeople().filter((p) => want.has(p.id)).map((p) => ({ id: p.id, name: p.name, active: p.active }))
-}
+/** 身份册快照行已收敛至 kanban-resolution.snapshotPeopleRows（Task 10：控制器与
+ *  派发门同一身份投影单一事实源）。 */
 
 // ---------- reopen 可调用面（不挂路由；简报无 reopen 端点，Task 10 外部触发） ----------
 
@@ -625,7 +623,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     }
     const built = buildMinimalSnapshot({
       contract,
-      decisionPolicyVersion: opts.decisionPolicyVersion ?? `outcome-policy-batch1/${DECISION_MATRIX_VERSION}`,
+      decisionPolicyVersion: opts.decisionPolicyVersion ?? DEFAULT_DECISION_POLICY_VERSION,
       resolve: {
         task: () => ({ ok: true, task: taskSummary }),
         people: (ids: string[]) => ({ ok: true, people: snapshotPeopleRows(ids) }),
@@ -680,6 +678,11 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   return router
 }
 
-/** 默认路由实例：宿主挂载补丁（Task 8，patches/804）直接 import；
- *  注入面（tasksTerminalOf 等）待 Task 10 接真实现时切换为工厂调用。 */
-export const outcomeRoutes: Router = createOutcomeRoutes()
+/** 默认路由实例：宿主挂载补丁（Task 8，patches/804）直接 import（实例名不变，补丁
+ *  无需随动）。Task 10 起注入真实现——observing 终态守卫/根任务摘要/归属证明均走
+ *  kanban-resolution 看板库只读正身（批一 fail-closed 桩退役）。 */
+export const outcomeRoutes: Router = createOutcomeRoutes({
+  tasksTerminalOf,
+  taskSummaryOf: rootTaskSummary,
+  verifyRootTask,
+})
