@@ -1,0 +1,81 @@
+version: 1
+source_of_truth: team/shared/acp-harness-catalog.yaml
+updated: '2026-11-19'
+# 声明式 ACP Harness 目录（SoduWork 调度智能吸收，2026-11-19）。
+#
+# 作用：把「怎么启动一个 ACP harness、怎么钉模型、cwd 参数叫什么」从 acp-client
+# 的 Python 分支抽到一份受版本控制的目录。新增标准 harness 只需加一条 providers
+# 项，不再改 21 份插件副本与 patch 源。
+#
+# 边界：
+# - 本目录只描述启动规格；「允许哪些后端」仍以 config/execution-contract.json 为准。
+#   registry_id 仅用于与契约对账，不构成准入。
+# - 未命中目录的 provider 回落 acp-client 内置四分支（向后兼容）。
+# - 部署位：~/.hermes/shared/acp-harness-catalog.yaml；插件解析序
+#   HERMES_ACP_CATALOG > ~/.hermes/shared/... > 插件目录同名文件。
+#
+# 字段：
+#   launch.strategy: binary | binary_or_npx | npx | command
+#   launch.candidates: binary 候选（绝对路径/~/PATH 名）
+#   launch.package: npx 包名
+#   launch.args: 启动参数（provider 配置可覆盖）
+#   launch.cwdArgs: 追加的 cwd 参数，`{cwd}` 会被替换为会话工作区
+#   model.envKeys: 模型环境变量解析序（空列表=不读环境变量）
+providers:
+  opencode:
+    displayName: OpenCode
+    status: legacy
+    registry_id: opencode
+    launch:
+      strategy: binary
+      candidates:
+        - '~/.opencode/bin/opencode'
+      args:
+        - acp
+      cwdArgs:
+        - '--cwd'
+        - '{cwd}'
+    model:
+      envKeys: []
+
+  codex:
+    displayName: Codex
+    status: legacy
+    registry_id: codex
+    launch:
+      strategy: npx
+      package: '@zed-industries/codex-acp'
+      args:
+        - '-c'
+        - 'sandbox_mode="danger-full-access"'
+        - '-c'
+        - 'approval_policy="never"'
+    model:
+      envKeys: []
+
+  claude:
+    displayName: Claude Agent
+    status: legacy
+    registry_id: claude-code
+    launch:
+      strategy: binary_or_npx
+      candidates: []
+      package: '@agentclientprotocol/claude-agent-acp'
+      args: []
+    model:
+      envKeys: []
+
+  zcode:
+    displayName: ZCode Agent
+    status: active
+    registry_id: zcode
+    launch:
+      strategy: binary_or_npx
+      candidates:
+        - zcode-acp-server
+        - zcode-acp
+      package: zcode-acp-server
+      args: []
+    model:
+      envKeys:
+        - ZCODE_ACP_MODEL

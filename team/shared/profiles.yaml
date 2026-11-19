@@ -1084,6 +1084,7 @@ profiles:
       enabled: false
     env_extra:
       API_SERVER_ENABLED: 'false'
+      HERMES_ACP_PROVIDER: zcode
     environment_hint: ~/.hermes/profiles/worker-coder/SOUL.md
     kanban:
       default_assignee: worker-coder

@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import threading
@@ -97,6 +98,137 @@ def _load_config(reload: bool = False) -> Dict[str, Any]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  Declarative ACP harness catalog (2026-11-19 directory batch)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# 正本：team/shared/acp-harness-catalog.yaml（部署到 ~/.hermes/shared/）。
+# 解析序：HERMES_ACP_CATALOG > ~/.hermes/shared/acp-harness-catalog.yaml >
+#         插件目录同名文件 > 代码内置四分支（向后兼容）。
+# 目录只描述「怎么启动/怎么钉模型」；准入/退役仍以 config/execution-contract.json
+# 为准（registry_id 字段仅作对账引用）。
+_CATALOG_FILE = "acp-harness-catalog.yaml"
+_cached_catalog: Optional[Dict[str, Any]] = None
+
+
+def _catalog_paths() -> List[str]:
+    out: List[str] = []
+    env = os.environ.get("HERMES_ACP_CATALOG", "").strip()
+    if env:
+        out.append(os.path.expanduser(env))
+    out.append(os.path.expanduser("~/.hermes/shared/acp-harness-catalog.yaml"))
+    out.append(str(_plugin_dir() / _CATALOG_FILE))
+    return out
+
+
+def _load_harness_catalog(reload: bool = False) -> Dict[str, Any]:
+    global _cached_catalog
+    if _cached_catalog is not None and not reload:
+        return _cached_catalog
+    _cached_catalog = {}
+    if yaml is None:
+        return _cached_catalog
+    for path in _catalog_paths():
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                raw = yaml.safe_load(fh) or {}
+        except Exception:
+            logger.warning("ACP catalog unreadable: %s", path, exc_info=True)
+            continue
+        providers = raw.get("providers") if isinstance(raw, dict) else None
+        if isinstance(providers, dict):
+            _cached_catalog = {str(k): v for k, v in providers.items() if isinstance(v, dict)}
+            logger.info("ACP catalog loaded: %s (%d providers)", path, len(_cached_catalog))
+            return _cached_catalog
+    return _cached_catalog
+
+
+def _catalog_provider(name: str) -> Optional[Dict[str, Any]]:
+    entry = _load_harness_catalog().get(name)
+    return entry if isinstance(entry, dict) else None
+
+
+def _catalog_names() -> List[str]:
+    return sorted(_load_harness_catalog().keys())
+
+
+def _find_npx(preferred: str = "npx") -> Optional[str]:
+    found = shutil.which(preferred)
+    if found:
+        return found
+    for candidate in [
+        "/home/linuxbrew/.linuxbrew/bin/npx",
+        "/usr/local/bin/npx",
+        os.path.expanduser("~/.nvm/current/bin/npx"),
+    ]:
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def _binary_available(candidate: Any) -> Optional[str]:
+    """候选可以是绝对/~/含路径，也可以是 PATH 名；返回可执行绝对路径或 None。"""
+    text = str(candidate or "").strip()
+    if not text:
+        return None
+    expanded = os.path.expanduser(text)
+    if "/" in expanded or expanded.startswith("~"):
+        return expanded if os.path.isfile(expanded) else None
+    return shutil.which(expanded)
+
+
+def _catalog_args(launch: Dict[str, Any], provider_cfg: Dict[str, Any]) -> List[str]:
+    args = provider_cfg.get("args")
+    if not isinstance(args, list):
+        args = launch.get("args") or []
+    return [str(a) for a in args]
+
+
+def _resolve_from_catalog(
+    name: str, entry: Dict[str, Any], provider_cfg: Dict[str, Any],
+) -> Tuple[List[str], str]:
+    """按目录项解析启动命令；strategy=binary|binary_or_npx|npx|command。"""
+    launch = entry.get("launch") or {}
+    display = str(entry.get("displayName") or name)
+    strategy = str(launch.get("strategy") or "binary")
+    args = _catalog_args(launch, provider_cfg)
+
+    if strategy in ("binary", "binary_or_npx"):
+        candidates: List[Any] = []
+        if provider_cfg.get("binary"):
+            candidates.append(provider_cfg["binary"])
+        candidates.extend(launch.get("candidates") or [])
+        for candidate in candidates:
+            binary = _binary_available(candidate)
+            if binary:
+                return [binary] + args, display
+        if strategy == "binary":
+            raise FileNotFoundError(
+                f"ACP provider '{name}' binary not found; candidates={candidates}. "
+                f"Set providers.{name}.binary in config.yaml or install the harness."
+            )
+
+    if strategy in ("npx", "binary_or_npx"):
+        npx = _find_npx(str(provider_cfg.get("npx") or "npx"))
+        package = provider_cfg.get("package") or launch.get("package")
+        if npx and package:
+            return [npx, str(package)] + args, display
+        raise FileNotFoundError(
+            f"ACP provider '{name}' requires npx/package (npx={npx!r}, package={package!r})."
+        )
+
+    if strategy == "command":
+        command = provider_cfg.get("command") or launch.get("command")
+        parts = shlex.split(command) if isinstance(command, str) else list(command or [])
+        if parts:
+            return [str(p) for p in parts] + args, display
+        raise FileNotFoundError(f"ACP provider '{name}' command is empty.")
+
+    raise ValueError(f"Unknown ACP catalog launch strategy: {strategy!r} (provider {name!r})")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  Provider definitions
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -108,6 +240,14 @@ def _resolve_provider(name: str) -> Tuple[List[str], str]:
     cfg = _load_config()
     providers_cfg = cfg.get("providers", {})
     provider_cfg = providers_cfg.get(name, {})
+    # 旧配置兼容：opencode 的根级 opencode_binary 等价于 providers.opencode.binary
+    if name == "opencode" and not provider_cfg.get("binary") and cfg.get("opencode_binary"):
+        provider_cfg = {**provider_cfg, "binary": cfg["opencode_binary"]}
+
+    # 声明式目录优先：命中即按目录启动；未命中回落下方内置四分支（兼容旧部署）。
+    catalog_entry = _catalog_provider(name)
+    if catalog_entry is not None:
+        return _resolve_from_catalog(name, catalog_entry, provider_cfg)
 
     if name == "opencode":
         binary = provider_cfg.get("binary", cfg.get("opencode_binary", "~/.opencode/bin/opencode"))
@@ -220,8 +360,9 @@ def _resolve_provider(name: str) -> Tuple[List[str], str]:
         )
 
     else:
+        available = sorted(set(_catalog_names()) | {"opencode", "codex", "claude", "zcode"})
         raise ValueError(
-            f"Unknown ACP provider: '{name}'. Available: opencode, codex, claude, zcode"
+            f"Unknown ACP provider: '{name}'. Available: {', '.join(available)}"
         )
 
 
@@ -284,9 +425,14 @@ class ACPClient:
         if self._alive:
             return {"already_started": True}
 
-        # Build launch command — opencode needs --cwd, codex uses config
+        # Build launch command — cwd 参数由目录 cwdArgs 声明；旧部署回落 opencode 特判
         launch_cmd = list(self.cmd)
-        if self.provider_name == "opencode":
+        entry = _catalog_provider(self.provider_name) or {}
+        launch = entry.get("launch") if isinstance(entry, dict) else None
+        cwd_args = launch.get("cwdArgs") if isinstance(launch, dict) else None
+        if isinstance(cwd_args, list) and cwd_args:
+            launch_cmd.extend([str(a).replace("{cwd}", self.default_cwd) for a in cwd_args])
+        elif self.provider_name == "opencode":
             launch_cmd.extend(["--cwd", self.default_cwd])
 
         logger.info("Starting ACP subprocess: %s", " ".join(launch_cmd))
@@ -919,9 +1065,15 @@ def _resolve_model(provider: str, args: Dict[str, Any], cfg: dict) -> Optional[s
     explicit = args.get("model")
     if isinstance(explicit, str) and explicit.strip():
         return explicit.strip()
-    env_model = os.environ.get("ZCODE_ACP_MODEL", "").strip()
-    if env_model:
-        return env_model
+    # 目录可声明模型环境变量名（model.envKeys）；旧部署回落 ZCODE_ACP_MODEL。
+    entry = _catalog_provider(provider) or {}
+    model_cfg = entry.get("model") if isinstance(entry, dict) else None
+    env_keys = model_cfg.get("envKeys") if isinstance(model_cfg, dict) else None
+    keys = [str(k) for k in env_keys if str(k).strip()] if isinstance(env_keys, list) else ["ZCODE_ACP_MODEL"]
+    for key in keys:
+        env_model = os.environ.get(key, "").strip()
+        if env_model:
+            return env_model
     pcfg = (cfg.get("providers") or {}).get(provider) or {}
     if isinstance(pcfg, dict):
         if isinstance(pcfg.get("model"), str) and pcfg["model"].strip():
@@ -1258,10 +1410,15 @@ def handle_acp_sessions(args: Dict[str, Any], **kwargs) -> str:
 #  Tool schemas
 # ═══════════════════════════════════════════════════════════════════════════
 
-_PROVIDER_DESC = (
-    "ACP provider to use: 'opencode', 'codex', or 'claude'. "
-    "Defaults to config default_provider."
-)
+def _provider_desc() -> str:
+    names = sorted(set(_catalog_names()) | {"opencode", "codex", "claude", "zcode"})
+    return (
+        "ACP provider to use: " + ", ".join(f"'{n}'" for n in names) + ". "
+        "Defaults to config default_provider."
+    )
+
+
+_PROVIDER_DESC = _provider_desc()
 
 ACP_AGENTS_SCHEMA = {
     "name": "acp_agents",
