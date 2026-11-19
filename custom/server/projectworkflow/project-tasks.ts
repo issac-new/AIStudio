@@ -13,6 +13,7 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { kanbanRootOf } from './state-store'
+import { allBoardDbsOf, boardSlugOf } from '../services/hermes/kanban-layout'
 
 type ReadOnlyDb = {
   prepare(sql: string): { all(...params: unknown[]): unknown[] }
@@ -37,40 +38,17 @@ export interface ProjectTaskStats {
   total: number
 }
 
-/** 板名推导（kanban-bridge boardNameOf 同款）：路径含 boards/<slug> 段才认板名，
- *  否则 default——临时目录里的裸 kanban.db 是测试库，不是新板。 */
+/** 板名推导：收口 kanban-layout 单一事实源（批二；与 orchestrator/kanban-bridge
+ *  原逐字双胞胎同归一处）——路径含 boards/<slug> 段才认板名，否则 default。 */
 export function boardNameOf(dbPath: string): string {
-  const parts = dbPath.replace(/\\/g, '/').split('/').filter(Boolean)
-  const file = parts[parts.length - 1] ?? 'kanban.db'
-  if (file === 'kanban.db') {
-    const boardsIdx = parts.lastIndexOf('boards')
-    const slug = boardsIdx >= 0 ? parts[boardsIdx + 1] : ''
-    if (slug && slug !== 'kanban.db') return slug
-    return 'default'
-  }
-  return file.replace(/\.db$/, '')
+  return boardSlugOf(dbPath)
 }
 
-/** 全部板库清单：default（两布局探测）+ kanban/boards/<slug> 全枚举。
+/** 全部板库清单：default（两布局探测）+ 双布局分板全枚举（`_` 前缀跳过口径保留）。
  *  boards 目录不存在 → 仅返回 default 可见集（目录缺失不是错误）。 */
 export function listBoardDbs(root: string = kanbanRootOf()): BoardDb[] {
-  const out: BoardDb[] = []
-  // default：优先 <root>/kanban.db，退 <root>/kanban/kanban.db（boardDbPath 同序）。
-  for (const p of [join(root, 'kanban.db'), join(root, 'kanban', 'kanban.db')]) {
-    if (existsSync(p)) {
-      out.push({ board: 'default', path: p })
-      break
-    }
-  }
-  const boardsDir = join(root, 'kanban', 'boards')
-  try {
-    for (const d of readdirSync(boardsDir, { withFileTypes: true })) {
-      if (!d.isDirectory() || d.name.startsWith('_')) continue // 收敛锚点：collectors.ts boards 枚举
-      const p = join(boardsDir, d.name, 'kanban.db')
-      if (existsSync(p)) out.push({ board: boardNameOf(p), path: p })
-    }
-  } catch { /* boards 目录不存在/不可读：只剩 default 可见集 */ }
-  return out
+  return allBoardDbsOf(root, { skipUnderscored: true })
+    .map(e => ({ board: e.slug === 'default' ? 'default' : boardSlugOf(e.dbPath), path: e.dbPath }))
 }
 
 /** 单板只读查询（fail-soft：库缺失/读失败/表缺席 → null，不抛）。 */

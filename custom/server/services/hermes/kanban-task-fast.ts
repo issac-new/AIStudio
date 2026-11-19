@@ -29,6 +29,7 @@ import { homedir } from 'node:os'
 import { createRequire } from 'node:module'
 import { hermesHome } from '../../lib/paths'
 import { validateResultEnvelope, type ResultEnvelope } from '../../result-contract/result-contract'
+import { boardDbPathOf } from './kanban-layout'
 
 // 双运行时取 node:sqlite：服务端 ts-node（CJS）与 vitest（ESM）都走 createRequire
 // 解内置模块（路径实参对内置模块无意义，任意占位即可）；解不出=快道关闭。
@@ -106,16 +107,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** 板库路径解析（与 kanban-overview fast 布局兼容）：分板库优先，default 板
- *  兼容旧根级布局（<home>/kanban/kanban.db）。返回存在的路径或 null。 */export function boardDbPath(board: string, home = hermesHome()): string | null {
-  const slug = board.trim()
-  if (!slug) return null
-  // W4 走查实锤修（活体 404 抓出）：default 板主库在 <home>/kanban.db 根级
-  //（与 kanban-overview 快道同三态口径），旧布局两态兜底。
-  const candidates = slug === 'default'
-    ? [join(home, 'kanban.db'), join(home, 'kanban', 'boards', 'default', 'kanban.db'), join(home, 'kanban', 'kanban.db')]
-    : [join(home, 'kanban', 'boards', slug, 'kanban.db'), join(home, 'boards', slug, 'kanban.db')]
-  return candidates.find(p => existsSync(p)) ?? null
+/** 板库路径解析：委托布局单一事实源（批二收口；default 三态/命名板双布局语义不变）。 */
+export function boardDbPath(board: string, home = hermesHome()): string | null {
+  return boardDbPathOf(board.trim(), home)
 }
 
 /**

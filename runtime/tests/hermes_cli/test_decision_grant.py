@@ -39,6 +39,21 @@ def test_shared_revision_vector_and_body_approved_is_not_a_grant():
     )
 
 
+def test_unmarked_tier_defaults_to_t2_with_env_escape():
+    """未标层缺省=T2（批二，对齐 completion-contract.md 立法）；env 逃生＋非法回落。"""
+    plain = {"body": "普通任务（未标层）"}
+    assert grant_tools.decision_tier_for_task(plain) == "T2"
+    with pytest.MonkeyPatch.context() as monkey:
+        monkey.setenv("KANBAN_UNMARKED_TIER", "T1")
+        assert grant_tools.decision_tier_for_task(plain) == "T1"
+        monkey.setenv("KANBAN_UNMARKED_TIER", "T9")
+        assert grant_tools.decision_tier_for_task(plain) == "T2"
+        monkey.delenv("KANBAN_UNMARKED_TIER", raising=False)
+        assert grant_tools.unmarked_decision_tier() == "T2"
+    # 非 str body（历史 T1 硬编码分支）同样走 T2 缺省。
+    assert grant_tools.decision_tier_for_task({"body": None}) == "T2"
+
+
 @pytest.fixture
 def kanban_home(tmp_path, monkeypatch):
     home = tmp_path / ".hermes"

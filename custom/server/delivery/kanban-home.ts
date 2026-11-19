@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { observerSimRootOrNull } from '../simcenter/observer-root'
+import { isKanbanHome } from '../services/hermes/kanban-layout'
 
 /** 看板数据根候选：显式 env 优先（测试/日常侧），否则 SIM 根 hermes/（推演侧）。 */
 export function kanbanHomeCandidates(env: NodeJS.ProcessEnv, simRoot: string | null): string[] {
@@ -18,12 +19,8 @@ export function resolveKanbanHome(env: NodeJS.ProcessEnv = process.env): { home:
   const simRoot = observerSimRootOrNull()
   for (const p of kanbanHomeCandidates(env, simRoot)) {
     try {
-      if (
-        existsSync(resolve(p, 'kanban', 'boards')) ||
-        existsSync(resolve(p, 'boards')) ||
-        existsSync(resolve(p, 'kanban.db')) ||
-        existsSync(resolve(p, 'kanban', 'kanban.db'))
-      ) {
+      // 四探测收一（批二）：布局判定委托 kanban-layout（等价序：主库两态∨分板目录任一）。
+      if (isKanbanHome(p)) {
         return { home: p, tried: [] }
       }
     } catch {

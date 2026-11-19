@@ -65,11 +65,22 @@ export function normalizeDecisionBoard(board: string): string {
   return board.trim().toLowerCase() || 'default'
 }
 
+/**
+ * 未标层缺省（批二，2026-11-19）：按团队立法 completion-contract.md「卡未标层时
+ * 按 T2 执行（从严默认，防漏标降级）」。KANBAN_UNMARKED_TIER 应急逃生（如 =T1
+ * 恢复旧行为）；非法值回落 T2（fail-closed 从严）。与 runtime/tools/kanban_tools.py
+ * 的 unmarked_decision_tier 同边界同 env。
+ */
+export function unmarkedDecisionTier(): DecisionTier {
+  const v = (process.env.KANBAN_UNMARKED_TIER ?? '').trim().toUpperCase()
+  return (v === 'T1' || v === 'T2' || v === 'T3' ? v : 'T2') as DecisionTier
+}
+
 /** 与决策分层注册表一致：只认 body 首行 routed 标记或紧随其后一行的 tier=T1/T2/T3。 */
 export function decisionTierForTask(task: Pick<DecisionTask, 'body'>): DecisionTier {
   const marker = (task.body ?? '').split('\n').slice(0, 2).join('\n')
   const hit = /(?:^|[\s:])tier=(T1|T2|T3)(?=\s|$)/im.exec(marker)
-  return (hit?.[1]?.toUpperCase() ?? 'T1') as DecisionTier
+  return (hit?.[1]?.toUpperCase() ?? unmarkedDecisionTier()) as DecisionTier
 }
 
 function requiredText(value: unknown, field: string): string {

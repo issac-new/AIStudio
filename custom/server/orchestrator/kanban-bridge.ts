@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { hermesHome } from '../lib/paths'
+import { boardSlugOf, mainDbCandidateOf } from '../services/hermes/kanban-layout'
 import { ingestTrigger, type IngestResult } from './ingest'
 import { kvGet, kvSet } from './store'
 import type { TriggerInput } from './types'
@@ -43,22 +44,14 @@ export function kanbanDbPaths(env: NodeJS.ProcessEnv = process.env): string[] {
   if (explicit) return explicit.split(',').map(expandHome).filter(Boolean)
   const pinned = (env.HERMES_KANBAN_DB ?? '').trim()
   if (pinned) return [expandHome(pinned)]
-  return [resolve(hermesHome(env), 'kanban.db')]
+  // default 板主库候选（批二收口：即使尚未落库也返回路径，bridgeOnce 侧 fail-soft）。
+  return [mainDbCandidateOf(hermesHome(env))]
 }
 
 function boardNameOf(dbPath: string): string {
-  // 上游布局（kanban_db.py:620-625）：default 板 DB 在 <root>/kanban.db；
-  // 其它板在 <root>/kanban/boards/<slug>/kanban.db。只有命中 boards 段才认板名，
-  // 否则一律 default——临时目录里的 kanban.db 是测试库，不是新板。
-  const parts = dbPath.replace(/\\/g, '/').split('/').filter(Boolean)
-  const file = parts[parts.length - 1] ?? 'kanban.db'
-  if (file === 'kanban.db') {
-    const boardsIdx = parts.lastIndexOf('boards')
-    const slug = boardsIdx >= 0 ? parts[boardsIdx + 1] : ''
-    if (slug && slug !== 'kanban.db') return slug
-    return 'default'
-  }
-  return file.replace(/\.db$/, '')
+  // 板名推导收口（批二）：与 projectworkflow/project-tasks 原逐字双胞胎同归
+  // kanban-layout 单一事实源——boards/<slug> 段才认板名，裸库一律 default。
+  return boardSlugOf(dbPath)
 }
 
 function cursorKey(dbPath: string): string {

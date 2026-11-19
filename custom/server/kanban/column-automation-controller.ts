@@ -15,6 +15,7 @@ import { loadColumnAutomations, matchColumnTransition } from './column-automatio
 import { dispatchColumnTransition, ColumnDispatchConfigError } from './column-dispatch'
 import { SPECIALIST_PRESETS } from './specialist-presets'
 import { getMentionDispatch, workspaceAccessDenied } from '../zcode/engine-controller'
+import { fail } from '../lib/http'
 
 const router = new Router({ prefix: '/api/column-automation' })
 
@@ -63,7 +64,7 @@ router.post('/dispatch', async (ctx) => {
       workspacePath,
       ...(typeof taskId === 'string' && taskId ? { taskId } : {}),
     })
-    ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes, delegation: result.delegation }
+    ctx.body = { ok: true, triggers: result.triggers.length, outcomes: result.outcomes, delegation: result.delegation, readiness: result.readiness }
   } catch (err) {
     // 错误分类透传（P-D(c)）：配置/校验错误≠引擎不可达≠未预期错误，不一律谎报。
     const detail = err instanceof Error ? err.message : String(err)
@@ -72,6 +73,11 @@ router.post('/dispatch', async (ctx) => {
     if (isConfig) {
       ctx.status = 400
       ctx.body = { ok: false, reason: 'target_unavailable', detail }
+      return
+    }
+    // AI 五问准入拦截（批二）：enforce 档缺项=422 语义（前置条件不满足，非配置错误）。
+    if ((err as { name?: string } | null)?.name === 'DispatchReadinessError') {
+      fail(ctx, 422, detail, { code: 'dispatch_readiness_failed' })
       return
     }
     // SLO 预算耗尽（4A 治理层 ③）：enforce 模式的硬冻结，409 冲突语义 + 记档原因。

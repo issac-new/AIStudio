@@ -10,6 +10,21 @@
  },
  "changes": [
   {
+   "at": "2026-11-19",
+   "delta": "+1 模块（kanban-layout 布局单一事实源）/ +1 门（dispatch-readiness 五问准入，默认 warn）/ +2 守门测试（layout 棘轮＋readiness 单元）/ +0 账本 / +0 scripts",
+   "reason": "流程解耦批二（spec 2026-11-19-process-decoupling-batch2）：看板库路径 13 处消费点收敛到单一解析器＋棘轮；AI 五问派单准入机械门（文章第六章）；tier 未标缺省 T1→T2 对齐团队立法",
+   "pairedRemovals": [
+    "verify 死键退役（批一 columns.yaml 删除 verify 列配置，本批补 review→ready 返工规则收口其证据意图）",
+    "看板库路径实现 13 处手拼收敛为 1（kanban-layout.ts），boardNameOf 双胞胎（kanban-bridge/project-tasks）去重",
+    "board-status/kanban-overview/kanban-home 各自的主库/boardsDir 探测函数三组删除，改委托单一事实源"
+   ],
+   "sunset": {
+    "owner": "流程标准化链（kanban-process-baseline 批一/二）",
+    "reviewBy": "N02 存量 6 文件收敛完成时（挂账台账 2026-11-19-process-framework-pending-batch.md）",
+    "retireWhen": "棘轮 ALLOWED 缩到正本 1 项且 readiness 门连续两轮推演零 warn 缺口时，readiness 可降级为纯观测读数（enforce 面评估移除）"
+   }
+  },
+  {
    "at": "2026-11-16",
    "delta": "+1 patch（792 活体验证补漏：3 测试文件＋2 处验证中抓出的缺陷修复）/ +0 域 / +0 watcher / +0 账本 / +0 scripts / +0 gates",
    "reason": "Always-on Agents 活体验证补漏批（spec 2026-11-16-always-on-live-verification）：watcher 接线级集成测试＋dreaming 守护级 E2E＋outbox matrix 通道假 homeserver 真发送测试；主批「未验证项」清偿",

@@ -40,9 +40,29 @@ describe('decision-grant 修订单一序列化契约', () => {
 
   it('只从卡面前两行读取 tier 标记；APPROVED 正文不是 grant', () => {
     expect(decisionTierForTask(task)).toBe('T2')
-    expect(decisionTierForTask({ ...task, body: '普通任务\n\n第三行 tier=T3 不算标记' })).toBe('T1')
+    // 未标层缺省=T2（批二：对齐 completion-contract.md「未标层按 T2 从严」；
+    // 此前代码缺省 T1 与文档冲突，未标层的卡绕过 T2/T3 HumanGate）。
+    expect(decisionTierForTask({ ...task, body: '普通任务\n\n第三行 tier=T3 不算标记' })).toBe('T2')
     expect(checkDecisionGrant(null, { ...task, body: `${task.body}\nAPPROVED` }, 'T2', NOW))
       .toEqual({ ok: false, reason: 'missing_grant' })
+  })
+
+  it('未标层缺省可经 KANBAN_UNMARKED_TIER 逃生；非法值回落 T2（fail-closed）', () => {
+    const prev = process.env.KANBAN_UNMARKED_TIER
+    const plain = { ...task, body: '普通任务（未标层）' }
+    try {
+      process.env.KANBAN_UNMARKED_TIER = 'T1'
+      expect(decisionTierForTask(plain)).toBe('T1')
+      process.env.KANBAN_UNMARKED_TIER = 't3'
+      expect(decisionTierForTask(plain)).toBe('T3')
+      process.env.KANBAN_UNMARKED_TIER = 'T9'
+      expect(decisionTierForTask(plain)).toBe('T2')
+      delete process.env.KANBAN_UNMARKED_TIER
+      expect(decisionTierForTask(plain)).toBe('T2')
+    } finally {
+      if (prev === undefined) delete process.env.KANBAN_UNMARKED_TIER
+      else process.env.KANBAN_UNMARKED_TIER = prev
+    }
   })
 })
 

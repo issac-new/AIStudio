@@ -1,0 +1,29 @@
+diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
+index a9a7448b9..141b6edaf 100644
+@@ -77,14 +77,23 @@
+     return board.strip().lower() or "default"
+ 
+ 
++def unmarked_decision_tier() -> str:
++    """未标层缺省（批二，2026-11-19）：按团队立法 completion-contract.md「卡未标层时
++    按 T2 执行（从严默认，防漏标降级）」。KANBAN_UNMARKED_TIER 应急逃生（如 =T1
++    恢复旧行为）；非法值回落 T2（fail-closed 从严）。与 decision-grant.ts 同边界同 env。"""
++    v = (os.environ.get("KANBAN_UNMARKED_TIER") or "").strip().upper()
++    return v if v in {"T1", "T2", "T3"} else "T2"
++
++
+ def decision_tier_for_task(task: Any) -> str:
+-    """与 TS 同边界：只认 body 前两行的 routed/tier 标记，不看 APPROVED 文本。"""
++    """与 TS 同边界：只认 body 前两行的 routed/tier 标记，不看 APPROVED 文本。
++    未标层缺省=unmarked_decision_tier()（T2，防漏标绕过 T2/T3 HumanGate）。"""
+     body = _task_value(task, "body") or ""
+     if not isinstance(body, str):
+-        return "T1"
++        return unmarked_decision_tier()
+     marker = "\n".join(body.split("\n")[:2])
+     hit = re.search(r"(?:^|[\s:])tier=(T1|T2|T3)(?=\s|$)", marker, re.IGNORECASE | re.MULTILINE)
+-    return hit.group(1).upper() if hit else "T1"
++    return hit.group(1).upper() if hit else unmarked_decision_tier()
+ 
+ 
+ def serialize_task_revision(task: Any) -> str:

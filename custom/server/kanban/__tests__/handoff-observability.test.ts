@@ -17,7 +17,7 @@ families:
     description: 观测面测试族
     rules:
       - rule_id: impl-to-review
-        from: in_progress
+        from: ready
         to: review
         instruction: 交接必须带改动文件清单与复现命令
         required_evidence: [changed_files, repro_command]
@@ -59,7 +59,7 @@ afterEach(() => {
 
 describe('selectHandoffRuleForDispatch 选择面', () => {
   it('命中：line＋familyId/ruleId/version＋理由齐备', () => {
-    const s = selectHandoffRuleForDispatch('in_progress', 'review')
+    const s = selectHandoffRuleForDispatch('ready', 'review')
     expect(s.line).toContain('hf-obs/impl-to-review')
     expect(s.familyId).toBe('hf-obs')
     expect(s.ruleId).toBe('impl-to-review')
@@ -71,12 +71,12 @@ describe('selectHandoffRuleForDispatch 选择面', () => {
     expect(selectHandoffRuleForDispatch('review', 'done').line).toBeNull()
     expect(selectHandoffRuleForDispatch('review', 'done').reason).toContain('NONE')
     process.env.HANDOFF_RULES_INJECT = '0'
-    const off = selectHandoffRuleForDispatch('in_progress', 'review')
+    const off = selectHandoffRuleForDispatch('ready', 'review')
     expect(off.line).toBeNull()
     expect(off.reason).toContain('开关关闭')
     delete process.env.HANDOFF_RULES_INJECT
     process.env.HANDOFF_RULES_PATH = join(home, 'missing.yaml')
-    const absent = selectHandoffRuleForDispatch('in_progress', 'review')
+    const absent = selectHandoffRuleForDispatch('ready', 'review')
     expect(absent.line).toBeNull()
     expect(absent.reason).toContain('缺席')
   })
@@ -87,7 +87,7 @@ describe('派发结果面与台账（column-dispatch 接线）', () => {
     const service = {
       dispatch: async () => [{ reason: 'queued', detail: 'ok', sessionId: 's1', commandId: 'c1' }],
     } as never
-    const r = await dispatchColumnTransition(service, { from: 'in_progress', to: 'review', workspacePath: '/tmp/w' })
+    const r = await dispatchColumnTransition(service, { from: 'ready', to: 'review', workspacePath: '/tmp/w' })
     expect(r.handoffRules).toHaveLength(1)
     expect(r.handoffRules[0]).toMatchObject({ column: 'review', familyId: 'hf-obs', ruleId: 'impl-to-review', version: 1 })
     const rows = readFileSync(process.env.GOVERNANCE_DISPATCH_LEDGER as string, 'utf8').trim().split('\n').map((l) => JSON.parse(l) as Record<string, unknown>)
@@ -107,7 +107,7 @@ describe('派发结果面与台账（column-dispatch 接线）', () => {
 })
 
 describe('A/B 简报差（成本校准）', () => {
-  const trigger = { column: 'review', matchedTiming: 'on_enter', autoAdvanceOnSuccess: true, steps: [], from: 'in_progress' } as unknown as ColumnTransitionTrigger
+  const trigger = { column: 'review', matchedTiming: 'on_enter', autoAdvanceOnSuccess: true, steps: [], from: 'ready' } as unknown as ColumnTransitionTrigger
   const steps: AutomationStep[] = [{ id: 'qa', provider: 'zcode', role: '评审' } as unknown as AutomationStep]
 
   it('注入与不注入的简报差恰为一行（交接契约行）', () => {
