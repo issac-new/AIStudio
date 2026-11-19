@@ -1,0 +1,21 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -243,6 +243,9 @@
+ // （/api/hermes/run-outcome）＋待发消息队列与派发（/api/hermes/outbox）。两者 fail-soft。
+ import { runOutcomeRouter } from '../custom/notify/run-outcome-controller'
+ import { outboxRouter } from '../custom/outbox/outbox-controller'
++// overlay[outcome]（AI 原生组织运行模型批一 Task 8 2026-11-19）：结果合同 REST——
++// /api/hermes/outcomes：合同 CRUD/状态迁移/测量/结算/上下文快照（OUTCOME_WORKBENCH 门控）。
++import { outcomeRoutes } from '../custom/outcome/outcome-controller'
+ // overlay[ask]: 结构化问卷契约（minimax ask_user，矩阵 §3.4 P1）
+ import { askRoutes } from '../custom/ask/ask-controller'
+ // overlay[escalation]: 权限升级协议（routa §七#7，矩阵 §3.6 P1）
+@@ -648,6 +651,7 @@
+   app.use(inboxRoutes.routes())                   // 注意力队列：三档/双轴/双收件人（P1 §3.5）
+   app.use(runOutcomeRouter.routes())              // Run 收口三态：outbox/silence/deferred 账本（Always-on P1，fail-soft）
+   app.use(outboxRouter.routes())                  // 发件箱：待发队列+派发（限流/合并/重试，Always-on P2，fail-soft）
++  app.use(outcomeRoutes.routes())                  // 结果合同：CRUD/迁移/测量/结算/快照（运行模型批一，OUTCOME_WORKBENCH 门）
+   app.use(askRoutes.routes())                     // 结构化问卷：1-4 步契约/一次定音（P1 §3.4）
+   app.use(escalationRoutes.routes())              // 权限升级：urgency 三档/批准即改沙箱（P1 §3.6）
+   app.use(mcpConfigRoutes.routes())              // MCP 配置：scope 三选一/needs-auth 闭环（P1 §3.3）

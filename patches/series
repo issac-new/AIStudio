@@ -1331,3 +1331,5 @@
 802-text-muted-wcag-aa.patch
 # 803-agent-unmarked-tier-default（流程解耦批二，spec 2026-11-19-process-decoupling-batch2：未标层 tier 缺省 T1→T2 对齐 completion-contract.md 立法；KANBAN_UNMARKED_TIER 逃生、非法回落 T2；与 decision-grant.ts 同边界同 env）
 803-agent-unmarked-tier-default.patch
+# 804-server-outcome-routes（AI 原生组织运行模型批一 Task 8，spec 2026-11-19-ai-native-operating-model-design：bootstrap/routes.ts 挂载 /api/hermes/outcomes 结果合同 REST——import 默认实例 outcomeRoutes＋app.use，OUTCOME_WORKBENCH 门控；接线范式照 773）
+804-server-outcome-routes.patch
