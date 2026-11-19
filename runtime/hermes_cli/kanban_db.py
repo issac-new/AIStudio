@@ -1141,7 +1141,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- 等级：NULL/standard=现状；independent=需 review handoff；strict:pr=
     -- PR acceptance 必过。
     version              INTEGER NOT NULL DEFAULT 0,
-    verification         TEXT
+    verification         TEXT,
+    -- AI-native operating model batch 1 (2026-11-19): outcome contract link
+    -- (spec 2026-11-19-ai-native-operating-model-design). Written by the
+    -- Studio-side bindOutcomeToTask when a contract is activated, and
+    -- inherited by decomposed children (kanban_db_graph). Server-side
+    -- updates allow only NULL->value or same-value; re-binding to a
+    -- different outcome requires an explicit migration event (not in
+    -- batch 1 — writers must refuse).
+    outcome_id           TEXT
 );
 
 CREATE TABLE IF NOT EXISTS task_links (

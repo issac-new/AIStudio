@@ -1,0 +1,74 @@
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -1141,7 +1141,15 @@
+     -- 等级：NULL/standard=现状；independent=需 review handoff；strict:pr=
+     -- PR acceptance 必过。
+     version              INTEGER NOT NULL DEFAULT 0,
+-    verification         TEXT
++    verification         TEXT,
++    -- AI-native operating model batch 1 (2026-11-19): outcome contract link
++    -- (spec 2026-11-19-ai-native-operating-model-design). Written by the
++    -- Studio-side bindOutcomeToTask when a contract is activated, and
++    -- inherited by decomposed children (kanban_db_graph). Server-side
++    -- updates allow only NULL->value or same-value; re-binding to a
++    -- different outcome requires an explicit migration event (not in
++    -- batch 1 — writers must refuse).
++    outcome_id           TEXT
+ );
+ 
+ CREATE TABLE IF NOT EXISTS task_links (
+diff --git a/hermes_cli/kanban_db_connect.py b/hermes_cli/kanban_db_connect.py
+--- a/hermes_cli/kanban_db_connect.py
++++ b/hermes_cli/kanban_db_connect.py
+@@ -916,6 +916,11 @@
+     # 卡级完成验证等级（NULL=standard；independent；strict:pr）。
+     ("version", "version INTEGER NOT NULL DEFAULT 0"),
+     ("verification", "verification TEXT"),
++    # AI-native operating model batch 1 (2026-11-19): outcome contract link
++    # (spec 2026-11-19-ai-native-operating-model-design). Writers allow only
++    # NULL->value / same-value (Studio-side kanban-bind.ts refuses re-bind);
++    # decomposed children inherit it at insert time (kanban_db_graph).
++    ("outcome_id", "outcome_id TEXT"),
+ )
+ 
+ _NOTIFY_SUB_COLUMNS = (
+diff --git a/hermes_cli/kanban_db_graph.py b/hermes_cli/kanban_db_graph.py
+--- a/hermes_cli/kanban_db_graph.py
++++ b/hermes_cli/kanban_db_graph.py
+@@ -115,7 +115,7 @@
+     now = int(time.time())
+     with write_txn(conn):
+         root_row = conn.execute(
+-            "SELECT id, status, tenant, workspace_kind, workspace_path "
++            "SELECT id, status, tenant, workspace_kind, workspace_path, outcome_id "
+             "FROM tasks WHERE id = ?", (task_id,),
+         ).fetchone()
+         if root_row is None or root_row["status"] != "triage":
+@@ -173,6 +173,10 @@
+     """Insert one decomposed child as ``todo`` (linked under the root later so
+     the dispatcher only ever sees a coherent graph); returns its id.
+ 
++    Outcome: the child inherits the root's ``outcome_id`` at insert time
++    (same creation transaction — a decomposed subtree never splits across
++    outcomes; re-binding is refused by every writer, batch 1).
++
+     Workspace: per-child override wins, else inherit the root's kind. Path
+     inherits only when kinds match (a 'dir' child must not point at the
+     root's worktree) and NEVER for worktrees — siblings dispatch concurrently
+@@ -199,12 +203,13 @@
+     conn.execute(
+         "INSERT INTO tasks "
+         "(id, title, body, assignee, status, workspace_kind, "
+-        " workspace_path, tenant, created_at, created_by) "
+-        "VALUES (?, ?, ?, ?, 'todo', ?, ?, ?, ?, ?)",
++        " workspace_path, tenant, created_at, created_by, outcome_id) "
++        "VALUES (?, ?, ?, ?, 'todo', ?, ?, ?, ?, ?, ?)",
+         (
+             new_id, child["title"].strip(), body if isinstance(body, str) else None,
+             _canonical_assignee(child.get("assignee")), child_ws_kind, child_ws_path,
+             root_row["tenant"], now, (author or "decomposer"),
++            root_row["outcome_id"],
+         ),
+     )
+     _append_event(

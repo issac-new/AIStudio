@@ -916,6 +916,11 @@ _LATER_TASK_COLUMNS = (
     # 卡级完成验证等级（NULL=standard；independent；strict:pr）。
     ("version", "version INTEGER NOT NULL DEFAULT 0"),
     ("verification", "verification TEXT"),
+    # AI-native operating model batch 1 (2026-11-19): outcome contract link
+    # (spec 2026-11-19-ai-native-operating-model-design). Writers allow only
+    # NULL->value / same-value (Studio-side kanban-bind.ts refuses re-bind);
+    # decomposed children inherit it at insert time (kanban_db_graph).
+    ("outcome_id", "outcome_id TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (

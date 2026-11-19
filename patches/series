@@ -1333,3 +1333,8 @@
 803-agent-unmarked-tier-default.patch
 # 804-server-outcome-routes（AI 原生组织运行模型批一 Task 8，spec 2026-11-19-ai-native-operating-model-design：bootstrap/routes.ts 挂载 /api/hermes/outcomes 结果合同 REST——import 默认实例 outcomeRoutes＋app.use，OUTCOME_WORKBENCH 门控；接线范式照 773）
 804-server-outcome-routes.patch
+# 805-agent-kanban-outcome-id（AI 原生组织运行模型批一 Task 9，spec 2026-11-19-ai-native-operating-model-design：
+# tasks 表增 outcome_id TEXT 列（CREATE TABLE＋_LATER_TASK_COLUMNS 旧库 ALTER 惰性迁移）；decompose 建子卡
+# 继承父卡 outcome_id（kanban_db_graph 建卡 INSERT 同事务）；服务端写面只许 空→值/同值——Studio 侧
+# custom/server/outcome/kanban-bind.ts 守门，改挂拒绝 outcome_rebind_forbidden）
+805-agent-kanban-outcome-id.patch
