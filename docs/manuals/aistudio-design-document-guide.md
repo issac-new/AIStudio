@@ -182,7 +182,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 | 驾驶舱模块声明 | `0.8.21-studio.1` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.23.2-team.1` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `3.18.0` | `vendor/zcode/package.json` |
-| yuan skill | `v2.100.3` | `skills/swarm-yuan/CHANGELOG.md` |
+| yuan skill | `v2.101.0` | `skills/swarm-yuan/CHANGELOG.md` |
 
 这些值可直接在 `RELEASE-MANIFEST.json:18,47-101,122-140` 与 `RELEASE-NOTES.md:55` 对账。驾驶舱在 2026-11-11 v1.0.15 发布轮随 identity-chat/执行内核/技能存储等实质变更声明前进到 0.8.20-studio.2，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
 

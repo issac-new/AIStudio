@@ -18,7 +18,7 @@ export interface BoardStatusEntry {
   available: boolean
   total: number
   statuses: Record<string, number>
-  /** 进行中口径=doing+review+blocked（WIP 治理观察位） */
+  /** 进行中口径=running+review+blocked（WIP 治理观察位） */
   wip: number
   updatedAt?: number
 }
@@ -71,7 +71,9 @@ function entryOf(slug: string, name: string, dbPath: string | null): BoardStatus
     statuses[s] = (statuses[s] ?? 0) + Number(r.n || 0)
     total += Number(r.n || 0)
   }
-  const wip = (statuses.doing ?? 0) + (statuses.review ?? 0) + (statuses.blocked ?? 0)
+  // 进行中口径取真实状态 `running`（2026-11-19 修正）：此前读 `doing`，而看板九态
+  // 无该状态，行数据来自 `group by status` 的真实值，故 doing 恒 0、WIP 少计。
+  const wip = (statuses.running ?? 0) + (statuses.review ?? 0) + (statuses.blocked ?? 0)
   let updatedAt: number | undefined
   try { updatedAt = Math.floor(statSync(dbPath).mtimeMs / 1000) } catch { /* 缺席如实 */ }
   return { slug, name, available: true, total, statuses, wip, updatedAt }

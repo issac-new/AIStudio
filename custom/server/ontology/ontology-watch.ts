@@ -229,9 +229,13 @@ class OntologyWatcher {
         for (const ev of events) {
           maxId = Math.max(maxId, ev.id)
           res.checked += 1
-          let payload: { status?: unknown } = {}
+          // column_transition 的真实 payload 是 {to, mode, results, actor?}
+          // （kanban_gates.py _eval_gates）；`status` 是旧投影/兼容形态。
+          // 2026-11-19 修正：此前只读 payload.status，该字段不存在 → 判定恒 false，
+          // 结卡后的本体校验从不触发（死路）。
+          let payload: { to?: unknown; status?: unknown } = {}
           try { payload = JSON.parse(ev.payload) } catch { continue }
-          if (payload.status !== 'done') continue
+          if ((payload.to ?? payload.status) !== 'done') continue
           const r = await ingestSingleTask(slug, ev.task_id)
           if (r.found) res.ingested += 1
           if (!r.ok) {

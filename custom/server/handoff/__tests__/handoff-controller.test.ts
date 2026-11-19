@@ -177,23 +177,25 @@ describe('交接规则端点（EvoTeam 吸收）', () => {
     expect(lib.available).toBe(true)
     expect(lib.families.length).toBeGreaterThanOrEqual(1)
 
-    const res = await post('/rules/select', { from: 'in_progress', to: 'review' })
+    // 列名用看板真实状态（2026-11-19）：实现阶段的列是 ready→review；
+    // 规则 id 随之由 in-progress-to-review-evidence 改为 ready-to-review-evidence。
+    const res = await post('/rules/select', { from: 'ready', to: 'review' })
     expect(res.status).toBe(200)
     const body = await res.json() as { selection: { rule: { ruleId: string } | null }; line: string | null }
-    expect(body.selection.rule?.ruleId).toBe('in-progress-to-review-evidence')
+    expect(body.selection.rule?.ruleId).toBe('ready-to-review-evidence')
     expect(body.line).toContain('改动文件清单')
   })
 
   it('conformance：缺证据报 missing；无 to → 400；未知规则 → 404', async () => {
     const conf = await post('/rules/conformance', {
-      ruleId: 'in-progress-to-review-evidence',
+      ruleId: 'ready-to-review-evidence',
       presentEvidence: ['changed_files'],
     })
     const confBody = await conf.json() as { conformance: { ok: boolean; missing: string[] } }
     expect(confBody.conformance.ok).toBe(false)
     expect(confBody.conformance.missing).toContain('repro_command')
 
-    expect((await post('/rules/select', { from: 'in_progress' })).status).toBe(400)
+    expect((await post('/rules/select', { from: 'ready' })).status).toBe(400)
     expect((await post('/rules/conformance', { ruleId: 'nope' })).status).toBe(404)
   })
 })

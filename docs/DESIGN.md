@@ -906,6 +906,21 @@ dispatcher 按名册派发，worker 隔离执行，独立验证收口。
 | blocked | 等待外部依赖、能力或人工输入 | 阻塞条件解除后重新调度 |
 | done / archived | 验收通过或归档保留 | 作为证据与经验来源 |
 
+状态词表只有一个正本：kernel `hermes_cli/kanban_workflow.py` 的 `DEFAULT_STATUSES`
+（上表八列加 `scheduled`，共九态；`scheduled` 只由排期动作进入，不是拖拽目标）。
+产品侧消费面常量是 `custom/server/kanban/kanban-status.ts`，列编排
+（`runtime/roster/columns.yaml`）、交接规则（`team/shared/handoff-rules.yaml`）、
+客户端转移表都必须落在该集合内；任一侧增删列而另一侧没跟，由守门测试
+`custom/server/kanban/__tests__/kanban-status-contract.test.ts` 拦下。
+列编排的触发面是前端拖卡成功后的 `/api/column-automation/dispatch`（传真实 from/to），
+所以挂在 `running` 上只会自触发——「实现」步骤挂 `ready`。
+
+事件侧同样以 kernel 实际写入的 kind 为准：状态直写发 `status`（payload `{status, requested_status}`），
+列门通过后补记 `column_transition`（payload `{to, mode, results}`）。
+产品不为看板另造事件名，客户端适配器（`custom/client/shared/adapters/event-adapter.ts`）
+负责把上游 kind 翻译成产品文案。没有配置列门的板不发 `column_transition`，
+这是「没启用」而不是「没发生」，不能据此判断流转未生效。
+
 看板 done 表示任务完成；发布类任务还要经过 4.5 的观察窗，
 才能对外收口。
 

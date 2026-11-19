@@ -9,6 +9,13 @@
 # 契约门四件套（requiredHumanApproval/checklist/validator/gateMode）已由
 # kanban_gates.py（patch 399）在流转侧强制，本表只管编排触发，不重复门禁。
 # 维护：role/specialist 对齐 runtime/roster/squads.yaml 与 agent-roster 角色目录。
+# 列名约束（2026-11-19 流程地基批）：键必须落在看板九态内——正本=kernel
+# kanban_workflow.py 的 DEFAULT_WORKFLOW（triage/todo/scheduled/ready/running/
+# blocked/review/done/archived），overlay 消费面常量=custom/server/kanban/
+# kanban-status.ts，漂移由 __tests__/kanban-status-contract.test.ts 拦截。
+# 触发面是前端拖卡成功后的 /api/column-automation/dispatch（传真实 from/to），
+# 因此只有可拖入的列才会命中：running 由 dispatcher 认领写出且 drag_target=False，
+# 挂 running 只会自触发，故「实现」步骤挂 ready。
 columns:
   todo:
     timing: entry
@@ -18,7 +25,9 @@ columns:
         role: general-engineer
         specialist: backlog-refiner
         provider: zcode
-  in_progress:
+  # 「实现」步骤：进 ready 表示卡已具备派发资格，此时派实现方。
+  # 历史键为 in_progress（旧列模型），该列不在看板九态内，恒不命中（2026-11-19 修正）。
+  ready:
     timing: entry
     autoAdvanceOnSuccess: false
     steps:
@@ -38,17 +47,10 @@ columns:
         role: code-reviewer
         specialist: review-guard
         provider: zcode
-  # 缺陷验证列（G3，2026-10-11）：修复结论行落房后卡移入本列即自动派发复测——
-  # 字段流转机械化（此前只在技能纪律里，靠人翻卡）。配套约定：建卡测试员负责移列；
-  # 结论行仍由主测试员统一汇集（V8.8 纪律 34-⑥）。
-  verify:
-    timing: entry
-    autoAdvanceOnSuccess: false
-    steps:
-      - id: retest
-        role: qa
-        specialist: review-guard
-        provider: zcode
+  # 缺陷复测列（原 verify 键，G3 2026-10-11）已删除：看板九态无 verify 列，该键恒不命中。
+  # 意图保留待裁决——是新增板列，还是并入 review 的某一步；并入会改变 review 进入时的
+  # 派发步数，属行为变更，不在缺陷修复批内猜测。台账见
+  # docs/superpowers/specs/2026-11-19-kanban-process-baseline.md 决策 D3。
   done:
     timing: exit
     autoAdvanceOnSuccess: false

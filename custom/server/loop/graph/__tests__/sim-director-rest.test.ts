@@ -6,7 +6,8 @@ import { InMemoryEventLogStore } from '../event-log-store'
 import { GraphService } from '../graph-service'
 import { CustomSpecRuntime } from '../spec-runtime'
 import { createGraphRunRouter } from '../graph-rest'
-import { DEFAULT_SIMULATION_SCENARIO } from '../../../graph/simulation-graph-template'
+import { preflightSpecCapabilities } from '../spec-capabilities'
+import { DEFAULT_SIMULATION_SCENARIO, compileRequirementToGraph } from '../../../graph/simulation-graph-template'
 import type { GraphSpec } from '../graph-spec'
 
 function handlerOf(router: any, path: string, method = 'GET'): (ctx: any) => Promise<void> {
@@ -92,40 +93,25 @@ describe('sim-director start', () => {
     expect(ctx.status).toBe(501)
   })
 
-  it('完整 Director 模板在真实预检中拒绝 gate_meta_forbidden，不产生 run', async () => {
-    const eventLog = new InMemoryEventLogStore()
-    const graphService = new GraphService({ eventLog })
-    const specs = new Map<string, GraphSpec>()
-    const specStore = {
-      save: async (spec: GraphSpec) => { specs.set(spec.id, structuredClone(spec)) },
-      get: (id: string) => specs.get(id),
-    }
-    const runtime = new CustomSpecRuntime({
-      specStore,
-      graphService,
-      runtimeKind: 'director',
-      capabilities: {
-        gateCatalog: [], hasRealKanbanBridge: true, executionMode: 'production',
-      },
-    })
-    const router = makeRouter({
-      graphService, eventLog, specStore,
-      directorRuntimeFactory: () => runtime,
-    })
-    const handler = handlerOf(router, '/api/graph/sim-director/start', 'POST')
-    const ctx: any = {
-      headers: { authorization: 'Bearer jwt-abc' },
-      request: { body: VALID_INPUT },
-      state: { user: { username: 'tester' } },
-    }
+  it('完整 Director 模板通过真实预检：模板不再携带 meta.gateCommands', () => {
+    // 2026-11-19：模板曾写 meta.gateCommands，而 preflightSpecCapabilities 无条件拒绝该键
+    // （gate_meta_forbidden）→ 导演台每次起跑必失败。删键后预检通过；
+    // gate 的受信来源仍是「gate 节点 config.command + LOOP_GATE_COMMANDS 目录」。
+    const spec = compileRequirementToGraph(DEFAULT_SIMULATION_SCENARIO)
 
-    await handler(ctx)
+    expect(Object.hasOwn(spec.meta ?? {}, 'gateCommands')).toBe(false)
+    expect(() => preflightSpecCapabilities(spec, {
+      gateCatalog: [], hasRealKanbanBridge: true, executionMode: 'production',
+    })).not.toThrow()
+  })
 
-    expect(ctx.status).toBe(400)
-    expect(ctx.body.error).toBe('spec.meta.gateCommands cannot expand the trusted gate catalog')
-    expect([...specs.values()]).toHaveLength(1)
-    expect([...specs.values()][0].meta?.gateCommands).toEqual(['qgate run --profile feature-close'])
-    expect(await eventLog.listRuns()).toEqual([])
+  it('Director 模板若被注入 meta.gateCommands，预检仍拒绝（受信面不放宽）', () => {
+    const spec = compileRequirementToGraph(DEFAULT_SIMULATION_SCENARIO)
+    spec.meta = { ...(spec.meta ?? {}), gateCommands: ['qgate run --profile feature-close'] }
+
+    expect(() => preflightSpecCapabilities(spec, {
+      gateCatalog: [], hasRealKanbanBridge: true, executionMode: 'production',
+    })).toThrow(/cannot expand the trusted gate catalog/)
   })
 
   it('完整起跑：spec 落库（meta.director.scenario+createdBy）且 JWT 透传 runtime 工厂', async () => {
