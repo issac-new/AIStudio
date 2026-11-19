@@ -3,11 +3,21 @@
 // 快照是「Agent 当时实际看到的上下文」的不可变物化：content 承载规范化只读内容，
 // sourceRefs 只负责溯源，历史还原不承诺外部链接永存。
 //
+// 信任边界（立法）：content 物化的合同侧文本已过 validate.ts 入库校验；
+// sanitizeForSnapshot 是物化前的最小真防线——针对「已验证文本仍可能携带的凭据泄漏形态」
+// （如 measure sourceRef 内嵌 token），不是对未验证输入的完整净化。附件字节、密钥原值
+// 与未授权材料永不物化（spec §4.4）；本函数之外的新增自由文本字段必须同步纳入脱敏面。
+//
 // 结构纪律（纯核心＋IO 薄壳分离）：
 //   - buildSnapshotFromResolved：纯核心——只接收已解析输入，不读盘、不取时钟、不随机，
 //     同输入产出全同快照（含 sha256/snapshotId）；
-//   - buildMinimalSnapshot：IO 薄壳——签名=任务简报逐字，负责调 resolve 拿任务摘要与身份册、
-//     吞解析异常转 problems，再委托纯核心。
+//   - buildMinimalSnapshot：IO 薄壳——签名=任务简报逐字＋可选 extraPersonIds，负责调
+//     resolve 拿任务摘要与身份册、吞解析异常转 problems，再委托纯核心。
+//
+// 身份行语义（审查 Important-2 裁决）：owner 与 verifier 的身份行是关键源——解析结果中
+// 任一缺席（含身份册返回空数组/未收录）→ ok:false 禁止派单，不降级进 excludedSources；
+// excludedSources 的 people 行仅适用于合同/团队额外引用的其他人（extraPersonIds 通道，
+// 批二接团队 roster 时复用）。
 //
 // 哈希口径：sha256 = sha256(canonicalJson(信封去 {snapshotId, createdAt, sha256}))。
 // 易变字段（生成时刻、派生 id）不入哈希——同语义输入跨时刻同哈希，是存储面
@@ -16,8 +26,8 @@
 //
 // 临界（spec §4.4 逐字）：content canonical 超 1 MiB 或 sourceRefs 超 100 → 拒绝生成，
 // 不静默截断；problems 注明实际超限值。关键源（合同/任务/身份/政策）失败 → ok:false
-// 禁止派单；身份册部分缺席（源 ok 但个别 person 未返回）属非关键 → 进 excludedSources。
-// 批一：teamVersion 恒 null、approvedExperienceVersions 恒 []（批二在同信封追加，不另建格式）。
+// 禁止派单。批一：teamVersion 恒 null、approvedExperienceVersions 恒 []（批二在同一
+// 信封追加，不另建格式）。
 import { createHash } from 'node:crypto'
 import vectors from './decision-vectors.json'
 import { canonicalJson } from './outcome-store'
@@ -30,7 +40,7 @@ export interface OutcomeContextSnapshot {
   contractVersion: number
   teamVersion: number | null
   decisionPolicyVersion: string
-  /** 实际注入 Agent 的规范化只读内容；不是仅有一组可失效引用。 */
+  /** 实际注入 Agent 的规范化只读内容（已过脱敏防线）；不是仅有一组可失效引用。 */
   content: Record<string, unknown>
   sourceRefs: Array<{ kind: string; id: string; version?: string; sha256?: string }>
   approvedExperienceVersions: string[]
@@ -60,8 +70,11 @@ export interface ResolvedSnapshotInput {
   /** 矩阵版本标识（批一取共享判定向量内容摘要）。 */
   matrixVersion: string
   task: SnapshotTaskSummary
-  /** 身份册已解析成功的行（部分缺席由核心对照合同身份字段推导，无须另行传入）。 */
+  /** 身份册已解析成功的行。owner/verifier 为关键（缺席→ok:false）；
+   *  extraPersonIds 为额外引用人（缺席→excludedSources，非关键）。 */
   people: SnapshotPersonRow[]
+  /** 合同/团队额外引用的其他人（可选）：与 owner/verifier 一并去重后对照 people 判缺席。 */
+  extraPersonIds?: string[]
   createdAt: number
 }
 
@@ -69,10 +82,12 @@ export type BuildSnapshotResult =
   | { ok: true; snapshot: OutcomeContextSnapshot }
   | { ok: false; problems: string[] }
 
-/** IO 薄壳入参（任务简报逐字）：resolve 由调用方供给读取面。 */
+/** IO 薄壳入参（任务简报逐字＋审查 Important-2 增补的可选额外人通道）：resolve 由调用方供给读取面。 */
 export interface BuildMinimalSnapshotInput {
   contract: OutcomeContract
   decisionPolicyVersion: string
+  /** 合同/团队额外引用的其他人（可选）：缺席进 excludedSources（非关键）；owner/verifier 恒为关键。 */
+  extraPersonIds?: string[]
   resolve: {
     task(): { ok: boolean; task?: SnapshotTaskSummary }
     people(ids: string[]): { ok: boolean; people?: SnapshotPersonRow[] }
@@ -92,7 +107,56 @@ export const DECISION_MATRIX_VERSION = `vec-${createHash('sha256')
   .digest('hex')
   .slice(0, 16)}`
 
+/**
+ * URL userinfo 密码形态脱敏（物化前最小真防线）：`scheme://user:pass@…` → `scheme://user:***@…`；
+ * 无密码（`scheme://user@…`）原样保留；要求合法 scheme（字母开头，RFC 3986 字符集）＋`://`，
+ * 裸 `user:pass@host` 文本不误伤。重复应用幂等（密码段已是 `***` 再脱不变）。
+ *
+ * 实现为线性手写扫描器而非全局正则：正则在每个起点做长回溯，无匹配长文本（如 1 MiB
+ * valueStatement）上退化为 O(n²)——实测 1.1M 字符卡死分钟级以上。扫描器只沿 indexOf('://')
+ * 锚点推进，整体线性（审查修复轮实测教训，勿改回正则版）。
+ */
+const isSchemeChar = (ch: string): boolean => /[A-Za-z0-9+.-]/.test(ch)
+const isLetter = (ch: string): boolean => /[A-Za-z]/.test(ch)
+
+export function sanitizeForSnapshot(text: string): string {
+  let out = ''
+  let i = 0
+  for (;;) {
+    const p = text.indexOf('://', i)
+    if (p < 0) return out + text.slice(i)
+    // scheme 起点：从 :// 向左取最长 scheme 字符段；首字符须字母，否则不是合法 URL（跳过该 ://）
+    let s = p
+    while (s > 0 && isSchemeChar(text[s - 1])) s--
+    if (s === p || !isLetter(text[s])) {
+      out += text.slice(i, p + 3)
+      i = p + 3
+      continue
+    }
+    // userinfo 段：:// 之后到首个 '/' '?' '#' 或 '@' 止；无 '@' 即无凭据形态，原样越过
+    let e = p + 3
+    while (e < text.length && text[e] !== '/' && text[e] !== '?' && text[e] !== '#' && text[e] !== '@') e++
+    if (e >= text.length || text[e] !== '@') {
+      out += text.slice(i, e)
+      i = e
+      continue
+    }
+    const userinfo = text.slice(p + 3, e)
+    const colon = userinfo.indexOf(':')
+    if (colon <= 0) {
+      // 无冒号（user@，无密码）或空 user：保留
+      out += text.slice(i, e + 1)
+      i = e + 1
+      continue
+    }
+    out += text.slice(i, p + 3) + userinfo.slice(0, colon) + ':***@'
+    i = e + 1
+  }
+}
+
 const nonEmpty = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
+const isStrArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string')
 const shaHex = (s: string): string => createHash('sha256').update(s).digest('hex')
 
 /** 身份行形状守卫：id/name 字符串、active 布尔。 */
@@ -103,8 +167,9 @@ const isPersonRow = (v: unknown): v is SnapshotPersonRow => {
 }
 
 /**
- * 纯核心：由已解析来源构建最小快照。关键源（合同/任务/身份/政策）失真或缺失 → ok:false；
- * 身份册部分缺席（源成功但个别 person 未返回）→ excludedSources；临界超限 → ok:false 不截断。
+ * 纯核心：由已解析来源构建最小快照。关键源（合同/任务/身份/政策）失真或缺失、
+ * 或 owner/verifier 身份行缺席 → ok:false；额外引用人缺席 → excludedSources（非关键）；
+ * 临界超限 → ok:false 不截断。content 五类自由文本面过 sanitizeForSnapshot 后物化。
  */
 export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSnapshotResult {
   const problems: string[] = []
@@ -121,6 +186,18 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
       problems.push('合同关键源失败：measures 须为数组')
     else if (!c.measures.every((m) => m !== null && typeof m === 'object' && nonEmpty((m as { measureId?: unknown }).measureId)))
       problems.push('合同关键源失败：measures 各项须为带 measureId 的对象')
+    // acceptance/scope 形状守卫：content 构建要对这些数组逐项脱敏，脏形状必须在此拒绝
+    // （判据与 validateContractInput 同构），否则核心纯函数会在 map 上抛异常。
+    const acc = c.acceptance
+    if (acc === null || typeof acc !== 'object' || Array.isArray(acc)
+      || !isStrArray((acc as { statements?: unknown }).statements)
+      || !isStrArray((acc as { requiredEvidenceKinds?: unknown }).requiredEvidenceKinds))
+      problems.push('合同关键源失败：acceptance 须为 {statements, requiredEvidenceKinds} 字符串数组')
+    const scope = c.scope
+    if (scope === null || typeof scope !== 'object' || Array.isArray(scope)
+      || !isStrArray((scope as { included?: unknown }).included)
+      || !isStrArray((scope as { excluded?: unknown }).excluded))
+      problems.push('合同关键源失败：scope 须为 {included, excluded} 字符串数组')
   }
   if (!nonEmpty(input.decisionPolicyVersion))
     problems.push('政策关键源失败：decisionPolicyVersion 必填，禁止派单')
@@ -135,6 +212,9 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
   people.forEach((p, i) => {
     if (!isPersonRow(p)) problems.push(`身份行形状非法（people[${i}] 须 {id 非空, name, active}）`)
   })
+  const extraRequested = Array.isArray(input.extraPersonIds)
+    ? input.extraPersonIds.filter(nonEmpty)
+    : []
 
   if (typeof input.createdAt !== 'number' || !Number.isFinite(input.createdAt))
     problems.push('createdAt 须为有限数值')
@@ -145,36 +225,60 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
   const contract = input.contract
   const task = input.task as SnapshotTaskSummary
 
-  // 身份册部分缺席（非关键）：对照合同身份字段推导命中/缺席行
-  const requestedIds = Array.from(
-    new Set([contract.ownerPersonId, contract.verificationOwnerId]),
-  )
+  // 身份行分诊（审查 Important-2 裁决）：owner/verifier=关键（任一缺席禁止派单）；
+  // 额外引用人=非关键（缺席记 excludedSources，命中物化 additionalPeople）。
+  const criticalIds = Array.from(new Set([contract.ownerPersonId, contract.verificationOwnerId]))
+  const extraIds = Array.from(new Set(extraRequested)).filter((id) => !criticalIds.includes(id))
   const found = new Map(people.map((p) => [p.id, p]))
-  const ownerRow = found.get(contract.ownerPersonId)
-  const verifierRow = found.get(contract.verificationOwnerId)
-  const excludedSources: OutcomeContextSnapshot['excludedSources'] = requestedIds
+  const missingCritical = criticalIds.filter((id) => !found.has(id))
+  if (missingCritical.length) {
+    return {
+      ok: false,
+      problems: [
+        `身份关键源失败：owner/verifier 身份行未返回（缺席：${missingCritical.join('、')}），禁止派单（spec §4.4）`,
+      ],
+    }
+  }
+  const ownerRow = found.get(contract.ownerPersonId) as SnapshotPersonRow
+  const verifierRow = found.get(contract.verificationOwnerId) as SnapshotPersonRow
+  const additionalRows = extraIds
+    .map((id) => found.get(id))
+    .filter((p): p is SnapshotPersonRow => !!p)
+  const excludedSources: OutcomeContextSnapshot['excludedSources'] = extraIds
     .filter((id) => !found.has(id))
-    .map((id) => ({ kind: 'people', reason: `person:${id} 身份册未返回（部分缺席，非关键源）` }))
+    .map((id) => ({ kind: 'people', reason: `person:${id} 身份册未返回（额外引用人，非关键源）` }))
 
-  // content：合同规范子集（不含 status 等运行态面）＋身份行＋任务摘要＋策略块
+  // content：合同规范子集（不含 status 等运行态面）＋身份行＋任务摘要＋策略块。
+  // 五类自由文本面过脱敏防线后物化（新数组/新对象，不回写合同原身）。
   const content: Record<string, unknown> = {
     contract: {
       outcomeId: contract.outcomeId,
       rootTaskId: contract.rootTaskId,
       contractVersion: contract.version,
       title: contract.title,
-      valueStatement: contract.valueStatement,
-      measures: contract.measures,
-      acceptance: contract.acceptance,
-      scope: contract.scope,
+      valueStatement: sanitizeForSnapshot(contract.valueStatement),
+      measures: contract.measures.map((m) => ({
+        ...m,
+        definition: sanitizeForSnapshot(m.definition),
+        sourceRef: sanitizeForSnapshot(m.sourceRef),
+      })),
+      acceptance: {
+        statements: contract.acceptance.statements.map(sanitizeForSnapshot),
+        requiredEvidenceKinds: [...contract.acceptance.requiredEvidenceKinds],
+      },
+      scope: {
+        included: contract.scope.included.map(sanitizeForSnapshot),
+        excluded: contract.scope.excluded.map(sanitizeForSnapshot),
+      },
       riskTier: contract.riskTier,
       defaultReversibility: contract.defaultReversibility,
     },
     task: { id: task.id, title: task.title, status: task.status },
     policy: { decisionPolicyVersion: input.decisionPolicyVersion, matrixVersion: input.matrixVersion },
   }
-  if (ownerRow) content.owner = { ...ownerRow }
-  if (verifierRow) content.verifier = { ...verifierRow }
+  content.owner = { ...ownerRow }
+  content.verifier = { ...verifierRow }
+  if (additionalRows.length) content.additionalPeople = additionalRows.map((p) => ({ ...p }))
 
   // sourceRefs：只溯源不承载内容；measure 定义逐条入 refs（超限由临界检查拒收）
   const sourceRefs: OutcomeContextSnapshot['sourceRefs'] = [
@@ -186,9 +290,7 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
     },
     { kind: 'task', id: task.id },
   ]
-  const peopleRefIds = new Set(
-    [ownerRow, verifierRow].filter(Boolean).map((p) => (p as SnapshotPersonRow).id),
-  )
+  const peopleRefIds = new Set([...criticalIds, ...additionalRows.map((p) => p.id)])
   for (const id of peopleRefIds) sourceRefs.push({ kind: 'people', id })
   sourceRefs.push({ kind: 'decision-policy', id: input.decisionPolicyVersion })
   sourceRefs.push({ kind: 'decision-matrix', id: input.matrixVersion })
@@ -229,9 +331,9 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
 }
 
 /**
- * IO 薄壳（任务简报签名逐字）：解析任务摘要与身份册后委托纯核心。
- * 关键源失败（合同/政策入参缺失、resolve.task 或 resolve.people 未返回可用数据、解析抛异常）
- * → ok:false；身份册 ok 但个别 person 未返回 → 纯核心判非关键缺席进 excludedSources。
+ * IO 薄壳（任务简报签名逐字＋可选 extraPersonIds）：解析任务摘要与身份册后委托纯核心。
+ * 关键源失败（合同/政策入参缺失、resolve.task 或 resolve.people 未返回可用数据、解析抛异常、
+ * owner/verifier 身份行缺席）→ ok:false；额外引用人缺席 → excludedSources（非关键）。
  */
 export function buildMinimalSnapshot(input: BuildMinimalSnapshotInput): BuildSnapshotResult {
   const contract = input?.contract
@@ -253,14 +355,21 @@ export function buildMinimalSnapshot(input: BuildMinimalSnapshotInput): BuildSna
   let people: SnapshotPersonRow[] | undefined
   try {
     const ids = Array.from(
-      new Set([contract.ownerPersonId, contract.verificationOwnerId].filter(nonEmpty)),
+      new Set(
+        [
+          contract.ownerPersonId,
+          contract.verificationOwnerId,
+          ...(Array.isArray(input.extraPersonIds) ? input.extraPersonIds : []),
+        ].filter(nonEmpty),
+      ),
     )
     const p = input.resolve?.people?.(ids)
     if (p && p.ok === true && Array.isArray(p.people)) people = p.people
   } catch {
     people = undefined
   }
-  // ok:true 但缺 people 数组=身份源自报成功却未交册，fail-closed 拒绝（不猜空册）
+  // ok:true 但缺 people 数组=身份源自报成功却未交册，fail-closed 拒绝（不猜空册）；
+  // ok:true+[] 交由核心判 owner/verifier 全缺席（同样 ok:false）。
   if (!people)
     return { ok: false, problems: ['身份关键源失败：resolve.people 未返回身份册，禁止派单（spec §4.4）'] }
 
@@ -270,6 +379,7 @@ export function buildMinimalSnapshot(input: BuildMinimalSnapshotInput): BuildSna
     matrixVersion: DECISION_MATRIX_VERSION,
     task,
     people,
+    extraPersonIds: Array.isArray(input.extraPersonIds) ? input.extraPersonIds : [],
     createdAt: Date.now(),
   })
 }

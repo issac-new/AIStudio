@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import {
   DECISION_MATRIX_VERSION,
   buildMinimalSnapshot,
+  sanitizeForSnapshot,
   type BuildSnapshotResult,
   type OutcomeContextSnapshot,
 } from '../snapshot'
@@ -286,10 +287,25 @@ describe('关键源失败→ok:false', () => {
   })
 })
 
-// ---------- people 部分缺席（非关键）→excludedSources ----------
+// ---------- 关键身份行 fail-closed 与额外引用人 ----------
 
-describe('people 部分缺席（非关键）→excludedSources', () => {
-  it('身份册只回 owner：ok:true，excludedSources 含 people 行，verifier 行不物化不溯源', () => {
+describe('关键身份行（owner/verifier）fail-closed；excludedSources 仅额外引用人', () => {
+  it('people 返回 ok:true+[]（owner/verifier 均不可解析）→ ok:false，problems 注明缺席者', () => {
+    const r = buildMinimalSnapshot({
+      contract: makeContract('oc-1'),
+      decisionPolicyVersion: POLICY_VERSION,
+      resolve: { task: () => TASK_OK, people: () => ({ ok: true, people: [] }) },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    const msg = r.problems.join('\n')
+    expect(msg).toContain('身份')
+    expect(msg).toContain('p-1')
+    expect(msg).toContain('p-2')
+    expect(r.snapshot).toBeUndefined()
+  })
+
+  it('verifier 缺席（只回 owner）→ ok:false 注明 p-2；不进 excludedSources（关键源不降级）', () => {
     const r = buildMinimalSnapshot({
       contract: makeContract('oc-1'),
       decisionPolicyVersion: POLICY_VERSION,
@@ -298,16 +314,104 @@ describe('people 部分缺席（非关键）→excludedSources', () => {
         people: () => ({ ok: true, people: [{ id: 'p-1', name: '张三', active: true }] }),
       },
     })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.problems.join('\n')).toContain('p-2')
+    expect(r.snapshot).toBeUndefined()
+  })
+
+  it('owner/verifier 在、额外引用人 p-3 缺席 → ok:true 且 excludedSources 含该人', () => {
+    const r = buildMinimalSnapshot({
+      contract: makeContract('oc-1'),
+      decisionPolicyVersion: POLICY_VERSION,
+      extraPersonIds: ['p-3'],
+      resolve: { task: () => TASK_OK, people: () => PEOPLE_OK }, // 未回 p-3
+    })
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.snapshot.excludedSources).toEqual([
-      { kind: 'people', reason: expect.stringContaining('p-2') },
+      { kind: 'people', reason: expect.stringContaining('p-3') },
     ])
     const c = r.snapshot.content as Record<string, unknown>
     expect(c.owner).toEqual({ id: 'p-1', name: '张三', active: true })
-    expect(c.verifier).toBeUndefined()
-    expect(r.snapshot.sourceRefs).toContainEqual({ kind: 'people', id: 'p-1' })
-    expect(r.snapshot.sourceRefs).not.toContainEqual({ kind: 'people', id: 'p-2' })
+    expect(c.verifier).toEqual({ id: 'p-2', name: '李四', active: true })
+    expect(c.additionalPeople).toBeUndefined()
+    expect(r.snapshot.sourceRefs).not.toContainEqual({ kind: 'people', id: 'p-3' })
+  })
+
+  it('额外引用人 p-3 命中 → 物化 additionalPeople＋people 溯源行，excludedSources 空', () => {
+    const r = buildMinimalSnapshot({
+      contract: makeContract('oc-1'),
+      decisionPolicyVersion: POLICY_VERSION,
+      extraPersonIds: ['p-3'],
+      resolve: {
+        task: () => TASK_OK,
+        people: () => ({
+          ok: true,
+          people: [...PEOPLE_OK.people, { id: 'p-3', name: '王五', active: false }],
+        }),
+      },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.snapshot.excludedSources).toEqual([])
+    const c = r.snapshot.content as Record<string, unknown>
+    expect(c.additionalPeople).toEqual([{ id: 'p-3', name: '王五', active: false }])
+    expect(r.snapshot.sourceRefs).toContainEqual({ kind: 'people', id: 'p-3' })
+  })
+})
+
+// ---------- 敏感脱敏（content 物化最后防线） ----------
+
+describe('sanitizeForSnapshot：URL userinfo 脱敏（物化前最小真防线）', () => {
+  const buildWithSourceRef = (sourceRef: string) => {
+    const contract = makeContract('oc-1', {
+      measures: [{ ...makeMeasures(1)[0], sourceRef }],
+    })
+    return buildMinimalSnapshot({ contract, decisionPolicyVersion: POLICY_VERSION, resolve: resolveAllOk })
+  }
+
+  it('measure.sourceRef 含 https://u:tok@h/db → content 物化为 https://u:***@h/db，sha256 基于脱敏后内容', () => {
+    const r = buildWithSourceRef('https://u:tok@h/db')
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const measure = (r.snapshot.content.contract as { measures: Array<{ sourceRef: string }> }).measures[0]
+    expect(measure.sourceRef).toBe('https://u:***@h/db')
+    // 信封内 canonical 文本不含凭据原值；sha256 复算＝基于（已脱敏）信封体
+    expect(canon(r.snapshot.content)).not.toContain(':tok@')
+    expect(r.snapshot.sha256).toBe(sha(canon(hashBodyOf(r.snapshot))))
+  })
+
+  it('valueStatement/acceptance.statements/scope 项/measure.definition 同样脱敏', () => {
+    const contract = {
+      ...makeContract('oc-1'),
+      valueStatement: '对接 https://a:b@c/x 网关后降低事故',
+      acceptance: { statements: ['以 https://s:pw@t/audit 报告为准'], requiredEvidenceKinds: [] },
+      scope: { included: ['https://in:sec@scope/1'], excluded: [] },
+    }
+    contract.measures = [{ ...makeMeasures(1)[0], definition: '取自 https://d:k@sink/metrics' }]
+    const r = buildMinimalSnapshot({ contract, decisionPolicyVersion: POLICY_VERSION, resolve: resolveAllOk })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const c = r.snapshot.content.contract as Record<string, unknown>
+    expect(c.valueStatement).toBe('对接 https://a:***@c/x 网关后降低事故')
+    expect((c.acceptance as { statements: string[] }).statements).toEqual(['以 https://s:***@t/audit 报告为准'])
+    expect((c.scope as { included: string[] }).included).toEqual(['https://in:***@scope/1'])
+    expect(((c.measures as Array<{ definition: string }>)[0]).definition).toBe('取自 https://d:***@sink/metrics')
+  })
+
+  it('纯函数面：无密码 user@ 保留；非 URL 文本不动；多 URL 全脱；重复应用幂等', () => {
+    expect(sanitizeForSnapshot('https://u@h/db')).toBe('https://u@h/db')
+    expect(sanitizeForSnapshot('密码是 u:pw 但无 URL')).toBe('密码是 u:pw 但无 URL')
+    expect(sanitizeForSnapshot('a https://x:1@h/1 b https://y:2@h/2')).toBe('a https://x:***@h/1 b https://y:***@h/2')
+    expect(sanitizeForSnapshot(sanitizeForSnapshot('https://u:tok@h/db'))).toBe('https://u:***@h/db')
+    // 非法 scheme（数字开头）不是 URL 凭据形态，保守不动
+    expect(sanitizeForSnapshot('1x://u:p@h')).toBe('1x://u:p@h')
+  })
+
+  it('长无匹配文本线性完成（防正则回溯退化：1.1M 字符须秒级，O(n²) 会撞 vitest 默认 5s 超时）', () => {
+    const big = 'x'.repeat(1_100_000)
+    expect(sanitizeForSnapshot(big)).toBe(big)
   })
 })
 
