@@ -3260,6 +3260,63 @@ def _independent_acceptance(
         )
     except AcceptanceReportViolation as exc:
         return False, str(exc), exc.blockers, None
+    # 不可变交付版本绑定（结果交付后续批）：存在 active 版本时，报告必须绑定
+    # 同一 versionId/checksum；旧版本报告因 checksum 不匹配自然失效。没有版本的
+    # 历史卡保持兼容（本批不追溯造版本）。
+    from hermes_cli.delivery_version import latest_delivery_version, verify_delivery_version
+    version = latest_delivery_version(conn, task_id)
+    if version is not None:
+        version_blockers: list[dict] = []
+        if not verify_delivery_version(version):
+            version_blockers.append({
+                "code": "delivery_version_corrupt",
+                "title": "交付版本自校验失败",
+                "detail": f"versionId={version.get('versionId')} 的 checksum/内容不一致",
+                "action": "重新走 request_review 生成新版本；不要手改事件载荷",
+            })
+        report_version = normalized.get("deliveryVersionId")
+        if not report_version:
+            version_blockers.append({
+                "code": "delivery_version_missing",
+                "title": "缺少交付版本绑定",
+                "detail": (
+                    "任务存在 active 交付版本，报告未携带 deliveryVersionId"
+                    f"（当前 active：{version.get('versionId')}）"
+                ),
+                "action": f"携带 {version.get('versionId')} 与 checksum {version.get('checksum')}",
+            })
+        elif report_version != version.get("versionId"):
+            version_blockers.append({
+                "code": "delivery_version_mismatch",
+                "title": "交付版本不匹配",
+                "detail": f"报告 {report_version} ≠ 当前 active {version.get('versionId')}",
+                "action": "按当前交付版本重新审查；旧版本报告不能重放",
+            })
+        report_checksum = normalized.get("artifactChecksum")
+        if not report_checksum:
+            version_blockers.append({
+                "code": "delivery_checksum_missing",
+                "title": "缺少交付校验和",
+                "detail": (
+                    "报告未携带 artifactChecksum"
+                    f"（当前 active checksum：{version.get('checksum')}）"
+                ),
+                "action": f"携带 checksum {version.get('checksum')}",
+            })
+        elif report_checksum != version.get("checksum"):
+            version_blockers.append({
+                "code": "delivery_checksum_mismatch",
+                "title": "交付校验和不匹配",
+                "detail": (
+                    f"报告 checksum {report_checksum} ≠ 当前 active {version.get('checksum')}"
+                ),
+                "action": "重新审查当前交付版本",
+            })
+        if version_blockers:
+            detail = "；".join(b["detail"] for b in version_blockers)
+            return False, f"delivery version check failed: {detail}", version_blockers, None
+        normalized["deliveryVersionId"] = version["versionId"]
+        normalized["artifactChecksum"] = version["checksum"]
     return True, "", [], normalized
 
 
@@ -3465,6 +3522,10 @@ def complete_task(
                 return False
             if isinstance(metadata, dict):
                 staged_copies = _stage_completion_artifacts(conn, task_id, metadata, now)
+            # 不可变交付版本：直通完成（无 review）也冻结一次交付清单；已走过
+            # request_review 的卡同 checksum 幂等，不重复追加。
+            from hermes_cli.delivery_version import record_delivery_version
+            record_delivery_version(conn, task_id, source="complete")
             run_id = _end_run(
                 conn, task_id, outcome="completed", status="done", summary=handoff_summary,
                 metadata=metadata,
@@ -4192,10 +4253,18 @@ def request_review(
                 summary=summary, metadata=metadata, synthesize=bool(summary or metadata),
                 profile=implementer,
             )
+            # 不可变交付版本（结果交付后续批）：评审交接是对外交付的冻结点；
+            # 版本清单以持久附件为准，同 checksum 幂等。
+            from hermes_cli.delivery_version import record_delivery_version
+            delivery = record_delivery_version(
+                conn, task_id, source="request_review", created_by=implementer,
+            )
             payload: dict = {
                 "summary": _first_line(summary, 400) or None,
                 "implementer": implementer,
                 "reviewer": reviewer,
+                "deliveryVersionId": delivery["versionId"],
+                "deliveryChecksum": delivery["checksum"],
             }
             staged = _cleaned_artifact_paths(metadata)
             if staged:

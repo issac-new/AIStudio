@@ -176,6 +176,30 @@ def test_missing_evidence_is_rejected():
     assert "evidence_missing" in _codes(ei.value)
 
 
+def test_delivery_version_fields_are_normalized():
+    report = _report(deliveryVersionId="dv_0123456789abcdef", artifactChecksum="a" * 64)
+    normalized = validate_report(
+        report, expected_ids=["AC-1", "AC-2"], implementer=IMPLEMENTER,
+        current_review_event_id=CYCLE,
+    )
+    assert normalized["deliveryVersionId"] == "dv_0123456789abcdef"
+    assert normalized["artifactChecksum"] == "a" * 64
+
+
+def test_invalid_delivery_version_id_is_rejected():
+    with pytest.raises(AcceptanceReportViolation) as ei:
+        validate_report(_report(deliveryVersionId="v1"), expected_ids=["AC-1", "AC-2"],
+                        implementer=IMPLEMENTER, current_review_event_id=CYCLE)
+    assert "schema_invalid" in _codes(ei.value)
+
+
+def test_invalid_artifact_checksum_is_rejected():
+    with pytest.raises(AcceptanceReportViolation) as ei:
+        validate_report(_report(artifactChecksum="not-a-sha"), expected_ids=["AC-1", "AC-2"],
+                        implementer=IMPLEMENTER, current_review_event_id=CYCLE)
+    assert "schema_invalid" in _codes(ei.value)
+
+
 def test_norm_ac_id_and_expected_ids_are_stable():
     assert norm_ac_id("ac 7") == "AC-7"
     assert norm_ac_id("AC_2") == "AC-2"

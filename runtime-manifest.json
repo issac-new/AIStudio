@@ -64,6 +64,11 @@
       "note": "结果交付批（2026-11-19）：逐条 AC 验收报告 schema/校验/结构化 blockers——independent 档完成门依赖"
     },
     {
+      "source": "hermes_cli/delivery_version.py",
+      "dest": "hermes_cli/delivery_version.py",
+      "note": "结果交付后续批（2026-11-19）：任务级不可变交付版本（内容 checksum/supersede 事件），acceptance_report 绑定依赖"
+    },
+    {
       "source": "hermes_cli/subcommands/cron.py",
       "dest": "hermes_cli/subcommands/cron.py",
       "note": "450: cron create/edit 加 --base-url 参数面（R1）"
@@ -302,6 +307,11 @@
       "source": "tests/hermes_cli/test_acceptance_gate.py",
       "dest": "tests/hermes_cli/test_acceptance_gate.py",
       "note": "结果交付批内核集成回归（independent 门/返修轮次）"
+    },
+    {
+      "source": "tests/hermes_cli/test_delivery_version.py",
+      "dest": "tests/hermes_cli/test_delivery_version.py",
+      "note": "交付版本纯逻辑与 kanban 事件集成回归（随 delivery_version 模块部署）"
     },
     {
       "source": "tests/hermes_cli/test_kanban_verification_levels.py",

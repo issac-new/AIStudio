@@ -45,7 +45,7 @@ def _setup_independent(tmp_path: Path) -> str:
     return tid
 
 
-def _report(**overrides) -> dict:
+def _report(version=None, **overrides) -> dict:
     base = {
         "version": 1,
         "reviewer": "reviewer-1",
@@ -57,8 +57,18 @@ def _report(**overrides) -> dict:
             {"id": "AC-2", "result": "pass", "evidence": "tap 2/2 passed"},
         ],
     }
+    if version is not None:
+        base["deliveryVersionId"] = version["versionId"]
+        base["artifactChecksum"] = version["checksum"]
     base.update(overrides)
     return base
+
+
+def _latest_version(conn, tid: str) -> dict:
+    from hermes_cli.delivery_version import latest_delivery_version
+    version = latest_delivery_version(conn, tid)
+    assert version is not None, "request_review should have created a delivery version"
+    return version
 
 
 def _kinds(conn, tid: str) -> list[str]:
@@ -82,7 +92,7 @@ def test_independent_valid_report_completes_and_records_event(tmp_path, kanban_h
         cycle = [
             e for e in kb.list_events(conn, tid) if e.kind == "review_requested"
         ][-1]
-        report = _report(reviewRequestedEventId=cycle.id)
+        report = _report(_latest_version(conn, tid), reviewRequestedEventId=cycle.id)
         ok = kb.complete_task(
             conn, tid, summary="复核通过", metadata={"acceptance_report": report},
             force=True,
@@ -95,7 +105,33 @@ def test_independent_valid_report_completes_and_records_event(tmp_path, kanban_h
         payload = report_events[0].payload or {}
         assert payload["reviewer"] == "reviewer-1"
         assert payload["reviewRequestedEventId"] == cycle.id
+        assert payload["deliveryVersionId"].startswith("dv_")
+        assert len(payload["artifactChecksum"]) == 64
         assert [c["id"] for c in payload["checks"]] == ["AC-1", "AC-2"]
+
+
+def test_report_must_bind_current_delivery_version(tmp_path, kanban_home):
+    tid = _setup_independent(tmp_path)
+    with kbc.connect() as conn:
+        version = _latest_version(conn, tid)
+        report = _report(version, artifactChecksum="0" * 64)
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            kb.complete_task(
+                conn, tid, summary="错版本", metadata={"acceptance_report": report}, force=True,
+            )
+        assert "delivery_checksum_mismatch" in [b["code"] for b in ei.value.blockers]
+        assert kb.get_task(conn, tid).status == "review"
+
+
+def test_report_without_delivery_version_is_rejected(tmp_path, kanban_home):
+    tid = _setup_independent(tmp_path)
+    with kbc.connect() as conn:
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            kb.complete_task(
+                conn, tid, summary="缺版本", metadata={"acceptance_report": _report()}, force=True,
+            )
+        assert "delivery_version_missing" in [b["code"] for b in ei.value.blockers]
+        assert kb.get_task(conn, tid).status == "review"
 
 
 def test_implementer_cannot_review_own_work(tmp_path, kanban_home):
