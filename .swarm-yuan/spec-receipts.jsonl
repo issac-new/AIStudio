@@ -416,3 +416,5 @@
 {"at": "2026-11-18T14:39:11Z", "spec": "docs/superpowers/specs/2026-11-18-retro-round2.md", "receipt": "01b5282d2781ae452065e19c78eff54c62fb2ccf", "commit": "7d4110148"}
 {"at": "2026-11-18T15:44:35Z", "spec": "docs/superpowers/specs/2026-11-16-ekko-ui-surface-chat-design.md", "receipt": "b9995a034f562d5750535e75ccd9588e31b4d4b5", "commit": "37210b622"}
 {"at":"2026-11-18T16:06:48Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"d89478aef"}
+{"at":"2026-11-19T03:01:37Z","spec":"docs/superpowers/specs/2026-11-19-ui-tech-skin-global.md","receipt":"58440a6be1d3ebdb432c417612ab85fdc7c60f4a","commit":"13f006fd4"}
+{"at":"2026-11-19T03:07:00Z","spec":"docs/superpowers/specs/2026-11-19-ui-tech-skin-global.md","receipt":"dc4df9ea7707b510f5ff9e7f19263dedc2c0e3bd","commit":"68e09153c"}

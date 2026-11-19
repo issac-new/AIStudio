@@ -1325,3 +1325,5 @@
 799-agent-kanban-session-board-context.patch
 # 800-agent-kanban-workspace-kind-omit（宿主热修回灌 2026-11-18，源提交 5b35f969ab0）
 800-agent-kanban-workspace-kind-omit.patch
+# 801-theme-accent-tech-skin（全站科技感皮肤批 A，spec 2026-11-19-ui-tech-skin-global：灰阶 accent/primary 换青蓝皮肤色，用户 accentColor 定制仍优先）
+801-theme-accent-tech-skin.patch
