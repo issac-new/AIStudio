@@ -16,6 +16,7 @@ import type {
 } from './types'
 import { atomicWriteText } from '../lib/fs-store'
 import { atomicCopyDir } from '../lib/fs-store'
+import { evaluateSkillAcl } from '../skillgov/skill-acl'
 
 const LEDGER = '.skill-provisioning.json'
 const SAFE_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
@@ -190,6 +191,12 @@ export function applyProvision(options: ApplyOptions = {}): ApplyResult {
 
     for (const skill of row.missingInHost) {
       if (!SAFE_SKILL.test(skill)) { result.skipped.push({ skill, reason: 'invalid_name' }); continue }
+      // 安装面授权（技能四层授权批）：profile+skill 的 install 规则；未配 ACL 文件保持现状。
+      const installAcl = evaluateSkillAcl({ skill, action: 'install', context: { profileId: row.profile } })
+      if (!installAcl.allowed) {
+        result.skipped.push({ skill, reason: `acl:${installAcl.reason}` })
+        continue
+      }
       const picked = pickSource(globalIndex.get(skill))
       if (!picked.source) { result.skipped.push({ skill, reason: picked.reason }); continue }
       const target = join(profileSkills, skill)

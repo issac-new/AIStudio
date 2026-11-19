@@ -7,6 +7,7 @@ import { scanSkillRoot } from '../scan'
 import { loadManifest, matchRole, normalizeManifest, resolveManifestPath } from '../manifest'
 import { buildReport, readDisabledSkills } from '../reconcile'
 import { applyProvision, hashDir, rollbackProvision } from '../provision'
+import { _resetSkillAclCacheForTests } from '../../skillgov/skill-acl'
 import type { ProvisionManifest } from '../types'
 
 let root = ''
@@ -243,6 +244,25 @@ describe('applyProvision', () => {
     expect(result.profiles[0].planned.map((p) => p.skill).sort()).toEqual(['global-a', 'global-b'])
     expect(result.profiles[0].skipped[0]).toMatchObject({ skill: 'missing-src', reason: 'source_missing' })
     expect(existsSync(join(root, 'host', 'profiles', 'alice', 'skills', 'global-a'))).toBe(before)
+  })
+
+  it('安装面 ACL：profile+skill 规则拒绝时跳过并写原因', () => {
+    const aclPath = join(root, 'skill-acl.json')
+    writeFileSync(aclPath, JSON.stringify({
+      version: 1,
+      profiles: { alice: { install: { allow: ['global-a'] } } },
+    }))
+    process.env.SKILLGOV_ACL_PATH = aclPath
+    _resetSkillAclCacheForTests()
+    try {
+      const result = applyProvision({ ...opts(), dryRun: true })
+      expect(result.profiles[0].planned.map((p) => p.skill)).toEqual(['global-a'])
+      const blocked = result.profiles[0].skipped.find((s) => s.skill === 'global-b')
+      expect(blocked?.reason).toContain('acl:')
+    } finally {
+      delete process.env.SKILLGOV_ACL_PATH
+      _resetSkillAclCacheForTests()
+    }
   })
 
   it('执行只补缺失、保留已有副本、写台账、二次执行幂等', () => {
