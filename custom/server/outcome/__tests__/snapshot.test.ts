@@ -409,6 +409,27 @@ describe('sanitizeForSnapshot：URL userinfo 脱敏（物化前最小真防线�
     expect(sanitizeForSnapshot('1x://u:p@h')).toBe('1x://u:p@h')
   })
 
+  it('空 user＋有密码（:secret@ 形态，sourceRef 最常见）→ 密码段照脱为 :***@', () => {
+    expect(sanitizeForSnapshot('redis://:secret@cache.internal:6379/0')).toBe('redis://:***@cache.internal:6379/0')
+    expect(sanitizeForSnapshot('postgresql://:pw@db:5432/prod')).toBe('postgresql://:***@db:5432/prod')
+    // 幂等：:***@ 再脱不变
+    expect(sanitizeForSnapshot(sanitizeForSnapshot('redis://:secret@cache.internal:6379/0'))).toBe('redis://:***@cache.internal:6379/0')
+  })
+
+  it('脱敏面脏输入（valueStatement/measures[].definition/measures[].sourceRef 非字符串）→ ok:false 不抛', () => {
+    const dirty = [
+      ['valueStatement', { ...makeContract('oc-1'), valueStatement: 123 as unknown as string }],
+      ['definition', { ...makeContract('oc-1'), measures: [{ ...makeMeasures(1)[0], definition: {} as unknown as string }] }],
+      ['sourceRef', { ...makeContract('oc-1'), measures: [{ ...makeMeasures(1)[0], sourceRef: null as unknown as string }] }],
+    ] as const
+    for (const [needle, contract] of dirty) {
+      const r = buildMinimalSnapshot({ contract, decisionPolicyVersion: POLICY_VERSION, resolve: resolveAllOk })
+      expect(r.ok, needle).toBe(false)
+      if (r.ok) return
+      expect(r.problems.join('\n'), needle).toContain(needle)
+    }
+  })
+
   it('长无匹配文本线性完成（防正则回溯退化：1.1M 字符须秒级，O(n²) 会撞 vitest 默认 5s 超时）', () => {
     const big = 'x'.repeat(1_100_000)
     expect(sanitizeForSnapshot(big)).toBe(big)

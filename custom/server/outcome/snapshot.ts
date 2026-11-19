@@ -108,7 +108,8 @@ export const DECISION_MATRIX_VERSION = `vec-${createHash('sha256')
   .slice(0, 16)}`
 
 /**
- * URL userinfo 密码形态脱敏（物化前最小真防线）：`scheme://user:pass@…` → `scheme://user:***@…`；
+ * URL userinfo 密码形态脱敏（物化前最小真防线）：`scheme://user:pass@…` → `scheme://user:***@…`，
+ * 空 user 的 `scheme://:pass@…`（sourceRef 常见形态）同脱为 `scheme://:***@…`；
  * 无密码（`scheme://user@…`）原样保留；要求合法 scheme（字母开头，RFC 3986 字符集）＋`://`，
  * 裸 `user:pass@host` 文本不误伤。重复应用幂等（密码段已是 `***` 再脱不变）。
  *
@@ -143,12 +144,13 @@ export function sanitizeForSnapshot(text: string): string {
     }
     const userinfo = text.slice(p + 3, e)
     const colon = userinfo.indexOf(':')
-    if (colon <= 0) {
-      // 无冒号（user@，无密码）或空 user：保留
+    if (colon < 0) {
+      // 无冒号（user@，无密码）：保留
       out += text.slice(i, e + 1)
       i = e + 1
       continue
     }
+    // colon>=0 一律脱敏：user:pass@ 与空 user 的 :pass@（sourceRef 常见形态）同待遇
     out += text.slice(i, p + 3) + userinfo.slice(0, colon) + ':***@'
     i = e + 1
   }
@@ -182,10 +184,15 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
       problems.push('合同关键源失败：version 须为正整数')
     if (!nonEmpty(c.ownerPersonId)) problems.push('合同关键源失败：ownerPersonId 必填')
     if (!nonEmpty(c.verificationOwnerId)) problems.push('合同关键源失败：verificationOwnerId 必填')
+    // 脱敏面字符串字段形状守卫：sanitize 对非字符串会 TypeError，脏合同在此拒绝（不抛纪律）
+    if (typeof c.valueStatement !== 'string')
+      problems.push('合同关键源失败：valueStatement 须为字符串（脱敏面输入）')
     if (!Array.isArray(c.measures))
       problems.push('合同关键源失败：measures 须为数组')
     else if (!c.measures.every((m) => m !== null && typeof m === 'object' && nonEmpty((m as { measureId?: unknown }).measureId)))
       problems.push('合同关键源失败：measures 各项须为带 measureId 的对象')
+    else if (!c.measures.every((m) => typeof (m as { definition?: unknown }).definition === 'string' && typeof (m as { sourceRef?: unknown }).sourceRef === 'string'))
+      problems.push('合同关键源失败：measures 各项 definition/sourceRef 须为字符串（脱敏面输入）')
     // acceptance/scope 形状守卫：content 构建要对这些数组逐项脱敏，脏形状必须在此拒绝
     // （判据与 validateContractInput 同构），否则核心纯函数会在 map 上抛异常。
     const acc = c.acceptance
