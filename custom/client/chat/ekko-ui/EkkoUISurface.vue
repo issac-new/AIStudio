@@ -309,4 +309,11 @@ defineExpose({
 .ekko-surface-issues { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 11px; }
 .ekko-surface-issues code { font-family: var(--font-mono, monospace); }
 .dark .ekko-surface { --ekko-skin-accent: #22d3ee; --ekko-skin-accent-hover: #67e8f9; --ekko-skin-on-accent: #052e3a; }
+
+/* 窄容器适配（IDE 侧栏会话约 350-480px）：Agent 声明的多列网格降为单列防溢出——
+   grid 列数是行内 style，仅 !important 可压（2026-11-19 两处聊天 A2UI 完善批） */
+.ekko-surface { container-type: inline-size; }
+@container (max-width: 480px) {
+  .ekko-grid { grid-template-columns: minmax(0, 1fr) !important; }
+}
 </style>

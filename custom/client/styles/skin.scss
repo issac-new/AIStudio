@@ -44,16 +44,30 @@ a,
 
 /* ── ③ 骨架玻璃底 + 光带（studio-* 自研骨架体系，类名取自实测 DOM） ── */
 // 侧导航：玻璃拟态（微渐变底显性化玻璃感）+ 右缘发光线 + 纵向光晕
-.studio-navigation-rail {
+.app-shell.app-shell--navigation-rail .studio-navigation-rail {
   background: linear-gradient(180deg,
-    rgba(var(--accent-primary-rgb), 0.055),
-    rgba(var(--accent-primary-rgb), 0.012) 62%,
-    rgba(var(--accent-primary-rgb), 0.04));
+    rgba(var(--accent-primary-rgb), 0.13),
+    rgba(var(--accent-primary-rgb), 0.035) 62%,
+    rgba(var(--accent-primary-rgb), 0.09));
   backdrop-filter: blur(14px);
   border-right: 1px solid var(--skin-edge);
   box-shadow: 1px 0 18px -8px rgba(var(--accent-primary-rgb), 0.35);
 }
-// 顶栏：微渐变底 + 底部光线（增强）
+// 顶栏：微渐变底 + 底部光线（header 在部分视图隐藏，主光线挂 .app-box 顶缘——spec closeout D1）
+.app-box {
+  position: relative;
+}
+.app-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 1;
+  background: linear-gradient(90deg, transparent 2%, rgba(var(--accent-primary-rgb), 0.65), transparent 98%);
+  pointer-events: none;
+}
 .studio-page-header {
   position: relative;
   background: linear-gradient(90deg, rgba(var(--accent-primary-rgb), 0.05), transparent 40%);
@@ -78,6 +92,11 @@ a,
 /* ── ④ naive-ui 少量控件面（主按钮光晕/开关染色自动跟随 primary） ── */
 .n-button.n-button--primary-type:not(:disabled):hover {
   box-shadow: var(--skin-glow-md);
+}
+// default 型按钮（看板工具栏实测主力）hover 起皮肤光
+.n-button:not(.n-button--text-type):not(:disabled):hover {
+  border-color: var(--skin-edge);
+  box-shadow: var(--skin-glow-sm);
 }
 // 通用卡片面：hover 青色 glow 边（自研卡片类模式匹配 + naive-ui 卡片）
 .n-card:hover,

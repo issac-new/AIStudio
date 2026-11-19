@@ -401,6 +401,8 @@ Legacy Loop 的定时、自治与预算能力保留；①搭建的主动性编�
 皮肤色正本在 theme.ts / variables.scss 的 accent/primary base（补丁 801）；
 用户 accentColor 定制仍优先于皮肤 base（上游 resolveThemeCustomization 通道不冲突）。
 custom 的 skin.scss 只做全局无损叠加（发光反馈/骨架玻璃/光带），不动布局与字号——克制纪律沿用 polish.scss D22。
+走查清偿批（2026-11-19-tech-skin-closeout）：主光线挂 .app-box 顶缘（header 随视图隐藏）；侧栏三连类提权渐变；
+看板域细改（告警条降饱和/筛选聚焦描边/任务卡 hover 微光）；全局 muted 过 WCAG AA（补丁 802，亮 #767676/暗 #9a9a9a）。
 Agent 侧（A2UI 协议）依旧无任何颜色/主题控制面，视觉全归宿主。
 
 ## 3、架构

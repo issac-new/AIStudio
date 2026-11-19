@@ -283,7 +283,8 @@ function handleDragEnd(e: DragEvent) {
 
   &:hover {
     box-shadow: inset 0 1px 0 0 $accent-primary,
-                inset 0 0 0 1px $accent-primary;
+                inset 0 0 0 1px $accent-primary,
+                0 0 14px rgba(var(--accent-primary-rgb), 0.18);
   }
 
   &:focus-visible {

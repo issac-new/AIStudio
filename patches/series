@@ -1327,3 +1327,5 @@
 800-agent-kanban-workspace-kind-omit.patch
 # 801-theme-accent-tech-skin（全站科技感皮肤批 A，spec 2026-11-19-ui-tech-skin-global：灰阶 accent/primary 换青蓝皮肤色，用户 accentColor 定制仍优先）
 801-theme-accent-tech-skin.patch
+# 802-text-muted-wcag-aa（走查清偿批：全局 muted 亮 #999→#767676 / 暗 #888→#9a9a9a 过 AA，与 ia2 壳层对齐；spec 2026-11-19-tech-skin-closeout）
+802-text-muted-wcag-aa.patch

@@ -1,0 +1,21 @@
+diff --git a/packages/client/src/styles/variables.scss b/packages/client/src/styles/variables.scss
+--- a/packages/client/src/styles/variables.scss
++++ b/packages/client/src/styles/variables.scss
+@@ -42,7 +42,7 @@
+   // Text
+   --text-primary: #1a1a1a;
+   --text-secondary: #666666;
+-  --text-muted: #999999;
++  --text-muted: #767676;
+   --input-placeholder-color: var(--text-muted);
+   --input-border-color: rgba(var(--accent-primary-rgb), 0.18);
+   --input-border-hover-color: rgba(var(--accent-primary-rgb), 0.32);
+@@ -118,7 +118,7 @@
+   // Text
+   --text-primary: #e0e0e0;
+   --text-secondary: #a0a0a0;
+-  --text-muted: #888888;
++  --text-muted: #9a9a9a;
+ 
+   // Status
+   --success: #66bb6a;
