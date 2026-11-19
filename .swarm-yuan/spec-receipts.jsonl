@@ -419,3 +419,6 @@
 {"at":"2026-11-19T03:01:37Z","spec":"docs/superpowers/specs/2026-11-19-ui-tech-skin-global.md","receipt":"58440a6be1d3ebdb432c417612ab85fdc7c60f4a","commit":"13f006fd4"}
 {"at":"2026-11-19T03:07:00Z","spec":"docs/superpowers/specs/2026-11-19-ui-tech-skin-global.md","receipt":"dc4df9ea7707b510f5ff9e7f19263dedc2c0e3bd","commit":"68e09153c"}
 {"at":"2026-11-19T05:36:31Z","spec":"docs/superpowers/specs/2026-11-19-independent-review-protocol.md","receipt":"0c2dc5a99ff9b1d67441aec3bf7840ac2f43a81c","commit":"7d4110148"}
+{"at":"2026-11-19T06:05:48Z","spec":"docs/superpowers/specs/2026-11-19-tech-skin-closeout.md","receipt":"b43610260d68d6f3c0cf0fd27a8dd4f7506fe426","commit":"eb2943351"}
+{"at":"2026-11-19T06:07:38Z","spec":"docs/superpowers/specs/2026-11-19-tech-skin-closeout.md","receipt":"3a29cec921a5e290d37b22508b3b8bb4ec3488b8","commit":"b317abb63"}
+{"at":"2026-11-19T06:12:19Z","spec":"docs/superpowers/specs/2026-11-19-tech-skin-closeout.md","receipt":"75f7b5350d5c96ab1c9cf727fc6c447dcb1c540d","commit":"be0423915"}

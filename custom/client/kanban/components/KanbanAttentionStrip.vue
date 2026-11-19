@@ -124,8 +124,9 @@ const attentionText = computed(() => {
   }
 
   &.attention--critical {
-    border-color: rgba(var(--error-rgb), 0.55);
-    background: rgba(var(--error-rgb), 0.10);
+    // 走查降饱和（2026-11-19）：0.55/0.10 与青蓝皮肤对撞刺眼，收至细描边柔底
+    border-color: rgba(var(--error-rgb), 0.40);
+    background: rgba(var(--error-rgb), 0.06);
   }
 }
 

@@ -530,6 +530,15 @@ function viewIsCurrent(v: { snapshot: KanbanViewSnapshot }): boolean {
   min-width: 140px;
 }
 
+// 走查补（2026-11-19）：筛选下拉 hover/聚焦皮肤描边，与全站交互反馈统一
+.filter-select:hover :deep(.n-base-selection),
+.filter-select:focus-within :deep(.n-base-selection) {
+  border-color: rgba(var(--accent-primary-rgb), 0.4);
+}
+.filter-select:focus-within :deep(.n-base-selection) {
+  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.14);
+}
+
 .search-input {
   min-width: 200px;
 }
