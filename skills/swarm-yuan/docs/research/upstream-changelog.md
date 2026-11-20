@@ -314,3 +314,16 @@
 - **graphify v0.9.104**（PyPI）/ **impeccable cli-v4.8.1** / **semantica tip 39cf7216**（钉 v0.7.0 口径不变，main 252c 未发版）。
 - **diagram-design v2.6.148 物化刷新**（e57eda610→6a7f19fcc 12 提交：references 五档/scripts 两件/arc-diagram 三示例；类型数 45 持平；五锚面同步）。
 - 零移动 15 行＋GitNexus（license-risk）/codegraph（未接线）。
+
+## 2026-11-20 R150 复扫（目标二运行时刷新轮）
+
+npm/PyPI/GitHub/release notes 多通道实核（2026-11-19~20 采集），**12 行升基线**：
+- openspec 1.16.1→**2.1.0**（major：Node≥22.12 硬门槛在 1.16 已立，2.x 为表结构演进线）
+- codex-security 0.8.3→**0.10.1**；ocr 1.13.6→**1.13.13**；gsd-core 1.20.1→**1.22.0**；comet 0.5.2→**0.5.5**
+- claude-mem 15.12.1→**16.0.1**（major，npm=GitHub 同步）；graphify PyPI 0.9.104→**0.9.105**（GitHub 已 v0.9.112，PyPI 通道滞后 7 版——通道陷阱①形态再现，基线随 PyPI、note 留痕）
+- claude-code 2.1.319→**2.1.328**（本机实测同版；2.1.320-328 变更集已采吸收素材）
+- codex-cli 0.167.0→**0.170.0**（0.168 终端工作区多标签/0.169 折叠回合详情+云端会话/0.170 WebRTC 语音+MCP 环境同名实验；本机实测同版）
+- dsh dsh-v0.2.2-rc.1→**rc.5**（DeepSeek 官网对话导入/web-search 深研/liveshare tunnel 修复；本机实测同版）；dsh-TUI 0.19.0→0.20.2、dsh-context 0.82.1→0.86.0（周边树缓存刷新，观察项不入表）
+- ruflo 3.74.1→**3.78.0**；pi 1.5.0→**1.5.2**
+- 零移动维持：gitnexus 1.6.12／superpowers 7.0.2／mattpocock 1.3.2／ECC 2.2.3／impeccable 4.8.1／semantica v0.7.0／pua 3.5.1／diagram-design 2.6.148
+- 宿主面：codex/dsh/dsh-tui 三件本机升级回读全绿（0.170.0/rc.5/0.20.2）。
