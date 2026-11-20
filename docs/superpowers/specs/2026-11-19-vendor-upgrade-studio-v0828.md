@@ -19,13 +19,14 @@
 | D3 | 构建物只 mac arm dmg＋win x64 zip 且不上传 | 用户显式指令 | 全平台/上传（否决：越权） |
 | D4 | 新依赖 vue-draggable-plus 经补丁入册 | upstream 缓存树禁手改锁；overlay 新依赖走 patches/ 先例（017/080/103/136-138/573） | vendor 直改（否决：基线漂移，pre-commit 撤出） |
 
-## 验证
+## 验证（2026-11-19/20 实测）
 
-（随批补实测）
-- vendor-sync 文件面与上游 `git diff --stat v0.8.21..v0.8.28` 吻合；pristine 抽验。
-- 净基线 clean+inject 全量重放零失败（studio 补丁失配处置明细随批记录）。
-- `npm test` 全量、`npm run typecheck:harness`、`npm run release:check`。
-- 构建产物存在性与体积；本机安装后版本回读。
+- **基线门**：vendor-sync 647 文件 +41213/−10191 与上游 `git diff --stat v0.8.21..v0.8.28` 精确吻合（基线提交 869eb951d）。
+- **重放门**：净基线 clean+inject **496/496 applied 零失败，幂等二连**；pristine worktree 真管线重放守门 2/2 过（提交后）。补丁面处置：38 枚新基线适配（重锚 30＋改道 2——zcode icon→chat-agent-avatar/541 导航→navigation-entries＋与上游 plugin 化并集 6）、退役 3（687/768 lock 收口并入 573 重算 lock、745 目标上游整删；原件 .archived-patches/2026-11-19-v0828/）、其余级联自愈。
+- **全量测试**：`npm test` 9208 passed / 11 skipped，**0 真失败**（唯一残留 overlay-pristine-replay 在全量内红=主检出 8647 活服挡 clean 的环境态，单独带 OVERLAY_ALLOW_LIVE_CLEAN=1 跑 2/2 绿；与能力池批同款排除项，非代码回归）。修复波计 28→6→0 三轮：丢段补齐（098 uploadFiles/getFileDownloadUrl、509/515/539/640/740/765 splice derived-A 丢 clean hunks 全部按「prefix A→reject 原版→手工并集→splice」正道重建）＋custom 适配（ia2 versionPreview 三处退役）＋断言随上游形态（plugin: 前缀/AgentManagerCard/blob: CSP/MANAGED_SERVERS 4→5/快照 29→28）＋RELEASE-NOTES cockpit 0.8.28-studio.1 版本节。
+- **typecheck**：`npm run typecheck:harness` rc=0。
+- **release:check**：四模块对账全绿（cockpit=0.8.28-studio.1/agent-teams=v0.23.2-team.1/ycode=3.18.2/yuan-skill=v2.101.0）；docs 投影随批两轮重写（routes 129→128，versionPreview 路由退役）。
+- **pytest**：agent 树 worktree 内 358 收集错误=环境态（host venv PYTHONPATH 面不齐，v0232 轮先例在主检出拼合树跑 155/0；本轮 agent 零补丁改动、无行为变更面）。
 
 ## 设计文档影响
 
