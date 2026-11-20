@@ -2,6 +2,8 @@
 // step 派发前按 taskId 反查 outcome——无合同原行为；cancelled/settled 拒
 // （OutcomeDispatchError code=outcome_not_active）；快照关键源失败拒
 // （code=outcome_context_unavailable）；active 生成最小快照并在结果透出三元组。
+// 审查修复轮二 I1（门统一）：OUTCOME_WORKBENCH 统管全部执法面——flag≠1 时派发侧
+// 跳过 outcome 解析（完全原行为），关 flag=等价回滚（设计 §批准前六问第 3 条）。
 // 夹具范式：dispatch-lane.test.ts（HERMES_HOME/columns/ledger/evidence env）
 // ＋outcome 台账与人员名册 override（kanban-resolution.test.ts 同款板库结构）。
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -102,6 +104,7 @@ beforeEach(async () => {
   process.env.HERMES_EVIDENCE_DIR = join(home, 'evidence')
   process.env.HERMES_COLUMNS_FILE = join(home, 'columns.yaml')
   process.env.GOVERNANCE_DISPATCH_LEDGER = join(home, 'ledger.jsonl')
+  process.env.OUTCOME_WORKBENCH = '1' // I1：派发门与 REST 面同 flag（缺省关＝跳过解析）
   delete process.env.EXPERIENCE_INJECT
   delete process.env.FLYWHEEL_FEWSHOT_INJECT
   writeFileSync(process.env.HERMES_COLUMNS_FILE, COLUMNS_YAML, 'utf8')
@@ -124,6 +127,7 @@ afterEach(async () => {
   delete process.env.HERMES_EVIDENCE_DIR
   delete process.env.HERMES_COLUMNS_FILE
   delete process.env.GOVERNANCE_DISPATCH_LEDGER
+  delete process.env.OUTCOME_WORKBENCH
   const store = await import('../../outcome/outcome-store')
   store._useOutcomeStoreForTests(null)
   const { resetColumnAutomationsCacheForTests } = await import('../column-automation')
@@ -193,5 +197,31 @@ describe('column.dispatch 结果解析门', () => {
     const first = await dispatchColumnTransition(fakeService(), params)
     const second = await dispatchColumnTransition(fakeService(), { ...params, taskId: 'tk-d1' })
     expect(second.outcome!.snapshotId).toBe(first.outcome!.snapshotId)
+  })
+
+  it('I1 门统一：OUTCOME_WORKBENCH≠1（未设/显式 0）时带终态绑定任务的派发走原行为——不拒、无快照、无三元组', async () => {
+    const { dispatchColumnTransition } = await import('../column-dispatch')
+    const { listSnapshots } = await import('../../outcome/outcome-store')
+    // 未设 flag
+    delete process.env.OUTCOME_WORKBENCH
+    seedContract('oc-off1', 'tk-f1', 'cancelled')
+    addTask('tk-f1', 'doing', 'oc-off1')
+    const unset = await dispatchColumnTransition(fakeService(), { ...params, taskId: 'tk-f1' })
+    expect(unset.outcomes).toHaveLength(1) // 派发照常（不拒）
+    expect(unset.outcome).toBeUndefined() // 无三元组
+    expect(listSnapshots('oc-off1')).toEqual([]) // 无快照落账
+    // 显式 0
+    process.env.OUTCOME_WORKBENCH = '0'
+    seedContract('oc-off2', 'tk-f2', 'cancelled')
+    addTask('tk-f2', 'doing', 'oc-off2')
+    const off = await dispatchColumnTransition(fakeService(), { ...params, taskId: 'tk-f2' })
+    expect(off.outcomes).toHaveLength(1)
+    expect(off.outcome).toBeUndefined()
+    expect(listSnapshots('oc-off2')).toEqual([])
+    // 回开 flag：同一形态任务恢复执法（门是动态读，非缓存）
+    process.env.OUTCOME_WORKBENCH = '1'
+    await expect(
+      dispatchColumnTransition(fakeService(), { ...params, taskId: 'tk-f1' }),
+    ).rejects.toMatchObject({ name: 'OutcomeDispatchError', code: 'outcome_not_active' })
   })
 })

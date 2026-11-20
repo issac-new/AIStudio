@@ -214,6 +214,132 @@ export function snapshotPeopleRows(ids: string[]): SnapshotPersonRow[] {
   return listPeople().filter((p) => want.has(p.id)).map((p) => ({ id: p.id, name: p.name, active: p.active }))
 }
 
+// ---------- 激活即绑定（审查修复轮二 I2 裁决） ----------
+
+/** 激活绑定结果码：root_task_missing 根卡不在任何板库；outcome_conflict 家族内
+ *  存在异值绑定（改挂须显式迁移，spec §3.3.1）；db_unavailable 无板库/读通道
+ *  关闭；write_failed 写阶段失败（预检后磁盘/竞态，幂等重试自愈）。 */
+export type ActivationBindCode = 'root_task_missing' | 'outcome_conflict' | 'db_unavailable' | 'write_failed'
+
+export interface ActivationBindResult {
+  ok: boolean
+  code?: ActivationBindCode
+  problems?: string[]
+  /** 本次新写入绑定的任务 id（空→值）。 */
+  bound?: string[]
+  /** 已同值绑定（含写阶段竞态同值幂等命中）的任务 id。 */
+  unchanged?: string[]
+}
+
+/**
+ * 激活即绑定（I2 裁决）：把 outcomeId 绑到根任务并一次性向下传播既有全部子卡
+ * （task_links 图遍历，多级含孙卡；幽灵链接＝链接在而卡行缺席→跳过，不是「既有子卡」）。
+ *
+ * 两段式（迁移与绑定同成败、失败不留半绑态）：
+ *   1) 预检（零写入）：逐卡读 tasks.outcome_id——同值=幂等面、空=待写、
+ *      异值=立即 outcome_conflict 返回（此时库面零改动，激活侧无须回滚）；
+ *   2) 写阶段：bindOutcomeToTask 三态契约逐卡写（空→值＋outcome_bound 审计事件）；
+ *      预检后仍可能因磁盘/竞态失败——各写幂等，重试自愈。
+ *
+ * 排序纪律（对裁决「迁移成功后绑定」的工程化收窄）：本函数被控制器安排在
+ * status_changed 事件落账**之前**调用——若绑定置于事件之后，绑定失败留下悬账事件，
+ * eventId 重放撕裂自愈会不经绑定直接补完迁移（部分绑定→假 observing 绕过）；
+ * 绑定在前时，残余（绑定已写、事件写失败）是「绑定指向 draft 合同」的良性瞬态，
+ * 同值幂等重试自愈、不假放行任何面。
+ */
+export function bindOutcomeFamily(
+  outcomeId: string,
+  rootTaskId: string,
+  opts: KanbanResolutionOptions = {},
+): ActivationBindResult {
+  if (!nonEmpty(outcomeId) || !nonEmpty(rootTaskId)) {
+    return { ok: false, code: 'root_task_missing', problems: ['outcomeId/rootTaskId 必填'] }
+  }
+  const root = rootTaskId.trim()
+  const boards = allBoardDbsOf(homeOf(opts), { skipUnderscored: true })
+  if (boards.length === 0) {
+    return { ok: false, code: 'db_unavailable', problems: ['hermes home 下无看板库（激活绑定无从落位）'] }
+  }
+  for (const { slug, dbPath } of boards) {
+    let db: Db | null = null
+    try {
+      db = openReadonly(dbPath)
+      if (!db) return { ok: false, code: 'db_unavailable', problems: ['node:sqlite 不可用或库无法打开'] }
+      const rootRow = db.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get(root) as
+        | { outcome_id?: unknown }
+        | undefined
+      if (!rootRow) continue // 该板无根卡：fail-soft 试下一板
+
+      // 图遍历（BFS，同板作用域——kernel decompose 子卡与父卡同板同事务落库）
+      const ids: string[] = [root]
+      const seen = new Set(ids)
+      for (let i = 0; i < ids.length; i++) {
+        let children: Array<{ child_id?: unknown }>
+        try {
+          children = db.prepare('SELECT child_id FROM task_links WHERE parent_id = ?').all(ids[i]) as Array<{ child_id?: unknown }>
+        } catch (err) {
+          return {
+            ok: false,
+            code: 'db_unavailable',
+            problems: [`板 ${slug} task_links 不可读（无法证明传播面完备，fail-closed）：${describeErr(err)}`],
+          }
+        }
+        for (const c of children) {
+          const cid = c?.child_id
+          if (typeof cid === 'string' && cid && !seen.has(cid)) {
+            seen.add(cid)
+            ids.push(cid)
+          }
+        }
+      }
+
+      // 预检（零写入）：异值在写前全量拦截
+      const toBind: string[] = []
+      const unchanged: string[] = []
+      const conflicts: string[] = []
+      for (const id of ids) {
+        const row = db.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get(id) as
+          | { outcome_id?: unknown }
+          | undefined
+        if (!row) {
+          console.warn(`[kanban-resolution] 传播面跳过幽灵链接（卡行缺席）：${id}`)
+          continue
+        }
+        const cur = normalize(row.outcome_id)
+        if (cur === outcomeId) unchanged.push(id)
+        else if (cur === null) toBind.push(id)
+        else conflicts.push(`任务 ${id} 已挂靠 ${cur}；改挂须显式迁移事件（spec §3.3.1），激活中止且库面零改动`)
+      }
+      if (conflicts.length) return { ok: false, code: 'outcome_conflict', problems: conflicts }
+
+      // 写阶段：三态契约逐卡写（同值幂等、空→值、异值拒——预检后仅竞态可触发）
+      const bound: string[] = []
+      for (const id of toBind) {
+        const r = bindOutcomeToTask(id, outcomeId, opts.home ? { home: opts.home } : {})
+        if (!r.ok) {
+          const code: ActivationBindCode =
+            r.code === 'outcome_rebind_forbidden' ? 'outcome_conflict'
+              : r.code === 'db_unavailable' ? 'db_unavailable'
+                : 'write_failed'
+          return {
+            ok: false,
+            code,
+            problems: [`任务 ${id} 绑定写失败（${r.code ?? 'write_failed'}）：${r.error ?? ''}（已写卡幂等，重试自愈）`],
+          }
+        }
+        if (r.unchanged) unchanged.push(id) // 预检后竞态同值：按幂等面计
+        else bound.push(id)
+      }
+      return { ok: true, bound, unchanged }
+    } catch (err) {
+      console.warn(`[kanban-resolution] 读板 ${slug} 失败（fail-soft 试下一板）：${describeErr(err)}`)
+    } finally {
+      try { db?.close() } catch { /* noop */ }
+    }
+  }
+  return { ok: false, code: 'root_task_missing', problems: [`根任务 ${root} 在各看板库中不存在`] }
+}
+
 // ---------- 派发门（column.dispatch 接线面） ----------
 
 /** 门错误码（REST 422）：outcome_not_active=终态合同拒派；

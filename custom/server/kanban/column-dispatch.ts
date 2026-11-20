@@ -226,7 +226,11 @@ export async function dispatchColumnTransition(
   // 绑定；无合同 null 原行为（readiness 接线同款：门求值在前、语义在
   // kanban-resolution 单一事实源）。守卫经 findByRootTask 兜底，「合同激活后未
   // 绑定」窗口不失明。
-  const outcome = params.taskId ? resolveDispatchOutcome(params.taskId) : null
+  // I1 门统一（审查修复轮二）：OUTCOME_WORKBENCH 统管全部执法面——flag≠1 时
+  // 跳过 outcome 解析、完全原行为，关 flag=等价回滚（设计 §批准前六问第 3 条
+  // 「功能开关灰度＋按批 revert」）；与 REST 面 404 同名同读（每派发动态读 env）。
+  const outcome =
+    params.taskId && process.env.OUTCOME_WORKBENCH === '1' ? resolveDispatchOutcome(params.taskId) : null
   const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // AI 五问准入（批二）：在任一 step 派发前求值；默认 warn，enforce 抛错。

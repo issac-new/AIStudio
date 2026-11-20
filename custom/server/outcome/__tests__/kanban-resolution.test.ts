@@ -17,6 +17,7 @@ import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import {
   OutcomeDispatchError,
+  bindOutcomeFamily,
   outcomeOfTask,
   resolveDispatchOutcome,
   rootTaskSummary,
@@ -50,11 +51,16 @@ function openBoard(dbPath = join(home, 'kanban.db')): Db {
     outcome_id TEXT, version INTEGER NOT NULL DEFAULT 0)`)
   d.exec(`CREATE TABLE task_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT, kind TEXT, payload TEXT, created_at INTEGER)`)
+  d.exec(`CREATE TABLE task_links (parent_id TEXT, child_id TEXT)`)
   return d
 }
 
 function addTask(id: string, status: string, outcomeId: string | null, title = `标题-${id}`): void {
   db!.prepare('INSERT INTO tasks (id, title, status, outcome_id) VALUES (?, ?, ?, ?)').run(id, title, status, outcomeId)
+}
+
+function addLink(parentId: string, childId: string): void {
+  db!.prepare('INSERT INTO task_links (parent_id, child_id) VALUES (?, ?)').run(parentId, childId)
 }
 
 /** 建合同（draft）并直写推进到指定状态——读层只认 contract.json 现值。 */
@@ -283,5 +289,61 @@ describe('resolveDispatchOutcome（派发门）', () => {
     } catch (e) {
       expect((e as OutcomeDispatchError).code).toBe('outcome_context_unavailable')
     }
+  })
+})
+
+describe('bindOutcomeFamily（激活即绑定，审查修复轮二 I2）', () => {
+  it('根＋子＋孙全绑定（task_links 图遍历），逐卡落 outcome_bound 审计事件；不连通卡不动', () => {
+    for (const id of ['r1', 'c1', 'c2', 'g1', 'unrelated']) addTask(id, 'todo', null)
+    addLink('r1', 'c1')
+    addLink('r1', 'c2')
+    addLink('c1', 'g1') // 多级：孙卡也在传播面
+    const r = bindOutcomeFamily('oc-fam', 'r1')
+    expect(r.ok).toBe(true)
+    expect([...(r.bound ?? [])].sort()).toEqual(['c1', 'c2', 'g1', 'r1'])
+    for (const id of ['r1', 'c1', 'c2', 'g1']) {
+      const row = db!.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get(id) as { outcome_id: string | null }
+      expect(row.outcome_id).toBe('oc-fam')
+    }
+    const evs = db!.prepare("SELECT COUNT(*) AS n FROM task_events WHERE kind = 'outcome_bound'").get() as { n: number }
+    expect(Number(evs.n)).toBe(4)
+    const other = db!.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get('unrelated') as { outcome_id: string | null }
+    expect(other.outcome_id).toBeNull()
+  })
+
+  it('同值幂等重跑：ok、bound 空、unchanged=全家、零新增事件', () => {
+    for (const id of ['r1', 'c1']) addTask(id, 'todo', null)
+    addLink('r1', 'c1')
+    expect(bindOutcomeFamily('oc-idem2', 'r1').ok).toBe(true)
+    const again = bindOutcomeFamily('oc-idem2', 'r1')
+    expect(again.ok).toBe(true)
+    expect(again.bound).toEqual([])
+    expect([...(again.unchanged ?? [])].sort()).toEqual(['c1', 'r1'])
+    const evs = db!.prepare("SELECT COUNT(*) AS n FROM task_events WHERE kind = 'outcome_bound'").get() as { n: number }
+    expect(Number(evs.n)).toBe(2) // 只有首轮两条
+  })
+
+  it('异值子卡→ok:false outcome_conflict 且零写入（根不绑、无任何事件）——失败不留半绑态', () => {
+    addTask('r1', 'todo', null)
+    addTask('c1', 'todo', 'oc-other')
+    addLink('r1', 'c1')
+    const r = bindOutcomeFamily('oc-fam', 'r1')
+    expect(r).toMatchObject({ ok: false, code: 'outcome_conflict' })
+    expect((r.problems ?? []).join('\n')).toContain('c1')
+    const root = db!.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get('r1') as { outcome_id: string | null }
+    expect(root.outcome_id).toBeNull() // 预检先行：冲突在写前拦截
+    const child = db!.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get('c1') as { outcome_id: string | null }
+    expect(child.outcome_id).toBe('oc-other')
+    const evs = db!.prepare('SELECT COUNT(*) AS n FROM task_events').get() as { n: number }
+    expect(Number(evs.n)).toBe(0)
+  })
+
+  it('根任务不存在→root_task_missing；幽灵链接（链接在而卡行缺席）跳过不阻断', () => {
+    expect(bindOutcomeFamily('oc-x', 'tk-none')).toMatchObject({ ok: false, code: 'root_task_missing' })
+    addTask('r2', 'todo', null)
+    addLink('r2', 'ghost') // 链接指向不存在的卡：跳过（不是「既有子卡」）
+    const r = bindOutcomeFamily('oc-fam3', 'r2')
+    expect(r.ok).toBe(true)
+    expect(r.bound).toEqual(['r2'])
   })
 })

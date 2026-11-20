@@ -11,7 +11,19 @@ import type { AddressInfo } from 'net'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { createRequire } from 'node:module'
 import type { PlatformPrincipal } from '../../../platform/contracts/identity'
+
+// I2（审查修复轮二）激活即绑定的看板夹具：node:sqlite 建板库（kanban-bind.test.ts 同款表结构＋task_links）
+const nodeRequire: NodeRequire = (() => {
+  try { return createRequire('/index.js') } catch { return null as unknown as NodeRequire }
+})()
+type BoardDb = {
+  exec: (sql: string) => void
+  prepare: (sql: string) => { get: (...p: unknown[]) => any; run: (...p: unknown[]) => unknown }
+  close: () => void
+}
+const { DatabaseSync } = nodeRequire('node:sqlite') as { DatabaseSync: new (p: string) => BoardDb }
 
 async function fetchJson(base: string, path: string, init?: RequestInit) {
   const res = await fetch(`${base}${path}`, init)
@@ -64,6 +76,11 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
   let server: ReturnType<typeof createServer>
   let tmpOutcome: string
   let tmpPeople: string
+  // 激活即绑定（审查修复轮二 I2）走控制器内置真实现（hermesHome 动态读 env）：
+  // 共享看板夹具让 seedContract 的激活链有库可绑（根卡由 seedContract 按需补插）；
+  // I2 专项组用自己的 khome 夹具在内层 beforeEach 覆盖本 env。
+  let ctlKhome: string
+  let ctlBoard: BoardDb
   let currentUser: PlatformPrincipal | undefined
   let allTasksTerminal = false
   let rootTaskOwnership: 'proved' | 'null' | 'false' = 'proved'
@@ -80,6 +97,10 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
   /** 建合同并推进到指定状态（owner 视角，全链走 REST 端点）。 */
   const seedContract = async (to: 'draft' | 'active' | 'observing' | 'settled', rootTaskId = 'task-root-1') => {
     asUser('owner-1')
+    // 激活即绑定（I2）真实现要求根卡在板：按需补插（幂等；无 task_links → 只绑根卡）
+    ctlBoard
+      .prepare('INSERT OR IGNORE INTO tasks (id, title, status, outcome_id) VALUES (?, ?, ?, ?)')
+      .run(rootTaskId, `根任务-${rootTaskId}`, 'todo', null)
     const created = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId }))
     expect(created.status).toBe(201)
     const id = (created.body.contract as { outcomeId: string }).outcomeId
@@ -115,6 +136,15 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
   beforeEach(async () => {
     tmpOutcome = mkdtempSync(join(tmpdir(), 'outcome-ctl-store-'))
     tmpPeople = mkdtempSync(join(tmpdir(), 'outcome-ctl-people-'))
+    ctlKhome = mkdtempSync(join(tmpdir(), 'outcome-ctl-kanban-'))
+    ctlBoard = new DatabaseSync(join(ctlKhome, 'kanban.db'))
+    ctlBoard.exec(`CREATE TABLE tasks (
+      id TEXT PRIMARY KEY, title TEXT, status TEXT,
+      outcome_id TEXT, version INTEGER NOT NULL DEFAULT 0)`)
+    ctlBoard.exec(`CREATE TABLE task_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT, kind TEXT, payload TEXT, created_at INTEGER)`)
+    ctlBoard.exec(`CREATE TABLE task_links (parent_id TEXT, child_id TEXT)`)
+    process.env.HERMES_HOME = ctlKhome
     allTasksTerminal = false
     rootTaskOwnership = 'proved'
     asUser('owner-1')
@@ -166,6 +196,9 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
 
   afterEach(async () => {
     await new Promise<void>((r) => server.close(() => r()))
+    try { ctlBoard.close() } catch { /* noop */ }
+    delete process.env.HERMES_HOME // I2 组内层 afterEach 已删：幂等
+    rmSync(ctlKhome, { recursive: true, force: true })
     rmSync(tmpOutcome, { recursive: true, force: true })
     rmSync(tmpPeople, { recursive: true, force: true })
     delete process.env.OUTCOME_WORKBENCH
@@ -736,6 +769,89 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       const id = await seedContract('draft')
       expect(reopenOutcome(id, 'owner-1').ok).toBe(false)
       expect(reopenOutcome('oc-nope', 'owner-1').ok).toBe(false)
+    })
+  })
+
+  describe('审查修复轮二 I2：激活即绑定（draft→active 绑根卡＋一次性传播既有子卡）', () => {
+    let khome: string
+    let board: BoardDb
+
+    const addCard = (id: string, outcomeId: string | null) =>
+      board.prepare('INSERT INTO tasks (id, title, status, outcome_id) VALUES (?, ?, ?, ?)').run(id, `标题-${id}`, 'todo', outcomeId)
+    const link = (parentId: string, childId: string) =>
+      board.prepare('INSERT INTO task_links (parent_id, child_id) VALUES (?, ?)').run(parentId, childId)
+    const boundOf = (id: string) =>
+      (board.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get(id) as { outcome_id: string | null }).outcome_id
+
+    beforeEach(() => {
+      khome = mkdtempSync(join(tmpdir(), 'act-bind-home-'))
+      board = new DatabaseSync(join(khome, 'kanban.db'))
+      board.exec(`CREATE TABLE tasks (
+        id TEXT PRIMARY KEY, title TEXT, status TEXT,
+        outcome_id TEXT, version INTEGER NOT NULL DEFAULT 0)`)
+      board.exec(`CREATE TABLE task_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT, kind TEXT, payload TEXT, created_at INTEGER)`)
+      board.exec(`CREATE TABLE task_links (parent_id TEXT, child_id TEXT)`)
+      // bindOutcomeFamily/hermesHome 每次调用动态读 env——控制器内置真实现走本夹具
+      process.env.HERMES_HOME = khome
+      asUser('owner-1')
+    })
+
+    afterEach(() => {
+      try { board.close() } catch { /* noop */ }
+      delete process.env.HERMES_HOME
+      rmSync(khome, { recursive: true, force: true })
+    })
+
+    it('激活成功：根＋全部既有子卡（含孙卡）同值绑定，合同转 active', async () => {
+      addCard('r1', null)
+      addCard('c1', null)
+      addCard('c2', null)
+      addCard('g1', null)
+      link('r1', 'c1')
+      link('r1', 'c2')
+      link('c1', 'g1')
+      const created = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'r1' }))
+      expect(created.status).toBe(201)
+      const id = (created.body.contract as { outcomeId: string }).outcomeId
+      const act = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'active' })
+      expect(act.status).toBe(201)
+      expect((act.body.contract as { status: string }).status).toBe('active')
+      for (const t of ['r1', 'c1', 'c2', 'g1']) expect(boundOf(t)).toBe(id)
+    })
+
+    it('异值子卡→激活 422（outcome_conflict）：合同留 draft、根零绑定、库面零改动（失败不留半绑态）', async () => {
+      addCard('r1', null)
+      addCard('c1', 'oc-other') // 子卡已挂其他 outcome：改挂须显式迁移（spec §3.3.1）
+      link('r1', 'c1')
+      const created = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'r1' }))
+      expect(created.status).toBe(201)
+      const id = (created.body.contract as { outcomeId: string }).outcomeId
+      const act = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'active' })
+      expect(act.status).toBe(422)
+      expect(act.body.code).toBe('outcome_conflict')
+      // 迁移失败：合同停在 draft、绑定面零写入
+      const detail = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect((detail.body.contract as { status: string }).status).toBe('draft')
+      expect(boundOf('r1')).toBeNull()
+      expect(boundOf('c1')).toBe('oc-other')
+      const evs = board.prepare('SELECT COUNT(*) AS n FROM task_events').get() as { n: number }
+      expect(Number(evs.n)).toBe(0)
+    })
+
+    it('非 draft→active 迁移不触发绑定（observing 等既有语义不变）', async () => {
+      addCard('r9', null)
+      const created = await post(base, '/api/hermes/outcomes', contractBody({ rootTaskId: 'r9' }))
+      const id = (created.body.contract as { outcomeId: string }).outcomeId
+      const act = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'active' })
+      expect(act.status).toBe(201)
+      expect(boundOf('r9')).toBe(id) // 绑定只随 draft→active 发生
+      allTasksTerminal = true
+      const obs = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'observing' })
+      expect(obs.status).toBe(201)
+      // observing 迁移不再重复写绑定事件（幂等面由 bindOutcomeFamily 三态契约承担）
+      const evs = board.prepare("SELECT COUNT(*) AS n FROM task_events WHERE kind = 'outcome_bound'").get() as { n: number }
+      expect(Number(evs.n)).toBe(1)
     })
   })
 })

@@ -54,7 +54,13 @@ import {
 import { applyReopen, transitionGuards } from './state-machine'
 import { buildMinimalSnapshot, DEFAULT_DECISION_POLICY_VERSION } from './snapshot'
 import type { SnapshotTaskSummary } from './snapshot'
-import { rootTaskSummary, snapshotPeopleRows, tasksTerminalOf, verifyRootTask } from './kanban-resolution'
+import {
+  bindOutcomeFamily,
+  rootTaskSummary,
+  snapshotPeopleRows,
+  tasksTerminalOf,
+  verifyRootTask,
+} from './kanban-resolution'
 import { suggestVerdict, validateSettlementInput } from './settlement'
 import { OUTCOME_STATUSES } from './types'
 import type { OutcomeContract, OutcomeMeasurement, OutcomeStatus } from './types'
@@ -397,6 +403,20 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     if (!guards.ok) {
       fail(ctx, 422, '状态迁移被拒', { code: guards.code, problems: guards.problems })
       return
+    }
+    // 激活即绑定（审查修复轮二 I2 裁决）：仅 draft→active；置于 status_changed 事件
+    // 落账之前——事件在前时 eventId 重放撕裂自愈会绕过绑定补完迁移（排序纪律见
+    // kanban-resolution.ts bindOutcomeFamily 注释）。绑定失败=迁移整体失败 422，
+    // 合同留 draft；预检零写入，失败不留半绑态。
+    if (contract.status === 'draft' && to === 'active') {
+      const bind = bindOutcomeFamily(id, contract.rootTaskId)
+      if (!bind.ok) {
+        fail(ctx, 422, '激活即绑定失败（迁移中止，合同留 draft）', {
+          code: bind.code ?? 'write_failed',
+          problems: bind.problems,
+        })
+        return
+      }
     }
     const payload: Record<string, unknown> = { from: contract.status, to }
     if (typeof body.reason === 'string' && body.reason.trim()) payload.reason = body.reason.trim()
