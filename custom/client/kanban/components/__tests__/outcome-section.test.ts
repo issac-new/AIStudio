@@ -132,6 +132,8 @@ describe('OutcomeSection — 权限面', () => {
     const w = await mountSection()
     expect((w.find('[data-testid="outcome-activate"]').element as HTMLButtonElement).disabled).toBe(true)
     expect((w.find('[data-testid="outcome-measure-toggle"]').element as HTMLButtonElement).disabled).toBe(true)
+    // M-1 取消入口（不只确认钮）对非 owner 同样禁用，示因已在操作区
+    expect((w.find('[data-testid="outcome-cancel-toggle"]').element as HTMLButtonElement).disabled).toBe(true)
     const note = w.find('[data-testid="outcome-authz-note"]')
     expect(note.exists()).toBe(true)
     expect(note.text()).toContain('bob')
@@ -172,6 +174,9 @@ describe('OutcomeSection — 测量提交', () => {
       evidenceRefs: ['evid://run/1', 'evid://db/2'],
     })
     expect(w.find('[data-testid="outcome-actual-m1"]').text()).toBe('45')
+    // M-2 连续提交流程：成功后实际值输入清空（防误带旧值），度量选择保留便于批量录入
+    expect((w.find('[data-testid="outcome-measure-actual"]').element as HTMLInputElement).value).toBe('')
+    expect((w.find('[data-testid="outcome-measure-select"]').element as HTMLSelectElement).value).toBe('m1')
   })
 })
 
@@ -240,6 +245,8 @@ describe('OutcomeSection — 状态迁移', () => {
     const w = await mountSection()
     const activate = w.find('[data-testid="outcome-activate"]')
     expect((activate.element as HTMLButtonElement).disabled).toBe(false)
+    // owner 取消入口可用（M-1 只收紧非 owner）
+    expect((w.find('[data-testid="outcome-cancel-toggle"]').element as HTMLButtonElement).disabled).toBe(false)
     await activate.trigger('click')
     await flushPromises()
     expect(apiMocks.transitionOutcome).toHaveBeenCalledWith('oc-test1', { to: 'active' })

@@ -179,6 +179,8 @@ async function doSubmitMeasurement(): Promise<void> {
       evidenceRefs,
     })
     sessionMeasurements.value = new Map(sessionMeasurements.value).set(m.measureId, m)
+    // 连续提交防误带旧值：成功后清空实际值与证据（度量/可用性保留上次选择便于批量录入）
+    measureActual.value = ''
     measureEvidence.value = ''
     actionMsg.value = { ok: true, text: `测量已记录（${m.measureId} → ${m.actual ?? '未知'}）` }
   } catch (err) {
@@ -346,6 +348,7 @@ function fmtTs(ms?: number): string {
           type="button"
           class="outcome-btn outcome-btn--danger"
           data-testid="outcome-cancel-toggle"
+          :disabled="!isOwner"
           @click="cancelOpen = !cancelOpen"
         >取消…</button>
         <p v-if="authzNote" class="outcome-authz" data-testid="outcome-authz-note">{{ authzNote }}</p>
