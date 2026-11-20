@@ -60,6 +60,8 @@
 | D7 | 补丁号 810 | series 尾 809 起独占递增；撞号让号先例（807/808/809） |
 | D8 | 团队约束不复制 accountable/reviewer 字段到 OutcomeTeam | 设计 §4.6 归属节：合同 ownerPersonId/verificationOwnerId 是唯一责任人正身；团队以成员 role 承载，避免双正本漂移 |
 | D9 | 议程与贡献端点全部只读或 human-entry，零自动写 | 设计 §4.7/§4.8 反目标：不允许一次成败静默改规则、不生成排名 |
+| D10 | 议程读源=七个 source key（reviewgov 与 escalation、合同与团队按账本拆独立）而非 spec 字面「六源」；评审源受 listCases 隐性 cap 500 截断且截断先于排序（复用既有语义） | 「每源独立 available」只有账本粒度才诚实（合并账本会连带误报或吞错伪装零数据）；理据注释在 agenda.ts:33-37。cap500 截断信号留待后续按需补（终审 M-1 注记） |
+| D11 | OutcomeTeam 裁剪 familyRef 字段；「系统给出候选团队」（设计 §5.2 步 2）落为手工编辑成员表而非 team-library 自动候选 | team-library 候选面无 outcome 关联外键，自动候选会伪造建议；owner 手工确认更符合「候选不自动成队」红线（终审 M-2 注记） |
 
 ## 验证
 
@@ -95,6 +97,16 @@
 ### pristine-replay 补跑（T7b）
 
 8647 空窗复跑 `scripts/__tests__/overlay-pristine-replay.test.ts`：**2/2 通过（97.76s）**——批一/二两轮环境性登记欠账清偿；且本次重放包含重组后的 778/640，全 503 枚补丁序列干净态重放全过（对两枚修复补丁的第二次独立验证）。
+
+### 批后挂账清单（终审 M-3 注记）
+
+- DecisionGraph「统一决策引用」（设计 §4.7）：议程零写面按设计落地，但议程处理后的决策统一引用进 DecisionGraph 未接——批后独立小批。
+- RACI 面接团队版本（设计 §4.6「RACI 与 OrchestrationView 消费同一团队版本」）：OrchestrationView 面已交付，RACI 消费面未接——批后挂账。
+- OutcomeSection 建模表单（走查 F1）：批一注释自认「POST / 由后续任务接线」未接 UI——批后挂账。
+
+### 终树验证（rebase 8553dadd2 后）
+
+全量 `npm test`：**9783 passed / 0 failed / 11 skipped**（含 pristine-replay、route-manifest、training-manual 全绿——索引冲突标记随 main 侧清理消解；走查期间 vite 落的实体 node_modules 遮蔽共享链已按配方隔离重建）。
 
 ## 设计文档影响
 
