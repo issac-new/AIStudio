@@ -65,4 +65,4 @@ T15 新增读端点（T13/T14 双报缺口补齐）：
 
 ## 设计文档影响
 
-DESIGN_SYNC: none——正本修订已在批一 Task 15 第三段同批兑现，无需另立 touched：`docs/DESIGN.md` §4.6 治理章已补「结果绑定审批以合同门为权威、与风险档闸互斥分流」与「测量/结算读面与 OUTCOME_WORKBENCH 门」两句（§3.9 outcome 行内旧读面口径同步）；设计 spec §4.3 已追加授权边界补注（SPEC_REBIND=1 收据重绑在册）；pending-batch N03 已标注部分承接；`custom/server/AGENTS.md` 域索引已登记 outcome 域。
+DESIGN_SYNC: none——正本修订已在批一 Task 15 第三段同批兑现，无需另立 touched：`docs/DESIGN.md` §4.6 治理章已补「结果绑定审批以合同门为权威、与风险档闸互斥分流」与「测量/结算读面与 OUTCOME_WORKBENCH 门」两句（§3.9 outcome 行内旧读面口径同步）；设计 spec §4.3 已追加授权边界补注（SPEC_REBIND=1 收据重绑在册）；pending-batch N03 已标注部分承接；`custom/server/AGENTS.md` 域索引已登记 outcome 域。终审修复波（I-2 代码修）落点：`295537b80`（结算引用集非空强制与客户端并集提交）。
