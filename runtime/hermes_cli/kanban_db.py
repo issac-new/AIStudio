@@ -852,6 +852,9 @@ class Task:
     workflow_template_id: Optional[str] = None
     current_step_key: Optional[str] = None
     skills: Optional[list] = None            # None = defaults only; [] = explicitly none
+    # Capability tags required to complete the task (capability-pool Task 8);
+    # dispatch-side demand, NOT worker force-load (see column comment above).
+    required_capabilities: Optional[list] = None
     model_override: Optional[str] = None
     provider_override: Optional[str] = None  # provider ``model_override`` belongs to
     reasoning_effort: Optional[str] = None   # VALID_REASONING_EFFORTS | "none"; NULL = profile's
@@ -878,6 +881,8 @@ class Task:
         g = lambda col, default=None: _lossy_text(_row_get(row, col, default))
         parsed = _json_or(g("skills"))
         skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
+        rc_parsed = _json_or(g("required_capabilities"))
+        required_capabilities_value = [str(s) for s in rc_parsed if s] if isinstance(rc_parsed, list) else None
         raci_parsed = _json_or(g("raci"))
         raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
         est_days_raw = g("estimate_days")
@@ -894,6 +899,7 @@ class Task:
             consecutive_failures=g("consecutive_failures", g("spawn_failures", 0)),
             last_failure_error=g("last_failure_error", g("last_spawn_error")),
             skills=skills_value,
+            required_capabilities=required_capabilities_value,
             raci=raci_value,
             estimate_days=est_days_value,
             estimate_meta=est_meta_value,
@@ -1149,7 +1155,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- updates allow only NULL->value or same-value; re-binding to a
     -- different outcome requires an explicit migration event (not in
     -- batch 1 — writers must refuse).
-    outcome_id           TEXT
+    outcome_id           TEXT,
+    -- Capability pool foundation Task 8 (spec 2026-11-19-capability-pool-
+    -- foundation §3.3): capability tags REQUIRED to complete this task, as a
+    -- JSON array. Semantically separate from ``skills`` (force-loaded skill
+    -- bundles for the worker); this column is the dispatch-side capability
+    -- demand consumed by the overlay capabilitypool readiness gate. NULL/[] =
+    -- not declared (legacy cards unchanged). Lexicon = capability tags
+    -- (^[a-z0-9][a-z0-9:-]*$ ≤64, shared with skills normalization).
+    required_capabilities TEXT
 );
 
 CREATE TABLE IF NOT EXISTS task_links (
@@ -1435,6 +1449,42 @@ def _normalize_task_skills(skills: Optional[Iterable[str]]) -> Optional[list[str
     return cleaned
 
 
+# Capability pool Task 8：能力需求标签词法（与技能包同 SKILL_TAG_RE/≤64、拒逗号串），
+# 但**不拒 toolset 名**——能力标签是 dispatch 侧粗粒度需求（coding/review/browser
+# 都是合法能力名），toolset 拒绝是 worker 强载语义，两者不可混用。
+_CAPABILITY_TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:-]*$")
+
+
+def _normalize_required_capabilities(tags: Optional[Iterable[str]]) -> Optional[list[str]]:
+    """Strip/dedupe/validate capability tags: same lexicon as skill tags, no
+    toolset-name rejection (a capability MAY share a toolset name)."""
+    if tags is None:
+        return None
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for s in tags:
+        if not s:
+            continue
+        name = str(s).strip()
+        if not name:
+            continue
+        if "," in name:
+            raise ValueError(
+                f"capability tag cannot contain comma: {name!r} "
+                f"(pass a list of separate tags instead of a comma-joined string)"
+            )
+        if not _CAPABILITY_TAG_RE.match(name) or len(name) > 64:
+            raise ValueError(
+                f"capability tag illegal: {name!r} "
+                f"(lexicon ^[a-z0-9][a-z0-9:-]*$ ≤64)"
+            )
+        if name in seen:
+            continue
+        seen.add(name)
+        cleaned.append(name)
+    return cleaned
+
+
 def create_task(
     conn: sqlite3.Connection, *, title: str, body: Optional[str] = None,
     assignee: Optional[str] = None, created_by: Optional[str] = None,
@@ -1442,6 +1492,7 @@ def create_task(
     branch_name: Optional[str] = None, tenant: Optional[str] = None, priority: int = 0,
     parents: Iterable[str] = (), triage: bool = False, idempotency_key: Optional[str] = None,
     max_runtime_seconds: Optional[int] = None, skills: Optional[Iterable[str]] = None,
+    required_capabilities: Optional[Iterable[str]] = None,
     max_retries: Optional[int] = None, model_override: Optional[str] = None,
     provider_override: Optional[str] = None, reasoning_effort: Optional[str] = None,
     goal_mode: bool = False, goal_max_turns: Optional[int] = None, initial_status: str = "running",
@@ -1515,6 +1566,9 @@ def create_task(
     )
     parents = tuple(p for p in parents if p)
     skills_list = _normalize_task_skills(skills)
+    # Capability tags：独立词法（见 _normalize_required_capabilities——不拒 toolset 名，
+    # 与 worker 强载的 _normalize_task_skills 语义分离）。
+    required_capabilities_list = _normalize_required_capabilities(required_capabilities)
 
     # Idempotency check BEFORE the write txn (no lock held); a concurrent-create
     # race may insert twice, the next lookup stabilises on the newest.
@@ -1567,8 +1621,8 @@ def create_task(
                         skills, max_retries, model_override, provider_override,
                         reasoning_effort,
                         goal_mode, goal_max_turns, session_id, completion_contract, raci,
-                        verification
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        verification, required_capabilities
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         task_id, title.strip(), body, assignee, task_status, priority,
@@ -1580,6 +1634,7 @@ def create_task(
                         1 if goal_mode else 0, _opt_int(goal_max_turns), session_id, completion_contract,
                         json.dumps(raci) if isinstance(raci, dict) else None,
                         verification,
+                        json.dumps(required_capabilities_list) if required_capabilities_list is not None else None,
                     ),
                 )
                 if cursor.rowcount == 0:
@@ -1611,6 +1666,7 @@ def create_task(
                         "branch_name": branch_name,
                         "project_id": project_id,
                         "skills": list(skills_list) if skills_list else None,
+                        "requiredCapabilities": list(required_capabilities_list) if required_capabilities_list else None,
                         "goal_mode": bool(goal_mode) or None,
                         "model_override": model_override,
                         "provider_override": provider_override,

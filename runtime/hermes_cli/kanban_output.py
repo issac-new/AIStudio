@@ -18,6 +18,8 @@ _TASK_DICT_FIELDS = (
     "workspace_kind", "workspace_path", "branch_name", "project_id",
     "created_by", "created_at", "started_at", "completed_at", "result",
     "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
+    # Capability pool Task 8：dispatch 侧能力需求（与 skills 语义分离）。
+    "required_capabilities",
     "reasoning_effort",  # HERMES_CUSTOM[v020]
     "raci",  # HERMES_CUSTOM[raci]
     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
@@ -85,4 +87,6 @@ def _obj_dict(obj: Any, fields: tuple[str, ...]) -> dict[str, Any]:
 def _task_to_dict(t: kb.Task) -> dict[str, Any]:
     d = _obj_dict(t, _TASK_DICT_FIELDS)
     d["skills"] = list(t.skills) if t.skills else []
+    # required_capabilities：None→null（未声明）与 []（显式空）两态不同，不折叠。
+    d["required_capabilities"] = list(t.required_capabilities) if t.required_capabilities is not None else None
     return d

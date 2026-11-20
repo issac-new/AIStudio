@@ -328,10 +328,14 @@ const {
             <span class="meta-label">{{ t('kanban.skills', 'Skills') }}</span>
             <span class="meta-value">{{ task.skills.join(', ') }}</span>
           </div>
+          <div v-if="task.required_capabilities?.length" class="meta-row">
+            <span class="meta-label">{{ t('kanban.requiredCapabilities', '能力需求') }}</span>
+            <span class="meta-value">{{ task.required_capabilities.join(', ') }}</span>
+          </div>
           <CapabilityReadinessBadge
-            v-if="task.skills?.length"
+            v-if="task.required_capabilities?.length || task.skills?.length"
             :task-id="task.id"
-            :skills="task.skills"
+            :tags="task.required_capabilities?.length ? task.required_capabilities : (task.skills ?? [])"
             :assignee="task.assignee ?? null"
           />
 

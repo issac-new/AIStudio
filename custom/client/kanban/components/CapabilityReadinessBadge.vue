@@ -1,6 +1,6 @@
 <!-- overlay/custom/client/kanban/components/CapabilityReadinessBadge.vue -->
-<!-- 任务抽屉能力准入：按任务 skills 声明查候选/缺口；只读建议，不自动改派。
-     无 skills 不渲染；源缺席显示错误文本，不伪造通过。 -->
+<!-- 任务抽屉能力准入：按任务 required_capabilities 查候选/缺口（Task 8 后 declared
+     口径；父组件已做 skills 回退）；只读建议，不自动改派。无需求不渲染；源缺席显示错误文本。 -->
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
@@ -9,7 +9,8 @@ import {
 
 const props = defineProps<{
   taskId: string | null
-  skills: string[] | null | undefined
+  /** 能力需求（required_capabilities 或 skills 回退） */
+  tags: string[] | null | undefined
   assignee: string | null | undefined
 }>()
 
@@ -20,7 +21,7 @@ let seq = 0
 
 async function load(): Promise<void> {
   const my = ++seq
-  if (!props.skills?.length) {
+  if (!props.tags?.length) {
     readiness.value = null
     errorMsg.value = ''
     return
@@ -28,7 +29,7 @@ async function load(): Promise<void> {
   loading.value = true
   errorMsg.value = ''
   try {
-    const res = await fetchCapabilityCandidates(props.skills, props.assignee ?? null)
+    const res = await fetchCapabilityCandidates(props.tags, props.assignee ?? null)
     if (my !== seq) return
     if (!res.ok) throw new Error((res as { error?: string }).error ?? '能力查询失败')
     readiness.value = res.readiness
@@ -43,7 +44,7 @@ async function load(): Promise<void> {
 
 watch(
   // 用字符串作 watch 源：数组源每次求值都是新引用，会在 loading 等无关更新时重复触发。
-  () => `${props.taskId ?? ''}|${(props.skills ?? []).join(',')}|${props.assignee ?? ''}`,
+  () => `${props.taskId ?? ''}|${(props.tags ?? []).join(',')}|${props.assignee ?? ''}`,
   () => {
     load().catch((e) => {
       errorMsg.value = e instanceof Error ? e.message : String(e)
@@ -56,7 +57,7 @@ const DECISION_LABEL: Record<string, string> = { pass: '通过', warn: '警告',
 </script>
 
 <template>
-  <div v-if="skills?.length" class="cr" data-testid="capability-readiness-badge">
+  <div v-if="tags?.length" class="cr" data-testid="capability-readiness-badge">
     <div class="cr__head">
       <span class="cr__title">能力准入</span>
       <span v-if="readiness" class="cr__decision" :class="`is-${readiness.decision}`">

@@ -921,6 +921,11 @@ _LATER_TASK_COLUMNS = (
     # NULL->value / same-value (Studio-side kanban-bind.ts refuses re-bind);
     # decomposed children inherit it at insert time (kanban_db_graph).
     ("outcome_id", "outcome_id TEXT"),
+    # Capability pool foundation Task 8 (spec 2026-11-19-capability-pool-
+    # foundation §3.3): JSON array of capability tags required by the task;
+    # dispatch-side demand (overlay capabilitypool readiness), separate from
+    # skills (worker force-load). NULL/[] = not declared.
+    ("required_capabilities", "required_capabilities TEXT"),
 )
 
 _NOTIFY_SUB_COLUMNS = (

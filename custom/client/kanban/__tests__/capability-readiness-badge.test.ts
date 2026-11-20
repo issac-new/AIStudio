@@ -22,7 +22,7 @@ describe('CapabilityReadinessBadge', () => {
       },
     })
     const { default: Badge } = await import('../components/CapabilityReadinessBadge.vue')
-    const w = mount(Badge, { props: { taskId: 't1', skills: ['coding', 'review'], assignee: 'worker-tester' } })
+    const w = mount(Badge, { props: { taskId: 't1', tags: ['coding', 'review'], assignee: 'worker-tester' } })
     await flushPromises()
 
     expect(w.find('[data-testid="capability-readiness-badge"]').exists()).toBe(true)
@@ -35,7 +35,7 @@ describe('CapabilityReadinessBadge', () => {
 
   it('无 skills 不渲染、不发请求', async () => {
     const { default: Badge } = await import('../components/CapabilityReadinessBadge.vue')
-    const w = mount(Badge, { props: { taskId: 't1', skills: [], assignee: null } })
+    const w = mount(Badge, { props: { taskId: 't1', tags: [], assignee: null } })
     await flushPromises()
     expect(w.find('[data-testid="capability-readiness-badge"]').exists()).toBe(false)
     expect(api.fetchCapabilityCandidates).not.toHaveBeenCalled()
@@ -52,7 +52,7 @@ describe('CapabilityReadinessBadge', () => {
       },
     })
     const { default: Badge } = await import('../components/CapabilityReadinessBadge.vue')
-    const w = mount(Badge, { props: { taskId: 't1', skills: ['coding'], assignee: null } })
+    const w = mount(Badge, { props: { taskId: 't1', tags: ['coding'], assignee: null } })
     await flushPromises()
     expect(w.text()).toContain('无法判定')
     expect(w.text()).not.toContain('缺供给')
@@ -66,7 +66,7 @@ describe('CapabilityReadinessBadge', () => {
       readiness: { decision: 'pass', reasons: [], candidates: [], evidenceRefs: [] },
     } as never)
     const { default: Badge } = await import('../components/CapabilityReadinessBadge.vue')
-    const w = mount(Badge, { props: { taskId: 't1', skills: ['coding'], assignee: null } })
+    const w = mount(Badge, { props: { taskId: 't1', tags: ['coding'], assignee: null } })
     await flushPromises()
     expect(w.text()).toContain('能力池不可用')
     expect(w.text()).not.toContain('通过')

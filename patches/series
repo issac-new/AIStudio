@@ -1348,3 +1348,16 @@
 # 不释放、同人二票不释放、不同人二签方释放；无身份同意不推进；deny 一票即终）。approval_ledger 记录
 # 带 outcomeId/contractVersion；runtime/tools/outcome_policy.py 镜像由测试 diff 断言双侧同构）
 806-agent-approval-outcome-guard.patch
+# 807-agent-kanban-required-capabilities（能力池 Task 8，spec 2026-11-19-capability-pool-foundation §3.3）：
+# tasks.required_capabilities 列（JSON 数组，与 skills 语义分离——dispatch 侧能力需求非 worker 强载）；
+# Task dataclass/from_row/create_task/--required-capability CLI 旗标/created 事件 payload/CLI JSON 序列化。
+# 词法=独立 _normalize_required_capabilities（SKILL_TAG_RE≤64、拒逗号串、**不拒 toolset 名**——
+# coding/review/browser 是合法能力标签，toolset 拒绝是 worker 强载语义，两者分离）；decompose 不继承
+# （能力需求是任务级语义，与 outcome_id 的"子树不跨结果"不同）。
+807-agent-kanban-required-capabilities.patch
+# 808-studio-kanban-required-capabilities（能力池 Task 8，studio lane）：REST create 透传
+# requiredCapabilities（controller optionalStringArray → service --required-capability 旗标）＋
+# KanbanTask/客户端类型双面＋i18n 词表 4 键（kanban.requiredCapabilities / inlineCreate.
+# requiredCapabilitiesPlaceholder，zh/en——324/325 追加流程同款）。编辑通道与 skills 同边界
+# （create-only，PATCH 不透传——对称）。
+808-studio-kanban-required-capabilities.patch
