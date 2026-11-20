@@ -41,7 +41,7 @@
 - [x] 投影面：docs:sync 投影块重写＋docs:check 绿；手册断言数组进位 v0.23.3-team.1（6/6 绿）；design-document-guide 快照两行＋演示稿 meta 行＋数字总账 agent/teams 两行随批；gen-doc-indexes --write 后 --check 0 problem（724 specs/271 nov）。
 - [x] `npm test` 全量：批内 **9596 过/1 红**（唯一红=承接清单注册表证据路径断链——上游把 `tools/checkpoint_manager.py` 迁 `agent/checkpoints/manager.py`、`hermes_state_rewind.py` 迁 `persistence/sqlite/conversation/_store/rewind.py`，config/coding-backend-absorption.json 14 组同型对全量迁移后复绿 7/7），零环境性红；rebase 集成轮 **9670 过/2 红/11 跳过**——①设计索引冲突标记＝main 存量（cognition 批二 3c17cb04d 带入，主检出同红实证）本批已清偿复绿；②overlay-pristine-replay clean 用例＝环境性（8647 端口被他会话 RSI 走查服务占用挡 clean 守卫，主检出同红同因实证），走查结束自愈，净红=0。
 - [x] 独立审查（蓝军）总判 PASS-with-findings 零 P0/P1：整树 tree hash 与 `v0.23.3^{tree}` 字节级相等（27139 文件零差）、10 枚手解补丁新增行集合指纹全等（纯锚迁零语义漂移）、109 枚 agent 补丁干净 v0.23.3 副本独立重放 109/109、路由双源/版本八处/收据链/提交卫生/安全面全过；四条 P2 处置＝F2（team 正本底座口径行随批进位）＋F3（口头口径 16 处实为 14 组，spec 本就正确）＋F4（本节勾选随集成轮补齐）＋F1（挂账 N-6）。
-- [ ] merge 后 main 抽验：merge 提交 vendor/hermes-agent 面 diff 非零；main clean+inject 全量 applied。
+- [x] merge 后 main 抽验（2630458c2）：vendor/hermes-agent 面 diff 非零（3982 文件/+224,826）✓；merge 树与分支树零差异（纯壳合并）——worktree clean+inject 492/492 幂等二连即本树的等价注入验证；主检出注入态重建（clean+inject）被 8647 端口在途 RSI 走查服务拦于 clean 守卫——agent 树已处纯 v0.23.3 基线态、studio 注入态未动，待走查结束 `npm run clean && npm run inject` 即重建（环境窗口，无技术阻塞）。
 
 ## 设计文档影响
 
