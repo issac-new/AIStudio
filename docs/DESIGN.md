@@ -789,7 +789,7 @@ Electron 桌面构建是可选发布能力。
 | 上游基线 | `vendor/VENDOR.md` | 升级与注入对账 |
 | 发布契约 | `RELEASE-MANIFEST.json` | 版本、模块和打包检查 |
 | 命令行契约 | `config/cli-contract.json` | 退出码、错误类别与结果信封的单一词表 |
-| 业务结果合同 | `custom/server/outcome/`（`OUTCOME_WORKBENCH=1` 启用） | OutcomeContract/事件台账/测量/结算唯一正本；工程完成≠业务达成，任务经 `tasks.outcome_id` 关联不双写 |
+| 业务结果合同 | `custom/server/outcome/`（`OUTCOME_WORKBENCH=1` 启用） | OutcomeContract/事件台账/测量/结算唯一正本；工程完成≠业务达成，任务经 `tasks.outcome_id` 关联不双写；客户端消费面为根任务抽屉 OutcomeSection（`custom/client/kanban/components/`，门关整段不渲染，测量/结算无读端点时仅回显会话内提交并如实标注） |
 | 结果决策画像 | `custom/server/outcome/decision-matrix.ts`＋双侧共享判定向量 | 风险×可逆性×四挡授权矩阵；TS 与 Python（审批守卫）同向量同边界，声明只可调严 |
 
 `runtime/hermes-records/` 是仓内脱敏工作副本，不是全部记录的系统正本。
