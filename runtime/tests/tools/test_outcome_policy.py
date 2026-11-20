@@ -267,7 +267,7 @@ def test_dual_sign_gateway_consent_never_releases(caplog):
     rid = entry.data["request_id"]
     with caplog.at_level("WARNING", logger="tools.approval"):
         assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0
-        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0   # 第二票（异人）仍不放行
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0   # deny-only：一切 consent 皆拒（单签/再来几票/任何面）
         assert approval.resolve_gateway_approval("s-dual", "session", request_id=rid) == 0
     assert not entry.event.is_set()
     assert entry in approval._gateway_queues["s-dual"]
@@ -388,6 +388,88 @@ def test_ledger_pending_record_carries_dual_sign_flag(tmp_path, monkeypatch):
     assert record["detail"]["ownerPersonId"] == "owner@t"
     assert record["detail"]["verificationOwnerId"] == "verifier@t"
     assert record["detail"]["dualSignRequired"] is True
+
+
+# ---------- 6) 复审收口（2026-11-20）：CLI/transport 直答旁门＋deferred 引用 ----------
+
+def test_dual_sign_cli_prompt_consent_refused(monkeypatch, caplog):
+    """复审 I1：CLI prompt 面单人 "y"（once）不能放行 dual-sign 条目——grant 收口
+    deny-only，message 含「审批收件箱」指引，且 warning 留痕。"""
+    monkeypatch.setattr(op, "outcome_context", lambda: _CTX_DUAL)
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, True, False, False))
+    monkeypatch.setattr(approval, "_present_with_selected_transport",
+                        lambda **kw: {"selected": False})
+    monkeypatch.setattr(approval, "prompt_dangerous_approval", lambda *a, **kw: "once")
+    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s", raising=False)
+    with caplog.at_level("WARNING", logger="tools.approval"):
+        result = approval._outcome_guard("git push origin main")
+    assert result["approved"] is False
+    assert result.get("outcome") == "dual_sign_refused"
+    assert "审批收件箱" in result["message"]
+    assert any("审批收件箱" in rec.message for rec in caplog.records)
+
+
+def test_dual_sign_transport_consent_refused(monkeypatch):
+    """复审 I1：transport 插件面 choice="once" 同样不能放行 dual-sign 条目。"""
+    monkeypatch.setattr(op, "outcome_context", lambda: _CTX_DUAL)
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, True, False, False))
+    monkeypatch.setattr(approval, "_present_with_selected_transport",
+                        lambda **kw: {"selected": True, "name": "test-transport", "choice": "once"})
+    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s", raising=False)
+    result = approval._outcome_guard("git push origin main")
+    assert result["approved"] is False
+    assert result.get("outcome") == "dual_sign_refused"
+    assert "审批收件箱" in result["message"]
+
+
+def test_non_dual_sign_cli_consent_still_grants(monkeypatch):
+    """收口不误伤：非双签的 outcome ask（medium 格）在 CLI 面单人 once 照常放行。"""
+    ctx = {"taskId": "task-1", "outcomeId": "oc-1", "contractVersion": 3}   # 无声明 → ls 为 low
+    monkeypatch.setattr(op, "outcome_context", lambda: ctx)
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, True, False, False))
+    monkeypatch.setattr(approval, "_present_with_selected_transport",
+                        lambda **kw: {"selected": False})
+    monkeypatch.setattr(approval, "prompt_dangerous_approval", lambda *a, **kw: "once")
+    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s", raising=False)
+    result = approval._outcome_guard("echo deploy note")   # low+reversible+external → build:ask 非双签
+    assert result["approved"] is True
+    assert result.get("user_approved") is True
+
+
+def test_record_deferred_approval_carries_outcome_fields(tmp_path, monkeypatch):
+    """复审 M1：deferred.json 记录带 outcome_ref（含 owner/verifier）与 dual_sign_required
+    ——T12 收件箱识别双签待决条目依赖。"""
+    from hermes_cli import followups
+
+    monkeypatch.setattr(followups, "capture_route", lambda: {"kind": "api"})
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    rec = approval._record_deferred_approval(
+        session_key="s", request_id="r1", tool="terminal", preview="git push", risk="high",
+        outcome_ref={"outcomeId": "oc-1", "contractVersion": 5,
+                     "ownerPersonId": "owner@t", "verificationOwnerId": "verifier@t"},
+        dual_sign_required=True)
+    assert rec is not None
+    assert rec["outcome_ref"]["outcomeId"] == "oc-1"
+    assert rec["outcome_ref"]["contractVersion"] == 5
+    assert rec["outcome_ref"]["ownerPersonId"] == "owner@t"
+    assert rec["outcome_ref"]["verificationOwnerId"] == "verifier@t"
+    assert rec["dual_sign_required"] is True
+    on_disk = json.loads((tmp_path / "hermes" / "approvals" / "deferred.json").read_text(encoding="utf-8"))
+    assert on_disk[-1]["outcome_ref"]["outcomeId"] == "oc-1"
+    assert on_disk[-1]["dual_sign_required"] is True
+
+
+def test_record_deferred_approval_without_outcome_unchanged(tmp_path, monkeypatch):
+    """非 outcome 挂起（缺省参数）不落 outcome 字段——既有记录形状不变。"""
+    from hermes_cli import followups
+
+    monkeypatch.setattr(followups, "capture_route", lambda: {"kind": "api"})
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    rec = approval._record_deferred_approval(
+        session_key="s", request_id="r2", tool="terminal", preview="rm -rf x", risk="high")
+    assert rec is not None
+    assert "outcome_ref" not in rec
+    assert "dual_sign_required" not in rec
 
 def test_runtime_mirror_identical_to_vendor():
     """runtime/tools/outcome_policy.py 与 vendor 注入态逐字节一致（补丁 806 双侧同构，

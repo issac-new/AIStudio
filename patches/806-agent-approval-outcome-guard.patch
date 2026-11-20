@@ -362,7 +362,15 @@ new file mode 100644
 diff --git a/tools/approval.py b/tools/approval.py
 --- a/tools/approval.py
 +++ b/tools/approval.py
-@@ -69,7 +69,18 @@
+@@ -17,6 +17,7 @@
+ import logging
+ import os
+ import threading
++import uuid
+ from typing import Any, Iterable, Optional
+ 
+ from utils import env_var_enabled, is_truthy_value
+@@ -69,7 +70,18 @@
  _denial_tally: dict[str, int] = {}
  _DENIAL_TALLY_MAX_SESSIONS = 256
  
@@ -381,7 +389,7 @@ diff --git a/tools/approval.py b/tools/approval.py
  def _get_denial_breaker_threshold() -> int:
      """``approvals.denial_breaker_threshold``: default 3; 0 or negative disables."""
      try:
-@@ -146,6 +157,30 @@
+@@ -146,6 +158,30 @@
              _gateway_queues.pop(session_key, None)
  
  
@@ -412,7 +420,7 @@ diff --git a/tools/approval.py b/tools/approval.py
  def resolve_gateway_approval(session_key: str, choice: str,
                               resolve_all: bool = False,
                               reason: Optional[str] = None,
-@@ -155,6 +190,10 @@
+@@ -155,6 +191,10 @@
      *resolve_all* resolves every pending approval (``/approve all``); otherwise the oldest
      (FIFO) or the one matching *request_id*. *reason* is the ``/deny <reason>`` free text,
      relayed to the agent in the BLOCKED message. Returns the number resolved.
@@ -423,7 +431,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      """
      # Canonicalize where the answer is stored, not only in ``grant``: coalesced followers
      # (``choice == "once"`` covers only the leader) and the protected-write and elicitation
-@@ -175,17 +214,26 @@
+@@ -175,17 +215,26 @@
              queue.clear()
          else:
              targets = [queue.pop(0)]
@@ -452,7 +460,7 @@ diff --git a/tools/approval.py b/tools/approval.py
  
  
  def _entry_for_request(session_key: str, request_id: Optional[str]):
-@@ -233,6 +281,8 @@
+@@ -233,6 +282,8 @@
              if not may_answer(target.authority, actor_id, admin_ids, extra, approval_commands(choice),
                                admitted=admitted):
                  return 0
@@ -461,7 +469,60 @@ diff --git a/tools/approval.py b/tools/approval.py
          return resolve_gateway_approval(session_key, choice, request_id=request_id)
  
  
-@@ -1089,6 +1139,12 @@
+@@ -658,8 +709,12 @@
+ 
+ 
+ def _record_deferred_approval(*, session_key: str, request_id: str, tool: str,
+-                              preview: str, risk: str):
+-    """落 deferred.json；路由从当前回合环境捕获（无路由=唤醒不了，返回 None）。"""
++                              preview: str, risk: str,
++                              outcome_ref: Optional[dict] = None,
++                              dual_sign_required: bool = False):
++    """落 deferred.json；路由从当前回合环境捕获（无路由=唤醒不了，返回 None）。
++    outcome_ref/dual_sign_required（审查复审 M1）：outcome-scoped 挂起携带合同引用与
++    双签标记，T12 收件箱靠它识别双签条目。"""
+     try:
+         from hermes_cli.followups import capture_route
+         from tools.deferred_calls import record_deferred
+@@ -676,6 +731,8 @@
+             preview=preview,
+             risk=risk,
+             route=route,
++            outcome_ref=outcome_ref,
++            dual_sign_required=dual_sign_required,
+         )
+     except Exception:  # noqa: BLE001 - deferral must never break the approval gate
+         logger.debug("deferred approval record failed; falling back to deny", exc_info=True)
+@@ -1041,6 +1098,28 @@
+ )
+ 
+ 
++_DUAL_SIGN_SURFACE_REFUSAL_MESSAGE = (
++    "BLOCKED by outcome policy: this action is a high-risk one-way outcome action that "
++    "requires dual sign-off — no single surface can release it. "
++    "高风险结果动作的双签放行请在审批收件箱处理。 Do NOT retry or rephrase."
++)
++
++
++def _outcome_dual_sign_surface_refusal(description: str, pattern_key: str, noun: str = "command") -> dict:
++    """deny-only 收口（审查复审 I1，2026-11-20）：CLI prompt 与 transport 插件两面的
++    consent 不经 ``resolve_gateway_approval``（gateway 双签闸门不覆盖这两面），而
++    ``grant`` 是所有放行的必经点——outcome high+one-way 双签条目在此一律拒绝，单面
++    单人不能放行，指引到审批收件箱（批一主面；批二建 person↔mxid 桥后再开各面放行）。"""
++    logger.warning(
++        "Dual-sign approval (pattern %s) refused at the grant gate: a single surface's "
++        "consent cannot release a dual-sign outcome action — release it from the approval "
++        "inbox (高风险结果动作的双签放行请在审批收件箱处理).",
++        pattern_key,
++    )
++    return _denied(_DUAL_SIGN_SURFACE_REFUSAL_MESSAGE, pattern_key=pattern_key,
++                   description=description, outcome="dual_sign_refused", noun=noun)
++
++
+ def _smart_gate(spec: _GateSpec, command: str, description: str, pattern_key: str,
+                 pattern_keys: list[str], session_key: str, *,
+                 human_present: bool) -> tuple[dict | None, bool]:
+@@ -1089,6 +1168,12 @@
      """
      from agent.redact import redact_approval_display
  
@@ -474,7 +535,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      smart_denied = False
      manual_only = not SMART_MANUAL_ONLY_DESCRIPTIONS.isdisjoint(pattern_keys)
      if smart and not manual_only:
-@@ -1100,7 +1156,9 @@
+@@ -1100,7 +1185,9 @@
      # A command the scanners could not read to the end is approved one run at a time: a session or
      # always grant on its key would wave through every later command that trips the scan budget.
      # A manual-only class (an osascript program that can discard unsaved work) is one run too.
@@ -485,8 +546,26 @@ diff --git a/tools/approval.py b/tools/approval.py
      allow_permanent = not one_shot
  
      def deny(template: str, outcome: str, **fmt) -> dict:
-@@ -1166,6 +1224,14 @@
+@@ -1124,6 +1211,11 @@
+                 choice, pattern_key, session_key, "/".join(sorted(CONSENT_ANSWERS)))
+             return _denied(_UNRECOGNIZED_ANSWER, pattern_key=pattern_key,
+                            description=description, outcome="unrecognized_answer", noun=spec.noun)
++        # 审查复审 I1（2026-11-20）：deny-only 全面收口——CLI prompt 与 transport 插件两面
++        # 的 consent 不经 resolve_gateway_approval（gateway 双签闸门不覆盖），grant 是所有
++        # 放行的必经点：outcome high+one-way 双签条目一面一人不能放行。
++        if outcome_mark and outcome_mark.get("dual_sign"):
++            return _outcome_dual_sign_surface_refusal(description, pattern_key, spec.noun)
+         # A smart-DENY owner override or a manual-only class is always one operation, even if an older
+         # client returns "session" or "always".
+         if not one_shot:
+@@ -1164,8 +1256,20 @@
+                 "allow_permanent": not one_shot,
+                 "allow_session": not one_shot,
              }
++            # 复审 M1 前置修复：deferred 分支此前引用不存在的 ``entry``（上游 latent
++            # NameError，一触达即炸守卫）。request_id 在此预置——_ApprovalEntry 的
++            # setdefault 便沿用同值，deferred 记录与审批条目的 request_id 保真对齐。
++            data.setdefault("request_id", uuid.uuid4().hex)
              if smart_denied:
                  data["smart_denied"] = True
 +            if outcome_mark:
@@ -500,7 +579,24 @@ diff --git a/tools/approval.py b/tools/approval.py
              decision = _await_gateway_decision(session_key, notify_cb, data, surface="gateway", identity=command)
              if decision.get("notify_failed"):
                  return _denied(spec.notify_failed, pattern_key=pattern_key,
-@@ -1410,6 +1476,95 @@
+@@ -1187,10 +1291,13 @@
+                 if _should_defer_approval():
+                     deferred_rec = _record_deferred_approval(
+                         session_key=session_key,
+-                        request_id=str((entry.data or {}).get("request_id") or ""),
+-                        tool=str((entry.data or {}).get("pattern_key") or ""),
++                        request_id=str(data.get("request_id") or ""),
++                        tool=str(pattern_key or ""),
+                         preview=display_command,
+-                        risk=str((entry.data or {}).get("description") or ""),
++                        risk=str(display_description or ""),
++                        # 复审 M1：outcome-scoped 挂起携带合同引用与双签标记（T12 收件箱识别面）。
++                        outcome_ref=dict(outcome_mark.get("ref") or {}) if outcome_mark else None,
++                        dual_sign_required=bool(outcome_mark and outcome_mark.get("dual_sign")),
+                     )
+                     if deferred_rec is not None:
+                         return _deferred_approval_result(
+@@ -1410,6 +1517,95 @@
              logger.warning("Sudo stdin guard block: %s (command: %s)", sudo_guess_desc, command[:200])
              return _sudo_stdin_block_result(sudo_guess_desc)
      return _user_deny_block(command)
@@ -596,7 +692,7 @@ diff --git a/tools/approval.py b/tools/approval.py
  
  
  def check_dangerous_command(command: str, env_type: str,
-@@ -1423,6 +1578,9 @@
+@@ -1423,6 +1619,9 @@
      blocked = _floor_block(command)
      if blocked is not None:
          return blocked
@@ -606,7 +702,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      unread = hardline_scan_incomplete(command)
      if _yolo_active() or approval_context._get_approval_mode() == "off":
          return _scan_incomplete_block(_NO_REVIEWER_BYPASS) if unread else _approved()
-@@ -1491,6 +1649,10 @@
+@@ -1491,6 +1690,10 @@
      if blocked is not None:
          return blocked
  
@@ -645,3 +741,34 @@ diff --git a/tools/approval_ledger.py b/tools/approval_ledger.py
          record = {
              "recordType": record_type,
              "tool": str(tool),
+diff --git a/tools/deferred_calls.py b/tools/deferred_calls.py
+--- a/tools/deferred_calls.py
++++ b/tools/deferred_calls.py
+@@ -80,10 +80,15 @@
+     preview: str = "",
+     risk: str = "",
+     route: Optional[dict[str, str]] = None,
++    outcome_ref: Optional[dict[str, Any]] = None,
++    dual_sign_required: bool = False,
+     ttl_seconds: float = DEFAULT_TTL_SECONDS,
+     now: Optional[float] = None,
+ ) -> dict[str, Any]:
+-    """落一条 pending 延迟调用；返回记录（含 id）。"""
++    """落一条 pending 延迟调用；返回记录（含 id）。
++
++    *outcome_ref*/*dual_sign_required*（批一 Task 11 审查复审 M1）：outcome-scoped
++    守卫的超时挂起携带合同引用与双签标记，T12 审批收件箱靠它们识别需双签的待决条目。"""
+     at = now if now is not None else time.time()
+     rid = request_id or uuid.uuid4().hex
+     record = {
+@@ -99,6 +104,10 @@
+         "expires_at": at + max(60.0, float(ttl_seconds)),
+         "status": "pending",
+     }
++    if isinstance(outcome_ref, dict) and outcome_ref:
++        record["outcome_ref"] = dict(outcome_ref)
++    if dual_sign_required:
++        record["dual_sign_required"] = True
+     records = _read_all()
+     records.append(record)
+     if len(records) > MAX_RECORDS:
