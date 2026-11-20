@@ -17,6 +17,9 @@
 //   GET  /:id/settlement      —— 结算读面（最新有效结算＋历史 superseded 链）
 //   POST /:id/context-snapshots —— 生成最小上下文快照（sha256 内容幂等）
 //   GET  /:id/context         —— 快照列表（?snapshotId= 指定取全量）
+//   GET  /:id/contribution    —— 贡献事实五面 fail-soft＋评审结论面恒 unavailable（批三 T5）
+//   POST /:id/contribution-reviews —— 人署名贡献评价（批三 T5：human-entry 唯一；
+//                                 owner-or-verifier；person 自评拒；reviewId 幂等）
 //
 // 纪律：
 // - 功能门：OUTCOME_WORKBENCH≠1 → 全端点 404 {code:'outcome_workbench_disabled'}（每请求
@@ -51,6 +54,9 @@ import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds } from '../agentidentity/people'
 import { getIdentity, rosterStatus } from '../agentidentity/agent-identity'
+import { appendContributionReview, listContributionReviews } from '../agentidentity/judgments'
+import type { ContributionReviewInput, ContributionReviewRecord } from '../agentidentity/judgments'
+import { listCandidates, listInjectionLog } from '../expcandidates/exp-store'
 import { listAllContracts,
   appendEvent,
   appendMeasurement,
@@ -526,6 +532,160 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     ok(ctx, { team: result.team })
+  })
+
+  // ---------- 批三 T5：贡献回顾域（spec 2026-11-21 批三 §五，设计 §4.8） ----------
+
+  /** metadata 态贡献评价脱敏：rationale/evidenceRefs（自然人裁决理由与证据引用）脱去；
+   *  assessment/subject/签署身份与时间骨架保留（settlement rationale 脱敏同款）。 */
+  function reviewMetadata(r: ContributionReviewRecord): Record<string, unknown> {
+    const { rationale: _r, evidenceRefs: _e, ...rest } = r
+    return rest
+  }
+
+  /** metadata 态学习候选脱敏：statement（内嵌结算理由摘要）与 evidence 脱去；
+   *  id/type/status/outcomeId 骨架保留。 */
+  function learningCandidateMetadata<T extends { statement?: unknown; evidence?: unknown }>(c: T): Record<string, unknown> {
+    const { statement: _s, evidence: _e, ...rest } = c
+    return rest as Record<string, unknown>
+  }
+
+  const describeErr = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+
+  // GET /:id/contribution：贡献事实五面 fail-soft（D6）。逐面独立读、独立失败——
+  // 源不可读记 {available:false, reason} 不伪装零数据；零数据（无测量/未成队/无评价）
+  // 如实 available:true＋空 items。第六面「评审结论」v1 恒 unavailable：评审域无
+  // outcome 外键，逐条挂接成本高且易伪造（review_linkage_not_built，不猜数）。
+  // 反目标（D9）：本端点纯只读，响应顶层与嵌套均无 score/rank/total/rating 类字段。
+  // 读面 authz 同批二：owner/verifier 全量；他人 metadata 脱各面敏感内容。
+  router.get('/:id/contribution', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const scope = readScopeOf(contract, actorOf(ctx))
+
+    let measurements: Record<string, unknown>
+    try {
+      const items = listMeasurements(id)
+      measurements = { available: true, items: scope === 'full' ? items : items.map(measurementMetadata) }
+    } catch (err) {
+      measurements = { available: false, reason: `测量源读取失败（事件账派生）：${describeErr(err)}` }
+    }
+
+    let team: Record<string, unknown>
+    try {
+      const t = getTeam(id) // 未确认/坏档→null（fail-soft 不猜数）
+      team = { available: true, item: t === null ? null : scope === 'full' ? t : teamMetadata(t) }
+    } catch (err) {
+      team = { available: false, reason: `团队源读取失败：${describeErr(err)}` }
+    }
+
+    let reviews: Record<string, unknown>
+    try {
+      const items = listContributionReviews(id)
+      reviews = { available: true, items: scope === 'full' ? items : items.map(reviewMetadata) }
+    } catch (err) {
+      reviews = { available: false, reason: `人署名评价源读取失败（judgments 账）：${describeErr(err)}` }
+    }
+
+    let learning: Record<string, unknown>
+    try {
+      const candidates = listCandidates().filter((c) => c.outcomeId === id)
+      const candidateIds = new Set(candidates.map((c) => c.id))
+      // 召回留痕反查：注入行引用了本 outcome 候选（candidateIds）即命中——「已注入」
+      // ≠「有效」，本面只留事实，效果断言归对照投影（comparison）。
+      const injections = listInjectionLog().filter((r) => r.ids.some((x) => candidateIds.has(x)))
+      learning = {
+        available: true,
+        candidates: scope === 'full' ? candidates : candidates.map(learningCandidateMetadata),
+        injections,
+      }
+    } catch (err) {
+      learning = { available: false, reason: `学习候选源读取失败（expcandidates 账）：${describeErr(err)}` }
+    }
+
+    let events: Record<string, unknown>
+    try {
+      // 时间线摘要：不带 payload 正身（contract_created 的 payload 含合同全文）
+      const timeline = listEvents(id).map((e) => ({
+        eventId: e.eventId,
+        type: e.type,
+        at: e.at,
+        actor: e.actor,
+        contractVersion: e.contractVersion,
+      }))
+      events = { available: true, timeline }
+    } catch (err) {
+      events = { available: false, reason: `事件时间线源读取失败：${describeErr(err)}` }
+    }
+
+    ok(ctx, {
+      outcomeId: id,
+      readScope: scope,
+      measurements,
+      team,
+      reviews,
+      learning,
+      events,
+      // 评审结论面 v1 恒不可用（D6）：评审域无 outcome 外键，不伪造逐条挂接
+      reviewConclusions: { available: false, reason: 'review_linkage_not_built' },
+    })
+  })
+
+  // POST /:id/contribution-reviews：人署名贡献评价（human-entry 唯一写面，D9）。
+  // 鉴权序同 T2 团队端点：404（合同）→401（登录用户）→403（owner-or-verifier 且
+  // active，authz 含在岗校验）→校验。signedBy/source 服务端定死（客户端冒传忽略），
+  // subject/assessment/rationale/evidenceRefs 校验全在服务端（appendContributionReview）；
+  // 幂等键 reviewId 重放返回原记录 200 replayed 不重复落账；成功 201。
+  router.post('/:id/contribution-reviews', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const user = ctx.state?.user as { username?: unknown } | undefined
+    if (!user || typeof user.username !== 'string' || !user.username.trim()) {
+      fail(ctx, 401, '贡献评价需要登录用户（服务端身份）', { code: 'authenticated_actor_required' })
+      return
+    }
+    const actor = actorOf(ctx)
+    if (!authz(contract, actor, 'owner-or-verifier')) {
+      fail(ctx, 403, '仅 owner 或验证责任人可署名贡献评价', { code: 'forbidden' })
+      return
+    }
+    const body = bodyOf(ctx)
+    // 白名单挑键：signedBy/source/unitId/signedAt 等身份冒用面一律不采纳——签署人取服务端身份；
+    // 转型仅恢复静态形状（confirmTeam body.members 同款先例），真校验在 appendContributionReview
+    const input = {
+      ...(nonEmpty(body.reviewId) ? { reviewId: body.reviewId.trim() } : {}),
+      signedBy: actor,
+      subject: body.subject as ContributionReviewInput['subject'],
+      assessment: body.assessment as ContributionReviewInput['assessment'],
+      // 非字符串归一为空串：类型诚实（string），缺省由 store 校验拒（governance-controller String 同款）
+      rationale: typeof body.rationale === 'string' ? body.rationale : '',
+      evidenceRefs: body.evidenceRefs as string[] | undefined,
+    }
+    let result
+    try {
+      result = appendContributionReview(input, contract, activePersonIds())
+    } catch (err) {
+      console.warn(`[outcome-controller] 贡献评价写入失败（${id}）：${describeErr(err)}`)
+      fail(ctx, 500, '贡献评价写入失败', { code: 'write_failed' })
+      return
+    }
+    if (!result.ok || !result.record) {
+      fail(ctx, 422, '贡献评价入参非法', { code: 'invalid_input', problems: result.problems })
+      return
+    }
+    if (result.replayed) {
+      ok(ctx, { review: result.record, replayed: true })
+      return
+    }
+    created(ctx, { review: result.record })
   })
 
   // POST /:id/transitions：状态迁移（eventId 幂等；observing=owner 或 verifier，其余=owner）

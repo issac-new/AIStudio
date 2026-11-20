@@ -3,9 +3,9 @@
 // 哈希链（GENESIS 首锚＋逐条独立复算）、appendEvent 写失败 fail-closed（contract.json 不被触碰）、
 // measurement 幂等重放 added:false、listMeasurements 事件派生。
 // 哈希复算用本文件独立的 canon 实现（不复用被测模块导出），钉死「sha256(prevHash|canonical)」格式。
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -552,6 +552,70 @@ describe('confirmTeam / getTeam（批三 T1：team.json＋team_confirmed 事件�
     expect(
       listEvents('oc-1', 'team_confirmed').map((e) => (e.payload as { status: string }).status),
     ).toEqual(['draft', 'active'])
+  })
+
+  // ---- T1-review 挂账补测（来源 task-1-review.md Minor-1/Minor-2） ----
+
+  it('T1-review M1：write_failed 反向残留——事件已落但 team.json 写失败（chmod 注入）→ write_failed 错误形状且告警可观察', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // 目录只读拦 atomicWriteJson 的 tmp 新建；events.jsonl 已存在且可写——追加面不受影响
+    chmodSync(join(dir, 'oc-1'), 0o500)
+    try {
+      const r = confirmTeam('oc-1', makeTeamInput(0), 'p-1')
+      expect(r).toMatchObject({ ok: false, code: 'write_failed' })
+      // 反向残留：先账后物——事件已在账，team.json 未写（读侧以 team.json 为权威，重试自愈）
+      expect(listEvents('oc-1', 'team_confirmed')).toHaveLength(1)
+      expect(existsSync(join(dir, 'oc-1', 'team.json'))).toBe(false)
+      expect(getTeam('oc-1')).toBeNull()
+      // 告警路径可观察：write_failed 必有 team.json 写入失败告警（变异探针：删 try/catch 让异常上抛则此处红）
+      expect(warnSpy.mock.calls.some((c) => String(c[0]).includes('team.json 写入失败'))).toBe(true)
+    } finally {
+      chmodSync(join(dir, 'oc-1'), 0o700)
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('T1-review M2：真实旧账夹具——手写仅含 contract_created 的 events.jsonl，confirmTeam 后哈希链复算不断、旧事件可读', () => {
+    // 夹具手写（非经 API）：升级前形态的账——只有一条 contract_created，无 team_confirmed。
+    // JSON 往返剥掉值为 undefined 的键（clientRequestId）：手写哈希的 canon 输入与读回解析
+    // 后的对象逐字一致，否则 undefined 键在 canon 里成 null、落盘后消失，复算必不等。
+    const outcomeDir = join(dir, 'oc-legacy')
+    mkdirSync(outcomeDir, { recursive: true })
+    const contract = JSON.parse(JSON.stringify(makeContract('oc-legacy', 'task-legacy')))
+    writeFileSync(join(outcomeDir, 'contract.json'), JSON.stringify(contract))
+    const legacyBody = {
+      eventId: 'ev-legacy-1',
+      outcomeId: 'oc-legacy',
+      contractVersion: 1,
+      type: 'contract_created',
+      at: 1700000001000,
+      actor: 'p-1',
+      payload: { contract },
+    }
+    const legacyEvent: OutcomeEvent = {
+      ...legacyBody,
+      prevHash: 'GENESIS',
+      hash: sha(`GENESIS|${canon(legacyBody)}`),
+    }
+    writeFileSync(join(outcomeDir, 'events.jsonl'), `${JSON.stringify(legacyEvent)}\n`)
+
+    const r = confirmTeam('oc-legacy', makeTeamInput(0), 'p-1')
+    expect(r.ok).toBe(true)
+    expect(r.team?.version).toBe(1)
+
+    // 旧事件可读：首条仍是手写的 contract_created（身份/内容未被改写）
+    const events = listEvents('oc-legacy')
+    expect(events.map((e) => e.type)).toEqual(['contract_created', 'team_confirmed'])
+    expect(events[0].eventId).toBe('ev-legacy-1')
+    expect(events[0].hash).toBe(legacyEvent.hash)
+    // 哈希链复算不断：GENESIS→旧事件→新 team_confirmed 逐条 prevHash 接续、hash 可独立复算
+    let prev = 'GENESIS'
+    for (const e of events) {
+      expect(e.prevHash).toBe(prev)
+      expect(e.hash).toBe(sha(`${prev}|${canon(bodyOf(e))}`))
+      prev = e.hash
+    }
   })
 })
 

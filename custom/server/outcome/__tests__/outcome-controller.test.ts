@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
 import type { AddressInfo } from 'net'
-import { mkdtempSync, rmSync, readFileSync } from 'fs'
+import { chmodSync, existsSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { createRequire } from 'node:module'
@@ -1429,6 +1429,334 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect((meta.members as unknown[]).length).toBe(2)
       expect(meta.changeReason).toBeUndefined()
       asUser('owner-1')
+    })
+  })
+
+  // ---- 批三 T5：贡献回顾域——GET /:id/contribution 五面＋POST /:id/contribution-reviews（spec 批三 §五） ----
+
+  describe('批三 T5：贡献事实五面 GET /:id/contribution', () => {
+    // 贡献面跨三存储：judgments（人署名评价）、exp 候选（learning 面）各自隔离到临时目录
+    let tmpJudg: string
+    let tmpExp: string
+    beforeEach(async () => {
+      tmpJudg = mkdtempSync(join(tmpdir(), 'outcome-ctl-judg-'))
+      ;(await import('../../agentidentity/judgments'))._useJudgmentStoreForTests(tmpJudg)
+      tmpExp = mkdtempSync(join(tmpdir(), 'outcome-ctl-exp-'))
+      process.env.EXP_STORE = tmpExp
+    })
+    afterEach(async () => {
+      ;(await import('../../agentidentity/judgments'))._useJudgmentStoreForTests(null)
+      delete process.env.EXP_STORE
+      rmSync(tmpJudg, { recursive: true, force: true })
+      rmSync(tmpExp, { recursive: true, force: true })
+    })
+
+    /** 预置学习候选＋召回留痕（手写 exp 账，非经提取面）：候选挂本 outcome，留痕引用其 id。 */
+    const seedLearning = (outcomeId: string) => {
+      const candidate = {
+        id: 'exp-001', type: 'good_path', statement: '历史经验句', fingerprint: 'settlement:set-x',
+        evidence: [], status: 'approved', createdAt: '2026-11-21T00:00:00.000Z',
+        updatedAt: '2026-11-21T00:00:00.000Z', injectedRuns: [], outcomeId, sourceSettlementId: 'set-x',
+      }
+      writeFileSync(join(tmpExp, 'exp-candidates.json'), JSON.stringify({
+        candidates: [candidate, { ...candidate, id: 'exp-002', outcomeId: 'oc-other', fingerprint: 'settlement:set-y', sourceSettlementId: 'set-y' }],
+        nextSeq: 3,
+        injectionLog: [
+          { runLabel: 'run-1', snapshotId: 'snap-1', ids: ['exp-001'], at: 1700000000000 },
+          { runLabel: 'run-2', snapshotId: 'snap-2', ids: ['exp-002'], at: 1700000000001 },
+        ],
+      }))
+      return candidate
+    }
+
+    const reviewBody = (patch: Record<string, unknown> = {}) => ({
+      reviewId: 'rev-ctl-1',
+      subject: { subjectKind: 'person', subjectId: 'verifier-1' },
+      assessment: 'effective',
+      rationale: '复核人在观察期独立核验了指标口径与证据链，贡献判定为有效。',
+      evidenceRefs: ['evidence://task-1/1'],
+      ...patch,
+    })
+
+    it('owner 全量五面：测量/团队/评价/学习（候选按 outcomeId＋召回留痕）/事件时间线；响应键集白名单、无任何排名字段', async () => {
+      const id = await seedContract('active')
+      const team = await put(base, `/api/hermes/outcomes/${id}/team`, {
+        expectedVersion: 0,
+        members: [
+          { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '对结果指标负责' },
+          { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '独立复核' },
+        ],
+        status: 'active',
+        changeReason: '初始成队',
+      })
+      expect(team.status).toBe(200)
+      const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measurementId: `ms-${id}`, measureId: 'm1', contractVersion: 1, actual: 96,
+        availability: 'available', evidenceRefs: ['metric://gateway/success_rate'], observedAt: Date.now(),
+      })
+      expect(ms.status).toBe(201)
+      const rv = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody())
+      expect(rv.status).toBe(201)
+      seedLearning(id)
+
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/contribution`)
+      expect(res.status).toBe(200)
+      expect(res.body.ok).toBe(true)
+      expect(res.body.readScope).toBe('full')
+      expect(res.body.outcomeId).toBe(id)
+      // 键集白名单：顶层只许这九个键——排名字段（score/rank/total/rating 等）无处容身
+      expect(Object.keys(res.body).sort()).toEqual(
+        ['events', 'learning', 'measurements', 'ok', 'outcomeId', 'readScope', 'reviewConclusions', 'reviews', 'team'],
+      )
+      // 递归禁排名键：任何深度不得出现 score/rank/total/rating 类字段
+      const banned = ['score', 'scores', 'rank', 'ranking', 'total', 'totals', 'rating', 'ratings', 'creditShare']
+      const walk = (v: unknown) => {
+        if (Array.isArray(v)) { v.forEach(walk); return }
+        if (v && typeof v === 'object') {
+          for (const [k, child] of Object.entries(v)) {
+            expect(banned, `响应出现排名字段：${k}`).not.toContain(k)
+            walk(child)
+          }
+        }
+      }
+      walk(res.body)
+
+      const measurements = res.body.measurements as { available: boolean; items: Array<Record<string, unknown>> }
+      expect(measurements.available).toBe(true)
+      expect(measurements.items).toHaveLength(1)
+      expect(measurements.items[0].evidenceRefs).toEqual(['metric://gateway/success_rate'])
+      const teamFace = res.body.team as { available: boolean; item: Record<string, unknown> | null }
+      expect(teamFace.available).toBe(true)
+      expect(teamFace.item).toMatchObject({ version: 1, status: 'active', changeReason: '初始成队' })
+      const reviews = res.body.reviews as { available: boolean; items: Array<Record<string, unknown>> }
+      expect(reviews.available).toBe(true)
+      expect(reviews.items).toHaveLength(1)
+      expect(reviews.items[0]).toMatchObject({
+        id: 'rev-ctl-1', kind: 'contribution_review', assessment: 'effective', signedBy: 'owner-1',
+      })
+      const learning = res.body.learning as {
+        available: boolean
+        candidates: Array<Record<string, unknown>>
+        injections: Array<Record<string, unknown>>
+      }
+      expect(learning.available).toBe(true)
+      expect(learning.candidates.map((c) => c.id)).toEqual(['exp-001']) // 按 outcomeId 过滤，他人 outcome 不混入
+      expect(learning.injections.map((r) => r.runLabel)).toEqual(['run-1']) // 召回留痕只含命中本 outcome 候选的注入
+      const events = res.body.events as { available: boolean; timeline: Array<Record<string, unknown>> }
+      expect(events.available).toBe(true)
+      expect(events.timeline.map((e) => e.type)).toEqual(
+        ['contract_created', 'status_changed', 'team_confirmed', 'measurement_appended'],
+      )
+      for (const e of events.timeline) expect('payload' in e).toBe(false) // 时间线摘要不带 payload 正身
+      expect(res.body.reviewConclusions).toEqual({ available: false, reason: 'review_linkage_not_built' })
+    })
+
+    it('他人 metadata：测量脱 evidenceRefs、团队脱 changeReason、评价脱 rationale/evidenceRefs、学习候选脱 statement；骨架可见', async () => {
+      const id = await seedContract('active')
+      await put(base, `/api/hermes/outcomes/${id}/team`, {
+        expectedVersion: 0,
+        members: [
+          { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '甲' },
+          { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '乙' },
+        ],
+        status: 'active',
+        changeReason: '内部调整理由',
+      })
+      const rv = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody())
+      expect(rv.status).toBe(201)
+      seedLearning(id)
+
+      asUser('other-1')
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/contribution`)
+      expect(res.status).toBe(200)
+      expect(res.body.readScope).toBe('metadata')
+      const measurements = res.body.measurements as { available: boolean; items: Array<Record<string, unknown>> }
+      expect(measurements.available).toBe(true)
+      expect(measurements.items).toEqual([]) // 未见测量提交，空列表≠失败
+      const teamFace = res.body.team as { item: Record<string, unknown> | null }
+      expect(teamFace.item).toMatchObject({ version: 1, status: 'active' })
+      expect(teamFace.item?.changeReason).toBeUndefined()
+      const reviews = res.body.reviews as { available: boolean; items: Array<Record<string, unknown>> }
+      expect(reviews.items).toHaveLength(1)
+      expect(reviews.items[0].assessment).toBe('effective') // 骨架可见
+      expect(reviews.items[0].rationale).toBeUndefined()
+      expect(reviews.items[0].evidenceRefs).toBeUndefined()
+      const learning = res.body.learning as { candidates: Array<Record<string, unknown>> }
+      expect(learning.candidates.map((c) => c.id)).toEqual(['exp-001'])
+      expect(learning.candidates[0].statement).toBeUndefined()
+      expect(learning.candidates[0].status).toBe('approved')
+      asUser('owner-1')
+    })
+
+    it('零数据≠失败：未确认团队/无测量/无评价/无学习的合同，五面 available 全 true、items 空、team.item=null', async () => {
+      const id = await seedContract('active')
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/contribution`)
+      expect(res.status).toBe(200)
+      expect(res.body.measurements).toMatchObject({ available: true })
+      expect((res.body.measurements as { items: unknown[] }).items).toEqual([])
+      expect(res.body.team).toEqual({ available: true, item: null })
+      expect((res.body.reviews as { items: unknown[] }).items).toEqual([])
+      expect(res.body.learning).toMatchObject({ available: true, candidates: [], injections: [] })
+      expect((res.body.events as { timeline: unknown[] }).timeline.length).toBeGreaterThan(0) // 事件账恒有创建/激活
+    })
+
+    it('逐源失败不伪装零数据：judgments 账不可读→reviews unavailable；exp 账损坏→learning unavailable；events 账不可读→events/measurements unavailable', async () => {
+      const id = await seedContract('active')
+      const rv = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody())
+      expect(rv.status).toBe(201)
+      seedLearning(id)
+      const eventsFile = join(tmpOutcome, id, 'events.jsonl')
+      const judgFile = join(tmpJudg, 'judgments.jsonl')
+      chmodSync(judgFile, 0o000)
+      chmodSync(eventsFile, 0o000)
+      writeFileSync(join(tmpExp, 'exp-candidates.json'), '{oops-not-json')
+      try {
+        const res = await fetchJson(base, `/api/hermes/outcomes/${id}/contribution`)
+        expect(res.status).toBe(200)
+        expect(res.body.reviews).toMatchObject({ available: false })
+        expect((res.body.reviews as { reason?: string }).reason).toBeTruthy()
+        expect(res.body.learning).toMatchObject({ available: false })
+        expect(res.body.events).toMatchObject({ available: false })
+        expect(res.body.measurements).toMatchObject({ available: false }) // 测量派生自事件账，同源同失败
+        expect(res.body.team).toMatchObject({ available: true }) // team.json 未受损，独立源照常
+      } finally {
+        chmodSync(judgFile, 0o644)
+        chmodSync(eventsFile, 0o644)
+      }
+    })
+
+    it('未知 outcome → 404 not_found；功能门关 → 404 outcome_workbench_disabled', async () => {
+      const nf = await fetchJson(base, '/api/hermes/outcomes/oc-nope/contribution')
+      expect(nf.status).toBe(404)
+      expect(nf.body.code).toBe('not_found')
+      delete process.env.OUTCOME_WORKBENCH
+      const gated = await fetchJson(base, '/api/hermes/outcomes/oc-nope/contribution')
+      expect(gated.status).toBe(404)
+      expect(gated.body.code).toBe('outcome_workbench_disabled')
+      process.env.OUTCOME_WORKBENCH = '1'
+    })
+  })
+
+  describe('批三 T5：POST /:id/contribution-reviews 人署名贡献评价', () => {
+    let tmpJudg: string
+    beforeEach(async () => {
+      tmpJudg = mkdtempSync(join(tmpdir(), 'outcome-ctl-judg-'))
+      ;(await import('../../agentidentity/judgments'))._useJudgmentStoreForTests(tmpJudg)
+    })
+    afterEach(async () => {
+      ;(await import('../../agentidentity/judgments'))._useJudgmentStoreForTests(null)
+      rmSync(tmpJudg, { recursive: true, force: true })
+    })
+
+    const reviewBody = (patch: Record<string, unknown> = {}) => ({
+      reviewId: 'rev-1',
+      subject: { subjectKind: 'person', subjectId: 'verifier-1' },
+      assessment: 'effective',
+      rationale: '复核人在观察期独立核验了指标口径与证据链，贡献判定为有效。',
+      evidenceRefs: ['evidence://task-1/1'],
+      ...patch,
+    })
+
+    it('owner 署名成功 201：source=human-entry 服务端定死、signedBy=服务端身份（客户端冒传忽略）、无 unitId', async () => {
+      const id = await seedContract('active')
+      const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody({
+        signedBy: 'attacker-1',
+        source: 'telemetry',
+        unitId: 'aid-smuggled',
+        signedAt: 1,
+      }))
+      expect(res.status).toBe(201)
+      expect(res.body.ok).toBe(true)
+      const review = res.body.review as Record<string, unknown>
+      expect(review).toMatchObject({
+        id: 'rev-1', kind: 'contribution_review', outcomeId: id, assessment: 'effective',
+        signedBy: 'owner-1', source: 'human-entry',
+      })
+      expect(review.subject).toEqual({ subjectKind: 'person', subjectId: 'verifier-1' })
+      expect('unitId' in review).toBe(false)
+      expect(typeof review.signedAt).toBe('number')
+      // 落账核验：judgments.jsonl 一行，human-entry 唯一
+      const lines = readFileSync(join(tmpJudg, 'judgments.jsonl'), 'utf8').trim().split('\n')
+      expect(lines).toHaveLength(1)
+      expect(JSON.parse(lines[0]).source).toBe('human-entry')
+    })
+
+    it('verifier 同权可签（owner-or-verifier）；agent/team 主体亦可', async () => {
+      const id = await seedContract('active')
+      asUser('verifier-1')
+      const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody({
+        reviewId: 'rev-v1',
+        subject: { subjectKind: 'agent', subjectId: 'ag-7' },
+      }))
+      expect(res.status).toBe(201)
+      expect((res.body.review as { signedBy: string }).signedBy).toBe('verifier-1')
+      const teamReview = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody({
+        reviewId: 'rev-v2',
+        subject: { subjectKind: 'team', subjectId: id },
+        assessment: 'mixed',
+      }))
+      expect(teamReview.status).toBe(201)
+      asUser('owner-1')
+    })
+
+    it('未认证 → 401 authenticated_actor_required，零落账', async () => {
+      const id = await seedContract('active')
+      currentUser = undefined
+      const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody())
+      expect(res.status).toBe(401)
+      expect(res.body.code).toBe('authenticated_actor_required')
+      expect(existsSync(join(tmpJudg, 'judgments.jsonl'))).toBe(false)
+      asUser('owner-1')
+    })
+
+    it('非 owner/verifier → 403 forbidden，零落账', async () => {
+      const id = await seedContract('active')
+      asUser('other-1')
+      const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody())
+      expect(res.status).toBe(403)
+      expect(res.body.code).toBe('forbidden')
+      expect(existsSync(join(tmpJudg, 'judgments.jsonl'))).toBe(false)
+      asUser('owner-1')
+    })
+
+    it('幂等 reviewId：重复 POST → 200 replayed 返回原记录，不重复落账', async () => {
+      const id = await seedContract('active')
+      const first = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody())
+      expect(first.status).toBe(201)
+      const replay = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody({
+        assessment: 'ineffective', // 重放携带不同值也不得覆盖
+      }))
+      expect(replay.status).toBe(200)
+      expect(replay.body.replayed).toBe(true)
+      expect(replay.body.review).toEqual(first.body.review)
+      const lines = readFileSync(join(tmpJudg, 'judgments.jsonl'), 'utf8').trim().split('\n')
+      expect(lines).toHaveLength(1)
+    })
+
+    it('422 全矩阵：rationale 短/evidenceRefs 空/assessment 非法/subjectKind 非法/subjectId 空/缺 subject/person 自评，各自点名 problems 且零落账', async () => {
+      const id = await seedContract('active')
+      const cases: Array<[string, Record<string, unknown>, string]> = [
+        ['rationale 过短', reviewBody({ rationale: '太短' }), 'rationale'],
+        ['evidenceRefs 空', reviewBody({ evidenceRefs: [] }), 'evidenceRefs'],
+        ['assessment 非法', reviewBody({ assessment: 'great' }), 'assessment'],
+        ['subjectKind 非法', reviewBody({ subject: { subjectKind: 'robot', subjectId: 'ag-1' } }), 'subjectKind'],
+        ['subjectId 空', reviewBody({ subject: { subjectKind: 'person', subjectId: '' } }), 'subjectId'],
+        ['缺 subject', reviewBody({ subject: undefined }), 'subject'],
+        ['person 自评', reviewBody({ subject: { subjectKind: 'person', subjectId: 'owner-1' } }), '自评'],
+      ]
+      for (const [label, body, keyword] of cases) {
+        const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, body)
+        expect(res.status, label).toBe(422)
+        expect(res.body.code, label).toBe('invalid_input')
+        expect((res.body.problems as string[]).join(), label).toContain(keyword)
+      }
+      expect(existsSync(join(tmpJudg, 'judgments.jsonl'))).toBe(false) // 全拒收：零落账
+    })
+
+    it('未知 outcome → 404 not_found', async () => {
+      const res = await post(base, '/api/hermes/outcomes/oc-nope/contribution-reviews', reviewBody())
+      expect(res.status).toBe(404)
+      expect(res.body.code).toBe('not_found')
     })
   })
 })
