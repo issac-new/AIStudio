@@ -1,8 +1,9 @@
-diff --git a/packages/client/src/router/index.ts b/packages/client/src/router/index.ts
-index ef81ce471..12b00e9c8 100644
+
+diff --git packages/client/src/router/index.ts packages/client/src/router/index.ts
+index cd89540c0..e4e7088a2 100644
 --- a/packages/client/src/router/index.ts
 +++ b/packages/client/src/router/index.ts
-@@ -30,71 +30,8 @@ const router = createRouter({
+@@ -45,71 +45,8 @@ const router = createRouter({
        component: () => import('@/views/hermes/GroupChatLinkView.vue'),
        meta: { standaloneChat: true },
      },
@@ -76,7 +77,7 @@ index ef81ce471..12b00e9c8 100644
      {
        path: '/desktop-chat/:sessionId',
        name: 'desktop.chat',
-@@ -322,6 +259,9 @@ const router = createRouter({
+@@ -326,6 +263,9 @@ const router = createRouter({
        component: () => import('@/views/hermes/McpManagerView.vue'),
        meta: { hermesConfig: true },
      },
@@ -86,7 +87,7 @@ index ef81ce471..12b00e9c8 100644
    ],
  })
  
-@@ -363,10 +303,10 @@ router.beforeEach(async (to, _from, next) => {
+@@ -381,10 +321,10 @@ router.beforeEach(async (to, _from, next) => {
    if (to.meta.public) {
      // Already has key, skip login
      if (to.name === 'login' && hasApiKey() && !isDesktopShell()) {
@@ -100,7 +101,7 @@ index ef81ce471..12b00e9c8 100644
        return
      }
      next()
-@@ -380,8 +320,8 @@ router.beforeEach(async (to, _from, next) => {
+@@ -406,8 +346,8 @@ router.beforeEach(async (to, _from, next) => {
    }
  
    if (to.meta.requiresSuperAdmin && !isStoredSuperAdmin()) {
