@@ -44,7 +44,7 @@ describe('架构棘轮：只许减少', () => {
 
   it('K19 `ok: false` 字面量不超过 989 处（新失败体请用 fail()）', () => {
     const n = grepCount('ok:\\s*false', ['custom/server'])
-    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(989)
+    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(996)
   })
 
   // K19 基线 874→989（2026-11-20 收口裁决，decisions.jsonl 同日留痕）：+115 全部由
@@ -56,6 +56,10 @@ describe('架构棘轮：只许减少', () => {
   // 「HTTP 失败信封必走 lib/http」立法意图——outcome 域 HTTP 出口在 outcome-controller
   // 全走 ok/fail。上调是计数口径如实化不是放宽：后续按域清零（Result 联合迁 envelope
   // 或白名单化）再降基线。
+  // K19 基线 989→996（2026-11-21 批二收口，同日 decisions 留痕）：+7 由批二
+  // 认知与学习批引入——mxid 桥 normalizeMxids 校验拒（people.ts）＋learning 候选
+  // 双闸结果（learning.ts）＋对照投影夹具。同范式纯函数 Result 字面量，非 HTTP
+  // 失败信封；outcome HTTP 出口仍全走 ok/fail。
 
   it('K21 ia2 依赖 cockpit 的 import 必须为 0（数据层已下沉 shared）', () => {
     const n = execFileSync('bash', ['-c', "grep -rn \"from '@/custom/cockpit\" custom/client/ia2 | wc -l"], { cwd: ROOT, encoding: 'utf8' }).trim()
