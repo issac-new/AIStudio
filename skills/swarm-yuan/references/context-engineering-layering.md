@@ -209,6 +209,18 @@ Anthropic 对 Context Engineering 的定义：**minimal 并不必然 short，关
 
 与 §十一 的分工：三漏管 token 从哪漏，本节管写下去的每一句买回了什么。
 
+## 十二点五、回合适读性分层（Collapse turn details）
+
+> 来源：openai/codex rust-v0.169.0 release notes（#60554-60557，2026-11-17）
+
+全屏转录里每个回合默认折叠已完成的活动（工具调用/中间输出），只保留答案可见；折叠内容仍可搜索、可展开复核。三个可操作判据，供目标技能写长任务日志/审查记录时自检：
+
+1. **答案优先**：一个回合落盘后，读者第一眼应看到结论行；过程行（命令、探查、被否决的路径）排在折叠区或附属文件。与 Artifact-First 互补：Artifact-First 管"聊天里只回路径与关键决策"，本节管"落盘产物内部的层序"。
+2. **折叠不等于删除**：折叠区的工具输出必须仍可全文检索——审查者要能按命令名/路径名/错误串反查证据，不允许"折叠即丢弃"。对应 not run ≠ 零发现的可复核纪律。
+3. **回合是分层单位**：以"一次提问→一次交付"为折叠单元，不在回合内部再折（内层折叠会让因果链断裂、检索跳失）。多回合产物（如回归报告）按回合分段，每段自带结论行。
+
+与 §十一 输出经济学的关系：三漏管 token 从哪漏，本节管落盘后的阅读 token 从哪省——两层合起来覆盖"写之前的取舍"与"写之后的层序"。
+
 ## 十三、版本与来源
 
 - 来源：[Vibe编码 公众号《Opus 4.8 删掉了73%的提示词，Opus 5 为何又新增了 82%》](https://mp.weixin.qq.com/s/GXEnP16WbpjWtWDxj5OE2A)（2026-07-27，作者 VibeCoder）+ Anthropic Context Engineering 文档
@@ -218,4 +230,5 @@ Anthropic 对 Context Engineering 的定义：**minimal 并不必然 short，关
 - 自检断言：G14 `check_context_engineering_layering`（`self-check.sh`，warn-only，守本文档存在性 + SKILL.md 整合 + facts.conf 口径）
 - 口径同步：`facts.conf` `FACT_REFERENCES`（计数含本文档；值以 facts.conf 为准——手抄数字一律不落地，本行此前手抄值已漂移为陈旧值后修复为引用式）
 - §十一 增补来源：行者明灵《Harness实践》上下篇（2026-09-16/17）+ rtk-ai/rtk（Apache-2.0）+ JuliusBrussee/caveman（Skill=MIT/Proxy=BSL-1.1）
+- §十二点五 来源：openai/codex rust-v0.169.0（Apache-2.0，release notes #60554-60557）——只吸收回合适读性判据，不复制实现
 - §十二 增补来源：mattpocock/skills v1.2.3（MIT）`writing-for-agents/SKILL.md`
