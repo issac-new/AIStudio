@@ -16,6 +16,10 @@ export interface FleetApprovalPreview {
    *  outcome 绑定引用与双签标记（806 补丁 L573-577 下发面）；缺省=非 outcome 绑定。 */
   outcome_ref?: unknown
   dual_sign_required?: boolean
+  /** 批二 Task 2：outcome 绑定字段读取瞬态失败（字段访问抛错）——条目仍可列出但
+   *  绑定不可证；收件箱聚合面据此标 PendingItem.outcomeUnverified（decide 批准类
+   *  409 outcome_unavailable、autopass 拒，不回退成「无绑定」放行）。 */
+  outcome_unverified?: boolean
 }
 
 export interface FleetClarifyPreview {

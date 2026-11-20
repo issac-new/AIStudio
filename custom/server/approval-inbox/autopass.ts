@@ -136,14 +136,17 @@ export function resolveSpotcheck(id: string, verdict: 'confirm' | 'veto', actor:
 /** autopass 候选判定（纯函数）：命令类 + low 档 + 过宽限期。
  *  批一 Task 12：outcome 绑定条目（源记录带 outcome_ref）一律不吃自动放行——
  *  合同治理面不随低风险抽检器放宽（T11「ask 不吃 unattended auto-approve」同则），
- *  否则 stale 合同门与双签门可被 autopass 旁路。 */
+ *  否则 stale 合同门与双签门可被 autopass 旁路。
+ *  批二 Task 2：绑定不可证（outcomeUnverified——tap 读取瞬态失败/引用形状不合法）
+ *  同拒——「有绑定但不可证」不得回退成无绑定放行（同 fail-open 收口）。 */
 export function isAutopassCandidate(
-  item: { kind: string; risk?: ApprovalRiskTier; createdAt?: number; outcomeRef?: unknown },
+  item: { kind: string; risk?: ApprovalRiskTier; createdAt?: number; outcomeRef?: unknown; outcomeUnverified?: boolean },
   now = Date.now(),
 ): boolean {
   if (item.kind !== 'command') return false
   if (item.risk !== 'low') return false
   if (item.outcomeRef) return false
+  if (item.outcomeUnverified === true) return false
   // createdAt<=0/缺失 视为未知（fleet 源 lastActiveAt=0 即"未知"）：宽限期从
   // 当下起算，杜绝陈旧/零值让新人列项首扫即被放行（先可见后放行失效）。
   const created = typeof item.createdAt === 'number' && item.createdAt > 0 ? item.createdAt : now

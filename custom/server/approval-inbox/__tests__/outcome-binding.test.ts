@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import Koa from 'koa'
+import type { OutcomeStatus } from '../../outcome/types'
 
 let dir = ''
 let queueDir = ''
@@ -66,8 +67,9 @@ async function pendingItems(): Promise<Array<Record<string, unknown>>> {
   return body.items
 }
 
-/** 造合同（owner=p-owner / verifier=p-verifier，version 由参定）。 */
-async function makeContract(outcomeId: string, version: number): Promise<void> {
+/** 造合同（owner=p-owner / verifier=p-verifier，version/status 由参定；
+ *  批二 T2 起支持 cancelled/settled 等终态合同造档）。 */
+async function makeContract(outcomeId: string, version: number, status: OutcomeStatus = 'active'): Promise<void> {
   const { createContract } = await import('../../outcome/outcome-store')
   const r = createContract({
     schemaVersion: 1,
@@ -88,7 +90,7 @@ async function makeContract(outcomeId: string, version: number): Promise<void> {
     verificationOwnerId: 'p-verifier',
     contextPolicy: { allowedScopes: ['project'], excludedSourceKinds: [] },
     learningOptIn: false,
-    status: 'active',
+    status,
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
   }, 'seed')
@@ -543,5 +545,187 @@ describe('审查 M-2/M-3：签署台账版本过滤与停用名册拒签', () =>
     expect(r.status).toBe(403)
     expect(r.body.code).toBe('not_outcome_signer')
     expect(existsSync(join(queueDir, 'responses', 'rq-m3.json'))).toBe(false)
+  })
+})
+
+// ── 批二 Task 2（2026-11-20）：合同状态门（终态拒批）＋ fleet tap 瞬态收口 ──
+// spec 2026-11-20-ai-native-cognition-batch2 §一：cancelled/settled 终态合同的绑定
+// 条目拒批（409 outcome_not_active，与 dispatch 面对齐）；deny/终态否决照常放行
+// （否决不设门）。fleet: 分支 tap 快照读取瞬态失败不再 fail-open：绑定不可证时
+// 聚合面标 outcomeUnverified、decide 批准类 409 outcome_unavailable、autopass 同拒。
+
+describe('批二 T2：合同状态门——终态合同拒批、deny 放行', () => {
+  it.each(['cancelled', 'settled'] as const)('终态 %s 合同：批准 409 outcome_not_active，不写响应、仍 pending', async (status) => {
+    await makeContract('oc-t2a', 1, status)
+    writeDeferred({ id: 'd-t2a', requestId: 'rq-t2a', outcomeId: 'oc-t2a', contractVersion: 1 })
+    const r = await decide('deferredfile:d-t2a', 'once')
+    expect(r.status).toBe(409)
+    expect(r.body.code).toBe('outcome_not_active')
+    expect(r.body.contractStatus).toBe(status)
+    expect(existsSync(join(queueDir, 'responses', 'rq-t2a.json'))).toBe(false)
+    expect((await pendingItems()).some((i) => i.id === 'deferredfile:d-t2a')).toBe(true)
+  })
+
+  it('终态合同 deny 放行（否决不设门）：单人 deny 即决、响应 choice=deny', async () => {
+    await makeContract('oc-t2b', 1, 'cancelled')
+    writeDeferred({ id: 'd-t2b', requestId: 'rq-t2b', outcomeId: 'oc-t2b', contractVersion: 1, dualSign: true })
+    const r = await decide('deferredfile:d-t2b', 'deny')
+    expect(r.status).toBe(200)
+    const resp = JSON.parse(readFileSync(join(queueDir, 'responses', 'rq-t2b.json'), 'utf8')) as { choice: string }
+    expect(resp.choice).toBe('deny')
+  })
+
+  it('非终态（observing）合同不受状态门影响：批准照常过门单签即决（回归）', async () => {
+    await makeContract('oc-t2c', 1, 'observing')
+    writeDeferred({ id: 'd-t2c', requestId: 'rq-t2c', outcomeId: 'oc-t2c', contractVersion: 1 })
+    const r = await decide('deferredfile:d-t2c', 'once')
+    expect(r.status).toBe(200)
+    expect(existsSync(join(queueDir, 'responses', 'rq-t2c.json'))).toBe(true)
+  })
+})
+
+describe('批二 T2：fleet tap 瞬态收口——outcomeUnverified 三面', () => {
+  let approvalRespondCalls: Array<{ id: string; choice: string }>
+
+  /** 注册 fake tap：单会话单条 approval.requested（data 定制；避免展开触发 getter）。 */
+  async function registerTapEvents(events: Array<{ event: string; data: unknown }>): Promise<void> {
+    const { registerChatRunSocket } = await import('../../services/hermes/fleet-tap')
+    approvalRespondCalls = []
+    registerChatRunSocket({
+      sessionMap: new Map([['s-tap', {
+        profile: 'worker-a',
+        isWorking: true,
+        events: events as Array<{ event: string; data: any }>,
+      }]]),
+      bridge: { approvalRespond: async (id: string, choice: string) => { approvalRespondCalls.push({ id, choice }); return { resolved: true } } },
+    }, { getSession: () => ({ profile: 'worker-a' }), listSessions: () => [] })
+  }
+
+  afterEach(async () => {
+    const { unregisterChatRunSocket } = await import('../../services/hermes/fleet-tap')
+    unregisterChatRunSocket()
+  })
+
+  it('聚合标注：tap 条目 outcome 绑定字段读取瞬态抛错 → 条目在列且标 outcomeUnverified（不猜无绑定）', async () => {
+    const data: Record<string, unknown> = {
+      approval_id: 'a-tap',
+      preview: 'git push origin main',
+      choices: ['once', 'deny'],
+    }
+    // 字段读取瞬态失败模拟：getter 在 tap 事件 data 上抛（不用字面量展开，防注册期即炸）
+    Object.defineProperty(data, 'outcome_ref', {
+      enumerable: true,
+      get() { throw new Error('transient tap field read') },
+    })
+    await registerTapEvents([{ event: 'approval.requested', data }])
+    const items = await pendingItems()
+    const tapItem = items.find((i) => i.id === 'fleet:s-tap:a-tap')
+    expect(tapItem).toBeTruthy()
+    expect(tapItem!.outcomeUnverified).toBe(true)
+    expect(tapItem!.outcomeRef).toBeUndefined()
+  })
+
+  it('聚合标注：outcome_ref 在但形状不合法 → 同标 outcomeUnverified（fleetfile 源同口径）', async () => {
+    writeFileSync(join(queueDir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-t2-mal', digest: 'd-t2', command: 'git push origin main',
+      timeout_seconds: 300, enqueued_at: Date.now(),
+      outcome_ref: { outcomeId: 'oc-broken', contractVersion: 'two' },
+    }) + '\n', 'utf8')
+    const items = await pendingItems()
+    const item = items.find((i) => i.id === 'fleetfile:rq-t2-mal')
+    expect(item).toBeTruthy()
+    expect(item!.outcomeUnverified).toBe(true)
+    expect(item!.outcomeRef).toBeUndefined()
+    // 无 outcome_ref 字段的普通条目不误标（回归）
+    writeFileSync(join(queueDir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-t2-plain', digest: 'd-t3', command: 'git push origin main',
+      timeout_seconds: 300, enqueued_at: Date.now(),
+    }) + '\n', 'utf8')
+    const plain = (await pendingItems()).find((i) => i.id === 'fleetfile:rq-t2-plain')
+    expect(plain).toBeTruthy()
+    expect(plain!.outcomeUnverified).toBeUndefined()
+  })
+
+  it('autopass 拒：绑定不可证（形状不合法）条目不吃低风险自动放行', async () => {
+    process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS = '0'
+    try {
+      // 低风险只读命令＋解不出的 outcome_ref——若按「无绑定」放行将绕过合同门
+      writeFileSync(join(queueDir, 'queue.jsonl'), JSON.stringify({
+        request_id: 'rq-t2-auto', digest: 'd-t4', command: 'grep deploy README.md',
+        timeout_seconds: 300, enqueued_at: Date.now() - 60_000,
+        outcome_ref: { outcomeId: 'oc-broken', contractVersion: 'v2' },
+      }) + '\n', 'utf8')
+      const { _resetAutopassScanThrottleForTests } = await import('../pending-controller')
+      _resetAutopassScanThrottleForTests()
+      const res = await fetch(`${base}/api/approvals/autopass/scan`, { method: 'POST' })
+      const body = await res.json() as { ok: boolean; acted: number }
+      expect(res.status).toBe(200)
+      expect(body.acted).toBe(0)
+      expect(existsSync(join(queueDir, 'responses', 'rq-t2-auto.json'))).toBe(false)
+    } finally {
+      delete process.env.HERMES_APPROVALS_AUTOPASS_GRACE_MS
+    }
+  })
+
+  it('decide 409：快照读取瞬态失败 → 409 outcome_unavailable 且不触达 bridge（不退风险档闸猜）', async () => {
+    const { registerChatRunSocket } = await import('../../services/hermes/fleet-tap')
+    approvalRespondCalls = []
+    registerChatRunSocket({
+      // 整体快照读取抛错模拟：sessionMap.entries() 抛（getFleetLiveEntries 不吞）
+      sessionMap: { entries() { throw new Error('transient snapshot read') } },
+      bridge: { approvalRespond: async (id: string, choice: string) => { approvalRespondCalls.push({ id, choice }); return { resolved: true } } },
+    }, { getSession: () => ({ profile: 'worker-a' }), listSessions: () => [] })
+    const r = await decide('fleet:s-tap:a-tap', 'once')
+    expect(r.status).toBe(409)
+    expect(r.body.code).toBe('outcome_unavailable')
+    expect(approvalRespondCalls).toEqual([])
+  })
+
+  it('decide 409：条目绑定字段读取抛错（outcomeUnverified 标记）→ 409 outcome_unavailable 不触达 bridge', async () => {
+    const data: Record<string, unknown> = {
+      approval_id: 'a-tap',
+      preview: 'git push origin main',
+      choices: ['once', 'deny'],
+    }
+    Object.defineProperty(data, 'outcome_ref', {
+      enumerable: true,
+      get() { throw new Error('transient tap field read') },
+    })
+    await registerTapEvents([{ event: 'approval.requested', data }])
+    const r = await decide('fleet:s-tap:a-tap', 'once')
+    expect(r.status).toBe(409)
+    expect(r.body.code).toBe('outcome_unavailable')
+    expect(approvalRespondCalls).toEqual([])
+  })
+
+  it('decide 409：条目不在快照（事件窗旋转/瞬态）→ 409 outcome_unavailable（旧路径无门直放，收口）', async () => {
+    // 快照健康但无该 approval——绑定状态不可证，批准类不放行
+    await registerTapEvents([{ event: 'approval.requested', data: { approval_id: 'a-other', preview: 'git push', choices: ['once', 'deny'] } }])
+    const r = await decide('fleet:s-tap:a-tap', 'once')
+    expect(r.status).toBe(409)
+    expect(r.body.code).toBe('outcome_unavailable')
+    expect(approvalRespondCalls).toEqual([])
+  })
+
+  it('快照不可读时 deny 照常放行（否决不设门）：bridge 收到 deny', async () => {
+    const { registerChatRunSocket } = await import('../../services/hermes/fleet-tap')
+    approvalRespondCalls = []
+    registerChatRunSocket({
+      sessionMap: { entries() { throw new Error('transient snapshot read') } },
+      bridge: { approvalRespond: async (id: string, choice: string) => { approvalRespondCalls.push({ id, choice }); return { resolved: true } } },
+    }, { getSession: () => ({ profile: 'worker-a' }), listSessions: () => [] })
+    const r = await decide('fleet:s-tap:a-tap', 'deny')
+    expect(r.status).toBe(200)
+    expect(approvalRespondCalls).toEqual([{ id: 'a-tap', choice: 'deny' }])
+  })
+
+  it('健康 tap 的无绑定条目照旧走风险档闸直决（回归：互斥分流不误伤）', async () => {
+    await registerTapEvents([{
+      event: 'approval.requested',
+      data: { approval_id: 'a-plain', preview: 'grep deploy README.md', choices: ['once', 'deny'] },
+    }])
+    const r = await decide('fleet:s-tap:a-plain', 'once')
+    expect(r.status).toBe(200)
+    expect(approvalRespondCalls).toEqual([{ id: 'a-plain', choice: 'once' }])
   })
 })
