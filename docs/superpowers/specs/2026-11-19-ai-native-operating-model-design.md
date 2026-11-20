@@ -272,6 +272,8 @@ interface DecisionProfile {
 
 该表只收紧新 outcome-scoped 面，不改变未接入合同的既有 yolo 行为。任何推广到全局执行入口的动作另立兼容性 spec。
 
+授权边界补注（T12 复审 Minor-1，2026-11-20 批一 Task 15 收录）：fleet: 绑定条目 `dual_sign_required=false` 而分类器判 high 时单签即决——合同门为权威的取舍，两分类器分歧角落取合同门。
+
 ### 4.4 OutcomeContextSnapshot
 
 派单时生成不可变快照：

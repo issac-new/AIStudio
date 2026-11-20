@@ -38,6 +38,7 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | `userenv/` | profile 环境变量读写面（N01：`~/.hermes/profiles/<name>/.env` 直读直写/敏感值掩码回显/原子替换+备份/审计 jsonl；挂载补丁待后续批） |
 | `team-library/` | 团队库读模型与建议选择（EvoTeam 吸收，2026-11-08）：家族＝四维身份＋候选名单＋版本史＋成败证据；只出 reuse/cold_start 建议，不接管派单（`/api/harness/team-library/*`） |
 | `handoff/` | 交接契约族：质量账本（只读）/验收断言/主张回执/阶段键/团队作用域交接规则（`handoff-rules.ts` 建议注入，不阻断派发） |
+| `outcome/` | 业务结果合同域（AI 原生运行模型批一，`OUTCOME_WORKBENCH=1` 启用）：合同状态机＋追加制事件哈希链＋版本绑定测量＋结算＋派单最小上下文快照＋决策画像矩阵（riskTier 判据正身在此，`approval-inbox/risk-tier.ts` 退为薄委托）；与 `approval-inbox/` 边界＝outcome 绑定条目以合同门为权威（`dual_sign_required` 双签），风险档闸只管未绑定条目；挂载补丁 804（看板列 805/审批守卫 806 为 agent 侧接线） |
 
 ## 测试约定
 

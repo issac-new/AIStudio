@@ -32,7 +32,7 @@
   persist 落卡只写摘要 body（`loop/graph/kanban-persistence.ts:75-90`）。
 - 验收判据：AgentTaskConfig 增 verification 档位透传建卡；acceptance 结构化（AC 列表）入卡 body
   机读块；异常 owner=RACI approver 或节点 onError 升级路径文档化。
-- 状态：待裁决（与 N01 同批做收益大）。
+- 状态：待裁决（与 N01 同批做收益大）；批一 outcome 字段部分承接（2026-11-20，outcome_id 列＋激活即绑定家族传播＋合同 measures/acceptance 结构化正身，见 2026-11-20-ai-native-outcome-batch1.md）。
 
 ### N04 action-contracts 注册表→执行器（解耦层）
 - 锚点：8 个动作契约只做 schema 校验＋拼派单文本（`custom/server/kanban/column-dispatch.ts:111-120`
