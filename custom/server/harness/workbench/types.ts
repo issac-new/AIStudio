@@ -446,6 +446,22 @@ export interface PromotionGateReport {
    * 高层 fail 时成本 blocker 暂缓（降 warning）；任何成本收益不能抵消安全/质量 fail。
    */
   lexOrder?: { safety: 'pass' | 'fail'; quality: 'pass' | 'fail'; cost: 'pass' | 'fail' }
+  /**
+   * 证据角色披露（2026-11-20 RSI 生命周期轮 B，综述 §10.3 判据）：
+   * 候选筛选消耗测试独立性——留出分参与接受决策后不能当完全独立的最终测试。
+   * 只披露不拦截：不参与 ok/blockers 判定（2026-11-01 机制扩展停止裁定边界内）。
+   */
+  evidenceRoles?: EvidenceRoleLine[]
+}
+
+/** 证据在哪些决策角色中被消费（edit_generation=产生修改；candidate_selection=筛选候选；final_judgement=最终判定） */
+export type EvidenceDecisionRole = 'edit_generation' | 'candidate_selection' | 'final_judgement'
+
+export interface EvidenceRoleLine {
+  /** 证据名（heldout / noise / equal_budget_baseline / counterfactual / evolve_probe / final） */
+  evidence: string
+  roles: EvidenceDecisionRole[]
+  note: string
 }
 
 // ---------- RRSI 正则化派生（2026-10-23 吸收轮） ----------

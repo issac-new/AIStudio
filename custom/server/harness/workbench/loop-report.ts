@@ -12,7 +12,7 @@ import { gainRetention } from './multi-objective'
 import { parseHookPolicy } from '../../goalbudget/stage-ladder'
 import type {
   BehaviorContrast, Champion, EvolutionReport, EvolutionRound, EvolutionSurface, GateBlocker,
-  ParetoPoint, ParetoReport, ParetoTier, ProbeMetrics, PromotionGateReport, Proposal,
+  EvidenceRoleLine, ParetoPoint, ParetoReport, ParetoTier, ProbeMetrics, PromotionGateReport, Proposal,
   ProposalStatus, QualityVerdict, RegularizationDerived, RetirementCandidate, SurfaceKey, Variant,
 } from './types'
 
@@ -469,7 +469,75 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
     cost: (blockers.some((b) => COST_BLOCKER_CODES.has(b.code)) ? 'fail' : 'pass') as 'fail' | 'pass',
   }
 
-  return { ok: blockers.length === 0, blockers, warnings, lexOrder }
+  // B（2026-11-20 综述吸收轮）：证据角色披露——只披露不拦截，不参与 ok/字典序判定
+  const selForRoles = composedVariant(proposal)
+  const probeForRoles = selForRoles
+    ? proposal.probes.find((p) => p.variantId === selForRoles.id && p.status === 'recorded')
+    : undefined
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    warnings,
+    lexOrder,
+    evidenceRoles: evidenceRoleLines({ proposal, probe: probeForRoles ?? null, noiseDelta: input.regularization?.noiseDelta ?? null }),
+  }
+}
+
+/**
+ * 证据角色账本（2026-11-20 综述吸收轮 B；综述 §10.3「候选筛选消耗测试独立性」判据，
+ * paper:1709-1713 Self-Harness 实证）。纯函数：枚举提案绑定证据在哪些决策角色被消费，
+ * 产出披露行。只做可观测性——不加门码（2026-11-01 机制扩展停止裁定）。
+ */
+export function evidenceRoleLines(input: { proposal: Proposal; probe: ProbeMetrics | { evidence?: ProbeMetrics } | null; noiseDelta: number | null }): EvidenceRoleLine[] {
+  const { proposal, noiseDelta } = input
+  // probe 兼容两种形态：完整 Probe 记录或直接的 ProbeMetrics（测试与 service 都可能传）
+  const ev = (() => {
+    const p = input.probe as { evidence?: ProbeMetrics } | ProbeMetrics | null
+    if (!p) return null
+    if ('evidence' in p && p.evidence) return p.evidence
+    return p as ProbeMetrics
+  })()
+  const lines: EvidenceRoleLine[] = []
+  lines.push({
+    evidence: 'evolve_probe',
+    roles: ['candidate_selection'],
+    note: '演化集候选读数（passAt1/回归/成本）参与本提案的候选接受决策',
+  })
+  if (noiseDelta != null || proposal.noise != null) {
+    lines.push({
+      evidence: 'noise',
+      roles: ['candidate_selection'],
+      note: '噪声 δ 作为接受地板（gain_within_noise 门消费）——同一演化集内的重复读数，非独立数据',
+    })
+  }
+  const eq = ev?.equalBudgetBaseline
+  if (eq) {
+    lines.push({
+      evidence: 'equal_budget_baseline',
+      roles: ['candidate_selection'],
+      note: '等预算基线读数被 attributeGain/算力归因门消费（gain_explained_by_compute）',
+    })
+  }
+  if (ev?.counterfactual) {
+    lines.push({
+      evidence: 'counterfactual',
+      roles: ['candidate_selection'],
+      note: '反事实变体读数参与捷径检验（counterfactual_gain_collapse）',
+    })
+  }
+  if (proposal.heldout) {
+    lines.push({
+      evidence: 'heldout',
+      roles: ['candidate_selection'],
+      note: '密封留出集读数已参与候选接受（heldout_regression 门消费）——按综述判据不再构成完全独立的最终测试',
+    })
+  }
+  lines.push({
+    evidence: 'final',
+    roles: ['final_judgement'],
+    note: '环内证据全部参与候选接受；独立最终验证在环外（烧机 digest verify-latest / 全量 npm test / 推演轮回写），不随晋级消耗',
+  })
+  return lines
 }
 
 /** 提案是否已具备提交条件（服务层用；纯函数便于测试）。 */
