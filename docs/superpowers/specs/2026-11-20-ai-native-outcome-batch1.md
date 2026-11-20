@@ -52,8 +52,14 @@ T15 新增读端点（T13/T14 双报缺口补齐）：
 - `node scripts/governance-lint.mjs --budget` → 0 problem(s)。
 - `node scripts/maintenance/gen-doc-indexes.mjs --write` → 710 specs 对账 0 problem。
 
-批一准出门（试点走查与全量门结果见收口提交回填与本任务报告 `.superpowers/sdd/2026-11-19-ai-native-outcome-batch1/task-15-report.md`）：
-npm test 全量、merge-invariants --check、typecheck 双套复跑、people 种子＋隔离起服 REST 试点主链（建根卡→合同→激活即绑定→dispatch 快照→双签→observing→双测量→结算）。
+批一准出门（2026-11-20 实测）：
+
+- 试点走查（NODE_ENV=production＋OUTCOME_WORKBENCH=1，隔离 HERMES_WEB_UI_HOME=/tmp/outcome-pilot-ui＋HERMES_HOME=/tmp/outcome-pilot-hermes，端口 8765——8647 被他 session 在服占用；服务 cwd 经 lsof 核验为本 worktree vendor 树）：people 种子（hrgov-seed 9 人＋27 单元草案，dry-run 先行）→建登录用户 plusprimer/verifier1→people 以 id=登录名建册激活（含种子 p-1 roster 激活）→建根卡→建合同（owner=plusprimer、riskTier=high、defaultReversibility=one-way、双 measure）→激活（看板库直读核验 outcome_id 绑定＋outcome_bound 事件）→派单快照（context-snapshots 端点代验——完整 gateway 未起，快照 content 物化 contract/owner/policy/task/verifier）→双签审批（queue.jsonl 入队 outcome_ref＋dual_sign_required：owner 第一签 409 dual-sign-required 落账→verifier 第二签 200 resolved＋响应文件在案；第三人 admin 签 403 not_outcome_signer 负例）→observing（tasksTerminal 真实现放行）→双 measure 人工核验提交（owner m1=96.4＋verifier m2=0）→结算 achieved（机器建议同判）→GET measurements/settlement 读端点回读一致。unauthorized=0。
+- `npm test` 全量：9468 passed / 2 failed / 11 skipped——两失败均与本批无关：①architecture-ratchet K19（ok:false 989>874）：计数在分支起点 merge-base 842a16d4e 即 989，批一各笔与 T15 零新增（989 恒定），系 main 侧先在欠账；②overlay-pristine-replay：clean 守卫检出 8647 端口他 session 在服而拒跑（环境性，简报预案内）。
+- `node scripts/merge-invariants.mjs --check` → pass（收据 431 行；新增 spec 后 gen-doc-indexes --write 同步索引 711/711 再验通过）。
+- `npm run typecheck:harness` → 0 错误；`npm run typecheck:client:ratchet` → 19 ≤ 基线 19。
+
+完整响应摘录与未验证项见 `.superpowers/sdd/2026-11-19-ai-native-outcome-batch1/task-15-report.md`（本地 SDD 工作区，不入库）。
 
 ## 设计文档影响
 

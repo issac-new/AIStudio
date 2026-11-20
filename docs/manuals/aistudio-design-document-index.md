@@ -741,6 +741,7 @@
 - [2026-11-19-tech-skin-closeout.md](../superpowers/specs/2026-11-19-tech-skin-closeout.md)
 - [2026-11-19-ui-tech-skin-global.md](../superpowers/specs/2026-11-19-ui-tech-skin-global.md)
 - [2026-11-19-vendor-upgrade-studio-v0828.md](../superpowers/specs/2026-11-19-vendor-upgrade-studio-v0828.md)
+- [2026-11-20-ai-native-outcome-batch1.md](../superpowers/specs/2026-11-20-ai-native-outcome-batch1.md)
 - [2026-11-20-deploy-import-smoke.md](../superpowers/specs/2026-11-20-deploy-import-smoke.md)
 - [2026-11-20-judge-anthropic-live-enable.md](../superpowers/specs/2026-11-20-judge-anthropic-live-enable.md)
 
