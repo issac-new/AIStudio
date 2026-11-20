@@ -18,7 +18,7 @@
 
 import type { VerifierDeps } from '../engine/verifier'
 import type { JudgeCheck } from '../types'
-import { createOpenAiJudgeClient } from './judge-client'
+import { createOpenAiJudgeClient, type JudgeProtocol } from './judge-client'
 
 export interface VerifierBridgeOpts {
   log?: (msg: string) => void
@@ -28,6 +28,7 @@ interface JudgeEnvConfig {
   baseUrl: string
   model: string
   apiKey?: string
+  protocol: JudgeProtocol
   timeoutMs?: number
   maxDiffChars?: number
   enabled: boolean
@@ -39,6 +40,8 @@ interface JudgeEnvConfig {
 function readJudgeEnv(env: NodeJS.ProcessEnv = process.env): JudgeEnvConfig {
   const baseUrl = env.GRAPH_JUDGE_BASE_URL?.trim() ?? ''
   const model = env.GRAPH_JUDGE_MODEL?.trim() ?? ''
+  const protocolRaw = env.GRAPH_JUDGE_PROTOCOL?.trim().toLowerCase()
+  const protocol: JudgeProtocol = protocolRaw === 'anthropic' ? 'anthropic' : 'openai'
   const timeoutMs = Number(env.GRAPH_JUDGE_TIMEOUT_MS ?? '')
   const maxDiffChars = Number(env.GRAPH_JUDGE_MAX_DIFF_CHARS ?? '')
   const minScoreRaw = env.GRAPH_JUDGE_MIN_SCORE?.trim()
@@ -46,13 +49,18 @@ function readJudgeEnv(env: NodeJS.ProcessEnv = process.env): JudgeEnvConfig {
   const minScore = Number.isFinite(minScoreParsed) && minScoreParsed >= 0 && minScoreParsed <= 1
     ? minScoreParsed
     : 0.7
+  const apiKey = env.GRAPH_JUDGE_API_KEY?.trim()
+    || (protocol === 'anthropic'
+      ? (env.ANTHROPIC_AUTH_TOKEN?.trim() || env.ANTHROPIC_API_KEY?.trim())
+      : undefined)
   return {
     baseUrl,
     model,
-    apiKey: env.GRAPH_JUDGE_API_KEY?.trim() || undefined,
+    ...(apiKey ? { apiKey } : {}),
+    protocol,
     ...(Number.isFinite(timeoutMs) && timeoutMs > 0 ? { timeoutMs } : {}),
     ...(Number.isFinite(maxDiffChars) && maxDiffChars > 0 ? { maxDiffChars } : {}),
-    enabled: Boolean(baseUrl && model),
+    enabled: Boolean(baseUrl && model && (protocol !== 'anthropic' || apiKey)),
     enforce: env.GRAPH_JUDGE_ENFORCE === '1',
     minScore,
     rubric: env.GRAPH_JUDGE_RUBRIC?.trim()
@@ -73,6 +81,7 @@ export function createProductionVerifierDeps(opts: VerifierBridgeOpts = {}): Ver
     deps.callJudge = createOpenAiJudgeClient({
       baseUrl: judge.baseUrl,
       model: judge.model,
+      protocol: judge.protocol,
       ...(judge.apiKey ? { apiKey: judge.apiKey } : {}),
       ...(judge.timeoutMs ? { timeoutMs: judge.timeoutMs } : {}),
       ...(judge.maxDiffChars ? { maxDiffChars: judge.maxDiffChars } : {}),
@@ -85,9 +94,10 @@ export function createProductionVerifierDeps(opts: VerifierBridgeOpts = {}): Ver
       }
       deps.defaultJudge = defaultJudge
     }
-    log(`[graph] verifier: judge enabled (model=${judge.model}, defaultIntent=${judge.enforce})`)
+    log(`[graph] verifier: judge enabled (protocol=${judge.protocol}, model=${judge.model}, defaultIntent=${judge.enforce})`)
   } else {
     log('[graph] verifier: judge disabled (set GRAPH_JUDGE_BASE_URL + GRAPH_JUDGE_MODEL; '
+      + 'GRAPH_JUDGE_PROTOCOL=anthropic with an API key/token for Anthropic-compatible endpoints; '
       + 'GRAPH_JUDGE_ENFORCE=1 to apply a default judge intent)')
   }
   return deps

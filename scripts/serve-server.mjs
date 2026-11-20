@@ -67,16 +67,18 @@ if (existsSync(orchestratorEnvFile)) {
     process.env[m[1]] = m[2];
   }
 }
-if (!process.env.API_SERVER_KEY?.trim()) {
-  const hermesHome = process.env.HERMES_HOME?.trim() || resolve(homedir(), '.hermes');
-  const hermesEnv = resolve(hermesHome, '.env');
-  if (existsSync(hermesEnv)) {
-    for (const line of readFileSync(hermesEnv, 'utf8').split('\n')) {
-      const m = /^\s*API_SERVER_KEY\s*=\s*(.+?)\s*$/.exec(line);
-      if (!m) continue;
-      process.env.API_SERVER_KEY = m[1].replace(/^["']|["']$/g, '');
-      break;
-    }
+const hermesHome = process.env.HERMES_HOME?.trim() || resolve(homedir(), '.hermes');
+const hermesEnv = resolve(hermesHome, '.env');
+if (existsSync(hermesEnv)) {
+  // 只加载白名单键：API_SERVER_KEY（既有）与 GRAPH_JUDGE_*（judge 端配置/凭据）。
+  // 已存在的 process.env 优先（shell 显式覆盖）；密钥不进版本库配置文件。
+  for (const line of readFileSync(hermesEnv, 'utf8').split('\n')) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.+?)\s*$/.exec(line);
+    if (!m) continue;
+    const key = m[1];
+    if (key !== 'API_SERVER_KEY' && !key.startsWith('GRAPH_JUDGE_')) continue;
+    if (process.env[key] !== undefined) continue;
+    process.env[key] = m[2].replace(/^["']|["']$/g, '');
   }
 }
 // 推演执行面根（SIM_ROOT）：仿真中心族（run-state/topology/issues/quality/delivery…
