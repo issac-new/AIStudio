@@ -1040,8 +1040,8 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。
 
 - 适用版本：AIStudio 1.0.16-overlay（package.json）
-- 路由计数：routes=123（page 82 / redirect 41）；stageTabs=37；visitStates=160
-- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.21-studio.1 · agent-teams v0.23.2-team.1 · ycode 3.18.2 · yuan-skill v2.101.0
+- 路由计数：routes=128（page 86 / redirect 42）；stageTabs=37；visitStates=165
+- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.28-studio.1 · agent-teams v0.23.2-team.1 · ycode 3.18.2 · yuan-skill v2.101.0
 - 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · expdual=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
 
 全量路由清单（行序=注册链输出序；redirect 类不可直访）：
@@ -1090,13 +1090,17 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 | ia2.modelProviders | /app/gov/model-providers | page |
 | hermes.configSettings | /hermes/config/settings | page |
 | codingAgent.config | /studio/agents/:agentId/:section(skills|mcp|settings|plugins|presets) | page |
+| studio.pluginSettings | /studio/plugin-settings/:pluginId/:viewId | page |
 | ia2.recordDetail | /app/records/:kind/:id | page |
+| studio.pluginAgentSettings | /studio/plugin-agent-settings/:pluginId/:viewId? | page |
+| studio.pluginPage | /studio/plugins/:pluginId/:viewId? | page |
 | ia2.loopCanvas | /app/l/:loopId | page |
 | ia2.runDetail | /app/runs/:runId | page |
 | hermes.session | /hermes/session/:sessionId | page |
 | projectDetail | /app/projects/:id | page |
 | matrix.clientRoom | /matrix/room/:roomId | page |
 | share.groupChat | /share/group-chat/:inviteCode? | page |
+| studio.plugins | /studio/plugins | page |
 | hermes.tasks | /hermes/tasks | redirect |
 | hermes.apiRelay | /hermes/api-relay | page |
 | hermes.agentManager | /studio/agents | page |
@@ -1106,6 +1110,7 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 | ekko.settings | /ekko/settings | page |
 |  | /hermes/agents | redirect |
 |  | /hermes/coding-agents | redirect |
+|  | /hermes/version-preview | redirect |
 |  | /app/journey | redirect |
 | ia2.notFound | /app/not-found | page |
 | ia2.search | /app/search | redirect |
@@ -1151,7 +1156,6 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 | hermes.petdex | /hermes/petdex | redirect |
 | hermes.skillsUsage | /hermes/skills-usage | page |
 | hermes.terminal | /hermes/terminal | page |
-| hermes.versionPreview | /hermes/version-preview | page |
 |  | /hermes/settings | redirect |
 | ide.shell | /app/ide | page |
 | ia2.eval | /app/eval | page |
@@ -1161,6 +1165,7 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 | projects | /app/projects | page |
 | desktop.chat | /desktop-chat/:sessionId | page |
 |  | /ide/:rest(.*) | redirect |
+| studio.start | /home | page |
 | hermes.person | /person | page |
 | desktop.pet | /desktop-pet | page |
 | login | / | page |

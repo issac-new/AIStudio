@@ -1,7 +1,9 @@
-diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+
+diff --git packages/server/src/bootstrap/routes.ts packages/server/src/bootstrap/routes.ts
+index 10a958cca..99c2efab9 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -295,6 +295,12 @@
+@@ -302,6 +302,12 @@ import { projectworkflowRoutes } from '../custom/projectworkflow/controller'
  // （过滤/分页）+ /delegate/:taskId 详情（result+log 尾读）+ /coding/:sessionId
  // webui 三表摘要（sessions/run_usage/workspace_run_changes，只读 fail-soft）。
  import { executionRecordsRoutes } from '../custom/execution-records/controller'
@@ -14,20 +16,21 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
  
  let loopStore: any = null
  const lazyStore = new Proxy({} as any, {
-@@ -425,6 +431,12 @@
+@@ -430,6 +436,13 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+ 
    // --- Auth middleware: all routes below require authentication ---
    authMiddleware.forEach((middleware) => app.use(middleware))
- 
++
 +  // overlay[userperms-audit]: 用户管理写面审计中间件——须在 authProtectedRoutes
 +  // 之前（先于用户管理路由拦截请求；此处 authMiddleware 已过，ctx.state.user
 +  // 已填充可取 actor）。app.use 而非 router.use：@koa/router 的 router.use 只对
 +  // 声明之后添加的路由生效，vendor auth 路由在模块加载期已声明完，router.use
 +  // 挂不上去（须改 vendor 路由文件，侵入更大）。
 +  app.use(userPermsAuditMiddleware)
-   // --- Protected routes (auth required) ---
-   app.use(authProtectedRoutes.routes())
-   app.use(desktopBrowserRoutes.routes())
-@@ -620,4 +632,5 @@
+   app.use(legacyProviderCredentials)
+   app.use(providerAccountMiddleware)
+ 
+@@ -631,4 +644,5 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
    initLoopSubsystem().catch(e => console.error('[loop] init failed:', e))
    app.use(projectworkflowRoutes.routes())       // 项目工作流：项目一级状态机+完成守卫（状态面与看板库只读分离）
    app.use(executionRecordsRoutes.routes())      // 执行记录：双源归并列表+delegate/coding 详情（只读 fail-soft）

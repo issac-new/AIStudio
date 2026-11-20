@@ -1,3 +1,4 @@
+import { withSocketProviderAccount } from '../../public/provider-account'
 import { createPersonDisplayStream } from './person-display'
 import { emitEkkoAbortCompletion } from './ekko-abort-completion'
 import { studioModelReasoningEffort } from '../../public/model-reasoning-effort'
@@ -427,7 +428,7 @@ function createProviderModelClient(
   }
 }
 
-export async function handleEkkoAgentRun(
+async function handleEkkoAgentRunImpl(
   nsp: ReturnType<Server['of']>,
   socket: Socket,
   data: EkkoAgentRunSocketData,
@@ -1337,6 +1338,7 @@ export async function handleEkkoAgentRun(
       }
     }
     const toolContext = {
+      ...(socket.data?.user?.id ? pluginRunHooks({ userId: socket.data.user.id, profile, sessionId, get runId() { return runId || undefined }, runtime: 'ekko-agent', workspace, surface: sessionSource }, abortController.signal) : {}),
       cwd: workspace,
       workspaceRoot: workspace,
       workspaceId: workspace,
@@ -1793,3 +1795,6 @@ export async function handleEkkoAgentRun(
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && (error.name === 'AbortError' || error.message === 'Run aborted.')
 }
+import { pluginRunHooks } from '../plugins/integration'
+
+export const handleEkkoAgentRun = withSocketProviderAccount(handleEkkoAgentRunImpl)

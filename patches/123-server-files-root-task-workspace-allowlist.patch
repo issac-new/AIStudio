@@ -38,11 +38,11 @@ index 8005dc30a..0a9f41c3c 100644
          ctx.body = { error: 'Requested path is outside the hermes base sandbox', code: 'invalid_path' }
          return
 diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
-index 9b6635468..bb7cccdb5 100644
+index a0e2cb881..a36b22634 100644
 --- a/packages/server/src/modules/studio/controllers/files.ts
 +++ b/packages/server/src/modules/studio/controllers/files.ts
-@@ -7,6 +7,9 @@ import {
- } from '../services/files/file-provider'
+@@ -8,6 +8,9 @@ import {
+ import { fileContent } from '../services/files/file-operations'
  import { isPathWithin, relativePathFromBase } from '../../hermes/services/runtime/path'
  import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
 +// HERMES_CUSTOM[TaskWorkspaceAllowlist] BEGIN: 放行任务 workspace_path 越界请求
@@ -51,7 +51,7 @@ index 9b6635468..bb7cccdb5 100644
  import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../public/multipart'
  
  function requestedProfile(ctx: any): string | undefined {
-@@ -27,7 +30,9 @@ function resolveRequestPath(ctx: any, relativePath: string): string {
+@@ -28,7 +31,9 @@ function resolveRequestPath(ctx: any, relativePath: string): string {
    if (root) {
      const hermesBase = getHermesBaseDir()
      const candidate = relativePath ? join(root, relativePath) : root
@@ -62,7 +62,7 @@ index 9b6635468..bb7cccdb5 100644
        throw Object.assign(new Error('Requested path is outside the hermes base sandbox'), { code: 'invalid_path' })
      }
      return candidate
-@@ -82,6 +87,15 @@ function handleError(ctx: any, err: any) {
+@@ -85,6 +90,15 @@ function handleError(ctx: any, err: any) {
  export async function list(ctx: any) {
    const relativePath = (ctx.query.path as string) || ''
    const root = requestedRoot(ctx)

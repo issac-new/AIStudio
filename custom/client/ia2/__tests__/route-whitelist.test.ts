@@ -50,7 +50,6 @@ const EXPECTED_NAMES = [
   'hermes.terminal',
   'hermes.theme',
   'hermes.usage',
-  'hermes.versionPreview',
   'hermes.workflow',
   'ia2.accounts',
   'ia2.agents',
@@ -119,7 +118,7 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
   })
   it('并入例外全部经 IaLegacyShell（双栏根治单测）：hermes.* 记录零裸视图', () => {
     const hermes = all.filter((r) => typeof r.name === 'string' && r.name.startsWith('hermes.'))
-    expect(hermes.length).toBe(29)
+    expect(hermes.length).toBe(28)  // v0.8.28：versionPreview 随上游删除退役（29→28）
     // 2026-10-20 去重：旧版看板重定向到主看板，不再挂 IaLegacyShell
     const kanban = hermes.find(r => r.name === 'hermes.kanban')
     expect(kanban?.redirect).toBeTruthy()
@@ -134,7 +133,7 @@ describe('路由白名单单测（补遗⑤ §13.6-2：快照断言）', () => {
     }
     // requiresSuperAdmin 随上游 meta 迁移（守卫语义保真；terminal 为 2026-10-01
     // 并入新增——上游 /hermes/terminal 本就 requiresSuperAdmin）
-    for (const name of ['hermes.terminal', 'hermes.performance', 'hermes.profiles', 'hermes.versionPreview']) {
+    for (const name of ['hermes.terminal', 'hermes.performance', 'hermes.profiles']) {
       const rec = hermes.find((r) => r.name === name)
       expect(rec?.meta?.requiresSuperAdmin, `${name} 须保留 requiresSuperAdmin`).toBe(true)
     }

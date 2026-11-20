@@ -1,14 +1,3 @@
-diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
---- a/packages/client/src/App.vue
-+++ b/packages/client/src/App.vue
-@@ -109,6 +109,7 @@ const naiveLocale = computed(() => naiveLocaleFor(locale.value));
- const naiveRtl = computed(() => naiveRtlFor(locale.value));
- const appStore = useAppStore();
- const profilesStore = useProfilesStore();
-+const authStore = useAuthStore();
- watch(() => profilesStore.activeProfileName, async () => { await stopRemoteBrowserRelay(); await ensureRemoteBrowserRelay() });
- const route = useRoute();
- const { sessionSearchOpen } = useSessionSearch();
 diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/stores/hermes/kanban.ts
 --- a/packages/client/src/stores/hermes/kanban.ts
 +++ b/packages/client/src/stores/hermes/kanban.ts
@@ -46,3 +35,15 @@ diff --git a/packages/client/src/stores/hermes/kanban.ts b/packages/client/src/s
    const selectedBoard = ref(normalizeBoardSlug(_boardPref.value || null))
  
    const filterStatus = ref<string | null>(null)
+diff --git packages/client/src/App.vue packages/client/src/App.vue
+index c5d48957d..f29f548fb 100644
+--- a/packages/client/src/App.vue
++++ b/packages/client/src/App.vue
+@@ -115,6 +115,7 @@ const naiveRtl = computed(() => naiveRtlFor(locale.value));
+ const appStore = useAppStore();
+ const navigation = useNavigationStore();
+ const profilesStore = useProfilesStore();
++const authStore = useAuthStore();
+ watch(() => profilesStore.activeProfileName, async () => { await stopRemoteBrowserRelay(); await ensureRemoteBrowserRelay() });
+ const route = useRoute();
+ const isPluginPage = computed(() => ['studio.pluginPage', 'studio.pluginSettings', 'studio.pluginAgentSettings'].includes(String(route.name)));

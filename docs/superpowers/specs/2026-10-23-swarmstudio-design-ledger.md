@@ -84,7 +84,7 @@
 
 | 对象 | 核实值 | 版本载体 |
 |---|---|---|
-| hermes-studio 基线 | v0.8.21 | `vendor/VENDOR.md` |
+| hermes-studio 基线 | v0.8.28 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.23.2 | `vendor/VENDOR.md` |
 | zcode 基线谱系 | v3.16.1 系列（包版本 3.18.2 @fec97590，2026-11-13 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
 | 驾驶舱模块 | 0.8.20-studio.3 | `RELEASE-NOTES.md` |

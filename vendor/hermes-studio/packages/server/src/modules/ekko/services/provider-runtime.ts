@@ -1,17 +1,18 @@
 import { join } from 'path'
-import { getCompatibleCustomProviders } from '../../studio/contracts/provider-compat'
+import { getCompatibleCustomProviders, resolveCustomProviderApiKey } from '../../studio/contracts/provider-compat'
 import { PROVIDER_PRESETS, assertProviderAvailable } from '../../studio/contracts/providers'
 import {
   getProfileDir,
   PROVIDER_ENV_MAP,
   readConfigYamlForProfile,
   safeReadFile,
-} from '../../studio/public/profile-config'
+} from '../../studio/public/provider-config'
 import {
   resolveEkkoAuthorizedProviderCredentials,
   type EkkoAuthorizedProviderCredentials,
 } from './auth-providers'
 import { isAuthorizedRuntimeProvider } from '../../studio/public/authorized-provider-runtime'
+import { canonicalProviderId } from '../../studio/public/model-routing'
 
 export interface EkkoProviderRuntimeConfig {
   provider: string
@@ -29,18 +30,29 @@ export async function resolveEkkoProviderRuntimeConfig(input: {
   apiMode?: string
   forceRefresh?: boolean
 }): Promise<EkkoProviderRuntimeConfig> {
-  const provider = String(input.provider || '').trim()
+  let provider = String(input.provider || '').trim()
   if (!provider) throw new Error('Ekko model provider is required')
 
   assertProviderAvailable(provider)
 
   const profile = String(input.profile || '').trim() || 'default'
+  const config = await readConfigYamlForProfile(profile)
+  if (config.studio_provider_pool === 2) {
+    const canonical = canonicalProviderId(profile, provider)
+    if (canonical !== provider) input = { ...input, baseUrl: undefined, apiKey: undefined, apiMode: undefined }
+    provider = canonical
+  }
   const providerKey = providerKeyWithoutCustomPrefix(provider.toLowerCase())
-  const authorized = await resolveEkkoAuthorizedProviderCredentials(
-    profile,
-    provider,
-    input.model,
-    input.forceRefresh === true,
+  const envContent = await safeReadFile(join(getProfileDir(profile), '.env')) || ''
+  const customEntry = getCompatibleCustomProviders(config).find(entry => {
+    const entryKeys = [entry.name, entry.provider_key, entry.catalog_provider].filter(Boolean).flatMap(value => providerLookupCandidates(String(value)))
+    return providerLookupCandidates(provider).some(candidate => entryKeys.includes(candidate))
+  })
+  const accountRecord = config.studio_provider_pool === 2 && !!customEntry
+  if (accountRecord) input = { ...input, baseUrl: undefined, apiKey: undefined, apiMode: undefined }
+  const authProvider = customEntry?.auth_provider || provider
+  const authorized = customEntry && !customEntry.auth_provider ? {} : await resolveEkkoAuthorizedProviderCredentials(
+    profile, authProvider, input.model, input.forceRefresh === true, customEntry?.auth_scope,
   )
   const authorizedValuesFirst = !!authorized.apiKey
   let baseUrl = String(
@@ -59,22 +71,9 @@ export async function resolveEkkoProviderRuntimeConfig(input: {
       : input.apiMode || authorized.apiMode || '',
   ).trim()
 
-  let config: Record<string, any> = {}
-  try {
-    config = await readConfigYamlForProfile(profile)
-  } catch {}
-  const envContent = await safeReadFile(join(getProfileDir(profile), '.env')) || ''
-
-  const customEntry = getCompatibleCustomProviders(config).find((entry) => {
-    const entryKeys = [entry.name, entry.provider_key]
-      .filter(Boolean)
-      .flatMap(value => providerLookupCandidates(String(value)))
-    return providerLookupCandidates(provider).some(candidate => entryKeys.includes(candidate))
-  })
   if (customEntry) {
     if (!baseUrl) baseUrl = String(customEntry.base_url || '').trim()
-    if (!apiKey) apiKey = String(customEntry.api_key || '').trim()
-    if (!apiKey && customEntry.key_env) apiKey = parseEnvValue(envContent, customEntry.key_env)
+    if (!apiKey) apiKey = resolveCustomProviderApiKey(customEntry, envContent)
     if (!apiMode) apiMode = String(customEntry.api_mode || '').trim()
   }
 
@@ -85,7 +84,7 @@ export async function resolveEkkoProviderRuntimeConfig(input: {
       ? parseEnvValue(envContent, envMapping.base_url_env) || preset?.base_url || ''
       : preset?.base_url || ''
   }
-  if (!apiKey && envMapping?.api_key_env) {
+  if (!accountRecord && !apiKey && envMapping?.api_key_env) {
     apiKey = parseEnvValue(envContent, envMapping.api_key_env)
   }
   if (!apiMode) apiMode = String(preset?.api_mode || '').trim()
@@ -107,8 +106,9 @@ export function createEkkoAuthorizedProviderFetch(input: {
   provider: string
   model?: string
   accessToken?: string
+  credentialScope?: string
 }, fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis)): typeof fetch {
-  if (!isAuthorizedRuntimeProvider(input.provider)) return fetchImpl
+  if (input.accessToken?.startsWith('studio_model_') || !isAuthorizedRuntimeProvider(input.provider)) return fetchImpl
 
   let accessToken = String(input.accessToken || '').trim()
   let refresh: Promise<EkkoAuthorizedProviderCredentials> | null = null
@@ -131,6 +131,7 @@ export function createEkkoAuthorizedProviderFetch(input: {
       input.provider,
       input.model,
       true,
+      input.credentialScope,
     ).finally(() => { refresh = null })
     const credentials = await refresh
     accessToken = String(credentials.apiKey || '').trim()

@@ -54,7 +54,9 @@ if grep -q "if (id === 'zcode') return 'zcode'" packages/client/src/stores/herme
   python3 -c "
 p = 'packages/client/src/stores/hermes/chat.ts'
 src = open(p).read()
-src = src.replace(\"  if (id === 'zcode') return 'zcode' as CodingAgentId\", '  if (id === 'mimo') return 'mimo'\\n  if (id === 'zcode') return 'zcode' as ChatAgentId')
+old = chr(34) if False else \"  if (id === 'zcode') return 'zcode' as CodingAgentId\"
+new = \"  if (id === 'mimo') return 'mimo' as ChatAgentId\\n  if (id === 'zcode') return 'zcode' as ChatAgentId\"
+src = src.replace(old, new)
 open(p, 'w').write(src)
 "
 fi

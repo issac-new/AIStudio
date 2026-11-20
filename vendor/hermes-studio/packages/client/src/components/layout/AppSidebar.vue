@@ -9,6 +9,10 @@ import { useAppStore } from "@/stores/hermes/app";
 import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
 import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
 import { isStoredSuperAdmin } from "@/api/client";
+import { usePluginCatalog, pluginNavigation, pluginPageLocation } from '@/composables/usePluginCatalog';
+import PluginNavigationIcon from '@/components/plugins/PluginNavigationIcon.vue';
+const { snapshot: pluginSnapshot } = usePluginCatalog();
+const pluginSettings = computed(() => pluginSnapshot.value.plugins.filter(plugin => plugin.status === 'active').flatMap(plugin => pluginNavigation(plugin, 'settings').map(view => ({ plugin, view }))));
 
 const { t } = useI18n();
 const route = useRoute();
@@ -19,7 +23,6 @@ const selectedKey = computed(() => {
   return route.name as string;
 });
 const isSuperAdmin = computed(() => isStoredSuperAdmin());
-const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
 const isDesktopShell = computed(
   () =>
     (window as typeof window & { hermesDesktop?: { isDesktop?: boolean } })
@@ -147,35 +150,6 @@ function handleSidebarClick(event: MouseEvent) {
         <span>{{ t("sidebar.browser") }}</span>
       </RouteLinkItem>
       <RouteLinkItem
-        v-if="
-          hasRoute('hermes.versionPreview') && isSuperAdmin && !isVersionPreview
-        "
-        class="nav-item"
-        :to="{ name: 'hermes.versionPreview' }"
-        :active="selectedKey === 'hermes.versionPreview'"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path
-            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-          />
-          <polyline points="7.5 4.21 12 6.81 16.5 4.21" />
-          <polyline points="7.5 19.79 7.5 14.6 3 12" />
-          <polyline points="21 12 16.5 14.6 16.5 19.79" />
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-          <line x1="12" y1="22.08" x2="12" y2="12" />
-        </svg>
-        <span>{{ t("sidebar.versionPreview") }}</span>
-      </RouteLinkItem>
-      <RouteLinkItem
         class="nav-item"
         :to="{ name: 'hermes.theme' }"
         :active="selectedKey === 'hermes.theme'"
@@ -263,6 +237,9 @@ function handleSidebarClick(event: MouseEvent) {
           />
         </svg>
         <span>{{ t("sidebar.settings") }}</span>
+      </RouteLinkItem>
+      <RouteLinkItem v-for="{ plugin, view } in pluginSettings" :key="plugin.manifest.id + ':' + view.id" class="nav-item" :to="pluginPageLocation(plugin, view.id)" :active="route.name === 'studio.pluginSettings' && route.params.pluginId === plugin.manifest.id && route.params.viewId === view.id" :title="view.title">
+        <PluginNavigationIcon :icon="view.icon" /><span>{{ view.title }}</span>
       </RouteLinkItem>
     </nav>
 
@@ -409,6 +386,7 @@ function handleSidebarClick(event: MouseEvent) {
 }
 
 // ─── Collapsed sidebar (icon-rail mode) ─────────────────────────
+.sidebar.collapsed .nav-item :deep(.plugin-icon) { display: inline-grid; }
 
 .sidebar.collapsed {
   width: $sidebar-collapsed-width;

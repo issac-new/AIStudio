@@ -226,6 +226,7 @@ const showEmptyConversation = computed(() => {
   const session = chatStore.activeSession;
   return !chatStore.isLoadingMessages && !isRunIndicatorActive.value
     && !!session && (session.messagesLoaded === true || session.isLocalOnly === true)
+    && !session.hasMoreBefore
     && chatStore.messages.length === 0 && !props.collaborations?.length && (session.messageTotal ?? session.messageCount ?? 0) === 0;
 });
 
@@ -437,6 +438,7 @@ const clarifyResponse = ref("");
 watch(
   () => visibleClarify.value?.clarifyId,
   () => { clarifyResponse.value = visibleClarify.value?.initialResponse || ""; },
+  { immediate: true },
 );
 const hasFloatingPrompt = computed(() => !!visibleApproval.value || !!visibleClarify.value);
 const virtualListPadding = computed(() => {
@@ -493,18 +495,26 @@ async function openForkParent(event?: MouseEvent) {
   window.location.hash = lineage.parentHref.replace(/^#/, "");
 }
 
-function handleApproval(choice: "once" | "session" | "always" | "deny") {
-  chatStore.respondApproval(choice);
+async function handleApproval(choice: "once" | "session" | "always" | "deny") {
+  try {
+    await chatStore.respondApproval(choice);
+  } catch {
+    // The store keeps the request visible and retryable on delivery failure.
+  }
 }
 
-function handleClarify(response?: string) {
+async function handleClarify(response?: string) {
   const finalResponse = response !== undefined
     ? response
     : visibleClarify.value?.responseMode === "editor"
       ? clarifyResponse.value
       : clarifyResponse.value.trim();
-  chatStore.respondToClarify(finalResponse);
-  clarifyResponse.value = "";
+  clarifyResponse.value = finalResponse;
+  try {
+    await chatStore.respondToClarify(finalResponse);
+  } catch {
+    // The store retains the answer and exposes the failure for retry.
+  }
 }
 
 function removeQueuedMessage(messageId: string) {
@@ -1148,6 +1158,7 @@ defineExpose({
           </div>
           <div class="approval-float-title">{{ t("chat.approvalTitle") }}</div>
           <div class="approval-float-desc">{{ visibleApproval.description }}</div>
+          <div v-if="visibleApproval.submissionFailed" role="alert">{{ t('chat.approvalSendFailed') }}</div>
           <code class="approval-float-command">{{ visibleApproval.command }}</code>
           <div class="approval-float-actions">
             <NButton
@@ -1155,6 +1166,7 @@ defineExpose({
               size="small"
               type="primary"
               @click="handleApproval('once')"
+              :disabled="visibleApproval.submitting"
             >
               {{ t("chat.approvalAgree") }}
             </NButton>
@@ -1163,6 +1175,7 @@ defineExpose({
               size="small"
               type="primary"
               @click="handleApproval('once')"
+              :disabled="visibleApproval.submitting"
             >
               {{ t("chat.approvalAllowOnce") }}
             </NButton>
@@ -1171,6 +1184,7 @@ defineExpose({
               size="small"
               secondary
               @click="handleApproval('session')"
+              :disabled="visibleApproval.submitting"
             >
               {{ t("chat.approvalAllowSession") }}
             </NButton>
@@ -1179,6 +1193,7 @@ defineExpose({
               size="small"
               secondary
               @click="handleApproval('always')"
+              :disabled="visibleApproval.submitting"
             >
               {{ t("chat.approvalAlways") }}
             </NButton>
@@ -1188,6 +1203,7 @@ defineExpose({
               type="error"
               secondary
               @click="handleApproval('deny')"
+              :disabled="visibleApproval.submitting"
             >
               {{ t("chat.approvalDeny") }}
             </NButton>
@@ -1219,17 +1235,19 @@ defineExpose({
           </div>
           <div class="approval-float-title">{{ t("chat.clarifyTitle") }}</div>
           <div class="approval-float-desc">{{ visibleClarify.question }}</div>
+          <div v-if="visibleClarify.submissionFailed" role="alert">{{ t('chat.clarifySendFailed') }}</div>
           <div v-if="visibleClarify.choices && visibleClarify.choices.length" class="approval-float-actions">
             <NButton
               v-for="choice in visibleClarify.choices"
               :key="choice"
               size="small"
               type="primary"
+              :disabled="visibleClarify.submitting"
               @click="handleClarify(choice)"
             >
               {{ choice }}
             </NButton>
-            <NButton size="small" type="error" secondary @click="handleClarify('')">
+            <NButton size="small" type="error" secondary :disabled="visibleClarify.submitting" @click="handleClarify('')">
               {{ t("chat.clarifyDismiss") }}
             </NButton>
           </div>
@@ -1239,8 +1257,9 @@ defineExpose({
               size="small"
               :type="visibleClarify.responseMode === 'editor' ? 'textarea' : 'text'"
               :placeholder="t('chat.clarifyPlaceholder')"
+              :disabled="visibleClarify.submitting"
             />
-            <NButton size="small" type="primary" @click="handleClarify()">
+            <NButton size="small" type="primary" :loading="visibleClarify.submitting" @click="handleClarify()">
               {{ t("chat.clarifySubmit") }}
             </NButton>
           </div>

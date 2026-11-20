@@ -1,5 +1,5 @@
 diff --git a/packages/client/src/components/layout/AppSidebar.vue b/packages/client/src/components/layout/AppSidebar.vue
-index 31b112b9..7b1ab255 100644
+index aa32e7bbe..4364b5bd5 100644
 --- a/packages/client/src/components/layout/AppSidebar.vue
 +++ b/packages/client/src/components/layout/AppSidebar.vue
 @@ -2,10 +2,11 @@
@@ -15,7 +15,7 @@ index 31b112b9..7b1ab255 100644
  import RouteLinkItem from "@/components/common/RouteLinkItem.vue";
  import PageSidebarFooter from "@/components/layout/PageSidebarFooter.vue";
  import { isStoredSuperAdmin } from "@/api/client";
-@@ -14,11 +15,29 @@ const { t } = useI18n();
+@@ -18,11 +19,29 @@ const { t } = useI18n();
  const route = useRoute();
  const router = useRouter();
  const appStore = useAppStore();
@@ -43,10 +43,10 @@ index 31b112b9..7b1ab255 100644
    return route.name as string;
  });
 -const isSuperAdmin = computed(() => isStoredSuperAdmin());
- const isVersionPreview = import.meta.env.VITE_HERMES_PREVIEW === "1";
  const isDesktopShell = computed(
    () =>
-@@ -58,10 +77,13 @@ function handleSidebarClick(event: MouseEvent) {
+     (window as typeof window & { hermesDesktop?: { isDesktop?: boolean } })
+@@ -61,10 +80,13 @@ function handleSidebarClick(event: MouseEvent) {
    >
      <SidebarResizeHandle />
      <nav class="sidebar-nav">
@@ -62,18 +62,30 @@ index 31b112b9..7b1ab255 100644
        >
          <svg
            width="16"
-@@ -73,21 +95,76 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -76,21 +98,39 @@ function handleSidebarClick(event: MouseEvent) {
            stroke-linecap="round"
            stroke-linejoin="round"
          >
+-          <path
+-            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+-          />
+-          <polyline points="14 2 14 8 20 8" />
+-          <line x1="16" y1="13" x2="8" y2="13" />
+-          <line x1="16" y1="17" x2="8" y2="17" />
+-          <polyline points="10 9 9 9 8 9" />
 +          <rect x="3" y="3" width="7" height="7" rx="1" />
 +          <rect x="14" y="3" width="7" height="7" rx="1" />
 +          <rect x="3" y="14" width="7" height="7" rx="1" />
 +          <rect x="14" y="14" width="7" height="7" rx="1" />
-+        </svg>
+         </svg>
+-        <span>{{ t("sidebar.logs") }}</span>
 +        <span>{{ t("ia2.brand") }}</span>
-+      </RouteLinkItem>
-+      <RouteLinkItem
+       </RouteLinkItem>
+       <RouteLinkItem
+-        v-if="isSuperAdmin"
+-        class="nav-item"
+-        :to="{ name: 'hermes.performance' }"
+-        :active="selectedKey === 'hermes.performance'"
 +              class="nav-item"
 +              :to="{ name: 'ide.shell' }"
 +              :active="isIdeShellArea"
@@ -99,61 +111,68 @@ index 31b112b9..7b1ab255 100644
 +        data-testid="sidebar-system-toggle"
 +        :aria-expanded="systemOpen"
 +        @click="systemOpen = !systemOpen"
-+      >
-+        <svg
-+          width="16"
-+          height="16"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
-+          stroke-width="1.5"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
+       >
+         <svg
+           width="16"
+@@ -102,35 +142,32 @@ function handleSidebarClick(event: MouseEvent) {
+           stroke-linecap="round"
+           stroke-linejoin="round"
+         >
+-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
 +          <circle cx="12" cy="12" r="3" />
-           <path
--            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
++          <path
 +            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-           />
--          <polyline points="14 2 14 8 20 8" />
--          <line x1="16" y1="13" x2="8" y2="13" />
--          <line x1="16" y1="17" x2="8" y2="17" />
--          <polyline points="10 9 9 9 8 9" />
++          />
          </svg>
--        <span>{{ t("sidebar.logs") }}</span>
+-        <span>{{ t("sidebar.performance") }}</span>
 -      </RouteLinkItem>
+-      <RouteLinkItem
+-        class="nav-item"
+-        :to="{ name: 'hermes.skillsUsage' }"
+-        :active="selectedKey === 'hermes.skillsUsage'"
+-      >
 +        <span>{{ t("sidebar.systemGroup") }}</span>
-+        <svg
+         <svg
+-          width="16"
+-          height="16"
 +          class="sidebar-system-toggle__arrow"
 +          :class="{ 'sidebar-system-toggle__arrow--open': systemOpen }"
 +          width="12"
 +          height="12"
-+          viewBox="0 0 24 24"
-+          fill="none"
-+          stroke="currentColor"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+-          stroke-width="1.5"
 +          stroke-width="2"
-+          stroke-linecap="round"
-+          stroke-linejoin="round"
-+        >
+           stroke-linecap="round"
+           stroke-linejoin="round"
+         >
+-          <path d="M21.21 15.89A10 10 0 1 1 8.11 2.79" />
+-          <path d="M22 12A10 10 0 0 0 12 2v10z" />
 +          <polyline points="9 18 15 12 9 6" />
-+        </svg>
+         </svg>
+-        <span>{{ t("sidebar.skillsUsage") }}</span>
+-      </RouteLinkItem>
 +      </button>
 +      <div v-show="systemOpen" class="sidebar-system-items">
        <RouteLinkItem
--        v-if="isSuperAdmin"
+-        v-if="isDesktopShell && hasRoute('hermes.browser')"
          class="nav-item"
--        :to="{ name: 'hermes.performance' }"
--        :active="selectedKey === 'hermes.performance'"
+-        :to="{ name: 'hermes.browser' }"
+-        :active="selectedKey === 'hermes.browser'"
 +        :to="{ name: 'hermes.logs' }"
 +        :active="selectedKey === 'hermes.logs'"
        >
          <svg
            width="16"
-@@ -99,14 +176,21 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -142,17 +179,21 @@ function handleSidebarClick(event: MouseEvent) {
            stroke-linecap="round"
            stroke-linejoin="round"
          >
--          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+-          <circle cx="12" cy="12" r="9" />
+-          <path d="M3 9h18" />
+-          <path d="M9 3c-2 5-2 13 0 18" />
+-          <path d="M15 3c2 5 2 13 0 18" />
 +          <path
 +            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
 +          />
@@ -162,88 +181,65 @@ index 31b112b9..7b1ab255 100644
 +          <line x1="16" y1="17" x2="8" y2="17" />
 +          <polyline points="10 9 9 9 8 9" />
          </svg>
--        <span>{{ t("sidebar.performance") }}</span>
+-        <span>{{ t("sidebar.browser") }}</span>
 +        <span>{{ t("sidebar.logs") }}</span>
        </RouteLinkItem>
        <RouteLinkItem
 +        v-if="isSuperAdmin"
          class="nav-item"
--        :to="{ name: 'hermes.skillsUsage' }"
--        :active="selectedKey === 'hermes.skillsUsage'"
+-        :to="{ name: 'hermes.theme' }"
+-        :active="selectedKey === 'hermes.theme'"
 +        :to="{ name: 'hermes.performance' }"
 +        :active="selectedKey === 'hermes.performance'"
        >
          <svg
            width="16"
-@@ -118,10 +202,9 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -164,19 +205,15 @@ function handleSidebarClick(event: MouseEvent) {
            stroke-linecap="round"
            stroke-linejoin="round"
          >
--          <path d="M21.21 15.89A10 10 0 1 1 8.11 2.79" />
--          <path d="M22 12A10 10 0 0 0 12 2v10z" />
-+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-         </svg>
--        <span>{{ t("sidebar.skillsUsage") }}</span>
-+        <span>{{ t("sidebar.performance") }}</span>
-       </RouteLinkItem>
-       <RouteLinkItem
-         v-if="isDesktopShell && hasRoute('hermes.browser')"
-@@ -175,52 +258,6 @@ function handleSidebarClick(event: MouseEvent) {
-         </svg>
-         <span>{{ t("sidebar.versionPreview") }}</span>
-       </RouteLinkItem>
--      <RouteLinkItem
--        class="nav-item"
--        :to="{ name: 'hermes.theme' }"
--        :active="selectedKey === 'hermes.theme'"
--      >
--        <svg
--          width="16"
--          height="16"
--          viewBox="0 0 24 24"
--          fill="none"
--          stroke="currentColor"
--          stroke-width="1.5"
--          stroke-linecap="round"
--          stroke-linejoin="round"
--        >
 -          <circle cx="13.5" cy="6.5" r="2.5" />
 -          <circle cx="17.5" cy="10.5" r="2.5" />
 -          <circle cx="8.5" cy="7.5" r="2.5" />
 -          <path
 -            d="M12 3a9 9 0 1 0 9 9c0-1.1-.9-2-2-2h-1.2a2.8 2.8 0 0 1-2.8-2.8V5c0-1.1-.9-2-2-2h-1z"
 -          />
--        </svg>
++          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+         </svg>
 -        <span>{{ t("sidebar.theme") }}</span>
--      </RouteLinkItem>
--      <RouteLinkItem
--        class="nav-item"
++        <span>{{ t("sidebar.performance") }}</span>
+       </RouteLinkItem>
+       <RouteLinkItem
++        v-if="isDesktopShell && hasRoute('hermes.browser')"
+         class="nav-item"
 -        :to="{ name: 'hermes.petdex' }"
 -        :active="selectedKey === 'hermes.petdex'"
--      >
--        <svg
--          width="16"
--          height="16"
--          viewBox="0 0 24 24"
--          fill="none"
--          stroke="currentColor"
--          stroke-width="1.5"
--          stroke-linecap="round"
--          stroke-linejoin="round"
--        >
++        :to="{ name: 'hermes.browser' }"
++        :active="selectedKey === 'hermes.browser'"
+       >
+         <svg
+           width="16"
+@@ -188,12 +225,12 @@ function handleSidebarClick(event: MouseEvent) {
+           stroke-linecap="round"
+           stroke-linejoin="round"
+         >
 -          <path d="M12 3l7 4v6c0 4-3 7-7 8-4-1-7-4-7-8V7l7-4z" />
 -          <path d="M9 11h.01" />
 -          <path d="M15 11h.01" />
 -          <path d="M9.5 15c1.6 1.1 3.4 1.1 5 0" />
--        </svg>
++          <circle cx="12" cy="12" r="9" />
++          <path d="M3 9h18" />
++          <path d="M9 3c-2 5-2 13 0 18" />
++          <path d="M15 3c2 5 2 13 0 18" />
+         </svg>
 -        <span>{{ t("sidebar.petdex") }}</span>
--      </RouteLinkItem>
++        <span>{{ t("sidebar.browser") }}</span>
+       </RouteLinkItem>
        <RouteLinkItem
          v-if="isSuperAdmin"
-         class="nav-item"
-@@ -264,31 +301,13 @@ function handleSidebarClick(event: MouseEvent) {
-         </svg>
-         <span>{{ t("sidebar.settings") }}</span>
+@@ -241,31 +278,13 @@ function handleSidebarClick(event: MouseEvent) {
+       <RouteLinkItem v-for="{ plugin, view } in pluginSettings" :key="plugin.manifest.id + ':' + view.id" class="nav-item" :to="pluginPageLocation(plugin, view.id)" :active="route.name === 'studio.pluginSettings' && route.params.pluginId === plugin.manifest.id && route.params.viewId === view.id" :title="view.title">
+         <PluginNavigationIcon :icon="view.icon" /><span>{{ view.title }}</span>
        </RouteLinkItem>
 +      </div>
      </nav>
@@ -276,7 +272,7 @@ index 31b112b9..7b1ab255 100644
        <button
          class="collapse-btn"
          @click="appStore.toggleSidebarCollapsed()"
-@@ -403,6 +422,20 @@ function handleSidebarClick(event: MouseEvent) {
+@@ -380,6 +399,20 @@ function handleSidebarClick(event: MouseEvent) {
    font-size: calc(var(--font-size-base, 14px) * 13 / 14);
  }
  

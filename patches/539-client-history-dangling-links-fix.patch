@@ -23,21 +23,21 @@ index b9a7d2580..417816272 100644
      canSwitchParent: chatStore.sessions.some((item) => item.id === session.parentSessionId),
      lastRole: session.parentLastMessageRole || "",
      lastMessage: session.parentLastMessage || "",
-diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
-index 7abc04309..cb774c106 100644
+diff --git packages/client/src/views/hermes/HistoryView.vue packages/client/src/views/hermes/HistoryView.vue
+index 3c291f5d6..6aec53825 100644
 --- a/packages/client/src/views/hermes/HistoryView.vue
 +++ b/packages/client/src/views/hermes/HistoryView.vue
-@@ -333,8 +333,7 @@ async function loadOlderHistoryMessages(sessionId: string): Promise<boolean> {
- 
+@@ -340,8 +340,7 @@ async function loadOlderHistoryMessages(sessionId: string): Promise<boolean> {
  function openHistorySession(sessionId: string, profile?: string | null) {
+   // Ordinary list navigation follows the active profile; only explicit links stay scoped.
    return router.push({
 -    name: 'hermes.historySession',
 -    params: { sessionId },
 +    path: `/app/history/session/${encodeURIComponent(sessionId)}`,
-     query: profile ? { profile } : undefined,
+     query: routeProfile.value && profile ? { profile } : undefined,
    })
  }
-@@ -350,7 +349,7 @@ async function openDefaultHistorySession(replace = false) {
+@@ -357,7 +356,7 @@ async function openDefaultHistorySession(replace = false) {
    if (!firstSession) {
      historySessionId.value = null
      historySession.value = null
@@ -46,7 +46,7 @@ index 7abc04309..cb774c106 100644
      return
    }
  
-@@ -375,7 +374,7 @@ async function syncRouteSession() {
+@@ -382,7 +381,7 @@ async function syncRouteSession() {
    if (!summary) {
      historySessionId.value = null
      historySession.value = null
@@ -55,7 +55,7 @@ index 7abc04309..cb774c106 100644
      return
    }
  
-@@ -767,7 +766,7 @@ async function handleContextMenuSelect(key: string) {
+@@ -787,7 +786,7 @@ async function handleContextMenuSelect(key: string) {
      if (!findHistorySession(contextSessionId.value)) {
        historySessionId.value = null
        historySession.value = null
@@ -64,7 +64,7 @@ index 7abc04309..cb774c106 100644
        await openDefaultHistorySession(true)
      }
    }
-@@ -796,7 +795,7 @@ async function handleDeleteSession(id: string, profile?: string | null) {
+@@ -816,7 +815,7 @@ async function handleDeleteSession(id: string, profile?: string | null) {
      historySession.value = null
      const next = historySessions.value[0]
      if (next) await handleSessionClick(next.id, next.profile)

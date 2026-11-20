@@ -97,6 +97,7 @@ try {
 }
 
 export interface CodingAgentRunLaunch {
+  ownerUserId?: number
   agentPreset?: string
   agentSessionId: string
   agentId: string
@@ -403,7 +404,7 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
     if (!piHome) return false
     try {
       const config = readFileSync(join(piHome, 'mcp.json'), 'utf-8')
-      return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
+      return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-plugins"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
     } catch {
       return false
     }
@@ -413,7 +414,7 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
     if (!grokHome) return false
     try {
       const config = readFileSync(join(grokHome, 'config.toml'), 'utf-8')
-      return config.includes('[mcp_servers.ekko-studio-api]') && config.includes('[mcp_servers.ekko-studio-use]') && config.includes('[mcp_servers.ekko-studio-interaction]')
+      return config.includes('[mcp_servers.ekko-studio-api]') && config.includes('[mcp_servers.ekko-studio-plugins]') && config.includes('[mcp_servers.ekko-studio-use]') && config.includes('[mcp_servers.ekko-studio-interaction]')
     } catch {
       return false
     }
@@ -423,7 +424,7 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
     if (!configDir) return false
     try {
       const config = readFileSync(join(configDir, 'opencode.json'), 'utf-8')
-      return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
+      return config.includes('"ekko-studio-api"') && config.includes('"ekko-studio-plugins"') && config.includes('"ekko-studio-use"') && config.includes('"ekko-studio-interaction"')
     } catch {
       return false
     }
@@ -433,7 +434,7 @@ function hasManagedHermesMcpConfig(run: ManagedCodingAgentRun): boolean {
   if (!codexHome) return false
   try {
     const config = readFileSync(join(codexHome, 'config.toml'), 'utf-8')
-    return ['api', 'browser', 'use', 'interaction'].every(toolset => config.includes(`[mcp_servers.ekko-studio-${toolset}]`))
+    return ['api', 'plugins', 'browser', 'use', 'interaction'].every(toolset => config.includes(`[mcp_servers.ekko-studio-${toolset}]`))
   } catch {
     return false
   }
@@ -2956,6 +2957,10 @@ export class CodingAgentRunManager {
           return
         }
         if (run.printCompleted) return
+        if (code === 0 && (run.printText || '').trim()) {
+          this.completeClaudePrintTurn(run, run.codexPendingUsage)
+          return
+        }
         this.failAntigravityTurn(run, run.codexPendingError || (code === 0 ? 'Antigravity exited without a terminal result event' : exitErrorMessage('Antigravity', code, run.currentChildStderr)), run.codexPendingUsage)
       },
     })

@@ -27,16 +27,13 @@ describe('744：announcements 离线加固', () => {
 })
 
 describe('745：update/preview/tags 超时收敛 + 失败负缓存', () => {
-  it('git 4s / GitHub API 6s / 失败负缓存 60s', () => {
-    const mgr = readVendor(resolve(SERVER, 'services/update/version-preview-manager.ts'))
-    expect(mgr).toMatch(/timeout: 4_000/)
-    expect(mgr).toMatch(/AbortSignal\.timeout\(6_000\)/)
-    expect(mgr).toMatch(/PREVIEW_TAGS_FAILURE_CACHE_MS = 60 \* 1000/)
-    expect(mgr).toContain('setTagsFailure')
-    expect(mgr).toContain('getTagsFailure')
-    // 两级超时不再回归到 8s/15s
-    expect(mgr).not.toMatch(/timeout: 8_000/)
-    expect(mgr).not.toMatch(/AbortSignal\.timeout\(15_000\)/)
+  it('v0.8.28 起随上游删除 version-preview 子系统而退役（预览改独立插件）', () => {
+    // 2026-11-19 v0.8.28 升级轮：唯一目标 version-preview-manager.ts 被上游整删，
+    // 补丁退役（原件 .archived-patches/2026-11-19-v0828/）。断言退役态而非实现体。
+    const exists = existsSync(resolve(SERVER, 'services/update/version-preview-manager.ts'))
+    expect(exists).toBe(false)
+    const archived = existsSync(resolve(__dirname, '../../.archived-patches/2026-11-19-v0828/745-server-preview-tags-timeout.patch'))
+    expect(archived).toBe(true)
   })
 })
 

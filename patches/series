@@ -915,7 +915,7 @@
 686-client-usage-skills-polish.patch
 
 # 687: 供应链治理轮锁收口——manifest 补丁（017/080/103/136/137/138/573）从未同步进 vendor 锁致 npm ci 必炸；以注入态 manifest 重生成锁：六依赖入树+@playwright/test 对齐 1.63.0，resolved 全锚 registry.npmjs.org（本机 npm 缓存曾带出 npmmirror 域名，已统一重写；integrity 不变）。
-687-package-lock-overlay-deps.patch
+# 687-package-lock-overlay-deps.patch
 
 # 688: 容量泵内省 sidecar 补丁化（2ce5333a0 纯运行时热修在 0.22.4 镜像刷新被抹，pytest 守门复红；补丁通道保证刷新不可再抹）——run_busy 四路径写 <HERMES_HOME>/runtime/capacity_retry.json（限频 2s），cluster-inspector 免改 api_server 可观测容量泵。
 688-agent-capacity-sidecar.patch
@@ -1139,7 +1139,7 @@
 743-server-userenv-routes.patch
 # 2026-11-04 Windows 离线回归 P1 修复批（spec 2026-11-04-win-regression-p1-fixes）
 744-server-announcements-offline-hardening.patch
-745-server-preview-tags-timeout.patch
+# 745（2026-11-19 v0.8.28 升级轮退役：唯一目标 version-preview-manager.ts 被上游删除（版本预览改独立插件）；原件 .archived-patches/2026-11-19-v0828/）
 746-server-petdex-offline-hardening.patch
 747-client-files-open-permission-hint.patch
 748-client-accountsettings-lockedips-permission-note.patch
@@ -1230,7 +1230,7 @@
 # 767（2026-11-12 TTSE 双轨经验吸收，spec 2026-11-12-expdual-ttse）：
 # 双轨经验台账路由注册（/api/expdual/* 挂进 bootstrap/routes.ts；先例 627）。
 767-server-expdual-routes.patch
-768-package-lock-root-deps.patch
+# 768（2026-11-19 v0.8.28 升级轮退役：root deps 段已被再生后的 573 lock 全量吸收——npm --package-lock-only 同步写 root dependencies 块；原件 .archived-patches/2026-11-19-v0828/）
 769-client-loginview-quick-accounts.patch
 
 # 770（2026-11-13 超级智能体吸收批一，spec 2026-11-13-superagent-contract-closure）：

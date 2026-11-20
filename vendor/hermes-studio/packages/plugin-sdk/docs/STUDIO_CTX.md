@@ -1,0 +1,226 @@
+# Studio SDK v1 上下文与能力
+
+精确类型由 sdk/src/index.ts 统一导出，按 core/state/host/browser/sessions/bots/contexts/agents/http 组织源码。
+逐字段含义、单位、必填/可空/默认与限制见 [FIELD_REFERENCE.md](FIELD_REFERENCE.md)，
+宿主业务方法的输入和返回见 [HOST_API.md](HOST_API.md)。通用 Json 是开放业务数据，不代表没有业务约束。
+
+| 上下文 | 元数据及能力 | 生命周期 |
+| --- | --- | --- |
+| PluginContext / apply | plugin、动态 identity、config、signal、paths.dataDir、host、extensions、state、events、scheduler、log、lifecycle | 插件启用到禁用/重载/卸载 |
+| RunContext | identity、signal、config、permissions、features、host、state、session.get、workspace.read/write、tools.call、messages.notify/emit、lifecycle | RPC、命令、工具、钩子或动作本次调用，最长 120 秒 |
+| ClientContext / mount | plugin、identity、locale、view/slot/location/data、signal、config、host、state、rpc.call、events.on、messages.on、ui、lifecycle | 当前 iframe 页面 |
+| AgentManagementContext | identity.agentId、可选 mode、signal、log、lifecycle、progress | 单次管理调用，最长 120 秒 |
+| AgentSessionContext | identity.agentId/sessionId、mode、paths、resumeState、signal、log、lifecycle | 原生 Agent 会话实例 |
+| AgentRunContext | 普通 RunContext 加 paths/deadlineAt/log/lifecycle/output/mcpServers/interactions/attachments/mode/model；state.agentSession 必定存在 | 当前单轮运行，最长一小时，父任务可提前取消 |
+
+身份来自宿主，不可信任浏览器传入的 userId/Profile。config 为插件全局配置，前端不可见 secret。
+paths.dataDir 保存稳定插件私有文件；Agent paths.runtimeDir/workspaceDir 分别为原生会话运行目录和实际工作区。
+权限不因 global/scoped 模式扩大；global 使用插件原生配置，scoped 使用宿主注入的短期模型代理，不暴露上游 key。
+同一 Agent 会话实例串行运行，按 Agent、账号、Profile、会话和模式隔离。
+
+RPC、事件及动作回调中创建的定时器或 HTTP 服务会继承该调用的异步上下文，闭包里的 ctx.host/state/signal
+也绑定该调用；回调结束后继续读取会被取消。ctx.lifecycle 负责资源清理，不会延长调用或切换身份。
+需要独立页面持续取数时，可在 apply 期间注册 scheduler action，在每次动作内 await run.host 读取并更新缓存，
+独立 HTTP 服务只读取缓存。直接使用插件级 ctx.host 的长驻服务应在 apply 阶段启动，不在短期 RPC 内启动。
+后台动作需要 automation，读取接口需要 api.read；定时任务使用激活管理员的绑定 Profile，且不依赖插件页面打开。
+
+## 宿主业务模块
+
+| host 分组 | 方法 |
+| --- | --- |
+| models | list、respond（非流式 Responses JSON） |
+| agents | list、status、models、settings |
+| sessions | list/get/create/run/stop/remove/rename/archive/setModel/setWorkspace/messages；connect 实时会话 |
+| bots | list/create/get/configure/clear/remove/connect；models/tasks/flows/schedules/memory/interactions，见下文 |
+| groupChats | list/get/create/update/remove/send/stop/messages；agents.list/add/update/remove |
+| workflows | list/get/create/update/remove/run/stop/runs/getRun；schedules.list/create/update/remove |
+| files | list/read |
+| browser | tabs.list/create/close；cdp.attach/send/events/release，见下文 |
+
+host.request 仅接受相对 /api/ 路径及 JSON；GET 需要 api.read，其他请求需要 api.write，沿用真实调用者权限和固定 Profile。
+账号、密钥、插件管理和原始桌面浏览器代理路径拒绝访问。普通业务结果保留 HTTP JSON 形状，不自动解包。
+sessions.run 默认启动或入队后返回；wait:true 等待终态但仍受普通调用寿命约束。
+
+## 扩展、消息和页面
+
+extensions.agents/tools/commands/hooks/actions/rpc/http.register 注册插件提供给宿主的能力。
+工具执行返回 ToolResult；commands 注册 /插件id:命令；hooks 只在 Ekko 支持 input.transform/context.transform/tool.before/tool.after。
+
+`context.transform` 的宿主输入会复制为 JSON：对象中值为 undefined 的可选数据字段会省略，不修改原消息；数组中的 undefined 或空位仍会拒绝，不会变成 null。其余非 JSON 值仍会报错。此转换只用于宿主构造的 context 输入，不用于插件回传或其他 hook。
+Agent 注册返回带完整 id 和 dispose 的句柄，其他注册返回 disposer。
+events.on 支持精确名称、前缀及 *，业务事件是有界内存观察流；离线恢复需查询历史并幂等处理。
+messages.emit 默认发给当前调用者，audience=plugin 广播本插件所有账号/Profile 页面，前端通过 messages.on 接收。
+messages.notify 给当前调用者提示；自定义消息不会回流后端 events 总线。
+前端 rpc.call 调用本插件 extensions.rpc 注册的业务函数。
+ui 提供 notify/confirm/prompt/navigate/selectModel/selectWorkspace；模型选择器返回规范模型引用或 null，不包含凭证，也不负责保存或调用模型。
+工作区选择器复用宿主目录浏览、手动路径、账号级收藏及最近记录；返回 `{profile,workspace}` 或取消时 null。
+它不修改会话或插件设置，插件可通过 RPC 保存选择，或显式调用 host.sessions.setWorkspace 等已有业务方法。
+
+```js
+const selected = await ctx.ui.selectWorkspace({ current: savedWorkspace || '' })
+if (selected) await ctx.rpc.call('save-workspace', selected)
+```
+页面包括 page/settings/workspace/agent-settings 和动态 workspace-sidebar，navigation.main/settings 独立声明入口。
+iframe 使用同源独立文档，不设置 sandbox，也不限制直接联网和资源来源；可信前端可访问宿主 DOM 和浏览器存储。
+使用宿主主题变量；业务调用通过 ctx.host/ctx.rpc，仍由宿主检查插件权限、用户与 Profile。
+音视频可使用远程 URL、内联 data 或 iframe 内 Blob URL；浏览器的 CORS、安全上下文和自动播放策略仍适用。
+插件处理点击播放、自动播放拒绝与资源清理；环境限制和 HTTP 页面说明见 `ARCHITECTURE.md`。
+主题桥同步文本、强调色、状态色、卡片/输入底色、边框，以及 `--font-family`、`--font-size-base`、
+`--spacing-scale`、`--line-height`、`--letter-spacing`、`--border-width`、`--control-height` 和 `--radius-component`。
+`--studio-color-scheme` 为 light/dark；`--theme-card-*`、`--theme-input-*`、`--theme-overlay-*` 提供
+bg/border/radius/shadow/filter 区域变量，跟随实时主题和壁纸更新；重置时清除旧覆盖。
+这些 CSS 变量不自动改变插件布局，插件自行使用并为旧宿主保留默认值；跨 iframe 的 backdrop-filter 不能采样宿主壁纸。
+
+## SDK v1 规范入口
+
+`ctx.host` 在前后端及调用上下文中使用相同业务分组：models、agents、sessions、bots、groupChats、workflows、files、browser。
+宿主业务统一通过 host 分组调用。Agent 目录通过 host.agents.list/status/models/settings 访问，
+注册自己的 Agent 则使用 extensions.agents.register。维护动作继续由宿主按原有管理员规则调度。
+`permissions` 是实际 manifest 权限；普通 run.features 是运行环境支持项；AgentDefinition.features 是引擎声明。
+后两者都不能作为授权判断。权限集合还包含 `browser.cdp` 和后端入站 HTTP 拦截所需的 `http`。
+
+`state.plugin` 是插件全局存储；user/profile/session 使用宿主绑定身份的独立命名空间。
+不存在当前会话时 state.session 缺省。Agent 专用的 state.agentSession 按 Agent、账号、Profile、会话与模式分区。
+Agent 不再覆盖默认存储。根 ctx.state 在回调内动态绑定真实身份；调用结束不能继续使用取出的存储句柄。
+前端选择 plugin/user/profile/session 范围仍需要 storage.client；它表示允许访问插件全部数据，并非用户数据授权边界。
+
+注册统一使用 extensions.agents/tools/commands/hooks/actions/rpc/http；每个注册返回清理句柄。
+
+## 入站 HTTP 请求与响应
+
+后端在清单声明 `"permissions": ["http"]`，然后注册拦截器：
+
+```js
+export function apply(ctx) {
+  ctx.extensions.http.register({
+    name: 'rewrite-example',
+    priority: 0,
+    onRequest(request, http) {
+      if (request.url === '/api/example') {
+        request.headers['x-plugin'] = 'enabled'
+        request.body = { ...request.body, source: 'plugin' }
+      }
+    },
+    onResponse(response, http) {
+      if (http.request.url === '/api/example') {
+        response.headers['x-plugin-response'] = 'enabled'
+        response.body = { result: response.body }
+      }
+    },
+  })
+}
+```
+
+请求可改 method、url、headers、body；url 必须为 `/path?query`，改写后正常执行鉴权和路由。
+headers 使用小写键，值为 string/string[]；delete 删除，Set-Cookie 等多值头保留数组。
+请求体为已有解析器产出的 JSON、表单或文本，不读取或缓冲 multipart 上传原始流。
+onRequest 返回 void 继续，也可返回 `{status: 403, headers: {}, body: {error: 'blocked'}}` 直接响应。
+onResponse 可改 status、headers、body；只有已进入的拦截器会按逆序收到响应。
+priority 默认 0，请求升序；同值按插件 ID、注册 name 排序。每次请求固定拦截器快照，后续禁用或
+单独 dispose 的回调不再执行；重载后的新实例从下一次请求生效。
+
+http.originalUrl 是最初路径，http.request 为当前请求快照；http.signal 绑定本次回调，最长 30 秒。
+http.identity 在鉴权前缺省，鉴权后使用实际账号/Profile。鉴权前访问闭包 ctx.identity、ctx.host、
+ctx.state 会拒绝，不继承激活管理员；ctx.signal 与 ctx.log 仍可使用。HTTP 权限本身允许访问全局
+入站流量，包括请求中的鉴权头，安装时需要信任该后端代码。
+SDK 发往本机后端的内部调用仍执行原有账号/Profile 鉴权，但跳过 HTTP 再次拦截以免递归。
+
+body 保留 Koa 支持的 Buffer 和 Readable；可自行接 Transform 转换流，宿主不强制缓冲。
+已通过原生 res 直接写出的 SSE/代理响应不再进入 onResponse；WebSocket/Socket.IO 升级不属于该能力。
+CORS 提前返回、解析器拒绝的请求及在此中间件之前终止的请求也不会进入拦截。
+该能力只处理入站 HTTP，不改变 Studio 对模型或外部服务的出站 HTTP。
+统一模型网关 `/api/ekko-studio/models/*` 也经过此中间件，无需额外权限：onRequest 看到协议转换前的
+入站 body，可改写后交给网关；正常鉴权、Profile 和分享 key 的模型授权检查仍会执行。
+onResponse 看到网关转换后的客户端响应；Coding Agent 专用 key 使用绑定账号/Profile，
+内部 key 和分享 key 的推理响应使用实际模型路由的账号/Profile。尚未确定 Profile 的请求没有 identity。
+网关 SSE 以 Readable 返回，onResponse 在开始发送前执行一次，可以连接 Transform 逐块处理。
+它不是传输结束通知，不应在回调里等整条流结束；需要结束通知时监听流的 end/close/error。
+http.signal 只覆盖回调寿命，不代表整条 SSE 流的寿命；后续流事件不得继续使用已结束回调的宿主能力。
+定时执行使用 scheduler.every；资源使用 lifecycle.add/acquire，按所在上下文寿命清理。
+前端 events.on 订阅业务事件，messages.on 接收插件自定义页面消息；Agent output.emit 发布运行事件。
+后端 ctx.events.on 需要 events 权限，按账号和 Profile 授权订阅宿主业务事件，包含原生会话事件，不限于插件创建的会话。
+
+## 单聊实时会话
+
+```js
+const live = await ctx.host.sessions.connect(sessionId, event => {
+  if (event.event === 'message.delta') appendText(event.delta)
+  if (event.event === 'resumed') restoreSnapshot(event)
+  if (event.event === 'run.completed') showFinalReply(event.output)
+})
+await live.run('你好')
+// await live.queue.insert(queueId)
+// await live.queue.cancel(queueId)
+// await live.interactions.approve(approvalId, choice)
+// await live.interactions.clarify(clarifyId, response)
+// await live.stop()
+await live.close()
+```
+
+connect 需要 api.read，控制指令需要 api.write；resume 只需 api.read。
+listener 接收核心 `/chat-run` 协议中目标会话的原始事件字段，含 event/session_id。
+包括 message.delta/interim、reasoning/thinking、tool/subagent、run/queue、approval/clarify、
+usage、plan、compression、workspace、session 更新，以及 resumed 恢复快照。
+transport.connected/disconnected/error/closed 描述连接状态。调用监听器应快速处理，不承担业务回执。
+首次连接与重连自动请求 resume；插件按快照恢复显示，不应把快照重复拼接到已有增量。
+断线期间的指令明确失败，不缓冲或自动重放。close 释放订阅，stop 才会停止宿主运行。
+指令 Promise 表示分发完成；运行结果、失败、审批与终态由后续事件确认。
+输入、options、事件和结果沿用 SDK JSON 限制；过大的事件会报告 transport.error，调用者可分页读取历史。
+连接寿命绑定创建它的上下文：页面卸载、插件停用、调用取消均释放资源；普通 RPC 不适合承载长期订阅。
+
+App 插件页面通过 Studio 中继使用同一实时句柄，支持单聊和 BOT 会话；局域网、云中继及 P2P
+沿用宿主账号、Profile、会话与插件权限校验，插件不会获得认证凭据。需要配套更新 App、Studio
+及云中继服务；旧中继未开放 `/plugins` 通道时会明确报告不支持。网络恢复后只重建订阅并恢复快照，
+不会重发 run 等控制指令。退出页面、切换账号/设备/Profile 时释放页面连接，不停止正在运行的任务。
+
+## BOT 完整模块
+
+`host.bots.list/create/get/configure/clear/remove` 管理 BOT 角色及对话；create 输入沿用宿主 title、bot_type、
+workspace、model 等字段，get 返回权威快照，configure 与 clear/remove 保留原有 revision 并发检查。
+`host.bots.connect(botSessionId, listener)` 返回同样的实时句柄，可聊天、排队、回应审批并恢复快照。
+BOT 变化通过 person.updated 事件通知，可重新 get 权威配置、任务、记忆和协作状态。
+
+| BOT 子模块 | 方法 |
+| --- | --- |
+| models | list / agents / execution：模型及执行 Agent 目录 |
+| tasks | list / apply：查询和变更任务；messages / send：任务对话；insert / remove：待执行输入队列；executions / events：执行历史与事件 |
+| flows | list / apply / messages：BOT 协作及协作对话 |
+| schedules | apply：查询、创建及控制原有定时计划 |
+| memory | forget(id, expectedRevision)：遗忘指定记忆；记忆新增修订仍通过 BOT 对话 |
+| interactions | answer(id, expectedRevision, answer)：回应 BOT 原有交互 |
+
+这些 HTTP 方法保留现有服务的 JSON 请求/返回、action、revision、幂等键、工作区和归属校验。
+其中 POST 查询也遵循 api.write 的现有方法授权规则；SDK 不代填 revision 或跳过业务确认。
+模型直接调用 host.models.respond 仍是非流式 JSON；单聊实时会话通过现有引擎保留流式体验。
+
+## 桌面内置浏览器 CDP
+
+声明 `browser.cdp` 后，使用 `host.browser.tabs.list/create/close` 和 `host.browser.cdp.attach/send/events/release`。
+该权限独立于 api.read/api.write；host.request 不能绕过浏览器模块访问浏览器代理接口。
+仅使用当前账号/Profile 已授权共享、且仍绑定的桌面浏览器；无桌面或授权已撤销时明确失败。
+本地和远程 Desktop 均由已登录的主窗口建立同一条账号/Profile 绑定的浏览器连接。
+插件通过相同的 host.browser 接口访问当前 Desktop；本地使用无需另起 MCP 子进程或配置调试端口。
+主窗口退出登录、切换账号/Profile、替换文档或关闭时撤销原连接，旧调用不会转移到其他 Desktop。
+不开放调试端口或 Studio 认证凭证，不创建另外的浏览器或浏览器 Profile。CDP 可以访问当前页面的调试及会话数据。
+
+```js
+const { tabs } = await ctx.host.browser.tabs.list()
+const tab = tabs[0] || await ctx.host.browser.tabs.create('https://example.com')
+const attached = await ctx.host.browser.cdp.attach(tab.id)
+try {
+  const result = await ctx.host.browser.cdp.send(tab.id, 'Runtime.evaluate', {
+    expression: 'document.title', returnByValue: true
+  })
+  const batch = await ctx.host.browser.cdp.events(tab.id, attached.cursor)
+} finally {
+  await ctx.host.browser.cdp.release(tab.id)
+}
+```
+
+CDP 面向指定标签页及 attach 返回的已知 iframe session；不是浏览器进程级 WebSocket。
+支持 Page/Runtime/DOM/DOMDebugger/CSS/Network/Fetch/Input/Emulation/Accessibility/Performance/Profiler/HeapProfiler/Log/Security/Audits/Overlay/Animation/Debugger/IO 域。
+Browser/Target 域由宿主管理，未知 frame session 拒绝。commands 保留 CDP JSON 结果，错误直接 reject。
+events 是有界游标轮询，每批最多 64 条；保留 64 条，过期游标返回 dropped=true 和 oldestCursor。
+单条事件超过 16000 字节时返回空 params 并标记 truncated=true。调用者自行启用需要的 CDP 域。
+标签页控制沿用现有租约、串行队列和用户接管；release 释放控制，不拆卸宿主共用 debugger。
+取消后不接收迟到结果，已发送到 Chromium 的命令可能已执行，禁止据此自动重放。

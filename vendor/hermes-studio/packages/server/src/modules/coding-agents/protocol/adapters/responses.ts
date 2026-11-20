@@ -1,9 +1,11 @@
+import type { ReasoningCodec } from '../../../studio/public/model-reasoning-codec'
 // Shared Responses payload translation for Coding Agent provider proxies.
 import { createHash } from 'node:crypto'
 import { imageUrlToAnthropicSource, openAiImageUrl } from './multimodal'
 import { shouldPreserveReasoningContent } from './anthropic'
 
 export interface ResponsesAdapterTarget {
+  reasoningCodec?: ReasoningCodec
   model: string
   mcpToolRoutes?: McpToolRoutes
   provider?: string
@@ -507,7 +509,7 @@ function responseContentToOpenAiChat(content: unknown): string | any[] {
   if (typeof content === 'string') return content
   if (!Array.isArray(content)) return stringifyContent(content)
   const parts: any[] = []
-  let hasImage = false
+  let hasMedia = false
   for (const part of content) {
     if (typeof part === 'string') {
       parts.push({ type: 'text', text: part })
@@ -520,7 +522,7 @@ function responseContentToOpenAiChat(content: unknown): string | any[] {
     if (part?.type === 'input_image') {
       const url = openAiImageUrl(part)
       if (url) {
-        hasImage = true
+        hasMedia = true
         const detail = typeof part.detail === 'string' ? part.detail : ''
         parts.push({
           type: 'image_url',
@@ -532,10 +534,16 @@ function responseContentToOpenAiChat(content: unknown): string | any[] {
       }
       continue
     }
+    if (part?.type === 'input_file') {
+      hasMedia = true
+      parts.push({ type: 'file', file: { ...(part.filename ? { filename: part.filename } : {}),
+        ...(part.file_data ? { file_data: part.file_data } : {}), ...(part.file_id ? { file_id: part.file_id } : {}) } })
+      continue
+    }
     const text = stringifyContent(part)
     if (text) parts.push({ type: 'text', text })
   }
-  if (hasImage) return parts
+  if (hasMedia) return parts
   return parts.map(part => String(part.text || '')).filter(Boolean).join('\n')
 }
 
@@ -579,7 +587,12 @@ function inlineReasoningText(item: any): string {
   return ''
 }
 
-function responsesReasoningText(item: any): string {
+function responsesReasoningText(item: any, target: ResponsesAdapterTarget): string {
+  if (item?.encrypted_content && target.reasoningCodec) {
+    // Responses clients retain opaque reasoning for replay; summaries may be
+    // omitted or shortened. A foreign target's envelope must not be replayed.
+    return target.reasoningCodec.decode(item.encrypted_content)?.text || ''
+  }
   const inline = inlineReasoningText(item)
   if (inline) return inline
 
@@ -624,10 +637,10 @@ function responsesInputToChatMessages(body: any, target: ResponsesAdapterTarget)
       messages.push({
         role: 'assistant',
         content: null,
-        // Synthetic/replayed tool calls may have no reasoning item. Keep the
-        // required field present, matching Ekko's Chat Completions adapter.
+        // Older/replayed tool calls may have no reasoning item. DeepSeek
+        // rejects an empty string, so retain its non-empty history fallback.
         ...(preserveReasoningContent
-          ? { reasoning_content: pendingReasoning }
+          ? { reasoning_content: pendingReasoning || ' ' }
           : {}),
         tool_calls: pendingToolCalls,
       })
@@ -661,7 +674,7 @@ function responsesInputToChatMessages(body: any, target: ResponsesAdapterTarget)
     if (!item || typeof item !== 'object') continue
     if (item.type === 'reasoning') {
       flushCompletedToolCalls()
-      const reasoning = responsesReasoningText(item)
+      const reasoning = responsesReasoningText(item, target)
       if (reasoning.startsWith(pendingReasoning)) pendingReasoning = reasoning
       else if (reasoning && !pendingReasoning.endsWith(reasoning)) pendingReasoning += reasoning
       continue
@@ -699,10 +712,13 @@ function responsesInputToChatMessages(body: any, target: ResponsesAdapterTarget)
         role,
         content: responseContentToOpenAiChat(item.content),
         ...(role === 'assistant' && preserveReasoningContent
-          ? { reasoning_content: inlineReasoningText(item) || pendingReasoning }
+          ? { reasoning_content: inlineReasoningText(item) || pendingReasoning || ' ' }
           : {}),
       })
-      pendingReasoning = ''
+      // Hermes may put an empty assistant message between the reasoning item
+      // and its function calls. Keep the same turn's reasoning until the tool
+      // group or a non-assistant message closes it.
+      pendingReasoning = role === 'assistant' ? inlineReasoningText(item) || pendingReasoning : ''
     }
   }
   flushCompletedToolCalls()
@@ -758,6 +774,11 @@ function responsesToolsToChatTools(tools: unknown): any[] | undefined {
   return mapped.length ? mapped : undefined
 }
 
+/** Function-only Responses Providers use the same namespace mapping as Chat. */
+export function responseFunctionTools(body: any): any[] {
+  return (responsesToolsToChatTools(responsesAvailableTools(body)) || []).map(tool => ({ type: 'function', ...tool.function }))
+}
+
 export function responsesToOpenAiChat(body: any, target: ResponsesAdapterTarget, stream = false): any {
   const tools = responsesToolsToChatTools(responsesAvailableTools(body))
   const reasoningEffort = targetReasoningEffort(target)
@@ -794,6 +815,13 @@ function responsesContentToAnthropicContent(content: unknown, role: 'user' | 'as
       const source = url ? imageUrlToAnthropicSource(url) : null
       return source ? { type: 'image', source } : null
     }
+    if (part?.type === 'input_file') {
+      const match = typeof part.file_data === 'string' && part.file_data.match(/^data:([^;,]+);base64,([\s\S]+)$/)
+      if (!match || !['application/pdf', 'text/plain'].includes(match[1])) throw Object.assign(new Error('Anthropic file input requires an inline PDF or text file'), { status: 400 })
+      return { type: 'document', ...(part.filename ? { title: part.filename } : {}), source: match[1] === 'text/plain'
+        ? { type: 'text', media_type: 'text/plain', data: Buffer.from(match[2], 'base64').toString('utf8') }
+        : { type: 'base64', media_type: match[1], data: match[2] } }
+    }
     return null
   }).filter(Boolean)
   return mapped.length ? mapped : [{ type: 'text', text: '' }]
@@ -802,17 +830,22 @@ function responsesContentToAnthropicContent(content: unknown, role: 'user' | 'as
 function responsesToolOutputToAnthropicContent(output: unknown): string | any[] {
   if (typeof output === 'string') return output
   const parts = responsesContentToAnthropicContent(output, 'user')
-  if (parts.some(part => part?.type === 'image')) return parts
+  if (parts.some(part => part?.type === 'image' || part?.type === 'document')) return parts
   return parts.map(part => String(part.text || '')).filter(Boolean).join('\n')
 }
 
-function responsesInputToAnthropicMessages(body: any): any[] {
+function responsesInputToAnthropicMessages(body: any, target: ResponsesAdapterTarget): any[] {
   const messages: any[] = []
   const input = body?.input
   if (typeof input === 'string') return [{ role: 'user', content: [{ type: 'text', text: input }] }]
 
   for (const item of Array.isArray(input) ? input : []) {
     if (!item || typeof item !== 'object') continue
+    if (item.type === 'reasoning' && item.encrypted_content) {
+      const reasoning = target.reasoningCodec?.decode(item.encrypted_content)
+      if (reasoning?.native?.format === 'anthropic-thinking-blocks' && Array.isArray(reasoning.native.data)) messages.push({ role: 'assistant', content: reasoning.native.data })
+      continue
+    }
     if (item.type === 'function_call' || item.type === 'tool_search_call') {
       messages.push({
         role: 'assistant',
@@ -849,7 +882,13 @@ function responsesInputToAnthropicMessages(body: any): any[] {
     }
   }
 
-  return messages.length ? messages : [{ role: 'user', content: [{ type: 'text', text: '' }] }]
+  if (!messages.length) return [{ role: 'user', content: [{ type: 'text', text: '' }] }]
+  return messages.reduce((merged: any[], message) => {
+    const previous = merged.at(-1)
+    if (previous?.role === message.role) previous.content.push(...message.content)
+    else merged.push({ ...message, content: [...message.content] })
+    return merged
+  }, [])
 }
 
 function responsesToolsToAnthropicTools(tools: unknown): any[] | undefined {
@@ -869,17 +908,22 @@ function responsesToolsToAnthropicTools(tools: unknown): any[] | undefined {
 export function responsesToAnthropicMessages(body: any, target: ResponsesAdapterTarget, stream = false): any {
   const tools = responsesToolsToAnthropicTools(responsesAvailableTools(body))
   const reasoningEffort = targetReasoningEffort(target)
+  const system = [body?.instructions, ...(Array.isArray(body?.input) ? body.input.filter((item: any) => ['system', 'developer'].includes(item?.role)).map((item: any) => stringifyContent(item.content)) : [])].filter(Boolean).join('\n\n')
+  const input = Array.isArray(body?.input) ? body.input.filter((item: any) => !['system', 'developer'].includes(item?.role)) : body?.input
+  const choice = body?.tool_choice
+  const toolChoice = typeof choice === 'string' ? { type: ({ auto: 'auto', none: 'none', required: 'any' } as Record<string, string>)[choice] || 'auto' }
+    : choice?.name ? { type: 'tool', name: choice.name } : { type: 'auto' }
   return {
     model: target.model,
-    messages: responsesInputToAnthropicMessages(body),
-    ...(body?.instructions ? { system: stringifyContent(body.instructions) } : {}),
+    messages: responsesInputToAnthropicMessages({ ...body, input }, target),
+    ...(system ? { system } : {}),
     max_tokens: typeof body?.max_output_tokens === 'number'
       ? body.max_output_tokens
       : target.outputLimit && target.outputLimit > 0 ? Math.floor(target.outputLimit) : 4096,
     ...(typeof body?.temperature === 'number' ? { temperature: body.temperature } : {}),
     ...(typeof body?.top_p === 'number' ? { top_p: body.top_p } : {}),
     ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
-    ...(tools?.length ? { tools } : {}),
+    ...(tools?.length ? { tools, tool_choice: { ...toolChoice, ...(body?.parallel_tool_calls === false ? { disable_parallel_tool_use: true } : {}) } } : {}),
     stream,
   }
 }
@@ -933,6 +977,7 @@ export function openAiChatToResponses(data: any, target: ResponsesAdapterTarget)
       type: 'reasoning',
       id: `rs_${responseId(data)}`,
       summary: [{ type: 'summary_text', text: reasoningText }],
+      ...(target.reasoningCodec ? { encrypted_content: target.reasoningCodec.encode({ text: reasoningText }) } : {}),
     })
   }
 
@@ -971,6 +1016,7 @@ export function anthropicMessageToResponses(data: any, target: ResponsesAdapterT
   const output: any[] = []
   const textParts: string[] = []
   const reasoningParts: string[] = []
+  const nativeReasoning = (data?.content || []).filter((block: any) => block?.type === 'thinking' || block?.type === 'redacted_thinking')
   for (const block of Array.isArray(data?.content) ? data.content : []) {
     if (block?.type === 'text' && block.text) textParts.push(String(block.text))
     if (block?.type === 'thinking' && block.thinking) reasoningParts.push(String(block.thinking))
@@ -999,6 +1045,7 @@ export function anthropicMessageToResponses(data: any, target: ResponsesAdapterT
       type: 'reasoning',
       id: `rs_${responseId(data)}`,
       summary: [{ type: 'summary_text', text: reasoningParts.join('\n') }],
+      ...(target.reasoningCodec ? { encrypted_content: target.reasoningCodec.encode({ text: reasoningParts.join('\n'), native: { format: 'anthropic-thinking-blocks', data: nativeReasoning } }) } : {}),
     })
   }
 

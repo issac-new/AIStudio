@@ -33,6 +33,8 @@ export interface AvailableModelGroup {
   available_models?: string[]
   model_count?: number
   api_key: string
+  /** The selected profile can resolve its custom-provider key on the server. */
+  credential_configured?: boolean
   api_mode?: ProviderApiMode
   api_mode_by_model?: Record<string, ProviderApiMode | null>
   builtin?: boolean
@@ -142,13 +144,14 @@ export async function fetchConfigModels(): Promise<ConfigModelsResponse> {
 }
 
 export async function fetchAvailableModels(): Promise<AvailableModelsResponse> {
-  return request<AvailableModelsResponse>('/api/hermes/available-models')
+  return request<AvailableModelsResponse>('/api/hermes/available-models?credential_format=metadata')
 }
 
-export async function fetchAvailableModelsForProfile(profile: string): Promise<AvailableModelsResponse> {
+export async function fetchAvailableModelsForProfile(profile: string, signal?: AbortSignal): Promise<AvailableModelsResponse> {
   const params = new URLSearchParams()
   params.set('profile', profile || 'default')
-  return request<AvailableModelsResponse>(`/api/hermes/available-models?${params.toString()}`)
+  params.set('credential_format', 'metadata')
+  return request<AvailableModelsResponse>(`/api/hermes/available-models?${params.toString()}`, { signal })
 }
 
 export interface ProviderModelCatalog {

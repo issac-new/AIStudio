@@ -1,3 +1,4 @@
+import { isPluginAgentId, agentDescriptor } from '../agents/registry'
 import { isNativeCodingAgent, isGlobalOnlyCodingAgent } from '../../contracts/agents/native-coding-agents'
 import { bindRunPushTarget, pushRunTransaction, type PushActor } from '../../repositories/run-push-store'
 import { EventEmitter } from 'events'
@@ -47,18 +48,19 @@ import {
 } from '../../public/workflow-runtime'
 import { logger } from '../../public/logging'
 import { assertAgentAvailable } from '../agent-availability'
+import { cancelPluginWorkflow, parsePluginAction, runPluginWorkflow } from '../plugins/workflow'
 
 export type { WorkflowCreateInput, WorkflowRecord, WorkflowUpdateInput }
 
 export type WorkflowRuntimeState = 'idle' | 'queued' | 'running' | 'pending_approval' | 'completed' | 'skipped' | 'failed' | 'approval_rejected' | 'canceled'
 export type WorkflowRunType = 'workflow'
-export type WorkflowNodeAgent = 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+export type WorkflowNodeAgent = `plugin:${string}/${string}` | 'hermes' | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
 
 export interface WorkflowNodeRunTarget {
   type: WorkflowRunType
   source: 'workflow'
-  agent: 'hermes' | 'ekko-agent' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
-  codingAgentId?: 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+  agent: `plugin:${string}/${string}` | 'hermes' | 'ekko-agent' | 'claude' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+  codingAgentId?: `plugin:${string}/${string}` | 'ekko-agent' | 'claude-code' | 'codex' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
 }
 
 export interface WorkflowRuntimeStatus {
@@ -113,6 +115,8 @@ export interface WorkflowNodeSnapshot {
   type: string
   position?: { x: number; y: number }
   data: {
+    pluginAction?: string
+    pluginInput?: string
     title: string
     agent: string
     agentMode: 'scoped' | 'global'
@@ -130,7 +134,7 @@ export interface WorkflowNodeSnapshot {
 }
 
 export function assertWorkflowAgentDependencies(nodes: WorkflowNodeSnapshot[]): void {
-  for (const node of nodes) assertAgentAvailable(node.data.agent)
+  for (const node of nodes) if (!node.data.pluginAction) assertAgentAvailable(node.data.agent)
 }
 
 type WorkflowEdgeRoute = 'success' | 'failure' | 'always'
@@ -239,6 +243,7 @@ function idleStatus(workflowId: string): WorkflowRuntimeStatus {
 }
 
 export function resolveWorkflowNodeRunTarget(agent?: string | null): WorkflowNodeRunTarget {
+  if (isPluginAgentId(agent)) return { type: 'workflow', source: 'workflow', agent, codingAgentId: agent }
   if (agent === 'ekko-agent') {
     return {
       type: 'workflow',
@@ -317,7 +322,14 @@ export function normalizeWorkflowNode(raw: unknown): WorkflowNodeSnapshot | null
   if (!id) return null
   const type = typeof record.type === 'string' && record.type ? record.type : 'agent'
   if (type !== 'agent') throw new Error(`workflow node ${id} must be an Agent node`)
-  const data = record.data && typeof record.data === 'object' ? record.data as Record<string, any> : {}
+  const data = record.data && typeof record.data === 'object' ? { ...record.data } as Record<string, any> : {}
+  const pluginAction = typeof data.pluginAction === 'string' && data.pluginAction ? data.pluginAction : undefined
+  if (pluginAction) {
+    parsePluginAction(pluginAction)
+    const args = JSON.parse(data.pluginInput || '{}')
+    if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error(`workflow node ${id} requires JSON object arguments`)
+    Object.assign(data, { agent: 'ekko-agent', agentMode: 'scoped', provider: '', model: '', apiMode: '', skills: [], images: [], agentPreset: undefined })
+  }
   let join: 'all' | 'any' = 'all'
   if (Object.prototype.hasOwnProperty.call(data, 'orchestration')) {
     const orchestration = data.orchestration
@@ -328,11 +340,11 @@ export function normalizeWorkflowNode(raw: unknown): WorkflowNodeSnapshot | null
     join = orchestration.join
   }
   const agent = typeof data.agent === 'string' && data.agent.trim() ? data.agent.trim() : 'hermes'
-  if (agent !== 'hermes' && agent !== 'ekko-agent' && agent !== 'claude-code' && agent !== 'codex' && agent !== 'pi' && agent !== 'grok' && (agent !== 'cursor' && (agent !== 'antigravity' && !isNativeCodingAgent(agent))) && (agent !== 'opencode' && agent !== 'dsh')) {
+  if (!isPluginAgentId(agent) && agent !== 'hermes' && agent !== 'ekko-agent' && agent !== 'claude-code' && agent !== 'codex' && agent !== 'pi' && agent !== 'grok' && (agent !== 'cursor' && (agent !== 'antigravity' && !isNativeCodingAgent(agent))) && (agent !== 'opencode' && agent !== 'dsh')) {
     throw new Error(`workflow node ${id} has unsupported agent runtime`)
   }
-  const agentMode = isGlobalOnlyCodingAgent(agent) ? 'global' : data.agentMode === 'global' ? 'global' : 'scoped'
-  if (agentMode === 'global' && !isNativeCodingAgent(agent) && agent !== 'claude-code' && agent !== 'codex' && agent !== 'pi' && agent !== 'grok' && agent !== 'cursor' && agent !== 'antigravity' && (agent !== 'opencode' && agent !== 'dsh')) {
+  const agentMode = (isGlobalOnlyCodingAgent(agent) || isPluginAgentId(agent) && agentDescriptor(agent)?.modes.length === 1 && agentDescriptor(agent)?.modes[0] === 'global') ? 'global' : data.agentMode === 'global' ? 'global' : 'scoped'
+  if (agentMode === 'global' && !isPluginAgentId(agent) && !isNativeCodingAgent(agent) && agent !== 'claude-code' && agent !== 'codex' && agent !== 'pi' && agent !== 'grok' && agent !== 'cursor' && agent !== 'antigravity' && (agent !== 'opencode' && agent !== 'dsh')) {
     throw new Error(`workflow node ${id} cannot use global mode with this agent runtime`)
   }
   // Old Global nodes retained their ignored Model-mode fields. Native overrides
@@ -369,6 +381,7 @@ export function normalizeWorkflowNode(raw: unknown): WorkflowNodeSnapshot | null
     ...(position ? { position } : {}),
     data: {
       title: typeof data.title === 'string' && data.title.trim() ? data.title.trim() : id,
+      ...(pluginAction ? { pluginAction, pluginInput: data.pluginInput || '{}' } : {}),
       agent,
       agentMode,
       provider,
@@ -960,7 +973,7 @@ function workflowOutputConditionContext(output: string, edges: WorkflowEdgeSnaps
 
 function isWorkflowCodingAgentSession(session?: { source?: string | null; agent?: string | null; agent_session_id?: string | null } | null): boolean {
   const agent = String(session?.agent || '').trim()
-  return agent === 'ekko-agent' || agent === 'claude' || agent === 'codex' || agent === 'pi' || agent === 'grok' || (agent === 'cursor' || agent === 'antigravity' || isNativeCodingAgent(agent)) || (agent === 'opencode' || agent === 'dsh') || Boolean(session?.agent_session_id)
+  return isPluginAgentId(agent) || agent === 'ekko-agent' || agent === 'claude' || agent === 'codex' || agent === 'pi' || agent === 'grok' || (agent === 'cursor' || agent === 'antigravity' || isNativeCodingAgent(agent)) || (agent === 'opencode' || agent === 'dsh') || Boolean(session?.agent_session_id)
 }
 
 async function deleteHermesSessionIfPresent(sessionId: string, profile: string): Promise<void> {
@@ -1135,7 +1148,7 @@ export class WorkflowManager extends EventEmitter<WorkflowManagerEvents> {
   async recoverActiveRuns(workflowId?: string): Promise<{ runs: number; sessions: number }> {
     const activeRuns = listActiveWorkflowRuns().filter(run => !workflowId || run.workflow_id === workflowId)
     if (activeRuns.length === 0) return { runs: 0, sessions: 0 }
-    const reason = 'Workflow runtime cannot safely resume because the server restarted'
+    const reason = 'Workflow execution was interrupted because the server process exited or restarted. Automatic resume is unsafe; check completed work and rerun from a node in the run details.'
     const finishedAt = Date.now()
     const sessionIds = new Set<string>()
     for (const run of activeRuns) {
@@ -1189,6 +1202,7 @@ export class WorkflowManager extends EventEmitter<WorkflowManagerEvents> {
     if (!run || run.workflow_id !== workflowId) return null
     if (run.status !== 'queued' && run.status !== 'running') return run
     this.canceledRunIds.add(runId)
+    cancelPluginWorkflow(runId)
     cancelWorkflowQualityReviews(runId)
     this.cancelPendingNodeApprovals(runId)
     const finishedAt = Date.now()
@@ -1537,7 +1551,9 @@ export class WorkflowManager extends EventEmitter<WorkflowManagerEvents> {
       nodeStatuses[node.id] = 'running'
       publishRunningStatus()
       try {
-        const runResult = await runWorkflowAndWait({
+        const runResult = node.data.pluginAction ? await runPluginWorkflow(node.data.pluginAction, node.data.pluginInput || '{}', assembledInput, {
+          userId: args.user?.id || 0, profile, sessionId, runId: run.id, workspace: workspace || undefined, surface: 'workflow',
+        }, remainingTimeoutMs) : await runWorkflowAndWait({
           session_id: sessionId, source: 'workflow', session_source: 'workflow', input: assembledInput,
           workflow_id: workflowId, workflow_node_id: node.id,
           profile, workspace: workspace,
@@ -2050,7 +2066,9 @@ export class WorkflowManager extends EventEmitter<WorkflowManagerEvents> {
             started_at: nodeStartedAt,
           })
           nodeSessionRecordIds.set(node.id, nodeSession.id)
-          const runResult = await runWorkflowAndWait({
+          const runResult = node.data.pluginAction ? await runPluginWorkflow(node.data.pluginAction, node.data.pluginInput || '{}', assembledInput, {
+            userId: args.user?.id || 0, profile, sessionId: nodeSessionId, runId: run.id, workspace: workspace || undefined, surface: 'workflow',
+          }, remainingTimeoutMs) : await runWorkflowAndWait({
             session_id: nodeSessionId,
             source: 'workflow',
             session_source: 'workflow',

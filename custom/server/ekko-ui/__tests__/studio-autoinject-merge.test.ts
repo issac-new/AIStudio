@@ -33,10 +33,10 @@ describe('mergeManagedMcpServers', () => {
     expect(merged.skipped).toHaveLength(3)
   })
 
-  it('空配置补齐全部四个托管服务', () => {
+  it('空配置补齐全部托管服务（0.8.28 起五个，含 plugins）', () => {
     const merged = mergeManagedMcpServers({}, 'default', '/tmp/ekko-studio-mcp.mjs')
     expect(Object.keys(merged.cfg.mcp_servers).sort()).toEqual([
-      'ekko-studio-api', 'ekko-studio-browser', 'ekko-studio-interaction', 'ekko-studio-use',
+      'ekko-studio-api', 'ekko-studio-browser', 'ekko-studio-interaction', 'ekko-studio-plugins', 'ekko-studio-use',
     ])
     expect(merged.injected).toBe(true)
     expect(merged.hadManagedExisting).toBe(false)
@@ -61,11 +61,13 @@ describe('mergeManagedMcpServers', () => {
         'ekko-studio-browser': managed('browser', false),
         'ekko-studio-use': managed('use', false),
         'ekko-studio-interaction': managed('plan', false),
+        // 0.8.28 起上游托管清单新增 plugins；全部禁用场景须含五服务
+        'ekko-studio-plugins': managed('plugins', false),
       },
     }
     const merged = mergeManagedMcpServers(cfg, 'default', '/tmp/ekko-studio-mcp.mjs')
     expect(merged.changed).toBe(false)
-    expect(merged.skipped).toHaveLength(4)
+    expect(merged.skipped).toHaveLength(5)
   })
 
   it('旧名 ekko-studio-plan 迁移为 interaction', () => {

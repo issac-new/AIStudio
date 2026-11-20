@@ -51,341 +51,6 @@ diff --git a/packages/client/src/components/hermes/connections/AppConnectionsPan
                </div>
              </div>
 
-diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
---- a/packages/client/src/i18n/locales/en.ts
-+++ b/packages/client/src/i18n/locales/en.ts
-@@ -480,7 +480,7 @@
-     remoteOwnerConnecting: 'Connecting',
- 
- 
--    title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in SwarmStudio Desktop.', newTab: 'New Tab',
-+    title: 'Browser', settings: 'Browser Settings', desktopOnly: 'The embedded browser is available only in AIStudio Desktop.', newTab: 'New Tab',
-     back: 'Back', forward: 'Forward', reload: 'Reload', stop: 'Stop', addressPlaceholder: 'Search or enter an address',
-     undoAnnotation: 'Undo last', deleteAnnotation: 'Delete annotation {index}',
-     selectElement: 'Select element', selectRegion: 'Select region', annotationPlaceholder: 'Describe what the Agent should inspect or change…', selectionData: 'Browser selection data', annotationAdded: 'Screenshot added to the chat composer', annotationCount: '{count} annotation(s)', annotationLabel: 'Annotation {index}', clearAnnotations: 'Clear annotations', finishAnnotation: 'Done',
-@@ -492,7 +492,7 @@
-   },
-   // Login
-   login: {
--    title: 'SwarmStudio',
-+    title: 'AIStudio',
-     description: 'Enter your username and password to continue.',
-     placeholder: 'Access token',
-     submit: 'Login',
-@@ -693,7 +693,7 @@
-     campaignLabel: "Double 11",
-     title: "API Relay",
-     headline: "Leading AI models, one gateway",
--    description: "APIKEY.FAN is SwarmStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
-+    description: "APIKEY.FAN is AIStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
-     zhipu: "Zhipu",
-     viewNow: "View now",
-     apiCompatible: "Official API compatibility",
-@@ -2473,7 +2473,7 @@
-     agentVersion: 'Hermes Agent version',
-     path: 'Path',
-     userCli: 'Hermes CLI',
--    userCliReadonly: 'SwarmStudio checks the current environment for a CLI first; CLI installations remain user managed.',
-+    userCliReadonly: 'AIStudio checks the current environment for a CLI first; CLI installations remain user managed.',
-     readOnly: 'Read only',
-     noUserCli: 'No available Hermes CLI was detected',
-     unknownVersion: 'Unknown version',
-@@ -2495,13 +2495,13 @@
-     aiHelpGeneralPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to the Agent and problem. Help me diagnose or manage Agent installation, updates, or removal on this device. Inspect the actual installation source, every resolved executable path, the Node/npm environment, and the applicable package-manager prefix. Ask which Agent and symptom I need help with if context is missing. Preserve user configuration, authentication, and conversation data, and ask for confirmation before making destructive changes.',
-     aiHelpPrompt: 'Use the `hermes-studio-installation` Skill and follow its routing instructions to select the reference appropriate to this Agent and problem. Diagnose this Agents page failure.\n\nAgent: {name}\nAgent ID: {id}\nOperation: {operation}\nExecutable: {command}\nnpm package: {package}\nOriginal error:\n{error}\n\nInspect the installation source, every resolved executable path, Node/npm environment, and applicable package-manager prefix. Preserve user configuration, authentication, and conversation data. Explain the root cause and ask for confirmation before making destructive changes.',
-     legacyDataMigrationTitle: 'Legacy Hermes data found',
--    legacyDataMigrationDescription: 'SwarmStudio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
-+    legacyDataMigrationDescription: 'AIStudio found data in a legacy Windows data directory. Would you like to migrate it to the current data directory?',
-     legacyDataMigrationSource: 'Legacy directory',
-     legacyDataMigrationTarget: 'Current directory',
-     legacyDataMigrationWarning: 'Studio will restart after confirmation and, before local services start, overwrite matching files with the legacy copies while preserving current-only files. This question is shown only once.',
-     legacyDataMigrationPositive: 'Migrate legacy data',
-     legacyDataMigrationNegative: 'Do not migrate',
--    legacyDataMigrationSuccess: 'Migration scheduled. SwarmStudio will restart and migrate the data before starting local services.',
-+    legacyDataMigrationSuccess: 'Migration scheduled. AIStudio will restart and migrate the data before starting local services.',
-     legacyDataMigrationFailed: 'Legacy Hermes data migration failed: {error}',
-     antigravityDescription: 'Install Antigravity CLI (agy) using the official guide and sign in from a terminal, then refresh. Global and scoped modes; installation, updates and removal are managed outside Studio.'
-   },
-@@ -2522,8 +2522,8 @@
-     dataDirectoryEnvMacos: 'macOS (Desktop / terminal)',
-     dataDirectoryEnvLinux: 'Linux (login environment)',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: 'Fully quit and reopen SwarmStudio after changing it. On Windows or Linux, sign out and back in if the desktop app still sees the old value.',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 and later can use the following command to update the bundled Hermes Agent only. It does not update the SwarmStudio desktop app or Web UI. Fully quit SwarmStudio before running:',
-+    dataDirectoryEnvRestart: 'Fully quit and reopen AIStudio after changing it. On Windows or Linux, sign out and back in if the desktop app still sees the old value.',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 and later can use the following command to update the bundled Hermes Agent only. It does not update the AIStudio desktop app or Web UI. Fully quit AIStudio before running:',
-     webUiTitle: 'Web UI',
-     platform: 'Platform',
-     currentWebUi: 'Current Web UI',
-@@ -2532,10 +2532,10 @@
-     chooseRuntimeDirectory: 'Choose directory',
-     resetRuntimeDirectory: 'Use system default',
-     runtimeDirectoryHint: 'The current Runtime is copied and verified before local services start on the next restart. Old storage is retained, and future Runtime downloads are stored here.',
--    runtimeDirectorySaved: 'Runtime migration scheduled. Restart SwarmStudio to apply it.',
-+    runtimeDirectorySaved: 'Runtime migration scheduled. Restart AIStudio to apply it.',
-     runtimeMigrationPending: 'Pending migration destination: {directory}',
-     runtimeMigrationFailed: 'Storage migration failed; the previous storage remains active',
--    runtimeActivationFailed: 'The selected Runtime could not start, so SwarmStudio used another installed version',
-+    runtimeActivationFailed: 'The selected Runtime could not start, so AIStudio used another installed version',
-     active: 'Active',
-     installed: 'Installed',
-     download: 'Download',
-@@ -2554,7 +2554,7 @@
-     remoteLoadFailed: 'Failed to load remote versions',
-     downloadTasks: 'Download tasks',
-     downloadStarted: 'Download started',
--    activateSuccess: 'Version selection saved. Restart SwarmStudio to use it.',
-+    activateSuccess: 'Version selection saved. Restart AIStudio to use it.',
-     restartPromptTitle: 'Runtime ready',
-     restartPromptContent: 'Hermes Runtime {version} has been installed. Restart now to use it?',
-     restartLater: 'Later',
-@@ -2645,9 +2645,9 @@
-       viewList: 'List',
-       viewDownload: 'Download',
-       viewMessages: 'Message Push',
--      downloadTitle: 'SwarmStudio on your phone',
-+      downloadTitle: 'AIStudio on your phone',
-       downloadDescription: 'We are currently in closed beta. A registration code is required to sign up, and we will share a limited number of codes on our social media channels.',
--      downloadPaidDescription: 'The SwarmStudio App is now officially available as a paid product. To get started, visit the pricing and purchase page, choose the plan that suits you, and complete your purchase.',
-+      downloadPaidDescription: 'The AIStudio App is now officially available as a paid product. To get started, visit the pricing and purchase page, choose the plan that suits you, and complete your purchase.',
-       downloadScan: 'Scan with your phone',
-       downloadScanHint: 'Android download available now',
-       available: 'Available',
-@@ -2691,7 +2691,7 @@
-       accessFailures: {
-         tokenExpired: 'Token expired',
-         paidAccountRequired: 'The current account is not a paid account and cannot use this feature',
--        cloudSubscriptionRequired: 'This account does not have SwarmStudio Cloud access',
-+        cloudSubscriptionRequired: 'This account does not have AIStudio Cloud access',
-         appAccessExpired: 'This internal test or public beta access has expired',
-         required: 'The App did not provide an access entitlement',
-         invalid: 'The App access entitlement is invalid',
-@@ -2976,7 +2976,7 @@
-       systemUnavailable: "System screenshots are currently unavailable",
-       systemWaiting: "Choose a screenshot in the system dialog",
-       timedOut: "Screenshot timed out. Please try again.",
--      permissionDenied: "Allow screen recording for SwarmStudio in system settings, then restart the app.",
-+      permissionDenied: "Allow screen recording for AIStudio in system settings, then restart the app.",
-       sourceUnavailable: "The screen could not be captured. Check your screen recording permissions and try again.",
-       failed: "Could not capture the screenshot. Please try again.",
-     },
-@@ -3139,7 +3139,7 @@
-     },
-     showToolCalls: 'Show tool calls',
-     pushEnabled: 'Enable push',
--    pushNotConfigured: 'Configure Message Push in SwarmStudio “Device Connections” before enabling it.',
-+    pushNotConfigured: 'Configure Message Push in AIStudio “Device Connections” before enabling it.',
-     hideToolCalls: 'Hide tool calls',
-     messageQueue: 'Message queue',
-     removeQueuedMessage: 'Remove queued message',
-@@ -5100,7 +5100,7 @@
-       notifyOnApprovalTestFailed: 'Failed to send approval notification',
-       approvalNotificationTitle: 'Approval required',
-       approvalNotificationClarifyTitle: 'Clarification required',
--      approvalNotificationBody: 'Open SwarmStudio to review and respond.',
-+      approvalNotificationBody: 'Open AIStudio to review and respond.',
-       notifyOnCompleteHint: 'Show a system notification when AI finishes',
-       notifyOnCompleteMacHint: 'On macOS, allow browser notifications in System Settings.',
-       notifyOnCompleteDenied: 'Notification permission was denied',
-@@ -5122,7 +5122,7 @@
-       chatInputHeightHint: 'Default desktop chat input height in pixels. Mobile keeps auto height.',
-       linkOpenTarget: 'Open web links in',
-       linkOpenTargetHint: 'Choose where links from messages and Markdown previews open.',
--      linkOpenTargetHermesStudio: 'SwarmStudio',
-+      linkOpenTargetHermesStudio: 'AIStudio',
-       linkOpenTargetDefaultBrowser: 'Default browser',
-     },
-     agent: {
-@@ -5320,10 +5320,10 @@
-         failed: 'Download failed',
-       },
-       hermesConfigTitle: 'Hermes Agent configuration',
--      hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as SwarmStudio.',
-+      hermesConfigDescription: 'Existing native providers remain in the Hermes profile. Web UI providers appear to Hermes as AIStudio.',
-       hermesActiveProvider: 'Active provider',
-       hermesConfiguredProviders: 'Configured providers',
--      hermesStudioProvider: 'SwarmStudio',
-+      hermesStudioProvider: 'AIStudio',
-       providerSpeed: 'Speed',
-       providerSampleRate: 'Sample rate',
-       providerBitRate: 'Bit rate',
-@@ -5337,7 +5337,7 @@
-       optionDisabled: 'Disabled',
-       nativeProvider: 'Hermes native provider',
-       selectNativeProvider: 'Select a Hermes native provider',
--      useHermesStudioProvider: 'Use SwarmStudio provider',
-+      useHermesStudioProvider: 'Use AIStudio provider',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-
-diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
---- a/packages/client/src/i18n/locales/zh.ts
-+++ b/packages/client/src/i18n/locales/zh.ts
-@@ -480,7 +480,7 @@
-     remoteOwnerConnecting: '正在连接',
- 
- 
--    title: '浏览器', settings: '浏览器设置', desktopOnly: '内置浏览器仅在 SwarmStudio 桌面端可用。', newTab: '新标签页',
-+    title: '浏览器', settings: '浏览器设置', desktopOnly: '内置浏览器仅在 AIStudio 桌面端可用。', newTab: '新标签页',
-     back: '后退', forward: '前进', reload: '刷新', stop: '停止', addressPlaceholder: '搜索或输入网址',
-     undoAnnotation: '撤销上一个', deleteAnnotation: '删除标注 {index}',
-     selectElement: '选择元素', selectRegion: '框选区域', annotationPlaceholder: '描述希望 Agent 检查或修改的内容…', selectionData: '浏览器选区数据', annotationAdded: '截图已添加到对话输入框', annotationCount: '已标注 {count} 处', annotationLabel: '标注 {index}', clearAnnotations: '清除标注', finishAnnotation: '完成',
-@@ -492,7 +492,7 @@
-   },
-   // 登录
-   login: {
--    title: 'SwarmStudio',
-+    title: 'AIStudio',
-     description: '输入用户名和密码以继续。',
-     placeholder: '访问令牌',
-     submit: '登录',
-@@ -692,7 +692,7 @@
-     campaignLabel: "双十一",
-     title: "API 中转",
-     headline: "一站接入主流 AI 模型",
--    description: "APIKEY.FAN 是 SwarmStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
-+    description: "APIKEY.FAN 是 AIStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
-     zhipu: "智谱",
-     viewNow: "立即查看",
-     apiCompatible: "官方 API 兼容",
-@@ -2494,13 +2494,13 @@
-     aiHelpGeneralPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据 Agent 和问题类型选择合适的 reference。帮我排查或管理这台设备上的 Agent 安装、更新或删除问题。请检查实际安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。如果上下文不足，请先询问我要处理的 Agent 和具体症状。不要删除用户配置、认证信息或会话数据，任何破坏性修改都必须再次征得用户确认。',
-     aiHelpPrompt: '请使用 `hermes-studio-installation` Skill，并遵循 Skill 自己的路由说明，根据这次 Agent 和问题类型选择合适的 reference，排查这次 Agents 页面操作失败。\n\nAgent：{name}\nAgent ID：{id}\n操作类型：{operation}\n可执行命令：{command}\nnpm 包：{package}\n原始错误：\n{error}\n\n请检查安装来源、所有实际命中的可执行文件路径、Node/npm 环境和对应的包管理器前缀。不要删除用户配置、认证信息或会话数据。先说明根因，任何破坏性修改都必须再次征得用户确认。',
-     legacyDataMigrationTitle: '发现旧版 Hermes 数据',
--    legacyDataMigrationDescription: 'SwarmStudio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
-+    legacyDataMigrationDescription: 'AIStudio 在旧版 Windows 数据目录中发现了数据。是否将其迁移到当前数据目录？',
-     legacyDataMigrationSource: '旧目录',
-     legacyDataMigrationTarget: '当前目录',
-     legacyDataMigrationWarning: '同意后 Studio 将自动重启，并在服务启动前用旧目录中的同名文件覆盖当前目录；当前目录独有的文件会保留。此询问只会显示一次。',
-     legacyDataMigrationPositive: '迁移旧数据',
-     legacyDataMigrationNegative: '不迁移',
--    legacyDataMigrationSuccess: '已记录迁移选择，SwarmStudio 将重启并在服务启动前迁移数据。',
-+    legacyDataMigrationSuccess: '已记录迁移选择，AIStudio 将重启并在服务启动前迁移数据。',
-     legacyDataMigrationFailed: '旧版 Hermes 数据迁移失败：{error}',
-     antigravityDescription: '安装 Antigravity CLI (agy) 请参照官方指引并在终端完成登录后刷新。支持全局与按项目两种模式；安装、更新与卸载由外部管理。'
-   },
-@@ -2521,8 +2521,8 @@
-     dataDirectoryEnvMacos: 'macOS（桌面端 / 终端）',
-     dataDirectoryEnvLinux: 'Linux（登录环境）',
-     dataDirectoryEnvDocker: 'Docker Compose',
--    dataDirectoryEnvRestart: '修改后请完全退出并重新打开 SwarmStudio。若 Windows 或 Linux 桌面端仍读取旧值，请注销并重新登录系统。',
--    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支持通过以下命令单独升级内置的 Hermes Agent；该命令不会升级 SwarmStudio 桌面端或 Web UI。执行前请先完全退出 SwarmStudio：',
-+    dataDirectoryEnvRestart: '修改后请完全退出并重新打开 AIStudio。若 Windows 或 Linux 桌面端仍读取旧值，请注销并重新登录系统。',
-+    cliUpdateDescription: 'Hermes Runtime 0.19.1 及以上版本支持通过以下命令单独升级内置的 Hermes Agent；该命令不会升级 AIStudio 桌面端或 Web UI。执行前请先完全退出 AIStudio：',
-     webUiTitle: 'Web UI',
-     platform: '平台',
-     currentWebUi: '当前 Web UI',
-@@ -2531,10 +2531,10 @@
-     chooseRuntimeDirectory: '选择目录',
-     resetRuntimeDirectory: '恢复系统默认',
-     runtimeDirectoryHint: '下次重启时会在本地服务启动前复制并校验当前 Runtime，旧目录会保留；后续 Runtime 下载也会保存在这里。',
--    runtimeDirectorySaved: 'Runtime 迁移已安排，重启 SwarmStudio 后执行。',
-+    runtimeDirectorySaved: 'Runtime 迁移已安排，重启 AIStudio 后执行。',
-     runtimeMigrationPending: '待迁移到：{directory}',
-     runtimeMigrationFailed: '存储目录迁移失败，已继续使用原目录',
--    runtimeActivationFailed: '所选 Runtime 无法启动，SwarmStudio 已改用其他已安装版本',
-+    runtimeActivationFailed: '所选 Runtime 无法启动，AIStudio 已改用其他已安装版本',
-     active: '已启用',
-     installed: '已安装',
-     download: '下载',
-@@ -2553,7 +2553,7 @@
-     remoteLoadFailed: '远程版本加载失败',
-     downloadTasks: '下载任务',
-     downloadStarted: '已开始下载',
--    activateSuccess: '版本选择已保存，重启 SwarmStudio 后生效。',
-+    activateSuccess: '版本选择已保存，重启 AIStudio 后生效。',
-     restartPromptTitle: 'Runtime 已就绪',
-     restartPromptContent: 'Hermes Runtime {version} 已安装完成，是否立即重启并使用该版本？',
-     restartLater: '稍后',
-@@ -2644,9 +2644,9 @@
-       viewList: '列表',
-       viewDownload: '下载',
-       viewMessages: '消息推送',
--      downloadTitle: '在手机上使用 SwarmStudio',
-+      downloadTitle: '在手机上使用 AIStudio',
-       downloadDescription: '我们正在内测阶段，需要注册码才有办法注册，我们会在社交媒体放出一部分注册码。',
--      downloadPaidDescription: 'SwarmStudio App 已正式上线，目前处于付费阶段。如需体验，请前往定价与购买页面选择合适的方案，完成购买后即可开始使用。',
-+      downloadPaidDescription: 'AIStudio App 已正式上线，目前处于付费阶段。如需体验，请前往定价与购买页面选择合适的方案，完成购买后即可开始使用。',
-       downloadScan: '手机扫码下载',
-       downloadScanHint: '当前提供 Android 安装包',
-       available: '可下载',
-@@ -2690,7 +2690,7 @@
-       accessFailures: {
-         tokenExpired: 'Token 已失效',
-         paidAccountRequired: '当前账户不是付费账号，无法使用该功能',
--        cloudSubscriptionRequired: '当前账号未开通 SwarmStudio Cloud，无法使用云端连接',
-+        cloudSubscriptionRequired: '当前账号未开通 AIStudio Cloud，无法使用云端连接',
-         appAccessExpired: '当前内测或公测资格已过期，无法使用云端连接',
-         required: 'App 未携带访问授权签名',
-         invalid: 'App 访问授权签名无效',
-@@ -2975,7 +2975,7 @@
-       systemUnavailable: "系统截图当前不可用",
-       systemWaiting: "请在系统界面选择截图区域",
-       timedOut: "截图等待超时，请重试。",
--      permissionDenied: "请在系统设置中授予 SwarmStudio 屏幕录制权限，然后重启应用。",
-+      permissionDenied: "请在系统设置中授予 AIStudio 屏幕录制权限，然后重启应用。",
-       sourceUnavailable: "无法获取屏幕画面，请检查屏幕录制权限后重试。",
-       failed: "截屏失败，请重试。",
-     },
-@@ -3138,7 +3138,7 @@
-     },
-     showToolCalls: '显示工具调用',
-     pushEnabled: '是否推送',
--    pushNotConfigured: '请先到 SwarmStudio「设备互联」中配置消息推送。',
-+    pushNotConfigured: '请先到 AIStudio「设备互联」中配置消息推送。',
-     hideToolCalls: '隐藏工具调用',
-     messageQueue: '消息队列',
-     removeQueuedMessage: '移除队列消息',
-@@ -5084,14 +5084,14 @@
-       approvalBellHint: '出现新的待处理审批或澄清时播放提示音',
-       notifyOnComplete: '完成弹窗通知',
-       notifyOnApproval: '审批桌面通知',
--      notifyOnApprovalHint: 'SwarmStudio 不在前台时，出现新的审批或澄清会发送系统通知；通知不显示敏感详情',
-+      notifyOnApprovalHint: 'AIStudio 不在前台时，出现新的审批或澄清会发送系统通知；通知不显示敏感详情',
-       notifyOnApprovalTest: '审批桌面通知已启用。',
-       notifyOnApprovalTestButton: '测试',
-       notifyOnApprovalTestSent: '审批通知已发送',
-       notifyOnApprovalTestFailed: '审批通知发送失败',
-       approvalNotificationTitle: '需要审批',
-       approvalNotificationClarifyTitle: '需要澄清',
--      approvalNotificationBody: '打开 SwarmStudio 查看并处理。',
-+      approvalNotificationBody: '打开 AIStudio 查看并处理。',
-       notifyOnCompleteHint: 'AI 回复完成时显示系统通知',
-       notifyOnCompleteMacHint: 'macOS 需要在系统设置里允许浏览器通知。',
-       notifyOnCompleteDenied: '通知权限已被拒绝',
-@@ -5113,7 +5113,7 @@
-       chatInputHeightHint: '桌面端聊天输入框默认高度（像素）。移动端保持自动高度。',
-       linkOpenTarget: '网页链接打开方式',
-       linkOpenTargetHint: '选择消息和 Markdown 预览中的网页链接在哪里打开。',
--      linkOpenTargetHermesStudio: 'SwarmStudio',
-+      linkOpenTargetHermesStudio: 'AIStudio',
-       linkOpenTargetDefaultBrowser: '默认浏览器',
-     },
-     agent: {
-@@ -5311,10 +5311,10 @@
-         failed: '下载失败',
-       },
-       hermesConfigTitle: 'Hermes Agent 配置',
--      hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 SwarmStudio。',
-+      hermesConfigDescription: 'Hermes profile 中原有的原生提供商会继续保留；Web UI 管理的提供商对 Hermes 统一显示为 AIStudio。',
-       hermesActiveProvider: '当前提供商',
-       hermesConfiguredProviders: '已配置提供商',
--      hermesStudioProvider: 'SwarmStudio',
-+      hermesStudioProvider: 'AIStudio',
-       providerSpeed: '语速',
-       providerSampleRate: '采样率',
-       providerBitRate: '比特率',
-@@ -5328,7 +5328,7 @@
-       optionDisabled: '停用',
-       nativeProvider: 'Hermes 原生提供商',
-       selectNativeProvider: '选择 Hermes 原生提供商',
--      useHermesStudioProvider: '使用 SwarmStudio 提供商',
-+      useHermesStudioProvider: '使用 AIStudio 提供商',
-       presetElevenLabsTtsLabel: 'ElevenLabs TTS',
-       presetGeminiTtsLabel: 'Gemini TTS',
-       presetXaiTtsLabel: 'xAI TTS',
-
 diff --git a/packages/client/src/main.ts b/packages/client/src/main.ts
 --- a/packages/client/src/main.ts
 +++ b/packages/client/src/main.ts
@@ -2162,28 +1827,6 @@ diff --git a/packages/server/src/modules/studio/services/social-messages/session
  }
  
 
-diff --git a/packages/server/src/modules/studio/services/update/version-preview-manager.ts b/packages/server/src/modules/studio/services/update/version-preview-manager.ts
---- a/packages/server/src/modules/studio/services/update/version-preview-manager.ts
-+++ b/packages/server/src/modules/studio/services/update/version-preview-manager.ts
-@@ -1044,7 +1044,7 @@
-     ctx.status = 409
-     ctx.body = {
-       success: false,
--      message: 'SwarmStudio update is already in progress',
-+      message: 'AIStudio update is already in progress',
-     }
-     return
-   }
-@@ -1055,7 +1055,7 @@
-     ctx.body = {
-       success: false,
-       code: DOCKER_ENVIRONMENT_CODE,
--      message: 'SwarmStudio update is not available inside Docker. '
-+      message: 'AIStudio update is not available inside Docker. '
-         + 'Please pull a new image and recreate the container:\n\n'
-         + '  docker compose pull\n'
-         + '  docker compose up -d --force-recreate',
-
 diff --git a/packages/server/src/modules/studio/services/webhooks/dispatcher.ts b/packages/server/src/modules/studio/services/webhooks/dispatcher.ts
 --- a/packages/server/src/modules/studio/services/webhooks/dispatcher.ts
 +++ b/packages/server/src/modules/studio/services/webhooks/dispatcher.ts
@@ -2261,3 +1904,29 @@ diff --git a/packages/skills/apikey-image-gen/SKILL.md b/packages/skills/apikey-
  
  This skill is separate from Hermes Agent's native `image_generate` tool. The
  native tool reads `image_gen` from `config.yaml`; this Studio-managed endpoint
+diff --git packages/client/src/i18n/locales/en.ts packages/client/src/i18n/locales/en.ts
+index b121e774e..c03231f1c 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -695,7 +695,7 @@ export default {
+   apiRelay: {
+     title: "API Relay",
+     headline: "Leading AI models, one gateway",
+-    description: "APIKEY.FAN is SwarmStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
++    description: "APIKEY.FAN is AIStudio’s partner API gateway, offering unified access to Claude, ChatGPT, Grok, Gemini, Zhipu, Kimi, DeepSeek, and MiniMax. It is compatible with official APIs and SDKs.",
+     zhipu: "Zhipu",
+     viewNow: "View now",
+     apiCompatible: "Official API compatibility",
+diff --git packages/client/src/i18n/locales/zh.ts packages/client/src/i18n/locales/zh.ts
+index 1826d6bf7..bb7c6e826 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -694,7 +694,7 @@ export default {
+   apiRelay: {
+     title: "API 中转",
+     headline: "一站接入主流 AI 模型",
+-    description: "APIKEY.FAN 是 SwarmStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
++    description: "APIKEY.FAN 是 AIStudio 的合作中转服务，统一接入 Claude、ChatGPT、Grok、Gemini、智谱、Kimi、DeepSeek 和 MiniMax，兼容官方 API 与 SDK。",
+     zhipu: "智谱",
+     viewNow: "立即查看",
+     apiCompatible: "官方 API 兼容",

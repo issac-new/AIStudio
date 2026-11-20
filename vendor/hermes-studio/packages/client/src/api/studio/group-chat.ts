@@ -102,7 +102,7 @@ export interface RoomAgent {
     id: string
     roomId: string
     agentId: string
-    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+    agent: `plugin:${string}/${string}` | 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
     agentMode: 'scoped' | 'global'
     priorAgentMode?: 'scoped' | 'global' | ''
     profile: string
@@ -148,7 +148,7 @@ export interface GroupAgentActivity {
 
 export interface RoomAgentInput {
     presetId?: string
-    agent: 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
+    agent: `plugin:${string}/${string}` | 'hermes' | 'ekko' | 'codex' | 'claude' | 'pi' | 'grok' | 'opencode' | 'dsh' | 'cursor' | 'antigravity' | 'qwen' | 'kimi' | 'codebuddy' | 'qoder' | 'copilot' | 'zcode'
     agentMode?: 'scoped' | 'global'
     priorAgentMode?: 'scoped' | 'global' | ''
     profile: string
@@ -633,9 +633,9 @@ export async function downloadGroupWorkspaceFile(roomId: string, path: string, f
     saveBlob(blob, fileName)
 }
 
-export async function writeGroupWorkspaceFile(roomId: string, path: string, content: string): Promise<void> {
+export async function writeGroupWorkspaceFile(roomId: string, path: string, content: string, createOnly = false): Promise<void> {
     await request(`/api/studio/group-chat/rooms/${encodeURIComponent(roomId)}/workspace-file/write`, {
-        method: 'PUT', body: JSON.stringify({ path, content }),
+        method: 'PUT', body: JSON.stringify({ path, content, createOnly: createOnly || undefined }),
     })
 }
 

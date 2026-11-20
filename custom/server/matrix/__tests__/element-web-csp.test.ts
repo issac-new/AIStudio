@@ -17,7 +17,7 @@ describe('element-web CSP wasm 放行（补丁 694 锁定）', () => {
     // 路径判定存在且只作用于 element-web 前缀
     expect(s).toMatch(/const isElementWeb = ctx\.path\.startsWith\('\/element-web\/'\)/)
     // script-src 行按该判定拼接 wasm token
-    expect(s).toMatch(/script-src 'self' 'unsafe-inline'\$\{isElementWeb \? " 'wasm-unsafe-eval'" : ''\}/)
+    expect(s).toMatch(/script-src 'self' 'unsafe-inline' blob:\$\{isElementWeb \? " 'wasm-unsafe-eval'" : ''\}/)
   })
 
   it('其余 CSP 指令与默认策略保持逐字不变（只放行 wasm，不开 eval）', () => {

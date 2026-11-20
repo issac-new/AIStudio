@@ -1,3 +1,5 @@
+import { logicalHermesMetadata } from '../../../studio/public/model-routing'
+import { hermesGatewaySelection } from '../../../studio/public/provider-projection'
 import { studioModelReasoningEffort } from '../../../studio/public/model-reasoning-effort'
 import { setTimeout as delay } from 'timers/promises'
 import { createConnection, type Socket } from 'net'
@@ -350,6 +352,14 @@ export class AgentBridgeClient {
       }
       const onConnect = () => {
         cleanup()
+        // A response can settle before the TCP stream closes. Keep ownership of
+        // errors across the request handoff and end(), including a late peer RST.
+        const onConnectedError = (err: Error) => {
+          bridgeLogger.warn({ err, endpoint }, '[agent-bridge-client] connected socket error')
+          socket.destroy()
+        }
+        socket.on('error', onConnectedError)
+        socket.once('close', () => socket.off('error', onConnectedError))
         resolveConnect(socket)
       }
       const onError = (err: Error) => {
@@ -440,6 +450,9 @@ export class AgentBridgeClient {
       const timeoutMs = options.timeoutMs || this.timeoutMs
       const startedAt = Date.now()
       const action = String(payload.action || '')
+      if (['chat', 'context_estimate', 'switch_session_model'].includes(action) && payload.model && payload.provider) {
+        payload = { ...payload, ...await hermesGatewaySelection(String(payload.profile || 'default'), String(payload.provider), String(payload.model)) }
+      }
       const shouldLogRequest = action !== 'get_output' && action !== 'background_poll'
       const runtimeContext = shouldLogRequest ? this.runtimeContext(payload) : undefined
       if (shouldLogRequest) {
@@ -472,7 +485,7 @@ export class AgentBridgeClient {
             response: this.summarizeResponse(response as Record<string, unknown>),
           }, '[agent-bridge-client] response')
         }
-        return response as T
+        return logicalHermesMetadata(response, String(payload.profile || 'default')) as T
       } catch (err: any) {
         if (!(err instanceof AgentBridgeError) && action !== 'background_poll') {
           bridgeLogger.error({
@@ -499,7 +512,7 @@ export class AgentBridgeClient {
     return this.request({ action: 'ping' })
   }
 
-  chat(
+  async chat(
     sessionId: string,
     message: AgentBridgeMessage,
     conversationHistory?: unknown[],
@@ -530,7 +543,7 @@ export class AgentBridgeClient {
     })
   }
 
-  contextEstimate(
+  async contextEstimate(
     sessionId: string,
     messages: unknown[],
     instructions?: string,
@@ -812,6 +825,10 @@ export class AgentBridgeClient {
   }
 
   // ───── MCP Management ─────
+
+  mcpPluginsChanged(servers: string[], removed: string[]): Promise<AgentBridgeResponse> {
+    return this.request({ action: 'mcp_plugins_changed', servers, removed }, { serialize: true, timeoutMs: 180_000 })
+  }
 
   mcpList(profile?: string): Promise<McpActionResponse> {
     return this.request({ action: 'mcp_list', ...(profile ? { profile } : {}) })

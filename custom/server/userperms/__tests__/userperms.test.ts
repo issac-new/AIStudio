@@ -335,12 +335,16 @@ describe('patches/740 接线标记断言', () => {
     expect(patchText).toContain("import { userPermsAuditRoutes } from '../custom/userperms/controller'")
   })
 
-  it('补丁含审计中间件挂载行（authProtectedRoutes 之前）与查询路由挂载行', () => {
+  it('补丁含审计中间件挂载行与查询路由挂载行（注入树次序核验）', () => {
     expect(patchText).toContain('app.use(userPermsAuditMiddleware)')
     expect(patchText).toContain('app.use(userPermsAuditRoutes.routes())')
-    // 挂载次序：中间件行必须在 authProtectedRoutes 行之前（路由先答=审计漏拍）
-    const middlewareAt = patchText.indexOf('app.use(userPermsAuditMiddleware)')
-    const protectedAt = patchText.indexOf('app.use(authProtectedRoutes.routes())')
+    // 挂载次序改在注入树核验（v0.8.28 重锚后补丁 hunk 上下文窗不含 authProtectedRoutes 行）
+    const routes = readFileSync(
+      resolve(__dirname, '../../../../vendor/hermes-studio/packages/server/src/bootstrap/routes.ts'),
+      'utf-8',
+    )
+    const middlewareAt = routes.indexOf('app.use(userPermsAuditMiddleware)')
+    const protectedAt = routes.indexOf('app.use(authProtectedRoutes.routes())')
     expect(protectedAt).toBeGreaterThan(0)
     expect(middlewareAt).toBeGreaterThan(0)
     expect(middlewareAt).toBeLessThan(protectedAt)

@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/stores/hermes/chat.ts
+index 0b2932af3..a4ead2d90 100644
 --- a/packages/client/src/stores/hermes/chat.ts
 +++ b/packages/client/src/stores/hermes/chat.ts
-@@ -49,6 +49,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
+@@ -51,6 +51,7 @@ function agentToCodingAgentId(agent?: string): ChatCodingAgentId | undefined {
    if (agent === 'opencode') return 'opencode'
    if (agent === 'antigravity') return 'antigravity'
    if (agent === 'cursor') return 'cursor'
@@ -9,7 +10,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
    if (agent === 'claude') return 'claude-code'
    if (['ekko', 'ekko_agent', 'ekko-agent'].includes(agent || '')) return 'ekko-agent'
    return undefined
-@@ -64,6 +65,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
+@@ -67,6 +68,7 @@ function codingAgentIdToAgent(id?: ChatCodingAgentId): ChatAgentId | undefined {
    if (id === 'antigravity') return 'antigravity'
    if (id === 'cursor') return 'cursor'
    if (id === 'claude-code') return 'claude'
@@ -17,7 +18,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
    if (id === 'ekko-agent') return 'ekko-agent'
    return undefined
  }
-@@ -1423,6 +1425,11 @@ function createChatState(scopedSessionId?: string) {
+@@ -1425,6 +1427,11 @@ function createChatState(scopedSessionId?: string) {
    const pendingForkCommands = ref<Set<string>>(new Set())
    /** Sessions that completed while the user was viewing another session. */
    const completedUnreadSessions = ref<Set<string>>(new Set())
@@ -29,7 +30,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
    /** UI-only live streams for Hermes background subagents. Never sent into parent context. */
    const subagentStreams = ref<Map<string, SubagentStream>>(new Map())
    const storedSessionProfileFilter = getItemBestEffort(SESSION_PROFILE_FILTER_STORAGE_KEY)?.trim()
-@@ -1585,6 +1592,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -1588,6 +1595,8 @@ function createChatState(scopedSessionId?: string) {
      sessions.value = []
      pendingRunUsage.clear()
      completedUnreadSessions.value = new Set()
@@ -38,7 +39,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
      queueLengths.value = new Map()
      queuedUserMessages.value = new Map()
      pendingUserMessageIds.clear()
-@@ -1692,8 +1701,50 @@ function createChatState(scopedSessionId?: string) {
+@@ -1695,7 +1704,49 @@ function createChatState(scopedSessionId?: string) {
    function pruneCompletedUnreadSessions(existingIds: Set<string>) {
      const next = new Set([...completedUnreadSessions.value].filter(id => existingIds.has(id)))
      if (next.size !== completedUnreadSessions.value.size) completedUnreadSessions.value = next
@@ -68,8 +69,8 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
 +
 +  function isSessionUnread(sessionId: string): boolean {
 +    return unreadMessages.value.has(sessionId)
-   }
- 
++  }
++
 +  function getSessionUnreadCount(sessionId: string): number {
 +    return unreadMessages.value.get(sessionId)?.count ?? 0
 +  }
@@ -83,13 +84,12 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
 +    const next = new Map(unreadMessages.value)
 +    next.delete(sessionId)
 +    unreadMessages.value = next
-+  }
+   }
 +  // HERMES_CUSTOM[ChatUnread] END
-+
+ 
    function clearActiveSession() {
      activeSelectionSequence++
-     const sid = activeSessionId.value
-@@ -2163,6 +2214,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -2172,6 +2223,8 @@ function createChatState(scopedSessionId?: string) {
      }
      activeSession.value = sessions.value.find(s => s.id === sessionId) || null
      clearSessionCompletedUnread(sessionId)
@@ -98,25 +98,15 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
  
      if (!activeSession.value) return false
  
-@@ -3271,6 +3324,7 @@ function createChatState(scopedSessionId?: string) {
+@@ -3299,6 +3352,7 @@ function createChatState(scopedSessionId?: string) {
        runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
        queueId,
-       runtime: raw.runtime === 'ekko'
+       runtime: typeof raw.runtime === 'string' && raw.runtime.startsWith('plugin:') ? raw.runtime as `plugin:${string}/${string}` : raw.runtime === 'ekko'
 +        || raw.runtime === 'zcode'
          || raw.runtime === 'claude-code'
          || raw.runtime === 'codex'
          || raw.runtime === 'pi'
-@@ -3733,6 +3787,9 @@ function createChatState(scopedSessionId?: string) {
-     if (codingAgentId === 'codex') {
-       return { icon: '/coding-agents/codex-openai.png' }
-     }
-+    if (codingAgentId === 'zcode') {
-+      return { icon: '/coding-agents/zcode.svg' }
-+    }
-     if (codingAgentId === 'claude-code') {
-       return { icon: '/coding-agents/claude-code.svg' }
-     }
-@@ -4392,6 +4449,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -4458,6 +4512,8 @@ function createChatState(scopedSessionId?: string) {
                    isStreaming: true,
                  })
                  activeAssistantMessageId = newId
@@ -125,7 +115,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
                }
  
                break
-@@ -5056,6 +5115,8 @@ function createChatState(scopedSessionId?: string) {
+@@ -5126,6 +5182,8 @@ function createChatState(scopedSessionId?: string) {
                isStreaming: true,
              })
              activeAssistantMessageId = newId
@@ -134,7 +124,7 @@ diff --git a/packages/client/src/stores/hermes/chat.ts b/packages/client/src/sto
            }
  
            break
-@@ -5787,6 +5848,13 @@ function createChatState(scopedSessionId?: string) {
+@@ -5884,6 +5942,13 @@ function createChatState(scopedSessionId?: string) {
      runStartedAt,
      isSessionCompletedUnread,
      clearSessionCompletedUnread,

@@ -1,118 +1,3 @@
-diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
---- a/packages/server/src/modules/studio/sockets/chat-run.ts
-+++ b/packages/server/src/modules/studio/sockets/chat-run.ts
-@@ -127,6 +127,9 @@
- } from '../services/chat-run/mobile-health'
- // overlay[fleet-tap]: 2.13 指挥中心 —— 注册实例供 custom 舰队聚合服务读取
- import { registerChatRunSocket, unregisterChatRunSocket } from '../../../custom/services/hermes/fleet-tap'
-+// overlay[ekko-ui-surface]: 声明式界面挂起/回填宿主（ekko-ui/v1）
-+import { SurfaceRuns } from '../../../custom/ekko-ui/surface-runs'
-+import { SurfaceError } from '../../../custom/ekko-ui/contract'
- 
- type AgentBridgeBackgroundNotification = any
- type AgentBridgeBackgroundSession = any
-@@ -478,6 +481,9 @@
-   private readonly clarificationRuns = new ClarificationRuns((sessionId, event, payload) => {
-     this.emitExternalEvent(sessionId, event, payload)
-     if (event === 'clarify.resolved') this.clearClarifyEventState(sessionId, String(payload.clarify_id))
-+  })
-+  private readonly surfaceRuns = new SurfaceRuns((sessionId, event, payload) => {
-+    this.emitExternalEvent(sessionId, event, payload)
-   })
-   private bridgeResumePolls = new Set<string>()
-   private readonly runWaiters = new Map<string, Set<(event: string, payload: any) => void>>()
-@@ -598,6 +604,11 @@
-     return this.clarificationRuns.request(contextId, profile, input, signal)
-   }
- 
-+  /** 阻塞式声明式界面：工具调用挂起，用户提交/取消/超时后返回结构化结果。 */
-+  requestUiSurface(contextId: string, profile: string, input: Record<string, unknown>, signal?: AbortSignal) {
-+    return this.surfaceRuns.request(contextId, profile, input, signal)
-+  }
-+
-   beginGroupTaskPlanRun(sessionId: string, profile: string, runId: string, isCurrent: () => boolean, publish: (snapshot: import('../contracts/task-plan').TaskPlanSnapshot) => void) {
-     const contextId = this.taskPlanRuns.begin(sessionId, profile,
-       () => ({ isWorking: isCurrent(), activeRunMarker: runId }), publish)
-@@ -608,13 +619,17 @@
-     if (!sessionId) return undefined
-     runMcpCredentials.revoke(sessionId)
-     this.clarificationRuns.finishSession(sessionId)
--    return this.taskPlanRuns.begin(sessionId, profile, () => this.sessionMap.get(sessionId), undefined, sessionTasksEnabled)
-+    const contextId = this.taskPlanRuns.begin(sessionId, profile, () => this.sessionMap.get(sessionId), undefined, sessionTasksEnabled)
-+    // Surface 与任务卡共用同一个 turn context：模型在同一条指令里拿到 context_id。
-+    this.surfaceRuns.begin(contextId, sessionId, profile, () => this.sessionMap.get(sessionId))
-+    return contextId
-   }
- 
-   private finishTaskPlanRun(sessionId: string, event: string, payload?: any, contextId?: string) {
-     if (!['run.completed', 'run.failed', 'abort.completed'].includes(event)) return
-     runMcpCredentials.revoke(sessionId, contextId)
-     this.clarificationRuns.finishSession(sessionId, contextId)
-+    this.surfaceRuns.finishSession(sessionId, contextId)
-     // A queue boundary can finish after its queued input was removed. Runtime
-     // interrupt flags alone do not mean the user pressed Stop.
-     const interrupted = event === 'abort.completed' || this.sessionMap.get(sessionId)?.isAborting
-@@ -1621,9 +1636,60 @@
-           event: 'clarify.resolved',
-           clarify_id: data.clarify_id,
-           resolved: false,
-+          error: err instanceof Error ? err.message : String(err),
-+        })
-+      }
-+    })
-+
-+    socket.on('ui.surface.action', (data: {
-+      session_id?: string
-+      surface_id?: string
-+      revision?: number
-+      action_id?: string
-+      payload?: unknown
-+      profile?: string
-+    }) => {
-+      if (!data?.session_id || !data?.surface_id) return
-+      try {
-+        // 会话可能属于非握手的 profile（工作台多 profile 切换）；用会话自身 profile
-+        // 做归属校验，仍与真实 session.profile 比对，不放宽。
-+        requireSocketSessionAccess(data.session_id, data.profile?.trim() || undefined)
-+      } catch (err) {
-+        socket.emit('ui.surface.closed', {
-+          event: 'ui.surface.closed',
-+          session_id: data.session_id,
-+          surface_id: data.surface_id,
-+          status: 'closed',
-           error: err instanceof Error ? err.message : String(err),
-         })
-+        return
-       }
-+      try {
-+        const result = this.surfaceRuns.respond(
-+          data.session_id,
-+          data.surface_id,
-+          Number(data.revision),
-+          data.action_id,
-+          data.payload,
-+        )
-+        if (!result.resolved) {
-+          socket.emit('ui.surface.closed', {
-+            event: 'ui.surface.closed',
-+            session_id: data.session_id,
-+            surface_id: data.surface_id,
-+            status: 'closed',
-+            error: result.handled ? 'Surface could not be applied.' : 'Surface is no longer pending.',
-+          })
-+        }
-+      } catch (err) {
-+        socket.emit('ui.surface.closed', {
-+          event: 'ui.surface.closed',
-+          session_id: data.session_id,
-+          surface_id: data.surface_id,
-+          status: 'closed',
-+          error: err instanceof SurfaceError ? err.message : err instanceof Error ? err.message : String(err),
-+        })
-+      }
-     })
- 
-     socket.on('location.respond', (data: {
 diff --git a/packages/server/src/modules/studio/routes/chat-run.ts b/packages/server/src/modules/studio/routes/chat-run.ts
 --- a/packages/server/src/modules/studio/routes/chat-run.ts
 +++ b/packages/server/src/modules/studio/routes/chat-run.ts
@@ -186,3 +71,65 @@ diff --git a/packages/server/src/modules/studio/services/clarification-runs.ts b
 -  return `<studio_interaction_context>\nWhen a missing user decision materially affects the task, call ekko_studio_clarify from the same ekko-studio-interaction MCP server used for task cards, with a concise question and optional choices. This tool displays the existing Studio/App question UI and waits for the user's response. Use it instead of terminal input or native interactive tools unavailable in headless mode. If tools are deferred, search for ekko-studio-interaction / clarify and use the discovered tool name. A timeout, dismissal, or cancellation is not user approval. Never use it from delegated subagents or background tasks.\nCurrent turn context_id="${contextId}". Use only this interaction context, never an id from earlier messages.\n</studio_interaction_context>`
 +  return `<studio_interaction_context>\nWhen a missing user decision materially affects the task, call ekko_studio_clarify from the same ekko-studio-interaction MCP server used for task cards, with a concise question and optional choices. This tool displays the existing Studio/App question UI and waits for the user's response. Use it instead of terminal input or native interactive tools unavailable in headless mode. If tools are deferred, search for ekko-studio-interaction / clarify and use the discovered tool name. A timeout, dismissal, or cancellation is not user approval. Never use it from delegated subagents or background tasks. When structured input (several fields or a choice set the user edits before anything is sent) is clearer than chat, call ekko_studio_show_surface from the same MCP server with one complete ekko-ui/v1 spec and wait for the submission; it uses this same context_id.\nCurrent turn context_id="${contextId}". Use only this interaction context, never an id from earlier messages.\n</studio_interaction_context>`
  }
+diff --git packages/server/src/modules/studio/sockets/chat-run.ts packages/server/src/modules/studio/sockets/chat-run.ts
+index 68bde8c0a..b9e573987 100644
+--- a/packages/server/src/modules/studio/sockets/chat-run.ts
++++ b/packages/server/src/modules/studio/sockets/chat-run.ts
+@@ -1665,6 +1665,57 @@ export class ChatRunSocket {
+       }
+     })
+ 
++    socket.on('ui.surface.action', (data: {
++      session_id?: string
++      surface_id?: string
++      revision?: number
++      action_id?: string
++      payload?: unknown
++      profile?: string
++    }) => {
++      if (!data?.session_id || !data?.surface_id) return
++      try {
++        // 会话可能属于非握手的 profile（工作台多 profile 切换）；用会话自身 profile
++        // 做归属校验，仍与真实 session.profile 比对，不放宽。
++        requireSocketSessionAccess(data.session_id, data.profile?.trim() || undefined)
++      } catch (err) {
++        socket.emit('ui.surface.closed', {
++          event: 'ui.surface.closed',
++          session_id: data.session_id,
++          surface_id: data.surface_id,
++          status: 'closed',
++          error: err instanceof Error ? err.message : String(err),
++        })
++        return
++      }
++      try {
++        const result = this.surfaceRuns.respond(
++          data.session_id,
++          data.surface_id,
++          Number(data.revision),
++          data.action_id,
++          data.payload,
++        )
++        if (!result.resolved) {
++          socket.emit('ui.surface.closed', {
++            event: 'ui.surface.closed',
++            session_id: data.session_id,
++            surface_id: data.surface_id,
++            status: 'closed',
++            error: result.handled ? 'Surface could not be applied.' : 'Surface is no longer pending.',
++          })
++        }
++      } catch (err) {
++        socket.emit('ui.surface.closed', {
++          event: 'ui.surface.closed',
++          session_id: data.session_id,
++          surface_id: data.surface_id,
++          status: 'closed',
++          error: err instanceof SurfaceError ? err.message : err instanceof Error ? err.message : String(err),
++        })
++      }
++    })
++
+     socket.on('location.respond', (data: {
+       session_id?: string
+       location_request_id?: string
