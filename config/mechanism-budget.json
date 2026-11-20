@@ -11,6 +11,20 @@
  "changes": [
   {
    "at": "2026-11-20",
+   "delta": "+1 域模块（judgment：席位类型/回交裁决/固化撤回，纯函数）/ +4 env 开关（TRG_FASTPATH、TRG_HANDOFF、TRG_S2_MODEL、TRG_S2_TIMEOUT_MS，默认全关）/ +1 快路径文件（toolresultguard-fastpath.json，落在既有审计目录，不新增 LEDGERS 注册项）/ +0 patch / +0 gate / +0 script / +0 npm script",
+   "reason": "Agnes Harness 吸收批二·判定席位（spec 2026-11-20-agnes-harness-absorption）：给 LLM 判定点加有限选项/强制回交/已验证快路径；先接 toolresultguard，快路径与 S2 回交均默认关（TRG_ENABLED=1 存量部署升级零行为变化）",
+   "pairedRemovals": [
+    "TRG_FASTPATH 开启后进程内 TTL 缓存在快路径命中场景下让位：同输入同版本第 4 次起不再查 TTL 缓存而走持久快路径（TTL 缓存保留给未固化与回交场景，两者不再叠乘）",
+    "redteam S1 读数口径钉死：s1Evaluate 显式禁用 handoffS2/fastPathEnabled，生产开关不再影响评测分层账（原实现隐式继承 env 属可漂移面，本批收紧）"
+   ],
+   "sunset": {
+    "owner": "plusprimer",
+    "reviewBy": "2026-12-05（或 Agnes 吸收批一合并时，以先到者为准）",
+    "retireWhen": "真实开启 TRG_FASTPATH=1 连续两轮推演快路径零命中且 TRG_HANDOFF 零触发，即退役 judgment 域模块与四个新开关；快路径文件随审计目录清理"
+   }
+  },
+  {
+   "at": "2026-11-20",
    "delta": "+1 域（outcome：合同/事件哈希链/测量/结算/快照/决策矩阵六模块）＋+3 patches（804 宿主路由挂载/805 看板 outcome_id 列与继承/806 审批守卫 outcome 接线与双签）/ +1 分册台账（autonomygov outcome-dual-sign.json 运行态，不进 LEDGERS 注册表）/ +1 门（OUTCOME_WORKBENCH env 功能门，控制器每请求动态读非 qgate 面）/ +1 双侧契约文件（outcome/decision-vectors.json，TS/Python 共享判定向量单一事实源）/ +0 scripts / +0 npm scripts / +0 qgate gates",
    "reason": "AI 原生组织运行模型批一（spec 2026-11-19-ai-native-operating-model-design）：工程完成与业务结算分离——结果合同状态机＋追加制事件哈希链＋版本绑定测量＋owner 单签业务裁决＋high 双签审批＋派单最小上下文快照＋决策画像矩阵（riskTier/reversibility/externalEffect 三维）",
    "pairedRemovals": [

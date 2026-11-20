@@ -54,9 +54,11 @@ export interface S1Detection {
 /**
  * S1 裁判复评（judge 链=toolresultguard 同源生产护栏）。deps 供测试注入 judge；
  * 判定端不可用/超时/熔断由 evaluate 内部 fail-open（via 如实标注，不抛）。
+ * 刻意钉死 handoffS2/fastPathEnabled=false：redteam 量的是 S1 层本身，
+ * 生产开了 TRG_HANDOFF/TRG_FASTPATH 也不能污染 S1 读数口径（历史读数可比）。
  */
 export async function s1Evaluate(text: string, deps?: Partial<EvaluateDeps>): Promise<S1Detection> {
-  const config = loadConfig({ enabled: true })
+  const config = loadConfig({ enabled: true, handoffS2: false, fastPathEnabled: false })
   const decision = await evaluate(
     'tool_result',
     text,
