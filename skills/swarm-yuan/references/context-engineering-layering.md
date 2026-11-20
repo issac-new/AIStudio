@@ -211,7 +211,7 @@ Anthropic 对 Context Engineering 的定义：**minimal 并不必然 short，关
 
 ## 十二点五、回合适读性分层（Collapse turn details）
 
-> 来源：openai/codex rust-v0.169.0 release notes（#60554-60557，2026-11-17）；R150 运行时刷新轮吸收（2026-11-20）。
+> 来源：openai/codex rust-v0.169.0 release notes（#60554-60557，2026-11-17）
 
 全屏转录里每个回合默认折叠已完成的活动（工具调用/中间输出），只保留答案可见；折叠内容仍可搜索、可展开复核。三个可操作判据，供目标技能写长任务日志/审查记录时自检：
 

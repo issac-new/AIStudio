@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.102.0] - 2026-11-20
+R150 运行时刷新轮：12 行升基线＋回合适读性分层吸收。门禁数不变（59），无新增 check_*。
+- **基线升位 12 行**（npm/PyPI/GitHub 多通道实核，2026-11-19~20）：openspec **2.1.0**（major）/claude-mem **16.0.1**（major）/codex-cli **0.170.0**/claude-code **2.1.328**/codex-security **0.10.1**/ocr **1.13.13**/gsd-core **1.22.0**/comet **0.5.5**/graphify **0.9.105**（GitHub 已 0.9.112，PyPI 通道滞后留痕）/ruflo **3.78.0**/pi **1.5.2**/dsh **dsh-v0.2.2-rc.5**；零移动 8 行维持（gitnexus/superpowers/mattpocock/ECC/impeccable/semantica/pua/diagram-design）。
+- **宿主工具三件升级回读绿**：codex 0.170.0 / dsh 0.2.2-rc.5 / dsh-tui 0.20.2（npm -g）；上游缓存树同批刷新（codex/dsh/dsh-TUI 0.20.2/dsh-context 0.86.0/kimi/claude-code）。
+- **回合适读性分层**（context-engineering-layering §12.5，codex rust-v0.169.0 Collapse turn details 吸收）：答案优先/折叠不等于删除（折叠区全文可检索，对齐 not run ≠ 零发现）/回合是分层单位三判据——补 Artifact-First 管不到的「落盘产物内部层序」。
+- **记录**：upstream-changelog R150 复扫段（差量明细：codex 0.168 终端工作区多标签/0.169 折叠回合+云端会话归档/0.170 WebRTC 语音+MCP 环境同名；claude-code 2.1.320-328 onFailure:block 等；dsh rc.2-rc.5 官网对话导入/web-search 深研）；UNIVERSAL_FILES 624029B ≤ 624640B 预算内零登记；self-check 全过。
+
+
 ## [v2.101.0] - 2026-11-19
 EGM 吸收批：独立审查协议 + 活文档漂移（B 档）。门禁数不变（59），无新增 check_*；脚本行数 9988→10080，references 61→63，内容预算按台账第 35/36 次登记上调。
 - **独立审查协议**（references/independent-review-protocol.md）：三角色（作者/冷读审阅者/裁决人）、冷读输入白名单/黑名单、S1 全局审视/S2 理解度/S3 设计批判/S4 实现就绪、反谄媚中英禁词表、`not run` ≠ 零发现、连续两轮 clean 才算 converged、无子代理停机阶梯。

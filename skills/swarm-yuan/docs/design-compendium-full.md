@@ -184,7 +184,7 @@ profile 三路信号驱动门禁分层，方向修正过一次（只升不降改
 
 > 对任意代码仓库跑一次，生成一个项目专属的开发技能。此后 AI 在这个项目里写代码，先查组件、依赖和规矩，再动手。
 
-[![Release](https://img.shields.io/badge/release-v2.97.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.97.0)
+[![Release](https://img.shields.io/badge/release-v2.102.0-blue)](https://github.com/issac-new/Swarm-yuan/releases/tag/v2.102.0)
 [![License](https://img.shields.io/badge/license-Apache--2.0-lightgrey)]()
 
 ---
@@ -3504,28 +3504,28 @@ Claude Code / Codex / Cursor / Windsurf / OpenCode / Gemini CLI / Kimi——自�
 <!-- >>> registry:runtimes >>> (generated from assets/registry/runtimes.tsv; do not edit) -->
 | 名称 | 仓库 | 许可证 | 当前基线 | 接入 | 证据 | 机器标记 |
 |---|---|---|---|---|---|---|
-| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.104 | deep | M1 | baseline_status=synced |
+| graphify | Graphify-Labs/graphify | Apache-2.0 | v0.9.105 | deep | M1 | baseline_status=synced |
 | GitNexus | abhigyanpatwari/GitNexus | PolyForm Noncommercial 1.0.0 | npm 1.6.12 | deep | M1 | baseline_status=license-risk |
-| claude-mem | thedotmack/claude-mem | Apache-2.0 | v15.12.1 | deep | M1 | baseline_status=watch |
-| ocr | alibaba/open-code-review | Apache-2.0 | v1.13.6 | deep | M1 | baseline_status=synced |
-| openspec | Fission-AI/OpenSpec | MIT | v1.16.1 | cli | M1 | baseline_status=synced |
-| comet | rpamis/comet | MIT | 0.5.2 | cli | M1 | baseline_status=synced |
-| gsd-core | open-gsd/gsd-core | MIT | v1.20.1 | cli | M1 | baseline_status=synced |
-| codex-security | openai/codex-security | Apache-2.0 | npm-v0.8.3 | cli | M1 | baseline_status=synced |
+| claude-mem | thedotmack/claude-mem | Apache-2.0 | v16.0.1 | deep | M1 | baseline_status=watch |
+| ocr | alibaba/open-code-review | Apache-2.0 | v1.13.13 | deep | M1 | baseline_status=synced |
+| openspec | Fission-AI/OpenSpec | MIT | v2.1.0 | cli | M1 | baseline_status=synced |
+| comet | rpamis/comet | MIT | 0.5.5 | cli | M1 | baseline_status=synced |
+| gsd-core | open-gsd/gsd-core | MIT | v1.22.0 | cli | M1 | baseline_status=synced |
+| codex-security | openai/codex-security | Apache-2.0 | npm-v0.10.1 | cli | M1 | baseline_status=synced |
 | mattpocock-skills | mattpocock/skills | MIT | v1.3.2 | cli | M1 | baseline_status=synced |
 | diagram-design | cathrynlavery/diagram-design | MIT | v2.6.148 | cli | M1 | baseline_status=synced |
 | superpowers | obra/superpowers | MIT | v7.0.2 | method | M1 | baseline_status=synced |
 | gstack | garrytan/gstack | MIT | v1.98.0.0 tip 350d4196 | method | M1 | baseline_status=synced |
-| ruflo | ruvnet/ruflo | MIT | v3.74.1 | method | M1 | baseline_status=synced |
+| ruflo | ruvnet/ruflo | MIT | v3.78.0 | method | M1 | baseline_status=synced |
 | ECC | affaan-m/ECC | MIT | v2.2.3 | method | M1 | baseline_status=synced |
 | impeccable | pbakaus/impeccable | Apache-2.0 | cli-v4.8.1 | method | M1 | baseline_status=synced |
-| dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.2-rc.1 | source | M0 | baseline_status=synced |
+| dsh | deepseek-ai/deepseek-harness | MIT | dsh-v0.2.2-rc.5 | source | M0 | baseline_status=synced |
 | pua | tanweai/pua | MIT | v3.5.1 | source | M0 | baseline_status=synced |
 | semantica | semantica-agi/semantica | MIT | main 39cf7216 | source | M0 | baseline_status=synced |
-| pi | earendil-works/pi | MIT | v1.5.0 | source | M0 | baseline_status=synced |
+| pi | earendil-works/pi | MIT | v1.5.2 | source | M0 | baseline_status=synced |
 | codegraph | colbymchenry/codegraph | MIT | 未定 | none | M0 | baseline_status=watch |
-| claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.319 | host | M3 | baseline_status=synced |
-| codex-cli | openai/codex | Apache-2.0 | rust-v0.167.0 | host | M3 | baseline_status=synced |
+| claude-code | anthropics/claude-code | 专有（Anthropic Commercial Terms） | v2.1.328 | host | M3 | baseline_status=synced |
+| codex-cli | openai/codex | Apache-2.0 | rust-v0.170.0 | host | M3 | baseline_status=synced |
 <!-- <<< registry:runtimes <<< -->
 
 列口径：`接入` = deep / cli / method / source / none / host；`证据` = M0–M4 五级记分；`机器标记` 供 `check_upstream_baseline` 与自检漂移检测消费。当前基线为最近一次核验后钉定的引用版本；tag 与 tip 的差异、逐版本变更说明一律进变更记录。
