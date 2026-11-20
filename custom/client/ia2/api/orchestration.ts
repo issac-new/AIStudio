@@ -374,3 +374,83 @@ export async function fetchGraphSpecs(): Promise<StoredSpecSummary[] | null> {
     return null
   }
 }
+
+// ── Outcome 域（2026-11-20 批一 Task 14）：根卡结果合同读取 ──
+
+/** GET /api/hermes/outcomes 合同行（客户端消费的最小子集；服务端正身形状见
+ *  custom/server/outcome/types.ts OutcomeContract，多余字段透传不裁剪）。
+ *  注意：measures 只带稳定定义（name/target/baseline…）——会变化的 actual 与
+ *  availability 走 OutcomeMeasurement 追加记录，批一 REST 面无测量读取端点，
+ *  本面板不显示实测读数（不造假）。 */
+export interface OutcomeContractRef {
+  outcomeId: string
+  rootTaskId: string
+  version: number
+  title: string
+  ownerPersonId: string
+  status: string
+  measures: Array<{
+    measureId: string
+    name: string
+    unit: string
+    operator: string
+    baseline: number | null
+    target: number
+  }>
+}
+
+/** fetchOutcomeByRoot 三分态：none 与 error 必须分开——none 是「确认没有合同」
+ *  （含功能门关），error 是「读不到、不知道有没有」，调用方据此区分徽标与不可用。 */
+export type OutcomeByRootResult =
+  | { state: 'contract'; contract: OutcomeContractRef }
+  | { state: 'none' }
+  | { state: 'error' }
+
+/** 按根任务取结果合同（GET /api/hermes/outcomes?rootTaskId=，T7 端点）。
+ *  404＝OUTCOME_WORKBENCH 门关（code=outcome_workbench_disabled）——按「未启用」
+ *  处理，等同无合同不报错；其余非 2xx/坏形状/网络异常＝error（调用方标不可用）。 */
+export async function fetchOutcomeByRoot(rootTaskId: string): Promise<OutcomeByRootResult> {
+  if (!rootTaskId) return { state: 'none' }
+  try {
+    const res = await authFetch(`/api/hermes/outcomes?rootTaskId=${encodeURIComponent(rootTaskId)}`)
+    if (res.status === 404) return { state: 'none' }
+    if (!res.ok) return { state: 'error' }
+    const data = (await res.json()) as { ok?: boolean; items?: unknown[] }
+    if (!data.ok || !Array.isArray(data.items)) return { state: 'error' }
+    const hit = data.items.find(
+      (c): c is OutcomeContractRef =>
+        !!c && typeof c === 'object' &&
+        (c as { rootTaskId?: unknown }).rootTaskId === rootTaskId &&
+        typeof (c as { ownerPersonId?: unknown }).ownerPersonId === 'string',
+    )
+    return hit ? { state: 'contract', contract: hit } : { state: 'none' }
+  } catch {
+    return { state: 'error' }
+  }
+}
+
+/** GET /api/governance/people 行（自然人名单）：ownerPersonId → 显示名解析用。 */
+export interface PeopleRosterEntry {
+  id: string
+  name: string
+  active: boolean
+}
+
+/** 自然人名单读取（owner 名解析）：失败返回 null——调用方回退显示 ownerPersonId
+ *  并标注，不因名单缺席把整个第 1 问打不可用。 */
+export async function fetchPeopleRoster(): Promise<PeopleRosterEntry[] | null> {
+  try {
+    const res = await authFetch('/api/governance/people')
+    if (!res.ok) return null
+    const data = (await res.json()) as { ok?: boolean; people?: unknown[] }
+    if (!data.ok || !Array.isArray(data.people)) return null
+    return data.people.filter(
+      (p): p is PeopleRosterEntry =>
+        !!p && typeof p === 'object' &&
+        typeof (p as { id?: unknown }).id === 'string' &&
+        typeof (p as { name?: unknown }).name === 'string',
+    )
+  } catch {
+    return null
+  }
+}

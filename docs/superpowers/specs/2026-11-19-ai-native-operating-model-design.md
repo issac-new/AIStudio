@@ -272,6 +272,8 @@ interface DecisionProfile {
 
 该表只收紧新 outcome-scoped 面，不改变未接入合同的既有 yolo 行为。任何推广到全局执行入口的动作另立兼容性 spec。
 
+授权边界补注（T12 复审 Minor-1，2026-11-20 批一 Task 15 收录）：fleet: 绑定条目 `dual_sign_required=false` 而分类器判 high 时单签即决——合同门为权威的取舍，两分类器分歧角落取合同门。
+
 ### 4.4 OutcomeContextSnapshot
 
 派单时生成不可变快照：
@@ -574,6 +576,9 @@ A 类新增集中在 `custom/server/outcome/`、`custom/client/governance/compon
 | D9 | 贡献评价 | 事实＋人签署评价，不做分数与排名 | 自动评分会产生因果错觉和监控异化 | Mechanical | 设计提案，待设计批准 |
 | D10 | 依赖 | 不新增或升级依赖 | 新数据库/框架会增加部署与迁移成本 | Mechanical | 设计提案，待设计批准 |
 | D11 | 首个试点 | AIStudio 自身高风险授权闭环；人工核验真实日志后提交测量 | 外部业务试点需额外数据源与适配器 | UserChallenge | approved：当前会话选择推荐项 |
+| D12 | 根任务结果面板读侧（批一 Task 13） | 合同/快照走既有读端点；测量与结算无读端点——面板仅回显本会话提交响应并如实标注「以事件账为准」；根卡判定=抽屉 links.parents 为空；权限前端按登录名禁用示因、服务端 403 终裁 | 临时造测量/结算读端点超出批一 API 面；静默显示来路不明的旧值违反 fail-soft 不造假 | Mechanical | 设计提案，待设计批准 |
+
+> D12 实施锚点：根任务结果面板落地于 297064277（批一 Task 13），复审修复 M-1/M-2 于 fbda213e0；本笔为授权修订的收据重绑（SPEC_REBIND）。
 
 ## 设计文档影响
 

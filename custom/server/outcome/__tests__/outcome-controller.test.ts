@@ -610,6 +610,114 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
     })
   })
 
+  describe('GET /:id/measurements 测量读面（Task 15，T13/T14 双报缺口）', () => {
+    const submit = (id: string, body: Record<string, unknown>) =>
+      post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measureId: 'm1', contractVersion: 1, actual: 96, availability: 'available',
+        evidenceRefs: ['metric://x'], ...body,
+      })
+
+    it('正常：全量落账序＋每 measure 最新摘要（observedAt 最大）；measureId 过滤；不存在 404；门关 404', async () => {
+      const id = await seedContract('active')
+      const now = Date.now()
+      expect((await submit(id, { measurementId: 'ms-a', observedAt: now - 5000 })).status).toBe(201)
+      expect((await submit(id, { measurementId: 'ms-b', observedAt: now })).status).toBe(201)
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      expect(res.status).toBe(200)
+      const body = res.body as {
+        measurements: Array<{ measurementId: string; contractVersion: number }>
+        latest: Record<string, { measurementId: string }>
+        contractVersion: number
+      }
+      expect(body.contractVersion).toBe(1)
+      expect(body.measurements.map((m) => m.measurementId)).toEqual(['ms-a', 'ms-b'])
+      expect(body.latest.m1!.measurementId).toBe('ms-b') // observedAt 最大者胜
+      const filtered = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements?measureId=nope`)
+      expect(filtered.status).toBe(200)
+      expect(filtered.body.measurements).toEqual([])
+      const filteredHit = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements?measureId=m1`)
+      expect((filteredHit.body.measurements as unknown[]).length).toBe(2)
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/measurements')
+      expect(missing.status).toBe(404)
+      expect(missing.body.code).toBe('not_found')
+      delete process.env.OUTCOME_WORKBENCH
+      const gated = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      expect(gated.status).toBe(404)
+      expect(gated.body.code).toBe('outcome_workbench_disabled')
+      process.env.OUTCOME_WORKBENCH = '1'
+    })
+
+    it('版本优先：修订升版后 v2 测量前排、latest 只认当前版本（旧口径只作历史）', async () => {
+      const id = await seedContract('active')
+      expect((await submit(id, { measurementId: 'ms-v1', observedAt: Date.now() })).status).toBe(201)
+      const upd = await put(base, `/api/hermes/outcomes/${id}`, { expectedVersion: 1, title: '改版后的标题口径' })
+      expect(upd.status).toBe(200)
+      // v2 测量 observedAt 刻意更旧——版本优先仍前排且 latest 只认 v2（结算绑定同口径）
+      expect((await submit(id, { measurementId: 'ms-v2', contractVersion: 2, actual: 92, observedAt: Date.now() - 60_000 })).status).toBe(201)
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      const body = res.body as {
+        measurements: Array<{ measurementId: string; contractVersion: number }>
+        latest: Record<string, { measurementId: string; contractVersion: number }>
+      }
+      expect(body.measurements.map((m) => m.measurementId)).toEqual(['ms-v2', 'ms-v1'])
+      expect(body.measurements.map((m) => m.contractVersion)).toEqual([2, 1])
+      expect(body.latest.m1!.measurementId).toBe('ms-v2')
+      expect(body.latest.m1!.contractVersion).toBe(2)
+    })
+  })
+
+  describe('GET /:id/settlement 结算读面（Task 15，T13/T14 双报缺口）', () => {
+    it('未结算：settlement=null、superseded=[]；不存在 404；门关 404', async () => {
+      const id = await seedContract('observing')
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(res.status).toBe(200)
+      expect(res.body.settlement).toBeNull()
+      expect(res.body.superseded).toEqual([])
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/settlement')
+      expect(missing.status).toBe(404)
+      delete process.env.OUTCOME_WORKBENCH
+      const gated = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(gated.status).toBe(404)
+      expect(gated.body.code).toBe('outcome_workbench_disabled')
+      process.env.OUTCOME_WORKBENCH = '1'
+    })
+
+    it('已结算：最新有效结算下发；重开后旧结算入 superseded 链；再结算 latest=新、链含旧', async () => {
+      const id = await seedContract('settled') // settlementId=`set-${id}`，allTasksTerminal 已置 true
+      const settled = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect((settled.body.settlement as { settlementId: string }).settlementId).toBe(`set-${id}`)
+      expect(settled.body.superseded).toEqual([])
+      // 重开：旧结算被取代、合同回 active
+      expect(reopenOutcome(id, 'owner-1').ok).toBe(true)
+      const reopened = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(reopened.body.settlement).toBeNull() // 全被取代：不拿已废结算充当前
+      const chain1 = reopened.body.superseded as Array<{ settlementId: string; reason: string; settlement: { settlementId: string } }>
+      expect(chain1.length).toBe(1)
+      expect(chain1[0]!.settlementId).toBe(`set-${id}`)
+      expect(chain1[0]!.reason).toBe('root_task_reopened')
+      expect(chain1[0]!.settlement.settlementId).toBe(`set-${id}`)
+      // 再走 observing → 二次结算：latest=新结算，链仍含旧
+      asUser('owner-1')
+      const obs = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'observing' })
+      expect(obs.status).toBe(201)
+      const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measurementId: `ms2-${id}`, measureId: 'm1', contractVersion: 1, actual: 97,
+        availability: 'available', evidenceRefs: ['metric://x'], observedAt: Date.now(),
+      })
+      expect(ms.status).toBe(201)
+      const st2 = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+        settlementId: 'set-2nd', contractVersion: 1, verdict: 'achieved',
+        rationale: '重开后二轮达成，成功率 97% 高于目标，准予二次结算。',
+        measurementIds: [`ms2-${id}`],
+      })
+      expect(st2.status).toBe(201)
+      const again = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect((again.body.settlement as { settlementId: string }).settlementId).toBe('set-2nd')
+      const chain2 = again.body.superseded as Array<{ settlementId: string }>
+      expect(chain2.map((c) => c.settlementId)).toEqual([`set-${id}`])
+    })
+  })
+
   describe('POST /:id/context-snapshots 与 GET /:id/context', () => {
     it('注入 taskSummaryOf 后生成快照 201；同内容重放 200 added:false（sha 幂等）', async () => {
       const id = await seedContract('active')

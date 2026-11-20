@@ -19,6 +19,8 @@ import KanbanAttachments from '@/custom/kanban/components/KanbanAttachments.vue'
 import RunLinks from '@/custom/ia2/components/RunLinks.vue'
 import KanbanHandoffSection from './KanbanHandoffSection.vue'
 import CapabilityReadinessBadge from './CapabilityReadinessBadge.vue'
+// HERMES_CUSTOM[Outcome] 根任务业务结果面板（批一 Task 13：合同状态/度量/结算，门关整段不渲染）
+import OutcomeSection from './OutcomeSection.vue'
 import { defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 // HERMES_CUSTOM[loop-multiview] 任务↔群弱锚点（ia2/adapters/manage 纯函数）
@@ -694,6 +696,16 @@ const {
             <KanbanMarkdown :source="task.result" />
           </div>
         </div>
+
+        <!-- HERMES_CUSTOM[Outcome] BEGIN: 根任务业务结果面板（批一 Task 13） -->
+        <!-- 根卡判定=links.parents 为空；面板内部按「合同命中/根卡/门关」三级裁决渲染 -->
+        <OutcomeSection
+          v-if="task"
+          class="drawer-section"
+          :task-id="task.id"
+          :is-root-task="!(links.parents && links.parents.length)"
+        />
+        <!-- HERMES_CUSTOM[Outcome] END -->
 
         <!-- Attachments -->
         <KanbanAttachments
