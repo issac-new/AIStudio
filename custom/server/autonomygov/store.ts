@@ -177,6 +177,70 @@ export function clearDualSignSigners(targetId: string): void {
   atomicWriteJson(signPath(), s)
 }
 
+// ── 批一 Task 12：outcome 双签台账（角色感知；与通用 signers 台账分册，不混编）──
+// 通用 dual-sign-signatures.json 只记 actor 集合（fleet/enf 风险档闸消费）；outcome
+// high+one-way 双签要求「owner 与 verifier 两笔不同 actor」，须记角色才能判齐——
+// 独立分册防两种判定互相污染形状。
+
+/** outcome 双签签署记录（targetId=收件箱条目 id，如 deferredfile:<id>）。 */
+export interface OutcomeSignRecord {
+  role: 'owner' | 'verifier'
+  actor: string
+  at: number
+  /** 签署时核验通过的合同版本（stale 门在签前已把守）。 */
+  contractVersion: number
+}
+
+function outcomeSignPath(): string {
+  return join(storeDir(), 'outcome-dual-sign.json')
+}
+
+type OutcomeSignLedger = Record<string, OutcomeSignRecord[]>
+
+function loadOutcomeSigns(): OutcomeSignLedger {
+  const file = outcomeSignPath()
+  if (!existsSync(file)) return {}
+  try {
+    const parsed = JSON.parse(readFileSync(file, 'utf8')) as OutcomeSignLedger
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
+  } catch { /* 坏档：隔离留档再从空起步 */ }
+  try { renameSync(file, `${file}.corrupt-${Date.now()}`) } catch { /* 不阻断 */ }
+  return {}
+}
+
+function isUsableSign(r: unknown): r is OutcomeSignRecord {
+  if (!r || typeof r !== 'object') return false
+  const v = r as Partial<OutcomeSignRecord>
+  return (v.role === 'owner' || v.role === 'verifier')
+    && typeof v.actor === 'string' && v.actor.trim().length > 0
+    && typeof v.at === 'number' && Number.isFinite(v.at)
+    && typeof v.contractVersion === 'number' && Number.isInteger(v.contractVersion)
+}
+
+/** 读某条目的 outcome 双签签署（追加序；读侧 fail-soft：坏档按空处理，闸会要求重签）。 */
+export function listOutcomeDualSign(targetId: string): OutcomeSignRecord[] {
+  const rows = loadOutcomeSigns()[targetId]
+  return Array.isArray(rows) ? rows.filter(isUsableSign) : []
+}
+
+/** 追加一笔签署（调用方=裁决门，已过角色映射与同人两票校验）。 */
+export function recordOutcomeDualSign(targetId: string, rec: OutcomeSignRecord): void {
+  const s = loadOutcomeSigns()
+  const prev = Array.isArray(s[targetId]) ? s[targetId]!.filter(isUsableSign) : []
+  s[targetId] = [...prev, rec]
+  mkdirSync(storeDir(), { recursive: true })
+  atomicWriteJson(outcomeSignPath(), s)
+}
+
+/** 清空某条目签署（测试与条目重开用）。 */
+export function clearOutcomeDualSign(targetId: string): void {
+  const s = loadOutcomeSigns()
+  if (!(targetId in s)) return
+  delete s[targetId]
+  mkdirSync(storeDir(), { recursive: true })
+  atomicWriteJson(outcomeSignPath(), s)
+}
+
 /** 测试隔离。 */
 export function _useAutonomyGovDirForTests(dir: string): void {
   process.env.HERMES_AUTONOMY_GOV_DIR = dir
