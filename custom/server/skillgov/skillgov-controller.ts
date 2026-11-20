@@ -19,6 +19,7 @@ import {
 import { homedir } from 'node:os'
 import { basename, resolve } from 'node:path'
 import { latestSkillScan, runSkillScan, scanSkillDir } from './skill-scan'
+import { attributeSkillFailure, type SkillFailureSignal } from './skill-failure-attribution'
 
 const router = new Router({ prefix: '/api/skillgov' })
 
@@ -60,6 +61,21 @@ export function linkEngineSkill(
     return { linked: false, link, reason: (err as Error).message }
   }
 }
+
+// ---------- 技能失败三分归因（2026-11-20 综述吸收轮 C） ----------
+// 综述 Figure 8：选错技能→改路由；照做跳步→改 Harness 完成检查；流程缺步→修
+// Skill 本体。纯函数诊断，只出建议不改行为；信号不足一律 unknown 不猜。
+router.post('/failure-attribution', (ctx) => {
+  const body = (ctx.request.body ?? {}) as Partial<SkillFailureSignal>
+  const signal: SkillFailureSignal = {
+    skillInvoked: typeof body.skillInvoked === 'string' ? body.skillInvoked : body.skillInvoked === null ? null : undefined,
+    skillsAvailable: typeof body.skillsAvailable === 'number' ? body.skillsAvailable : null,
+    stepsDeclared: typeof body.stepsDeclared === 'number' ? body.stepsDeclared : null,
+    stepsCompleted: typeof body.stepsCompleted === 'number' ? body.stepsCompleted : null,
+    failureSignature: typeof body.failureSignature === 'string' ? body.failureSignature.slice(0, 200) : '',
+  }
+  ctx.body = { ok: true, signal, verdict: attributeSkillFailure(signal) }
+})
 
 // ---------- 三段治理 · 第一段：注册扫描 ----------
 
