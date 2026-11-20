@@ -1162,6 +1162,14 @@ OS 级沙箱只在高风险命令且配置开启时执行，
 测量与结算读面（`/api/hermes/outcomes/:id/measurements`、`/:id/settlement`）
 与 outcome 域全端点同受 `OUTCOME_WORKBENCH` 门管辖，门关一律 404。
 
+**gateway 双签经 mxid 桥释放。** 双签释放只认「两笔 consent 的 actor 经
+people.mxids 显式登记映射到 owner 与 verifier 两个不同 person」；未登记
+mxid 永不命中，同人两 mxid 不构成两签，CLI/transport 单身份直答面维持
+deny-only 并指引收件箱（批二立法：映射错误＝越权放行，代价不对称，故不自动映射）。
+**对照投影 effect 三态。** 同口径结果对照（`/comparison`）恒
+`improved|degraded|unknown`——不足两个同 measure 定义的已结算结果时恒
+unknown 且带缺口说明；投影只读不写账，「已注入」永不等于「有效」。
+
 **批准前复核。** 任务类批准在签发前重新读取任务并重算版本，
 与建单时记录不符即以冲突拒绝并提示重签；任务不可达时放行但标注「复核不可用」，
 不拿不可达冒充「已复核」，也不拿抖动冒充「已过期」。
