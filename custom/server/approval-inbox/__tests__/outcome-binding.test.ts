@@ -355,3 +355,193 @@ describe('decide 门：绑定但非双签格与无绑定回归', () => {
     }
   })
 })
+
+// ── 审查修复轮（2026-11-20，I-1/I-2/M-2/M-3）──
+
+
+describe('审查 I-1：fleetfile 响应幂等（防覆盖翻盘）', () => {
+  it('已决条目二次 decide 被拒（404），响应不被改写', async () => {
+    await makeContract('oc-i1', 1)
+    writeFileSync(join(queueDir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-i1', digest: 'd1', command: 'git push', timeout_seconds: 300, enqueued_at: Date.now(),
+      outcome_ref: { outcomeId: 'oc-i1', contractVersion: 1, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+    }) + '\n', 'utf8')
+    expect((await decide('fleetfile:rq-i1', 'once')).status).toBe(200)
+    // 已答后任何二次裁决（含单方改 session/always）被幂等拒绝
+    const again = await decide('fleetfile:rq-i1', 'session')
+    expect(again.status).toBe(404)
+    const resp = JSON.parse(readFileSync(join(queueDir, 'responses', 'rq-i1.json'), 'utf8')) as { choice: string }
+    expect(resp.choice).toBe('once')
+  })
+
+  it('双签第一签后 deny 一票即决；此后补签不得覆盖翻盘', async () => {
+    await makeContract('oc-i1b', 1)
+    writeDeferred({ id: 'd-i1b', requestId: 'rq-i1b', outcomeId: 'oc-i1b', contractVersion: 1, dualSign: true })
+    // owner 第一签：409 仍 pending
+    expect((await decide('deferredfile:d-i1b', 'once')).status).toBe(409)
+    // 换人 deny：否决一票即终（合法）
+    currentActor = 'verifier@example.com'
+    expect((await decide('deferredfile:d-i1b', 'deny')).status).toBe(200)
+    const resp = JSON.parse(readFileSync(join(queueDir, 'responses', 'rq-i1b.json'), 'utf8')) as { choice: string }
+    expect(resp.choice).toBe('deny')
+    // deny 已决：owner 再补 once 签不得覆盖翻盘（fleetfile/deferredfile 同一语义，
+    // deferredfile 既有幂等；这里锁 deferred 面，fleetfile 面由上一用例锁）
+    currentActor = 'owner@example.com'
+    const flip = await decide('deferredfile:d-i1b', 'once')
+    expect(flip.status).toBe(404)
+    const resp2 = JSON.parse(readFileSync(join(queueDir, 'responses', 'rq-i1b.json'), 'utf8')) as { choice: string }
+    expect(resp2.choice).toBe('deny')
+  })
+
+  it('fleetfile 双签第一签后 deny 即决、补签 404 不翻盘（writeFleetFileResponse 幂等）', async () => {
+    await makeContract('oc-i1c', 1)
+    writeFileSync(join(queueDir, 'queue.jsonl'), JSON.stringify({
+      request_id: 'rq-i1c', digest: 'd2', command: 'git push origin main', timeout_seconds: 300, enqueued_at: Date.now(),
+      outcome_ref: { outcomeId: 'oc-i1c', contractVersion: 1, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+      dual_sign_required: true,
+    }) + '\n', 'utf8')
+    expect((await decide('fleetfile:rq-i1c', 'once')).status).toBe(409) // owner 第一签
+    currentActor = 'verifier@example.com'
+    expect((await decide('fleetfile:rq-i1c', 'deny')).status).toBe(200) // deny 即决
+    currentActor = 'owner@example.com'
+    // 同人两票路径外：双签第二签补 once——响应已在（deny），幂等拒绝不翻盘
+    const flip = await decide('fleetfile:rq-i1c', 'once')
+    expect(flip.status).toBe(404)
+    const resp = JSON.parse(readFileSync(join(queueDir, 'responses', 'rq-i1c.json'), 'utf8')) as { choice: string }
+    expect(resp.choice).toBe('deny')
+  })
+})
+
+describe('审查 I-2：fleet tap 透传 outcome_ref 走同门', () => {
+  let approvalRespondCalls: Array<{ id: string; choice: string }>
+
+  /** 注册 fake tap：单会话带一条 approval.requested 事件（outcome_ref 按 806 data 形状）。 */
+  async function registerTapWithApproval(approvalData: Record<string, unknown>): Promise<void> {
+    const { registerChatRunSocket } = await import('../../services/hermes/fleet-tap')
+    approvalRespondCalls = []
+    registerChatRunSocket({
+      sessionMap: new Map([['s-tap', {
+        profile: 'worker-a',
+        isWorking: true,
+        events: [{ event: 'approval.requested', data: { approval_id: 'a-tap', ...approvalData } }],
+      }]]),
+      bridge: { approvalRespond: async (id: string, choice: string) => { approvalRespondCalls.push({ id, choice }); return { resolved: true } } },
+    }, { getSession: () => ({ profile: 'worker-a' }), listSessions: () => [] })
+  }
+
+  afterEach(async () => {
+    const { unregisterChatRunSocket } = await import('../../services/hermes/fleet-tap')
+    unregisterChatRunSocket()
+  })
+
+  it('tap 条目带 outcome_ref → pending 标注；stale 版本 decide 409 且不触达 bridge', async () => {
+    await makeContract('oc-tap', 1)
+    await registerTapWithApproval({
+      preview: 'git push origin main',
+      choices: ['once', 'deny'],
+      outcome_ref: { outcomeId: 'oc-tap', contractVersion: 8, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+      dual_sign_required: true,
+    })
+    const items = await pendingItems()
+    const tapItem = items.find((i) => i.id === 'fleet:s-tap:a-tap')
+    expect(tapItem).toBeTruthy()
+    expect((tapItem!.outcomeRef as { outcomeId: string }).outcomeId).toBe('oc-tap')
+    expect(tapItem!.dualSignRequired).toBe(true)
+
+    const r = await decide('fleet:s-tap:a-tap', 'once')
+    expect(r.status).toBe(409)
+    expect(r.body.code).toBe('stale_contract')
+    expect(approvalRespondCalls).toEqual([]) // 未放行、不触达 agent
+  })
+
+  it('tap 双签条目 owner+verifier 顺序两笔 → resolved（bridge 放行一次＋历史带 outcome 引用）', async () => {
+    await makeContract('oc-tap2', 1)
+    await registerTapWithApproval({
+      preview: 'git push origin main',
+      choices: ['once', 'deny'],
+      outcome_ref: { outcomeId: 'oc-tap2', contractVersion: 1, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+      dual_sign_required: true,
+    })
+    expect((await decide('fleet:s-tap:a-tap', 'once')).status).toBe(409) // owner 第一签仍 pending
+    expect(approvalRespondCalls).toEqual([])
+    currentActor = 'verifier@example.com'
+    const second = await decide('fleet:s-tap:a-tap', 'once')
+    expect(second.status).toBe(200)
+    expect(approvalRespondCalls).toEqual([{ id: 'a-tap', choice: 'once' }])
+    expect((second.body.entry as { outcomeRef?: { outcomeId: string } }).outcomeRef?.outcomeId).toBe('oc-tap2')
+  })
+
+  it('tap 绑定非双签条目：单签直决（stale 门仍生效）', async () => {
+    await makeContract('oc-tap3', 1)
+    await registerTapWithApproval({
+      preview: 'grep deploy README.md',
+      outcome_ref: { outcomeId: 'oc-tap3', contractVersion: 1, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+    })
+    const r = await decide('fleet:s-tap:a-tap', 'once')
+    expect(r.status).toBe(200)
+    expect(approvalRespondCalls).toEqual([{ id: 'a-tap', choice: 'once' }])
+  })
+
+  it('mx 请求条目带 outcome_ref → 同门：stale 409 / 双签两笔后响应文件落地', async () => {
+    await makeContract('oc-mx', 1)
+    writeFileSync(join(queueDir, 'mx-requests.jsonl'), JSON.stringify({
+      eid: '$mx1:matrix.test', title: 'git push origin main', detail: 'worker 推送', createdAt: 1000,
+      outcome_ref: { outcomeId: 'oc-mx', contractVersion: 5, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+      dual_sign_required: true,
+    }) + '\n', 'utf8')
+    // stale：409 不写响应
+    const stale = await decide('mx:$mx1:matrix.test', 'once')
+    expect(stale.status).toBe(409)
+    expect(stale.body.code).toBe('stale_contract')
+    expect(existsSync(join(queueDir, 'mx-responses', '_mx1_matrix_test.json'))).toBe(false)
+    // 版本修齐后双签两笔 → resolved
+    writeFileSync(join(queueDir, 'mx-requests.jsonl'), JSON.stringify({
+      eid: '$mx1:matrix.test', title: 'git push origin main', detail: 'worker 推送', createdAt: 1000,
+      outcome_ref: { outcomeId: 'oc-mx', contractVersion: 1, ownerPersonId: 'p-owner', verificationOwnerId: 'p-verifier' },
+      dual_sign_required: true,
+    }) + '\n', 'utf8')
+    expect((await decide('mx:$mx1:matrix.test', 'once')).status).toBe(409) // owner 第一签
+    currentActor = 'verifier@example.com'
+    const second = await decide('mx:$mx1:matrix.test', 'once')
+    expect(second.status).toBe(200)
+    const resp = JSON.parse(readFileSync(join(queueDir, 'mx-responses', '_mx1_matrix_test.json'), 'utf8')) as { decision: string }
+    expect(resp.decision).toBe('once')
+    expect((second.body.entry as { outcomeRef?: { outcomeId: string } }).outcomeRef?.outcomeId).toBe('oc-mx')
+  })
+})
+
+describe('审查 M-2/M-3：签署台账版本过滤与停用名册拒签', () => {
+  it('M-2：旧版本签署不凑对——合同升级后旧签被过滤，双签按当前版本重凑', async () => {
+    await makeContract('oc-m2', 1)
+    writeDeferred({ id: 'd-m2', requestId: 'rq-m2', outcomeId: 'oc-m2', contractVersion: 1, dualSign: true })
+    // 种一条旧版本（v99）owner 签——合同现为 v1，旧签不得凑对
+    const { recordOutcomeDualSign } = await import('../../autonomygov/store')
+    recordOutcomeDualSign('deferredfile:d-m2', { role: 'owner', actor: 'owner@example.com', at: 1, contractVersion: 99 })
+    // verifier 按 v1 签：过滤后无既有签 → verifier 是当前版本第一签（仍 pending，待 owner）
+    currentActor = 'verifier@example.com'
+    const first = await decide('deferredfile:d-m2', 'once')
+    expect(first.status).toBe(409)
+    expect(first.body.code).toBe('dual-sign-required')
+    expect((first.body.roles as Record<string, string | null>).owner).toBeNull() // 旧 owner 签未计入
+    // owner 按 v1 补第二签：两笔当前版本、两角色、不同 actor → resolved
+    currentActor = 'owner@example.com'
+    const second = await decide('deferredfile:d-m2', 'once')
+    expect(second.status).toBe(200)
+    expect(existsSync(join(queueDir, 'responses', 'rq-m2.json'))).toBe(true)
+  })
+
+  it('M-3：停用（inactive）名册成员无签署权——403 拒签', async () => {
+    await makeContract('oc-m3', 1)
+    writeDeferred({ id: 'd-m3', requestId: 'rq-m3', outcomeId: 'oc-m3', contractVersion: 1, dualSign: true })
+    // verifier 名册行停用：emails 命中但 active=false → 拒签
+    const peopleFile = join(process.env.AGENT_IDENTITY_STORE!, 'people.json')
+    const people = JSON.parse(readFileSync(peopleFile, 'utf8')) as { people: Array<{ id: string; active: boolean }> }
+    people.people.find((p) => p.id === 'p-verifier')!.active = false
+    writeFileSync(peopleFile, JSON.stringify(people), 'utf8')
+    currentActor = 'verifier@example.com'
+    const r = await decide('deferredfile:d-m3', 'once')
+    expect(r.status).toBe(403)
+    expect(r.body.code).toBe('not_outcome_signer')
+    expect(existsSync(join(queueDir, 'responses', 'rq-m3.json'))).toBe(false)
+  })
+})

@@ -245,6 +245,9 @@ interface MxRequestEntry {
   sessionId?: string
   profile?: string
   createdAt?: number
+  /** 批一 Task 12 复审 I-2：harness 入队时随带的 outcome 绑定（806 字段名），decide 同门。 */
+  outcome_ref?: unknown
+  dual_sign_required?: boolean
 }
 
 /** Matrix $event_id 含 $/: 等文件名不安全字符——响应文件名统一转义（harness ③b 同约定） */
@@ -291,14 +294,15 @@ function readMxApprovalChannel(): PendingItem[] {
         ...(entry.profile ? { profile: entry.profile } : {}),
         createdAt: entry.createdAt ?? 0,
         risk: classifyApprovalRisk({ kind: 'command', detail: entry.detail || '', title: entry.title || entry.eid }),
+        ...outcomeAnnotationOf(entry),
       })
     }
   }
   return out
 }
 
-/** mx 请求所在目录（decide 回写响应用）；找不到 = null。 */
-function mxRequestDirOf(eid: string): string | null {
+/** mx 请求条目定位（decide 回写响应与 Task 12 outcome 门共读）；找不到 = null。 */
+function findMxEntry(eid: string): { dir: string; entry: MxRequestEntry } | null {
   for (const dir of approvalsDirs()) {
     const queue = join(dir, 'mx-requests.jsonl')
     try {
@@ -306,7 +310,8 @@ function mxRequestDirOf(eid: string): string | null {
         const trimmed = line.trim()
         if (!trimmed) continue
         try {
-          if ((JSON.parse(trimmed) as MxRequestEntry).eid === eid) return dir
+          const entry = JSON.parse(trimmed) as MxRequestEntry
+          if (entry.eid === eid) return { dir, entry }
         } catch { continue }
       }
     } catch { continue }
@@ -387,8 +392,11 @@ function writeFleetFileResponse(requestId: string, choice: string, actor: string
   } catch { /* 队列不可读 */ }
   if (!digest) return { ok: false }
   const respDir = join(dir, 'responses')
-  mkdirSync(respDir, { recursive: true })
   const file = join(respDir, `${requestId}.json`)
+  // 批一 Task 12 复审 I-1：已答幂等拒绝（先到先得，writeDeferredResponse 先例）——
+  // 防双签流程中 deny 后补签覆盖翻盘、resolved 后单方改写 session/always。
+  if (existsSync(file)) return { ok: false }
+  mkdirSync(respDir, { recursive: true })
   atomicWriteJson(file, { request_id: requestId, digest, choice, decided_at: Date.now(), actor })
   return { ok: true }
 }
@@ -423,6 +431,22 @@ function findDeferredRecord(deferredId: string): DeferredRecord | null {
     } catch { continue }
   }
   return null
+}
+
+/** deferred 记录的响应文件是否已在（已答判定；复审 I-1 先于双签门检查，
+ *  防已决条目仍报「待第二签」）。 */
+function deferredResponseExists(deferredId: string): boolean {
+  for (const dir of approvalsDirs()) {
+    const file = join(dir, 'deferred.json')
+    if (!existsSync(file)) continue
+    try {
+      const rows = JSON.parse(readFileSync(file, 'utf8')) as DeferredRecord[]
+      if (!Array.isArray(rows)) continue
+      const rec = rows.find((r) => r && r.id === deferredId)
+      if (rec && rec.request_id && existsSync(join(dir, 'responses', `${rec.request_id}.json`))) return true
+    } catch { continue }
+  }
+  return false
 }
 
 /** 待审聚合三源合并（不排序；供 pending 路由与自动放行扫描共用）。 */
@@ -471,6 +495,8 @@ function collectPendingItems(): PendingItem[] {
           createdAt: session.lastActiveAt || 0,
           risk: classifyApprovalRisk({ kind: 'command', detail: approval.preview || '', title: session.title }),
           impact: analyzeCommandImpact(approval.preview || ''),
+          // 批一 Task 12 复审 I-2：fleet tap 透传的 outcome 绑定同标注（含 autopass 拒绝面）
+          ...outcomeAnnotationOf(approval),
         })
       }
     }
@@ -648,9 +674,11 @@ function actorOutcomeRole(actor: string, contract: OutcomeContract): 'owner' | '
   ]
   for (const [personId, role] of seats) {
     if (!personId) continue
-    let person: { name: string; emails: string[] } | null = null
+    let person: { name: string; emails: string[]; active: boolean } | null = null
     try { person = getPerson(personId) } catch { person = null }
     if (!person) continue
+    // 复审 M-3：停用名册成员无签署权（activePersonIds 先例——责任座只在 active 名册上）
+    if (person.active !== true) continue
     if (person.emails.some((e) => typeof e === 'string' && e.toLowerCase() === lower) || person.name === name) {
       return role
     }
@@ -710,7 +738,9 @@ function enforceOutcomeBinding(
       { code: 'not_outcome_signer', extra: { outcomeId: outcomeRef.outcomeId } })
     return false
   }
-  const prior = listOutcomeDualSign(itemId)
+  // 复审 M-2：签署台账按当前合同版本过滤——合同升级后旧版本签署不凑对（双签
+  // 须两笔都核验过当前版本；旧签残留只作历史，不参与判定）。
+  const prior = listOutcomeDualSign(itemId).filter((p) => p.contractVersion === contract.version)
   const byRole = (r: 'owner' | 'verifier') => prior.find((p) => p.role === r) ?? null
   const mine = byRole(role)
   const other: 'owner' | 'verifier' = role === 'owner' ? 'verifier' : 'owner'
@@ -814,14 +844,26 @@ router.post('/:id/decide', async (ctx) => {
     const approvalId = rest.slice(sep + 1)
     // V4-N1：裁决前服务端重算风险档入台账（不信客户端自报档位）
     let risk: ApprovalRiskTier | undefined
+    let fleetOutcomeRef: OutcomeRef | undefined
+    let fleetDualSign = false
     try {
       const sessions = buildFleetSnapshotFromTap()
       const sess = sessions?.find((s) => s.id === sessionId)
       const appr = sess?.approvals?.find((a) => a.approval_id === approvalId)
-      if (appr) risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
+      if (appr) {
+        risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
+        fleetOutcomeRef = parseOutcomeRef(appr.outcome_ref)
+        fleetDualSign = appr.dual_sign_required === true
+      }
     } catch { /* 快照不可用则档位留空，不阻断裁决 */ }
-    // 2026-11-05 双签闸：风险档已在上面服务端重算，高风险批准须双签（不影响 deny）。
-    if (!enforceDualSign(ctx, {
+    // 批一 Task 12 复审 I-2：outcome 绑定条目（tap 透传 outcome_ref）以合同门为权威
+    // ——角色绑定双签强于风险档双签，绑定条目不再叠 risk-tier 闸（防双闸复合把双签
+    // 拖成三请求）；未绑定条目照旧走风险档闸。
+    if (fleetOutcomeRef) {
+      if (!enforceOutcomeBinding(ctx, {
+        itemId: id, actor, decision, outcomeRef: fleetOutcomeRef, dualSignRequired: fleetDualSign,
+      })) return
+    } else if (!enforceDualSign(ctx, {
       targetId: id, risk, decision, waiver: (body as { waiver?: unknown }).waiver,
     })) return
 
@@ -834,6 +876,7 @@ router.post('/:id/decide', async (ctx) => {
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: approvalId,
       targetTitle: `${sessionId} · ${approvalId}`, decision, note, risk,
+      ...(fleetOutcomeRef ? { outcomeRef: { outcomeId: fleetOutcomeRef.outcomeId, contractVersion: fleetOutcomeRef.contractVersion } } : {}),
     })
     ctx.body = { ok: true, entry }
     return
@@ -852,24 +895,32 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: '该审批已经 Matrix 反应通道裁决（approved.events 在案），一次定音' }
       return
     }
-    const dir = mxRequestDirOf(eid)
-    if (!dir) {
+    const found = findMxEntry(eid)
+    if (!found) {
       ctx.status = 404
       ctx.body = { ok: false, detail: '审批请求不在 mx 通道（已裁决或不存在）' }
       return
     }
     // 幂等闸②：本通道已批（响应文件在）
-    const respFile = join(dir, 'mx-responses', `${mxSafeEid(eid)}.json`)
+    const respFile = join(found.dir, 'mx-responses', `${mxSafeEid(eid)}.json`)
     if (existsSync(respFile)) {
       ctx.status = 409
       ctx.body = { ok: false, detail: '该审批已经收件箱裁决（响应文件在案），一次定音' }
       return
     }
-    mkdirSync(join(dir, 'mx-responses'), { recursive: true })
-  atomicWriteJson(respFile, { request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' })
+    // 批一 Task 12 复审 I-2：outcome 绑定条目走同一合同门＋owner/verifier 双签门
+    // （第一签仍 pending 不写响应；单签不得绕版本门）。
+    const mxOutcomeRef = parseOutcomeRef(found.entry.outcome_ref)
+    if (mxOutcomeRef && !enforceOutcomeBinding(ctx, {
+      itemId: id, actor, decision, outcomeRef: mxOutcomeRef,
+      dualSignRequired: found.entry.dual_sign_required === true,
+    })) return
+    mkdirSync(join(found.dir, 'mx-responses'), { recursive: true })
+    atomicWriteJson(respFile, { request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' })
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: eid,
       targetTitle: note || eid, decision, note,
+      ...(mxOutcomeRef ? { outcomeRef: { outcomeId: mxOutcomeRef.outcomeId, contractVersion: mxOutcomeRef.contractVersion } } : {}),
     })
     ctx.body = { ok: true, entry }
     return
@@ -884,6 +935,12 @@ router.post('/:id/decide', async (ctx) => {
     }
     // 批一 Task 12：outcome 绑定条目先过合同门（stale 409）＋owner/verifier 双签门
     // （第一签落账仍 pending，不写响应文件；无绑定条目不经本门，行为回归不变）。
+    // 复审 I-1：已答条目（响应文件在）先到先得——先于双签门报「已裁决」，
+    // 防已决条目仍报「待第二签」误导（deny 即决后补签不得翻盘）。
+    if (deferredResponseExists(deferredId)) {
+      fail(ctx, 404, '延迟审批已裁决（响应文件在案，先到先得），不得覆盖')
+      return
+    }
     const dRec = findDeferredRecord(deferredId)
     const dOutcomeRef = parseOutcomeRef(dRec?.outcome_ref)
     if (dOutcomeRef && !enforceOutcomeBinding(ctx, {
@@ -910,14 +967,22 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: 'fleetfile 决策须为 once|session|always|deny' }
       return
     }
-    // 批一 Task 12：outcome 绑定条目走同一门（gateway data 经 worker 插件入队携带 outcome_ref）
+    // 批一 Task 12：outcome 绑定条目走同一门（gateway data 经 worker 插件入队携带 outcome_ref）。
+    // 复审 I-1：已答条目（响应文件在）先到先得——先于双签门报「已裁决」，防翻盘窗。
+    const qDir = queueDirOfRequest(requestId)
+    if (qDir && existsSync(join(qDir, 'responses', `${requestId}.json`))) {
+      ctx.status = 404
+      ctx.body = { ok: false, detail: '该审批已裁决（响应文件在案，先到先得），不得覆盖' }
+      return
+    }
     const qEntry = findQueueEntry(requestId)
     const qOutcomeRef = parseOutcomeRef(qEntry?.outcome_ref)
     if (qOutcomeRef && !enforceOutcomeBinding(ctx, {
       itemId: id, actor, decision, outcomeRef: qOutcomeRef,
       dualSignRequired: qEntry?.dual_sign_required === true,
     })) return
-    // 响应文件带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）
+    // 响应文件带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）；
+    // writeFleetFileResponse 内另有已答幂等拒绝（并发双写兜底）。
     if (!writeFleetFileResponse(requestId, decision, actor).ok) {
       ctx.status = 404
       ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
