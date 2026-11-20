@@ -995,6 +995,48 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(missing.body.code).toBe('not_found')
     })
 
+    it('GET / 列表（T1 补）：他人行 readScope=metadata 且无 definition，自己行全量；过滤语义不变', async () => {
+      await seedContract('active', 'task-list-a')
+      asUser('other-1')
+      const mine = await post(base, '/api/hermes/outcomes', contractBody({
+        ownerPersonId: 'other-1',
+        rootTaskId: 'task-list-b',
+      }))
+      expect(mine.status).toBe(201)
+      asUser('owner-1')
+      const ownerView = await fetchJson(base, '/api/hermes/outcomes')
+      const ownerRows = ownerView.body.items as Array<{ readScope: string; ownerPersonId: string }>
+      expect(ownerRows.length).toBe(2)
+      // 行级判权：owner-1 视角下自己的行 full、他人（other-1）的行 metadata
+      for (const row of ownerRows) {
+        expect(row.readScope).toBe(row.ownerPersonId === 'owner-1' ? 'full' : 'metadata')
+      }
+      asUser('other-1')
+      const other = await fetchJson(base, '/api/hermes/outcomes')
+      expect(other.status).toBe(200)
+      const rows = other.body.items as Array<{
+        readScope: string
+        ownerPersonId: string
+        measures: Array<Record<string, unknown>>
+      }>
+      expect(rows.length).toBe(2)
+      for (const row of rows) {
+        if (row.ownerPersonId === 'other-1') {
+          expect(row.readScope).toBe('full')
+          expect(row.measures[0].definition).toBeTruthy()
+        } else {
+          expect(row.readScope).toBe('metadata')
+          expect(row.measures[0].definition).toBeUndefined() // 他人行脱度量口径文本
+          expect(row.measures[0].name).toBe('成功率') // 骨架保留
+        }
+      }
+      // 过滤语义不变：owner/rootTaskId 过滤照常（脱敏不改可见行集）
+      const byOwner = await fetchJson(base, '/api/hermes/outcomes?owner=owner-1')
+      expect((byOwner.body.items as Array<{ ownerPersonId: string }>).map((r) => r.ownerPersonId)).toEqual(['owner-1'])
+      const byRoot = await fetchJson(base, '/api/hermes/outcomes?rootTaskId=task-list-b')
+      expect((byRoot.body.items as unknown[]).length).toBe(1)
+    })
+
     it('GET /:id/context：owner 取全量含 content；他人 metadata content 整体脱去；列表摘要行与 404 不变', async () => {
       const id = await seedContract('active')
       const created = await post(base, `/api/hermes/outcomes/${id}/context-snapshots`, {})

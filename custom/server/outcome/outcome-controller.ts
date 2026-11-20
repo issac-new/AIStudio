@@ -3,7 +3,7 @@
 // operating-model-design.md §4.2/§4.6；批一 Task 7）。
 //
 // 端点表（简报逐字，前缀 /api/hermes/outcomes）：
-//   GET  /                    —— 列表，query status/rootTaskId/owner 过滤
+//   GET  /                    —— 列表，query status/rootTaskId/owner 过滤（行级 readScope，T1 补）
 //   POST /                    —— 创建（clientRequestId 幂等；rootTaskId 冲突 409）
 //   GET  /:id                 —— 合同详情
 //   PUT  /:id                 —— 修订（expectedVersion 乐观并发）
@@ -31,11 +31,12 @@
 //   演进到其他状态（如重开回 active）则如实返回原事件不回滚。
 // - 幂等键作用域：clientRequestId 以 `${actor}:${clientRequestId}` 组合键落账与查定
 //   （I2 裁决）——异 actor 重放同键不得命中他人合同；存量无组合键数据无需迁移。
-// - 读面 authz（批二 T1，spec 批二 §一）：GET /:id、/:id/context、/:id/measurements、
+// - 读面 authz（批二 T1，spec 批二 §一）：GET /、/:id、/:id/context、/:id/measurements、
 //   /:id/settlement——owner/verifier（authz 同源判权：合同字段→people active 校验）得
 //   readScope:'full' 全量；其他登录用户 200 但 readScope:'metadata' 脱去敏感内容
 //   （最小集：合同 measures[].definition、快照 content 整体、测量 evidenceRefs、结算
-//   rationale/gapNote——快照物化文本与 C1 保护面对齐）；功能门/404 语义不变。
+//   rationale/gapNote——快照物化文本与 C1 保护面对齐）；列表面 readScope 行级（混合
+//   归属）；功能门/404 语义不变。
 // - 归属证明（spec §4.6）：opts.verifyRootTask 注入面返回 null（不可证明）默认
 //   422 ownership_unavailable，env OUTCOME_ALLOW_UNVERIFIED_ROOT=1 显式放行（批一
 //   试点/测试用，Task 10 接真实现后不再需要）；{ok:false}=可证明且不归属，永不放行。
@@ -256,8 +257,12 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     await next()
   })
 
-  // GET /：列表（query status/rootTaskId/owner 过滤）
+  // GET /：列表（query status/rootTaskId/owner 过滤）。读面 authz（批二 T1 补）：行级
+  // readScope——owner/verifier 行全量；他人行 metadata（contractMetadata 与 GET /:id
+  // 同源，脱 measures[].definition）。列表可混合归属（一屏多合同），故 readScope 落
+  // 在行上而非响应级；过滤语义（status/rootTaskId/owner）不变——脱敏不改可见行集。
   router.get('/', async (ctx) => {
+    const actor = actorOf(ctx)
     const status = ctx.query.status
     if (status !== undefined && !(OUTCOME_STATUSES as readonly string[]).includes(String(status))) {
       fail(ctx, 422, `status 过滤值非法（须为 ${OUTCOME_STATUSES.join('|')} 之一）`, {
@@ -268,7 +273,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     }
     const rootTaskId = ctx.query.rootTaskId !== undefined ? String(ctx.query.rootTaskId) : null
     const owner = ctx.query.owner !== undefined ? String(ctx.query.owner) : null
-    const items: OutcomeContract[] = []
+    const items: Array<Record<string, unknown>> = []
     try {
       const ids = readdirSync(outcomeStoreRoot(), { withFileTypes: true })
         .filter((d) => d.isDirectory())
@@ -280,7 +285,10 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         if (status !== undefined && c.status !== String(status)) continue
         if (rootTaskId !== null && c.rootTaskId !== rootTaskId) continue
         if (owner !== null && c.ownerPersonId !== owner) continue
-        items.push(c)
+        const scope = readScopeOf(c, actor)
+        items.push(
+          scope === 'full' ? { ...c, readScope: scope } : { ...contractMetadata(c), readScope: scope },
+        )
       }
     } catch {
       /* 存储根不存在=空列表（fail-soft 读侧） */
