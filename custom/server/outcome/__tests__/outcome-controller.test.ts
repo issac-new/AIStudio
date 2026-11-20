@@ -1396,6 +1396,42 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(storeMod.getTeam(id)?.version).toBe(1)
       expect(storeMod.listEvents(id, 'team_confirmed')).toHaveLength(1)
     })
+
+    // T2 审查 I-1：幂等判定的「内容相等」是数组序敏感（canonicalJson 保序）——
+    // 同集合不同顺序不判重放、按乐观并发 409。此为有意收紧：换序≠重放，语义必须钉死。
+    it('幂等顺序敏感：同成员集合不同顺序 → 409 version_conflict（非重放），T2 审查 I-1', async () => {
+      const id = await seedContract('active')
+      const first = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(first.status).toBe(200)
+      const reordered = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, {
+        members: [
+          { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '独立复核' },
+          { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '对结果指标负责' },
+        ],
+      }))
+      expect(reordered.status).toBe(409)
+      expect(reordered.body.code).toBe('version_conflict')
+      expect(reordered.body.replayed).not.toBe(true)
+      expect(storeMod.getTeam(id)?.version).toBe(1)
+      expect(storeMod.listEvents(id, 'team_confirmed')).toHaveLength(1)
+    })
+
+    // T2 审查 I-2：幂等窗口=恰一版回退——跨多版重放（expectedVersion 早于当前−1）必须 409，
+    // 乐观并发不因幂等放宽。
+    it('跨多版重放：v2 落地后重放 v1 原始输入 → 409 version_conflict，T2 审查 I-2', async () => {
+      const id = await seedContract('active')
+      const v1 = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(v1.status).toBe(200)
+      const v2 = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(1, { changeReason: '第二版换防' }))
+      expect(v2.status).toBe(200)
+      expect((v2.body.team as { version: number }).version).toBe(2)
+      // 重放 v1 原始输入：expectedVersion=0 已早于当前−1=1 → 409，不得按幂等放行
+      const staleReplay = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(staleReplay.status).toBe(409)
+      expect(staleReplay.body.code).toBe('version_conflict')
+      expect(storeMod.getTeam(id)?.version).toBe(2)
+      expect(storeMod.listEvents(id, 'team_confirmed')).toHaveLength(2)
+    })
   })
 
   describe('批三 T2：GET /:id team 面', () => {
