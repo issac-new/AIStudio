@@ -152,6 +152,15 @@ export const governanceMessages = {
         rsiEvolvableYes: '可进化',
         rsiEvolvablePartial: '部分',
         rsiEvolvableNo: '不可',
+        // RSI 生命周期审计（2026-11-20 综述吸收轮 A）
+        rsiLcTitle: 'RSI 生命周期审计',
+        rsiLcSub: '五条更新环路 × 七阶段（Collect→…→Consolidate）；NR＝未实现该阶段操作，不等于无最终评估',
+        rsiLcRefresh: '刷新',
+        rsiLcLoading: '加载中…',
+        rsiLcLoadFailed: '加载失败',
+        rsiLcImplemented: '已实现',
+        rsiLcPartial: '部分',
+        rsiLcGaps: '缺口行（部分/NR 定性）',
         // B4 原语对账
         primitivesTitle: '八工程原语对账',
         primitivesSub: '任务/会话/状态/工具/记忆/权限/评估/审计 × 唯一标识/版本/生命周期/审计追溯——从代码现实归纳',
@@ -766,6 +775,15 @@ export const governanceMessages = {
         rsiEvolvableYes: 'Evolvable',
         rsiEvolvablePartial: 'Partial',
         rsiEvolvableNo: 'No',
+        // RSI lifecycle audit (2026-11-20 survey absorption batch A)
+        rsiLcTitle: 'RSI Lifecycle Audit',
+        rsiLcSub: 'five update loops × seven stages (Collect→…→Consolidate); NR = no operation reported for that stage, not absence of final evaluation',
+        rsiLcRefresh: 'Refresh',
+        rsiLcLoading: 'Loading…',
+        rsiLcLoadFailed: 'Load failed',
+        rsiLcImplemented: 'Implemented',
+        rsiLcPartial: 'Partial',
+        rsiLcGaps: 'Gap lines (partial/NR qualified)',
         // B4 primitives
         primitivesTitle: 'Eight Engineering Primitives',
         primitivesSub: 'task/session/state/tool/memory/permission/evaluation/audit × identity/version/lifecycle/audit — grounded in actual code',

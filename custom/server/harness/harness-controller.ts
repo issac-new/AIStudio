@@ -27,6 +27,7 @@ import { assessMaturity, collectMaturityInputs, type MaturityReport } from './ma
 import { buildPrimitivesReport, collectPrimitiveCounts, type PrimitivesReport } from './primitives'
 import { buildEvalLayers, collectEvalLayersInputs, type EvalLayersReport } from './eval-layers'
 import { collectRsiMaturity, type RsiMaturityReport } from './rsi-maturity'
+import { buildRsiLifecycleReport, type RsiLifecycleReport } from './rsi-lifecycle'
 import { queryToolExecAudit } from '../toolpipeline/tool-hooks'
 import { executionJoin } from './execution-join'
 import { taskModelRoutes } from '../taskmodel/taskmodel-controller'
@@ -170,6 +171,13 @@ router.get('/rsi-maturity', async (ctx) => {
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
+})
+
+// RSI 生命周期审计（2026-11-20 综述吸收轮 A）：五条更新环路 × 七阶段矩阵，
+// 缺口行定性真缺口/论文允许省略/另批在途。与 /rsi-maturity 分工：分级 vs 缺段。
+router.get('/rsi-lifecycle', (ctx) => {
+  const report: RsiLifecycleReport = buildRsiLifecycleReport()
+  ctx.body = { ...report, ok: true }
 })
 
 // 工具契约目录（2026-10-18 Harness 可靠性轮）：按工具族声明副作用/超时/重试/

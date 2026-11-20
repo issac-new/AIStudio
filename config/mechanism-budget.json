@@ -255,6 +255,19 @@
    "pairedRemovals": [
     "docs-ssot-guard.test.ts 削 3 个纯文本断言测试（守卫面迁 --check 生成校验，测试套件只留解析器行为与结构完整性）"
    ]
+  },
+  {
+   "at": "2026-11-20",
+   "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（rsi-lifecycle 只读审计端点＋面板节，不入四类别）",
+   "reason": "RSI 生命周期综述吸收轮（spec 2026-11-20-rsi-lifecycle-absorption）：五环路×七阶段审计器（custom/server/harness/rsi-lifecycle.ts＋GET /api/harness/rsi-lifecycle＋RsiLifecycleSection 面板节）、晋级报告证据角色披露字段（workbench evidenceRoles，只披露不加门码）、skillgov 失败三分归因纯函数（POST /api/skillgov/failure-attribution）。零新增门/钩子/脚本/账本；遵守 2026-11-01 机制扩展停止裁定",
+   "pairedRemovals": [
+    "B 的披露并入既有晋级报告（PromotionGateReport 可选字段）不加新门；C 并入既有 skillgov 域不加新服务——零类别增量，无独立退役动作"
+   ],
+   "sunset": {
+    "owner": "RSI 生命周期吸收轮（2026-11-20-rsi-lifecycle-absorption）",
+    "reviewBy": "2027-02-20",
+    "retireWhen": "矩阵连续两轮全绿（无 nr/partial 新增）且五环路结构稳定时，降级并入 rsi-maturity 或 spec 附录"
+   }
   }
  ],
  "sunset": [

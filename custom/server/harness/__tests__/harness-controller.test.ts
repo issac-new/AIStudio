@@ -92,6 +92,18 @@ const post = async (path: string, body: unknown): Promise<{ status: number; body
 }
 
 describe('四子路由 HTTP 投影', () => {
+  it('GET /api/harness/rsi-lifecycle：200 + 五环路×七阶段矩阵 + 汇总一致（2026-11-20 综述吸收轮 A）', async () => {
+    const { status, body } = await get('/api/harness/rsi-lifecycle')
+    expect(status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.loops).toHaveLength(5)
+    for (const lp of body.loops) expect(lp.cells).toHaveLength(7)
+    expect(body.summary.total).toBe(35)
+    expect(body.summary.implemented + body.summary.partial + body.summary.nr).toBe(35)
+    expect(body.gapLines.length).toBe(body.summary.partial + body.summary.nr)
+    expect(body.meta.criteria).toContain('NR')
+  })
+
   it('GET /api/harness/capability-catalog：200 + entries/gapSummary/meta；source 过滤生效', async () => {
     const { status, body } = await get('/api/harness/capability-catalog')
     expect(status).toBe(200)
