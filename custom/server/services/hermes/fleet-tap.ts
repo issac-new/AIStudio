@@ -74,6 +74,11 @@ export function extractPendingInteractions(
         approval_id: id,
         preview: String(data.preview || data.tool || data.name || data.summary || '').trim(),
         choices: rawChoices.length ? rawChoices : ['once', 'session', 'deny'],
+        // 批一 Task 12 复审 I-2：gateway 条目 data 的 outcome 绑定字段原样透传
+        // （806 补丁把 outcome_ref/dual_sign_required 放进审批条目 data）——
+        // 收件箱 decide 侧据此走合同门＋owner/verifier 双签门，防单签绕版本门。
+        ...(data.outcome_ref !== undefined ? { outcome_ref: data.outcome_ref } : {}),
+        ...(data.dual_sign_required !== undefined ? { dual_sign_required: data.dual_sign_required } : {}),
       })
     } else if (event === 'approval.resolved') {
       approvals.delete(String(data.approval_id || ''))

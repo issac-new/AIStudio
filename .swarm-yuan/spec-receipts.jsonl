@@ -424,9 +424,11 @@
 {"at":"2026-11-19T06:12:19Z","spec":"docs/superpowers/specs/2026-11-19-tech-skin-closeout.md","receipt":"75f7b5350d5c96ab1c9cf727fc6c447dcb1c540d","commit":"be0423915"}
 {"at":"2026-11-19T06:59:23Z","spec":"docs/superpowers/specs/2026-11-19-kanban-process-baseline.md","receipt":"943236a004ba0859e34c55578b858f9ea3fe46f8","commit":"ea62365d8"}
 {"at":"2026-11-19T07:53:33Z","spec":"docs/superpowers/specs/2026-11-19-process-decoupling-batch2.md","receipt":"1e502254b1bd0c15a69dc11752dac81047d7aede","commit":"eec6dedf3"}
+{"at":"2026-11-19T11:40:26Z","spec":"docs/superpowers/specs/2026-11-19-ai-native-operating-model-design.md","receipt":"a1d17ce8d22427e32dc035b5b7123d860317cbc2","commit":"4da6f3a6e"}
 {"at":"2026-11-19T12:47:28Z","spec":"docs/superpowers/specs/2026-11-19-capability-pool-foundation.md","receipt":"f36817cd4d89bf761065ec8212574e1d52b4a708","commit":"880090f0b"}
+{"at":"2026-11-19T13:01:10Z","spec":"docs/superpowers/specs/2026-11-19-ai-native-operating-model-design.md","receipt":"f743100e12b8a3261ba0664240655f28bb247f8a","commit":"03241e50e"}
 {"at":"2026-11-19T13:21:05Z","spec":"docs/superpowers/specs/2026-11-19-capability-pool-foundation.md","receipt":"46cdfe2a7fd24d28426097933c1625f4c4eac2d7","commit":"9059f9e87"}
-{"at":"2026-11-19T13:33:05Z","spec":"docs/superpowers/specs/2026-11-19-delivery-truth-acceptance.md","receipt":"0d292f7ddc5f9d5f18bf094074ff1fda5bf171f5","commit":"880090f0b"}
+{"at":"2026-11-19T13:33:05Z","spec":"docs/superpowers/specs/2026-11-19-delivery-truth-acceptance.md","receipt":"0d292f7ddc5d9d5f18bf094074ff1fda5bf171f5","commit":"880090f0b"}
 {"at":"2026-11-19T13:33:16Z","spec":"docs/superpowers/specs/2026-11-19-delivery-truth-acceptance.md","receipt":"cc2a2c7d7bea8e136776c566a19e21c432f2e4c8","commit":"880090f0b"}
 {"at":"2026-11-19T13:33:33Z","spec":"docs/superpowers/specs/2026-11-19-delivery-truth-acceptance.md","receipt":"688b292c923f452f1c615e1c1fb15b725eea4ab8","commit":"880090f0b"}
 {"at":"2026-11-19T13:39:15Z","spec":"docs/superpowers/specs/2026-11-19-delivery-truth-acceptance.md","receipt":"7a9519ff67dfed75b1c66bce467e2993ccc282de","commit":"880090f0b"}
@@ -437,3 +439,4 @@
 {"at":"2026-11-19T14:38:21Z","spec":"docs/superpowers/specs/2026-11-19-doc-index-refresh.md","receipt":"4d7b99763a3bdae5c7631be134b649abbd3fa138","commit":"e76141297"}
 {"at":"2026-11-20T01:00:34Z","spec":"docs/superpowers/specs/2026-11-20-judge-anthropic-live-enable.md","receipt":"098ae0e7b55caeaa1277945b83135731d6d9f4b0","commit":"ab7a6aa7c"}
 {"at":"2026-11-20T01:12:26Z","spec":"docs/superpowers/specs/2026-11-20-deploy-import-smoke.md","receipt":"214934bb4da0e2b5851dcb6a1a581031a163301e","commit":"ca5beae9e"}
+{"at":"2026-11-20T02:05:00Z","spec":"docs/superpowers/specs/2026-11-19-ai-native-operating-model-design.md","receipt":"3194bacc31b8a21bb28ba05aef5d2185d52a698a","commit":"5d3974e36"}

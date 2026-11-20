@@ -31,6 +31,7 @@ import { registerEntry } from '../taskledger/taskledger-store'
 import { assessDispatchReadiness, enforceOrWarnReadiness, fetchTaskTitleAndBodyByTaskId, type DispatchReadinessFinding } from './dispatch-readiness'
 import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
 import type { CapabilityReadiness } from '../capabilitypool/types'
+import { resolveDispatchOutcome, type DispatchOutcomeContext } from '../outcome/kanban-resolution'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -66,6 +67,11 @@ export interface ColumnDispatchResult {
   /** 能力准入读数（批二点五）：任务 `skills` 声明与供给/assignee 的对照；
    *  null=任务无能力声明或快照缺席；默认只 warn，不阻断派发。 */
   capabilityReadiness: CapabilityReadiness | null
+  /** 结果合同解析门（批一 Task 10，spec §3.3.2）：taskId 反查 outcome——终态合同
+   *  （cancelled/settled）在任何 step 派发前抛 OutcomeDispatchError（REST 422
+   *  outcome_not_active）；活跃合同生成最小快照（关键源失败 422
+   *  outcome_context_unavailable）并幂等补绑定；无合同任务无此字段（原行为）。 */
+  outcome?: DispatchOutcomeContext
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -226,6 +232,17 @@ export async function dispatchColumnTransition(
   if (capabilityReadiness && capabilityReadiness.decision !== 'pass') {
     console.warn(`[column-dispatch] 能力准入 ${capabilityReadiness.decision}（warn，不阻断）：${capabilityReadiness.reasons.join('；')}`)
   }
+  // 结果合同解析门（批一 Task 10，spec §3.3.2）：任一 step 派发前按 taskId 反查
+  // outcome——终态合同拒派（OutcomeDispatchError→REST 422 outcome_not_active）、
+  // 活跃合同生成最小快照（关键源失败 422 outcome_context_unavailable）并幂等补
+  // 绑定；无合同 null 原行为（readiness 接线同款：门求值在前、语义在
+  // kanban-resolution 单一事实源）。守卫经 findByRootTask 兜底，「合同激活后未
+  // 绑定」窗口不失明。
+  // I1 门统一（审查修复轮二）：OUTCOME_WORKBENCH 统管全部执法面——flag≠1 时
+  // 跳过 outcome 解析、完全原行为，关 flag=等价回滚（设计 §批准前六问第 3 条
+  // 「功能开关灰度＋按批 revert」）；与 REST 面 404 同名同读（每派发动态读 env）。
+  const outcome =
+    params.taskId && process.env.OUTCOME_WORKBENCH === '1' ? resolveDispatchOutcome(params.taskId) : null
   const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // AI 五问准入（批二）：在任一 step 派发前求值；默认 warn，enforce 抛错。
@@ -333,7 +350,7 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness, capabilityReadiness }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness, capabilityReadiness, ...(outcome ? { outcome } : {}) }
 }
 
 

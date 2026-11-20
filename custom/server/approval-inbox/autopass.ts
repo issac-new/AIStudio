@@ -133,10 +133,17 @@ export function resolveSpotcheck(id: string, verdict: 'confirm' | 'veto', actor:
 
 // ── 自动放行执行（副作用；由 pending 聚合前调用，见 pending-controller）──
 
-/** autopass 候选判定（纯函数）：命令类 + low 档 + 过宽限期。 */
-export function isAutopassCandidate(item: { kind: string; risk?: ApprovalRiskTier; createdAt?: number }, now = Date.now()): boolean {
+/** autopass 候选判定（纯函数）：命令类 + low 档 + 过宽限期。
+ *  批一 Task 12：outcome 绑定条目（源记录带 outcome_ref）一律不吃自动放行——
+ *  合同治理面不随低风险抽检器放宽（T11「ask 不吃 unattended auto-approve」同则），
+ *  否则 stale 合同门与双签门可被 autopass 旁路。 */
+export function isAutopassCandidate(
+  item: { kind: string; risk?: ApprovalRiskTier; createdAt?: number; outcomeRef?: unknown },
+  now = Date.now(),
+): boolean {
   if (item.kind !== 'command') return false
   if (item.risk !== 'low') return false
+  if (item.outcomeRef) return false
   // createdAt<=0/缺失 视为未知（fleet 源 lastActiveAt=0 即"未知"）：宽限期从
   // 当下起算，杜绝陈旧/零值让新人列项首扫即被放行（先可见后放行失效）。
   const created = typeof item.createdAt === 'number' && item.createdAt > 0 ? item.createdAt : now

@@ -38,7 +38,12 @@ import { decideEnforceApprovalGuarded, listPendingEnforceApprovals } from '../to
 // overlay[orggov-dualsign]（2026-11-05 收口）：高风险批准双签真拦。
 // 只在「风险档可重算」的审批分支生效（enf:/fleet:）；其余分支判不了档位，不猜也不假装拦。
 import { decideDualSignGate } from '../autonomygov/dualsign'
-import { listDualSignSigners, recordDualSignGap, recordDualSignSigner } from '../autonomygov/store'
+import { listDualSignSigners, listOutcomeDualSign, recordDualSignGap, recordDualSignSigner, recordOutcomeDualSign } from '../autonomygov/store'
+// 批一 Task 12：outcome 绑定条目的合同门（stale 409）与 owner/verifier 双签门——
+// 签署人集合=合同字段（ownerPersonId/verificationOwnerId），不再仅 fleet:/enf: 风险档分支。
+import { getContract } from '../outcome/outcome-store'
+import { getPerson } from '../agentidentity/people'
+import type { OutcomeContract } from '../outcome/types'
 import { listHumanGatePending, humanGateRouter, decide as humanGateDecide } from './human-gate'
 import { atomicWriteJson } from '../lib/fs-store'
 import { fail, ok } from '../lib/http'
@@ -67,6 +72,35 @@ export interface PendingItem {
   /** 2026-10-04 影响面预览（Blast Radius）：高危命令裁决前列受影响目标；
    *  null/缺省 = 非破坏性模式或解析不适用（不假装零影响）。纯模式解析无 IO。 */
   impact?: CommandImpact | null
+  /** 批一 Task 12：条目源记录携带 outcome_ref（T11 agent 侧随 gateway/deferred 条目下发）
+   *  时的合同绑定上下文；缺省=无 outcome 绑定，行为与批一前一致。 */
+  outcomeRef?: OutcomeRef
+  /** high+one-way 格（decision-matrix evaluateOutcomeAction）标记：decide 走
+   *  owner+verifier 双签门（两笔不同 actor 顺序批准才 resolved）。 */
+  dualSignRequired?: boolean
+}
+
+/** outcome 绑定引用（vendor/hermes-agent/tools/approval.py outcome_ref 同形；
+ *  verificationOwnerId 为合同正身字段名——与 outcome/types.ts 逐字一致）。 */
+export interface OutcomeRef {
+  outcomeId: string
+  contractVersion: number
+  ownerPersonId?: string | null
+  verificationOwnerId?: string | null
+}
+
+/** 源记录携带的 outcome_ref 宽容解析：形状不对视同无绑定（不猜数）。 */
+function parseOutcomeRef(v: unknown): OutcomeRef | undefined {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined
+  const r = v as Record<string, unknown>
+  if (typeof r.outcomeId !== 'string' || !r.outcomeId.trim()) return undefined
+  if (typeof r.contractVersion !== 'number' || !Number.isInteger(r.contractVersion) || r.contractVersion < 1) return undefined
+  return {
+    outcomeId: r.outcomeId,
+    contractVersion: r.contractVersion,
+    ...(typeof r.ownerPersonId === 'string' && r.ownerPersonId ? { ownerPersonId: r.ownerPersonId } : {}),
+    ...(typeof r.verificationOwnerId === 'string' && r.verificationOwnerId ? { verificationOwnerId: r.verificationOwnerId } : {}),
+  }
 }
 
 function actorOf(ctx: { state?: { user?: { username?: string } } }): string {
@@ -85,6 +119,9 @@ interface FileQueueEntry {
   allowed_choices?: string[]
   timeout_seconds?: number
   enqueued_at?: number
+  /** 批一 Task 12：outcome-scoped 命令审批随条目下发（gateway data 经 worker 插件入队）。 */
+  outcome_ref?: unknown
+  dual_sign_required?: boolean
 }
 
 function approvalsDirs(): string[] {
@@ -123,6 +160,10 @@ interface DeferredRecord {
   created_at?: number
   expires_at?: number
   status?: string
+  /** 批一 Task 12（tools/deferred_calls.py record_deferred 同形）：outcome-scoped
+   *  守卫超时挂起携带合同引用与双签标记，收件箱据此识别需双签的待决条目。 */
+  outcome_ref?: unknown
+  dual_sign_required?: boolean
 }
 
 function readDeferredQueue(): PendingItem[] {
@@ -151,10 +192,21 @@ function readDeferredQueue(): PendingItem[] {
         createdAt: created,
         risk: classifyApprovalRisk({ kind: 'command', detail }),
         impact: analyzeCommandImpact(detail),
+        ...outcomeAnnotationOf(r),
       })
     }
   }
   return items
+}
+
+/** 批一 Task 12：源记录 outcome 绑定字段 → PendingItem 标注（形状不对=无绑定，不猜数）。 */
+function outcomeAnnotationOf(rec: { outcome_ref?: unknown; dual_sign_required?: boolean }): {
+  outcomeRef?: OutcomeRef
+  dualSignRequired?: boolean
+} {
+  const outcomeRef = parseOutcomeRef(rec.outcome_ref)
+  if (!outcomeRef) return {}
+  return { outcomeRef, ...(rec.dual_sign_required === true ? { dualSignRequired: true } : {}) }
 }
 
 /** 写延迟审批响应（无 digest 绑定——delayed 记录本身是事实源；先到先得由 watcher settle）。
@@ -193,6 +245,9 @@ interface MxRequestEntry {
   sessionId?: string
   profile?: string
   createdAt?: number
+  /** 批一 Task 12 复审 I-2：harness 入队时随带的 outcome 绑定（806 字段名），decide 同门。 */
+  outcome_ref?: unknown
+  dual_sign_required?: boolean
 }
 
 /** Matrix $event_id 含 $/: 等文件名不安全字符——响应文件名统一转义（harness ③b 同约定） */
@@ -239,14 +294,15 @@ function readMxApprovalChannel(): PendingItem[] {
         ...(entry.profile ? { profile: entry.profile } : {}),
         createdAt: entry.createdAt ?? 0,
         risk: classifyApprovalRisk({ kind: 'command', detail: entry.detail || '', title: entry.title || entry.eid }),
+        ...outcomeAnnotationOf(entry),
       })
     }
   }
   return out
 }
 
-/** mx 请求所在目录（decide 回写响应用）；找不到 = null。 */
-function mxRequestDirOf(eid: string): string | null {
+/** mx 请求条目定位（decide 回写响应与 Task 12 outcome 门共读）；找不到 = null。 */
+function findMxEntry(eid: string): { dir: string; entry: MxRequestEntry } | null {
   for (const dir of approvalsDirs()) {
     const queue = join(dir, 'mx-requests.jsonl')
     try {
@@ -254,7 +310,8 @@ function mxRequestDirOf(eid: string): string | null {
         const trimmed = line.trim()
         if (!trimmed) continue
         try {
-          if ((JSON.parse(trimmed) as MxRequestEntry).eid === eid) return dir
+          const entry = JSON.parse(trimmed) as MxRequestEntry
+          if (entry.eid === eid) return { dir, entry }
         } catch { continue }
       }
     } catch { continue }
@@ -311,6 +368,7 @@ function readOneQueue(dir: string): PendingItem[] {
       choices: (entry.allowed_choices && entry.allowed_choices.length ? entry.allowed_choices : ['once', 'session', 'deny']),
       createdAt: enqueued || now,
       impact: analyzeCommandImpact(entry.command || ''),
+      ...outcomeAnnotationOf(entry),
     })
   }
   return out
@@ -334,10 +392,61 @@ function writeFleetFileResponse(requestId: string, choice: string, actor: string
   } catch { /* 队列不可读 */ }
   if (!digest) return { ok: false }
   const respDir = join(dir, 'responses')
-  mkdirSync(respDir, { recursive: true })
   const file = join(respDir, `${requestId}.json`)
+  // 批一 Task 12 复审 I-1：已答幂等拒绝（先到先得，writeDeferredResponse 先例）——
+  // 防双签流程中 deny 后补签覆盖翻盘、resolved 后单方改写 session/always。
+  if (existsSync(file)) return { ok: false }
+  mkdirSync(respDir, { recursive: true })
   atomicWriteJson(file, { request_id: requestId, digest, choice, decided_at: Date.now(), actor })
   return { ok: true }
+}
+
+/** 按 request_id 找文件队列条目（Task 12 decide 门读 outcome 绑定用）；找不到 = null。 */
+function findQueueEntry(requestId: string): FileQueueEntry | null {
+  for (const dir of approvalsDirs()) {
+    try {
+      for (const line of readFileSync(join(dir, 'queue.jsonl'), 'utf8').split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        try {
+          const entry = JSON.parse(trimmed) as FileQueueEntry
+          if (entry.request_id === requestId) return entry
+        } catch { continue }
+      }
+    } catch { continue }
+  }
+  return null
+}
+
+/** 按 deferred id 找 pending 延迟记录（Task 12 decide 门读 outcome 绑定用）；找不到 = null。 */
+function findDeferredRecord(deferredId: string): DeferredRecord | null {
+  for (const dir of approvalsDirs()) {
+    const file = join(dir, 'deferred.json')
+    if (!existsSync(file)) continue
+    try {
+      const rows = JSON.parse(readFileSync(file, 'utf8')) as DeferredRecord[]
+      if (!Array.isArray(rows)) continue
+      const rec = rows.find((r) => r && r.id === deferredId && r.status === 'pending')
+      if (rec) return rec
+    } catch { continue }
+  }
+  return null
+}
+
+/** deferred 记录的响应文件是否已在（已答判定；复审 I-1 先于双签门检查，
+ *  防已决条目仍报「待第二签」）。 */
+function deferredResponseExists(deferredId: string): boolean {
+  for (const dir of approvalsDirs()) {
+    const file = join(dir, 'deferred.json')
+    if (!existsSync(file)) continue
+    try {
+      const rows = JSON.parse(readFileSync(file, 'utf8')) as DeferredRecord[]
+      if (!Array.isArray(rows)) continue
+      const rec = rows.find((r) => r && r.id === deferredId)
+      if (rec && rec.request_id && existsSync(join(dir, 'responses', `${rec.request_id}.json`))) return true
+    } catch { continue }
+  }
+  return false
 }
 
 /** 待审聚合三源合并（不排序；供 pending 路由与自动放行扫描共用）。 */
@@ -386,6 +495,8 @@ function collectPendingItems(): PendingItem[] {
           createdAt: session.lastActiveAt || 0,
           risk: classifyApprovalRisk({ kind: 'command', detail: approval.preview || '', title: session.title }),
           impact: analyzeCommandImpact(approval.preview || ''),
+          // 批一 Task 12 复审 I-2：fleet tap 透传的 outcome 绑定同标注（含 autopass 拒绝面）
+          ...outcomeAnnotationOf(approval),
         })
       }
     }
@@ -546,6 +657,141 @@ function enforceDualSign(
   return true
 }
 
+// ── 批一 Task 12：outcome 绑定条目的裁决门（合同门 + owner/verifier 双签门）──
+// 适用面：条目源记录携带 outcome_ref 的收件箱条目（deferredfile:/fleetfile:——T11
+// gateway pending 与 deferred.json 下发面）。无绑定条目不经本门，行为回归不变。
+
+/** actor（服务端身份 username）→ 合同签署角色映射：people.emails 含 actor（大小写
+ *  不敏感）或本地同名（person.name===actor）；owner 先于 verifier。映射失败=null——
+ *  该 actor 无权签该条目（不猜：名册缺席/身份对不上都如实拒）。 */
+function actorOutcomeRole(actor: string, contract: OutcomeContract): 'owner' | 'verifier' | null {
+  const name = actor.trim()
+  if (!name) return null
+  const lower = name.toLowerCase()
+  const seats: Array<[string | undefined, 'owner' | 'verifier']> = [
+    [contract.ownerPersonId, 'owner'],
+    [contract.verificationOwnerId, 'verifier'],
+  ]
+  for (const [personId, role] of seats) {
+    if (!personId) continue
+    let person: { name: string; emails: string[]; active: boolean } | null = null
+    try { person = getPerson(personId) } catch { person = null }
+    if (!person) continue
+    // 复审 M-3：停用名册成员无签署权（activePersonIds 先例——责任座只在 active 名册上）
+    if (person.active !== true) continue
+    if (person.emails.some((e) => typeof e === 'string' && e.toLowerCase() === lower) || person.name === name) {
+      return role
+    }
+  }
+  return null
+}
+
+/**
+ * outcome 绑定裁决门：contractVersion 与当前合同不符 → 409 `stale_contract`；
+ * dual_sign_required → owner 与 verifier 两笔不同 actor 顺序批准——第一签（任意一角色）
+ * 落签署账后仍 pending（409 `dual-sign-required`），第二签须另一角色且不同 actor 才
+ * 放行（同人两票/单签不生效；映射失败 403 `not_outcome_signer`）。否决类决策不设
+ * 双签（收紧方向不加门槛）；合同不可读 409 `outcome_unavailable`（fail-closed 不猜）。
+ *
+ * 返回 false 时已写好 4xx 响应；返回 true 时放行既有 decide 流程（响应照写、历史
+ * 落账由调用方带 outcome 引用）。
+ */
+function enforceOutcomeBinding(
+  ctx: Context,
+  opts: {
+    itemId: string
+    actor: string
+    decision: string
+    outcomeRef: OutcomeRef
+    dualSignRequired: boolean
+  },
+): boolean {
+  const { itemId, actor, decision, outcomeRef, dualSignRequired } = opts
+  const contract = getContract(outcomeRef.outcomeId)
+  if (!contract) {
+    fail(ctx, 409, `outcome 合同 ${outcomeRef.outcomeId} 不可读（不存在或坏档已隔离），拒绝裁决`, {
+      code: 'outcome_unavailable',
+      extra: { outcomeId: outcomeRef.outcomeId },
+    })
+    return false
+  }
+  if (contract.version !== outcomeRef.contractVersion) {
+    fail(ctx, 409,
+      `合同版本已更新（条目绑定 v${outcomeRef.contractVersion} ≠ 当前 v${contract.version}），拒绝旧版本裁决`,
+      {
+        code: 'stale_contract',
+        extra: {
+          outcomeId: outcomeRef.outcomeId,
+          itemContractVersion: outcomeRef.contractVersion,
+          currentContractVersion: contract.version,
+        },
+      })
+    return false
+  }
+  // 否决类不设双签（与 enforceDualSign 同取舍）；非双签格（矩阵 high+one-way 以外）单签即决
+  if (!dualSignRequired || decision === 'deny' || decision === 'reject') return true
+
+  const role = actorOutcomeRole(actor, contract)
+  if (!role) {
+    fail(ctx, 403,
+      `签署人 ${actor} 无法映射到合同 ${outcomeRef.outcomeId} 的 owner（${contract.ownerPersonId}）/verifier（${contract.verificationOwnerId}），无权签署该条目`,
+      { code: 'not_outcome_signer', extra: { outcomeId: outcomeRef.outcomeId } })
+    return false
+  }
+  // 复审 M-2：签署台账按当前合同版本过滤——合同升级后旧版本签署不凑对（双签
+  // 须两笔都核验过当前版本；旧签残留只作历史，不参与判定）。
+  const prior = listOutcomeDualSign(itemId).filter((p) => p.contractVersion === contract.version)
+  const byRole = (r: 'owner' | 'verifier') => prior.find((p) => p.role === r) ?? null
+  const mine = byRole(role)
+  const other: 'owner' | 'verifier' = role === 'owner' ? 'verifier' : 'owner'
+  const otherRec = byRole(other)
+  const rolesNow: Record<string, string | null> = {
+    owner: byRole('owner')?.actor ?? (role === 'owner' ? actor : null),
+    verifier: byRole('verifier')?.actor ?? (role === 'verifier' ? actor : null),
+  }
+  if (mine && otherRec) {
+    // 双角色已齐（常态在第二签即放行；防台账残留双写重复放行）
+    return true
+  }
+  if (otherRec) {
+    // 第二签：另一角色已签——同人两票不生效（actor 跨角色映射的退化名册同样拒）
+    if (otherRec.actor === actor) {
+      fail(ctx, 409, `双签须两笔不同 actor：${actor} 已以 ${other} 角色签署，不得再签 ${role}`, {
+        code: 'dual-sign-required',
+        extra: { outcomeId: outcomeRef.outcomeId, signers: prior.map((p) => p.actor), roles: rolesNow },
+      })
+      return false
+    }
+    recordOutcomeDualSign(itemId, { role, actor, at: Date.now(), contractVersion: contract.version })
+    return true
+  }
+  if (mine) {
+    // 该角色已签（同人重复或同角色另一映射人）：仍 pending，等另一角色
+    fail(ctx, 409, `${role} 角色已由 ${mine.actor} 签署，双签仍缺 ${other}——单签/同人两票不生效`, {
+      code: 'dual-sign-required',
+      extra: {
+        outcomeId: outcomeRef.outcomeId,
+        signers: prior.map((p) => p.actor),
+        roles: rolesNow,
+        scope: 'outcome high+one-way 双签：owner 与 verifier 两笔不同 actor 顺序批准',
+      },
+    })
+    return false
+  }
+  // 第一签（该角色未签）：落签署账后仍 pending——不写响应文件，条目留收件箱待第二签
+  recordOutcomeDualSign(itemId, { role, actor, at: Date.now(), contractVersion: contract.version })
+  fail(ctx, 409, `双签第一签已记录（${role}=${actor}），待 ${other} 角色第二签后条目才生效`, {
+    code: 'dual-sign-required',
+    extra: {
+      outcomeId: outcomeRef.outcomeId,
+      signers: [...prior.map((p) => p.actor), actor],
+      roles: rolesNow,
+      scope: 'outcome high+one-way 双签：owner 与 verifier 两笔不同 actor 顺序批准',
+    },
+  })
+  return false
+}
+
 router.post('/:id/decide', async (ctx) => {
   const body = ((ctx.request as { body?: unknown }).body ?? {}) as { decision?: unknown; note?: unknown; title?: unknown; waiver?: unknown }
   const decision = String(body.decision ?? '')
@@ -598,14 +844,26 @@ router.post('/:id/decide', async (ctx) => {
     const approvalId = rest.slice(sep + 1)
     // V4-N1：裁决前服务端重算风险档入台账（不信客户端自报档位）
     let risk: ApprovalRiskTier | undefined
+    let fleetOutcomeRef: OutcomeRef | undefined
+    let fleetDualSign = false
     try {
       const sessions = buildFleetSnapshotFromTap()
       const sess = sessions?.find((s) => s.id === sessionId)
       const appr = sess?.approvals?.find((a) => a.approval_id === approvalId)
-      if (appr) risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
+      if (appr) {
+        risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
+        fleetOutcomeRef = parseOutcomeRef(appr.outcome_ref)
+        fleetDualSign = appr.dual_sign_required === true
+      }
     } catch { /* 快照不可用则档位留空，不阻断裁决 */ }
-    // 2026-11-05 双签闸：风险档已在上面服务端重算，高风险批准须双签（不影响 deny）。
-    if (!enforceDualSign(ctx, {
+    // 批一 Task 12 复审 I-2：outcome 绑定条目（tap 透传 outcome_ref）以合同门为权威
+    // ——角色绑定双签强于风险档双签，绑定条目不再叠 risk-tier 闸（防双闸复合把双签
+    // 拖成三请求）；未绑定条目照旧走风险档闸。
+    if (fleetOutcomeRef) {
+      if (!enforceOutcomeBinding(ctx, {
+        itemId: id, actor, decision, outcomeRef: fleetOutcomeRef, dualSignRequired: fleetDualSign,
+      })) return
+    } else if (!enforceDualSign(ctx, {
       targetId: id, risk, decision, waiver: (body as { waiver?: unknown }).waiver,
     })) return
 
@@ -618,6 +876,7 @@ router.post('/:id/decide', async (ctx) => {
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: approvalId,
       targetTitle: `${sessionId} · ${approvalId}`, decision, note, risk,
+      ...(fleetOutcomeRef ? { outcomeRef: { outcomeId: fleetOutcomeRef.outcomeId, contractVersion: fleetOutcomeRef.contractVersion } } : {}),
     })
     ctx.body = { ok: true, entry }
     return
@@ -636,24 +895,32 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: '该审批已经 Matrix 反应通道裁决（approved.events 在案），一次定音' }
       return
     }
-    const dir = mxRequestDirOf(eid)
-    if (!dir) {
+    const found = findMxEntry(eid)
+    if (!found) {
       ctx.status = 404
       ctx.body = { ok: false, detail: '审批请求不在 mx 通道（已裁决或不存在）' }
       return
     }
     // 幂等闸②：本通道已批（响应文件在）
-    const respFile = join(dir, 'mx-responses', `${mxSafeEid(eid)}.json`)
+    const respFile = join(found.dir, 'mx-responses', `${mxSafeEid(eid)}.json`)
     if (existsSync(respFile)) {
       ctx.status = 409
       ctx.body = { ok: false, detail: '该审批已经收件箱裁决（响应文件在案），一次定音' }
       return
     }
-    mkdirSync(join(dir, 'mx-responses'), { recursive: true })
-  atomicWriteJson(respFile, { request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' })
+    // 批一 Task 12 复审 I-2：outcome 绑定条目走同一合同门＋owner/verifier 双签门
+    // （第一签仍 pending 不写响应；单签不得绕版本门）。
+    const mxOutcomeRef = parseOutcomeRef(found.entry.outcome_ref)
+    if (mxOutcomeRef && !enforceOutcomeBinding(ctx, {
+      itemId: id, actor, decision, outcomeRef: mxOutcomeRef,
+      dualSignRequired: found.entry.dual_sign_required === true,
+    })) return
+    mkdirSync(join(found.dir, 'mx-responses'), { recursive: true })
+    atomicWriteJson(respFile, { request_id: eid, decision, decided_at: Date.now(), actor, channel: 'inbox' })
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: eid,
       targetTitle: note || eid, decision, note,
+      ...(mxOutcomeRef ? { outcomeRef: { outcomeId: mxOutcomeRef.outcomeId, contractVersion: mxOutcomeRef.contractVersion } } : {}),
     })
     ctx.body = { ok: true, entry }
     return
@@ -666,6 +933,20 @@ router.post('/:id/decide', async (ctx) => {
       fail(ctx, 400, 'deferredfile 决策须为 once|deny')
       return
     }
+    // 批一 Task 12：outcome 绑定条目先过合同门（stale 409）＋owner/verifier 双签门
+    // （第一签落账仍 pending，不写响应文件；无绑定条目不经本门，行为回归不变）。
+    // 复审 I-1：已答条目（响应文件在）先到先得——先于双签门报「已裁决」，
+    // 防已决条目仍报「待第二签」误导（deny 即决后补签不得翻盘）。
+    if (deferredResponseExists(deferredId)) {
+      fail(ctx, 404, '延迟审批已裁决（响应文件在案，先到先得），不得覆盖')
+      return
+    }
+    const dRec = findDeferredRecord(deferredId)
+    const dOutcomeRef = parseOutcomeRef(dRec?.outcome_ref)
+    if (dOutcomeRef && !enforceOutcomeBinding(ctx, {
+      itemId: id, actor, decision: choice, outcomeRef: dOutcomeRef,
+      dualSignRequired: dRec?.dual_sign_required === true,
+    })) return
     if (!writeDeferredResponse(deferredId, choice, actor)) {
       fail(ctx, 404, '延迟审批不在账本（已裁决/已过期/不存在）')
       return
@@ -673,6 +954,7 @@ router.post('/:id/decide', async (ctx) => {
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: deferredId,
       targetTitle: note || deferredId, decision: choice, note,
+      ...(dOutcomeRef ? { outcomeRef: { outcomeId: dOutcomeRef.outcomeId, contractVersion: dOutcomeRef.contractVersion } } : {}),
     })
     ok(ctx, { entry })
     return
@@ -685,7 +967,22 @@ router.post('/:id/decide', async (ctx) => {
       ctx.body = { ok: false, detail: 'fleetfile 决策须为 once|session|always|deny' }
       return
     }
-    // 响应文件带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）
+    // 批一 Task 12：outcome 绑定条目走同一门（gateway data 经 worker 插件入队携带 outcome_ref）。
+    // 复审 I-1：已答条目（响应文件在）先到先得——先于双签门报「已裁决」，防翻盘窗。
+    const qDir = queueDirOfRequest(requestId)
+    if (qDir && existsSync(join(qDir, 'responses', `${requestId}.json`))) {
+      ctx.status = 404
+      ctx.body = { ok: false, detail: '该审批已裁决（响应文件在案，先到先得），不得覆盖' }
+      return
+    }
+    const qEntry = findQueueEntry(requestId)
+    const qOutcomeRef = parseOutcomeRef(qEntry?.outcome_ref)
+    if (qOutcomeRef && !enforceOutcomeBinding(ctx, {
+      itemId: id, actor, decision, outcomeRef: qOutcomeRef,
+      dualSignRequired: qEntry?.dual_sign_required === true,
+    })) return
+    // 响应文件带 digest 绑定（worker 侧校验 request_id+digest，宿主再校验一次）；
+    // writeFleetFileResponse 内另有已答幂等拒绝（并发双写兜底）。
     if (!writeFleetFileResponse(requestId, decision, actor).ok) {
       ctx.status = 404
       ctx.body = { ok: false, detail: '审批请求不在队列（已超时或不存在）' }
@@ -694,6 +991,7 @@ router.post('/:id/decide', async (ctx) => {
     const entry = await appendApprovalLog({
       id, actor, targetKind: 'command', targetId: requestId,
       targetTitle: note || requestId, decision, note,
+      ...(qOutcomeRef ? { outcomeRef: { outcomeId: qOutcomeRef.outcomeId, contractVersion: qOutcomeRef.contractVersion } } : {}),
     })
     ctx.body = { ok: true, entry }
     return

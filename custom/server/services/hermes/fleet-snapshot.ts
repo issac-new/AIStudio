@@ -12,6 +12,10 @@ export interface FleetApprovalPreview {
   approval_id: string
   preview: string
   choices: string[]
+  /** 批一 Task 12（复审 I-2）：gateway 审批条目 data 经 approval.requested 事件透传的
+   *  outcome 绑定引用与双签标记（806 补丁 L573-577 下发面）；缺省=非 outcome 绑定。 */
+  outcome_ref?: unknown
+  dual_sign_required?: boolean
 }
 
 export interface FleetClarifyPreview {

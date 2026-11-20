@@ -1,0 +1,774 @@
+diff --git a/tools/outcome_policy.py b/tools/outcome_policy.py
+new file mode 100644
+--- /dev/null
++++ b/tools/outcome_policy.py
+@@ -0,0 +1,356 @@
++"""Outcome 合同策略面（批一 Task 11，spec 2026-11-19-ai-native-operating-model §4.3）。
++
++Hermes 审批守卫的 outcome 接线单一事实源：``tools/approval.py`` 在既有 floors 与
++yolo 判定之间调用 ``outcome_context``/``evaluate``，非 outcome-scoped 会话（任一环
++缺席）由调用方走既有行为。
++
++- ``outcome_context()``：网关注入的 env（HERMES_KANBAN_TASK/HERMES_KANBAN_DB，
++  gateway/session_kanban.bind_worker_context）→ 只读查板库 ``tasks.outcome_id``
++  （补丁 805）→ 读 ``~/.hermes-web-ui/outcome/<id>/contract.json``（照 TS 侧
++  custom/server/outcome/outcome-store.ts 的 underWebUi 根与目录布局；
++  HERMES_OUTCOME_STORE env 覆盖同 TS 侧 OUTCOME_STORE 语义）。任一环缺席→
++  None=非 outcome-scoped（fail-soft 不猜数）。
++- ``classify_profile``/``combine_declared``/``decide``/``evaluate``：三维画像与授权
++  矩阵，判据与 TS 侧 custom/server/outcome/decision-matrix.ts 逐字对齐（正则翻译），
++  由 runtime/tests/tools/test_outcome_policy.py 与 TS 侧
++  __tests__/decision-matrix.test.ts 在同一份 decision-vectors.json 上双侧锁定。
++
++词表立法（向量文件头注）：高危词表与 one-way/对外词表刻意分开维护（HIGH 含「部署」
++而 one-way 表不含，改一处不得静默影响另一处）——两侧翻译必须保持同型分表。
++"""
++from __future__ import annotations
++
++import json
++import logging
++import os
++import re
++import sqlite3
++from pathlib import Path
++
++logger = logging.getLogger(__name__)
++
++# ---------- 词表（与 TS decision-matrix.ts 逐字对齐；见文件头注） ----------
++
++# 高危：不可逆或对外可见的命令模式（HIGH_COMMAND）。
++_HIGH_COMMAND = [
++    re.compile(r"\bgit\s+push\b", re.IGNORECASE),
++    re.compile(r"\bgit\s+reset\s+--hard\b", re.IGNORECASE),
++    re.compile(r"\bgit\s+clean\s+-[a-z]*f", re.IGNORECASE),
++    re.compile(r"\brm\s+", re.IGNORECASE),
++    re.compile(r"\brmdir\s+", re.IGNORECASE),
++    re.compile(r"\b(npm|yarn|pnpm)\s+publish\b", re.IGNORECASE),
++    re.compile(r"\bdocker(-|\s+)compose\s+down\b", re.IGNORECASE),
++    re.compile(r"\bdocker\s+(rm|rmi|stop|kill|system\s+prune)\b", re.IGNORECASE),
++    re.compile(r"\b(kill|pkill|killall)\s+-?\d*", re.IGNORECASE),
++    re.compile(r"\bkubectl\s+(apply|delete|drain|rollout)\b", re.IGNORECASE),
++    re.compile(r"\bhelm\s+(install|upgrade|uninstall|rollback)\b", re.IGNORECASE),
++    re.compile(r"\bdrop\s+(table|database|index)\b", re.IGNORECASE),
++    re.compile(r"\btruncate\s+(table\s+)?\w+", re.IGNORECASE),
++    re.compile("(发布|部署|上线|发版)"),
++]
++
++# 组合/写副作用形态：管道、命令序列、重定向、命令替换、find -exec、xargs/tee。
++# 首词只读不代表整条只读（cat payload.sh | bash、echo x > /etc/cron.d/x），
++# 任一命中即不得判 low（v1 保守原则：拿不准一律 medium）。
++_SHELL_COMPOSITE = re.compile(
++    r"[|;&<>$`" "\n" r"]|\bexec\b|-exec(dir)?\b|\bxargs\b|\btee\b",
++    re.IGNORECASE,
++)
++
++# 低风险：只读命令（首词命中、无组合/写副作用形态）。
++_LOW_COMMAND_LEAD = frozenset({
++    "ls", "pwd", "cat", "head", "tail", "less", "more", "grep", "rg", "find",
++    "wc", "which", "echo", "printf", "env", "date", "uname", "ps", "df", "du",
++    "tree", "stat", "file", "jq", "sort", "uniq", "diff", "basename", "dirname",
++    "realpath", "readlink", "id", "whoami", "hostname", "uptime",
++})
++
++# git 只读子命令（带任何参数都不写仓库）。
++_GIT_READONLY_ANY_ARGS = frozenset({
++    "status", "log", "diff", "show", "rev-parse", "blame", "describe", "shortlog",
++})
++
++# git 条件只读子命令：仅当参数命中只读形态时算 low（branch -d / tag v1 / stash push 均为写）。
++# 注意锚语义：TS 侧 branch/tag 带 ^…$ 全锚（整串匹配），remote/stash 只带 ^ 前缀
++# （前缀匹配）——翻译用 \A/\Z 保持同型，勿漏 \A（否则零宽匹配在任意位置成立）。
++_GIT_READONLY_SAFE_ARGS = {
++    "branch": re.compile(r"\A(-[av]\s*)*\Z"),
++    "tag": re.compile(r"\A(-[ln]\s*\S*\s*)*\Z"),
++    "remote": re.compile(r"\A(-v|show\b|get-url\b)"),
++    "stash": re.compile(r"\A(list|show)\b"),
++}
++
++# git 全局旗标（-C <path>、-c k=v、--git-dir=… 等）：剥掉后子命令/高危判据才不被首词
++# 干扰（git -C /repo push 曾绕过 /\bgit\s+push\b/ 高危正则——安全向缺陷，TS 侧已修）。
++_GIT_GLOBAL_FLAG = re.compile(
++    r"(?:-C\s+\S+|-c\s+\S+=\S+|--git-dir(?:=\s*\S+|\s+\S+)|--work-tree(?:=\s*\S+|\s+\S+)"
++    r"|--namespace(?:=\s*\S+|\s+\S+)|--no-pager|--no-optional-locks|--literal-pathspecs)\s*"
++)
++
++_WS_SPLIT = re.compile(r"\s+")
++
++# 不可逆词表（ONE_WAY_COMMAND，简报 v1 逐字；与 _HIGH_COMMAND 刻意分开维护）。
++_ONE_WAY_COMMAND = [
++    re.compile(r"\bgit\s+push\b", re.IGNORECASE),
++    re.compile(r"\b(npm|yarn|pnpm)\s+publish\b", re.IGNORECASE),
++    re.compile(r"\bdrop\s+(table|database|index)\b", re.IGNORECASE),
++    re.compile(r"\btruncate\s+(table\s+)?\w+", re.IGNORECASE),
++    re.compile(r"\bkubectl\s+delete\b", re.IGNORECASE),
++    re.compile("(发布|上线|发版)"),
++]
++
++# 对外影响词表（EXTERNAL_EFFECT，简报 v1 逐字）：push / publish / deploy / 发送 / 上传。
++_EXTERNAL_EFFECT = re.compile(r"\b(push|publish|deploy)\b|(发送|上传)", re.IGNORECASE)
++
++_NPM_READONLY = re.compile(r"^(npm|yarn|pnpm)\s+(ls|list|outdated|view|info|audit)\b", re.IGNORECASE)
++_VERSION_QUERY = re.compile(r"^(node|python3?|ruby|java|go|rustc)\s+(--version|-v|-V)\Z")
++
++
++def _strip_git_global_flags(args: str) -> str:
++    """循环剥掉 git 全局旗标（TS stripGitGlobalFlags 同构）。"""
++    while True:
++        m = _GIT_GLOBAL_FLAG.match(args)
++        if not m:
++            return args
++        args = args[m.end():]
++
++
++def _effective_command_text(text: str) -> str:
++    """高危判据、one-way 与对外词表共用的有效文本：剥掉 git 全局旗标后的命令。"""
++    if re.match(r"git\b", text):
++        return ("git " + _strip_git_global_flags(text[3:].strip())).strip()
++    return text
++
++
++def _is_readonly_git(rest: str) -> bool:
++    args = _strip_git_global_flags(rest)
++    parts = _WS_SPLIT.split(args)
++    sub = parts[0] if parts else ""
++    if sub in _GIT_READONLY_ANY_ARGS:
++        return True
++    safe = _GIT_READONLY_SAFE_ARGS.get(sub)
++    if safe is None:
++        return False
++    return safe.search(args[len(sub):].strip()) is not None
++
++
++def _classify_command(detail: str) -> str:
++    """riskTier 三档（TS classifyCommand 同判据）：高危词表→high、组合形态→medium、
++    只读 lead/git 只读/版本查询→low、其余 medium。"""
++    text = detail.strip()
++    if not text:
++        return "medium"
++    effective = _effective_command_text(text)
++    for pattern in _HIGH_COMMAND:
++        if pattern.search(effective):
++            return "high"
++    if _SHELL_COMPOSITE.search(effective):
++        return "medium"
++    parts = _WS_SPLIT.split(effective)
++    lead = parts[0] if parts else ""
++    lead = "" if lead == "sudo" else lead
++    rest = effective[effective.index(lead) + len(lead):].strip() if lead else effective.strip()
++    if lead.lower() in _LOW_COMMAND_LEAD:
++        return "low"
++    if lead == "git" and _is_readonly_git(rest):
++        return "low"
++    if _NPM_READONLY.search(effective):
++        return "low"
++    if _VERSION_QUERY.search(effective):
++        return "low"
++    return "medium"
++
++
++def classify_profile(command: str) -> dict:
++    """决策画像三维分类（TS classifyDecisionProfile 的 command 面同判据）：
++    reversibility v1 只分三路——one-way 词表命中→one-way、纯只读（判 low）→reversible、
++    其余写副作用→unknown（v1 不自动判 costly，costly 只经声明调严进入）。"""
++    text = (command or "").strip()
++    risk_tier = _classify_command(text)
++    effective = _effective_command_text(text) if text else ""
++    if any(p.search(effective) for p in _ONE_WAY_COMMAND):
++        reversibility = "one-way"
++    elif risk_tier == "low":
++        reversibility = "reversible"
++    else:
++        reversibility = "unknown"
++    return {
++        "riskTier": risk_tier,
++        "reversibility": reversibility,
++        "externalEffect": _EXTERNAL_EFFECT.search(effective) is not None if effective else False,
++    }
++
++
++_RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
++_REVERSIBILITY_ORDER = {"reversible": 0, "costly": 1, "one-way": 2}
++
++
++def combine_declared(auto: dict, declared: dict | None) -> dict:
++    """声明合并（spec §4.3「只能调严、不能调松」；TS combineProfiles 同判据）：
++    riskTier 只升不降；reversibility 只向 one-way 收且 unknown 冻结；externalEffect
++    只可置 true。违规项一律忽略，不抛错；declared 缺省原样返回。"""
++    if not declared:
++        return dict(auto)
++    merged = dict(auto)
++    wanted_risk = declared.get("riskTier")
++    if wanted_risk in _RISK_ORDER and _RISK_ORDER[wanted_risk] > _RISK_ORDER[auto["riskTier"]]:
++        merged["riskTier"] = wanted_risk
++    wanted_rev = declared.get("reversibility")
++    if wanted_rev in _REVERSIBILITY_ORDER and auto["reversibility"] != "unknown" \
++            and wanted_rev != "unknown" \
++            and _REVERSIBILITY_ORDER[wanted_rev] > _REVERSIBILITY_ORDER[auto["reversibility"]]:
++        merged["reversibility"] = wanted_rev
++    if declared.get("externalEffect") is True:
++        merged["externalEffect"] = True
++    return merged
++
++
++def decide(mode: str, profile: dict) -> dict:
++    """授权矩阵逐格裁决（spec §4.3 表＝decision-vectors.json 单一事实源）：
++    plan 先于矩阵一律 deny；high+one-way → ask＋双签；high/one-way/unknown/对外任一 →
++    ask；medium 或 costly → build:ask、guarded/yolo:allow；low+reversible+无对外 →
++    allow；未知挡 fail-closed 为 ask。"""
++    if mode == "plan":
++        return {"action": "deny", "dual_sign_required": False,
++                "decidedBy": "policy:plan-readonly", "rule": "plan-readonly"}
++    if mode not in ("build", "guarded", "yolo"):
++        return {"action": "ask", "dual_sign_required": False,
++                "decidedBy": "policy:risk-evaluated", "rule": "fail-closed-unknown-mode"}
++    if profile["riskTier"] == "high" and profile["reversibility"] == "one-way":
++        return {"action": "ask", "dual_sign_required": True,
++                "decidedBy": "policy:risk-evaluated", "rule": "high-one-way-dual-sign"}
++    if profile["riskTier"] == "high" or profile["reversibility"] in ("one-way", "unknown") \
++            or profile["externalEffect"]:
++        return {"action": "ask", "dual_sign_required": False,
++                "decidedBy": "policy:risk-evaluated", "rule": "risk-strict-ask"}
++    if profile["riskTier"] == "medium" or profile["reversibility"] == "costly":
++        if mode == "build":
++            return {"action": "ask", "dual_sign_required": False,
++                    "decidedBy": "policy:risk-evaluated", "rule": "medium-costly-build-ask"}
++        return {"action": "allow", "dual_sign_required": False,
++                "decidedBy": "policy:risk-evaluated", "rule": "medium-costly-policy-allow"}
++    if profile["riskTier"] == "low" and profile["reversibility"] == "reversible" \
++            and not profile["externalEffect"]:
++        return {"action": "allow", "dual_sign_required": False,
++                "decidedBy": "policy:readonly", "rule": "low-reversible-allow"}
++    return {"action": "ask", "dual_sign_required": False,
++            "decidedBy": "policy:risk-evaluated", "rule": "fail-closed-ask"}
++
++
++def current_mode() -> str:
++    """矩阵四挡：HERMES_OUTCOME_MODE 显式覆盖（plan 挡逃生/测试面）> 审批挡映射
++    （off 或 yolo 活跃→yolo；smart→guarded；manual→build——与 approval._approval_ledger_mode
++    同语义）。矩阵对未知挡 fail-closed 为 ask。"""
++    explicit = (os.environ.get("HERMES_OUTCOME_MODE") or "").strip().lower()
++    if explicit:
++        return explicit
++    try:
++        from tools import approval_context
++        if approval_context._get_approval_mode() == "off":
++            return "yolo"
++        mode = approval_context._get_approval_mode()
++    except Exception:
++        mode = "manual"
++    if mode == "smart":
++        return "guarded"
++    if mode in ("plan", "build", "guarded", "yolo"):
++        return mode
++    return "build"
++
++
++def evaluate(command: str, *, mode: str | None = None, context: dict | None = None) -> dict:
++    """分类＋合同声明合并＋矩阵裁决一体。``context`` 缺省取 ``outcome_context()``，
++    ``mode`` 缺省取 ``current_mode()``。返回 ``{action, dual_sign_required, profile,
++    decidedBy, rule}``。"""
++    if context is None:
++        context = outcome_context()
++    if mode is None:
++        mode = current_mode()
++    auto = classify_profile(command)
++    declared = None
++    if context:
++        declared = {}
++        if context.get("riskTier") in _RISK_ORDER:
++            declared["riskTier"] = context["riskTier"]
++        if context.get("defaultReversibility") in _REVERSIBILITY_ORDER:
++            declared["reversibility"] = context["defaultReversibility"]
++        declared = declared or None
++    profile = combine_declared(auto, declared)
++    return {**decide(mode, profile), "profile": profile}
++
++
++# ---------- 可信任务上下文（env → 板库 → 合同） ----------
++
++_OUTCOME_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
++
++
++def outcome_store_root() -> Path:
++    """存储根：HERMES_OUTCOME_STORE env > HERMES_WEB_UI_HOME/outcome > ~/.hermes-web-ui/outcome
++    （照 TS 侧 outcomeStoreRoot 的 underWebUi 语义）。"""
++    explicit = (os.environ.get("HERMES_OUTCOME_STORE") or "").strip()
++    if explicit:
++        return Path(explicit)
++    webui = (os.environ.get("HERMES_WEB_UI_HOME") or "").strip()
++    if webui:
++        return Path(webui) / "outcome"
++    return Path.home() / ".hermes-web-ui" / "outcome"
++
++
++def _task_outcome_id(db_path: str, task_id: str) -> str | None:
++    """只读查板库 tasks.outcome_id（补丁 805 列）。查询失败/列缺失/无绑定→None。"""
++    if not _OUTCOME_ID_RE.match(task_id):
++        return None
++    try:
++        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5.0)
++        try:
++            row = conn.execute("SELECT outcome_id FROM tasks WHERE id = ?", (task_id,)).fetchone()
++        finally:
++            conn.close()
++    except sqlite3.Error:
++        return None
++    if not row or not isinstance(row[0], str) or not row[0].strip():
++        return None
++    return row[0].strip()
++
++
++def _read_contract(outcome_id: str) -> dict | None:
++    """读 <root>/<outcomeId>/contract.json；缺/坏/身份不符→None（fail-soft 不猜数，
++    照 TS getContract：目录名≠合同 outcomeId 视同坏档拒绝认领）。"""
++    if not _OUTCOME_ID_RE.match(outcome_id):
++        return None
++    path = outcome_store_root() / outcome_id / "contract.json"
++    try:
++        raw = json.loads(path.read_text(encoding="utf-8"))
++    except (OSError, ValueError):
++        return None
++    if not isinstance(raw, dict) or raw.get("outcomeId") != outcome_id:
++        return None
++    return raw
++
++
++def outcome_context(env=None) -> dict | None:
++    """outcome-scoped 会话的可信任务上下文：HERMES_KANBAN_TASK → 只读查板库
++    tasks.outcome_id → 读合同。任一环缺席→None=非 outcome-scoped（守卫走既有行为）。"""
++    source = os.environ if env is None else env
++    task_id = (source.get("HERMES_KANBAN_TASK") or "").strip()
++    if not task_id:
++        return None
++    db_path = (source.get("HERMES_KANBAN_DB") or "").strip()
++    if not db_path:
++        return None
++    outcome_id = _task_outcome_id(db_path, task_id)
++    if outcome_id is None:
++        return None
++    contract = _read_contract(outcome_id)
++    if contract is None:
++        return None
++    return {
++        "taskId": task_id,
++        "outcomeId": outcome_id,
++        "contractVersion": contract.get("version"),
++        "riskTier": contract.get("riskTier"),
++        "defaultReversibility": contract.get("defaultReversibility"),
++        "ownerPersonId": contract.get("ownerPersonId"),
++        "verificationOwnerId": contract.get("verificationOwnerId"),
++        "status": contract.get("status"),
++    }
+diff --git a/tools/approval.py b/tools/approval.py
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -17,6 +17,7 @@
+ import logging
+ import os
+ import threading
++import uuid
+ from typing import Any, Iterable, Optional
+ 
+ from utils import env_var_enabled, is_truthy_value
+@@ -69,7 +70,18 @@
+ _denial_tally: dict[str, int] = {}
+ _DENIAL_TALLY_MAX_SESSIONS = 256
+ 
++# Per-thread handoff from the outcome guard to the human-decision engine (批一 Task 11):
++# a single dict ``{"dual_sign": bool, "reason": str, "ref": outcome_ref}`` marks every
++# outcome-policy ask. Its presence makes the answer one-shot (the guard never consumes
++# session/always grants, so offering them would mislead — 审查 M3); ``dual_sign`` additionally
++# marks the high+one-way cell and ``ref`` carries the contract reference (owner/verifier names
++# go to the approval surface — 审查 I1). Set by ``_outcome_guard``, consumed (and cleared) by
++# ``_human_decision`` when it builds the gateway approval data; the guard's no-surface branch
++# clears it itself (it bypasses ``_human_decision``). No thread-local residue may survive
++# either path — a stale mark would tag a later unrelated approval (审查 M1).
++_OUTCOME_TLS = threading.local()
+ 
++
+ def _get_denial_breaker_threshold() -> int:
+     """``approvals.denial_breaker_threshold``: default 3; 0 or negative disables."""
+     try:
+@@ -146,6 +158,30 @@
+             _gateway_queues.pop(session_key, None)
+ 
+ 
++def _dual_sign_hold(entry, choice: str) -> bool:
++    """True when this entry must STAY QUEUED after *choice* (审查 I1，2026-11-20：gateway 面
++    dual-sign 条目 deny-only).
++
++    Gateway signer identities (mxid / session keys) cannot be bound to the outcome contract's
++    ownerPersonId/verificationOwnerId — the people registry has no person↔mxid bridge in
++    batch 1 — so NO consent, single or two distinct signers, releases a ``dual_sign_required``
++    entry here; fail closed with an operator pointer. Batch 2 builds the bridge and reopens
++    gateway release. Deny and unrecognized answers never hold: one refusal settles the
++    request, and an unrecognized answer is refused fail-closed by the waiting side. Entries
++    without the mark are untouched. Caller holds ``_lock``."""
++    if not isinstance(entry.data, dict) or not entry.data.get("dual_sign_required"):
++        return False
++    if choice in CONSENT_ANSWERS:
++        logger.warning(
++            "Dual-sign approval (request_id=%s) was NOT released: gateway signer identities "
++            "cannot be bound to the outcome contract's owner/verifier (batch 1 has no "
++            "person↔mxid bridge). 高风险结果动作的双签放行请在审批收件箱处理。",
++            entry.data.get("request_id"),
++        )
++        return True
++    return False
++
++
+ def resolve_gateway_approval(session_key: str, choice: str,
+                              resolve_all: bool = False,
+                              reason: Optional[str] = None,
+@@ -155,6 +191,10 @@
+     *resolve_all* resolves every pending approval (``/approve all``); otherwise the oldest
+     (FIFO) or the one matching *request_id*. *reason* is the ``/deny <reason>`` free text,
+     relayed to the agent in the BLOCKED message. Returns the number resolved.
++
++    Entries marked ``dual_sign_required`` (outcome policy high+one-way) are deny-only here:
++    consent never releases them on the gateway surface (see ``_dual_sign_hold``); deny
++    settles as usual.
+     """
+     # Canonicalize where the answer is stored, not only in ``grant``: coalesced followers
+     # (``choice == "once"`` covers only the leader) and the protected-write and elicitation
+@@ -175,17 +215,26 @@
+             queue.clear()
+         else:
+             targets = [queue.pop(0)]
++        released: list = []
++        held: list = []
++        for target in targets:
++            # The dual-sign gate runs inside the same critical section as the settle: a held
++            # entry must go back on the queue before anything is committed, so a waiter can
++            # never observe its entry both queued and resolved.
++            (held if _dual_sign_hold(target, choice) else released).append(target)
++        for target in reversed(held):
++            queue.insert(0, target)
+         if not queue:
+             _gateway_queues.pop(session_key, None)
+         # Popping the entry and committing its outcome are ONE critical section: the waiter's
+         # ``_drop_entry`` reads ``entry.result`` under this same lock after its deadline check, so a
+         # choice acked to the client here can never be popped-and-lost as a timeout (#112548).
+-        for entry in targets:
++        for entry in released:
+             entry.result = choice
+             if reason:
+                 entry.reason = reason
+             entry.event.set()
+-    return len(targets)
++    return len(released)
+ 
+ 
+ def _entry_for_request(session_key: str, request_id: Optional[str]):
+@@ -233,6 +282,8 @@
+             if not may_answer(target.authority, actor_id, admin_ids, extra, approval_commands(choice),
+                               admitted=admitted):
+                 return 0
++        # 审查 I1：卡片答案经同一 deny-only 双签闸门——gateway/卡片面签署人无法绑定合同
++        # owner/verifier（people 无 mxid 桥），dual-sign 条目放行只在审批收件箱。
+         return resolve_gateway_approval(session_key, choice, request_id=request_id)
+ 
+ 
+@@ -658,8 +709,12 @@
+ 
+ 
+ def _record_deferred_approval(*, session_key: str, request_id: str, tool: str,
+-                              preview: str, risk: str):
+-    """落 deferred.json；路由从当前回合环境捕获（无路由=唤醒不了，返回 None）。"""
++                              preview: str, risk: str,
++                              outcome_ref: Optional[dict] = None,
++                              dual_sign_required: bool = False):
++    """落 deferred.json；路由从当前回合环境捕获（无路由=唤醒不了，返回 None）。
++    outcome_ref/dual_sign_required（审查复审 M1）：outcome-scoped 挂起携带合同引用与
++    双签标记，T12 收件箱靠它识别双签条目。"""
+     try:
+         from hermes_cli.followups import capture_route
+         from tools.deferred_calls import record_deferred
+@@ -676,6 +731,8 @@
+             preview=preview,
+             risk=risk,
+             route=route,
++            outcome_ref=outcome_ref,
++            dual_sign_required=dual_sign_required,
+         )
+     except Exception:  # noqa: BLE001 - deferral must never break the approval gate
+         logger.debug("deferred approval record failed; falling back to deny", exc_info=True)
+@@ -1041,6 +1098,28 @@
+ )
+ 
+ 
++_DUAL_SIGN_SURFACE_REFUSAL_MESSAGE = (
++    "BLOCKED by outcome policy: this action is a high-risk one-way outcome action that "
++    "requires dual sign-off — no single surface can release it. "
++    "高风险结果动作的双签放行请在审批收件箱处理。 Do NOT retry or rephrase."
++)
++
++
++def _outcome_dual_sign_surface_refusal(description: str, pattern_key: str, noun: str = "command") -> dict:
++    """deny-only 收口（审查复审 I1，2026-11-20）：CLI prompt 与 transport 插件两面的
++    consent 不经 ``resolve_gateway_approval``（gateway 双签闸门不覆盖这两面），而
++    ``grant`` 是所有放行的必经点——outcome high+one-way 双签条目在此一律拒绝，单面
++    单人不能放行，指引到审批收件箱（批一主面；批二建 person↔mxid 桥后再开各面放行）。"""
++    logger.warning(
++        "Dual-sign approval (pattern %s) refused at the grant gate: a single surface's "
++        "consent cannot release a dual-sign outcome action — release it from the approval "
++        "inbox (高风险结果动作的双签放行请在审批收件箱处理).",
++        pattern_key,
++    )
++    return _denied(_DUAL_SIGN_SURFACE_REFUSAL_MESSAGE, pattern_key=pattern_key,
++                   description=description, outcome="dual_sign_refused", noun=noun)
++
++
+ def _smart_gate(spec: _GateSpec, command: str, description: str, pattern_key: str,
+                 pattern_keys: list[str], session_key: str, *,
+                 human_present: bool) -> tuple[dict | None, bool]:
+@@ -1089,6 +1168,12 @@
+     """
+     from agent.redact import redact_approval_display
+ 
++    # Consume (and clear) the outcome mark ONCE at entry: the payload/option surface below is
++    # the only consumer, so a CLI-only answer (no gateway data) drops it instead of leaking
++    # onto a later unrelated approval (批一 Task 11；审查 M1：no-surface 由守卫自清).
++    outcome_mark = getattr(_OUTCOME_TLS, "outcome", None)
++    _OUTCOME_TLS.outcome = None
++    outcome_ask = outcome_mark is not None
+     smart_denied = False
+     manual_only = not SMART_MANUAL_ONLY_DESCRIPTIONS.isdisjoint(pattern_keys)
+     if smart and not manual_only:
+@@ -1100,7 +1185,9 @@
+     # A command the scanners could not read to the end is approved one run at a time: a session or
+     # always grant on its key would wave through every later command that trips the scan budget.
+     # A manual-only class (an osascript program that can discard unsaved work) is one run too.
+-    one_shot = smart_denied or manual_only or _SCAN_INCOMPLETE_DESCRIPTION in pattern_keys
++    # An outcome-policy ask is one run too (审查 M3)：the outcome guard never consults the
++    # session/always stores, so offering those options would only mislead the answerer.
++    one_shot = smart_denied or manual_only or _SCAN_INCOMPLETE_DESCRIPTION in pattern_keys or outcome_ask
+     allow_permanent = not one_shot
+ 
+     def deny(template: str, outcome: str, **fmt) -> dict:
+@@ -1124,6 +1211,11 @@
+                 choice, pattern_key, session_key, "/".join(sorted(CONSENT_ANSWERS)))
+             return _denied(_UNRECOGNIZED_ANSWER, pattern_key=pattern_key,
+                            description=description, outcome="unrecognized_answer", noun=spec.noun)
++        # 审查复审 I1（2026-11-20）：deny-only 全面收口——CLI prompt 与 transport 插件两面
++        # 的 consent 不经 resolve_gateway_approval（gateway 双签闸门不覆盖），grant 是所有
++        # 放行的必经点：outcome high+one-way 双签条目一面一人不能放行。
++        if outcome_mark and outcome_mark.get("dual_sign"):
++            return _outcome_dual_sign_surface_refusal(description, pattern_key, spec.noun)
+         # A smart-DENY owner override or a manual-only class is always one operation, even if an older
+         # client returns "session" or "always".
+         if not one_shot:
+@@ -1164,8 +1256,20 @@
+                 "allow_permanent": not one_shot,
+                 "allow_session": not one_shot,
+             }
++            # 复审 M1 前置修复：deferred 分支此前引用不存在的 ``entry``（上游 latent
++            # NameError，一触达即炸守卫）。request_id 在此预置——_ApprovalEntry 的
++            # setdefault 便沿用同值，deferred 记录与审批条目的 request_id 保真对齐。
++            data.setdefault("request_id", uuid.uuid4().hex)
+             if smart_denied:
+                 data["smart_denied"] = True
++            if outcome_mark:
++                # 批一 Task 11：审批条目随带合同引用（owner/verifier 供双签面点名，审查 I1）；
++                # high+one-way 格另标 dual_sign_required——gateway 面对该标记 deny-only，
++                # 放行只在审批收件箱（审查 I1）。
++                data["outcome_ref"] = dict(outcome_mark.get("ref") or {})
++                if outcome_mark.get("dual_sign"):
++                    data["dual_sign_required"] = True
++                    data["dual_sign_reason"] = outcome_mark.get("reason") or ""
+             decision = _await_gateway_decision(session_key, notify_cb, data, surface="gateway", identity=command)
+             if decision.get("notify_failed"):
+                 return _denied(spec.notify_failed, pattern_key=pattern_key,
+@@ -1187,10 +1291,13 @@
+                 if _should_defer_approval():
+                     deferred_rec = _record_deferred_approval(
+                         session_key=session_key,
+-                        request_id=str((entry.data or {}).get("request_id") or ""),
+-                        tool=str((entry.data or {}).get("pattern_key") or ""),
++                        request_id=str(data.get("request_id") or ""),
++                        tool=str(pattern_key or ""),
+                         preview=display_command,
+-                        risk=str((entry.data or {}).get("description") or ""),
++                        risk=str(display_description or ""),
++                        # 复审 M1：outcome-scoped 挂起携带合同引用与双签标记（T12 收件箱识别面）。
++                        outcome_ref=dict(outcome_mark.get("ref") or {}) if outcome_mark else None,
++                        dual_sign_required=bool(outcome_mark and outcome_mark.get("dual_sign")),
+                     )
+                     if deferred_rec is not None:
+                         return _deferred_approval_result(
+@@ -1410,6 +1517,95 @@
+             logger.warning("Sudo stdin guard block: %s (command: %s)", sudo_guess_desc, command[:200])
+             return _sudo_stdin_block_result(sudo_guess_desc)
+     return _user_deny_block(command)
++
++
++def _outcome_guard(command: str) -> dict | None:
++    """Outcome 合同守卫（批一 Task 11，spec 2026-11-19-ai-native-operating-model §4.3）。
++    插在既有 floors 之后、yolo/allowlist 短路之前——合同治理面不随个人 yolo 或
++    command_allowlist 放宽（矩阵 yolo 挡 high+one-way 仍 ask＋双签）。
++
++    非 outcome-scoped（``outcome_context()`` None：env/板库绑定/合同任一环缺席）→
++    None，走既有行为。outcome-scoped 时按矩阵三出口：
++      deny（plan 只读挡）→ guardian deny 形状（smart_denied，计入 denial breaker）；
++      allow → 放行并在守卫结果携带 ``outcome_ref``（approval_ledger 落 detail）；
++      ask → 送人工门：有人面（CLI/gateway/ask）走 ``_human_decision``（gateway 审批
++      条目经 _OUTCOME_TLS 标记 dual_sign_required）；无人面落 pending 形状交审批
++      收件箱（ledger 记 approval.pending），不吃 unattended auto-approve。
++    execute_code 面未接（脚本文本会误触发命令词表），挂账后续批。"""
++    try:
++        from tools import outcome_policy
++        context = outcome_policy.outcome_context()
++    except Exception:
++        logger.debug("outcome policy unavailable; guard skipped", exc_info=True)
++        return None
++    if context is None:
++        return None
++    rule = "eval-error"
++    try:
++        decision = outcome_policy.evaluate(command, context=context)
++        rule = decision.get("rule") or rule
++        action = decision["action"]
++    except Exception:
++        # fail-closed：评估失败按 ask 处理（不猜 allow/deny）
++        logger.warning("outcome policy evaluation failed; failing closed to ask", exc_info=True)
++        action = "ask"
++        decision = {"dual_sign_required": False}
++    outcome_ref = {
++        "outcomeId": context.get("outcomeId"),
++        "contractVersion": context.get("contractVersion"),
++        # 审查 I1：owner/verifier 随终态与条目下发（收件箱执法点名双签两角色），不再是死数据。
++        "ownerPersonId": context.get("ownerPersonId"),
++        "verificationOwnerId": context.get("verificationOwnerId"),
++    }
++    if action == "deny":
++        session_key = get_current_session_key()
++        _record_denial(session_key)
++        return {
++            "approved": False,
++            "message": (
++                "BLOCKED by outcome policy: this command runs under outcome contract "
++                f"{context.get('outcomeId')} in a read-only execution mode (plan) — "
++                "outcome-scoped actions are denied. Do NOT retry, rephrase, or attempt the "
++                "same outcome via a different route."
++            ),
++            "smart_denied": True,
++            "pattern_key": f"outcome_policy:{rule}",
++            "description": "outcome contract policy (plan-readonly)",
++            "outcome_ref": outcome_ref,
++        }
++    if action == "allow":
++        return {"approved": True, "message": None, "smart_approved": True, "outcome_ref": outcome_ref}
++    # ask：人工门。标记经 _OUTCOME_TLS 传递——outcome ask 使答案面只余 once/deny（守卫不消费
++    # session/always，展示即误导，审查 M3）；high+one-way 格另带双签标记与合同引用。
++    _OUTCOME_TLS.outcome = {
++        "dual_sign": bool(decision.get("dual_sign_required")),
++        "reason": f"outcome {context.get('outcomeId')}: {rule}",
++        "ref": outcome_ref,
++    }
++    approval_callback, is_cli, is_gateway, is_ask = _presence()
++    pattern_key = f"outcome_policy:{rule}"
++    description = f"outcome policy requires approval ({rule}; outcome {context.get('outcomeId')})"
++    session_key = get_current_session_key()
++    if not is_cli and not is_gateway and not is_ask:
++        # 无人面：合同 ask 不吃 unattended auto-approve（治理面不随 single_query_mode 放宽），
++        # 落 pending 形状交审批收件箱裁决；fail-closed 不猜 allow/deny。pending 记录携带
++        # outcome 引用与双签标记（审查 M2：T12 收件箱执法依赖），且本分支不经 _human_decision
++        # 的入口清标记——此处必须自清，防 thread-local 残留误标同线程后续无关审批（审查 M1）。
++        result = _pending_result(
++            _COMMAND_GATE, session_key, command=command, description=description,
++            pattern_key=pattern_key, pattern_keys=[pattern_key], body=None, smart_denied=False,
++        )
++        result["outcome_ref"] = outcome_ref
++        if decision.get("dual_sign_required"):
++            result["dual_sign_required"] = True
++        _OUTCOME_TLS.outcome = None
++        return result
++    return _human_decision(
++        _COMMAND_GATE, command=command, description=description,
++        pattern_key=pattern_key, pattern_keys=[pattern_key],
++        session_key=session_key, approval_callback=approval_callback,
++        is_cli=is_cli, is_gateway=is_gateway, is_ask=is_ask,
++    )
+ 
+ 
+ def check_dangerous_command(command: str, env_type: str,
+@@ -1423,6 +1619,9 @@
+     blocked = _floor_block(command)
+     if blocked is not None:
+         return blocked
++    outcome = _outcome_guard(command)
++    if outcome is not None:
++        return outcome
+     unread = hardline_scan_incomplete(command)
+     if _yolo_active() or approval_context._get_approval_mode() == "off":
+         return _scan_incomplete_block(_NO_REVIEWER_BYPASS) if unread else _approved()
+@@ -1491,6 +1690,10 @@
+     if blocked is not None:
+         return blocked
+ 
++    outcome = _outcome_guard(command)
++    if outcome is not None:
++        return outcome
++
+     from agent.terminal_approval_batch import consume_prepared_guard
+     prepared = consume_prepared_guard(command, env_type, has_host_access)
+     if prepared is not None:
+diff --git a/tools/approval_ledger.py b/tools/approval_ledger.py
+--- a/tools/approval_ledger.py
++++ b/tools/approval_ledger.py
+@@ -87,6 +87,24 @@
+             detail["outcome"] = str(result["outcome"])
+         if result.get("pattern_key"):
+             detail["patternKey"] = str(result["pattern_key"])
++        # 批一 Task 11（spec 2026-11-19-ai-native-operating-model §4.3）：outcome-scoped
++        # 守卫终态携带合同引用（allow 放行 / deny 拒绝 / pending 待决都可带），审批账与
++        # 收件箱据此关联结果合同——outcomeId/contractVersion 透传进 detail。
++        outcome_ref = result.get("outcome_ref")
++        if isinstance(outcome_ref, dict):
++            if outcome_ref.get("outcomeId"):
++                detail["outcomeId"] = str(outcome_ref["outcomeId"])
++            if outcome_ref.get("contractVersion") is not None:
++                detail["contractVersion"] = outcome_ref["contractVersion"]
++            # 审查 I1：owner/verifier 随终态入账（收件箱双签执法点名两角色）。
++            if outcome_ref.get("ownerPersonId"):
++                detail["ownerPersonId"] = str(outcome_ref["ownerPersonId"])
++            if outcome_ref.get("verificationOwnerId"):
++                detail["verificationOwnerId"] = str(outcome_ref["verificationOwnerId"])
++        # 审查 M2（2026-11-20）：pending 记录带 dual_sign_required——T12 收件箱执法面靠
++        # 此标记识别需双签的待决条目（gateway 面对该类条目 deny-only，放行只在收件箱）。
++        if result.get("dual_sign_required"):
++            detail["dualSignRequired"] = True
+         record = {
+             "recordType": record_type,
+             "tool": str(tool),
+diff --git a/tools/deferred_calls.py b/tools/deferred_calls.py
+--- a/tools/deferred_calls.py
++++ b/tools/deferred_calls.py
+@@ -80,10 +80,15 @@
+     preview: str = "",
+     risk: str = "",
+     route: Optional[dict[str, str]] = None,
++    outcome_ref: Optional[dict[str, Any]] = None,
++    dual_sign_required: bool = False,
+     ttl_seconds: float = DEFAULT_TTL_SECONDS,
+     now: Optional[float] = None,
+ ) -> dict[str, Any]:
+-    """落一条 pending 延迟调用；返回记录（含 id）。"""
++    """落一条 pending 延迟调用；返回记录（含 id）。
++
++    *outcome_ref*/*dual_sign_required*（批一 Task 11 审查复审 M1）：outcome-scoped
++    守卫的超时挂起携带合同引用与双签标记，T12 审批收件箱靠它们识别需双签的待决条目。"""
+     at = now if now is not None else time.time()
+     rid = request_id or uuid.uuid4().hex
+     record = {
+@@ -99,6 +104,10 @@
+         "expires_at": at + max(60.0, float(ttl_seconds)),
+         "status": "pending",
+     }
++    if isinstance(outcome_ref, dict) and outcome_ref:
++        record["outcome_ref"] = dict(outcome_ref)
++    if dual_sign_required:
++        record["dual_sign_required"] = True
+     records = _read_all()
+     records.append(record)
+     if len(records) > MAX_RECORDS:

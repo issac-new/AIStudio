@@ -69,6 +69,9 @@ export interface ApprovalLogEntry {
   strength?: 'explicit' | 'delegated' | 'inferred'
   /** 裁决时的策略版本（事后可回答「当时生效的是哪一版策略」）。老记录可无。 */
   policyVersion?: number
+  /** 批一 Task 12：outcome 绑定条目的合同引用（裁决所依据的合同版本在案可审计；
+   *  双签格 resolved 时为第二签核验通过的版本）。老记录可无。 */
+  outcomeRef?: { outcomeId: string; contractVersion: number }
   /** 前向链字段（2026-10-21 AGT 吸收轮 B）：升级前落账的旧记录无此二字段（unchained）。 */
   prevHash?: string
   hash?: string

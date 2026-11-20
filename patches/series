@@ -1331,3 +1331,20 @@
 802-text-muted-wcag-aa.patch
 # 803-agent-unmarked-tier-default（流程解耦批二，spec 2026-11-19-process-decoupling-batch2：未标层 tier 缺省 T1→T2 对齐 completion-contract.md 立法；KANBAN_UNMARKED_TIER 逃生、非法回落 T2；与 decision-grant.ts 同边界同 env）
 803-agent-unmarked-tier-default.patch
+# 804-server-outcome-routes（AI 原生组织运行模型批一 Task 8，spec 2026-11-19-ai-native-operating-model-design：bootstrap/routes.ts 挂载 /api/hermes/outcomes 结果合同 REST——import 默认实例 outcomeRoutes＋app.use，OUTCOME_WORKBENCH 门控；接线范式照 773）
+804-server-outcome-routes.patch
+# 805-agent-kanban-outcome-id（AI 原生组织运行模型批一 Task 9，spec 2026-11-19-ai-native-operating-model-design：
+# tasks 表增 outcome_id TEXT 列（CREATE TABLE＋_LATER_TASK_COLUMNS 旧库 ALTER 惰性迁移）；decompose 建子卡
+# 继承父卡 outcome_id（kanban_db_graph 建卡 INSERT 同事务）；服务端写面只许 空→值/同值——Studio 侧
+# custom/server/outcome/kanban-bind.ts 守门，改挂拒绝 outcome_rebind_forbidden）
+805-agent-kanban-outcome-id.patch
+# 806-agent-approval-outcome-guard（AI 原生组织运行模型批一 Task 11，spec 2026-11-19-ai-native-operating-model-design §4.3：
+# 新 tools/outcome_policy.py——outcome_context() 读 env HERMES_KANBAN_TASK/DB→板库 tasks.outcome_id（805 列）
+# →~/.hermes-web-ui/outcome/<id>/contract.json（HERMES_OUTCOME_STORE 覆盖，照 TS outcome-store 根语义），
+# 任一环缺席=非 outcome-scoped 走既有行为；词表/画像/矩阵与 TS decision-matrix.ts 逐字对齐（向量=
+# custom/server/outcome/decision-vectors.json 双侧单一事实源，pytest/vitest 双锁）。approval.py 在既有
+# floors 与 yolo 判定之间接线：deny（plan 只读挡）按 guardian deny；allow 放行＋outcome_ref；ask 走
+# 人工门，high+one-way 审批条目标记 dual_sign_required——resolve_gateway_approval 双签闸门（第一签记名
+# 不释放、同人二票不释放、不同人二签方释放；无身份同意不推进；deny 一票即终）。approval_ledger 记录
+# 带 outcomeId/contractVersion；runtime/tools/outcome_policy.py 镜像由测试 diff 断言双侧同构）
+806-agent-approval-outcome-guard.patch

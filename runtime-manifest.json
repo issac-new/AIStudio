@@ -342,6 +342,16 @@
       "source": "tests/tools/test_skills_hub_uri.py",
       "dest": "tests/tools/test_skills_hub_uri.py",
       "note": "737 解析器表驱动测试（随 skills_hub_uri 模块部署，安装树可就地回归，照 732 tests 条目先例）"
+    },
+    {
+      "source": "tools/outcome_policy.py",
+      "dest": "tools/outcome_policy.py",
+      "note": "806 outcome 合同策略面（outcome_context/词表画像/矩阵/evaluate；vendor 注入态同构镜像，测试 diff 断言锁定）——approval.py 守卫消费，缺它安装树 outcome 接线即 ImportError 回落既有行为"
+    },
+    {
+      "source": "tests/tools/test_outcome_policy.py",
+      "dest": "tests/tools/test_outcome_policy.py",
+      "note": "806 策略面表驱动测试（向量全量断言＋outcome_context 缺席链＋双签闸门＋ledger outcome 引用；随模块部署，照 737 tests 条目先例）"
     }
   ],
   "notes": [
