@@ -202,6 +202,9 @@ function readSeries() {
 export const HERMES_AGENT_PATCH_PREFIXES = [
   'hermes_cli/', 'plugins/', 'agent/', 'apps/', 'assets/', 'acp_',
   'gateway/', 'tests/gateway/', 'tests/hermes_cli/',
+  // persistence/（v0.23.3 起，patch 485/755）：上游 state 层大重构把根层 hermes_state_*.py 族
+  // 合并进 persistence/ 包；485 前缀链/755 readpool 锚已迁入，不扩则误路由 studio 硬死。
+  'persistence/',
   'optional-mcps/', 'optional-skills/',
   'tools/', 'tests/tools/', 'tests/agent/',
   // hermes-agent 仓库根层的 hermes_state_*.py 族(patch 485 起):studio 无此文件,

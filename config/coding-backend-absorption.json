@@ -40,8 +40,8 @@
     "checkpoint-rewind": {
       "status": "implemented",
       "evidence": [
-        "vendor/hermes-agent/tools/checkpoint_manager.py",
-        "vendor/hermes-agent/hermes_state_rewind.py"
+        "vendor/hermes-agent/agent/checkpoints/manager.py",
+        "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
       ],
       "absorbedBy": "hermes-tools"
     },
@@ -92,8 +92,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -144,8 +144,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -196,8 +196,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -248,8 +248,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -300,8 +300,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -352,8 +352,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -404,8 +404,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -456,8 +456,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -508,8 +508,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -560,8 +560,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -612,8 +612,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -664,8 +664,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },
@@ -716,8 +716,8 @@
         "checkpoint-rewind": {
           "status": "implemented",
           "evidence": [
-            "vendor/hermes-agent/tools/checkpoint_manager.py",
-            "vendor/hermes-agent/hermes_state_rewind.py"
+            "vendor/hermes-agent/agent/checkpoints/manager.py",
+            "vendor/hermes-agent/persistence/sqlite/conversation/_store/rewind.py"
           ],
           "absorbedBy": "hermes-tools"
         },

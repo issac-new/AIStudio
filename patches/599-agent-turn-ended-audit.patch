@@ -1,8 +1,8 @@
 diff --git a/agent/conversation_loop.py b/agent/conversation_loop.py
-index b4948b6c5..27de518a1 100644
+index 5634fc13e9..a4a8a231e4 100644
 --- a/agent/conversation_loop.py
 +++ b/agent/conversation_loop.py
-@@ -1860,6 +1860,13 @@ def run_conversation(
+@@ -1919,6 +1919,13 @@
                  prelude=prelude,
              )
          finally:
@@ -14,5 +14,5 @@ index b4948b6c5..27de518a1 100644
 +            except Exception:
 +                pass
              end_voice_turn_route(agent)
-     fence_result_reply(result)
-     # Joined before settle_held_final so a held transform sees the lead, unless a collapsed partial already ran it.
+             # Every turn exit (early returns included): a machine session stops warming; a chat a
+             # person types into keeps its budget of keep-alives while idle (prompt_cache_lifecycle).

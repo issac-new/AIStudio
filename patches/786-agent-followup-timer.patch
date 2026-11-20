@@ -1,8 +1,9 @@
 diff --git a/hermes_cli/followups.py b/hermes_cli/followups.py
 new file mode 100644
+index 0000000000..c29b8963e1 100644
 --- /dev/null
 +++ b/hermes_cli/followups.py
-@@ -0,0 +1,271 @@
+@@ -0,0 +1,273 @@
 +"""Agent 自设 follow-up 定时器（Always-on Agents 吸收 P3，2026-11-16）。
 +
 +语义来源（Anthropic《Building always-on agents》定时器）：follow-up 是 agent 给自己
@@ -112,7 +113,7 @@ new file mode 100644
 +    if db is None:
 +        return False
 +    try:
-+        db.set_meta(_meta_key(state.id), state.to_json())
++        db.state_meta.set(_meta_key(state.id), state.to_json())
 +        return True
 +    except Exception as exc:  # pragma: no cover - defensive
 +        logger.debug("Followups: set_meta failed: %s", exc)
@@ -123,9 +124,10 @@ new file mode 100644
 +    db = _get_session_db()
 +    if db is None:
 +        return []
-+    rows = _db_op("list_meta_prefix", lambda: db.list_meta_prefix(_META_PREFIX), []) or []
++    entries = _db_op("list_meta_prefix", lambda: db.state_meta.list_prefix(_META_PREFIX), []) or []
 +    out: list[FollowupState] = []
-+    for key, raw in rows:
++    for entry in entries:
++        key, raw = entry.key, entry.value
 +        fid = key[len(_META_PREFIX):]
 +        state = _parse(raw, fid) if fid and raw else None
 +        if state is not None:
@@ -269,11 +271,13 @@ new file mode 100644
 +
 +def store_has_active_followup(db: Any) -> bool:
 +    """idle gate：该库有 active/firing 行（或无法解析的未知行）→ True。"""
-+    for key, raw in db.list_meta_prefix(_META_PREFIX):
-+        state = _parse(raw, key[len(_META_PREFIX):]) if raw else None
++    for entry in db.state_meta.list_prefix(_META_PREFIX):
++        raw = entry.value
++        state = _parse(raw, entry.key[len(_META_PREFIX):]) if raw else None
 +        if state is None or state.status in ("active", "firing"):
 +            return True
 +    return False
+
 diff --git a/tools/followup_tool.py b/tools/followup_tool.py
 new file mode 100644
 --- /dev/null
@@ -819,6 +823,7 @@ index 000000000..111111111 100644
      def _start_spawn_background_watchers(self) -> None:
 
 diff --git a/gateway/run_idle_gates.py b/gateway/run_idle_gates.py
+index e19ba109ba..47699f2a59 100644
 --- a/gateway/run_idle_gates.py
 +++ b/gateway/run_idle_gates.py
 @@ -53,6 +53,12 @@
@@ -832,5 +837,6 @@ diff --git a/gateway/run_idle_gates.py b/gateway/run_idle_gates.py
 +
 +
  def profile_has_pending_handoff(profile_home: Path) -> bool:
-     return _gate(profile_home, lambda db: db.has_pending_handoffs())
+     return _gate(profile_home, lambda store: store.coordination.has_pending_handoffs())
  
+

@@ -1,9 +1,9 @@
 {
-  "version": "v0.23.2-team.1",
-  "base": "0.23.2",
+  "version": "v0.23.3-team.1",
+  "base": "0.23.3",
   "extension": "team",
   "extN": 1,
-  "upstreamCommit": "ae2a81ccc",
+  "upstreamCommit": "caafe5389a",
   "carrierOf": "agent-teams 模块",
-  "note": "机器可读载体（2026-10-28 K4）：与 team/VERSION 首行、vendor/VENDOR.md 的 hermes-agent 行互为对账；release:check 三方交叉校验。真源仍是 team/VERSION，本文件供程序读取。v0.23.2 换血批进位 team.1（底座 v0.23.1→v0.23.2，扩展序随底座升级归 1；runtime 覆盖层 20 件重镜像）。"
+  "note": "机器可读载体（2026-10-28 K4）：与 team/VERSION 首行、vendor/VENDOR.md 的 hermes-agent 行互为对账；release:check 三方交叉校验。真源仍是 team/VERSION，本文件供程序读取。v0.23.3 换血批进位 team.1（底座 v0.23.2→v0.23.3，扩展序随底座升级归 1；上游 state 层重构 60+ 件合并入 persistence/ 包，补丁 485/755 锚迁新家）。"
 }

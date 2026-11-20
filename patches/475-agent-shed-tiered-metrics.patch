@@ -1,19 +1,19 @@
 diff --git a/agent/context_compressor.py b/agent/context_compressor.py
-index 72f486a813..9dd40b46dc 100644
+index f5a68bab9a..eacf5d61b6 100644
 --- a/agent/context_compressor.py
 +++ b/agent/context_compressor.py
-@@ -845,6 +845,9 @@ def _is_summary_stub(content: str) -> bool:
+@@ -767,6 +767,9 @@
+ # Shared floor; the clarify summary cap must stay strictly BELOW it so a preserved
  # user answer is never re-summarized away on a later prune pass.
  _PRUNE_MIN_CHARS = 200
- 
++
 +# 分级牺牲表 tier 0（可再生——重跑即得，先牺牲）：只读类工具名前缀。
 +_SACRIFICE_REGEN_TOOLS: tuple[str, ...] = ("read", "grep", "glob", "ls", "find", "search")
-+
+ 
  # Ghost-skill defense: the ONE canonical prune marker; emit sites and presence
  # checks must use the same string so they cannot drift.
- # Ghost-skill defense (#32106): when compaction reduces an old ``skill_view`` result to a 1-line metadata
-@@ -2157,7 +2160,10 @@ class ContextCompressor(
-     ProactivePruneMixin, CompactionWindowMixin, ContextEngine,
+@@ -2043,7 +2046,10 @@
+     ProactivePruneMixin, CompactionWindowMixin, DurableStateMixin, ContextEngine,
  ):
      """Default context engine: prune tool results, protect head/tail, summarize the middle
 -    with an LLM, and iteratively update the previous summary on later compactions."""
@@ -24,17 +24,18 @@ index 72f486a813..9dd40b46dc 100644
  
      @property
      def name(self) -> str:
-@@ -3301,10 +3307,17 @@ class ContextCompressor(
+@@ -3153,11 +3159,18 @@
+         def _content_len(i: int) -> int:
              c = result[i].get("content", "")
              return len(c) if isinstance(c, str) else _content_length_for_budget(c)
- 
++
 +        # 分级牺牲优先级表（codex e7165c2 余半项）：可再生只读工具结果先牺牲
 +        # （tier 0），其余工具结果 tier 1；同级内大小降序（保留"最大优先"语义）。
 +        def _sacrifice_tier(i: int) -> int:
 +            name, _args = call_id_to_tool.get(result[i].get("tool_call_id", ""), ("", ""))
 +            n = str(name).lower()
 +            return 0 if any(n.startswith(t) for t in _SACRIFICE_REGEN_TOOLS) else 1
-+
+ 
          order = sorted(
              (i for i in range(boundary)
               if result[i].get("role") == "tool" and _content_len(i) >= min_prune_chars),
@@ -43,7 +44,7 @@ index 72f486a813..9dd40b46dc 100644
          )
          reclaimed = 0
          demoted = 0
-@@ -3315,6 +3328,13 @@ class ContextCompressor(
+@@ -3168,6 +3181,13 @@
              if self._demote_tool_result_at(result, i, call_id_to_tool, min_prune_chars, protected_skills):
                  demoted += 1
                  reclaimed += max(0, before - _content_len(i))
@@ -57,6 +58,7 @@ index 72f486a813..9dd40b46dc 100644
          return demoted
  
      def _prune_old_tool_results(
+
 diff --git a/tests/agent/test_shed_size_order.py b/tests/agent/test_shed_size_order.py
 index 1d2849c054..11f99564fc 100644
 --- a/tests/agent/test_shed_size_order.py
