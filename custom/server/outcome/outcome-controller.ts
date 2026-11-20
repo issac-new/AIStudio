@@ -31,6 +31,11 @@
 //   演进到其他状态（如重开回 active）则如实返回原事件不回滚。
 // - 幂等键作用域：clientRequestId 以 `${actor}:${clientRequestId}` 组合键落账与查定
 //   （I2 裁决）——异 actor 重放同键不得命中他人合同；存量无组合键数据无需迁移。
+// - 读面 authz（批二 T1，spec 批二 §一）：GET /:id、/:id/context、/:id/measurements、
+//   /:id/settlement——owner/verifier（authz 同源判权：合同字段→people active 校验）得
+//   readScope:'full' 全量；其他登录用户 200 但 readScope:'metadata' 脱去敏感内容
+//   （最小集：合同 measures[].definition、快照 content 整体、测量 evidenceRefs、结算
+//   rationale/gapNote——快照物化文本与 C1 保护面对齐）；功能门/404 语义不变。
 // - 归属证明（spec §4.6）：opts.verifyRootTask 注入面返回 null（不可证明）默认
 //   422 ownership_unavailable，env OUTCOME_ALLOW_UNVERIFIED_ROOT=1 显式放行（批一
 //   试点/测试用，Task 10 接真实现后不再需要）；{ok:false}=可证明且不归属，永不放行。
@@ -129,6 +134,44 @@ function activeProblemsFor(ids: string[]): string[] {
   return ids.filter((id) => !active.has(id)).map(
     (id) => `${id} 未在人员名单中激活（owner/verifier 必须为 active 自然人，spec §4.6）`,
   )
+}
+
+// ---------- 读面 authz（批二 T1）：owner/verifier 全量、其他登录用户 metadata ----------
+
+/** 读面档位：full=全量；metadata=200 但脱去敏感内容（脱敏清单见各投影函数）。 */
+type OutcomeReadScope = 'full' | 'metadata'
+
+/** 读面判权：与写面同源（authz 'owner-or-verifier'＝合同字段→people active 校验）。
+ *  owner/verifier 得 'full'；其他登录用户（含未登录降级 anonymous）得 'metadata'。 */
+const readScopeOf = (contract: OutcomeContract, actor: string): OutcomeReadScope =>
+  authz(contract, actor, 'owner-or-verifier') ? 'full' : 'metadata'
+
+/** metadata 态合同脱敏（批二 T1 敏感度最小集）：measures[].definition（度量口径
+ *  文本）整体脱去；度量骨架（measureId/name/unit/operator/baseline/target/sourceRef）
+ *  与合同其余字段保留——元数据消费面（身份/状态/骨架）不受影响。 */
+function contractMetadata(c: OutcomeContract): Record<string, unknown> {
+  const { measures, ...rest } = c
+  return {
+    ...rest,
+    measures: measures.map((m) => {
+      const { definition: _d, ...skeleton } = m
+      return skeleton
+    }),
+  }
+}
+
+/** metadata 态测量行脱敏：evidenceRefs（证据引用可内嵌 token——sanitizeForSnapshot
+ *  同款泄漏形态）脱去；测量事实骨架（measureId/actual/availability/时间戳）保留。 */
+function measurementMetadata(m: OutcomeMeasurement): Record<string, unknown> {
+  const { evidenceRefs: _e, ...rest } = m
+  return rest
+}
+
+/** metadata 态结算脱敏：rationale/gapNote（自然人裁决理由与缺口说明文本）脱去；
+ *  verdict/settlementId/签署身份与时间等骨架保留。最新结算与 superseded 链同权。 */
+function settlementMetadata(s: Record<string, unknown>): Record<string, unknown> {
+  const { rationale: _r, gapNote: _g, ...rest } = s
+  return rest
 }
 
 /** 合同落盘（先账后物的「物」半边）：路径规则与 store 私有 contractFileOf 一致。 */
@@ -304,14 +347,15 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     created(ctx, { contract: result.contract }, `/api/hermes/outcomes/${result.contract.outcomeId}`)
   })
 
-  // GET /:id：详情
+  // GET /:id：详情（读面 authz：owner/verifier 全量；他人 metadata 脱 measures[].definition）
   router.get('/:id', async (ctx) => {
     const contract = getContract(String(ctx.params.id ?? ''))
     if (!contract) {
       fail(ctx, 404, '合同不存在', { code: 'not_found' })
       return
     }
-    ok(ctx, { contract })
+    const scope = readScopeOf(contract, actorOf(ctx))
+    ok(ctx, { contract: scope === 'full' ? contract : contractMetadata(contract), readScope: scope })
   })
 
   // PUT /:id：修订（owner only；白名单挑 patch，expectedVersion 乐观并发）
@@ -496,7 +540,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   // - latest：每 measureId 最新一条摘要，绑定口径与结算机器建议同一选取器
   //   （latestCurrentMeasurement：仅当前版本、observedAt 最大、后写覆盖）——无当前
   //   版本记录的 measure 不出现在 latest（fail-soft 不拿旧口径充新值）。
-  // 读面与 GET /:id 同信任模型（单租户登录用户可读，spec §4.2 读侧无角色门槛）。
+  // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata 脱测量行 evidenceRefs。
   router.get('/:id/measurements', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -516,11 +560,18 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       const pick = latestCurrentMeasurement(contract, all, m.measureId)
       if (pick) latest[m.measureId] = pick
     }
+    const scope = readScopeOf(contract, actorOf(ctx))
     ok(ctx, {
       outcomeId: id,
       contractVersion: contract.version,
-      measurements: currentFirst,
-      latest,
+      measurements: scope === 'full' ? currentFirst : currentFirst.map(measurementMetadata),
+      latest:
+        scope === 'full'
+          ? latest
+          : Object.fromEntries(
+              Object.entries(latest).map(([k, v]) => [k, measurementMetadata(v)]),
+            ),
+      readScope: scope,
     })
   })
 
@@ -662,7 +713,8 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   //   历史进 superseded 链，不拿已废结算充当前（fail-soft 不造假）。
   // - superseded：历史取代链，按取代事件落账序；每条含 settlement 正身（账上可
   //   查得时；孤儿 id 只带 settlementId+reason）、取代理由与时间。
-  // 读面信任模型同上（单租户登录用户可读）。
+  // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata 脱最新结算与取代链
+  // settlement 的 rationale/gapNote（自然人裁决文本），verdict 等骨架保留。
   router.get('/:id/settlement', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -685,20 +737,28 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     for (const s of settlements) {
       if (!supersededIds.has((s as { settlementId: string }).settlementId)) latest = s as Record<string, unknown>
     }
+    const scope = readScopeOf(contract, actorOf(ctx))
     const chain = supersededEvents.map((e) => {
       const p = e.payload as { settlementId?: unknown; reason?: unknown }
       const settlementId = typeof p.settlementId === 'string' ? p.settlementId : ''
+      const found =
+        (settlements.find(
+          (s) => (s as { settlementId: string }).settlementId === settlementId,
+        ) as Record<string, unknown> | undefined) ?? null
       return {
         settlementId,
         reason: typeof p.reason === 'string' ? p.reason : '',
         supersededAt: e.at,
         settlement:
-          (settlements.find(
-            (s) => (s as { settlementId: string }).settlementId === settlementId,
-          ) as Record<string, unknown> | undefined) ?? null,
+          scope === 'full' ? found : found ? settlementMetadata(found) : null,
       }
     })
-    ok(ctx, { outcomeId: id, settlement: latest, superseded: chain })
+    ok(ctx, {
+      outcomeId: id,
+      settlement: scope === 'full' ? latest : latest ? settlementMetadata(latest) : null,
+      superseded: chain,
+      readScope: scope,
+    })
   })
 
   // POST /:id/context-snapshots：生成最小上下文快照（批一 taskSummary 由注入面提供）
@@ -747,7 +807,10 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     else ok(ctx, { snapshot: result.snapshot, added: false })
   })
 
-  // GET /:id/context：快照列表（摘要行，fail-soft 空列表）/?snapshotId= 取全量
+  // GET /:id/context：快照列表（摘要行，fail-soft 空列表）/?snapshotId= 取全量。
+  // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata——单快照 content 整体
+  // 脱去（快照物化文本与 C1 保护面对齐），信封元数据（snapshotId/sha256/sourceRefs）保留；
+  // 列表摘要行本就无 content，仅附 readScope。
   router.get('/:id/context', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -756,6 +819,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     const snapshots = listSnapshots(id) // 坏行已在读侧跳过（fail-soft）
+    const scope = readScopeOf(contract, actorOf(ctx))
     const snapshotId = ctx.query.snapshotId !== undefined ? String(ctx.query.snapshotId) : null
     if (snapshotId !== null) {
       const one = snapshots.find((s) => s.snapshotId === snapshotId)
@@ -763,7 +827,12 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         fail(ctx, 404, '快照不存在', { code: 'snapshot_not_found' })
         return
       }
-      ok(ctx, { snapshot: one })
+      if (scope === 'full') {
+        ok(ctx, { snapshot: one, readScope: scope })
+        return
+      }
+      const { content: _c, ...envelope } = one
+      ok(ctx, { snapshot: envelope, readScope: scope })
       return
     }
     ok(ctx, {
@@ -773,6 +842,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         createdAt: s.createdAt,
         sha256: s.sha256,
       })),
+      readScope: scope,
     })
   })
 

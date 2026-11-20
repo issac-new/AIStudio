@@ -962,4 +962,143 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(Number(evs.n)).toBe(1)
     })
   })
+
+  describe('批二 T1：读面 authz（owner/verifier 全量、其他登录用户 metadata 脱敏）', () => {
+    it('GET /:id：owner/verifier readScope=full 带 measures[].definition；他人 metadata 且 definition 脱去；404 不变', async () => {
+      const id = await seedContract('active')
+      const shape = (body: Record<string, unknown>) => {
+        const contract = body.contract as Record<string, unknown>
+        const measures = contract.measures as Array<Record<string, unknown>>
+        return {
+          scope: body.readScope,
+          title: contract.title,
+          def: measures[0].definition,
+          name: measures[0].name,
+          target: measures[0].target,
+        }
+      }
+      const owner = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(owner.status).toBe(200)
+      expect(shape(owner.body)).toMatchObject({ scope: 'full', def: '分钟粒度 5xx 以外的请求占比' })
+      asUser('verifier-1')
+      expect(shape((await fetchJson(base, `/api/hermes/outcomes/${id}`)).body).scope).toBe('full')
+      asUser('other-1')
+      const other = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(other.status).toBe(200)
+      const meta = shape(other.body)
+      expect(meta.scope).toBe('metadata')
+      expect(meta.def).toBeUndefined()
+      expect(meta.name).toBe('成功率') // 度量骨架保留：元数据仍可消费
+      expect(meta.title).toBeTruthy()
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope')
+      expect(missing.status).toBe(404)
+      expect(missing.body.code).toBe('not_found')
+    })
+
+    it('GET /:id/context：owner 取全量含 content；他人 metadata content 整体脱去；列表摘要行与 404 不变', async () => {
+      const id = await seedContract('active')
+      const created = await post(base, `/api/hermes/outcomes/${id}/context-snapshots`, {})
+      expect(created.status).toBe(201)
+      const sid = (created.body.snapshot as { snapshotId: string }).snapshotId
+      const full = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=${sid}`)
+      expect(full.status).toBe(200)
+      expect(full.body.readScope).toBe('full')
+      expect((full.body.snapshot as { content?: unknown }).content).toBeTruthy()
+      const fullList = await fetchJson(base, `/api/hermes/outcomes/${id}/context`)
+      expect(fullList.body.readScope).toBe('full')
+      asUser('other-1')
+      const meta = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=${sid}`)
+      expect(meta.status).toBe(200)
+      expect(meta.body.readScope).toBe('metadata')
+      const snap = meta.body.snapshot as { content?: unknown; snapshotId: string; sha256: string }
+      expect(snap.content).toBeUndefined() // content 整体脱去（快照物化文本与 C1 保护面对齐）
+      expect(snap.snapshotId).toBe(sid) // 信封元数据保留
+      expect(typeof snap.sha256).toBe('string')
+      const metaList = await fetchJson(base, `/api/hermes/outcomes/${id}/context`)
+      expect(metaList.status).toBe(200)
+      expect(metaList.body.readScope).toBe('metadata')
+      expect((metaList.body.snapshots as unknown[]).length).toBe(1) // 摘要行本就无 content
+      const unknownSnap = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=snap-nope`)
+      expect(unknownSnap.status).toBe(404)
+      const unknownContract = await fetchJson(base, '/api/hermes/outcomes/oc-nope/context')
+      expect(unknownContract.status).toBe(404)
+    })
+
+    it('GET /:id/measurements：owner 全量含 evidenceRefs；他人 metadata evidenceRefs 脱去；404 不变', async () => {
+      const id = await seedContract('active')
+      const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measurementId: 'ms-authz',
+        measureId: 'm1',
+        contractVersion: 1,
+        actual: 96,
+        availability: 'available',
+        evidenceRefs: ['metric://gateway/success_rate?window=1h'],
+        observedAt: Date.now(),
+      })
+      expect(ms.status).toBe(201)
+      const owner = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      expect(owner.body.readScope).toBe('full')
+      expect((owner.body.measurements as Array<{ evidenceRefs?: string[] }>)[0].evidenceRefs).toBeTruthy()
+      asUser('other-1')
+      const meta = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      expect(meta.status).toBe(200)
+      expect(meta.body.readScope).toBe('metadata')
+      const row = (meta.body.measurements as Array<{ evidenceRefs?: string[]; actual: number }>)[0]
+      expect(row.evidenceRefs).toBeUndefined() // 证据引用可内嵌 token，metadata 态脱去
+      expect(row.actual).toBe(96) // 测量事实骨架保留
+      expect((meta.body.latest as Record<string, { evidenceRefs?: string[] }>).m1.evidenceRefs).toBeUndefined()
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/measurements')
+      expect(missing.status).toBe(404)
+    })
+
+    it('GET /:id/settlement：owner 全量含 rationale/gapNote；他人 metadata 两字段脱去且取代链同脱；404 不变', async () => {
+      const id = await seedContract('observing')
+      const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measurementId: `ms-${id}`,
+        measureId: 'm1',
+        contractVersion: 1,
+        actual: 91,
+        availability: 'available',
+        evidenceRefs: ['metric://x'],
+        observedAt: Date.now(),
+      })
+      expect(ms.status).toBe(201)
+      const st = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+        settlementId: `set-${id}`,
+        contractVersion: 1,
+        verdict: 'unknown',
+        rationale: '证据不足以判定业务达成情况，需补充数据后复审的说明',
+        gapNote: '缺部署维度的成功率口径',
+        nextReviewAt: Date.now() + 86_400_000,
+        measurementIds: [`ms-${id}`],
+      })
+      expect(st.status).toBe(201)
+      const owner = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(owner.body.readScope).toBe('full')
+      const os = owner.body.settlement as Record<string, unknown>
+      expect(typeof os.rationale).toBe('string')
+      expect(os.gapNote).toBe('缺部署维度的成功率口径')
+      asUser('other-1')
+      const meta = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(meta.status).toBe(200)
+      expect(meta.body.readScope).toBe('metadata')
+      const redacted = meta.body.settlement as Record<string, unknown>
+      expect(redacted.rationale).toBeUndefined()
+      expect(redacted.gapNote).toBeUndefined()
+      expect(redacted.verdict).toBe('unknown') // 裁决与骨架保留
+      // 取代链同权：重开后旧结算进 superseded，他人读时链内 settlement 同样脱敏
+      expect(reopenOutcome(id, 'owner-1').ok).toBe(true)
+      asUser('other-1')
+      const after = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(after.body.readScope).toBe('metadata')
+      expect(after.body.settlement).toBeNull()
+      const chain = after.body.superseded as Array<{ settlement: Record<string, unknown> | null }>
+      expect(chain.length).toBe(1)
+      expect(chain[0].settlement?.rationale).toBeUndefined()
+      expect(chain[0].settlement?.gapNote).toBeUndefined()
+      expect(chain[0].settlement?.verdict).toBe('unknown')
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/settlement')
+      expect(missing.status).toBe(404)
+    })
+  })
 })

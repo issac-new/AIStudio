@@ -6,7 +6,8 @@
 // - 哈希链：hash(n) = sha256( hash(n-1) | canonicalJson(record_n 去链字段) )，首条 prevHash='GENESIS'。
 //   本域 events/snapshots 只追加、不做环形覆盖——幂等键（clientRequestId/measurementId）永久有效，
 //   不存在 evidence 域「挤出环外即失去幂等保护」的取舍。
-// - 原子写：contract.json 走 lib/fs-store atomicWriteJson（tmp+rename）；events.jsonl 追加走 appendJsonl。
+// - 原子写：contract.json 走 lib/fs-store atomicWriteJson（tmp+rename）；events.jsonl/snapshots.jsonl
+//   两追加面追加前 ensureLineTerminated 防断电半行粘行（批二 T1 回移，快照面批一实绩）。
 // - 坏档：contract.json 解析失败改名 .corrupt.<ts> 留档（G7 防二次损坏覆盖现场），不静默当空合同续写。
 // - fail-closed 写序（先账后物）：create/update 一律先 appendEvent 再写 contract.json——事件写失败
 //   返回 {ok:false, code:'write_failed'} 且 contract.json 零改动。反向残留（事件已落、合同写失败）时
@@ -282,6 +283,8 @@ export function appendEvent(
   }
   event.hash = hashOutcomeEvent(event)
   try {
+    // 半行防护（批二 T1）：与 snapshots.jsonl 同款追加面前置换行，防残片粘行吞新事件
+    ensureLineTerminated(eventsFileOf(outcomeId))
     appendJsonl(eventsFileOf(outcomeId), event)
   } catch (err) {
     console.warn(`[outcome-store] 事件写入失败（${outcomeId}/${type}）：${describeErr(err)}`)
@@ -467,10 +470,11 @@ function readSnapshotsAt(outcomeId: string, file: string): OutcomeContextSnapsho
 }
 
 /** 写前防粘行：断电半行残片无换行结尾时，下一条 appendJsonl 会直接接在残片后，
- *  「残片＋新行」粘成一条坏行被 readJsonl 跳过——未损坏的新快照被静默吞掉。
+ *  「残片＋新行」粘成一条坏行被 readJsonl 跳过——未损坏的新记录被静默吞掉。
  *  追加前检查尾字节、非 \n 结尾先补换行，把残片隔离成独立坏行（读侧 skipped 告警），
- *  后续每行独立可解析。只在本域快照面启用；events.jsonl 面同问题挂账见文件头注。 */
-function ensureLineTerminated(file: string): void {
+ *  后续每行独立可解析。批二 T1 起本域两追加面（events.jsonl/snapshots.jsonl）统一
+ *  启用本助手——单一事实源导出复用，勿在别处复制同构实现。 */
+export function ensureLineTerminated(file: string): void {
   if (!existsSync(file)) return
   let fd: number | null = null
   try {
