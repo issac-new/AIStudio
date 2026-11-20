@@ -59,7 +59,9 @@ T15 新增读端点（T13/T14 双报缺口补齐）：
 - `node scripts/merge-invariants.mjs --check` → pass（收据 431 行；新增 spec 后 gen-doc-indexes --write 同步索引 711/711 再验通过）。
 - `npm run typecheck:harness` → 0 错误；`npm run typecheck:client:ratchet` → 19 ≤ 基线 19。
 
-完整响应摘录与未验证项见 `.superpowers/sdd/2026-11-19-ai-native-outcome-batch1/task-15-report.md`（本地 SDD 工作区，不入库）。
+完整响应摘录见 `.superpowers/sdd/2026-11-19-ai-native-outcome-batch1/task-15-report.md`（本地 SDD 工作区，不入库）。未验证项（终审 I-1 如实披露）：**浏览器实物走查未做**——试点为 REST 全链代验（NODE_ENV=production 隔离起服）＋组件交互测试覆盖；OutcomeSection/OrchestrationView/Inbox 三面的浏览器实操挂账批二置顶补验。
+
+终审 I-2/I-3 处置（2026-11-20 修复波）：①结算引用集断链已根治——服务端 `validateSettlementInput` 当前版本有在账测量时空 measurementIds 拒（settlement.test.ts 32 用例含两新分支）；客户端 doSettle 引用集＝本会话 ∪ 服务端在账最新（outcome-section 16 用例含终审 I-2 断言）。②执法面口径边界注：`OUTCOME_WORKBENCH` 统管 REST 与 dispatch 两面；agent 审批守卫面（补丁 806）以「合同存在且任务绑定」为门、不受该 env 开关控制——关闭开关不解除已有合同绑定的守卫执法（方向从严），批二评估守卫面接同 flag。此注与设计 spec T10 ruling「统管全部执法面」的表述差异以本注为准。
 
 ## 设计文档影响
 
