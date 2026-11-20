@@ -5,8 +5,10 @@
 // 无合同且本卡为根卡（无 parents，由抽屉传入）→「建模业务结果」提示入口；
 // 无合同非根卡 → 整段不渲染。功能门关（404 outcome_workbench_disabled）→
 // 整段不渲染且不报错；其余 API 失败 → 本段显示不可用，不炸抽屉（fail-soft）。
-// 读侧边界（不造假）：批一后端无测量/结算读端点——「最新实际值」「结算摘要」
-// 仅回显本会话提交响应，历史记录以服务端事件账为准。
+// 读面（Task 15 升级）：「最新实际值」按 GET /:id/measurements 的 latest 摘要
+// （当前版本口径）真实读取；「结算摘要」按 GET /:id/settlement（最新有效＋
+// superseded 链）。读取失败（非门关）→ 降级回显本会话提交响应并如实标注，
+// 历史以服务端事件账为准（不猜数）。
 // 权限（spec §4.6）：激活/取消/结算=owner；观察迁移/测量=owner 或 verifier；
 // 服务端另有 owner/verifier 须在人员名单 active 的守卫，前端无从判断，
 // 只按登录名比对禁用并示因，终裁以服务端 403 为准。
@@ -14,6 +16,8 @@ import { computed, ref, watch } from 'vue'
 import { getStoredUsername } from '@/api/client'
 import {
   fetchOutcomeByRoot,
+  fetchOutcomeMeasurements,
+  fetchOutcomeSettlement,
   fetchOutcomeSnapshots,
   settleOutcome,
   submitMeasurement,
@@ -22,6 +26,7 @@ import {
   type OutcomeContract,
   type OutcomeMeasurement,
   type OutcomeSettlement,
+  type OutcomeSettlementSuperseded,
   type OutcomeVerdict,
 } from '@/custom/kanban/api/outcome'
 
@@ -48,7 +53,14 @@ const loadError = ref('')
 const contract = ref<OutcomeContract | null>(null)
 const snapshotCount = ref<number | null>(null)
 
-// 会话内回显（批一无测量/结算读端点，提交响应是面板唯一实时来源）
+// 服务端读面（Task 15）：latest=每 measure 当前版本最新摘要；settlement=最新有效结算
+const serverLatest = ref<Record<string, OutcomeMeasurement>>({})
+const serverSettlement = ref<OutcomeSettlement | null>(null)
+const supersededChain = ref<OutcomeSettlementSuperseded[]>([])
+// 读面降级标记：测量/结算读失败（非门关）→ 回退会话内回显并如实标注
+const readDegraded = ref(false)
+
+// 会话内回显（读面降级时的实时来源；正常态由服务端读面覆盖）
 const sessionMeasurements = ref<Map<string, OutcomeMeasurement>>(new Map())
 const sessionSettlement = ref<OutcomeSettlement | null>(null)
 
@@ -58,6 +70,10 @@ async function load(): Promise<void> {
   loadError.value = ''
   contract.value = null
   snapshotCount.value = null
+  serverLatest.value = {}
+  serverSettlement.value = null
+  supersededChain.value = []
+  readDegraded.value = false
   sessionMeasurements.value = new Map()
   sessionSettlement.value = null
   if (!props.taskId) { loading.value = false; return }
@@ -76,6 +92,22 @@ async function load(): Promise<void> {
     } catch (err) {
       if (err instanceof OutcomeWorkbenchDisabledError) gateOff.value = true
       /* 快照计数 fail-soft：显示 — */
+    }
+    // 测量/结算读面（Task 15）：失败（非门关）降级回显并标注，不炸段
+    try {
+      const m = await fetchOutcomeMeasurements(contract.value.outcomeId)
+      serverLatest.value = m.latest
+    } catch (err) {
+      if (err instanceof OutcomeWorkbenchDisabledError) gateOff.value = true
+      else readDegraded.value = true
+    }
+    try {
+      const s = await fetchOutcomeSettlement(contract.value.outcomeId)
+      serverSettlement.value = s.settlement
+      supersededChain.value = s.superseded
+    } catch (err) {
+      if (err instanceof OutcomeWorkbenchDisabledError) gateOff.value = true
+      else readDegraded.value = true
     }
   }
 }
@@ -179,6 +211,8 @@ async function doSubmitMeasurement(): Promise<void> {
       evidenceRefs,
     })
     sessionMeasurements.value = new Map(sessionMeasurements.value).set(m.measureId, m)
+    // 乐观同步读面摘要（服务端权威，下次 load 以读端点为准）
+    serverLatest.value = { ...serverLatest.value, [m.measureId]: m }
     // 连续提交防误带旧值：成功后清空实际值与证据（度量/可用性保留上次选择便于批量录入）
     measureActual.value = ''
     measureEvidence.value = ''
@@ -191,8 +225,14 @@ async function doSubmitMeasurement(): Promise<void> {
 }
 
 function latestActualOf(measureId: string): OutcomeMeasurement | null {
-  return sessionMeasurements.value.get(measureId) ?? null
+  // 服务端读面优先（当前版本口径）；读面降级时回退会话内回显
+  return serverLatest.value[measureId] ?? sessionMeasurements.value.get(measureId) ?? null
 }
+
+// 结算摘要展示源：会话内回显（签署后即时）优先，常态由服务端读面供给
+const shownSettlement = computed<OutcomeSettlement | null>(
+  () => sessionSettlement.value ?? serverSettlement.value,
+)
 
 // ---------- 结算签署（owner only；仅 observing） ----------
 const settleVerdict = ref<'' | OutcomeVerdict>('')
@@ -288,7 +328,7 @@ function fmtTs(ms?: number): string {
         <span>风险 {{ contract.riskTier }} / 可逆性 {{ contract.defaultReversibility }}</span>
       </div>
 
-      <!-- 度量表：定义来自合同；最新实际值/可用性仅回显本会话提交（批一无读端点） -->
+      <!-- 度量表：定义来自合同；最新实际值/可用性来自服务端测量读面（当前版本口径） -->
       <table class="outcome-measures" data-testid="outcome-measures">
         <thead>
           <tr><th>度量</th><th>基线</th><th>目标</th><th>最新实际值</th><th>可用性</th></tr>
@@ -305,23 +345,28 @@ function fmtTs(ms?: number): string {
           </tr>
         </tbody>
       </table>
-      <p class="outcome-hint">「最新实际值」仅回显本面板提交的测量；批一后端未提供测量读端点，历史以事件账为准。</p>
+      <p class="outcome-hint" data-testid="outcome-actual-hint">
+        「最新实际值」按当前合同版本口径取最新测量{{ readDegraded ? '（读取不可用，仅回显本面板提交）' : '' }}；历史记录以事件账为准。
+      </p>
 
-      <!-- 结算摘要 -->
-      <div v-if="sessionSettlement" class="outcome-settlement" data-testid="outcome-settlement-summary">
+      <!-- 结算摘要（服务端读面：最新有效结算＋历史取代链） -->
+      <div v-if="shownSettlement" class="outcome-settlement" data-testid="outcome-settlement-summary">
         <div class="outcome-settlement__head">
-          <span class="outcome-verdict" :class="`is-${sessionSettlement.verdict}`">
-            {{ VERDICT_LABEL[sessionSettlement.verdict] }}
+          <span class="outcome-verdict" :class="`is-${shownSettlement.verdict}`">
+            {{ VERDICT_LABEL[shownSettlement.verdict] }}
           </span>
-          <span class="outcome-hint">由 {{ sessionSettlement.signedBy }} 于 {{ fmtTs(sessionSettlement.signedAt) }} 签署</span>
+          <span class="outcome-hint">由 {{ shownSettlement.signedBy }} 于 {{ fmtTs(shownSettlement.signedAt) }} 签署</span>
         </div>
-        <p class="outcome-settlement__rationale">{{ sessionSettlement.rationale }}</p>
-        <p v-if="sessionSettlement.verdict === 'unknown' && sessionSettlement.gapNote" class="outcome-settlement__gap" data-testid="outcome-settlement-gap">
-          证据缺口：{{ sessionSettlement.gapNote }}（下次复审 {{ fmtTs(sessionSettlement.nextReviewAt) }}）
+        <p class="outcome-settlement__rationale">{{ shownSettlement.rationale }}</p>
+        <p v-if="shownSettlement.verdict === 'unknown' && shownSettlement.gapNote" class="outcome-settlement__gap" data-testid="outcome-settlement-gap">
+          证据缺口：{{ shownSettlement.gapNote }}（下次复审 {{ fmtTs(shownSettlement.nextReviewAt) }}）
+        </p>
+        <p v-if="supersededChain.length" class="outcome-hint" data-testid="outcome-settlement-superseded">
+          历史结算 {{ supersededChain.length }} 笔已被取代（根任务重开），链序以事件账为准。
         </p>
       </div>
       <p v-else-if="contract.status === 'settled'" class="outcome-hint" data-testid="outcome-settled-readonly">
-        合同已结算。批一后端未提供结算读端点，裁决详情以事件账为准。
+        合同已结算。结算读面暂不可用，裁决详情以事件账为准。
       </p>
 
       <!-- 操作面（终态只读） -->

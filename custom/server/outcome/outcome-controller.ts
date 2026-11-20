@@ -9,7 +9,9 @@
 //   PUT  /:id                 —— 修订（expectedVersion 乐观并发）
 //   POST /:id/transitions     —— 状态迁移（eventId 幂等；非法 422 problems）
 //   POST /:id/measurements    —— 测量提交（measurementId 幂等；evidenceRefs 必填）
+//   GET  /:id/measurements    —— 测量读面（?measureId= 过滤；当前版本优先全量＋每 measure 最新摘要）
 //   POST /:id/settlement      —— 结算签署（settlementId 幂等；unknown 须 gapNote+nextReviewAt）
+//   GET  /:id/settlement      —— 结算读面（最新有效结算＋历史 superseded 链）
 //   POST /:id/context-snapshots —— 生成最小上下文快照（sha256 内容幂等）
 //   GET  /:id/context         —— 快照列表（?snapshotId= 指定取全量）
 //
@@ -61,7 +63,7 @@ import {
   tasksTerminalOf,
   verifyRootTask,
 } from './kanban-resolution'
-import { suggestVerdict, validateSettlementInput } from './settlement'
+import { suggestVerdict, validateSettlementInput, latestCurrentMeasurement } from './settlement'
 import { OUTCOME_STATUSES } from './types'
 import type { OutcomeContract, OutcomeMeasurement, OutcomeStatus } from './types'
 
@@ -488,6 +490,40 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     else ok(ctx, { measurement: result.measurement, added: false })
   })
 
+  // GET /:id/measurements：测量读面（T13/T14 双报缺口补齐）。?measureId= 可选过滤。
+  // - measurements：全量列表「当前版本优先」——contractVersion=当前版的前排、组内按
+  //   落账序；旧版本（定义修订前口径）后排只作历史（spec §4.1）。
+  // - latest：每 measureId 最新一条摘要，绑定口径与结算机器建议同一选取器
+  //   （latestCurrentMeasurement：仅当前版本、observedAt 最大、后写覆盖）——无当前
+  //   版本记录的 measure 不出现在 latest（fail-soft 不拿旧口径充新值）。
+  // 读面与 GET /:id 同信任模型（单租户登录用户可读，spec §4.2 读侧无角色门槛）。
+  router.get('/:id/measurements', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const measureId = ctx.query.measureId !== undefined ? String(ctx.query.measureId) : undefined
+    const all = listMeasurements(id, measureId)
+    const currentFirst = [
+      ...all.filter((m) => m.contractVersion === contract.version),
+      ...all.filter((m) => m.contractVersion !== contract.version),
+    ]
+    const latest: Record<string, OutcomeMeasurement> = {}
+    for (const m of all) {
+      if (m.measureId in latest) continue
+      const pick = latestCurrentMeasurement(contract, all, m.measureId)
+      if (pick) latest[m.measureId] = pick
+    }
+    ok(ctx, {
+      outcomeId: id,
+      contractVersion: contract.version,
+      measurements: currentFirst,
+      latest,
+    })
+  })
+
   // POST /:id/settlement：结算签署（owner only；observing 起步；机器建议不代决）
   router.post('/:id/settlement', async (ctx) => {
     const actor = actorOf(ctx)
@@ -618,6 +654,51 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     created(ctx, { settlement, suggestion })
+  })
+
+  // GET /:id/settlement：结算读面（T13/T14 双报缺口补齐）。
+  // - settlement：最新有效结算=账上未被取代（无 settlement_superseded 命中）的
+  //   settlement_signed 中最后一条；全被取代（settled 后重开、未再结算）→ null，
+  //   历史进 superseded 链，不拿已废结算充当前（fail-soft 不造假）。
+  // - superseded：历史取代链，按取代事件落账序；每条含 settlement 正身（账上可
+  //   查得时；孤儿 id 只带 settlementId+reason）、取代理由与时间。
+  // 读面信任模型同上（单租户登录用户可读）。
+  router.get('/:id/settlement', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const signed = listEvents(id, 'settlement_signed')
+    const supersededEvents = listEvents(id, 'settlement_superseded')
+    const supersededIds = new Set(
+      supersededEvents
+        .map((e) => (e.payload as { settlementId?: unknown }).settlementId)
+        .filter((v): v is string => typeof v === 'string' && v.trim().length > 0),
+    )
+    const settlements = signed
+      .map((e) => (e.payload as { settlement?: unknown }).settlement)
+      .filter((s): s is NonNullable<unknown> => !!s && typeof s === 'object')
+      .filter((s) => nonEmpty((s as { settlementId?: unknown }).settlementId))
+    let latest: Record<string, unknown> | null = null
+    for (const s of settlements) {
+      if (!supersededIds.has((s as { settlementId: string }).settlementId)) latest = s as Record<string, unknown>
+    }
+    const chain = supersededEvents.map((e) => {
+      const p = e.payload as { settlementId?: unknown; reason?: unknown }
+      const settlementId = typeof p.settlementId === 'string' ? p.settlementId : ''
+      return {
+        settlementId,
+        reason: typeof p.reason === 'string' ? p.reason : '',
+        supersededAt: e.at,
+        settlement:
+          (settlements.find(
+            (s) => (s as { settlementId: string }).settlementId === settlementId,
+          ) as Record<string, unknown> | undefined) ?? null,
+      }
+    })
+    ok(ctx, { outcomeId: id, settlement: latest, superseded: chain })
   })
 
   // POST /:id/context-snapshots：生成最小上下文快照（批一 taskSummary 由注入面提供）

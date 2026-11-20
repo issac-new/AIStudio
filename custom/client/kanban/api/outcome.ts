@@ -10,9 +10,9 @@
 //   白名单外的键被静默丢弃（见控制器 CONTRACT_INPUT_FIELDS 注释）。
 // - 幂等键（eventId/measurementId/settlementId）由本模块生成 uuid 后缀，
 //   网络重试同键落账不重复；作用域组合（actor:键）由服务端落账时拼接。
-// - 读侧边界（fail-soft 不造假）：批一后端只有合同列表/详情与快照列表读端点，
-//   无测量/结算读端点——「最新测量」「结算摘要」仅能由本会话提交响应回显，
-//   面板如实标注，不猜数。
+// - 读面（Task 15 补齐）：GET /:id/measurements 与 GET /:id/settlement 已上线，
+//   「最新实际值」「结算摘要」从服务端真实读取（latest 只认当前版本口径，
+//   superseded 链如实下发）；读失败仍 fail-soft 回退会话内回显并标注。
 import { authFetch } from '@/custom/shared/http'
 
 export type OutcomeStatus = 'draft' | 'active' | 'observing' | 'settled' | 'cancelled'
@@ -132,6 +132,58 @@ export async function fetchOutcomeByRoot(rootTaskId: string): Promise<OutcomeCon
 export async function fetchOutcomeSnapshots(outcomeId: string): Promise<OutcomeSnapshotSummary[]> {
   const j = await requestOutcome(`/api/hermes/outcomes/${encodeURIComponent(outcomeId)}/context`)
   return Array.isArray(j.snapshots) ? (j.snapshots as OutcomeSnapshotSummary[]) : []
+}
+
+/** 测量读面响应（Task 15）：measurements=当前版本优先全量；latest=每 measure 最新
+ *  一条（服务端 settlement 同口径绑定：仅当前 contractVersion、observedAt 最大），
+ *  无当前版本记录的 measure 不在 latest——旧口径只作历史（spec §4.1）。 */
+export interface OutcomeMeasurementsRead {
+  outcomeId: string
+  contractVersion: number
+  measurements: OutcomeMeasurement[]
+  latest: Record<string, OutcomeMeasurement>
+}
+
+/** 读取测量（?measureId= 可选过滤）；门关抛 OutcomeWorkbenchDisabledError。 */
+export async function fetchOutcomeMeasurements(
+  outcomeId: string,
+  measureId?: string,
+): Promise<OutcomeMeasurementsRead> {
+  const q = measureId ? `?measureId=${encodeURIComponent(measureId)}` : ''
+  const j = await requestOutcome(
+    `/api/hermes/outcomes/${encodeURIComponent(outcomeId)}/measurements${q}`,
+  )
+  return {
+    outcomeId: String(j.outcomeId ?? outcomeId),
+    contractVersion: Number(j.contractVersion ?? 0),
+    measurements: Array.isArray(j.measurements) ? (j.measurements as OutcomeMeasurement[]) : [],
+    latest: (j.latest ?? {}) as Record<string, OutcomeMeasurement>,
+  }
+}
+
+/** 历史取代链条目：settlement 正身在账上可查得时随行（孤儿 id 为 null）。 */
+export interface OutcomeSettlementSuperseded {
+  settlementId: string
+  reason: string
+  supersededAt: number
+  settlement: OutcomeSettlement | null
+}
+
+/** 结算读面响应（Task 15）：settlement=最新有效结算（未被取代；全被取代=null）。 */
+export interface OutcomeSettlementRead {
+  outcomeId: string
+  settlement: OutcomeSettlement | null
+  superseded: OutcomeSettlementSuperseded[]
+}
+
+/** 读取结算（最新有效＋历史取代链）；门关抛 OutcomeWorkbenchDisabledError。 */
+export async function fetchOutcomeSettlement(outcomeId: string): Promise<OutcomeSettlementRead> {
+  const j = await requestOutcome(`/api/hermes/outcomes/${encodeURIComponent(outcomeId)}/settlement`)
+  return {
+    outcomeId: String(j.outcomeId ?? outcomeId),
+    settlement: (j.settlement ?? null) as OutcomeSettlement | null,
+    superseded: Array.isArray(j.superseded) ? (j.superseded as OutcomeSettlementSuperseded[]) : [],
+  }
 }
 
 export interface TransitionInput {

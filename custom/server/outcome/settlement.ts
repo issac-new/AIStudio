@@ -39,8 +39,10 @@ function metBy(operator: MeasureOperator, actual: number, target: number): boole
 }
 
 /** 选取某 measure 的当前版本最新测量：observedAt 最大者；平局取数组中后出现者
- *  （后写覆盖前写）。只看版本与 measureId 双匹配，outcomeId 不符视同无记录（fail-closed）。 */
-function latestCurrentMeasurement(
+ *  （后写覆盖前写）。只看版本与 measureId 双匹配，outcomeId 不符视同无记录（fail-closed）。
+ *  导出供读端点复用（Task 15 GET /:id/measurements 的 latest 摘要同一绑定口径：
+ *  单一事实源——「每 measure 最新一条」不得另写一套版本过滤）。 */
+export function latestCurrentMeasurement(
   contract: OutcomeContract,
   measurements: OutcomeMeasurement[],
   measureId: string,

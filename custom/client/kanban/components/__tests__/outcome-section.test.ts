@@ -11,6 +11,8 @@ import { mount, flushPromises } from '@vue/test-utils'
 const apiMocks = vi.hoisted(() => ({
   fetchOutcomeByRoot: vi.fn(),
   fetchOutcomeSnapshots: vi.fn(),
+  fetchOutcomeMeasurements: vi.fn(),
+  fetchOutcomeSettlement: vi.fn(),
   transitionOutcome: vi.fn(),
   submitMeasurement: vi.fn(),
   settleOutcome: vi.fn(),
@@ -70,6 +72,12 @@ beforeEach(() => {
   auth.actor.value = 'alice'
   apiMocks.fetchOutcomeByRoot.mockResolvedValue(null)
   apiMocks.fetchOutcomeSnapshots.mockResolvedValue([])
+  apiMocks.fetchOutcomeMeasurements.mockResolvedValue({
+    outcomeId: 'oc-test1', contractVersion: 2, measurements: [], latest: {},
+  })
+  apiMocks.fetchOutcomeSettlement.mockResolvedValue({
+    outcomeId: 'oc-test1', settlement: null, superseded: [],
+  })
   apiMocks.transitionOutcome.mockResolvedValue(makeContract({ status: 'active' }))
   apiMocks.submitMeasurement.mockImplementation(async (_id: string, input: { measureId: string; actual: number | null }) => ({
     measurementId: 'mea-x1', outcomeId: 'oc-test1', measureId: input.measureId, contractVersion: 2,
@@ -122,6 +130,61 @@ describe('OutcomeSection — 渲染面', () => {
     const w = await mountSection()
     expect(w.find('[data-testid="outcome-error"]').text()).toContain('业务结果面板不可用')
     expect(w.find('[data-testid="outcome-error"]').text()).toContain('504')
+  })
+})
+
+describe('OutcomeSection — 测量/结算读面（Task 15）', () => {
+  it('服务端 latest 渲染「最新实际值」（有值/未知/未测三分）；settled 合同渲染结算正身与取代链', async () => {
+    apiMocks.fetchOutcomeByRoot.mockResolvedValue(makeContract({ status: 'settled' }))
+    apiMocks.fetchOutcomeMeasurements.mockResolvedValue({
+      outcomeId: 'oc-test1', contractVersion: 2,
+      measurements: [],
+      latest: {
+        m1: {
+          measurementId: 'mea-1', outcomeId: 'oc-test1', measureId: 'm1', contractVersion: 2,
+          actual: 45, availability: 'available', evidenceRefs: ['evid://1'],
+          observedAt: 1731000200000, recordedBy: 'alice', recordedAt: 1731000200000,
+        },
+        m2: {
+          measurementId: 'mea-2', outcomeId: 'oc-test1', measureId: 'm2', contractVersion: 2,
+          actual: null, availability: 'unavailable', evidenceRefs: ['evid://2'],
+          observedAt: 1731000200000, recordedBy: 'vera', recordedAt: 1731000200000,
+        },
+      },
+    })
+    apiMocks.fetchOutcomeSettlement.mockResolvedValue({
+      outcomeId: 'oc-test1',
+      settlement: {
+        settlementId: 'set-2', outcomeId: 'oc-test1', contractVersion: 2, verdict: 'achieved',
+        rationale: '积压压到 45 张低于目标 50，准予结算。', measurementIds: ['mea-1'],
+        signedBy: 'alice', signedAt: 1731000300000,
+      },
+      superseded: [
+        { settlementId: 'set-1', reason: 'root_task_reopened', supersededAt: 1731000250000, settlement: null },
+      ],
+    })
+    const w = await mountSection()
+    // 三分：m1 有值 45；m2 null=未知；最新口径注脚不再宣称「无读端点」
+    expect(w.find('[data-testid="outcome-actual-m1"]').text()).toBe('45')
+    expect(w.find('[data-testid="outcome-actual-m2"]').text()).toBe('未知')
+    expect(w.find('[data-testid="outcome-actual-hint"]').text()).toContain('当前合同版本口径')
+    // 结算正身来自读端点（非会话回显）
+    const summary = w.find('[data-testid="outcome-settlement-summary"]')
+    expect(summary.exists()).toBe(true)
+    expect(summary.text()).toContain('达成')
+    expect(summary.text()).toContain('由 alice 于')
+    expect(w.find('[data-testid="outcome-settlement-superseded"]').text()).toContain('1 笔已被取代')
+  })
+
+  it('读面失败（非门关）→ 降级标注＋表格回退未测（—），不炸段', async () => {
+    apiMocks.fetchOutcomeByRoot.mockResolvedValue(makeContract())
+    apiMocks.fetchOutcomeMeasurements.mockRejectedValue(new Error('测量读取失败（503）'))
+    apiMocks.fetchOutcomeSettlement.mockRejectedValue(new Error('结算读取失败（503）'))
+    const w = await mountSection()
+    expect(w.find('[data-testid="outcome-section"]').exists()).toBe(true)
+    expect(w.find('[data-testid="outcome-actual-m1"]').text()).toBe('—')
+    expect(w.find('[data-testid="outcome-actual-hint"]').text()).toContain('读取不可用，仅回显本面板提交')
+    expect(w.find('[data-testid="outcome-settlement-summary"]').exists()).toBe(false)
   })
 })
 
