@@ -73,7 +73,7 @@ function runOf(id: string, setId: string, pass: number) {
     id,
     setId,
     target: {},
-    k: 2,
+    k: 3,
     status: 'done' as const,
     attempts: [],
     aggregates: {

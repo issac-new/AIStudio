@@ -18,7 +18,7 @@ import {
   surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
 } from './loop'
 import { behavioralDiversity, decomposeSearch, gainRetention, objectivePointsOf } from './multi-objective'
-import { createSet, getSet } from '../../eval/store'
+import { createSet, getSet, splitOfSet } from '../../eval/store'
 import { runReplayEval } from '../../eval/runner'
 import { loadEvalConfig } from '../../eval/types'
 import type { AskFn } from '../../eval/judge'
@@ -894,9 +894,32 @@ export interface ReflectionInput {
   confidence?: 'low' | 'medium' | 'high'
 }
 
+/**
+ * 证据集三向角色表（Agnes 批一 a）：收集提案所有证据引用的 setId（探测/基线/
+ * 等预算/反事实），从 eval store 读出角色。集已删除的条目缺席（该门不评估那一条，
+ * 不猜）。fail-soft：eval store 不可读返回空表（门跳过，向后兼容）。
+ */
+function evidenceSetSplitsFor(proposal: Proposal): Record<string, 'train' | 'eval' | 'sealed'> {
+  const ids = new Set<string>()
+  for (const probe of proposal.probes) {
+    if (probe.evidence?.setId) ids.add(probe.evidence.setId)
+    if (probe.evidence?.equalBudgetBaseline?.setId) ids.add(probe.evidence.equalBudgetBaseline.setId)
+    if (probe.evidence?.counterfactual?.setId) ids.add(probe.evidence.counterfactual.setId)
+  }
+  if (proposal.baseline?.setId) ids.add(proposal.baseline.setId)
+  const out: Record<string, 'train' | 'eval' | 'sealed'> = {}
+  for (const id of ids) {
+    try {
+      const set = getSet(id)
+      if (set) out[id] = splitOfSet(set)
+    } catch { /* store 不可读：该条缺席 */ }
+  }
+  return out
+}
+
 export async function promoteProposal(
   id: string,
-  opts: { actor?: string; apply?: boolean; reflection?: ReflectionInput } = {},
+  opts: { actor?: string; apply?: boolean; reflection?: ReflectionInput; waivers?: Array<{ code: 'min_k'; reason: string }> } = {},
 ): Promise<{ proposal: ProposalView; gate: PromotionGateReport; applied: boolean; experience?: Experience }> {
   const store = readStore()
   const p0 = store.proposals.find((x) => x.id === id)
@@ -911,8 +934,24 @@ export async function promoteProposal(
       targetDigestNow = resolved.ok && resolved.abs ? fileDigest(resolved.abs) : null
     }
   }
+  // 豁免先落提案（Agnes 批一 a）：min_k 豁免必须留痕在案才被晋级门承认——
+  // 同一次调用里提交即生效，但记录不可变（追加，不覆盖历史豁免）。
+  const p0WithWaivers = (opts.waivers ?? []).length > 0
+    ? {
+        ...p0,
+        waivers: [
+          ...(p0.waivers ?? []),
+          ...opts.waivers!.map((w) => ({
+            code: w.code,
+            actor: String(opts.actor ?? 'operator'),
+            reason: String(w.reason ?? '').trim(),
+            at: nowIso(),
+          })),
+        ].filter((w) => w.reason),
+      }
+    : p0
   const gate = evaluatePromotion({
-    proposal: p0,
+    proposal: p0WithWaivers,
     currentChampion: champion,
     applyRequested: opts.apply === true,
     applyEnvEnabled: applyEnabled(),
@@ -920,6 +959,7 @@ export async function promoteProposal(
     targetExists,
     regularization: regularizationOf(store, p0),
     leakage: leakageForProposal(p0),
+    evidenceSetSplits: evidenceSetSplitsFor(p0),
   })
   if (!gate.ok) throw new ServiceError(409, '晋级门禁未通过', gate.blockers)
 
@@ -937,6 +977,10 @@ export async function promoteProposal(
   const result = await mutateStore((store2) => {
     const p = requireProposal(store2, id)
     const now = nowIso()
+    // 豁免留痕随晋级写回（Agnes 批一 a）：gate 用的副本有而库里的没有时补齐。
+    if (p0WithWaivers !== p0 && p0WithWaivers.waivers && p.waivers?.length !== p0WithWaivers.waivers.length) {
+      p.waivers = p0WithWaivers.waivers
+    }
     const previous = currentChampionOf(store2.champions, p.surfaceKey, p.id)
     const champ: Champion = {
       id: nextId(store2, 'ch'),

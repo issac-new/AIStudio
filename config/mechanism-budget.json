@@ -25,6 +25,20 @@
   },
   {
    "at": "2026-11-20",
+   "delta": "+2 blocker code（statistical_insufficient_waived/train_evidence，W6 棘轮 57→59）＋+1 门输入维度（evidenceSetSplits 三向角色表）＋+1 豁免字段族（Proposal.waivers min_k）＋+1 报告字段（PromotionGateReport.lexOrder）＋probeK 默认 2→3 / +0 域 / +0 patch / +0 gate / +0 script / +0 npm script",
+   "reason": "Agnes Harness 吸收批一 a·晋级门收紧（spec 2026-11-20-agnes-gate-hardening）：字典序目标（安全>质量>成本，高层 fail 暂缓成本裁决）＋n≥3 统计下限（k<3 blocker，min_k 显式豁免留痕）＋Train/Eval/Sealed 三向数据集隔离（train 证据不可晋级）",
+   "pairedRemovals": [
+    "statistical_insufficient 的 warning 形态退役：k<2-warning 通道被 k<3-blocker＋豁免通道取代（旧 warning code 只在豁免场景以 _waived 后缀存活，语义从「提醒」变「人工担责留痕」）",
+    "probeK=2 默认值退役：与新 k≥3 门矛盾的默认配置不再出厂（存量已落盘 harness-schedule.json 的 probeK=2 显式配置保留，重晋级时被新门如实拦）"
+   ],
+   "sunset": {
+    "owner": "plusprimer",
+    "reviewBy": "Agnes 批 1b（学习闭环）合并时复核",
+    "retireWhen": "若连续两轮真实晋级全部走 min_k 豁免（即 k=3 成本不可承受），把默认 probeK 回调 2 并撤 k<3 blocker、恢复 warning 通道；lexOrder 与 train_evidence 为正身机制不退役"
+   }
+  },
+  {
+   "at": "2026-11-20",
    "delta": "+1 域模块（judgment：席位类型/回交裁决/固化撤回，纯函数）/ +4 env 开关（TRG_FASTPATH、TRG_HANDOFF、TRG_S2_MODEL、TRG_S2_TIMEOUT_MS，默认全关）/ +1 快路径文件（toolresultguard-fastpath.json，落在既有审计目录，不新增 LEDGERS 注册项）/ +0 patch / +0 gate / +0 script / +0 npm script",
    "reason": "Agnes Harness 吸收批二·判定席位（spec 2026-11-20-agnes-harness-absorption）：给 LLM 判定点加有限选项/强制回交/已验证快路径；先接 toolresultguard，快路径与 S2 回交均默认关（TRG_ENABLED=1 存量部署升级零行为变化）",
    "pairedRemovals": [

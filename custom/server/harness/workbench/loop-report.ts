@@ -62,10 +62,29 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
           message: `选中候选的历史回归失败 ${probe.evidence.regression.failed} 项`,
         })
       }
-      // R4（2026-10-31 D4）：k=1 恒 warning（单样本无法区分运气与能力）；
-      // pass@1 升而 pass@k 降＝靠运气通过——divergence 告警（两读数齐全才判）。
-      if (probe.evidence.statisticallyInsufficient || (probe.evidence.k ?? 1) < 2) {
-        warnings.push({ code: 'statistical_insufficient', message: '评测采样 k<2，统计上不足（单样本无法区分运气与能力）' })
+      // ---- Agnes 批一 a：三向数据集隔离——晋级证据只认 eval|sealed ----
+      // train 集是给进化/调参过程读的；用它晋级＝「教到考上再自己打分」。
+      // splits 表由 service 层读 eval store 注入；缺席（旧调用方）不评估该门。
+      const evidenceSplit = input.evidenceSetSplits?.[probe.evidence.setId]
+      if (evidenceSplit === 'train') {
+        blockers.push({
+          code: 'train_evidence',
+          message: `选中候选的评测集 ${probe.evidence.setId} 是 train 角色：晋级证据必须来自 eval|sealed 集（Train/Eval/Sealed 三向隔离，Agnes 批一 a）`,
+        })
+      }
+      // Agnes 批一 a（2026-11-20）：k<3 从 warning 升 blocker——两个样本无法区分
+      // 运气与能力（Agnes RSI 三跑统计纪律同款；k=2 只是「没矛盾」，不是「一致」）。
+      // 显式 min_k 豁免（actor+reason 留痕进 proposal.waivers）可降 warning，不静默。
+      const minKWaived = (proposal.waivers ?? []).some(
+        (w) => w.code === 'min_k' && typeof w.actor === 'string' && w.actor.trim() && typeof w.reason === 'string' && w.reason.trim(),
+      )
+      if (probe.evidence.statisticallyInsufficient || (probe.evidence.k ?? 1) < 3) {
+        const msg = `评测采样 k=${probe.evidence.k ?? 1}（<3）：两样本以下无法区分运气与能力（R4/Agnes RSI n=3）`
+        if (minKWaived) {
+          warnings.push({ code: 'statistical_insufficient_waived', message: `${msg}——已豁免（min_k，见 proposal.waivers 留痕），人工承担统计风险` })
+        } else {
+          blockers.push({ code: 'statistical_insufficient', message: msg })
+        }
       }
       if (probe.evidence.passAt1 != null && probe.evidence.passAtK != null
         && probe.evidence.k != null && probe.evidence.k >= 2
@@ -414,7 +433,30 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
     }
   }
 
-  return { ok: blockers.length === 0, blockers, warnings }
+  // ---- Agnes 批一 a（2026-11-20）：字典序目标——安全 > 质量 > 成本 ----
+  // 成本类 blocker 仅在安全与质量层都干净时才参与裁决；高层 fail 时暂缓为
+  // warning（「先修安全/质量，成本裁决下轮再算」）。反方向永远不成立：任何
+  // 成本收益都抵消不了安全/质量 fail——那些 blocker 原地不动，无豁免通道。
+  const SAFETY_BLOCKER_CODES = new Set(['constraint_regression', 'benchmark_leakage'])
+  const COST_BLOCKER_CODES = new Set(['cost_unjustified', 'budget_exceeded', 'cost_missing'])
+  const safetyFail = blockers.some((b) => SAFETY_BLOCKER_CODES.has(b.code))
+  // 未列明的 code（流程完备/质量/证据类）一律按质量层处理——保守：宁可暂缓成本裁决。
+  const qualityFail = blockers.some((b) => !SAFETY_BLOCKER_CODES.has(b.code) && !COST_BLOCKER_CODES.has(b.code))
+  if ((safetyFail || qualityFail) && blockers.some((b) => COST_BLOCKER_CODES.has(b.code))) {
+    for (let i = blockers.length - 1; i >= 0; i -= 1) {
+      const b = blockers[i]
+      if (!COST_BLOCKER_CODES.has(b.code)) continue
+      blockers.splice(i, 1)
+      warnings.push({ code: b.code, message: `${b.message}（成本裁决暂缓：字典序下层，先解决安全/质量 blocker）` })
+    }
+  }
+  const lexOrder = {
+    safety: (safetyFail ? 'fail' : 'pass') as 'fail' | 'pass',
+    quality: (qualityFail ? 'fail' : 'pass') as 'fail' | 'pass',
+    cost: (blockers.some((b) => COST_BLOCKER_CODES.has(b.code)) ? 'fail' : 'pass') as 'fail' | 'pass',
+  }
+
+  return { ok: blockers.length === 0, blockers, warnings, lexOrder }
 }
 
 /** 提案是否已具备提交条件（服务层用；纯函数便于测试）。 */

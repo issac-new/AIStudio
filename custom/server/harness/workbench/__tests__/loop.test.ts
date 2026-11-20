@@ -14,7 +14,7 @@ function metrics(over: Partial<ProbeMetrics> = {}): ProbeMetrics {
   return {
     evalRunId: 'run-base',
     setId: 'set-1',
-    k: 2,
+    k: 3,
     passAt1: 0.5,
     passAtK: 0.5,
     resultPassRate: 0.5,
@@ -751,17 +751,29 @@ describe('RSI P2：D7 全历史注入与 D10 删除提案模板', () => {
 describe('R4 pass@k 背离与 R12a 验证分级', () => {
   const base = () => ({ proposal: fixture(), currentChampion: null as Champion | null, applyRequested: false, applyEnvEnabled: false })
 
-  it('k=1 → statistical_insufficient 必现（含 evidence.k 缺席场景）', () => {
+  it('k<3 → statistical_insufficient blocker（Agnes 批一 a：k=1/k=2 都拦）；k=3 干净；min_k 豁免降 warning', () => {
     const p = fixture()
     const probe = p.probes.find((x) => x.variantId === 'v1')!
     probe.evidence = { ...probe.evidence!, k: 1 }
     const r = evaluatePromotion({ ...base(), proposal: p })
-    expect(r.warnings.map((w) => w.code)).toContain('statistical_insufficient')
+    expect(r.blockers.map((w) => w.code)).toContain('statistical_insufficient')
     const k2 = fixture()
     const pr2 = k2.probes.find((x) => x.variantId === 'v1')!
     pr2.evidence = { ...pr2.evidence!, k: 2, passAtK: 0.8 }
     const r2 = evaluatePromotion({ ...base(), proposal: k2 })
-    expect(r2.warnings.map((w) => w.code)).not.toContain('statistical_insufficient')
+    expect(r2.blockers.map((w) => w.code)).toContain('statistical_insufficient')
+    const k3 = fixture()
+    const pr3 = k3.probes.find((x) => x.variantId === 'v1')!
+    pr3.evidence = { ...pr3.evidence!, k: 3, passAtK: 0.8 }
+    const r3 = evaluatePromotion({ ...base(), proposal: k3 })
+    expect(r3.blockers.map((w) => w.code)).not.toContain('statistical_insufficient')
+    expect(r3.warnings.map((w) => w.code)).not.toContain('statistical_insufficient')
+    // 豁免留痕（actor+reason 齐）→ 降 warning 不拦；无理由豁免不被承认。
+    const waived = k2
+    waived.waivers = [{ code: 'min_k', actor: 'reviewer-a', reason: '预算受限，接受两样本风险', at: new Date().toISOString() }]
+    const r4 = evaluatePromotion({ ...base(), proposal: waived })
+    expect(r4.blockers.map((w) => w.code)).not.toContain('statistical_insufficient')
+    expect(r4.warnings.map((w) => w.code)).toContain('statistical_insufficient_waived')
   })
 
   it('pass@1 升而 pass@k 降 → warning pass_at_k_divergence；同步升不告警', () => {

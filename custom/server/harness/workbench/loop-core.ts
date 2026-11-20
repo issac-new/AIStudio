@@ -480,5 +480,10 @@ export interface PromotionGateInput {
   regularization?: RegularizationDerived | null
   /** 泄漏批评者（S1）发现，service 层按证据集扫描后注入；晋级硬拦。 */
   leakage?: GateBlocker[]
+  /**
+   * 证据集三向角色表（Agnes 批一 a）：setId→train/eval/sealed，service 层读
+   * eval store 注入；缺席时该门不评估（向后兼容）。晋级证据只认 eval|sealed。
+   */
+  evidenceSetSplits?: Record<string, 'train' | 'eval' | 'sealed'>
 }
 

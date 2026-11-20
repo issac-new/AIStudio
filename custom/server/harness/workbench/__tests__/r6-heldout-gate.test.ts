@@ -75,7 +75,7 @@ afterEach(async () => {
 
 function runOf(id: string, setId: string, pass: number) {
   return {
-    id, setId, target: {}, k: 2, status: 'done' as const, attempts: [],
+    id, setId, target: {}, k: 3, status: 'done' as const, attempts: [],
     aggregates: {
       taskCount: 1, passAt1: pass, passAtK: pass,
       byLayer: { result: pass, trajectory: pass, efficiency: { avgTokens: 100, avgCostUsd: 1, avgSteps: 5, avgDurationMs: 100 } },

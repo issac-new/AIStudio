@@ -300,10 +300,17 @@ export interface EvalSet {
   /** discovery 形态必填（校验在建集口分支执行）。 */
   discovery?: DiscoverySpec
   /**
-   * 是否要求先通过 F2P/P2P 校准才能正式运行（2026-10-30 HelixHarness 吸收轮）。
+   * 是否要求先通过 F2F/P2P 校准才能正式运行（2026-10-30 HelixHarness 吸收轮）。
    * 缺省 false：存量集向后兼容；新建/改版后要收紧的集置 true。
    */
   requireCalibration?: boolean
+  /**
+   * 三向数据集角色（Agnes Harness 吸收批一 a，2026-11-20）：`train`=进化/调参可读、
+   * `eval`=晋级比较集、`sealed`=密封验证集。缺省按 sealed 布尔推导（sealed=true→sealed，
+   * 否则 eval）；`train` 必须建集时显式声明。晋级证据只认 eval|sealed（workbench 晋级门
+   * 拦 train 证据）；从 eval/sealed 不回流 train。
+   */
+  split?: 'train' | 'eval' | 'sealed'
   /**
    * 任务族标签（R10，2026-10-31 三批）：同族任务测同一能力（HCAST 范式）——
    * 进化报告按族聚合增益，防单任务特化（面级增益与族级增益背离即 family_specialization 警示）。
