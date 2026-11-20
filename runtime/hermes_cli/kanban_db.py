@@ -1603,6 +1603,28 @@ def create_task(
             # commit so the dispatcher never sees a half-built graph.
             with write_txn(conn, allow_nested=True):
                 task_status, tenant = initial_task_state(conn, parents, initial_status, triage, tenant)
+                # 批二补丁 807（spec 2026-11-20-ai-native-cognition-batch2 §2）：建卡带
+                # parents 时继承父卡 outcome_id——父序首个非空值胜出（与 tenant 继承
+                # 同位次语义，未绑定父不拦截「空→值」）；多父绑定到不同 outcome 即拒
+                # （805 三态纪律在建卡面的等价物：一张卡不得跨两个结果合同）。
+                # kanban_swarm 建卡与 CLI --parent 均经本函数，两路自然覆盖。
+                outcome_id = None
+                if parents:
+                    _parent_outcomes = {
+                        row["id"]: row["outcome_id"]
+                        for row in conn.execute(
+                            "SELECT id, outcome_id FROM tasks WHERE id IN ("
+                            + ",".join("?" * len(parents)) + ")", parents,
+                        )
+                    }
+                    _bound = [_parent_outcomes[pid] for pid in parents if _parent_outcomes.get(pid)]
+                    if len(set(_bound)) > 1:
+                        raise ValueError(
+                            "parents bind different outcomes ("
+                            + ", ".join(sorted(set(_bound)))
+                            + "); a task cannot join two outcomes — re-bind parents first"
+                        )
+                    outcome_id = _bound[0] if _bound else None
                 # Project worktree: fresh dir under the repo + deterministic
                 # branch, instead of the random ``wt/<id>`` worker fallback.
                 if project_obj is not None and workspace_kind == "worktree":
@@ -1621,8 +1643,8 @@ def create_task(
                         skills, max_retries, model_override, provider_override,
                         reasoning_effort,
                         goal_mode, goal_max_turns, session_id, completion_contract, raci,
-                        verification, required_capabilities
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        verification, required_capabilities, outcome_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         task_id, title.strip(), body, assignee, task_status, priority,
@@ -1635,6 +1657,7 @@ def create_task(
                         json.dumps(raci) if isinstance(raci, dict) else None,
                         verification,
                         json.dumps(required_capabilities_list) if required_capabilities_list is not None else None,
+                        outcome_id,
                     ),
                 )
                 if cursor.rowcount == 0:

@@ -1361,3 +1361,8 @@
 # requiredCapabilitiesPlaceholder，zh/en——324/325 追加流程同款）。编辑通道与 skills 同边界
 # （create-only，PATCH 不透传——对称）。
 808-studio-kanban-required-capabilities.patch
+# 809-agent-kanban-create-parent-outcome（AI 原生组织运行模型批二 Task 3，spec 2026-11-20-ai-native-cognition-batch2 §2）：
+# kanban_db.create_task 带 parents 建卡时继承父卡 outcome_id——父序首个非空值胜出（同 tenant 继承位次）；
+# 多父绑定到不同 outcome 即拒（异值拒，805 三态纪律建卡面等价物，原子失败不留半写）。
+# kanban_swarm 建卡与 CLI --parent 均经 create_task 两路自然覆盖；runtime/hermes_cli/kanban_db.py 镜像同批同步。
+809-agent-kanban-create-parent-outcome.patch
