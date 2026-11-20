@@ -69,6 +69,33 @@
 - 补丁 810 双向 apply-check＋`npm run inject` 重放 complete；浏览器走查记录文字留档。
 - 全量 `npm test`＋`node scripts/merge-invariants.mjs --check`＋`node scripts/governance-lint.mjs --budget`。
 
+## 收口回填（2026-11-21 实测）
+
+### 浏览器六步走查（T7a，全链通）
+
+隔离栈：8648 后端（NODE_ENV=production＋OUTCOME_WORKBENCH=1＋HERMES_WEB_UI_HOME/HERMES_HOME/HERMES_KANBAN_HOME 三隔离）＋8649 vite dev 代理；admin 随机口令（640 修复后 CLI 建号）注入会话。全链实录：
+
+- ① 建根任务（看板 UI 待分拣列）：`t_b32a98f6` 创建成功，任务计数 0→1。
+- ② 建合同：OutcomeSection 空态如实提示「尚未建模业务结果」；合同经 API 建（`oc-mwpclgsg-cjy06k`，high/one-way 双测量，verifier-b3 双人）——**UI 无建模表单系批一既定缺口**（组件注释自认「POST / 由后续任务接线」未接线），见发现 F1。
+- ③ 激活（抽屉 UI 激活按钮）：首次诚实拒绝（绑定扫不到根卡）；补隔离库 outcome_id 列后重试成功（**发现 F4/F3**：vendor 建表的 fresh 库无 805 列；缺列被误报为「任务不存在」）；合同生效、激活即绑定全家。
+- ④ 团队（gov-org OutcomeTeamSection）：查询面渲染合同卡＋高风险警示文案；成员表编辑＋变更理由就位；确认按钮点击后 UI 无变化（**发现 F2：确认失败零反馈**）；API 直测 PUT 即成（v1 active，updatedBy=admin 服务端身份）；刷新后只读成员表「已确认团队 v1」正确。
+- ⑤ 主链 API 闭环（测量双条 contractVersion 校验拒旧版在案→wm-1/wm-2 落账；observing 首拒 tasks_unfinished 诚实→终结核卡后过；结算 ws-1 achieved 签署＋机器建议）；学习候选未生成=双闸正确（隔离服未开 EXPERIENCE_INJECT）。
+- ⑥ 议程＋协同图＋贡献：DecisionAgendaSection 七源真数据（学习候选 16 项 available、空源「没有待决事项」与 available 徽标区分）；OrchestrationView 五问全渲染（合同 v1＋**团队：已确认团队 v1 · admin（accountable）、verifier-b3（reviewer）**＋度量目标）；ContributionReviewSection 六面（测量/团队/评价/学习/事件时间线三事件＋评审结论面「暂未接通」诚实态）；签署评价 UI 端到端成功（cr-mwpctif4，subject=verifier-b3 非自评，signedBy=admin 服务端定）。抽屉终态：已结算＋实测值（0/100 available）＋达成签署＋对照投影「效果未知——不足两个同口径已结算结果，不宣称改善」。
+- 亮暗模式/窄容器抽查未逐项做（时间窗），组件测试已覆盖关键态——不宣称已验。
+
+### 走查发现（处置）
+
+| # | 发现 | 级别 | 处置 |
+|---|---|---|---|
+| F1 | OutcomeSection 无建模表单（仅提示文案；批一注释自认 POST / 未接 UI） | 既有缺口 | 批后挂账（批一面，非本批引入；API 面完整） |
+| F2 | OutcomeTeamSection 确认失败零反馈（422/409 无错误文案；表单模型绑定疑点并存） | T6 缺陷 | T8 硬化：确认按钮补错误显示路径 |
+| F3 | bindOutcomeFamily 对缺 outcome_id 列的库误报「根任务不存在」（缺列异常被吞成 not-found） | Minor | T8 若顺手（错误码区分 schema 缺列）；否则批后挂账 |
+| F4 | fresh 隔离 home 的 kanban.db 由 vendor 建表无 805 列（805 只在 python 建库/迁移路径） | 环境注记 | 走查配方记录：fresh home 需经 python CLI 建库或手工补列 |
+
+### pristine-replay 补跑（T7b）
+
+8647 空窗复跑 `scripts/__tests__/overlay-pristine-replay.test.ts`：**2/2 通过（97.76s）**——批一/二两轮环境性登记欠账清偿；且本次重放包含重组后的 778/640，全 503 枚补丁序列干净态重放全过（对两枚修复补丁的第二次独立验证）。
+
 ## 设计文档影响
 
 DESIGN_SYNC: touched
