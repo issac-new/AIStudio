@@ -1,3 +1,95 @@
+diff --git a/bin/hermes-web-ui.mjs b/bin/hermes-web-ui.mjs
+--- a/bin/hermes-web-ui.mjs
++++ b/bin/hermes-web-ui.mjs
+@@ -25,7 +25,11 @@
+ const WEB_UI_DB_FILE = join(WEB_UI_HOME, 'hermes-web-ui.db')
+ const DEFAULT_PORT = 8648
+ const DEFAULT_USERNAME = 'admin'
+-const DEFAULT_PASSWORD = '123456'
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 出厂默认口令移除（安全轮 M8b，2026-10-16）
++// reset-default-login 改为每次生成随机密码；凭据落 <home>/admin-login.json（0600，
++// 供桌面主进程代理自动登录复用），并打印一次。
++const ADMIN_LOGIN_FILE = join(WEB_UI_HOME, 'admin-login.json')
++// HERMES_CUSTOM[SecNoDefaultCred] END
+ const DEFAULT_RESTART_GRACE_MS = 5000
+ const DEFAULT_STOP_GRACE_MS = 15000
+ const STOP_POLL_INTERVAL_MS = 500
+@@ -563,6 +567,18 @@
+   return `scrypt:${salt}:${hash}`
+ }
+ 
++// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 随机密码建号/重置（安全轮 M8b，2026-10-16）
++// 旧行为=每次重置回出厂 admin/123456（已知默认口令的再生产源）。新行为=每次生成
++// 随机密码，凭据写 <home>/admin-login.json（0600，桌面主进程自动登录复用）并打印。
++function generateAdminPassword() {
++  return randomBytes(15).toString('base64url')
++}
++
++function writeAdminLoginFile(username, password) {
++  writeFileSync(ADMIN_LOGIN_FILE, `${JSON.stringify({ username, password, createdAt: Date.now() })}\n`, { mode: 0o600 })
++  try { chmodSync(ADMIN_LOGIN_FILE, 0o600) } catch { /* best-effort */ }
++}
++
+ async function resetDefaultLogin(options = {}) {
+   const { silent = false } = options
+   mkdirSync(WEB_UI_HOME, { recursive: true })
+@@ -583,7 +599,8 @@
+     `)
+ 
+     const now = Date.now()
+-    const passwordHash = hashPassword(DEFAULT_PASSWORD)
++    const password = generateAdminPassword()
++    const passwordHash = hashPassword(password)
+     const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(DEFAULT_USERNAME)
+     if (existing?.id) {
+       db.prepare(
+@@ -591,26 +608,24 @@
+          SET password_hash = ?, role = 'super_admin', status = 'active', updated_at = ?
+          WHERE id = ?`
+       ).run(passwordHash, now, existing.id)
+-      if (!silent) {
+-        console.log(`  ✓ Reset default login: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD}`)
+-        console.log(`    Database: ${WEB_UI_DB_FILE}`)
+-      }
+-      return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD, action: 'updated' }
+-    }
+-
+-    db.prepare(
+-      `INSERT INTO users (username, password_hash, role, status, created_at, updated_at)
+-       VALUES (?, ?, 'super_admin', 'active', ?, ?)`
+-    ).run(DEFAULT_USERNAME, passwordHash, now, now)
++    } else {
++      db.prepare(
++        `INSERT INTO users (username, password_hash, role, status, created_at, updated_at)
++         VALUES (?, ?, 'super_admin', 'active', ?, ?)`
++      ).run(DEFAULT_USERNAME, passwordHash, now, now)
++    }
++    writeAdminLoginFile(DEFAULT_USERNAME, password)
+     if (!silent) {
+-      console.log(`  ✓ Created default login: ${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD}`)
++      console.log(`  ✓ ${existing?.id ? 'Reset' : 'Created'} login: ${DEFAULT_USERNAME} / ${password}`)
++      console.log(`    (random password, shown once; also stored at ${ADMIN_LOGIN_FILE})`)
+       console.log(`    Database: ${WEB_UI_DB_FILE}`)
+     }
+-    return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password: DEFAULT_PASSWORD, action: 'created' }
++    return { path: WEB_UI_DB_FILE, username: DEFAULT_USERNAME, password, action: existing?.id ? 'updated' : 'created' }
+   } finally {
+     db.close()
+   }
+ }
++// HERMES_CUSTOM[SecNoDefaultCred] END
+ 
+ async function main() {
+   const command = process.argv[2] || 'start'
+@@ -634,7 +649,7 @@
+   status             Show server status
+   plugins            Create, register and debug standalone plugins
+   clear-login-locks  Delete the login IP lock file
+-  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD})
++  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / random password, shown once)
+   update             Update to latest version and restart
+   upgrade            Alias for update
+   version            Show version number
 
 diff --git a/packages/client/src/components/hermes/pets/WebPet.vue b/packages/client/src/components/hermes/pets/WebPet.vue
 --- a/packages/client/src/components/hermes/pets/WebPet.vue
@@ -37,6 +129,7 @@ diff --git a/packages/client/src/components/hermes/pets/WebPet.vue b/packages/cl
    for (let i = 0; i < 20 && !localStorage.getItem('hermes_api_key'); i += 1) {
      await new Promise(resolve => window.setTimeout(resolve, 100))
 
+
 diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/locales/ar.ts
 --- a/packages/client/src/i18n/locales/ar.ts
 +++ b/packages/client/src/i18n/locales/ar.ts
@@ -49,6 +142,7 @@ diff --git a/packages/client/src/i18n/locales/ar.ts b/packages/client/src/i18n/l
      credentialsRequired: 'الرجاء إدخال اسم المستخدم وكلمة المرور',
      invalidCredentials: 'اسم المستخدم أو كلمة المرور غير صحيحة',
      tooManyAttempts: 'محاولات فاشلة كثيرة، الرجاء المحاولة لاحقًا',
+
 
 diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/locales/de.ts
 --- a/packages/client/src/i18n/locales/de.ts
@@ -63,6 +157,7 @@ diff --git a/packages/client/src/i18n/locales/de.ts b/packages/client/src/i18n/l
      invalidCredentials: 'Ungultiger Benutzername oder Passwort',
      tooManyAttempts: 'Zu viele fehlgeschlagene Versuche, bitte versuchen Sie es spater erneut',
 
+
 diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
 --- a/packages/client/src/i18n/locales/en.ts
 +++ b/packages/client/src/i18n/locales/en.ts
@@ -75,6 +170,7 @@ diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Please enter username and password',
      invalidCredentials: 'Invalid username or password',
      tooManyAttempts: 'Too many failed attempts, please try again later',
+
 
 diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/locales/es.ts
 --- a/packages/client/src/i18n/locales/es.ts
@@ -89,6 +185,7 @@ diff --git a/packages/client/src/i18n/locales/es.ts b/packages/client/src/i18n/l
      invalidCredentials: 'Nombre de usuario o contrasena incorrectos',
      tooManyAttempts: 'Demasiados intentos fallidos, por favor intente mas tarde',
 
+
 diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/locales/fr.ts
 --- a/packages/client/src/i18n/locales/fr.ts
 +++ b/packages/client/src/i18n/locales/fr.ts
@@ -101,6 +198,7 @@ diff --git a/packages/client/src/i18n/locales/fr.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Veuillez entrer le nom d\'utilisateur et le mot de passe',
      invalidCredentials: 'Nom d\'utilisateur ou mot de passe incorrect',
      tooManyAttempts: 'Trop de tentatives echouees, veuillez reessayer plus tard',
+
 
 diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/locales/ja.ts
 --- a/packages/client/src/i18n/locales/ja.ts
@@ -115,6 +213,7 @@ diff --git a/packages/client/src/i18n/locales/ja.ts b/packages/client/src/i18n/l
      invalidCredentials: 'ユーザー名またはパスワードが正しくありません',
      tooManyAttempts: 'ログイン試行回数が多すぎます。しばらくしてからお試しください',
 
+
 diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/locales/ko.ts
 --- a/packages/client/src/i18n/locales/ko.ts
 +++ b/packages/client/src/i18n/locales/ko.ts
@@ -127,6 +226,7 @@ diff --git a/packages/client/src/i18n/locales/ko.ts b/packages/client/src/i18n/l
      credentialsRequired: '사용자 이름과 비밀번호를 입력해 주세요',
      invalidCredentials: '사용자 이름 또는 비밀번호가 올바르지 않습니다',
      tooManyAttempts: '로그인 시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요',
+
 
 diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/locales/pt.ts
 --- a/packages/client/src/i18n/locales/pt.ts
@@ -141,6 +241,7 @@ diff --git a/packages/client/src/i18n/locales/pt.ts b/packages/client/src/i18n/l
      invalidCredentials: 'Nome de usuário ou senha incorretos',
      tooManyAttempts: 'Muitas tentativas falhadas, por favor tente novamente mais tarde',
 
+
 diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/locales/ru.ts
 --- a/packages/client/src/i18n/locales/ru.ts
 +++ b/packages/client/src/i18n/locales/ru.ts
@@ -153,6 +254,7 @@ diff --git a/packages/client/src/i18n/locales/ru.ts b/packages/client/src/i18n/l
      credentialsRequired: 'Введите имя пользователя и пароль',
      invalidCredentials: 'Неверное имя пользователя или пароль',
      tooManyAttempts: 'Слишком много неудачных попыток входа, повторите попытку позже',
+
 
 diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/locales/tr.ts
 --- a/packages/client/src/i18n/locales/tr.ts
@@ -167,6 +269,7 @@ diff --git a/packages/client/src/i18n/locales/tr.ts b/packages/client/src/i18n/l
      invalidCredentials: 'Geçersiz kullanıcı adı veya parola',
      tooManyAttempts: 'Çok fazla başarısız deneme yapıldı; lütfen daha sonra tekrar deneyin',
 
+
 diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18n/locales/zh-TW.ts
 --- a/packages/client/src/i18n/locales/zh-TW.ts
 +++ b/packages/client/src/i18n/locales/zh-TW.ts
@@ -179,6 +282,7 @@ diff --git a/packages/client/src/i18n/locales/zh-TW.ts b/packages/client/src/i18
      credentialsRequired: '請輸入使用者名稱和密碼',
      invalidCredentials: '使用者名稱或密碼錯誤',
      tooManyAttempts: '登入失敗次數過多，請稍後再試',
+
 
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 --- a/packages/client/src/i18n/locales/zh.ts
@@ -193,6 +297,7 @@ diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/l
      invalidCredentials: '用户名或密码错误',
      tooManyAttempts: '登录失败次数过多，请稍后重试',
 
+
 diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/utils/desktop-bridge.ts
 --- a/packages/client/src/utils/desktop-bridge.ts
 +++ b/packages/client/src/utils/desktop-bridge.ts
@@ -205,6 +310,7 @@ diff --git a/packages/client/src/utils/desktop-bridge.ts b/packages/client/src/u
    ensureAuth?: () => Promise<boolean>
    retryBootstrap: (source?: 'cf' | 'github') => Promise<void>
    restartApp?: () => Promise<boolean>
+
 
 diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/main/desktop-i18n.ts
 --- a/packages/desktop/src/main/desktop-i18n.ts
@@ -290,6 +396,7 @@ diff --git a/packages/desktop/src/main/desktop-i18n.ts b/packages/desktop/src/ma
      'loginReset.confirmDetail': 'SwarmStudio will restart its local Web UI service, clear login locks, and return to the login page.',
      'loginReset.resetting': 'Resetting login...',
      'loginReset.successTitle': 'Login reset',
+
 
 diff --git a/packages/desktop/src/main/desktop-login-reset.ts b/packages/desktop/src/main/desktop-login-reset.ts
 --- a/packages/desktop/src/main/desktop-login-reset.ts
@@ -396,6 +503,7 @@ diff --git a/packages/desktop/src/main/desktop-login-reset.ts b/packages/desktop
 +  return (await login(fresh.username, fresh.password)).jwt
  }
 
+
 diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/index.ts
 --- a/packages/desktop/src/main/index.ts
 +++ b/packages/desktop/src/main/index.ts
@@ -425,6 +533,7 @@ diff --git a/packages/desktop/src/main/index.ts b/packages/desktop/src/main/inde
    requireDesktopUpdaterSender(event)
    if (activeRemoteServerUrl) throw new Error('Remote service restarts must be requested from the remote server')
 
+
 diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preload/index.ts
 --- a/packages/desktop/src/preload/index.ts
 +++ b/packages/desktop/src/preload/index.ts
@@ -437,6 +546,7 @@ diff --git a/packages/desktop/src/preload/index.ts b/packages/desktop/src/preloa
    retryBootstrap: (source?: 'cf' | 'github'): Promise<void> => ipcRenderer.invoke('hermes-desktop:retry-bootstrap', source),
    ...(!REMOTE_SERVER_MODE ? {
      restartApp: (): Promise<boolean> => ipcRenderer.invoke('hermes-desktop:restart-app'),
+
 
 diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/server/src/modules/studio/controllers/auth.ts
 --- a/packages/server/src/modules/studio/controllers/auth.ts
@@ -496,6 +606,7 @@ diff --git a/packages/server/src/modules/studio/controllers/auth.ts b/packages/s
      ctx.status = 401
      ctx.body = { error: 'Invalid username or password' }
 
+
 diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
 --- a/packages/server/src/modules/studio/repositories/users-store.ts
 +++ b/packages/server/src/modules/studio/repositories/users-store.ts
@@ -535,29 +646,3 @@ diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/pa
 -  return createDefaultSuperAdmin()
 +  return findUserByUsername(username)
  }
-diff --git bin/hermes-web-ui.mjs bin/hermes-web-ui.mjs
-index 6cccc2af2..48f0a0a3e 100755
---- a/bin/hermes-web-ui.mjs
-+++ b/bin/hermes-web-ui.mjs
-@@ -25,7 +25,11 @@ const LOGIN_LOCK_FILE = join(WEB_UI_HOME, '.login-lock.json')
- const WEB_UI_DB_FILE = join(WEB_UI_HOME, 'hermes-web-ui.db')
- const DEFAULT_PORT = 8648
- const DEFAULT_USERNAME = 'admin'
--const DEFAULT_PASSWORD = '123456'
-+// HERMES_CUSTOM[SecNoDefaultCred] BEGIN: 出厂默认口令移除（安全轮 M8b，2026-10-16）
-+// reset-default-login 改为每次生成随机密码；凭据落 <home>/admin-login.json（0600，
-+// 供桌面主进程代理自动登录复用），并打印一次。
-+const ADMIN_LOGIN_FILE = join(WEB_UI_HOME, 'admin-login.json')
-+// HERMES_CUSTOM[SecNoDefaultCred] END
- const DEFAULT_RESTART_GRACE_MS = 5000
- const DEFAULT_STOP_GRACE_MS = 15000
- const STOP_POLL_INTERVAL_MS = 500
-@@ -644,7 +648,7 @@ Commands:
-   status             Show server status
-   plugins            Create, register and debug standalone plugins
-   clear-login-locks  Delete the login IP lock file
--  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / ${DEFAULT_PASSWORD})
-+  reset-default-login Create or reset the default login (${DEFAULT_USERNAME} / random password, shown once)
-   update             Update to latest version and restart
-   upgrade            Alias for update
-   version            Show version number
