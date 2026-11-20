@@ -376,10 +376,10 @@ index 0000000..cccbe48
 +registry.register(name="obs_recall", toolset="file", schema=OBS_RECALL_SCHEMA,
 +                  handler=_handle_obs_recall, emoji="🗃️", max_result_size_chars=100_000)
 diff --git a/tools/tool_result_storage.py b/tools/tool_result_storage.py
-index 1eb9e47..5e2892d 100644
+index f75efbeb62..88762fb2bb 100644
 --- a/tools/tool_result_storage.py
 +++ b/tools/tool_result_storage.py
-@@ -22,6 +22,9 @@ from tools.budget_config import DEFAULT_PREVIEW_SIZE_CHARS, BudgetConfig, DEFAUL
+@@ -23,6 +23,9 @@
  logger = logging.getLogger(__name__)
  PERSISTED_OUTPUT_TAG = "<persisted-output>"
  PERSISTED_OUTPUT_CLOSING_TAG = "</persisted-output>"
@@ -387,12 +387,14 @@ index 1eb9e47..5e2892d 100644
 +# the end of logs). 512 chars ≈ 128-170 tokens, paid once per archived result.
 +DEFAULT_TAIL_EXCERPT_CHARS = 512
  STORAGE_DIR = os.path.join(tempfile.gettempdir(), "hermes-results")
- SPILLOVER_SUBDIR = "cache/spillover"
+ _ARCHIVE_SUBDIRS = (SPILLOVER_SUBDIR, PRUNED_SUBDIR)
  # Fallback spillover age only (unreadable config); the real default is the session
-@@ -281,6 +284,19 @@ def generate_preview(content: str, max_chars: int = DEFAULT_PREVIEW_SIZE_CHARS)
+@@ -520,6 +523,19 @@
+         return content, False
+     last_nl = content.rfind("\n", 0, max_chars)
      return content[:last_nl + 1 if last_nl > max_chars // 2 else max_chars], True
- 
- 
++
++
 +def generate_tail_excerpt(content: str, max_chars: int = DEFAULT_TAIL_EXCERPT_CHARS) -> str:
 +    """Last *max_chars* of *content* on a line boundary (SoL-Pi ObservationPack head+tail
 +    excerpt). Diagnostics concentrate at the END of logs — stack traces, test summaries,
@@ -404,12 +406,10 @@ index 1eb9e47..5e2892d 100644
 +    if 0 < first_nl < max_chars // 2:
 +        tail = tail[first_nl + 1:]
 +    return tail
-+
-+
+ 
+ 
  def _tool_metadata_block(fields: dict) -> str:
-     metadata = json.dumps(fields, ensure_ascii=False, indent=1, sort_keys=True, default=str)
-     return f"{_TOOL_METADATA_TAG}\n{metadata}\n{_TOOL_METADATA_CLOSING_TAG}"
-@@ -389,22 +405,31 @@ def _write_to_sandbox(content: str, remote_path: str, env) -> bool:
+@@ -666,22 +682,31 @@
  
  
  def _build_persisted_message(preview: str, has_more: bool, original_size: int,
@@ -446,11 +446,7 @@ index 1eb9e47..5e2892d 100644
          + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
  
  
-diff --git a/tools/tool_result_storage.py b/tools/tool_result_storage.py
-index 000000000..111111111 100644
---- a/tools/tool_result_storage.py
-+++ b/tools/tool_result_storage.py
-@@ -461,11 +461,19 @@ def maybe_persist_tool_result(content: str, tool_name: str, tool_use_id: str, en
+@@ -711,11 +736,19 @@
      persisted_content = _pageable_text(content)
      filename = _safe_result_filename(tool_use_id)
      preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)
@@ -471,4 +467,3 @@ index 000000000..111111111 100644
  
      if (hosted_path := _persist_hosted(persisted_content, tool_use_id, env)) is not None:
          return _persisted(hosted_path) if hosted_path else _inline_truncated(preview, tool_name, content)
-

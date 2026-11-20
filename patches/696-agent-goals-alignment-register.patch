@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/goals.py b/hermes_cli/goals.py
-index 7c06d6343..a7beb5f2b 100644
+index 268523f957..ef0f05df42 100644
 --- a/hermes_cli/goals.py
 +++ b/hermes_cli/goals.py
-@@ -661,6 +661,60 @@ def load_goal(session_id: str) -> Optional[GoalState]:
+@@ -647,6 +647,61 @@
          return None
  
  
@@ -60,10 +60,11 @@ index 7c06d6343..a7beb5f2b 100644
 +        logger.debug("GoalManager: alignment ledger upsert failed (fail-soft): %s", exc)
 +
 +
++
  def save_goal(session_id: str, state: GoalState) -> None:
-     """Persist a goal to SessionDB. No-op if DB unavailable."""
+     """Persist a goal to the session store. No-op if the store is unavailable."""
      if not session_id:
-@@ -1214,6 +1268,7 @@ class GoalManager:
+@@ -1202,6 +1257,7 @@
              max_turns=int(max_turns) if max_turns else self.default_max_turns,
              contract=contract if contract is not None else GoalContract(),
          )
@@ -71,7 +72,7 @@ index 7c06d6343..a7beb5f2b 100644
          return self._save()
  
      def set_contract(self, contract: GoalContract) -> Optional[GoalState]:
-@@ -1221,6 +1276,7 @@ class GoalManager:
+@@ -1209,6 +1265,7 @@
          if self._state is None:
              return None
          self._state.contract = contract or GoalContract()
@@ -79,6 +80,7 @@ index 7c06d6343..a7beb5f2b 100644
          return self._save()
  
      def pause(self, reason: str = "user-paused") -> Optional[GoalState]:
+
 diff --git a/tests/hermes_cli/test_goals_alignment_ledger.py b/tests/hermes_cli/test_goals_alignment_ledger.py
 new file mode 100644
 index 000000000..97b701d14

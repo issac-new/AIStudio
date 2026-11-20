@@ -1,13 +1,13 @@
-diff --git a/hermes_state_common.py b/hermes_state_common.py
-index c31526f02c..bae74eff11 100644
---- a/hermes_state_common.py
-+++ b/hermes_state_common.py
-@@ -767,7 +767,14 @@ CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usag
+diff --git a/persistence/sqlite/_schema_ddl.py b/persistence/sqlite/_schema_ddl.py
+index bc09ffe6dd..7ccd6be21f 100644
+--- a/persistence/sqlite/_schema_ddl.py
++++ b/persistence/sqlite/_schema_ddl.py
+@@ -448,8 +448,15 @@
  CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model);
  CREATE INDEX IF NOT EXISTS idx_async_delegations_delivery
      ON async_delegations(delivery_state, completed_at);
 -"""
-+
+ 
 +-- overlay[485] 前缀复用层 2：会话指纹链表（独立表零迁移；append_message 增量维护）。
 +CREATE TABLE IF NOT EXISTS session_prefix_chain (
 +  session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
@@ -15,17 +15,21 @@ index c31526f02c..bae74eff11 100644
 +  verified_index INTEGER NOT NULL DEFAULT 0,
 +  updated_at REAL NOT NULL
 +);"""
- 
++
  # Indexes on later-added columns must run AFTER _reconcile_columns(), or executescript fails on legacy DBs.
  # sessions_runtime_ledger_delete_guard: every delete path in this release retires a session's ledger rows
-diff --git a/hermes_state_messages.py b/hermes_state_messages.py
-index 614e3262dd..f5d79b0ab4 100644
---- a/hermes_state_messages.py
-+++ b/hermes_state_messages.py
-@@ -30,6 +30,29 @@ from hermes_state_identity import (
- logger = logging.getLogger("hermes_state")  # caplog tests pin the origin module's name
- 
- # One INSERT shape for every message writer (append, batch, replace, compact, import).
+ # (session_admissions / worker_executions, ON DELETE RESTRICT) first, so only a release that predates the
+
+diff --git a/persistence/sqlite/conversation/_store/messages.py b/persistence/sqlite/conversation/_store/messages.py
+index f26c533f30..f8bd4decbd 100644
+--- a/persistence/sqlite/conversation/_store/messages.py
++++ b/persistence/sqlite/conversation/_store/messages.py
+@@ -298,6 +298,29 @@
+                     row[column], None, f"Failed to deserialize repaired {column}, falling back to None"
+                 )
+     return msg
++
++
 +def _advance_prefix_chain(conn, session_id: str, role: str, content) -> None:
 +    """overlay[485] 前缀指纹链增量推进：chain_head'=sha1(chain_head||role||NUL||content)。
 +
@@ -47,31 +51,30 @@ index 614e3262dd..f5d79b0ab4 100644
 +            (session_id, new_head, prev_index + 1, __import__("time").time()))
 +    except Exception:
 +        pass
-+
-+
- _INSERT_MESSAGE_SQL = """INSERT INTO messages (session_id, role, content, tool_call_id,
-                    tool_calls, tool_name, effect_disposition, timestamp, token_count, finish_reason,
-                    reasoning, reasoning_content, reasoning_details, codex_reasoning_items,
-@@ -421,6 +444,7 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin):
-                 turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds)
-             msg_id = conn.execute(_INSERT_MESSAGE_SQL, params).lastrowid
-             self._bump_session_counters(conn, session_id, 1, _tool_calls_count(tool_calls), unit=True)
-+            _advance_prefix_chain(conn, session_id, role, content)
-             return msg_id
-         # THE critical write (failure aborts the turn): long patience so a sibling legitimately
-         # holding the lock for seconds (VACUUM, checkpoint) can't kill it.
-@@ -465,6 +489,8 @@ class SessionMessagesMixin(SessionDetachedResultsMixin, SessionTodoResultMixin):
-         )
-         inserted, tool_calls_total = self._insert_message_rows(conn, session_id, inserted_rows)
-         self._bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
-+        for row in inserted_rows:
-+            _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
-         return inserted
  
-     _ROW_STATE_KEYS = ("_row_id", DB_ROW_SNAPSHOT, "timestamp")
+ 
+ def _bump_session_counters(conn, session_id: str, inserted: int, tool_calls: int, *, unit: bool) -> None:
+@@ -342,6 +365,7 @@
+             turn_lease_holder=turn_lease_holder, turn_lease_ttl_seconds=turn_lease_ttl_seconds)
+         msg_id = conn.execute(_INSERT_MESSAGE_SQL, params).lastrowid
+         _bump_session_counters(conn, session_id, 1, _tool_calls_count(tool_calls), unit=True)
++        _advance_prefix_chain(conn, session_id, role, content)
+         return msg_id
+     # THE critical write (failure aborts the turn): long patience so a sibling legitimately
+     # holding the lock for seconds (VACUUM, checkpoint) can't kill it.
+@@ -388,6 +412,8 @@
+     )
+     inserted, tool_calls_total = _insert_message_rows(holder, conn, session_id, inserted_rows)
+     _bump_session_counters(conn, session_id, inserted, tool_calls_total, unit=False)
++    for row in inserted_rows:
++        _advance_prefix_chain(conn, session_id, row.get("role"), row.get("content"))
+     return inserted
+ 
+ 
+
 diff --git a/tests/hermes_cli/test_prefix_chain_485.py b/tests/hermes_cli/test_prefix_chain_485.py
 new file mode 100644
-index 0000000000..43177d1998
+index 0000000000..74b57a227e 100644
 --- /dev/null
 +++ b/tests/hermes_cli/test_prefix_chain_485.py
 @@ -0,0 +1,66 @@
@@ -91,13 +94,13 @@ index 0000000000..43177d1998
 +
 +
 +def _init_tables(conn):
-+    from hermes_state_common import SCHEMA_SQL
++    from persistence.sqlite._schema_ddl import SCHEMA_SQL
 +    conn.executescript(SCHEMA_SQL)
 +    conn.commit()
 +
 +
 +def _append(db, session_id, role, content):
-+    from hermes_state_messages import _advance_prefix_chain
++    from persistence.sqlite.conversation._store.messages import _advance_prefix_chain
 +    conn = sqlite3.connect(db)
 +    conn.execute("PRAGMA journal_mode=WAL")
 +    _advance_prefix_chain(conn, session_id, role, content)
@@ -139,5 +142,5 @@ index 0000000000..43177d1998
 +    conn.execute("CREATE TABLE sessions (id TEXT PRIMARY KEY)")
 +    conn.commit()
 +    conn.close()
-+    from hermes_state_messages import _advance_prefix_chain
++    from persistence.sqlite.conversation._store.messages import _advance_prefix_chain
 +    _advance_prefix_chain(conn, "s1", "user", "x")  # 不应抛

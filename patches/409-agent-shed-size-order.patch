@@ -54,22 +54,22 @@ index 50060901cd..72f486a813 100644
          # Pass 3: retire image payloads inside the protected tail; re-sent embeds otherwise make
          # compression look ineffective and trip anti-thrash. Newest frames stay live.
 diff --git a/agent/context_compressor_prune.py b/agent/context_compressor_prune.py
-index 043ee38bdc..36d9326988 100644
+index 38cc53b53a..cb93501372 100644
 --- a/agent/context_compressor_prune.py
 +++ b/agent/context_compressor_prune.py
-@@ -65,8 +65,12 @@ class ProactivePruneMixin:
-         if session_db and session_id and not callable(getattr(session_db, "archive_and_compact", None)):
-             self._warn_reclamation_no_op("prune:store_cannot_persist", current_tokens)
-             return messages, 0
+@@ -160,8 +160,12 @@ class ProactivePruneMixin:
+         if 0 < boundary < len(messages) and messages[boundary].get("role") == "tool":
+             boundary = self._align_boundary_backward(messages, boundary)
+         protect_tail = len(messages) - boundary
 +        # 超溢量即目标（"装下即停"）：只回收越线部分+余量，多留完整工具结果。
 +        overage_tokens = max(0, int(current_tokens or 0) - self.threshold_tokens) if self.threshold_tokens > 0 else 0
 +        shed_target = int(overage_tokens * _cc()._CHARS_PER_TOKEN * 1.2) if overage_tokens > 0 else None
          pruned_msgs, pruned_count = self._prune_old_tool_results(
-             messages, protect_tail_count=self.protect_last_n, protect_tail_tokens=None, min_prune_chars=self.proactive_prune_min_result_chars,
+             messages, protect_tail_count=protect_tail, protect_tail_tokens=None, min_prune_chars=self.proactive_prune_min_result_chars,
 +            shed_target_chars=shed_target,
          )
-         from agent.context_compressor_tail import with_pruned_row_skill_safety_rule
-         pruned_msgs = with_pruned_row_skill_safety_rule(messages, pruned_msgs)
+         kept = _keep_running_turn(messages, pruned_msgs, turn_start)
+         if kept is None:
 diff --git a/tests/agent/test_shed_size_order.py b/tests/agent/test_shed_size_order.py
 new file mode 100644
 index 0000000000..1d2849c054

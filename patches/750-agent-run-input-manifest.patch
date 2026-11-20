@@ -1,4 +1,5 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index 76521c406a..eeb9a1088f 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
 @@ -15,6 +15,7 @@

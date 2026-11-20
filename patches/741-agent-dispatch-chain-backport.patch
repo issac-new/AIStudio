@@ -1,8 +1,8 @@
 diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
-index 868d072f3..fac4f65fe 100644
+index f6578f000f..76521c406a 100644
 --- a/hermes_cli/kanban_db.py
 +++ b/hermes_cli/kanban_db.py
-@@ -16,6 +16,7 @@ from __future__ import annotations
+@@ -16,6 +16,7 @@
  
  import contextlib
  import json
@@ -10,7 +10,7 @@ index 868d072f3..fac4f65fe 100644
  import os
  import re
  import secrets
-@@ -800,6 +801,8 @@ class Task:
+@@ -800,6 +801,8 @@
      block_recurrences: int = 0               # unblock-loop counter, see BLOCK_RECURRENCE_LIMIT
      completion_contract: Optional[str] = None
      raci: Optional[dict] = None              # HERMES_CUSTOM[raci] structured RACI (JSON dict)
@@ -19,7 +19,7 @@ index 868d072f3..fac4f65fe 100644
  
      @classmethod
      def from_row(cls, row: sqlite3.Row) -> Task:
-@@ -808,6 +811,10 @@ class Task:
+@@ -808,6 +811,10 @@
          skills_value = [str(s) for s in parsed if s] if isinstance(parsed, list) else None
          raci_parsed = _json_or(g("raci"))
          raci_value = raci_parsed if isinstance(raci_parsed, dict) else None
@@ -30,7 +30,7 @@ index 868d072f3..fac4f65fe 100644
          return cls(
              **{col: _lossy_text(row[col]) for col in _TASK_REQUIRED_COLUMNS},
              **{col: _to_epoch(g(col)) for col in _TASK_EPOCH_COLUMNS},  # outside writers may store text: epoch or None
-@@ -819,6 +826,8 @@ class Task:
+@@ -819,6 +826,8 @@
              last_failure_error=g("last_failure_error", g("last_spawn_error")),
              skills=skills_value,
              raci=raci_value,
@@ -39,7 +39,7 @@ index 868d072f3..fac4f65fe 100644
              goal_mode=bool(g("goal_mode")),
              block_recurrences=int(g("block_recurrences") or 0),
          )
-@@ -1041,7 +1050,12 @@ CREATE TABLE IF NOT EXISTS tasks (
+@@ -1041,7 +1050,12 @@
      -- ``blocked`` so a cron can't spin it forever. Reset to 0 only on a
      -- successful completion — NOT on unblock (resetting on unblock is exactly
      -- the amnesia that let the loop run unbounded).
@@ -53,10 +53,12 @@ index 868d072f3..fac4f65fe 100644
  );
  
  CREATE TABLE IF NOT EXISTS task_links (
-@@ -1718,6 +1732,41 @@ def set_reasoning_effort(conn: sqlite3.Connection, task_id: str, effort: Optiona
+@@ -1716,6 +1730,41 @@
+         "reasoning_effort_set", {"reasoning_effort": effort},
+         ("reasoning_effort",), archived_msg="cannot set reasoning effort",
      )
- 
- 
++
++
 +def set_estimate(
 +    conn: sqlite3.Connection,
 +    task_id: str,
@@ -90,15 +92,15 @@ index 868d072f3..fac4f65fe 100644
 +        _append_event(conn, task_id, "estimate_set", {"estimate_days": days, **(meta_value or {})})
 +    notify_task_updated(conn, task_id, ("estimate_days", "estimate_meta"))
 +    return True
-+
-+
+ 
+ 
  # --- Links ---
- 
- def link_tasks(
-@@ -2832,11 +2881,89 @@ def _claim_is_live(trow) -> bool:
+@@ -2830,6 +2879,83 @@
+         and trow["worker_pid"]
+         and _worker_alive(trow["worker_pid"], trow["worker_started_at"])
      )
- 
- 
++
++
 +def _gate_completion_contract(
 +    conn: sqlite3.Connection, task_id: str, *,
 +    receipt: Optional[dict], workspace: Optional[str],
@@ -174,10 +176,10 @@ index 868d072f3..fac4f65fe 100644
 +            "the task is still in-flight."
 +        ) from None
 +    return validated
-+
-+
+ 
+ 
  def complete_task(
-     conn: sqlite3.Connection, task_id: str, *, result: Optional[str] = None,
+@@ -2837,6 +2963,7 @@
      summary: Optional[str] = None, metadata: Optional[dict] = None,
      created_cards: Optional[Iterable[str]] = None, expected_run_id: Optional[int] = None,
      fire_lifecycle_hook: bool = True, force: bool = False,
@@ -185,7 +187,7 @@ index 868d072f3..fac4f65fe 100644
  ) -> bool:
      """``running|ready|blocked|review -> done``; records ``result``.
  
-@@ -2867,6 +2994,13 @@ def complete_task(
+@@ -2867,6 +2994,13 @@
      from hermes_cli.kanban_pr_acceptance_store import prepare_acceptance, record_acceptance
      verified_cards = _gate_created_cards(conn, task_id, created_cards, summary or result)
      _gate_empty_completion(conn, task_id, result=result, summary=summary)
@@ -877,10 +879,10 @@ index f62fb04ce..235c3165b 100644
  )
 
 diff --git a/tools/kanban_tools.py b/tools/kanban_tools.py
-index c6ff19411..f33c34c71 100644
+index f6899362ba..d5a10153a8 100644
 --- a/tools/kanban_tools.py
 +++ b/tools/kanban_tools.py
-@@ -8,11 +8,17 @@ shlex quoting of JSON metadata, structured-JSON failures). Humans use CLI/dashbo
+@@ -8,11 +8,17 @@
  from __future__ import annotations
  
  import functools
@@ -893,15 +895,17 @@ index c6ff19411..f33c34c71 100644
 +import re
  import time
 +from collections.abc import Mapping
- from contextlib import contextmanager
+ from contextlib import ExitStack, contextmanager
 +from pathlib import Path
  from typing import Any, Callable, Optional
  
  from agent.delegation_context import owned_kanban_task
-@@ -32,6 +38,190 @@ KANBAN_LIST_DEFAULT_LIMIT = 50
+@@ -31,8 +37,192 @@
+ 
+ KANBAN_LIST_DEFAULT_LIMIT = 50
  KANBAN_LIST_MAX_LIMIT = 200
- 
- 
++
++
 +# --- HumanGate decision grants（只读消费者） ---------------------------------
 +# 权威写入在 TypeScript HumanGate；这里只读同一 store，绝不让 agent 自批准。
 +# 卡 body/workspace/assignee 等任一修订字段后续变化都会改变哈希并使旧 grant 失效。
@@ -1036,8 +1040,8 @@ index c6ff19411..f33c34c71 100644
 +    if not isinstance(grant_revision, str) or not hmac.compare_digest(grant_revision, actual_revision):
 +        return False, "revision_mismatch"
 +    return True, "ok"
-+
-+
+ 
+ 
 +def _read_task_grants() -> list[Mapping[str, Any]]:
 +    """只读 HumanGate store；IO/JSON 失败交调用方 fail-closed。"""
 +    path = human_gate_store_path()
@@ -1089,7 +1093,7 @@ index c6ff19411..f33c34c71 100644
  # --- Gating ---
  
  def _profile_has_kanban_toolset() -> bool:
-@@ -746,10 +936,15 @@ def _handle_complete(args: dict, **kw) -> str:
+@@ -764,10 +954,15 @@
          # actually reachable — see _goal_judge_available for why an unavailable judge fails open.
          task = kb.get_task(conn, tid)
          _goal_gate("kanban_complete", task, tid, (summary or result or "").strip())
@@ -1106,8 +1110,7 @@ index c6ff19411..f33c34c71 100644
          except kb.ArtifactPreservationError as artifact_err:
              # Structured rejection — surface the phantom ids so the worker can retry with a corrected list
              # or drop the field. Audit event already landed in the DB. The task itself was NOT mutated (the
-@@ -1142,7 +1337,8 @@ def _handle_create(args: dict, **kw) -> str:
-             conn, title=_redact(str(title).strip()), body=_redact_opt(args.get("body")),
+@@ -1160,7 +1355,8 @@
              assignee=str(assignee),
              parents=tuple(parents), tenant=args.get("tenant") or os.environ.get("HERMES_TENANT"),
              priority=_opt_int(args.get("priority"), 0),
