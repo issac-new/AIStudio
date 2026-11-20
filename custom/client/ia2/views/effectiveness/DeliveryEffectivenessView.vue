@@ -10,6 +10,7 @@
      全部只读消费 /api/hermes/delivery/*；fail-soft：源缺席如实呈现原因。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   fetchDigest, fetchInterventions, fetchMatrix, fetchMaturity, fetchSwarmBench, fetchSwarmCollab,
   type DailyDigest, type DeliveryMatrix, type DigestItem, type InterventionsResponse, type MaturityResponse,
@@ -18,6 +19,13 @@ import {
 import { useEffectivenessText } from './i18n'
 
 const text = useEffectivenessText()
+const router = useRouter()
+
+// 批三 T6（设计 §5.1）：同口径结果对照链接——只指路到工作台看板（根任务抽屉的
+// 结果面板含对照投影），本页不新增排行/对照面
+function gotoOutcomeCompare(): void {
+  void router.push({ name: 'ia2.board' })
+}
 
 const digest = ref<DailyDigest | null>(null)
 const digestError = ref<string | null>(null)
@@ -250,6 +258,14 @@ function cellClass(count: number): string {
         </button>
       </div>
     </header>
+
+    <!-- 批三 T6：同口径结果对照链接一行（只读指路，不新增排行榜） -->
+    <p class="eff-view__compare" data-testid="eff-outcome-compare-line">
+      {{ text.outcomeCompareNote }}
+      <button type="button" class="eff-view__compare-link" data-testid="eff-outcome-compare-link" @click="gotoOutcomeCompare">
+        {{ text.outcomeCompareLink }} →
+      </button>
+    </p>
 
     <div class="eff-view__body">
       <!-- ① 交付日报 -->
@@ -516,6 +532,16 @@ function cellClass(count: number): string {
 .eff-view__bar { display: flex; align-items: flex-start; gap: 10px; flex-shrink: 0; }
 .eff-view__title { margin: 0; font-size: 15px; font-weight: 600; }
 .eff-view__sub { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted); }
+/* 批三 T6：同口径结果对照链接行（只指路，不新增排行面） */
+.eff-view__compare {
+  margin: 0; padding: 6px 14px; font-size: 11.5px; color: var(--text-muted);
+  border-bottom: 1px dashed var(--border-color); flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.eff-view__compare-link {
+  border: none; background: none; padding: 0; cursor: pointer;
+  font-size: 11.5px; color: var(--accent-info, inherit); text-decoration: underline;
+}
 .eff-view__actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 .eff-view__run-select {
   font-size: 12px; padding: 3px 6px; border: 1px solid var(--border-color);

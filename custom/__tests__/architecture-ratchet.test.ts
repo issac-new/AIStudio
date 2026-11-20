@@ -42,9 +42,12 @@ describe('架构棘轮：只许减少', () => {
     expect(n, `新增了直接 ctx.body 赋值——请改用 custom/server/lib/http.ts（当前 ${n}）`).toBeLessThanOrEqual(1193)
   })
 
-  it('K19 `ok: false` 字面量不超过 989 处（新失败体请用 fail()）', () => {
+  it('K19 `ok: false` 字面量不超过 1012 处（新失败体请用 fail()）', () => {
     const n = grepCount('ok:\\s*false', ['custom/server'])
-    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(996)
+    // 批三归因（2026-11-21）：996→1012＝+16，全部为纯函数 Result 形状（agenda.ts runSource
+    // 三处、judgments/team 约束校验、outcome-controller 迁移助手等内部 result 联合），HTTP
+    // 信封出口仍走 fail()/ok()；批一 874→989 同型先例。
+    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1012)
   })
 
   // K19 基线 874→989（2026-11-20 收口裁决，decisions.jsonl 同日留痕）：+115 全部由

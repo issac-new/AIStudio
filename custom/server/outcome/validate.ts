@@ -132,6 +132,10 @@ export function validateContractInput(v: unknown): ContractValidation {
   if (typeof c.learningOptIn !== 'boolean') problems.push('learningOptIn 须为布尔值')
   if (!oneOf(OUTCOME_STATUSES, c.status))
     problems.push('status 须为 draft|active|observing|settled|cancelled')
+  // dueAt 可选三态（批三 T1）：undefined=未设置（旧合同零迁移）、null=显式无期限、
+  // 有限数值=期限；其余类型拒绝（端点侧 422 invalid_input 语义）。
+  if (c.dueAt !== undefined && c.dueAt !== null && !isFiniteNumber(c.dueAt))
+    problems.push('dueAt 须为有限数值或 null')
   if (!isFiniteNumber(c.createdAt)) problems.push('createdAt 须为有限数值')
   if (!isFiniteNumber(c.updatedAt)) problems.push('updatedAt 须为有限数值')
 

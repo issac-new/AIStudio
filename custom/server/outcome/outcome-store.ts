@@ -1,6 +1,7 @@
 // custom/server/outcome/outcome-store.ts
 // Outcome 域事件台账与存储层（spec 2026-11-19-ai-native-operating-model-design.md §4.2；
-// Task 2）。存储布局：outcomeStoreRoot()/<outcomeId>/{contract.json=当前合同, events.jsonl=追加制事件账}。
+// Task 2）。存储布局：outcomeStoreRoot()/<outcomeId>/{contract.json=当前合同,
+// team.json=当前团队（批三 T1）, events.jsonl=追加制事件账, snapshots.jsonl=追加制快照账}。
 //
 // 纪律（先例 custom/server/evidence/evidence-store.ts）：
 // - 哈希链：hash(n) = sha256( hash(n-1) | canonicalJson(record_n 去链字段) )，首条 prevHash='GENESIS'。
@@ -23,13 +24,20 @@ import { appendFileSync, closeSync, existsSync, fstatSync, openSync, readdirSync
 import { join, resolve } from 'node:path'
 import { appendJsonl, atomicWriteJson, readJsonl } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
-import { MEASURE_AVAILABILITIES } from './types'
+import { MEASURE_AVAILABILITIES, OUTCOME_TEAM_STATUSES, TEAM_SUBJECT_KINDS } from './types'
 import type { OutcomeContextSnapshot } from './snapshot'
-import type { OutcomeContract, OutcomeMeasurement } from './types'
+import type {
+  OutcomeContract,
+  OutcomeMeasurement,
+  OutcomeTeam,
+  OutcomeTeamMember,
+  OutcomeTeamStatus,
+} from './types'
 import { validateContractInput } from './validate'
 
-/** 事件类型全集（spec §4.2：合同激活/测量追加/状态迁移/结算/取消归并进 status_changed/团队变更归并进
- *  contract_updated/上下文快照生成；批一存储层只落账不解释语义——解释权在状态机与控制器）。 */
+/** 事件类型全集（spec §4.2：合同激活/测量追加/状态迁移/结算/取消归并进 status_changed/
+ *  上下文快照生成；批三 T1 追加 team_confirmed——团队确认不再归并进 contract_updated，
+ *  旧账无该类型照常可读，追加制只增不改）。批一存储层只落账不解释语义——解释权在状态机与控制器。 */
 export const OUTCOME_EVENT_TYPES = [
   'contract_created',
   'contract_activated',
@@ -39,6 +47,7 @@ export const OUTCOME_EVENT_TYPES = [
   'settlement_signed',
   'context_snapshot_created',
   'settlement_superseded',
+  'team_confirmed',
 ] as const
 export type OutcomeEventType = (typeof OUTCOME_EVENT_TYPES)[number]
 
@@ -137,15 +146,16 @@ const nonEmpty = (v: unknown): v is string => typeof v === 'string' && v.trim().
 const describeErr = (err: unknown): string =>
   err instanceof Error ? err.message : String(err)
 
-/** 坏档隔离（evidence-store 先例）：改名 .corrupt.<ts> 留档＋warn；留档失败不阻断。 */
-function quarantine(file: string, err: unknown): void {
+/** 坏档隔离（evidence-store 先例）：改名 .corrupt.<ts> 留档＋warn；留档失败不阻断。
+ *  label 点名档面（contract.json/team.json），告警可区分。 */
+function quarantine(file: string, err: unknown, label = '合同文件'): void {
   const archive = `${file}.corrupt.${Date.now()}`
   try {
     renameSync(file, archive)
   } catch {
     /* 只读介质等：留档失败不阻断，仅告警 */
   }
-  console.warn(`[outcome-store] 合同文件解析失败，已留档 ${archive}：${describeErr(err)}`)
+  console.warn(`[outcome-store] ${label}解析失败，已留档 ${archive}：${describeErr(err)}`)
 }
 
 // ---------- canonical JSON 与哈希链 ----------
@@ -444,6 +454,138 @@ export function appendMeasurement(
   const ev = appendEvent(m.outcomeId, 'measurement_appended', { measurement: m }, who, m.contractVersion)
   if (!ev.ok) return { ok: false, added: false, code: 'write_failed' }
   return { ok: true, added: true, measurement: m, event: ev.event }
+}
+
+// ---------- 写侧：团队（批三 T1，spec 2026-11-21-ai-native-orgworkbench-batch3.md §一） ----------
+
+export interface ConfirmTeamInput {
+  /** 乐观并发：须等于当前团队版本；无团队时为 0（首次确认落 version=1）。 */
+  expectedVersion: number
+  members: OutcomeTeamMember[]
+  status: OutcomeTeamStatus
+  changeReason: string
+}
+
+/** confirmTeam 错误形状（T2 端点按此转 HTTP）：invalid_input→422、not_found→404、
+ *  version_conflict→409、write_failed→5xx 语义。沿用 OutcomeStoreErrorCode 单一事实源。 */
+export interface ConfirmTeamResult {
+  ok: boolean
+  code?: OutcomeStoreErrorCode
+  problems?: string[]
+  team?: OutcomeTeam
+  event?: OutcomeEvent
+}
+
+/** team.json 路径（批三 T2 起导出：snapshot 团队源读失败判存用——路径规则单一事实源，
+ *  不在 snapshot.ts 复制 'team.json' 字面量）。 */
+export const teamFileOf = (outcomeId: string): string => join(outcomeDirOf(outcomeId), 'team.json')
+
+/** 读当前团队；未确认/坏档返回 null（fail-soft 不猜数；坏档照 contract.json 纪律隔离留档）。
+ *  身份不符（目录名≠team.outcomeId）视同坏档：拒绝认领，防碰撞覆盖。 */
+export function getTeam(outcomeId: string): OutcomeTeam | null {
+  if (!isSafeOutcomeId(outcomeId)) return null
+  const file = teamFileOf(outcomeId)
+  if (!existsSync(file)) return null
+  let raw: unknown
+  try {
+    raw = JSON.parse(readFileSync(file, 'utf8'))
+  } catch (err) {
+    quarantine(file, err, 'team.json')
+    return null
+  }
+  const t = raw as OutcomeTeam | null
+  if (!t || typeof t !== 'object' || t.outcomeId !== outcomeId) {
+    quarantine(file, new Error('team.json 身份不符（缺少/不等于目录名对应 outcomeId）'), 'team.json')
+    return null
+  }
+  return t
+}
+
+/** 确认团队（写 team.json＋追加 team_confirmed 事件）。本函数只做结构校验与并发/落盘——
+ *  成员语义约束（owner/verifier 到位、person active、agent roster complete、高风险分离）
+ *  需外部权威（people/身份册），由调用方先过 team-validate.validateTeam（T2 端点职责）。
+ *
+ *  - 首次确认 expectedVersion=0 → version=1；其后 expectedVersion 须等于当前版本，
+ *    不符返回 version_conflict（team.json 与事件账零改动；端点转 409）。
+ *  - 事件只落摘要（version/changeReason/status/memberCount）——成员正身在 team.json，
+ *    不双写正本（D1：一个对象一份账）。
+ *  - 先账后物（fail-closed）：事件写失败→team.json 零改动；反向残留（事件已落、team.json
+ *    写失败）时账上多一条未生效记录，team.json 仍是读侧权威，重试自愈（createContract 同款容忍）。
+ *  - draft 不自动成队：status 照输入落盘，候选→active 的显式确认由调用方把守（T2 owner 门）。
+ */
+export function confirmTeam(
+  outcomeId: string,
+  input: ConfirmTeamInput,
+  updatedBy: string,
+): ConfirmTeamResult {
+  const problems: string[] = []
+  const i = (input ?? {}) as ConfirmTeamInput
+  if (!isSafeOutcomeId(outcomeId)) problems.push('outcomeId 非法')
+  if (
+    typeof i.expectedVersion !== 'number' ||
+    !Number.isInteger(i.expectedVersion) ||
+    i.expectedVersion < 0
+  )
+    problems.push('expectedVersion 须为非负整数（无团队首次确认为 0）')
+  if (!Array.isArray(i.members) || i.members.length === 0) {
+    problems.push('members 须为非空数组')
+  } else {
+    i.members.forEach((m, idx) => {
+      if (m === null || typeof m !== 'object') {
+        problems.push(`members[${idx}] 须为对象`)
+        return
+      }
+      if (!(TEAM_SUBJECT_KINDS as readonly string[]).includes(m.subjectKind))
+        problems.push(`members[${idx}].subjectKind 须为 person|agent`)
+      if (!nonEmpty(m.subjectId)) problems.push(`members[${idx}].subjectId 必填`)
+      if (!nonEmpty(m.role)) problems.push(`members[${idx}].role 必填`)
+      if (!nonEmpty(m.responsibility)) problems.push(`members[${idx}].responsibility 必填`)
+    })
+  }
+  if (!(OUTCOME_TEAM_STATUSES as readonly string[]).includes(i.status))
+    problems.push(`status 须为 ${OUTCOME_TEAM_STATUSES.join('|')}`)
+  if (!nonEmpty(i.changeReason)) problems.push('changeReason 必填')
+  if (!nonEmpty(updatedBy)) problems.push('updatedBy 必填')
+  if (problems.length) return { ok: false, code: 'invalid_input', problems }
+
+  const contract = getContract(outcomeId)
+  if (!contract) return { ok: false, code: 'not_found' }
+
+  const current = getTeam(outcomeId)
+  const currentVersion = current?.version ?? 0
+  if (currentVersion !== i.expectedVersion) return { ok: false, code: 'version_conflict' }
+
+  const team: OutcomeTeam = {
+    outcomeId,
+    version: currentVersion + 1,
+    members: i.members,
+    status: i.status,
+    changeReason: i.changeReason.trim(),
+    updatedBy: updatedBy.trim(),
+    updatedAt: Date.now(),
+  }
+
+  // 先账后物：contractVersion 锚定确认时刻的合同版本（事件账跨面可对账）
+  const ev = appendEvent(
+    outcomeId,
+    'team_confirmed',
+    {
+      version: team.version,
+      changeReason: team.changeReason,
+      status: team.status,
+      memberCount: team.members.length,
+    },
+    updatedBy,
+    contract.version,
+  )
+  if (!ev.ok) return { ok: false, code: 'write_failed' }
+  try {
+    atomicWriteJson(teamFileOf(outcomeId), team)
+  } catch (err) {
+    console.warn(`[outcome-store] team.json 写入失败（${outcomeId}）：${describeErr(err)}`)
+    return { ok: false, code: 'write_failed' }
+  }
+  return { ok: true, team, event: ev.event }
 }
 
 // ---------- 写侧：上下文快照（Task 6，spec §4.4） ----------

@@ -21,6 +21,7 @@ import {
 import {
   _useOutcomeStoreForTests,
   appendSnapshot,
+  confirmTeam,
   createContract,
   listEvents,
   listSnapshots,
@@ -644,6 +645,77 @@ describe('buildFullSnapshot（批二 §四）', () => {
     expect(r.ok).toBe(false)
     if (r.ok) return
     expect(r.problems.join()).toContain('任务关键源失败')
+  })
+})
+
+// ---- 批三 T2：teamVersion 实值（spec 2026-11-21 批三 §一：active 团队版本冻结进快照） ----
+
+describe('批三 T2：teamVersion 实值（active 团队版本冻结进快照哈希体）', () => {
+  const teamInput = (expectedVersion: number, patch: Record<string, unknown> = {}) => ({
+    expectedVersion,
+    members: [
+      { subjectKind: 'person', subjectId: 'p-1', role: 'accountable', responsibility: '对结果负责' },
+      { subjectKind: 'person', subjectId: 'p-2', role: 'reviewer', responsibility: '独立复核' },
+    ],
+    status: 'active',
+    changeReason: '初始成队',
+    ...patch,
+  } as import('../outcome-store').ConfirmTeamInput)
+
+  const build = (oc: string) =>
+    buildMinimalSnapshot({ contract: makeContract(oc), decisionPolicyVersion: POLICY_VERSION, resolve: resolveAllOk })
+
+  it('active 团队 → teamVersion=版本实值且进哈希体（独立复算含 teamVersion）', () => {
+    createContract(makeContract('oc-t1'), 'p-1')
+    expect(confirmTeam('oc-t1', teamInput(0), 'p-1').ok).toBe(true)
+    const r = build('oc-t1')
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.snapshot.teamVersion).toBe(1)
+    // 独立复算（哈希体含 teamVersion 字段：信封去易变字段后 canonical）
+    expect(r.snapshot.sha256).toBe(sha(canon(hashBodyOf(r.snapshot))))
+  })
+
+  it('无团队 → null；draft 团队不算已确认团队 → 仍 null 且不记排除（无 active 团队是事实，非源失败）', () => {
+    createContract(makeContract('oc-t2'), 'p-1')
+    const none = build('oc-t2')
+    expect(none.ok).toBe(true)
+    if (!none.ok) return
+    expect(none.snapshot.teamVersion).toBeNull()
+    expect(confirmTeam('oc-t2', teamInput(0, { status: 'draft', changeReason: '候选提案' }), 'p-1').ok).toBe(true)
+    const drafted = build('oc-t2')
+    expect(drafted.ok).toBe(true)
+    if (!drafted.ok) return
+    expect(drafted.snapshot.teamVersion).toBeNull()
+    expect(drafted.snapshot.excludedSources).toEqual([])
+  })
+
+  it('团队读失败（team.json 损坏）→ 非关键源降级：teamVersion null＋excludedSources 留痕，快照仍生成', () => {
+    createContract(makeContract('oc-t3'), 'p-1')
+    writeFileSync(join(dir, 'oc-t3', 'team.json'), '{broken json')
+    const r = build('oc-t3')
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.snapshot.teamVersion).toBeNull()
+    expect(r.snapshot.excludedSources).toHaveLength(1)
+    expect(r.snapshot.excludedSources[0]).toMatchObject({ kind: 'team' })
+    expect(r.snapshot.excludedSources[0].reason).toContain('读失败')
+  })
+
+  it('版本变化 → 快照 hash 变化（同 content 仅 teamVersion 不同即不同快照；appendSnapshot 放行实值）', () => {
+    createContract(makeContract('oc-t4'), 'p-1')
+    confirmTeam('oc-t4', teamInput(0), 'p-1')
+    const v1 = build('oc-t4')
+    confirmTeam('oc-t4', teamInput(1, { changeReason: '调整成员职责' }), 'p-1')
+    const v2 = build('oc-t4')
+    expect(v1.ok && v2.ok).toBe(true)
+    if (!v1.ok || !v2.ok) return
+    expect(v1.snapshot.teamVersion).toBe(1)
+    expect(v2.snapshot.teamVersion).toBe(2)
+    expect(v2.snapshot.sha256).not.toBe(v1.snapshot.sha256)
+    expect(v2.snapshot.snapshotId).not.toBe(v1.snapshot.snapshotId)
+    // store 层 appendSnapshot 同步放行实值 teamVersion（落账不拒）
+    expect(appendSnapshot(v2.snapshot, 'p-1').added).toBe(true)
   })
 })
 

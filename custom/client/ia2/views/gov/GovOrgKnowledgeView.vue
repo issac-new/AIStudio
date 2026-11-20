@@ -4,6 +4,11 @@
      （结案摄取+冲突收件箱）· 决策图谱（时间线/因果链/门禁同步/双时态回放）。
      分区无内部导航（单层页签纪律）；各板块自取数、失败态自管。 -->
 <script setup lang="ts">
+// 2026-11-21 组织工作台批三（spec §六，设计 §5.1）：决策议程置顶＋团队面＋贡献回顾
+// 三 Section——议程把「等人决定」的事项放在五流/知识/决策图谱之前（先看要拍板什么）。
+import DecisionAgendaSection from '@/custom/governance/components/DecisionAgendaSection.vue'
+import OutcomeTeamSection from '@/custom/governance/components/OutcomeTeamSection.vue'
+import ContributionReviewSection from '@/custom/governance/components/ContributionReviewSection.vue'
 import OrgDiagnosisSection from '@/custom/governance/components/OrgDiagnosisSection.vue'
 import KnowledgeGraphSection from '@/custom/governance/components/KnowledgeGraphSection.vue'
 import DecisionGraphSection from '@/custom/governance/components/DecisionGraphSection.vue'
@@ -21,10 +26,14 @@ const tabText = useTasksTabsText()
     <header class="gov-view__bar">
       <div>
         <h2 class="gov-view__title">{{ tabText.tabGovOrg }}</h2>
-        <p class="gov-view__sub">五流断点诊断 · 板级知识图谱 · 决策图谱 · 协作画像 · 判例库</p>
+        <p class="gov-view__sub">决策议程 · 团队与贡献 · 五流断点诊断 · 板级知识图谱 · 决策图谱 · 协作画像 · 判例库</p>
       </div>
     </header>
     <div class="gov-view__body">
+      <!-- 决策议程置顶（批三 T6）：等决定的事项先于诊断/知识/图谱呈现 -->
+      <DecisionAgendaSection />
+      <OutcomeTeamSection />
+      <ContributionReviewSection />
       <OrgDiagnosisSection />
       <KnowledgeGraphSection />
       <DecisionGraphSection />

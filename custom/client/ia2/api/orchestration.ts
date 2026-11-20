@@ -454,3 +454,48 @@ export async function fetchPeopleRoster(): Promise<PeopleRosterEntry[] | null> {
     return null
   }
 }
+
+// ── 团队面（批三 T6，设计 §5.1）：有合同时显示当前团队版本与成员角色 ──
+
+/** GET /:id 扩展面 team 行的客户端最小面（服务端正身 outcome/types.ts OutcomeTeam）。 */
+export interface OutcomeTeamInfo {
+  version: number
+  status: 'draft' | 'active' | 'closed'
+  members: Array<{ subjectKind: string; subjectId: string; role: string }>
+}
+
+/** fetchOutcomeTeamInfo 三分态：none=team null（未成队，真零数据）、team=已确认/
+ *  候选团队正身、error=读不到（不得当 none 显示——读不到≠没有团队）。 */
+export type OutcomeTeamInfoResult =
+  | { state: 'team'; team: OutcomeTeamInfo }
+  | { state: 'none' }
+  | { state: 'error' }
+
+/** 读取 GET /api/hermes/outcomes/:id 的 team 面（批三 T2 扩展）。本函数只服务
+ *  合同面已确认存在的场景（门关时协同图根本不进 contract 态，不会走到这里）；
+ *  非 2xx/坏形状/网络异常一律 error——读不到不等于没有团队。 */
+export async function fetchOutcomeTeamInfo(outcomeId: string): Promise<OutcomeTeamInfoResult> {
+  if (!outcomeId) return { state: 'none' }
+  try {
+    const res = await authFetch(`/api/hermes/outcomes/${encodeURIComponent(outcomeId)}`)
+    if (!res.ok) return { state: 'error' }
+    const data = (await res.json()) as { ok?: boolean; team?: unknown }
+    if (!data.ok || data.team === undefined) return { state: 'error' }
+    if (data.team === null) return { state: 'none' }
+    const t = data.team as { version?: unknown; status?: unknown; members?: unknown }
+    if (typeof t.version !== 'number' || typeof t.status !== 'string' || !Array.isArray(t.members)) {
+      return { state: 'error' }
+    }
+    const members = t.members
+      .filter(
+        (m): m is { subjectKind: string; subjectId: string; role: string } =>
+          !!m && typeof m === 'object' &&
+          typeof (m as { subjectId?: unknown }).subjectId === 'string' &&
+          typeof (m as { role?: unknown }).role === 'string',
+      )
+      .map((m) => ({ subjectKind: String((m as { subjectKind?: unknown }).subjectKind ?? ''), subjectId: m.subjectId, role: m.role }))
+    return { state: 'team', team: { version: t.version, status: t.status as OutcomeTeamInfo['status'], members } }
+  } catch {
+    return { state: 'error' }
+  }
+}

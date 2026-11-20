@@ -3,20 +3,23 @@
 // 哈希链（GENESIS 首锚＋逐条独立复算）、appendEvent 写失败 fail-closed（contract.json 不被触碰）、
 // measurement 幂等重放 added:false、listMeasurements 事件派生。
 // 哈希复算用本文件独立的 canon 实现（不复用被测模块导出），钉死「sha256(prevHash|canonical)」格式。
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
+  ConfirmTeamInput,
   CreateContractInput,
   OutcomeEvent,
   _useOutcomeStoreForTests,
   appendEvent,
   appendMeasurement,
+  confirmTeam,
   createContract,
   findByRootTask,
   getContract,
+  getTeam,
   hashOutcomeEvent,
   listEvents,
   listMeasurements,
@@ -417,6 +420,235 @@ describe('断电半行吞行防护（批二 T1：events 追加面前置换行）
     expect(lines).toHaveLength(3)
     expect(JSON.parse(lines[0]).eventId).toBe(lastGood.eventId)
     expect(JSON.parse(lines[2]).eventId).toBe(events[1].eventId)
+  })
+})
+
+/** 合法最小团队输入（批三 T1）：owner/verifier 两个 person 成员。成员约束的语义校验
+ *  （owner/verifier 到位、active、roster complete）在 team-validate.test.ts，此处只验 store 层。 */
+function makeTeamInput(expectedVersion: number, patch: Record<string, unknown> = {}): ConfirmTeamInput {
+  return {
+    expectedVersion,
+    members: [
+      { subjectKind: 'person', subjectId: 'p-1', role: 'accountable', responsibility: '对结果指标负责' },
+      { subjectKind: 'person', subjectId: 'p-2', role: 'reviewer', responsibility: '独立复核' },
+    ],
+    status: 'active',
+    changeReason: '初始成队',
+    ...patch,
+  } as ConfirmTeamInput
+}
+
+describe('confirmTeam / getTeam（批三 T1：team.json＋team_confirmed 事件）', () => {
+  it('首次确认（expectedVersion=0）落 team.json v1＋team_confirmed 事件摘要；getTeam 读回一致、无 tmp 残留', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const r = confirmTeam('oc-1', makeTeamInput(0), 'p-1')
+    expect(r.ok).toBe(true)
+    expect(r.team).toMatchObject({ outcomeId: 'oc-1', version: 1, status: 'active', changeReason: '初始成队' })
+    expect(r.team?.members).toHaveLength(2)
+    expect(r.team?.updatedBy).toBe('p-1')
+    expect(typeof r.team?.updatedAt).toBe('number')
+
+    // team.json 与返回值逐字一致；atomicWriteJson tmp+rename 不留临时文件
+    const teamPath = join(dir, 'oc-1', 'team.json')
+    expect(existsSync(teamPath)).toBe(true)
+    expect(JSON.parse(readFileSync(teamPath, 'utf8'))).toEqual(r.team)
+    expect(getTeam('oc-1')).toEqual(r.team)
+    expect(readdirSync(join(dir, 'oc-1')).some((n) => n.includes('.tmp'))).toBe(false)
+
+    // 事件面只落摘要（version/changeReason/status/成员数）——成员正身在 team.json，不双写
+    const events = listEvents('oc-1', 'team_confirmed')
+    expect(events).toHaveLength(1)
+    expect(events[0].contractVersion).toBe(1)
+    expect(events[0].actor).toBe('p-1')
+    expect(events[0].payload).toEqual({
+      version: 1,
+      changeReason: '初始成队',
+      status: 'active',
+      memberCount: 2,
+    })
+  })
+
+  it('再次确认递增 version；哈希链跨 contract_created→team_confirmed→team_confirmed 连续（独立复算）', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    confirmTeam('oc-1', makeTeamInput(0), 'p-1')
+    const second = confirmTeam('oc-1', makeTeamInput(1, { changeReason: '补充执行 agent' }), 'p-1')
+    expect(second.ok).toBe(true)
+    expect(second.team?.version).toBe(2)
+    expect(getTeam('oc-1')?.version).toBe(2)
+
+    const events = listEvents('oc-1')
+    expect(events.map((e) => e.type)).toEqual(['contract_created', 'team_confirmed', 'team_confirmed'])
+    let prev = 'GENESIS'
+    for (const e of events) {
+      expect(e.prevHash).toBe(prev)
+      expect(e.hash).toBe(sha(`${prev}|${canon(bodyOf(e))}`))
+      prev = e.hash
+    }
+    // 向后兼容：旧账（无 team_confirmed 类型）照常可读——首条仍是 contract_created
+    expect(events[0].type).toBe('contract_created')
+  })
+
+  it('expectedVersion 不匹配→version_conflict，team.json 与事件账均未动（T2 端点转 409 的错误形状）', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    expect(confirmTeam('oc-1', makeTeamInput(1), 'p-1')).toMatchObject({ ok: false, code: 'version_conflict' })
+    expect(getTeam('oc-1')).toBeNull()
+    expect(listEvents('oc-1')).toHaveLength(1)
+
+    // 首次确认后用过期版本重放：同样冲突（乐观并发）
+    confirmTeam('oc-1', makeTeamInput(0), 'p-1')
+    expect(confirmTeam('oc-1', makeTeamInput(0), 'p-1')).toMatchObject({ ok: false, code: 'version_conflict' })
+    expect(getTeam('oc-1')?.version).toBe(1)
+    expect(listEvents('oc-1', 'team_confirmed')).toHaveLength(1)
+  })
+
+  it('非法输入拒绝：成员空/成员字段缺/status 非法/changeReason 空/updatedBy 空/expectedVersion 负数/outcomeId 非法', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const cases: Array<[ConfirmTeamInput, string, string]> = [
+      [makeTeamInput(0, { members: [] }), 'members', 'p-1'],
+      [
+        makeTeamInput(0, {
+          members: [{ subjectKind: 'person', subjectId: '', role: 'accountable', responsibility: 'x' }],
+        }),
+        'subjectId',
+        'p-1',
+      ],
+      [
+        makeTeamInput(0, {
+          members: [{ subjectKind: 'team', subjectId: 'p-1', role: 'accountable', responsibility: 'x' }],
+        }),
+        'subjectKind',
+        'p-1',
+      ],
+      [makeTeamInput(0, { status: 'pending' }), 'status', 'p-1'],
+      [makeTeamInput(0, { changeReason: '' }), 'changeReason', 'p-1'],
+      [makeTeamInput(0), 'updatedBy', ''],
+      [makeTeamInput(-1), 'expectedVersion', 'p-1'],
+    ]
+    for (const [input, keyword, updatedBy] of cases) {
+      const r = confirmTeam('oc-1', input, updatedBy)
+      expect(r.ok).toBe(false)
+      expect(r.code).toBe('invalid_input')
+      expect(r.problems?.join()).toContain(keyword)
+    }
+    expect(confirmTeam('../evil', makeTeamInput(0), 'p-1').code).toBe('invalid_input')
+    expect(getTeam('oc-1')).toBeNull()
+    expect(listEvents('oc-1')).toHaveLength(1)
+  })
+
+  it('未知 outcome→not_found；getTeam 未知/非法 outcomeId→null', () => {
+    expect(confirmTeam('oc-nope', makeTeamInput(0), 'p-1')).toMatchObject({ ok: false, code: 'not_found' })
+    expect(getTeam('oc-nope')).toBeNull()
+    expect(getTeam('../evil')).toBeNull()
+  })
+
+  it('draft 语义：候选不自动成队——写 draft 落盘仍是 draft，显式确认 active 才 active', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const draft = confirmTeam('oc-1', makeTeamInput(0, { status: 'draft', changeReason: '候选提案' }), 'p-2')
+    expect(draft.ok).toBe(true)
+    expect(getTeam('oc-1')?.status).toBe('draft')
+    const active = confirmTeam('oc-1', makeTeamInput(1, { changeReason: 'owner 确认成队' }), 'p-1')
+    expect(active.ok).toBe(true)
+    expect(getTeam('oc-1')?.status).toBe('active')
+    expect(
+      listEvents('oc-1', 'team_confirmed').map((e) => (e.payload as { status: string }).status),
+    ).toEqual(['draft', 'active'])
+  })
+
+  // ---- T1-review 挂账补测（来源 task-1-review.md Minor-1/Minor-2） ----
+
+  it('T1-review M1：write_failed 反向残留——事件已落但 team.json 写失败（chmod 注入）→ write_failed 错误形状且告警可观察', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    // 目录只读拦 atomicWriteJson 的 tmp 新建；events.jsonl 已存在且可写——追加面不受影响
+    chmodSync(join(dir, 'oc-1'), 0o500)
+    try {
+      const r = confirmTeam('oc-1', makeTeamInput(0), 'p-1')
+      expect(r).toMatchObject({ ok: false, code: 'write_failed' })
+      // 反向残留：先账后物——事件已在账，team.json 未写（读侧以 team.json 为权威，重试自愈）
+      expect(listEvents('oc-1', 'team_confirmed')).toHaveLength(1)
+      expect(existsSync(join(dir, 'oc-1', 'team.json'))).toBe(false)
+      expect(getTeam('oc-1')).toBeNull()
+      // 告警路径可观察：write_failed 必有 team.json 写入失败告警（变异探针：删 try/catch 让异常上抛则此处红）
+      expect(warnSpy.mock.calls.some((c) => String(c[0]).includes('team.json 写入失败'))).toBe(true)
+    } finally {
+      chmodSync(join(dir, 'oc-1'), 0o700)
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('T1-review M2：真实旧账夹具——手写仅含 contract_created 的 events.jsonl，confirmTeam 后哈希链复算不断、旧事件可读', () => {
+    // 夹具手写（非经 API）：升级前形态的账——只有一条 contract_created，无 team_confirmed。
+    // JSON 往返剥掉值为 undefined 的键（clientRequestId）：手写哈希的 canon 输入与读回解析
+    // 后的对象逐字一致，否则 undefined 键在 canon 里成 null、落盘后消失，复算必不等。
+    const outcomeDir = join(dir, 'oc-legacy')
+    mkdirSync(outcomeDir, { recursive: true })
+    const contract = JSON.parse(JSON.stringify(makeContract('oc-legacy', 'task-legacy')))
+    writeFileSync(join(outcomeDir, 'contract.json'), JSON.stringify(contract))
+    const legacyBody = {
+      eventId: 'ev-legacy-1',
+      outcomeId: 'oc-legacy',
+      contractVersion: 1,
+      type: 'contract_created',
+      at: 1700000001000,
+      actor: 'p-1',
+      payload: { contract },
+    }
+    const legacyEvent: OutcomeEvent = {
+      ...legacyBody,
+      prevHash: 'GENESIS',
+      hash: sha(`GENESIS|${canon(legacyBody)}`),
+    }
+    writeFileSync(join(outcomeDir, 'events.jsonl'), `${JSON.stringify(legacyEvent)}\n`)
+
+    const r = confirmTeam('oc-legacy', makeTeamInput(0), 'p-1')
+    expect(r.ok).toBe(true)
+    expect(r.team?.version).toBe(1)
+
+    // 旧事件可读：首条仍是手写的 contract_created（身份/内容未被改写）
+    const events = listEvents('oc-legacy')
+    expect(events.map((e) => e.type)).toEqual(['contract_created', 'team_confirmed'])
+    expect(events[0].eventId).toBe('ev-legacy-1')
+    expect(events[0].hash).toBe(legacyEvent.hash)
+    // 哈希链复算不断：GENESIS→旧事件→新 team_confirmed 逐条 prevHash 接续、hash 可独立复算
+    let prev = 'GENESIS'
+    for (const e of events) {
+      expect(e.prevHash).toBe(prev)
+      expect(e.hash).toBe(sha(`${prev}|${canon(bodyOf(e))}`))
+      prev = e.hash
+    }
+  })
+})
+
+describe('合同 dueAt 可选字段（批三 T1：旧合同零迁移）', () => {
+  it('旧合同无 dueAt：创建/读回不带该键，update 设置与显式清空（null）往返一致', () => {
+    expect(createContract(makeContract('oc-1', 'task-1'), 'p-1').ok).toBe(true)
+    const stored = getContract('oc-1')
+    expect(stored?.dueAt).toBeUndefined()
+    expect('dueAt' in (stored as object)).toBe(false)
+
+    const set = updateContract('oc-1', { dueAt: 1700000099999 }, 1, 'p-2')
+    expect(set.ok).toBe(true)
+    expect(set.contract?.dueAt).toBe(1700000099999)
+    expect(getContract('oc-1')?.dueAt).toBe(1700000099999)
+
+    const cleared = updateContract('oc-1', { dueAt: null }, 2, 'p-2')
+    expect(cleared.ok).toBe(true)
+    expect(cleared.contract?.dueAt).toBeNull()
+  })
+
+  it('dueAt 非法类型经 updateContract 合并校验拒绝（invalid_input，端点侧 422）', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const r = updateContract('oc-1', { dueAt: 'soon' as unknown as number }, 1, 'p-2')
+    expect(r).toMatchObject({ ok: false, code: 'invalid_input' })
+    expect(r.problems?.join()).toContain('dueAt')
+    expect(getContract('oc-1')?.dueAt).toBeUndefined()
+  })
+
+  it('创建带 dueAt 的合同照常落盘', () => {
+    const withDue = makeContract('oc-2', 'task-2')
+    withDue.dueAt = 1700000099999
+    expect(createContract(withDue, 'p-1').ok).toBe(true)
+    expect(getContract('oc-2')?.dueAt).toBe(1700000099999)
   })
 })
 

@@ -5,8 +5,11 @@
 // 端点表（简报逐字，前缀 /api/hermes/outcomes）：
 //   GET  /                    —— 列表，query status/rootTaskId/owner 过滤（行级 readScope，T1 补）
 //   POST /                    —— 创建（clientRequestId 幂等；rootTaskId 冲突 409）
-//   GET  /:id                 —— 合同详情
+//   GET  /:id                 —— 合同详情（批三 T2 起附 team 面：当前团队或 null）
 //   PUT  /:id                 —— 修订（expectedVersion 乐观并发）
+//   PUT  /:id/team            —— 团队确认（批三 T2：owner only；expectedVersion 409；
+//                                 changeReason 必填；validateTeam 422；状态门 active/observing；
+//                                 内容幂等；成功 200 返回新团队）
 //   POST /:id/transitions     —— 状态迁移（eventId 幂等；非法 422 problems）
 //   POST /:id/measurements    —— 测量提交（measurementId 幂等；evidenceRefs 必填）
 //   GET  /:id/measurements    —— 测量读面（?measureId= 过滤；当前版本优先全量＋每 measure 最新摘要）
@@ -14,6 +17,9 @@
 //   GET  /:id/settlement      —— 结算读面（最新有效结算＋历史 superseded 链）
 //   POST /:id/context-snapshots —— 生成最小上下文快照（sha256 内容幂等）
 //   GET  /:id/context         —— 快照列表（?snapshotId= 指定取全量）
+//   GET  /:id/contribution    —— 贡献事实五面 fail-soft＋评审结论面恒 unavailable（批三 T5）
+//   POST /:id/contribution-reviews —— 人署名贡献评价（批三 T5：human-entry 唯一；
+//                                 owner-or-verifier；person 自评拒；reviewId 幂等）
 //
 // 纪律：
 // - 功能门：OUTCOME_WORKBENCH≠1 → 全端点 404 {code:'outcome_workbench_disabled'}（每请求
@@ -47,12 +53,19 @@ import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds } from '../agentidentity/people'
+import { getIdentity, rosterStatus } from '../agentidentity/agent-identity'
+import { appendContributionReview, listContributionReviews } from '../agentidentity/judgments'
+import type { ContributionReviewInput, ContributionReviewRecord } from '../agentidentity/judgments'
+import { listCandidates, listInjectionLog } from '../expcandidates/exp-store'
 import { listAllContracts,
   appendEvent,
   appendMeasurement,
   appendSnapshot,
+  canonicalJson,
+  confirmTeam,
   createContract,
   getContract,
+  getTeam,
   listEvents,
   listMeasurements,
   listSnapshots,
@@ -70,8 +83,16 @@ import {
   verifyRootTask,
 } from './kanban-resolution'
 import { suggestVerdict, validateSettlementInput, latestCurrentMeasurement } from './settlement'
+import { validateTeam } from './team-validate'
 import { OUTCOME_STATUSES } from './types'
-import type { OutcomeContract, OutcomeMeasurement, OutcomeStatus } from './types'
+import type {
+  OutcomeContract,
+  OutcomeMeasurement,
+  OutcomeStatus,
+  OutcomeTeam,
+  OutcomeTeamMember,
+  OutcomeTeamStatus,
+} from './types'
 
 /** 控制器注入面：observing 迁移的 allTasksTerminal 守卫由 Task 10 的 tasksByOutcome
  *  提供，批一以注入接口承接（缺省 fail-closed 返回 false）；taskSummaryOf 供快照
@@ -172,6 +193,14 @@ function measurementMetadata(m: OutcomeMeasurement): Record<string, unknown> {
  *  verdict/settlementId/签署身份与时间等骨架保留。最新结算与 superseded 链同权。 */
 function settlementMetadata(s: Record<string, unknown>): Record<string, unknown> {
   const { rationale: _r, gapNote: _g, ...rest } = s
+  return rest
+}
+
+/** metadata 态团队脱敏（批三 T2）：团队是「非敏感摘要」（成员表＋版本＋状态）——
+ *  元数据级可见；changeReason 是人写理由文本，跟随 settlement rationale 脱敏模式脱去；
+ *  updatedBy/updatedAt 骨架保留（签署身份与时间同权）。 */
+function teamMetadata(t: OutcomeTeam): Record<string, unknown> {
+  const { changeReason: _c, ...rest } = t
   return rest
 }
 
@@ -355,15 +384,22 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     created(ctx, { contract: result.contract }, `/api/hermes/outcomes/${result.contract.outcomeId}`)
   })
 
-  // GET /:id：详情（读面 authz：owner/verifier 全量；他人 metadata 脱 measures[].definition）
+  // GET /:id：详情（读面 authz：owner/verifier 全量；他人 metadata 脱 measures[].definition；
+  // 批三 T2 起附 team 面——当前团队或 null，metadata 态脱 changeReason（teamMetadata））
   router.get('/:id', async (ctx) => {
-    const contract = getContract(String(ctx.params.id ?? ''))
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
     if (!contract) {
       fail(ctx, 404, '合同不存在', { code: 'not_found' })
       return
     }
     const scope = readScopeOf(contract, actorOf(ctx))
-    ok(ctx, { contract: scope === 'full' ? contract : contractMetadata(contract), readScope: scope })
+    const team = getTeam(id) // 未确认/坏档→null（fail-soft 不猜数）
+    ok(ctx, {
+      contract: scope === 'full' ? contract : contractMetadata(contract),
+      team: team === null ? null : scope === 'full' ? team : teamMetadata(team),
+      readScope: scope,
+    })
   })
 
   // PUT /:id：修订（owner only；白名单挑 patch，expectedVersion 乐观并发）
@@ -403,6 +439,261 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     ok(ctx, { contract: result.contract })
+  })
+
+  // PUT /:id/team：团队确认（批三 T2，spec 2026-11-21 批三 §二）。幂等在端点层实现——
+  // store confirmTeam 保持 T1 乐观并发语义零改动；「重复提交同 team 输入」判定=内容
+  // （members/status/changeReason 三面 canonical 相等）且 expectedVersion 恰为当前版本-1
+  // （网络重试原样重放窗口）：命中返回当前团队 200 replayed，不递增版本、不重复落
+  // team_confirmed 事件；内容不同或更早版本照常 409（乐观并发不因幂等放宽）。
+  // 鉴权序：404（合同）→401（无认证用户，human-gate authenticated_actor_required 先例，
+  // 不让 anonymous 参与判权）→403（owner only）→重放扫描（先于状态门，transitions/
+  // settlement 幂等同款序：已成功的确认不因合同后续状态演进而拒绝重放）→状态门→约束校验。
+  router.put('/:id/team', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const user = ctx.state?.user as { username?: unknown } | undefined
+    if (!user || typeof user.username !== 'string' || !user.username.trim()) {
+      fail(ctx, 401, '团队确认需要登录用户（服务端身份）', { code: 'authenticated_actor_required' })
+      return
+    }
+    const actor = actorOf(ctx)
+    if (!authz(contract, actor, 'owner')) {
+      fail(ctx, 403, '仅结果责任人（ownerPersonId）可确认团队', { code: 'forbidden' })
+      return
+    }
+    const body = bodyOf(ctx)
+    const expectedVersion = body.expectedVersion
+    if (typeof expectedVersion !== 'number' || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
+      fail(ctx, 422, 'expectedVersion 须为非负整数（无团队首次确认为 0）', {
+        code: 'invalid_input',
+        problems: ['expectedVersion 须为非负整数（无团队首次确认为 0）'],
+      })
+      return
+    }
+    // 内容幂等扫描：同输入重放命中即返回当前团队（版本/事件零变动）
+    const current = getTeam(id)
+    if (
+      current &&
+      expectedVersion === current.version - 1 &&
+      body.status === current.status &&
+      canonicalJson(body.members) === canonicalJson(current.members) &&
+      String(body.changeReason ?? '').trim() === current.changeReason
+    ) {
+      ok(ctx, { team: current, replayed: true })
+      return
+    }
+    // 状态门（spec §二：合同非 active/observing 拒，outcome_not_active 同语义）
+    if (contract.status !== 'active' && contract.status !== 'observing') {
+      fail(ctx, 422, `仅 active/observing 合同可确认团队（当前 ${contract.status}）`, {
+        code: 'outcome_not_active',
+        problems: [`仅 active/observing 合同可确认团队（当前 ${contract.status}）；draft 须先激活，settled/cancelled 为终态`],
+      })
+      return
+    }
+    // 约束校验（T1 validateTeam：owner/verifier 到位、person active、agent roster complete、高风险分离）。
+    // agent 名册判据走 agentidentity 真实现（D5：rosterStatus==='complete'）；名册读失败按
+    // fail-closed 记 blocked（不能证明齐备即不齐备）。
+    const rosterOk = (agentId: string): boolean => {
+      try {
+        const identity = getIdentity(agentId)
+        return !!identity && rosterStatus(identity) === 'complete'
+      } catch {
+        return false
+      }
+    }
+    const validation = validateTeam(contract, { members: body.members }, activePersonIds(), rosterOk)
+    if (validation.problems.length) {
+      fail(ctx, 422, '团队约束校验失败', { code: 'invalid_input', problems: validation.problems })
+      return
+    }
+    const result = confirmTeam(
+      id,
+      {
+        expectedVersion,
+        members: body.members as OutcomeTeamMember[],
+        status: body.status as OutcomeTeamStatus,
+        changeReason: String(body.changeReason ?? ''),
+      },
+      actor, // updatedBy=服务端身份，客户端传值忽略（白名单外键不采纳）
+    )
+    if (!result.ok || !result.team) {
+      const status = result.code === 'version_conflict' ? 409
+        : result.code === 'not_found' ? 404
+        : result.code === 'write_failed' ? 500 : 422
+      fail(ctx, status, `团队确认失败（${result.code ?? 'invalid_input'}）`, {
+        code: result.code,
+        problems: result.problems,
+      })
+      return
+    }
+    ok(ctx, { team: result.team })
+  })
+
+  // ---------- 批三 T5：贡献回顾域（spec 2026-11-21 批三 §五，设计 §4.8） ----------
+
+  /** metadata 态贡献评价脱敏：rationale/evidenceRefs（自然人裁决理由与证据引用）脱去；
+   *  assessment/subject/签署身份与时间骨架保留（settlement rationale 脱敏同款）。 */
+  function reviewMetadata(r: ContributionReviewRecord): Record<string, unknown> {
+    const { rationale: _r, evidenceRefs: _e, ...rest } = r
+    return rest
+  }
+
+  /** metadata 态学习候选脱敏：statement（内嵌结算理由摘要）与 evidence 脱去；
+   *  id/type/status/outcomeId 骨架保留。 */
+  function learningCandidateMetadata<T extends { statement?: unknown; evidence?: unknown }>(c: T): Record<string, unknown> {
+    const { statement: _s, evidence: _e, ...rest } = c
+    return rest as Record<string, unknown>
+  }
+
+  const describeErr = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+
+  // GET /:id/contribution：贡献事实五面 fail-soft（D6）。逐面独立读、独立失败——
+  // 源不可读记 {available:false, reason} 不伪装零数据；零数据（无测量/未成队/无评价）
+  // 如实 available:true＋空 items。第六面「评审结论」v1 恒 unavailable：评审域无
+  // outcome 外键，逐条挂接成本高且易伪造（review_linkage_not_built，不猜数）。
+  // 反目标（D9）：本端点纯只读，响应顶层与嵌套均无 score/rank/total/rating 类字段。
+  // 读面 authz 同批二：owner/verifier 全量；他人 metadata 脱各面敏感内容。
+  router.get('/:id/contribution', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const scope = readScopeOf(contract, actorOf(ctx))
+
+    let measurements: Record<string, unknown>
+    try {
+      const items = listMeasurements(id)
+      measurements = { available: true, items: scope === 'full' ? items : items.map(measurementMetadata) }
+    } catch (err) {
+      measurements = { available: false, reason: `测量源读取失败（事件账派生）：${describeErr(err)}` }
+    }
+
+    let team: Record<string, unknown>
+    try {
+      const t = getTeam(id) // 未确认/坏档→null（fail-soft 不猜数）
+      team = { available: true, item: t === null ? null : scope === 'full' ? t : teamMetadata(t) }
+    } catch (err) {
+      team = { available: false, reason: `团队源读取失败：${describeErr(err)}` }
+    }
+
+    let reviews: Record<string, unknown>
+    try {
+      const items = listContributionReviews(id)
+      reviews = { available: true, items: scope === 'full' ? items : items.map(reviewMetadata) }
+    } catch (err) {
+      reviews = { available: false, reason: `人署名评价源读取失败（judgments 账）：${describeErr(err)}` }
+    }
+
+    let learning: Record<string, unknown>
+    try {
+      const candidates = listCandidates().filter((c) => c.outcomeId === id)
+      const candidateIds = new Set(candidates.map((c) => c.id))
+      // 召回留痕反查：注入行引用了本 outcome 候选（candidateIds）即命中——「已注入」
+      // ≠「有效」，本面只留事实，效果断言归对照投影（comparison）。
+      const injections = listInjectionLog().filter((r) => r.ids.some((x) => candidateIds.has(x)))
+      learning = {
+        available: true,
+        candidates: scope === 'full' ? candidates : candidates.map(learningCandidateMetadata),
+        injections,
+      }
+    } catch (err) {
+      learning = { available: false, reason: `学习候选源读取失败（expcandidates 账）：${describeErr(err)}` }
+    }
+
+    let events: Record<string, unknown>
+    try {
+      // 时间线摘要：不带 payload 正身（contract_created 的 payload 含合同全文）
+      const timeline = listEvents(id).map((e) => ({
+        eventId: e.eventId,
+        type: e.type,
+        at: e.at,
+        actor: e.actor,
+        contractVersion: e.contractVersion,
+      }))
+      events = { available: true, timeline }
+    } catch (err) {
+      events = { available: false, reason: `事件时间线源读取失败：${describeErr(err)}` }
+    }
+
+    ok(ctx, {
+      outcomeId: id,
+      readScope: scope,
+      measurements,
+      team,
+      reviews,
+      learning,
+      events,
+      // 评审结论面 v1 恒不可用（D6）：评审域无 outcome 外键，不伪造逐条挂接
+      reviewConclusions: { available: false, reason: 'review_linkage_not_built' },
+    })
+  })
+
+  // POST /:id/contribution-reviews：人署名贡献评价（human-entry 唯一写面，D9）。
+  // 鉴权序同 T2 团队端点：404（合同）→401（登录用户）→403（owner-or-verifier 且
+  // active，authz 含在岗校验）→校验。signedBy/source 服务端定死（客户端冒传忽略），
+  // subject/assessment/rationale/evidenceRefs 校验全在服务端（appendContributionReview）；
+  // 幂等键 reviewId 重放返回原记录 200 replayed 不重复落账；传入即须为非空字符串
+  // （非字符串/空白显式 422，不静默丢弃换键——T5-M4）；成功 201。
+  router.post('/:id/contribution-reviews', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const user = ctx.state?.user as { username?: unknown } | undefined
+    if (!user || typeof user.username !== 'string' || !user.username.trim()) {
+      fail(ctx, 401, '贡献评价需要登录用户（服务端身份）', { code: 'authenticated_actor_required' })
+      return
+    }
+    const actor = actorOf(ctx)
+    if (!authz(contract, actor, 'owner-or-verifier')) {
+      fail(ctx, 403, '仅 owner 或验证责任人可署名贡献评价', { code: 'forbidden' })
+      return
+    }
+    const body = bodyOf(ctx)
+    // T5-M4：reviewId 传入即须为非空字符串——此前 nonEmpty 拣选会把非字符串/空串静默
+    // 丢弃再生成新键落账（judgments 侧「reviewId 须为非空字符串」校验从控制器路径不可达，
+    // 成死代码面）；幂等键是客户端语义的一部分，畸形键显式 422 而非悄悄换键
+    if (body.reviewId !== undefined && (typeof body.reviewId !== 'string' || !body.reviewId.trim())) {
+      fail(ctx, 422, '贡献评价入参非法', { code: 'invalid_input', problems: ['reviewId 须为非空字符串'] })
+      return
+    }
+    // 白名单挑键：signedBy/source/unitId/signedAt 等身份冒用面一律不采纳——签署人取服务端身份；
+    // 转型仅恢复静态形状（confirmTeam body.members 同款先例），真校验在 appendContributionReview
+    const input = {
+      ...(nonEmpty(body.reviewId) ? { reviewId: body.reviewId.trim() } : {}),
+      signedBy: actor,
+      subject: body.subject as ContributionReviewInput['subject'],
+      assessment: body.assessment as ContributionReviewInput['assessment'],
+      // 非字符串归一为空串：类型诚实（string），缺省由 store 校验拒（governance-controller String 同款）
+      rationale: typeof body.rationale === 'string' ? body.rationale : '',
+      evidenceRefs: body.evidenceRefs as string[] | undefined,
+    }
+    let result
+    try {
+      result = appendContributionReview(input, contract, activePersonIds())
+    } catch (err) {
+      console.warn(`[outcome-controller] 贡献评价写入失败（${id}）：${describeErr(err)}`)
+      fail(ctx, 500, '贡献评价写入失败', { code: 'write_failed' })
+      return
+    }
+    if (!result.ok || !result.record) {
+      fail(ctx, 422, '贡献评价入参非法', { code: 'invalid_input', problems: result.problems })
+      return
+    }
+    if (result.replayed) {
+      ok(ctx, { review: result.record, replayed: true })
+      return
+    }
+    created(ctx, { review: result.record })
   })
 
   // POST /:id/transitions：状态迁移（eventId 幂等；observing=owner 或 verifier，其余=owner）

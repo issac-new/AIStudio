@@ -8,6 +8,9 @@ const EFFECTIVENESS_TEXT = {
   zh: {
     title: '交付效能',
     subtitle: '今天干到哪了 · 活有多难干到哪步 · 人插了多少次手',
+    // 批三 T6（设计 §5.1）：同口径结果对照链接行——只指路，不在本页新增排行面
+    outcomeCompareNote: '结果对照：业务结果的同口径对照（基线 vs 实测，按结果合同口径）在根任务抽屉的「业务结果」面板查看',
+    outcomeCompareLink: '去工作台看板打开根任务',
     refresh: '刷新',
     generatedAt: '生成于',
     unavailable: '数据源缺席',
@@ -57,6 +60,8 @@ const EFFECTIVENESS_TEXT = {
   en: {
     title: 'Delivery Effectiveness',
     subtitle: 'Daily digest · C×L matrix · Intervention ledger',
+    outcomeCompareNote: 'Outcome comparison: same-caliber comparisons (baseline vs actual) live in the outcome panel of the root task drawer',
+    outcomeCompareLink: 'Open the board in Workbench',
     refresh: 'Refresh',
     generatedAt: 'Generated at',
     unavailable: 'Source unavailable',
