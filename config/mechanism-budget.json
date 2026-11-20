@@ -10,6 +10,21 @@
  },
  "changes": [
   {
+   "at": "2026-11-20",
+   "delta": "+1 域（outcome：合同/事件哈希链/测量/结算/快照/决策矩阵六模块）＋+3 patches（804 宿主路由挂载/805 看板 outcome_id 列与继承/806 审批守卫 outcome 接线与双签）/ +1 分册台账（autonomygov outcome-dual-sign.json 运行态，不进 LEDGERS 注册表）/ +1 门（OUTCOME_WORKBENCH env 功能门，控制器每请求动态读非 qgate 面）/ +1 双侧契约文件（outcome/decision-vectors.json，TS/Python 共享判定向量单一事实源）/ +0 scripts / +0 npm scripts / +0 qgate gates",
+   "reason": "AI 原生组织运行模型批一（spec 2026-11-19-ai-native-operating-model-design）：工程完成与业务结算分离——结果合同状态机＋追加制事件哈希链＋版本绑定测量＋owner 单签业务裁决＋high 双签审批＋派单最小上下文快照＋决策画像矩阵（riskTier/reversibility/externalEffect 三维）",
+   "pairedRemovals": [
+    "risk-tier 委托归一：approval-inbox/risk-tier.ts 判据正则/词表整体迁入 outcome/decision-matrix.ts，原文件退为兼容薄层（行为字节级不变，回归锁 risk-tier.test.ts「回归锁」describe 委托化前后同绿）",
+    "N03 任务卡结构化部分承接：根任务 outcome 绑定面（outcome_id 列＋合同 measures/acceptance 结构化正身＋激活即绑定家族传播）已由本批落地，pending-batch N03 行标注部分承接（2026-11-20）",
+    "verifyRootTask env 豁免通道（OUTCOME_ALLOW_UNVERIFIED_ROOT=1）系批一试点逃生门——T10 已接看板只读正身后该通道失势，随批二收口首项退役"
+   ],
+   "sunset": {
+    "owner": "plusprimer",
+    "reviewBy": "AI 原生运行模型批二收口（与 2026-11-19-process-framework-pending-batch 台账同批核）",
+    "retireWhen": "OUTCOME_WORKBENCH 门转默认启用（GA 去 env 门）时门与豁免通道一并退役；outcome-dual-sign 分册连续两轮推演零 deny 记录后评估并入主台账；outcome 域为正身机制不整体退役，仅按消费读数裁剪面（测量/结算连续两轮零消费的端点降级归档）"
+   }
+  },
+  {
    "at": "2026-11-19",
    "delta": "+1 域（capabilitypool 只读投影）/ +1 script（capability-registry-seed 一次性种子）/ +0 patch / +0 gate / +0 ledger / +0 npm script；同域内 2 个客户端区块与 1 组候选/供需 API",
    "reason": "AI 原生组织 C 方案·批二点五能力池地基（spec 2026-11-19-capability-pool-foundation）：能力标签进入派单准入、供需只读投影、三项指标；不新建调度器",
