@@ -279,10 +279,16 @@ async function doSettle(): Promise<void> {
   }
   settleBusy.value = true
   try {
+    // 引用集＝本会话提交 ∪ 服务端在账最新（终审 I-2：刷新后 session 为空不空引用；
+    // 服务端同门兜底——有在账测量时空集 422，这里先行并集减少一次往返失败）。
+    const referenced = new Set<string>([
+      ...[...sessionMeasurements.value.values()].map((m) => m.measurementId),
+      ...Object.values(serverLatest.value).map((m) => m.measurementId),
+    ])
     const s = await settleOutcome(contract.value.outcomeId, {
       verdict: settleVerdict.value,
       rationale: settleRationale.value.trim(),
-      measurementIds: [...sessionMeasurements.value.values()].map((m) => m.measurementId),
+      measurementIds: [...referenced],
       contractVersion: contract.value.version,
       ...(settleVerdict.value === 'unknown'
         ? { gapNote: settleGapNote.value.trim(), nextReviewAt: parseNextReview() ?? undefined }

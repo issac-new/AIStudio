@@ -299,6 +299,30 @@ describe('OutcomeSection — 结算签署', () => {
     expect(gap.text()).toContain('证据缺口：按期结单率数据源不可用')
     expect(gap.text()).toContain('下次复审')
   })
+
+  it('结算引用集＝本会话 ∪ 服务端在账最新（终审 I-2：刷新后 session 空，不空引用提交）', async () => {
+    // 服务端已有 m1 在账最新（本会话零提交）——doSettle 须并入 mea-1，不得空数组
+    apiMocks.fetchOutcomeMeasurements.mockResolvedValue({
+      outcomeId: 'oc-test1', contractVersion: 2,
+      measurements: [],
+      latest: {
+        m1: {
+          measurementId: 'mea-1', outcomeId: 'oc-test1', measureId: 'm1', contractVersion: 2,
+          actual: 45, availability: 'available', evidenceRefs: ['evid://1'],
+          observedAt: 1731000200000, recordedBy: 'alice', recordedAt: 1731000200000,
+        },
+      },
+    })
+    const w = await mountObserving()
+    await w.find('[data-testid="outcome-settle-verdict"]').setValue('achieved')
+    await w.find('[data-testid="outcome-settle-rationale"]').setValue('积压压到 45 张低于目标 50，准予结算。')
+    await w.find('[data-testid="outcome-settle-submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.settleOutcome).toHaveBeenCalledTimes(1)
+    const arg = apiMocks.settleOutcome.mock.calls[0]![1]
+    expect(arg.measurementIds).toContain('mea-1')
+    expect(arg.measurementIds.length).toBeGreaterThan(0)
+  })
 })
 
 describe('OutcomeSection — 状态迁移', () => {

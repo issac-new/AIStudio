@@ -129,8 +129,11 @@ export const SETTLEMENT_RATIONALE_MIN = 20
 
 /** 结算入参校验：verdict 形状、rationale 长度、measurementIds ⊆ 当前版本测量
  *  id 集（旧版本/伪造 id 一律拒——引用集须能逐条对回本版合同口径）；
- *  verdict='unknown' 追加 gapNote 非空＋nextReviewAt 合法时间戳（正有限数值）。
- *  非 unknown 不强制缺口字段（不禁止携带，签署人自愿补充复审计划不作 problem）。 */
+ *  合同存在任一当前版本测量时 measurementIds 不得为空（终审 I-2：空引用集
+ *  断链——测量在账而结算不引用，裁决失去证据锚点；纯定性合同无任何当前
+ *  版本测量，空数组仍放行）；verdict='unknown' 追加 gapNote 非空＋
+ *  nextReviewAt 合法时间戳（正有限数值）。非 unknown 不强制缺口字段
+ *  （不禁止携带，签署人自愿补充复审计划不作 problem）。 */
 export function validateSettlementInput(
   input: unknown,
   contract: OutcomeContract,
@@ -163,6 +166,13 @@ export function validateSettlementInput(
     if (foreign.length)
       problems.push(
         `measurementIds 含当前版本（v${contract?.version ?? '?'}）测量之外的 id：${foreign.join('、')}`,
+      )
+    // 终审 I-2：测量在账而结算引用集为空＝证据链断链——有当前版本测量时
+    // 空数组拒（引用集至少含一条在账测量）；无任何当前版本测量（纯定性合同
+    // 或全缺口合同）不设此门，空数组合法。
+    else if (s.measurementIds.length === 0 && validIds.size > 0)
+      problems.push(
+        `measurementIds 不得为空：当前版本（v${contract?.version ?? '?'}）已有 ${validIds.size} 条在账测量，结算引用集须包含至少一条（纯定性结算仅适用于无任何当前版本测量的合同）`,
       )
   }
 

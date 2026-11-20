@@ -338,8 +338,16 @@ describe('validateSettlementInput', () => {
     expect(r.problems[0]).toContain('ms-forged')
   })
 
-  it('measurementIds 为空数组合法（纯定性结算无量化引用）', () => {
+  it('measurementIds 为空数组：当前版本有在账测量→拒（终审 I-2 证据链断链）', () => {
     const r = validateSettlementInput({ ...base, measurementIds: [] }, contract, measurements)
+    expect(r.problems.join()).toContain('measurementIds 不得为空')
+    expect(r.problems.join()).toContain('在账测量')
+  })
+
+  it('measurementIds 为空数组合法（纯定性结算：无任何当前版本测量）', () => {
+    // 只有 v1 历史测量＝当前版本零在账，空引用集不构成断链，放行
+    const historicalOnly = measurements.filter((m) => m.contractVersion === 1)
+    const r = validateSettlementInput({ ...base, measurementIds: [] }, contract, historicalOnly)
     expect(r.problems).toEqual([])
   })
 
