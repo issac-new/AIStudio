@@ -3,6 +3,9 @@
      「这件事如何由人、Agent 与控制点协同完成」（2026-10-10 麦肯锡概念一轮）。
      左：根卡选择 + VueFlow 任务链画布（人=蓝 / Agent=紫 / 未指派=灰；控制点=橙色描边+徽标）。
      右：五问面板（业务结果与负责人 / 人机分工 / 确认点 / 异常升级 / 可复用资产）。
+     第 1 问数据面（2026-11-20 批一 Task 14）：根卡有结果合同（OutcomeContract）时
+     渲染真实 title/owner/status/measures/版本，无合同回看板启发式并亮「未建模业务
+     结果」徽标，读取失败仅该小节标不可用——画布与其余四问不受影响。
      口径诚实项（面板脚注）：人/Agent 判定用 -agent 后缀约定；估算覆盖率如实展示，
      未估算卡不折算；任务工厂模板沉淀为 Phase 2 占位说明。 -->
 <script setup lang="ts">
@@ -14,9 +17,11 @@ import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { shortMxName } from '@/custom/ui/mxid-display'
 import {
   type OrchTaskRaw, type AutonomyEntry, type EscalationRecord, type StoredSpecSummary,
+  type OutcomeContractRef, type PeopleRosterEntry,
   classifyExecutor, controlPointReasons, deriveMissionRoots, buildMissionTree,
   deriveFiveQuestions, layoutMissionDag, ORCH_NODE_W, ORCH_NODE_H,
   fetchAutonomyLadder, fetchPendingEscalations, fetchGraphSpecs,
+  fetchOutcomeByRoot, fetchPeopleRoster,
 } from '../../api/orchestration'
 
 const workspace = useWorkspaceStore()
@@ -61,6 +66,42 @@ const fiveQ = computed(() => {
     specs.value ?? [],
   )
 })
+
+// ── 结果合同（2026-11-20 批一 Task 14）：第 1 问真实数据面 ──
+// 三态：loading（读取中，不亮徽标）/ contract（真实合同）/ none（确认无合同——
+// 含 OUTCOME_WORKBENCH 门关）/ error（读取失败，第 1 问标不可用）。
+// none 与 error 必须分开：徽标说「没建模」，不可用说「读不到、不知道」。
+
+const outcomeState = ref<'loading' | 'contract' | 'none' | 'error'>('loading')
+const outcomeContract = ref<OutcomeContractRef | null>(null)
+const peopleById = ref<Map<string, PeopleRosterEntry> | null>(null)
+
+/** 过期响应防护：换根卡/刷新会并发发起读取，只认最后一次（seq 不匹配即丢弃）。 */
+let outcomeReqSeq = 0
+async function loadOutcome(rootId: string): Promise<void> {
+  const seq = ++outcomeReqSeq
+  if (!rootId) {
+    if (seq === outcomeReqSeq) { outcomeState.value = 'none'; outcomeContract.value = null }
+    return
+  }
+  if (seq === outcomeReqSeq) outcomeState.value = 'loading'
+  const result = await fetchOutcomeByRoot(rootId)
+  if (seq !== outcomeReqSeq) return
+  outcomeContract.value = result.state === 'contract' ? result.contract : null
+  outcomeState.value = result.state
+}
+
+watch(selectedRootId, id => { void loadOutcome(id) }, { immediate: true })
+
+/** owner 显示名：people 名单命中→name；名单缺席或 id 未收录→ownerPersonId 并标注。 */
+const ownerDisplay = computed(() => {
+  const c = outcomeContract.value
+  if (!c) return { name: '', resolved: false }
+  const p = peopleById.value?.get(c.ownerPersonId)
+  return { name: p?.name ?? c.ownerPersonId, resolved: p != null }
+})
+
+const MEASURE_OP_LABEL: Record<string, string> = { gte: '≥', lte: '≤', eq: '=' }
 
 // ── 画布：VueFlow 节点/边（分层布局，根在上）──
 
@@ -117,13 +158,16 @@ watch(nodeCount, n => {
 async function refresh(): Promise<void> {
   loading.value = true
   try {
-    const [ladderR, escR, specsR] = await Promise.all([
-      fetchAutonomyLadder(), fetchPendingEscalations(), fetchGraphSpecs(),
+    const [ladderR, escR, specsR, peopleR] = await Promise.all([
+      fetchAutonomyLadder(), fetchPendingEscalations(), fetchGraphSpecs(), fetchPeopleRoster(),
     ])
     ladder.value = ladderR
     escalations.value = escR
     specs.value = specsR
+    peopleById.value = peopleR ? new Map(peopleR.map(p => [p.id, p])) : null
     await workspace.refreshAllBoards(true)
+    // 换根卡已由 selectedRootId watch 触发；这里刷新当前根的合同（seq 防过期）
+    await loadOutcome(selectedRootId.value)
   } finally {
     loading.value = false
   }
@@ -197,9 +241,35 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
 
         <section class="orch__q">
           <h4>1. 业务结果与负责人</h4>
-          <p class="orch__q-line"><strong>{{ fiveQ.outcome.title }}</strong></p>
-          <p class="orch__q-line">负责人：{{ fiveQ.outcome.owner }}<template v-if="fiveQ.outcome.approver"> · 审批人：{{ shortMxName(fiveQ.outcome.approver) }}</template></p>
-          <p class="orch__q-line">状态：{{ fiveQ.outcome.status }} · 任务链 {{ fiveQ.outcome.taskCount }} 张卡</p>
+          <!-- 有合同：真实 title/owner/status/measures/版本（owner 由人员名单解析） -->
+          <div v-if="outcomeState === 'contract' && outcomeContract" data-testid="ia-orchestration-outcome-contract">
+            <p class="orch__q-line"><strong>{{ outcomeContract.title }}</strong></p>
+            <p class="orch__q-line">
+              负责人：{{ ownerDisplay.name }}<template v-if="!ownerDisplay.resolved">（未匹配人员名单，按合同 ownerPersonId 显示）</template>
+            </p>
+            <p class="orch__q-line">状态：{{ outcomeContract.status }} · 合同版本 v{{ outcomeContract.version }} · 任务链 {{ fiveQ.outcome.taskCount }} 张卡</p>
+            <ul v-if="outcomeContract.measures.length > 0" class="orch__list">
+              <li v-for="m in outcomeContract.measures" :key="m.measureId">
+                {{ m.name }}：目标 {{ m.target }} {{ m.unit }}（{{ MEASURE_OP_LABEL[m.operator] ?? m.operator }}）· 基线 {{ m.baseline ?? '未知' }}
+              </li>
+            </ul>
+            <p v-else class="orch__q-note">合同未定义度量（measures 为空）。</p>
+            <p class="orch__q-note">实测读数（actual/availability）不随合同读取端点下发（批一无测量读取面）；测量提交与结算在任务抽屉的结果面板。</p>
+          </div>
+          <!-- API 失败：只标第 1 问不可用，画布与其余四问照常 -->
+          <p v-else-if="outcomeState === 'error'" class="orch__q-note" data-testid="ia-orchestration-outcome-unavailable">
+            业务结果合同读取失败，本小节暂不可用（画布与其余四问不受影响）。
+          </p>
+          <!-- 无合同（含功能门关）：保留看板启发式并亮徽标 -->
+          <template v-else>
+            <p class="orch__q-line">
+              <strong>{{ fiveQ.outcome.title }}</strong>
+              <span v-if="outcomeState === 'none'" class="orch__chip orch__chip--unmodeled" data-testid="ia-orchestration-outcome-unmodeled">未建模业务结果</span>
+            </p>
+            <p class="orch__q-line">负责人：{{ fiveQ.outcome.owner }}<template v-if="fiveQ.outcome.approver"> · 审批人：{{ shortMxName(fiveQ.outcome.approver) }}</template></p>
+            <p class="orch__q-line">状态：{{ fiveQ.outcome.status }} · 任务链 {{ fiveQ.outcome.taskCount }} 张卡</p>
+            <p v-if="outcomeState === 'none'" class="orch__q-note">该根卡尚未建模业务结果——以上为看板启发式（负责人＝根卡 assignee）；建模入口在任务抽屉的结果面板。</p>
+          </template>
         </section>
 
         <section class="orch__q">
@@ -249,7 +319,11 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
           <p class="orch__q-note">{{ fiveQ.assets.factoryNote }}</p>
         </section>
 
-        <p class="orch__footnote">口径说明：人/Agent 按 -agent 后缀约定判定；控制点来自 RACI 审批人、review 状态与自主度阶梯审批点。</p>
+        <p class="orch__footnote">
+          口径说明：人/Agent 按 -agent 后缀约定判定；控制点来自 RACI 审批人、review 状态与自主度阶梯审批点。
+          <template v-if="outcomeState === 'contract' && outcomeContract">业务结果与负责人来自结果合同 OutcomeContract v{{ outcomeContract.version }}。</template>
+          <template v-else-if="outcomeState === 'none'">业务结果未建模：第 1 问为看板启发式（负责人＝根卡 assignee）。</template>
+        </p>
       </aside>
     </div>
   </div>
@@ -310,6 +384,8 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
   &--agent { color: var(--ia-compensated); border-color: color-mix(in srgb, var(--ia-compensated) 40%, transparent); background: color-mix(in srgb, var(--ia-compensated) 8%, transparent); }
   &--unassigned { color: var(--text-muted); border-color: var(--border-color); }
   &--control { color: var(--ia-stale); border-color: rgba(var(--warning-rgb), 0.4); background: rgba(var(--warning-rgb), 0.1); }
+  /* 未建模业务结果（第 1 问徽标）：缺口标记，与控制点同一警示色系 */
+  &--unmodeled { margin-left: 6px; color: var(--ia-stale); border-color: rgba(var(--warning-rgb), 0.5); background: rgba(var(--warning-rgb), 0.12); }
 }
 
 
