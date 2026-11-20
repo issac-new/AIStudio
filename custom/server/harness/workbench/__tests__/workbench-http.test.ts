@@ -113,7 +113,7 @@ const post = async (path: string, body: unknown): Promise<{ status: number; body
   return { status: res.status, body: await res.json() }
 }
 
-async function createSubmittedApproved(): Promise<any> {
+async function createSubmittedApproved(probeRunId = 'run-probe'): Promise<any> {
   const created = await post('/api/harness/workbench/proposals', {
     title: '收紧提示词',
     hypothesis: '输出约束更明确可减少返工',
@@ -137,7 +137,7 @@ async function createSubmittedApproved(): Promise<any> {
   expect(probed.body.proposal.probes).toHaveLength(2)
   for (const probe of probed.body.proposal.probes) {
     const rec = await post(`/api/harness/workbench/proposals/${id}/probes/${probe.id}/record`, {
-      evalRunId: 'run-probe', regressionRunId: 'run-reg', note: '真实评测',
+      evalRunId: probeRunId, regressionRunId: 'run-reg', note: '真实评测',
     })
     expect(rec.status).toBe(200)
   }
@@ -229,6 +229,55 @@ describe('Harness² 工作台 HTTP', () => {
     const promoted = await post(`/api/harness/workbench/proposals/${composed.id}/promote`, { apply: true })
     expect(promoted.status).toBe(409)
     expect((promoted.body.blockers as any[]).map((b) => b.code)).toContain('apply_env_disabled')
+  })
+
+  // ---- Agnes 批一 a（独立审查 P1-2）：min_k 豁免 HTTP 集成 ----
+  it('k<3 证据：无豁免 409 statistical_insufficient；带理由豁免晋级成功且留痕进提案历史', async () => {
+    // 低采样运行（k=1）：探测证据过不了 n≥3 门。
+    const store = await import('../../../eval/store')
+    store.appendRun({ ...runOf('run-lowk', baseSetId, 0.8), k: 1 })
+    const composed = await createSubmittedApproved('run-lowk')
+
+    const denied = await post(`/api/harness/workbench/proposals/${composed.id}/promote`, { apply: false, actor: 'reviewer' })
+    expect(denied.status).toBe(409)
+    expect((denied.body.blockers as any[]).map((b) => b.code)).toContain('statistical_insufficient')
+
+    const waived = await post(`/api/harness/workbench/proposals/${composed.id}/promote`, {
+      apply: false,
+      actor: 'reviewer-a',
+      waivers: [{ code: 'min_k', reason: '预算受限，接受单样本统计风险' }],
+    })
+    expect(waived.status).toBe(200)
+    expect(waived.body.proposal.status).toBe('promoted')
+    // 留痕断言：豁免进提案历史（actor/reason/at 齐），非内存态。
+    const waivers = waived.body.proposal.waivers as Array<{ code: string; actor: string; reason: string; at: string }>
+    expect(waivers).toHaveLength(1)
+    expect(waivers[0]).toMatchObject({ code: 'min_k', actor: 'reviewer-a', reason: '预算受限，接受单样本统计风险' })
+    expect(typeof waivers[0].at).toBe('string')
+    const list = await get('/api/harness/workbench/proposals')
+    const persisted = (list.body.proposals as any[]).find((p) => p.id === composed.id)
+    expect((persisted.waivers ?? []).length).toBe(1)
+  })
+
+  it('空理由豁免被过滤：仍 409，且库内无豁免残留（失败尝试不留痕）', async () => {
+    const store = await import('../../../eval/store')
+    store.appendRun({ ...runOf('run-lowk2', baseSetId, 0.8), k: 2 })
+    const composed = await createSubmittedApproved('run-lowk2')
+
+    const attempt = await post(`/api/harness/workbench/proposals/${composed.id}/promote`, {
+      apply: false,
+      actor: 'reviewer-b',
+      waivers: [
+        { code: 'min_k', reason: '   ' },
+        { code: 'min_k' },
+        { code: 'other_gate', reason: '越权豁免尝试' },
+      ],
+    })
+    expect(attempt.status).toBe(409)
+    expect((attempt.body.blockers as any[]).map((b) => b.code)).toContain('statistical_insufficient')
+    const list = await get('/api/harness/workbench/proposals')
+    const persisted = (list.body.proposals as any[]).find((p) => p.id === composed.id)
+    expect(persisted.waivers ?? []).toHaveLength(0)
   })
 
   it('批准后候选集合变化会失效（此实现不允许改候选，验证摘要绑定入账）', async () => {

@@ -25,7 +25,7 @@
   },
   {
    "at": "2026-11-20",
-   "delta": "+2 blocker code（statistical_insufficient_waived/train_evidence，W6 棘轮 57→59）＋+1 门输入维度（evidenceSetSplits 三向角色表）＋+1 豁免字段族（Proposal.waivers min_k）＋+1 报告字段（PromotionGateReport.lexOrder）＋probeK 默认 2→3 / +0 域 / +0 patch / +0 gate / +0 script / +0 npm script",
+   "delta": "+2 门 code（train_evidence=blocker、statistical_insufficient_waived=warning，W6 棘轮 57→59）＋+1 门输入维度（evidenceSetSplits 三向角色表）＋+1 豁免字段族（Proposal.waivers min_k）＋+1 报告字段（PromotionGateReport.lexOrder）＋probeK 默认 2→3 / +0 域 / +0 patch / +0 gate / +0 script / +0 npm script",
    "reason": "Agnes Harness 吸收批一 a·晋级门收紧（spec 2026-11-20-agnes-gate-hardening）：字典序目标（安全>质量>成本，高层 fail 暂缓成本裁决）＋n≥3 统计下限（k<3 blocker，min_k 显式豁免留痕）＋Train/Eval/Sealed 三向数据集隔离（train 证据不可晋级）",
    "pairedRemovals": [
     "statistical_insufficient 的 warning 形态退役：k<2-warning 通道被 k<3-blocker＋豁免通道取代（旧 warning code 只在豁免场景以 _waived 后缀存活，语义从「提醒」变「人工担责留痕」）",

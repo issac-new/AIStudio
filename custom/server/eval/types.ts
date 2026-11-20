@@ -352,6 +352,8 @@ export interface EvalSetMeta {
   track: Track
   module?: string
   sealed: boolean
+  /** 三向角色（Agnes 批一 a）：推导值（sealed 布尔恒胜出）。 */
+  split: 'train' | 'eval' | 'sealed'
   contentHash: string
   revision: number
   createdAt: number

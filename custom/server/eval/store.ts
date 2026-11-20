@@ -307,6 +307,8 @@ export function listSets(): EvalSetMeta[] {
     track: s.track,
     module: s.module,
     sealed: s.sealed,
+    /** 三向角色（Agnes 批一 a）：列表面可见，不必等晋级被拦才知道集是 train。 */
+    split: splitOfSet(s),
     contentHash: s.contentHash,
     revision: s.revision,
     createdAt: s.createdAt,

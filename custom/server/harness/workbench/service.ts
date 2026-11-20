@@ -977,9 +977,14 @@ export async function promoteProposal(
   const result = await mutateStore((store2) => {
     const p = requireProposal(store2, id)
     const now = nowIso()
-    // 豁免留痕随晋级写回（Agnes 批一 a）：gate 用的副本有而库里的没有时补齐。
-    if (p0WithWaivers !== p0 && p0WithWaivers.waivers && p.waivers?.length !== p0WithWaivers.waivers.length) {
-      p.waivers = p0WithWaivers.waivers
+    // 豁免留痕随晋级写回（Agnes 批一 a）：库内缺哪条补哪条（显式追加语义，
+    // 不做长度比较——独立审查 P2-3：长度相等但内容不同的并发态会静默丢豁免）。
+    if (p0WithWaivers !== p0 && p0WithWaivers.waivers) {
+      const existing = p.waivers ?? []
+      const missing = p0WithWaivers.waivers.filter(
+        (w) => !existing.some((e) => e.code === w.code && e.at === w.at && e.reason === w.reason),
+      )
+      if (missing.length > 0) p.waivers = [...existing, ...missing]
     }
     const previous = currentChampionOf(store2.champions, p.surfaceKey, p.id)
     const champ: Champion = {

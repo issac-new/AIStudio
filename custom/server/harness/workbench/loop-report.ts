@@ -65,12 +65,25 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
       // ---- Agnes 批一 a：三向数据集隔离——晋级证据只认 eval|sealed ----
       // train 集是给进化/调参过程读的；用它晋级＝「教到考上再自己打分」。
       // splits 表由 service 层读 eval store 注入；缺席（旧调用方）不评估该门。
-      const evidenceSplit = input.evidenceSetSplits?.[probe.evidence.setId]
-      if (evidenceSplit === 'train') {
-        blockers.push({
-          code: 'train_evidence',
-          message: `选中候选的评测集 ${probe.evidence.setId} 是 train 角色：晋级证据必须来自 eval|sealed 集（Train/Eval/Sealed 三向隔离，Agnes 批一 a）`,
-        })
+      // 覆盖四个证据面（独立审查 P1-1）：主评测集＋等预算基线（HDA 归因起点）＋
+      // 反事实集（CHASE 捷径判定）＋提案基线（passAt1Delta 对比起点）——任何一个
+      // 是 train 都实质影响晋级裁决，都必须拦。
+      const splitsTable = input.evidenceSetSplits
+      if (splitsTable) {
+        const trainRoles: string[] = []
+        if (splitsTable[probe.evidence.setId] === 'train') trainRoles.push(`主评测集 ${probe.evidence.setId}`)
+        const eq = probe.evidence.equalBudgetBaseline?.setId
+        if (eq && splitsTable[eq] === 'train') trainRoles.push(`等预算基线集 ${eq}`)
+        const cf = probe.evidence.counterfactual?.setId
+        if (cf && splitsTable[cf] === 'train') trainRoles.push(`反事实集 ${cf}`)
+        const baselineSetId = proposal.baseline?.setId
+        if (baselineSetId && splitsTable[baselineSetId] === 'train') trainRoles.push(`提案基线集 ${baselineSetId}`)
+        if (trainRoles.length > 0) {
+          blockers.push({
+            code: 'train_evidence',
+            message: `${trainRoles.join('、')} 是 train 角色：晋级证据与对比起点必须来自 eval|sealed 集（Train/Eval/Sealed 三向隔离，Agnes 批一 a）`,
+          })
+        }
       }
       // Agnes 批一 a（2026-11-20）：k<3 从 warning 升 blocker——两个样本无法区分
       // 运气与能力（Agnes RSI 三跑统计纪律同款；k=2 只是「没矛盾」，不是「一致」）。

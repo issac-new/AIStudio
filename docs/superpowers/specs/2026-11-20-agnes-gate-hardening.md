@@ -72,3 +72,5 @@ DESIGN_SYNC: touched
 - 批 1b（注入回执/效果归因/试用期/自动回滚）：等 `ai-native-cognition-batch2` 合并后另立 spec 与 worktree。
 - 存量宿主 `harness-schedule.json` 已落盘的 `probeK:2` 不被新默认覆盖（normalize 保留显式配置）；新档才用 3。已有提案在旧 k=2 证据上重晋级会被新门拦，需补跑探测或走豁免——这是收紧的预期行为，不是回归。
 - 字典序分层对「质量未知（quality_unknown warning）」不升 blocker：维持既有人工复核语义，本批只重排 blocker 优先级，不新增质量门。
+- **独立审查（2026-11-20，修复后可合并）已清偿**：P1-1 三向门从只查主证据扩到等预算基线/反事实/提案基线四个证据面（审查确认原实现与 spec 声称不符）；P1-2 豁免链路补 HTTP 集成测试（k=1 无豁免 409→带理由豁免 200 且留痕持久化→空理由过滤且 409 不留残留）；P2-3 豁免写回改显式追加语义（弃长度比较）；P2-5 service-auto-probe 过时注释同步 k=3；P2-6 listSets 元数据暴露推导 split；P2-7 机制预算 delta 措辞修正（statistical_insufficient_waived 是 warning）。
+- 未采纳（记录理由）：P2-1 `constraint_unchecked` 等安全证据类仍归质量层——裁决行为等价（同样触发成本暂缓），只影响 lexOrder.safety 读数口径，留待 1b 统一安全 code 分类时一并处理；P2-2 lexOrder.cost 增设 deferred 态——信息已在 warnings 保留，三态读数的暂缓语义在类型注释里说明；P2-4 actor 缺省 'operator' 弱归属——与 champion.promotedBy 同款既有口径，不单批改。
