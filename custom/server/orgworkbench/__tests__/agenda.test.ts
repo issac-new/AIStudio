@@ -415,6 +415,41 @@ describe('fail-soft：源失败≠没有待决事项', () => {
     expect(r.sources.outcome_teams.available).toBe(false)
     expect(r.sources.outcome_teams.error).toContain('raw string failure')
   })
+
+  // T3 审查 I-1 补齐：approvals/escalations/exp_candidates 三源此前无逐源失败用例——
+  // 逐源 available 的诚实性必须每源各有失败锚，缺一格即装配层吞错也无人抓。
+  it('approvals 源失败 → available:false 且他源照常（T3 审查 I-1）', () => {
+    const deps = emptyDeps()
+    deps.collectPendingItems = () => { throw new Error('收件箱队列目录不可读') }
+    deps.listCandidates = () => [candidate('exp-1')]
+    const r = buildAgenda(deps, NOW)
+    expect(r.sources.approvals.available).toBe(false)
+    expect(r.sources.approvals.error).toContain('收件箱队列目录不可读')
+    expect(r.sources.approvals.items).toBeUndefined()
+    expect(r.sources.exp_candidates.available).toBe(true)
+    expect(r.sources.exp_candidates.itemCount).toBe(1)
+  })
+
+  it('escalations 源失败 → available:false 且他源照常（T3 审查 I-1）', () => {
+    const deps = emptyDeps()
+    deps.listPendingEscalations = () => { throw new Error('升级分册损坏') }
+    const r = buildAgenda(deps, NOW)
+    expect(r.sources.escalations.available).toBe(false)
+    expect(r.sources.escalations.error).toContain('升级分册损坏')
+    expect(r.sources.escalations.items).toBeUndefined()
+    expect(r.sources.premises.available).toBe(true)
+  })
+
+  it('exp_candidates 源失败 → available:false 且他源照常（T3 审查 I-1）', () => {
+    const deps = emptyDeps()
+    deps.listCandidates = () => { throw new Error('经验候选库被锁') }
+    const r = buildAgenda(deps, NOW)
+    expect(r.sources.exp_candidates.available).toBe(false)
+    expect(r.sources.exp_candidates.error).toContain('经验候选库被锁')
+    expect(r.sources.exp_candidates.items).toBeUndefined()
+    expect(r.sources.approvals.available).toBe(true)
+    expect(r.sources.approvals.itemCount).toBe(0)
+  })
 })
 
 describe('全空与全覆盖', () => {
