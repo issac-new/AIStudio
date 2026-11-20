@@ -1366,3 +1366,8 @@
 # 多父绑定到不同 outcome 即拒（异值拒，805 三态纪律建卡面等价物，原子失败不留半写）。
 # kanban_swarm 建卡与 CLI --parent 均经 create_task 两路自然覆盖；runtime/hermes_cli/kanban_db.py 镜像同批同步。
 809-agent-kanban-create-parent-outcome.patch
+# 810-hermes-org-workbench-routes（AI 原生组织运行模型批三 Task 4，spec 2026-11-21-ai-native-orgworkbench-batch3 §四）：
+# bootstrap/routes.ts 挂载组织工作台议程路由——import orgWorkbenchRoutes ＋
+# app.use 两段（804 范式）。GET /api/hermes/org-workbench/agenda：宿主 JWT＋
+# OUTCOME_WORKBENCH 门控的决策议程六源只读投影（控制器见 custom/server/orgworkbench/）。
+810-hermes-org-workbench-routes.patch
