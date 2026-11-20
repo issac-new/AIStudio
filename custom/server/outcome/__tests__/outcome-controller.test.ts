@@ -1237,4 +1237,198 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       }
     })
   })
+
+  // ---- 批三 T2：团队端点 PUT /:id/team 与 GET /:id team 面（spec 2026-11-21 批三 §一/§二） ----
+
+  describe('批三 T2：PUT /:id/team 团队确认', () => {
+    // agent 成员 roster 判据走 agentidentity 真实现：隔离到临时身份册（无任何注册身份→blocked）
+    let tmpAgentId: string
+    beforeEach(async () => {
+      tmpAgentId = mkdtempSync(join(tmpdir(), 'outcome-ctl-agid-'))
+      const agentIdentity = await import('../../agentidentity/agent-identity')
+      agentIdentity._useStoreDirForTests(tmpAgentId)
+    })
+    afterEach(async () => {
+      const agentIdentity = await import('../../agentidentity/agent-identity')
+      agentIdentity._useStoreDirForTests(null)
+      rmSync(tmpAgentId, { recursive: true, force: true })
+    })
+
+    const teamBody = (expectedVersion: number, patch: Record<string, unknown> = {}) => ({
+      expectedVersion,
+      members: [
+        { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '对结果指标负责' },
+        { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '独立复核' },
+      ],
+      status: 'active',
+      changeReason: '初始成队',
+      ...patch,
+    })
+
+    it('owner 确认成功 200：team v1、team_confirmed 事件摘要、updatedBy=服务端身份（客户端冒传忽略）', async () => {
+      const id = await seedContract('active')
+      const res = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, { updatedBy: 'attacker-1' }))
+      expect(res.status).toBe(200)
+      expect(res.body.ok).toBe(true)
+      expect(res.body.team).toMatchObject({
+        outcomeId: id,
+        version: 1,
+        status: 'active',
+        changeReason: '初始成队',
+        updatedBy: 'owner-1', // 服务端身份，客户端传值忽略
+      })
+      expect(storeMod.getTeam(id)?.members).toHaveLength(2)
+      const events = storeMod.listEvents(id, 'team_confirmed')
+      expect(events).toHaveLength(1)
+      expect(events[0].actor).toBe('owner-1')
+      expect(events[0].payload).toEqual({ version: 1, changeReason: '初始成队', status: 'active', memberCount: 2 })
+    })
+
+    it('observing 合同同样可确认（active/observing 双态门）', async () => {
+      const id = await seedContract('observing')
+      const res = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(res.status).toBe(200)
+      expect((res.body.team as { version: number }).version).toBe(1)
+    })
+
+    it('未认证（无 JWT）→ 401 authenticated_actor_required，不落任何团队痕迹', async () => {
+      const id = await seedContract('active')
+      currentUser = undefined
+      const res = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(res.status).toBe(401)
+      expect(res.body.code).toBe('authenticated_actor_required')
+      expect(storeMod.getTeam(id)).toBeNull()
+      asUser('owner-1')
+    })
+
+    it('非 owner（verifier/他人）→ 403 forbidden，零团队痕迹', async () => {
+      const id = await seedContract('active')
+      asUser('verifier-1')
+      const v = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(v.status).toBe(403)
+      expect(v.body.code).toBe('forbidden')
+      asUser('other-1')
+      const o = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(o.status).toBe(403)
+      expect(o.body.code).toBe('forbidden')
+      expect(storeMod.getTeam(id)).toBeNull()
+      asUser('owner-1')
+    })
+
+    it('未知 outcomeId → 404 not_found', async () => {
+      const res = await put(base, '/api/hermes/outcomes/oc-nope/team', teamBody(0))
+      expect(res.status).toBe(404)
+      expect(res.body.code).toBe('not_found')
+    })
+
+    it('expectedVersion 过期且内容不同 → 409 version_conflict；team.json 与事件账未动', async () => {
+      const id = await seedContract('active')
+      const first = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(first.status).toBe(200)
+      const stale = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, {
+        changeReason: '换一批人',
+        members: [
+          { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '甲' },
+          { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '乙' },
+        ],
+      }))
+      expect(stale.status).toBe(409)
+      expect(stale.body.code).toBe('version_conflict')
+      expect(storeMod.getTeam(id)?.version).toBe(1)
+      expect(storeMod.listEvents(id, 'team_confirmed')).toHaveLength(1)
+    })
+
+    it('合同非 active/observing（draft/settled）→ 422 outcome_not_active', async () => {
+      const draftId = await seedContract('draft', 'task-t2-draft')
+      const d = await put(base, `/api/hermes/outcomes/${draftId}/team`, teamBody(0))
+      expect(d.status).toBe(422)
+      expect(d.body.code).toBe('outcome_not_active')
+      const settledId = await seedContract('settled', 'task-t2-settled')
+      const s = await put(base, `/api/hermes/outcomes/${settledId}/team`, teamBody(0))
+      expect(s.status).toBe(422)
+      expect(s.body.code).toBe('outcome_not_active')
+      expect(storeMod.getTeam(draftId)).toBeNull()
+    })
+
+    it('validateTeam 约束失败 → 422 invalid_input problems（owner 缺席/person 非 active/agent 名册未齐备/changeReason 必填）', async () => {
+      const id = await seedContract('active')
+      // 合同 owner 不在成员表：到位性失守（D8）
+      const noOwner = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, {
+        members: [{ subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '独立复核' }],
+      }))
+      expect(noOwner.status).toBe(422)
+      expect(noOwner.body.code).toBe('invalid_input')
+      expect((noOwner.body.problems as string[]).join()).toContain('owner-1')
+      // person 成员未在人员名单激活
+      const ghost = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, {
+        members: [
+          { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '甲' },
+          { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '乙' },
+          { subjectKind: 'person', subjectId: 'ghost-9', role: 'support', responsibility: '丙' },
+        ],
+      }))
+      expect(ghost.status).toBe(422)
+      expect((ghost.body.problems as string[]).join()).toContain('ghost-9')
+      // agent 成员 roster 未齐备（隔离身份册无记录 → blocked，D5）
+      const agentBlocked = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, {
+        members: [
+          ...teamBody(0).members as Array<Record<string, unknown>>,
+          { subjectKind: 'agent', subjectId: 'ag-none', role: 'executor', responsibility: '执行' },
+        ],
+      }))
+      expect(agentBlocked.status).toBe(422)
+      expect((agentBlocked.body.problems as string[]).join()).toContain('ag-none')
+      // changeReason 必填
+      const noReason = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, { changeReason: '' }))
+      expect(noReason.status).toBe(422)
+      expect((noReason.body.problems as string[]).join()).toContain('changeReason')
+      expect(storeMod.getTeam(id)).toBeNull() // 全拒收：零团队痕迹
+    })
+
+    it('幂等重放：重复提交同 team 输入 → 200 replayed 返回当前团队，版本不递增、事件不重复', async () => {
+      const id = await seedContract('active')
+      const first = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(first.status).toBe(200)
+      const replay = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))
+      expect(replay.status).toBe(200)
+      expect(replay.body.replayed).toBe(true)
+      expect(replay.body.team).toEqual(first.body.team)
+      expect(storeMod.getTeam(id)?.version).toBe(1)
+      expect(storeMod.listEvents(id, 'team_confirmed')).toHaveLength(1)
+    })
+  })
+
+  describe('批三 T2：GET /:id team 面', () => {
+    it('确认前 team=null；确认后 owner 全量含 changeReason；他人 metadata 成员表+版本保留、changeReason 脱去', async () => {
+      const id = await seedContract('active')
+      const before = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(before.status).toBe(200)
+      expect(before.body.team).toBeNull()
+      const confirmed = await put(base, `/api/hermes/outcomes/${id}/team`, {
+        expectedVersion: 0,
+        members: [
+          { subjectKind: 'person', subjectId: 'owner-1', role: 'accountable', responsibility: '对结果指标负责' },
+          { subjectKind: 'person', subjectId: 'verifier-1', role: 'reviewer', responsibility: '独立复核' },
+        ],
+        status: 'active',
+        changeReason: '初始成队理由文本',
+      })
+      expect(confirmed.status).toBe(200)
+      const ownerView = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(ownerView.body.readScope).toBe('full')
+      const full = ownerView.body.team as Record<string, unknown>
+      expect(full).toMatchObject({ version: 1, status: 'active', changeReason: '初始成队理由文本' })
+      expect((full.members as unknown[]).length).toBe(2)
+      asUser('other-1')
+      const metaView = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(metaView.status).toBe(200)
+      expect(metaView.body.readScope).toBe('metadata')
+      const meta = metaView.body.team as Record<string, unknown>
+      // 团队非敏感摘要（成员表+版本）元数据级可见；changeReason 是人写理由文本，跟随 settlement rationale 脱敏模式
+      expect(meta).toMatchObject({ version: 1, status: 'active' })
+      expect((meta.members as unknown[]).length).toBe(2)
+      expect(meta.changeReason).toBeUndefined()
+      asUser('owner-1')
+    })
+  })
 })

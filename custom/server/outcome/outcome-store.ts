@@ -476,7 +476,9 @@ export interface ConfirmTeamResult {
   event?: OutcomeEvent
 }
 
-const teamFileOf = (outcomeId: string): string => join(outcomeDirOf(outcomeId), 'team.json')
+/** team.json 路径（批三 T2 起导出：snapshot 团队源读失败判存用——路径规则单一事实源，
+ *  不在 snapshot.ts 复制 'team.json' 字面量）。 */
+export const teamFileOf = (outcomeId: string): string => join(outcomeDirOf(outcomeId), 'team.json')
 
 /** 读当前团队；未确认/坏档返回 null（fail-soft 不猜数；坏档照 contract.json 纪律隔离留档）。
  *  身份不符（目录名≠team.outcomeId）视同坏档：拒绝认领，防碰撞覆盖。 */

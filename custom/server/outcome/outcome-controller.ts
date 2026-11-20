@@ -5,8 +5,11 @@
 // 端点表（简报逐字，前缀 /api/hermes/outcomes）：
 //   GET  /                    —— 列表，query status/rootTaskId/owner 过滤（行级 readScope，T1 补）
 //   POST /                    —— 创建（clientRequestId 幂等；rootTaskId 冲突 409）
-//   GET  /:id                 —— 合同详情
+//   GET  /:id                 —— 合同详情（批三 T2 起附 team 面：当前团队或 null）
 //   PUT  /:id                 —— 修订（expectedVersion 乐观并发）
+//   PUT  /:id/team            —— 团队确认（批三 T2：owner only；expectedVersion 409；
+//                                 changeReason 必填；validateTeam 422；状态门 active/observing；
+//                                 内容幂等；成功 200 返回新团队）
 //   POST /:id/transitions     —— 状态迁移（eventId 幂等；非法 422 problems）
 //   POST /:id/measurements    —— 测量提交（measurementId 幂等；evidenceRefs 必填）
 //   GET  /:id/measurements    —— 测量读面（?measureId= 过滤；当前版本优先全量＋每 measure 最新摘要）
@@ -47,12 +50,16 @@ import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds } from '../agentidentity/people'
+import { getIdentity, rosterStatus } from '../agentidentity/agent-identity'
 import { listAllContracts,
   appendEvent,
   appendMeasurement,
   appendSnapshot,
+  canonicalJson,
+  confirmTeam,
   createContract,
   getContract,
+  getTeam,
   listEvents,
   listMeasurements,
   listSnapshots,
@@ -70,8 +77,16 @@ import {
   verifyRootTask,
 } from './kanban-resolution'
 import { suggestVerdict, validateSettlementInput, latestCurrentMeasurement } from './settlement'
+import { validateTeam } from './team-validate'
 import { OUTCOME_STATUSES } from './types'
-import type { OutcomeContract, OutcomeMeasurement, OutcomeStatus } from './types'
+import type {
+  OutcomeContract,
+  OutcomeMeasurement,
+  OutcomeStatus,
+  OutcomeTeam,
+  OutcomeTeamMember,
+  OutcomeTeamStatus,
+} from './types'
 
 /** 控制器注入面：observing 迁移的 allTasksTerminal 守卫由 Task 10 的 tasksByOutcome
  *  提供，批一以注入接口承接（缺省 fail-closed 返回 false）；taskSummaryOf 供快照
@@ -172,6 +187,14 @@ function measurementMetadata(m: OutcomeMeasurement): Record<string, unknown> {
  *  verdict/settlementId/签署身份与时间等骨架保留。最新结算与 superseded 链同权。 */
 function settlementMetadata(s: Record<string, unknown>): Record<string, unknown> {
   const { rationale: _r, gapNote: _g, ...rest } = s
+  return rest
+}
+
+/** metadata 态团队脱敏（批三 T2）：团队是「非敏感摘要」（成员表＋版本＋状态）——
+ *  元数据级可见；changeReason 是人写理由文本，跟随 settlement rationale 脱敏模式脱去；
+ *  updatedBy/updatedAt 骨架保留（签署身份与时间同权）。 */
+function teamMetadata(t: OutcomeTeam): Record<string, unknown> {
+  const { changeReason: _c, ...rest } = t
   return rest
 }
 
@@ -355,15 +378,22 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     created(ctx, { contract: result.contract }, `/api/hermes/outcomes/${result.contract.outcomeId}`)
   })
 
-  // GET /:id：详情（读面 authz：owner/verifier 全量；他人 metadata 脱 measures[].definition）
+  // GET /:id：详情（读面 authz：owner/verifier 全量；他人 metadata 脱 measures[].definition；
+  // 批三 T2 起附 team 面——当前团队或 null，metadata 态脱 changeReason（teamMetadata））
   router.get('/:id', async (ctx) => {
-    const contract = getContract(String(ctx.params.id ?? ''))
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
     if (!contract) {
       fail(ctx, 404, '合同不存在', { code: 'not_found' })
       return
     }
     const scope = readScopeOf(contract, actorOf(ctx))
-    ok(ctx, { contract: scope === 'full' ? contract : contractMetadata(contract), readScope: scope })
+    const team = getTeam(id) // 未确认/坏档→null（fail-soft 不猜数）
+    ok(ctx, {
+      contract: scope === 'full' ? contract : contractMetadata(contract),
+      team: team === null ? null : scope === 'full' ? team : teamMetadata(team),
+      readScope: scope,
+    })
   })
 
   // PUT /:id：修订（owner only；白名单挑 patch，expectedVersion 乐观并发）
@@ -403,6 +433,99 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     ok(ctx, { contract: result.contract })
+  })
+
+  // PUT /:id/team：团队确认（批三 T2，spec 2026-11-21 批三 §二）。幂等在端点层实现——
+  // store confirmTeam 保持 T1 乐观并发语义零改动；「重复提交同 team 输入」判定=内容
+  // （members/status/changeReason 三面 canonical 相等）且 expectedVersion 恰为当前版本-1
+  // （网络重试原样重放窗口）：命中返回当前团队 200 replayed，不递增版本、不重复落
+  // team_confirmed 事件；内容不同或更早版本照常 409（乐观并发不因幂等放宽）。
+  // 鉴权序：404（合同）→401（无认证用户，human-gate authenticated_actor_required 先例，
+  // 不让 anonymous 参与判权）→403（owner only）→重放扫描（先于状态门，transitions/
+  // settlement 幂等同款序：已成功的确认不因合同后续状态演进而拒绝重放）→状态门→约束校验。
+  router.put('/:id/team', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    const user = ctx.state?.user as { username?: unknown } | undefined
+    if (!user || typeof user.username !== 'string' || !user.username.trim()) {
+      fail(ctx, 401, '团队确认需要登录用户（服务端身份）', { code: 'authenticated_actor_required' })
+      return
+    }
+    const actor = actorOf(ctx)
+    if (!authz(contract, actor, 'owner')) {
+      fail(ctx, 403, '仅结果责任人（ownerPersonId）可确认团队', { code: 'forbidden' })
+      return
+    }
+    const body = bodyOf(ctx)
+    const expectedVersion = body.expectedVersion
+    if (typeof expectedVersion !== 'number' || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
+      fail(ctx, 422, 'expectedVersion 须为非负整数（无团队首次确认为 0）', {
+        code: 'invalid_input',
+        problems: ['expectedVersion 须为非负整数（无团队首次确认为 0）'],
+      })
+      return
+    }
+    // 内容幂等扫描：同输入重放命中即返回当前团队（版本/事件零变动）
+    const current = getTeam(id)
+    if (
+      current &&
+      expectedVersion === current.version - 1 &&
+      body.status === current.status &&
+      canonicalJson(body.members) === canonicalJson(current.members) &&
+      String(body.changeReason ?? '').trim() === current.changeReason
+    ) {
+      ok(ctx, { team: current, replayed: true })
+      return
+    }
+    // 状态门（spec §二：合同非 active/observing 拒，outcome_not_active 同语义）
+    if (contract.status !== 'active' && contract.status !== 'observing') {
+      fail(ctx, 422, `仅 active/observing 合同可确认团队（当前 ${contract.status}）`, {
+        code: 'outcome_not_active',
+        problems: [`仅 active/observing 合同可确认团队（当前 ${contract.status}）；draft 须先激活，settled/cancelled 为终态`],
+      })
+      return
+    }
+    // 约束校验（T1 validateTeam：owner/verifier 到位、person active、agent roster complete、高风险分离）。
+    // agent 名册判据走 agentidentity 真实现（D5：rosterStatus==='complete'）；名册读失败按
+    // fail-closed 记 blocked（不能证明齐备即不齐备）。
+    const rosterOk = (agentId: string): boolean => {
+      try {
+        const identity = getIdentity(agentId)
+        return !!identity && rosterStatus(identity) === 'complete'
+      } catch {
+        return false
+      }
+    }
+    const validation = validateTeam(contract, { members: body.members }, activePersonIds(), rosterOk)
+    if (validation.problems.length) {
+      fail(ctx, 422, '团队约束校验失败', { code: 'invalid_input', problems: validation.problems })
+      return
+    }
+    const result = confirmTeam(
+      id,
+      {
+        expectedVersion,
+        members: body.members as OutcomeTeamMember[],
+        status: body.status as OutcomeTeamStatus,
+        changeReason: String(body.changeReason ?? ''),
+      },
+      actor, // updatedBy=服务端身份，客户端传值忽略（白名单外键不采纳）
+    )
+    if (!result.ok || !result.team) {
+      const status = result.code === 'version_conflict' ? 409
+        : result.code === 'not_found' ? 404
+        : result.code === 'write_failed' ? 500 : 422
+      fail(ctx, status, `团队确认失败（${result.code ?? 'invalid_input'}）`, {
+        code: result.code,
+        problems: result.problems,
+      })
+      return
+    }
+    ok(ctx, { team: result.team })
   })
 
   // POST /:id/transitions：状态迁移（eventId 幂等；observing=owner 或 verifier，其余=owner）

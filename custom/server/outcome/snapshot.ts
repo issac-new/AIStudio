@@ -26,14 +26,15 @@
 //
 // 临界（spec §4.4 逐字）：content canonical 超 1 MiB 或 sourceRefs 超 100 → 拒绝生成，
 // 不静默截断；problems 注明实际超限值。关键源（合同/任务/身份/政策）失败 → ok:false
-// 禁止派单。批一：teamVersion 恒 null、approvedExperienceVersions 恒 []（批二在同一
-// 信封追加，不另建格式）。
+// 禁止派单。批一 teamVersion 恒 null、批二 approvedExperienceVersions 实值、批三 T2 起
+// teamVersion 实值（active 团队版本冻结进哈希体；团队属非关键源，读失败降级 excludedSources）。
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import vectors from './decision-vectors.json'
-import { canonicalJson } from './outcome-store'
+import { canonicalJson, getTeam, teamFileOf } from './outcome-store'
 import type { OutcomeContract } from './types'
 
-/** 快照信封（spec §4.4 逐字；批一 teamVersion 恒 null、approvedExperienceVersions 恒 []）。 */
+/** 快照信封（spec §4.4 逐字；批三 T2 起 teamVersion=active 团队版本实值，无 active 团队为 null）。 */
 export interface OutcomeContextSnapshot {
   snapshotId: string
   outcomeId: string
@@ -69,6 +70,9 @@ export interface ResolvedSnapshotInput {
   decisionPolicyVersion: string
   /** 矩阵版本标识（批一取共享判定向量内容摘要）。 */
   matrixVersion: string
+  /** 团队版本（批三 T2）：active 团队版本实值；无 active 团队/读失败降级为 null。
+   *  由 IO 壳（buildMinimalSnapshot 团队源）解析注入，核心不读盘。 */
+  teamVersion?: number | null
   task: SnapshotTaskSummary
   /** 身份册已解析成功的行。owner/verifier 为关键（缺席→ok:false）；
    *  extraPersonIds 为额外引用人（缺席→excludedSources，非关键）。 */
@@ -374,12 +378,18 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
     )
   if (problems.length) return { ok: false, problems }
 
-  // 哈希体＝信封去易变字段（snapshotId/createdAt/sha256）；teamVersion 批三前恒 null；
-  // approvedExperienceVersions 批二起为实值（无经验块时仍 []，与批一快照同形）
+  // 哈希体＝信封去易变字段（snapshotId/createdAt/sha256）；teamVersion 批三 T2 起为
+  // active 团队版本实值（无 active 团队/读失败仍 null）——版本演进即哈希演进，派单
+  // 上下文可反查团队代次；approvedExperienceVersions 批二起为实值（无经验块时仍 []，
+  // 与批一快照同形）。非正整数输入归一为 null（防御：appendSnapshot 侧另有同款校验）。
+  const teamVersion =
+    typeof input.teamVersion === 'number' && Number.isInteger(input.teamVersion) && input.teamVersion >= 1
+      ? input.teamVersion
+      : null
   const body = {
     outcomeId: contract.outcomeId,
     contractVersion: contract.version,
-    teamVersion: null,
+    teamVersion,
     decisionPolicyVersion: input.decisionPolicyVersion,
     content,
     sourceRefs,
@@ -396,10 +406,48 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
   return { ok: true, snapshot }
 }
 
+/** 团队源解析结果（批三 T2）：active 团队→版本实值；其余→null；读失败另带排除行。 */
+interface TeamSourceResolution {
+  teamVersion: number | null
+  excluded: OutcomeContextSnapshot['excludedSources']
+}
+
+/**
+ * 团队源（批三 T2，非关键源）：冻结派单上下文时取当前已确认（active）团队的 version；
+ * 无团队/draft/closed 团队→null（「无 active 团队」是事实陈述，不记排除）；team.json
+ * 存在却读不回（损坏/身份不符，getTeam 已隔离留档）→ null＋excludedSources 留痕降级，
+ * 不阻断派单。判存必须先于 getTeam——getTeam 的隔离动作会改名坏档，事后无法再判。
+ * 排除理由固定文案（进哈希体须确定性，批二 enrich 同款纪律：诊断走日志不进信封）。
+ */
+function resolveTeamSource(outcomeId: string): TeamSourceResolution {
+  let hadTeamFile = false
+  try {
+    hadTeamFile = existsSync(teamFileOf(outcomeId))
+  } catch {
+    hadTeamFile = false // 判存失败按无团队处理（getTeam 兜底真读）
+  }
+  let team: ReturnType<typeof getTeam> = null
+  try {
+    team = getTeam(outcomeId)
+  } catch (err) {
+    console.warn(`[outcome-snapshot] 团队源解析异常（非关键降级）：${(err as Error).message}`)
+    team = null
+  }
+  if (team) return { teamVersion: team.status === 'active' ? team.version : null, excluded: [] }
+  if (hadTeamFile)
+    return {
+      teamVersion: null,
+      excluded: [{ kind: 'team', reason: 'team.json 读失败（损坏/身份不符已隔离留档，非关键源降级）' }],
+    }
+  return { teamVersion: null, excluded: [] }
+}
+
 /**
  * IO 薄壳（任务简报签名逐字＋可选 extraPersonIds）：解析任务摘要与身份册后委托纯核心。
  * 关键源失败（合同/政策入参缺失、resolve.task 或 resolve.people 未返回可用数据、解析抛异常、
  * owner/verifier 身份行缺席）→ ok:false；额外引用人缺席 → excludedSources（非关键）。
+ * 批三 T2：团队源（非关键）在本壳解析——active 团队版本注入信封 teamVersion，读失败
+ * 降级进 excludedSources（经 enrichExcluded 通道并入，核心不猜补）。
  */
 export function buildMinimalSnapshot(input: BuildMinimalSnapshotInput): BuildSnapshotResult {
   const contract = input?.contract
@@ -439,13 +487,16 @@ export function buildMinimalSnapshot(input: BuildMinimalSnapshotInput): BuildSna
   if (!people)
     return { ok: false, problems: ['身份关键源失败：resolve.people 未返回身份册，禁止派单（spec §4.4）'] }
 
+  const teamSource = resolveTeamSource(contract.outcomeId)
   return buildSnapshotFromResolved({
     contract,
     decisionPolicyVersion: input.decisionPolicyVersion.trim(),
     matrixVersion: DECISION_MATRIX_VERSION,
+    teamVersion: teamSource.teamVersion,
     task,
     people,
     extraPersonIds: Array.isArray(input.extraPersonIds) ? input.extraPersonIds : [],
+    enrichExcluded: teamSource.excluded.length ? teamSource.excluded : undefined,
     createdAt: Date.now(),
   })
 }
@@ -545,10 +596,12 @@ export async function buildFullSnapshot(input: BuildFullSnapshotInput): Promise<
   // 关键源刚在 buildMinimalSnapshot 里验证过，此处等价重解析（确定性纯函数，同输入同输出）。
   // 经由导出的内部解析（buildMinimalSnapshot 已消费 resolve.task/people；这里复用其结果
   // 需要 buildSnapshotFromResolved 的入参形状——直接重建：
+  // 批三 T2：团队版本与团队源排除行从 base 信封原样继承（团队源在最小面壳内已解析）。
   const rebuilt = buildSnapshotFromResolved({
     contract: input.contract,
     decisionPolicyVersion: input.decisionPolicyVersion.trim(),
     matrixVersion: DECISION_MATRIX_VERSION,
+    teamVersion: base.snapshot.teamVersion,
     task: base.snapshot.content.task as SnapshotTaskSummary,
     people: [
       base.snapshot.content.owner as SnapshotPersonRow,
@@ -564,7 +617,11 @@ export async function buildFullSnapshot(input: BuildFullSnapshotInput): Promise<
         experiences: enrichment.experiences ?? [],
       }
       : undefined,
-    enrichExcluded,
+    enrichExcluded: [
+      // 团队源排除行（kind='team'）先于四块排除行并入，与最小面信封次序一致
+      ...base.snapshot.excludedSources.filter((e) => e.kind === 'team'),
+      ...enrichExcluded,
+    ],
     createdAt: base.snapshot.createdAt,
   })
   return rebuilt
