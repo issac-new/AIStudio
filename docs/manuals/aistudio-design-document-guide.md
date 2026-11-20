@@ -181,12 +181,12 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 | 整体源码包 | `1.0.16-overlay`，tag `v1.0.16-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
 | 驾驶舱模块声明 | `0.8.28-studio.1` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.23.2-team.1` | `team/VERSION`，机器载体 `team/version.json` |
-| Ycode | `3.18.0` | `vendor/zcode/package.json` |
-| yuan skill | `v2.101.0` | `skills/swarm-yuan/CHANGELOG.md` |
+| Ycode | `3.18.2` | `vendor/zcode/package.json` |
+| yuan skill | `v2.102.0` | `skills/swarm-yuan/CHANGELOG.md` |
 
 这些值可直接在 `RELEASE-MANIFEST.json:18,47-101,122-140` 与 `RELEASE-NOTES.md:55` 对账。驾驶舱在 2026-11-11 v1.0.15 发布轮随 identity-chat/执行内核/技能存储等实质变更声明前进到 0.8.20-studio.2，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
 
-上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.17、`35a7158a1`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.0、`2bd378ed1`；zcode 包版本为 3.18.0、`b95ebaff`。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
+上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.28、`5e4fb6354`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.2、`ae2a81ccc`；zcode 包版本为 3.18.2、`fec97590`。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
 
 ### 3.2 每版只发哪两件资产
 
