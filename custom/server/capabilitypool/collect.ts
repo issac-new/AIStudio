@@ -29,6 +29,8 @@ interface KanbanTaskSkillsRow {
   status: string
   created_at: number
   skills: string | null
+  /** Task 8 落地后新列；旧库（无该列）经 fallback 查询为 undefined */
+  required_capabilities?: string | null
 }
 
 function parseSkills(raw: string | null): string[] {
@@ -42,9 +44,9 @@ function parseSkills(raw: string | null): string[] {
 }
 
 /**
- * 需求侧：读所有看板库中带 `skills` 声明的任务。
- * `skills` 仍是执行期强制加载清单；在 `required_capabilities` 落地前作为过渡需求源，
- * 输出 source 由 derive 的调用方标注为 skills-fallback。
+ * 需求侧：读所有看板库中声明了能力需求的任务。
+ * Task 8 后：`required_capabilities`（declared 口径）优先；旧库无该列时回落
+ * `skills`（skills-fallback 口径）。返回 `declared` 标记供 derive 的 demandSource 切换。
  */
 export async function collectDemands(homeDir?: string): Promise<CapabilityDemandTask[]> {
   const home = homeDir?.trim() || hermesHome()
@@ -57,11 +59,26 @@ export async function collectDemands(homeDir?: string): Promise<CapabilityDemand
       continue
     }
     try {
-      const rows = db.prepare(
-        "SELECT id, status, created_at, skills FROM tasks WHERE skills IS NOT NULL AND skills != '' AND skills != '[]'",
-      ).all() as unknown as KanbanTaskSkillsRow[]
+      let rows: KanbanTaskSkillsRow[]
+      let declared = true
+      try {
+        rows = db.prepare(
+          "SELECT id, status, created_at, skills, required_capabilities FROM tasks "
+          + "WHERE (required_capabilities IS NOT NULL AND required_capabilities != '' AND required_capabilities != '[]') "
+          + "   OR (skills IS NOT NULL AND skills != '' AND skills != '[]')",
+        ).all() as unknown as KanbanTaskSkillsRow[]
+      } catch {
+        // 旧库无 required_capabilities 列：回落 skills-only（过渡口径）
+        rows = db.prepare(
+          "SELECT id, status, created_at, skills FROM tasks WHERE skills IS NOT NULL AND skills != '' AND skills != '[]'",
+        ).all() as unknown as KanbanTaskSkillsRow[]
+        declared = false
+      }
       for (const row of rows) {
-        const tags = parseSkills(row.skills)
+        const rcTags = declared ? parseSkills(row.required_capabilities ?? null) : []
+        const skillTags = parseSkills(row.skills)
+        // declared 口径优先：有能力需求列声明的任务按 declared；仅 skills 的按 fallback
+        const tags = rcTags.length > 0 ? rcTags : skillTags
         if (tags.length === 0) continue
         let firstRunStartedAt: number | null = null
         try {
@@ -233,12 +250,36 @@ export function collectSupplySnapshot() {
 
 /** 采集并派生完整供需报告（只读；各源独立降级）。 */
 export async function collectCapabilityPoolReport(homeDir?: string): Promise<SupplyDemandReport> {
+  const home = homeDir?.trim() || hermesHome()
   const [demands, ledger] = await Promise.all([collectDemands(homeDir), collectLedger()])
   const graph = collectGraph()
   const skillProvisioning = collectSkillProvisioning()
   const profiles = collectProfiles()
   const fleet = collectFleet()
-  return deriveSupplyDemand({ demands, ledger, graph, skillProvisioning, profiles, fleet })
+  // Task 8：任一库带 required_capabilities 列即 declared 口径；全旧库保持 skills-fallback
+  const demandSource = await hasRequiredCapabilitiesColumn(home) ? 'declared' : 'skills-fallback'
+  return deriveSupplyDemand({ demands, ledger, graph, skillProvisioning, profiles, fleet, demandSource })
+}
+
+/** 能力列在位探测：任一板库 tasks 表含 required_capabilities 列即视为已迁移。 */
+async function hasRequiredCapabilitiesColumn(home: string): Promise<boolean> {
+  for (const entry of allBoardDbsOf(home)) {
+    let db
+    try {
+      db = await openReadonly(entry.dbPath)
+    } catch {
+      continue
+    }
+    try {
+      const cols = db.prepare("PRAGMA table_info(tasks)").all() as unknown as Array<{ name: string }>
+      if (cols.some((col) => col.name === 'required_capabilities')) return true
+    } catch {
+      // 读失败按未迁移处理（保守回落 skills-fallback）
+    } finally {
+      try { db.close() } catch { /* 已关 */ }
+    }
+  }
+  return false
 }
 
 /** 候选查询的当前负载：按 assignee 统计在途卡（running/review/blocked）。 */

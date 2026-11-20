@@ -792,7 +792,7 @@ Electron 桌面构建是可选发布能力。
 | Studio/IDE 会话消息 | 产品 SQLite 的会话与消息表 | 按会话持久化，按授权范围读取 |
 | 统一身份聊天窗消息 | 产品 SQLite 的群聊消息表 | 本地消息可按受控桥接投影到 Matrix |
 | 团队与身份 | `team/`、profiles 与组织注册信息 | 按授权范围解析和呈现 |
-| 能力供需 | kanban `tasks.skills`、`runtime/governance/capability-ledger.yaml`、`team/shared/capability-graph.yaml`、`skill-provisioning.json`、`profiles.yaml`、舰队能力上报 | 只读投影（`custom/server/capabilitypool`），不建第二份能力真值；派单准入只警告，不改派 |
+| 能力供需 | kanban `tasks.required_capabilities`（declared，Task 8）＋`tasks.skills`（回退）、`runtime/governance/capability-ledger.yaml`、`team/shared/capability-graph.yaml`、`skill-provisioning.json`、`profiles.yaml`、舰队能力上报 | 只读投影（`custom/server/capabilitypool`），不建第二份能力真值；派单准入只警告，不改派 |
 | 审批与治理 | 审批、评审和治理台账 | 追加动作与结论，保留来源 |
 | 评测数据 | 评测库与运行证据 | 通过评测域读写，产品只读投影 |
 | 标注数据 | 业务地图标注存储（按需求指纹） | 通过标注端点写入，LWW 合并 |

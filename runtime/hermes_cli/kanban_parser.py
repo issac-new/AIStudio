@@ -190,6 +190,12 @@ _SPECS = [
              help="Skill to force-load into the worker (repeatable). The kanban "
                   "lifecycle is already injected automatically. Example: --skill "
                   "translation --skill github-code-review"),
+        # Capability pool Task 8: dispatch-side capability demand (lexicon =
+        # capability tags, e.g. coding / review); NOT a worker force-load.
+        _arg("--required-capability", action="append", default=[], dest="required_capabilities",
+             help="Capability tag the task requires for dispatch readiness "
+                  "(repeatable; same lexicon as skill tags). Example: "
+                  "--required-capability coding --required-capability review"),
         _arg("--max-retries", type=int, metavar="N",
              help="Per-task override for the consecutive-failure "
                   f"circuit breaker. Trip on the Nth failure — e.g. --max-retries 1 blocks on the "

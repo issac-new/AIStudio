@@ -280,8 +280,8 @@ export class MentionDispatchService {
   async dispatch(params: DispatchParams): Promise<MentionOutcome[]> {
     if (params.taskId) {
       const snapshot = await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null)
-      if (snapshot?.skills?.length) {
-        const readiness = assessTaskCapabilityReadiness({ requiredTags: snapshot.skills, assignee: snapshot.assignee })
+      if (snapshot?.required_capabilities?.length) {
+        const readiness = assessTaskCapabilityReadiness({ requiredTags: snapshot.required_capabilities, assignee: snapshot.assignee })
         if (readiness.decision !== 'pass') {
           console.warn(`[mention-dispatch] 能力准入 ${readiness.decision}（warn，不阻断）：${readiness.reasons.join('；')}`)
         }

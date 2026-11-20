@@ -225,9 +225,10 @@ export async function dispatchColumnTransition(
   // body 供五问准入的「结果可验证」判据；查不到/无 taskId 保持 null，回落现状。
   const taskSnapshot = params.taskId ? await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null) : null
   const taskTitle = taskSnapshot?.title ?? null
-  // 能力准入（批二点五）：只看有 skills 声明的任务；默认 warn，不自动改派、不阻断。
-  const capabilityReadiness = taskSnapshot?.skills?.length
-    ? assessTaskCapabilityReadiness({ requiredTags: taskSnapshot.skills, assignee: taskSnapshot.assignee })
+  // 能力准入（批二点五→Task 8）：declared 能力需求优先（required_capabilities），
+  // 旧库回退 skills；默认 warn，不自动改派、不阻断。
+  const capabilityReadiness = taskSnapshot?.required_capabilities?.length
+    ? assessTaskCapabilityReadiness({ requiredTags: taskSnapshot.required_capabilities, assignee: taskSnapshot.assignee })
     : null
   if (capabilityReadiness && capabilityReadiness.decision !== 'pass') {
     console.warn(`[column-dispatch] 能力准入 ${capabilityReadiness.decision}（warn，不阻断）：${capabilityReadiness.reasons.join('；')}`)

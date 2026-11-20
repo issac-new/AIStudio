@@ -1,0 +1,132 @@
+diff --git a/packages/client/src/api/hermes/kanban.ts b/packages/client/src/api/hermes/kanban.ts
+index 533a937..2e489d4 100644
+--- a/packages/client/src/api/hermes/kanban.ts
++++ b/packages/client/src/api/hermes/kanban.ts
+@@ -21,6 +21,8 @@ export interface KanbanTask {
+   project_id: string | null
+   result: string | null
+   skills: string[] | null
++  // Capability pool Task 8：能力需求标签（dispatch readiness；null=未声明）。
++  required_capabilities?: string[] | null
+   // ─── v0.19 运维状态字段（overlay 补齐，均 optional/nullable，向后兼容）───
+   branch_name?: string | null
+   idempotency_key?: string | null
+@@ -243,6 +245,7 @@ export interface KanbanCreateRequest {
+   branch?: string
+   triage?: boolean
+   skills?: string[]
++  requiredCapabilities?: string[]
+   maxRuntime?: string
+   maxRetries?: number
+   goalMode?: boolean
+diff --git a/packages/client/src/i18n/locales/en.ts b/packages/client/src/i18n/locales/en.ts
+index e075c02..0450722 100644
+--- a/packages/client/src/i18n/locales/en.ts
++++ b/packages/client/src/i18n/locales/en.ts
+@@ -3854,6 +3854,7 @@ export default {
+     listActions: 'Workflow list actions'
+   },
+   kanban: {
++    requiredCapabilities: 'Required capabilities',
+     simTask: {
+       readonlyJump: 'Simulation task is read-only — switched to simulation view',
+       readonlyGuard: 'Simulation tasks are handled in the simulation instance — read-only here'
+@@ -3925,6 +3926,7 @@ export default {
+       branch: 'Branch',
+       branchPlaceholder: 'Worktree branch',
+       skills: 'Skills',
++      requiredCapabilities: 'Required capabilities',
+       skillsPlaceholder: 'Select skills...',
+       triage: 'Create in triage',
+       goalMode: 'Goal mode',
+@@ -4069,6 +4071,7 @@ export default {
+       worktreePathPlaceholder: 'workspace path (optional, derived from assignee if blank)',
+       projectPlaceholder: 'project id or slug (optional)',
+       skillsPlaceholder: 'skills (optional, comma-separated)',
++      requiredCapabilitiesPlaceholder: 'required capabilities (optional, comma-separated): coding, review',
+       maxTurnsPlaceholder: 'max turns (default 20)',
+       parentPlaceholder: '— no parent —'
+     },
+diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
+index 20c2b21..6038a3a 100644
+--- a/packages/client/src/i18n/locales/zh.ts
++++ b/packages/client/src/i18n/locales/zh.ts
+@@ -3853,6 +3853,7 @@ export default {
+     listActions: '工作流列表操作'
+   },
+   kanban: {
++    requiredCapabilities: '能力需求',
+     simTask: {
+       readonlyJump: '推演任务只读——已切到推演模式查看',
+       readonlyGuard: '推演任务请在推演实例处理——日常侧只读'
+@@ -4068,6 +4069,7 @@ export default {
+       worktreePathPlaceholder: '工作区路径（可选，留空则按负责人推导）',
+       projectPlaceholder: '项目 id 或 slug（可选）',
+       skillsPlaceholder: '技能（可选，逗号分隔）',
++      requiredCapabilitiesPlaceholder: '能力需求（可选，逗号分隔）: coding, review',
+       maxTurnsPlaceholder: '最大轮数（默认 20）',
+       parentPlaceholder: '— 无父任务 —'
+     },
+diff --git a/packages/server/src/modules/hermes/controllers/kanban.ts b/packages/server/src/modules/hermes/controllers/kanban.ts
+index 6b5e171..db770d8 100644
+--- a/packages/server/src/modules/hermes/controllers/kanban.ts
++++ b/packages/server/src/modules/hermes/controllers/kanban.ts
+@@ -547,6 +547,8 @@ export async function create(ctx: Context) {
+   const branch = optionalString(payload.branch, 'branch')
+   const triage = optionalBoolean(payload.triage, 'triage')
+   const skills = optionalStringArray(payload.skills, 'skills')
++  // Capability pool Task 8：能力需求标签（dispatch readiness，非 worker 强载）。
++  const requiredCapabilities = optionalStringArray(payload.requiredCapabilities, 'requiredCapabilities')
+   const maxRuntime = optionalString(payload.maxRuntime, 'maxRuntime')
+   const maxRetries = optionalPositiveInteger(payload.maxRetries, 'maxRetries', 100)
+   const goalMode = optionalBoolean(payload.goalMode, 'goalMode')
+@@ -556,7 +558,7 @@ export async function create(ctx: Context) {
+   const provider = optionalString(payload.provider, 'provider')
+   const reasoning = optionalString(payload.reasoning, 'reasoning')
+   // HERMES_CUSTOM[v020] END
+-  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error || model.error || provider.error || reasoning.error)) return
++  if (rejectBadRequest(ctx, title.error || body.error || assignee.error || priority.error || tenant.error || project.error || workspace.error || branch.error || triage.error || skills.error || requiredCapabilities.error || maxRuntime.error || maxRetries.error || goalMode.error || goalMaxTurns.error || model.error || provider.error || reasoning.error)) return
+   const targetAssignee = assignee.value || requestedProfile(ctx) || undefined
+   if (targetAssignee && denyProfileAccess(ctx, targetAssignee)) return
+   const board = requestBoard(ctx)
+@@ -573,6 +575,7 @@ export async function create(ctx: Context) {
+       branch: branch.value,
+       triage: triage.value,
+       skills: skills.value,
++      requiredCapabilities: requiredCapabilities.value,
+       maxRuntime: maxRuntime.value,
+       maxRetries: maxRetries.value,
+       goalMode: goalMode.value,
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+index 961b855..6002bf8 100644
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -138,6 +138,8 @@ export interface KanbanTask {
+   project_id: string | null
+   result: string | null
+   skills: string[] | null
++  // Capability pool Task 8：dispatch 侧能力需求（JSON 数组；null=未声明）。
++  required_capabilities: string[] | null
+   // ─── v0.19 运维状态字段（overlay 补齐，均 optional/nullable，向后兼容）───
+   branch_name?: string | null
+   idempotency_key?: string | null
+@@ -773,6 +775,8 @@ export async function createTask(
+     branch?: string
+     triage?: boolean
+     skills?: string[]
++    // Capability pool Task 8：能力需求标签（dispatch readiness，非 worker 强载）。
++    requiredCapabilities?: string[]
+     maxRuntime?: string
+     maxRetries?: number
+     goalMode?: boolean
+@@ -805,6 +809,10 @@ export async function createTask(
+   for (const skill of opts?.skills || []) {
+     if (skill.trim()) args.push('--skill', skill.trim())
+   }
++  // Capability pool Task 8：能力需求走独立 CLI 旗标（与 skills 语义分离）。
++  for (const cap of opts?.requiredCapabilities || []) {
++    if (cap.trim()) args.push('--required-capability', cap.trim())
++  }
+ 
+   try {
+     const { stdout } = await execKanbanCli(args, {

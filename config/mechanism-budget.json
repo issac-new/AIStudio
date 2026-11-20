@@ -11,6 +11,20 @@
  "changes": [
   {
    "at": "2026-11-20",
+   "delta": "+2 patches（807 agent required_capabilities 列/808 studio REST 透传）/ +1 script（t8-verify-kernel 一次性回环验证）/ +0 域 / +0 账本 / +0 gate；scripts cap 138→139",
+   "reason": "能力池 Task 8（spec 2026-11-20-capability-task8-required-capabilities）：任务能力需求字段落地，demandSource 自动切 declared，批二点五 11 任务全闭环",
+   "pairedRemovals": [
+    "t8-verify-kernel.py 为一次性内核回环验证，合并验收后归档",
+    "skills-fallback 过渡口径随真实任务全部迁移到 declared 后退役（demandSource 检测逻辑保留作旧库兼容）"
+   ],
+   "sunset": {
+    "owner": "能力池地基批（批二点五＋Task 8）",
+    "reviewBy": "批三组织工作台开工前",
+    "retireWhen": "连续两轮真实任务零 required_capabilities 声明且供需端点零调用时，字段保留（存量兼容）但 UI 面退役"
+   }
+  },
+  {
+   "at": "2026-11-20",
    "delta": "+1 域模块（judgment：席位类型/回交裁决/固化撤回，纯函数）/ +4 env 开关（TRG_FASTPATH、TRG_HANDOFF、TRG_S2_MODEL、TRG_S2_TIMEOUT_MS，默认全关）/ +1 快路径文件（toolresultguard-fastpath.json，落在既有审计目录，不新增 LEDGERS 注册项）/ +0 patch / +0 gate / +0 script / +0 npm script",
    "reason": "Agnes Harness 吸收批二·判定席位（spec 2026-11-20-agnes-harness-absorption）：给 LLM 判定点加有限选项/强制回交/已验证快路径；先接 toolresultguard，快路径与 S2 回交均默认关（TRG_ENABLED=1 存量部署升级零行为变化）",
    "pairedRemovals": [

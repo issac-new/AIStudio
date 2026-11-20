@@ -91,42 +91,54 @@ export function enforceOrWarnReadiness(findings: DispatchReadinessFinding[]): vo
     + missing.map(f => `${f.dimension}=${f.detail}`).join('；'))
 }
 
-/** 按 taskId 跨板取任务标题/正文/assignee/技能声明（只读主键查询，毫秒级；查不到返回 null 不猜）。 */
+/** 按 taskId 跨板取任务标题/正文/assignee/技能声明/能力需求（只读主键查询，毫秒级；查不到返回 null 不猜）。 */
 export async function fetchTaskTitleAndBodyByTaskId(taskId: string): Promise<{
   title: string | null
   body: string | null
   assignee: string | null
   skills: string[]
+  /** Task 8：能力需求（declared 优先，缺列回退 skills） */
+  required_capabilities: string[]
 } | null> {
   for (const dbPath of kanbanDbFiles()) {
     let db: Awaited<ReturnType<typeof openReadonly>> | undefined
     try {
       db = await openReadonly(dbPath)
-      // 旧库无 skills 列时回落到三列查询：标题/正文/assignee 仍可取，能力声明按空处理。
+      // 旧库无 skills/required_capabilities 列时逐级回落：标题/正文/assignee 仍可取。
       let row: {
         title?: string | null
         body?: string | null
         assignee?: string | null
         skills?: string | null
+        required_capabilities?: string | null
       } | undefined
       try {
-        row = db.prepare('SELECT title, body, assignee, skills FROM tasks WHERE id = ?').get(taskId) as typeof row
+        row = db.prepare('SELECT title, body, assignee, skills, required_capabilities FROM tasks WHERE id = ?').get(taskId) as typeof row
       } catch {
-        row = db.prepare('SELECT title, body, assignee FROM tasks WHERE id = ?').get(taskId) as typeof row
+        try {
+          row = db.prepare('SELECT title, body, assignee, skills FROM tasks WHERE id = ?').get(taskId) as typeof row
+        } catch {
+          row = db.prepare('SELECT title, body, assignee FROM tasks WHERE id = ?').get(taskId) as typeof row
+        }
       }
       if (row) {
-        let skills: string[] = []
-        try {
-          const parsed = row.skills ? (JSON.parse(row.skills) as unknown) : []
-          if (Array.isArray(parsed)) skills = parsed.filter((value): value is string => typeof value === 'string')
-        } catch {
-          skills = []
+        const parseList = (raw: string | null | undefined): string[] => {
+          try {
+            const parsed = raw ? (JSON.parse(raw) as unknown) : []
+            return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
+          } catch {
+            return []
+          }
         }
+        const skills = parseList(row.skills)
+        const rc = parseList(row.required_capabilities)
         return {
           title: row.title ?? null,
           body: row.body ?? null,
           assignee: row.assignee?.trim() ? row.assignee.trim() : null,
           skills,
+          // declared 口径优先；无声明时回退 skills（过渡期）
+          required_capabilities: rc.length > 0 ? rc : skills,
         }
       }
     } catch {

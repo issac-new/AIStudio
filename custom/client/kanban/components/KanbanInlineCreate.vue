@@ -21,6 +21,7 @@ const title = ref('')
 const assignee = ref('')
 const priority = ref<number | null>(null)
 const skills = ref('')
+const requiredCapabilities = ref('')
 const goalMode = ref(false)
 const goalMaxTurns = ref<number | null>(null)
 const workspaceKind = ref<'scratch' | 'worktree' | 'dir'>('scratch')
@@ -76,6 +77,9 @@ function submit() {
   if (skills.value.trim()) {
     data.skills = skills.value.split(',').map((s: string) => s.trim()).filter(Boolean)
   }
+  if (requiredCapabilities.value.trim()) {
+    data.requiredCapabilities = requiredCapabilities.value.split(',').map((s: string) => s.trim()).filter(Boolean)
+  }
   if (parent.value) data.parents = [parent.value]
   if (project.value.trim()) data.project = project.value.trim()
   if (workspaceKind.value !== 'scratch') {
@@ -103,6 +107,7 @@ function resetFields() {
   assignee.value = ''
   priority.value = null
   skills.value = ''
+  requiredCapabilities.value = ''
   goalMode.value = false
   goalMaxTurns.value = null
   project.value = ''
@@ -163,6 +168,13 @@ function onTitleKeydown(e: KeyboardEvent) {
       v-model:value="skills"
       size="small"
       :placeholder="t('kanban.inlineCreate.skillsPlaceholder', 'skills (optional, comma-separated): translation, github-code-review')"
+    />
+
+    <!-- 3b. 能力需求（dispatch 侧，Task 8） -->
+    <NInput
+      v-model:value="requiredCapabilities"
+      size="small"
+      :placeholder="t('kanban.inlineCreate.requiredCapabilitiesPlaceholder', '能力需求（可选，逗号分隔）: coding, review')"
     />
 
     <!-- 4. Goal mode row -->
