@@ -9,11 +9,17 @@
 // 安全边界：不把 API key、diff 全文写日志；diff 有字符上限；请求带超时。
 import type { JudgeVerdict } from '../types'
 
+export type JudgeProtocol = 'openai' | 'anthropic'
+
 export interface JudgeClientOptions {
   baseUrl: string
   model: string
   apiKey?: string
+  /** 协议：openai=/chat/completions，anthropic=/v1/messages（缺省 openai）。 */
+  protocol?: JudgeProtocol
   timeoutMs?: number
+  /** 输出上限；anthropic 协议缺省 1024（思考块也占 token）。 */
+  maxTokens?: number
   /** diff 上限（字符），超限截断并附提示；缺省 20000。 */
   maxDiffChars?: number
   fetchImpl?: typeof fetch
@@ -57,48 +63,80 @@ export function createOpenAiJudgeClient(
 ): (model: string, diff: string, rubric: string) => Promise<JudgeVerdict> {
   const baseUrl = opts.baseUrl.trim().replace(/\/+$/, '')
   const defaultModel = opts.model.trim()
+  const protocol: JudgeProtocol = opts.protocol ?? 'openai'
   const timeoutMs = Math.max(1, opts.timeoutMs ?? DEFAULT_TIMEOUT_MS)
+  const maxTokens = Math.max(64, opts.maxTokens ?? (protocol === 'anthropic' ? 1024 : 512))
   const maxDiffChars = Math.max(1000, opts.maxDiffChars ?? DEFAULT_MAX_DIFF_CHARS)
   const fetchImpl = opts.fetchImpl ?? fetch
+  const systemPrompt = 'You are an independent reviewer. Return STRICT JSON only: '
+    + '{"score": <number 0..1>, "reasoning": "<short evidence-based reason>"}. '
+    + 'Do not include markdown fences or extra keys.'
 
   return async (model, diff, rubric) => {
     if (!baseUrl || !defaultModel) return pending('judge client not configured (baseUrl/model)')
+    if (protocol === 'anthropic' && !opts.apiKey) {
+      return pending('judge api key missing for anthropic protocol')
+    }
     const chosen = (model || defaultModel).trim()
     const bodyDiff = diff.length > maxDiffChars
       ? `${diff.slice(0, maxDiffChars)}\n… [diff truncated at ${maxDiffChars} chars, total ${diff.length}]`
       : diff
+    const userPrompt = `Rubric:\n${rubric}\n\nDiff under review:\n${bodyDiff}`
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
     try {
-      const res = await fetchImpl(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
-        },
-        body: JSON.stringify({
-          model: chosen,
-          temperature: 0,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are an independent reviewer. Return STRICT JSON only: '
-                + '{"score": <number 0..1>, "reasoning": "<short evidence-based reason>"}. '
-                + 'Do not include markdown fences or extra keys.',
-            },
-            {
-              role: 'user',
-              content: `Rubric:\n${rubric}\n\nDiff under review:\n${bodyDiff}`,
-            },
-          ],
-        }),
-        signal: controller.signal,
-      })
-      if (!res.ok) return pending(`judge http ${res.status}`)
-      const data = await res.json() as {
-        choices?: Array<{ message?: { content?: unknown } }>
+      let content: string | null = null
+      if (protocol === 'anthropic') {
+        const url = baseUrl.endsWith('/v1') ? `${baseUrl}/messages` : `${baseUrl}/v1/messages`
+        const res = await fetchImpl(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': opts.apiKey as string,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: chosen,
+            max_tokens: maxTokens,
+            temperature: 0,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+          }),
+          signal: controller.signal,
+        })
+        if (!res.ok) return pending(`judge http ${res.status}`)
+        const data = await res.json() as {
+          content?: Array<{ type?: unknown; text?: unknown }>
+        }
+        content = (data?.content ?? [])
+          .filter((block) => block?.type === 'text' && typeof block.text === 'string')
+          .map((block) => String(block.text))
+          .join('\n')
+      } else {
+        const res = await fetchImpl(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}),
+          },
+          body: JSON.stringify({
+            model: chosen,
+            temperature: 0,
+            max_tokens: maxTokens,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+          signal: controller.signal,
+        })
+        if (!res.ok) return pending(`judge http ${res.status}`)
+        const data = await res.json() as {
+          choices?: Array<{ message?: { content?: unknown } }>
+        }
+        const value = data?.choices?.[0]?.message?.content
+        content = typeof value === 'string' ? value : null
       }
-      const content = data?.choices?.[0]?.message?.content
       if (typeof content !== 'string' || !content.trim()) return pending('judge empty response')
       const parsed = extractJson(content) as { score?: unknown; reasoning?: unknown } | null
       const score = typeof parsed?.score === 'number' ? parsed.score : Number.NaN

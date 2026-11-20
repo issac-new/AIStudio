@@ -74,6 +74,33 @@ describe('createProductionVerifierDeps (I5)', () => {
     })
   })
 
+  it('anthropic protocol uses GRAPH_JUDGE_API_KEY or ANTHROPIC_AUTH_TOKEN fallback', () => {
+    vi.stubEnv('GRAPH_JUDGE_BASE_URL', 'http://127.0.0.1:15721')
+    vi.stubEnv('GRAPH_JUDGE_MODEL', 'glm-5.3')
+    vi.stubEnv('GRAPH_JUDGE_PROTOCOL', 'anthropic')
+    vi.stubEnv('GRAPH_JUDGE_API_KEY', '')
+    vi.stubEnv('ANTHROPIC_AUTH_TOKEN', 'local-token')
+    vi.stubEnv('GRAPH_JUDGE_ENFORCE', '0')
+    const logs: string[] = []
+    const deps = createProductionVerifierDeps({ log: m => logs.push(m) })
+    expect(typeof deps.callJudge).toBe('function')
+    expect(deps.defaultJudge).toBeUndefined()
+    expect(logs.some(l => l.includes('protocol=anthropic'))).toBe(true)
+  })
+
+  it('anthropic protocol without any key stays disabled', () => {
+    vi.stubEnv('GRAPH_JUDGE_BASE_URL', 'http://127.0.0.1:15721')
+    vi.stubEnv('GRAPH_JUDGE_MODEL', 'glm-5.3')
+    vi.stubEnv('GRAPH_JUDGE_PROTOCOL', 'anthropic')
+    vi.stubEnv('GRAPH_JUDGE_API_KEY', '')
+    vi.stubEnv('ANTHROPIC_AUTH_TOKEN', '')
+    vi.stubEnv('ANTHROPIC_API_KEY', '')
+    const logs: string[] = []
+    const deps = createProductionVerifierDeps({ log: m => logs.push(m) })
+    expect(deps.callJudge).toBeUndefined()
+    expect(logs.some(l => l.includes('judge disabled'))).toBe(true)
+  })
+
   it('defaultJudge applies to contracts without an explicit judge intent', async () => {
     const verifier = new Verifier({
       callJudge: async () => ({ score: 0.9, reasoning: 'looks good' }),
