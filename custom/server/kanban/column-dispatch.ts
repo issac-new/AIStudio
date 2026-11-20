@@ -242,8 +242,9 @@ export async function dispatchColumnTransition(
   // I1 门统一（审查修复轮二）：OUTCOME_WORKBENCH 统管全部执法面——flag≠1 时
   // 跳过 outcome 解析、完全原行为，关 flag=等价回滚（设计 §批准前六问第 3 条
   // 「功能开关灰度＋按批 revert」）；与 REST 面 404 同名同读（每派发动态读 env）。
-  const outcome =
-    params.taskId && process.env.OUTCOME_WORKBENCH === '1' ? resolveDispatchOutcome(params.taskId) : null
+  const outcome = params.taskId && process.env.OUTCOME_WORKBENCH === '1'
+    ? await resolveDispatchOutcome(params.taskId, { experienceScope: { column: params.to } })
+    : null
   const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // AI 五问准入（批二）：在任一 step 派发前求值；默认 warn，enforce 抛错。

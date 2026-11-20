@@ -1,7 +1,7 @@
 // overlay[expcandidates] 经验候选 store（eval store 同模式）+ 提取执行面。
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import type { ExpCandidate, ExpStoreShape } from './exp-types'
+import type { ExpCandidate, ExpInjectionRecord, ExpStoreShape } from './exp-types'
 import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
 import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from './qgate-ingest'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
@@ -42,6 +42,8 @@ export function readExpStore(): ExpStoreShape {
   return {
     candidates: Array.isArray(raw.candidates) ? raw.candidates : [],
     nextSeq: typeof raw.nextSeq === 'number' ? raw.nextSeq : 1,
+    // 批二 T5 召回留痕账：读侧保留（否则每次读就整账蒸发，留痕永不可反查）
+    injectionLog: Array.isArray(raw.injectionLog) ? raw.injectionLog : [],
   }
 }
 
@@ -74,8 +76,12 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
   return store.candidates[idx]
 }
 
-/** B2 注入留痕（追加制，幂等）。 */
-export function recordInjection(ids: string[], runLabel: string): void {
+/** 留痕账上限（环形：超限挤最旧——留痕是事实记录不是无限审计账）。 */
+export const EXP_INJECTION_LOG_CAP = 200
+
+/** B2 注入留痕（追加制，幂等）。批二 T5：带 snapshotId 的调用同时落召回留痕账
+ *  （injectionLog），快照指纹反查靠它；旧调用（无 snapshotId）行为不变。 */
+export function recordInjection(ids: string[], runLabel: string, snapshotId?: string): void {
   const store = readExpStore()
   for (const c of store.candidates) {
     if (ids.includes(c.id) && !c.injectedRuns.includes(runLabel)) {
@@ -83,7 +89,20 @@ export function recordInjection(ids: string[], runLabel: string): void {
       c.updatedAt = new Date().toISOString()
     }
   }
+  if (typeof snapshotId === 'string' && snapshotId.trim() && ids.length) {
+    store.injectionLog = [
+      ...(Array.isArray(store.injectionLog) ? store.injectionLog : []),
+      { runLabel, snapshotId: snapshotId.trim(), ids: [...ids], at: Date.now() },
+    ].slice(-EXP_INJECTION_LOG_CAP)
+  }
   writeExpStore(store)
+}
+
+/** 召回留痕读面（批二 T5）：按 snapshotId 反查被注入候选（对照组件/对照投影消费）。 */
+export function listInjectionLog(snapshotId?: string): ExpInjectionRecord[] {
+  const raw = readExpStore().injectionLog
+  const log: ExpInjectionRecord[] = Array.isArray(raw) ? raw : []
+  return snapshotId ? log.filter((r) => r.snapshotId === snapshotId) : [...log]
 }
 
 // ---------- 提取执行面（读板库→归一→提取→指纹幂等入库） ----------

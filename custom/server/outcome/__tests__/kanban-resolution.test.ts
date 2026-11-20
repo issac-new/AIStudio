@@ -205,13 +205,13 @@ describe('tasksTerminalOf（observing 守卫正身）', () => {
     expect(tasksTerminalOf('oc-t2')).toBe(false)
   })
 
-  it('空集 fail-closed → false（零关联任务=绑定面不可证明，不借空集放行 observing）', () => {
+  it('空集 fail-closed → false（零关联任务=绑定面不可证明，不借空集放行 observing）', async () => {
     expect(tasksTerminalOf('oc-empty')).toBe(false)
   })
 })
 
 describe('verifyRootTask（根任务存在性三态）', () => {
-  it('存在 → {ok:true}；可枚举但不存在 → {ok:false}；无任何板库 → null（不可证明）', () => {
+  it('存在 → {ok:true}；可枚举但不存在 → {ok:false}；无任何板库 → null（不可证明）', async () => {
     addTask('tk-root', 'todo', null)
     expect(verifyRootTask('tk-root')).toEqual({ ok: true })
     expect(verifyRootTask('tk-absent')).toEqual({ ok: false })
@@ -228,14 +228,14 @@ describe('verifyRootTask（根任务存在性三态）', () => {
 describe('resolveDispatchOutcome（派发门）', () => {
   it('无合同：null（dispatch 原行为）', async () => {
     addTask('tk-free', 'todo', null)
-    expect(resolveDispatchOutcome('tk-free')).toBeNull()
+    expect(await resolveDispatchOutcome('tk-free')).toBeNull()
   })
 
   it.each(['cancelled', 'settled'] as const)('终态 %s → 抛 OutcomeDispatchError(outcome_not_active)', async (status) => {
     await seedContract('oc-dead', 'tk-dead', status)
     addTask('tk-dead', 'todo', 'oc-dead')
     try {
-      resolveDispatchOutcome('tk-dead')
+      await resolveDispatchOutcome('tk-dead')
       throw new Error('unreachable')
     } catch (e) {
       expect(e).toBeInstanceOf(OutcomeDispatchError)
@@ -249,12 +249,12 @@ describe('resolveDispatchOutcome（派发门）', () => {
   it.each(['active', 'draft', 'observing'] as const)('非终态 %s → 快照落账＋幂等补绑定＋透出三元组', async (status) => {
     const c = await seedContract('oc-live', 'tk-live', status)
     addTask('tk-live', 'todo', null) // 未绑定窗口：门须补绑定
-    const ctx = resolveDispatchOutcome('tk-live')
+    const ctx = await resolveDispatchOutcome('tk-live')
     expect(ctx).toMatchObject({ outcomeId: 'oc-live', contractVersion: c.version })
     expect(ctx!.snapshotId).toMatch(/^snap-[0-9a-f]{16}$/)
     // 快照已物化落账（sha256 幂等重放返回同一 snapshotId）
     expect(listSnapshots('oc-live').some((s) => s.snapshotId === ctx!.snapshotId)).toBe(true)
-    const again = resolveDispatchOutcome('tk-live')
+    const again = await resolveDispatchOutcome('tk-live')
     expect(again!.snapshotId).toBe(ctx!.snapshotId)
     // 补绑定生效：库面 outcome_id 已写
     const row = db!.prepare('SELECT outcome_id FROM tasks WHERE id = ?').get('tk-live') as { outcome_id: string | null }
@@ -270,7 +270,7 @@ describe('resolveDispatchOutcome（派发门）', () => {
     const people = await import('../../agentidentity/people')
     people._usePeopleStoreForTests(mkdtempSync(join(tmpdir(), 'kanban-res-empty-people-')))
     try {
-      resolveDispatchOutcome('tk-nop')
+      await resolveDispatchOutcome('tk-nop')
       throw new Error('unreachable')
     } catch (e) {
       expect(e).toBeInstanceOf(OutcomeDispatchError)
@@ -284,7 +284,7 @@ describe('resolveDispatchOutcome（派发门）', () => {
     await seedContract('oc-notask', 'tk-vanish', 'active')
     // 卡行不存在：绑定路径落空、台账兜底命中合同，但快照任务关键源失败
     try {
-      resolveDispatchOutcome('tk-vanish')
+      await resolveDispatchOutcome('tk-vanish')
       throw new Error('unreachable')
     } catch (e) {
       expect((e as OutcomeDispatchError).code).toBe('outcome_context_unavailable')
@@ -345,5 +345,68 @@ describe('bindOutcomeFamily（激活即绑定，审查修复轮二 I2）', () =>
     const r = bindOutcomeFamily('oc-fam3', 'r2')
     expect(r.ok).toBe(true)
     expect(r.bound).toEqual(['r2'])
+  })
+})
+
+// ---- 批二 T5：召回留痕反查（EXPERIENCE_INJECT 双闸） ----
+
+describe('resolveDispatchOutcome 召回留痕（批二 §四）', () => {
+  it('EXPERIENCE_INJECT=1＋approved 候选：快照含经验指纹，injectionLog 可按 snapshotId 反查候选 id', async () => {
+    const prev = process.env.EXPERIENCE_INJECT
+    process.env.EXPERIENCE_INJECT = '1'
+    const expDir = mkdtempSync(join(tmpdir(), 'exp-recall-'))
+    process.env.EXP_STORE = expDir
+    try {
+      const { listInjectionLog } = await import('../../expcandidates/exp-store')
+      // 种一个 approved 候选（作用域不限=全局）＋建卡＋合同（active）
+      addTask('tk-exp', 'ready', null)
+      await seedContract('oc-exp', 'tk-exp', 'active')
+      // 直接造 approved 候选（绕过提取面）
+      const fs = await import('node:fs')
+      fs.mkdirSync(expDir, { recursive: true })
+      fs.writeFileSync(join(expDir, 'exp-candidates.json'), JSON.stringify({
+        candidates: [{
+          id: 'exp-001', type: 'good_path', statement: '派单前先查交接规则可省一轮返工',
+          fingerprint: 'fp-1', evidence: [{ taskId: 'tk-old', note: 'n', at: 1 }],
+          status: 'approved', createdAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-02T00:00:00Z',
+          injectedRuns: [],
+        }], nextSeq: 2,
+      }))
+      const ctx = await resolveDispatchOutcome('tk-exp')
+      expect(ctx).not.toBeNull()
+      // 快照指纹含候选
+      const { listSnapshots } = await import('../outcome-store')
+      const snap = listSnapshots('oc-exp').at(-1)!
+      expect(snap.approvedExperienceVersions).toContain('exp-001@2026-11-02T00:00:00Z')
+      // 反查闭环：injectionLog 按 snapshotId 命中候选 id
+      const rec = listInjectionLog(ctx!.snapshotId)
+      expect(rec.length).toBeGreaterThanOrEqual(1)
+      expect(rec[0].ids).toContain('exp-001')
+      expect(rec[0].snapshotId).toBe(ctx!.snapshotId)
+    } finally {
+      if (prev === undefined) delete process.env.EXPERIENCE_INJECT
+      else process.env.EXPERIENCE_INJECT = prev
+      delete process.env.EXP_STORE
+    }
+  })
+
+  it('EXPERIENCE_INJECT=0：快照无经验块（approvedExperienceVersions 仍 []）且零留痕', async () => {
+    const prev = process.env.EXPERIENCE_INJECT
+    process.env.EXPERIENCE_INJECT = '0'
+    try {
+      addTask('tk-noexp', 'ready', null)
+      await seedContract('oc-noexp', 'tk-noexp', 'active')
+      const ctx = await resolveDispatchOutcome('tk-noexp')
+      expect(ctx).not.toBeNull()
+      const { listSnapshots } = await import('../outcome-store')
+      const snap = listSnapshots('oc-noexp').at(-1)!
+      expect(snap.approvedExperienceVersions).toEqual([])
+      expect(snap.content.experiences).toBeUndefined()
+      const { listInjectionLog } = await import('../../expcandidates/exp-store')
+      expect(listInjectionLog(ctx!.snapshotId)).toEqual([])
+    } finally {
+      if (prev === undefined) delete process.env.EXPERIENCE_INJECT
+      else process.env.EXPERIENCE_INJECT = prev
+    }
   })
 })

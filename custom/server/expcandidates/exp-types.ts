@@ -55,4 +55,17 @@ export interface ExpCandidate {
 export interface ExpStoreShape {
   candidates: ExpCandidate[]
   nextSeq: number
+  /** 批二 T5 召回留痕（追加制，上限 EXP_INJECTION_LOG_CAP）：每次派单快照注入
+   *  approved 经验记一行——runLabel＋snapshotId＋ids 三元组可反查快照指纹
+   *  （approvedExperienceVersions 含被注入候选）。「已注入」≠「有效」，效果
+   *  断言走 outcome 对照投影（comparison.ts），本账只留事实。 */
+  injectionLog?: ExpInjectionRecord[]
+}
+
+/** 召回留痕行（批二 T5）。 */
+export interface ExpInjectionRecord {
+  runLabel: string
+  snapshotId: string
+  ids: string[]
+  at: number
 }

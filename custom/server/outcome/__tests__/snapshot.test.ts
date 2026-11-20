@@ -565,3 +565,98 @@ describe('appendSnapshot / listSnapshots', () => {
     expect(list[1].snapshotId).toBe(s2.snapshotId)
   })
 })
+
+// ---- 批二 Task 5：全量快照（buildFullSnapshot） ----
+
+import { buildFullSnapshot, DEFAULT_DECISION_POLICY_VERSION, type BuildFullSnapshotInput } from '../snapshot'
+
+function fullInput(overrides: Partial<BuildFullSnapshotInput['resolve']> = {}): BuildFullSnapshotInput {
+  return {
+    contract: makeContract('oc-full') as unknown as BuildFullSnapshotInput['contract'],
+    decisionPolicyVersion: DEFAULT_DECISION_POLICY_VERSION,
+    resolve: {
+      task: () => ({ ok: true, task: { id: 'root-1', title: 'T', status: 'ready' } }),
+      people: () => ({ ok: true, people: [
+        { id: 'p-1', name: 'A', active: true }, { id: 'p-2', name: 'B', active: true }] }),
+      ...overrides,
+    },
+  }
+}
+
+describe('buildFullSnapshot（批二 §四）', () => {
+  it('四块成功：content 四区块物化、经验指纹进 approvedExperienceVersions、sourceRefs 带面级与逐条经验 ref', async () => {
+    const r = await buildFullSnapshot(fullInput({
+      panorama: () => ({ ok: true, faces: [{ face: 'evidence', count: 3, note: 'latest=pass' }] }),
+      decisions: async () => ({ ok: true, decisions: [{ id: 'd1', category: 'dispatch', outcome: 'approved', at: 123 }] }),
+      premises: () => ({ ok: true, premises: [{ id: 'pr-1', statement: '前提陈述' }] }),
+      experiences: () => ({ ok: true, experiences: [{ id: 'exp-1', statement: '经验句 http://u:pw@h/x', updatedAt: '2026-11-20T00:00:00Z' }] }),
+    }))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const s = r.snapshot
+    expect((s.content.panoramaFaces as Array<{ face: string }>)[0].face).toBe('evidence')
+    expect((s.content.recentDecisions as Array<{ id: string }>)[0].id).toBe('d1')
+    expect((s.content.activePremises as Array<{ statement: string }>)[0].statement).toBe('前提陈述')
+    // 经验陈述过脱敏防线；指纹=id@updatedAt
+    expect((s.content.experiences as Array<{ statement: string }>)[0].statement).toContain('u:***@h')
+    expect(s.approvedExperienceVersions).toEqual(['exp-1@2026-11-20T00:00:00Z'])
+    expect(s.sourceRefs.find((x) => x.kind === 'experience' && x.id === 'exp-1')?.version).toBe('2026-11-20T00:00:00Z')
+    expect(s.sourceRefs.some((x) => x.kind === 'panorama')).toBe(true)
+    expect(s.sha256).toBe(shaOf(s))
+  })
+
+  it('非关键源失败/抛异常/形状不符/未接入 → excludedSources 四路如实、快照仍生成', async () => {
+    const r = await buildFullSnapshot(fullInput({
+      panorama: () => { throw new Error('boom') },
+      decisions: () => ({ ok: false }),
+      premises: () => ({ ok: true, premises: [{ id: 'pr-1', statement: 123 } as unknown as { id: string; statement: string }] }),
+      // experiences 未提供
+    }))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const excl = r.snapshot.excludedSources.map((e) => e.kind)
+    expect(excl).toContain('panorama')
+    expect(excl).toContain('decisions')
+    expect(excl).toContain('premises')
+    expect(excl).toContain('experiences')
+    expect(r.snapshot.approvedExperienceVersions).toEqual([])
+    expect(r.snapshot.content.experiences).toBeUndefined()
+  })
+
+  it('未 approved 缺席双面：经验块空数组→无 experiences content、指纹空（候选永不出现在快照）', async () => {
+    const r = await buildFullSnapshot(fullInput({
+      experiences: () => ({ ok: true, experiences: [] }),
+    }))
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.snapshot.content.experiences).toBeUndefined()
+    expect(r.snapshot.approvedExperienceVersions).toEqual([])
+  })
+
+  it('关键源失败原样上抛（全量面不放宽最小面语义）', async () => {
+    const r = await buildFullSnapshot({
+      ...fullInput(),
+      resolve: {
+        ...fullInput().resolve,
+        task: () => ({ ok: false }),
+      },
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.problems.join()).toContain('任务关键源失败')
+  })
+})
+
+/** 复算信封哈希（与核心同式：去 snapshotId/createdAt/sha256 后 canonical）。 */
+function shaOf(s: { outcomeId: string; contractVersion: number; teamVersion: number | null; decisionPolicyVersion: string; content: Record<string, unknown>; sourceRefs: unknown[]; approvedExperienceVersions: string[]; excludedSources: unknown[] }): string {
+  const crypto = require('node:crypto') as typeof import('node:crypto')
+  const body = {
+    outcomeId: s.outcomeId, contractVersion: s.contractVersion, teamVersion: s.teamVersion,
+    decisionPolicyVersion: s.decisionPolicyVersion, content: s.content, sourceRefs: s.sourceRefs,
+    approvedExperienceVersions: s.approvedExperienceVersions, excludedSources: s.excludedSources,
+  }
+  const canonical = (v: unknown): unknown => v === null || typeof v !== 'object' ? v
+    : Array.isArray(v) ? v.map(canonical)
+    : Object.fromEntries(Object.keys(v as Record<string, unknown>).sort().map((k) => [k, canonical((v as Record<string, unknown>)[k])]))
+  return crypto.createHash('sha256').update(JSON.stringify(canonical(body))).digest('hex')
+}

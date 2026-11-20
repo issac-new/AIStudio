@@ -26,10 +26,18 @@ import { hermesHome } from '../lib/paths'
 import { allBoardDbsOf } from '../services/hermes/kanban-layout'
 import { bindOutcomeToTask } from './kanban-bind'
 import { findByRootTask, getContract, appendSnapshot } from './outcome-store'
-import { DEFAULT_DECISION_POLICY_VERSION, buildMinimalSnapshot } from './snapshot'
+import { DEFAULT_DECISION_POLICY_VERSION, buildFullSnapshot } from './snapshot'
 import type { SnapshotPersonRow, SnapshotTaskSummary } from './snapshot'
 import { listPeople } from '../agentidentity/people'
 import type { OutcomeContract } from './types'
+// 批二 T5 全量面读源（全部既有域，不复制聚合器）：
+import { listEvidence, latestVerdict } from '../evidence/evidence-store'
+import { listCases } from '../reviewgov/store'
+import { listRequested } from '../plan/plan-mode'
+import { listPremises } from '../premiselog/store'
+import { listDecisions } from '../decisiongraph/semantica-client'
+import { listCandidates, recordInjection } from '../expcandidates/exp-store'
+import { selectableExperiences } from '../expcandidates/exp-inject'
 
 // 双运行时取 node:sqlite：服务端 ts-node（CJS）与 vitest（ESM）都走 createRequire
 // 解内置模块（kanban-bind/kanban-task-fast 同款）；解不出=读通道关闭（fail-soft）。
@@ -57,6 +65,8 @@ const describeErr = (err: unknown): string =>
 export interface KanbanResolutionOptions {
   /** 覆写 hermes home（测试注入；缺省 lib/paths hermesHome，含 HERMES_HOME env）。 */
   home?: string
+  /** 批二 T5 经验召回作用域（派单列；EXPERIENCE_INJECT=1 时供 selectableExperiences 过滤）。 */
+  experienceScope?: { column?: string }
 }
 
 const homeOf = (opts: KanbanResolutionOptions): string => opts.home ?? hermesHome()
@@ -379,10 +389,10 @@ export const DISPATCH_OUTCOME_ACTOR = 'studio:column-dispatch'
  * 补绑定失败 fail-soft warn 不阻断派发——守卫经 findByRootTask 兜底不失明，
  * 绑定可由下次派发/激活侧重试修复。
  */
-export function resolveDispatchOutcome(
+export async function resolveDispatchOutcome(
   taskId: string,
   opts: KanbanResolutionOptions = {},
-): DispatchOutcomeContext | null {
+): Promise<DispatchOutcomeContext | null> {
   const contract = outcomeOfTask(taskId, opts)
   if (!contract) return null
   if (contract.status === 'cancelled' || contract.status === 'settled') {
@@ -393,12 +403,59 @@ export function resolveDispatchOutcome(
     )
   }
   const summary = rootTaskSummary(taskId, opts)
-  const built = buildMinimalSnapshot({
+  // 批二 T5：经验召回总闸（EXPERIENCE_INJECT）——关=0 时快照无经验块（双闸纪律：
+  // 注入总闸管召回，learningOptIn 只管写入侧候选生成）。经验选择复用 exp-inject
+  // 的 selectableExperiences＋scope-match（approved 且作用域匹配才入选，不复制）。
+  const experienceGateOn = process.env.EXPERIENCE_INJECT === '1'
+  const built = await buildFullSnapshot({
     contract,
     decisionPolicyVersion: DEFAULT_DECISION_POLICY_VERSION,
     resolve: {
       task: () => (summary ? { ok: true, task: summary } : { ok: false }),
       people: (ids: string[]) => ({ ok: true, people: snapshotPeopleRows(ids) }),
+      // 全景面（同步只读三面：证据/评审/计划——批二最小面，评测/图运行/泳道后续批接入）
+      panorama: () => {
+        const evidence = listEvidence(taskId)
+        const verdict = latestVerdict(taskId)
+        return {
+          ok: true,
+          faces: [
+            { face: 'evidence', count: evidence.length, note: verdict ? `latest=${verdict.verdict}` : undefined },
+            { face: 'reviews', count: listCases().filter((c) => c.taskId === taskId).length },
+            { face: 'plans', count: listRequested().filter((p) => p.taskId === taskId).length },
+          ],
+        }
+      },
+      // 近期决策（semantica 桥异步；桥不可达→块降级 excluded，非关键）
+      decisions: async () => {
+        const r = await listDecisions(10)
+        return {
+          ok: true,
+          decisions: r.decisions.map((d) => ({
+            id: String(d.id), category: d.category ?? null, outcome: d.outcome ?? null,
+            at: Number((d as unknown as { at?: unknown }).at) || 0,
+          })),
+        }
+      },
+      // 在册前提（active/open 态；statement 物化前过脱敏防线）
+      premises: () => ({
+        ok: true,
+        premises: listPremises()
+          .filter((p) => p.status === 'hold' || p.status === 'pending')
+          .slice(0, 20)
+          .map((p) => ({ id: p.id, statement: p.statement })),
+      }),
+      ...(experienceGateOn ? {
+        experiences: () => {
+          const selected = selectableExperiences(listCandidates(), {
+            ...(opts.experienceScope?.column ? { column: opts.experienceScope.column } : {}),
+          })
+          return {
+            ok: true,
+            experiences: selected.map((c) => ({ id: c.id, statement: c.statement, updatedAt: c.updatedAt })),
+          }
+        },
+      } : {}),
     },
   })
   if (!built.ok) {
@@ -421,6 +478,16 @@ export function resolveDispatchOutcome(
     console.warn(
       `[kanban-resolution] 补绑定失败（不阻断派发，守卫经台账兜底不失明）：${bound.code ?? ''} ${bound.error ?? ''}`,
     )
+  }
+  // 批二 T5 召回留痕：快照含经验块时把「哪些候选进了哪个快照」落 injectionLog
+  // （留痕可反查：snapshot.approvedExperienceVersions ⊇ 被注入候选指纹；fail-soft）。
+  const injectedIds = appended.snapshot.approvedExperienceVersions.map((f) => f.split('@')[0])
+  if (injectedIds.length) {
+    try {
+      recordInjection(injectedIds, `dispatch:${appended.snapshot.snapshotId.slice(0, 12)}`, appended.snapshot.snapshotId)
+    } catch (err) {
+      console.warn(`[kanban-resolution] 召回留痕落账失败（不阻断派发）：${(err as Error).message}`)
+    }
   }
   return {
     outcomeId: contract.outcomeId,
