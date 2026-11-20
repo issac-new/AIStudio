@@ -384,10 +384,13 @@ export function sealSet(id: string, actor?: string): { ok: true } | ProblemsFail
   const store = readStore()
   const set = store.sets.find((s) => s.id === id)
   if (!set) return { ok: false, problems: [`评测集不存在：${id}`] }
-  if (set.sealed) return { ok: false, problems: ['评测集已密封'] }
+  // 问题统一收集后单一失败出口（K19 棘轮：失败字面量只许减）。
+  const problems: string[] = []
+  if (set.sealed) problems.push('评测集已密封')
   // 三向角色（Agnes 批一 a）：密封即转 sealed 角色——train 集不允许密封
   // （训练集就是要给进化过程读的，密封后语义自相矛盾）。
-  if (set.split === 'train') return { ok: false, problems: ['train 集不可密封：训练集服务进化调参，密封后失去存在意义；如需密封验证集另建 eval 集验证后密封'] }
+  if (set.split === 'train') problems.push('train 集不可密封：训练集服务进化调参，密封后失去存在意义；如需密封验证集另建 eval 集验证后密封')
+  if (problems.length) return { ok: false, problems }
   set.sealed = true
   if (actor) set.createdBy = set.createdBy ?? actor
   writeStore(store)
