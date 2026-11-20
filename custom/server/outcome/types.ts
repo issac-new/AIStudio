@@ -25,6 +25,15 @@ export type MeasureOperator = (typeof MEASURE_OPERATORS)[number]
 export const MEASURE_AVAILABILITIES = ['available', 'pending', 'unavailable'] as const
 export type MeasureAvailability = (typeof MEASURE_AVAILABILITIES)[number]
 
+/** 团队状态（批三 spec §一）：draft=候选提案（不自动成队，agenda 待确认源）、
+ *  active=owner 显式确认、closed=解散。 */
+export const OUTCOME_TEAM_STATUSES = ['draft', 'active', 'closed'] as const
+export type OutcomeTeamStatus = (typeof OUTCOME_TEAM_STATUSES)[number]
+
+/** 团队成员主体类型（批三 spec §一）：person=自然人（people 域）、agent=身份册成员。 */
+export const TEAM_SUBJECT_KINDS = ['person', 'agent'] as const
+export type TeamSubjectKind = (typeof TEAM_SUBJECT_KINDS)[number]
+
 /** 度量定义（spec §4.1）：baseline=null 与 actual=null 是合法未知，不得自动补零。 */
 export interface OutcomeMeasure {
   measureId: string
@@ -56,6 +65,9 @@ export interface OutcomeContract {
   contextPolicy: { allowedScopes: string[]; excludedSourceKinds: string[] }
   learningOptIn: boolean
   status: OutcomeStatus
+  /** 截止时刻（批三 T1，可选三态）：undefined=未设置（旧合同零迁移）、null=显式无期限、
+   *  有限数值=期限。逾期判定由议程投影按 dueAt != null && dueAt <= now 计算，本域不存派生态。 */
+  dueAt?: number | null
   createdAt: number
   updatedAt: number
 }
@@ -72,6 +84,28 @@ export interface OutcomeMeasurement {
   observedAt: number
   recordedBy: string
   recordedAt: number
+}
+
+/** 团队成员（批三 spec §一）：role 承载 accountable/reviewer 等责任语义——不设独立
+ *  accountablePersonId/reviewerPersonId 字段（D8：合同 owner/verifier 是唯一责任人正身，
+ *  双正本必然漂移），到位性由 team-validate 对照合同校验。 */
+export interface OutcomeTeamMember {
+  subjectKind: TeamSubjectKind
+  subjectId: string
+  role: string
+  responsibility: string
+}
+
+/** 团队正身（批三 spec §一）：最新态落 outcome 目录 team.json；version 从 1 递增
+ *  （confirmTeam 乐观并发），确认历史由 events.jsonl 的 team_confirmed 事件承载。 */
+export interface OutcomeTeam {
+  outcomeId: string
+  version: number
+  members: OutcomeTeamMember[]
+  status: OutcomeTeamStatus
+  changeReason: string
+  updatedBy: string
+  updatedAt: number
 }
 
 /** 决策画像（spec §4.3）：审批风险分类的新正身，classifyApprovalRisk 委托到这里。 */

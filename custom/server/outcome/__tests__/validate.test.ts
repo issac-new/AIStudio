@@ -172,4 +172,16 @@ describe('validateContractInput', () => {
       expect(validateContractInput(variant(patch)).problems.length).toBeGreaterThan(0)
     }
   })
+
+  it('dueAt 可选（批三 T1）：undefined=未设置（旧合同零迁移）、null=显式无期限、有限数值=期限，均放行', () => {
+    expect(validateContractInput(base).problems).toEqual([])
+    expect(validateContractInput(variant({ dueAt: null })).problems).toEqual([])
+    expect(validateContractInput(variant({ dueAt: 1700000099999 })).problems).toEqual([])
+  })
+
+  it('dueAt 非法类型拒绝（字符串/NaN/Infinity）', () => {
+    for (const dueAt of ['soon', Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(validateContractInput(variant({ dueAt })).problems.join()).toContain('dueAt')
+    }
+  })
 })
