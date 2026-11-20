@@ -10,6 +10,22 @@
  },
  "changes": [
   {
+   "at": "2026-11-21",
+   "delta": "+1 patch（810 studio 宿主路由挂载 org-workbench）/ +1 域（orgworkbench：议程只读投影零写面）/ +0 独立账本（OutcomeTeam 落 outcome 目录 team.json＋events.jsonl 既有哈希链）/ +0 scripts / +0 npm scripts / +0 gates；另 778/640 升级丢段根治为零净增（重锚回补，非新增面）",
+   "reason": "AI 原生组织批三（spec 2026-11-21-ai-native-orgworkbench-batch3）：OutcomeTeam 团队域、DecisionAgenda 六源只读议程、贡献回顾 judgments 判别联合、治理工作台三 Section；随批根治 778/640 两枚升级重锚丢段（T7 浏览器走查前置）",
+   "pairedRemovals": [
+    "议程为纯只读投影零写面：随 OUTCOME_WORKBENCH 门退役（GA 去 env 门）一并退役",
+    "OutcomeTeam 团队面：连续两轮真实推演零 owner 确认操作后评估并入合同面归档",
+    "贡献评价面：连续两轮零签署后 UI 面降级为 API-only",
+    "778/640 丢段根治清偿升级批两个静默坏死面（CLI 建号 ReferenceError＋起服编译红），属负增收敛"
+   ],
+   "sunset": {
+    "owner": "AI 原生组织批三",
+    "reviewBy": "批后下一轮推演复盘",
+    "retireWhen": "团队/议程/贡献三面连续两轮真实运行零消费时按面退役（历史档案保留）；outcome 域正身不整体退役"
+   }
+  },
+  {
    "at": "2026-11-20",
    "delta": "+2 patches（807 agent required_capabilities 列/808 studio REST 透传）/ +1 script（t8-verify-kernel 一次性回环验证）/ +0 域 / +0 账本 / +0 gate；scripts cap 138→139",
    "reason": "能力池 Task 8（spec 2026-11-20-capability-task8-required-capabilities）：任务能力需求字段落地，demandSource 自动切 declared，批二点五 11 任务全闭环",
