@@ -95,6 +95,27 @@ vi.mock('@/custom/shared/api/approvals', () => ({
   decideApproval: vi.fn(),
   dedupePending: (items: unknown[]) => items,
 }))
+// 组织工作台三 Section（批三 T6，GovOrgKnowledgeView 挂载消费面）——mock 须全量，
+// 缺导出即 vitest unhandled rejection（LedgerSection 先例）；议程恒空源保持本套
+// 聚焦既有分区断言（三 Section 自身的渲染守门在 org-workbench-sections.test.ts）
+vi.mock('@/custom/governance/api/org-workbench', () => ({
+  fetchAgenda: vi.fn(async () => ({
+    generatedAt: 1,
+    sources: {
+      approvals: { available: true, itemCount: 0, items: [] },
+      outcome_contracts: { available: true, itemCount: 0, items: [] },
+      premises: { available: true, itemCount: 0, items: [] },
+      review_cases: { available: true, itemCount: 0, items: [] },
+      escalations: { available: true, itemCount: 0, items: [] },
+      exp_candidates: { available: true, itemCount: 0, items: [] },
+      outcome_teams: { available: true, itemCount: 0, items: [] },
+    },
+  })),
+  resolveOutcomeFace: vi.fn(async () => null),
+  confirmOutcomeTeam: vi.fn(),
+  fetchContribution: vi.fn(),
+  submitContributionReview: vi.fn(),
+}))
 vi.mock('@/custom/kanban/components/KanbanMarkdown.vue', () => ({
   default: { name: 'KanbanMarkdown', props: ['source'], template: '<div class="md-stub">{{ source }}</div>' },
 }))

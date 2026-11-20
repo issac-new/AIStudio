@@ -17,11 +17,11 @@ import { useWorkspaceStore } from '@/custom/shared/store/workspace'
 import { shortMxName } from '@/custom/ui/mxid-display'
 import {
   type OrchTaskRaw, type AutonomyEntry, type EscalationRecord, type StoredSpecSummary,
-  type OutcomeContractRef, type PeopleRosterEntry,
+  type OutcomeContractRef, type PeopleRosterEntry, type OutcomeTeamInfo,
   classifyExecutor, controlPointReasons, deriveMissionRoots, buildMissionTree,
   deriveFiveQuestions, layoutMissionDag, ORCH_NODE_W, ORCH_NODE_H,
   fetchAutonomyLadder, fetchPendingEscalations, fetchGraphSpecs,
-  fetchOutcomeByRoot, fetchPeopleRoster,
+  fetchOutcomeByRoot, fetchPeopleRoster, fetchOutcomeTeamInfo,
 } from '../../api/orchestration'
 
 const workspace = useWorkspaceStore()
@@ -89,9 +89,48 @@ async function loadOutcome(rootId: string): Promise<void> {
   if (seq !== outcomeReqSeq) return
   outcomeContract.value = result.state === 'contract' ? result.contract : null
   outcomeState.value = result.state
+  // 团队面随合同面（批三 T6）：有合同才读团队，无合同复位（不渲染团队行）
+  void loadTeam(result.state === 'contract' && result.contract ? result.contract.outcomeId : '')
 }
 
 watch(selectedRootId, id => { void loadOutcome(id) }, { immediate: true })
+
+// ── 团队面（批三 T6，设计 §5.1）：有合同时显示当前团队版本与成员角色 ──
+// 三态同 fetchOutcomeByRoot 纪律：none=team null（未成队，真零数据）与 error
+// （读不到，不知道有没有）分开；读取失败只影响团队行，第 1 问其余内容照常。
+const teamState = ref<'loading' | 'team' | 'none' | 'error' | 'idle'>('idle')
+const teamInfo = ref<OutcomeTeamInfo | null>(null)
+
+/** 过期响应防护（loadOutcome 同款 seq）：换根卡并发只认最后一次。 */
+let teamReqSeq = 0
+async function loadTeam(outcomeId: string): Promise<void> {
+  const seq = ++teamReqSeq
+  if (!outcomeId) {
+    if (seq === teamReqSeq) { teamState.value = 'idle'; teamInfo.value = null }
+    return
+  }
+  if (seq === teamReqSeq) { teamState.value = 'loading'; teamInfo.value = null }
+  const result = await fetchOutcomeTeamInfo(outcomeId)
+  if (seq !== teamReqSeq) return
+  teamInfo.value = result.state === 'team' ? result.team : null
+  teamState.value = result.state
+}
+
+/** 团队行文案：版本＋成员角色（subjectId（role）逐个列出）；draft 标候选待确认。 */
+const teamLine = computed(() => {
+  if (teamState.value === 'loading') return '读取中…'
+  if (teamState.value === 'error') return '团队信息读取失败（本行不可用，其余内容不受影响）'
+  if (teamState.value === 'none') return '未成队（无已确认团队）'
+  const t = teamInfo.value
+  if (!t) return ''
+  const roles = t.members.map(m => `${m.subjectId}（${m.role}）`).join('、')
+  const head = t.status === 'draft'
+    ? `候选团队 v${t.version}（draft，待 owner 确认）`
+    : t.status === 'closed'
+      ? `团队已解散（closed，v${t.version}）`
+      : `已确认团队 v${t.version}`
+  return roles ? `${head} · ${roles}` : `${head}（无成员记录）`
+})
 
 /** owner 显示名：people 名单命中→name；名单缺席或 id 未收录→ownerPersonId 并标注。 */
 const ownerDisplay = computed(() => {
@@ -248,6 +287,8 @@ const EXECUTOR_LABEL: Record<string, string> = { human: '人', agent: 'Agent', u
               负责人：{{ ownerDisplay.name }}<template v-if="!ownerDisplay.resolved">（未匹配人员名单，按合同 ownerPersonId 显示）</template>
             </p>
             <p class="orch__q-line">状态：{{ outcomeContract.status }} · 合同版本 v{{ outcomeContract.version }} · 任务链 {{ fiveQ.outcome.taskCount }} 张卡</p>
+            <!-- 团队版本与成员角色（批三 T6，消费 GET /:id 扩展面 team）；失败只降级本行 -->
+            <p class="orch__q-line" data-testid="ia-orchestration-team">团队：{{ teamLine }}</p>
             <ul v-if="outcomeContract.measures.length > 0" class="orch__list">
               <li v-for="m in outcomeContract.measures" :key="m.measureId">
                 {{ m.name }}：目标 {{ m.target }} {{ m.unit }}（{{ MEASURE_OP_LABEL[m.operator] ?? m.operator }}）· 基线 {{ m.baseline ?? '未知' }}
