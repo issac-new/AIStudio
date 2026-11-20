@@ -13,6 +13,7 @@ import MaturitySection from '@/custom/governance/components/MaturitySection.vue'
 import PrimitivesSection from '@/custom/governance/components/PrimitivesSection.vue'
 import EvalLayersSection from '@/custom/governance/components/EvalLayersSection.vue'
 import RsiMaturitySection from '@/custom/governance/components/RsiMaturitySection.vue'
+import RsiLifecycleSection from '@/custom/governance/components/RsiLifecycleSection.vue'
 import NineLayersSection from '@/custom/governance/components/NineLayersSection.vue'
 import AiNativeScorecardSection from '@/custom/governance/components/AiNativeScorecardSection.vue'
 import ObsSignalsSection from '@/custom/governance/components/ObsSignalsSection.vue'
@@ -61,6 +62,7 @@ const L = computed(() => {
       <ObsSignalsSection />
       <HarnessRunOpsSection />
       <RsiMaturitySection />
+      <RsiLifecycleSection />
     </div>
   </div>
 </template>
