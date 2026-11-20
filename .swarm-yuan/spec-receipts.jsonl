@@ -447,3 +447,4 @@
 {"at":"2026-11-20T11:41:20Z","spec":"docs/superpowers/specs/2026-11-20-agnes-gate-hardening.md","receipt":"45895058a4655d8ad75bcbee0a33913c19bedd9d","commit":"992820191"}
 {"at":"2026-11-20T12:29:09Z","spec":"docs/superpowers/specs/2026-11-20-agnes-gate-hardening.md","receipt":"b1b9d5c83a3abb2a829cf80525539902d1c4b3a7","commit":"33ad7ddc9"}
 {"at":"2026-11-20T16:08:39Z","spec":"docs/superpowers/specs/2026-11-20-rsi-lifecycle-absorption.md","receipt":"107a302a71d8b822903b56636f6bf88d8e44b426","commit":"12f0d5591"}
+{"at":"2026-11-20T16:49:42Z","spec":"docs/superpowers/specs/2026-11-21-dispatch-source-field.md","receipt":"10c67c94f8bd2aafd3df0bd4b792a2b7f3e3dc89","commit":"2cca157b9"}

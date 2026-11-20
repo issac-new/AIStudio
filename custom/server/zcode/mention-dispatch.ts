@@ -88,6 +88,11 @@ export interface MentionOutcome {
   /** squad 委托的执行 leader（P-D(b) 信封对称：外层统一 mentionKind:'squad'、target=squad 名，leader 独立字段）。 */
   leader?: string
   reason: DispatchReasonCode
+  /** 判定来源（Agnes 吸收批二遗留，2026-11-21）：与 DispatchPlan.source 同源透传；恒 'rule'。 */
+  source?: 'rule'
+  /** 决策回执键（Agnes 吸收批二遗留）：倒查派发台账/审计的规范键（commandId 优先，仅 sessionId 时回落）；
+   *  reject 无引擎 id 时缺席。与 dispatch-ledger 的 commandId>sessionId 归因优先级同口径。 */
+  decisionRef?: string
   detail?: string
   sessionId?: string
   commandId?: string
@@ -167,6 +172,9 @@ export interface DispatchPlan {
   action: 'reject' | 'coalesce' | 'start'
   /** 判定命中 reason（reject 即 outcome reason；coalesce→coalesced；start 成功→queued）。 */
   reason: DispatchReasonCode
+  /** 判定来源（Agnes 吸收批二遗留，2026-11-21）：派单判定是确定性纯函数，恒 'rule'；
+   *  字段留作将来接入席位快路径时的区分位（seatMode 五条件回交已在 judgment 域）。 */
+  source: 'rule'
   /** 实际执行 agent（squad=leader；agent=自身）——pending 槽按它归位。 */
   runsFor: string
   squad?: { name: string; leader: string; members: string[] }
@@ -189,13 +197,14 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
   if (token.kind === 'squad') {
     const def: SquadDefinition | null = resolveSquad(token.target)
     if (!def) {
-      return { action: 'reject', reason: 'target_unavailable', runsFor: '-', detail: `未知 squad：${token.target}` }
+      return { action: 'reject', reason: 'target_unavailable', source: 'rule', runsFor: '-', detail: `未知 squad：${token.target}` }
     }
     squad = { name: token.target, leader: def.leader, members: def.members }
     runsFor = def.leader
   }
-  const wrap = (plan: Omit<DispatchPlan, 'runsFor' | 'squad' | 'warnings'>): DispatchPlan => ({
+  const wrap = (plan: Omit<DispatchPlan, 'runsFor' | 'squad' | 'warnings' | 'source'>): DispatchPlan => ({
     ...plan,
+    source: 'rule',
     runsFor,
     squad,
     ...(warnings ? { warnings } : {}),
@@ -383,7 +392,7 @@ export class MentionDispatchService {
       mentionAuthor: params.mentionAuthor ?? this.mentionAuthor,
       engineOnline,
     }, planFacts)
-    const envelope = { ...base, ...(plan.squad ? { leader: plan.squad.leader } : {}) }
+    const envelope = { ...base, ...(plan.squad ? { leader: plan.squad.leader } : {}), source: plan.source }
 
     if (plan.action === 'reject') {
       return emit({ ...envelope, reason: plan.reason, detail: wrapDetail(plan.detail) })
@@ -437,6 +446,7 @@ export class MentionDispatchService {
       if (undelivered === null) this.recordLaneSession(params.taskId, existing.sessionId, commandId)
       return emit({
         ...envelope, reason: 'coalesced', sessionId: existing.sessionId, commandId,
+        decisionRef: commandId,
         detail: wrapDetail(undelivered === null
           ? `并入活跃 run（已投递，追加 ${existing.coalesced.length} 条）`
           : `并入活跃 run 但文本未送达（${undelivered}）`),
@@ -483,11 +493,12 @@ export class MentionDispatchService {
         return emit({
           ...envelope, reason: 'command_rejected',
           sessionId, commandId,
+          decisionRef: commandId,
           detail: wrapDetail(`status=${result.status}${result.reasonCode ? ` reasonCode=${result.reasonCode}` : ''}`),
         })
       }
     } catch (err) {
-      return emit({ ...envelope, reason: 'command_rejected', sessionId, commandId, detail: wrapDetail(err instanceof Error ? err.message : String(err)) })
+      return emit({ ...envelope, reason: 'command_rejected', sessionId, commandId, decisionRef: commandId, detail: wrapDetail(err instanceof Error ? err.message : String(err)) })
     }
 
     this.pending.set(key, { sessionId, since: this.now(), coalesced: [] })
@@ -501,7 +512,7 @@ export class MentionDispatchService {
       sessionId, profile: resolveRunsFor(token), entryPoint: 'zcode-mention-dispatch',
       decided: 'auto', detail: { taskId: params.taskId, commandId },
     })
-    return emit({ ...envelope, reason: 'queued', sessionId, commandId, detail: wrapDetail('run 已派发（createSession+sendText）') })
+    return emit({ ...envelope, reason: 'queued', sessionId, commandId, decisionRef: commandId, detail: wrapDetail('run 已派发（createSession+sendText）') })
   }
 
   /** 泳道会话落账（挂账清偿批二 C3）：@mention 通道的 lane_session 摄取源——
