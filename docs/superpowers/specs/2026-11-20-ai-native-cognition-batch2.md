@@ -56,3 +56,16 @@
 DESIGN_SYNC: touched
 - `docs/DESIGN.md`——§4.6 补「gateway 双签经 mxid 桥释放（CLI/transport 维持 deny-only）」「对照投影 effect 三态」两句。
 - 机制预算 changes[]：mxid 桥、全量快照扩展、对照投影（均带 sunset＋配对收敛：deny-only 临时裁决退役、快照最小/全量合一、effect 不进 settle）。
+
+
+## 收口回填（2026-11-21 实测）
+
+- T1 吞行回移＋读面 authz（742d9e9c1+df74cc4d5）：outcome 域 210 用例绿；四读端点＋GET / 行级 readScope。
+- T2 收件箱状态门＋tap 收口（9d770a5ac）：approval-inbox 153 用例绿。
+- T3 补丁 807 建卡继承（59f518ee3）：pytest 12/12（swarm 三 parents/CLI --parent 真链）；worktree 全量重放 complete。
+- T4 mxid 桥与 gateway 双签释放（edd0ab3）：pytest 62/62（桥命中两异角色释放/同人两 mxid 拒/未登记拒/桥缺席 fail-closed/无 actor 面 hold/卡片面透传）；806 重生成双向 apply-check 过、四文件与注入态逐字节一致。
+- T5 全量快照与召回留痕（dbccea0）：snapshot 33（四块物化/非关键四路降级/未 approved 双面缺席/关键源失败上抛）；dispatch-outcome 7；召回留痕反查（快照指纹⊇候选、injectionLog 按 snapshotId 命中）与 EXPERIENCE_INJECT=0 无块零留痕双钉；42 文件 448 用例绿。
+- T6 学习候选＋对照投影（4e2dcca）：learning 7（双闸/幂等/形状）＋comparison 7（单结果恒 unknown/口径漂移不算/持平 unknown/退化 degraded/取最新基线）＋控制器 4（comparison 端点/双闸触发）＋面板对照行 1；339 用例绿。
+- **试点 II（pilot2-e2e.test.ts，可复跑证据）**：people→建卡→合同(high/one-way,learningOptIn)→激活即绑定→approved 经验→派单全量快照（approvedExperienceVersions 含 exp-p2@指纹、sourceRefs 逐条）→召回留痕反查闭环→observing→测量→结算→学习候选生成→对照投影（两结果持平恒 unknown＋单结果恒 unknown）——学习链全通。
+- **T7 浏览器实物走查：两次受阻挂账批三初**。隔离 production 起服因 vendor chat-run.ts 编译红（surfaceRuns/SurfaceError 在 v0.8.28 基线无定义）拒起——main 检出注入态同红定谳（他会话 v0.8.28 换血＋778 链在途残缺，非本批引入；批二点五轮同型受阻一次，本批第二次）。按外部阻塞立法换策略：组件级全交互（outcome-section 17 用例）＋REST/store 级全链（pilot2-e2e）代偿，实物走查随批三初 778 收口后补。
+- 全量门：`npm test` 9596 passed / 2 failed（overlay-pristine-replay=8647 环境性；v2.102.0 training-manual+route-manatic=他会话在途，主检出同红在案）。
