@@ -548,7 +548,8 @@ A 类新增集中在 `custom/server/outcome/`、`custom/client/governance/compon
 - Deloitte, *Building the AI-native enterprise*（官网未显示发布日期）：https://www.deloitte.com/us/en/services/consulting/articles/enterprise-ai-operating-model-for-ai-native-businesses.html
 - BCG, *Five Ways That AI Front-Runners Change How Work Gets Done*（2026-09-24）：https://www.bcg.com/publications/2026/companies-use-ai-to-redesign-work
 - Gartner, *The AI-Shaped Organization Reimagines Work, Not Jobs*（2026-10-30）：https://www.gartner.com/en/articles/ai-shaped-organization
-- 微信二手导读者文章（2026-11-19）：https://mp.weixin.qq.com/s/iIPBYx6BjGWS3PNoqjG8Rg
+- 微信二手导读者文章·上篇（2026-11-19）：https://mp.weixin.qq.com/s/iIPBYx6BjGWS3PNoqjG8Rg
+- 微信二手导读者文章·下篇（2026-11-20）：https://mp.weixin.qq.com/s/Wgb93mOGgzWOA1mEpPoDjQ —— 下篇增量对账（2026-11-20 补充调研）：「六个核心变化」与本设计三批对象一一对应（工作设计=OutcomeContract、成果型团队=OutcomeTeam、有边界授权=DecisionProfile 矩阵、组织认知=快照/学习闭环、复合能力=角色引用、经营成果=结算与对照）；「五步转型路径」（价值链→拆工作→定分工→调机制→结果检验）即批一试点主流程的叙述形态，不新增机制面。新增可引数据点：McKinsey《The State of AI 2025》（约 1993 家受访）——25 项组织实践中工作流程重构与 genAI EBIT 影响关联最强，仅 21% 组织已根本重构至少部分工作流程（官网直连被拦，经多源二手交叉证实；仅作叙事依据，不设为产品 KPI）。
 
 仓内关联：
 
