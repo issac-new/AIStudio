@@ -440,3 +440,4 @@
 {"at":"2026-11-20T01:00:34Z","spec":"docs/superpowers/specs/2026-11-20-judge-anthropic-live-enable.md","receipt":"098ae0e7b55caeaa1277945b83135731d6d9f4b0","commit":"ab7a6aa7c"}
 {"at":"2026-11-20T01:12:26Z","spec":"docs/superpowers/specs/2026-11-20-deploy-import-smoke.md","receipt":"214934bb4da0e2b5851dcb6a1a581031a163301e","commit":"ca5beae9e"}
 {"at":"2026-11-20T02:05:00Z","spec":"docs/superpowers/specs/2026-11-19-ai-native-operating-model-design.md","receipt":"3194bacc31b8a21bb28ba05aef5d2185d52a698a","commit":"5d3974e36"}
+{"at":"2026-11-20T03:40:41Z","spec":"docs/superpowers/specs/2026-11-19-ai-native-operating-model-design.md","receipt":"e59521c1a21c2b77010b4581a88fb959ec057743","commit":"fbda213e0"}
