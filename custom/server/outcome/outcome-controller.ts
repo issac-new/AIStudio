@@ -639,7 +639,8 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   // 鉴权序同 T2 团队端点：404（合同）→401（登录用户）→403（owner-or-verifier 且
   // active，authz 含在岗校验）→校验。signedBy/source 服务端定死（客户端冒传忽略），
   // subject/assessment/rationale/evidenceRefs 校验全在服务端（appendContributionReview）；
-  // 幂等键 reviewId 重放返回原记录 200 replayed 不重复落账；成功 201。
+  // 幂等键 reviewId 重放返回原记录 200 replayed 不重复落账；传入即须为非空字符串
+  // （非字符串/空白显式 422，不静默丢弃换键——T5-M4）；成功 201。
   router.post('/:id/contribution-reviews', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -658,6 +659,13 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     const body = bodyOf(ctx)
+    // T5-M4：reviewId 传入即须为非空字符串——此前 nonEmpty 拣选会把非字符串/空串静默
+    // 丢弃再生成新键落账（judgments 侧「reviewId 须为非空字符串」校验从控制器路径不可达，
+    // 成死代码面）；幂等键是客户端语义的一部分，畸形键显式 422 而非悄悄换键
+    if (body.reviewId !== undefined && (typeof body.reviewId !== 'string' || !body.reviewId.trim())) {
+      fail(ctx, 422, '贡献评价入参非法', { code: 'invalid_input', problems: ['reviewId 须为非空字符串'] })
+      return
+    }
     // 白名单挑键：signedBy/source/unitId/signedAt 等身份冒用面一律不采纳——签署人取服务端身份；
     // 转型仅恢复静态形状（confirmTeam body.members 同款先例），真校验在 appendContributionReview
     const input = {

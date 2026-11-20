@@ -291,6 +291,53 @@ describe('OutcomeTeamSection', () => {
     expect(apiMocks.resolveOutcomeFace).toHaveBeenCalledWith('oc-1')
   })
 
+  it('走查 F2：PUT 422（成员约束校验失败）→ 表单区「确认失败：」文案带上服务端 problems', async () => {
+    apiMocks.resolveOutcomeFace.mockResolvedValue(makeFace())
+    // 错误形态照 api 层 request() 实抛：message 已拼 problems（服务端 422 invalid_input）
+    apiMocks.confirmOutcomeTeam.mockRejectedValue(new ApiError(
+      '团队约束校验失败：owner 与验证责任人须各有一名对应成员', 422, 'invalid_input',
+      ['owner 与验证责任人须各有一名对应成员'],
+    ))
+    const w = mount(OutcomeTeamSection)
+    await flushPromises()
+    await w.find('[data-testid="org-team-input"]').setValue('oc-1')
+    await w.find('[data-testid="org-team-load"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="org-team-reason"]').setValue('候选齐备，确认转 active')
+    await w.find('[data-testid="org-team-confirm"]').trigger('click')
+    await flushPromises()
+    const err = w.find('[data-testid="org-team-formerr"]')
+    expect(err.exists()).toBe(true)
+    expect(err.text()).toContain('确认失败')
+    expect(err.text()).toContain('各有一名对应成员')
+    expect(w.find('[data-testid="org-team-msg"]').exists()).toBe(false) // 失败不得伪装成功文案
+  })
+
+  it('走查 F2 修复面：失败后再次提交成功 → 错误文案清除，成功消息与 active 态回显', async () => {
+    apiMocks.resolveOutcomeFace.mockResolvedValue(makeFace())
+    apiMocks.confirmOutcomeTeam.mockRejectedValueOnce(new ApiError(
+      '团队约束校验失败：owner 与验证责任人须各有一名对应成员', 422, 'invalid_input',
+      ['owner 与验证责任人须各有一名对应成员'],
+    ))
+    apiMocks.confirmOutcomeTeam.mockResolvedValueOnce(makeTeam({ status: 'active', version: 3, changeReason: '候选齐备，确认转 active' }))
+    const w = mount(OutcomeTeamSection)
+    await flushPromises()
+    await w.find('[data-testid="org-team-input"]').setValue('oc-1')
+    await w.find('[data-testid="org-team-load"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="org-team-reason"]').setValue('候选齐备，确认转 active')
+    // 第一次提交：422 显错
+    await w.find('[data-testid="org-team-confirm"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="org-team-formerr"]').exists()).toBe(true)
+    // 第二次提交（成员补齐后）：成功清错＋成功文案＋active 态
+    await w.find('[data-testid="org-team-confirm"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="org-team-formerr"]').exists()).toBe(false)
+    expect(w.find('[data-testid="org-team-msg"]').text()).toContain('团队已确认')
+    expect(w.find('[data-testid="org-team-active"]').text()).toContain('已确认团队')
+  })
+
   it('高风险合同：警示文案与警示色（非绿）', async () => {
     apiMocks.resolveOutcomeFace.mockResolvedValue(makeFace(makeTeam(), {
       contract: { ...makeFace().contract, riskTier: 'high' },

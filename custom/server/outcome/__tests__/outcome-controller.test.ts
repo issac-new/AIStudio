@@ -1769,6 +1769,22 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(lines).toHaveLength(1)
     })
 
+    it('T5-M4：reviewId 传入即须为非空字符串——非字符串/空串显式 422，不静默丢弃换键落账', async () => {
+      const id = await seedContract('active')
+      const cases: Array<[string, unknown, string]> = [
+        ['reviewId 非字符串（畸形类型）', 12345, 'reviewId'],
+        ['reviewId 空字符串', '', 'reviewId'],
+      ]
+      for (const [label, reviewId, keyword] of cases) {
+        const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, reviewBody({ reviewId }))
+        expect(res.status, label).toBe(422)
+        expect(res.body.code, label).toBe('invalid_input')
+        expect((res.body.problems as string[]).join(), label).toContain(keyword)
+      }
+      // 全拒收：不得出现「丢弃畸形键后生成新键落账」的静默路径
+      expect(existsSync(join(tmpJudg, 'judgments.jsonl'))).toBe(false)
+    })
+
     it('422 全矩阵：rationale 短/evidenceRefs 空/assessment 非法/subjectKind 非法/subjectId 空/缺 subject/person 自评，各自点名 problems 且零落账', async () => {
       const id = await seedContract('active')
       const cases: Array<[string, Record<string, unknown>, string]> = [
@@ -1779,6 +1795,9 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
         ['subjectId 空', reviewBody({ subject: { subjectKind: 'person', subjectId: '' } }), 'subjectId'],
         ['缺 subject', reviewBody({ subject: undefined }), 'subject'],
         ['person 自评', reviewBody({ subject: { subjectKind: 'person', subjectId: 'owner-1' } }), '自评'],
+        // T5-M1 两变体：畸形类型（数组——控制器 as 转型不得放行）与缺 subjectKind 字段
+        ['subject 为数组（畸形类型）', reviewBody({ subject: ['person', 'ag-1'] }), 'subjectKind'],
+        ['subject 缺 subjectKind 字段', reviewBody({ subject: { subjectId: 'verifier-1' } }), 'subjectKind'],
       ]
       for (const [label, body, keyword] of cases) {
         const res = await post(base, `/api/hermes/outcomes/${id}/contribution-reviews`, body)

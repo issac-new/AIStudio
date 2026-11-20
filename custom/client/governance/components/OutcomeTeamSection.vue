@@ -5,7 +5,8 @@
        draft=候选提案待 owner 显式确认（候选不自动成队）；active=已确认。
      - owner 确认走 PUT /:id/team：changeReason 必填（前端先拦）、expectedVersion=当前
        团队版本（无团队首次确认为 0）、status=active；409 version_conflict 提示刷新重试
-       （乐观并发，他人先一步确认）；服务端 owner/active 名单/roster 约束终裁（403/422）。
+       （乐观并发，他人先一步确认）；422/网络错在表单区「确认失败：{message}」显错、
+       成功即清（走查 F2 修复）；服务端 owner/active 名单/roster 约束终裁（403/422）。
      - 成员编辑以当前（候选）团队为底：确认即原样提交候选成员转 active；无团队记录时
        可手工录入首版成员——不伪造「系统已派生候选」。
      - 界面诚实态：高风险警示色（不用绿色）；中文文案＋英文标识符。
@@ -75,6 +76,10 @@ async function refreshFace(): Promise<void> {
 }
 
 const contract = computed(() => face.value?.contract ?? null)
+/** team 坏档结构性不可注入（T5-M2 注记）：坏 team.json 在 store 层隔离留档
+ *  （改名 .corrupt.<ts>）后返回 null，故 GET 面 team 恒 available（item=null）——
+ *  坏档场景在本组件落入「尚未建立团队记录」文案属结构行为，不是把失败伪装成零数据；
+ *  如需向用户区分坏档须改 store 返回三态（null|team|corrupt），此处不动。 */
 const team = computed<OutcomeTeam | null>(() => face.value?.team ?? null)
 /** 前端按登录名比对 owner（服务端另有 active 名单守卫，403 终裁——OutcomeSection 同口径）。 */
 const isOwner = computed(() => !!contract.value && actor !== '' && actor === contract.value.ownerPersonId)
@@ -115,7 +120,9 @@ async function confirmTeam(): Promise<void> {
     changeReason.value = ''
   } catch (err) {
     if (err instanceof ApiError && err.code === 'version_conflict') conflict.value = true
-    else formErr.value = err instanceof Error ? err.message : String(err)
+    // 走查 F2：422/网络错统一「确认失败：」前缀在表单区显错（message 已含服务端 problems，
+    // api 层 request() 拼接），不再零反馈；成功路径在函数入口已清 formErr
+    else formErr.value = `确认失败：${err instanceof Error ? err.message : String(err)}`
   } finally {
     busy.value = false
   }

@@ -200,7 +200,12 @@ export function appendContributionReview(
   }
   if (problems.length) return { ok: false, problems }
 
-  // 幂等扫描（appendMeasurement 同款：先查后写、重放返回原记录不覆盖）
+  // 幂等扫描（appendMeasurement 同款：先查后写、重放返回原记录不覆盖）。
+  // 作用域边界（T5-M3 注记，不改行为）：扫描经 listContributionReviews(contract.outcomeId)
+  // 预过滤，reviewId 唯一性只在单 outcome 域内成立——跨 outcome 重放同 reviewId 不会命中
+  // 幂等，而是各自追加（judgments.jsonl 全局单账出现同 id 双行；读侧按 outcomeId 过滤，
+  // 互不串面）。后续若需全局唯一：改为读全量 contribution_review 行先按 id 匹配，命中
+  // 异域 id 时显式拒绝（422 reviewId 冲突）而非追加。
   if (reviewId) {
     const hit = listContributionReviews(contract.outcomeId).find((r) => r.id === reviewId)
     if (hit) return { ok: true, problems: [], record: hit, replayed: true }
