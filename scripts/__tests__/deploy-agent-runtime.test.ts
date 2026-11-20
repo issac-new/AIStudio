@@ -4,7 +4,7 @@
 // 末行 RESULT status= 是机器可读状态面（inject 预检消费）。
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -141,5 +141,59 @@ describe('deploy-agent-runtime：worktree 宿主写入隔离', () => {
     const r = runHost({ RUNTIME_DEPLOY_LINKED_WORKTREE: '0' })
     expect(r.code).toBe(0)
     expect(r.out).not.toContain('.runtime-deploy-shadow')
+  })
+})
+
+describe('部署后导入冒烟（宿主版本错配守卫）', () => {
+  function makeTarget(ok: boolean): string {
+    const target = mkdtempSync(join(tmpdir(), 'deploy-smoke-'))
+    mkdirSync(join(target, 'gateway'), { recursive: true })
+    writeFileSync(join(target, 'gateway', 'run.py'), '')
+    const bin = join(target, '.venv', 'bin')
+    mkdirSync(bin, { recursive: true })
+    const py = join(bin, 'python')
+    writeFileSync(py, ok
+      ? '#!/bin/sh\nexit 0\n'
+      : '#!/bin/sh\necho "ImportError: boom" >&2\nexit 1\n')
+    chmodSync(py, 0o755)
+    return target
+  }
+
+  function runTarget(target: string) {
+    const r = spawnSync('node', [SCRIPT, '--apply', '--runtime', target], {
+      env: {
+        ...process.env,
+        RUNTIME_DEPLOY_MANIFEST: manifestPath,
+        RUNTIME_DEPLOY_SKIP_IMPORT_SMOKE: '',
+      },
+      encoding: 'utf8',
+      maxBuffer: 4 * 1024 * 1024,
+    })
+    return { code: r.status ?? 1, out: (r.stdout ?? '') + (r.stderr ?? '') }
+  }
+
+  it('gateway.run 导入成功 → complete', () => {
+    const target = makeTarget(true)
+    try {
+      const r = runTarget(target)
+      expect(r.code).toBe(0)
+      expect(r.out).toContain('import smoke: gateway.run imports')
+      expect(r.out.trimEnd().endsWith('RESULT status=complete')).toBe(true)
+    } finally {
+      rmSync(target, { recursive: true, force: true })
+    }
+  })
+
+  it('gateway.run 导入失败 → failed/exit 1，并给出备份回滚提示', () => {
+    const target = makeTarget(false)
+    try {
+      const r = runTarget(target)
+      expect(r.code).toBe(1)
+      expect(r.out).toContain('import smoke failed')
+      expect(r.out).toContain('回滚')
+      expect(r.out.trimEnd().endsWith('RESULT status=failed')).toBe(true)
+    } finally {
+      rmSync(target, { recursive: true, force: true })
+    }
   })
 })

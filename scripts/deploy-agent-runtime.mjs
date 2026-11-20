@@ -16,7 +16,7 @@
 import { readFileSync, existsSync, copyFileSync, mkdirSync, lstatSync, readdirSync, unlinkSync } from 'node:fs';
 import { resolve, dirname, join, basename, sep } from 'node:path';
 import { homedir } from 'node:os';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { deriveAgentPatchTouchedFiles } from './platform/deploy/patch-touched.mjs';
 
 // 路径解析（Z5）：worktree 检出（.claude/worktrees/<x>）与正常检出（ncwk/overlay）层级
@@ -210,6 +210,28 @@ for (const f of [...manifest.files, ...touchedEntries]) {
     copied++; console.log(`  ~ 待同步 ${f.dest}`);
   }
 }
+// 部署后导入冒烟（2026-11-20 宿主 48 文件错配事故根治）：触碰面收口可能把宿主
+// 更新版文件换成旧 vendor 版，导致 gateway.run 导入失败。失败即 failed，不报 complete；
+// 备份在 *.bak.<stamp>，可整批回滚。RUNTIME_DEPLOY_SKIP_IMPORT_SMOKE=1 可关断（测试）。
+let smokeFailed = false;
+if (apply && !process.env.RUNTIME_DEPLOY_SKIP_IMPORT_SMOKE) {
+  const smokePy = join(dstRoot, '.venv', 'bin', 'python');
+  const smokeEntry = join(dstRoot, 'gateway', 'run.py');
+  if (existsSync(smokePy) && existsSync(smokeEntry)) {
+    const smoke = spawnSync(smokePy, ['-c', 'import gateway.run'], {
+      cwd: dstRoot, encoding: 'utf8', timeout: 120000,
+    });
+    if (smoke.status === 0) {
+      console.log('  ✓ import smoke: gateway.run imports');
+    } else {
+      smokeFailed = true;
+      const detail = `${smoke.stderr || smoke.stdout || ''}`.trim()
+        .split('\n').slice(-3).join(' | ').slice(0, 400);
+      console.log(`  ✗ import smoke failed: ${detail}`);
+      console.log(`    宿主运行时导入失败（补丁面可能与宿主版本不配套）。回滚：${dstRoot} 下 *.bak.${stamp}`);
+    }
+  }
+}
 if (keptList.length > 0) {
   console.log(`  ! 目标与模板不同 ${keptList.length} 个，已保留目标未覆盖（模板可能落后于宿主；需以模板覆盖请加 --force）：`);
   for (const k of keptList) console.log(`      ${k}`);
@@ -229,7 +251,7 @@ if (copied > 0 && apply) console.log('提示：运行时已更新，需重启各
 // 只有全同或无冲突同步成功才是 complete（exit 0）。末行 RESULT 供 inject 预检/后置消费。
 // 触碰面的 touchedMissing/touchedConverge 不参与状态：前者=本检出未注入（无真值），
 // 后者=apply 可自动收口（inject 链路内先注入后部署，源恒为新注入态）。
-const deployFailed = missing > 0 || copyErr > 0;
+const deployFailed = missing > 0 || copyErr > 0 || smokeFailed;
 const deployPartial = kept > 0 || conflict > 0;
 const deployStatus = deployFailed ? 'failed' : deployPartial ? 'partial' : 'complete';
 console.log(`RESULT status=${deployStatus}`);
