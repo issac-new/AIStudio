@@ -314,3 +314,11 @@ skills 面晋级要求 `skillDifferential`（同集有技能/无技能两态）�
 **不学的三条**：①整条轨迹逐字不裁剪（Harness² 单条上限 800 万字符）——本仓以 USD 预算为约束，学它会把成本打爆；②匿名盲选 A/B——那是没有评测集时的替代品，本仓有评测集与六层证据，加盲选只会削弱既有门；③权重共演化（Evo² 主表收益来源）——模型冻结是产品前提。
 
 **未实现、记为下一轮设计候选**：OO-Harness 的 base/specialized 继承与失败签名路由。论文自身证据显示相对最强基线 AAH 只有 +2.01/+0.86/+3.13（Workspace 的 +0.86 在标准差内），收益主要来自「专有化本身」而非「面向对象化」；真要落地须先解决多 harness 实例的抽象，成本高于本批。
+
+## 证据角色披露（2026-11-20 RSI 生命周期轮 B）
+
+出处：《When, Where, and How Experience Becomes Structure》§10.3「候选筛选消耗测试独立性」（Self-Harness 实证：留出轨迹对提案者隐藏，但留出分仍参与候选接受——分数已影响系统留下哪个版本，故不能当完全独立的最终测试）。spec：`2026-11-20-rsi-lifecycle-absorption.md`。
+
+**改动**：`PromotionGateReport` 新增可选字段 `evidenceRoles: EvidenceRoleLine[]`（`evidence`＋`roles`［edit_generation/candidate_selection/final_judgement］＋`note`），由纯函数 `evidenceRoleLines()`（`loop-report.ts`）在晋级评估时产出。披露范围：evolve_probe／noise δ／equal_budget_baseline／counterfactual／heldout 五类提案绑定证据各自在哪个决策角色被消费，并固定输出一行 `final`——环内证据全部参与候选接受，独立最终验证在环外（烧机 digest verify-latest／全量 npm test／推演轮回写），不随晋级消耗。
+
+**边界**：只披露不拦截——`evidenceRoles` 不参与 `ok`/blockers/warnings 判定，不新增门码（2026-11-01「机制扩展停止」裁定的边界内：这是证据可观测性，不是判断规则）。heldout 门本身行为不变；本节只是让「独立性已被消耗」这件事在晋级报告上可见，供人工裁决与独立审查参考。
