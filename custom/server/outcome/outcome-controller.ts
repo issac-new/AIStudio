@@ -47,7 +47,7 @@ import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds } from '../agentidentity/people'
-import {
+import { listAllContracts,
   appendEvent,
   appendMeasurement,
   appendSnapshot,
@@ -677,7 +677,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       settlementId: settlementId ?? `set-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       outcomeId: id,
       contractVersion: contract.version,
-      verdict: body.verdict,
+      verdict: String(body.verdict),
       rationale: typeof body.rationale === 'string' ? body.rationale.trim() : '',
       measurementIds: body.measurementIds as string[],
       ...(nonEmpty(body.gapNote) ? { gapNote: body.gapNote } : {}),
@@ -712,7 +712,21 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       fail(ctx, 500, '合同落盘失败（结算已入账，读侧以合同为准，可重试自愈）', { code: 'write_failed' })
       return
     }
-    created(ctx, { settlement, suggestion })
+    // 批二 T6：结算触发学习候选（双闸 learningOptIn×EXPERIENCE_INJECT；幂等按
+    // settlementId）——fail-soft：存储异常 warn 不改结算结果（学习是派生面）。
+    let learning: { generated: boolean; reason: string; candidateId?: string } | null = null
+    try {
+      const { generateLearningCandidate } = await import('./learning')
+      learning = generateLearningCandidate(next, {
+        settlementId: settlement.settlementId,
+        verdict: settlement.verdict,
+        rationale: settlement.rationale,
+        signedAt: settlement.signedAt,
+      })
+    } catch (err) {
+      learning = { generated: false, reason: `学习候选生成异常（不阻断结算）：${(err as Error).message}` }
+    }
+    created(ctx, { settlement, suggestion, learning })
   })
 
   // GET /:id/settlement：结算读面（T13/T14 双报缺口补齐）。
@@ -723,6 +737,70 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   //   查得时；孤儿 id 只带 settlementId+reason）、取代理由与时间。
   // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata 脱最新结算与取代链
   // settlement 的 rationale/gapNote（自然人裁决文本），verdict 等骨架保留。
+  // GET /:id/comparison（批二 T6）：同口径对照投影——evaluation=本合同（须已
+  // settled），baseline=listAllContracts 中最近一个同口径已结算结果；effect 恒三态，
+  // 不足两个同口径已结算结果恒 unknown＋缺口说明（「已注入」永不等于「有效」）。
+  // 纯读面不写账；owner/verifier 全量、他人 metadata（对照行含实际读数，同测量面纪律）。
+  router.get('/:id/comparison', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    if (contract.status !== 'settled') {
+      fail(ctx, 422, `对照仅适用于已结算合同（当前 ${contract.status}）`, { code: 'not_settled' })
+      return
+    }
+    const { buildOutcomeComparison } = await import('./comparison')
+    const { listEvents } = await import('./outcome-store')
+    // 装配已结算方：合同＋当前版本测量＋最新有效结算（读侧与 settlement 面同法）
+    const latestSettlementOf = (oid: string): { settlementId: string; verdict: string; signedAt: number } | null => {
+      const signed = listEvents(oid, 'settlement_signed')
+      const superseded = new Set(
+        listEvents(oid, 'settlement_superseded')
+          .map((e) => (e.payload as { settlementId?: unknown }).settlementId)
+          .filter((v): v is string => typeof v === 'string'),
+      )
+      let latest: { settlementId: string; verdict: string; signedAt: number } | null = null
+      for (const e of signed) {
+        const sp = (e.payload as { settlement?: { settlementId?: unknown; verdict?: unknown; signedAt?: unknown } }).settlement
+        const sid = sp?.settlementId
+        if (typeof sid === 'string' && sid && !superseded.has(sid)) {
+          latest = {
+            settlementId: sid,
+            verdict: typeof sp?.verdict === 'string' ? sp.verdict : 'unknown',
+            signedAt: typeof sp?.signedAt === 'number' ? sp.signedAt : e.at,
+          }
+        }
+      }
+      return latest
+    }
+    const evaluation = { contract, measurements: listMeasurements(id), settlement: latestSettlementOf(id)! }
+    const others = listAllContracts()
+      .filter((c) => c.outcomeId !== id && c.status === 'settled')
+      .map((c) => ({ contract: c, measurements: listMeasurements(c.outcomeId), settlement: latestSettlementOf(c.outcomeId)! }))
+      .filter((o) => o.settlement !== null)
+    const scope = readScopeOf(contract, actorOf(ctx))
+    const comparison = buildOutcomeComparison(evaluation, others)
+    if (scope === 'metadata') {
+      // 他人：脱对照行实际读数（actual），骨架（effect/口径/目标）保留
+      ok(ctx, {
+        readScope: 'metadata',
+        comparison: {
+          ...comparison,
+          rows: comparison.rows.map((r) => ({
+            ...r,
+            baseline: r.baseline ? { ...r.baseline, actual: null, availability: 'unavailable' } : null,
+            evaluation: r.evaluation ? { ...r.evaluation, actual: null, availability: 'unavailable' } : null,
+          })),
+        },
+      })
+      return
+    }
+    ok(ctx, { readScope: 'full', comparison })
+  })
+
   router.get('/:id/settlement', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)

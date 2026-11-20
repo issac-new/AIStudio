@@ -50,6 +50,12 @@ export interface ExpCandidate {
   scope?: ExpScope
   /** 产出侧 provenance（可选）：模型/执行者/时刻；未知字段为 null。 */
   provenance?: ExpProvenance
+  /** 批二 T6 结果学习链（可选）：来源结果合同与结算锚——候选由结算触发生成，
+   *  幂等键=sourceSettlementId（同结算不重复生成）；对照链引用（comparison 消费）。 */
+  outcomeId?: string
+  sourceSettlementId?: string
+  baselineOutcomeRef?: string
+  evaluationOutcomeRefs?: string[]
 }
 
 export interface ExpStoreShape {

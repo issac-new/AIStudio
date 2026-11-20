@@ -562,6 +562,27 @@ export function appendSnapshot(
 }
 
 /** 列快照（追加序）。未知 outcome 返回 []；坏行跳过（见 readSnapshotsAt）。 */
+/** 全量合同索引（批二 T6 对照投影消费）：扫存储根逐目录读 contract.json。
+ *  fail-soft：坏档/缺档目录跳过（对照面宁可少比不可炸）。 */
+export function listAllContracts(): OutcomeContract[] {
+  const root = outcomeStoreRoot()
+  let entries: Array<string> = []
+  try {
+    entries = readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory()).map((d) => d.name)
+  } catch {
+    return []
+  }
+  const out: OutcomeContract[] = []
+  for (const id of entries) {
+    try {
+      const c = getContract(id)
+      if (c) out.push(c)
+    } catch { /* 坏档跳过 */ }
+  }
+  return out
+}
+
 export function listSnapshots(outcomeId: string): OutcomeContextSnapshot[] {
   if (!isSafeOutcomeId(outcomeId)) return []
   return readSnapshotsAt(outcomeId, snapshotsFileOf(outcomeId))

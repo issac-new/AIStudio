@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
 import type { AddressInfo } from 'net'
-import { mkdtempSync, rmSync } from 'fs'
+import { mkdtempSync, rmSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { createRequire } from 'node:module'
@@ -1141,6 +1141,100 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(chain[0].settlement?.verdict).toBe('unknown')
       const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/settlement')
       expect(missing.status).toBe(404)
+    })
+  })
+
+  // ---- 批二 T6：comparison 端点与结算触发学习 ----
+
+  describe('GET /:id/comparison（同口径对照投影）', () => {
+    it('settled 合同＋无其他同口径结果 → effect=unknown＋缺口说明；owner 得全量读数', async () => {
+      const id = await seedContract('settled', 'task-cmp-1')
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/comparison`)
+      expect(res.status).toBe(200)
+      const body = res.body as { readScope: string; comparison: { effect: string; gapNote: string; rows: Array<{ evaluation: { actual: number | null } }> } }
+      expect(body.readScope).toBe('full')
+      expect(body.comparison.effect).toBe('unknown')
+      expect(body.comparison.gapNote).toContain('不足两个同口径')
+      expect(body.comparison.rows[0].evaluation.actual).toBe(96)
+    })
+
+    it('非 settled → 422 not_settled；不存在 → 404', async () => {
+      const draftId = await seedContract('draft', 'task-cmp-draft')
+      expect((await fetchJson(base, `/api/hermes/outcomes/${draftId}/comparison`)).status).toBe(422)
+      expect((await fetchJson(base, '/api/hermes/outcomes/oc-none/comparison')).status).toBe(404)
+    })
+  })
+
+  describe('POST /:id/settlement 触发学习候选（双闸）', () => {
+    it('EXPERIENCE_INJECT=1 且默认合同（learningOptIn 缺省 false）→ generated=false 双闸未开', async () => {
+      const prev = process.env.EXPERIENCE_INJECT
+      process.env.EXPERIENCE_INJECT = '1'
+      try {
+        const id = await seedContract('settled', 'task-learn-off')
+        const st = await post(base, `/api/hermes/outcomes/${id}/settlement`)
+        void st // seedContract 内部已结算；这里验读面 learning 侧写——重开再结算
+        const reopened = reopenOutcome(id, 'owner-1')
+        expect(reopened.ok).toBe(true)
+        allTasksTerminal = true
+        const obsHop = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'observing' })
+        expect(obsHop.status).toBe(201)
+        const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+          measurementId: `ms2-${id}`, measureId: 'm1', contractVersion: 1, actual: 96,
+          availability: 'available', evidenceRefs: ['metric://w'], observedAt: Date.now(),
+        })
+        expect(ms.status).toBe(201)
+        const again = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+          settlementId: `set2-${id}`, contractVersion: 1, verdict: 'achieved',
+          rationale: '复结算：成功率维持 96%，准予再次收口结算。', measurementIds: [`ms2-${id}`],
+        })
+        expect(again.status).toBe(201)
+        expect((again.body.learning as { generated: boolean }).generated).toBe(false)
+        expect((again.body.learning as { reason: string }).reason).toContain('双闸未开')
+      } finally {
+        if (prev === undefined) delete process.env.EXPERIENCE_INJECT
+        else process.env.EXPERIENCE_INJECT = prev
+      }
+    })
+
+    it('双闸全开（learningOptIn=true＋EXPERIENCE_INJECT=1）→ generated=true 且候选落盘（candidate 态、带 sourceSettlementId）', async () => {
+      const prev = process.env.EXPERIENCE_INJECT
+      process.env.EXPERIENCE_INJECT = '1'
+      const expDir = mkdtempSync(join(tmpdir(), 'exp-ctl-'))
+      process.env.EXP_STORE = expDir
+      try {
+        asUser('owner-1')
+        ctlBoard.prepare('INSERT OR IGNORE INTO tasks (id, title, status, outcome_id) VALUES (?, ?, ?, ?)')
+          .run('task-learn-on', '根任务-task-learn-on', 'todo', null)
+        const created = await post(base, '/api/hermes/outcomes', contractBody({
+          rootTaskId: 'task-learn-on',
+          outcomeId: 'oc-learn-on',
+          learningOptIn: true,
+        } as never))
+        expect(created.status).toBe(201)
+        const id = 'oc-learn-on'
+        const act = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'active' })
+        allTasksTerminal = true
+        const obs3 = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'observing' })
+        const ms3 = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+          measurementId: 'ms-lo', measureId: 'm1', contractVersion: 1, actual: 96,
+          availability: 'available', evidenceRefs: ['metric://w'], observedAt: Date.now(),
+        })
+        const st = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+          settlementId: 'set-lo', contractVersion: 1, verdict: 'achieved',
+          rationale: '成功率 96% 达标且验收陈述全部满足，准予收口结算。', measurementIds: ['ms-lo'],
+        })
+        expect(st.status).toBe(201)
+        expect((st.body.learning as { generated: boolean }).generated).toBe(true)
+        const raw = JSON.parse(readFileSync(join(expDir, 'exp-candidates.json'), 'utf8'))
+        expect(raw.candidates[0].status).toBe('candidate')
+        expect(raw.candidates[0].sourceSettlementId).toBe('set-lo')
+        expect(raw.candidates[0].outcomeId).toBe('oc-learn-on')
+      } finally {
+        if (prev === undefined) delete process.env.EXPERIENCE_INJECT
+        else process.env.EXPERIENCE_INJECT = prev
+        delete process.env.EXP_STORE
+        rmSync(expDir, { recursive: true, force: true })
+      }
     })
   })
 })

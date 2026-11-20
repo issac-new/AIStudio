@@ -250,3 +250,26 @@ export async function settleOutcome(
   })
   return j.settlement as OutcomeSettlement
 }
+
+/** 批二 T6：同口径对照投影（只读）。 */
+export interface OutcomeComparison {
+  evaluationOutcomeId: string
+  baselineOutcomeId: string | null
+  effect: 'improved' | 'degraded' | 'unknown'
+  gapNote: string
+  rows: Array<{
+    measureId: string; name: string; definition: string; target: number; operator: string
+    baseline: { outcomeId: string; actual: number | null; availability: string } | null
+    evaluation: { outcomeId: string; actual: number | null; availability: string } | null
+  }>
+}
+
+export async function fetchOutcomeComparison(outcomeId: string): Promise<OutcomeComparison | null> {
+  try {
+    const j = await requestOutcome(`/api/hermes/outcomes/${encodeURIComponent(outcomeId)}/comparison`)
+    return (j.comparison as OutcomeComparison) ?? null
+  } catch (err) {
+    if (err instanceof OutcomeWorkbenchDisabledError) throw err
+    return null // 非 422/404 的读失败按 fail-soft 静默（对照是增益面不炸面板）
+  }
+}
