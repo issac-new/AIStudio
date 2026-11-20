@@ -29,4 +29,27 @@ describe('people registry', () => {
   it('空名字拒绝', () => {
     expect(upsertPerson({ name: '  ', emails: [], source: 'manual' }, 't').ok).toBe(false)
   })
+
+  it('mxids 剔除空白并去重，全形与裸 localpart 都按显式值保存', () => {
+    const r = upsertPerson({
+      name: 'Alice',
+      emails: ['alice@example.com'],
+      mxids: [' @alice:example.org ', 'alice', '@alice:example.org', '', '   ', 'alice'],
+      source: 'manual',
+    }, 't')
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // 不从 email 推断 mxid，也不把裸 localpart 补成某个服务器的全形。
+    expect(r.person.mxids).toEqual(['@alice:example.org', 'alice'])
+    expect(getPerson(r.person.id)?.mxids).toEqual(['@alice:example.org', 'alice'])
+  })
+
+  it('mxids 畸形值拒绝，且不写入半规范化名册', () => {
+    const r = upsertPerson({
+      name: 'Alice', emails: [], mxids: ['@alice:example.org', '@missing-server'], source: 'manual',
+    }, 't')
+    expect(r.ok).toBe(false)
+    expect(r.problems.join('\n')).toContain('@missing-server')
+    expect(listPeople()).toEqual([])
+  })
 })

@@ -11,6 +11,9 @@ export interface Person {
   id: string
   name: string
   emails: string[]
+  /** 显式登记的 Matrix 账号（批二 mxid 桥）：@user:server 全形或裸 localpart 均收，
+   *  仅按显式值保存——不从 email 推断、不补全形（推断即猜数）。缺席=未登记。 */
+  mxids?: string[]
   active: boolean
   source: 'git' | 'manual'
   createdAt: number
@@ -67,13 +70,34 @@ export function activePersonIds(): Set<string> {
   return new Set(listPeople().filter((p) => p.active).map((p) => p.id))
 }
 
+/** mxid 形态校验：@user:server 全形（各段非空）或裸 localpart（非空、无空白与冒号）。
+ *  空白/畸形拒绝并点名原值——桥面按显式值匹配，畸形值进名册只会制造假命中。 */
+const MXID_FULL = /^@[^:\s@]+:[^:\s@]+$/
+
+function normalizeMxids(raw: unknown): { ok: true; mxids: string[] } | { ok: false; problem: string } {
+  if (raw === undefined) return { ok: true, mxids: [] }
+  if (!Array.isArray(raw)) return { ok: false, problem: 'mxids 须为字符串数组' }
+  const out: string[] = []
+  for (const v of raw) {
+    const s = String(v ?? '').trim()
+    if (!s) continue
+    if (!MXID_FULL.test(s) && /[:@\s]/.test(s)) {
+      return { ok: false, problem: `mxid 畸形：${s}（须 @user:server 全形或无空白冒号的裸 localpart）` }
+    }
+    if (!out.includes(s)) out.push(s)
+  }
+  return { ok: true, mxids: out }
+}
+
 export function upsertPerson(
-  input: { id?: string; name: string; emails?: string[]; source?: 'git' | 'manual' },
+  input: { id?: string; name: string; emails?: string[]; mxids?: string[]; source?: 'git' | 'manual' },
   _actor: string,
 ): { ok: boolean; problems: string[]; person?: Person } {
   const name = String(input.name ?? '').trim()
   if (!name) return { ok: name.trim().length > 0, problems: ['name 必填'] }
   const emails = (input.emails ?? []).map((e) => String(e).trim().toLowerCase()).filter(Boolean)
+  const mx = normalizeMxids(input.mxids)
+  if (!mx.ok) return { ok: false, problems: [mx.problem] }
   const store = readStore()
   const byId = input.id ? store.people.find((p) => p.id === input.id) : undefined
   const byEmail = emails.length
@@ -83,6 +107,8 @@ export function upsertPerson(
   if (existing) {
     existing.name = name
     existing.emails = [...new Set([...existing.emails, ...emails])]
+    // mxids 显式传入时整体替换（含空数组=清空）；未传=保留原值——不猜合并意图
+    if (input.mxids !== undefined) existing.mxids = mx.mxids
     writeStore(store)
     return { ok: true, problems: [], person: { ...existing } }
   }
@@ -90,6 +116,7 @@ export function upsertPerson(
     id: input.id ?? `p-${store.nextSeq++}`,
     name,
     emails,
+    ...(mx.mxids.length ? { mxids: mx.mxids } : {}),
     active: false,
     source: input.source ?? 'manual',
     createdAt: Date.now(),
