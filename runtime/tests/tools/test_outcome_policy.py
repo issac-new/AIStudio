@@ -9,8 +9,11 @@
   2) 词表判据与 TS 侧 decision-matrix.ts 逐字对齐（HIGH_COMMAND/只读 lead/one-way/
      对外词表同判据，正则翻译以代表性命令锁定）＋combine_declared 只调严；
   3) outcome_context 各环缺席→None（env→taskId→板库 outcome_id→contract.json）；
-  4) 双签（首签记名不释放/同人二票不释放/不同人二签释放/deny 一票即终/无身份同意
-     不推进）＋allow 记账带 outcome 引用（approval-ledger detail）。
+  4) 双签闸门（审查 I1 裁决，2026-11-20：gateway 面签署人无法映射合同 owner/verifier
+     ——people 无 mxid 桥，dual_sign 条目 deny-only，两异人签亦不放行并附「审批收件箱」
+     指引；deny 一票即终）＋pending/条目随带 outcome 引用与双签标记（M2/I1）＋
+     no-surface 自清 TLS（M1）＋outcome ask 不展示 session/always（M3）＋allow 记账带
+     outcome 引用（approval-ledger detail）。
 
 运行口径：PYTHONPATH=vendor/hermes-agent:runtime（照 tests/tools/test_evidence_reducer_archive
 头注——vendor 正包优先，runtime/tools 命名空间包让位；runtime/ 与 vendor/ 两份
@@ -236,7 +239,7 @@ def test_outcome_context_reads_board_db_readonly(outcome_env, monkeypatch):
         db.chmod(0o644)
 
 
-# ---------- 4) 双签闸门（resolve_gateway_approval 的 consent 闸门） ----------
+# ---------- 4) 双签闸门（审查 I1：gateway 面 deny-only） ----------
 
 def _enqueue_dual_sign_entry(session_key="s-dual", **extra):
     from tools.approval_gateway_wait import _ApprovalEntry
@@ -251,68 +254,49 @@ def _enqueue_dual_sign_entry(session_key="s-dual", **extra):
 @pytest.fixture(autouse=True)
 def _clean_approval_state():
     approval._gateway_queues.clear()
-    approval._session_dual_sign_first.clear()
+    approval._OUTCOME_TLS.outcome = None
     yield
     approval._gateway_queues.clear()
-    approval._session_dual_sign_first.clear()
+    approval._OUTCOME_TLS.outcome = None
 
 
-def test_dual_sign_first_vote_holds(monkeypatch):
-    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s-dual", raising=False)
+def test_dual_sign_gateway_consent_never_releases(caplog):
+    """审查 I1：gateway 签署人（mxid/session 键）无法映射合同 owner/verifier（people 无
+    mxid 桥）——两异人签亦不放行，fail-closed 附「审批收件箱」指引文案；条目留队。"""
     entry = _enqueue_dual_sign_entry()
     rid = entry.data["request_id"]
-    count = approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="owner@t")
-    assert count == 0
-    assert not entry.event.is_set()
-    assert entry in approval._gateway_queues["s-dual"]          # 条目留队
-    assert approval._session_dual_sign_first[("s-dual", rid)] == "owner@t"
-
-
-def test_dual_sign_same_person_second_vote_still_holds():
-    entry = _enqueue_dual_sign_entry()
-    rid = entry.data["request_id"]
-    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="owner@t") == 0
-    assert approval.resolve_gateway_approval("s-dual", "session", request_id=rid, actor="owner@t") == 0
+    with caplog.at_level("WARNING", logger="tools.approval"):
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0   # 第二票（异人）仍不放行
+        assert approval.resolve_gateway_approval("s-dual", "session", request_id=rid) == 0
     assert not entry.event.is_set()
     assert entry in approval._gateway_queues["s-dual"]
+    assert any("审批收件箱" in rec.message for rec in caplog.records), \
+        "deny-only 指引文案（高风险结果动作的双签放行请在审批收件箱处理）必须随拒释出现"
 
 
-def test_dual_sign_verifier_second_vote_releases():
+def test_dual_sign_card_consent_also_refused():
+    """卡片面同一闸门：resolve_gateway_approval_card 的同意点击对 dual-sign 条目不释放。"""
     entry = _enqueue_dual_sign_entry()
     rid = entry.data["request_id"]
-    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="owner@t") == 0
-    count = approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="verifier@t")
-    assert count == 1
-    assert entry.event.is_set()
-    assert entry.result == "once"
-    assert ("s-dual", rid) not in approval._session_dual_sign_first   # 释放即清理
+    entry.authority = {"requester_id": "owner@t", "approvers": ["*"]}
+    approval.restrict_gateway_approval_card_to_deny("s-dual", rid, restricted=False)
+    assert approval.resolve_gateway_approval_card(
+        "s-dual", "once", rid, actor_id="owner@t", admin_ids=()) == 0
+    assert not entry.event.is_set()
 
 
-def test_dual_sign_deny_releases_with_single_vote():
-    """deny 一票即终（fail-fast：拒绝不需要凑两人）。"""
+def test_dual_sign_deny_settles_with_single_vote():
+    """deny 一票即终（fail-fast：拒绝不是放行，双签不拦）。"""
     entry = _enqueue_dual_sign_entry()
     rid = entry.data["request_id"]
-    count = approval.resolve_gateway_approval("s-dual", "deny", request_id=rid, actor="owner@t")
+    count = approval.resolve_gateway_approval("s-dual", "deny", request_id=rid)
     assert count == 1
     assert entry.result == "deny"
-    assert ("s-dual", rid) not in approval._session_dual_sign_first
 
 
-def test_dual_sign_anonymous_consent_neither_records_nor_releases():
-    """无身份（actor=None）的同意票：记不了名也不放行——gateway 旧调用方（不带 actor）
-    的 /approve 不能单独推进双签条目。"""
-    entry = _enqueue_dual_sign_entry()
-    rid = entry.data["request_id"]
-    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0
-    assert ("s-dual", rid) not in approval._session_dual_sign_first
-    assert not entry.event.is_set()
-    # 随后带身份的两个人仍可正常走完双签
-    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="a@t") == 0
-    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="b@t") == 1
-
-
-def test_non_dual_sign_entry_ignores_actor_gate():
-    """普通审批条目（无 dual_sign_required）不受双签闸门影响——单人 once 照常释放。"""
+def test_non_dual_sign_entry_settles_normally():
+    """普通审批条目（无 dual_sign_required）不受闸门影响——单人 once 照常释放。"""
     from tools.approval_gateway_wait import _ApprovalEntry
 
     entry = _ApprovalEntry({"command": "rm -rf build", "pattern_key": "k", "description": "d"})
@@ -322,17 +306,88 @@ def test_non_dual_sign_entry_ignores_actor_gate():
     assert entry.result == "once"
 
 
-def test_dual_sign_state_cleared_on_session_teardown():
+def test_dual_sign_entry_cancelled_on_session_teardown():
     entry = _enqueue_dual_sign_entry()
-    rid = entry.data["request_id"]
-    approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor="owner@t")
-    assert ("s-dual", rid) in approval._session_dual_sign_first
     approval.clear_session("s-dual")
-    assert ("s-dual", rid) not in approval._session_dual_sign_first
     assert entry.cancelled is not None          # 条目随会话撤销唤醒
 
 
-# ---------- 5) 守卫接线：deny/allow 出口与 ledger 的 outcome 引用 ----------
+# ---------- 5) 守卫接线：deny/allow 出口、pending 引用（M1/M2）与选项面（M3） ----------
+
+_CTX_DUAL = {"taskId": "task-1", "outcomeId": "oc-1", "contractVersion": 5,
+             "riskTier": "high", "defaultReversibility": "one-way",
+             "ownerPersonId": "owner@t", "verificationOwnerId": "verifier@t"}
+
+
+def test_outcome_guard_ask_no_surface_pending_carries_ref_and_dual_sign(monkeypatch):
+    """审查 M2：ask 档无人面 pending 形状带 outcome_ref（含 owner/verifier，I1 随条目下发）
+    与 dual_sign_required 标记——T12 收件箱执法依赖。"""
+    monkeypatch.setattr(op, "outcome_context", lambda: _CTX_DUAL)
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, False, False, False))
+    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s", raising=False)
+    result = approval._outcome_guard("git push origin main")   # 声明 high+one-way → 双签格
+    assert result["approved"] is False
+    assert result.get("approval_pending") is True
+    assert result["outcome_ref"]["outcomeId"] == "oc-1"
+    assert result["outcome_ref"]["contractVersion"] == 5
+    assert result["outcome_ref"]["ownerPersonId"] == "owner@t"
+    assert result["outcome_ref"]["verificationOwnerId"] == "verifier@t"
+    assert result["dual_sign_required"] is True
+
+
+def test_outcome_guard_no_surface_clears_thread_local_mark(monkeypatch):
+    """审查 M1：no-surface 分支不经 _human_decision 的入口清标记——必须自清，同线程
+    下一个无关决策不得带残留 outcome 标记。"""
+    monkeypatch.setattr(op, "outcome_context", lambda: _CTX_DUAL)
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, False, False, False))
+    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s", raising=False)
+    approval._outcome_guard("git push origin main")
+    assert getattr(approval._OUTCOME_TLS, "outcome", None) is None
+    # 同线程下一决策（无 outcome 上下文）不产标记
+    monkeypatch.setattr(op, "outcome_context", lambda: None)
+    assert approval._outcome_guard("rm -rf build") is None
+    assert getattr(approval._OUTCOME_TLS, "outcome", None) is None
+
+
+def test_outcome_ask_gateway_payload_omits_session_always_options(monkeypatch):
+    """审查 M3：outcome ask 从不消费 session/always grant——答案面不得展示（one-shot 化）；
+    同时审批条目随带 outcome_ref 与 dual_sign 标记（I1 随条目下发）。"""
+    monkeypatch.setattr(op, "outcome_context", lambda: _CTX_DUAL)
+    captured = {}
+
+    def fake_await(session_key, notify_cb, data, surface="gateway", identity=None):
+        captured.update(data)
+        return {"resolved": True, "choice": "deny", "reason": None}
+
+    monkeypatch.setattr(approval, "_await_gateway_decision", fake_await)
+    monkeypatch.setattr(approval, "_gateway_notify_cb", lambda sk: (lambda d: None))
+    monkeypatch.setattr(approval, "_presence", lambda cb=None: (None, False, True, False))
+    monkeypatch.setattr(approval, "get_current_session_key", lambda default=None: "s", raising=False)
+    result = approval._outcome_guard("git push origin main")
+    assert captured.get("allow_session") is False        # 不展示 session
+    assert captured.get("allow_permanent") is False      # 不展示 always
+    assert captured.get("dual_sign_required") is True
+    assert captured["outcome_ref"]["outcomeId"] == "oc-1"
+    assert result["approved"] is False                    # deny 回包正常终结
+
+
+def test_ledger_pending_record_carries_dual_sign_flag(tmp_path, monkeypatch):
+    """审查 M2：pending 终态入账带 outcomeId/contractVersion/owner/verifier＋dualSignRequired。"""
+    monkeypatch.setenv("HERMES_APPROVAL_LEDGER_DIR", str(tmp_path))
+    record_approval_decision(
+        tool="terminal",
+        result={"approved": False, "status": "pending_approval", "approval_pending": True,
+                "dual_sign_required": True,
+                "outcome_ref": {"outcomeId": "oc-9", "contractVersion": 12,
+                                "ownerPersonId": "owner@t", "verificationOwnerId": "verifier@t"}},
+        session_id="s", profile="p", platform="agent_bridge", mode="build")
+    record = json.loads((tmp_path / "approval-ledger.jsonl").read_text(encoding="utf-8").strip())
+    assert record["recordType"] == "approval.pending"
+    assert record["detail"]["outcomeId"] == "oc-9"
+    assert record["detail"]["contractVersion"] == 12
+    assert record["detail"]["ownerPersonId"] == "owner@t"
+    assert record["detail"]["verificationOwnerId"] == "verifier@t"
+    assert record["detail"]["dualSignRequired"] is True
 
 def test_runtime_mirror_identical_to_vendor():
     """runtime/tools/outcome_policy.py 与 vendor 注入态逐字节一致（补丁 806 双侧同构，
@@ -346,7 +401,8 @@ def test_outcome_guard_allow_result_carries_outcome_ref(monkeypatch):
     monkeypatch.setattr(op, "outcome_context", lambda: ctx)
     result = approval._outcome_guard("ls -la")
     assert result is not None and result["approved"] is True
-    assert result["outcome_ref"] == {"outcomeId": "oc-1", "contractVersion": 5}
+    assert result["outcome_ref"]["outcomeId"] == "oc-1"
+    assert result["outcome_ref"]["contractVersion"] == 5
 
 
 def test_outcome_guard_deny_takes_guardian_deny_shape(monkeypatch):
