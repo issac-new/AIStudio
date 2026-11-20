@@ -1,8 +1,7 @@
 diff --git a/tools/outcome_policy.py b/tools/outcome_policy.py
 new file mode 100644
 --- /dev/null
-+++ b/tools/outcome_policy.py
-@@ -0,0 +1,356 @@
+@@ -0,0 +1,429 @@
 +"""Outcome 合同策略面（批一 Task 11，spec 2026-11-19-ai-native-operating-model §4.3）。
 +
 +Hermes 审批守卫的 outcome 接线单一事实源：``tools/approval.py`` 在既有 floors 与
@@ -359,6 +358,80 @@ new file mode 100644
 +        "verificationOwnerId": contract.get("verificationOwnerId"),
 +        "status": contract.get("status"),
 +    }
++
++
++# ---------- 批二 Task 4：person↔mxid 桥（gateway 双签释放） ----------
++# 语义（spec §三）：两笔 consent 的 actor 经 people.mxids **显式登记**映射到
++# ownerPersonId 与 verificationOwnerId 两个不同 person 方释放。未登记不命中、同人
++# 两 mxid 不构成两签、people.json 缺席/坏档=桥不可用=维持 deny-only（fail-closed：
++# 映射错误=越权放行，代价不对称，故永不猜）。与 TS 侧 people.ts 的显式值纪律同源。
++
++
++def _people_store_path() -> Path:
++    """people.json 路径：AGENT_IDENTITY_STORE > HERMES_WEB_UI_HOME/agent-identity
++    > ~/.hermes-web-ui/agent-identity（照 TS people.ts storeDir 同序）。"""
++    explicit = (os.environ.get("AGENT_IDENTITY_STORE") or "").strip()
++    if explicit:
++        return Path(explicit) / "people.json"
++    webui = (os.environ.get("HERMES_WEB_UI_HOME") or "").strip()
++    if webui:
++        return Path(webui) / "agent-identity" / "people.json"
++    return Path.home() / ".hermes-web-ui" / "agent-identity" / "people.json"
++
++
++def _mxid_person_index() -> dict[str, str] | None:
++    """mxid→person_id 显式登记索引；people.json 缺席/坏档→None（桥不可用，不猜）。"""
++    try:
++        raw = json.loads(_people_store_path().read_text(encoding="utf-8"))
++    except (OSError, ValueError):
++        return None
++    if not isinstance(raw, dict) or not isinstance(raw.get("people"), list):
++        return None
++    index: dict[str, str] = {}
++    for p in raw["people"]:
++        if not isinstance(p, dict):
++            continue
++        pid = p.get("id")
++        mxids = p.get("mxids")
++        if not isinstance(pid, str) or not isinstance(mxids, list):
++            continue
++        for m in mxids:
++            if isinstance(m, str) and m.strip():
++                index.setdefault(m.strip(), pid)
++    return index
++
++
++def dual_sign_step(ref: dict | None, actor: object, first_person: str | None) -> tuple[bool, str | None, str]:
++    """gateway 双签释放步进（纯判定，无 IO 副作用；people 读取在此完成）。
++
++    返回 (hold, person, reason)：hold=True 条目留队；person=本次签名人（首签时
++    供调用方记名）；reason=日志/文案语义锚。release 条件=first 与本次 person 恰为
++    {owner, verifier} 两个不同 person。
++    """
++    if not isinstance(ref, dict):
++        return True, None, "no-contract-ref：条目无合同引用，双签放行请在审批收件箱处理"
++    owner = ref.get("ownerPersonId")
++    verifier = ref.get("verificationOwnerId")
++    if not isinstance(owner, str) or not owner or not isinstance(verifier, str) or not verifier:
++        return True, None, "contract-ref-incomplete：合同引用缺 owner/verifier，双签放行请在审批收件箱处理"
++    if actor is None or not str(actor).strip():
++        return True, None, "no-actor：本面无签署人身份可绑定，双签放行请在审批收件箱处理"
++    index = _mxid_person_index()
++    if index is None:
++        return True, None, "bridge-unavailable：people 名册不可读（桥不可用，fail-closed），双签放行请在审批收件箱处理"
++    person = index.get(str(actor).strip())
++    if person is None:
++        return True, None, f"unregistered-actor：签署人 {actor} 未登记 mxid（显式登记才可命中），双签放行请在审批收件箱处理"
++    if person not in (owner, verifier):
++        # 集合外签署人不构成有效首签——不返回记名候选（返回 person 会误导调用方记名）
++        return True, None, f"outside-signer-set：签署人 {person} 非本合同 owner/verifier，双签放行请在审批收件箱处理"
++    if first_person is None:
++        return True, person, f"first-signature-recorded：首签 {person} 已记名（仍不放行，待另一角色）"
++    if first_person == person:
++        return True, person, f"same-person-second-vote：同人（{person}）两票不构成两签，双签放行请在审批收件箱处理"
++    # first 与本次 person 都在集合内且不同 → 恰为 {owner, verifier}
++    return False, person, f"dual-sign-released：{first_person}＋{person} 双签成立"
+
 diff --git a/tools/approval.py b/tools/approval.py
 --- a/tools/approval.py
 +++ b/tools/approval.py
@@ -389,30 +462,38 @@ diff --git a/tools/approval.py b/tools/approval.py
  def _get_denial_breaker_threshold() -> int:
      """``approvals.denial_breaker_threshold``: default 3; 0 or negative disables."""
      try:
-@@ -146,6 +158,30 @@
+@@ -146,20 +158,58 @@
              _gateway_queues.pop(session_key, None)
  
  
-+def _dual_sign_hold(entry, choice: str) -> bool:
++def _dual_sign_hold(entry, choice: str, actor_id: Any = None) -> bool:
 +    """True when this entry must STAY QUEUED after *choice* (审查 I1，2026-11-20：gateway 面
-+    dual-sign 条目 deny-only).
++    dual-sign 条目默认 deny-only；批二 Task 4 起 mxid 桥条件放开).
 +
-+    Gateway signer identities (mxid / session keys) cannot be bound to the outcome contract's
-+    ownerPersonId/verificationOwnerId — the people registry has no person↔mxid bridge in
-+    batch 1 — so NO consent, single or two distinct signers, releases a ``dual_sign_required``
-+    entry here; fail closed with an operator pointer. Batch 2 builds the bridge and reopens
-+    gateway release. Deny and unrecognized answers never hold: one refusal settles the
-+    request, and an unrecognized answer is refused fail-closed by the waiting side. Entries
-+    without the mark are untouched. Caller holds ``_lock``."""
++    批二语义（spec §三）：两笔 consent 的 actor 经 people.mxids **显式登记**映射到合同
++    ownerPersonId/verificationOwnerId 两个不同 person 方释放（首签记名留队，次签另一角色
++    释放）。未登记/桥不可用/同人两票/无 actor 面（slash、session 控件）仍不放行——
++    fail-closed，文案指审批收件箱。Deny and unrecognized answers never hold: one refusal
++    settles the request, and an unrecognized answer is refused fail-closed by the waiting
++    side. Entries without the mark are untouched. Caller holds ``_lock``."""
 +    if not isinstance(entry.data, dict) or not entry.data.get("dual_sign_required"):
 +        return False
 +    if choice in CONSENT_ANSWERS:
++        from tools.outcome_policy import dual_sign_step
++        hold, person, reason = dual_sign_step(
++            entry.data.get("outcome_ref"), actor_id, entry.data.get("dual_sign_first_person"))
++        if not hold:
++            # 释放：清记名状态，避免条目复用/审计误读
++            entry.data.pop("dual_sign_first_person", None)
++            logger.warning("Dual-sign approval (request_id=%s) RELEASED via mxid bridge: %s",
++                           entry.data.get("request_id"), reason)
++            return False
++        if person is not None and entry.data.get("dual_sign_first_person") is None:
++            # 首签记名（持久在队列快照里，审计可查）
++            entry.data["dual_sign_first_person"] = person
 +        logger.warning(
-+            "Dual-sign approval (request_id=%s) was NOT released: gateway signer identities "
-+            "cannot be bound to the outcome contract's owner/verifier (batch 1 has no "
-+            "person↔mxid bridge). 高风险结果动作的双签放行请在审批收件箱处理。",
-+            entry.data.get("request_id"),
-+        )
++            "Dual-sign approval (request_id=%s) NOT released: %s",
++            entry.data.get("request_id"), reason)
 +        return True
 +    return False
 +
@@ -420,18 +501,29 @@ diff --git a/tools/approval.py b/tools/approval.py
  def resolve_gateway_approval(session_key: str, choice: str,
                               resolve_all: bool = False,
                               reason: Optional[str] = None,
-@@ -155,6 +191,10 @@
+-                             request_id: Optional[str] = None) -> int:
++                             request_id: Optional[str] = None,
++                             actor_id: Any = None) -> int:
+     """Unblock waiting agent thread(s) from the gateway's /approve or /deny handler.
+ 
      *resolve_all* resolves every pending approval (``/approve all``); otherwise the oldest
      (FIFO) or the one matching *request_id*. *reason* is the ``/deny <reason>`` free text,
-     relayed to the agent in the BLOCKED message. Returns the number resolved.
+-    relayed to the agent in the BLOCKED message. Returns the number resolved.
++    relayed to the agent in the BLOCKED message. *actor_id*（卡片面透传签署人）参与双签
++    步进（批二 mxid 桥）；无 actor 的调用面 consent 仍不放行。 Returns the number resolved.
 +
-+    Entries marked ``dual_sign_required`` (outcome policy high+one-way) are deny-only here:
-+    consent never releases them on the gateway surface (see ``_dual_sign_hold``); deny
-+    settles as usual.
++    Entries marked ``dual_sign_required`` (outcome policy high+one-way) release only via the
++    mxid bridge's two-distinct-role consents (see ``_dual_sign_hold``); deny settles as usual.
      """
      # Canonicalize where the answer is stored, not only in ``grant``: coalesced followers
      # (``choice == "once"`` covers only the leader) and the protected-write and elicitation
-@@ -175,17 +215,26 @@
+     # gates read ``entry.result`` directly, so an alias of "once" must already be "once" here.
+     choice = canonical_approval_choice(choice)
++    actor = str(actor_id).strip() if actor_id is not None and str(actor_id).strip() else None
+     with _lock:
+         queue = _gateway_queues.get(session_key)
+         if not queue:
+@@ -175,17 +225,26 @@
              queue.clear()
          else:
              targets = [queue.pop(0)]
@@ -441,7 +533,7 @@ diff --git a/tools/approval.py b/tools/approval.py
 +            # The dual-sign gate runs inside the same critical section as the settle: a held
 +            # entry must go back on the queue before anything is committed, so a waiter can
 +            # never observe its entry both queued and resolved.
-+            (held if _dual_sign_hold(target, choice) else released).append(target)
++            (held if _dual_sign_hold(target, choice, actor) else released).append(target)
 +        for target in reversed(held):
 +            queue.insert(0, target)
          if not queue:
@@ -460,16 +552,18 @@ diff --git a/tools/approval.py b/tools/approval.py
  
  
  def _entry_for_request(session_key: str, request_id: Optional[str]):
-@@ -233,6 +282,8 @@
+@@ -233,7 +292,9 @@
              if not may_answer(target.authority, actor_id, admin_ids, extra, approval_commands(choice),
                                admitted=admitted):
                  return 0
-+        # 审查 I1：卡片答案经同一 deny-only 双签闸门——gateway/卡片面签署人无法绑定合同
-+        # owner/verifier（people 无 mxid 桥），dual-sign 条目放行只在审批收件箱。
-         return resolve_gateway_approval(session_key, choice, request_id=request_id)
+-        return resolve_gateway_approval(session_key, choice, request_id=request_id)
++        # 批二 Task 4：卡片面签署人经 mxid 桥参与双签步进（两异角色释放）；
++        # CLI/transport 单身份面维持 deny-only（见 _dual_sign_hold 与 grant 闭包拦截）。
++        return resolve_gateway_approval(session_key, choice, request_id=request_id, actor_id=actor_id)
  
  
-@@ -658,8 +709,12 @@
+ def withdraw_gateway_approval(session_key: str, request_id: str, cause: str) -> bool:
+@@ -658,8 +719,12 @@
  
  
  def _record_deferred_approval(*, session_key: str, request_id: str, tool: str,
@@ -484,7 +578,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      try:
          from hermes_cli.followups import capture_route
          from tools.deferred_calls import record_deferred
-@@ -676,6 +731,8 @@
+@@ -676,6 +741,8 @@
              preview=preview,
              risk=risk,
              route=route,
@@ -493,15 +587,18 @@ diff --git a/tools/approval.py b/tools/approval.py
          )
      except Exception:  # noqa: BLE001 - deferral must never break the approval gate
          logger.debug("deferred approval record failed; falling back to deny", exc_info=True)
-@@ -1041,6 +1098,28 @@
- )
- 
- 
+@@ -1038,7 +1105,29 @@
+         "'{description}'). Do NOT retry — the user has explicitly rejected it."
+     ),
+     smart_log="",
++)
++
++
 +_DUAL_SIGN_SURFACE_REFUSAL_MESSAGE = (
 +    "BLOCKED by outcome policy: this action is a high-risk one-way outcome action that "
 +    "requires dual sign-off — no single surface can release it. "
-+    "高风险结果动作的双签放行请在审批收件箱处理。 Do NOT retry or rephrase."
-+)
++    "本面为单身份通道不能放行：双签可经 mx: gateway 卡片两角签署，或在审批收件箱处理。 Do NOT retry or rephrase."
+ )
 +
 +
 +def _outcome_dual_sign_surface_refusal(description: str, pattern_key: str, noun: str = "command") -> dict:
@@ -517,12 +614,10 @@ diff --git a/tools/approval.py b/tools/approval.py
 +    )
 +    return _denied(_DUAL_SIGN_SURFACE_REFUSAL_MESSAGE, pattern_key=pattern_key,
 +                   description=description, outcome="dual_sign_refused", noun=noun)
-+
-+
+ 
+ 
  def _smart_gate(spec: _GateSpec, command: str, description: str, pattern_key: str,
-                 pattern_keys: list[str], session_key: str, *,
-                 human_present: bool) -> tuple[dict | None, bool]:
-@@ -1089,6 +1168,12 @@
+@@ -1089,6 +1178,12 @@
      """
      from agent.redact import redact_approval_display
  
@@ -535,7 +630,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      smart_denied = False
      manual_only = not SMART_MANUAL_ONLY_DESCRIPTIONS.isdisjoint(pattern_keys)
      if smart and not manual_only:
-@@ -1100,7 +1185,9 @@
+@@ -1100,7 +1195,9 @@
      # A command the scanners could not read to the end is approved one run at a time: a session or
      # always grant on its key would wave through every later command that trips the scan budget.
      # A manual-only class (an osascript program that can discard unsaved work) is one run too.
@@ -546,7 +641,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      allow_permanent = not one_shot
  
      def deny(template: str, outcome: str, **fmt) -> dict:
-@@ -1124,6 +1211,11 @@
+@@ -1124,6 +1221,11 @@
                  choice, pattern_key, session_key, "/".join(sorted(CONSENT_ANSWERS)))
              return _denied(_UNRECOGNIZED_ANSWER, pattern_key=pattern_key,
                             description=description, outcome="unrecognized_answer", noun=spec.noun)
@@ -558,7 +653,7 @@ diff --git a/tools/approval.py b/tools/approval.py
          # A smart-DENY owner override or a manual-only class is always one operation, even if an older
          # client returns "session" or "always".
          if not one_shot:
-@@ -1164,8 +1256,20 @@
+@@ -1164,8 +1266,20 @@
                  "allow_permanent": not one_shot,
                  "allow_session": not one_shot,
              }
@@ -579,7 +674,7 @@ diff --git a/tools/approval.py b/tools/approval.py
              decision = _await_gateway_decision(session_key, notify_cb, data, surface="gateway", identity=command)
              if decision.get("notify_failed"):
                  return _denied(spec.notify_failed, pattern_key=pattern_key,
-@@ -1187,10 +1291,13 @@
+@@ -1187,10 +1301,13 @@
                  if _should_defer_approval():
                      deferred_rec = _record_deferred_approval(
                          session_key=session_key,
@@ -596,7 +691,7 @@ diff --git a/tools/approval.py b/tools/approval.py
                      )
                      if deferred_rec is not None:
                          return _deferred_approval_result(
-@@ -1410,6 +1517,95 @@
+@@ -1410,6 +1527,95 @@
              logger.warning("Sudo stdin guard block: %s (command: %s)", sudo_guess_desc, command[:200])
              return _sudo_stdin_block_result(sudo_guess_desc)
      return _user_deny_block(command)
@@ -692,7 +787,7 @@ diff --git a/tools/approval.py b/tools/approval.py
  
  
  def check_dangerous_command(command: str, env_type: str,
-@@ -1423,6 +1619,9 @@
+@@ -1423,6 +1629,9 @@
      blocked = _floor_block(command)
      if blocked is not None:
          return blocked
@@ -702,7 +797,7 @@ diff --git a/tools/approval.py b/tools/approval.py
      unread = hardline_scan_incomplete(command)
      if _yolo_active() or approval_context._get_approval_mode() == "off":
          return _scan_incomplete_block(_NO_REVIEWER_BYPASS) if unread else _approved()
-@@ -1491,6 +1690,10 @@
+@@ -1491,6 +1700,10 @@
      if blocked is not None:
          return blocked
  

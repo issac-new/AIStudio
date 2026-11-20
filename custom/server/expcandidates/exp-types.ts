@@ -50,9 +50,28 @@ export interface ExpCandidate {
   scope?: ExpScope
   /** 产出侧 provenance（可选）：模型/执行者/时刻；未知字段为 null。 */
   provenance?: ExpProvenance
+  /** 批二 T6 结果学习链（可选）：来源结果合同与结算锚——候选由结算触发生成，
+   *  幂等键=sourceSettlementId（同结算不重复生成）；对照链引用（comparison 消费）。 */
+  outcomeId?: string
+  sourceSettlementId?: string
+  baselineOutcomeRef?: string
+  evaluationOutcomeRefs?: string[]
 }
 
 export interface ExpStoreShape {
   candidates: ExpCandidate[]
   nextSeq: number
+  /** 批二 T5 召回留痕（追加制，上限 EXP_INJECTION_LOG_CAP）：每次派单快照注入
+   *  approved 经验记一行——runLabel＋snapshotId＋ids 三元组可反查快照指纹
+   *  （approvedExperienceVersions 含被注入候选）。「已注入」≠「有效」，效果
+   *  断言走 outcome 对照投影（comparison.ts），本账只留事实。 */
+  injectionLog?: ExpInjectionRecord[]
+}
+
+/** 召回留痕行（批二 T5）。 */
+export interface ExpInjectionRecord {
+  runLabel: string
+  snapshotId: string
+  ids: string[]
+  at: number
 }

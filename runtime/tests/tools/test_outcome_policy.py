@@ -523,3 +523,124 @@ def test_ledger_without_outcome_ref_unchanged(tmp_path, monkeypatch):
                              session_id="s", profile="p", platform="cli", mode="build")
     record = json.loads((tmp_path / "approval-ledger.jsonl").read_text(encoding="utf-8").strip())
     assert "outcomeId" not in record.get("detail", {})
+
+
+# ---- 批二 Task 4：mxid 桥与 gateway 双签释放 -----------------------------------
+# 语义（spec §三）：两笔 consent 的 actor 经 people.mxids 显式登记映射到
+# ownerPersonId 与 verificationOwnerId 两个不同 person 方释放；同人两 mxid 不构成
+# 两签；未登记不命中；people.json 缺席/坏档=桥不可用=维持 deny-only fail-closed；
+# 无 actor 的面（slash/session 控件）仍不放行；CLI/transport 单身份面维持 deny-only。
+
+
+def _enqueue_dual_sign_with_ref(tmp_path, monkeypatch, *, owner_mx, verifier_mx,
+                                people=None, broken_people=False):
+    """建隔离 people.json＋带 outcome_ref 的双签条目；返回 (entry, rid)。
+
+    people 形如 [("p-1", ["@o:t"]), ("p-2", ["@v:t"])]；broken_people=True 时写坏档。
+    outcome_ref 的 owner/verifier 对应 p-1/p-2（与 mxid 解耦——桥靠登记值命中）。
+    """
+    import json as _json
+    ident = tmp_path / "ident"
+    ident.mkdir(parents=True, exist_ok=True)
+    if broken_people:
+        (ident / "people.json").write_text("{not json", encoding="utf-8")
+    elif people is not None:
+        (ident / "people.json").write_text(_json.dumps({
+            "people": [
+                {"id": pid, "name": pid, "emails": [], "mxids": mx, "active": True,
+                 "source": "manual", "createdAt": 1}
+                for pid, mx in people
+            ], "nextSeq": 99}), encoding="utf-8")
+    monkeypatch.setenv("AGENT_IDENTITY_STORE", str(ident))
+    entry = _enqueue_dual_sign_entry(outcome_ref={
+        "outcomeId": "oc-b2", "contractVersion": 3,
+        "ownerPersonId": "p-1", "verificationOwnerId": "p-2"})
+    return entry, entry.data["request_id"]
+
+
+def test_dual_sign_mxid_bridge_releases_on_owner_then_verifier(tmp_path, monkeypatch):
+    """桥命中：owner 首签（记名仍留队）→ verifier 次签释放；集合恰为 {owner, verifier}。"""
+    entry, rid = _enqueue_dual_sign_with_ref(
+        tmp_path, monkeypatch, owner_mx="@o:t", verifier_mx="@v:t",
+        people=[("p-1", ["@o:t"]), ("p-2", ["@v:t"])])
+    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@o:t") == 0
+    assert not entry.event.is_set() and entry in approval._gateway_queues["s-dual"]
+    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@v:t") == 1
+    assert entry.event.is_set()
+
+
+def test_dual_sign_bridge_same_person_two_mxids_never_releases(tmp_path, monkeypatch, caplog):
+    """同人两 mxid：p-1 登记两个 mxid，两票不同 mxid 仍 hold——按 person 判同，不按字符串。"""
+    entry, rid = _enqueue_dual_sign_with_ref(
+        tmp_path, monkeypatch, owner_mx="@o:t", verifier_mx="@v:t",
+        people=[("p-1", ["@o:t", "@o2:t"]), ("p-2", ["@v:t"])])
+    with caplog.at_level("WARNING", logger="tools.approval"):
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@o:t") == 0
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@o2:t") == 0
+    assert not entry.event.is_set()
+    assert any("同一人" in rec.message or "同人" in rec.message for rec in caplog.records), \
+        "同人二票拒释文案必须点名「同一人」语义"
+
+
+def test_dual_sign_bridge_unregistered_actor_never_releases(tmp_path, monkeypatch, caplog):
+    """未登记 mxid 永不命中（桥外身份零放大）；文案指收件箱。"""
+    entry, rid = _enqueue_dual_sign_with_ref(
+        tmp_path, monkeypatch, owner_mx="@o:t", verifier_mx="@v:t",
+        people=[("p-1", ["@o:t"]), ("p-2", ["@v:t"])])
+    with caplog.at_level("WARNING", logger="tools.approval"):
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@stranger:t") == 0
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@o:t") == 0
+        # 首签有效后再来陌生人：仍不放行（集合不齐）
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@stranger:t") == 0
+    assert not entry.event.is_set()
+    assert any("审批收件箱" in rec.message for rec in caplog.records)
+
+
+def test_dual_sign_bridge_outside_owner_verifier_set_never_releases(tmp_path, monkeypatch):
+    """集合外 person（登记在册但非本合同 owner/verifier）不构成任何一签。"""
+    entry, rid = _enqueue_dual_sign_with_ref(
+        tmp_path, monkeypatch, owner_mx="@o:t", verifier_mx="@v:t",
+        people=[("p-1", ["@o:t"]), ("p-2", ["@v:t"]), ("p-3", ["@x:t"])])
+    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@x:t") == 0
+    assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@v:t") == 0
+    assert not entry.event.is_set()
+
+
+def test_dual_sign_bridge_missing_or_broken_people_fails_closed(tmp_path, monkeypatch, caplog):
+    """people.json 缺席/坏档=桥不可用=维持 deny-only（两异人签亦不放行）。"""
+    for broken in (False, True):  # False=目录在但 people.json 缺席；True=坏档
+        approval._gateway_queues.clear()
+        entry, rid = _enqueue_dual_sign_with_ref(
+            tmp_path / ("b" if broken else "m"), monkeypatch,
+            owner_mx="@o:t", verifier_mx="@v:t",
+            people=None, broken_people=broken)
+        with caplog.at_level("WARNING", logger="tools.approval"):
+            assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@o:t") == 0
+            assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid, actor_id="@v:t") == 0
+        assert not entry.event.is_set()
+
+
+def test_dual_sign_no_actor_surface_still_holds(tmp_path, monkeypatch, caplog):
+    """无 actor 面（slash/session 控件）：consent 无签署人身份可绑定 → 仍不放行。"""
+    entry, rid = _enqueue_dual_sign_with_ref(
+        tmp_path, monkeypatch, owner_mx="@o:t", verifier_mx="@v:t",
+        people=[("p-1", ["@o:t"]), ("p-2", ["@v:t"])])
+    with caplog.at_level("WARNING", logger="tools.approval"):
+        assert approval.resolve_gateway_approval("s-dual", "once", request_id=rid) == 0
+    assert not entry.event.is_set()
+    assert any("签署人身份" in rec.message for rec in caplog.records)
+
+
+def test_dual_sign_card_surface_passes_actor_through_bridge(tmp_path, monkeypatch):
+    """卡片面透传 actor_id 走同一桥：owner 卡片签→verifier 卡片签=释放。"""
+    entry, rid = _enqueue_dual_sign_with_ref(
+        tmp_path, monkeypatch, owner_mx="@o:t", verifier_mx="@v:t",
+        people=[("p-1", ["@o:t"]), ("p-2", ["@v:t"])])
+    entry.authority = {"requester_id": "@o:t", "approvers": ["*"]}
+    approval.restrict_gateway_approval_card_to_deny("s-dual", rid, restricted=False)
+    assert approval.resolve_gateway_approval_card(
+        "s-dual", "once", rid, actor_id="@o:t", admin_ids=()) == 0
+    assert not entry.event.is_set()
+    assert approval.resolve_gateway_approval_card(
+        "s-dual", "once", rid, actor_id="@v:t", admin_ids=()) == 1
+    assert entry.event.is_set()

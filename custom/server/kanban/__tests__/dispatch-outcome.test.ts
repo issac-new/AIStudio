@@ -196,7 +196,15 @@ describe('column.dispatch 结果解析门', () => {
     addTask('tk-d1', 'doing', 'oc-idem')
     const first = await dispatchColumnTransition(fakeService(), params)
     const second = await dispatchColumnTransition(fakeService(), { ...params, taskId: 'tk-d1' })
-    expect(second.outcome!.snapshotId).toBe(first.outcome!.snapshotId)
+    // 批二语义修正：全量快照物化世界态（evidence/评审/计划面），dispatch 本身每步
+    // 写 lane 证据——第一次派单后世界已变，第二次快照不同是诚实行为，不再断言同 id。
+    // 内容哈希幂等改由「无副作用的连续两次直调」守（世界不变→快照逐字节相同）。
+    expect(second.outcome).not.toBeNull()
+    expect(second.outcome!.outcomeId).toBe(first.outcome!.outcomeId)
+    const { resolveDispatchOutcome } = await import('../../outcome/kanban-resolution')
+    const directA = await resolveDispatchOutcome(params.taskId!)
+    const directB = await resolveDispatchOutcome(params.taskId!)
+    expect(directA!.snapshotId).toBe(directB!.snapshotId)
   })
 
   it('I1 门统一：OUTCOME_WORKBENCH≠1（未设/显式 0）时带终态绑定任务的派发走原行为——不拒、无快照、无三元组', async () => {

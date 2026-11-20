@@ -354,3 +354,76 @@ def outcome_context(env=None) -> dict | None:
         "verificationOwnerId": contract.get("verificationOwnerId"),
         "status": contract.get("status"),
     }
+
+
+# ---------- 批二 Task 4：person↔mxid 桥（gateway 双签释放） ----------
+# 语义（spec §三）：两笔 consent 的 actor 经 people.mxids **显式登记**映射到
+# ownerPersonId 与 verificationOwnerId 两个不同 person 方释放。未登记不命中、同人
+# 两 mxid 不构成两签、people.json 缺席/坏档=桥不可用=维持 deny-only（fail-closed：
+# 映射错误=越权放行，代价不对称，故永不猜）。与 TS 侧 people.ts 的显式值纪律同源。
+
+
+def _people_store_path() -> Path:
+    """people.json 路径：AGENT_IDENTITY_STORE > HERMES_WEB_UI_HOME/agent-identity
+    > ~/.hermes-web-ui/agent-identity（照 TS people.ts storeDir 同序）。"""
+    explicit = (os.environ.get("AGENT_IDENTITY_STORE") or "").strip()
+    if explicit:
+        return Path(explicit) / "people.json"
+    webui = (os.environ.get("HERMES_WEB_UI_HOME") or "").strip()
+    if webui:
+        return Path(webui) / "agent-identity" / "people.json"
+    return Path.home() / ".hermes-web-ui" / "agent-identity" / "people.json"
+
+
+def _mxid_person_index() -> dict[str, str] | None:
+    """mxid→person_id 显式登记索引；people.json 缺席/坏档→None（桥不可用，不猜）。"""
+    try:
+        raw = json.loads(_people_store_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(raw, dict) or not isinstance(raw.get("people"), list):
+        return None
+    index: dict[str, str] = {}
+    for p in raw["people"]:
+        if not isinstance(p, dict):
+            continue
+        pid = p.get("id")
+        mxids = p.get("mxids")
+        if not isinstance(pid, str) or not isinstance(mxids, list):
+            continue
+        for m in mxids:
+            if isinstance(m, str) and m.strip():
+                index.setdefault(m.strip(), pid)
+    return index
+
+
+def dual_sign_step(ref: dict | None, actor: object, first_person: str | None) -> tuple[bool, str | None, str]:
+    """gateway 双签释放步进（纯判定，无 IO 副作用；people 读取在此完成）。
+
+    返回 (hold, person, reason)：hold=True 条目留队；person=本次签名人（首签时
+    供调用方记名）；reason=日志/文案语义锚。release 条件=first 与本次 person 恰为
+    {owner, verifier} 两个不同 person。
+    """
+    if not isinstance(ref, dict):
+        return True, None, "no-contract-ref：条目无合同引用，双签放行请在审批收件箱处理"
+    owner = ref.get("ownerPersonId")
+    verifier = ref.get("verificationOwnerId")
+    if not isinstance(owner, str) or not owner or not isinstance(verifier, str) or not verifier:
+        return True, None, "contract-ref-incomplete：合同引用缺 owner/verifier，双签放行请在审批收件箱处理"
+    if actor is None or not str(actor).strip():
+        return True, None, "no-actor：本面无签署人身份可绑定，双签放行请在审批收件箱处理"
+    index = _mxid_person_index()
+    if index is None:
+        return True, None, "bridge-unavailable：people 名册不可读（桥不可用，fail-closed），双签放行请在审批收件箱处理"
+    person = index.get(str(actor).strip())
+    if person is None:
+        return True, None, f"unregistered-actor：签署人 {actor} 未登记 mxid（显式登记才可命中），双签放行请在审批收件箱处理"
+    if person not in (owner, verifier):
+        # 集合外签署人不构成有效首签——不返回记名候选（返回 person 会误导调用方记名）
+        return True, None, f"outside-signer-set：签署人 {person} 非本合同 owner/verifier，双签放行请在审批收件箱处理"
+    if first_person is None:
+        return True, person, f"first-signature-recorded：首签 {person} 已记名（仍不放行，待另一角色）"
+    if first_person == person:
+        return True, person, f"same-person-second-vote：同人（{person}）两票不构成两签，双签放行请在审批收件箱处理"
+    # first 与本次 person 都在集合内且不同 → 恰为 {owner, verifier}
+    return False, person, f"dual-sign-released：{first_person}＋{person} 双签成立"

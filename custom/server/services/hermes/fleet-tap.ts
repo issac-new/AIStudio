@@ -70,15 +70,28 @@ export function extractPendingInteractions(
       const id = String(data.approval_id || '')
       if (!id) continue
       const rawChoices = Array.isArray(data.choices) ? data.choices.map((item: unknown) => String(item)) : []
+      // 批一 Task 12 复审 I-2：gateway 条目 data 的 outcome 绑定字段原样透传
+      // （806 补丁把 outcome_ref/dual_sign_required 放进审批条目 data）——
+      // 收件箱 decide 侧据此走合同门＋owner/verifier 双签门，防单签绕版本门。
+      // 批二 Task 2：字段读取瞬态失败（撕裂状态对象/getter 抛错）不拖垮整条
+      // approval 的可见性——条目照常列出但标 outcome_unverified（「有绑定但不可证」），
+      // 由收件箱 decide/autopass 面拒绝；不回退成「无绑定」放行（fail-open 收口）。
+      let outcomeRef: FleetApprovalPreview['outcome_ref']
+      let dualSignRequired: FleetApprovalPreview['dual_sign_required']
+      let outcomeUnverified = false
+      try {
+        outcomeRef = data.outcome_ref
+        dualSignRequired = data.dual_sign_required
+      } catch {
+        outcomeUnverified = true
+      }
       approvals.set(id, {
         approval_id: id,
         preview: String(data.preview || data.tool || data.name || data.summary || '').trim(),
         choices: rawChoices.length ? rawChoices : ['once', 'session', 'deny'],
-        // 批一 Task 12 复审 I-2：gateway 条目 data 的 outcome 绑定字段原样透传
-        // （806 补丁把 outcome_ref/dual_sign_required 放进审批条目 data）——
-        // 收件箱 decide 侧据此走合同门＋owner/verifier 双签门，防单签绕版本门。
-        ...(data.outcome_ref !== undefined ? { outcome_ref: data.outcome_ref } : {}),
-        ...(data.dual_sign_required !== undefined ? { dual_sign_required: data.dual_sign_required } : {}),
+        ...(outcomeRef !== undefined ? { outcome_ref: outcomeRef } : {}),
+        ...(dualSignRequired !== undefined ? { dual_sign_required: dualSignRequired } : {}),
+        ...(outcomeUnverified ? { outcome_unverified: true } : {}),
       })
     } else if (event === 'approval.resolved') {
       approvals.delete(String(data.approval_id || ''))

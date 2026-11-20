@@ -3,7 +3,7 @@
 // operating-model-design.md §4.2/§4.6；批一 Task 7）。
 //
 // 端点表（简报逐字，前缀 /api/hermes/outcomes）：
-//   GET  /                    —— 列表，query status/rootTaskId/owner 过滤
+//   GET  /                    —— 列表，query status/rootTaskId/owner 过滤（行级 readScope，T1 补）
 //   POST /                    —— 创建（clientRequestId 幂等；rootTaskId 冲突 409）
 //   GET  /:id                 —— 合同详情
 //   PUT  /:id                 —— 修订（expectedVersion 乐观并发）
@@ -31,6 +31,12 @@
 //   演进到其他状态（如重开回 active）则如实返回原事件不回滚。
 // - 幂等键作用域：clientRequestId 以 `${actor}:${clientRequestId}` 组合键落账与查定
 //   （I2 裁决）——异 actor 重放同键不得命中他人合同；存量无组合键数据无需迁移。
+// - 读面 authz（批二 T1，spec 批二 §一）：GET /、/:id、/:id/context、/:id/measurements、
+//   /:id/settlement——owner/verifier（authz 同源判权：合同字段→people active 校验）得
+//   readScope:'full' 全量；其他登录用户 200 但 readScope:'metadata' 脱去敏感内容
+//   （最小集：合同 measures[].definition、快照 content 整体、测量 evidenceRefs、结算
+//   rationale/gapNote——快照物化文本与 C1 保护面对齐）；列表面 readScope 行级（混合
+//   归属）；功能门/404 语义不变。
 // - 归属证明（spec §4.6）：opts.verifyRootTask 注入面返回 null（不可证明）默认
 //   422 ownership_unavailable，env OUTCOME_ALLOW_UNVERIFIED_ROOT=1 显式放行（批一
 //   试点/测试用，Task 10 接真实现后不再需要）；{ok:false}=可证明且不归属，永不放行。
@@ -41,7 +47,7 @@ import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds } from '../agentidentity/people'
-import {
+import { listAllContracts,
   appendEvent,
   appendMeasurement,
   appendSnapshot,
@@ -131,6 +137,44 @@ function activeProblemsFor(ids: string[]): string[] {
   )
 }
 
+// ---------- 读面 authz（批二 T1）：owner/verifier 全量、其他登录用户 metadata ----------
+
+/** 读面档位：full=全量；metadata=200 但脱去敏感内容（脱敏清单见各投影函数）。 */
+type OutcomeReadScope = 'full' | 'metadata'
+
+/** 读面判权：与写面同源（authz 'owner-or-verifier'＝合同字段→people active 校验）。
+ *  owner/verifier 得 'full'；其他登录用户（含未登录降级 anonymous）得 'metadata'。 */
+const readScopeOf = (contract: OutcomeContract, actor: string): OutcomeReadScope =>
+  authz(contract, actor, 'owner-or-verifier') ? 'full' : 'metadata'
+
+/** metadata 态合同脱敏（批二 T1 敏感度最小集）：measures[].definition（度量口径
+ *  文本）整体脱去；度量骨架（measureId/name/unit/operator/baseline/target/sourceRef）
+ *  与合同其余字段保留——元数据消费面（身份/状态/骨架）不受影响。 */
+function contractMetadata(c: OutcomeContract): Record<string, unknown> {
+  const { measures, ...rest } = c
+  return {
+    ...rest,
+    measures: measures.map((m) => {
+      const { definition: _d, ...skeleton } = m
+      return skeleton
+    }),
+  }
+}
+
+/** metadata 态测量行脱敏：evidenceRefs（证据引用可内嵌 token——sanitizeForSnapshot
+ *  同款泄漏形态）脱去；测量事实骨架（measureId/actual/availability/时间戳）保留。 */
+function measurementMetadata(m: OutcomeMeasurement): Record<string, unknown> {
+  const { evidenceRefs: _e, ...rest } = m
+  return rest
+}
+
+/** metadata 态结算脱敏：rationale/gapNote（自然人裁决理由与缺口说明文本）脱去；
+ *  verdict/settlementId/签署身份与时间等骨架保留。最新结算与 superseded 链同权。 */
+function settlementMetadata(s: Record<string, unknown>): Record<string, unknown> {
+  const { rationale: _r, gapNote: _g, ...rest } = s
+  return rest
+}
+
 /** 合同落盘（先账后物的「物」半边）：路径规则与 store 私有 contractFileOf 一致。 */
 function persistContract(next: OutcomeContract): boolean {
   try {
@@ -213,8 +257,12 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     await next()
   })
 
-  // GET /：列表（query status/rootTaskId/owner 过滤）
+  // GET /：列表（query status/rootTaskId/owner 过滤）。读面 authz（批二 T1 补）：行级
+  // readScope——owner/verifier 行全量；他人行 metadata（contractMetadata 与 GET /:id
+  // 同源，脱 measures[].definition）。列表可混合归属（一屏多合同），故 readScope 落
+  // 在行上而非响应级；过滤语义（status/rootTaskId/owner）不变——脱敏不改可见行集。
   router.get('/', async (ctx) => {
+    const actor = actorOf(ctx)
     const status = ctx.query.status
     if (status !== undefined && !(OUTCOME_STATUSES as readonly string[]).includes(String(status))) {
       fail(ctx, 422, `status 过滤值非法（须为 ${OUTCOME_STATUSES.join('|')} 之一）`, {
@@ -225,7 +273,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     }
     const rootTaskId = ctx.query.rootTaskId !== undefined ? String(ctx.query.rootTaskId) : null
     const owner = ctx.query.owner !== undefined ? String(ctx.query.owner) : null
-    const items: OutcomeContract[] = []
+    const items: Array<Record<string, unknown>> = []
     try {
       const ids = readdirSync(outcomeStoreRoot(), { withFileTypes: true })
         .filter((d) => d.isDirectory())
@@ -237,7 +285,10 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         if (status !== undefined && c.status !== String(status)) continue
         if (rootTaskId !== null && c.rootTaskId !== rootTaskId) continue
         if (owner !== null && c.ownerPersonId !== owner) continue
-        items.push(c)
+        const scope = readScopeOf(c, actor)
+        items.push(
+          scope === 'full' ? { ...c, readScope: scope } : { ...contractMetadata(c), readScope: scope },
+        )
       }
     } catch {
       /* 存储根不存在=空列表（fail-soft 读侧） */
@@ -304,14 +355,15 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     created(ctx, { contract: result.contract }, `/api/hermes/outcomes/${result.contract.outcomeId}`)
   })
 
-  // GET /:id：详情
+  // GET /:id：详情（读面 authz：owner/verifier 全量；他人 metadata 脱 measures[].definition）
   router.get('/:id', async (ctx) => {
     const contract = getContract(String(ctx.params.id ?? ''))
     if (!contract) {
       fail(ctx, 404, '合同不存在', { code: 'not_found' })
       return
     }
-    ok(ctx, { contract })
+    const scope = readScopeOf(contract, actorOf(ctx))
+    ok(ctx, { contract: scope === 'full' ? contract : contractMetadata(contract), readScope: scope })
   })
 
   // PUT /:id：修订（owner only；白名单挑 patch，expectedVersion 乐观并发）
@@ -496,7 +548,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   // - latest：每 measureId 最新一条摘要，绑定口径与结算机器建议同一选取器
   //   （latestCurrentMeasurement：仅当前版本、observedAt 最大、后写覆盖）——无当前
   //   版本记录的 measure 不出现在 latest（fail-soft 不拿旧口径充新值）。
-  // 读面与 GET /:id 同信任模型（单租户登录用户可读，spec §4.2 读侧无角色门槛）。
+  // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata 脱测量行 evidenceRefs。
   router.get('/:id/measurements', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -516,11 +568,18 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       const pick = latestCurrentMeasurement(contract, all, m.measureId)
       if (pick) latest[m.measureId] = pick
     }
+    const scope = readScopeOf(contract, actorOf(ctx))
     ok(ctx, {
       outcomeId: id,
       contractVersion: contract.version,
-      measurements: currentFirst,
-      latest,
+      measurements: scope === 'full' ? currentFirst : currentFirst.map(measurementMetadata),
+      latest:
+        scope === 'full'
+          ? latest
+          : Object.fromEntries(
+              Object.entries(latest).map(([k, v]) => [k, measurementMetadata(v)]),
+            ),
+      readScope: scope,
     })
   })
 
@@ -618,7 +677,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       settlementId: settlementId ?? `set-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       outcomeId: id,
       contractVersion: contract.version,
-      verdict: body.verdict,
+      verdict: String(body.verdict),
       rationale: typeof body.rationale === 'string' ? body.rationale.trim() : '',
       measurementIds: body.measurementIds as string[],
       ...(nonEmpty(body.gapNote) ? { gapNote: body.gapNote } : {}),
@@ -653,7 +712,21 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       fail(ctx, 500, '合同落盘失败（结算已入账，读侧以合同为准，可重试自愈）', { code: 'write_failed' })
       return
     }
-    created(ctx, { settlement, suggestion })
+    // 批二 T6：结算触发学习候选（双闸 learningOptIn×EXPERIENCE_INJECT；幂等按
+    // settlementId）——fail-soft：存储异常 warn 不改结算结果（学习是派生面）。
+    let learning: { generated: boolean; reason: string; candidateId?: string } | null = null
+    try {
+      const { generateLearningCandidate } = await import('./learning')
+      learning = generateLearningCandidate(next, {
+        settlementId: settlement.settlementId,
+        verdict: settlement.verdict,
+        rationale: settlement.rationale,
+        signedAt: settlement.signedAt,
+      })
+    } catch (err) {
+      learning = { generated: false, reason: `学习候选生成异常（不阻断结算）：${(err as Error).message}` }
+    }
+    created(ctx, { settlement, suggestion, learning })
   })
 
   // GET /:id/settlement：结算读面（T13/T14 双报缺口补齐）。
@@ -662,7 +735,72 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
   //   历史进 superseded 链，不拿已废结算充当前（fail-soft 不造假）。
   // - superseded：历史取代链，按取代事件落账序；每条含 settlement 正身（账上可
   //   查得时；孤儿 id 只带 settlementId+reason）、取代理由与时间。
-  // 读面信任模型同上（单租户登录用户可读）。
+  // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata 脱最新结算与取代链
+  // settlement 的 rationale/gapNote（自然人裁决文本），verdict 等骨架保留。
+  // GET /:id/comparison（批二 T6）：同口径对照投影——evaluation=本合同（须已
+  // settled），baseline=listAllContracts 中最近一个同口径已结算结果；effect 恒三态，
+  // 不足两个同口径已结算结果恒 unknown＋缺口说明（「已注入」永不等于「有效」）。
+  // 纯读面不写账；owner/verifier 全量、他人 metadata（对照行含实际读数，同测量面纪律）。
+  router.get('/:id/comparison', async (ctx) => {
+    const id = String(ctx.params.id ?? '')
+    const contract = getContract(id)
+    if (!contract) {
+      fail(ctx, 404, '合同不存在', { code: 'not_found' })
+      return
+    }
+    if (contract.status !== 'settled') {
+      fail(ctx, 422, `对照仅适用于已结算合同（当前 ${contract.status}）`, { code: 'not_settled' })
+      return
+    }
+    const { buildOutcomeComparison } = await import('./comparison')
+    const { listEvents } = await import('./outcome-store')
+    // 装配已结算方：合同＋当前版本测量＋最新有效结算（读侧与 settlement 面同法）
+    const latestSettlementOf = (oid: string): { settlementId: string; verdict: string; signedAt: number } | null => {
+      const signed = listEvents(oid, 'settlement_signed')
+      const superseded = new Set(
+        listEvents(oid, 'settlement_superseded')
+          .map((e) => (e.payload as { settlementId?: unknown }).settlementId)
+          .filter((v): v is string => typeof v === 'string'),
+      )
+      let latest: { settlementId: string; verdict: string; signedAt: number } | null = null
+      for (const e of signed) {
+        const sp = (e.payload as { settlement?: { settlementId?: unknown; verdict?: unknown; signedAt?: unknown } }).settlement
+        const sid = sp?.settlementId
+        if (typeof sid === 'string' && sid && !superseded.has(sid)) {
+          latest = {
+            settlementId: sid,
+            verdict: typeof sp?.verdict === 'string' ? sp.verdict : 'unknown',
+            signedAt: typeof sp?.signedAt === 'number' ? sp.signedAt : e.at,
+          }
+        }
+      }
+      return latest
+    }
+    const evaluation = { contract, measurements: listMeasurements(id), settlement: latestSettlementOf(id)! }
+    const others = listAllContracts()
+      .filter((c) => c.outcomeId !== id && c.status === 'settled')
+      .map((c) => ({ contract: c, measurements: listMeasurements(c.outcomeId), settlement: latestSettlementOf(c.outcomeId)! }))
+      .filter((o) => o.settlement !== null)
+    const scope = readScopeOf(contract, actorOf(ctx))
+    const comparison = buildOutcomeComparison(evaluation, others)
+    if (scope === 'metadata') {
+      // 他人：脱对照行实际读数（actual），骨架（effect/口径/目标）保留
+      ok(ctx, {
+        readScope: 'metadata',
+        comparison: {
+          ...comparison,
+          rows: comparison.rows.map((r) => ({
+            ...r,
+            baseline: r.baseline ? { ...r.baseline, actual: null, availability: 'unavailable' } : null,
+            evaluation: r.evaluation ? { ...r.evaluation, actual: null, availability: 'unavailable' } : null,
+          })),
+        },
+      })
+      return
+    }
+    ok(ctx, { readScope: 'full', comparison })
+  })
+
   router.get('/:id/settlement', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -685,20 +823,28 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     for (const s of settlements) {
       if (!supersededIds.has((s as { settlementId: string }).settlementId)) latest = s as Record<string, unknown>
     }
+    const scope = readScopeOf(contract, actorOf(ctx))
     const chain = supersededEvents.map((e) => {
       const p = e.payload as { settlementId?: unknown; reason?: unknown }
       const settlementId = typeof p.settlementId === 'string' ? p.settlementId : ''
+      const found =
+        (settlements.find(
+          (s) => (s as { settlementId: string }).settlementId === settlementId,
+        ) as Record<string, unknown> | undefined) ?? null
       return {
         settlementId,
         reason: typeof p.reason === 'string' ? p.reason : '',
         supersededAt: e.at,
         settlement:
-          (settlements.find(
-            (s) => (s as { settlementId: string }).settlementId === settlementId,
-          ) as Record<string, unknown> | undefined) ?? null,
+          scope === 'full' ? found : found ? settlementMetadata(found) : null,
       }
     })
-    ok(ctx, { outcomeId: id, settlement: latest, superseded: chain })
+    ok(ctx, {
+      outcomeId: id,
+      settlement: scope === 'full' ? latest : latest ? settlementMetadata(latest) : null,
+      superseded: chain,
+      readScope: scope,
+    })
   })
 
   // POST /:id/context-snapshots：生成最小上下文快照（批一 taskSummary 由注入面提供）
@@ -747,7 +893,10 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     else ok(ctx, { snapshot: result.snapshot, added: false })
   })
 
-  // GET /:id/context：快照列表（摘要行，fail-soft 空列表）/?snapshotId= 取全量
+  // GET /:id/context：快照列表（摘要行，fail-soft 空列表）/?snapshotId= 取全量。
+  // 读面 authz（批二 T1）：owner/verifier 全量；他人 metadata——单快照 content 整体
+  // 脱去（快照物化文本与 C1 保护面对齐），信封元数据（snapshotId/sha256/sourceRefs）保留；
+  // 列表摘要行本就无 content，仅附 readScope。
   router.get('/:id/context', async (ctx) => {
     const id = String(ctx.params.id ?? '')
     const contract = getContract(id)
@@ -756,6 +905,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       return
     }
     const snapshots = listSnapshots(id) // 坏行已在读侧跳过（fail-soft）
+    const scope = readScopeOf(contract, actorOf(ctx))
     const snapshotId = ctx.query.snapshotId !== undefined ? String(ctx.query.snapshotId) : null
     if (snapshotId !== null) {
       const one = snapshots.find((s) => s.snapshotId === snapshotId)
@@ -763,7 +913,12 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         fail(ctx, 404, '快照不存在', { code: 'snapshot_not_found' })
         return
       }
-      ok(ctx, { snapshot: one })
+      if (scope === 'full') {
+        ok(ctx, { snapshot: one, readScope: scope })
+        return
+      }
+      const { content: _c, ...envelope } = one
+      ok(ctx, { snapshot: envelope, readScope: scope })
       return
     }
     ok(ctx, {
@@ -773,6 +928,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         createdAt: s.createdAt,
         sha256: s.sha256,
       })),
+      readScope: scope,
     })
   })
 

@@ -16,6 +16,7 @@ const apiMocks = vi.hoisted(() => ({
   transitionOutcome: vi.fn(),
   submitMeasurement: vi.fn(),
   settleOutcome: vi.fn(),
+  fetchOutcomeComparison: vi.fn(),
 }))
 vi.mock('@/custom/kanban/api/outcome', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api/outcome')>()
@@ -71,6 +72,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   auth.actor.value = 'alice'
   apiMocks.fetchOutcomeByRoot.mockResolvedValue(null)
+  apiMocks.fetchOutcomeComparison.mockResolvedValue(null)
   apiMocks.fetchOutcomeSnapshots.mockResolvedValue([])
   apiMocks.fetchOutcomeMeasurements.mockResolvedValue({
     outcomeId: 'oc-test1', contractVersion: 2, measurements: [], latest: {},
@@ -119,6 +121,7 @@ describe('OutcomeSection — 渲染面', () => {
 
   it('无合同：根卡显示建模入口；非根卡整段不渲染', async () => {
     apiMocks.fetchOutcomeByRoot.mockResolvedValue(null)
+  apiMocks.fetchOutcomeComparison.mockResolvedValue(null)
     const root = await mountSection('root-1', true)
     expect(root.find('[data-testid="outcome-model-hint"]').exists()).toBe(true)
     const child = await mountSection('child-1', false)
@@ -367,5 +370,28 @@ describe('OutcomeSection — 状态迁移', () => {
     const msg = w.find('[data-testid="outcome-action-msg"]')
     expect(msg.exists()).toBe(true)
     expect(msg.text()).toContain('未全部终结')
+  })
+})
+
+
+// ---- 批二 T6：同口径对照行（只读投影） ----
+describe('OutcomeSection — 对照投影渲染', () => {
+  it('settled＋对照返回 → effect 徽标＋缺口说明＋行读数；comparison 缺席 → 不渲染', async () => {
+    apiMocks.fetchOutcomeByRoot.mockResolvedValue(makeContract({ status: 'settled' }))
+    apiMocks.fetchOutcomeComparison.mockResolvedValue({
+      evaluationOutcomeId: 'oc-test1', baselineOutcomeId: null, effect: 'unknown',
+      gapNote: '不足两个同口径已结算结果，效果恒未知',
+      rows: [{ measureId: 'm1', name: '工单积压量', definition: 'd', target: 50, operator: 'lte',
+        baseline: null, evaluation: { outcomeId: 'oc-test1', actual: 45, availability: 'available' } }],
+    })
+    let w = await mountSection()
+    expect(w.find('[data-testid="outcome-comparison"]').exists()).toBe(true)
+    expect(w.find('[data-testid="outcome-comparison-effect"]').text()).toContain('效果未知')
+    expect(w.find('[data-testid="outcome-comparison"]').text()).toContain('不足两个同口径')
+    expect(w.find('[data-testid="outcome-comparison-eval"]').text()).toBe('45')
+    // 缺席（无对照）
+    apiMocks.fetchOutcomeComparison.mockResolvedValue(null)
+    w = await mountSection()
+    expect(w.find('[data-testid="outcome-comparison"]').exists()).toBe(false)
   })
 })

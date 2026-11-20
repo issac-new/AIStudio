@@ -75,7 +75,22 @@ export interface ResolvedSnapshotInput {
   people: SnapshotPersonRow[]
   /** 合同/团队额外引用的其他人（可选）：与 owner/verifier 一并去重后对照 people 判缺席。 */
   extraPersonIds?: string[]
+  /** 批二全量面（可选，spec §四）：非关键——已解析成功的块进 content；缺席块由
+   *  调用方（buildFullSnapshot 壳）记入 enrichExcluded，核心不猜补。 */
+  enrichment?: SnapshotEnrichment
+  /** 壳侧收集的非关键排除行（批二全量面解析失败/禁用）。 */
+  enrichExcluded?: OutcomeContextSnapshot['excludedSources']
   createdAt: number
+}
+
+/** 批二全量面块形状（spec §四）：panoramaFaces=各面计数摘要；recentDecisions≤10；
+ *  activePremises=在册前提（statement 过脱敏）；experiences=approved 候选
+ *  （statement 过脱敏＋`id@updatedAt` 指纹进 approvedExperienceVersions）。 */
+export interface SnapshotEnrichment {
+  panoramaFaces: Array<{ face: string; count: number; note?: string }>
+  recentDecisions: Array<{ id: string; category: string | null; outcome: string | null; at: number }>
+  activePremises: Array<{ id: string; statement: string }>
+  experiences: Array<{ id: string; statement: string; updatedAt: string }>
 }
 
 export type BuildSnapshotResult =
@@ -259,6 +274,8 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
   const excludedSources: OutcomeContextSnapshot['excludedSources'] = extraIds
     .filter((id) => !found.has(id))
     .map((id) => ({ kind: 'people', reason: `person:${id} 身份册未返回（额外引用人，非关键源）` }))
+  // 批二全量面：壳侧收集的非关键排除行并入（失败/禁用的块在此如实可见）
+  excludedSources.push(...(Array.isArray(input.enrichExcluded) ? input.enrichExcluded : []))
 
   // content：合同规范子集（不含 status 等运行态面）＋身份行＋任务摘要＋策略块。
   // 五类自由文本面过脱敏防线后物化（新数组/新对象，不回写合同原身）。
@@ -292,6 +309,35 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
   content.verifier = { ...verifierRow }
   if (additionalRows.length) content.additionalPeople = additionalRows.map((p) => ({ ...p }))
 
+  // 批二全量面（spec §四）：已解析成功的块物化进 content（自由文本过脱敏防线），
+  // approvedExperienceVersions 由恒 [] 变实值（`${id}@${updatedAt}` 指纹——
+  // 「已注入」可反查到具体快照，但指纹本身不构成「有效」断言）。
+  const enrichment = input.enrichment
+  let approvedExperienceVersions: string[] = []
+  if (enrichment) {
+    if (Array.isArray(enrichment.panoramaFaces) && enrichment.panoramaFaces.length)
+      content.panoramaFaces = enrichment.panoramaFaces.map((f) => ({
+        face: String(f.face), count: Number(f.count) || 0,
+        ...(typeof f.note === 'string' && f.note ? { note: sanitizeForSnapshot(f.note) } : {}),
+      }))
+    if (Array.isArray(enrichment.recentDecisions) && enrichment.recentDecisions.length)
+      content.recentDecisions = enrichment.recentDecisions.map((d) => ({
+        id: String(d.id), category: d.category === null ? null : String(d.category),
+        outcome: d.outcome === null ? null : String(d.outcome), at: Number(d.at) || 0,
+      }))
+    if (Array.isArray(enrichment.activePremises) && enrichment.activePremises.length)
+      content.activePremises = enrichment.activePremises.map((p) => ({
+        id: String(p.id), statement: sanitizeForSnapshot(String(p.statement)),
+      }))
+    if (Array.isArray(enrichment.experiences) && enrichment.experiences.length) {
+      content.experiences = enrichment.experiences.map((e) => ({
+        id: String(e.id), statement: sanitizeForSnapshot(String(e.statement)), updatedAt: String(e.updatedAt),
+      }))
+      const expRows = content.experiences as Array<{ id: string; updatedAt: string }>
+      approvedExperienceVersions = expRows.map((e) => `${e.id}@${e.updatedAt}`)
+    }
+  }
+
   // sourceRefs：只溯源不承载内容；measure 定义逐条入 refs（超限由临界检查拒收）
   const sourceRefs: OutcomeContextSnapshot['sourceRefs'] = [
     {
@@ -307,6 +353,14 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
   sourceRefs.push({ kind: 'decision-policy', id: input.decisionPolicyVersion })
   sourceRefs.push({ kind: 'decision-matrix', id: input.matrixVersion })
   for (const m of contract.measures) sourceRefs.push({ kind: 'measure', id: m.measureId })
+  // 批二全量面溯源：每块一个面级 ref＋经验逐条带版本（召回留痕反查锚）
+  if (enrichment) {
+    if (enrichment.panoramaFaces?.length) sourceRefs.push({ kind: 'panorama', id: task.id })
+    if (enrichment.recentDecisions?.length) sourceRefs.push({ kind: 'decision-graph', id: 'recent' })
+    if (enrichment.activePremises?.length) sourceRefs.push({ kind: 'premise-log', id: 'active' })
+    for (const e of enrichment.experiences ?? [])
+      sourceRefs.push({ kind: 'experience', id: e.id, version: e.updatedAt })
+  }
 
   // 临界检查（spec §4.4 逐字：拒绝生成、不截断；两项都超则一并注明）
   const contentBytes = Buffer.byteLength(canonicalJson(content), 'utf8')
@@ -320,8 +374,8 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
     )
   if (problems.length) return { ok: false, problems }
 
-  // 哈希体＝信封去易变字段（snapshotId/createdAt/sha256）；批一 teamVersion 恒 null、
-  // approvedExperienceVersions 恒 []
+  // 哈希体＝信封去易变字段（snapshotId/createdAt/sha256）；teamVersion 批三前恒 null；
+  // approvedExperienceVersions 批二起为实值（无经验块时仍 []，与批一快照同形）
   const body = {
     outcomeId: contract.outcomeId,
     contractVersion: contract.version,
@@ -329,7 +383,7 @@ export function buildSnapshotFromResolved(input: ResolvedSnapshotInput): BuildSn
     decisionPolicyVersion: input.decisionPolicyVersion,
     content,
     sourceRefs,
-    approvedExperienceVersions: [],
+    approvedExperienceVersions,
     excludedSources,
   }
   const sha256 = shaHex(canonicalJson(body))
@@ -394,4 +448,124 @@ export function buildMinimalSnapshot(input: BuildMinimalSnapshotInput): BuildSna
     extraPersonIds: Array.isArray(input.extraPersonIds) ? input.extraPersonIds : [],
     createdAt: Date.now(),
   })
+}
+
+// ---------- 批二 Task 5：全量上下文快照（spec §四） ----------
+
+/** 全量壳入参：在最小面（task/people 关键源）之上叠四个非关键面 resolver。
+ *  resolver 可异步；解析失败/抛异常/形状不符 → 该块进 excludedSources（非关键，
+ *  不禁派单）；未提供 resolver 的块按「未接入」记 excluded。 */
+export interface BuildFullSnapshotInput extends BuildMinimalSnapshotInput {
+  resolve: BuildMinimalSnapshotInput['resolve'] & {
+    panorama?(): { ok: boolean; faces?: SnapshotEnrichment['panoramaFaces'] } | Promise<{ ok: boolean; faces?: SnapshotEnrichment['panoramaFaces'] }>
+    decisions?(): { ok: boolean; decisions?: SnapshotEnrichment['recentDecisions'] } | Promise<{ ok: boolean; decisions?: SnapshotEnrichment['recentDecisions'] }>
+    premises?(): { ok: boolean; premises?: SnapshotEnrichment['activePremises'] } | Promise<{ ok: boolean; premises?: SnapshotEnrichment['activePremises'] }>
+    experiences?(): { ok: boolean; experiences?: SnapshotEnrichment['experiences'] } | Promise<{ ok: boolean; experiences?: SnapshotEnrichment['experiences'] }>
+  }
+}
+
+interface EnrichBlockSpec {
+  kind: 'panorama' | 'decisions' | 'premises' | 'experiences'
+  label: string
+}
+
+const ENRICH_BLOCKS: ReadonlyArray<EnrichBlockSpec> = [
+  { kind: 'panorama', label: '全景面（证据/评审/计划计数）' },
+  { kind: 'decisions', label: '近期决策（decisiongraph）' },
+  { kind: 'premises', label: '在册前提（premiselog）' },
+  { kind: 'experiences', label: '已审核经验（expcandidates approved）' },
+]
+
+/** 形状校验（块级）：不符视同该源失败（fail-soft 进 excluded，不猜补）。 */
+function validEnrichBlock(kind: EnrichBlockSpec['kind'], v: unknown): boolean {
+  if (!Array.isArray(v)) return false
+  switch (kind) {
+    case 'panorama': return v.every((f) => f && typeof f === 'object' && typeof (f as { face?: unknown }).face === 'string')
+    case 'decisions': return v.every((d) => d && typeof d === 'object' && typeof (d as { id?: unknown }).id === 'string')
+    case 'premises': return v.every((p) => p && typeof p === 'object' && typeof (p as { id?: unknown }).id === 'string' && typeof (p as { statement?: unknown }).statement === 'string')
+    case 'experiences': return v.every((e) => e && typeof e === 'object' && typeof (e as { id?: unknown }).id === 'string' && typeof (e as { statement?: unknown }).statement === 'string' && typeof (e as { updatedAt?: unknown }).updatedAt === 'string')
+  }
+}
+
+/**
+ * IO 薄壳（批二 Task 5）：先走最小面关键源（复用 buildMinimalSnapshot 的解析与
+ * 核心守卫路径），再逐块解析四个非关键面——失败/未接入进 excludedSources，
+ * 成功块物化进 content（经验指纹进 approvedExperienceVersions）。关键源语义与
+ * 批一完全一致（失败禁派单）；非关键面失败只降级不禁派单（spec §四）。
+ */
+export async function buildFullSnapshot(input: BuildFullSnapshotInput): Promise<BuildSnapshotResult> {
+  // 最小面先行：关键源失败原样上抛（含 problems 明细）
+  const base = buildMinimalSnapshot(input)
+  if (!base.ok) return base
+
+  const enrichment: Partial<SnapshotEnrichment> = {}
+  const enrichExcluded: OutcomeContextSnapshot['excludedSources'] = []
+  for (const spec of ENRICH_BLOCKS) {
+    const resolver = (input.resolve as Record<string, unknown>)[spec.kind] as
+      | (() => Promise<{ ok: boolean } & Record<string, unknown>>)
+      | undefined
+    let block: unknown
+    if (typeof resolver !== 'function') {
+      enrichExcluded.push({ kind: spec.kind, reason: `${spec.label}未接入（调用方未提供 resolver）` })
+      continue
+    }
+    try {
+      const r = await resolver()
+      if (!r || r.ok !== true) {
+        enrichExcluded.push({ kind: spec.kind, reason: `${spec.label}源自报失败（ok:false，非关键降级）` })
+        continue
+      }
+      block = spec.kind === 'panorama' ? r.faces : spec.kind === 'decisions' ? r.decisions
+        : spec.kind === 'premises' ? r.premises : r.experiences
+    } catch (err) {
+      // 排除理由必须确定性（进哈希体）：异常消息可能含时变端口/重试信息，会把
+      // 同输入重放打成不同快照——诊断走 warn 日志，不进信封（重放幂等实测教训）。
+      console.warn(`[outcome-snapshot] ${spec.label}源解析异常（非关键降级）：${(err as Error).message}`)
+      enrichExcluded.push({ kind: spec.kind, reason: `${spec.label}源解析异常（非关键降级）` })
+      continue
+    }
+    if (!validEnrichBlock(spec.kind, block)) {
+      enrichExcluded.push({ kind: spec.kind, reason: `${spec.label}返回形状不符（非关键降级，不猜补）` })
+      continue
+    }
+    // 形状已验，按块类型挂载（核心再做字符串脱敏与物化）
+    if (spec.kind === 'panorama') enrichment.panoramaFaces = block as SnapshotEnrichment['panoramaFaces']
+    else if (spec.kind === 'decisions') enrichment.recentDecisions = block as SnapshotEnrichment['recentDecisions']
+    else if (spec.kind === 'premises') enrichment.activePremises = block as SnapshotEnrichment['activePremises']
+    else enrichment.experiences = block as SnapshotEnrichment['experiences']
+  }
+
+  // 有任何块成功或任何排除行时重建信封（核心复用：守卫/临界/脱敏/哈希全走同一条路）；
+  // 四块全空且无排除行时直接返回最小快照（与批一形态逐字节等价）。
+  const anyBlock = enrichment.panoramaFaces?.length || enrichment.recentDecisions?.length
+    || enrichment.activePremises?.length || enrichment.experiences?.length
+  if (!anyBlock && !enrichExcluded.length) return base
+
+  // 重放核心：从 base 快照中拿不到已解析中间态，重走 buildSnapshotFromResolved——
+  // 关键源刚在 buildMinimalSnapshot 里验证过，此处等价重解析（确定性纯函数，同输入同输出）。
+  // 经由导出的内部解析（buildMinimalSnapshot 已消费 resolve.task/people；这里复用其结果
+  // 需要 buildSnapshotFromResolved 的入参形状——直接重建：
+  const rebuilt = buildSnapshotFromResolved({
+    contract: input.contract,
+    decisionPolicyVersion: input.decisionPolicyVersion.trim(),
+    matrixVersion: DECISION_MATRIX_VERSION,
+    task: base.snapshot.content.task as SnapshotTaskSummary,
+    people: [
+      base.snapshot.content.owner as SnapshotPersonRow,
+      base.snapshot.content.verifier as SnapshotPersonRow,
+      ...((base.snapshot.content.additionalPeople as SnapshotPersonRow[] | undefined) ?? []),
+    ],
+    enrichment: enrichment.panoramaFaces?.length || enrichment.recentDecisions?.length
+      || enrichment.activePremises?.length || enrichment.experiences?.length
+      ? {
+        panoramaFaces: enrichment.panoramaFaces ?? [],
+        recentDecisions: enrichment.recentDecisions ?? [],
+        activePremises: enrichment.activePremises ?? [],
+        experiences: enrichment.experiences ?? [],
+      }
+      : undefined,
+    enrichExcluded,
+    createdAt: base.snapshot.createdAt,
+  })
+  return rebuilt
 }

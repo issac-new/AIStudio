@@ -393,6 +393,33 @@ describe('appendMeasurement / listMeasurements', () => {
   })
 })
 
+describe('断电半行吞行防护（批二 T1：events 追加面前置换行）', () => {
+  it('events.jsonl 尾部残片（无换行）后追加：新事件独立成行不被粘行吞掉，哈希链仍接最后好行', () => {
+    createContract(makeContract('oc-1', 'task-1'), 'p-1')
+    const lastGood = listEvents('oc-1')[0]
+    // 模拟断电半行：尾部追加一段无换行残片（批一 snapshots.jsonl 面实绩同款形态）
+    const file = join(dir, 'oc-1', 'events.jsonl')
+    writeFileSync(file, '{"eventId":"ev-torn","hash":"ab', { flag: 'a' })
+
+    const r = appendEvent('oc-1', 'status_changed', { from: 'draft', to: 'active' }, 'p-2', 1)
+    expect(r.ok).toBe(true)
+
+    // 新事件不被吞：读侧可读（残片被隔离成独立坏行由 readEventsAt 跳过）
+    const events = listEvents('oc-1')
+    expect(events).toHaveLength(2)
+    expect(events[1].type).toBe('status_changed')
+    // 哈希链仍连续：新事件 prevHash 接最后一条好事件（残片不参与链）
+    expect(events[1].prevHash).toBe(lastGood.hash)
+    expect(events[1].hash).toBe(sha(`${lastGood.hash}|${canon(bodyOf(events[1]))}`))
+
+    // 文件面：残片被补换行隔离，新事件独占一行且完整可解析
+    const lines = readFileSync(file, 'utf8').trim().split('\n')
+    expect(lines).toHaveLength(3)
+    expect(JSON.parse(lines[0]).eventId).toBe(lastGood.eventId)
+    expect(JSON.parse(lines[2]).eventId).toBe(events[1].eventId)
+  })
+})
+
 describe('contract.json 与事件账的对账', () => {
   it('contract.json 内容即 getContract 返回值；坏档隔离后 getContract→null', () => {
     createContract(makeContract('oc-1', 'task-1'), 'p-1')

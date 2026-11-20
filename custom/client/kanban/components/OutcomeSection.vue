@@ -18,6 +18,8 @@ import {
   fetchOutcomeByRoot,
   fetchOutcomeMeasurements,
   fetchOutcomeSettlement,
+  fetchOutcomeComparison,
+  type OutcomeComparison,
   fetchOutcomeSnapshots,
   settleOutcome,
   submitMeasurement,
@@ -39,6 +41,7 @@ const props = defineProps<{
 const STATUS_LABEL: Record<string, string> = {
   draft: '草稿', active: '生效', observing: '观察期', settled: '已结算', cancelled: '已取消',
 }
+const EFFECT_LABEL: Record<string, string> = { improved: '有改善迹象', degraded: '较基线退步', unknown: '效果未知' }
 const VERDICT_LABEL: Record<string, string> = {
   achieved: '达成', partial: '部分达成', missed: '未达成', unknown: '无法判定（证据缺口）',
 }
@@ -57,6 +60,8 @@ const snapshotCount = ref<number | null>(null)
 const serverLatest = ref<Record<string, OutcomeMeasurement>>({})
 const serverSettlement = ref<OutcomeSettlement | null>(null)
 const supersededChain = ref<OutcomeSettlementSuperseded[]>([])
+// 批二 T6：同口径对照投影（settled 后加载；只读）
+const comparison = ref<OutcomeComparison | null>(null)
 // 读面降级标记：测量/结算读失败（非门关）→ 回退会话内回显并如实标注
 const readDegraded = ref(false)
 
@@ -105,6 +110,9 @@ async function load(): Promise<void> {
       const s = await fetchOutcomeSettlement(contract.value.outcomeId)
       serverSettlement.value = s.settlement
       supersededChain.value = s.superseded
+      if (contract.value.status === 'settled') {
+        try { comparison.value = await fetchOutcomeComparison(contract.value.outcomeId) } catch { comparison.value = null }
+      }
     } catch (err) {
       if (err instanceof OutcomeWorkbenchDisabledError) gateOff.value = true
       else readDegraded.value = true
@@ -374,6 +382,27 @@ function fmtTs(ms?: number): string {
       <p v-else-if="contract.status === 'settled'" class="outcome-hint" data-testid="outcome-settled-readonly">
         合同已结算。结算读面暂不可用，裁决详情以事件账为准。
       </p>
+
+      <!-- 同口径对照（批二 T6：effect 三态，不足两个同口径已结算结果恒 unknown） -->
+      <div v-if="comparison" class="outcome-comparison" data-testid="outcome-comparison">
+        <div class="outcome-comparison__head">
+          <span class="outcome-effect" :class="`is-${comparison.effect}`" data-testid="outcome-comparison-effect">对照：{{ EFFECT_LABEL[comparison.effect] }}</span>
+          <span class="outcome-hint">
+            {{ comparison.baselineOutcomeId ? `基线 ${comparison.baselineOutcomeId}` : '无同口径基线' }} · {{ comparison.gapNote }}
+          </span>
+        </div>
+        <table class="outcome-comparison__table">
+          <thead><tr><th>度量</th><th>目标</th><th>基线</th><th>本次</th></tr></thead>
+          <tbody>
+            <tr v-for="row in comparison.rows" :key="row.measureId">
+              <td>{{ row.name }}</td>
+              <td>{{ row.operator === 'gte' ? '≥' : row.operator === 'lte' ? '≤' : '=' }}{{ row.target }}</td>
+              <td>{{ row.baseline && row.baseline.availability === 'available' ? row.baseline.actual : '未知' }}</td>
+              <td data-testid="outcome-comparison-eval">{{ row.evaluation && row.evaluation.availability === 'available' ? row.evaluation.actual : '未知' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- 操作面（终态只读） -->
       <div v-if="contract.status !== 'settled' && contract.status !== 'cancelled'" class="outcome-actions">

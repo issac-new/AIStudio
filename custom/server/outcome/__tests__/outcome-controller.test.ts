@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createServer } from 'http'
 import Koa from 'koa'
 import type { AddressInfo } from 'net'
-import { mkdtempSync, rmSync } from 'fs'
+import { mkdtempSync, rmSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { createRequire } from 'node:module'
@@ -960,6 +960,281 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       // observing 迁移不再重复写绑定事件（幂等面由 bindOutcomeFamily 三态契约承担）
       const evs = board.prepare("SELECT COUNT(*) AS n FROM task_events WHERE kind = 'outcome_bound'").get() as { n: number }
       expect(Number(evs.n)).toBe(1)
+    })
+  })
+
+  describe('批二 T1：读面 authz（owner/verifier 全量、其他登录用户 metadata 脱敏）', () => {
+    it('GET /:id：owner/verifier readScope=full 带 measures[].definition；他人 metadata 且 definition 脱去；404 不变', async () => {
+      const id = await seedContract('active')
+      const shape = (body: Record<string, unknown>) => {
+        const contract = body.contract as Record<string, unknown>
+        const measures = contract.measures as Array<Record<string, unknown>>
+        return {
+          scope: body.readScope,
+          title: contract.title,
+          def: measures[0].definition,
+          name: measures[0].name,
+          target: measures[0].target,
+        }
+      }
+      const owner = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(owner.status).toBe(200)
+      expect(shape(owner.body)).toMatchObject({ scope: 'full', def: '分钟粒度 5xx 以外的请求占比' })
+      asUser('verifier-1')
+      expect(shape((await fetchJson(base, `/api/hermes/outcomes/${id}`)).body).scope).toBe('full')
+      asUser('other-1')
+      const other = await fetchJson(base, `/api/hermes/outcomes/${id}`)
+      expect(other.status).toBe(200)
+      const meta = shape(other.body)
+      expect(meta.scope).toBe('metadata')
+      expect(meta.def).toBeUndefined()
+      expect(meta.name).toBe('成功率') // 度量骨架保留：元数据仍可消费
+      expect(meta.title).toBeTruthy()
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope')
+      expect(missing.status).toBe(404)
+      expect(missing.body.code).toBe('not_found')
+    })
+
+    it('GET / 列表（T1 补）：他人行 readScope=metadata 且无 definition，自己行全量；过滤语义不变', async () => {
+      await seedContract('active', 'task-list-a')
+      asUser('other-1')
+      const mine = await post(base, '/api/hermes/outcomes', contractBody({
+        ownerPersonId: 'other-1',
+        rootTaskId: 'task-list-b',
+      }))
+      expect(mine.status).toBe(201)
+      asUser('owner-1')
+      const ownerView = await fetchJson(base, '/api/hermes/outcomes')
+      const ownerRows = ownerView.body.items as Array<{ readScope: string; ownerPersonId: string }>
+      expect(ownerRows.length).toBe(2)
+      // 行级判权：owner-1 视角下自己的行 full、他人（other-1）的行 metadata
+      for (const row of ownerRows) {
+        expect(row.readScope).toBe(row.ownerPersonId === 'owner-1' ? 'full' : 'metadata')
+      }
+      asUser('other-1')
+      const other = await fetchJson(base, '/api/hermes/outcomes')
+      expect(other.status).toBe(200)
+      const rows = other.body.items as Array<{
+        readScope: string
+        ownerPersonId: string
+        measures: Array<Record<string, unknown>>
+      }>
+      expect(rows.length).toBe(2)
+      for (const row of rows) {
+        if (row.ownerPersonId === 'other-1') {
+          expect(row.readScope).toBe('full')
+          expect(row.measures[0].definition).toBeTruthy()
+        } else {
+          expect(row.readScope).toBe('metadata')
+          expect(row.measures[0].definition).toBeUndefined() // 他人行脱度量口径文本
+          expect(row.measures[0].name).toBe('成功率') // 骨架保留
+        }
+      }
+      // 过滤语义不变：owner/rootTaskId 过滤照常（脱敏不改可见行集）
+      const byOwner = await fetchJson(base, '/api/hermes/outcomes?owner=owner-1')
+      expect((byOwner.body.items as Array<{ ownerPersonId: string }>).map((r) => r.ownerPersonId)).toEqual(['owner-1'])
+      const byRoot = await fetchJson(base, '/api/hermes/outcomes?rootTaskId=task-list-b')
+      expect((byRoot.body.items as unknown[]).length).toBe(1)
+    })
+
+    it('GET /:id/context：owner 取全量含 content；他人 metadata content 整体脱去；列表摘要行与 404 不变', async () => {
+      const id = await seedContract('active')
+      const created = await post(base, `/api/hermes/outcomes/${id}/context-snapshots`, {})
+      expect(created.status).toBe(201)
+      const sid = (created.body.snapshot as { snapshotId: string }).snapshotId
+      const full = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=${sid}`)
+      expect(full.status).toBe(200)
+      expect(full.body.readScope).toBe('full')
+      expect((full.body.snapshot as { content?: unknown }).content).toBeTruthy()
+      const fullList = await fetchJson(base, `/api/hermes/outcomes/${id}/context`)
+      expect(fullList.body.readScope).toBe('full')
+      asUser('other-1')
+      const meta = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=${sid}`)
+      expect(meta.status).toBe(200)
+      expect(meta.body.readScope).toBe('metadata')
+      const snap = meta.body.snapshot as { content?: unknown; snapshotId: string; sha256: string }
+      expect(snap.content).toBeUndefined() // content 整体脱去（快照物化文本与 C1 保护面对齐）
+      expect(snap.snapshotId).toBe(sid) // 信封元数据保留
+      expect(typeof snap.sha256).toBe('string')
+      const metaList = await fetchJson(base, `/api/hermes/outcomes/${id}/context`)
+      expect(metaList.status).toBe(200)
+      expect(metaList.body.readScope).toBe('metadata')
+      expect((metaList.body.snapshots as unknown[]).length).toBe(1) // 摘要行本就无 content
+      const unknownSnap = await fetchJson(base, `/api/hermes/outcomes/${id}/context?snapshotId=snap-nope`)
+      expect(unknownSnap.status).toBe(404)
+      const unknownContract = await fetchJson(base, '/api/hermes/outcomes/oc-nope/context')
+      expect(unknownContract.status).toBe(404)
+    })
+
+    it('GET /:id/measurements：owner 全量含 evidenceRefs；他人 metadata evidenceRefs 脱去；404 不变', async () => {
+      const id = await seedContract('active')
+      const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measurementId: 'ms-authz',
+        measureId: 'm1',
+        contractVersion: 1,
+        actual: 96,
+        availability: 'available',
+        evidenceRefs: ['metric://gateway/success_rate?window=1h'],
+        observedAt: Date.now(),
+      })
+      expect(ms.status).toBe(201)
+      const owner = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      expect(owner.body.readScope).toBe('full')
+      expect((owner.body.measurements as Array<{ evidenceRefs?: string[] }>)[0].evidenceRefs).toBeTruthy()
+      asUser('other-1')
+      const meta = await fetchJson(base, `/api/hermes/outcomes/${id}/measurements`)
+      expect(meta.status).toBe(200)
+      expect(meta.body.readScope).toBe('metadata')
+      const row = (meta.body.measurements as Array<{ evidenceRefs?: string[]; actual: number }>)[0]
+      expect(row.evidenceRefs).toBeUndefined() // 证据引用可内嵌 token，metadata 态脱去
+      expect(row.actual).toBe(96) // 测量事实骨架保留
+      expect((meta.body.latest as Record<string, { evidenceRefs?: string[] }>).m1.evidenceRefs).toBeUndefined()
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/measurements')
+      expect(missing.status).toBe(404)
+    })
+
+    it('GET /:id/settlement：owner 全量含 rationale/gapNote；他人 metadata 两字段脱去且取代链同脱；404 不变', async () => {
+      const id = await seedContract('observing')
+      const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+        measurementId: `ms-${id}`,
+        measureId: 'm1',
+        contractVersion: 1,
+        actual: 91,
+        availability: 'available',
+        evidenceRefs: ['metric://x'],
+        observedAt: Date.now(),
+      })
+      expect(ms.status).toBe(201)
+      const st = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+        settlementId: `set-${id}`,
+        contractVersion: 1,
+        verdict: 'unknown',
+        rationale: '证据不足以判定业务达成情况，需补充数据后复审的说明',
+        gapNote: '缺部署维度的成功率口径',
+        nextReviewAt: Date.now() + 86_400_000,
+        measurementIds: [`ms-${id}`],
+      })
+      expect(st.status).toBe(201)
+      const owner = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(owner.body.readScope).toBe('full')
+      const os = owner.body.settlement as Record<string, unknown>
+      expect(typeof os.rationale).toBe('string')
+      expect(os.gapNote).toBe('缺部署维度的成功率口径')
+      asUser('other-1')
+      const meta = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(meta.status).toBe(200)
+      expect(meta.body.readScope).toBe('metadata')
+      const redacted = meta.body.settlement as Record<string, unknown>
+      expect(redacted.rationale).toBeUndefined()
+      expect(redacted.gapNote).toBeUndefined()
+      expect(redacted.verdict).toBe('unknown') // 裁决与骨架保留
+      // 取代链同权：重开后旧结算进 superseded，他人读时链内 settlement 同样脱敏
+      expect(reopenOutcome(id, 'owner-1').ok).toBe(true)
+      asUser('other-1')
+      const after = await fetchJson(base, `/api/hermes/outcomes/${id}/settlement`)
+      expect(after.body.readScope).toBe('metadata')
+      expect(after.body.settlement).toBeNull()
+      const chain = after.body.superseded as Array<{ settlement: Record<string, unknown> | null }>
+      expect(chain.length).toBe(1)
+      expect(chain[0].settlement?.rationale).toBeUndefined()
+      expect(chain[0].settlement?.gapNote).toBeUndefined()
+      expect(chain[0].settlement?.verdict).toBe('unknown')
+      const missing = await fetchJson(base, '/api/hermes/outcomes/oc-nope/settlement')
+      expect(missing.status).toBe(404)
+    })
+  })
+
+  // ---- 批二 T6：comparison 端点与结算触发学习 ----
+
+  describe('GET /:id/comparison（同口径对照投影）', () => {
+    it('settled 合同＋无其他同口径结果 → effect=unknown＋缺口说明；owner 得全量读数', async () => {
+      const id = await seedContract('settled', 'task-cmp-1')
+      const res = await fetchJson(base, `/api/hermes/outcomes/${id}/comparison`)
+      expect(res.status).toBe(200)
+      const body = res.body as { readScope: string; comparison: { effect: string; gapNote: string; rows: Array<{ evaluation: { actual: number | null } }> } }
+      expect(body.readScope).toBe('full')
+      expect(body.comparison.effect).toBe('unknown')
+      expect(body.comparison.gapNote).toContain('不足两个同口径')
+      expect(body.comparison.rows[0].evaluation.actual).toBe(96)
+    })
+
+    it('非 settled → 422 not_settled；不存在 → 404', async () => {
+      const draftId = await seedContract('draft', 'task-cmp-draft')
+      expect((await fetchJson(base, `/api/hermes/outcomes/${draftId}/comparison`)).status).toBe(422)
+      expect((await fetchJson(base, '/api/hermes/outcomes/oc-none/comparison')).status).toBe(404)
+    })
+  })
+
+  describe('POST /:id/settlement 触发学习候选（双闸）', () => {
+    it('EXPERIENCE_INJECT=1 且默认合同（learningOptIn 缺省 false）→ generated=false 双闸未开', async () => {
+      const prev = process.env.EXPERIENCE_INJECT
+      process.env.EXPERIENCE_INJECT = '1'
+      try {
+        const id = await seedContract('settled', 'task-learn-off')
+        const st = await post(base, `/api/hermes/outcomes/${id}/settlement`)
+        void st // seedContract 内部已结算；这里验读面 learning 侧写——重开再结算
+        const reopened = reopenOutcome(id, 'owner-1')
+        expect(reopened.ok).toBe(true)
+        allTasksTerminal = true
+        const obsHop = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'observing' })
+        expect(obsHop.status).toBe(201)
+        const ms = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+          measurementId: `ms2-${id}`, measureId: 'm1', contractVersion: 1, actual: 96,
+          availability: 'available', evidenceRefs: ['metric://w'], observedAt: Date.now(),
+        })
+        expect(ms.status).toBe(201)
+        const again = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+          settlementId: `set2-${id}`, contractVersion: 1, verdict: 'achieved',
+          rationale: '复结算：成功率维持 96%，准予再次收口结算。', measurementIds: [`ms2-${id}`],
+        })
+        expect(again.status).toBe(201)
+        expect((again.body.learning as { generated: boolean }).generated).toBe(false)
+        expect((again.body.learning as { reason: string }).reason).toContain('双闸未开')
+      } finally {
+        if (prev === undefined) delete process.env.EXPERIENCE_INJECT
+        else process.env.EXPERIENCE_INJECT = prev
+      }
+    })
+
+    it('双闸全开（learningOptIn=true＋EXPERIENCE_INJECT=1）→ generated=true 且候选落盘（candidate 态、带 sourceSettlementId）', async () => {
+      const prev = process.env.EXPERIENCE_INJECT
+      process.env.EXPERIENCE_INJECT = '1'
+      const expDir = mkdtempSync(join(tmpdir(), 'exp-ctl-'))
+      process.env.EXP_STORE = expDir
+      try {
+        asUser('owner-1')
+        ctlBoard.prepare('INSERT OR IGNORE INTO tasks (id, title, status, outcome_id) VALUES (?, ?, ?, ?)')
+          .run('task-learn-on', '根任务-task-learn-on', 'todo', null)
+        const created = await post(base, '/api/hermes/outcomes', contractBody({
+          rootTaskId: 'task-learn-on',
+          outcomeId: 'oc-learn-on',
+          learningOptIn: true,
+        } as never))
+        expect(created.status).toBe(201)
+        const id = 'oc-learn-on'
+        const act = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'active' })
+        allTasksTerminal = true
+        const obs3 = await post(base, `/api/hermes/outcomes/${id}/transitions`, { to: 'observing' })
+        const ms3 = await post(base, `/api/hermes/outcomes/${id}/measurements`, {
+          measurementId: 'ms-lo', measureId: 'm1', contractVersion: 1, actual: 96,
+          availability: 'available', evidenceRefs: ['metric://w'], observedAt: Date.now(),
+        })
+        const st = await post(base, `/api/hermes/outcomes/${id}/settlement`, {
+          settlementId: 'set-lo', contractVersion: 1, verdict: 'achieved',
+          rationale: '成功率 96% 达标且验收陈述全部满足，准予收口结算。', measurementIds: ['ms-lo'],
+        })
+        expect(st.status).toBe(201)
+        expect((st.body.learning as { generated: boolean }).generated).toBe(true)
+        const raw = JSON.parse(readFileSync(join(expDir, 'exp-candidates.json'), 'utf8'))
+        expect(raw.candidates[0].status).toBe('candidate')
+        expect(raw.candidates[0].sourceSettlementId).toBe('set-lo')
+        expect(raw.candidates[0].outcomeId).toBe('oc-learn-on')
+      } finally {
+        if (prev === undefined) delete process.env.EXPERIENCE_INJECT
+        else process.env.EXPERIENCE_INJECT = prev
+        delete process.env.EXP_STORE
+        rmSync(expDir, { recursive: true, force: true })
+      }
     })
   })
 })

@@ -75,6 +75,10 @@ export interface PendingItem {
   /** 批一 Task 12：条目源记录携带 outcome_ref（T11 agent 侧随 gateway/deferred 条目下发）
    *  时的合同绑定上下文；缺省=无 outcome 绑定，行为与批一前一致。 */
   outcomeRef?: OutcomeRef
+  /** 批二 Task 2：outcome 绑定「有线索但不可证」（fleet tap 字段读取瞬态抛错，或
+   *  outcome_ref 在但形状解不出）——不回退成「无绑定」放行（旧路径落风险档闸/单签
+   *  直决= fail-open）；autopass 拒、decide 批准类 409 outcome_unavailable。 */
+  outcomeUnverified?: boolean
   /** high+one-way 格（decision-matrix evaluateOutcomeAction）标记：decide 走
    *  owner+verifier 双签门（两笔不同 actor 顺序批准才 resolved）。 */
   dualSignRequired?: boolean
@@ -101,6 +105,16 @@ function parseOutcomeRef(v: unknown): OutcomeRef | undefined {
     ...(typeof r.ownerPersonId === 'string' && r.ownerPersonId ? { ownerPersonId: r.ownerPersonId } : {}),
     ...(typeof r.verificationOwnerId === 'string' && r.verificationOwnerId ? { verificationOwnerId: r.verificationOwnerId } : {}),
   }
+}
+
+/** 批二 Task 2：outcome 绑定「有线索但不可证」判定——fleet tap 标记的读取瞬态失败
+ *  （outcome_unverified），或非空 outcome_ref 解析不出（形状不合法），皆为真。此类
+ *  条目不得按「无绑定」放行（互斥分流要求先证明无绑定才能落风险档闸），聚合面标
+ *  PendingItem.outcomeUnverified、autopass 拒、decide 批准类 409 outcome_unavailable。 */
+function outcomeRefUnverified(rec: { outcome_ref?: unknown; outcome_unverified?: boolean } | null | undefined): boolean {
+  if (!rec) return false
+  if (rec.outcome_unverified === true) return true
+  return rec.outcome_ref != null && parseOutcomeRef(rec.outcome_ref) === undefined
 }
 
 function actorOf(ctx: { state?: { user?: { username?: string } } }): string {
@@ -199,13 +213,16 @@ function readDeferredQueue(): PendingItem[] {
   return items
 }
 
-/** 批一 Task 12：源记录 outcome 绑定字段 → PendingItem 标注（形状不对=无绑定，不猜数）。 */
-function outcomeAnnotationOf(rec: { outcome_ref?: unknown; dual_sign_required?: boolean }): {
+/** 批一 Task 12：源记录 outcome 绑定字段 → PendingItem 标注（null/缺省=无绑定）。
+ *  批二 Task 2：绑定线索在但不可证（tap 读取瞬态抛错/引用形状不合法）→ 标
+ *  outcomeUnverified，不回退成「无绑定」（fail-open 收口：autopass/decide 面同拒）。 */
+function outcomeAnnotationOf(rec: { outcome_ref?: unknown; dual_sign_required?: boolean; outcome_unverified?: boolean }): {
   outcomeRef?: OutcomeRef
   dualSignRequired?: boolean
+  outcomeUnverified?: boolean
 } {
   const outcomeRef = parseOutcomeRef(rec.outcome_ref)
-  if (!outcomeRef) return {}
+  if (!outcomeRef) return outcomeRefUnverified(rec) ? { outcomeUnverified: true } : {}
   return { outcomeRef, ...(rec.dual_sign_required === true ? { dualSignRequired: true } : {}) }
 }
 
@@ -688,6 +705,9 @@ function actorOutcomeRole(actor: string, contract: OutcomeContract): 'owner' | '
 
 /**
  * outcome 绑定裁决门：contractVersion 与当前合同不符 → 409 `stale_contract`；
+ * 批二 Task 2 合同状态门——cancelled/settled 终态不再承接批准类裁决（409
+ * `outcome_not_active`，与 dispatch 面对齐），否决类（deny/reject）照常放行（否决
+ * 不设门：收紧方向不加门槛，且 deny 不放行命令、无绕行面）；
  * dual_sign_required → owner 与 verifier 两笔不同 actor 顺序批准——第一签（任意一角色）
  * 落签署账后仍 pending（409 `dual-sign-required`），第二签须另一角色且不同 actor 才
  * 放行（同人两票/单签不生效；映射失败 403 `not_outcome_signer`）。否决类决策不设
@@ -725,6 +745,18 @@ function enforceOutcomeBinding(
           itemContractVersion: outcomeRef.contractVersion,
           currentContractVersion: contract.version,
         },
+      })
+    return false
+  }
+  // 批二 Task 2 合同状态门：cancelled/settled 终态合同不再承接批准类裁决（与 dispatch
+  // 面 outcome_not_active 对齐）；否决类（deny/reject）照常放行——否决不设门。
+  if ((contract.status === 'cancelled' || contract.status === 'settled')
+    && decision !== 'deny' && decision !== 'reject') {
+    fail(ctx, 409,
+      `outcome 合同 ${outcomeRef.outcomeId} 已${contract.status === 'cancelled' ? '取消' : '结算'}（终态），不再承接批准类裁决`,
+      {
+        code: 'outcome_not_active',
+        extra: { outcomeId: outcomeRef.outcomeId, contractStatus: contract.status },
       })
     return false
   }
@@ -846,6 +878,11 @@ router.post('/:id/decide', async (ctx) => {
     let risk: ApprovalRiskTier | undefined
     let fleetOutcomeRef: OutcomeRef | undefined
     let fleetDualSign = false
+    // 批二 Task 2：快照读取瞬态失败不再退风险档闸放行（旧路径 risk 留空→双签闸
+    // 不适用=无门直放 fail-open）。绑定不可证（快照抛错/条目不在快照/绑定字段读不
+    // 出解不出）按「有绑定但不可证」处理：批准类 409 outcome_unavailable（宁可 409
+    // 不放行，不猜）；否决类照常放行（否决不设门，deny 不放行命令、无绕行面）。
+    let fleetUnverified = false
     try {
       const sessions = buildFleetSnapshotFromTap()
       const sess = sessions?.find((s) => s.id === sessionId)
@@ -854,8 +891,23 @@ router.post('/:id/decide', async (ctx) => {
         risk = classifyApprovalRisk({ kind: 'command', detail: appr.preview || '', title: sess?.title })
         fleetOutcomeRef = parseOutcomeRef(appr.outcome_ref)
         fleetDualSign = appr.dual_sign_required === true
+        fleetUnverified = outcomeRefUnverified(appr)
+      } else {
+        // 条目不在快照（事件窗旋转/瞬态）——绑定状态不可证，批准类不放行
+        fleetUnverified = true
       }
-    } catch { /* 快照不可用则档位留空，不阻断裁决 */ }
+    } catch {
+      fleetUnverified = true
+    }
+    if (fleetUnverified && decision !== 'deny') {
+      fail(ctx, 409,
+        `fleet 审批 ${approvalId} 的 outcome 绑定不可证（tap 快照读取异常或条目不在快照），拒绝批准类裁决`,
+        {
+          code: 'outcome_unavailable',
+          extra: { approvalId, sessionId, scope: '绑定不可证时宁可 409，不退风险档闸猜' },
+        })
+      return
+    }
     // 批一 Task 12 复审 I-2：outcome 绑定条目（tap 透传 outcome_ref）以合同门为权威
     // ——角色绑定双签强于风险档双签，绑定条目不再叠 risk-tier 闸（防双闸复合把双签
     // 拖成三请求）；未绑定条目照旧走风险档闸。
@@ -910,7 +962,15 @@ router.post('/:id/decide', async (ctx) => {
     }
     // 批一 Task 12 复审 I-2：outcome 绑定条目走同一合同门＋owner/verifier 双签门
     // （第一签仍 pending 不写响应；单签不得绕版本门）。
+    // 批二 Task 2：绑定线索在但解不出 → 「有绑定但不可证」，批准类 409（deny 放行）。
     const mxOutcomeRef = parseOutcomeRef(found.entry.outcome_ref)
+    if (decision !== 'deny' && outcomeRefUnverified(found.entry)) {
+      fail(ctx, 409, `mx 审批 ${eid} 的 outcome 绑定不可读（引用形状不合法），拒绝批准类裁决`, {
+        code: 'outcome_unavailable',
+        extra: { eid },
+      })
+      return
+    }
     if (mxOutcomeRef && !enforceOutcomeBinding(ctx, {
       itemId: id, actor, decision, outcomeRef: mxOutcomeRef,
       dualSignRequired: found.entry.dual_sign_required === true,
@@ -943,6 +1003,14 @@ router.post('/:id/decide', async (ctx) => {
     }
     const dRec = findDeferredRecord(deferredId)
     const dOutcomeRef = parseOutcomeRef(dRec?.outcome_ref)
+    // 批二 Task 2：绑定线索在但解不出 → 「有绑定但不可证」，批准类 409（deny 放行）。
+    if (choice !== 'deny' && outcomeRefUnverified(dRec)) {
+      fail(ctx, 409, `延迟审批 ${deferredId} 的 outcome 绑定不可读（引用形状不合法），拒绝批准类裁决`, {
+        code: 'outcome_unavailable',
+        extra: { deferredId },
+      })
+      return
+    }
     if (dOutcomeRef && !enforceOutcomeBinding(ctx, {
       itemId: id, actor, decision: choice, outcomeRef: dOutcomeRef,
       dualSignRequired: dRec?.dual_sign_required === true,
@@ -977,6 +1045,14 @@ router.post('/:id/decide', async (ctx) => {
     }
     const qEntry = findQueueEntry(requestId)
     const qOutcomeRef = parseOutcomeRef(qEntry?.outcome_ref)
+    // 批二 Task 2：绑定线索在但解不出 → 「有绑定但不可证」，批准类 409（deny 放行）。
+    if (decision !== 'deny' && outcomeRefUnverified(qEntry)) {
+      fail(ctx, 409, `审批 ${requestId} 的 outcome 绑定不可读（引用形状不合法），拒绝批准类裁决`, {
+        code: 'outcome_unavailable',
+        extra: { requestId },
+      })
+      return
+    }
     if (qOutcomeRef && !enforceOutcomeBinding(ctx, {
       itemId: id, actor, decision, outcomeRef: qOutcomeRef,
       dualSignRequired: qEntry?.dual_sign_required === true,
