@@ -304,6 +304,18 @@ export interface RollbackRecord {
 }
 
 /**
+ * 晋级豁免（Agnes Harness 吸收批一 a，2026-11-20）：对特定硬门的人工豁免留痕。
+ * v1 只豁免 min_k（k<3 采样不足）——豁免必须记 actor 与理由，进提案历史可审计；
+ * 安全类门（riskVeto/约束 fail）不可豁免。
+ */
+export interface PromotionWaiver {
+  code: 'min_k'
+  actor: string
+  reason: string
+  at: string
+}
+
+/**
  * 噪声标定（RRSI S2：δ 来自未改动基线的重复实测，不提供调参入口）。
  * method 固定 'half-range'：passAt1 半极差 (max-min)/2，保守且不需要分布假设。
  */
@@ -344,6 +356,8 @@ export interface Proposal {
    * 只用于归因与拆分建议，不改变晋级证据链。
    */
   editClass?: EditClass | null
+  /** 晋级豁免（Agnes 批一 a，2026-11-20）：min_k 等可豁免门的人工留痕；缺席=无豁免。 */
+  waivers?: PromotionWaiver[]
   /** 采用的组件库 donor（W3，2026-11-05）：ComponentEntry.id 列表。 */
   donorRefs?: string[]
   /** 起草时被过滤掉的 donor（已在基线里/无正增益），留痕供审计。 */
@@ -427,6 +441,11 @@ export interface PromotionGateReport {
   ok: boolean
   blockers: GateBlocker[]
   warnings: GateBlocker[]
+  /**
+   * 字典序分层结论（Agnes 批一 a，2026-11-20）：安全 > 质量 > 成本。
+   * 高层 fail 时成本 blocker 暂缓（降 warning）；任何成本收益不能抵消安全/质量 fail。
+   */
+  lexOrder?: { safety: 'pass' | 'fail'; quality: 'pass' | 'fail'; cost: 'pass' | 'fail' }
 }
 
 // ---------- RRSI 正则化派生（2026-10-23 吸收轮） ----------

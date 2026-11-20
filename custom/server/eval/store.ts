@@ -281,6 +281,20 @@ export interface CreateSetInput {
   /** 集形态（2026-11-14 P1）：缺省 task；discovery＝发现测试（tasks 可空，discovery 规格必填）。 */
   kind?: 'task' | 'discovery'
   discovery?: unknown
+  /**
+   * 三向角色（Agnes 批一 a）：train=进化调参可读；eval=晋级比较；sealed=密封验证。
+   * 缺省按推导落盘（非 sealed→eval）；train 必须显式声明——防误把比较集标成训练集。
+   */
+  split?: 'train' | 'eval' | 'sealed'
+}
+
+/** 三向角色推导（单一事实源）：sealed 布尔恒胜出（密封机制优先于角色标签）；
+ *  显式 train → train；其余（含缺省与无效组合）→ eval。split='sealed' 而 sealed=false
+ *  属配置矛盾，由 createSet 校验拒绝，不在推导层容忍。 */
+export function splitOfSet(set: Pick<EvalSet, 'sealed'> & { split?: EvalSet['split'] }): 'train' | 'eval' | 'sealed' {
+  if (set.sealed) return 'sealed'
+  if (set.split === 'train') return 'train'
+  return 'eval'
 }
 
 // ---------- 评测集 ----------
@@ -293,6 +307,8 @@ export function listSets(): EvalSetMeta[] {
     track: s.track,
     module: s.module,
     sealed: s.sealed,
+    /** 三向角色（Agnes 批一 a）：列表面可见，不必等晋级被拦才知道集是 train。 */
+    split: splitOfSet(s),
     contentHash: s.contentHash,
     revision: s.revision,
     createdAt: s.createdAt,
@@ -329,6 +345,14 @@ export function createSet(
   // 黄金集配比校验（2026-11-06 C 批）：golden=true 时 10/10/10 是机制不是口头约定；
   // 校验器与守门测试同源（golden-set.ts assertGoldenRatio），错配比在建集口即拒。
   if (input?.golden === true) problems.push(...assertGoldenRatio(input.tasks as EvalTask[]))
+  // 三向角色校验（Agnes 批一 a）：split 只收三个合法值；sealed 角色由密封机制推导、
+  // 不接受显式声明（未密封却标 sealed=配置矛盾）；train 集不得同时 golden（训练集
+  // 服务进化调参，黄金配比是评测面约束，两者混标会让「黄金」读数失去比较意义）。
+  if (input?.split !== undefined && !['train', 'eval', 'sealed'].includes(String(input.split))) {
+    problems.push('split 须为 train/eval/sealed')
+  }
+  if (input?.split === 'sealed') problems.push('split=sealed 不接受显式声明：密封集由 sealSet 推导（先建 eval 集，验证后密封）')
+  if (input?.split === 'train' && input?.golden === true) problems.push('train 集不得同时 golden：训练集服务进化调参，黄金配比属评测面')
   const store = readStore()
   if (!problems.length && store.sets.some((s) => s.name === name)) problems.push(`同名评测集已存在：${name}`)
   if (problems.length) return { ok: false, problems }
@@ -343,6 +367,7 @@ export function createSet(
     revision: 1,
     createdAt: Date.now(),
     createdBy,
+    ...(input?.split === 'train' ? { split: 'train' as const } : {}),
     ...(input?.golden === true ? { golden: true } : {}),
     tasks: input.tasks as EvalTask[],
     ...(kind === 'discovery' ? { kind: 'discovery' as const, discovery: input?.discovery as EvalSet['discovery'] } : {}),
@@ -359,7 +384,13 @@ export function sealSet(id: string, actor?: string): { ok: true } | ProblemsFail
   const store = readStore()
   const set = store.sets.find((s) => s.id === id)
   if (!set) return { ok: false, problems: [`评测集不存在：${id}`] }
-  if (set.sealed) return { ok: false, problems: ['评测集已密封'] }
+  // 问题统一收集后单一失败出口（K19 棘轮：失败字面量只许减）。
+  const problems: string[] = []
+  if (set.sealed) problems.push('评测集已密封')
+  // 三向角色（Agnes 批一 a）：密封即转 sealed 角色——train 集不允许密封
+  // （训练集就是要给进化过程读的，密封后语义自相矛盾）。
+  if (set.split === 'train') problems.push('train 集不可密封：训练集服务进化调参，密封后失去存在意义；如需密封验证集另建 eval 集验证后密封')
+  if (problems.length) return { ok: false, problems }
   set.sealed = true
   if (actor) set.createdBy = set.createdBy ?? actor
   writeStore(store)

@@ -195,7 +195,9 @@ async function runAutoProbeJob(
       }
     })
 
-    // R4（D4 匹配预算口径）：k=2 默认；预算不足以支撑双样本全程时降 1（如实降级不造假）。
+    // R4（D4 匹配预算口径）：k=3 默认（Agnes 批一 a）；预算不足以支撑全程采样时降 1
+    // （如实降级不造假——降级后的 k<3 证据会被晋级门 statistical_insufficient 拦，
+    // 需 min_k 豁免或补足预算重探）。
     const perTask = limits.estimate
     const wantK = Math.max(1, Math.min(readSchedulePolicy().probeK, 10))
     const affordableK = remaining >= tasks.length * perTask * wantK ? wantK : 1

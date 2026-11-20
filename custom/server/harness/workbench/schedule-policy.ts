@@ -25,7 +25,10 @@ export interface SchedulePolicy {
 
 export const DEFAULT_SCHEDULE_POLICY: SchedulePolicy = {
   probeMaxTasks: 5,
-  probeK: 2,
+  // 缺省 3（Agnes 批一 a，2026-11-20）：k<3 无法区分运气与能力（晋级门同款判据；
+  // Agnes RSI 密封复跑实测同任务方差 12-19%，n=3 是统计下限不是奢侈）。降回 2
+  // 须显式改档并接受晋级门 statistical_insufficient blocker。
+  probeK: 3,
   // 缺省 2：探测墙钟时间减半，代价是最多多花 1 份单题估值（约 5 美元上限的 10%），
   // 且只占 2 个 agent 子进程。3 以上留给「机器够、预算宽、题多」的场景——模型账号
   // 限流是按账号算的，同机其它 agent 也在用同一个额度。执行器还会再按「单元数」

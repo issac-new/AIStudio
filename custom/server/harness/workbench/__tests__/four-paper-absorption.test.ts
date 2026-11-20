@@ -411,9 +411,10 @@ describe('W6 code 计数棘轮', () => {
     const codes = new Set(
       [...source.matchAll(/code: '([a-z0-9_]+)'/g)].map((m) => m[1]),
     )
-    // 2026-11-05 四篇论文吸收后：53 → 57（+mechanism_not_executed/mechanism_trace_missing/edit_class_undeclared/edit_class_mixed）
-    expect(codes.size).toBe(57)
-    for (const code of ['mechanism_not_executed', 'mechanism_trace_missing', 'edit_class_undeclared', 'edit_class_mixed']) {
+    // 2026-11-05 四篇论文吸收后：53 → 57；2026-11-20 Agnes 批一 a：57 → 59
+    // （+statistical_insufficient_waived/train_evidence）
+    expect(codes.size).toBe(59)
+    for (const code of ['mechanism_not_executed', 'mechanism_trace_missing', 'edit_class_undeclared', 'edit_class_mixed', 'statistical_insufficient_waived', 'train_evidence']) {
       expect(codes.has(code)).toBe(true)
     }
   })

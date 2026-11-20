@@ -409,7 +409,14 @@ router.post('/proposals/:id/promote', async (ctx) => {
         confidence,
       }
       : undefined
-    const result = await promoteProposal(ctx.params.id, { actor: actorOf(ctx, b), apply: b.apply === true, reflection })
+    // 豁免入参（Agnes 批一 a）：[{code:'min_k', reason}]——reason 必填（空理由的豁免视同未提交）。
+    const waiversRaw = Array.isArray(b.waivers) ? b.waivers : []
+    const waivers = waiversRaw
+      .filter((w): w is { code: 'min_k'; reason: string } =>
+        w && typeof w === 'object' && (w as { code?: unknown }).code === 'min_k'
+        && typeof (w as { reason?: unknown }).reason === 'string' && (w as { reason: string }).reason.trim().length > 0)
+      .map((w) => ({ code: 'min_k' as const, reason: w.reason }))
+    const result = await promoteProposal(ctx.params.id, { actor: actorOf(ctx, b), apply: b.apply === true, reflection, ...(waivers.length > 0 ? { waivers } : {}) })
     ctx.body = { ok: true, ...result }
   } catch (e) {
     fail(ctx, e)
