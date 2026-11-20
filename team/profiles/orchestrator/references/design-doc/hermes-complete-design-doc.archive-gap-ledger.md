@@ -6,6 +6,80 @@
 
 ---
 
+## gap-20261120-design-doc-sync：1103-1120 窗口复盘 → 设计文档口径刷新（编制 30→27 + 六融合节）
+
+- **来源**：用户令「依据近期调研及更新等，更新整体设计文档」。窗口起点 = 上次同步 `gap-20261102-design-doc-sync`（正文尾批 commit 9b09fe4c5，11-02）。方法 = design-doc-sync-audit 五件套 + 6 路 digest 子代理全文消化（微信簇/1117 簇/hack 簇/知识栈簇/公文簇/科学技能簇，18 分钟并行回执）。
+- **编制刷新（三域网关并入）**：aiteam/pay/data-orchestrator 三岗 2026-11-17 退役（`20261117-orch-merge`）→ 在册 30→27（26 worker + 1 orchestrator），正本 30+ 处口径全改（头部/§0.1/§2.0/§2.1 图/§2.2 范式表与 27 岗一览与编制明细/§2.3.1 三视图/§3.4/附录 A）；域知识库路径外置 `shared/domain-knowledge/{pay,data}/`（验证命令同步换新）；10 业务板口径不变。
+- **计数复测（2026-11-20）**：skills 889→923 / 顶层 53→51；治理规则 95→97；bin 74→82；pay 库 32MB→34MB；research 目录 50 个；底座三件套 swarm-yuan v2.95.0（正本 11-08 自安装副本重建）/ hermes v0.23.2 / studio v0.8.28（cockpit 0.8.28-studio.1）。
+- **新增 §4.42-§4.47 六融合节**：技能工程与评测（wechat3）/ 主动性治理（6A）/ hack 攻防双技能（moanju）/ 知识栈与 WeKnora（knowledge-stack）/ 微信情报增量管线（wechat-delta）/ 公文能力栈（gongwen-suite）；§3.5 补五类分账+存量对账三面法+台账第 8 行；§4.33 补调研方法论增量（scoop-check/release notes 口径/K-Dense）；§4.7.2 补五闸门随板分发注；§4.21 补 semantica 现状口径；附录 A +12 术语行；附录 B +9 索引行。
+- **实现缺口顺手修复**：夜间域派工 `domain_nightly.py` + `gap_register.py`（life-workbench 正本 + ~/.hermes/scripts 副本）仍派 aiteam/data/pay 差距给已归档网关 profile——改投 aiteam-scout / data-arch / pay-fintech（语法校验过）；文正本 §4.10 域→岗映射同步。
+- **验收**：新词 grep>0；`^||` 畸形行零新增；代码围栏偶数；§4.N 序列 4.42→4.47 递进；旧值复扫（29 worker/30 agent/889/95/74/47-47）非历史行零残留；stale 快照 `hermes-complete-design-doc.md.stale-pre-20261120-sync-1014` 留档。
+- **状态**：done（2026-11-20）。挂账：① hermes 侧 RSI P0 三项仍未执行（见 gap-20261031-rsi-survey 行）；② AIStudio records 10-28 快照副本落后正本，按 aistudio-incremental-sync 另行同步。
+
+## gap-20261120-scientific-agent-skills：K-Dense 科学技能簇方法论融合
+
+- **来源**：K-Dense scientific-agent-skills v2.72.0（177 技能/22 类，MIT，arXiv:2609.00065v2）→ 裁决书 `~/.hermes/shared/research/20261120-scientific-agent-skills/FUSION-VERDICT-20261120.md`（20 机制：吸收 8/收缩 4/印证 7/不吸收 1）。
+- **落地**：research-methodology v1.3→v1.4.0（59→64 条：T6/S12/E18/V6/R14，K-Bench 过度宣称打标/自验证频次/裁判自偏好、复现>生成、行锚引证 #L45-L52、PRISMA 三分、HARKing 冻结防线）；skill-library-slimming v1.1.0 合并路由证据锚（13.9x 常驻税实测行）；article-methodology-fusion v1.7.0。
+- **验收**：四 skill 锚点独立复核在位（含 orchestrator symlink 视图与实体逐对 SAME）；grep「64 条」/五条新目全中。
+- **不吸收**：177 领域技能本体（tap 已注册按需取用）；BYOK 桌面产品；NemoClaw/OpenShell 沙箱；M20 LLM 技能扫描器（登记 gap 低优先）；「25 万科学家用户」正典无此数不采信。
+- **状态**：done（2026-11-20）；成色=语义+机制落地，效力待首次实战。
+
+## gap-20261119-gongwen-suite：公文能力栈收敛单技能（三层栈 + 两逆向产物）
+
+- **来源**：`20261112-gongwen-ai-reverse`（公文精灵 OmniMesh bundle 免登录逆向：OM 标签 18 要素 + GB9704 参数矩阵；新华妙笔官网实测：三级校对/四档差错/五类词库）+ `20261119-gongwen-wx-article`（super-official-writer 229 篇 91.4 万字量化参数 + ppt-studio 审美证据化两正典 clone）。
+- **落地**：三技能收敛单技能 `devops/gongwen-suite` v1.0.0（452K；references 5 件 + scripts 4 件 2706 行；34 profile 挂载）；om2docx 29/29 断言（本轮亲测 rc=0）；gw-qa 七文体量化终检；gongwen-lint 18 规则（设计文档 §0.5 文风基线门禁消费件）；旧 gongwen-bifa 收编（tar 备份在案）。横切原则=内容与版式分离。
+- **不吸收**：C 端定价/端侧硬件/亿级素材库宣称/领导人称谓词库/服务端 prompt（未取证）/ppt-studio Gallery。保留意见：妙笔 98.7% 等校对数字为厂商宣称未独立验证，吸收的是维度框架。
+- **memory 勘误**：om2docx.py 实际在技能 scripts/ 下（非 ~/.hermes/bin/）；三层栈已收敛单技能（旧三技能名过期）。
+- **状态**：done（2026-11-12/19 两轮）。
+
+## gap-20261119-researchstudio-fusion：ResearchStudio 12 机制 + CCFA 14 条融合（scoop-check 落地）
+
+- **来源**：微软 ResearchStudio（MIT，3,620★）回源正典 + CCFA-Skills → 裁决 `~/.hermes/shared/research/20261119-researchstudio-idea/FUSION-VERDICT-20261119.md`。
+- **落地**：research-methodology v1.3.0→v1.3.1（多源检索 CLI/DOI 三级去重/语义过滤 Step 1.5/scoop-check 七步/ideation 模式库收缩/质量契约）；skill-tuning-production v1.0.1；CCFA 批次吸收 CS-7 完整性核验 auditor（R13）。
+- **scoopcheck 效力首跑**：`scoopcheck-exercise/scoopcheck-report.md` 判 clef-jev 守门位 **Level 1 全撞**（this-that-model-1.0 arXiv 2609.23886 + Jev 1.13 实测 arXiv 2610.24649 覆盖；残余 delta=生产校准回路+编排治理决策点）；选项通道攻击（arXiv 2610.12292）实测所有防御可击破 → 维持 fail-closed。对外表述禁宣称首创。
+- **不吸收**：idea_spark 执行管线与 idea-quality 评分（重入条件：idea card/CCF-A 量产需求）；Reel 半边；CCFA 18 skills 本体；CS-14 科研绘图。
+- **状态**：done（2026-11-19）。
+
+## gap-20261119-moanju-hack-fusion：模安局语料线二期（hack 攻防双技能 + 互测结构）
+
+- **来源**：模安局（moanju.org 站点直抓）sitemap 枚举 142 篇真增量（精读 30）→ `~/.hermes/shared/research/20261119-moanju-hack-fusion/FUSION-REPORT.md`；基线=9 月 148 篇（§4.7.2）。卡 t_acf7ed74 done。
+- **落地**：redteam-agent-injection v1.2.0（七大攻击面+双层选型决策树）+ skill-integrity-path-governance v1.2.0（六段三门 L0-L4+π 八策略+运行时门 v2）互为回归用例集（红蓝对照互测结构）；五闸门拷入 `scripts/moanju-gates/` 随板分发（56/56 复验）；6 hack profile symlink。
+- **口径修正**：「大量 skill 本身恶意」不成立（恶意率 0.09%-5.2%），真实水位=漏洞密度 26%-64% × 全权限继承。报告两勘误入档：增量实际跨度 2025-10-11→11-17；profile 数 6 非 5。
+- **不吸收**：112 篇未精读（manifest 分诊在案）；治理/域外类文章；27 机制矩阵非 P0 的 22 条；shinthink 单源待复核。
+- **状态**：done（2026-11-19）。
+
+## gap-20261117-research-capability-audit：调研吸收三面存量对账
+
+- **来源**：用户问「历史调研吸收的渠道/能力是否已补齐」→ `~/.hermes/shared/research/20261117-research-capability-audit/`（AUDIT.md + 两 JSON 底账）。
+- **落地**：P0 三修验证过（pentest §12 重落、daily-intel-brief v1.2.0、llm-wiki 回位）；程序固化为 skill `research-capability-absorption-audit` v1.0.0；机制结论=对账产物必落 shared/research/ 持久层。台账勘误：WeKnora 此前漏登（本卷 gap-20261113-knowledge-stack 补齐）。
+- **不吸收**：P1 三项+4 子项择期；P2 14 项保持归档；9 行非调研豁免。
+- **状态**：P0 done；P1/P2 open（择期）。
+
+## gap-20261117-orch-merge：三域网关退役并入主 orchestrator
+
+- **来源**：用户裁决（2026-11-17）「aiteam/pay/data 域网关退役，分解权收归主 orchestrator（k12edu 保留独立）」→ `~/.hermes/shared/research/20261117-orch-merge/`（manifest 3 tar sha256 全 verify=true）。
+- **落地**：三 profile 冷归档 `/Volumes/nvme2230/lab/archive/20261117-orch-merge/`；路由知识蒸馏进 skill `domain-team-dispatch` v1.0.0（三域 SOUL 全文在 references/）；域知识库外置 `shared/domain-knowledge/{pay,data}/`（git 历史与 tag 随迁）；domain-registry owner 三行改 orchestrator；profiles.yaml 三条目删；三板 board.json profile_scope 去网关。
+- **后续修复（2026-11-20 本轮 sync 发现）**：夜间域派工脚本 assignee 断链（aiteam/data/pay 仍指已归档 profile）→ 改投 aiteam-scout / data-arch / pay-fintech（domain_nightly.py + gap_register.py 正本与副本双修）。
+- **不吸收**：三域 SOUL 全文不进设计文档；k12edu 不并入（隐私+独立微信通道）；三域 hindsight 记忆库不动。
+- **状态**：done（2026-11-17；断链修复 2026-11-20）。
+
+## gap-20261113-knowledge-stack：知识栈五线调研与 WeKnora 转正
+
+- **来源**：`~/.hermes/shared/research/20261113-knowledge-stack-selection/`（REPORT + stream-a~e）+ POC 五件套 `20261113-knowledge-rag-selection/POC-FINAL-REPORT.md`（WeKnora vs RAGFlow：盲测 3:1、内存峰值 1.15GB vs 5.18GB）。
+- **落地**：2026-11-14 终裁 WeKnora 转正（v0.9.0 五容器生产运行）、RAGFlow 退役观察（复查三条件入 skill `kb-platform-deployment` v1.0.0）；2026-11-15 投产 kb-search.py（混合检索+--ask）与生产库 hermes-research-prod（kb-config.json；嵌入=Ollama qwen3-embedding:0.6b 本地、LLM=glm-5.3 经 :18085 responses-桥）；nightly 03:10 导入/04:10 备份；设计文档 §4.45/§3.5 台账第 8 行（本轮 sync 收录——此前 SOUL 已用而设计文档零收录，为最大补位项）。
+- **待办**：P0 LanceDB / P2 LightRAG / P3 llm-wiki 编译层未动工（条件触发）。
+- **不吸收**：RAGFlow/Onyx/Kotaemon/向量库竞品/记忆中间件五家（与 Hindsight 同层）/Neo4j/Kuzu/全量 GraphRAG/Self-RAG/NotebookLM。
+- **状态**：done（转正+投产）；三待办 open。附勘误：`20261113-ontostudo` 为取证脚本 typo 空壳目录（真实证据在 ontostudio/），已删除。
+
+## gap-20261113-wechat3-skillfusion：微信三文融合（技能工程与评测体系）
+
+- **来源**：三篇微信技术文（评测体系全景图/AntiFox/Skill 焚诀）→ `~/.hermes/shared/research/20261113-wechat3-hermes-fusion/REPORT.md`（裁决：吸收 4/判已有 3/部分增量 3；A3 原文 1141 行全文读毕）。卡 t_b1b44661 done。
+- **落地**：skill `devops/skill-tuning-production`（反例必配——无反例路由 73%→53%、有反例 85%；bad case 五步法；三层套件一处定义）+ `devops/agent-eval-system-design`（六维矩阵+Pass^k+L0 全对门禁）+ security-tool-landscape-tracking patch（AntiFox 条目+自主渗透平台类目）。
+- **不吸收**：A1 六维图仅审计透镜；AntiFox 本体（AGPL+本地靶场红线）；授权纸面/HITL（security-domain-delegation 已同构）。
+- **状态**：done（2026-11-13）；设计文档 §4.42 本轮 sync 收录。
+
+---
+
 ## gap-20261117-wechat-delta-pipeline：微信增量调研战役（15 篇精读 8 项落地 + 搜狗终局 + 论文升级 + 巡检管道）
 
 - **来源**：用户令「跟进主要公众号的更新文章，完善 hermes agent teams」。存档 `~/.hermes/shared/research/20261116-wechat-delta/`（DELTA-FUSION-REPORT §一-§七 + corpus + sweep.py 管道 + 台账 wechat-accounts-ledger.yaml）。
