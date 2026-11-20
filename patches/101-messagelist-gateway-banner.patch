@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packages/client/src/components/hermes/chat/MessageList.vue
+index 8bda81cc5..bc14653a1 100644
 --- a/packages/client/src/components/hermes/chat/MessageList.vue
 +++ b/packages/client/src/components/hermes/chat/MessageList.vue
-@@ -30,6 +30,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
+@@ -31,6 +31,7 @@ import { messageScrollPositionKey, rememberMessageScrollPosition } from "./messa
  import { chatSessionAgentAvatar, personAvatarAnimation, personAvatarStyle } from "@/utils/chat-agent-avatar";
  import { parseThinking } from "@/utils/thinking-parser";
  import { groupCompletedToolsByRun } from "./tool-run-grouping";
@@ -9,10 +10,10 @@ diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packag
  import { useMessageSelection } from './useMessageSelection';
  import type { MessageSelectionRow } from './message-selection';
  import { desktopBridge } from '@/utils/desktop-bridge';
-@@ -487,6 +488,24 @@ async function openForkParent(event?: MouseEvent) {
+@@ -496,6 +497,24 @@ async function openForkParent(event?: MouseEvent) {
  }
  
- function handleApproval(choice: "once" | "session" | "always" | "deny") {
+ async function handleApproval(choice: "once" | "session" | "always" | "deny") {
 +  // HERMES_CUSTOM[IdeApprovalLearning] BEGIN
 +  // R2 批准即学习：上游 MessageList 按钮改为发 CustomEvent（不新增 props/emit，
 +  // 避免波及全部调用点）；overlay IdeChatPane 捕获后做记忆+提示再转发
@@ -31,10 +32,10 @@ diff --git a/packages/client/src/components/hermes/chat/MessageList.vue b/packag
 +    );
 +  }
 +  // HERMES_CUSTOM[IdeApprovalLearning] END
-   chatStore.respondApproval(choice);
- }
- 
-@@ -776,6 +795,7 @@ defineExpose({
+   try {
+     await chatStore.respondApproval(choice);
+   } catch {
+@@ -801,6 +820,7 @@ defineExpose({
  
  <template>
    <div class="message-list-shell" :aria-busy="isSearchLoading">

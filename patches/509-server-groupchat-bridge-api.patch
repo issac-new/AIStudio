@@ -1,17 +1,18 @@
-diff --git a/packages/server/src/modules/studio/sockets/group-chat.ts b/packages/server/src/modules/studio/sockets/group-chat.ts
-index 7ad7496a3..d474d9b9c 100644
+
+diff --git packages/server/src/modules/studio/sockets/group-chat.ts packages/server/src/modules/studio/sockets/group-chat.ts
+index c359327f6..8adb7b496 100644
 --- a/packages/server/src/modules/studio/sockets/group-chat.ts
 +++ b/packages/server/src/modules/studio/sockets/group-chat.ts
-@@ -8,6 +8,8 @@ import { bindLegacyAppEvents } from '../services/webhooks/legacy-app-events'
- import { registerGroupEventAccess } from '../services/webhooks/app-events'
+@@ -11,6 +11,8 @@ import { registerGroupEventAccess } from '../services/webhooks/app-events'
  import { publishGroupMessage, publishGroupInteraction } from '../services/webhooks/domain-events'
+ import { publishPluginObservation } from '../services/plugins/event-source'
  import { Server, Socket, Namespace } from 'socket.io'
 +// overlay[v14 P2B]: ChatBridge 桥事件出口（审批请求远端通知）
 +import { EventEmitter } from 'node:events'
  import type { Server as HttpServer } from 'http'
  import { mkdirSync } from 'fs'
  import { basename, join } from 'path'
-@@ -3271,6 +3273,8 @@ export class GroupChatServer {
+@@ -3303,6 +3305,8 @@ export class GroupChatServer {
      /** Map: socket.id → numeric users.id from the web UI auth (for avatar resolution) */
      private socketAuthUserIdMap = new Map<string, number>()
      readonly agentClients = new AgentClients()
@@ -20,7 +21,7 @@ index 7ad7496a3..d474d9b9c 100644
      private roomSummaryService: GroupRoomSummaryService
      private summaryReviewService: GroupSummaryReviewService
      private messageRoutingService: GroupMessageRoutingService
-@@ -3692,6 +3696,40 @@ export class GroupChatServer {
+@@ -3749,6 +3753,40 @@ export class GroupChatServer {
          return this.chatRunService
      }
  
@@ -61,7 +62,7 @@ index 7ad7496a3..d474d9b9c 100644
      publishAgentAttachmentMessage(input: {
          roomId: string
          agentId: string
-@@ -5430,6 +5468,8 @@ export class GroupChatServer {
+@@ -5501,6 +5539,8 @@ export class GroupChatServer {
              requestedAt: Date.now(),
          }
          this.pendingApprovalRoutes.set(routeKey, pendingRoute)

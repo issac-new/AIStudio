@@ -65,17 +65,18 @@ index 80fb44a2c..8005dc30a 100644
      // Choose provider: always use local for upload directory files
      let data: Buffer
 diff --git a/packages/server/src/modules/studio/controllers/files.ts b/packages/server/src/modules/studio/controllers/files.ts
-index 32c386764..9b6635468 100644
+index 022546313..a0e2cb881 100644
 --- a/packages/server/src/modules/studio/controllers/files.ts
 +++ b/packages/server/src/modules/studio/controllers/files.ts
-@@ -1,16 +1,38 @@
+@@ -1,3 +1,4 @@
 +import { join } from 'path'
  import {
    createFileProvider,
    resolveProfileFilePath,
-   isSensitivePath,
+@@ -5,13 +6,34 @@ import {
    MAX_EDIT_SIZE,
  } from '../services/files/file-provider'
+ import { fileContent } from '../services/files/file-operations'
 +import { isPathWithin, relativePathFromBase } from '../../hermes/services/runtime/path'
 +import { getHermesBaseDir } from '../../hermes/services/profiles/profile'
  import { MultipartParseError, parseMultipartBoundary, parseMultipartFilename, splitMultipart } from '../public/multipart'
@@ -107,7 +108,7 @@ index 32c386764..9b6635468 100644
    return resolveProfileFilePath(relativePath, requestedProfile(ctx))
  }
  
-@@ -18,7 +40,21 @@ async function createRequestFileProvider(ctx: any) {
+@@ -19,7 +41,21 @@ async function createRequestFileProvider(ctx: any) {
    return createFileProvider(requestedProfile(ctx))
  }
  
@@ -129,7 +130,7 @@ index 32c386764..9b6635468 100644
    return { ...entry, absolutePath: resolveRequestPath(ctx, entry.path) }
  }
  
-@@ -45,6 +81,14 @@ function handleError(ctx: any, err: any) {
+@@ -48,6 +84,14 @@ function handleError(ctx: any, err: any) {
  // GET /api/studio/files/list?path=
  export async function list(ctx: any) {
    const relativePath = (ctx.query.path as string) || ''
@@ -144,7 +145,7 @@ index 32c386764..9b6635468 100644
    try {
      const absPath = resolveRequestPath(ctx, relativePath)
      const provider = await createRequestFileProvider(ctx)
-@@ -53,7 +97,8 @@ export async function list(ctx: any) {
+@@ -56,7 +100,8 @@ export async function list(ctx: any) {
        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1
        return a.name.localeCompare(b.name)
      })
@@ -154,7 +155,7 @@ index 32c386764..9b6635468 100644
    } catch (err: any) {
      handleError(ctx, err)
    }
-@@ -67,6 +112,13 @@ export async function stat(ctx: any) {
+@@ -88,6 +133,13 @@ export async function read(ctx: any) {
      ctx.body = { error: 'Missing path parameter', code: 'missing_path' }
      return
    }

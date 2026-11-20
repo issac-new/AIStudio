@@ -1,37 +1,3 @@
-diff --git a/packages/client/src/api/studio/chat.ts b/packages/client/src/api/studio/chat.ts
---- a/packages/client/src/api/studio/chat.ts
-+++ b/packages/client/src/api/studio/chat.ts
-@@ -792,6 +792,30 @@
-     session_id: sessionId,
-     approval_id: approvalId,
-     choice,
-+  })
-+}
-+
-+/**
-+ * 回填一块声明式界面（ekko-ui/v1 Surface）。payload 只在服务端复验后交给 Agent；
-+ * 前端乐观状态由工具结果校正。
-+ */
-+export function respondUiSurface(
-+  sessionId: string,
-+  surfaceId: string,
-+  revision: number,
-+  actionId: string,
-+  payload?: unknown,
-+  profile?: string,
-+  transport: ChatRunTransport = 'chat-run',
-+): void {
-+  const socket = connectChatRun(null, transport)
-+  socket.emit('ui.surface.action', {
-+    session_id: sessionId,
-+    surface_id: surfaceId,
-+    revision,
-+    action_id: actionId,
-+    ...(profile ? { profile } : {}),
-+    ...(payload !== undefined ? { payload } : {}),
-   })
- }
- 
 diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
 --- a/packages/client/src/components/hermes/chat/MessageItem.vue
 +++ b/packages/client/src/components/hermes/chat/MessageItem.vue
@@ -111,3 +77,38 @@ diff --git a/packages/client/src/components/hermes/chat/tool-run-grouping.ts b/p
        ? message.runMarker?.trim()
        : undefined
      if (!runId) {
+diff --git packages/client/src/api/studio/chat.ts packages/client/src/api/studio/chat.ts
+index a4705de43..7e1b555c7 100644
+--- a/packages/client/src/api/studio/chat.ts
++++ b/packages/client/src/api/studio/chat.ts
+@@ -840,6 +840,30 @@ export function respondToolApproval(
+   return respondPendingInteraction('approval', sessionId, approvalId, { choice }, transport, profile)
+ }
+ 
++/**
++ * 回填一块声明式界面（ekko-ui/v1 Surface）。payload 只在服务端复验后交给 Agent；
++ * 前端乐观状态由工具结果校正。
++ */
++export function respondUiSurface(
++  sessionId: string,
++  surfaceId: string,
++  revision: number,
++  actionId: string,
++  payload?: unknown,
++  profile?: string,
++  transport: ChatRunTransport = 'chat-run',
++): void {
++  const socket = connectChatRun(null, transport)
++  socket.emit('ui.surface.action', {
++    session_id: sessionId,
++    surface_id: surfaceId,
++    revision,
++    action_id: actionId,
++    ...(profile ? { profile } : {}),
++    ...(payload !== undefined ? { payload } : {}),
++  })
++}
++
+ export function getChatRunSocket(transport?: ChatRunTransport): Socket | null {
+   if (transport && chatRunSocketTransport !== transport) return null
+   return chatRunSocket

@@ -90,7 +90,7 @@ describe('S3 入口补齐 patch 523 守门（cockpit-s3 轮：语音入口/ekko 
     // 0.7.30 迁移：AgentManagerView 段已并入上游重排版（patch 中不再逐字出现），
     // 改为注入态树直断；路由守卫仍出自本 patch。
     const agentManager = readFileSync(resolve(UPSTREAM_CLIENT, 'views/hermes/AgentManagerView.vue'), 'utf8')
-    expect(agentManager).toContain('v-if="features.ekko" class="agent-card coding-agent-card"')
+    expect(agentManager).toContain('<AgentManagerCard v-if="features.ekko" name="Ekko"')
     expect(patch).toContain('to.meta.ekkoConfig && !features.ekko')
   })
 

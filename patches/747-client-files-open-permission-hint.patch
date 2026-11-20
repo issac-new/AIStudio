@@ -50,43 +50,6 @@ index 8c3d4d1cc..146ad5e01 100644
              <NButton v-if="!filesStore.currentWorkspaceSessionId && !filesStore.currentWorkspaceRoomId && !entry.isDir" size="tiny" quaternary @click.stop="handleDownload(entry)" :title="t('files.download')">⬇️</NButton>
            </div>
          </div>
-diff --git a/packages/client/src/views/hermes/FilesView.vue b/packages/client/src/views/hermes/FilesView.vue
-index 5afbb5c07..ccd4a49b9 100644
---- a/packages/client/src/views/hermes/FilesView.vue
-+++ b/packages/client/src/views/hermes/FilesView.vue
-@@ -3,7 +3,7 @@ import PageLoading from '@/components/common/PageLoading.vue'
- import PageHeader from '@/components/layout/PageHeader.vue'
- import { computed, defineAsyncComponent, ref, watch } from 'vue'
- import { useRoute, useRouter } from 'vue-router'
--import { useDialog } from 'naive-ui'
-+import { useDialog, useMessage } from 'naive-ui'
- import { useI18n } from 'vue-i18n'
- import { useFilesStore } from '@/stores/hermes/files'
- import { useProfilesStore } from '@/stores/hermes/profiles'
-@@ -24,6 +24,7 @@ const profilesStore = useProfilesStore()
- const route = useRoute()
- const router = useRouter()
- const dialog = useDialog()
-+const message = useMessage()
- const { t } = useI18n()
- 
- const contextMenuRef = ref<InstanceType<typeof FileContextMenu> | null>(null)
-@@ -111,7 +112,14 @@ async function loadFromRoute() {
-     }
- 
-     if (filePath) {
--      await filesStore.openEditor(filePath, { profile })
-+      // overlay[perm]（2026-11-04 Windows 离线回归批）：?file= 深链与 FileList 打开
-+      // 同口径——非 super 用户 read 403 时给显式权限提示，不再静默无操作。
-+      try {
-+        await filesStore.openEditor(filePath, { profile })
-+      } catch (err: any) {
-+        const forbidden = String(err?.message || '').includes('API Error 403')
-+        message.error(forbidden ? t('files.openSuperadminRequired') : (err.message || t('files.backendError')))
-+      }
-     }
-   } finally {
-     if (generation === loadGeneration) initializing.value = false
 diff --git a/packages/client/src/i18n/locales/zh.ts b/packages/client/src/i18n/locales/zh.ts
 index 88fb194d8..5f5a3ea85 100644
 --- a/packages/client/src/i18n/locales/zh.ts
@@ -113,3 +76,23 @@ index e4d92b4ab..ece772b88 100644
      dragDropHint: 'Drag files here to upload',
      closeEditor: 'Close Editor',
      closePreview: 'Close',
+diff --git packages/client/src/views/hermes/FilesView.vue packages/client/src/views/hermes/FilesView.vue
+index bab5cc6af..3ed93ced7 100644
+--- a/packages/client/src/views/hermes/FilesView.vue
++++ b/packages/client/src/views/hermes/FilesView.vue
+@@ -113,7 +113,14 @@ async function loadFromRoute() {
+     }
+ 
+     if (generation === loadGeneration && filePath) {
+-      await filesStore.openEditor(filePath, { profile })
++      // overlay[perm]（2026-11-04 Windows 离线回归批）：?file= 深链与 FileList 打开
++      // 同口径——非 super 用户 read 403 时给显式权限提示，不再静默无操作。
++      try {
++        await filesStore.openEditor(filePath, { profile })
++      } catch (err: any) {
++        const forbidden = String(err?.message || '').includes('API Error 403')
++        message.error(forbidden ? t('files.openSuperadminRequired') : (err.message || t('files.backendError')))
++      }
+     }
+   } finally {
+     if (generation === loadGeneration) initializing.value = false

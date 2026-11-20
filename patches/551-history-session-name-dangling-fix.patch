@@ -1,18 +1,19 @@
-diff --git a/packages/client/src/views/hermes/HistoryView.vue b/packages/client/src/views/hermes/HistoryView.vue
-index cb774c106..bb05d274e 100644
+
+diff --git packages/client/src/views/hermes/HistoryView.vue packages/client/src/views/hermes/HistoryView.vue
+index 6aec53825..e11c05cb7 100644
 --- a/packages/client/src/views/hermes/HistoryView.vue
 +++ b/packages/client/src/views/hermes/HistoryView.vue
-@@ -358,8 +358,7 @@ async function openDefaultHistorySession(replace = false) {
+@@ -365,8 +365,7 @@ async function openDefaultHistorySession(replace = false) {
    }
  
    const location = {
 -    name: 'hermes.historySession',
 -    params: { sessionId: firstSession.id },
 +    path: `/app/history/session/${encodeURIComponent(firstSession.id)}`,
-     query: firstSession.profile ? { profile: firstSession.profile } : undefined,
+     query: routeProfile.value && firstSession.profile ? { profile: firstSession.profile } : undefined,
    }
    if (replace) await router.replace(location)
-@@ -692,8 +691,7 @@ function historySessionProfile(sessionId: string): string | null {
+@@ -712,8 +711,7 @@ function historySessionProfile(sessionId: string): string | null {
  
  function buildHistorySessionUrl(sessionId: string, profile?: string | null) {
    const href = router.resolve({

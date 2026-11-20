@@ -1,7 +1,8 @@
 diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstrap/http.ts
+index e1b2f2b78..e014d5eb2 100644
 --- a/packages/server/src/bootstrap/http.ts
 +++ b/packages/server/src/bootstrap/http.ts
-@@ -20,6 +20,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'
+@@ -26,6 +26,8 @@ import { dshPluginUi } from '../modules/coding-agents/services'
  import './chat-agent-runtime-adapter'
  import './skill-files-adapter'
  import { setGroupChatServer } from '../modules/studio/routes/group-chat'
@@ -10,9 +11,9 @@ diff --git a/packages/server/src/bootstrap/http.ts b/packages/server/src/bootstr
  import { setChatRunServer } from '../modules/studio/public/chat-run'
  import { GroupChatServer } from '../modules/studio/public/group-chat'
  import {
-@@ -731,6 +733,9 @@ export async function bootstrap() {
-   additionalShutdownSteps.push({ name: 'Person presence', close: () => personPresenceServer.close() })
+@@ -719,6 +721,9 @@ export async function bootstrap() {
    registerDesktopBrowserRelay(activeGroupChatServer.getIO())
+   registerPluginSessions(activeGroupChatServer.getIO())
  
 +  // overlay[loop-socket]: register /loop Socket.IO namespace on the shared IO.
 +  setupLoopSocketNamespace(activeGroupChatServer.getIO())

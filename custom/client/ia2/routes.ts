@@ -147,7 +147,7 @@ export const ANNEXED_LEGACY: RouteRecordRaw[] = [
   // Web 终端并入（2026-10-01 上游自用批 A1）：上游路由与 superadmin 门控本就
   // 在线（terminal/mobile-terminal 双 WS），此前零导航入口；并入进壳同域管理
   annex('/hermes/terminal', 'hermes.terminal', { superAdmin: true }),
-  annex('/hermes/version-preview', 'hermes.versionPreview', { superAdmin: true }),
+  // v0.8.28：上游删除 VersionPreviewView（版本预览改独立插件），annex 条目随退役
 ]
 
 /** 旧推演深链归一（2026-10-21 IA 收口）：

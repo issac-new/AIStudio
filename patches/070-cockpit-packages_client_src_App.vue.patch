@@ -1,7 +1,8 @@
 diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
+index 7a6d85742..9004f04ba 100644
 --- a/packages/client/src/App.vue
 +++ b/packages/client/src/App.vue
-@@ -30,6 +30,7 @@ import { useAppStore } from "@/stores/hermes/app";
+@@ -35,6 +35,7 @@ import { useAppStore } from "@/stores/hermes/app";
  import { useProfilesStore } from "@/stores/hermes/profiles";
  import { usePersonPresenceStore } from '@/stores/hermes/person-presence';
  import { isStoredSuperAdmin } from "@/api/client";
@@ -9,7 +10,7 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
  import AuthEventListener from "@/components/auth/AuthEventListener.vue";
  import { desktopBridge } from "@/utils/desktop-bridge";
  import { naiveLocaleFor } from "@/constants/naiveLocale";
-@@ -196,7 +197,7 @@ const showAppSidebar = computed(
+@@ -215,7 +216,7 @@ const showAppSidebar = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -17,8 +18,8 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
 +    !isFullscreen.value &&
      !usesHermesConfigSidebar.value &&
      !usesEkkoConfigSidebar.value &&
-     !usesCodingAgentConfigSidebar.value,
-@@ -208,8 +209,8 @@ const showMobileMenuButton = computed(
+     !usesCodingAgentConfigSidebar.value && !usesPluginSidebar.value,
+@@ -227,8 +228,8 @@ const showMobileMenuButton = computed(
    () =>
      !isLoginPage.value &&
      !isStandaloneChatPage.value &&
@@ -28,7 +29,7 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
        usesHermesConfigSidebar.value ||
        usesEkkoConfigSidebar.value ||
        usesCodingAgentConfigSidebar.value),
-@@ -269,6 +270,7 @@ watch(
+@@ -288,6 +289,7 @@ watch(
        appStore.stopHealthPolling();
        return;
      }
@@ -37,6 +38,7 @@ diff --git a/packages/client/src/App.vue b/packages/client/src/App.vue
      appStore.startHealthPolling();
    },
 diff --git a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
+index 51b63711c..d1e0abb8c 100644
 --- a/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 +++ b/packages/client/src/components/hermes/connections/ConnectionsPanel.vue
 @@ -8,6 +8,8 @@ import AppConnectionsPanel from '@/components/hermes/connections/AppConnectionsP

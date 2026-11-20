@@ -1,28 +1,30 @@
-diff --git a/packages/server/src/modules/coding-agents/services/index.ts b/packages/server/src/modules/coding-agents/services/index.ts
-index 443157d..5fb7564 100644
+
+diff --git packages/server/src/modules/coding-agents/services/index.ts packages/server/src/modules/coding-agents/services/index.ts
+index 850701f57..b8c12c490 100644
 --- a/packages/server/src/modules/coding-agents/services/index.ts
 +++ b/packages/server/src/modules/coding-agents/services/index.ts
-@@ -1,5 +1,11 @@
+@@ -6,6 +6,12 @@ import { resolveProviderUpstream } from '../../studio/public/provider-upstream'
  import { lowestReasoningEffort } from '../../../../../shared/reasoning-effort'
  import { studioModelReasoningEffort } from '../../studio/public/model-reasoning-effort'
+ import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
 +// overlay[approval-ledger]（P0b-2）：编码任务启动免审记录（经 src/custom 符号链接解析）。
 +// 终审 C2：档位取 sessionModeOf 会话档经 zcodeNativeMode 归一（launch 无 approvalRequired 字段）。
 +import { codingLaunchApprovalRecord } from '../../../custom/approval-ledger/coding-entry'
 +import { synthesizeExempted } from '../../../custom/approval-ledger/ledger-store'
 +import { sessionModeOf } from '../../../custom/permmodes/session-mode-store'
 +import { zcodeNativeMode } from '../../../custom/executioncontract/mode-policy'
- import type { CodingAgentDefinition, CodingAgentConfigFileDefinition } from '../contracts/definition'
  import { TOOL_DEFINITIONS, CONFIG_FILE_DEFINITIONS } from './registry/definitions'
  import { createOpenCodeConfig, mergeOpenCodeSettingsConfig, openCodeSettingsConfig, opencodeMcpServerConfig, parseOpenCodeConfig, OPENCODE_CONFIG_FILE, OPENCODE_DATABASE_FILE, OPENCODE_API_KEY_ENV, OPENCODE_PROVIDER_ID, OPENCODE_SHARED_CONFIG_DIRS } from './opencode/config'
-@@ -4130,6 +4136,7 @@ async function startCodingAgentRunInternal(
+ import { prepareOpenCodeBaseConfig } from './opencode/runtime-config'
+@@ -4184,6 +4190,7 @@ async function startCodingAgentRunInternal(
+     ? await resolveCommandForExecution(launch.command, commandExecutionEnv)
+     : launch.command
+   const runtimeEnv = launch.agentId === 'pi' ? launch.env : commandExecutionEnv
++  const sessionMode = sessionModeOf(launch.profile)
    const persistedProvider = isNativeCodingAgent(id) || id === 'cursor' || id === 'antigravity'
      ? String(launch.provider || 'global').trim() || 'global'
      : String(resolvedInput.provider || launch.provider || '').trim() || launch.provider
-+  const sessionMode = sessionModeOf(launch.profile)
-   const started = codingAgentRunManager.start({
-     agentSessionId,
-     agentId: launch.agentId,
-@@ -4169,6 +4176,15 @@ async function startCodingAgentRunInternal(
+@@ -4227,6 +4234,15 @@ async function startCodingAgentRunInternal(
      api_mode: launch.apiMode || '',
      workspace: launch.workspaceDir,
    })

@@ -161,20 +161,7 @@ describe('Task 7-3 目录元数据：surface 声明 + 入口保留 + 不重新�
 
 describe('Task 7-4 preview 开关统一（收编侧栏语义：预览项只在 preview 开时显示）', () => {
   const hasRouter = { hasRoute: () => true } as never
-  it('VITE_HERMES_PREVIEW 关（默认）：versionPreview 对 superAdmin 也不可见', () => {
-    const vp = byName('hermes.versionPreview')
-    expect(vp).toBeTruthy()
-    expect(entryVisible(vp!, hasRouter, true)).toBe(false)
-  })
 
-  it('VITE_HERMES_PREVIEW 开：versionPreview 随路由在场可见', async () => {
-    vi.stubEnv('VITE_HERMES_PREVIEW', '1')
-    try {
-      expect(entryVisible(byName('hermes.versionPreview')!, hasRouter, true)).toBe(true)
-    } finally {
-      vi.unstubAllEnvs()
-    }
-  })
 
   it('开关判定只在注册表一处：侧栏组件不得私读 VITE_HERMES_PREVIEW', () => {
     const registry = readOverlay('custom/client/ia2/views/gov/gov-settings-registry.ts')
@@ -218,7 +205,7 @@ const routerState = vi.hoisted(() => ({ hasRouteNames: new Set<string>([
   'ia2.govSettings', 'hermes.settings', 'hermes.theme', 'hermes.models', 'hermes.workflow',
   'hermes.agentManager', 'hermes.skills', 'hermes.plugins', 'hermes.mcp', 'hermes.memory',
   'hermes.channels', 'hermes.jobs', 'hermes.profiles', 'hermes.skillsUsage', 'hermes.logs',
-  'hermes.usage', 'hermes.performance', 'hermes.versionPreview', 'ekko.settings',
+  'hermes.usage', 'hermes.performance', 'ekko.settings',
   'hermes.configSettings', 'hermes.groupChat', 'hermes.connections', 'hermes.petdex',
 ]) }))
 vi.mock('vue-router', () => ({
@@ -280,7 +267,6 @@ describe('Task 7-7 侧栏从注册表派生（入口保留 + 不重新暴露）'
       // system（原 AppSidebar 系统组面）
       'ia2.govSettings', 'hermes.settings', 'hermes.profiles', 'hermes.theme',
       'hermes.skillsUsage', 'hermes.logs', 'hermes.usage', 'hermes.performance',
-      'hermes.versionPreview',
     ])
   })
 })

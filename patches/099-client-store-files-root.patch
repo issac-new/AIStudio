@@ -1,16 +1,16 @@
 diff --git a/packages/client/src/stores/hermes/files.ts b/packages/client/src/stores/hermes/files.ts
-index ba86eaffb..29333223b 100644
+index 30e3d45a3..64156f360 100644
 --- a/packages/client/src/stores/hermes/files.ts
 +++ b/packages/client/src/stores/hermes/files.ts
-@@ -61,6 +61,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -62,6 +62,7 @@ export const useFilesStore = defineStore('files', () => {
    const currentWorkspaceRoomId = ref<string | null>(null)
    const entries = ref<FileEntry[]>([])
    const loading = ref(false)
 +  const workspaceRoot = ref<string | undefined>(undefined)
    const sortBy = ref<'name' | 'size' | 'modTime'>('name')
    const sortOrder = ref<'asc' | 'desc'>('asc')
-   let fetchRequestSeq = 0
-@@ -137,12 +138,12 @@ export const useFilesStore = defineStore('files', () => {
+   let editorRequestSeq = 0
+@@ -140,12 +141,12 @@ export const useFilesStore = defineStore('files', () => {
      const workspaceRoomId = currentWorkspaceRoomId.value
      if (workspaceRoomId) return listGroupWorkspaceFiles(workspaceRoomId, path)
      if (workspaceSessionId) return listSessionWorkspaceFiles(workspaceSessionId, path)
@@ -25,25 +25,25 @@ index ba86eaffb..29333223b 100644
    }
  
    async function fetchEntries(path?: string, options: { profile?: string | null; workspaceSessionId?: string | null; workspaceRoomId?: string | null } = {}) {
-@@ -208,7 +209,7 @@ export const useFilesStore = defineStore('files', () => {
-     }
-     const profile = resolveProfile(options.profile)
-     currentProfile.value = profile
+@@ -211,7 +212,7 @@ export const useFilesStore = defineStore('files', () => {
+     const profile = (options.profile === undefined ? currentProfile.value : normalizeProfile(options.profile)) || getActiveProfileName()
+     const request = ++editorRequestSeq
+     closePreview()
 -    const result = await filesApi.readFile(filePath, profile)
 +    const result = await filesApi.readFile(filePath, workspaceRoot.value, profile)
+     if (request !== editorRequestSeq) return
      editingFile.value = {
        path: filePath,
-       content: result.content,
-@@ -258,7 +259,7 @@ export const useFilesStore = defineStore('files', () => {
-         editingFile.value.content,
-       )
-     } else {
--      await filesApi.writeFile(editingFile.value.path, editingFile.value.content, currentProfile.value)
-+      await filesApi.writeFile(editingFile.value.path, editingFile.value.content, workspaceRoot.value, currentProfile.value)
+@@ -271,7 +272,7 @@ export const useFilesStore = defineStore('files', () => {
+           content,
+         )
+       } else {
+-        await filesApi.writeFile(file.path, content, file.profile)
++        await filesApi.writeFile(file.path, content, workspaceRoot.value, file.profile)
+       }
+       file.originalContent = content
      }
-     editingFile.value.originalContent = editingFile.value.content
-   }
-@@ -285,14 +286,14 @@ export const useFilesStore = defineStore('files', () => {
+@@ -306,14 +307,14 @@ export const useFilesStore = defineStore('files', () => {
          ? await readGroupWorkspaceFile(currentWorkspaceRoomId.value, entry.path)
          : currentWorkspaceSessionId.value
            ? await readSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path)
@@ -60,7 +60,7 @@ index ba86eaffb..29333223b 100644
        previewFile.value = {
          ...common,
          content: result.content,
-@@ -413,7 +414,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -434,7 +435,7 @@ export const useFilesStore = defineStore('files', () => {
      const path = targetPath ? `${targetPath}/${name}` : name
      if (currentWorkspaceRoomId.value) await mkdirGroupWorkspaceFile(currentWorkspaceRoomId.value, path)
      else if (currentWorkspaceSessionId.value) await mkdirSessionWorkspaceFile(currentWorkspaceSessionId.value, path)
@@ -69,12 +69,12 @@ index ba86eaffb..29333223b 100644
      await fetchEntries(undefined)
    }
  
-@@ -421,14 +422,14 @@ export const useFilesStore = defineStore('files', () => {
+@@ -442,14 +443,14 @@ export const useFilesStore = defineStore('files', () => {
      const path = currentPath.value ? `${currentPath.value}/${name}` : name
-     if (currentWorkspaceRoomId.value) await writeGroupWorkspaceFile(currentWorkspaceRoomId.value, path, '')
-     else if (currentWorkspaceSessionId.value) await writeSessionWorkspaceFile(currentWorkspaceSessionId.value, path, '')
--    else await filesApi.writeFile(path, '', currentProfile.value)
-+    else await filesApi.writeFile(path, '', workspaceRoot.value, currentProfile.value)
+     if (currentWorkspaceRoomId.value) await writeGroupWorkspaceFile(currentWorkspaceRoomId.value, path, '', true)
+     else if (currentWorkspaceSessionId.value) await writeSessionWorkspaceFile(currentWorkspaceSessionId.value, path, '', true)
+-    else await filesApi.writeFile(path, '', currentProfile.value, true)
++    else await filesApi.writeFile(path, '', workspaceRoot.value, currentProfile.value, true)
      await fetchEntries(undefined)
    }
  
@@ -86,7 +86,7 @@ index ba86eaffb..29333223b 100644
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -443,7 +444,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -464,7 +465,7 @@ export const useFilesStore = defineStore('files', () => {
      const newPath = parentPath ? `${parentPath}/${newName}` : newName
      if (currentWorkspaceRoomId.value) await renameGroupWorkspaceFile(currentWorkspaceRoomId.value, entry.path, newPath)
      else if (currentWorkspaceSessionId.value) await renameSessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, newPath)
@@ -95,7 +95,7 @@ index ba86eaffb..29333223b 100644
      if (previewFile.value && isAffected(previewFile.value.path, entry.path, entry.isDir)) {
        previewFile.value = null
      }
-@@ -456,13 +457,13 @@ export const useFilesStore = defineStore('files', () => {
+@@ -477,13 +478,13 @@ export const useFilesStore = defineStore('files', () => {
    async function copyEntry(entry: FileEntry, destPath: string) {
      if (currentWorkspaceRoomId.value) await copyGroupWorkspaceFile(currentWorkspaceRoomId.value, entry.path, destPath)
      else if (currentWorkspaceSessionId.value) await copySessionWorkspaceFile(currentWorkspaceSessionId.value, entry.path, destPath)
@@ -111,7 +111,7 @@ index ba86eaffb..29333223b 100644
        await fetchEntries(undefined)
        return
      }
-@@ -490,7 +491,7 @@ export const useFilesStore = defineStore('files', () => {
+@@ -511,7 +512,7 @@ export const useFilesStore = defineStore('files', () => {
    })
  
    return {

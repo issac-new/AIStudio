@@ -1,8 +1,8 @@
 diff --git a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-index 3b55608cd..44406e4f3 100644
+index 8cd678d96..ffc6428db 100644
 --- a/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
 +++ b/packages/client/src/components/hermes/group-chat/GroupMessageList.vue
-@@ -12,6 +12,8 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
+@@ -13,6 +13,8 @@ import type { RoomAgentHandoffChain } from '@/api/studio/group-chat'
  import { handoffErrorTranslationKey, isPresentableHandoffChain } from './handoff-presentation'
  import { useToolTraceVisibility } from '@/composables/useToolTraceVisibility'
  import GroupMessageItem from './GroupMessageItem.vue'
@@ -11,21 +11,3 @@ index 3b55608cd..44406e4f3 100644
  import GroupAgentRunCard from './GroupAgentRunCard.vue'
  import VirtualMessageList from '../chat/VirtualMessageList.vue'
  
-@@ -40,9 +42,14 @@ const emptyStateAgents = AGENT_OPTIONS.map(option => ({
-     src: chatSessionAgentAvatar({ agent: option.value }).src,
- }))
- const displayMessages = computed(() => groupAgentRunMessages(store.sortedMessages.filter(msg =>
--    msg.role !== 'tool' ||
--    toolTraceVisible.value ||
--    msg.toolStatus === 'running',
-+    !isGatewayNotice(msg.content) &&
-+    (
-+        msg.role !== 'tool' ||
-+        toolTraceVisible.value ||
-+        msg.toolStatus === 'running' ||
-+        msg.toolName === 'workspace_diff' ||
-+        msg.tool_name === 'workspace_diff'
-+    ),
- )))
- const supportsMessageSelection = computed(() => props.allowMessageDeletion && !store.inviteGuest)
- const {

@@ -1,6 +1,8 @@
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index a6f522621..760a7c4ec 100644
 --- a/packages/server/src/bootstrap/routes.ts
 +++ b/packages/server/src/bootstrap/routes.ts
-@@ -310,6 +310,9 @@
+@@ -317,6 +317,9 @@ import { userPermsAuditRoutes } from '../custom/userperms/controller'
  // 挂载补丁 743 清偿——原批禁改 patches/ 挂载被遗忘，活体探测 404 实锤，spec 2026-11-04-userenv-route-mount）。
  // GET/PUT /api/userenv/profiles/:name/env（读脱敏回显/写整表原子替换＋敏感确认位）。
  import { userenvRoutes } from '../custom/userenv/controller'
@@ -10,7 +12,7 @@
  
  let loopStore: any = null
  const lazyStore = new Proxy({} as any, {
-@@ -415,7 +418,13 @@
+@@ -422,7 +425,13 @@ async function initLoopSubsystem(): Promise<void> {
   * then all protected routes.
   */
  export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, next: Next) => Promise<void>>) {
@@ -23,8 +25,8 @@
 +  app.use(enforcePlatformRoutePolicy(platformPublicRouters, platformRoutePolicies))
  
    // --- Public routes (no auth required) ---
-   app.use(healthRoutes.routes())
-@@ -439,6 +448,7 @@
+   app.use(modelGatewayMiddleware)
+@@ -445,6 +454,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
  
    // --- Auth middleware: all routes below require authentication ---
    authMiddleware.forEach((middleware) => app.use(middleware))

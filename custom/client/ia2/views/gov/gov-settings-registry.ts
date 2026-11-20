@@ -67,7 +67,7 @@ export const GOV_SETTINGS_DOMAINS: GovSettingsDomain[] = [
       // ekko 运维面（2026-10-02 开门）：上游 /ekko/* 页自有壳与 ekkoConfig 守卫
       // （patch 523），superadmin+features.ekko 双门控——只挂侧栏
       { name: 'ekko.settings', label: 'ekko 运维', source: 'legacy', surface: 'sidebar', superAdmin: true, featureGate: 'ekko', sidebarGroup: 'hermes', sidebarOrder: 8, icon: 'grid', sidebarLabel: 'ekko 运维' },
-      { name: 'hermes.versionPreview', label: '版本预览', source: 'legacy', surface: 'both', superAdmin: true, featureGate: 'versionPreview', sidebarGroup: 'system', sidebarOrder: 9, icon: 'refresh', sidebarLabelKey: 'sidebar.versionPreview' },
+      // v0.8.28：上游删除 VersionPreviewView（版本预览改独立插件），注册表条目随退役
     ],
   },
   {

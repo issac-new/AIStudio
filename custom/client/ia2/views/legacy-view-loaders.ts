@@ -34,7 +34,7 @@ export const VIEW_LOADERS: Record<string, () => Promise<unknown>> = {
   'hermes.skillsUsage': () => import('@/views/hermes/SkillsUsageView.vue'),
   'hermes.configSettings': () => import('@/views/hermes/HermesSettingsView.vue'),
   'hermes.terminal': () => import('@/views/hermes/TerminalView.vue'),
-  'hermes.versionPreview': () => import('@/views/hermes/VersionPreviewView.vue'),
+  // v0.8.28：上游删除 VersionPreviewView（版本预览改独立插件），条目随退役
 }
 
 // ── 预取（走查三修：侧栏迟钝根治——冷首访编译/分片拉取移到悬停与空闲期）──
