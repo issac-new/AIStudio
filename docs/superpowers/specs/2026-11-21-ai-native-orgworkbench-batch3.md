@@ -42,7 +42,8 @@
 - 界面诚实态：空数据/来源失败/指标未知分别文案；高风险、one-way、来源不可用不用绿色；中文文案＋英文标识符。
 
 ### 七、批二欠账清偿
-- 浏览器三面实物走查（批一 I-1＋批二 T7 两次受阻；v0.8.28 已合入 main、通道恢复）：隔离 production 起服（NODE_ENV=production、OUTCOME_WORKBENCH=1、HERMES_WEB_UI_HOME 隔离）按设计 §9.4 六步实操；记录文字化留档（evidence 禁新增二进制，仓规）。
+- **补丁 778 丢段根治（T7 前置，随批三落地）**：v0.8.28 重锚（83a38d3e8）把 778 的 sockets/chat-run.ts 定义段整段丢失（SurfaceRuns/SurfaceError import、surfaceRuns 成员、requestUiSurface、begin/finish 接线），且残留段头无 a/ b/ 前缀——ts-node 起服编译红（surfaceRuns 不存在），批二点五与批二两轮受阻的同根因在升级合入后仍未消除（vitest 不走起服编译、pristine-replay 只验 apply，故全量门不红）。按「外部阻塞复现两次即换策略」立法本批根治：五定义段按 v0.8.28 上下文重锚回补、段头规整为 a/ b/ 形态、畸形头旧段删除；重放五前置补丁生成 777 态后正向 diff 重组，全量 clean＋inject 与修复态逐字节一致；隔离起服编译零错、ekko 域 14/14 绿。
+- 浏览器三面实物走查（批一 I-1＋批二 T7 两次受阻；778 根治后通道恢复）：隔离 production 起服（NODE_ENV=production、OUTCOME_WORKBENCH=1、HERMES_WEB_UI_HOME 隔离）按设计 §9.4 六步实操；记录文字化留档（evidence 禁新增二进制，仓规）。
 - `overlay-pristine-replay` 复跑（8647 空窗时；批一/二两轮环境性登记的欠账）。
 
 ## 决策记录
