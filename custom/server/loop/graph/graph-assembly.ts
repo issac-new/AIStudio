@@ -383,13 +383,20 @@ export function createGraphAssembly(opts: GraphAssemblyOpts): GraphAssembly {
     let table: Record<string, unknown> = {}
     let lastRefresh = 0
     const refresh = async () => {
-      try { table = parseCapabilitiesTable((await readRegistry('agent-capabilities' as never)).markdown) } catch { table = {} }
+      try {
+        table = parseCapabilitiesTable((await readRegistry('agent-capabilities' as never)).markdown)
+      } catch (err) {
+        table = {}
+        log?.(`[graph] 能力声明注册表刷新失败（${(err as Error).message}）——本轮空表，走角色模板地板`)
+      }
       lastRefresh = Date.now()
     }
     await refresh()
     setInterval(() => { void refresh() }, 60_000).unref?.()
     setCapabilitiesProvider((assignee) => (assignee ? (table[assignee] as never) : undefined))
-  } catch { /* 注册表面不可用→合成层空转，模板地板兜底 */ }
+  } catch (err) {
+    log?.(`[graph] 能力声明注册表不可用（${(err as Error).message}）——合成层空转，走角色模板地板`)
+  }
   })()
   specRuntime = mode === 'on' || mode === 'shadow'
     ? new CustomSpecRuntime({

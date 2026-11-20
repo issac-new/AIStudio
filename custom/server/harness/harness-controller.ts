@@ -55,6 +55,7 @@ import { handoffRoutes } from '../handoff/handoff-controller'
 import { collectLineage } from '../lineage/lineage'
 import { workbenchRoutes } from './workbench/controller'
 import { teamLibraryRoutes } from '../team-library/controller'
+import { capabilityPoolRoutes } from '../capabilitypool/controller'
 import { fail, ok } from '../lib/http'
 // 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
 import { simLaunchRoutes } from '../simcenter/sim-launch'
@@ -88,6 +89,8 @@ router.get('/lineage', (ctx) => {
 })
 // 团队库（EvoTeam 吸收，2026-11-08）：只读库＋建议选择，不接管派单。
 router.use('/team-library', teamLibraryRoutes.routes(), teamLibraryRoutes.allowedMethods())
+// 能力池地基（批二点五）：只读供需与候选，不接管派单。
+router.use('/capabilitypool', capabilityPoolRoutes.routes(), capabilityPoolRoutes.allowedMethods())
 // 受控 harness 推演启动（SIM_HARNESS_LAUNCH=1 + super_admin；固定脚本，不接受任意命令）
 router.use('/sim-launch', simLaunchRoutes.routes(), simLaunchRoutes.allowedMethods())
 // 长程任务可信执行（2026-10-22）：主张审计 / 双准入 / 完整性栅栏 / 断点核对

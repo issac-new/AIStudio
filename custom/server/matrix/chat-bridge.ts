@@ -30,6 +30,8 @@ import {
   serializeReceipt,
 } from './task-protocol'
 import { atomicWriteJson } from '../lib/fs-store'
+import { collectGraph } from '../capabilitypool/collect'
+import { SKILL_TAG_MAX, SKILL_TAG_RE } from '../governance/governance-ledger'
 
 export interface BridgeMatrixEnv { homeserverUrl: string; accessToken: string; userId: string }
 export interface BridgeMapping { matrixRoomId: string; gcRoomId: string }
@@ -213,6 +215,29 @@ function saveState(file: string, st: BridgeState): void {
   atomicWriteJson(file, st, { mode: 0o600 })
 }
 
+export interface BridgeAgentCapability {
+  capabilities: string[]
+  maxParallel?: number
+  needsHumanConfirm?: string[]
+  permissions?: string[]
+}
+
+const CAPABILITY_CACHE_MS = 60_000
+let capabilityCache: { at: number; map: Map<string, BridgeAgentCapability> } | null = null
+
+/** 默认能力来源：能力图手工声明区；文件缺席/坏档时返回空能力，不阻断声明。 */
+function defaultCapabilitiesFor(agentName: string): BridgeAgentCapability | null {
+  const now = Date.now()
+  if (!capabilityCache || now - capabilityCache.at > CAPABILITY_CACHE_MS) {
+    const graph = collectGraph()
+    capabilityCache = {
+      at: now,
+      map: new Map(graph.agents.map((agent) => [agent.name, { capabilities: agent.capabilities }])),
+    }
+  }
+  return capabilityCache.map.get(agentName) ?? null
+}
+
 export interface ChatBridgeOptions {
   env: BridgeMatrixEnv
   mappings: BridgeMapping[]
@@ -222,6 +247,8 @@ export interface ChatBridgeOptions {
   stateFile?: string
   syncTimeoutMs?: number
   log?: (msg: string) => void
+  /** 能力声明来源（缺省读能力图；测试可注入） */
+  capabilitiesFor?: (agentName: string) => BridgeAgentCapability | null
 }
 
 export class ChatBridge {
@@ -241,6 +268,7 @@ export class ChatBridge {
       stateFile: opts.stateFile ?? defaultStateFile(),
       syncTimeoutMs: opts.syncTimeoutMs ?? 25_000,
       log: opts.log ?? ((m: string) => { console.log(`[ChatBridge] ${m}`) }),
+      capabilitiesFor: opts.capabilitiesFor ?? defaultCapabilitiesFor,
     }
     this.st = loadState(this.opts.stateFile)
   }
@@ -423,18 +451,58 @@ export class ChatBridge {
     } catch { /* 通知失败不阻断 */ }
   }
 
-  /** P2D：agent.profile 能力声明（启动时一次性发映射房）。 */
+  /** P2D：agent.profile 能力声明（启动时一次性发映射房；v2 完整形状）。 */
   private async declareAgentProfiles(): Promise<void> {
     for (const mapping of this.opts.mappings) {
       try {
         const views = this.opts.gcs.getRoomAgentViews?.(mapping.gcRoomId) ?? []
-        const agents = views.map(v => ({
-          agentId: String(v.agentId ?? v.id ?? ''),
-          name: String(v.name ?? ''),
-          agent: String(v.agent ?? ''),
-        })).filter(a => a.name)
+        const now = this.opts.now()
+        if (views.length > 20) this.opts.log(`agent.profile 声明截断：${views.length} → 20（协议上限）`)
+        const agents = views.slice(0, 20).map((v) => {
+          const agentName = String(v.name ?? '')
+          const agentId = String(v.agentId ?? v.id ?? '')
+          const agentType = String(v.agent ?? agentName)
+          const declared = this.opts.capabilitiesFor(agentName)
+          const viewCapabilities = Array.isArray(v.capabilities)
+            ? v.capabilities.filter((tag): tag is string => typeof tag === 'string')
+            : []
+          const rawCapabilities = declared && declared.capabilities.length > 0
+            ? declared.capabilities
+            : viewCapabilities
+          const capabilities = rawCapabilities
+            .filter((tag) => SKILL_TAG_RE.test(tag) && tag.length <= SKILL_TAG_MAX)
+            .slice(0, 10)
+          const viewMaxParallel = typeof v.maxParallel === 'number' && Number.isInteger(v.maxParallel) && v.maxParallel >= 1
+            ? v.maxParallel
+            : undefined
+          const maxParallel = declared?.maxParallel ?? viewMaxParallel
+          const needsHumanConfirm = declared?.needsHumanConfirm
+            ?? (Array.isArray(v.needsHumanConfirm)
+              ? v.needsHumanConfirm.filter((s): s is string => typeof s === 'string')
+              : undefined)
+          const permissions = declared?.permissions
+            ?? (Array.isArray(v.permissions)
+              ? v.permissions.filter((s): s is string => typeof s === 'string')
+              : undefined)
+          return {
+            agentId: agentId.slice(0, 64),
+            name: agentName,
+            agent: agentType,
+            agentType: agentType.slice(0, 32),
+            capabilities,
+            ...(maxParallel !== undefined ? { maxParallel } : {}),
+            ...(needsHumanConfirm ? { needsHumanConfirm } : {}),
+            ...(permissions ? { permissions } : {}),
+            lastReportAt: now,
+          }
+        }).filter((agent) => agent.agentId !== '' && agent.agentType !== '')
         await matrixSendState(this.opts.env, mapping.matrixRoomId, AGENT_PROFILE_EVENT_TYPE, '', {
-          bridge: this.opts.env.userId, declaredAt: this.opts.now(), agents,
+          schemaVersion: 2,
+          updatedBy: this.opts.env.userId,
+          updatedAt: now,
+          bridge: this.opts.env.userId,
+          declaredAt: now,
+          agents,
         }, this.opts.fetchImpl)
       } catch (e) {
         this.opts.log(`agent.profile 声明 ${mapping.matrixRoomId} 失败：${String((e as Error).message)}`)

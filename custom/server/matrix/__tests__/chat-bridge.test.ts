@@ -216,3 +216,41 @@ describe('ChatBridge 审批远端通知 + profile 声明（P2C/P2D）', () => {
     rmSync(home, { recursive: true, force: true })
   })
 })
+
+describe('agent.profile v2 声明', () => {
+  it('输出 schemaVersion=2 与能力标签，客户端解析器可接受', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'v14-bridge-profile-'))
+    const fake = makeGcs()
+    const states: Array<{ url: string; body: Record<string, unknown> }> = []
+    const bridge = new ChatBridge({
+      env: ENV, mappings: [MAP], gcs: fake.gcs,
+      capabilitiesFor: (name) => (name === 'maker' ? { capabilities: ['coding', 'review'], maxParallel: 2 } : null),
+      now: () => 1_700_000_000_000,
+      fetchImpl: (async (u: unknown, init?: RequestInit) => {
+        if (String(u).includes('/state/')) {
+          states.push({ url: String(u), body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown> })
+        }
+        return jsonRes({ event_id: '$n' })
+      }) as unknown as typeof fetch,
+      stateFile: join(home, 'state.json'),
+    })
+    await bridge.start()
+    bridge.stop()
+    expect(states).toHaveLength(1)
+    const body = states[0].body
+    expect(body.schemaVersion).toBe(2)
+    expect(body.updatedBy).toBe(ENV.userId)
+    expect(body.updatedAt).toBe(1_700_000_000_000)
+    const agents = body.agents as Array<Record<string, unknown>>
+    expect(agents[0]).toMatchObject({
+      agentId: 'a1', agentType: 'hermes', capabilities: ['coding', 'review'], maxParallel: 2,
+    })
+    expect(agents[0].lastReportAt).toBe(1_700_000_000_000)
+
+    // 与客户端协议解析器对账：同一载荷必须被接受，否则能力路由仍为空。
+    const { parseAgentProfileContent } = await import('../../../client/matrix-teams/protocol')
+    const parsed = parseAgentProfileContent(body)
+    expect(parsed?.agents[0].capabilities).toEqual(['coding', 'review'])
+    rmSync(home, { recursive: true, force: true })
+  })
+})

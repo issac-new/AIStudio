@@ -29,6 +29,8 @@ import { fewshotRerank, rerankInjectLine, type RerankOutcome } from '../eval/few
 import { fetchTaskTitleByTaskId } from '../governance/governance-analytics'
 import { registerEntry } from '../taskledger/taskledger-store'
 import { assessDispatchReadiness, enforceOrWarnReadiness, fetchTaskTitleAndBodyByTaskId, type DispatchReadinessFinding } from './dispatch-readiness'
+import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
+import type { CapabilityReadiness } from '../capabilitypool/types'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -61,6 +63,9 @@ export interface ColumnDispatchResult {
    *  判据（见 dispatch-readiness.ts 注释），默认 warn；
    *  HERMES_DISPATCH_READINESS_ENFORCE=1 时缺项在任何 step 派发前抛错。 */
   readiness: DispatchReadinessFinding[]
+  /** 能力准入读数（批二点五）：任务 `skills` 声明与供给/assignee 的对照；
+   *  null=任务无能力声明或快照缺席；默认只 warn，不阻断派发。 */
+  capabilityReadiness: CapabilityReadiness | null
 }
 
 /** 授权五要素（文章第七节："给责任，也给空间；给资源，也给约束；允许不同路径，同时守住结果标准"）。 */
@@ -214,6 +219,13 @@ export async function dispatchColumnTransition(
   // body 供五问准入的「结果可验证」判据；查不到/无 taskId 保持 null，回落现状。
   const taskSnapshot = params.taskId ? await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null) : null
   const taskTitle = taskSnapshot?.title ?? null
+  // 能力准入（批二点五）：只看有 skills 声明的任务；默认 warn，不自动改派、不阻断。
+  const capabilityReadiness = taskSnapshot?.skills?.length
+    ? assessTaskCapabilityReadiness({ requiredTags: taskSnapshot.skills, assignee: taskSnapshot.assignee })
+    : null
+  if (capabilityReadiness && capabilityReadiness.decision !== 'pass') {
+    console.warn(`[column-dispatch] 能力准入 ${capabilityReadiness.decision}（warn，不阻断）：${capabilityReadiness.reasons.join('；')}`)
+  }
   const rerank = taskTitle ? await fewshotRerank(taskTitle, listLedger().distills).catch(() => null) : null
   const rerankLine = rerank ? rerankInjectLine(rerank) : null
   // AI 五问准入（批二）：在任一 step 派发前求值；默认 warn，enforce 抛错。
@@ -321,7 +333,7 @@ export async function dispatchColumnTransition(
       }
     }
   }
-  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness }
+  return { triggers, outcomes, delegation, rules: ruleEvals, precedents, deduped, rerank: rerank ? { source: rerank.source, ...(rerank.reason ? { reason: rerank.reason } : {}) } : null, handoffRules, readiness, capabilityReadiness }
 }
 
 

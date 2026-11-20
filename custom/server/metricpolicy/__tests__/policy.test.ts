@@ -137,13 +137,29 @@ describe('validateMetricInput：结构校验', () => {
 })
 
 describe('内置登记簿：口径完整且全部如实标为装饰', () => {
-  it('六个内置指标都以 measure/ 开头、带 sources（除接口数占位）', () => {
-    expect(BUILTIN_METRICS.length).toBe(6)
+  it('九个内置指标都以 measure/ 开头、带 sources（除接口数占位）', () => {
+    expect(BUILTIN_METRICS.length).toBe(9)
     for (const m of BUILTIN_METRICS) {
       expect(m.key.startsWith('measure/')).toBe(true)
       expect(m.namespace).toBe('measure')
       expect(m.builtin).toBe(true)
       if (m.key !== 'measure/interface-count') expect(m.sources.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('能力组三项登记计划消费者，但未发生实际决策前仍算装饰', () => {
+    const keys = [
+      'measure/capability-supply-lead-time',
+      'measure/capability-reuse-rate',
+      'measure/human-ai-team-success',
+    ]
+    for (const key of keys) {
+      const metric = BUILTIN_METRICS.find((m) => m.key === key)
+      expect(metric).toBeDefined()
+      expect(metric?.consumers).toEqual([])
+      expect(metric?.consumerPlan?.decision).toBeTruthy()
+      expect(metric?.consumerPlan?.threshold).toBeTruthy()
+      expect(metric?.consumerPlan?.owner).toBeTruthy()
     }
   })
 
