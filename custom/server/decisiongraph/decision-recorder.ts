@@ -6,6 +6,8 @@
  *   2. approval  —— 审批裁决（approval-log appendApprovalLog 单一收口点，覆盖全部 6 调用面）
  *   3. escalation —— 升级裁决（escalation-controller decide 路由）
  *   4. gate      —— qgate 门禁判定（sync-gates 端点批量摄取，seen 标记防重）
+ *   5. learning  —— 经验候选审核决定（expcandidates curateCandidate 写点，批四 T3）
+ *   6. team      —— 团队确认决定（outcome confirmTeam 写点，批四 T3）
  *
  * 模型路由决策不在此列（如实登记：模型路由发生在 hermes 运行时侧，studio 无决策点）。
  * 去重：commandId/targetId 内存 Set（进程生命周期）+ bridge 端 scenario 天然幂等不去重
@@ -81,6 +83,47 @@ export function recordEscalationDecision(input: {
     confidence: 0.85,
     decisionMaker: input.by,
     metadata: { escalationId: input.escalationId, fromAgent: input.fromAgent, tool: input.tool },
+    linkPrecedent: true,
+  })
+}
+
+/** 经验候选审核决定（批四 T3，spec 2026-11-21-ai-native-orgworkbench-batch4.md §三）：
+ *  expcandidates curateCandidate 写点在状态真实迁移时调用。回退 candidate（撤回
+ *  审核决定）按 deferred 落账，不伪造 approve/reject 二态。decidedBy 缺席=当前
+ *  curate API 不携带操作人，落 'exp-curator' 如实标注来源面而非猜人。 */
+export function recordLearningDecision(input: {
+  candidateId: string; from: string; to: string; decidedBy?: string
+}): void {
+  const key = `learning:${input.candidateId}:${input.to}`
+  if (!once(key)) return
+  void recordDecision({
+    category: 'learning',
+    scenario: `经验候选审核 ${input.candidateId}`.slice(0, 400),
+    reasoning: `候选状态 ${input.from} → ${input.to}`,
+    outcome: input.to === 'approved' ? 'approved' : input.to === 'rejected' ? 'rejected' : 'deferred',
+    confidence: 0.85,
+    decisionMaker: input.decidedBy ?? 'exp-curator',
+    metadata: { candidateId: input.candidateId, from: input.from, to: input.to, decidedBy: input.decidedBy ?? null },
+    linkPrecedent: true,
+  })
+}
+
+/** 团队确认决定（批四 T3）：outcome confirmTeam 在 team_confirmed 事件与 team.json
+ *  均落盘成功后调用。确认动作本身即对团队组成的认可，outcome 恒 'approved'；
+ *  version 进去重键——同一 outcome 每次版本确认是独立决定，各自落账。 */
+export function recordTeamDecision(input: {
+  outcomeId: string; version: number; changeReason: string; updatedBy: string
+}): void {
+  const key = `team:${input.outcomeId}:${input.version}`
+  if (!once(key)) return
+  void recordDecision({
+    category: 'team',
+    scenario: `结果合同团队确认 ${input.outcomeId} v${input.version}`.slice(0, 400),
+    reasoning: input.changeReason,
+    outcome: 'approved',
+    confidence: 0.85,
+    decisionMaker: input.updatedBy,
+    metadata: { outcomeId: input.outcomeId, version: input.version, changeReason: input.changeReason },
     linkPrecedent: true,
   })
 }

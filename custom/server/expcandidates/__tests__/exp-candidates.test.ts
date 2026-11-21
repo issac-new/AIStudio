@@ -10,6 +10,15 @@ import {
 
 const dir = mkdtempSync(join(tmpdir(), 'expcandidates-test-'))
 _useStoreDirForTests(dir)
+// 批四 T3：curate 挂 decision-recorder fire-and-forget 落账后，本文件未 mock recorder 的
+// curate 用例会在 venv 存在的机器上真起 python bridge 写宿主 KG——单测禁触宿主状态，
+// 这里关闸（接线行为断言在 curate-decision-recorder.test.ts 的 vi.mock 面）。
+const prevDecisionGraph = process.env.HERMES_DECISION_GRAPH
+process.env.HERMES_DECISION_GRAPH = '0'
+afterAll(() => {
+  if (prevDecisionGraph === undefined) delete process.env.HERMES_DECISION_GRAPH
+  else process.env.HERMES_DECISION_GRAPH = prevDecisionGraph
+})
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
 beforeEach(() => rmSync(join(dir, 'exp-candidates.json'), { force: true }))
 

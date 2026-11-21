@@ -8,6 +8,20 @@ import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 import { validateReflectionStatement } from './reflection-guard'
+import { recordLearningDecision } from '../decisiongraph/decision-recorder'
+
+// 决策图谱落账（批四 T3）：审核决定 → 统一决策引用。fire-and-forget try/catch 形态
+// 照 approval-log recordToDecisionGraph 先例；引入方式取静态 import（escalation-controller
+// 同款）——本域与 decisiongraph 无环（其依赖闭包仅 lib/与 node 内建），而 lazy require
+// 在 vitest ESM 下加载含 import 语句的模块会静默失败（approval-log.ts:29 自证），
+// 接线测试将无法断言 recorder 被调。静态 import 可被 vi.mock 拦截（autonomy-ladder 先例）。
+function recordCurationToDecisionGraph(candidateId: string, from: string, to: string): void {
+  try {
+    recordLearningDecision({ candidateId, from, to })
+  } catch (err) {
+    console.warn(`[exp-store] 决策图谱落账失败（fail-soft，不影响候选审核主链路）：${err instanceof Error ? err.message : String(err)}`)
+  }
+}
 
 /** 反思守卫拒收（审核批准时触发；控制器映射 422，允许先改陈述再批）。 */
 export class ReflectionGuardError extends Error {
@@ -61,6 +75,7 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
   const store = readExpStore()
   const idx = store.candidates.findIndex((c) => c.id === id)
   if (idx < 0) throw new Error(`候选不存在：${id}`)
+  const from = store.candidates[idx].status
   const next: ExpCandidate = { ...store.candidates[idx], status, updatedAt: new Date().toISOString() }
   // 反思守卫（EvoTeam 吸收）：批准是人工决策点，在此时拒收泛泛/过窄/自相矛盾的陈述；
   // 提取期不拦（保留证据），拒绝/回退状态不触发守卫。
@@ -73,6 +88,10 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
   }
   store.candidates[idx] = next
   writeExpStore(store)
+  // 决策图谱落账在权威域写（store 落盘）成功后：同状态重写不是决定，只记真实迁移
+  if (status !== from) {
+    recordCurationToDecisionGraph(id, from, status)
+  }
   return store.candidates[idx]
 }
 
