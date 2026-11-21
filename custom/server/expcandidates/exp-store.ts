@@ -1,7 +1,7 @@
 // overlay[expcandidates] 经验候选 store（eval store 同模式）+ 提取执行面。
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import type { ExpCandidate, ExpInjectionRecord, ExpStoreShape } from './exp-types'
+import type { ExpCandidate, ExpInjectionKind, ExpInjectionRecord, ExpStoreShape } from './exp-types'
 import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
 import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from './qgate-ingest'
 import { kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
@@ -98,9 +98,27 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
 /** 留痕账上限（环形：超限挤最旧——留痕是事实记录不是无限审计账）。 */
 export const EXP_INJECTION_LOG_CAP = 200
 
+/** recordInjection 尾参（批一 b 变更 1/4）：来源通道与注入现场作用域。
+ *  kind 缺省不落键（读取侧按 'exp' 归一）；column/specialist 供 effect-report
+ *  的同口径基线限定，派单链路可得即传，无值场景（快照路无 specialist）不猜。 */
+export interface RecordInjectionMeta {
+  kind?: ExpInjectionKind
+  column?: string
+  specialist?: string
+}
+
 /** B2 注入留痕（追加制，幂等）。批二 T5：带 snapshotId 的调用同时落召回留痕账
- *  （injectionLog），快照指纹反查靠它；旧调用（无 snapshotId）行为不变。 */
-export function recordInjection(ids: string[], runLabel: string, snapshotId?: string): void {
+ *  （injectionLog），快照指纹反查靠它；旧调用（无 snapshotId）行为不变。
+ *  批一 b 变更 1：taskId 到场也落留痕行（join 任务终态做效果归因——runLabel 是
+ *  标签不是 taskId，join 不到终态是本批补的缺口）；同键重放（runLabel+snapshotId
+ *  +taskId+kind+ids 全同）幂等不重复追加，防派发重试刷量。 */
+export function recordInjection(
+  ids: string[],
+  runLabel: string,
+  snapshotId?: string,
+  taskId?: string,
+  meta?: RecordInjectionMeta,
+): void {
   const store = readExpStore()
   for (const c of store.candidates) {
     if (ids.includes(c.id) && !c.injectedRuns.includes(runLabel)) {
@@ -108,11 +126,25 @@ export function recordInjection(ids: string[], runLabel: string, snapshotId?: st
       c.updatedAt = new Date().toISOString()
     }
   }
-  if (typeof snapshotId === 'string' && snapshotId.trim() && ids.length) {
-    store.injectionLog = [
-      ...(Array.isArray(store.injectionLog) ? store.injectionLog : []),
-      { runLabel, snapshotId: snapshotId.trim(), ids: [...ids], at: Date.now() },
-    ].slice(-EXP_INJECTION_LOG_CAP)
+  const snap = typeof snapshotId === 'string' ? snapshotId.trim() : ''
+  const task = typeof taskId === 'string' ? taskId.trim() : ''
+  if ((snap || task) && ids.length) {
+    const row: ExpInjectionRecord = {
+      runLabel,
+      ...(snap ? { snapshotId: snap } : {}),
+      ids: [...ids],
+      at: Date.now(),
+      ...(task ? { taskId: task } : {}),
+      ...(meta?.kind ? { kind: meta.kind } : {}),
+      ...(meta?.column?.trim() ? { column: meta.column.trim() } : {}),
+      ...(meta?.specialist?.trim() ? { specialist: meta.specialist.trim() } : {}),
+    }
+    const rowKey = (r: ExpInjectionRecord): string =>
+      JSON.stringify([r.runLabel, r.snapshotId ?? '', r.taskId ?? '', r.kind ?? 'exp', r.ids])
+    const log = Array.isArray(store.injectionLog) ? [...store.injectionLog] : []
+    if (!log.some((r) => rowKey(r) === rowKey(row))) {
+      store.injectionLog = [...log, row].slice(-EXP_INJECTION_LOG_CAP)
+    }
   }
   writeExpStore(store)
 }

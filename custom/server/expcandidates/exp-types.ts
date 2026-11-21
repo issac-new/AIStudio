@@ -68,10 +68,21 @@ export interface ExpStoreShape {
   injectionLog?: ExpInjectionRecord[]
 }
 
-/** 召回留痕行（批二 T5）。 */
+/** 注入来源通道（批一 b 变更 4）：exp=经验候选路（旧数据缺省同义）；dual=双轨经验；fewshot=飞轮教训。 */
+export type ExpInjectionKind = 'exp' | 'dual' | 'fewshot'
+
+/** 召回留痕行（批二 T5）。批一 b 变更 1/4 补键：taskId（效果归因 join 键）、kind
+ *  （来源通道）、column/specialist（注入现场作用域，基线同口径对照用）。旧数据
+ *  缺这些键照旧可读——taskId 到场才可归因，kind 缺席按 'exp' 归一（读取侧）。 */
 export interface ExpInjectionRecord {
   runLabel: string
-  snapshotId: string
+  /** 快照指纹（快照路回执恒有）；派单简报路回执无快照——taskId 到场即留痕。 */
+  snapshotId?: string
   ids: string[]
   at: number
+  /** 派单链路任务 id（板内 id）：join 任务终态做效果归因（effect-report）。 */
+  taskId?: string
+  kind?: ExpInjectionKind
+  column?: string
+  specialist?: string
 }

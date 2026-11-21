@@ -63,8 +63,10 @@ export function experienceBriefLine(candidates: ExpCandidate[]): string | null {
 /** 派单侧读取面（column-dispatch 消费）：默认关/无 approved/存储异常→空行。
  * query（可选）=当前任务语境；提供且 fewshot 通道选通时按相似度追加飞轮教训行。
  * 作用域（2026-11-08 EvoTeam 吸收）：按派单列/specialist 过滤带 scope 的经验；
- * 无 scope 的存量候选按全局处理。 */
-export function experienceLinesForDispatch(target: DispatchTarget, query?: string): string[] {
+ * 无 scope 的存量候选按全局处理。
+ * taskId（批一 b 变更 1，可选）=当前派单任务 id：到场时注入回执带 join 键与现场
+ * 作用域（column/specialist），供 effect-report 归因；缺席不落 taskId 留痕（向后兼容）。 */
+export function experienceLinesForDispatch(target: DispatchTarget, query?: string, taskId?: string): string[] {
   const lines: string[] = []
   try {
     if (injectionEnabled()) {
@@ -73,7 +75,13 @@ export function experienceLinesForDispatch(target: DispatchTarget, query?: strin
         ...(target.specialist ? { specialist: target.specialist } : {}),
       })
       if (selected.length) {
-        recordInjection(selected.map((c) => c.id), injectionRunLabel())
+        recordInjection(
+          selected.map((c) => c.id),
+          injectionRunLabel(),
+          undefined,
+          taskId,
+          { kind: 'exp', ...(target.column ? { column: target.column } : {}), ...(target.specialist ? { specialist: target.specialist } : {}) },
+        )
         const line = experienceBriefLine(selected)
         if (line) lines.push(line)
       }

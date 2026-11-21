@@ -8,7 +8,7 @@ import {
   experienceBriefLine, experienceLinesForDispatch, injectionRunLabel, selectableExperiences,
 } from '../exp-inject'
 import { recordDistill } from '../../eval/flywheel'
-import { _useStoreDirForTests, listCandidates, writeExpStore, readExpStore } from '../exp-store'
+import { _useStoreDirForTests, listCandidates, listInjectionLog, recordInjection, writeExpStore, readExpStore } from '../exp-store'
 import type { ExpCandidate } from '../exp-types'
 
 const dir = mkdtempSync(join(tmpdir(), 'exp-inject-test-'))
@@ -95,6 +95,45 @@ describe('受控注入', () => {
       { ...cand('exp-a', 'approved'), updatedAt: '2026-01-01' },
     ])
     expect(sel.map((c) => c.id)).toEqual(['exp-a', 'exp-b'])
+  })
+})
+
+describe('注入回执补键（批一 b 变更 1：taskId/kind/作用域透传）', () => {
+  it('recordInjection 带 taskId 无 snapshotId 也落留痕行（join 键到场即留痕）；同键重放幂等不重复追加', () => {
+    seed([cand('exp-001', 'approved')])
+    recordInjection(['exp-001'], 'run21', undefined, 'T-101', { kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+    recordInjection(['exp-001'], 'run21', undefined, 'T-101', { kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({ runLabel: 'run21', ids: ['exp-001'], taskId: 'T-101', kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+    expect(log[0].snapshotId).toBeUndefined()
+  })
+
+  it('recordInjection 无 taskId 且无 snapshotId（旧调用面）不落留痕行——向后兼容', () => {
+    seed([cand('exp-001', 'approved')])
+    recordInjection(['exp-001'], 'run22')
+    expect(listInjectionLog()).toEqual([])
+    expect(listCandidates()[0].injectedRuns).toEqual(['run22'])
+  })
+
+  it('派单注入透传 taskId＋作用域：experienceLinesForDispatch 第三参落到回执（spec 验收 1 前置）', () => {
+    process.env.EXPERIENCE_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run23'
+    seed([cand('exp-001', 'approved')])
+    const lines = experienceLinesForDispatch({ column: 'devimpl', specialist: 'refiner' }, undefined, 'T-202')
+    expect(lines).toHaveLength(1)
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({ runLabel: 'run23', taskId: 'T-202', kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+  })
+
+  it('无 taskId 场景向后兼容：派单注入照旧只记 injectedRuns，不落 taskId 留痕', () => {
+    process.env.EXPERIENCE_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run24'
+    seed([cand('exp-001', 'approved')])
+    experienceLinesForDispatch({ column: 'devimpl' })
+    expect(listInjectionLog()).toEqual([])
+    expect(listCandidates()[0].injectedRuns).toEqual(['run24'])
   })
 })
 
