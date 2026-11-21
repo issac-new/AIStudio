@@ -42,10 +42,13 @@ export function experienceInScope(candidate: ExpCandidate, filter?: ExperienceSc
   return scopeAllows(candidate.scope, filter)
 }
 
-/** 可注入候选：approved 态；按作用域过滤（无 scope 视为全局）；作用域更具体者优先，封顶 3。 */
+/** 可注入候选（批一 b 变更 3 注入闸）：approved＋probation 可注入（试用期=带观察的
+ *  生产，不注入就没有效果数据，spec 决策 2；probation 行带「（试用期）」标记）；
+ *  retired/candidate/rejected 不注入；存量 approved 兼容仍可注入。按作用域过滤
+ *  （无 scope 视为全局）；作用域更具体者优先，封顶 3。 */
 export function selectableExperiences(candidates: ExpCandidate[], filter?: ExperienceScopeFilter): ExpCandidate[] {
   return [...candidates]
-    .filter((c) => c.status === 'approved')
+    .filter((c) => c.status === 'approved' || c.status === 'probation')
     .filter((c) => experienceInScope(c, filter))
     .sort((a, b) => scopeSpecificity(b.scope) - scopeSpecificity(a.scope)
       || a.updatedAt.localeCompare(b.updatedAt)
@@ -53,9 +56,10 @@ export function selectableExperiences(candidates: ExpCandidate[], filter?: Exper
     .slice(0, MAX_EXP_INJECT)
 }
 
-/** 注入行：凭据形态改写——陈述原样（提取时已不含哈希），出处只以「历史经验」形态。 */
+/** 注入行：凭据形态改写——陈述原样（提取时已不含哈希），出处只以「历史经验」形态；
+ *  试用期候选带「（试用期）」标记（agent 知道该经验未转正）。 */
 export function experienceBriefLine(candidates: ExpCandidate[]): string | null {
-  const items = candidates.map((c, i) => `${i + 1}. [${c.id}] ${c.statement}`)
+  const items = candidates.map((c, i) => `${i + 1}. [${c.id}]${c.status === 'probation' ? '（试用期）' : ''} ${c.statement}`)
   if (!items.length) return null
   return `历史经验（已审核，历史经验出处·非本轮实测凭据）：${items.join('；')}`
 }
@@ -63,8 +67,10 @@ export function experienceBriefLine(candidates: ExpCandidate[]): string | null {
 /** 派单侧读取面（column-dispatch 消费）：默认关/无 approved/存储异常→空行。
  * query（可选）=当前任务语境；提供且 fewshot 通道选通时按相似度追加飞轮教训行。
  * 作用域（2026-11-08 EvoTeam 吸收）：按派单列/specialist 过滤带 scope 的经验；
- * 无 scope 的存量候选按全局处理。 */
-export function experienceLinesForDispatch(target: DispatchTarget, query?: string): string[] {
+ * 无 scope 的存量候选按全局处理。
+ * taskId（批一 b 变更 1，可选）=当前派单任务 id：到场时注入回执带 join 键与现场
+ * 作用域（column/specialist），供 effect-report 归因；缺席不落 taskId 留痕（向后兼容）。 */
+export function experienceLinesForDispatch(target: DispatchTarget, query?: string, taskId?: string): string[] {
   const lines: string[] = []
   try {
     if (injectionEnabled()) {
@@ -73,7 +79,13 @@ export function experienceLinesForDispatch(target: DispatchTarget, query?: strin
         ...(target.specialist ? { specialist: target.specialist } : {}),
       })
       if (selected.length) {
-        recordInjection(selected.map((c) => c.id), injectionRunLabel())
+        recordInjection(
+          selected.map((c) => c.id),
+          injectionRunLabel(),
+          undefined,
+          taskId,
+          { kind: 'exp', ...(target.column ? { column: target.column } : {}), ...(target.specialist ? { specialist: target.specialist } : {}) },
+        )
         const line = experienceBriefLine(selected)
         if (line) lines.push(line)
       }
@@ -81,8 +93,22 @@ export function experienceLinesForDispatch(target: DispatchTarget, query?: strin
   } catch { /* fail-soft：经验通道异常不影响派发 */ }
   try {
     if (fewshotInjectionEnabled() && query?.trim()) {
-      const line = fewshotInjectLine(recallFewshot(query, listLedger().distills))
-      if (line) lines.push(line)
+      const recall = recallFewshot(query, listLedger().distills)
+      const line = fewshotInjectLine(recall)
+      if (line) {
+        // 批一 b 变更 4：fewshot 路也落留痕账（kind='fewshot'，ids=台账提炼 id）——
+        // taskId 到场才落（join 键），缺席零留痕向后兼容。
+        if (recall.recalled.length && taskId?.trim()) {
+          recordInjection(
+            recall.recalled.map((t) => t.ledgerId),
+            injectionRunLabel(),
+            undefined,
+            taskId,
+            { kind: 'fewshot', ...(target.column ? { column: target.column } : {}), ...(target.specialist ? { specialist: target.specialist } : {}) },
+          )
+        }
+        lines.push(line)
+      }
     }
   } catch { /* fail-soft：fewshot 通道异常不影响派发 */ }
   return lines

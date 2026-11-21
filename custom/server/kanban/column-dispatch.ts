@@ -21,7 +21,7 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
-import { dualTrackLinesForDispatch } from '../expdual/dual-inject'
+import { dualTrackInjectionForDispatch } from '../expdual/dual-inject'
 import { selectHandoffRuleForDispatch } from '../handoff/handoff-rules'
 import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
@@ -32,6 +32,7 @@ import { assessDispatchReadiness, enforceOrWarnReadiness, fetchTaskTitleAndBodyB
 import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
 import type { CapabilityReadiness } from '../capabilitypool/types'
 import { resolveDispatchOutcome, type DispatchOutcomeContext } from '../outcome/kanban-resolution'
+import { settleDueProbation } from '../expcandidates/probation'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -135,7 +136,9 @@ function contractFooter(): string {
   ].join('')
 }
 
-export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null, rerankLine?: string | null, handoffLine?: string | null): string {
+/** taskId（第 8 参，批一 b 变更 1）：当前派单任务 id——透传进注入回执（join 任务
+ * 终态做效果归因）；缺席时各注入路照旧不留 taskId 痕（向后兼容）。 */
+export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationStep[], index: number, precedentLine: string | null = null, taskTitle?: string | null, rerankLine?: string | null, handoffLine?: string | null, taskId?: string | null): string {
   const lines = steps.map((s, i) => `  ${i + 1}. ${s.id}（${s.role}${s.specialist ? ` / ${s.specialist}` : ''}）`)
   // 第五期 ①：语义上下文块（agent 消费本体）——单元/能力/SLO 目标/判定词表随负载下发，
   // buildDispatchSemanticContext 内部 fail-soft（注册表缺该单元返回 null 不占行）。
@@ -162,14 +165,17 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
       stepId: step.id,
     },
     taskTitle ?? undefined,
+    taskId ?? undefined,
   )
   // 双轨经验注入（TTSE 吸收，2026-11-12）：EXP_DUAL_INJECT=1 才启用；FACT/TIP 分块、
-  // 通道内独立编号、各封顶 3 条。与历史经验通道独立选通（互不依赖）。
-  const dualExperienceLines = dualTrackLinesForDispatch({
+  // 通道内独立编号、各封顶 3 条。与历史经验通道独立选通（互不依赖）。批一 b 变更 4：
+  // taskId 透传留痕（kind='dual' 回执——效果归因同账）。
+  const dualExperienceLines = dualTrackInjectionForDispatch({
     column: trigger.column,
     ...(step.specialist ? { specialist: step.specialist } : {}),
     ...(taskTitle ? { query: taskTitle } : {}),
-  })
+    ...(taskId ? { taskId } : {}),
+  }).lines
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
@@ -215,6 +221,14 @@ export async function dispatchColumnTransition(
       // ruleEvals 不抛），enforce 对这类规则名存实亡。
       checkDecisionRulesForDispatch({ specialist: step.specialist || undefined, column: trigger.column })
     }
+  }
+  // 试用期惰性结算（批一 b 变更 3）：下一次派单触发到期条目结算（幂等有界，z 检验
+  // 三分支见 probation.ts；spec 决策 1——不新增 watcher）。fail-soft：结算异常只
+  // warn 不阻断派发（试用期是派生观测面，不是派发的前置条件）。
+  try {
+    await settleDueProbation()
+  } catch (e) {
+    console.warn(`[column-dispatch] 试用期惰性结算失败（不阻断派发）：${e instanceof Error ? e.message : String(e)}`)
   }
   const outcomes: MentionOutcome[] = []
   const delegation: DelegationCheck[] = []
@@ -307,7 +321,7 @@ export async function dispatchColumnTransition(
       }
       inflight.add(idemKey)
       let stepOutcomes: MentionOutcome[]
-      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle, rerankLine, handoffLine)}`
+      const text = `@${step.provider} ${stepBrief(trigger, trigger.steps, index, precedentLine, taskTitle, rerankLine, handoffLine, params.taskId ?? null)}`
       try {
         stepOutcomes = await service.dispatch({ workspacePath: params.workspacePath, text, ...(params.taskId ? { taskId: params.taskId } : {}) })
       } finally {

@@ -41,17 +41,18 @@ function seedCandidate(id: string, status: ExpCandidate['status'] = 'candidate')
 }
 
 describe('curateCandidate → 决策图谱接线（批四 T3）', () => {
-  it('真实状态迁移（candidate→approved / approved→rejected）→ recorder 被调，入参带 from/to', () => {
+  it('真实状态迁移（candidate→probation[批一 b 批准落点] / probation→rejected）→ recorder 被调，入参带 from/to', () => {
     seedCandidate('exp-001')
     const approved = curateCandidate('exp-001', 'approved')
-    expect(approved.status).toBe('approved')
+    // 批一 b 变更 3：批准落 probation（试用期）；决策记录按真实迁移记 to=probation
+    expect(approved.status).toBe('probation')
     expect(recordLearningDecision).toHaveBeenCalledTimes(1)
-    expect(recordLearningDecision).toHaveBeenCalledWith({ candidateId: 'exp-001', from: 'candidate', to: 'approved' })
+    expect(recordLearningDecision).toHaveBeenCalledWith({ candidateId: 'exp-001', from: 'candidate', to: 'probation' })
 
     const rejected = curateCandidate('exp-001', 'rejected')
     expect(rejected.status).toBe('rejected')
     expect(recordLearningDecision).toHaveBeenCalledTimes(2)
-    expect(recordLearningDecision).toHaveBeenLastCalledWith({ candidateId: 'exp-001', from: 'approved', to: 'rejected' })
+    expect(recordLearningDecision).toHaveBeenLastCalledWith({ candidateId: 'exp-001', from: 'probation', to: 'rejected' })
   })
 
   it('同状态重写不是决定（candidate→candidate）→ recorder 不被调', () => {
@@ -61,12 +62,26 @@ describe('curateCandidate → 决策图谱接线（批四 T3）', () => {
     expect(recordLearningDecision).not.toHaveBeenCalled()
   })
 
+  it('审查 I-2：effect_unknown 挂人工后 approve=显式转正（probation→approved）→ recorder 记人工决定', () => {
+    seedCandidate('exp-004')
+    // 先推进到 effect_unknown（二次样本不足结算终态——直接造档等价）
+    const store = readExpStore()
+    const c = store.candidates.find((x) => x.id === 'exp-004')!
+    c.status = 'probation'
+    c.probation = { startedAt: '2026-11-01T00:00:00.000Z', windowTasks: 20, minSamples: 5, settledAt: '2026-11-10T00:00:00.000Z', verdict: 'effect_unknown' }
+    writeExpStore(store)
+    const r = curateCandidate('exp-004', 'approved')
+    expect(r.status).toBe('approved')
+    expect(r.probation?.verdict).toBe('manual_approved')
+    expect(recordLearningDecision).toHaveBeenCalledWith({ candidateId: 'exp-004', from: 'probation', to: 'approved' })
+  })
+
   it('recorder 抛异常 → 审核主链路不受影响（fire-and-forget：返回值与落盘照常）', () => {
     recordLearningDecision.mockImplementation(() => { throw new Error('KG bridge down') })
     seedCandidate('exp-003')
     const r = curateCandidate('exp-003', 'approved')
-    expect(r.status).toBe('approved')
-    expect(readExpStore().candidates.find((c) => c.id === 'exp-003')?.status).toBe('approved')
+    expect(r.status).toBe('probation')
+    expect(readExpStore().candidates.find((c) => c.id === 'exp-003')?.status).toBe('probation')
   })
 
   it('候选不存在 → 原有异常行为不变，recorder 不被调', () => {

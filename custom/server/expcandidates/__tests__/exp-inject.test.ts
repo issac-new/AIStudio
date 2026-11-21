@@ -8,7 +8,7 @@ import {
   experienceBriefLine, experienceLinesForDispatch, injectionRunLabel, selectableExperiences,
 } from '../exp-inject'
 import { recordDistill } from '../../eval/flywheel'
-import { _useStoreDirForTests, listCandidates, writeExpStore, readExpStore } from '../exp-store'
+import { _useStoreDirForTests, listCandidates, listInjectionLog, recordInjection, writeExpStore, readExpStore } from '../exp-store'
 import type { ExpCandidate } from '../exp-types'
 
 const dir = mkdtempSync(join(tmpdir(), 'exp-inject-test-'))
@@ -95,6 +95,86 @@ describe('受控注入', () => {
       { ...cand('exp-a', 'approved'), updatedAt: '2026-01-01' },
     ])
     expect(sel.map((c) => c.id)).toEqual(['exp-a', 'exp-b'])
+  })
+})
+
+describe('注入回执补键（批一 b 变更 1：taskId/kind/作用域透传）', () => {
+  it('recordInjection 带 taskId 无 snapshotId 也落留痕行（join 键到场即留痕）；同键重放幂等不重复追加', () => {
+    seed([cand('exp-001', 'approved')])
+    recordInjection(['exp-001'], 'run21', undefined, 'T-101', { kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+    recordInjection(['exp-001'], 'run21', undefined, 'T-101', { kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({ runLabel: 'run21', ids: ['exp-001'], taskId: 'T-101', kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+    expect(log[0].snapshotId).toBeUndefined()
+  })
+
+  it('recordInjection 无 taskId 且无 snapshotId（旧调用面）不落留痕行——向后兼容', () => {
+    seed([cand('exp-001', 'approved')])
+    recordInjection(['exp-001'], 'run22')
+    expect(listInjectionLog()).toEqual([])
+    expect(listCandidates()[0].injectedRuns).toEqual(['run22'])
+  })
+
+  it('派单注入透传 taskId＋作用域：experienceLinesForDispatch 第三参落到回执（spec 验收 1 前置）', () => {
+    process.env.EXPERIENCE_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run23'
+    seed([cand('exp-001', 'approved')])
+    const lines = experienceLinesForDispatch({ column: 'devimpl', specialist: 'refiner' }, undefined, 'T-202')
+    expect(lines).toHaveLength(1)
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({ runLabel: 'run23', taskId: 'T-202', kind: 'exp', column: 'devimpl', specialist: 'refiner' })
+  })
+
+  it('无 taskId 场景向后兼容：派单注入照旧只记 injectedRuns，不落 taskId 留痕', () => {
+    process.env.EXPERIENCE_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run24'
+    seed([cand('exp-001', 'approved')])
+    experienceLinesForDispatch({ column: 'devimpl' })
+    expect(listInjectionLog()).toEqual([])
+    expect(listCandidates()[0].injectedRuns).toEqual(['run24'])
+  })
+
+  it('fewshot 路 recordInjection（批一 b 变更 4）：召回即落 kind=fewshot 回执（台账 id＋作用域）', () => {
+    process.env.FLYWHEEL_FEWSHOT_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run25'
+    const evalDir = join(dir, 'eval-ledger-fewshot')
+    process.env.EVAL_STORE = evalDir
+    recordDistill({
+      taskId: 'bd-f1', sourceRunId: 'erun-1', sourceTaskId: 't1', sampleIdx: 1,
+      rootCause: 'result_defect', tabooActions: ['禁止重复失败结果'], failedSteps: 5, stepRedline: 7,
+      targetSetId: 'eset-009', problem: '查北京到上海的机票', expectedBehavior: '返回正确航班与价格',
+    })
+    const lines = experienceLinesForDispatch({ column: 'devimpl', specialist: 'refiner' }, '帮我查一下北京到上海的机票哈', 'T-501')
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('历史教训')
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({
+      runLabel: 'run25', taskId: 'T-501', kind: 'fewshot', column: 'devimpl', specialist: 'refiner',
+    })
+    expect(log[0].ids).toHaveLength(1) // 台账提炼 id（ledgerId）
+    delete process.env.FLYWHEEL_FEWSHOT_INJECT
+    delete process.env.EVAL_STORE
+    rmSync(evalDir, { recursive: true, force: true })
+  })
+
+  it('fewshot 无 taskId：行照常追加，零留痕（向后兼容）', () => {
+    process.env.FLYWHEEL_FEWSHOT_INJECT = '1'
+    const evalDir = join(dir, 'eval-ledger-fewshot2')
+    process.env.EVAL_STORE = evalDir
+    recordDistill({
+      taskId: 'bd-f2', sourceRunId: 'erun-1', sourceTaskId: 't1', sampleIdx: 1,
+      rootCause: 'result_defect', tabooActions: ['禁止重复失败结果'], failedSteps: 5, stepRedline: 7,
+      targetSetId: 'eset-009', problem: '查北京到上海的机票', expectedBehavior: '返回正确航班与价格',
+    })
+    const lines = experienceLinesForDispatch({ column: 'devimpl' }, '帮我查一下北京到上海的机票哈')
+    expect(lines).toHaveLength(1)
+    expect(listInjectionLog()).toEqual([])
+    delete process.env.FLYWHEEL_FEWSHOT_INJECT
+    delete process.env.EVAL_STORE
+    rmSync(evalDir, { recursive: true, force: true })
   })
 })
 

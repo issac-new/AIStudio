@@ -473,3 +473,6 @@
 {"at":"2026-11-21T06:53:43Z","spec":"docs/superpowers/specs/2026-11-21-rd-governance-collab-capability.md","receipt":"4a2076668cea39af95c402d02f92995fef2a4211","commit":"8f4bd172c"}
 {"at":"2026-11-21T06:58:11Z","spec":"docs/superpowers/specs/2026-11-21-p1-acceptance-simrun-router-tests.md","receipt":"1fcb7608855227b3fc580de505364fb8f59d9b05","commit":"013d488f2"}
 {"at":"2026-11-21T07:38:23Z","spec":"docs/superpowers/specs/2026-11-21-p2-p4-sim-product-final.md","receipt":"d5a80473e622fdae3152dfbe5eddbd15887f43d4","commit":"244c8e4fd"}
+{"at":"2026-11-21T08:53:15Z","spec":"docs/superpowers/specs/2026-11-21-agnes-probation-effect-attribution.md","receipt":"3bfdeec478873e9d00d376bfea80122c43584163","commit":"3080f49b2"}
+{"at":"2026-11-21T09:14:25Z","spec":"docs/superpowers/specs/2026-11-21-agnes-probation-effect-attribution.md","receipt":"4a74da1008501f7fd53a1b63537b2bbe162f41b2","commit":"48dabd905"}
+{"at":"2026-11-21T09:25:11Z","spec":"docs/superpowers/specs/2026-11-21-agnes-probation-effect-attribution.md","receipt":"bd9f7a2f9f7770be2611b954bd272deac086f109","commit":"2312f32d6"}

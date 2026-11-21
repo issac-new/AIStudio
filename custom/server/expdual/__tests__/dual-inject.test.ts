@@ -105,3 +105,57 @@ describe('双轨注入', () => {
     expect(renderDualTrackBlock({ facts: [], tips: [] })).toEqual([])
   })
 })
+
+describe('两路留痕（批一 b 变更 4：dual 路 recordInjection，kind 区分）', () => {
+  it('taskId 到场：注入即落 kind=dual 回执（规则 ids＋作用域）；ruleIds 与行内容一致', async () => {
+    seed()
+    process.env.EXP_DUAL_INJECT = '1'
+    const expStoreDir = mkdtempSync(join(tmpdir(), 'expdual-recall-exp-'))
+    const { _useStoreDirForTests, listInjectionLog } = await import('../../expcandidates/exp-store')
+    _useStoreDirForTests(expStoreDir)
+    try {
+      const { dualTrackInjectionForDispatch } = await import('../dual-inject')
+      const { lines, ruleIds } = dualTrackInjectionForDispatch({ column: 'devimpl', specialist: 'refiner', taskId: 'T-401' })
+      expect(lines.length).toBeGreaterThan(0)
+      expect(ruleIds.every((id) => /^([ft]-\d+)$/.test(id))).toBe(true)
+      const log = listInjectionLog()
+      expect(log).toHaveLength(1)
+      expect(log[0]).toMatchObject({
+        taskId: 'T-401', kind: 'dual', column: 'devimpl', specialist: 'refiner', ids: ruleIds,
+      })
+    } finally {
+      rmSync(expStoreDir, { recursive: true, force: true })
+    }
+  })
+
+  it('taskId 缺席零留痕（向后兼容）；旧 dualTrackLinesForDispatch 是薄包装（行为不变）', async () => {
+    seed()
+    process.env.EXP_DUAL_INJECT = '1'
+    const expStoreDir = mkdtempSync(join(tmpdir(), 'expdual-recall-exp2-'))
+    const { _useStoreDirForTests, listInjectionLog } = await import('../../expcandidates/exp-store')
+    _useStoreDirForTests(expStoreDir)
+    try {
+      const lines = dualTrackLinesForDispatch({ column: 'devimpl' })
+      expect(lines.length).toBeGreaterThan(0)
+      expect(listInjectionLog()).toEqual([]) // 无 taskId 不落回执
+    } finally {
+      rmSync(expStoreDir, { recursive: true, force: true })
+    }
+  })
+
+  it('留痕 fail-soft：留痕账写坏不阻断注入行产出', async () => {
+    seed()
+    process.env.EXP_DUAL_INJECT = '1'
+    const expStoreDir = mkdtempSync(join(tmpdir(), 'expdual-recall-exp3-'))
+    const { _useStoreDirForTests } = await import('../../expcandidates/exp-store')
+    _useStoreDirForTests(expStoreDir)
+    try {
+      writeFileSync(join(expStoreDir, 'exp-candidates.json'), '{broken', 'utf8')
+      const { dualTrackInjectionForDispatch } = await import('../dual-inject')
+      const { lines } = dualTrackInjectionForDispatch({ column: 'devimpl', taskId: 'T-402' })
+      expect(lines.length).toBeGreaterThan(0) // 注入行照常，留痕失败不阻断
+    } finally {
+      rmSync(expStoreDir, { recursive: true, force: true })
+    }
+  })
+})

@@ -8,7 +8,7 @@ import { join } from 'path'
 import { stepBrief } from '../column-dispatch'
 import type { ColumnTransitionTrigger, AutomationStep } from '../column-automation'
 import { createConstraintCard } from '../../constraints/constraint-store'
-import { _useStoreDirForTests as useExpStore, writeExpStore } from '../../expcandidates/exp-store'
+import { _useStoreDirForTests as useExpStore, listInjectionLog, writeExpStore } from '../../expcandidates/exp-store'
 import type { ExpCandidate } from '../../expcandidates/exp-types'
 
 const dir = mkdtempSync(join(tmpdir(), 'dispatch-constraints-'))
@@ -81,5 +81,42 @@ describe('stepBrief 约束卡注入', () => {
     const on = stepBrief(trigger, steps, 0)
     expect(on).toContain('历史经验（已审核，历史经验出处·非本轮实测凭据）')
     expect(on).toContain('exp-001')
+  })
+
+  it('taskId 透传（批一 b 变更 1）：stepBrief 第 8 参落进注入回执（taskId+column+specialist+kind=exp）', () => {
+    writeExpStore({
+      candidates: [{
+        id: 'exp-001', type: 'sop', statement: '同类任务先备齐证据再提交', fingerprint: 'fp-1',
+        evidence: [], status: 'approved', createdAt: 't', updatedAt: 't', injectedRuns: [],
+      } as ExpCandidate],
+      nextSeq: 2,
+    })
+    process.env.EXPERIENCE_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run-brief-1'
+    const specialistSteps: AutomationStep[] = [
+      { id: 'impl-main', provider: 'zcode', role: '实现', specialist: 'refiner' } as unknown as AutomationStep,
+    ]
+    const brief = stepBrief(trigger, specialistSteps, 0, null, '任务标题', null, null, 'T-301')
+    expect(brief).toContain('历史经验（已审核')
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({
+      runLabel: 'run-brief-1', taskId: 'T-301', kind: 'exp',
+      column: 'devimpl', specialist: 'refiner', ids: ['exp-001'],
+    })
+  })
+
+  it('taskId 缺席（无 taskId 派单/旧调用面）：简报照常，回执不落 taskId 键——向后兼容', () => {
+    writeExpStore({
+      candidates: [{
+        id: 'exp-001', type: 'sop', statement: '同类任务先备齐证据再提交', fingerprint: 'fp-1',
+        evidence: [], status: 'approved', createdAt: 't', updatedAt: 't', injectedRuns: [],
+      } as ExpCandidate],
+      nextSeq: 2,
+    })
+    process.env.EXPERIENCE_INJECT = '1'
+    const brief = stepBrief(trigger, steps, 0)
+    expect(brief).toContain('历史经验（已审核')
+    expect(listInjectionLog()).toEqual([])
   })
 })

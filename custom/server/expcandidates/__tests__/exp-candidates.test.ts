@@ -121,7 +121,9 @@ describe('store 幂等与审核', () => {
     store.nextSeq = 2
     writeExpStore(store)
     const approved = curateCandidate('exp-001', 'approved')
-    expect(approved.status).toBe('approved')
+    // 批一 b 变更 3：批准不再直进 approved——落 probation 观察窗（惰性结算转正/退役）
+    expect(approved.status).toBe('probation')
+    expect(approved.probation).toMatchObject({ windowTasks: 20, minSamples: 5 })
     recordInjection(['exp-001'], 'run20')
     recordInjection(['exp-001'], 'run20')
     recordInjection(['exp-001'], 'run21')

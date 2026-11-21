@@ -9,6 +9,20 @@
     "npmScripts": 52
   },
   "changes": [
+{
+   "at": "2026-11-21",
+   "delta": "+2 域文件（expcandidates/probation.ts 试用期惰性结算＋effect-report.ts record 维度归因）＋exp-controller 增 1 只读端点（GET /api/expcandidates/effects）/ +0 patches / +0 scripts / +0 gates / +0 npm scripts；ExpInjectionRecord 扩 taskId/kind/column 字段（追加兼容，旧数据按缺省）",
+   "reason": "Agnes 吸收批一 b（spec 2026-11-21-agnes-probation-effect-attribution）：经验试用期（probation→retired/approved，z 检验劣化退役）＋注入效果归因（三路留痕同账＋同列基线对照）——approved 永久生效缺口关闭",
+   "pairedRemovals": [
+    "惰性结算挂既有 dispatchColumnTransition 入口，零新增常驻进程/定时器",
+    "连续两轮真实运行零 probation 条目时，probation 面降级为纯观测（curate 可直进 approved），结算逻辑保留为库内死代码待下轮确认后归档"
+   ],
+   "sunset": {
+    "owner": "Agnes 批一 b",
+    "reviewBy": "批后下一轮推演复盘",
+    "retireWhen": "连续两轮真实运行零 probation 条目且 effects 端点零消费时，试用期面降级纯观测、effects 端点归档（数据保留）"
+   }
+  },
     {
       "at": "2026-11-21",
       "delta": "+1 patch（810 studio 宿主路由挂载 org-workbench）/ +1 域（orgworkbench：议程只读投影零写面）/ +0 独立账本（OutcomeTeam 落 outcome 目录 team.json＋events.jsonl 既有哈希链）/ +0 scripts / +0 npm scripts / +0 gates；另 778/640 升级丢段根治为零净增（重锚回补，非新增面）",

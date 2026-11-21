@@ -499,10 +499,19 @@ export async function resolveDispatchOutcome(
   }
   // 批二 T5 召回留痕：快照含经验块时把「哪些候选进了哪个快照」落 injectionLog
   // （留痕可反查：snapshot.approvedExperienceVersions ⊇ 被注入候选指纹；fail-soft）。
+  // 批一 b 变更 1：taskId＋派单列随回执落键——效果归因（effect-report）join 任务
+  // 终态与同口径基线都靠它；同 taskId 派单简报路与快照路可能各落一行，聚合侧按
+  // (recordId, taskId) 去重（同一任务对同一记录只计一次曝光）。
   const injectedIds = appended.snapshot.approvedExperienceVersions.map((f) => f.split('@')[0])
   if (injectedIds.length) {
     try {
-      recordInjection(injectedIds, `dispatch:${appended.snapshot.snapshotId.slice(0, 12)}`, appended.snapshot.snapshotId)
+      recordInjection(
+        injectedIds,
+        `dispatch:${appended.snapshot.snapshotId.slice(0, 12)}`,
+        appended.snapshot.snapshotId,
+        taskId.trim(),
+        { kind: 'exp', ...(opts.experienceScope?.column ? { column: opts.experienceScope.column } : {}) },
+      )
     } catch (err) {
       console.warn(`[kanban-resolution] 召回留痕落账失败（不阻断派发）：${(err as Error).message}`)
     }
