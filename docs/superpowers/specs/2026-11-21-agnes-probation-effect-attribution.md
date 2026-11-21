@@ -55,3 +55,10 @@ DESIGN_SYNC: touched
 
 - `docs/DESIGN.md` §4.8（评测、记忆与经验回流）补「经验试用期与注入效果归因」段——probation 生命周期、惰性结算 z 检验退役、record 维度归因、三路注入留痕同账。
 - `config/mechanism-budget.json` changes[] 登记本批 delta（+2 域文件 probation.ts/effect-report.ts、+0 patch/script/gate；sunset 绑「连续两轮零 probation 条目即降级为纯观测」）。
+
+## 收口回填（2026-11-21 实测）
+
+- 七提交落地（c76e727ac..2312f32d6）：回执补键（taskId/kind/column/specialist）→effect-report 纯投影＋GET /api/expcandidates/effects→试用期生命周期（curate→probation、惰性结算挂 dispatchColumnTransition 幂等有界、z 检验 α=0.05 单侧劣化退役、首延/二次 effect_unknown、注入闸三态、rollbackProposal 动态 import fail-soft 联动）→dual/fewshot 两路留痕→配套（DESIGN §4.8 试用期段＋机制预算＋本 spec 改 touched）→审查 I-1/I-2 修复。
+- 实现裁决：recordInjection 扩第 4 位 taskId＋第 5 位 meta（超 spec 字面，基线限定所必需）；基线=同列 task_events 轨迹未注入终态任务（specialist 无表列不猜）；结算判读用全部可归因数据、窗口只定到期；rollbackProposal 真身确认（workbench/service.ts:1078，promoted 态要求 409），动态 import 防静态图膨胀。
+- 审查（独立，可合并 0C/2I/5M/4N）两 I 当场修：I-1 settleDueProbation 写回前重读 store 逐候选补丁（防长窗口覆盖并发写）；I-2 effect_unknown 后人工 approve=显式转正（manual_approved verdict，learning decision 落账）——「挂人工」语义补全。
+- 验证：custom/server 全目录 5719/0（实现轮）＋三目录复核 423/423（审查轮）＋修复轮 140/140；typecheck:harness 零错；五条 GIVEN/WHEN/THEN 验收逐条有测试锚；全量门随合并跑。
