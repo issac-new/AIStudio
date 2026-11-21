@@ -4,164 +4,14 @@
   "target": "~/.hermes/hermes-agent",
   "files": [
     {
-      "source": "plugins/platforms/matrix/tools.py",
-      "dest": "plugins/platforms/matrix/tools.py",
-      "note": "matrix room 工具：is_async=True + R5 房间列表截断 50 + R6/V2 alias 统一门禁"
+      "source": "agent/handoff_checkpoint.py",
+      "dest": "agent/handoff_checkpoint.py",
+      "note": "604 交接检查点：轮换/fork 边界落机械交接记录（<home>/session-checkpoints/，历史有界 8）"
     },
     {
-      "source": "plugins/platforms/matrix/plugin.yaml",
-      "dest": "plugins/platforms/matrix/plugin.yaml",
-      "note": "provides_tools 声明"
-    },
-    {
-      "source": "hermes_cli/kanban_db.py",
-      "dest": "hermes_cli/kanban_db.py",
-      "note": "C3 raci TEXT 列 + R2/R3/R4 原子写 + 399 流转门禁接线 + 604 交接检查点段 + guardrail 层（register_write_sanction_udf/install_guardrail_triggers/SCHEMA_SQL，宿主自更新带入的写闸）——2026-10-11 长会话治理轮实锤：宿主 connect.py 已依赖 sanction 契约，series 版缺它会被本通道部署打崩宿主看板；镜像基线=SIM 黄金合体版（快照+390/391+C3+399+guardrail）+604 移植块。739 已全量回灌补丁链（guardrail/DoD/决策授权/团队键/估算重排一并收编），零漂移恢复。"
-    },
-    {
-      "source": "hermes_cli/kanban_db_connect.py",
-      "dest": "hermes_cli/kanban_db_connect.py",
-      "note": "C3: 旧库 ALTER TABLE 自动迁移 raci"
-    },
-    {
-      "source": "hermes_cli/kanban_output.py",
-      "dest": "hermes_cli/kanban_output.py",
-      "note": "C3: --json 输出含 raci"
-    },
-    {
-      "source": "hermes_cli/kanban_workflow.py",
-      "dest": "hermes_cli/kanban_workflow.py",
-      "note": "kanban_db.py 的 import 依赖（VALID_STATUSES 真源）——2026-10-24 整合轮实抓：runtime 树缺它致 tests/hermes_cli 三测全数 import 失败；vendor/部署树副本逐字节一致，补齐根治 manifest 漂移"
-    },
-    {
-      "source": "hermes_cli/kanban_parser.py",
-      "dest": "hermes_cli/kanban_parser.py",
-      "note": "C3: create 加 --raci JSON"
-    },
-    {
-      "source": "hermes_cli/kanban.py",
-      "dest": "hermes_cli/kanban.py",
-      "note": "C3: _cmd_create 解析并透传 raci + R1 _parse_duration 溢出/负值拒绝"
-    },
-    {
-      "source": "tools/kanban_tools_schemas.py",
-      "dest": "tools/kanban_tools_schemas.py",
-      "note": "C3: kanban_create 工具 raci object 参数"
-    },
-    {
-      "source": "tools/kanban_tools.py",
-      "dest": "tools/kanban_tools.py",
-      "note": "C3: 工具建卡透传 raci；A 层完成契约门（receipt 校验）"
-    },
-    {
-      "source": "completion_contract.py",
-      "dest": "completion_contract.py",
-      "note": "A 层完成契约：AC/dod 派生、源哈希、回执校验、TAP/JUnit 重算（2026-10-31 模型波动加固）"
-    },
-    {
-      "source": "hermes_cli/acceptance_report.py",
-      "dest": "hermes_cli/acceptance_report.py",
-      "note": "结果交付批（2026-11-19）：逐条 AC 验收报告 schema/校验/结构化 blockers——independent 档完成门依赖"
-    },
-    {
-      "source": "hermes_cli/delivery_version.py",
-      "dest": "hermes_cli/delivery_version.py",
-      "note": "结果交付后续批（2026-11-19）：任务级不可变交付版本（内容 checksum/supersede 事件），acceptance_report 绑定依赖"
-    },
-    {
-      "source": "hermes_cli/subcommands/cron.py",
-      "dest": "hermes_cli/subcommands/cron.py",
-      "note": "450: cron create/edit 加 --base-url 参数面（R1）"
-    },
-    {
-      "source": "hermes_cli/cron.py",
-      "dest": "hermes_cli/cron.py",
-      "note": "450: _JOB_ARG_FIELDS 收 base_url（R1）"
-    },
-    {
-      "source": "hermes_cli/subcommands/memory.py",
-      "dest": "hermes_cli/subcommands/memory.py",
-      "note": "452: memory set 子命令（三文件单写者，R2）"
-    },
-    {
-      "source": "hermes_cli/main_agent_cmds.py",
-      "dest": "hermes_cli/main_agent_cmds.py",
-      "note": "452: _cmd_memory_set（原子写+--expect-mtime CAS，R2）"
-    },
-    {
-      "source": "gateway/hosted_rooms.py",
-      "dest": "gateway/hosted_rooms.py",
-      "note": "470: append_event 可选 collab_event_id（T4b 跨机 eid 锚点）"
-    },
-    {
-      "source": "hermes_cli/kanban_db_dispatch.py",
-      "dest": "hermes_cli/kanban_db_dispatch.py",
-      "note": "478: dispatcher 预算闸遥信（budget_capped/per_profile_capped 进 suppression——满载忙不再误报卡死）；板级围栏读 profiles/profile_scope 双键——739 回灌后与补丁链零漂移（4 个 runtime-only 特性全部入链）"
-    },
-    {
-      "source": "hermes_cli/board_team_keys.py",
-      "dest": "hermes_cli/board_team_keys.py",
-      "note": "板级团队键选择单一源：profiles 优先、profile_scope 回落（live board.json 实测键）"
-    },
-    {
-      "source": "gateway/run_busy.py",
-      "dest": "gateway/run_busy.py",
-      "note": "533: 容量拒绝排队重试泵（_queue_capacity_retry/_capacity_retry_pump）——并发闸拒收不再丢消息；hermes 自更新擦除三次实录（run6/run7），收编正本防再擦"
-    },
-    {
-      "source": "gateway/run_inbound.py",
-      "dest": "gateway/run_inbound.py",
-      "note": "533: claim 拒绝路径接容量排队（静默重试不回声防通知风暴）+534 出站通知守卫接线"
-    },
-    {
-      "source": "gateway/outbound_notice_guard.py",
-      "dest": "gateway/outbound_notice_guard.py",
-      "note": "534: 出站通知守卫（通知风暴断源）"
-    },
-    {
-      "source": "tests/gateway/test_outbound_notice_guard.py",
-      "dest": "tests/gateway/test_outbound_notice_guard.py",
-      "note": "534: 守门测试"
-    },
-    {
-      "source": "gateway/platforms/base.py",
-      "dest": "gateway/platforms/base.py",
-      "note": "534: 出站通知守卫接线点（notice 调用经守卫包裹——缺它 534 半残）"
-    },
-    {
-      "source": "tests/gateway/test_max_concurrent_sessions.py",
-      "dest": "tests/gateway/test_max_concurrent_sessions.py",
-      "note": "533: 容量排队泵测试"
-    },
-    {
-      "source": "hermes_cli/kanban_gates.py",
-      "dest": "hermes_cli/kanban_gates.py",
-      "note": "399 流转声明式门禁层：kanban_db.complete/request_review/promote 三处消费（宿主未跟踪文件，manifest 是其唯一分发通道；2026-10-03 隔离轮补——快照只取 git 跟踪文件致缺位，G 门禁必炸）"
-    },
-    {
-      "source": "gateway/noise_filter.py",
-      "dest": "gateway/noise_filter.py",
-      "note": "噪声过滤层：matrix adapter/weixin 平台消费（宿主未跟踪文件，manifest 分发通道；2026-10-03 隔离轮补）"
-    },
-    {
-      "source": "gateway/kanban_watchers_common.py",
-      "dest": "gateway/kanban_watchers_common.py",
-      "note": "569 gate-guard：闸门键未齐 spawn 暂停（run9 P9 越序抢跑前置拦截；KANBAN_GATE_GUARD_FILE/KEYS 未配=惰性，生产零行为变化）"
-    },
-    {
-      "source": "plugins/style-charter/plugin.yaml",
-      "dest": "plugins/style-charter/plugin.yaml",
-      "note": "受控写作条款插件声明（kind:backend bundled 自动加载，零 plugins.enabled 门槛）——全局文风根治轮 2026-10-09"
-    },
-    {
-      "source": "plugins/style-charter/__init__.py",
-      "dest": "plugins/style-charter/__init__.py",
-      "note": "注册 swarmstudio.style-charter 系统提示词段（after_memory，每新会话冻结注入）"
-    },
-    {
-      "source": "plugins/style-charter/style-charter.md",
-      "dest": "plugins/style-charter/style-charter.md",
-      "note": "受控写作条款唯一真源（ASD-STE100×公文笔法）；simharness mx-lib 同源只读消费"
+      "source": "agent/rule_heartbeat.py",
+      "dest": "agent/rule_heartbeat.py",
+      "note": "601 规则心跳：每 N 迭代把核心纪律重申进最新未持久化 tool 行（前缀缓存零破坏）"
     },
     {
       "source": "agent/runaway_guard.py",
@@ -174,69 +24,29 @@
       "note": "457+605 监督决策/执行面：report|watchdog_retry|ralph_loop 三模式有界恢复（缺它 401 只观测不处置）"
     },
     {
-      "source": "agent/rule_heartbeat.py",
-      "dest": "agent/rule_heartbeat.py",
-      "note": "601 规则心跳：每 N 迭代把核心纪律重申进最新未持久化 tool 行（前缀缓存零破坏）"
-    },
-    {
-      "source": "agent/handoff_checkpoint.py",
-      "dest": "agent/handoff_checkpoint.py",
-      "note": "604 交接检查点：轮换/fork 边界落机械交接记录（<home>/session-checkpoints/，历史有界 8）"
-    },
-    {
-      "source": "gateway/session_telemetry.py",
-      "dest": "gateway/session_telemetry.py",
-      "note": "602 会话遥测 sidecar：<home>/runtime/sessions-telemetry.json——集群巡检 D9/D10/D11 的观测面"
-    },
-    {
-      "source": "gateway/session_rotation.py",
-      "dest": "gateway/session_rotation.py",
-      "note": "603 会话轮换策略：水位/累计迭代/空转三判据，report（默认）|auto 两档，auto 复用压缩耗尽漏斗+604 检查点"
-    },
-    {
-      "source": "toolsets.py",
-      "dest": "toolsets.py",
-      "note": "611: obs_recall 进 _HERMES_CORE_TOOLS（默认工具面）"
-    },
-    {
-      "source": "tools/file_tools.py",
-      "dest": "tools/file_tools.py",
-      "note": "613: write_file/patch then_run 动作融合+内容哈希守卫"
-    },
-    {
-      "source": "tools/tool_result_storage.py",
-      "dest": "tools/tool_result_storage.py",
-      "note": "612: 溢出报文头+尾双摘录+召回句柄（obs_recall 数据面）"
-    },
-    {
-      "source": "tools/efficiency_ledger.py",
-      "dest": "tools/efficiency_ledger.py",
-      "note": "612: 机制账本 JSONL（efficiency/ledger.jsonl，studio 面板消费）"
-    },
-    {
-      "source": "tools/obs_recall_tool.py",
-      "dest": "tools/obs_recall_tool.py",
-      "note": "612: obs_recall 归档分页召回工具（路径限定归档目录）"
-    },
-    {
-      "source": "tools/evidence_reducer.py",
-      "dest": "tools/evidence_reducer.py",
-      "note": "614: 证据保全精简器（默认关；引文校验 fail-through）"
-    },
-    {
       "source": "agent/tool_executor.py",
       "dest": "agent/tool_executor.py",
       "note": "614: 精简器接线观察提交点（maybe_persist 之前）"
     },
     {
-      "source": "hermes_cli/kanban_db_boards.py",
-      "dest": "hermes_cli/kanban_db_boards.py",
-      "note": "0.22.4 起被 kanban_db_connect/_kb 引用（board metadata 源模块）；417 运行时加固改它——升级轮补入，防宿主用未补丁版"
+      "source": "completion_contract.py",
+      "dest": "completion_contract.py",
+      "note": "A 层完成契约：AC/dod 派生、源哈希、回执校验、TAP/JUnit 重算（2026-10-31 模型波动加固）"
     },
     {
-      "source": "hermes_cli/kanban_boards.py",
-      "dest": "hermes_cli/kanban_boards.py",
-      "note": "看板 boards 子命令面（series 补丁改动）——与 kanban 家族同步部署"
+      "source": "exa/manifest.yaml",
+      "dest": "optional-mcps/exa/manifest.yaml",
+      "note": "optional-mcps 部署链补位（2026-11-04）：patch 396 只注入 vendor 树，安装树 optional-mcps/ 从未有 exa 条目——catalog 不识别、mcp install 无门。正身=runtime/exa/manifest.yaml 单一事实源，部署后 catalog 即时可见（3.4.3）"
+    },
+    {
+      "source": "gateway/hosted_rooms.py",
+      "dest": "gateway/hosted_rooms.py",
+      "note": "470: append_event 可选 collab_event_id（T4b 跨机 eid 锚点）"
+    },
+    {
+      "source": "gateway/kanban_watchers_common.py",
+      "dest": "gateway/kanban_watchers_common.py",
+      "note": "569 gate-guard：闸门键未齐 spawn 暂停（run9 P9 越序抢跑前置拦截；KANBAN_GATE_GUARD_FILE/KEYS 未配=惰性，生产零行为变化）"
     },
     {
       "source": "gateway/kanban_watchers_dispatcher.py",
@@ -244,19 +54,54 @@
       "note": "看板 watcher 派发器（series 补丁改动）——宿主网关消费面，升级轮补入"
     },
     {
-      "source": "plugins/kanban/dashboard/plugin_api.py",
-      "dest": "plugins/kanban/dashboard/plugin_api.py",
-      "note": "看板 dashboard 插件 API（series 补丁改动）——升级轮补入"
+      "source": "gateway/kanban_watchers_notifier.py",
+      "dest": "gateway/kanban_watchers_notifier.py",
+      "note": "assigned 改派通知 ping-only，732"
     },
     {
-      "source": "hermes_cli/kanban_decompose.py",
-      "dest": "hermes_cli/kanban_decompose.py",
-      "note": "看板分解估算（估算负载轮）：runtime 覆盖层为权威版（含 _normalize_estimate 族），manifest 曾缺席致部署树缺特性"
+      "source": "gateway/noise_filter.py",
+      "dest": "gateway/noise_filter.py",
+      "note": "噪声过滤层：matrix adapter/weixin 平台消费（宿主未跟踪文件，manifest 分发通道；2026-10-03 隔离轮补）"
     },
     {
-      "source": "plugins/studio-file-approval/__init__.py",
-      "dest": "plugins/studio-file-approval/__init__.py",
-      "note": "studio 文件审批插件主体，manifest 曾缺席"
+      "source": "gateway/outbound_notice_guard.py",
+      "dest": "gateway/outbound_notice_guard.py",
+      "note": "534: 出站通知守卫（通知风暴断源）"
+    },
+    {
+      "source": "gateway/platforms/base.py",
+      "dest": "gateway/platforms/base.py",
+      "note": "534: 出站通知守卫接线点（notice 调用经守卫包裹——缺它 534 半残）"
+    },
+    {
+      "source": "gateway/run_busy.py",
+      "dest": "gateway/run_busy.py",
+      "note": "533: 容量拒绝排队重试泵（_queue_capacity_retry/_capacity_retry_pump）——并发闸拒收不再丢消息；hermes 自更新擦除三次实录（run6/run7），收编正本防再擦"
+    },
+    {
+      "source": "gateway/run_inbound.py",
+      "dest": "gateway/run_inbound.py",
+      "note": "533: claim 拒绝路径接容量排队（静默重试不回声防通知风暴）+534 出站通知守卫接线"
+    },
+    {
+      "source": "gateway/session_kanban.py",
+      "dest": "gateway/session_kanban.py",
+      "note": "A 层完成契约会话接线（2026-11-01 dod-drill R3 实锤）：build_kanban_policy 把 derive_contract(task.body) 冻进 kanban_json 上下文，bind_worker_context 导出 HERMES_KANBAN_DOD_CONTRACT/SOURCE_SHA256 到内层 agent——内层进程 env 不继承外层派发进程，契约必须随会话策略走"
+    },
+    {
+      "source": "gateway/session_rotation.py",
+      "dest": "gateway/session_rotation.py",
+      "note": "603 会话轮换策略：水位/累计迭代/空转三判据，report（默认）|auto 两档，auto 复用压缩耗尽漏斗+604 检查点"
+    },
+    {
+      "source": "gateway/session_telemetry.py",
+      "dest": "gateway/session_telemetry.py",
+      "note": "602 会话遥测 sidecar：<home>/runtime/sessions-telemetry.json——集群巡检 D9/D10/D11 的观测面"
+    },
+    {
+      "source": "gateway/shutdown_watchdog.py",
+      "dest": "gateway/shutdown_watchdog.py",
+      "note": "watchdog hostile-load 容忍热修回灌（2026-11-05 立法：loadavg≥factor×cpu 延迟 strike 升级防重启风暴）——宿主 config.py 配套引用面，无清单承载会被触碰面 force 洗掉；D9 回灌通道"
     },
     {
       "source": "hermes-skills/coding-delegate/SKILL.md",
@@ -269,24 +114,74 @@
       "note": "coding-delegate zcode ACP 脚本，manifest 曾缺席（部署侧目录需存在）"
     },
     {
-      "source": "gateway/session_kanban.py",
-      "dest": "gateway/session_kanban.py",
-      "note": "A 层完成契约会话接线（2026-11-01 dod-drill R3 实锤）：build_kanban_policy 把 derive_contract(task.body) 冻进 kanban_json 上下文，bind_worker_context 导出 HERMES_KANBAN_DOD_CONTRACT/SOURCE_SHA256 到内层 agent——内层进程 env 不继承外层派发进程，契约必须随会话策略走"
+      "source": "hermes_cli/acceptance_report.py",
+      "dest": "hermes_cli/acceptance_report.py",
+      "note": "结果交付批（2026-11-19）：逐条 AC 验收报告 schema/校验/结构化 blockers——independent 档完成门依赖"
     },
     {
-      "source": "exa/manifest.yaml",
-      "dest": "optional-mcps/exa/manifest.yaml",
-      "note": "optional-mcps 部署链补位（2026-11-04）：patch 396 只注入 vendor 树，安装树 optional-mcps/ 从未有 exa 条目——catalog 不识别、mcp install 无门。正身=runtime/exa/manifest.yaml 单一事实源，部署后 catalog 即时可见（3.4.3）"
+      "source": "hermes_cli/board_team_keys.py",
+      "dest": "hermes_cli/board_team_keys.py",
+      "note": "板级团队键选择单一源：profiles 优先、profile_scope 回落（live board.json 实测键）"
     },
     {
-      "source": "semantica/manifest.yaml",
-      "dest": "optional-mcps/semantica/manifest.yaml",
-      "note": "同上补位（patch 375 注入面同病）：semantica v0.7.0 catalog 条目随部署链到位，`hermes mcp install semantica` 恢复可用"
+      "source": "hermes_cli/cron.py",
+      "dest": "hermes_cli/cron.py",
+      "note": "450: _JOB_ARG_FIELDS 收 base_url（R1）"
     },
     {
-      "source": "gateway/kanban_watchers_notifier.py",
-      "dest": "gateway/kanban_watchers_notifier.py",
-      "note": "assigned 改派通知 ping-only，732"
+      "source": "hermes_cli/delivery_version.py",
+      "dest": "hermes_cli/delivery_version.py",
+      "note": "结果交付后续批（2026-11-19）：任务级不可变交付版本（内容 checksum/supersede 事件），acceptance_report 绑定依赖"
+    },
+    {
+      "source": "hermes_cli/kanban.py",
+      "dest": "hermes_cli/kanban.py",
+      "note": "C3: _cmd_create 解析并透传 raci + R1 _parse_duration 溢出/负值拒绝"
+    },
+    {
+      "source": "hermes_cli/kanban_boards.py",
+      "dest": "hermes_cli/kanban_boards.py",
+      "note": "看板 boards 子命令面（series 补丁改动）——与 kanban 家族同步部署"
+    },
+    {
+      "source": "hermes_cli/kanban_db.py",
+      "dest": "hermes_cli/kanban_db.py",
+      "note": "C3 raci TEXT 列 + R2/R3/R4 原子写 + 399 流转门禁接线 + 604 交接检查点段 + guardrail 层（register_write_sanction_udf/install_guardrail_triggers/SCHEMA_SQL，宿主自更新带入的写闸）——2026-10-11 长会话治理轮实锤：宿主 connect.py 已依赖 sanction 契约，series 版缺它会被本通道部署打崩宿主看板；镜像基线=SIM 黄金合体版（快照+390/391+C3+399+guardrail）+604 移植块。739 已全量回灌补丁链（guardrail/DoD/决策授权/团队键/估算重排一并收编），零漂移恢复。"
+    },
+    {
+      "source": "hermes_cli/kanban_db_boards.py",
+      "dest": "hermes_cli/kanban_db_boards.py",
+      "note": "0.22.4 起被 kanban_db_connect/_kb 引用（board metadata 源模块）；417 运行时加固改它——升级轮补入，防宿主用未补丁版"
+    },
+    {
+      "source": "hermes_cli/kanban_db_connect.py",
+      "dest": "hermes_cli/kanban_db_connect.py",
+      "note": "C3: 旧库 ALTER TABLE 自动迁移 raci"
+    },
+    {
+      "source": "hermes_cli/kanban_db_dispatch.py",
+      "dest": "hermes_cli/kanban_db_dispatch.py",
+      "note": "478: dispatcher 预算闸遥信（budget_capped/per_profile_capped 进 suppression——满载忙不再误报卡死）；板级围栏读 profiles/profile_scope 双键——739 回灌后与补丁链零漂移（4 个 runtime-only 特性全部入链）"
+    },
+    {
+      "source": "hermes_cli/kanban_decompose.py",
+      "dest": "hermes_cli/kanban_decompose.py",
+      "note": "看板分解估算（估算负载轮）：runtime 覆盖层为权威版（含 _normalize_estimate 族），manifest 曾缺席致部署树缺特性"
+    },
+    {
+      "source": "hermes_cli/kanban_gates.py",
+      "dest": "hermes_cli/kanban_gates.py",
+      "note": "399 流转声明式门禁层：kanban_db.complete/request_review/promote 三处消费（宿主未跟踪文件，manifest 是其唯一分发通道；2026-10-03 隔离轮补——快照只取 git 跟踪文件致缺位，G 门禁必炸）"
+    },
+    {
+      "source": "hermes_cli/kanban_output.py",
+      "dest": "hermes_cli/kanban_output.py",
+      "note": "C3: --json 输出含 raci"
+    },
+    {
+      "source": "hermes_cli/kanban_parser.py",
+      "dest": "hermes_cli/kanban_parser.py",
+      "note": "C3: create 加 --raci JSON"
     },
     {
       "source": "hermes_cli/kanban_projects_pause.py",
@@ -294,29 +189,29 @@
       "note": "项目暂停状态读取器（projects-state.json，mtime 缓存 fail-open），732"
     },
     {
-      "source": "tests/hermes_cli/test_project_pause.py",
-      "dest": "tests/hermes_cli/test_project_pause.py",
-      "note": "732 项目暂停拦派单行为测试（随 notifier/pause 模块部署，安装树可就地回归）"
+      "source": "hermes_cli/kanban_workflow.py",
+      "dest": "hermes_cli/kanban_workflow.py",
+      "note": "kanban_db.py 的 import 依赖（VALID_STATUSES 真源）——2026-10-24 整合轮实抓：runtime 树缺它致 tests/hermes_cli 三测全数 import 失败；vendor/部署树副本逐字节一致，补齐根治 manifest 漂移"
     },
     {
-      "source": "tests/hermes_cli/test_acceptance_report.py",
-      "dest": "tests/hermes_cli/test_acceptance_report.py",
-      "note": "结果交付批纯函数回归（随 acceptance_report 模块部署）"
+      "source": "hermes_cli/main_agent_cmds.py",
+      "dest": "hermes_cli/main_agent_cmds.py",
+      "note": "452: _cmd_memory_set（原子写+--expect-mtime CAS，R2）"
     },
     {
-      "source": "tests/hermes_cli/test_acceptance_gate.py",
-      "dest": "tests/hermes_cli/test_acceptance_gate.py",
-      "note": "结果交付批内核集成回归（independent 门/返修轮次）"
+      "source": "hermes_cli/skills_hub.py",
+      "dest": "hermes_cli/skills_hub.py",
+      "note": "737 接线：_resolve_source_meta_and_bundle 入口先走解析器（命中已知源等同 --source 固定）+ _registry_from_identifier 优先解析器；该文件此前不在 manifest，本批补入使解析器上宿主"
     },
     {
-      "source": "tests/hermes_cli/test_delivery_version.py",
-      "dest": "tests/hermes_cli/test_delivery_version.py",
-      "note": "交付版本纯逻辑与 kanban 事件集成回归（随 delivery_version 模块部署）"
+      "source": "hermes_cli/subcommands/cron.py",
+      "dest": "hermes_cli/subcommands/cron.py",
+      "note": "450: cron create/edit 加 --base-url 参数面（R1）"
     },
     {
-      "source": "tests/hermes_cli/test_kanban_verification_levels.py",
-      "dest": "tests/hermes_cli/test_kanban_verification_levels.py",
-      "note": "结果交付批：independent 放行判据升级为逐条 AC 报告；覆盖 patch 775 旧版时序判据测试"
+      "source": "hermes_cli/subcommands/memory.py",
+      "dest": "hermes_cli/subcommands/memory.py",
+      "note": "452: memory set 子命令（三文件单写者，R2）"
     },
     {
       "source": "locales/en.yaml",
@@ -329,14 +224,84 @@
       "note": "同上（中文词条）"
     },
     {
-      "source": "tools/skills_hub_uri.py",
-      "dest": "tools/skills_hub_uri.py",
-      "note": "737 统一 registry URI 解析器（显式前缀→(source_id, identifier)，含 nacos:// 预留位；纯函数零 IO）——skills_hub.py 分发链消费，缺它安装树 hermes skills install 前缀短路即 ImportError"
+      "source": "plugins/kanban/dashboard/plugin_api.py",
+      "dest": "plugins/kanban/dashboard/plugin_api.py",
+      "note": "看板 dashboard 插件 API（series 补丁改动）——升级轮补入"
     },
     {
-      "source": "hermes_cli/skills_hub.py",
-      "dest": "hermes_cli/skills_hub.py",
-      "note": "737 接线：_resolve_source_meta_and_bundle 入口先走解析器（命中已知源等同 --source 固定）+ _registry_from_identifier 优先解析器；该文件此前不在 manifest，本批补入使解析器上宿主"
+      "source": "plugins/platforms/matrix/plugin.yaml",
+      "dest": "plugins/platforms/matrix/plugin.yaml",
+      "note": "provides_tools 声明"
+    },
+    {
+      "source": "plugins/platforms/matrix/tools.py",
+      "dest": "plugins/platforms/matrix/tools.py",
+      "note": "matrix room 工具：is_async=True + R5 房间列表截断 50 + R6/V2 alias 统一门禁"
+    },
+    {
+      "source": "plugins/studio-file-approval/__init__.py",
+      "dest": "plugins/studio-file-approval/__init__.py",
+      "note": "studio 文件审批插件主体，manifest 曾缺席"
+    },
+    {
+      "source": "plugins/style-charter/__init__.py",
+      "dest": "plugins/style-charter/__init__.py",
+      "note": "注册 swarmstudio.style-charter 系统提示词段（after_memory，每新会话冻结注入）"
+    },
+    {
+      "source": "plugins/style-charter/plugin.yaml",
+      "dest": "plugins/style-charter/plugin.yaml",
+      "note": "受控写作条款插件声明（kind:backend bundled 自动加载，零 plugins.enabled 门槛）——全局文风根治轮 2026-10-09"
+    },
+    {
+      "source": "plugins/style-charter/style-charter.md",
+      "dest": "plugins/style-charter/style-charter.md",
+      "note": "受控写作条款唯一真源（ASD-STE100×公文笔法）；simharness mx-lib 同源只读消费"
+    },
+    {
+      "source": "semantica/manifest.yaml",
+      "dest": "optional-mcps/semantica/manifest.yaml",
+      "note": "同上补位（patch 375 注入面同病）：semantica v0.7.0 catalog 条目随部署链到位，`hermes mcp install semantica` 恢复可用"
+    },
+    {
+      "source": "tests/gateway/test_max_concurrent_sessions.py",
+      "dest": "tests/gateway/test_max_concurrent_sessions.py",
+      "note": "533: 容量排队泵测试"
+    },
+    {
+      "source": "tests/gateway/test_outbound_notice_guard.py",
+      "dest": "tests/gateway/test_outbound_notice_guard.py",
+      "note": "534: 守门测试"
+    },
+    {
+      "source": "tests/hermes_cli/test_acceptance_gate.py",
+      "dest": "tests/hermes_cli/test_acceptance_gate.py",
+      "note": "结果交付批内核集成回归（independent 门/返修轮次）"
+    },
+    {
+      "source": "tests/hermes_cli/test_acceptance_report.py",
+      "dest": "tests/hermes_cli/test_acceptance_report.py",
+      "note": "结果交付批纯函数回归（随 acceptance_report 模块部署）"
+    },
+    {
+      "source": "tests/hermes_cli/test_delivery_version.py",
+      "dest": "tests/hermes_cli/test_delivery_version.py",
+      "note": "交付版本纯逻辑与 kanban 事件集成回归（随 delivery_version 模块部署）"
+    },
+    {
+      "source": "tests/hermes_cli/test_kanban_verification_levels.py",
+      "dest": "tests/hermes_cli/test_kanban_verification_levels.py",
+      "note": "结果交付批：independent 放行判据升级为逐条 AC 报告；覆盖 patch 775 旧版时序判据测试"
+    },
+    {
+      "source": "tests/hermes_cli/test_project_pause.py",
+      "dest": "tests/hermes_cli/test_project_pause.py",
+      "note": "732 项目暂停拦派单行为测试（随 notifier/pause 模块部署，安装树可就地回归）"
+    },
+    {
+      "source": "tests/tools/test_outcome_policy.py",
+      "dest": "tests/tools/test_outcome_policy.py",
+      "note": "806 策略面表驱动测试（向量全量断言＋outcome_context 缺席链＋双签闸门＋ledger outcome 引用；随模块部署，照 737 tests 条目先例）"
     },
     {
       "source": "tests/tools/test_skills_hub_uri.py",
@@ -344,14 +309,54 @@
       "note": "737 解析器表驱动测试（随 skills_hub_uri 模块部署，安装树可就地回归，照 732 tests 条目先例）"
     },
     {
+      "source": "tools/efficiency_ledger.py",
+      "dest": "tools/efficiency_ledger.py",
+      "note": "612: 机制账本 JSONL（efficiency/ledger.jsonl，studio 面板消费）"
+    },
+    {
+      "source": "tools/evidence_reducer.py",
+      "dest": "tools/evidence_reducer.py",
+      "note": "614: 证据保全精简器（默认关；引文校验 fail-through）"
+    },
+    {
+      "source": "tools/file_tools.py",
+      "dest": "tools/file_tools.py",
+      "note": "613: write_file/patch then_run 动作融合+内容哈希守卫"
+    },
+    {
+      "source": "tools/kanban_tools.py",
+      "dest": "tools/kanban_tools.py",
+      "note": "C3: 工具建卡透传 raci；A 层完成契约门（receipt 校验）"
+    },
+    {
+      "source": "tools/kanban_tools_schemas.py",
+      "dest": "tools/kanban_tools_schemas.py",
+      "note": "C3: kanban_create 工具 raci object 参数"
+    },
+    {
+      "source": "tools/obs_recall_tool.py",
+      "dest": "tools/obs_recall_tool.py",
+      "note": "612: obs_recall 归档分页召回工具（路径限定归档目录）"
+    },
+    {
       "source": "tools/outcome_policy.py",
       "dest": "tools/outcome_policy.py",
       "note": "806 outcome 合同策略面（outcome_context/词表画像/矩阵/evaluate；vendor 注入态同构镜像，测试 diff 断言锁定）——approval.py 守卫消费，缺它安装树 outcome 接线即 ImportError 回落既有行为"
     },
     {
-      "source": "tests/tools/test_outcome_policy.py",
-      "dest": "tests/tools/test_outcome_policy.py",
-      "note": "806 策略面表驱动测试（向量全量断言＋outcome_context 缺席链＋双签闸门＋ledger outcome 引用；随模块部署，照 737 tests 条目先例）"
+      "source": "tools/skills_hub_uri.py",
+      "dest": "tools/skills_hub_uri.py",
+      "note": "737 统一 registry URI 解析器（显式前缀→(source_id, identifier)，含 nacos:// 预留位；纯函数零 IO）——skills_hub.py 分发链消费，缺它安装树 hermes skills install 前缀短路即 ImportError"
+    },
+    {
+      "source": "tools/tool_result_storage.py",
+      "dest": "tools/tool_result_storage.py",
+      "note": "612: 溢出报文头+尾双摘录+召回句柄（obs_recall 数据面）"
+    },
+    {
+      "source": "toolsets.py",
+      "dest": "toolsets.py",
+      "note": "611: obs_recall 进 _HERMES_CORE_TOOLS（默认工具面）"
     }
   ],
   "notes": [
