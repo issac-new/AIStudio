@@ -51,6 +51,7 @@
 
 ## 设计文档影响
 
-DESIGN_SYNC: none
+DESIGN_SYNC: touched
 
-纯立项 spec（未实施）。设计正本（DESIGN.md 学习闭环段、机制预算）随实施批同批修订——届时本 spec 收据绑定与 DESIGN_SYNC: touched 一并落；此刻无代码与文档变更面。
+- `docs/DESIGN.md` §4.8（评测、记忆与经验回流）补「经验试用期与注入效果归因」段——probation 生命周期、惰性结算 z 检验退役、record 维度归因、三路注入留痕同账。
+- `config/mechanism-budget.json` changes[] 登记本批 delta（+2 域文件 probation.ts/effect-report.ts、+0 patch/script/gate；sunset 绑「连续两轮零 probation 条目即降级为纯观测」）。
