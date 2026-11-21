@@ -33,9 +33,9 @@
 | 批 | 内容 | 代价/风险 | 验收 |
 |---|---|---|---|
 | P1 | ~~推演驱动 REST 化~~ **开工对账（2026-11-21）：交付物已基本在案**——REST 面=custom/server/simrun（11-02 产品批：supervisor＋status/start/stop 三端点）＋graph-rest run 全套＋run-progress 端点；前端面=/app/sim 六面板（SimCenterView/Director/RunDetail/Evidence）。本批补齐验收欠账：router 契约测试 5/5（端点四绿达成：router 三端点＋run-progress 既有测试） | 已付：对账批（测试＋盘点）；原估「协议挪 controller」不再需要 | 控制面/视图面产品在案＋协议契约已测；**SIM 重建后端到端挂账**（环境缺席） |
-| P2 | 场景库产品化：scenarios/ 迁产品数据面（版本化/校验入 REST） | 低——数据资产迁移＋路径解引 | 场景经 REST 可列表/拉取 |
-| P3 | 采集面产品化：帧拍摄位/证据采集并入产品 eval 域 | 中——capture-plan 注册表与治理判据对齐 | 采集产物直落产品证据库 |
-| P4 | simharness 收敛退役：驱动壳薄化→归档（对齐 SIM 实体已拆态，重建走产品通道） | 高——依赖 P1-P3 全落 | 全量推演能力可在产品面独立运行 |
+| P2 | ~~场景库产品化~~ **已落地**（2026-11-21 收尾批）：/api/sim/scenarios 发现＋roster 数组摘要（REST 投影；物理迁移随 P4 归档——D1 决策防破坏 mx-* 引用） | 已付 | REST 可列表/拉取 ✓（测试 3 例） |
+| P3 | ~~采集面产品化~~ **已落地（REST 投影层）**：/api/sim/capture-plan 四态结构化 JSON（正本仍在 capture-plan.env 单一事实源）；「采集产物直落证据库」属驱动执行面，随 SIM 重建端到端验证 | 已付（投影层）；执行面挂端到端 | 四态解析测试 4 例 ✓ |
+| P4 | **归档预备态**：能力面全产品化（P1 对账＋P2/P3 落地＋驱动绑定在案）；README 归档预备标注 | 已付（预备态） | 「产品面独立运行」端到端挂 SIM 重建窗口——归档执行待该验证 |
 
 ## 决策记录
 

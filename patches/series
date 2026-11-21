@@ -1371,3 +1371,7 @@
 # app.use 两段（804 范式）。GET /api/hermes/org-workbench/agenda：宿主 JWT＋
 # OUTCOME_WORKBENCH 门控的决策议程六源只读投影（控制器见 custom/server/orgworkbench/）。
 810-hermes-org-workbench-routes.patch
+# 811-server-sim-library-routes（P2/P3 场景库与采集面产品化，spec 2026-11-21-p2-p4-sim-product-final）：
+# bootstrap/routes.ts 挂载两控制器——/api/sim/scenarios（发现/roster 数组摘要，bash 函数体不解析）
+# ＋/api/sim/capture-plan（四态投影：page/none/repo/file）；均只读 fail-soft（simharness 缺席=空态）。
+811-server-sim-library-routes.patch
