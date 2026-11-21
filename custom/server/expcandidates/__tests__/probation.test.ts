@@ -13,9 +13,14 @@ import {
   settleDueProbation, twoProportionZ, Z_ALPHA_ONE_SIDED_0_05, PROBATION_SETTLE_BATCH_LIMIT,
   type ProbationRollbackFn,
 } from '../probation'
-import { _useStoreDirForTests, curateCandidate, listCandidates, readExpStore, writeExpStore } from '../exp-store'
+import { _useStoreDirForTests, curateCandidate, listCandidates, readExpStore, recordInjection, writeExpStore } from '../exp-store'
 import { experienceBriefLine, selectableExperiences } from '../exp-inject'
 import type { ExpCandidate, ExpInjectionRecord, ProbationVerdict } from '../exp-types'
+
+// 决策图谱关闸（exp-candidates.test.ts 同款）：curate 用例不在 mock 面上，
+// venv 存在的机器禁真起 bridge 写宿主 KG（接线断言在 curate-decision-recorder.test.ts）。
+const prevDecisionGraph = process.env.HERMES_DECISION_GRAPH
+process.env.HERMES_DECISION_GRAPH = '0'
 
 const nodeRequire: NodeRequire = (() => {
   try { return createRequire('/index.js') } catch { return null as unknown as NodeRequire }
@@ -37,6 +42,8 @@ db.exec(`CREATE TABLE task_events (id INTEGER PRIMARY KEY AUTOINCREMENT, task_id
 afterAll(() => {
   rmSync(expDir, { recursive: true, force: true })
   rmSync(home, { recursive: true, force: true })
+  if (prevDecisionGraph === undefined) delete process.env.HERMES_DECISION_GRAPH
+  else process.env.HERMES_DECISION_GRAPH = prevDecisionGraph
 })
 
 beforeEach(() => {
@@ -129,6 +136,19 @@ describe('curate 批准进试用期（spec 变更 3）', () => {
     const r = curateCandidate('exp-001', 'approved')
     expect(r.status).toBe('probation')
     expect(r.probation!.startedAt).toBe(before)
+  })
+
+  it('审查 I-2：effect_unknown 挂人工后 approve=显式转正（approved＋verdict=manual_approved、settledAt 保留）；reject 走正常拒绝', () => {
+    // effect_unknown：已结算、人工接管态
+    seedStore([probationCand('exp-001', { settledAt: '2026-11-10T00:00:00.000Z', verdict: 'effect_unknown' })], [])
+    const promoted = curateCandidate('exp-001', 'approved')
+    expect(promoted.status).toBe('approved')
+    expect(promoted.probation).toMatchObject({ verdict: 'manual_approved', settledAt: '2026-11-10T00:00:00.000Z' })
+    // reject 分支不受影响：effect_unknown → rejected 正常落
+    seedStore([probationCand('exp-002', { settledAt: '2026-11-10T00:00:00.000Z', verdict: 'effect_unknown' })], [])
+    const rejected = curateCandidate('exp-002', 'rejected')
+    expect(rejected.status).toBe('rejected')
+    expect(rejected.probation?.verdict).toBe('effect_unknown') // 试用期判档历史不动
   })
 })
 
@@ -242,6 +262,36 @@ describe('settleDueProbation（验收 2/3：结算三分支/幂等/有界）', (
     } finally {
       rmSync(emptyHome, { recursive: true, force: true })
     }
+  })
+
+  it('审查 I-1：结算窗口内并发 recordInjection 的写入在结算写回后仍存在（重读合并不整库覆盖）', async () => {
+    process.env.HERMES_HOME = home
+    process.env.HARNESS2_AUTO_ROLLBACK = '1'
+    seedBoard({
+      done: ['T1'], cancelled: ['T2', 'T3', 'T4', 'T5', 'T6'],
+      baselineDone: ['B1', 'B2', 'B3', 'B4', 'B5'], baselineCancel: ['B6'],
+    })
+    // 另一个候选在结算期间被并发注入（模拟另一路派单的 recordInjection 落账）
+    seedStore(
+      [probationCand('exp-001', { sourceProposalId: 'wb-i1' }), probationCand('exp-009')],
+      ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'].map((t) => logRow(t)),
+    )
+    const midFlight: ProbationRollbackFn = async () => {
+      // 结算的板库读/回滚 await 窗口内：并发写注入留痕行＋injectedRuns
+      recordInjection(['exp-009'], 'run-concurrent', undefined, 'T-cc', { kind: 'exp', column: 'devimpl' })
+    }
+    const results = await settleDueProbation({ rollback: midFlight })
+    expect(results[0]).toMatchObject({ candidateId: 'exp-001', verdict: 'probation_regression' })
+    const store = readExpStore()
+    // 并发写入未被结算写回覆盖：留痕行（6 种子＋1 并发）与 injectedRuns 都在
+    expect(store.injectionLog).toHaveLength(7)
+    expect(store.injectionLog.map((r) => r.taskId)).toContain('T-cc')
+    expect(store.candidates.find((c) => c.id === 'exp-009')?.injectedRuns).toEqual(['run-concurrent'])
+    // 结算效果本身也落档（重读合并后单候选补丁仍在）
+    const settled = store.candidates.find((c) => c.id === 'exp-001')
+    expect(settled?.status).toBe('retired')
+    expect(settled?.probation?.verdict).toBe('probation_regression')
+    delete process.env.HARNESS2_AUTO_ROLLBACK
   })
 })
 

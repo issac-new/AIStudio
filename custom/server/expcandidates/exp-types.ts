@@ -19,8 +19,10 @@ export const PROBATION_WINDOW_TASKS = 20
 export const PROBATION_MIN_SAMPLES = 5
 
 /** 试用期结算判定：promoted=转正；probation_regression=劣化退役；probation_extended=
- *  首次样本不足延长窗口（未结算）；effect_unknown=二次仍不足挂人工（结算终态，不再自动判）。 */
-export type ProbationVerdict = 'promoted' | 'probation_regression' | 'probation_extended' | 'effect_unknown'
+ *  首次样本不足延长窗口（未结算）；effect_unknown=二次仍不足挂人工（结算终态，不再
+ *  自动判）；manual_approved=effect_unknown 后人工 approve 显式转正（审查 I-2——
+ *  自动面判不了的数据，人工裁决是唯一转正杠杆）。 */
+export type ProbationVerdict = 'promoted' | 'probation_regression' | 'probation_extended' | 'effect_unknown' | 'manual_approved'
 
 /** 结算落档统计（历史保留：settled 后 probation.stats 即判档快照）。 */
 export interface ProbationStats {

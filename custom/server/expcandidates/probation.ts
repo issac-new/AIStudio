@@ -176,6 +176,18 @@ export async function settleDueProbation(opts: {
     candidate.updatedAt = nowIso()
     results.push({ candidateId: candidate.id, verdict, status, dueInjections: injections, stats, ...(rollback ? { rollback } : {}) })
   }
-  writeExpStore(store)
+  // 审查 I-1 写回合并：结算窗口（板库读＋回滚 await）内可能有并发 recordInjection/curate
+  // 落盘——整库覆盖会把它们静默吞掉。写回前重读最新 store，对每个被结算条目只做单候选
+  // 补丁（status/probation/updatedAt），其余（injectionLog、其他候选、nextSeq）一律以
+  // 最新为准；窗口内被删的候选跳过补丁（不复活）。
+  const latest = readExpStore()
+  for (const r of results) {
+    const idx = latest.candidates.findIndex((c) => c.id === r.candidateId)
+    if (idx < 0) continue
+    const settled = store.candidates.find((c) => c.id === r.candidateId)
+    if (!settled?.probation) continue
+    latest.candidates[idx] = { ...latest.candidates[idx], status: settled.status, probation: settled.probation, updatedAt: settled.updatedAt }
+  }
+  writeExpStore(latest)
   return results
 }

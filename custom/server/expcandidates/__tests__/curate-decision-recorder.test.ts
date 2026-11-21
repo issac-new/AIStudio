@@ -62,6 +62,20 @@ describe('curateCandidate → 决策图谱接线（批四 T3）', () => {
     expect(recordLearningDecision).not.toHaveBeenCalled()
   })
 
+  it('审查 I-2：effect_unknown 挂人工后 approve=显式转正（probation→approved）→ recorder 记人工决定', () => {
+    seedCandidate('exp-004')
+    // 先推进到 effect_unknown（二次样本不足结算终态——直接造档等价）
+    const store = readExpStore()
+    const c = store.candidates.find((x) => x.id === 'exp-004')!
+    c.status = 'probation'
+    c.probation = { startedAt: '2026-11-01T00:00:00.000Z', windowTasks: 20, minSamples: 5, settledAt: '2026-11-10T00:00:00.000Z', verdict: 'effect_unknown' }
+    writeExpStore(store)
+    const r = curateCandidate('exp-004', 'approved')
+    expect(r.status).toBe('approved')
+    expect(r.probation?.verdict).toBe('manual_approved')
+    expect(recordLearningDecision).toHaveBeenCalledWith({ candidateId: 'exp-004', from: 'probation', to: 'approved' })
+  })
+
   it('recorder 抛异常 → 审核主链路不受影响（fire-and-forget：返回值与落盘照常）', () => {
     recordLearningDecision.mockImplementation(() => { throw new Error('KG bridge down') })
     seedCandidate('exp-003')

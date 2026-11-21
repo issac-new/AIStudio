@@ -89,7 +89,21 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
     // 试用期生命周期（批一 b 变更 3）：批准不再直进 approved 生效——落 probation
     // 观察窗（20 任务/最小 5 样本，惰性结算见 probation.ts）。存量 approved 重批保持
     // approved 不迁移不重开窗口（兼容）；probation 态重批幂等不重置窗口（防人工刷窗）。
-    if (from !== 'approved' && from !== 'probation') {
+    // 审查 I-2 例外：probation 且 verdict=effect_unknown（自动面已判不动、挂人工）时
+    // approve=人工显式转正——status→approved、verdict=manual_approved（settledAt 保留
+    // 原结算时刻，判档历史不重写），决策图谱照常记这次人工决定（probation→approved）。
+    const cur = store.candidates[idx]
+    if (cur.status === 'probation' && cur.probation?.verdict === 'effect_unknown') {
+      next = {
+        ...next,
+        status: 'approved',
+        probation: {
+          ...cur.probation,
+          verdict: 'manual_approved',
+          ...(cur.probation.settledAt ? {} : { settledAt: next.updatedAt }),
+        },
+      }
+    } else if (from !== 'approved' && from !== 'probation') {
       next = {
         ...next,
         status: 'probation',
