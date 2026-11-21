@@ -1,6 +1,6 @@
 # Agnes 吸收批一 b：经验试用期与注入效果归因（实施级 spec，待 ai-native-batch2 合并后开工）
 
-> 状态：立项待开工（2026-11-21）。前置：`feat/ai-native-cognition-batch2` 已提交 T5（dbccea0d7：`recordInjection`＋`injectionLog` 留痕账＋`listInjectionLog`）与 T6（4e2dccaec：`outcome/learning.ts` 结算→候选＋`outcome/comparison.ts` 同口径对照投影），该分支合并 main 后本批从新 main 起 worktree。
+> 状态：实施中（2026-11-21 开工，worktree `.claude/worktrees/agnes-b1b`，分支 feat/agnes-probation-attribution）。前置：`feat/ai-native-cognition-batch2` 已提交 T5（dbccea0d7：`recordInjection`＋`injectionLog` 留痕账＋`listInjectionLog`）与 T6（4e2dccaec：`outcome/learning.ts` 结算→候选＋`outcome/comparison.ts` 同口径对照投影），该分支合并 main 后本批从新 main 起 worktree。
 > 批一拆分：a 段（晋级门收紧）已合并 8911d0a7d。本 spec 覆盖 b 段剩余缺口——**以 T5/T6 落地契约为基础**，不重复造已存在的面。
 
 ## 1. 背景与真实缺口（对账 2026-11-21 batch2 分支实测）
