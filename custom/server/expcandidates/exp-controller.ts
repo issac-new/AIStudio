@@ -2,6 +2,7 @@
 import Router from '@koa/router'
 import { fail, ok, bodyOf } from '../lib/http'
 import { ReflectionGuardError, curateCandidate, listCandidates, runExtraction } from './exp-store'
+import { collectEffectReport } from './effect-report'
 
 const router = new Router({ prefix: '/api/expcandidates' })
 
@@ -9,6 +10,16 @@ router.get('/', async (ctx) => {
   const status = typeof ctx.query.status === 'string' ? ctx.query.status : undefined
   const all = listCandidates()
   ctx.body = { ok: true, candidates: status ? all.filter((c) => c.status === status) : all }
+})
+
+// 批一 b 变更 2：record 维度效果归因只读投影（join 任务终态＋同列未注入基线；
+// 样本不足/终态缺失一律 unknown 不猜数——见 effect-report.ts 纪律注释）。
+router.get('/effects', async (ctx) => {
+  try {
+    ok(ctx, await collectEffectReport())
+  } catch (e) {
+    fail(ctx, 500, String((e as Error).message || e), { code: 'effects_failed' })
+  }
 })
 
 router.post('/extract', async (ctx) => {
