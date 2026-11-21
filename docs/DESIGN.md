@@ -752,7 +752,7 @@ AIStudio 是单一完整项目仓。
 | `patches/`、`zcode-patches/` | 对钉版上游的受管变更 |
 | `vendor/` | hermes-studio、hermes-agent 与 zcode 基线 |
 | `runtime/`、`team/` | agent 运行时扩展与团队部署资产 |
-| `simharness/` | 全流程推演程序与场景——其中的组织/治理/串联类功能＝**研发治理和协作的能力**（2026-11-21 立法，产品正身：组织=roster/角色/board 围栏、治理=六闸/审计/判词/台账、串联=26 步主链/派单/审批传输；判读/报告/评测/运行中心已产品承接，能力面按 P1-P4 路线图收敛，spec 2026-11-21-sim-product-absorption-roadmap）；环境供给/采集/场景为推演设施。运行态：SIM 实体随 11-18 归档轮拆除，重建走 mx-setup |
+| `simharness/` | 全流程推演程序与场景——其中的组织/治理/串联类功能＝**研发治理和协作的能力**（2026-11-21 立法，产品正身：组织=roster/角色/board 围栏、治理=六闸/审计/判词/台账、串联=26 步主链/派单/审批传输；判读/报告/评测/运行中心已产品承接，能力面按 P1-P4 路线图收敛——P1 对账＋P2 场景库/P3 拍摄位 REST 已落地、P4 归档预备态，spec 2026-11-21-sim-product-absorption-roadmap）；环境供给/采集/场景为推演设施。运行态：SIM 实体随 11-18 归档轮拆除，重建走 mx-setup |
 | `skills/swarm-yuan/` | 项目技能生成器本体 |
 | `registries/`、`config/` | 注册入口与特性配置 |
 | `docs/superpowers/specs/` | 设计正本、专题规格与决策档案 |
