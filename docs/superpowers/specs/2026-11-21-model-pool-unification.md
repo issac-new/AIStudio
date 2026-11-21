@@ -1,6 +1,6 @@
 # 模型池统一：ekkostudio 调用面钉 cc-switch 单通道（方案 A）
 
-> 状态：实施中（2026-11-21 开工，worktree `.claude/worktrees/model-pool-unify`，分支 feat/model-pool-unify）。
+> 状态：已收口（2026-11-21 三提交落地：894abbf9d 立项＋1f4083f52 批二＋e6047aa95 审查三 I；全量 9876/0、server tsc 零错、隔离冒烟 401＝路由挂载+JWT 门在位；批三挂账另批实施）。
 
 ## 1. 背景与对账（2026-11-21 三路实测）
 
