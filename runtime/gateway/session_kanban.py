@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import sqlite3
 
-from hermes_state_runtime import RuntimeStoreError
+from persistence.core.errors import AuthorityRefusal as RuntimeStoreError  # v0.23.3 重构后残引修正
 
 
 def build_kanban_policy(connection, params, config):
@@ -76,21 +76,25 @@ async def run_task(connection, params):
     from gateway.run import _load_gateway_config
     from gateway.session_local import create_local_session
     from gateway.session_contract import Submission
-    from gateway.session_local_recovery import local_identity
-    from hermes_state_local import local_receipt
+    # 审查 P0-1 修复：hermes_state_local/authority.db 均为 v0.23.3 前旧生态——
+    # 换宿主生产在跑的门面路线（bindings/persistence_assembly/store_*）。
+    from persistence.authority.bindings import local_session_id
+    from gateway.session_persistence import authority_persistence
     from gateway.session_policy import restore_policy
+    from persistence_assembly import store_location
     authority = connection.authority
+    store = authority_persistence(authority)
     # Resolved off-loop up front: no await separates the saved-claim check from session
     # creation. The Kanban claim check and its marker share one off-loop transaction; a
     # concurrent retry of the same attempt meets that marker (same session) or a stale claim.
-    owner_db = str(await asyncio.to_thread(Path(authority.db.db_path).resolve))
+    owner_db = str(await asyncio.to_thread((store_location(store.scope) or store.scope.profile_dir).resolve))
     # The dispatcher attempt is the durable request identity, including after the
     # task closes. Retry checks the saved claim, never reinterprets updated cards.
     request_id = 'kanban:' + json.dumps([params.get('board'), params.get('task_id'), params.get('run_id')], separators=(',', ':'))
-    sid = local_identity(authority.profile_id, connection.actor.subject, request_id)
-    saved = local_receipt(authority.db, sid) if authority.db.get_session(sid) is not None else None
+    sid = local_session_id(authority.profile_id, connection.actor.subject, request_id)
+    saved = store.bindings.receipt(sid) if store.sessions.get(sid) is not None else None
     if saved:
-        policy = restore_policy(saved['policy'])
+        policy = restore_policy(saved.policy)
         context = json.loads(policy.kanban_json or '{}')
         if (not connection.native_owner or set(params) not in ({'board', 'task_id', 'run_id', 'claim_lock'}, {'board', 'task_id', 'run_id', 'claim_lock', 'db'})
                 or any(params[k] != context.get(k) for k in params)):
@@ -135,17 +139,16 @@ async def run_task(connection, params):
     # card (approvals.single_query_mode applies). Never unattended: that is `-z`'s auto-approval.
     # A retry of an attempt admitted before cards were finite resubmits its committed payload,
     # so the store returns the original receipt instead of admission_conflict.
-    from hermes_state_runtime import find_session_admission
-    committed = None if not saved else await asyncio.to_thread(find_session_admission, authority.db,
+    committed = None if saved is None else await asyncio.to_thread(store.admissions.find,
         principal_id=connection.actor.subject, session_id=ref.session_id, request_id=request_id)
     payload: dict = {'text': f'work kanban task {params["task_id"]}'}
-    if committed is None or 'finite' in committed['payload']:
+    if committed is None or 'finite' in committed.payload:
         payload['finite'] = True
     # The dispatcher's trusted producer marker (#134889 KB-8): nobody waits on a card attempt, so one
     # lost across an owner restart settles interrupted instead of pausing the card session. An
     # attempt main committed without it resubmits unmarked (same digest, original receipt).
     card = None
-    if committed is None or 'kanban_card_v1' in committed['payload']:
+    if committed is None or 'kanban_card_v1' in committed.payload:
         card = {'board': context.get('board'), 'task_id': params['task_id'], 'run_id': params['run_id']}
     receipt = await authority.submit(connection.actor, Submission(request_id, ref, payload, 'queue'),
                                      _kanban_card=card)
@@ -385,6 +388,16 @@ def worker_exit_code(path, params):
 KANBAN_TURN_AUTHOR = {'id': 'kanban:dispatcher', 'name': 'Kanban dispatcher', 'is_bot': True}
 
 
+def _stored_conversation(agent):
+    """The agent's stored conversation: read through its storage interface handle when it holds one on
+    its own store, else from its store (a managed worker's client store)."""
+    from agent.agent_init_session import agent_interface
+    store = agent_interface(agent)
+    if store is None:
+        return agent._session_db.get_messages_as_conversation(agent.session_id)
+    return [message.as_openai_message() for message in store.messages.read_conversation(agent.session_id)]
+
+
 def _run_task_turns(agent, frame, history, context):
     from agent.skill_commands import build_preloaded_skills_prompt
     skills, loaded, missing = build_preloaded_skills_prompt(context['skills'], task_id=agent.session_id)
@@ -396,8 +409,7 @@ def _run_task_turns(agent, frame, history, context):
     def recover(nudge):
         nonlocal result
         prior = result.get('messages') if isinstance(result, dict) else None
-        result = agent.run_conversation(nudge, conversation_history=prior or
-                                        agent._session_db.get_messages_as_conversation(agent.session_id),
+        result = agent.run_conversation(nudge, conversation_history=prior or _stored_conversation(agent),
                                         turn_author=KANBAN_TURN_AUTHOR)
     # Same in-place retry as the one-shot CLI worker (agent/kanban_turn_recovery.py), but the
     # carrier is this frame's bound claim, never the owner process's environment.
@@ -420,7 +432,7 @@ def _run_task_turns(agent, frame, history, context):
             kb.block_task(conn, context['task_id'], reason=reason, expected_run_id=context['run_id'])
     def turn(prompt):
         nonlocal result
-        result = agent.run_conversation(prompt, conversation_history=agent._session_db.get_messages_as_conversation(agent.session_id),
+        result = agent.run_conversation(prompt, conversation_history=_stored_conversation(agent),
                                         turn_author=KANBAN_TURN_AUTHOR)
         return result.get('final_response', '')
     run_kanban_goal_loop(task_id=context['task_id'], goal_text=context['goal_text'], run_turn=turn,

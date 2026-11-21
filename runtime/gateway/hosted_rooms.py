@@ -432,8 +432,8 @@ def _schema_is_current(conn: sqlite3.Connection) -> bool:
         "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?", (_KIND_INDEX,)).fetchone() is not None
 
 
-def default_db_path() -> Path:
-    """Return the hosted-room coordination database for the active install.
+def default_db_path(home: Path | None = None) -> Path:
+    """Return the hosted-room coordination database for the install of ``home`` (the active home by default).
 
     Profile gateways (``~/.hermes/profiles/<name>/``) resolve to the shared
     ROOT ``shared-state.db`` instead of the master ``state.db``: hosted-room
@@ -445,8 +445,10 @@ def default_db_path() -> Path:
     tables in a dedicated file means profile gateways never open the master
     session store writable.
     """
-    from hermes_constants import get_hermes_home
-    home = get_hermes_home()
+    if home is None:
+        from hermes_constants import get_hermes_home
+        home = get_hermes_home()
+    home = Path(home)
     return (home.parent.parent if home.parent.name == "profiles" else home) / "shared-state.db"
 
 
