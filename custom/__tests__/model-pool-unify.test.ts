@@ -65,7 +65,7 @@ describe('synchronizeHermesProvider 行为（统一态）', () => {
     expect(config).toContain('base_url: http://127.0.0.1:15721/hermes/v1')
     expect(config).toContain('api_key: PROXY_MANAGED')
     expect(config).toContain('session_affinity_header: session_id')
-    expect(config).toContain('default: aim')
+    expect(config).toContain('default: glm-5.3')
     // 审查 P1-1 回归锁：统一态清单不得出现 namespace 前缀（曾漏网为 cc-switch-route/aim）。
     expect(config).not.toContain('cc-switch-route/')
     for (const model of ['aim', 'glm-5.3', 'kimi-for-coding', 'glm-5.3-flash', 'claude-opus-5']) {
