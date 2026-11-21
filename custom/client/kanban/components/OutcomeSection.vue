@@ -15,6 +15,7 @@
 import { computed, ref, watch } from 'vue'
 import { getStoredUsername } from '@/api/client'
 import {
+  createOutcome,
   fetchOutcomeByRoot,
   fetchOutcomeMeasurements,
   fetchOutcomeSettlement,
@@ -24,7 +25,9 @@ import {
   settleOutcome,
   submitMeasurement,
   transitionOutcome,
+  OutcomeApiError,
   OutcomeWorkbenchDisabledError,
+  type MeasureOperator,
   type OutcomeContract,
   type OutcomeMeasurement,
   type OutcomeSettlement,
@@ -36,6 +39,8 @@ const props = defineProps<{
   taskId: string
   /** 根卡判定：任务无 parents（抽屉 links.parents 为空）。 */
   isRootTask?: boolean
+  /** 卡标题（抽屉 task.title）：建模表单 title 预填用（可改），不伪造。 */
+  taskTitle?: string
 }>()
 
 const STATUS_LABEL: Record<string, string> = {
@@ -147,6 +152,15 @@ async function doTransition(to: 'active' | 'observing'): Promise<void> {
     contract.value = await transitionOutcome(contract.value.outcomeId, { to })
     actionMsg.value = { ok: true, text: to === 'active' ? '合同已激活（绑定根任务家族）' : '已进入观察期' }
   } catch (err) {
+    // F3 定向文案：按响应码（body.code）识别，不做 problems 字符串匹配——
+    // schema_missing=看板库缺 outcome_id 列（805 迁移面未覆盖），须修库而非重试。
+    if (err instanceof OutcomeApiError && err.code === 'schema_missing') {
+      actionMsg.value = {
+        ok: false,
+        text: '激活失败：看板库缺 outcome_id 列（805 迁移面未覆盖）——经 python CLI 建库/迁移或手工补列后重试',
+      }
+      return
+    }
     actionMsg.value = { ok: false, text: err instanceof Error ? err.message : String(err) }
   }
 }
@@ -321,6 +335,188 @@ async function doSettle(): Promise<void> {
 
 function fmtTs(ms?: number): string {
   return ms && Number.isFinite(ms) ? new Date(ms).toLocaleString() : '—'
+}
+
+// ---------- 建模表单（批四 T1）：空态根卡「建合同」折叠表单 ----------
+// 必填集与服务端 validateContractInput 同源（D1：单一事实源）；客户端只做必填
+// 非空级提示，合法性判定（高风险同人分离、人员名单 active 等）一律服务端终裁
+// ——这里仅给预警文案，不阻断。未入表单的字段按服务端可接受缺省发送：
+// acceptance.requiredEvidenceKinds/scope.excluded/contextPolicy 均空数组（validate
+// 接受空数组），不伪造内容；rootTaskId=当前卡自动携带，不暴露输入。
+interface MeasureRow {
+  measureId: string
+  name: string
+  unit: string
+  operator: MeasureOperator
+  target: string
+  baseline: string
+  definition: string
+  sourceRef: string
+}
+
+const createOpen = ref(false)
+const createBusy = ref(false)
+/** 幂等键：打开表单时生成一次，失败重试不换键（重开/换卡才换新会话）。 */
+const createClientRequestId = ref('')
+const createTitle = ref('')
+const createValue = ref('')
+const createOwner = ref('')
+const createVerifier = ref('')
+const createRiskTier = ref<'' | 'low' | 'medium' | 'high'>('')
+const createReversibility = ref<'' | 'reversible' | 'costly' | 'one-way' | 'unknown'>('')
+const createLearningOptIn = ref(false)
+/** 验收陈述（每行一条）——定性合同可只填陈述不加度量。 */
+const createStatements = ref('')
+/** scope.included（逗号分隔，可留空=空数组）。 */
+const createScopeIncluded = ref('')
+const createMeasures = ref<MeasureRow[]>([])
+const createErr = ref('')
+/** 服务端 422 problems 逐条回显。 */
+const createProblems = ref<string[]>([])
+/** 409（root_task_taken/outcome_exists）：提示刷新而非重试（重试同键仍 409）。 */
+const createConflict = ref(false)
+
+/** 高风险/不可逆预警（警示色，不用绿色）：只提示不阻断，服务端终裁。 */
+const createRiskHint = computed(() => {
+  if (createRiskTier.value === 'high') return '高风险：验证责任人必须与结果责任人分离（同人将被服务端拒绝）'
+  if (createRiskTier.value === 'medium') return '中风险：允许责任/验证同人，但未分离（服务端将附未分离提示）'
+  return ''
+})
+const createReversibilityHint = computed(() =>
+  createReversibility.value === 'one-way' ? '不可逆：动作一旦执行无法撤销，请确认验收口径' : '',
+)
+
+// 切卡即换建模会话：表单收起（clientRequestId 随下次打开重新生成）。
+// 独立非 immediate watch：上面主 watch 是 immediate，此块声明在其后避免 TDZ。
+watch(() => props.taskId, () => { createOpen.value = false })
+
+function toggleCreateForm(): void {
+  createOpen.value = !createOpen.value
+  if (!createOpen.value) return
+  createClientRequestId.value = `creq-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  // 预填不伪造：title=卡标题（可改）、owner=当前登录人（可改），其余留空
+  createTitle.value = (props.taskTitle ?? '').trim()
+  createValue.value = ''
+  createOwner.value = actor
+  createVerifier.value = ''
+  createRiskTier.value = ''
+  createReversibility.value = ''
+  createLearningOptIn.value = false
+  createStatements.value = ''
+  createScopeIncluded.value = ''
+  createMeasures.value = []
+  createErr.value = ''
+  createProblems.value = []
+  createConflict.value = false
+}
+
+function addMeasureRow(): void {
+  createMeasures.value.push({
+    measureId: `m${createMeasures.value.length + 1}`,
+    name: '', unit: '', operator: 'gte', target: '', baseline: '', definition: '', sourceRef: '',
+  })
+}
+
+function removeMeasureRow(idx: number): void {
+  createMeasures.value.splice(idx, 1)
+}
+
+/** 必填非空级客户端提示（D1：合法性判定一律服务端）。 */
+function collectCreateMissing(): string[] {
+  const miss: string[] = []
+  if (!createTitle.value.trim()) miss.push('标题')
+  if (!createValue.value.trim()) miss.push('价值陈述')
+  if (!createOwner.value.trim()) miss.push('结果责任人')
+  if (!createVerifier.value.trim()) miss.push('验证责任人')
+  if (createRiskTier.value === '') miss.push('风险档')
+  if (createReversibility.value === '') miss.push('默认可逆性')
+  createMeasures.value.forEach((row, i) => {
+    const rowMiss: string[] = []
+    // type=number 的 v-model 可解析时自动 number 化（空输入保持 ''）——统一按字符串判空
+    const target = String(row.target ?? '').trim()
+    const baseline = String(row.baseline ?? '').trim()
+    if (!row.measureId.trim()) rowMiss.push('measureId')
+    if (!row.name.trim()) rowMiss.push('名称')
+    if (!row.unit.trim()) rowMiss.push('单位')
+    if (target === '' || !Number.isFinite(Number(target))) rowMiss.push('目标值（有限数值）')
+    if (baseline !== '' && !Number.isFinite(Number(baseline))) rowMiss.push('基线（留空或有限数值）')
+    if (!row.definition.trim()) rowMiss.push('口径定义')
+    if (!row.sourceRef.trim()) rowMiss.push('数据源引用')
+    if (rowMiss.length) miss.push(`度量${i + 1}：${rowMiss.join('、')}`)
+  })
+  const statements = createStatements.value.split('\n').map((s) => s.trim()).filter(Boolean)
+  if (createMeasures.value.length === 0 && statements.length === 0) {
+    miss.push('度量与验收陈述至少填一项（定性合同可只填验收陈述）')
+  }
+  return miss
+}
+
+/** 逗号分隔（中英文逗号/换行）→ trim 后非空数组（scope.included 用）。 */
+function splitCsv(v: string): string[] {
+  return v.split(/[,，\n]/).map((s) => s.trim()).filter(Boolean)
+}
+
+async function doCreateOutcome(): Promise<void> {
+  if (createBusy.value || !props.taskId) return
+  createErr.value = ''
+  createProblems.value = []
+  createConflict.value = false
+  const miss = collectCreateMissing()
+  if (miss.length) {
+    createErr.value = `必填未填：${miss.join('；')}`
+    return
+  }
+  createBusy.value = true
+  try {
+    await createOutcome({
+      rootTaskId: props.taskId,
+      title: createTitle.value.trim(),
+      valueStatement: createValue.value.trim(),
+      ownerPersonId: createOwner.value.trim(),
+      verificationOwnerId: createVerifier.value.trim(),
+      riskTier: createRiskTier.value as 'low' | 'medium' | 'high',
+      defaultReversibility: createReversibility.value as 'reversible' | 'costly' | 'one-way' | 'unknown',
+      learningOptIn: createLearningOptIn.value,
+      acceptance: {
+        statements: createStatements.value.split('\n').map((s) => s.trim()).filter(Boolean),
+        requiredEvidenceKinds: [],
+      },
+      scope: { included: splitCsv(createScopeIncluded.value), excluded: [] },
+      contextPolicy: { allowedScopes: [], excludedSourceKinds: [] },
+      measures: createMeasures.value.map((row) => ({
+        measureId: row.measureId.trim(),
+        name: row.name.trim(),
+        unit: row.unit.trim(),
+        operator: row.operator,
+        target: Number(row.target),
+        baseline: String(row.baseline ?? '').trim() === '' ? null : Number(row.baseline),
+        definition: row.definition.trim(),
+        sourceRef: row.sourceRef.trim(),
+      })),
+      clientRequestId: createClientRequestId.value,
+    })
+    createOpen.value = false
+    // 成功后面板刷新进合同态（复用既有 load；幂等重放命中时同合同，展示一致）
+    await load()
+  } catch (err) {
+    if (err instanceof OutcomeWorkbenchDisabledError) {
+      gateOff.value = true
+      return
+    }
+    if (err instanceof OutcomeApiError) {
+      if (err.code === 'root_task_taken' || err.code === 'outcome_exists') {
+        createConflict.value = true
+        return
+      }
+      if (err.problems.length) {
+        createProblems.value = err.problems
+        return
+      }
+    }
+    createErr.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    createBusy.value = false
+  }
 }
 </script>
 
@@ -535,10 +731,116 @@ function fmtTs(ms?: number): string {
       </p>
     </template>
 
-    <!-- 无合同且本卡为根卡：建模入口（批一面板不含建模表单，POST / 由后续任务接线） -->
+    <!-- 无合同且本卡为根卡：建模入口（批四 T1 升级为可操作表单——POST / 接线） -->
     <div v-else class="outcome-model-entry" data-testid="outcome-model-hint">
       <span class="outcome-title">业务结果</span>
       <span class="outcome-hint">该根任务尚未建模业务结果（合同）。建模后此处展示状态、度量与结算。</span>
+      <button
+        type="button"
+        class="outcome-btn"
+        data-testid="outcome-create-toggle"
+        @click="toggleCreateForm"
+      >{{ createOpen ? '收起' : '建合同…' }}</button>
+      <div v-if="createOpen" class="outcome-form outcome-create-form" data-testid="outcome-create-form">
+        <label class="outcome-field">
+          标题（必填）
+          <input v-model="createTitle" type="text" data-testid="outcome-create-title" />
+        </label>
+        <label class="outcome-field">
+          价值陈述（必填：这个结果为什么值得做）
+          <textarea v-model="createValue" rows="2" data-testid="outcome-create-value" />
+        </label>
+        <label class="outcome-field">
+          结果责任人（必填）
+          <input v-model="createOwner" type="text" data-testid="outcome-create-owner" />
+        </label>
+        <label class="outcome-field">
+          验证责任人（必填；高风险须与结果责任人分离）
+          <input v-model="createVerifier" type="text" data-testid="outcome-create-verifier" />
+        </label>
+        <div class="outcome-field-row">
+          <label class="outcome-field">
+            风险档（必填）
+            <select v-model="createRiskTier" data-testid="outcome-create-risktier">
+              <option value="" disabled>请选择</option>
+              <option value="low">低</option>
+              <option value="medium">中</option>
+              <option value="high">高</option>
+            </select>
+          </label>
+          <label class="outcome-field">
+            默认可逆性（必填）
+            <select v-model="createReversibility" data-testid="outcome-create-reversibility">
+              <option value="" disabled>请选择</option>
+              <option value="reversible">可逆</option>
+              <option value="costly">高代价</option>
+              <option value="one-way">不可逆</option>
+              <option value="unknown">未知</option>
+            </select>
+          </label>
+        </div>
+        <p v-if="createRiskHint" class="outcome-warn" data-testid="outcome-create-risk-hint">{{ createRiskHint }}</p>
+        <p v-if="createReversibilityHint" class="outcome-warn" data-testid="outcome-create-reversibility-hint">{{ createReversibilityHint }}</p>
+        <label class="outcome-field outcome-field--check">
+          <input v-model="createLearningOptIn" type="checkbox" data-testid="outcome-create-learning" />
+          同意学习沉淀（learningOptIn：结算事实可入学习面）
+        </label>
+        <label class="outcome-field">
+          验收陈述（每行一条；不加度量时至少一条）
+          <textarea v-model="createStatements" rows="2" data-testid="outcome-create-statements" />
+        </label>
+        <label class="outcome-field">
+          范围内（scope.included，逗号分隔，可留空）
+          <input v-model="createScopeIncluded" type="text" data-testid="outcome-create-scope-included" />
+        </label>
+
+        <div class="outcome-create-measures" data-testid="outcome-create-measures">
+          <div class="outcome-create-measures__head">度量（行可增删；与验收陈述至少其一非空）</div>
+          <div
+            v-for="(row, i) in createMeasures"
+            :key="i"
+            class="outcome-create-measure-row"
+            :data-testid="`outcome-create-measure-${i}`"
+          >
+            <input v-model="row.measureId" type="text" placeholder="measureId" data-testid="outcome-create-measure-measureid" />
+            <input v-model="row.name" type="text" placeholder="名称" data-testid="outcome-create-measure-name" />
+            <input v-model="row.unit" type="text" placeholder="单位" data-testid="outcome-create-measure-unit" />
+            <select v-model="row.operator" data-testid="outcome-create-measure-operator" title="判定算子">
+              <option value="gte">≥</option>
+              <option value="lte">≤</option>
+              <option value="eq">＝</option>
+            </select>
+            <input v-model="row.target" type="number" step="any" placeholder="目标值" data-testid="outcome-create-measure-target" />
+            <input v-model="row.baseline" type="number" step="any" placeholder="基线（可空）" data-testid="outcome-create-measure-baseline" />
+            <input v-model="row.definition" type="text" placeholder="口径定义" data-testid="outcome-create-measure-definition" />
+            <input v-model="row.sourceRef" type="text" placeholder="数据源引用" data-testid="outcome-create-measure-sourceref" />
+            <button
+              type="button"
+              class="outcome-btn outcome-btn--danger"
+              :data-testid="`outcome-create-measure-remove-${i}`"
+              @click="removeMeasureRow(i)"
+            >删</button>
+          </div>
+          <button type="button" class="outcome-btn" data-testid="outcome-create-measure-add" @click="addMeasureRow">＋ 添加度量</button>
+        </div>
+
+        <p v-if="createErr" class="outcome-err" data-testid="outcome-create-err">{{ createErr }}</p>
+        <ul v-if="createProblems.length" class="outcome-problems" data-testid="outcome-create-problems">
+          <li v-for="(p, pi) in createProblems" :key="pi" :data-testid="`outcome-create-problem-${pi}`">{{ p }}</li>
+        </ul>
+        <p v-if="createConflict" class="outcome-err" data-testid="outcome-create-conflict">
+          该根任务已存在业务结果合同（他人刚建或本页数据过期）——请刷新面板查看。
+          <button type="button" class="outcome-btn" data-testid="outcome-create-conflict-refresh" @click="load()">刷新面板</button>
+        </p>
+        <button
+          type="button"
+          class="outcome-btn outcome-btn--primary"
+          data-testid="outcome-create-submit"
+          :disabled="createBusy"
+          @click="doCreateOutcome"
+        >{{ createBusy ? '创建中…' : '创建合同（草稿）' }}</button>
+        <span class="outcome-hint">提交后合同为草稿态；激活才绑定根任务家族（归属证明与人员名单校验由服务端终裁）。幂等键随本次表单会话保持，失败重试不会重复建。</span>
+      </div>
     </div>
 
     <!-- 其余读取失败：本段不可用，不炸抽屉 -->
@@ -611,4 +913,14 @@ function fmtTs(ms?: number): string {
   &.is-err { background: rgba(192, 57, 43, 0.08); color: var(--error-color, #c0392b); }
 }
 .outcome-model-entry { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.outcome-create-form { flex-basis: 100%; border-top: 1px dashed var(--border-color, #eee); padding-top: 8px; }
+.outcome-field { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-secondary, #555); }
+.outcome-field--check { flex-direction: row; align-items: center; gap: 6px; }
+.outcome-field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.outcome-create-measures { display: flex; flex-direction: column; gap: 6px; }
+.outcome-create-measures__head { font-size: 11px; color: var(--text-secondary, #555); font-weight: 500; }
+.outcome-create-measure-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+/* 高风险/不可逆预警：警示色（非绿色），只提示不阻断（服务端终裁） */
+.outcome-warn { font-size: 11px; color: var(--warning-color, #f0a020); margin: 0; }
+.outcome-problems { margin: 0; padding-left: 16px; color: var(--error-color, #c0392b); font-size: 11px; }
 </style>
