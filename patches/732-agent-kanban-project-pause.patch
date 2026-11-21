@@ -352,7 +352,7 @@ index 000000000..30abf9a87 100644
 +def _make_task(conn, title: str, assignee: str, *, project_id=None, status="ready") -> str:
 +    """建卡后直接改 status/project_id——project_id 无 projects.db 背书时
 +    create_task 会丢弃链接，故用 UPDATE 落列（tasks 表本就带该列）。"""
-+    tid = kb.create_task(conn, title=title, assignee=assignee)
++    tid = kb.create_task(conn, title=title, body="tier=T1", assignee=assignee)
 +    conn.execute(
 +        "UPDATE tasks SET status = ?, project_id = ? WHERE id = ?",
 +        (status, project_id, tid),

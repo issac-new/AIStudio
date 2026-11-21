@@ -54,5 +54,5 @@ DESIGN_SYNC: touched —— `vendor/VENDOR.md`（台账正本：表行 commit/�
 | N-1 | 宿主 `~/.hermes/hermes-agent` 基线仍 v0.23.2 线 | 独立批（带网关重启窗口；v0232 批 N-1 同型，热修甄别后升级部署） |
 | N-2 | SIM profile 基线盖章仍 v0.23.2 面 | 宿主升级（N-1）落地后独立批重盖章 |
 | N-3 | ~~在途他批新补丁按属主 rebase 重锚~~ **已解**：807 号 capability-pool 定号、cognition 批二让号 809，两批先于本批合入 main；本批 rebase 集成轮实证 806 扩段/807/809 在 v0.23.3 锚零重锚直过（见验证节 rebase 集成轮条） | 无剩余动作 |
-| N-5 | 拼合树 pytest 存量红（rebase 集成轮终态 14，批内曾为 16）：project_pause（主检出同红＋上游 v0.23.3 dispatch 重构漂移）、delegate/concurrency/followup_tool 等（主检出同红/全量顺序污染单跑绿）——与主检出同清单同红集双向差集空 | project_pause 派发链语义漂移随 732/741 域跟进批归因；其余为跨批存量红不属本批范围 |
+| N-5 | ~~原归因「上游 dispatch 重构漂移」已被推翻~~（2026-11-21 探因：真因=批二 unmarked_decision_tier=T2 立法时 dispatch 族测试未适配，missing_grant 拦派发，与基线无关）。**5 枚已清偿**（spec 2026-11-21-dispatch-tests-tier-adaptation：732/419 测试卡加 tier=T1，13/13 绿，全清单 14→9 净差精确）；余 9 枚（delegate/memory/followup/subagent/dreaming）为跨批存量不属本批范围 | 已闭环（5 枚）＋余量留跨批清偿 |
 | N-6 | runtime/ 下 14 个 `.78619-*.tmp` 编辑器临时文件历史入库（59050a87d 原子写批量收口第八批引入，非本批面；审查 F1） | 独立卫生批清偿＋gitignore 补 `runtime/**/*.tmp`（须配对机制预算条目） |

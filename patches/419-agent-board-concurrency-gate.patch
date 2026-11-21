@@ -141,8 +141,8 @@ index 0000000000..f1863fb54d
 +    def test_board_cap_default_one_defers_second(self, fresh_home):
 +        # routa 默认 1：同板 running=1 时第二张 ready 被拦（skipped_board_capped）。
 +        conn = connect()
-+        t1 = kb.create_task(conn, title="r1", body="b", assignee="sage")
-+        t2 = kb.create_task(conn, title="r2", body="b", assignee="alex")
++        t1 = kb.create_task(conn, title="r1", body="tier=T1", assignee="sage")
++        t2 = kb.create_task(conn, title="r2", body="tier=T1", assignee="alex")
 +        conn.execute("UPDATE tasks SET status = 'running', claim_lock = 'l' WHERE id = ?", (t1,))
 +        conn.commit()
 +        board_running = {None: 1}
@@ -161,10 +161,10 @@ index 0000000000..f1863fb54d
 +
 +    def test_board_cap_zero_disables_gate(self, fresh_home):
 +        conn = connect()
-+        t1 = kb.create_task(conn, title="a", body="b", assignee="sage")
++        t1 = kb.create_task(conn, title="a", body="tier=T1", assignee="sage")
 +        conn.execute("UPDATE tasks SET status = 'running', claim_lock = 'l' WHERE id = ?", (t1,))
 +        conn.commit()
-+        t2 = kb.create_task(conn, title="c", body="b", assignee="alex")
++        t2 = kb.create_task(conn, title="c", body="tier=T1", assignee="alex")
 +        result = kbd.DispatchResult()
 +        row2 = next(r for r in kbd._lane_rows(conn, "ready") if r["id"] == t2)
 +        consumed = kbd._dispatch_lane_task(
@@ -179,8 +179,8 @@ index 0000000000..f1863fb54d
 +    def test_spawn_count_sync(self, fresh_home):
 +        # _count_spawn 同步 board 计数：同 tick 内第二张按计数被拦。
 +        conn = connect()
-+        t1 = kb.create_task(conn, title="x", body="b", assignee="sage")
-+        t2 = kb.create_task(conn, title="y", body="b", assignee="alex")
++        t1 = kb.create_task(conn, title="x", body="tier=T1", assignee="sage")
++        t2 = kb.create_task(conn, title="y", body="tier=T1", assignee="alex")
 +        board_running: dict = {}
 +        def run_one(tid):
 +            result = kbd.DispatchResult()
