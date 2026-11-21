@@ -128,6 +128,8 @@ export interface MissionNode {
   executor: ExecutorClass
   estimateDays: number | null
   controlReasons: string[]
+  /** RACI 审批人（raw 卡透传）：第三问团队对账（批四 T4）用，画布控制点判定不消费 */
+  raciApprover: string | null
 }
 
 export interface MissionEdge {
@@ -187,6 +189,7 @@ export function buildMissionTree(
       executor: classifyExecutor(t.assignee),
       estimateDays: t.estimate_days ?? null,
       controlReasons: controlPointReasons(t, ladderByTarget),
+      raciApprover: t.raci?.approver ?? null,
     }))
   return { nodes, edges }
 }
@@ -224,17 +227,23 @@ export interface FiveQuestions {
   }
 }
 
-/** 麦肯锡五问面板推导（纯函数）：结果责任/人机分工/确认点/异常升级/可复用资产。 */
+/** 麦肯锡五问面板推导（纯函数）：结果责任/人机分工/确认点/异常升级/可复用资产。
+ *  team（可选，批四 T4/D）：有已确认团队（version>0）时对第三问做 RACI 对账——
+ *  审批人不在团队成员 subjectId 集的控制点追加只读提示；不传/无团队不提示。 */
 export function deriveFiveQuestions(
   tree: { nodes: MissionNode[]; edges: MissionEdge[] },
   root: { id: string; title: string; status: string; owner: string; approver: string | null },
   escalations: EscalationRecord[],
   specs: StoredSpecSummary[],
+  team?: OutcomeTeamInfo | null,
 ): FiveQuestions {
   const { nodes } = tree
   const est = (cls: ExecutorClass) =>
     nodes.filter(n => n.executor === cls).reduce((s, n) => s + (n.estimateDays ?? 0), 0)
   const missionIds = new Set(nodes.map(n => n.taskId))
+  // 对账前提=已确认团队（version>0）；读不到/未确认（none/error/version=0）时
+  // 成员集为空集且不入对账分支——不基于缺失数据做「不在团队」断言。
+  const teamMemberIds = new Set((team && team.version > 0 ? team.members : []).map(m => m.subjectId))
   const pending = escalations.filter(e => e.state === 'pending')
   const linked = pending.filter(e => e.taskId && missionIds.has(e.taskId))
   return {
@@ -256,7 +265,16 @@ export function deriveFiveQuestions(
     },
     checkpoints: nodes
       .filter(n => n.controlReasons.length > 0)
-      .map(n => ({ taskId: n.taskId, title: n.title, assignee: n.assignee, reasons: n.controlReasons })),
+      .map(n => {
+        // RACI 审批人 ×已确认团队对账（批四 T4/D）：只读黄条提示，不改写卡、
+        // 不伪造控制点——approver 非空本就构成控制点，这里只在对账不齐时附一条
+        // 供人裁决；approver 为空/无已确认团队（version=0 未确认）一律不提示。
+        const reasons = [...n.controlReasons]
+        if (team && team.version > 0 && n.raciApprover && !teamMemberIds.has(n.raciApprover)) {
+          reasons.push(`RACI 审批人 ${n.raciApprover} 不在已确认团队 v${team.version} 中`)
+        }
+        return { taskId: n.taskId, title: n.title, assignee: n.assignee, reasons }
+      }),
     escalation: {
       pendingTotal: pending.length,
       linkedToMission: linked.length,

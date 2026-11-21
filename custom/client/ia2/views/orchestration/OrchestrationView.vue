@@ -64,6 +64,9 @@ const fiveQ = computed(() => {
     },
     escalations.value ?? [],
     specs.value ?? [],
+    // 团队对账（批四 T4）：团队面数据已在装配链路内（loadTeam 与五问同源），
+    // 纯客户端投影零新请求；teamInfo 只在 team 态非空，none/error 不提示。
+    teamInfo.value,
   )
 })
 
