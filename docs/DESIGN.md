@@ -752,7 +752,7 @@ AIStudio 是单一完整项目仓。
 | `patches/`、`zcode-patches/` | 对钉版上游的受管变更 |
 | `vendor/` | hermes-studio、hermes-agent 与 zcode 基线 |
 | `runtime/`、`team/` | agent 运行时扩展与团队部署资产 |
-| `simharness/` | 全流程推演程序与场景——本质上是治理程序（2026-11-21 立法：六闸/审计/证据链/净额度量=治理执行形态，判读正本在产品治理域）。运行态：SIM 实体随 11-18 归档轮拆除，程序随仓保留、mx-setup 重建即对齐宿主当前基面 |
+| `simharness/` | 全流程推演程序与场景——本质上是治理程序，融入 AIStudio 产品能力（2026-11-21 立法：判读/报告/评测/运行中心已产品承接，驱动面按 P1-P4 路线图收敛，spec 2026-11-21-sim-product-absorption-roadmap）。运行态：SIM 实体随 11-18 归档轮拆除，重建走 mx-setup 即治理程序再执行 |
 | `skills/swarm-yuan/` | 项目技能生成器本体 |
 | `registries/`、`config/` | 注册入口与特性配置 |
 | `docs/superpowers/specs/` | 设计正本、专题规格与决策档案 |
