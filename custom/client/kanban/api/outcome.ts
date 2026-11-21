@@ -96,6 +96,22 @@ export class OutcomeWorkbenchDisabledError extends Error {
   }
 }
 
+/** 结构化失败（批四 T1）：携带 HTTP 状态、机器码与逐条 problems，供建模表单
+ *  分形态展示（422 逐条列示/409 提示刷新）。message 保持既有拼接文案——
+ *  既有消费面按 Error.message 显示，行为不变。 */
+export class OutcomeApiError extends Error {
+  readonly status: number
+  readonly code: string | null
+  readonly problems: string[]
+  constructor(status: number, message: string, code: string | null = null, problems: string[] = []) {
+    super(message)
+    this.name = 'OutcomeApiError'
+    this.status = status
+    this.code = code
+    this.problems = problems
+  }
+}
+
 /** 幂等键生成（服务端控制器同风格：前缀 + 时间 36 进制 + 随机尾巴）。 */
 function genId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -114,9 +130,15 @@ async function requestOutcome(path: string, init: RequestInit = {}): Promise<Rec
     throw new OutcomeWorkbenchDisabledError()
   }
   if (!res.ok || j?.ok === false) {
-    const problems = Array.isArray(j?.problems) ? (j.problems as string[]).join('；') : ''
+    const problems = Array.isArray(j?.problems) ? (j.problems as string[]) : []
     const base = typeof j?.error === 'string' ? j.error : `请求失败（HTTP ${res.status}）`
-    throw new Error(problems ? `${base}：${problems}` : base)
+    const code = typeof j?.code === 'string' ? j.code : null
+    throw new OutcomeApiError(
+      res.status,
+      problems.length ? `${base}：${problems.join('；')}` : base,
+      code,
+      problems,
+    )
   }
   return j ?? {}
 }
@@ -126,6 +148,60 @@ export async function fetchOutcomeByRoot(rootTaskId: string): Promise<OutcomeCon
   const j = await requestOutcome(`/api/hermes/outcomes?rootTaskId=${encodeURIComponent(rootTaskId)}`)
   const items = Array.isArray(j.items) ? (j.items as OutcomeContract[]) : []
   return items.length > 0 ? items[0]! : null
+}
+
+// ---------- 建模创建（批四 T1：POST / 由 UI 接线） ----------
+// 服务端控制器白名单（CONTRACT_INPUT_FIELDS）：schemaVersion/version/status/时间戳/
+// outcomeId 由服务端定——客户端不传管理面字段；身份面（signedBy 等）一律不传。
+export interface CreateOutcomeMeasureInput {
+  measureId: string
+  name: string
+  definition: string
+  unit: string
+  operator: MeasureOperator
+  /** null=合法未知（不得自动补零）；留空由表单转 null。 */
+  baseline: number | null
+  target: number
+  sourceRef: string
+}
+
+export interface CreateOutcomeInput {
+  /** 当前根卡 ID——表单自动携带，不暴露输入。 */
+  rootTaskId: string
+  title: string
+  valueStatement: string
+  ownerPersonId: string
+  verificationOwnerId: string
+  riskTier: 'low' | 'medium' | 'high'
+  defaultReversibility: 'reversible' | 'costly' | 'one-way' | 'unknown'
+  learningOptIn: boolean
+  acceptance: { statements: string[]; requiredEvidenceKinds: string[] }
+  scope: { included: string[]; excluded: string[] }
+  contextPolicy: { allowedScopes: string[]; excludedSourceKinds: string[] }
+  measures: CreateOutcomeMeasureInput[]
+  /** 幂等键：由调用方（表单会话）生成一次、失败重试不换键；服务端按
+   *  `${actor}:${clientRequestId}` 组合键落账查定（I2：异 actor 同键不命中）。 */
+  clientRequestId: string
+}
+
+export interface CreateOutcomeResult {
+  contract: OutcomeContract
+  /** true=clientRequestId 命中重放，返回的是原合同（未新建）。 */
+  replayed: boolean
+}
+
+/** 创建合同（POST /api/hermes/outcomes）。422 抛 OutcomeApiError（problems 逐条）、
+ *  409 root_task_taken/outcome_exists 同抛 OutcomeApiError（code 可判）；门关抛
+ *  OutcomeWorkbenchDisabledError。 */
+export async function createOutcome(input: CreateOutcomeInput): Promise<CreateOutcomeResult> {
+  const j = await requestOutcome('/api/hermes/outcomes', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  return {
+    contract: j.contract as OutcomeContract,
+    replayed: j.replayed === true,
+  }
 }
 
 /** 快照摘要列表（快照计数用；坏行服务端读侧已跳过）。 */

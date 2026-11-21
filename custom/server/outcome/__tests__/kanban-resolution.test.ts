@@ -346,6 +346,24 @@ describe('bindOutcomeFamily（激活即绑定，审查修复轮二 I2）', () =>
     expect(r.ok).toBe(true)
     expect(r.bound).toEqual(['r2'])
   })
+
+  // 批四 T2（走查 F3）：库缺 outcome_id 列（805 迁移面未覆盖，如 fresh home 由 vendor 建表）
+  // 时不得吞成 root_task_missing 误导「任务不存在」——缺列是结构性错误，须专用码定向指引。
+  it('库缺 outcome_id 列→schema_missing（不误报任务不存在），批四 T2', () => {
+    db!.close()
+    const noCol = new DatabaseSync(join(home, 'kanban.db'))
+    noCol.exec('DROP TABLE tasks')
+    // vendor 建表形态：无 outcome_id 列（805 只在 python 建库/迁移路径）
+    noCol.exec(`CREATE TABLE tasks (
+      id TEXT PRIMARY KEY, title TEXT, status TEXT,
+      assignee TEXT, tenant TEXT, workspace_path TEXT)`)
+    noCol.prepare("INSERT INTO tasks (id, title, status) VALUES ('r1', '卡在库', 'todo')").run()
+    noCol.close()
+    const r = bindOutcomeFamily('oc-fam4', 'r1')
+    expect(r).toMatchObject({ ok: false, code: 'schema_missing' })
+    expect((r.problems ?? []).join('\n')).toContain('outcome_id')
+    expect((r.problems ?? []).join('\n')).not.toContain('不存在')
+  })
 })
 
 // ---- 批二 T5：召回留痕反查（EXPERIENCE_INJECT 双闸） ----

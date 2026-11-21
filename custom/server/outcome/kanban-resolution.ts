@@ -93,7 +93,10 @@ function readOutcomeBinding(taskId: string, home: string): string | null {
         | undefined
       if (row) return normalize(row.outcome_id)
     } catch (err) {
-      console.warn(`[kanban-resolution] 读板 ${slug} 失败（fail-soft 试下一板）：${describeErr(err)}`)
+      // 批四 T2（走查 F3）：缺 outcome_id 列加 [schema_missing] 定向标记（读投影无错误通道，
+      // 保持 fail-soft；bindOutcomeFamily 面返回专用码）
+      const _sm = /no such column:\s*outcome_id/i.test(describeErr(err))
+      console.warn(`[kanban-resolution] 读板 ${slug} 失败${_sm ? '（schema_missing：tasks 表缺 outcome_id 列）' : '（fail-soft 试下一板）'}：${describeErr(err)}`)
     } finally {
       try { db?.close() } catch { /* noop */ }
     }
@@ -151,7 +154,10 @@ export function tasksByOutcome(outcomeId: string, opts: KanbanResolutionOptions 
         }
       }
     } catch (err) {
-      console.warn(`[kanban-resolution] 读板 ${slug} 失败（fail-soft 试下一板）：${describeErr(err)}`)
+      // 批四 T2（走查 F3）：缺 outcome_id 列加 [schema_missing] 定向标记（读投影无错误通道，
+      // 保持 fail-soft；bindOutcomeFamily 面返回专用码）
+      const _sm = /no such column:\s*outcome_id/i.test(describeErr(err))
+      console.warn(`[kanban-resolution] 读板 ${slug} 失败${_sm ? '（schema_missing：tasks 表缺 outcome_id 列）' : '（fail-soft 试下一板）'}：${describeErr(err)}`)
     } finally {
       try { db?.close() } catch { /* noop */ }
     }
@@ -179,7 +185,10 @@ export function rootTaskSummary(taskId: string, opts: KanbanResolutionOptions = 
         }
       }
     } catch (err) {
-      console.warn(`[kanban-resolution] 读板 ${slug} 失败（fail-soft 试下一板）：${describeErr(err)}`)
+      // 批四 T2（走查 F3）：缺 outcome_id 列加 [schema_missing] 定向标记（读投影无错误通道，
+      // 保持 fail-soft；bindOutcomeFamily 面返回专用码）
+      const _sm = /no such column:\s*outcome_id/i.test(describeErr(err))
+      console.warn(`[kanban-resolution] 读板 ${slug} 失败${_sm ? '（schema_missing：tasks 表缺 outcome_id 列）' : '（fail-soft 试下一板）'}：${describeErr(err)}`)
     } finally {
       try { db?.close() } catch { /* noop */ }
     }
@@ -229,7 +238,7 @@ export function snapshotPeopleRows(ids: string[]): SnapshotPersonRow[] {
 /** 激活绑定结果码：root_task_missing 根卡不在任何板库；outcome_conflict 家族内
  *  存在异值绑定（改挂须显式迁移，spec §3.3.1）；db_unavailable 无板库/读通道
  *  关闭；write_failed 写阶段失败（预检后磁盘/竞态，幂等重试自愈）。 */
-export type ActivationBindCode = 'root_task_missing' | 'outcome_conflict' | 'db_unavailable' | 'write_failed'
+export type ActivationBindCode = 'root_task_missing' | 'outcome_conflict' | 'db_unavailable' | 'write_failed' | 'schema_missing'
 
 export interface ActivationBindResult {
   ok: boolean
@@ -342,6 +351,15 @@ export function bindOutcomeFamily(
       }
       return { ok: true, bound, unchanged }
     } catch (err) {
+      // 批四 T2（走查 F3）：缺列是全库结构性错误（805 迁移面未覆盖），试下一板无意义且
+      // 最终误报「根任务不存在」——专用码定向指引。
+      if (/no such column:\s*outcome_id/i.test(describeErr(err))) {
+        return {
+          ok: false,
+          code: 'schema_missing',
+          problems: [`板 ${slug} tasks 表缺 outcome_id 列（805 迁移面未覆盖该库；建库/迁移走 python CLI 或补列后重试）`],
+        }
+      }
       console.warn(`[kanban-resolution] 读板 ${slug} 失败（fail-soft 试下一板）：${describeErr(err)}`)
     } finally {
       try { db?.close() } catch { /* noop */ }

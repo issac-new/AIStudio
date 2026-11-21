@@ -708,6 +708,7 @@ const {
           class="drawer-section"
           :task-id="task.id"
           :is-root-task="!(links.parents && links.parents.length)"
+          :task-title="task.title || ''"
         />
         <!-- HERMES_CUSTOM[Outcome] END -->
 

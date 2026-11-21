@@ -34,6 +34,22 @@ import type {
   OutcomeTeamStatus,
 } from './types'
 import { validateContractInput } from './validate'
+import { recordTeamDecision } from '../decisiongraph/decision-recorder'
+
+// 决策图谱落账（批四 T3）：团队确认 → 统一决策引用。fire-and-forget try/catch 形态
+// 照 approval-log recordToDecisionGraph 先例；引入方式取静态 import（escalation-controller
+// 同款）——本域与 decisiongraph 无环（其依赖闭包仅 lib/与 node 内建），而 lazy require
+// 在 vitest ESM 下加载含 import 语句的模块会静默失败（approval-log.ts:29 自证），
+// 接线测试将无法断言 recorder 被调。静态 import 可被 vi.mock 拦截（autonomy-ladder 先例）。
+function recordTeamConfirmToDecisionGraph(input: {
+  outcomeId: string; version: number; changeReason: string; updatedBy: string
+}): void {
+  try {
+    recordTeamDecision(input)
+  } catch (err) {
+    console.warn(`[outcome-store] 决策图谱落账失败（fail-soft，不影响团队确认主链路）：${err instanceof Error ? err.message : String(err)}`)
+  }
+}
 
 /** 事件类型全集（spec §4.2：合同激活/测量追加/状态迁移/结算/取消归并进 status_changed/
  *  上下文快照生成；批三 T1 追加 team_confirmed——团队确认不再归并进 contract_updated，
@@ -585,6 +601,14 @@ export function confirmTeam(
     console.warn(`[outcome-store] team.json 写入失败（${outcomeId}）：${describeErr(err)}`)
     return { ok: false, code: 'write_failed' }
   }
+  // 决策图谱落账在权威域写（team_confirmed 事件＋team.json）全部成功后：确认未生效
+  // （校验失败/版本冲突/写失败）不落账——决策引用只记真实发生的决定。
+  recordTeamConfirmToDecisionGraph({
+    outcomeId,
+    version: team.version,
+    changeReason: team.changeReason,
+    updatedBy: team.updatedBy,
+  })
   return { ok: true, team, event: ev.event }
 }
 

@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   submitMeasurement: vi.fn(),
   settleOutcome: vi.fn(),
   fetchOutcomeComparison: vi.fn(),
+  createOutcome: vi.fn(),
 }))
 vi.mock('@/custom/kanban/api/outcome', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api/outcome')>()
@@ -26,7 +27,7 @@ const auth = vi.hoisted(() => ({ actor: { value: 'alice' } }))
 vi.mock('@/api/client', () => ({ getStoredUsername: () => auth.actor.value }))
 
 import OutcomeSection from '../OutcomeSection.vue'
-import { OutcomeWorkbenchDisabledError, type OutcomeContract } from '../../api/outcome'
+import { OutcomeApiError, OutcomeWorkbenchDisabledError, type OutcomeContract } from '../../api/outcome'
 
 function makeContract(over: Partial<OutcomeContract> = {}): OutcomeContract {
   return {
@@ -81,6 +82,7 @@ beforeEach(() => {
     outcomeId: 'oc-test1', settlement: null, superseded: [],
   })
   apiMocks.transitionOutcome.mockResolvedValue(makeContract({ status: 'active' }))
+  apiMocks.createOutcome.mockResolvedValue({ contract: makeContract(), replayed: false })
   apiMocks.submitMeasurement.mockImplementation(async (_id: string, input: { measureId: string; actual: number | null }) => ({
     measurementId: 'mea-x1', outcomeId: 'oc-test1', measureId: input.measureId, contractVersion: 2,
     actual: input.actual, availability: 'available', evidenceRefs: ['evid://1'],
@@ -371,6 +373,21 @@ describe('OutcomeSection — 状态迁移', () => {
     expect(msg.exists()).toBe(true)
     expect(msg.text()).toContain('未全部终结')
   })
+
+  it('激活 422 code=schema_missing（批四 F3）→ 按码定向文案（缺列修库指引），非原文回显', async () => {
+    apiMocks.fetchOutcomeByRoot.mockResolvedValue(makeContract())
+    apiMocks.transitionOutcome.mockRejectedValue(new OutcomeApiError(
+      422, '激活失败（schema_missing）：看板库缺 outcome_id 列（805 迁移面未覆盖该库）',
+      'schema_missing', ['看板库缺 outcome_id 列（805 迁移面未覆盖该库）']))
+    const w = await mountSection()
+    await w.find('[data-testid="outcome-activate"]').trigger('click')
+    await flushPromises()
+    const msg = w.find('[data-testid="outcome-action-msg"]')
+    expect(msg.exists()).toBe(true)
+    expect(msg.text()).toContain('看板库缺 outcome_id 列')
+    expect(msg.text()).toContain('python CLI')
+    expect(msg.text()).toContain('手工补列后重试')
+  })
 })
 
 
@@ -393,5 +410,192 @@ describe('OutcomeSection — 对照投影渲染', () => {
     apiMocks.fetchOutcomeComparison.mockResolvedValue(null)
     w = await mountSection()
     expect(w.find('[data-testid="outcome-comparison"]').exists()).toBe(false)
+  })
+})
+
+
+// ---- 批四 T1：建模表单（空态根卡「建合同」，POST / 接线） ----
+describe('OutcomeSection — 建模表单（批四 T1）', () => {
+  /** 空态根卡挂载（无合同）；taskTitle 可选预填卡标题。 */
+  async function mountEmptyRoot(taskTitle?: string) {
+    apiMocks.fetchOutcomeByRoot.mockResolvedValue(null)
+    const w = mount(OutcomeSection, {
+      props: { taskId: 'root-1', isRootTask: true, ...(taskTitle !== undefined ? { taskTitle } : {}) },
+    })
+    await flushPromises()
+    return w
+  }
+
+  async function openForm(w: Awaited<ReturnType<typeof mountEmptyRoot>>) {
+    await w.find('[data-testid="outcome-create-toggle"]').trigger('click')
+    return w
+  }
+
+  /** 填必填集（title 依赖预填/已填）；statements 传空串=走度量/陈述联合校验。 */
+  async function fillRequired(w: Awaited<ReturnType<typeof mountEmptyRoot>>, statements: string) {
+    await w.find('[data-testid="outcome-create-value"]').setValue('把工单积压压到 50 以内，释放人力')
+    await w.find('[data-testid="outcome-create-verifier"]').setValue('vera')
+    await w.find('[data-testid="outcome-create-risktier"]').setValue('medium')
+    await w.find('[data-testid="outcome-create-reversibility"]').setValue('reversible')
+    await w.find('[data-testid="outcome-create-statements"]').setValue(statements)
+  }
+
+  it('空态根卡：折叠表单默认收起；打开后 title=卡标题、owner=当前登录人预填（可改），rootTaskId 不暴露输入', async () => {
+    const w = await mountEmptyRoot('降低工单积压')
+    expect(w.find('[data-testid="outcome-model-hint"]').exists()).toBe(true)
+    expect(w.find('[data-testid="outcome-create-form"]').exists()).toBe(false)
+    await openForm(w)
+    const form = w.find('[data-testid="outcome-create-form"]')
+    expect(form.exists()).toBe(true)
+    expect((w.find('[data-testid="outcome-create-title"]').element as HTMLInputElement).value).toBe('降低工单积压')
+    expect((w.find('[data-testid="outcome-create-owner"]').element as HTMLInputElement).value).toBe('alice')
+    // rootTaskId 自动携带：表单内不出现 rootTaskId 输入控件
+    expect(w.find('[data-testid="outcome-create-roottaskid"]').exists()).toBe(false)
+    expect(w.find('[data-testid="outcome-create-submit"]').exists()).toBe(true)
+  })
+
+  it('必填非空提示：空表单提交不发请求，缺项逐名列出；度量与陈述同空拦截', async () => {
+    const w = await openForm(await mountEmptyRoot()) // 无 taskTitle → title 空
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    const err = w.find('[data-testid="outcome-create-err"]')
+    expect(err.exists()).toBe(true)
+    expect(err.text()).toContain('必填未填')
+    expect(err.text()).toContain('标题')
+    expect(err.text()).toContain('验证责任人')
+    expect(err.text()).toContain('风险档')
+    expect(err.text()).toContain('默认可逆性')
+    expect(err.text()).toContain('至少填一项')
+    expect(apiMocks.createOutcome).not.toHaveBeenCalled()
+    // 非空级联合规则：只填必填、无度量无陈述 → 仍拦截（服务端 measures/statements 同源规则）
+    await w.find('[data-testid="outcome-create-title"]').setValue('降低工单积压')
+    await fillRequired(w, '')
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    expect(w.find('[data-testid="outcome-create-err"]').text()).toContain('至少填一项')
+    expect(apiMocks.createOutcome).not.toHaveBeenCalled()
+  })
+
+  it('度量行增删：半行提交拦截行内缺项；补齐后度量口径随载荷（baseline 留空=null）', async () => {
+    const w = await openForm(await mountEmptyRoot('降低工单积压'))
+    await fillRequired(w, '') // 走纯定量合同：不加陈述
+    await w.find('[data-testid="outcome-create-measure-add"]').trigger('click')
+    expect(w.find('[data-testid="outcome-create-measure-0"]').exists()).toBe(true)
+    expect((w.find('[data-testid="outcome-create-measure-measureid"]').element as HTMLInputElement).value).toBe('m1')
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    expect(w.find('[data-testid="outcome-create-err"]').text()).toContain('度量1')
+    expect(w.find('[data-testid="outcome-create-err"]').text()).toContain('口径定义')
+    expect(apiMocks.createOutcome).not.toHaveBeenCalled()
+    // 补齐行内字段（measureId 已预填 m1、operator 默认 gte）
+    await w.find('[data-testid="outcome-create-measure-name"]').setValue('工单积压量')
+    await w.find('[data-testid="outcome-create-measure-unit"]').setValue('张')
+    await w.find('[data-testid="outcome-create-measure-target"]').setValue('50')
+    await w.find('[data-testid="outcome-create-measure-definition"]').setValue('未结工单数')
+    await w.find('[data-testid="outcome-create-measure-sourceref"]').setValue('helpdesk/db')
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.createOutcome).toHaveBeenCalledTimes(1)
+    const payload = apiMocks.createOutcome.mock.calls[0]![0]
+    expect(payload.measures).toEqual([{
+      measureId: 'm1', name: '工单积压量', unit: '张', operator: 'gte',
+      target: 50, baseline: null, definition: '未结工单数', sourceRef: 'helpdesk/db',
+    }])
+    expect(payload.acceptance.statements).toEqual([])
+    expect(payload.scope).toEqual({ included: [], excluded: [] })
+    // 删行 → 回到定性合同路径（无度量无陈述再次拦截）
+    const w2 = await openForm(await mountEmptyRoot('降低工单积压'))
+    await w2.find('[data-testid="outcome-create-measure-add"]').trigger('click')
+    await w2.find('[data-testid="outcome-create-measure-remove-0"]').trigger('click')
+    expect(w2.find('[data-testid="outcome-create-measure-0"]').exists()).toBe(false)
+  })
+
+  it('422 problems 逐条显示；失败重试同 clientRequestId（幂等键稳定）', async () => {
+    const w = await openForm(await mountEmptyRoot('降低工单积压'))
+    await fillRequired(w, '积压 ≤50 张\n按期结单率 ≥90%')
+    apiMocks.createOutcome.mockRejectedValueOnce(new OutcomeApiError(
+      422, '创建失败（invalid_input）：两条问题', 'invalid_input', [
+        'ownerPersonId alice 未在人员名单中激活（owner/verifier 必须为 active 自然人）',
+        'valueStatement 与验收口径冲突，请补充价值陈述',
+      ]))
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    await flushPromises()
+    const items = w.findAll('[data-testid="outcome-create-problems"] li')
+    expect(items.length).toBe(2)
+    expect(items[0]!.text()).toContain('未在人员名单中激活')
+    expect(items[1]!.text()).toContain('价值陈述')
+    // 表单保持展开（键不换）；补正后重试 → 两次调用同键、载荷键 creq- 前缀
+    apiMocks.createOutcome.mockResolvedValueOnce({ contract: makeContract(), replayed: false })
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.createOutcome).toHaveBeenCalledTimes(2)
+    const first = apiMocks.createOutcome.mock.calls[0]![0]
+    const second = apiMocks.createOutcome.mock.calls[1]![0]
+    expect(second.clientRequestId).toBe(first.clientRequestId)
+    expect(first.clientRequestId).toMatch(/^creq-/)
+    expect(first.rootTaskId).toBe('root-1')
+    expect(first.title).toBe('降低工单积压')
+    expect(first.ownerPersonId).toBe('alice')
+    expect(first.learningOptIn).toBe(false)
+    expect(first.riskTier).toBe('medium')
+    expect(first.defaultReversibility).toBe('reversible')
+    expect(first.acceptance.statements).toEqual(['积压 ≤50 张', '按期结单率 ≥90%'])
+  })
+
+  it('创建成功 → 表单收起、面板复用 load 刷新进合同态', async () => {
+    // 初次读=null（空态）；创建成功后 load 重读=合同
+    apiMocks.fetchOutcomeByRoot.mockReset()
+    apiMocks.fetchOutcomeByRoot.mockResolvedValueOnce(null).mockResolvedValue(makeContract())
+    const w = mount(OutcomeSection, { props: { taskId: 'root-1', isRootTask: true, taskTitle: '降低工单积压' } })
+    await flushPromises()
+    await w.find('[data-testid="outcome-create-toggle"]').trigger('click')
+    await fillRequired(w, '积压 ≤50 张')
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.createOutcome).toHaveBeenCalledTimes(1)
+    expect(apiMocks.fetchOutcomeByRoot).toHaveBeenCalledTimes(2)
+    expect(w.find('[data-testid="outcome-create-form"]').exists()).toBe(false)
+    expect(w.find('[data-testid="outcome-measure-m1"]').exists()).toBe(true)
+    expect(w.find('[data-testid="outcome-section"]').text()).toContain('业务结果 · 降低工单积压')
+  })
+
+  it('409 冲突（root_task_taken）→ 提示刷新而非重试；点「刷新面板」重读进合同态', async () => {
+    const w = await openForm(await mountEmptyRoot('降低工单积压'))
+    await fillRequired(w, '积压 ≤50 张')
+    apiMocks.createOutcome.mockRejectedValueOnce(new OutcomeApiError(
+      409, '创建失败（root_task_taken）', 'root_task_taken'))
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    await flushPromises()
+    const conflict = w.find('[data-testid="outcome-create-conflict"]')
+    expect(conflict.exists()).toBe(true)
+    expect(conflict.text()).toContain('已存在')
+    expect(w.find('[data-testid="outcome-create-problems"]').exists()).toBe(false)
+    // 冲突面板刷新：load 重读返回合同 → 进合同态
+    apiMocks.fetchOutcomeByRoot.mockResolvedValue(makeContract())
+    await w.find('[data-testid="outcome-create-conflict-refresh"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.fetchOutcomeByRoot).toHaveBeenCalledTimes(2)
+    expect(w.find('[data-testid="outcome-measure-m1"]').exists()).toBe(true)
+  })
+
+  it('高风险/不可逆预警文案出现且用警示样式（非绿色）；预警只提示不硬阻断', async () => {
+    const w = await openForm(await mountEmptyRoot('降低工单积压'))
+    // 未选档位时无预警
+    expect(w.find('[data-testid="outcome-create-risk-hint"]').exists()).toBe(false)
+    await fillRequired(w, '积压 ≤50 张') // 先填必填（medium/reversible），再换高风险档验证预警
+    await w.find('[data-testid="outcome-create-risktier"]').setValue('high')
+    const riskHint = w.find('[data-testid="outcome-create-risk-hint"]')
+    expect(riskHint.exists()).toBe(true)
+    expect(riskHint.text()).toContain('分离')
+    expect(riskHint.classes()).toContain('outcome-warn')
+    expect(riskHint.classes()).not.toContain('is-ok')
+    await w.find('[data-testid="outcome-create-reversibility"]').setValue('one-way')
+    const revHint = w.find('[data-testid="outcome-create-reversibility-hint"]')
+    expect(revHint.exists()).toBe(true)
+    expect(revHint.text()).toContain('不可逆')
+    expect(revHint.classes()).toContain('outcome-warn')
+    // 预警不阻断：仍可发请求（高风险同人分离由服务端 422 终裁）
+    await w.find('[data-testid="outcome-create-submit"]').trigger('click')
+    await flushPromises()
+    expect(apiMocks.createOutcome).toHaveBeenCalledTimes(1)
+    expect(apiMocks.createOutcome.mock.calls[0]![0].riskTier).toBe('high')
+    expect(apiMocks.createOutcome.mock.calls[0]![0].defaultReversibility).toBe('one-way')
   })
 })

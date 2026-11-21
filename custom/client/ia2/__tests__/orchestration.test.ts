@@ -7,6 +7,7 @@ import {
   classifyExecutor, controlPointReasons, deriveMissionRoots, buildMissionTree,
   deriveFiveQuestions, layoutMissionDag,
   type OrchTaskRaw, type AutonomyEntry, type EscalationRecord, type StoredSpecSummary,
+  type OutcomeTeamInfo,
 } from '../api/orchestration'
 
 const t = (over: Partial<OrchTaskRaw>): OrchTaskRaw => ({
@@ -123,6 +124,68 @@ describe('deriveFiveQuestions', () => {
     expect(q.escalation.pendingTotal).toBe(0)
     expect(q.assets.factoryTemplates).toEqual([])
     expect(q.assets.loopTemplates).toEqual([])
+  })
+})
+
+describe('deriveFiveQuestions 团队对账（批四 T4/D：RACI 审批人 ×已确认团队）', () => {
+  const ladder = new Map<string, AutonomyEntry>()
+  const team: OutcomeTeamInfo = {
+    version: 4,
+    status: 'active',
+    members: [
+      { subjectKind: 'person', subjectId: 'plusprimer', role: 'accountable' },
+      { subjectKind: 'agent', subjectId: 'recon-agent', role: 'executor' },
+    ],
+  }
+  const root = { id: 'r', title: '对账提速', status: 'todo', owner: 'bella', approver: null }
+
+  /** 链内三卡：审批人在团队 / 审批人不在团队 / 无审批人（其余控制源皆无） */
+  const tasks: OrchTaskRaw[] = [
+    t({ id: 'r', assignee: 'bella', children: ['c1', 'c2', 'c3'] }),
+    t({ id: 'c1', parents: ['r'], assignee: 'chen', raci: { approver: 'plusprimer' } }),
+    t({ id: 'c2', parents: ['r'], assignee: 'chen', raci: { approver: 'mei' } }),
+    t({ id: 'c3', parents: ['r'], assignee: 'chen' }),
+  ]
+
+  function checkpointsOf(qteam?: OutcomeTeamInfo | null) {
+    return deriveFiveQuestions(buildMissionTree('r', tasks, ladder), root, [], [], qteam).checkpoints
+  }
+
+  it('审批人在团队成员集：不附对账提示（原控制点理由原样）', () => {
+    const cps = checkpointsOf(team)
+    const c1 = cps.find(cp => cp.taskId === 'c1')!
+    expect(c1.reasons).toEqual(['RACI 审批人：plusprimer'])
+  })
+
+  it('审批人非空且不在团队成员集：附提示，文案含审批人与团队版本号', () => {
+    const cps = checkpointsOf(team)
+    const c2 = cps.find(cp => cp.taskId === 'c2')!
+    expect(c2.reasons).toContain('RACI 审批人 mei 不在已确认团队 v4 中')
+    // 提示是追加，不改写既有控制点理由
+    expect(c2.reasons[0]).toBe('RACI 审批人：mei')
+  })
+
+  it('审批人为空：不提示也不伪造控制点（无其他控制源的卡不入 checkpoints）', () => {
+    const cps = checkpointsOf(team)
+    expect(cps.find(cp => cp.taskId === 'c3')).toBeUndefined()
+  })
+
+  it('无已确认团队（不传 team / version=0 未确认）：不提示', () => {
+    for (const qteam of [undefined, null, { ...team, version: 0 }] as Array<OutcomeTeamInfo | null | undefined>) {
+      const cps = checkpointsOf(qteam)
+      const c2 = cps.find(cp => cp.taskId === 'c2')!
+      expect(c2.reasons).toEqual(['RACI 审批人：mei'])
+    }
+  })
+
+  // 批四审查 I-1：draft/closed 团队经 API 可落盘（version≥1 但非已确认）——
+  // 黄条不得称「已确认团队」，对账门收紧为 version>0 && status==='active'。
+  it('draft/closed 团队（version≥1 但非 active）：不做团队对账提示（审查 I-1）', () => {
+    for (const st of ['draft', 'closed'] as const) {
+      const cps = checkpointsOf({ ...team, status: st })
+      const c2 = cps.find(cp => cp.taskId === 'c2')!
+      expect(c2.reasons).toEqual(['RACI 审批人：mei'])
+    }
   })
 })
 

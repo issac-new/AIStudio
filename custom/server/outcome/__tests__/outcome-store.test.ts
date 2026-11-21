@@ -3,7 +3,7 @@
 // 哈希链（GENESIS 首锚＋逐条独立复算）、appendEvent 写失败 fail-closed（contract.json 不被触碰）、
 // measurement 幂等重放 added:false、listMeasurements 事件派生。
 // 哈希复算用本文件独立的 canon 实现（不复用被测模块导出），钉死「sha256(prevHash|canonical)」格式。
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -102,6 +102,16 @@ function makeMeasurement(
 }
 
 let dir = ''
+
+// 批四 T3：confirmTeam 挂 decision-recorder fire-and-forget 落账后，本文件未 mock
+// recorder 的确认用例会在 venv 存在的机器上真起 python bridge 写宿主 KG——单测禁触
+// 宿主状态，这里关闸（接线行为断言在 confirm-team-decision-recorder.test.ts 的 vi.mock 面）。
+const prevDecisionGraph = process.env.HERMES_DECISION_GRAPH
+process.env.HERMES_DECISION_GRAPH = '0'
+afterAll(() => {
+  if (prevDecisionGraph === undefined) delete process.env.HERMES_DECISION_GRAPH
+  else process.env.HERMES_DECISION_GRAPH = prevDecisionGraph
+})
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'outcome-store-'))

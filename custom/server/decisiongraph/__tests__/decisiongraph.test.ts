@@ -80,6 +80,52 @@ describe('记录器（乙4）：去重 + outcome 映射 + fire-and-forget', () =
   })
 })
 
+describe('记录器（批四 T3）：learning/team 落账形状 + 去重', () => {
+  it('recordLearningDecision：三态映射（approved/rejected/回退 deferred），metadata 带 from/to；同决定去重', async () => {
+    const rec = await import('../../decisiongraph/decision-recorder')
+    rec.resetRecorderStateForTests()
+    fakeRunner(() => JSON.stringify({ ok: true, decisionId: 'u', precedentOf: null }))
+    const { recordLearningDecision } = rec
+    recordLearningDecision({ candidateId: 'exp-001', from: 'candidate', to: 'approved' })
+    recordLearningDecision({ candidateId: 'exp-001', from: 'candidate', to: 'approved' })  // 去重（重放同决定）
+    recordLearningDecision({ candidateId: 'exp-001', from: 'approved', to: 'rejected', decidedBy: 'root' })
+    recordLearningDecision({ candidateId: 'exp-002', from: 'approved', to: 'candidate' })  // 回退 → deferred
+    await new Promise((r) => setTimeout(r, 20))
+    const records = calls.filter((c) => c.args[0] === 'record').map((c) => JSON.parse(c.input!))
+    expect(records).toHaveLength(3)
+    expect(records[0]).toMatchObject({
+      category: 'learning', outcome: 'approved', decision_maker: 'exp-curator',
+      metadata: { candidateId: 'exp-001', from: 'candidate', to: 'approved', decidedBy: null },
+    })
+    expect(records[1]).toMatchObject({
+      category: 'learning', outcome: 'rejected', decision_maker: 'root',
+      metadata: { candidateId: 'exp-001', from: 'approved', to: 'rejected' },
+    })
+    expect(records[2].outcome).toBe('deferred')
+  })
+
+  it('recordTeamDecision：确认恒 approved，metadata 带 version/changeReason；同版本去重、跨版本独立', async () => {
+    const rec = await import('../../decisiongraph/decision-recorder')
+    rec.resetRecorderStateForTests()
+    fakeRunner(() => JSON.stringify({ ok: true, decisionId: 'u', precedentOf: null }))
+    const { recordTeamDecision } = rec
+    recordTeamDecision({ outcomeId: 'oc-1', version: 1, changeReason: '初始成队', updatedBy: 'p-1' })
+    recordTeamDecision({ outcomeId: 'oc-1', version: 1, changeReason: '初始成队', updatedBy: 'p-1' })  // 去重
+    recordTeamDecision({ outcomeId: 'oc-1', version: 2, changeReason: '补充执行 agent', updatedBy: 'p-9' })
+    await new Promise((r) => setTimeout(r, 20))
+    const records = calls.filter((c) => c.args[0] === 'record').map((c) => JSON.parse(c.input!))
+    expect(records).toHaveLength(2)
+    expect(records[0]).toMatchObject({
+      category: 'team', outcome: 'approved', decision_maker: 'p-1',
+      metadata: { outcomeId: 'oc-1', version: 1, changeReason: '初始成队' },
+    })
+    expect(records[1]).toMatchObject({
+      category: 'team', outcome: 'approved', decision_maker: 'p-9',
+      metadata: { outcomeId: 'oc-1', version: 2, changeReason: '补充执行 agent' },
+    })
+  })
+})
+
 describe('先例回灌（乙5）：相似阈值 + TTL 缓存', () => {
   it('高相似先例 → 拼行文案（含"仅供参考"防历史绑架）；低相似 → null', async () => {
     const rec = await import('../../decisiongraph/decision-recorder')

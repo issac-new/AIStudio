@@ -6,7 +6,7 @@
 // store 扩展 appendSnapshot/listSnapshots（幂等按内容 sha256、context_snapshot_created 事件、撕裂行自愈）。
 // 哈希复算用本文件独立的 canon/sha 实现（不复用被测模块导出），钉死
 // 「sha256 = sha256(canonicalJson(信封去 snapshotId/createdAt/sha256))」格式——outcome-store.test.ts 同款纪律。
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -103,6 +103,16 @@ const resolveAllOk = {
 const POLICY_VERSION = 'policy-2026-11-19'
 
 let dir = ''
+
+// 批四 T3：confirmTeam 挂 decision-recorder fire-and-forget 落账后，本文件未 mock
+// recorder 的确认用例会在 venv 存在的机器上真起 python bridge 写宿主 KG——单测禁触
+// 宿主状态，这里关闸（接线行为断言在 confirm-team-decision-recorder.test.ts 的 vi.mock 面）。
+const prevDecisionGraph = process.env.HERMES_DECISION_GRAPH
+process.env.HERMES_DECISION_GRAPH = '0'
+afterAll(() => {
+  if (prevDecisionGraph === undefined) delete process.env.HERMES_DECISION_GRAPH
+  else process.env.HERMES_DECISION_GRAPH = prevDecisionGraph
+})
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'outcome-snapshot-'))
