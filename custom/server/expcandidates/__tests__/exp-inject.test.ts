@@ -135,6 +135,47 @@ describe('注入回执补键（批一 b 变更 1：taskId/kind/作用域透传�
     expect(listInjectionLog()).toEqual([])
     expect(listCandidates()[0].injectedRuns).toEqual(['run24'])
   })
+
+  it('fewshot 路 recordInjection（批一 b 变更 4）：召回即落 kind=fewshot 回执（台账 id＋作用域）', () => {
+    process.env.FLYWHEEL_FEWSHOT_INJECT = '1'
+    process.env.EXPERIENCE_INJECT_RUN = 'run25'
+    const evalDir = join(dir, 'eval-ledger-fewshot')
+    process.env.EVAL_STORE = evalDir
+    recordDistill({
+      taskId: 'bd-f1', sourceRunId: 'erun-1', sourceTaskId: 't1', sampleIdx: 1,
+      rootCause: 'result_defect', tabooActions: ['禁止重复失败结果'], failedSteps: 5, stepRedline: 7,
+      targetSetId: 'eset-009', problem: '查北京到上海的机票', expectedBehavior: '返回正确航班与价格',
+    })
+    const lines = experienceLinesForDispatch({ column: 'devimpl', specialist: 'refiner' }, '帮我查一下北京到上海的机票哈', 'T-501')
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('历史教训')
+    const log = listInjectionLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({
+      runLabel: 'run25', taskId: 'T-501', kind: 'fewshot', column: 'devimpl', specialist: 'refiner',
+    })
+    expect(log[0].ids).toHaveLength(1) // 台账提炼 id（ledgerId）
+    delete process.env.FLYWHEEL_FEWSHOT_INJECT
+    delete process.env.EVAL_STORE
+    rmSync(evalDir, { recursive: true, force: true })
+  })
+
+  it('fewshot 无 taskId：行照常追加，零留痕（向后兼容）', () => {
+    process.env.FLYWHEEL_FEWSHOT_INJECT = '1'
+    const evalDir = join(dir, 'eval-ledger-fewshot2')
+    process.env.EVAL_STORE = evalDir
+    recordDistill({
+      taskId: 'bd-f2', sourceRunId: 'erun-1', sourceTaskId: 't1', sampleIdx: 1,
+      rootCause: 'result_defect', tabooActions: ['禁止重复失败结果'], failedSteps: 5, stepRedline: 7,
+      targetSetId: 'eset-009', problem: '查北京到上海的机票', expectedBehavior: '返回正确航班与价格',
+    })
+    const lines = experienceLinesForDispatch({ column: 'devimpl' }, '帮我查一下北京到上海的机票哈')
+    expect(lines).toHaveLength(1)
+    expect(listInjectionLog()).toEqual([])
+    delete process.env.FLYWHEEL_FEWSHOT_INJECT
+    delete process.env.EVAL_STORE
+    rmSync(evalDir, { recursive: true, force: true })
+  })
 })
 
 describe('Few-shot 记忆通道（数据飞轮 round 2 挂账 1）', () => {

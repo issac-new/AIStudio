@@ -4,6 +4,8 @@
 // 不带 id/计数/时刻（防被当作本轮实测凭据）；FACT 与 TIP 独立编号（各自从 1 起），
 // 让「环境认识」和「条件技巧」在简报里不混成一段。fail-soft：任何异常返回空块。
 import { scopeAllows, type ScopeFilter } from '../expcandidates/scope-match'
+import { recordInjection } from '../expcandidates/exp-store'
+import { injectionRunLabel } from '../expcandidates/exp-inject'
 import { DEFAULT_TOP_K, MAX_TOP_K, type DualRule, type DualStoreShape } from './dual-types'
 import { bigramSimilarity } from '../eval/vectorizer'
 import { readDualStore } from './dual-store'
@@ -67,12 +69,34 @@ export function renderDualTrackBlock(selection: DualSelection): string[] {
 
 /** 派单侧读取面（column-dispatch 消费）：默认关/无规则/存储异常→空数组。 */
 export function dualTrackLinesForDispatch(opts: DualSelectOptions = {}): string[] {
+  return dualTrackInjectionForDispatch(opts).lines
+}
+
+/** 派单注入＋留痕面（批一 b 变更 4）：「返回记录＋正文」接口——选择 dual 规则渲染
+ *  正文，同时把被注入规则 ids 落进 expcandidates 留痕账（kind='dual'，taskId 到场
+ *  才落——效果归因 join 键；taskId 缺席零留痕，向后兼容）。留痕 fail-soft：账写坏
+ *  不阻断注入行（与 exp 路同纪律）。旧 dualTrackLinesForDispatch 保留为薄包装。 */
+export function dualTrackInjectionForDispatch(
+  opts: DualSelectOptions & { taskId?: string } = {},
+): { lines: string[]; ruleIds: string[] } {
   try {
-    if (!dualInjectionEnabled()) return []
+    if (!dualInjectionEnabled()) return { lines: [], ruleIds: [] }
     const store = readDualStore()
     const selection = selectDualRules(store, opts)
-    return renderDualTrackBlock(selection)
+    const lines = renderDualTrackBlock(selection)
+    const ruleIds = [...selection.facts, ...selection.tips].map((r) => r.id)
+    const taskId = opts.taskId?.trim()
+    if (lines.length && ruleIds.length && taskId) {
+      try {
+        recordInjection(ruleIds, injectionRunLabel(), undefined, taskId, {
+          kind: 'dual',
+          ...(opts.column ? { column: opts.column } : {}),
+          ...(opts.specialist ? { specialist: opts.specialist } : {}),
+        })
+      } catch { /* 留痕 fail-soft：不阻断注入行 */ }
+    }
+    return { lines, ruleIds }
   } catch {
-    return []
+    return { lines: [], ruleIds: [] }
   }
 }

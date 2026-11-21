@@ -93,8 +93,22 @@ export function experienceLinesForDispatch(target: DispatchTarget, query?: strin
   } catch { /* fail-soft：经验通道异常不影响派发 */ }
   try {
     if (fewshotInjectionEnabled() && query?.trim()) {
-      const line = fewshotInjectLine(recallFewshot(query, listLedger().distills))
-      if (line) lines.push(line)
+      const recall = recallFewshot(query, listLedger().distills)
+      const line = fewshotInjectLine(recall)
+      if (line) {
+        // 批一 b 变更 4：fewshot 路也落留痕账（kind='fewshot'，ids=台账提炼 id）——
+        // taskId 到场才落（join 键），缺席零留痕向后兼容。
+        if (recall.recalled.length && taskId?.trim()) {
+          recordInjection(
+            recall.recalled.map((t) => t.ledgerId),
+            injectionRunLabel(),
+            undefined,
+            taskId,
+            { kind: 'fewshot', ...(target.column ? { column: target.column } : {}), ...(target.specialist ? { specialist: target.specialist } : {}) },
+          )
+        }
+        lines.push(line)
+      }
     }
   } catch { /* fail-soft：fewshot 通道异常不影响派发 */ }
   return lines

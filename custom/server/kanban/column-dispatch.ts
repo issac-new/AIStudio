@@ -21,7 +21,7 @@ import { checkDecisionRulesForDispatch, evaluateDecisionRules, type RuleEvaluati
 import { precedentLineFor, recordDispatchDecision } from '../decisiongraph/decision-recorder'
 import { constraintLinesForDispatch } from '../constraints/constraint-inject'
 import { experienceLinesForDispatch } from '../expcandidates/exp-inject'
-import { dualTrackLinesForDispatch } from '../expdual/dual-inject'
+import { dualTrackInjectionForDispatch } from '../expdual/dual-inject'
 import { selectHandoffRuleForDispatch } from '../handoff/handoff-rules'
 import { listLedger } from '../eval/flywheel'
 import { appendEvidence } from '../evidence/evidence-store'
@@ -168,12 +168,14 @@ export function stepBrief(trigger: ColumnTransitionTrigger, steps: AutomationSte
     taskId ?? undefined,
   )
   // 双轨经验注入（TTSE 吸收，2026-11-12）：EXP_DUAL_INJECT=1 才启用；FACT/TIP 分块、
-  // 通道内独立编号、各封顶 3 条。与历史经验通道独立选通（互不依赖）。
-  const dualExperienceLines = dualTrackLinesForDispatch({
+  // 通道内独立编号、各封顶 3 条。与历史经验通道独立选通（互不依赖）。批一 b 变更 4：
+  // taskId 透传留痕（kind='dual' 回执——效果归因同账）。
+  const dualExperienceLines = dualTrackInjectionForDispatch({
     column: trigger.column,
     ...(step.specialist ? { specialist: step.specialist } : {}),
     ...(taskTitle ? { query: taskTitle } : {}),
-  })
+    ...(taskId ? { taskId } : {}),
+  }).lines
   return [
     `[kanban:${trigger.column}] 列编排（时机 ${trigger.matchedTiming}）共 ${steps.length} 步，按序执行：`,
     ...lines,
