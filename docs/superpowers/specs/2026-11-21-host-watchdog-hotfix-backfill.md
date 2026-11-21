@@ -18,10 +18,10 @@
 
 ## 验证
 
-- [ ] `npx vitest run scripts/__tests__/deploy-agent-runtime.test.ts` 绿（清单变更守门）。
-- [ ] worktree 内 dry-run deploy 对账：watchdog 归入「相同」（模板=宿主融合版）。
-- [ ] 合并后主检出 `npm run inject` manifest complete；`deploy --apply --force` 后宿主 `import gateway.run` SMOKE OK 且 hostile-load 常量在位。
-- [ ] 网关重启（launchctl kickstart -k）后进程稳定无重启风暴。
+- [x] `npx vitest run scripts/__tests__/deploy-agent-runtime.test.ts` 绿（清单变更守门）。
+- [x] worktree 内 dry-run deploy 对账：watchdog 归入「相同」（模板=宿主融合版）。
+- [x] 合并后主检出 `npm run inject` manifest complete；`deploy --apply --force` 后宿主 `import gateway.run` SMOKE OK 且 hostile-load 常量在位。
+- [x] 网关重启（launchctl kickstart -k）后进程稳定无重启风暴。
 
 ## 设计文档影响
 

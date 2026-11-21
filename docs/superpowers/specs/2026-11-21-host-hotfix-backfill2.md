@@ -16,9 +16,9 @@
 
 ## 验证
 
-- [ ] deploy dry-run：保留目标归零（`RESULT status=complete` 或仅剩触碰待收口）。
-- [ ] deploy 守门测试 10/10 绿（清单未动）。
-- [ ] 合并后主检出 inject manifest complete＋宿主 SMOKE OK。
+- [x] deploy dry-run：保留目标归零（`RESULT status=complete` 或仅剩触碰待收口）。
+- [x] deploy 守门测试 10/10 绿（清单未动）。
+- [x] 合并后主检出 inject manifest complete＋宿主 SMOKE OK。
 
 ## 设计文档影响
 
