@@ -464,3 +464,4 @@
 {"at":"2026-11-21T00:43:46Z","spec":"docs/superpowers/specs/2026-11-21-overlay-sfcfs-isfile-fix.md","receipt":"d6421701afa846549d8c4686b9500ea03528ba4e","commit":"e4e447ab9"}
 {"at":"2026-11-21T00:51:09Z","spec":"docs/superpowers/specs/2026-11-21-ai-native-orgworkbench-batch4.md","receipt":"892bb4ec15b73eb706008bce0dbea1978b7d5e0d","commit":"c9b571b2f"}
 {"at":"2026-11-21T01:09:54Z","spec":"docs/superpowers/specs/2026-11-21-host-watchdog-hotfix-backfill.md","receipt":"4402a8ae72c29ae359350eee9b3504fcbc55de0e","commit":"d482de3d8"}
+{"at":"2026-11-21T01:12:29Z","spec":"docs/superpowers/specs/2026-11-21-host-hotfix-backfill2.md","receipt":"99cecdfcbf11224362687a6811f3ac90b5f10420","commit":"0ea16f70e"}
