@@ -393,7 +393,7 @@ export function generateOverlayViteConfig() {
 import { defineConfig, mergeConfig } from 'vite';
 import { resolve } from 'path';
 import vue from '@vitejs/plugin-vue';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import upstream from ${js(upstreamViteConfig)};
 
 // 裸包名钉单一实例用的根（alias 行引用；此前模板只用法不定义——生成的配置
@@ -410,8 +410,12 @@ const upstreamCfg =
 // 模块结构下失效 → 抛 "No fs option ... non-Node environment",全量构建在 WorkflowAgentNode
 // 处断裂。此处显式注入 node:fs 适配器替代 ts.sys 自动探测,一次性覆盖全仓导入类型 defineProps。
 // (上游 vite.config 的 vue() 为裸调用无选项,故原位替换不丢配置;若上游日后加选项需同步合并。)
+// fileExists 须用 isFile() 语义(2026-11-21 修复)：existsSync 对目录也返回 true，compiler-sfc
+// resolveExt 探 "export * from './types'" 这类星号再导出时把目录(dist/types/)当文件命中，
+// readFile EISDIR 被吞→类型 scope 为空→defineProps<EdgeProps> 报 Unresolvable；TS
+// ModuleResolutionHost 契约本就要求 fileExists 对目录 false。
 const sfcFs = {
-  fileExists: (f) => { try { return existsSync(f); } catch { return false; } },
+  fileExists: (f) => { try { return statSync(f).isFile(); } catch { return false; } },
   readFile: (f) => { try { return readFileSync(f, 'utf8'); } catch { return undefined; } },
   realpath: (f) => { try { return realpathSync(f); } catch { return f; } },
 };
