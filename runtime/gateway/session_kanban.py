@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import sqlite3
 
-from hermes_state_runtime import RuntimeStoreError
+from persistence.core.errors import AuthorityRefusal as RuntimeStoreError  # v0.23.3 重构后残引修正
 
 
 def build_kanban_policy(connection, params, config):
@@ -135,7 +135,7 @@ async def run_task(connection, params):
     # card (approvals.single_query_mode applies). Never unattended: that is `-z`'s auto-approval.
     # A retry of an attempt admitted before cards were finite resubmits its committed payload,
     # so the store returns the original receipt instead of admission_conflict.
-    from hermes_state_runtime import find_session_admission
+    from persistence.sqlite.authority._admission_store import find_session_admission
     committed = None if not saved else await asyncio.to_thread(find_session_admission, authority.db,
         principal_id=connection.actor.subject, session_id=ref.session_id, request_id=request_id)
     payload: dict = {'text': f'work kanban task {params["task_id"]}'}
@@ -385,6 +385,16 @@ def worker_exit_code(path, params):
 KANBAN_TURN_AUTHOR = {'id': 'kanban:dispatcher', 'name': 'Kanban dispatcher', 'is_bot': True}
 
 
+def _stored_conversation(agent):
+    """The agent's stored conversation: read through its storage interface handle when it holds one on
+    its own store, else from its store (a managed worker's client store)."""
+    from agent.agent_init_session import agent_interface
+    store = agent_interface(agent)
+    if store is None:
+        return agent._session_db.get_messages_as_conversation(agent.session_id)
+    return [message.as_openai_message() for message in store.messages.read_conversation(agent.session_id)]
+
+
 def _run_task_turns(agent, frame, history, context):
     from agent.skill_commands import build_preloaded_skills_prompt
     skills, loaded, missing = build_preloaded_skills_prompt(context['skills'], task_id=agent.session_id)
@@ -396,8 +406,7 @@ def _run_task_turns(agent, frame, history, context):
     def recover(nudge):
         nonlocal result
         prior = result.get('messages') if isinstance(result, dict) else None
-        result = agent.run_conversation(nudge, conversation_history=prior or
-                                        agent._session_db.get_messages_as_conversation(agent.session_id),
+        result = agent.run_conversation(nudge, conversation_history=prior or _stored_conversation(agent),
                                         turn_author=KANBAN_TURN_AUTHOR)
     # Same in-place retry as the one-shot CLI worker (agent/kanban_turn_recovery.py), but the
     # carrier is this frame's bound claim, never the owner process's environment.
@@ -420,7 +429,7 @@ def _run_task_turns(agent, frame, history, context):
             kb.block_task(conn, context['task_id'], reason=reason, expected_run_id=context['run_id'])
     def turn(prompt):
         nonlocal result
-        result = agent.run_conversation(prompt, conversation_history=agent._session_db.get_messages_as_conversation(agent.session_id),
+        result = agent.run_conversation(prompt, conversation_history=_stored_conversation(agent),
                                         turn_author=KANBAN_TURN_AUTHOR)
         return result.get('final_response', '')
     run_kanban_goal_loop(task_id=context['task_id'], goal_text=context['goal_text'], run_turn=turn,

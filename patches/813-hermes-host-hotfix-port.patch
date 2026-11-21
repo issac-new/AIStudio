@@ -1,0 +1,118 @@
+diff --git a/tools/approval.py b/tools/approval.py
+--- a/tools/approval.py
++++ b/tools/approval.py
+@@ -1145,6 +1145,21 @@
+     verdict = _smart_verdict(command, description, pattern_key, pattern_keys, session_key)
+     if verdict == "approve":
+         _reset_denials(session_key)
++        # >>> swarm:smart-approve-session-cache >>>
++        # 2026-09-23 频率治理: smart APPROVE 后把 pattern 写入 session cache,
++        # 同一会话同一 pattern 只判决 1 次 (此前每条被 flag 命令都重发守门 LLM,
++        # 舰队夜间实测 ~4500 次/天微型请求)。DENY/ESCALATE 不缓存, 危险命令仍逐条审。
++        # 开关: approvals.smart_cache (默认开, 设 false 回到逐条判决)。
++        try:
++            from tools.approval_context import _get_approval_config
++            _sc = _get_approval_config().get("smart_cache", True)
++        except Exception:
++            _sc = True
++        if _sc:
++            approve_session(session_key, pattern_key)
++            logger.debug("Smart approval: cached APPROVE for pattern %s (session %s)",
++                         pattern_key, session_key)
++        # <<< swarm:smart-approve-session-cache <<<
+         logger.debug(spec.smart_log.format(command=command[:60], description=description, session_key=session_key))
+         return {"approved": True, "message": None, "smart_approved": True, "description": description}, False
+     if verdict != "deny":
+diff --git a/gateway/run.py b/gateway/run.py
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -1634,8 +1634,25 @@
+     reserved = getattr(config, "_runtime_profile_homes", None)
+     if reserved is not None:
+         return list(reserved)
+-    from hermes_cli.profiles import profiles_to_serve
+-    return list(profiles_to_serve(multiplex=True))
++    from hermes_cli.profiles import get_active_profile_name, get_profile_dir, profiles_to_serve
++    homes = list(profiles_to_serve(multiplex=True))
++    # >>> swarm:multiplex-active-primary >>> (rebased 2026-10-15 onto v0.22.1's
++    # reserved-set short-circuit: bootstrap seeds _runtime_profile_homes from this
++    # fallback before freezing it, so the swap propagates into the reservation.)
++    # A multiplex gateway running as a NAMED profile (e.g. orchestrator) serves —
++    # and cron-ticks — its OWN home as the primary entry, not the default home
++    # ``profiles_to_serve`` always prepends. The default home is a *different*
++    # HERMES_HOME whose adapters never run in this process; keeping it as primary
++    # ticks an empty cron store while the active profile's real jobs never fire,
++    # and reserves the shared ``runner.adapters`` for a profile that owns none of
++    # them. When the gateway runs as the default (or a custom Docker HERMES_HOME),
++    # ``active`` is "default"/"custom" and behaviour is byte-identical to upstream.
++    active = get_active_profile_name() or "default"
++    if active not in ("default", "custom"):
++        homes = [(n, h) for n, h in homes if n not in ("default", active)]
++        homes.insert(0, (active, get_profile_dir(active)))
++    # <<< swarm:multiplex-active-primary <<<
++    return homes
+ 
+ 
+ def _cron_tick_profile_homes(config: object) -> list[tuple[str, Path]]:
+@@ -1711,8 +1728,14 @@
+     try:
+         config = getattr(runner, "config", None)
+         if config is not None and getattr(config, "multiplex_profiles", False):
++            # swarm:multiplex-active-primary — skip whichever profile owns the root
++            # store. Upstream that is "default"; for a named-profile gateway it is
++            # the active profile (the primary entry), which must not be polled twice.
++            from hermes_cli.profiles import get_active_profile_name
++
++            active = get_active_profile_name() or "default"
+             for name, home in _multiplex_profile_homes(config):
+-                if home is None or not name or name == "default":
++                if home is None or not name or name == "default" or name == active:
+                     continue
+                 scopes.append((name, home))
+     except Exception:
+diff --git a/model_tools.py b/model_tools.py
+--- a/model_tools.py
++++ b/model_tools.py
+@@ -846,6 +846,28 @@
+         if block_message is not None:
+             return function_args, (tool_error(block_message), "plugin_block", block_message)
+ 
++    # Action 契约确定性门禁 (P1-2b impl-3, kanban t_cc655ecb)。落点 A:
++    # plugin pre_tool_call hook 之后、ACP edit approval 之前。gate_tool_call
++    # 内部按 action_gate.mode 分流: enforce -> 返回 block message 真实阻断;
++    # shadow -> 校验照跑、block 候选落 JSONL 日志、返回 None 不阻断。
++    # fail-closed: gate 自身异常 -> block (同 plugins.py:6354-6357 模式)。
++    # 热修移植注 (2026-11-21 批 813): agent.action_gate 模块本体是宿主现场态,
++    # 不在本移植批 16 件清单内。模块缺席(仓库拼合树/测试树)=门禁未部署, 跳过
++    # 本段; 模块在场(宿主部署面)时与宿主热修语义完全一致, 含 gate 异常 fail-closed。
++    try:
++        from agent.action_gate import gate_tool_call
++    except ImportError:
++        gate_tool_call = None
++    if gate_tool_call is not None:
++        try:
++            _gate_block = gate_tool_call(function_name, function_args)
++            if _gate_block is not None:
++                return function_args, (tool_error(_gate_block), "action_gate_block", _gate_block)
++        except Exception as _gate_err:
++            # fail-closed: 校验器自身异常 -> block (借鉴 plugins.py:6354-6357)
++            _gate_block = f"action-gate: gate error: {_gate_err} — blocked (fail-closed)"
++            return function_args, (tool_error(_gate_block), "action_gate_block", _gate_block)
++
+     # ACP/Zed edit approval before any file mutation. The requester is bound
+     # via ContextVar only for ACP sessions, so CLI/gateway paths are unaffected.
+     try:
+diff --git a/hermes_cli/followups.py b/hermes_cli/followups.py
+--- a/hermes_cli/followups.py
++++ b/hermes_cli/followups.py
+@@ -107,6 +107,10 @@
+     if db is None:
+         return False
+     try:
++        # 持久化路线裁决（热修回植 2026-11-21）：_get_session_db 返回 Persistence 句柄
++        # （goals._acquire_session_db → open_persistence），仅转发 PersistenceStore 注解面
++        # （state_meta 等）；宿主热修变体 db.set_meta/db.list_meta_prefix 是 SessionDB 包装
++        # API，不在该句柄上存在（AttributeError），故取 state_meta 直达路线。
+         db.state_meta.set(_meta_key(state.id), state.to_json())
+         return True
+     except Exception as exc:  # pragma: no cover - defensive

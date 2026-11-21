@@ -1380,3 +1380,9 @@
 # 默认 :15721/hermes/v1，'self' 回退产品态）＋ /api/modelpool 挂载；白名单单一源在
 # custom/server/modelpool/pool.ts，供应商管理 UI 不动（用户裁决保留）。
 812-server-model-pool-unify.patch
+# 813-hermes-host-hotfix-port（宿主热修移植批，spec 2026-11-21-runtime-hotfix-port-batch）：
+# 宿主现场热修加法回植：approval smart_cache 会话缓存/gateway.run multiplex-active-primary/
+# model_tools action-gate（在场探测；模块本体 runtime/agent/action_gate.py 随 manifest 收编）。
+# 零改动件（repo 已超集/宿主变体已坏）：agent_init pc_cfg、context_compressor、tool_executor、
+# followups、两测试件——定谳留痕见 spec。
+813-hermes-host-hotfix-port.patch

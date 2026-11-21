@@ -772,6 +772,41 @@ def _resolve_or_none(filepath: str, task_id: str, *, entry: bool = False) -> str
         return None
 
 
+_FILE_TOOLS_LOAD_TS = time.time()  # 会话装载时刻：陈旧会话拒写守卫的比较基准
+
+
+def _check_stale_repo_write(paths: list[str]) -> str | None:
+    """2026-11-21 覆写波根因防护：装载早于最近代码认证的会话不得写本仓库文件。
+
+    背景：长寿命 agent 会话（旧模块快照）在 update/补丁重放后继续用旧内容
+    Edit 仓库文件，产生 .bak.<epoch-ms> 覆盖波（2026-10-03 五波；2026-11-19/20/21
+    复发，写手=陈旧会话编辑工具）。apply-source-patches.sh 每次全量认证成功后写
+    仓库根的 .hermes-code-certified-stamp（epoch 秒）；本守卫拒绝"装载时刻早于
+    戳记"的进程写仓库内文件。fail-open：无戳记、解析异常一律放行，守卫自身
+    永不成为正常写路径的故障点。
+    """
+    try:
+        repo = Path(__file__).resolve().parents[1]
+        stamp = repo / ".hermes-code-certified-stamp"
+        if not stamp.is_file():
+            return None
+        certified = float((stamp.read_text(encoding="utf-8") or "0").strip() or 0)
+        if not certified or certified <= _FILE_TOOLS_LOAD_TS:
+            return None
+        for p in paths:
+            try:
+                rp = Path(p).resolve()
+            except OSError:
+                continue
+            if rp == repo or repo in rp.parents:
+                return ("refused: hermes-agent files were re-certified after this session "
+                        "loaded its code (.hermes-code-certified-stamp is newer than the "
+                        "process); restart the session before editing repo files")
+    except Exception:
+        return None
+    return None
+
+
 def _write_precheck_error(paths: list[str], content_paths: list[str], task_id: str,
                           cross_profile: bool) -> str | None:
     """Run the shared write/patch guards in order; return the first error string.
@@ -780,6 +815,9 @@ def _write_precheck_error(paths: list[str], content_paths: list[str], task_id: s
     guard run before anything that could prompt the user, and ONE approval
     prompt covers every path of a multi-file patch.
     """
+    stale_err = _check_stale_repo_write(paths)
+    if stale_err:
+        return stale_err
     for p in paths:
         err = _check_sensitive_path(p, task_id) or (
             None if cross_profile else _check_cross_profile_path(p, task_id))

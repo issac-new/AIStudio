@@ -712,7 +712,10 @@ class GatewayInboundMixin(
                 authority.fence_route(_quick_key)
             return
         from gateway.session_contract import SessionActor, SessionRef
-        from hermes_state_runtime import RuntimeStoreError, list_session_admissions
+        # v0.23.3 state 层重构后 hermes_state_runtime 已拆入 persistence（模板残引修正，
+        # 适配先例=vendor gateway/session_handoff.py:15 AuthorityRefusal as RuntimeStoreError）
+        from persistence.core.errors import AuthorityRefusal as RuntimeStoreError
+        from persistence.sqlite.authority._admission_store import list_session_admissions
         ref = SessionRef(authority.profile_id, sid)
         actor = SessionActor('messaging-control', authority.profile_id,
                           frozenset({'session:submit', 'session:control'}), 'busy-command')
@@ -725,6 +728,10 @@ class GatewayInboundMixin(
             # commits after it; one that committed before the fence is in the second listing and
             # cancelled below. A paused FIFO keeps both, like its queued followers.
             authority.fence_route(_quick_key)
+            if (ordered := getattr(authority, '_ordered_writes', None)) is not None:
+                # An input that passed the fence before it moved commits before the listing, which cancels it.
+                async with ordered:
+                    pass
             rows = await asyncio.to_thread(list_session_admissions, authority.db, session_id=sid)
         for row in [] if paused else rows:
             if row['status'] == 'queued' and row['principal_id'].startswith('messaging:'):
@@ -1306,7 +1313,7 @@ class GatewayInboundMixin(
         if (authority is None and not is_internal and not event.get_command()
                 and getattr(self, 'session_authority', None) is not None):
             # Scoped to a home this process does not serve: never fall back to the launch ledger.
-            from hermes_state_runtime import RuntimeStoreError
+            from persistence.core.errors import AuthorityRefusal as RuntimeStoreError
             raise RuntimeStoreError('profile_mismatch')
         return False, None
 

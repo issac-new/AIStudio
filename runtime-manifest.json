@@ -357,6 +357,11 @@
       "source": "toolsets.py",
       "dest": "toolsets.py",
       "note": "611: obs_recall 进 _HERMES_CORE_TOOLS（默认工具面）"
+    },
+    {
+      "source": "agent/action_gate.py",
+      "dest": "agent/action_gate.py",
+      "note": "热修移植批收编（原仅宿主存）：工具调用 action 门禁，model_tools._pre_dispatch_guards 消费（在场探测，缺省跳过）"
     }
   ],
   "notes": [
