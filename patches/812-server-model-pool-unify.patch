@@ -12,7 +12,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
  
  interface Group { provider: string; models: string[]; base_url?: string }
  let modelGroups: ((profile: string) => Promise<Group[]>) | undefined
-@@ -29,23 +33,28 @@
+@@ -29,23 +33,30 @@
    const edits = await readSupplementalEdits(profile)
    const credential = await internalModelCredential(profile)
    const catalog = await safeFileStore.readText(join(providerAccountHome(), 'catalog.json')).catch(() => '')
@@ -31,7 +31,10 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
 +    ? [{ provider: UNIFIED_PROVIDER, models: unifiedModelNames(), base_url: upstream.baseUrl }]
 +    : (await modelGroups(profile)).filter(group => group.provider !== 'moa' && !['ekkostudio', 'custom:ekkostudio'].includes(group.provider))
    const models: string[] = []
-   for (const group of groups) for (const model of group.models) models.push(qualifyModelRoute(await providerRouteNamespace(profile, group.provider), model))
+-  for (const group of groups) for (const model of group.models) models.push(qualifyModelRoute(await providerRouteNamespace(profile, group.provider), model))
++  // 统一模式裸名透传（cc-switch 按请求名直路由）；legacy 才做 namespace 限定
++  // （前缀供 studio 网关反解）。审查 P1-1 修复：此前统一组也被前缀化。
++  for (const group of groups) for (const model of group.models) models.push(upstream.unified ? model : qualifyModelRoute(await providerRouteNamespace(profile, group.provider), model))
    const selection = typeof cfg.model === 'object' && cfg.model ? cfg.model : {}
 -  const defaultModel = String(typeof cfg.model === 'string' ? cfg.model : selection.default || '')
 -  let defaultProvider = String(selection.provider || '')
@@ -48,7 +51,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
    const src = providerSourceDir(profile)
    const configPath = join(src, 'config.yaml')
    const envPath = join(src, '.env')
-@@ -57,9 +66,12 @@
+@@ -57,9 +68,12 @@
      const projected = Object.fromEntries(await Promise.all(Object.entries(value).map(async ([key, entry]) => [key, await projectRoutes(entry)])))
      if (typeof value.model === 'string' && value.model && value.provider !== 'moa' && value.provider !== 'auto') {
        const provider = value.provider && value.provider !== 'auto' ? value.provider : defaultProvider
@@ -64,7 +67,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
      }
      return projected
    }
-@@ -74,16 +86,22 @@
+@@ -74,16 +88,22 @@
      }
      // Existing auxiliary routes still need their original provider definitions
      // and credentials. Keep those dependencies until users choose to migrate.
@@ -92,7 +95,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
      if (keepLegacy) return { files: { [configPath]: YAML.dump(original, { lineWidth: -1, noRefs: true }), [marker]: stamp }, result: undefined }
      const env = String(current[envPath] || '').split(/\r?\n/).filter(line => !envKeys.has(line.trim().split('=', 1)[0].trim())).join('\n')
      const auth = JSON.parse(current[authPath] || '{}')
-@@ -99,6 +117,11 @@
+@@ -99,6 +119,11 @@
    const selected = logicalModelSelection(profile, provider, model)
    if (selected.provider === 'moa') return { model: selected.model, provider: selected.provider }
    await synchronizeHermesProvider(profile)

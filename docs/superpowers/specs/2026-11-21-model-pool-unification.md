@@ -42,12 +42,12 @@
 
 ## 验证
 
-- **vitest 目标**（新增＋改造，全在两态上断言）：
-  - 投影统一态：`synchronizeHermesProvider` 产物含 upstream base_url＋`api_key=PROXY_MANAGED`＋`session_affinity_header: session_id`＋裸模型名（无 namespace 前缀）；
-  - 投影 legacy 态（env=self）：产物与现状逐字段一致（回归）；
-  - `resolveAgentGatewayRuntime` 两态 baseUrl/apiKey；
-  - `getAvailableModelGroupsForProfile` 统一态=白名单单组、legacy 态原输出；
-  - modelpool 域：`unifiedModelPool()` 形状＋`GET /api/modelpool` 契约（vi.mock 单例模式，router 契约测试先例）。
+- **vitest 目标**（新增＋改造）：
+  - 投影统一态**行为断言**（mock 账号面/存储面真跑 `synchronizeHermesProvider`）：产物含 upstream base_url＋`api_key=PROXY_MANAGED`＋`session_affinity_header: session_id`＋**裸模型名**（回归锁：断言不出现 `cc-switch-route/` 前缀——审查 P1-1 曾漏网处）；
+  - 投影 legacy 态与池漏斗早退＝**内容锁**（补丁是本仓产物，内容断言成立；legacy 路径触真实账号面不做行为调用）；
+  - `resolveAgentGatewayRuntime` 统一态行为断言（真 import 打补丁模块）＋显式 URL 覆盖；
+  - modelpool 域：`unifiedModelPool()` 不变式＋`resolveModelUpstream` 两态＋`GET /api/modelpool` 投影契约。
+- **审查修复留痕**（节点⑦ 蓝军 2026-11-21）：P1-1 投影 models 循环漏网前缀化→循环条件修复＋回归锁；P2-2 投影仅内容锁可被死代码骗过→补行为测试；P3-3 本段原措辞夸大（声称 legacy 行为断言）→校准如上。
 - **补丁重放**：`npm run inject` 后目标测试绿（fresh worktree pretest 自动注入，N-4 已根治）。
 - **批三走查判据**（机械可查）：studio 聊天发起 → `proxy_request_logs` 新增 `app_type='hermes'` 记录且 `request_model`=裸名；UI 模型清单=白名单；env=self 回退原网关行为不变。
 - **门槛**：提交前 `npx vitest run <目标路径>`；合并前 `npm test` 全量＋`npm run typecheck:harness`（涉服务端新模块）。
