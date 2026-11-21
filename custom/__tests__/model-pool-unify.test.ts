@@ -117,4 +117,8 @@ describe('补丁 812 改写点内容锁', () => {
     expect(patch).toContain("import { modelPoolRoutes } from '../custom/modelpool/controller'")
     expect(patch).toContain('app.use(modelPoolRoutes.routes())')
   })
+
+  it('studio 侧 KNOWN_KEYS 识别会话亲和头（根治 boot 告警；python 侧 config_providers 原生消费）', () => {
+    expect(patch).toContain("'session_affinity_header',")
+  })
 })

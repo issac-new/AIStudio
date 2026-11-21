@@ -176,3 +176,16 @@ diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/boots
    app.use(progressRoutes.routes())                  // 研发任务进度：/api/progress/tasks（taskId 联表）
    app.use(evalRoutes.routes())                     // Eval Studio：评测集/回放判分/pass@k 报告/归因双 Loop（spec 2026-10-07）
    app.use(evidenceRoutes.routes())                // 任务证据台账：artifact/snapshot/verification（P0 §3.6）
+diff --git a/packages/server/src/modules/studio/contracts/provider-compat.ts b/packages/server/src/modules/studio/contracts/provider-compat.ts
+--- a/packages/server/src/modules/studio/contracts/provider-compat.ts
++++ b/packages/server/src/modules/studio/contracts/provider-compat.ts
+@@ -24,6 +24,9 @@
+   'context_length', 'rate_limit_delay',
+   'request_timeout_seconds', 'stale_timeout_seconds',
+   'discover_models', 'extra_body', 'extra_headers', 'catalog_provider', 'runtime_provider', 'auth_provider', 'auth_scope',
++  // overlay[modelpool]（补丁 812）：投影条目携带的会话亲和头（python 侧 config_providers.py
++  // 原生消费），studio 归一化视图须识别，否则每次解析告警 unknown key。
++  'session_affinity_header',
+ ])
+ 
+ // Config is parsed repeatedly by model, provider, and context lookups.
