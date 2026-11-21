@@ -1375,3 +1375,8 @@
 # bootstrap/routes.ts 挂载两控制器——/api/sim/scenarios（发现/roster 数组摘要，bash 函数体不解析）
 # ＋/api/sim/capture-plan（四态投影：page/none/repo/file）；均只读 fail-soft（simharness 缺席=空态）。
 811-server-sim-library-routes.patch
+# 812-server-model-pool-unify（模型池统一，spec 2026-11-21-model-pool-unification）：
+# 投影/内嵌 runtime/池漏斗三改写点直钉 cc-switch 上游（env EKKO_MODEL_UPSTREAM_BASE_URL
+# 默认 :15721/hermes/v1，'self' 回退产品态）＋ /api/modelpool 挂载；白名单单一源在
+# custom/server/modelpool/pool.ts，供应商管理 UI 不动（用户裁决保留）。
+812-server-model-pool-unify.patch
