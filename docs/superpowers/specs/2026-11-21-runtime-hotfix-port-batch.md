@@ -24,11 +24,16 @@
 3. `--force` 部署仅在本批超集证明后使用；.bak 全留底可整批回滚。
 4. 并发防漂移：移植前后对宿主文件做 md5 快照比对，漂移文件重移植（防热修作者会话同时在途）。
 5. kanban.py/kanban_output.py（谱系 MATCH 祖先）与 toolsets.py（repo 超集）＝宿主过期，随 --force 直接覆盖，无 repo 改动。
+6. **模板残引/断链修正**（移植连带定谳，蓝军建议回填）：模板长期未部署，残留 v0.23.3 前旧生态——①`hermes_state_runtime`（v0.23.3 重构 d74e56806 拆入 persistence，模板 4 处残引）；②`hermes_state_local`/`hermes_state_wal`/`hermes_state_registry.acquire` 等 B 组换掉的断链路线（模块或方法全树不存在）；③`hermes_state_runtime` 同生态的 `authority.db` 属性访问（SessionAuthority 只有 `persistence` 属性）。修正一律对齐两树孪生先例：vendor `gateway/session_handoff.py:15`（AuthorityRefusal as RuntimeStoreError）、vendor `gateway/run_inbound.py` 同函数（authority_persistence→store.admissions.list）、宿主 `session_kanban.py`（bindings/local_session_id/store_location/store.sessions.get）。
+7. **蓝军 P0-1 闭环**：审查抓出模板 `run_inbound._hm_stop_owner_turn`/`session_kanban.run_task` 保留的 repo 段本身即断链旧生态（`authority.db` AttributeError/`hermes_state_local` ImportError）——部署即崩 /stop、/new 与 kanban 卡片 RPC。修法=整段对齐 vendor 孪生/宿主生产形态（决策 6 的具体落点）；py_compile 与触域 pytest 未能拦住的原因=函数内延迟 import 无测试覆盖，故部署前加「宿主 venv 下对两文件做 import 级冒烟」为流程补强（见验证段）。
+8. **定谳回填**（原留痕在 series 注释，蓝军建议入 spec）：kanban_db.py 宿主 verification 列已被 repo 超集（verification＋required_capabilities＋outcome_id 28 占位）完整包含，零改动；followups.py 宿主 set_meta/list_meta_prefix 路线在 repo SessionDB 包装上 AttributeError，repo state_meta API 为准（仅 4 行裁决注释）；两测试件宿主变体（hermes_state_messages 等不存在模块 import、惰性 body="b"）自身已坏，repo 为准；agent_init pc_cfg=旧方案（repo 新链 auto_start_cache_ttl 超集）；context_compressor 宿主变体为标点旧版。
+9. **action_gate.py 收编**：模块本体原仅宿主存（16 件清单外），随本批入 `runtime/agent/action_gate.py`＋manifest 登记（71→72 条）；model_tools 侧在场探测（缺模块=门禁未部署跳过，在场=fail-closed 与宿主逐字一致）。
+10. **盲区盯防清单**（部署后观察项，非阻塞）：smart_cache 行为零测试；locales cache 三键树内零消费者（消费在宿主 prompt_cache_clock 生态）；multiplex-active-primary 仅 named profile cron 路径；_stored_conversation 双路径；hosted_room_* 宿主模块群对 repo 版 hosted_rooms 的运行时假设。
 
 ## 验证
 
 - **集包含双向断言**（脚本机检）：每移植文件，merged ⊇ repo 现行全部实质行 AND merged ⊇ 宿主全部实质行（弃置行须留痕理由）。
-- `py_compile` 全过＋host venv import 冒烟关键模块。
+- `py_compile` 全过＋**host venv import 级冒烟**（决策 7 流程补强：延迟 import 不进 py_compile/触域 pytest——对 P0 涉及的 run_inbound/session_kanban 在宿主 venv 下做模块装载验证）。
 - **pytest 拼合树全量**（vendor/hermes-agent 基线＋runtime/ 覆盖层，仓配方）＋根 vitest 全量。
 - 补丁 813 clean+inject 重放验证；部署 dry-run 记数：kept/diff 归零（或仅剩已证安全项）。
 - 部署后三板：网关进程链/error.log 时间窗 Traceback=0/gateway.log 业务行；studio 聊天探针再落 `hermes|200`。

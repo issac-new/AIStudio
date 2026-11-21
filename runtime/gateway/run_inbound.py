@@ -712,17 +712,19 @@ class GatewayInboundMixin(
                 authority.fence_route(_quick_key)
             return
         from gateway.session_contract import SessionActor, SessionRef
-        # v0.23.3 state 层重构后 hermes_state_runtime 已拆入 persistence（模板残引修正，
-        # 适配先例=vendor gateway/session_handoff.py:15 AuthorityRefusal as RuntimeStoreError）
-        from persistence.core.errors import AuthorityRefusal as RuntimeStoreError
-        from persistence.sqlite.authority._admission_store import list_session_admissions
+        # 审查 P0-1 修复：模板旧生态（authority.db 属性/_admission_store 直调）在 v0.23.3
+        # 树上不存在——整段对齐 vendor 同函数（gateway/run_inbound.py 孪生）的门面路线。
+        from gateway.session_persistence import authority_persistence
+        from persistence.core.errors import AuthorityRefusal, StoreUnavailable
         ref = SessionRef(authority.profile_id, sid)
         actor = SessionActor('messaging-control', authority.profile_id,
                           frozenset({'session:submit', 'session:control'}), 'busy-command')
-        rows = await asyncio.to_thread(list_session_admissions, authority.db, session_id=sid)
+        if (store := authority_persistence(authority)) is None:
+            raise StoreUnavailable(f"no storage handle for {authority.profile_id}")
+        rows = await asyncio.to_thread(store.admissions.list, session_id=sid)
         # A FIFO paused on a lost (``unknown``) turn is the operator's to resume: its pause notice
         # promised the queued followers stay saved, so a /new from the chat leaves them queued.
-        paused = any(row['status'] == 'unknown' for row in rows)
+        paused = any(row.status == 'unknown' for row in rows)
         if not paused:
             # Input (and a command's turn) that arrived before this and is not committed yet never
             # commits after it; one that committed before the fence is in the second listing and
@@ -732,12 +734,12 @@ class GatewayInboundMixin(
                 # An input that passed the fence before it moved commits before the listing, which cancels it.
                 async with ordered:
                     pass
-            rows = await asyncio.to_thread(list_session_admissions, authority.db, session_id=sid)
+            rows = await asyncio.to_thread(store.admissions.list, session_id=sid)
         for row in [] if paused else rows:
-            if row['status'] == 'queued' and row['principal_id'].startswith('messaging:'):
+            if row.status == 'queued' and row.principal_id.startswith('messaging:'):
                 # Claimed meanwhile (stale_generation): it runs as main's post-claim race does.
                 with suppress(RuntimeStoreError):
-                    await authority.cancel_queued(actor, ref, row['admission_id'])
+                    await authority.cancel_queued(actor, ref, row.admission_id)
         handle = authority._handle(ref)
         if handle.execution_state == 'running':
             # Settled meanwhile (stale_generation): there is no claimed turn left to stop.

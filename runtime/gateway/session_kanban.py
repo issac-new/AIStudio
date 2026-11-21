@@ -76,21 +76,25 @@ async def run_task(connection, params):
     from gateway.run import _load_gateway_config
     from gateway.session_local import create_local_session
     from gateway.session_contract import Submission
-    from gateway.session_local_recovery import local_identity
-    from hermes_state_local import local_receipt
+    # 审查 P0-1 修复：hermes_state_local/authority.db 均为 v0.23.3 前旧生态——
+    # 换宿主生产在跑的门面路线（bindings/persistence_assembly/store_*）。
+    from persistence.authority.bindings import local_session_id
+    from gateway.session_persistence import authority_persistence
     from gateway.session_policy import restore_policy
+    from persistence_assembly import store_location
     authority = connection.authority
+    store = authority_persistence(authority)
     # Resolved off-loop up front: no await separates the saved-claim check from session
     # creation. The Kanban claim check and its marker share one off-loop transaction; a
     # concurrent retry of the same attempt meets that marker (same session) or a stale claim.
-    owner_db = str(await asyncio.to_thread(Path(authority.db.db_path).resolve))
+    owner_db = str(await asyncio.to_thread((store_location(store.scope) or store.scope.profile_dir).resolve))
     # The dispatcher attempt is the durable request identity, including after the
     # task closes. Retry checks the saved claim, never reinterprets updated cards.
     request_id = 'kanban:' + json.dumps([params.get('board'), params.get('task_id'), params.get('run_id')], separators=(',', ':'))
-    sid = local_identity(authority.profile_id, connection.actor.subject, request_id)
-    saved = local_receipt(authority.db, sid) if authority.db.get_session(sid) is not None else None
+    sid = local_session_id(authority.profile_id, connection.actor.subject, request_id)
+    saved = store.bindings.receipt(sid) if store.sessions.get(sid) is not None else None
     if saved:
-        policy = restore_policy(saved['policy'])
+        policy = restore_policy(saved.policy)
         context = json.loads(policy.kanban_json or '{}')
         if (not connection.native_owner or set(params) not in ({'board', 'task_id', 'run_id', 'claim_lock'}, {'board', 'task_id', 'run_id', 'claim_lock', 'db'})
                 or any(params[k] != context.get(k) for k in params)):
@@ -135,17 +139,16 @@ async def run_task(connection, params):
     # card (approvals.single_query_mode applies). Never unattended: that is `-z`'s auto-approval.
     # A retry of an attempt admitted before cards were finite resubmits its committed payload,
     # so the store returns the original receipt instead of admission_conflict.
-    from persistence.sqlite.authority._admission_store import find_session_admission
-    committed = None if not saved else await asyncio.to_thread(find_session_admission, authority.db,
+    committed = None if saved is None else await asyncio.to_thread(store.admissions.find,
         principal_id=connection.actor.subject, session_id=ref.session_id, request_id=request_id)
     payload: dict = {'text': f'work kanban task {params["task_id"]}'}
-    if committed is None or 'finite' in committed['payload']:
+    if committed is None or 'finite' in committed.payload:
         payload['finite'] = True
     # The dispatcher's trusted producer marker (#134889 KB-8): nobody waits on a card attempt, so one
     # lost across an owner restart settles interrupted instead of pausing the card session. An
     # attempt main committed without it resubmits unmarked (same digest, original receipt).
     card = None
-    if committed is None or 'kanban_card_v1' in committed['payload']:
+    if committed is None or 'kanban_card_v1' in committed.payload:
         card = {'board': context.get('board'), 'task_id': params['task_id'], 'run_id': params['run_id']}
     receipt = await authority.submit(connection.actor, Submission(request_id, ref, payload, 'queue'),
                                      _kanban_card=card)
