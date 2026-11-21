@@ -27,7 +27,7 @@
 | `custom/qgate/` | 质量门禁框架（L0-L5 gate packs） |
 | `patches/` | 上游注入补丁（编号 series）；改上游行为必须走这里 |
 | `vendor/` | 上游钉版基线（hermes-studio v0.8.28 / hermes-agent v0.23.3 / zcode 3.18.2 线）；只读，台账见 `vendor/VENDOR.md` |
-| `simharness/` | 全流程推演 harness（mx-* 脚本/场景/守门测试；SIM_ROOT 等运行态在仓外） |
+| `simharness/` | 全流程推演 harness——**本质上是治理程序**（2026-11-21 立法：六闸/审计/判词/证据链/净额度量=对 AI 组织的治理执行形态；mx-* 脚本/场景/守门测试；SIM_ROOT 等运行态在仓外） |
 | `skills/swarm-yuan/` | swarm-yuan 技能本体源码（六段目录；dist 离线包不入库） |
 | `runtime/` | agent 运行时扩展（Python/TS 工具与检查器；部署到 ~/.hermes/hermes-agent） |
 | `scripts/` | 构建/注入/验证入口（根只放被 package.json、CI、qgate、源码或测试调用的脚本与共享库；归位规则见 `scripts/README.md`）；`regression/` 走查探针、`maintenance/` 迁移对账 |

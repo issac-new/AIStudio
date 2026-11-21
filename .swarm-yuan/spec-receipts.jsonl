@@ -468,3 +468,4 @@
 {"at":"2026-11-21T01:16:55Z","spec":"docs/superpowers/specs/2026-11-20-vendor-upgrade-agent-v0233.md","receipt":"e6539f6c3b32a485349871f39a08f7ad22111d73","commit":"589ce63b7"}
 {"at":"2026-11-21T02:33:21Z","spec":"docs/superpowers/specs/2026-11-21-host-hotfix-backfill2.md","receipt":"6c222f937f4139cbea30d806182c867ce2b43f55","commit":"910583286"}
 {"at":"2026-11-21T05:30:31Z","spec":"docs/superpowers/specs/2026-11-21-scaffold-scripts-removal.md","receipt":"226a5cea86fa099b7ba31a44f2712e44f692c287","commit":"5078189cd"}
+{"at":"2026-11-21T06:47:21Z","spec":"docs/superpowers/specs/2026-11-21-simharness-governance-nature.md","receipt":"0993e06680e38e45965ab9758e5a4dfcb4b436dc","commit":"290dd4368"}
