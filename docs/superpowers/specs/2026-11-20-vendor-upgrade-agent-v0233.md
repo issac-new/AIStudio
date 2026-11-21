@@ -51,8 +51,8 @@ DESIGN_SYNC: touched —— `vendor/VENDOR.md`（台账正本：表行 commit/�
 
 | # | 项 | 处置建议 |
 |---|---|---|
-| N-1 | 宿主 `~/.hermes/hermes-agent` 基线仍 v0.23.2 线 | 独立批（带网关重启窗口；v0232 批 N-1 同型，热修甄别后升级部署） |
-| N-2 | SIM profile 基线盖章仍 v0.23.2 面 | 宿主升级（N-1）落地后独立批重盖章 |
+| N-1 | ~~宿主基线仍 v0.23.2 线~~ **已闭环**（2026-11-21 收口轮）：基线经他会话升 v0.23.3（describe 实证）；本轮补齐收口=热修错配修复（watchdog hostile-load／dispatcher _refusal_hint，SMOKE OK）＋两批热修回灌入库承载（0ea16f70e／589ce63b7 前身 4b793d39b，清单 71 件）＋deploy --apply --force complete（相同 194/差异 0）＋网关 kickstart 重启稳定 | 无剩余动作（config.py 热修引用面不入库——不在任何部署面天然幸存，如需补丁承载另立批） |
+| N-2 | ~~SIM profile 基线盖章仍 v0.23.2 面~~ **对象已消失**（2026-11-21 实证：SIM_ROOT 仅剩 logs/，42 profile 与 var/agent-src.stamp 均随 11-18 归档轮拆除）| 下次 run 由 mx-setup 重建即 v0.23.3 全新面（自带 deploy 至 SIM agent 树＋migrate_config 盖章），无需独立批 |
 | N-3 | ~~在途他批新补丁按属主 rebase 重锚~~ **已解**：807 号 capability-pool 定号、cognition 批二让号 809，两批先于本批合入 main；本批 rebase 集成轮实证 806 扩段/807/809 在 v0.23.3 锚零重锚直过（见验证节 rebase 集成轮条） | 无剩余动作 |
 | N-5 | ~~原归因「上游 dispatch 重构漂移」已被推翻~~（2026-11-21 探因：真因=批二 unmarked_decision_tier=T2 立法时 dispatch 族测试未适配，missing_grant 拦派发，与基线无关）。**5 枚已清偿**（spec 2026-11-21-dispatch-tests-tier-adaptation：732/419 测试卡加 tier=T1，13/13 绿，全清单 14→9 净差精确）；余 9 枚（delegate/memory/followup/subagent/dreaming）为跨批存量不属本批范围 | 已闭环（5 枚）＋余量留跨批清偿 |
 | N-6 | runtime/ 下 14 个 `.78619-*.tmp` 编辑器临时文件历史入库（59050a87d 原子写批量收口第八批引入，非本批面；审查 F1） | 独立卫生批清偿＋gitignore 补 `runtime/**/*.tmp`（须配对机制预算条目） |
