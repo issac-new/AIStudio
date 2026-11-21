@@ -90,7 +90,9 @@ export function recordEscalationDecision(input: {
 /** 经验候选审核决定（批四 T3，spec 2026-11-21-ai-native-orgworkbench-batch4.md §三）：
  *  expcandidates curateCandidate 写点在状态真实迁移时调用。回退 candidate（撤回
  *  审核决定）按 deferred 落账，不伪造 approve/reject 二态。decidedBy 缺席=当前
- *  curate API 不携带操作人，落 'exp-curator' 如实标注来源面而非猜人。 */
+ *  curate API 不携带操作人，落 'exp-curator' 如实标注来源面而非猜人。
+ *  批一 b（2026-11-21）：批准的实际落点是 probation（试用期）——仍是批准决定，
+ *  outcome 记 approved；metadata.from/to 保留真实迁移（candidate→probation）。 */
 export function recordLearningDecision(input: {
   candidateId: string; from: string; to: string; decidedBy?: string
 }): void {
@@ -100,7 +102,7 @@ export function recordLearningDecision(input: {
     category: 'learning',
     scenario: `经验候选审核 ${input.candidateId}`.slice(0, 400),
     reasoning: `候选状态 ${input.from} → ${input.to}`,
-    outcome: input.to === 'approved' ? 'approved' : input.to === 'rejected' ? 'rejected' : 'deferred',
+    outcome: input.to === 'approved' || input.to === 'probation' ? 'approved' : input.to === 'rejected' ? 'rejected' : 'deferred',
     confidence: 0.85,
     decisionMaker: input.decidedBy ?? 'exp-curator',
     metadata: { candidateId: input.candidateId, from: input.from, to: input.to, decidedBy: input.decidedBy ?? null },

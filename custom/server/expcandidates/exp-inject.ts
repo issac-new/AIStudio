@@ -42,10 +42,13 @@ export function experienceInScope(candidate: ExpCandidate, filter?: ExperienceSc
   return scopeAllows(candidate.scope, filter)
 }
 
-/** 可注入候选：approved 态；按作用域过滤（无 scope 视为全局）；作用域更具体者优先，封顶 3。 */
+/** 可注入候选（批一 b 变更 3 注入闸）：approved＋probation 可注入（试用期=带观察的
+ *  生产，不注入就没有效果数据，spec 决策 2；probation 行带「（试用期）」标记）；
+ *  retired/candidate/rejected 不注入；存量 approved 兼容仍可注入。按作用域过滤
+ *  （无 scope 视为全局）；作用域更具体者优先，封顶 3。 */
 export function selectableExperiences(candidates: ExpCandidate[], filter?: ExperienceScopeFilter): ExpCandidate[] {
   return [...candidates]
-    .filter((c) => c.status === 'approved')
+    .filter((c) => c.status === 'approved' || c.status === 'probation')
     .filter((c) => experienceInScope(c, filter))
     .sort((a, b) => scopeSpecificity(b.scope) - scopeSpecificity(a.scope)
       || a.updatedAt.localeCompare(b.updatedAt)
@@ -53,9 +56,10 @@ export function selectableExperiences(candidates: ExpCandidate[], filter?: Exper
     .slice(0, MAX_EXP_INJECT)
 }
 
-/** 注入行：凭据形态改写——陈述原样（提取时已不含哈希），出处只以「历史经验」形态。 */
+/** 注入行：凭据形态改写——陈述原样（提取时已不含哈希），出处只以「历史经验」形态；
+ *  试用期候选带「（试用期）」标记（agent 知道该经验未转正）。 */
 export function experienceBriefLine(candidates: ExpCandidate[]): string | null {
-  const items = candidates.map((c, i) => `${i + 1}. [${c.id}] ${c.statement}`)
+  const items = candidates.map((c, i) => `${i + 1}. [${c.id}]${c.status === 'probation' ? '（试用期）' : ''} ${c.statement}`)
   if (!items.length) return null
   return `历史经验（已审核，历史经验出处·非本轮实测凭据）：${items.join('；')}`
 }

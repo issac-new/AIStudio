@@ -1,6 +1,7 @@
 // overlay[expcandidates] 经验候选 store（eval store 同模式）+ 提取执行面。
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { join } from 'path'
+import { PROBATION_MIN_SAMPLES, PROBATION_WINDOW_TASKS } from './exp-types'
 import type { ExpCandidate, ExpInjectionKind, ExpInjectionRecord, ExpStoreShape } from './exp-types'
 import { extractCandidates, toCandidate, type ExtractEventRow, type ExtractOptions } from './extract'
 import { extractQgateRunCandidates, readQgateRunRows, resolveQgateRunsDir } from './qgate-ingest'
@@ -76,7 +77,7 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
   const idx = store.candidates.findIndex((c) => c.id === id)
   if (idx < 0) throw new Error(`候选不存在：${id}`)
   const from = store.candidates[idx].status
-  const next: ExpCandidate = { ...store.candidates[idx], status, updatedAt: new Date().toISOString() }
+  let next: ExpCandidate = { ...store.candidates[idx], status, updatedAt: new Date().toISOString() }
   // 反思守卫（EvoTeam 吸收）：批准是人工决策点，在此时拒收泛泛/过窄/自相矛盾的陈述；
   // 提取期不拦（保留证据），拒绝/回退状态不触发守卫。
   if (status === 'approved') {
@@ -85,12 +86,29 @@ export function curateCandidate(id: string, status: 'approved' | 'rejected' | 'c
       .map((c) => c.statement)
     const guard = validateReflectionStatement(next.statement, existing)
     if (!guard.ok) throw new ReflectionGuardError(guard.reasons)
+    // 试用期生命周期（批一 b 变更 3）：批准不再直进 approved 生效——落 probation
+    // 观察窗（20 任务/最小 5 样本，惰性结算见 probation.ts）。存量 approved 重批保持
+    // approved 不迁移不重开窗口（兼容）；probation 态重批幂等不重置窗口（防人工刷窗）。
+    if (from !== 'approved' && from !== 'probation') {
+      next = {
+        ...next,
+        status: 'probation',
+        probation: {
+          startedAt: next.updatedAt,
+          windowTasks: PROBATION_WINDOW_TASKS,
+          minSamples: PROBATION_MIN_SAMPLES,
+        },
+      }
+    } else {
+      next = { ...next, status: from }
+    }
   }
   store.candidates[idx] = next
   writeExpStore(store)
   // 决策图谱落账在权威域写（store 落盘）成功后：同状态重写不是决定，只记真实迁移
-  if (status !== from) {
-    recordCurationToDecisionGraph(id, from, status)
+  // （批一 b 起「批准」实际落点是 probation——决策记录按真实迁移记，to=probation）。
+  if (next.status !== from) {
+    recordCurationToDecisionGraph(id, from, next.status)
   }
   return store.candidates[idx]
 }

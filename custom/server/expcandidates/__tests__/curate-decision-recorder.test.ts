@@ -41,17 +41,18 @@ function seedCandidate(id: string, status: ExpCandidate['status'] = 'candidate')
 }
 
 describe('curateCandidate → 决策图谱接线（批四 T3）', () => {
-  it('真实状态迁移（candidate→approved / approved→rejected）→ recorder 被调，入参带 from/to', () => {
+  it('真实状态迁移（candidate→probation[批一 b 批准落点] / probation→rejected）→ recorder 被调，入参带 from/to', () => {
     seedCandidate('exp-001')
     const approved = curateCandidate('exp-001', 'approved')
-    expect(approved.status).toBe('approved')
+    // 批一 b 变更 3：批准落 probation（试用期）；决策记录按真实迁移记 to=probation
+    expect(approved.status).toBe('probation')
     expect(recordLearningDecision).toHaveBeenCalledTimes(1)
-    expect(recordLearningDecision).toHaveBeenCalledWith({ candidateId: 'exp-001', from: 'candidate', to: 'approved' })
+    expect(recordLearningDecision).toHaveBeenCalledWith({ candidateId: 'exp-001', from: 'candidate', to: 'probation' })
 
     const rejected = curateCandidate('exp-001', 'rejected')
     expect(rejected.status).toBe('rejected')
     expect(recordLearningDecision).toHaveBeenCalledTimes(2)
-    expect(recordLearningDecision).toHaveBeenLastCalledWith({ candidateId: 'exp-001', from: 'approved', to: 'rejected' })
+    expect(recordLearningDecision).toHaveBeenLastCalledWith({ candidateId: 'exp-001', from: 'probation', to: 'rejected' })
   })
 
   it('同状态重写不是决定（candidate→candidate）→ recorder 不被调', () => {
@@ -65,8 +66,8 @@ describe('curateCandidate → 决策图谱接线（批四 T3）', () => {
     recordLearningDecision.mockImplementation(() => { throw new Error('KG bridge down') })
     seedCandidate('exp-003')
     const r = curateCandidate('exp-003', 'approved')
-    expect(r.status).toBe('approved')
-    expect(readExpStore().candidates.find((c) => c.id === 'exp-003')?.status).toBe('approved')
+    expect(r.status).toBe('probation')
+    expect(readExpStore().candidates.find((c) => c.id === 'exp-003')?.status).toBe('probation')
   })
 
   it('候选不存在 → 原有异常行为不变，recorder 不被调', () => {

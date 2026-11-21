@@ -112,7 +112,7 @@ describe('curateCandidate 批准门', () => {
       ],
       nextSeq: 3,
     })
-    expect(curateCandidate('good', 'approved').status).toBe('approved')
+    expect(curateCandidate('good', 'approved').status).toBe('probation') /* 批一 b：批准落 probation */
     expect(curateCandidate('plain', 'rejected').status).toBe('rejected')
     expect(curateCandidate('plain', 'candidate').status).toBe('candidate')
   })

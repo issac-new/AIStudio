@@ -32,6 +32,7 @@ import { assessDispatchReadiness, enforceOrWarnReadiness, fetchTaskTitleAndBodyB
 import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
 import type { CapabilityReadiness } from '../capabilitypool/types'
 import { resolveDispatchOutcome, type DispatchOutcomeContext } from '../outcome/kanban-resolution'
+import { settleDueProbation } from '../expcandidates/probation'
 
 /** P1（JoyAI 闭环吸收轮）：按 taskId 跨板取任务标题——派发层 fewshot 召回的语境源。
  * 「接指令→先查知识库」的执行层接线：有任务语境才召回历史教训（无语境不造召回）。
@@ -218,6 +219,14 @@ export async function dispatchColumnTransition(
       // ruleEvals 不抛），enforce 对这类规则名存实亡。
       checkDecisionRulesForDispatch({ specialist: step.specialist || undefined, column: trigger.column })
     }
+  }
+  // 试用期惰性结算（批一 b 变更 3）：下一次派单触发到期条目结算（幂等有界，z 检验
+  // 三分支见 probation.ts；spec 决策 1——不新增 watcher）。fail-soft：结算异常只
+  // warn 不阻断派发（试用期是派生观测面，不是派发的前置条件）。
+  try {
+    await settleDueProbation()
+  } catch (e) {
+    console.warn(`[column-dispatch] 试用期惰性结算失败（不阻断派发）：${e instanceof Error ? e.message : String(e)}`)
   }
   const outcomes: MentionOutcome[] = []
   const delegation: DelegationCheck[] = []
