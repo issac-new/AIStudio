@@ -32,7 +32,7 @@
 
 | 批 | 内容 | 代价/风险 | 验收 |
 |---|---|---|---|
-| P1 | 推演驱动 REST 化：产品端点（start/stop/status/list 演推 run）＋驾驶舱推演页签（runId 徽标消费既有 observer/overview 聚合） | 中——mx-relay 驱动协议挪进 controller；SIM 拓扑绑定面用 HERMES_ROOT 参数化解耦 | 端点四绿＋前端走查；SIM 重建后端到端一轮 |
+| P1 | ~~推演驱动 REST 化~~ **开工对账（2026-11-21）：交付物已基本在案**——REST 面=custom/server/simrun（11-02 产品批：supervisor＋status/start/stop 三端点）＋graph-rest run 全套＋run-progress 端点；前端面=/app/sim 六面板（SimCenterView/Director/RunDetail/Evidence）。本批补齐验收欠账：router 契约测试 5/5（端点四绿达成：router 三端点＋run-progress 既有测试） | 已付：对账批（测试＋盘点）；原估「协议挪 controller」不再需要 | 控制面/视图面产品在案＋协议契约已测；**SIM 重建后端到端挂账**（环境缺席） |
 | P2 | 场景库产品化：scenarios/ 迁产品数据面（版本化/校验入 REST） | 低——数据资产迁移＋路径解引 | 场景经 REST 可列表/拉取 |
 | P3 | 采集面产品化：帧拍摄位/证据采集并入产品 eval 域 | 中——capture-plan 注册表与治理判据对齐 | 采集产物直落产品证据库 |
 | P4 | simharness 收敛退役：驱动壳薄化→归档（对齐 SIM 实体已拆态，重建走产品通道） | 高——依赖 P1-P3 全落 | 全量推演能力可在产品面独立运行 |
