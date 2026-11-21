@@ -27,7 +27,10 @@
 2. **custom 新域 `custom/server/modelpool/`**：白名单**单一事实源**（TS 模块 `pool.ts`，非 JSON——白名单变更走代码+测试，版本化可审查）；导出 `unifiedModelPool()`（models＋contextLength＋defaultModel）＋只读 `GET /api/modelpool`（诊断/UI 数据源）。补丁侧经 `../custom/modelpool/...` 相对路径 import（810/811 挂载先例）。白名单口径：**默认模型 `aim`**（占位符对换组/开 LB 免疫，0917 舰队裁决）＋实名备选 `glm-5.3`/`kimi-for-coding`/`glm-5.3-flash`/`claude-opus-5`；辅助任务（compression/review 等）统一默认 `aim`（粘性 provider 原生模型，必可服务——cc-switch 选点模型盲，异源实名在粘错 provider 时 400，team 技能 ccswitch-routing-semantics 规则 3 实录）。
 3. **供应商管理 UI：不动**（裁决③）——上游 account pool 管理能力完整保留，本批零改动。
 
-**批三挂账（本 spec 立账、另批实施）**：cc-switch launchd 保活＋双路判别器探针常驻（统一后 cc-switch 为全流量单点，run27 坏状态 ~3h 周期实录）；宿主 ：8648 走查验证。
+**批三执行记录（2026-11-21 晚，同日销账）**：
+- **②保活**：`~/.cc-switch/keepalive/cc-switch-keepalive.sh`＋LaunchAgent `com.ccswitch.keepalive`（5 分钟探针＝小负载流式判据；连续 2 败 quit+reopen CC Switch，600s 冷却；探针实测过门，失败计数文件在位）。
+- **①走查（真机 ：8648，新 dist 五文件补丁）**：login 200 → `/api/modelpool` 200（unified=true＋白名单 5 项）→ `/api/hermes/available-models` 200（唯一组 cc-switch-route，default_provider=cc-switch-route）→ socket `/chat-run` 真跑一回合 → **`proxy_request_logs` 落 `app_type='hermes'` 记录＝E2E 通道实证**。走查连环修三件：KNOWN_KEYS 告警（fix2）；宿主 runtime 半同步残态致 bridge ImportError（63 个纯新增 runtime 模块补拷，热修 18 件原样保留）；`aim` 在未配 `meta.model_mappings` 的 hermes lane 原样透传→上游 400（fix3：默认模型改实名 `glm-5.3`，aim 降为选项）。
+- **③runtime 收口判向（dossier 待用户裁决）**：保留 15＋差异 14 中 18 件为**双向分歧**（宿主独有热修：hosted_rooms authority 子系统 144 行/approval smart_cache/agent_init prompt_caching/model_tools action-gate 等 vs repo 独有近三日批次：dual_sign/required_capabilities 等）——整灌倒退 repo、覆盖毁热修，须热修作者会话认领移植（建议独立批）；9 件 repo 超集已随 63 模块补拷收敛（`deploy --apply` 级覆盖未执行，.bak 零产生）。
 
 ## 决策记录
 
@@ -36,7 +39,7 @@
 3. **供应商管理 UI 保留**（用户裁决）：CC Switch 与 studio 供应商管理并列为两个管理渠道；本批不改其行为。
 4. **env 默认=cc-switch URL 而非空默认**：本仓即部署正身（补丁编码部署口径是二开常规，先例 801 皮肤色）；`self` 逃生门显式回退，保上游产品态可回归测试。
 5. **裸模型名透传**：模型名归客户端所有（ccswitch-routing-semantics 规则 1），cc-switch 按请求名直路由；namespace 限定是 studio 网关的私有协议，直钉后删。
-6. **默认/辅助模型=aim**：粘性换组免疫（0917 舰队口径，claude 分支 22.6 万次 200 实测）；实名白名单仅作显式选择项。
+6. **默认模型=glm-5.3（fix3 修订；原定 aim）**：走查实证 hermes lane 未配 `meta.model_mappings` 时 `aim` 被原样透传→上游 400（`proxy_request_logs` 20:35:35 实录）——默认必须用粘性 provider 原生名。`aim` 保留为白名单选项，lane 侧配好 model_mappings 后可切回占位符获得换组免疫（0917 舰队口径，claude 分支 22.6 万次 200 实测）。辅助任务同默认实名档。
 7. **白名单放 custom TS 模块而非 JSON/读 cc-switch DB**：单一事实源＋类型化＋守门测试覆盖；读 cc-switch SQLite 引入跨进程双写耦合，不做。将来需要热改时再评估配置文件化。
 8. **补丁号 812**：series 尾 811 核查过，无撞号。
 

@@ -27,10 +27,13 @@ export const DEFAULT_UPSTREAM = 'http://127.0.0.1:15721/hermes/v1'
 export const UNIFIED_POOL: UnifiedModelPool = {
   provider: UNIFIED_PROVIDER,
   apiMode: 'codex_responses',
-  defaultModel: 'aim',
+  defaultModel: 'glm-5.3',
   models: [
-    { model: 'aim', contextLength: 1048576, note: '默认；占位符→粘性 provider 原生模型' },
-    { model: 'glm-5.3', contextLength: 1048576 },
+    // 默认=glm-5.3（hermes lane 现行粘性 provider 原生名；走查实证 aim 在未配
+    // meta.model_mappings 的 lane 会被原样透传→上游 400）。aim 保留为选项：lane 侧
+    // 配好 model_mappings 后可切回占位符获得换组免疫（0917 舰队口径）。
+    { model: 'glm-5.3', contextLength: 1048576, note: '默认；hermes lane 原生名' },
+    { model: 'aim', contextLength: 1048576, note: '占位符选项；需 lane 配 meta.model_mappings' },
     { model: 'kimi-for-coding', contextLength: 1048576 },
     { model: 'glm-5.3-flash', contextLength: 1048576, note: '轻任务/辅助档' },
     { model: 'claude-opus-5', contextLength: 200000, note: '重评审档（可用性随 cc-switch 挂载）' },
