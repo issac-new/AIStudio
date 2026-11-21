@@ -177,6 +177,16 @@ describe('deriveFiveQuestions 团队对账（批四 T4/D：RACI 审批人 ×已�
       expect(c2.reasons).toEqual(['RACI 审批人：mei'])
     }
   })
+
+  // 批四审查 I-1：draft/closed 团队经 API 可落盘（version≥1 但非已确认）——
+  // 黄条不得称「已确认团队」，对账门收紧为 version>0 && status==='active'。
+  it('draft/closed 团队（version≥1 但非 active）：不做团队对账提示（审查 I-1）', () => {
+    for (const st of ['draft', 'closed'] as const) {
+      const cps = checkpointsOf({ ...team, status: st })
+      const c2 = cps.find(cp => cp.taskId === 'c2')!
+      expect(c2.reasons).toEqual(['RACI 审批人：mei'])
+    }
+  })
 })
 
 describe('layoutMissionDag', () => {

@@ -39,6 +39,15 @@
 - F1 组件测试：表单渲染/必填提示/422 problems 显示/幂等键稳定/成功刷新；F3 store 测试：缺列夹具（手建无 outcome_id 列库）→schema_missing、正常库不受影响；D recorder 测试：两函数落账形状＋原域写失败不阻断（fire-and-forget）；RACI 对账测试：approver 在/不在团队两态＋空 approver 不提示。
 - 全量 `npm test`＋`node scripts/merge-invariants.mjs --check`＋`node scripts/governance-lint.mjs --budget`（机制预算：本批零新增门/脚本/账本，不登记 delta；若 reviewer 有异见按其裁决补记）。
 
+## 收口回填（2026-11-21 实测）
+
+- T2 `875aff2`（主会话）：bind 面缺列→schema_missing（红测先行：无列夹具实证误报→专用码）；三处读投影 catch 加 [schema_missing] 日志定向标记（返回契约零破坏）；ActivationBindCode 扩列。27/27 绿。
+- T1 `2697204fa`：建模表单（必填非空级提示＋rootTaskId 自动携带＋clientRequestId 会话内稳定＋422 逐条回显＋成功刷新）；measures.sourceRef 按服务端正身收入行字段（实现者核实 validate.ts:84 逐行必填，spec 字面未列——实现取服务端）；激活 schema_missing 定向文案（按 body.code）。kanban 92 绿（+8）。
+- T3 `c9b571b2f`：recordLearning/recordTeamDecision 照既有形态；引入方式取静态 import（偏离锚点的 lazy require——自证在案：approval-log.ts:29-31 注明 lazy require 在 vitest ESM 静默失败，escalation-controller 等三处静态先例）；落账点=事件＋team.json 双成功后（优于 spec 字面）；curate 同状态重写不记；4 既有测试文件加 HERMES_DECISION_GRAPH=0 关闸（afterAll 恢复）。五目录 343 绿。
+- T4 `438165f9f`＋审查 I-1 修复：对账门=version>0 && status==='active'（draft/closed 团队经 API 可落盘 version≥1，draft 非已确认——黄条不得称「已确认团队」；draft/closed 态测试锚补）；ia2 989 绿（+5）。
+- 整批审查：可合并 0C/1I/2M/6N——I-1 已当场修（上条）；M 级均文档面（留档 batch-review.md）不阻断。
+- 全量 `npm test` 结果见合并前验证（本节不预写）。
+
 ## 设计文档影响
 
 DESIGN_SYNC: touched

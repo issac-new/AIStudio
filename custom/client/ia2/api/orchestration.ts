@@ -228,7 +228,8 @@ export interface FiveQuestions {
 }
 
 /** 麦肯锡五问面板推导（纯函数）：结果责任/人机分工/确认点/异常升级/可复用资产。
- *  team（可选，批四 T4/D）：有已确认团队（version>0）时对第三问做 RACI 对账——
+ *  team（可选，批四 T4/D）：有已确认团队（version>0 且 status=active——批四审查 I-1：
+ *  draft/closed 经 API 可落盘，draft 非已确认，黄条不得称「已确认团队」）时对第三问做
  *  审批人不在团队成员 subjectId 集的控制点追加只读提示；不传/无团队不提示。 */
 export function deriveFiveQuestions(
   tree: { nodes: MissionNode[]; edges: MissionEdge[] },
@@ -243,7 +244,8 @@ export function deriveFiveQuestions(
   const missionIds = new Set(nodes.map(n => n.taskId))
   // 对账前提=已确认团队（version>0）；读不到/未确认（none/error/version=0）时
   // 成员集为空集且不入对账分支——不基于缺失数据做「不在团队」断言。
-  const teamMemberIds = new Set((team && team.version > 0 ? team.members : []).map(m => m.subjectId))
+  const teamConfirmed = !!team && team.version > 0 && team.status === 'active'
+  const teamMemberIds = new Set((teamConfirmed ? team.members : []).map(m => m.subjectId))
   const pending = escalations.filter(e => e.state === 'pending')
   const linked = pending.filter(e => e.taskId && missionIds.has(e.taskId))
   return {
@@ -270,7 +272,7 @@ export function deriveFiveQuestions(
         // 不伪造控制点——approver 非空本就构成控制点，这里只在对账不齐时附一条
         // 供人裁决；approver 为空/无已确认团队（version=0 未确认）一律不提示。
         const reasons = [...n.controlReasons]
-        if (team && team.version > 0 && n.raciApprover && !teamMemberIds.has(n.raciApprover)) {
+        if (teamConfirmed && n.raciApprover && !teamMemberIds.has(n.raciApprover)) {
           reasons.push(`RACI 审批人 ${n.raciApprover} 不在已确认团队 v${team.version} 中`)
         }
         return { taskId: n.taskId, title: n.title, assignee: n.assignee, reasons }
