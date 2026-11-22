@@ -30,12 +30,16 @@ describe('zcode-patches 受管机制（R2 守门）', () => {
   })
 
   it('patch 目标全部落在 zcode 仓内（packages/ 或 apps/ 首段）', () => {
+    // 002（2026-11-22 回归批）：测试注册清单 scripts/engineering-test-files.json 是
+    // zcode 工程套件唯一 include 事实源——新测试入套件必经此文件；精确放行该单文件，
+    // 其余 scripts/ 目标仍全拦（R2 边界不放松到目录级）。
+    const TARGET_ALLOWLIST = new Set(['scripts/engineering-test-files.json'])
     for (const p of series) {
       const text = readOverlay(`zcode-patches/${p}`)
       const targets = [...text.matchAll(/^diff --git a\/(.+?) b\//gm)].map((m) => m[1])
       expect(targets.length, `${p} 无 diff 目标`).toBeGreaterThan(0)
       for (const t of targets) {
-        expect(/^(packages|apps)\//.test(t), `${p} 目标越界: ${t}`).toBe(true)
+        expect(/^(packages|apps)\//.test(t) || TARGET_ALLOWLIST.has(t), `${p} 目标越界: ${t}`).toBe(true)
       }
     }
   })

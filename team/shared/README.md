@@ -39,6 +39,12 @@ bash ~/.hermes/patches/apply-acp-client-codex-fix.sh     # 重铺 acp-client 补
 5. 重启对应 Gateway → `hermes -p <profile> gateway run --replace`
 6. 改角色行为 → 对应 `profiles/<name>/SOUL.md`（身份文件，运行时自动注入；改动下一次会话生效，无需重启）
 
+### 密钥变量（无值示例）
+
+`team/shared/.env.common.example` 只列变量名，不含任何真实值。复制为 `~/.hermes/shared/.env.common` 后由账户所有者填值：`MATRIX_PASSWORD`、两个微信账号各自的 `K12EDU_WEIXIN_TOKEN` / `ORCHESTRATOR_WEIXIN_TOKEN`，以及 8 个 `*_API_KEY` 模型供应商变量。`profiles.yaml` 只保留 `${VAR}` 引用，不再保存可直接使用的密钥。
+
+如果旧版 `profiles.yaml` 曾包含明文，当前脱敏不能替代轮换：必须由各账号所有者吊销并重新生成那些历史值，再填入本机 `.env.common`。不要把旧值复制到 Git、issue、聊天或测试输出中。
+
 ## 设计原理（要点）
 
 - config.yaml 中 `${VAR}` 由 `_expand_env_vars()`（`hermes_cli/config.py:6378`）展开；密钥只在 .env，config 可入库。

@@ -50,7 +50,7 @@ class TestAnchor:
         assert _capacity_retry_anchor(a) != _capacity_retry_anchor(c)
         assert _capacity_retry_anchor(_FakeEvent()) is not None  # 兜底 id()
 
-    def test_reentry_inherits_first_seen_and_backs_off(self, monkeypatch):
+    def test_reentry_inherits_first_seen_and_backs_off(self, monkeypatch, recwarn):
         class _DeadPump:  # 入队会想拉泵任务——测试无事件循环，stub 成"已完成"
             def done(self):
                 return True
@@ -61,7 +61,11 @@ class TestAnchor:
             def exception(self):
                 return None
 
-        monkeypatch.setattr("gateway.run_busy.asyncio.create_task", lambda coro: _DeadPump())
+        def _completed_task(coro):
+            coro.close()  # 无事件循环夹具也必须回收协程，避免测试退出时未等待警告
+            return _DeadPump()
+
+        monkeypatch.setattr("gateway.run_busy.asyncio.create_task", _completed_task)
         r = _FakeRunner()
         e1 = _FakeEvent(event_id="$re")
         assert r._queue_capacity_retry(e1, None, "agent:x") is True
@@ -73,6 +77,8 @@ class TestAnchor:
         assert len(r._capacity_retry_queue) == 2
         assert r._capacity_retry_queue[1][0] == t1              # 继承首见时间
         assert r._capacity_retry_queue[1][4] > r._capacity_retry_queue[0][4]  # 退避生效
+        # Regression: ISSUE-006 — create_task 桩不得遗留未等待协程
+        assert not [w for w in recwarn.list if issubclass(w.category, RuntimeWarning)]
 
     def test_pump_expiry_uses_same_anchor(self):
         # 泵过期路径按同键清锚（_capacity_retry_pump 的 pop 调用与入队同键）：
@@ -88,13 +94,17 @@ class TestAnchor:
 
 
 class TestCapacitySidecar:
-    def test_enqueue_writes_depth_sidecar_throttled(self, tmp_path, monkeypatch):
+    def test_enqueue_writes_depth_sidecar_throttled(self, tmp_path, monkeypatch, recwarn):
         monkeypatch.setenv("HERMES_HOME", str(tmp_path))
         class _DP:
             def done(self): return True
             def cancelled(self): return False
             def exception(self): return None
-        monkeypatch.setattr("gateway.run_busy.asyncio.create_task", lambda coro: _DP())
+        def _completed_task(coro):
+            coro.close()
+            return _DP()
+
+        monkeypatch.setattr("gateway.run_busy.asyncio.create_task", _completed_task)
         r = _FakeRunner()
         r._queue_capacity_retry(_FakeEvent(event_id="$a"), None, "agent:x")
         r._queue_capacity_retry(_FakeEvent(event_id="$b"), None, "agent:y")
@@ -103,3 +113,4 @@ class TestCapacitySidecar:
         assert f.exists()
         d = _j.loads(f.read_text())
         assert d["cap"] == 64 and d["anchors"] >= 1
+        assert not [w for w in recwarn.list if issubclass(w.category, RuntimeWarning)]

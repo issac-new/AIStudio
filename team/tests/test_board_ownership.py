@@ -23,10 +23,10 @@ def _blocks(text: str) -> list[str]:
 
 def test_every_board_has_team_and_human_owner() -> None:
     blocks = _blocks(REGISTRY.read_text(encoding="utf-8"))
-    # 2026-10-28：eda 域标 retired（用户裁决），活跃板 9 → 8；退役块仍校验结构完整性
+    # 当前正本为 10 个活跃域；owner 字段覆盖合并后的归属，不虚构幽灵 orchestrator。
     active = [b for b in blocks if "status: retired" not in b]
-    assert len(active) == 8, f"活跃领域/板数量异常：{len(active)}"
-    assert len(blocks) == 9, f"领域条目总数异常（含退役）：{len(blocks)}"
+    assert len(active) == 10, f"活跃领域/板数量异常：{len(active)}"
+    assert len(blocks) == 10, f"领域条目总数异常：{len(blocks)}"
     boards = []
     for block in active:
         board = re.search(r"(?m)^  board:\s*(\S+)", block)
@@ -40,6 +40,7 @@ def test_every_board_has_team_and_human_owner() -> None:
         boards.append(board.group(1))
         assert owner_env.group(1).startswith("BOARD_OWNER_"), owner_env.group(1)
     assert len(set(boards)) == len(boards), f"board slug 重复：{boards}"
+    assert set(boards) == {"swarm", "ops", "pay", "data", "hack", "product", "platform", "aiteam", "eda", "k12edu"}
 
 
 def test_orchestrator_exposes_a2a_without_embedded_tokens() -> None:

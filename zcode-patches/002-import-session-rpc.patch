@@ -1,5 +1,27 @@
+diff --git a/packages/services/src/zcode-agent/zcodeAgent.ts b/packages/services/src/zcode-agent/zcodeAgent.ts
+index bea11b0c3..70c0bad1f 100644
+--- a/packages/services/src/zcode-agent/zcodeAgent.ts
++++ b/packages/services/src/zcode-agent/zcodeAgent.ts
+@@ -129,6 +129,8 @@ import type {
+   V4ConversationFileChangesResult,
+   V4ConversationFileRewindPreviewResult,
+   V4ConversationInputPredictionResult,
++  V4ImportSessionParams,
++  V4ImportSessionResult,
+   V4ConversationPlansResult,
+   V4ConversationWorkflowRunEventsResult,
+   V4ConversationWorkflowRunArtifactDataResult,
+@@ -1024,6 +1026,8 @@ export interface IZCodeAgentService {
+   conversationInputPredictionV4(
+     params: ZCodeAgentConversationInputPredictionParams,
+   ): Promise<V4ConversationInputPredictionResult>;
++  /** 外部历史会话导入：写入 task index 事实与 legacy 迁移备份。 */
++  importSessionV4(params: V4ImportSessionParams): Promise<V4ImportSessionResult>;
+   /** workflow run 事件日志分页；与 plans 同族（只读、无状态、超时重发安全）。 */
+   conversationWorkflowRunEventsV4(
+     params: ZCodeAgentConversationWorkflowRunEventsParams,
 diff --git a/packages/services/src/zcode-agent/zcodeAgentService.ts b/packages/services/src/zcode-agent/zcodeAgentService.ts
-index 13080e9b..a065ed33 100644
+index 13080e9b5..169b5689e 100644
 --- a/packages/services/src/zcode-agent/zcodeAgentService.ts
 +++ b/packages/services/src/zcode-agent/zcodeAgentService.ts
 @@ -220,6 +220,7 @@ import {
@@ -10,19 +32,30 @@ index 13080e9b..a065ed33 100644
  import { ZCODE_AGENT_RUNTIME_UNAVAILABLE_CODE } from "./zcodeAgent.js";
  import { createContextCompositionClient } from "#src/zcode-agent/contextCompositionClient.js";
  import {
-@@ -7354,6 +7355,54 @@ export function createZCodeAgentService(
+@@ -4679,7 +4680,11 @@ export function createZCodeAgentService(
+         throw new Error("project.creation-unavailable");
+       }
+       const startedAt = Date.now();
+-      const client = await getClient(params);
++      // 历史导入只写会话，不执行模型；不得要求调用方先配置 provider/API Key。
++      // 普通新会话仍走模型执行门禁，避免把无配置导入的放行扩散到真实模型调用。
++      const client = params.importedHistory
++        ? await getReadOnlyClient(params)
++        : await getClient(params);
+       await ensureAccountProviderConfigSynced({
+         client,
+         reason: "session_create",
+@@ -7354,6 +7359,88 @@ export function createZCodeAgentService(
        }
      },
  
-+    // overlay 002-import-session-rpc（#22 多源导入写入面）：归一化行 → imported
-+    // snapshot（claude-native persist 泛化；migrationSource 扩 codex/kimi）。
-+    // tool 行并入 assistant（persisted 消息 role 仅 user/assistant，"[tool]" 前缀保留来源语义）。
++    // overlay 002-import-session-rpc（#22 多源导入写入面）：外部历史事实写入 task index，
++    // legacy snapshot 只作迁移备份。tool 行并入 assistant，"[tool]" 前缀保留来源语义。
 +    async importSessionV4(params: V4ImportSessionParams) {
 +      const { randomUUID } = await import("node:crypto");
 +      const { TaskIndexRepo } = await import("../session/taskIndexRepo.js");
-+      const { persistImportedClaudeTask } = await import(
-+        "../session/claude-native/persistImportedClaudeTask.js"
-+      );
++      const { buildSearchableTextFromMessages, writeImportedClaudeTaskSnapshot } =
++        await import("../session/claude-native/persistImportedClaudeTask.js");
 +      if (params.rows.length === 0) {
 +        throw new Error("fault.importSession.noRows");
 +      }
@@ -40,46 +73,122 @@ index 13080e9b..a065ed33 100644
 +        migrationSource: params.source,
 +        status: "completed" as const,
 +      };
-+      const messages = params.rows.map((r, i) => ({
-+        id: `${sessionId}-${i}`,
++      const messages = params.rows.map((r) => ({
 +        role: r.role === "user" ? ("user" as const) : ("assistant" as const),
 +        content: r.role === "tool" ? `[tool] ${r.text}` : r.text,
 +        timestamp: Math.floor(r.at),
 +      }));
++      const snapshot = await service.createSession({
++        workspacePath: params.workspacePath,
++        ...(params.projectId ? { projectId: params.projectId } : {}),
++        sessionId,
++        sessionTraceId: meta.traceId,
++        persistence: "immediate",
++        importedHistory: {
++          source: params.source,
++          title: meta.title,
++          createdAt: meta.createdAt,
++          updatedAt: meta.updatedAt,
++          messages,
++        },
++      });
++      const sessionFileMeta = {
++        ...meta,
++        taskId: snapshot.session.sessionId,
++        traceId: snapshot.session.traceId ?? meta.traceId,
++      };
++      const sessionMessages = messages.map((message, i) => ({
++        ...message,
++        id: `${snapshot.session.sessionId}-${i}`,
++      }));
 +      const repo = new TaskIndexRepo();
 +      try {
-+        const taskMeta = await persistImportedClaudeTask({
-+          taskIndexRepo: repo,
-+          sessionFile: { meta, messages },
-+          workspaceIdentity: params.workspacePath,
++        const created = await repo.applyCliFacts({
++          meta: sessionFileMeta,
++          lastOutcome: "completed",
 +        });
++        await writeImportedClaudeTaskSnapshot({
++          sessionFile: { meta: sessionFileMeta, messages: sessionMessages },
++        });
++        const taskMeta = await repo.updateTaskPresentation({
++          workspacePath: created.workspacePath,
++          ...(created.workspaceIdentity ? { workspaceIdentity: created.workspaceIdentity } : {}),
++          taskId: created.taskId,
++          presentation: { migrationSource: params.source },
++          searchableText: buildSearchableTextFromMessages(sessionMessages),
++        });
++        if (!taskMeta) throw new Error("importSession task index did not persist session facts");
 +        return {
 +          sessionId: taskMeta.taskId,
-+          rowsWritten: messages.length,
++          rowsWritten: sessionMessages.length,
 +        } satisfies V4ImportSessionResult;
 +      } finally {
-+        try { (repo as unknown as { close?: () => void }).close?.() } catch { /* best-effort */ }
++        try {
++          repo.close();
++        } catch {
++          /* best-effort */
++        }
 +      }
 +    },
 +
      // workflow run 事件日志：同样是只读 query，沿现有 workspace attachment 透传。
      // 分页发生在存储层（JournalStorePort.listEvents 带 afterSequence/limit），这里不切片；
      // 在 RPC 层切等于每翻一页把整条 journal 读进内存。
+diff --git a/packages/shared/src/task-realtime-core.ts b/packages/shared/src/task-realtime-core.ts
+index e697048f0..c4d5813f4 100644
+--- a/packages/shared/src/task-realtime-core.ts
++++ b/packages/shared/src/task-realtime-core.ts
+@@ -5,7 +5,7 @@
+ // task-realtime.ts 保留旧协议兼容接口；本文件集中定义对应的运行时 schema。
+ 
+ import { z } from "zod";
+-import type { ZCodeTaskMigrationSource, ZCodeTaskMode } from "./zcode-task-types-core.js";
++import { zcodeTaskMigrationSourceValues, type ZCodeTaskMode } from "./zcode-task-types-core.js";
+ import { legacyZCodeProviderSchema } from "./zcode-agent-policy.js";
+ import { zcodePermissionResponseSchema } from "./zcode-protocol-legacy-types.js";
+ // merge 冲突解决：两侧分别在相邻行新增独立 import（本分支 hook trust review
+@@ -27,9 +27,6 @@ const zcodeTaskModeRealtimeValues = [
+   "autoEdit",
+   "build",
+ ] as const satisfies readonly ZCodeTaskMode[];
+-const zcodeTaskMigrationSourceRealtimeValues = [
+-  "claudeCode",
+-] as const satisfies readonly ZCodeTaskMigrationSource[];
+ const zcodeTaskChangeSummaryRealtimeSchema = z
+   .object({
+     fileCount: z.number().int().nonnegative(),
+@@ -64,7 +61,7 @@ const taskMetaRealtimeSchema = z.object({
+   runtimeEpoch: z.number().int().nonnegative().optional(),
+   // relay payload 可能由旧版本桌面投影；历史 provider 值在此归一为 glm。
+   provider: legacyZCodeProviderSchema.optional(),
+-  migrationSource: z.enum(zcodeTaskMigrationSourceRealtimeValues).optional(),
++  migrationSource: z.enum(zcodeTaskMigrationSourceValues).optional(),
+   forkedFromTaskId: nonEmptyString.optional(),
+   unreadAt: z.number().int().nonnegative().optional(),
+   status: z.enum(["running", "completed", "error"]).optional(),
 diff --git a/packages/shared/src/validation.ts b/packages/shared/src/validation.ts
-index 2451f742..10c641fc 100644
+index 7fe419c14..8c2c2e97a 100644
 --- a/packages/shared/src/validation.ts
 +++ b/packages/shared/src/validation.ts
-@@ -1277,7 +1277,7 @@ export const hostLogResponseSchema = z.object({
+@@ -8,6 +8,7 @@ import {
+ } from "./sessionCreateTelemetry.js";
+ /* eslint-disable max-lines -- 运行时 schema 当前集中在共享包入口，外部 relay payload 校验加入后先保持单一导出面。 */
+ import { z } from "zod";
++import { zcodeTaskMigrationSourceValues } from "./zcode-task-types-core.js";
+ 
+ export const CREDENTIAL_PLAINTEXT_MAX_BYTES = 1_048_576;
+ // UTF-8 明文经过 Base64 后会膨胀；保留 IV、tag、版本和指纹的固定开销。
+@@ -1301,7 +1302,7 @@ export const hostLogResponseSchema = z.object({
  
  export { zcodeProviderSchema };
  
 -export const zcodeTaskMigrationSourceSchema = z.enum(["claudeCode"]);
-+export const zcodeTaskMigrationSourceSchema = z.enum(["claudeCode", "codex", "kimi"]);
++export const zcodeTaskMigrationSourceSchema = z.enum(zcodeTaskMigrationSourceValues);
  
  export const hostAgentProcessSpawnedResponseSchema = z.object({
    type: z.literal("agent-process-spawned"),
 diff --git a/packages/shared/src/zcode-protocol-v4/transport.ts b/packages/shared/src/zcode-protocol-v4/transport.ts
-index f434693a..dc3d9ffe 100644
+index f434693a5..1b8ecb615 100644
 --- a/packages/shared/src/zcode-protocol-v4/transport.ts
 +++ b/packages/shared/src/zcode-protocol-v4/transport.ts
 @@ -366,6 +366,9 @@ export const V4_METHODS = {
@@ -92,7 +201,7 @@ index f434693a..dc3d9ffe 100644
    conversationWorkflowRunEvents: "v4/conversation/workflowRunEvents",
    conversationWorkflowRuns: "v4/conversation/workflowRuns",
    // workflow run 的用户面产物。三条同族：
-@@ -773,6 +776,33 @@ export type V4ConversationWorkflowRunsResult = z.infer<
+@@ -773,6 +776,35 @@ export type V4ConversationWorkflowRunsResult = z.infer<
    typeof v4ConversationWorkflowRunsResultSchema
  >;
  
@@ -100,6 +209,8 @@ index f434693a..dc3d9ffe 100644
 +export const v4ImportSessionParamsSchema = z
 +  .object({
 +    workspacePath: z.string().min(1),
++    // standalone-server 的 createSession 必须挂到已注册项目；desktop-local 可继续缺省。
++    projectId: z.string().min(1).optional(),
 +    source: z.enum(["codex", "kimi", "claudeCode"]),
 +    sourceId: z.string().min(1),
 +    rows: z
@@ -126,3 +237,114 @@ index f434693a..dc3d9ffe 100644
  export const v4ConversationFileRewindPreviewParamsSchema = z
    .object({
      workspace: v4ColdResumeWorkspaceSchema,
+diff --git a/packages/shared/src/zcode-protocol/index.ts b/packages/shared/src/zcode-protocol/index.ts
+index e85f16a60..00fa0afcc 100644
+--- a/packages/shared/src/zcode-protocol/index.ts
++++ b/packages/shared/src/zcode-protocol/index.ts
+@@ -1,3 +1,4 @@
++import { zcodeTaskMigrationSourceValues } from "../zcode-task-types-core.js";
+ import { requestVerificationReasons } from "../request-security-edition/verification-policy.js";
+ import { zcodeProtocolTraceSchema } from "./trace.js";
+ export * from "../app-control/contract.js";
+@@ -1170,7 +1171,7 @@ export type ZCodeSessionImportMessage = z.infer<typeof zcodeSessionImportMessage
+ export const zcodeSessionImportHistorySchema = z.discriminatedUnion("source", [
+   z
+     .object({
+-      source: z.literal("claudeCode"),
++      source: z.enum(zcodeTaskMigrationSourceValues),
+       title: z.string().optional(),
+       createdAt: timestampMsSchema.optional(),
+       updatedAt: timestampMsSchema.optional(),
+diff --git a/packages/shared/src/zcode-task-types-core.ts b/packages/shared/src/zcode-task-types-core.ts
+index 4960dd31b..b35d5f184 100644
+--- a/packages/shared/src/zcode-task-types-core.ts
++++ b/packages/shared/src/zcode-task-types-core.ts
+@@ -57,8 +57,9 @@ export interface ZCodeGlmAgentModelStateUpdatePayload {
+     tokens: number;
+   };
+ }
+-/** 外部历史迁移来源。当前只落 Claude Code，后续其它来源继续在这里扩展。 */
+-export type ZCodeTaskMigrationSource = "claudeCode";
++/** 外部历史迁移来源。运行时 schema 与 realtime 投影共用此词表，禁止另写 Literal 副本。 */
++export const zcodeTaskMigrationSourceValues = ["claudeCode", "codex", "kimi"] as const;
++export type ZCodeTaskMigrationSource = (typeof zcodeTaskMigrationSourceValues)[number];
+ export type ZCodeTaskGoalStatus = "active" | "paused" | "budget_limited" | "complete";
+ export type ZCodeTaskTargetChangedAction =
+   | "set"
+diff --git a/scripts/engineering-test-files.json b/scripts/engineering-test-files.json
+index f468610ad..82554b378 100644
+--- a/scripts/engineering-test-files.json
++++ b/scripts/engineering-test-files.json
+@@ -161,6 +161,7 @@
+   "packages/plugin-api/test/version.test.ts",
+   "packages/server/test/remoteOfficialPluginAssets.test.ts",
+   "packages/server/test/tsupConfig.test.ts",
++  "packages/shared/test/taskMigrationSource.regression-1.test.ts",
+   "packages/web/test/viteConfigLoad.test.ts",
+   "packages/zcode-server-cli/test/packaging.test.ts",
+   "packages/zcode-server-cli/test/stageRemoteAssetsCli.test.ts",
+diff --git a/packages/shared/test/taskMigrationSource.regression-1.test.ts b/packages/shared/test/taskMigrationSource.regression-1.test.ts
+new file mode 100644
+index 000000000..857bcf736
+--- /dev/null
++++ b/packages/shared/test/taskMigrationSource.regression-1.test.ts
+@@ -0,0 +1,59 @@
++import { describe, expect, it } from "vitest";
++import { workspaceTaskListInvalidatedEventSchema } from "../src/task-realtime-core.js";
++import { zcodeSessionImportHistorySchema } from "../src/zcode-protocol/index.js";
++import { zcodeTaskMetaSchema } from "../src/validation.js";
++
++// Regression: ISSUE-001 — 多源导入在持久化 schema 通过后被 realtime schema 拒绝
++// Found by /qa on 2026-11-22
++// Report: .gstack/qa-reports/run-20261122T133641Z/qa-report-aistudio-2026-11-22.md
++function taskMeta(migrationSource: "claudeCode" | "codex" | "kimi") {
++  return {
++    taskId: `import-${migrationSource}-1`,
++    traceId: `trace-import-${migrationSource}-1`,
++    title: `[imported:${migrationSource}] fixture`,
++    workspacePath: "/tmp/ycode-import-fixture",
++    createdAt: 100,
++    updatedAt: 200,
++    mode: "build" as const,
++    migrationSource,
++  };
++}
++
++describe("多源导入的 task realtime 投影", () => {
++  it.each(["claudeCode", "codex", "kimi"] as const)(
++    "持久化与 realtime schema 均接受 %s",
++    (migrationSource) => {
++      const meta = taskMeta(migrationSource);
++      expect(zcodeTaskMetaSchema.parse(meta).migrationSource).toBe(migrationSource);
++      const event = workspaceTaskListInvalidatedEventSchema.parse({
++        eventId: `event-${migrationSource}`,
++        workspacePath: meta.workspacePath,
++        workspaceKey: meta.workspacePath,
++        traceId: meta.traceId,
++        createdAt: 201,
++        reason: "task_created",
++        type: "workspace_task_list_invalidated",
++        taskId: meta.taskId,
++        taskMeta: meta,
++      });
++      expect(event.taskMeta?.migrationSource).toBe(migrationSource);
++    },
++  );
++
++  it("仍拒绝词表外的迁移来源", () => {
++    const meta = { ...taskMeta("codex"), migrationSource: "unknown-source" };
++    expect(zcodeTaskMetaSchema.safeParse(meta).success).toBe(false);
++  });
++
++  it.each(["claudeCode", "codex", "kimi"] as const)(
++    "createSession importedHistory 接受 %s",
++    (source) => {
++      const history = zcodeSessionImportHistorySchema.parse({
++        source,
++        title: `[imported:${source}] fixture`,
++        messages: [{ role: "user", content: "fixture", timestamp: 100 }],
++      });
++      expect(history.source).toBe(source);
++    },
++  );
++});

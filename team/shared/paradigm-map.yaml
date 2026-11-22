@@ -9,11 +9,8 @@
 version: 1
 updated: '2026-10-28'
 mapping:
-  # ── 治理（8）──
+  # ── 治理（5）──
   orchestrator: governance            # 顶层调度，只路由不执行
-  aiteam-orchestrator: governance     # 领域网关，只路由
-  data-orchestrator: governance       # 领域调度路由器
-  pay-orchestrator: governance        # 领域调度路由器
   ops-eval: governance                # 工作流度量与六维评估＝判据面（2026-10-28 定为治理）
   platform-ontology-curator: governance  # 本体与语义层守门
   platform-skill-miner: governance    # 技能供给治理（扫描/提炼/准入）

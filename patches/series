@@ -1389,3 +1389,9 @@
 # 回归根治批 F6：hermes_cli runtime 领先面回灌（11-19 交付域批只落 runtime 未回移 vendor，
 # 拼合树 pytest 配方对 runtime 独有模块失明——15 例结构性红；741 dispatch 回灌同款）。
 814-agent-hermes-cli-runtime-backport.patch
+# 全量回归 Python 3.14 兼容：re.split 的 maxsplit 改关键字参数，消除插件版本解析弃用警告；
+# 同补丁携带版本门回归（post 后缀行为不变＋零 DeprecationWarning）。
+815-agent-python314-re-split-keyword.patch
+# 全量回归业务写面：patchTask 的 title/body 走既有 `kanban edit`，消除 200+旧任务假成功；
+# 真实 CLI 集成回归同时校验返回值与二次读取。
+816-studio-kanban-title-body-edit.patch

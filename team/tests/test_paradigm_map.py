@@ -2,7 +2,7 @@
 
 口径：整合正本 §4.3 的三范式（基座/领域/治理），映射表在 team/shared/paradigm-map.yaml。
 本测锁三件事：① 取值合法；② 与 team/profiles 目录一一对应（无遗漏、无幽灵、无重复）；
-③ 分档计数与报告 §八 一致（治理 8 / 基座 5 / 领域 17）——改判须同时改映射表与本处计数。
+③ 分档计数与报告 §八 一致（治理 5 / 基座 5 / 领域 17）——改判须同时改映射表与本处计数。
 """
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ def test_covers_every_profile_exactly_once() -> None:
 
 def test_paradigm_counts_match_report() -> None:
     counts = Counter(_mapping().values())
-    assert counts == Counter({"domain": 17, "governance": 8, "base": 5}), (
+    assert counts == Counter({"domain": 17, "governance": 5, "base": 5}), (
         f"范式计数与报告 §八 不一致：{dict(counts)}；改判请同批更新映射表与本断言"
     )
 
@@ -59,12 +59,9 @@ def test_governance_set_is_explicit() -> None:
     """治理面必须是显式名单，新增治理岗要在这里可见（防悄悄升格）。"""
     gov = sorted(name for name, p in _mapping().items() if p == "governance")
     assert gov == [
-        "aiteam-orchestrator",
-        "data-orchestrator",
         "hack-auditor",
         "ops-eval",
         "orchestrator",
-        "pay-orchestrator",
         "platform-ontology-curator",
         "platform-skill-miner",
     ], f"治理面发生变化：{gov}"

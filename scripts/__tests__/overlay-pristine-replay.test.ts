@@ -62,7 +62,10 @@ describe('overlay 补丁系列 pristine 全量重放（三 lane 真管线）', (
       expect(applied).toContain(p)
     }
     const validation = readFileSync(join(TMP_WT, 'vendor/zcode/packages/shared/src/validation.ts'), 'utf8')
-    expect(validation).toContain('"claudeCode", "codex", "kimi"')
+    // 2026-11-22 回归批：002 改用共享枚举单一事实源（zcodeTaskMigrationSourceValues），
+    // 行为不变（三来源接受/词表外拒绝）由 packages/shared/test/taskMigrationSource.regression-1
+    // 运行时断言；此处锚定新注入标记。
+    expect(validation).toContain('zcodeTaskMigrationSourceValues')
   }, 300_000)
 
   // N-4 根治回归门（2026-11-12 清债批）：ensure-injected 路径（pretest 同款）在

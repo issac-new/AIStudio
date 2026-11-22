@@ -1,0 +1,30 @@
+diff --git a/hermes_cli/plugins_manifest.py b/hermes_cli/plugins_manifest.py
+index 22ecbc213..ab823707f 100644
+--- a/hermes_cli/plugins_manifest.py
++++ b/hermes_cli/plugins_manifest.py
+@@ -472,7 +472,7 @@ def _version_tuple(v: str) -> Optional[tuple]:
+     """``v1.2.3-rc1`` / ``1.2.3rc1`` / ``1.2.3.post1`` → ``(1, 2, 3)``; ``None`` when a segment has no
+     leading digits. PEP 440 pre/post/dev suffixes glued to a segment (``0rc1``) are dropped so an rc
+     *target* still gates and an rc *running* version does not disable every gate."""
+-    parts = re.split(r"[-+]", str(v).strip().lstrip("v"), 1)[0].split(".")
++    parts = re.split(r"[-+]", str(v).strip().lstrip("v"), maxsplit=1)[0].split(".")
+     parts += ["0"] * (3 - len(parts))
+     out = []
+     for x in parts[:3]:
+diff --git a/tests/hermes_cli/test_plugin_manifest_v2.py b/tests/hermes_cli/test_plugin_manifest_v2.py
+index 1cd59bfaa..d182e97e6 100644
+--- a/tests/hermes_cli/test_plugin_manifest_v2.py
++++ b/tests/hermes_cli/test_plugin_manifest_v2.py
+@@ -417,6 +417,12 @@ class TestRequiresHermes:
+         from hermes_cli.plugins_manifest import version_satisfies
+         assert version_satisfies(spec, current) is expected
+ 
++    def test_version_parsing_has_no_python314_deprecation_warning(self, recwarn):
++        # Regression: ISSUE-007 — re.split 的 maxsplit 必须使用关键字参数
++        from hermes_cli.plugins_manifest import version_satisfies
++        assert version_satisfies(">=1.2.3.post1", "1.2.3") is True
++        assert not [w for w in recwarn.list if issubclass(w.category, DeprecationWarning)]
++
+     def test_unsatisfied_requires_hermes_skips_without_importing(self, hermes_home, monkeypatch):
+         """A too-new ``requires_hermes`` records an error and never runs register(); a satisfied one loads."""
+         import sys

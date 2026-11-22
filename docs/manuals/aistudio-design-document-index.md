@@ -768,6 +768,7 @@
 - [2026-11-21-scaffold-scripts-removal.md](../superpowers/specs/2026-11-21-scaffold-scripts-removal.md)
 - [2026-11-21-sim-product-absorption-roadmap.md](../superpowers/specs/2026-11-21-sim-product-absorption-roadmap.md)
 - [2026-11-21-simharness-governance-nature.md](../superpowers/specs/2026-11-21-simharness-governance-nature.md)
+- [2026-11-22-full-regression-security-nfr.md](../superpowers/specs/2026-11-22-full-regression-security-nfr.md)
 - [2026-11-22-regression-rootfix-batch.md](../superpowers/specs/2026-11-22-regression-rootfix-batch.md)
 - [2026-11-22-release-v1.0.17-overlay.md](../superpowers/specs/2026-11-22-release-v1.0.17-overlay.md)
 

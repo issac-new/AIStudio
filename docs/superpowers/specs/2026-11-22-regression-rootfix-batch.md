@@ -36,7 +36,7 @@
 - F3：新增守门测试（briefing 抽屉 hash 路由 miss 收起）＋`npx vitest run custom/client/ide/__tests__/`＋活体 ide-smoke 11/11
 - F4：`npm run catalog-check` exit 0
 - F5：锁测试 `test-ci-informational-steps.sh` 通过
-- F6：`PYTHONPATH=vendor/hermes-agent:runtime python3.14 -m pytest runtime/tests -q` 全绿（15 例结构性红清零，249 例）
+- F6：`PYTHONPATH=vendor/hermes-agent:runtime /Users/cuishi/.hermes/hermes-agent/.venv/bin/python -m pytest runtime/tests -q` 全绿（15 例结构性红清零，273 例）
 - F8：用户级 `precheck.sh --all` 覆盖式 rc=0（已实证）；仓内正本同步后锁测试/夹具过
 - 全量：`npm test` 全绿＋`typecheck:harness` exit 0（合并前）
 

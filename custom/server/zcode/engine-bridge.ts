@@ -13,6 +13,7 @@ export interface ZcodeEngineAgentService {
   // v4 通道（2026-10-08 实证接通）：config.mode=引擎任务档（yolo/plan/edit/auto/autoEdit/build），
   // 锚=upstream/zcode packages/shared/src/zcode-protocol-v4/command.ts:39 createSessionRequestedConfigSchema
   createSession(params: { workspacePath: string; config?: { mode?: string } }): Promise<{ session: { sessionId: string } }>
+  listSessions(params: { workspacePath: string }): Promise<Array<{ sessionId: string }>>
   subscribeConversationV4(params: { workspacePath: string; sessionId: string }): Promise<{ ack: { subscriptionId: string; mode: string } }>
   subscribeSessionsIndexV4(params: { workspacePath: string }): Promise<{ ack: { subscriptionId: string; mode?: string } }>
   sendConversationCommandV4(params: { workspacePath: string; envelope: Record<string, unknown> }): Promise<{ status: string; reasonCode?: string }>
