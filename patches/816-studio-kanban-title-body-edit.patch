@@ -1,0 +1,20 @@
+diff --git a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+--- a/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
++++ b/packages/server/src/modules/hermes/services/kanban/kanban-service.ts
+@@ -1286,8 +1286,13 @@ export async function patchTask(taskId: string, patch: KanbanTaskPatchOptions):
+     )
+   }
+   // HERMES_CUSTOM[v020] END
+-  // For title/body edits, we don't have a direct CLI verb — use create+replace pattern
+-  // is not available, so title/body edits fall back to re-fetching.
++  // title/body 使用现有 `kanban edit` 动词；此前直接重读造成 200+旧值的假成功。
++  const editArgs = [...boardArgs(board), 'edit', taskId]
++  if (patch.title !== undefined) editArgs.push('--title', String(patch.title))
++  if (patch.body !== undefined) editArgs.push('--body', String(patch.body))
++  if (patch.title !== undefined || patch.body !== undefined) {
++    await execKanbanMutation(editArgs, 'Hermes CLI: kanban edit failed', 'Failed to edit task')
++  }
+   return (await getTask(taskId, { board }))?.task || null
+ }
+ 
+ // ─── Home channel notification subscriptions ──────────────────────
