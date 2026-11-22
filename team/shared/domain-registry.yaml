@@ -12,6 +12,8 @@ domains:
   - ~/.hermes/delivery/（软件开发交付标准工作模板 v1.0.0，2026-09-17 起；六阶段×六门禁，工具无关）
   target_skill: null
   owner_of_domain: orchestrator
+  owner_label: orchestrator
+  owner_account_env: BOARD_OWNER_ORCHESTRATOR
 - domain: ops
   board: ops
   profiles:
@@ -22,6 +24,8 @@ domains:
   knowledge: []
   target_skill: pending
   owner_of_domain: ops-devops
+  owner_label: ops-devops
+  owner_account_env: BOARD_OWNER_OPS_DEVOPS
 - domain: pay
   board: pay
   profiles:
@@ -32,6 +36,8 @@ domains:
   - ~/.hermes/shared/domain-knowledge/pay/ (pay-kb, tag pay-kb-v20260903; 20261117 迁居)
   target_skill: pending
   owner_of_domain: orchestrator  # 20261117 域网关并入
+  owner_label: orchestrator
+  owner_account_env: BOARD_OWNER_ORCHESTRATOR
 - domain: data
   board: data
   profiles:
@@ -41,6 +47,8 @@ domains:
   knowledge: []
   target_skill: pending
   owner_of_domain: orchestrator  # 20261117 域网关并入
+  owner_label: orchestrator
+  owner_account_env: BOARD_OWNER_ORCHESTRATOR
 - domain: hack
   board: hack
   profiles:
@@ -52,6 +60,8 @@ domains:
   - 网安知识库（hack 团队 references/）
   target_skill: pending
   owner_of_domain: hack-auditor
+  owner_label: hack-auditor
+  owner_account_env: BOARD_OWNER_HACK_AUDITOR
 - domain: product
   board: product
   profiles:
@@ -60,6 +70,8 @@ domains:
   knowledge: []
   target_skill: null
   owner_of_domain: product-manager
+  owner_label: product-manager
+  owner_account_env: BOARD_OWNER_PRODUCT_MANAGER
 - domain: platform
   board: platform
   profiles:
@@ -68,6 +80,8 @@ domains:
   knowledge: []
   target_skill: null
   owner_of_domain: platform-ontology-curator
+  owner_label: platform-ontology-curator
+  owner_account_env: BOARD_OWNER_PLATFORM_ONTOLOGY_CURATOR
 - domain: aiteam
   board: aiteam
   profiles:
@@ -79,6 +93,8 @@ domains:
   knowledge: []
   target_skill: pending
   owner_of_domain: orchestrator  # 20261117 域网关并入
+  owner_label: orchestrator
+  owner_account_env: BOARD_OWNER_ORCHESTRATOR
 - domain: eda
   board: eda
   profiles:
@@ -97,6 +113,8 @@ domains:
   target_skill: null
   status: active
   owner_of_domain: eda-arch
+  owner_label: eda-arch
+  owner_account_env: BOARD_OWNER_EDA_ARCH
   note: 在整体设计文档中不体现（用户口径），运行态活跃
 - domain: k12edu
   board: k12edu
@@ -112,4 +130,6 @@ domains:
   target_skill: null
   status: active
   owner_of_domain: k12edu-orchestrator
+  owner_label: k12edu-orchestrator
+  owner_account_env: BOARD_OWNER_K12EDU_ORCHESTRATOR
   note: 在整体设计文档中不体现（用户口径），运行态活跃

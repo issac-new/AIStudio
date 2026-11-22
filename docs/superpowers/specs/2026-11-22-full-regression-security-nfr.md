@@ -15,6 +15,11 @@
 4. **测试前置构建缺口**：工程测试中 `@zcode/e2e-report` 与 `@zcode/contracts` 两个收集失败先通过真实依赖构建补齐，再原命令复跑；不把收集失败误记为产品失败，也不为消红删除测试。
 5. **swarm-yuan 生成源与产物漂移**：`test-registry.sh` 稳定复现 `gates-warn.sh 过期`。上一轮给依赖扫描加 `/vendor/` 排除时只改了生成产物 `assets/gates-warn.sh`，未同步域源 `assets/gates/process/deps.sh`，导致生成器会把修复洗掉。把排除规则回移域源并重生成，保留既有 `test-registry` 红灯作为回归门。
 6. **Python 数字、协程与 Python 3.14 兼容性**：当前拼合树实测为 273 通过，不是旧 spec 的 249；授权修订旧验证数字。两条 `gateway/run_busy.py` 协程未等待警告定位为测试桩丢弃 coroutine，新增 `recwarn` 断言先红后，夹具改为关闭 coroutine。`plugins_manifest.py` 的 `re.split` 位置参数弃用警告由补丁 815 改为 `maxsplit=1`，并携带零警告回归。最终 runtime＋插件版本门 306 通过、零警告。
+7. **Ycode CLI Android 安全三连红＝产品缺陷**（zcode-patches/012）：macOS `/usr/libexec/java_home -v <major>` 在请求版本缺失时回退其它大版本，`validJavaHome` 未核对实际主版本，导致「无匹配 JDK」被判定为可用（本机 jdk-25 实证）。修复：`externalPath` 安全校验后执行受信任 JVM 的 `-version` 并核对主版本；项目内伪造 Java 仍先被拒。夹具 Java 改为按 `ANDROID_PLUGIN_JDK_MAJOR` 报告版本。修复前 3 红，修复后包内 19 通过/1 平台跳过。
+8. **看板 PATCH title/body 假成功**（patches/816）：`patchTask` 对 title/body 不落任何 CLI 动词、直接重读旧任务返回 200——活体复现「PATCH 200 后 GET 仍旧标题」。修复：映射到既有 `kanban edit --title/--body`；真实 CLI 集成回归同时断言返回值与二次读取。v0.19 旧运行时不支持无 `--result` 的 edit（历史版本差，非本仓缺陷），服务端钉 v0.23.3 验证通过；活体 PATCH→GET 闭环绿。
+9. **team/shared/profiles.yaml 明文密钥**（安全缺陷）：gitleaks 全仓 1128 候选中，`team/shared/profiles.yaml` 的 `MATRIX_PASSWORD`＋8 处 `api_key`/`WEIXIN_TOKEN` 为非占位真实值，违反「密钥只存 env 名」红线。修复：全部改 `${VAR}` 引用＋新增 `.env.common.example`（仅变量名）；消费侧测试锁定「无裸密钥＋引用登记＋双微信账号独立展开」。**历史明文必须由账号所有者轮换，本次脱敏不替代轮换**（README 已声明）。其余候选定谳：vendor 钉版基线/测试夹具/文档示例（含 `REDACTED` 假值与图标路径），不属本仓治理面；Semgrep p/typescript 自有代码 0 发现。
+10. **team 注册表/映射表/配置漂移**：`domain-registry.yaml` 实为 10 活跃域但测试锚 8、且缺 spec 2026-10-26 要求的 `owner_label/owner_account_env`；`paradigm-map.yaml` 残留已并入主 orchestrator 的 3 个幽灵 profile；orchestrator `config.yaml` 缺 A2A 段（profiles.yaml 源同样缺失）。修复：三事实源补齐＋测试改锚当前事实（域集合显式枚举、治理 5/基座 5/领域 17）。team/tests 32/32。
+11. **Ycode 工程面收口**：`pnpm typecheck` 修复后 0 错误；`test:engineering` 168 文件/1039 用例通过（9 平台跳过）；`db:schema:check`、CUA 独立套件、`build` 全绿；CLI `check`（registry/typecheck/turbo test）除 dynamic-workflow 2 例性能阈值断言外全绿（定谳见验证段）。catalog-check 3.19.1 快照一致。
 
 后续新发现必须先精确重放、完成根因分类并追记本 spec，再修改产品或测试。浏览器驱动缓存、宿主引擎连接和间歇超时先按环境/产品边界调查，不在根因未明时改代码。
 
@@ -46,6 +51,9 @@
 - ISSUE-005（生成源漂移）：`skills/swarm-yuan/tests/test-registry.sh`。Value: protects=重生成不会洗掉 vendor 排除; fails_when=域源与 gates-warn 不一致; why_new=上一轮只改生成产物; seam=none; no_claim=全部 fixture 已跑（由 sweep 另证）。修复前 12 ok/1 fail，修复后 13 ok/0 fail。
 - ISSUE-006（协程夹具）：`runtime/tests/gateway/test_capacity_retry_anchor.py` 两条 `recwarn` 断言。Value: protects=create_task 桩不遗留未等待协程; fails_when=桩只返回 completed 而不关闭 coroutine; why_new=原测试只测队列逻辑不看资源回收; seam=none; no_claim=生产后台任务无其他泄漏。修复前 2 失败，修复后目标 5/5。
 - ISSUE-007（Python 3.14）：补丁 815 内 `test_version_parsing_has_no_python314_deprecation_warning`。Value: protects=版本比较行为不变且无弃用警告; fails_when=re.split 恢复位置 maxsplit; why_new=全量 pytest 有警告无断言; seam=none; no_claim=全部 Python 上游文件无弃用（仅覆盖本调用）。修复前 1 失败/17 警告，修复后 runtime＋版本门 306/306、零警告。
+- ISSUE-008（Android JDK 主版本）：补丁 012 改造 `tool-security.test.ts` 既有三用例＋夹具版本化。Value: protects=无匹配主版本的 JDK 判不可用且项目内伪造 Java 永不执行; fails_when=java_home 回退版本被当有效; why_new=原测试在无 JDK 机器上才成立，本机 jdk-25 暴露缺陷; seam=none; no_claim=Windows/Linux 路径（平台分支未动）。修复前 3 红，修复后 19 过/1 平台跳过。
+- ISSUE-009（看板 title/body 假成功）：`custom/server/services/hermes/__tests__/kanban-title-edit.regression-1.test.ts`（真实 CLI＋临时板库）。Value: protects=PATCH title/body 后返回值与二次读取均为新值; fails_when=service 恢复只读不落 edit; why_new=路由层测试 mock service，无法发现静默 no-op; seam=none; no_claim=HTTP 层鉴权（auth 活体另证）。修复前断言红（旧标题），修复后全绿＋活体 PATCH→GET 闭环。
+- ISSUE-010（profiles 明文密钥）：`team/tests/test_profiles_secret_hygiene.py`。Value: protects=profiles.yaml 零裸密钥且所有 ${VAR} 在无值示例登记、双微信账号 token 独立; fails_when=任一敏感字段回到字面量或引用未登记; why_new=gitleaks 是扫描器非消费契约，且需防生成器洗回; seam=none; no_claim=历史泄露值的轮换（必须账号所有者执行）。修复前 11 处裸值红，修复后 2/2。
 
 最终还须完成：Python runtime pytest、swarm-yuan 全 sweep 与生成器门、Ycode CLI/CUA/构建、全量应用 build/bundle、依赖与秘密扫描、业务 API 持久效果及负面契约、跨角色/属主授权、真实浏览器导航/移动端/无障碍、并发/幂等/超时/恢复和最终全量复验。未实际执行的项目一律标为未验证，不写“覆盖”。
 

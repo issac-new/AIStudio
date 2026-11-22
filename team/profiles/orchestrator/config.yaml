@@ -101,6 +101,8 @@ auxiliary:
     provider: auto
 fallback_providers: []
 platforms:
+  a2a:
+    enabled: true
   api_server:
     enabled: true
     extra:
