@@ -1145,7 +1145,8 @@ check_deps() {
     }
   ' "$baseline_file" 2>/dev/null | sort -u || true)
 
-  # 收集项目依赖清单文件（排除 node_modules / upstream / .git）
+  # 收集项目依赖清单文件（排除 node_modules / upstream / .git / vendor）
+  # vendor 是钉版基线，注入态版本差不是本仓依赖升级动作；与生成产物和仓法 vendor 挡护同源。
   local dep_files
   dep_files=$(find "$PROJECT_DIR" -maxdepth 3 \
     \( -name package.json -o -name pyproject.toml -o -name go.mod -o -name requirements.txt -o -name Cargo.toml -o -name pom.xml -o -name build.gradle -o -name build.gradle.kts \) \
