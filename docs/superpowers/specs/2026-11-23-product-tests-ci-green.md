@@ -1,6 +1,8 @@
 # 2026-11-23 CI 红清偿批（product-tests / qgate workflow 转绿）
 
-> 状态：in-flight（分支 fix/product-tests-ci-green）
+> 状态：merged（2026-11-23 收口，merge fbfd2230a；GitHub Actions 复验全绿：product-tests
+> run 45063914284 success（main 连红 8 轮后首次全绿）＋qgate run 45063914291 success＋
+> governance run 45063914278 success；发版门台账随批回填 fb2c971b8）
 
 ## 变更
 
@@ -45,7 +47,7 @@ v1.0.18 发版推送后核验 GitHub Actions，发现 main 上两个 workflow �
   `modelscope.cn/models/tupang/ollama/resolve/master/swarm-yuan/…everything…zip` 得
   80,488,786 字节，sha256 `97e96e73ad21bb61fdc51bb8232972e884011c35f928705fc1bbe5806cfb109c`
   与 SHA256SUMS-v1.0.18-overlay.txt 逐字一致。
-- 推送后 GitHub Actions 复验：product-tests 与 qgate workflow 转绿（见收口回填）。
+- 推送后 GitHub Actions 复验（fbfd2230a）：product-tests 45063914284 success（junit 0 失败，kanban 测试在 CI 形态＝skip 分支）＋qgate 45063914291 success＋governance 45063914278 success。
 
 ## 设计文档影响（DESIGN_SYNC 声明）
 
