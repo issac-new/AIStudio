@@ -91,7 +91,7 @@ _git_changed_files() {
       git diff --name-only "$base"...HEAD 2>/dev/null || true
       git diff --name-only HEAD 2>/dev/null || true
       git ls-files --others --exclude-standard 2>/dev/null || true
-    } | sed '/^$/d' | sort -u
+    } | sed '/^$/d' | grep -v '^vendor/' | sort -u
   )
   [[ -z "$changed" ]] || printf '%s\n' "$changed"
   return 0

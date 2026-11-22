@@ -1,0 +1,959 @@
+# 814（2026-11-22 回归根治批 F6）：hermes_cli runtime 领先面回灌——11-19 交付域批只落 runtime 未回移 vendor，
+# 拼合树 pytest 配方（PYTHONPATH=vendor:runtime）对 runtime 独有模块失明（15 例结构性红）；
+# 按 741 dispatch 回灌先例回移：acceptance_report/delivery_version 新文件 + kanban_db 221 行领先（验收门/交付版本域）。
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index e64e71e17..05f25eb0a 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -1488,7 +1488,7 @@ def _normalize_required_capabilities(tags: Optional[Iterable[str]]) -> Optional[
+ def create_task(
+     conn: sqlite3.Connection, *, title: str, body: Optional[str] = None,
+     assignee: Optional[str] = None, created_by: Optional[str] = None,
+-    workspace_kind: Optional[str] = None, workspace_path: Optional[str] = None,
++    workspace_kind: str = "worktree", workspace_path: Optional[str] = None,
+     branch_name: Optional[str] = None, tenant: Optional[str] = None, priority: int = 0,
+     parents: Iterable[str] = (), triage: bool = False, idempotency_key: Optional[str] = None,
+     max_runtime_seconds: Optional[int] = None, skills: Optional[Iterable[str]] = None,
+@@ -1603,7 +1603,7 @@ def create_task(
+             # commit so the dispatcher never sees a half-built graph.
+             with write_txn(conn, allow_nested=True):
+                 task_status, tenant = initial_task_state(conn, parents, initial_status, triage, tenant)
+-                # 批二补丁 809（原 807 让号，spec 2026-11-20-ai-native-cognition-batch2 §2）：建卡带
++                # 批二补丁 807（spec 2026-11-20-ai-native-cognition-batch2 §2）：建卡带
+                 # parents 时继承父卡 outcome_id——父序首个非空值胜出（与 tenant 继承
+                 # 同位次语义，未绑定父不拦截「空→值」）；多父绑定到不同 outcome 即拒
+                 # （805 三态纪律在建卡面的等价物：一张卡不得跨两个结果合同）。
+@@ -3107,10 +3107,15 @@ class VersionConflictError(ValueError):
+ 
+ class VerificationLevelBlocked(ValueError):
+     """批二：卡声明的 verification 等级未满足——完成被拒（fail-closed），错误
+-    文本指引下一步（request_review / 待 PR 转绿），不自动改任务状态。"""
++    文本指引下一步（request_review / 待 PR 转绿 / 补验收报告），不自动改任务状态。
+ 
+-    def __init__(self, level: str, detail: str):
++    ``blockers`` 是结构化拒绝原因（``{code,title,detail,action}``），供 UI 与重试
++    策略按 code 分支；旧调用方只读 ``detail`` 也兼容。
++    """
++
++    def __init__(self, level: str, detail: str, blockers: Optional[list[dict]] = None):
+         self.level, self.detail = level, detail
++        self.blockers = list(blockers or [])
+         super().__init__(f"verification level '{level}' not satisfied: {detail}")
+ 
+ 
+@@ -3223,6 +3228,19 @@ def _gate_completion_contract(
+ # 批二（2026-11-14 superagent-contract-batch2）：卡级完成验证等级。
+ VALID_VERIFICATION_LEVELS = frozenset({"standard", "independent", "strict:pr"})
+ 
++DEFAULT_MAX_REWORK_ROUNDS = 5
++
++
++def _max_rework_rounds() -> int:
++    """返修轮次上限：默认 5（对齐 SoduWork 自动返修上限）；env 可调，0/负值关闭。"""
++    raw = os.environ.get("HERMES_KANBAN_MAX_REWORK_ROUNDS", "").strip()
++    if not raw:
++        return DEFAULT_MAX_REWORK_ROUNDS
++    try:
++        return max(0, int(raw))
++    except ValueError:
++        return DEFAULT_MAX_REWORK_ROUNDS
++
+ 
+ def _pr_acceptance_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
+     """strict:pr 判据：最新 ``pr_acceptance`` 事件的 receipt.ok（kanban 库内
+@@ -3242,40 +3260,175 @@ def _pr_acceptance_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
+     return bool(receipt.get("ok"))
+ 
+ 
+-def _review_verdict_satisfied(conn: sqlite3.Connection, task_id: str) -> bool:
+-    """independent 判据：走过评审闭环——存在 ``review_requested`` 且其后有
+-    reviewer 侧活动证据：批准路径＝reviewer 在 review 态的 ``completed``、
+-    驳回路径＝``changes_requested``（两者都构成"独立看过"）；``review_verdict``
+-    为预留扩展位。防伪：时序必须晚于 review_requested。"""
+-    req = conn.execute(
+-        "SELECT id FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
+-        "ORDER BY id LIMIT 1",
++def _latest_review_cycle(conn: sqlite3.Connection, task_id: str) -> tuple[Optional[int], Optional[str]]:
++    """当前评审周期：最新 ``review_requested`` 的 ``(event_id, implementer)``。
++
++    没有 handoff 时返回 ``(None, None)``。取最新（DESC）而不是最早：返修后重新
++    request_review 会开新周期，验收报告只能绑定当前这次交付。
++    """
++    row = conn.execute(
++        "SELECT id, payload FROM task_events WHERE task_id = ? AND kind = 'review_requested' "
++        "ORDER BY id DESC LIMIT 1",
+         (task_id,),
+     ).fetchone()
+-    if req is None:
+-        return False
+-    verdict = conn.execute(
+-        "SELECT id FROM task_events WHERE task_id = ? AND kind IN "
+-        "('changes_requested', 'review_verdict', 'completed') AND id > ? LIMIT 1",
+-        (task_id, req["id"]),
+-    ).fetchone()
+-    return verdict is not None
++    if row is None:
++        return None, None
++    payload = _json_dict(row["payload"])
++    return int(row["id"]), _nonblank_str(payload.get("implementer"))
++
++
++def _acceptance_override_enabled() -> bool:
++    """显式环境闸：只在操作员确认紧急放行时使用；放行本身落 acceptance_override 事件。"""
++    return os.environ.get("HERMES_KANBAN_ACCEPTANCE_OVERRIDE", "").strip() == "1"
++
++
++def _independent_acceptance(
++    conn: sqlite3.Connection, task_id: str, metadata: Optional[dict],
++) -> tuple[bool, str, list[dict], Optional[dict]]:
++    """校验 independent 档的逐条 AC 验收报告。
++
++    返回 ``(ok, detail, blockers, normalized_report)``。报告来源固定为
++    ``complete_task(metadata=...)`` 的 ``acceptance_report`` 键；AC 来源固定为
++    任务 body 经 ``completion_contract.derive_contract`` 派生的 criteria——不新增
++    第二套卡面格式。任何模块/DB 异常都按 fail-closed 返回 blocker，不静默放行。
++    """
++    try:
++        from completion_contract import derive_contract
++        from hermes_cli.acceptance_report import (
++            AcceptanceReportViolation, expected_criteria_ids, validate_report,
++        )
++    except ImportError as exc:  # 部署缺模块：与完成契约门同哲学，宁可拒完成
++        return False, f"acceptance-report module unavailable ({exc})", [{
++            "code": "verifier_unavailable",
++            "title": "验收模块不可用",
++            "detail": str(exc)[:300],
++            "action": "修复 runtime 部署后重试；不要用完成动作绕过验收",
++        }], None
++
++    row = conn.execute("SELECT body FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    body = (row["body"] if row is not None else "") or ""
++    criteria = derive_contract(body).get("criteria") or []
++    cycle_id, implementer = _latest_review_cycle(conn, task_id)
++    # 周期闭合：最新 changes_requested 晚于 review_requested，说明这一轮评审已被
++    # 打回；实现方必须先重新 request_review，旧周期上补一份通过报告不成立。
++    if cycle_id is not None:
++        last_change = conn.execute(
++            "SELECT id FROM task_events WHERE task_id = ? AND kind = 'changes_requested' "
++            "ORDER BY id DESC LIMIT 1",
++            (task_id,),
++        ).fetchone()
++        if last_change is not None and int(last_change["id"]) > int(cycle_id):
++            return False, (
++                "review cycle already closed by changes_requested; request a new review "
++                "handoff before submitting another acceptance report"
++            ), [{
++                "code": "review_cycle_closed",
++                "title": "评审周期已关闭",
++                "detail": "最新 changes_requested 晚于 review_requested，这一轮已判不通过",
++                "action": "实现方返修后重新 kanban_request_review，再提交新报告",
++            }], None
++    report = (metadata or {}).get("acceptance_report") if isinstance(metadata, dict) else None
++    if not isinstance(report, dict):
++        return False, (
++            "missing metadata.acceptance_report; verification=independent requires a "
++            "per-AC reviewer report"
++        ), [{
++            "code": "acceptance_report_missing",
++            "title": "缺少验收报告",
++            "detail": "完成调用必须携带 metadata.acceptance_report",
++            "action": "按 spec 形状提交逐条 AC 报告后重试",
++        }], None
++    try:
++        normalized = validate_report(
++            report,
++            expected_ids=expected_criteria_ids(criteria),
++            implementer=implementer,
++            current_review_event_id=cycle_id,
++        )
++    except AcceptanceReportViolation as exc:
++        return False, str(exc), exc.blockers, None
++    # 不可变交付版本绑定（结果交付后续批）：存在 active 版本时，报告必须绑定
++    # 同一 versionId/checksum；旧版本报告因 checksum 不匹配自然失效。没有版本的
++    # 历史卡保持兼容（本批不追溯造版本）。
++    from hermes_cli.delivery_version import latest_delivery_version, verify_delivery_version
++    version = latest_delivery_version(conn, task_id)
++    if version is not None:
++        version_blockers: list[dict] = []
++        if not verify_delivery_version(version):
++            version_blockers.append({
++                "code": "delivery_version_corrupt",
++                "title": "交付版本自校验失败",
++                "detail": f"versionId={version.get('versionId')} 的 checksum/内容不一致",
++                "action": "重新走 request_review 生成新版本；不要手改事件载荷",
++            })
++        report_version = normalized.get("deliveryVersionId")
++        if not report_version:
++            version_blockers.append({
++                "code": "delivery_version_missing",
++                "title": "缺少交付版本绑定",
++                "detail": (
++                    "任务存在 active 交付版本，报告未携带 deliveryVersionId"
++                    f"（当前 active：{version.get('versionId')}）"
++                ),
++                "action": f"携带 {version.get('versionId')} 与 checksum {version.get('checksum')}",
++            })
++        elif report_version != version.get("versionId"):
++            version_blockers.append({
++                "code": "delivery_version_mismatch",
++                "title": "交付版本不匹配",
++                "detail": f"报告 {report_version} ≠ 当前 active {version.get('versionId')}",
++                "action": "按当前交付版本重新审查；旧版本报告不能重放",
++            })
++        report_checksum = normalized.get("artifactChecksum")
++        if not report_checksum:
++            version_blockers.append({
++                "code": "delivery_checksum_missing",
++                "title": "缺少交付校验和",
++                "detail": (
++                    "报告未携带 artifactChecksum"
++                    f"（当前 active checksum：{version.get('checksum')}）"
++                ),
++                "action": f"携带 checksum {version.get('checksum')}",
++            })
++        elif report_checksum != version.get("checksum"):
++            version_blockers.append({
++                "code": "delivery_checksum_mismatch",
++                "title": "交付校验和不匹配",
++                "detail": (
++                    f"报告 checksum {report_checksum} ≠ 当前 active {version.get('checksum')}"
++                ),
++                "action": "重新审查当前交付版本",
++            })
++        if version_blockers:
++            detail = "；".join(b["detail"] for b in version_blockers)
++            return False, f"delivery version check failed: {detail}", version_blockers, None
++        normalized["deliveryVersionId"] = version["versionId"]
++        normalized["artifactChecksum"] = version["checksum"]
++    return True, "", [], normalized
+ 
+ 
+-def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None) -> None:
++def _gate_verification_level(
++    conn: sqlite3.Connection, task_id: str, *, pr_receipt_ok=None,
++    metadata: Optional[dict] = None,
++) -> Optional[dict]:
+     """complete_task 单点等级门（在既有 gates/DoD 门之后）。
+ 
+     - NULL/standard：现状零成本路径直接过。
+-    - independent：需评审闭环证据（review handoff＋verdict）。
++    - independent：需当前评审周期的逐条 AC 验收报告；reviewer 必须独立于
++      implementer，报告与契约 AC 一一对应且证据可核验（见 acceptance_report.py）。
+     - strict:pr：需 PR acceptance 事件 ok。
+     判定器异常 fail-closed（verifier_unavailable），不猜通过；拒绝落
+-    ``verification_level_result`` 事件（事务外小事务，同 gate_transition 先例）。
++    ``acceptance_blocked`` / ``verification_level_result`` 事件（事务外小事务，
++    同 gate_transition 先例）。
++
++    返回 independent 通过时的 ``{"level", "acceptance_report"}``（由 complete_task
++    在完成事务内落 ``acceptance_report`` 事件）；其余档返回 None。
+     """
+     row = conn.execute("SELECT verification FROM tasks WHERE id = ?", (task_id,)).fetchone()
+     level = (row["verification"] if row else None) or "standard"
+     if level == "standard":
+-        return
+-    detail, satisfied = None, None
++        return None
++    detail, satisfied, blockers = None, None, []
+     try:
+         if level == "strict:pr":
+             # 本次 complete 的 PR 检查结果优先（green 即过）；None=无 PR 契约
+@@ -3287,11 +3440,31 @@ def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_recei
+                 "to go green, then complete again"
+             )
+         elif level == "independent":
+-            satisfied = _review_verdict_satisfied(conn, task_id)
+-            detail = "review handoff with a verdict on record" if satisfied else (
+-                "no review handoff verdict found; call request_review and let "
+-                "the reviewer run decide before completing"
++            satisfied, detail, blockers, normalized = _independent_acceptance(
++                conn, task_id, metadata,
+             )
++            if not satisfied and _acceptance_override_enabled():
++                with contextlib.suppress(Exception):
++                    with write_txn(conn):
++                        _append_event(conn, task_id, "acceptance_override", {
++                            "level": level,
++                            "detail": (detail or "")[:600],
++                            "blockers": blockers,
++                        })
++                satisfied, detail, blockers, normalized = (
++                    True, "acceptance override enabled (HERMES_KANBAN_ACCEPTANCE_OVERRIDE=1)",
++                    [], None,
++                )
++            if satisfied:
++                return {"level": level, "acceptance_report": normalized}
++            with contextlib.suppress(Exception):
++                with write_txn(conn):
++                    _append_event(conn, task_id, "acceptance_blocked", {
++                        "level": level,
++                        "blockers": blockers,
++                        "detail": (detail or "")[:600],
++                    })
++            raise VerificationLevelBlocked(level, detail or "acceptance report rejected", blockers)
+         else:
+             # 未知值在建/改时已拒；库内直写的畸形值按 fail-closed 处理。
+             raise ValueError(f"unknown verification level {level!r}")
+@@ -3312,6 +3485,7 @@ def _gate_verification_level(conn: sqlite3.Connection, task_id: str, *, pr_recei
+                 _append_event(conn, task_id, "verification_level_result",
+                               {"level": level, "satisfied": False, "reason": detail})
+         raise VerificationLevelBlocked(level, detail)
++    return None
+ 
+ 
+ def complete_task(
+@@ -3373,12 +3547,13 @@ def complete_task(
+     # 门序在 prepare_acceptance 之后：strict:pr 优先用本次 PR 检查结果
+     # （acceptance.ok），无 PR 契约的卡回落库内最新 pr_acceptance 事件——
+     # 先门后查会让 strict 卡首次 complete 必拒且 acceptance 永不落库（死锁）。
+-    _gate_verification_level(
++    verification_gate = _gate_verification_level(
+         conn, task_id,
+         # prepare 返回 (snapshot, receipt)；receipt.ok=本次 PR required checks 实测
+         pr_receipt_ok=(acceptance[1].get("ok")
+                        if isinstance(acceptance, tuple) and len(acceptance) == 2
+                        and isinstance(acceptance[1], dict) else None),
++        metadata=metadata,
+     )
+     if acceptance is False:
+         return False
+@@ -3434,6 +3609,10 @@ def complete_task(
+                 return False
+             if isinstance(metadata, dict):
+                 staged_copies = _stage_completion_artifacts(conn, task_id, metadata, now)
++            # 不可变交付版本：直通完成（无 review）也冻结一次交付清单；已走过
++            # request_review 的卡同 checksum 幂等，不重复追加。
++            from hermes_cli.delivery_version import record_delivery_version
++            record_delivery_version(conn, task_id, source="complete")
+             run_id = _end_run(
+                 conn, task_id, outcome="completed", status="done", summary=handoff_summary,
+                 metadata=metadata,
+@@ -3447,6 +3626,13 @@ def complete_task(
+                 run_id = _synthesize_ended_run(
+                     conn, task_id, outcome="completed", summary=synth_summary, metadata=synth_metadata,
+                 )
++            if verification_gate and verification_gate.get("acceptance_report"):
++                # 逐条 AC 验收报告与完成状态同事务落账：回滚则报告不存在，
++                # 不存在「报告已落但任务没完成」的中间态。
++                _append_event(
++                    conn, task_id, "acceptance_report",
++                    verification_gate["acceptance_report"], run_id=run_id,
++                )
+             event_summary = handoff_summary
+             if prior_status == "review" and not event_summary:
+                 event_summary = _REVIEW_APPROVED_NOTE
+@@ -4043,6 +4229,27 @@ def request_review(
+ 
+     summary = redact_review_value(summary)
+     metadata = redact_review_value(metadata)
++    # 返修轮次上限（SoduWork 结果交付吸收）：changes_requested 计数达到上限后
++    # 拒绝再请求评审，防止同一张卡无限「退回—重做—再审」。force=True 越过并留痕。
++    max_rounds = _max_rework_rounds()
++    if max_rounds and not force:
++        prior = conn.execute(
++            "SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND kind = 'changes_requested'",
++            (task_id,),
++        ).fetchone()
++        rounds = int(prior["n"] if prior is not None else 0)
++        if rounds >= max_rounds:
++            with contextlib.suppress(Exception):
++                with write_txn(conn):
++                    _append_event(conn, task_id, "rework_exhausted", {
++                        "rounds": rounds, "maxRounds": max_rounds,
++                        "summary": _first_line(summary, 300) or None,
++                    })
++            return _ret(
++                False,
++                f"rework rounds exhausted ({rounds}/{max_rounds}); pass force=True "
++                "to request another review or re-scope the card",
++            )
+     # routa 流转门禁四件套（overlay 吸收第一批 #8）：review 列声明式门。
+     # GateBlockedError 向上抛（与 ArtifactPreservationError 同为拒绝语义）；拒绝/告警
+     # 事件留在事务外，通过事件在下方 write_txn 内补记，与状态 UPDATE 同提交。
+@@ -4133,10 +4340,18 @@ def request_review(
+                 summary=summary, metadata=metadata, synthesize=bool(summary or metadata),
+                 profile=implementer,
+             )
++            # 不可变交付版本（结果交付后续批）：评审交接是对外交付的冻结点；
++            # 版本清单以持久附件为准，同 checksum 幂等。
++            from hermes_cli.delivery_version import record_delivery_version
++            delivery = record_delivery_version(
++                conn, task_id, source="request_review", created_by=implementer,
++            )
+             payload: dict = {
+                 "summary": _first_line(summary, 400) or None,
+                 "implementer": implementer,
+                 "reviewer": reviewer,
++                "deliveryVersionId": delivery["versionId"],
++                "deliveryChecksum": delivery["checksum"],
+             }
+             staged = _cleaned_artifact_paths(metadata)
+             if staged:
+@@ -4230,6 +4445,11 @@ def request_changes(
+         run_id = _end_run(
+             conn, task_id, outcome="changes_requested", status=new_status, summary=reason,
+         )
++        prior_rounds = conn.execute(
++            "SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND kind = 'changes_requested'",
++            (task_id,),
++        ).fetchone()
++        rework_round = int(prior_rounds["n"] if prior_rounds is not None else 0) + 1
+         _append_event(
+             conn,
+             task_id,
+@@ -4239,6 +4459,7 @@ def request_changes(
+                 "implementer": implementer,
+                 "reviewer": reviewer,
+                 "status": new_status,
++                "reworkRound": rework_round,
+             },
+             run_id=run_id,
+         )
+diff --git a/hermes_cli/acceptance_report.py b/hermes_cli/acceptance_report.py
+new file mode 100644
+index 000000000..7c0a80c6d
+--- /dev/null
++++ b/hermes_cli/acceptance_report.py
+@@ -0,0 +1,345 @@
++"""逐条 AC 验收报告：schema、校验与结构化 blockers。
++
++来源：SoduWork 结果交付支柱的逐条 checks 校验（hub-backend
++``task_acceptance_review.py:124-154``）与返修栅栏（``artifact_version_guard.py:21-85``）。
++本模块只做纯函数校验，不碰 DB：评审周期、执行者/审查者身份、契约 criteria 由调用方
++作为参数传入，避免第二事实源。
++
++报告形状（随 ``kanban_complete.metadata.acceptance_report`` 提交）::
++
++    {
++      "version": 1,
++      "reviewer": "reviewer-profile",
++      "reviewerKind": "agent" | "human",          # 可选，缺省不校验
++      "reviewRequestedEventId": 123,              # 可选；缺省绑定当前评审周期
++      "verdict": "pass" | "changes_requested",
++      "summary": "一句话结论",
++      "checks": [
++        {"id": "AC-1", "result": "pass|fail|na",
++         "evidence": "复跑命令/产物路径/观察结论", "note": "fail/na 必填"}
++      ]
++    }
++
++纪律：
++- 条数、ID 与契约 AC 必须一一对应；不得多报、漏报、重报。
++- 任一 ``fail`` 必须写 ``note``；``na`` 同样要说明为什么无法判定。
++- 总体 verdict 必须与逐条结果一致；完成路径只接受 ``pass``。
++- 审查者身份必须与 ``review_requested.implementer`` 不同（防自审）。
++- 报告可显式绑定 ``reviewRequestedEventId``；显式值不是当前周期即拒（防重放）。
++"""
++from __future__ import annotations
++
++import re
++from typing import Any, Iterable, Optional
++
++REPORT_VERSION = 1
++VALID_VERDICTS = frozenset({"pass", "changes_requested"})
++VALID_RESULTS = frozenset({"pass", "fail", "na"})
++VALID_REVIEWER_KINDS = frozenset({"agent", "human"})
++MAX_CHECKS = 64
++MAX_TEXT = 2000
++MAX_EVIDENCE = 1000
++MAX_REVIEWER = 120
++
++_AC_DIGITS = re.compile(r"\d+")
++_HEX64 = re.compile(r"^[a-f0-9]{64}$")
++
++
++class AcceptanceReportViolation(ValueError):
++    """报告不满足验收契约；``blockers`` 供 UI/重试策略按 code 分支。"""
++
++    def __init__(self, blockers: list[dict[str, str]]):
++        self.blockers = blockers
++        reason = "；".join(
++            f"{b['code']}：{b['detail']}" for b in blockers
++        ) or "验收报告无效"
++        super().__init__(reason)
++
++
++def _blocker(code: str, title: str, detail: str, action: str) -> dict[str, str]:
++    return {"code": code, "title": title, "detail": detail, "action": action}
++
++
++def _clip(value: Any, cap: int) -> str:
++    text = "" if value is None else str(value).strip()
++    return text[:cap]
++
++
++def _norm_identity(value: Any) -> str:
++    """身份比较用归一：去首尾空白、折叠内部空白、大小写不敏感（不改变展示值）。"""
++    return " ".join(str(value or "").strip().casefold().split())
++
++
++def norm_ac_id(raw: Any) -> str:
++    """AC 编号归一：``ac1`` / ``AC_1`` / ``AC-1`` → ``AC-1``；无数字时大写原样。"""
++    text = str(raw or "").strip()
++    digits = _AC_DIGITS.search(text)
++    return f"AC-{digits.group(0)}" if digits else text.upper()
++
++
++def expected_criteria_ids(criteria: Iterable[Any]) -> list[str]:
++    """从完成契约 criteria（``[{"id": "AC-1", ...}]``）提取去重后的 AC ID 序列。"""
++    out: list[str] = []
++    seen: set[str] = set()
++    for item in criteria or []:
++        raw = item.get("id") if isinstance(item, dict) else item
++        cid = norm_ac_id(raw)
++        if cid and cid not in seen:
++            seen.add(cid)
++            out.append(cid)
++    return out
++
++
++def _coerce_evidence(value: Any) -> str:
++    if isinstance(value, str):
++        return value.strip()
++    if isinstance(value, (list, tuple)):
++        parts = [str(v).strip() for v in value if str(v).strip()]
++        return "；".join(parts)
++    return ""
++
++
++def validate_report(
++    report: Any,
++    *,
++    expected_ids: Iterable[Any],
++    implementer: Optional[str],
++    current_review_event_id: Optional[int] = None,
++    require_pass: bool = True,
++) -> dict[str, Any]:
++    """校验并归一验收报告；不解则抛 :class:`AcceptanceReportViolation`（含全部 blockers）。
++
++    ``current_review_event_id`` 是当前评审周期对应的 ``review_requested`` 事件 id；
++    调方在无法定位周期时应传 ``None``，本函数按 fail-closed 拒绝——没有周期锚点的
++    报告无法证明它审的是本次交付。
++    """
++    if not isinstance(report, dict):
++        raise AcceptanceReportViolation([
++            _blocker(
++                "acceptance_report_missing",
++                "缺少验收报告",
++                "verification=independent 的完成必须携带 metadata.acceptance_report",
++                "按 spec 形状提交报告后重试 kanban_complete",
++            )
++        ])
++
++    blockers: list[dict[str, str]] = []
++    if report.get("version") != REPORT_VERSION:
++        blockers.append(_blocker(
++            "schema_invalid", "报告版本不支持",
++            f"version 必须为 {REPORT_VERSION}（收到 {report.get('version')!r}）",
++            "按当前 schema 重新生成报告",
++        ))
++
++    reviewer = _clip(report.get("reviewer"), MAX_REVIEWER)
++    if not reviewer:
++        blockers.append(_blocker(
++            "reviewer_missing", "缺少审查者",
++            "reviewer 必须是非空身份（profile 名或人员标识）",
++            "填写实际审查者身份后重试",
++        ))
++    reviewer_kind = report.get("reviewerKind")
++    if reviewer_kind is not None and reviewer_kind not in VALID_REVIEWER_KINDS:
++        blockers.append(_blocker(
++            "schema_invalid", "reviewerKind 非法",
++            f"reviewerKind 只能是 {sorted(VALID_REVIEWER_KINDS)} 或省略",
++            "改为 agent/human，或省略该字段",
++        ))
++    delivery_version_id = _clip(report.get("deliveryVersionId"), MAX_REVIEWER)
++    if delivery_version_id and not delivery_version_id.startswith("dv_"):
++        blockers.append(_blocker(
++            "schema_invalid", "deliveryVersionId 非法",
++            f"deliveryVersionId 必须以 dv_ 开头（收到 {delivery_version_id!r}）",
++            "携带当前交付版本的 versionId，或省略该字段",
++        ))
++    artifact_checksum = _clip(report.get("artifactChecksum"), 64).lower()
++    if artifact_checksum and not _HEX64.fullmatch(artifact_checksum):
++        blockers.append(_blocker(
++            "schema_invalid", "artifactChecksum 非法",
++            f"artifactChecksum 必须是 64 位小写 sha256（收到 {artifact_checksum!r}）",
++            "携带当前交付版本的 checksum，或省略该字段",
++        ))
++
++    implementer_norm = _norm_identity(implementer)
++    if not implementer_norm:
++        blockers.append(_blocker(
++            "implementer_unknown", "执行者身份未知",
++            "review_requested 事件没有可用的 implementer，无法证明审查独立性",
++            "让实现方先走 kanban_request_review（记录 implementer），再提交报告",
++        ))
++    elif reviewer and _norm_identity(reviewer) == implementer_norm:
++        blockers.append(_blocker(
++            "reviewer_not_independent", "审查者与执行者相同",
++            f"reviewer={reviewer!r} 与 implementer={implementer!r} 归一后相同",
++            "换一个独立审查者；自审不构成独立验收",
++        ))
++
++    claimed_cycle = report.get("reviewRequestedEventId")
++    if claimed_cycle is not None:
++        try:
++            claimed_cycle_int = int(claimed_cycle)
++        except (TypeError, ValueError):
++            claimed_cycle_int = None
++        if claimed_cycle_int is None:
++            blockers.append(_blocker(
++                "schema_invalid", "reviewRequestedEventId 非法",
++                f"reviewRequestedEventId 必须是整数（收到 {claimed_cycle!r}）",
++                "填写当前 review_requested 事件 id，或省略该字段",
++            ))
++        elif current_review_event_id is None:
++            blockers.append(_blocker(
++                "review_cycle_missing", "找不到当前评审周期",
++                "报告声明了 reviewRequestedEventId，但卡上没有对应的 review_requested 事件",
++                "先让实现方走 kanban_request_review，再提交报告",
++            ))
++        elif claimed_cycle_int != int(current_review_event_id):
++            blockers.append(_blocker(
++                "stale_review_cycle", "报告绑定的是旧评审周期",
++                f"报告周期 {claimed_cycle_int} ≠ 当前周期 {current_review_event_id}",
++                "按本次交付重新审查并提交新报告；旧报告不能重放",
++            ))
++    elif current_review_event_id is None:
++        blockers.append(_blocker(
++            "review_cycle_missing", "找不到当前评审周期",
++            "卡上没有 review_requested 事件，报告无法绑定到一次交付",
++            "先让实现方走 kanban_request_review，再提交报告",
++        ))
++
++    verdict = report.get("verdict")
++    if verdict not in VALID_VERDICTS:
++        blockers.append(_blocker(
++            "schema_invalid", "verdict 非法",
++            f"verdict 只能是 {sorted(VALID_VERDICTS)}（收到 {verdict!r}）",
++            "改为 pass 或 changes_requested",
++        ))
++
++    wanted = expected_criteria_ids(expected_ids)
++    checks_raw = report.get("checks")
++    if not wanted:
++        blockers.append(_blocker(
++            "criteria_missing", "卡上没有可判定的验收标准",
++            "完成契约未派生任何 AC；independent 验收不能无标准通过",
++            "在卡面补 AC-n 行或 dod 块，重新派发后再审查",
++        ))
++    if not isinstance(checks_raw, list):
++        blockers.append(_blocker(
++            "schema_invalid", "checks 形状非法",
++            "checks 必须是数组",
++            "按逐条 AC 数组提交",
++        ))
++        checks_raw = []
++    if len(checks_raw) > MAX_CHECKS:
++        blockers.append(_blocker(
++            "schema_invalid", "checks 条数超限",
++            f"最多 {MAX_CHECKS} 条（收到 {len(checks_raw)}）",
++            "拆分任务或减少 AC",
++        ))
++
++    normalized_checks: dict[str, dict[str, str]] = {}
++    for index, check in enumerate(checks_raw):
++        if not isinstance(check, dict):
++            blockers.append(_blocker(
++                "report_inconsistent", f"第 {index + 1} 条 check 不是对象",
++                "每条 check 必须是 {id,result,evidence,note} 对象",
++                "修正报告结构",
++            ))
++            continue
++        cid = norm_ac_id(check.get("id"))
++        if not cid:
++            blockers.append(_blocker(
++                "report_inconsistent", f"第 {index + 1} 条 check 缺 id",
++                "check.id 不能为空",
++                "填写对应 AC 编号",
++            ))
++            continue
++        if cid in normalized_checks:
++            blockers.append(_blocker(
++                "criteria_mismatch", f"{cid} 重复判定",
++                "同一 AC 只能有一条判定",
++                "删除重复项",
++            ))
++            continue
++        result = check.get("result")
++        if result not in VALID_RESULTS:
++            blockers.append(_blocker(
++                "report_inconsistent", f"{cid} 的 result 非法",
++                f"result 只能是 {sorted(VALID_RESULTS)}（收到 {result!r}）",
++                "改为 pass/fail/na",
++            ))
++            continue
++        evidence = _clip(_coerce_evidence(check.get("evidence")), MAX_EVIDENCE)
++        if not evidence:
++            blockers.append(_blocker(
++                "evidence_missing", f"{cid} 缺少证据",
++                "每条判定必须附可核验证据（复跑命令/产物路径/观察结论）",
++                "补证据后重试",
++            ))
++        note = _clip(check.get("note"), MAX_TEXT)
++        if result in ("fail", "na") and not note:
++            blockers.append(_blocker(
++                "report_inconsistent", f"{cid} 的 {result} 判定缺少 note",
++                "fail/na 必须说明原因或无法判定的理由",
++                "补 note 后重试",
++            ))
++        normalized_checks[cid] = {
++            "id": cid, "result": result, "evidence": evidence, "note": note,
++        }
++
++    if wanted:
++        wanted_set = set(wanted)
++        got = set(normalized_checks)
++        missing = [cid for cid in wanted if cid not in got]
++        extra = sorted(got - wanted_set)
++        if missing or extra:
++            detail_parts = []
++            if missing:
++                detail_parts.append(f"缺少 {', '.join(missing)}")
++            if extra:
++                detail_parts.append(f"多出 {', '.join(extra)}")
++            blockers.append(_blocker(
++                "criteria_mismatch", "报告与契约 AC 不一致",
++                "；".join(detail_parts) or "条数不一致",
++                "按契约 criteria 逐条重写报告",
++            ))
++        elif len(checks_raw) != len(wanted):
++            blockers.append(_blocker(
++                "criteria_mismatch", "报告条数与契约 AC 不一致",
++                f"契约 {len(wanted)} 条，报告 {len(checks_raw)} 条",
++                "按契约 criteria 逐条重写报告",
++            ))
++
++    if verdict in VALID_VERDICTS and normalized_checks:
++        any_fail = any(c["result"] == "fail" for c in normalized_checks.values())
++        if any_fail and verdict != "changes_requested":
++            blockers.append(_blocker(
++                "report_inconsistent", "总体结论与逐条结果矛盾",
++                "存在 fail 项，但 verdict=pass",
++                "改为 changes_requested，或修正判定",
++            ))
++        if not any_fail and verdict == "changes_requested":
++            blockers.append(_blocker(
++                "report_inconsistent", "总体结论与逐条结果矛盾",
++                "没有 fail 项，但 verdict=changes_requested",
++                "改为 pass，或补充 fail 判定",
++            ))
++        if require_pass and verdict != "pass":
++            raise AcceptanceReportViolation(blockers + [_blocker(
++                "verdict_not_pass", "审查未通过",
++                f"report.verdict={verdict!r}，完成路径只接受 pass",
++                "走 kanban_request_changes 退回返修；不要用完成动作表达不通过",
++            )])
++
++    if blockers:
++        raise AcceptanceReportViolation(blockers)
++
++    return {
++        "version": REPORT_VERSION,
++        "reviewer": reviewer,
++        "reviewerKind": reviewer_kind,
++        "reviewRequestedEventId": current_review_event_id,
++        "verdict": verdict,
++        "summary": _clip(report.get("summary"), MAX_TEXT),
++        "checks": [normalized_checks[cid] for cid in wanted],
++        **({"deliveryVersionId": delivery_version_id} if delivery_version_id else {}),
++        **({"artifactChecksum": artifact_checksum} if artifact_checksum else {}),
++    }
+diff --git a/hermes_cli/delivery_version.py b/hermes_cli/delivery_version.py
+new file mode 100644
+index 000000000..0b63b7a3a
+--- /dev/null
++++ b/hermes_cli/delivery_version.py
+@@ -0,0 +1,191 @@
++"""任务级不可变交付版本：交付清单、内容 checksum 与 supersede 事件。
++
++来源：SoduWork 结果交付支柱的 `ArtifactVersion`（checksum/commit/state + 新版本
++作废旧版本）。本仓的单一事实源是 kanban DB：任务、事件、附件、完成门都在这里，
++因此版本不另开表，用 append-only 事件表达：
++
++    delivery_version              {versionId, seq, checksum, manifest, createdAt, ...}
++    delivery_version_superseded   {versionId, supersededBy, at}
++
++纪律：
++- 版本内容不可变：checksum = sha256(canonical({taskId, bodySha256, attachments}))；
++  同 checksum 重复创建返回既有版本（幂等），不追加新事件。
++- 新版本创建时，先把当前 active 版本标 superseded，再追加新版本；旧验收报告因
++  `deliveryVersionId`/`artifactChecksum` 不匹配而自然失效。
++- 附件哈希在版本创建时读取持久附件文件计算；文件缺失如实记 `missing=true`，
++  sha256=null，不猜内容。
++- 调用方必须已经持有 write_txn（与 _append_event 同约定）。
++
++边界：本模块不建新表、不做数据库级不可变；不可变性由「只追加事件 + 内容寻址」
++保证。强不可变表结构（触发器/唯一约束）留待后续批。
++"""
++from __future__ import annotations
++
++import hashlib
++import json
++import time
++from pathlib import Path
++from typing import Any, Optional
++
++DELIVERY_VERSION_KIND = "delivery_version"
++SUPERSEDED_KIND = "delivery_version_superseded"
++_CHUNK = 1024 * 1024
++
++
++def canonical_json(value: Any) -> str:
++    """键序稳定的 JSON 序列化（与 evidence 链的 canonicalJson 同哲学）。"""
++    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
++
++
++def sha256_bytes(data: bytes) -> str:
++    return hashlib.sha256(data).hexdigest()
++
++
++def sha256_file(path: str | Path) -> Optional[str]:
++    """流式哈希；文件不存在/不可读返回 None（调用方记 missing，不猜）。"""
++    h = hashlib.sha256()
++    try:
++        with open(path, "rb") as fh:
++            while True:
++                chunk = fh.read(_CHUNK)
++                if not chunk:
++                    break
++                h.update(chunk)
++        return h.hexdigest()
++    except OSError:
++        return None
++
++
++def _task_body(conn, task_id: str) -> str:
++    row = conn.execute("SELECT body FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    return (row["body"] if row is not None else "") or ""
++
++
++def _attachments(conn, task_id: str) -> list[dict[str, Any]]:
++    rows = conn.execute(
++        "SELECT id, filename, stored_path, size FROM task_attachments "
++        "WHERE task_id = ? ORDER BY id",
++        (task_id,),
++    ).fetchall()
++    out: list[dict[str, Any]] = []
++    for row in rows:
++        path = row["stored_path"]
++        digest = sha256_file(path) if path else None
++        out.append({
++            "id": row["id"],
++            "filename": row["filename"],
++            "size": int(row["size"] or 0),
++            "sha256": digest,
++            "missing": digest is None,
++        })
++    return out
++
++
++def delivery_content(task_id: str, body: str, attachments: list[dict[str, Any]]) -> dict[str, Any]:
++    """版本内容（checksum 的输入；不含 seq/createdAt 等可变字段）。"""
++    return {
++        "taskId": task_id,
++        "bodySha256": sha256_bytes(body.encode("utf8")),
++        "attachments": attachments,
++    }
++
++
++def delivery_checksum(content: dict[str, Any]) -> str:
++    return sha256_bytes(canonical_json(content).encode("utf8"))
++
++
++def version_id_of(checksum: str) -> str:
++    return f"dv_{checksum[:16]}"
++
++
++def _event_rows(conn, task_id: str) -> list[Any]:
++    return conn.execute(
++        "SELECT id, kind, payload FROM task_events WHERE task_id = ? "
++        "AND kind IN (?, ?) ORDER BY id",
++        (task_id, DELIVERY_VERSION_KIND, SUPERSEDED_KIND),
++    ).fetchall()
++
++
++def _payload(row) -> dict[str, Any]:
++    try:
++        value = json.loads(row["payload"] or "{}")
++    except (TypeError, ValueError):
++        return {}
++    return value if isinstance(value, dict) else {}
++
++
++def latest_delivery_version(conn, task_id: str) -> Optional[dict[str, Any]]:
++    """当前 active 版本（被 superseded 的版本不算）；没有返回 None。"""
++    current: Optional[dict[str, Any]] = None
++    for row in _event_rows(conn, task_id):
++        payload = _payload(row)
++        if row["kind"] == DELIVERY_VERSION_KIND:
++            current = payload
++        elif row["kind"] == SUPERSEDED_KIND:
++            if current is not None and payload.get("versionId") == current.get("versionId"):
++                current = None
++    return current
++
++
++def verify_delivery_version(version: dict[str, Any]) -> bool:
++    """重算 checksum 与 versionId，判断版本行自身是否自洽。"""
++    if not isinstance(version, dict):
++        return False
++    content = version.get("content")
++    checksum = version.get("checksum")
++    version_id = version.get("versionId")
++    if not isinstance(content, dict) or not isinstance(checksum, str):
++        return False
++    recomputed = delivery_checksum(content)
++    return recomputed == checksum and version_id == version_id_of(checksum)
++
++
++def _next_seq(conn, task_id: str) -> int:
++    row = conn.execute(
++        "SELECT COUNT(*) AS n FROM task_events WHERE task_id = ? AND kind = ?",
++        (task_id, DELIVERY_VERSION_KIND),
++    ).fetchone()
++    return int(row["n"] if row is not None else 0) + 1
++
++
++def _append_event(conn, task_id: str, kind: str, payload: dict[str, Any]) -> None:
++    """复用 kanban 事件写入（envelope/actor/reason/trace 同源）；延迟导入避免环。"""
++    from hermes_cli.kanban_db import _append_event as kb_append_event
++
++    kb_append_event(conn, task_id, kind, payload)
++
++
++def record_delivery_version(
++    conn, task_id: str, *, source: str, created_by: Optional[str] = None,
++) -> dict[str, Any]:
++    """在调用方事务内记录一个交付版本；同 checksum 幂等返回既有版本。
++
++    返回完整版本 dict（含 versionId/checksum/content/manifest/seq 等）。
++    """
++    body = _task_body(conn, task_id)
++    attachments = _attachments(conn, task_id)
++    content = delivery_content(task_id, body, attachments)
++    checksum = delivery_checksum(content)
++    current = latest_delivery_version(conn, task_id)
++    if current is not None and current.get("checksum") == checksum:
++        return current
++
++    version_id = version_id_of(checksum)
++    now = int(time.time())
++    if current is not None:
++        _append_event(conn, task_id, SUPERSEDED_KIND, {
++            "versionId": current.get("versionId"),
++            "supersededBy": version_id,
++            "at": now,
++        })
++    version = {
++        "versionId": version_id,
++        "seq": _next_seq(conn, task_id),
++        "checksum": checksum,
++        "content": content,
++        "source": source,
++        "createdAt": now,
++        "createdBy": created_by,
++    }
++    _append_event(conn, task_id, DELIVERY_VERSION_KIND, version)
++    return version

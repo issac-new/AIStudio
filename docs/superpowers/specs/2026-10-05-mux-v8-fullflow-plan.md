@@ -95,7 +95,7 @@ AIStudio 是一个让 AI 像一家软件公司一样干活的桌面工作台。�
 > - 术语：产品面与推演域术语以总述词表为单一事实源。
 > - 文风验收线：正文散文长句清零（保留主句+必要参数括注形态），表格枚举与冻结面步条为公文合法保留形态。
 
-> **运行基面（2026-11-21 状态同步）**：宿主 `~/.hermes/hermes-agent` 已收口 hermes-agent v0.23.3 稳态（基线 caafe5389a＋runtime 清单 71 件——含 watchdog hostile-load 热修承载；deploy 对账 194 相同/0 差异，网关重启稳定，详见 spec 2026-11-20-vendor-upgrade-agent-v0233 N-1 销账行）。SIM 实体环境已随 2026-11-18 归档轮拆除（SIM_ROOT 仅剩 logs/）；本文各「宿主供给/SIM 快照」条款在下次推演重建时生效——重建入口 `mux/mx-setup.sh`（自带 agent 供给部署与 config 幂等盖章，重建即 v0.23.3 全新面），程序本体无版本适配缺口。本文以下条款为重建后运行规则，不因拆除失效。
+> **运行基面（2026-11-21 状态同步）**：宿主 `~/.hermes/hermes-agent` 已同步至 hermes-agent v0.23.3 稳态（基线 caafe5389a＋runtime 清单 71 件——含 watchdog hostile-load 热修承载；deploy 对账 194 相同/0 差异，网关重启稳定，详见 spec 2026-11-20-vendor-upgrade-agent-v0233 N-1 清偿记录行）。SIM 实体环境已随 2026-11-18 归档轮拆除（SIM_ROOT 仅剩 logs/）；本文各「宿主供给/SIM 快照」条款在下次推演重建时生效——重建入口 `mux/mx-setup.sh`（自带 agent 供给部署与 config 幂等盖章，重建即 v0.23.3 全新面），程序本体无版本适配缺口。本文以下条款为重建后运行规则，不因拆除失效。
 
 ## 一、方案目标
 

@@ -1386,3 +1386,6 @@
 # 零改动件（repo 已超集/宿主变体已坏）：agent_init pc_cfg、context_compressor、tool_executor、
 # followups、两测试件——定谳留痕见 spec。
 813-hermes-host-hotfix-port.patch
+# 回归根治批 F6：hermes_cli runtime 领先面回灌（11-19 交付域批只落 runtime 未回移 vendor，
+# 拼合树 pytest 配方对 runtime 独有模块失明——15 例结构性红；741 dispatch 回灌同款）。
+814-agent-hermes-cli-runtime-backport.patch

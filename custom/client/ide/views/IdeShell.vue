@@ -420,8 +420,12 @@ watch(() => route.query.task, (taskId) => {
   if (typeof taskId === 'string' && taskId.trim()) briefingOpen.value = true
 }, { immediate: true })
 // 抽屉自动收起的一次性消费在声明处定义（briefingMissHandled，见上）；此处只挂监听。
-watch([briefingOpen, briefingTask, briefingMiss], ([open, task, miss]) => {
-  if (open && miss && !task && !briefingMissHandled.value) {
+// 2026-11-22 R7 语义补全（F3 根治二段）：「不可解析即收起」含两态——notFound（miss）
+// 与解析故障（briefingTaskError：超时/5xx/网络）。旧版只收 miss，慢 404 被 withTimeout
+// 吞成 transient 后抽屉常开盖住右栏页签（与 R7 立项动机同形）。手动打开不受强关
+// （briefingMissHandled 一次性消费，换任务时随 watch197 重置）。
+watch([briefingOpen, briefingTask, briefingMiss, briefingTaskError], ([open, task, miss, err]) => {
+  if (open && !task && !briefingMissHandled.value && (miss || err)) {
     briefingOpen.value = false
     briefingMissHandled.value = true
   }
