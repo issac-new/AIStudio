@@ -91,3 +91,6 @@
 #      （严格 provider 如 Moonshot 会整单拒收）。Qwen 逐项对照其余差距=零（失败分类
 #      18 类>8 类/压缩三级阶梯>两级/流恢复预算 10>2/MCP 池化已有，锚点见 spec D1）。
 011-mcp-schema-sanitizer.patch
+# 012（2026-11-22 全量回归 Android 安全面）：macOS java_home 可能回退到其它大版本；
+# externalPath 安全校验后执行受信任 JVM -version 并核对主版本，项目内伪造 Java 仍先拒。
+012-android-jdk-major-check.patch

@@ -1,0 +1,54 @@
+diff --git a/apps/zcode-cli/packages/android-emulator-plugin/src/providers/sdk.ts b/apps/zcode-cli/packages/android-emulator-plugin/src/providers/sdk.ts
+index 94a79b708..f6238978f 100644
+--- a/apps/zcode-cli/packages/android-emulator-plugin/src/providers/sdk.ts
++++ b/apps/zcode-cli/packages/android-emulator-plugin/src/providers/sdk.ts
+@@ -149,8 +149,22 @@ export async function javaHome(): Promise<string | undefined> {
+ 
+ async function validJavaHome(candidate: string): Promise<string | undefined> {
+   const root = await externalPath(candidate, "directory");
+-  if (!root || !(await externalPath(path.join(root, "bin", javaBin()), "executable")))
+-    return undefined;
++  if (!root) return undefined;
++  const executable = path.join(root, "bin", javaBin());
++  if (!(await externalPath(executable, "executable"))) return undefined;
++
++  // macOS 的 java_home 在请求版本不存在时会回退到其它大版本。
++  // 先通过 externalPath 拒绝项目内伪造可执行文件，再核对真实 JVM 的主版本，
++  // 避免把不匹配 JDK 当成有效运行环境（tool-security 回归 ISSUE-008）。
++  if (process.platform === "darwin") {
++    const expectedMajor = javaMajorVersion().split(".")[0];
++    const observed = await run([executable, "-version"], { timeout: 5000 });
++    if (!ok(observed)) return undefined;
++    const match = `${observed.stdout}\n${observed.stderr}`.match(/version "(\d+)(?:\.(\d+))?/);
++    if (!match) return undefined;
++    const actualMajor = match[1] === "1" ? match[2] : match[1];
++    if (actualMajor !== expectedMajor) return undefined;
++  }
+   return root;
+ }
+ 
+diff --git a/apps/zcode-cli/packages/android-emulator-plugin/test/tool-security.test.ts b/apps/zcode-cli/packages/android-emulator-plugin/test/tool-security.test.ts
+index 682868c33..9ee7f3223 100644
+--- a/apps/zcode-cli/packages/android-emulator-plugin/test/tool-security.test.ts
++++ b/apps/zcode-cli/packages/android-emulator-plugin/test/tool-security.test.ts
+@@ -183,7 +183,19 @@ test("Java SDK scripts require a validated JDK instead of running their Java fal
+   const java = path.join(jdk, "bin", windows ? "java.exe" : "java");
+   await mkdir(path.dirname(java), { recursive: true });
+   if (windows) await copyFile(process.execPath, java);
+-  else await trustedExecutable(java);
++  else {
++    await writeFile(
++      java,
++      `#!/bin/sh
++if [ "$1" = "-version" ]; then
++  printf 'openjdk version "${process.env.ANDROID_PLUGIN_JDK_MAJOR}.0.0"\\n' >&2
++  exit 0
++fi
++printf 'trusted-tool\\n'
++`,
++    );
++    await chmod(java, 0o755);
++  }
+   vi.stubEnv("JAVA_HOME", jdk);
+   expect(await javaHome()).toBe(await realpath(jdk));
+   expect(await findTool("sdkmanager")).toBe(await realpath(tool));
