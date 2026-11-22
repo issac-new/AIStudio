@@ -82,7 +82,7 @@
         "zcode-patches/"
       ],
       "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（3.18.2）；基线 commit fec97590（v3.18.2 线，2026-11-13 同步批）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 10：002-011；011=Qwen Code 1.0 吸收项——MCP 参数名消毒＋调用回译）。",
-      "baselineCommit": "b95ebaff",
+      "baselineCommit": "fec97590",
       "activePatchCount": "10"
     },
     "yuan-skill": {

@@ -1,6 +1,7 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
-# 基线: origin/main @ b95ebaff (v3.18.0 线, 2026-11-11 同步批；同步口径=上游 main 变更非版本 tag)。
+# 基线: origin/main @ fec97590 (v3.18.2 线, 2026-11-13 同步批；同步口径=上游 main 变更非版本 tag)。
+# 2026-11-13 同步批：b95ebaff→fec97590；台账见 vendor/VENDOR.md。
 # 2026-11-11 同步批（spec 2026-11-11-zcode-3180-sync-and-qwen-absorb）：a9fe401e→b95ebaff
 # 单 sync 提交 5099 文件 +429348/−44745；002/006 锚漂移重生成（010 实测直放），净基线 10/10 全过。
 #

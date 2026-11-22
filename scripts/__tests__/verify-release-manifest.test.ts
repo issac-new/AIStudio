@@ -149,10 +149,18 @@ describe('版本载体对账（真源在 carrier，清单只抄录）', () => {
     expect(pkg.version).toBe(m.modules.ycode.version)
   })
 
-  it('ycode：基线 commit 仍见于 series 头，且活跃补丁数与 series 一致', () => {
+  it('ycode：基线 commit 在 series、VENDOR.md 与清单三方一致，活跃补丁数与 series 一致', () => {
     const m = loadManifest()
     const series = readFileSync(join(ROOT, 'zcode-patches/series'), 'utf8')
-    expect(series).toContain(m.modules.ycode.baselineCommit ?? '') // 基线 commit 在 series 头可反查
+    const vendor = readFileSync(join(ROOT, 'vendor/VENDOR.md'), 'utf8')
+    const vendorCommit = /\| zcode \| `([0-9a-f]+)`/.exec(vendor)?.[1]
+    const seriesCommit = /# 基线: [^@\n]+@ ([0-9a-f]+)/.exec(series)?.[1]
+    // Regression: ISSUE-002 — 三处基线各自更新导致发布清单反查旧源码
+    // Found by /qa on 2026-11-22
+    // Report: .gstack/qa-reports/run-20261122T133641Z/qa-report-aistudio-2026-11-22.md
+    expect(vendorCommit, 'VENDOR.md 必须声明 zcode 钉版 commit').toBeTruthy()
+    expect(m.modules.ycode.baselineCommit, '清单不得指向旧基线').toBe(vendorCommit)
+    expect(seriesCommit, 'series 头不得指向旧基线').toBe(vendorCommit)
     const declared = Number(m.modules.ycode.activePatchCount ?? 0)
     const active = series.split('\n').filter(l => /^\d{3}-/.test(l.trim())).length
     expect(declared, '清单声明的活跃补丁数须等于 series 实际数').toBe(active)
