@@ -1040,7 +1040,7 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。
 
 - 适用版本：AIStudio 1.0.17-overlay（package.json）
-- 路由计数：routes=129（page 88 / redirect 41）；stageTabs=37；visitStates=166
+- 路由计数：routes=128（page 86 / redirect 42）；stageTabs=37；visitStates=165
 - 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.28-studio.2 · agent-teams v0.23.3-team.1 · ycode 3.18.2 · yuan-skill v2.103.0
 - 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · expdual=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
 
@@ -1050,7 +1050,6 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 |---|---|---|
 |  | /app/collab/history/session/:sessionId | redirect |
 |  | /app/collab/global-agent/session/:sessionId | redirect |
-| hermes.historySession | /hermes/history/session/:sessionId | page |
 |  | /hermes/history/group-chat/:roomId | redirect |
 |  | /hermes/group-chat/history/:roomId | redirect |
 | ia2.collabSession | /app/s/chat/:sessionId | page |
@@ -1103,7 +1102,6 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 | share.groupChat | /share/group-chat/:inviteCode? | page |
 | studio.plugins | /studio/plugins | page |
 | hermes.tasks | /hermes/tasks | redirect |
-| hermes.history | /hermes/history | page |
 | hermes.apiRelay | /hermes/api-relay | page |
 | hermes.agentManager | /studio/agents | page |
 | ekko.memory | /ekko/memory | page |
@@ -1177,4 +1175,5 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 | ia2.journey | /app | page |
 |  | /ide | redirect |
 | matrix.client | /matrix | page |
+|  | /:pathMatch(.*)* | redirect |
 <!-- docs-projection:end -->
