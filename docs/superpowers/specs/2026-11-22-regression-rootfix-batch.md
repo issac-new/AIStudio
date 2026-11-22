@@ -21,6 +21,8 @@
 
 ## 决策记录
 
+7. **合并时新事实：runtime/gateway/hosted_rooms.py 模板陈旧于 v0.23.3 vendor 基线**（合并后主树 inject 预检 partial 抓出）：宿主与 vendor 字节一致（persistence.gateway 重构版），runtime 模板是换血未更新的旧层——按仓法 10 从 vendor 正本回灌模板（非宿主直拷，来源可审计）；同轮 kanban_db/容量测试两件模板新于宿主（补丁 814 产物），超集成立后 --force 收敛，宿主 deploy dry-run 终态 195 同/0 差异 complete。
+
 1. **F1 修门不修产品**（Mechanical）：契约接线闭环完整（dispatch env 注入＋kanban_db 消费），宿主生产正本同形态佐证；session_kanban.py 孪生对齐是 3ffcd3df8 的 P0 部署崩溃修复，不得回退。门跟随架构演进更新锚点。
 2. **F2 改词优于映射**（Mechanical）：jargon 词表立法意图是「说人话」，加映射豁免让 HARD 词永久豁免；该行是 2026-11-21 新增状态同步注记非冻结面正文。SPEC_REBIND=1 走授权修订通道。
 3. **F6 补丁回移优于改配方**（Mechanical）：仓法「改上游行为必须走 patches/」；PYTHONPATH 顺序调整会让 runtime 同名模块全量遮蔽基线破坏拼合树语义。741 先例已验证回灌模式。
