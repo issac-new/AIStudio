@@ -16,12 +16,18 @@ afterEach(() => {
 })
 
 describe('detectSandboxSupport', () => {
+  // 真探测语义＝如实报后端身份，不锁 runner 镜像内容物：2026-11-23 CI 红定谳——
+  // GH ubuntu-latest（24.04）镜像演进后 bwrap 可用，旧断言「非 darwin 必 unavailable」
+  // （2026-11-12 立论「CI 无 bwrap」）已被环境事实打破。
   it('本机 darwin 探测到 sandbox-exec（真探测，不编造能力）', () => {
     const support = detectSandboxSupport()
     if (process.platform === 'darwin') {
       expect(support).toMatchObject({ backend: 'darwin-sandbox-exec', available: true })
+    } else if (support.available) {
+      // linux：bwrap 在场→如实可用，且后端身份只能是 linux-bwrap（不编造）
+      expect(support.backend).toBe('linux-bwrap')
     } else {
-      expect(support.available).toBe(false)
+      expect(support.backend).toBe('none')
     }
   })
 

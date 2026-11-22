@@ -1,10 +1,17 @@
 // Regression: ISSUE-009 — PATCH 返回 200 但 title/body 未持久化
 // Found by /qa on 2026-11-22
 // Report: .gstack/qa-reports/run-20261122T133641Z/qa-report-aistudio-2026-11-22.md
+// 真实 CLI 端到端测试：二进制缺席（GH CI runner 无 hermes）整组跳过——
+// mock 掉 CLI 即失去 ISSUE-009 回归意义；开发机/预推送门二进制在场时全量执行。
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { spawnSync } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+// 与 resolveHermesBin()（vendor runtime/process）同序：HERMES_BIN → PATH hermes
+const hermesBin = process.env.HERMES_BIN?.trim() || 'hermes'
+const hermesAvailable = spawnSync(hermesBin, ['--version'], { timeout: 10_000 }).status === 0
 
 let home = ''
 let previousKanbanHome: string | undefined
@@ -21,7 +28,7 @@ afterEach(async () => {
   if (home) await rm(home, { recursive: true, force: true })
 })
 
-describe('kanban PATCH title/body', () => {
+describe.skipIf(!hermesAvailable)('kanban PATCH title/body', () => {
   it('通过真实 kanban CLI 编辑并在二次读取时保持新值', async () => {
     const cli = await import('../../../../../vendor/hermes-studio/packages/server/src/modules/hermes/services/kanban/kanban-service')
     const board = 'title-edit'
