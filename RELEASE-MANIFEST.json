@@ -149,6 +149,14 @@
       "treeHash": "0165a000403633560e8b9e81fc94db219bbd42a6",
       "createdAt": "2026-11-22",
       "note": "v1.0.17 发布轮实际打包 commit（tag 指向＝feef0a6）；打包链 release:preflight 全过（九门 fresh 证据＋symbol-grounding executor 双层根治后 PASS）；技能回归 140/140；GitHub Release 三资产＋ModelScope swarm-yuan/ 目录 everything zip＋SHA256SUMS-v1.0.17-overlay.txt。"
+    },
+    {
+      "id": "v1.0.18-overlay",
+      "tag": "v1.0.18-overlay",
+      "commit": "b722617ebbe6fb323637d9aa34ace0b57e658733",
+      "treeHash": "ee3fcf28a30fe8ad9255899ed9166579f51a64bb",
+      "createdAt": "2026-11-23",
+      "note": "v1.0.18 发布轮实际打包 commit（tag 指向＝b722617eb）；release:preflight 全过（basic-check junit 9892/0＋六门 fresh）；GitHub Release 三资产字节尺寸回验一致＋远端 SUMS 逐字相同；ModelScope swarm-yuan/ everything zip＋SHA256SUMS-v1.0.18（64fdf50，远端 scan ACCEPTED）。"
     }
   ],
   "packaging": {
