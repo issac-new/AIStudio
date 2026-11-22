@@ -70,7 +70,7 @@ check_deps() {
   local dep_files
   dep_files=$(find "$PROJECT_DIR" -maxdepth 3 \
     \( -name package.json -o -name pyproject.toml -o -name go.mod -o -name requirements.txt -o -name Cargo.toml -o -name pom.xml -o -name build.gradle -o -name build.gradle.kts \) \
-    2>/dev/null | grep -vE 'node_modules|/upstream/|/\.git/' || true)
+    2>/dev/null | grep -vE 'node_modules|/upstream/|/\.git/|/vendor/' || true)
 
   local df name ver base_ver ver_clean base_clean declared
   for df in $dep_files; do
