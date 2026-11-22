@@ -481,3 +481,4 @@
 {"at":"2026-11-21T11:04:30Z","spec":"docs/superpowers/specs/2026-11-21-model-pool-unification.md","receipt":"e00b16b5a92121845f35de00d7304bb36738e3c4","commit":"e6047aa95"}
 {"at":"2026-11-21T13:10:29Z","spec":"docs/superpowers/specs/2026-11-21-runtime-hotfix-port-batch.md","receipt":"4aac089375444d5432f1e5cbf1a3bc9131194397","commit":"3e4c1a653"}
 {"at":"2026-11-21T14:18:00Z","spec":"docs/superpowers/specs/2026-11-21-runtime-hotfix-port-batch.md","receipt":"d1643d71647fd044d03e7b793a744311bdc7a575","commit":"da318161d"}
+{"at":"2026-11-22T12:02:29Z","spec":"docs/superpowers/specs/2026-11-22-regression-rootfix-batch.md","receipt":"dfc2d3fa80bfc5ed6bac1bafd649cdfb599b86cf","commit":"445cd42ec"}
