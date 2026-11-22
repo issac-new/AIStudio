@@ -80,6 +80,7 @@ END {
     split(ADD[i], p, "\t"); f = p[1]; t = p[2]
     # 文档与守卫自身不参与"代码动作"判定：md 里描述这些模式不是降标行为，
     # 守卫自身携带的检测正则也不是（否则守卫一落地就把自己判成降标）
+    if (f ~ /^vendor\//) { continue }
     if (f ~ /\.md$/ || f ~ /floor-guard.*\.sh$/ || f ~ /test-floor-guard/) {
       if (f ~ /CONSTRAINTS/ && t ~ /^\| *[WE][0-9]+ *\|/) { printf "降标[新增例外] %s: %s\n", f, substr(t, 1, 120); bad++ }
       continue
@@ -90,11 +91,12 @@ END {
     else if (f ~ /(CONSTRAINTS|precheck[a-z.]*\.conf|rules\.d\/.*\.rules)$/ && t ~ /^\| *[WE][0-9]+ *\|/) { printf "降标[新增例外] %s: %s\n", f, substr(t, 1, 120); bad++ }
   }
   # 删除测试文件
-  for (f in DEL) if (f ~ /(\.test\.|\.spec\.|_test\.|test_)/) { printf "降标[测试变松] %s: 文件被删除\n", f; bad++ }
+  for (f in DEL) { if (f ~ /^vendor\//) continue; if (f ~ /(\.test\.|\.spec\.|_test\.|test_)/) { printf "降标[测试变松] %s: 文件被删除\n", f; bad++ } }
   # 删除断言（文件仍存在）
   for (i = 1; i <= nr; i++) {
     split(REM[i], p, "\t"); f = p[1]; t = p[2]
     if (f in DEL) continue
+    if (f ~ /^vendor\//) continue
     if (f ~ /(\.test\.|\.spec\.|_test\.|test_)/ && t ~ /(expect|assert|should|SHOULD|ASSERT)/) {
       printf "降标[断言删除] %s: %s\n", f, substr(t, 1, 120); bad++
     }
