@@ -483,3 +483,5 @@
 {"at":"2026-11-21T14:18:00Z","spec":"docs/superpowers/specs/2026-11-21-runtime-hotfix-port-batch.md","receipt":"d1643d71647fd044d03e7b793a744311bdc7a575","commit":"da318161d"}
 {"at":"2026-11-22T12:02:29Z","spec":"docs/superpowers/specs/2026-11-22-regression-rootfix-batch.md","receipt":"dfc2d3fa80bfc5ed6bac1bafd649cdfb599b86cf","commit":"445cd42ec"}
 {"at":"2026-11-22T13:01:32Z","spec":"docs/superpowers/specs/2026-11-22-regression-rootfix-batch.md","receipt":"fac3d7f3989980b621f1f4bba00d94348a662068","commit":"e4319334d"}
+{"at":"2026-11-22T13:20:59Z","spec":"docs/superpowers/specs/2026-11-22-release-v1.0.17-overlay.md","receipt":"d8e03daa6845ec5f10aa018545e2e9585f96cb2c","commit":"941a9f467"}
+{"at":"2026-11-22T15:28:09Z","spec":"docs/superpowers/specs/2026-11-22-release-v1.0.17-overlay.md","receipt":"4cbd65205ba78422f843324b11f5ddcaab34dc0e","commit":"bda4ef574"}

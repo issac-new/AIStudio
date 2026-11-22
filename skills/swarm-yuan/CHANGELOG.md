@@ -1,5 +1,11 @@
 # Changelog
 
+## [v2.103.0] - 2026-11-22
+回归根治批技能面（AIStudio 2026-11-22 回归根治批 F5/F8 落地）。门禁数不变（59），无新增 check_*。
+- **三类门 vendor 盲区根治（F8）**：check_deps 依赖扫描排除 `vendor/`（钉版基线自有版本非本仓升级动作）/floor-guard 新增·删除·断言三循环排除 `vendor/`（注入态 diff 的上游自带 noqa 标注非本仓 diff 动作）/spec-first `_git_changed_files` 排除 `vendor/`（注入态脏文件不是「可写源码区改动」）——与仓法 L2 vendor 挡护同语义；干净 clone 判别实验定谳（主检出串扰红=环境态非技能缺陷）。
+- **信息性台账三条 observe 到期归类（F5）**：gate_fixtures_bsd/fixtures_windows/gate_fixtures_windows 按 CI 实证归类 **green**（BSD=run 44667629999 2026-11-20 ✓；Windows full=run 43841779440 2026-11-16 schedule ✓）——变红即真回归棘轮生效。
+
+
 ## [v2.102.0] - 2026-11-20
 R150 运行时刷新轮：12 行升基线＋回合适读性分层吸收。门禁数不变（59），无新增 check_*。
 - **基线升位 12 行**（npm/PyPI/GitHub 多通道实核，2026-11-19~20）：openspec **2.1.0**（major）/claude-mem **16.0.1**（major）/codex-cli **0.170.0**/claude-code **2.1.328**/codex-security **0.10.1**/ocr **1.13.13**/gsd-core **1.22.0**/comet **0.5.5**/graphify **0.9.105**（GitHub 已 0.9.112，PyPI 通道滞后留痕）/ruflo **3.78.0**/pi **1.5.2**/dsh **dsh-v0.2.2-rc.5**；零移动 8 行维持（gitnexus/superpowers/mattpocock/ECC/impeccable/semantica/pua/diagram-design）。

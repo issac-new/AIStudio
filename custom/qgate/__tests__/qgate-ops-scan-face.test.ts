@@ -96,3 +96,34 @@ describe('symbols 走读面（Task 10 已修，回归锚定）', () => {
     } finally { rmSync(ws, { recursive: true, force: true }) }
   })
 })
+
+// 2026-11-22 发版轮实录回归：相对 .json 导入的数据文件不在 scanGlobs 扫描宇宙内，
+// resolveSpecifier 成员判定对它结构性失明（decision-vectors.json 双红）——显式扩展名
+// 相对导入改走文件系统在位判定；缺席仍 fail（真红不豁免）。
+describe('ops symbols：显式扩展名相对导入的文件系统接地', () => {
+  it('在位的 ./x.json 不再误报未接地（数据文件不在扫描宇宙）', async () => {
+    const ws = mkdtempSync(join(tmpdir(), 'qgate-json-ground-'))
+    try {
+      mkdirSync(join(ws, 'custom', 'd'), { recursive: true })
+      writeFileSync(join(ws, 'custom', 'd', 'data.json'), '{"k":1}')
+      writeFileSync(join(ws, 'custom', 'd', 'a.ts'), "import d from './data.json'\nexport const v = d.k\n")
+      const spec = opsExecutor({ mode: 'symbols', depsFile: 'package.json', scanGlobs: ['custom/**/*.ts'] })
+      writeFileSync(join(ws, 'package.json'), '{"name":"x","dependencies":{}}')
+      const r = await runOpsExecutor(spec, { workspace: ws } as never)
+      expect(r.result).toBe('pass')
+      expect(r.summary ?? '').not.toMatch(/violations/)
+    } finally { rmSync(ws, { recursive: true, force: true }) }
+  })
+  it('缺席的 ./missing.json 仍判未接地（fail-closed 不豁免）', async () => {
+    const ws = mkdtempSync(join(tmpdir(), 'qgate-json-ground2-'))
+    try {
+      mkdirSync(join(ws, 'custom', 'd'), { recursive: true })
+      writeFileSync(join(ws, 'package.json'), '{"name":"x","dependencies":{}}')
+      writeFileSync(join(ws, 'custom', 'd', 'b.ts'), "import d from './missing.json'\nexport const v = d\n")
+      const spec = opsExecutor({ mode: 'symbols', depsFile: 'package.json', scanGlobs: ['custom/**/*.ts'] })
+      const r = await runOpsExecutor(spec, { workspace: ws } as never)
+      expect(r.result).toBe('fail')
+      expect(r.summary ?? '').toMatch(/missing\.json/)
+    } finally { rmSync(ws, { recursive: true, force: true }) }
+  })
+})

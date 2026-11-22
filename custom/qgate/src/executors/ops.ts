@@ -766,6 +766,14 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
         const relc = relative(input.workspace, cand)
         if (files.includes(relc)) return relc
       }
+      // 显式扩展名的相对导入（./data.json 等）：文件在位即接地——数据文件不在
+      // scanGlobs 扫描宇宙内，成员判定对它们结构性失明（2026-11-22 发版轮
+      // decision-vectors.json 双红实录）。文件系统判在位不依赖扫描宇宙，修类不修点。
+      if (/\.[A-Za-z0-9]+$/.test(spec.split('/').pop() ?? '')) {
+        try {
+          if (statSync(base).isFile()) return relative(input.workspace, base)
+        } catch { /* 不在位＝真红，落入 null */ }
+      }
       return null
     }
     const aliases = executor.aliases ?? {}
@@ -803,6 +811,9 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
           if (t === '__asset__') { importsChecked++; continue }
           const names = exportsOf(t)
           if (!names) continue // 目标不可词法解析（.vue 等）→ 不判成员
+          // JSON 数据模块（resolveJsonModule）：TS 侧 default 导入即整份 JSON——
+          // 无词法导出面可判，成员判定对 json 整类豁免（在位性已由 resolveSpecifier 保证）。
+          if (/\.json$/.test(t)) { importsChecked++; continue }
           for (const raw of (namedList ?? '').split(',')) {
             let seg = raw.trim()
             if (!seg) continue
