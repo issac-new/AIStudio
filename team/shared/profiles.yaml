@@ -663,7 +663,7 @@ profiles:
       WEIXIN_ACCOUNT_ID: efeb83c9e62a@im.bot
       WEIXIN_DM_POLICY: pairing
       WEIXIN_GROUP_POLICY: disabled
-      WEIXIN_TOKEN: efeb83c9e62a@im.bot:060000bd5f6bf3219849f5e226179ed00aee48
+      WEIXIN_TOKEN: ${K12EDU_WEIXIN_TOKEN}
       API_SERVER_ENABLED: 'false'
       HERMES_KANBAN_BOARD: k12edu
     environment_hint: ~/.hermes/profiles/k12edu-orchestrator/SOUL.md
@@ -817,6 +817,8 @@ profiles:
       enabled: true
       host: 127.0.0.1
       port: 8650
+    a2a:
+      enabled: true
     email:
       enabled: false
       gateway_restart_notification: false
@@ -825,8 +827,7 @@ profiles:
       WEIXIN_DM_POLICY: pairing
       WEIXIN_GROUP_POLICY: disabled
       HERMES_CRON_SCRIPT_TIMEOUT: '7200'
-      WEIXIN_TOKEN: 8267e9b73b55@im.bot:060000ed8858918cd6bd451ee104a87e73d249
-      MATRIX_PASSWORD: 8gNpLiBfUOOgEOwESl3ifxw84pg3wceL
+      WEIXIN_TOKEN: ${ORCHESTRATOR_WEIXIN_TOKEN}
       MATRIX_HOMESERVER: http://localhost:8008
       MATRIX_HOME_ROOM: '!ejpuWQrZOTfhjBWbLu:matrix.test'
       MATRIX_HOME_ROOM_THREAD_ID: ''
@@ -1519,7 +1520,7 @@ shared_config:
     target_ratio: 0.15
     threshold: 0.35
   custom_providers:
-  - api_key: 231c28642c534da3b3f90785a140c0dc.jxXO6WIFg6oRRN4z
+  - api_key: ${MOA_MGLM_API_KEY}
     api_mode: anthropic_messages
     base_url: https://open.bigmodel.cn/api/anthropic
     context_length: 1003520
@@ -1529,7 +1530,7 @@ shared_config:
       glm-5.3-flash:
         name: glm-5.3-flash
     name: moa-mglm
-  - api_key: sk-kimi-bVe93BOmFPga1vaSwV6XucxfVSfrRGrfiJ0Fl02GHQkSqqOFHD4lhTJMgtwZsGPW
+  - api_key: ${MOA_MK256_API_KEY}
     api_mode: anthropic_messages
     base_url: https://api.kimi.com/coding
     context_length: 1048576
@@ -1537,7 +1538,7 @@ shared_config:
       k3:
         name: k3
     name: moa-mk256
-  - api_key: tp-cppgfzgehrzi5p83uvetbcyb2etguvqbc94okmccfwhjxng2
+  - api_key: ${MOA_MIMO_API_KEY}
     api_mode: anthropic_messages
     base_url: https://token-plan-cn.xiaomimimo.com/anthropic
     context_length: 1048576
@@ -1547,7 +1548,7 @@ shared_config:
     name: moa-mimo
   - name: moa-stepfun
     base_url: https://api.stepfun.com/step_plan
-    api_key: 23f3j5z8GvGkin63xSyLRmtAJfG4N8n74fYo5Has5MF3rBGwV37rJMj7cJufQBTx2
+    api_key: ${MOA_STEPFUN_API_KEY}
     api_mode: anthropic_messages
     context_length: 1048576
     models:
@@ -1558,7 +1559,7 @@ shared_config:
         effort: high
   - name: moa-minimax
     base_url: https://api.minimax.cn/anthropic
-    api_key: sk-cp-cUu18Io2uRTQTJUaHv_o1qKzz0CxEUD9gtbY4uIDuLwWR9hH7x5ufskaRQ-k7mUKsEt8OC439B6x5GqxPbs3px1cNXYksTg-gwIXMX2n23QCZxDr8dREtIU
+    api_key: ${MOA_MINIMAX_API_KEY}
     api_mode: anthropic_messages
     context_length: 1048576
     models:
@@ -1569,7 +1570,7 @@ shared_config:
         type: adaptive
   - name: moa-deepseek
     base_url: https://api.deepseek.com/anthropic
-    api_key: sk-ccd1368fcb184ca0b6ffbe10b2ece496
+    api_key: ${MOA_DEEPSEEK_API_KEY}
     api_mode: anthropic_messages
     context_length: 128000
     models:
@@ -1580,7 +1581,7 @@ shared_config:
         effort: max
   - name: cc-switch-route
     base_url: http://127.0.0.1:15721/hermes/v1
-    api_key: PROXY_MANAGED
+    api_key: ${CC_SWITCH_ROUTE_API_KEY}
     api_mode: codex_responses
     session_affinity_header: session_id
     models:
@@ -1591,7 +1592,7 @@ shared_config:
     model: glm-5.3
   - name: cc-switch
     base_url: http://127.0.0.1:15721
-    api_key: PROXY_MANAGED
+    api_key: ${CC_SWITCH_API_KEY}
     api_mode: anthropic_messages
     context_length: 1048576
     models:
