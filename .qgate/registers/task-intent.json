@@ -1,10 +1,11 @@
 {
-  "taskId": "retro-round2-20261118",
-  "statement": "run31 报告方案二轮复核根治（报告链/方案正本/审计器/预检/索引/runtime 回灌；与 vendor 换血批同窗推进）",
+  "taskId": "full-regression-20261122",
+  "statement": "AIStudio 全功能·非功能·安全全量回归与缺陷修复（含前后端服务、swarm-yuan、Ycode；Ycode 002/012 真实会话导入与 Android JDK 校验、补丁 815 Python 3.14、816 看板 title/body 假成功、profiles 密钥 env 化、注册表/A2A 补段）",
   "scope": [
     "docs/**",
     "simharness/**",
     "patches/**",
+    "zcode-patches/**",
     "runtime/**",
     ".swarm-yuan/**",
     ".qgate/**",
@@ -37,11 +38,8 @@
     ".env.example"
   ],
   "acceptance": [
-    "When 运行 npm test Then 9194 全过",
-    "When 运行 bash simharness/tests/run-gates.sh Then EXIT=0",
-    "When 运行 npm run inject Then status=complete",
-    "When 重建 run31 报告并跑审计 Then 0 FAIL"
+    "When 运行 npm test Then 9879 全过"
   ],
-  "confirmedBy": "用户 2026-11-18 令「全面复盘下当前全流程推演报告和推演方案，寻找存在的问题并根治」",
-  "confirmedAt": "2026-11-18T15:36:17.997Z"
+  "confirmedBy": "用户 2026-11-22 令「完成AIStudio…全功能及非功能、安全回归测试…并修复所有问题」",
+  "confirmedAt": "2026-11-22T17:38:35.857Z"
 }

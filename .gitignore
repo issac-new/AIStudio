@@ -53,6 +53,8 @@ vite.config.overlay.wt.ts
 # 构建垃圾；vendor 变更走 VENDOR_SYNC=1 显式通道（pre-commit 钩子挡护）
 vendor/**/.turbo/
 vendor/**/*.tsbuildinfo
+# 根级 turbo 缓存（在主检出跑 vendor/zcode apps/zcode-cli check 时落位；2026-11-22 回归轮实录）
+/.turbo/
 
 # vendor 注入态衍生物（2026-10-28 工程复查）：loop 本地库与 inject 建的 src/custom 符号链
 /vendor/**/.loop/

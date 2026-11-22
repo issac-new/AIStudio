@@ -1,3 +1,7 @@
+# v1.0.18-overlay（2026-11-23）
+
+全功能·非功能·安全回归修复批：Ycode 真实会话导入闭环（补丁 002 重写——shared 多源 schema 单一事实源＋importSessionV4 走真实 createSession(importedHistory)＋隔离引擎 listSessions 回读实证；012 Android JDK 主版本校验）；补丁 815 Python 3.14 兼容（re.split maxsplit）＋协程夹具根治（pytest 306/306 零警告）；补丁 816 看板 PATCH title/body 假成功根治（走 kanban edit）；team/shared/profiles.yaml 明文密钥全量 env 化＋无值示例（历史值须账号所有者轮换）＋注册表 10 域 owner 补齐＋orchestrator A2A 补段；Ycode 基线元数据三方一致守门（fec97590）。回归证据：npm test 9879/0、IDE smoke 双绿、隔离引擎导入/鉴权三态/跨 profile 403/并发唯一性活体全绿。
+
 # AIStudio 发布说明
 
 > **全功能回归＋八项根治＋v0.23.3/v0.8.28 双底座线收敛发布轮（2026-11-13~22，chore/release-v1.0.17）** — v1.0.16 后本轮窗口 318 提交，主脉四线：**①双底座换血**（hermes-agent v0.22.7→**v0.23.3**（caafe5389a，2026-11-20 批，state 层大重构 persistence/ 收拢＋485/755 锚迁＋宿主断点续跑 N-1~N-6 全清＋热修移植批三域回植＋补丁 813/814）；hermes-studio v0.8.21→**v0.8.28**（2026-11-19 批，38 补丁重锚＋496/496 重放零失败）；zcode 3.18.0→3.18.2）；**②全功能回归轮**（2026-11-21 十一轴：vitest 9877/0＋typecheck 双绿＋pytest/sim/技能/前后端活体＋安全三态实证＋非功能门；npm test 结构性不含 simharness 实锤入册）；**③回归根治批八项**（F1 dod_contract 门锚定 dispatch env 新架构/F2 jargon 两词/F3 幽灵抽屉 withTimeout 吞 reject 根因双居修复＋smoke 探针窗校正/F4 catalog 3.19.1 基线/F5 台账三条 CI 实证归类/F6 补丁 814 hermes_cli 回移——pytest 拼合树 249→273 全绿/F7 qgate 陈旧门刷新/F8 技能三类门 vendor 盲区根治＋L1 死锁解锁链）；**④产品面**（模型池统一批 cc-switch 直钉＋白名单单一源＋真机 E2E；P1-P4 simharness 串联/场景/采集 REST 化；AI 原生组织批一二三；Agnes 经验试用期与注入归因；scaffold 脚本清理 68 删；全站科技感皮肤收口）。终态：npm test **9878/0**＋sim 41 门+377 例全绿＋pytest **273/273**＋typecheck 0＋ide-smoke 幽灵面双环境稳定。
@@ -58,6 +62,7 @@
 本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
 
 ## 版本
+AIStudio 驾驶舱 **0.8.28-studio.3**（2026-11-23 v1.0.18-overlay 发布轮：全功能·非功能·安全回归修复批——补丁 815 Python 3.14/816 看板 title-body/Ycode 002 真实会话导入与 012 Android JDK 校验/profiles 密钥 env 化＋注册表 owner 补齐＋A2A 补段；同底座扩展序进位，声明前进、包不重发）
 AIStudio 驾驶舱 **0.8.28-studio.2**（2026-11-22 v1.0.17-overlay 发布轮：双底座线收敛＋全功能回归＋根治批八项——模型池统一/P1-P4 串联 REST 化/AI 原生组织三批/科技感皮肤/IDE 幽灵抽屉修复/F8 技能 vendor 盲区；同底座扩展序进位，补丁面 812/813/814 三枚新增）
 AIStudio 驾驶舱 **0.8.28-studio.1**（2026-11-19 studio 底座换血批：hermes-studio 基线 v0.8.21→**v0.8.28**（5e4fb6354，上游 67 提交/647 文件——App 会话恢复/文件覆盖防护与时区感知调度/clarification confirmations 投递/CC-Switch provider catalog 修复/DeepSeek reasoning replay 修复/codex 版本预览改独立插件（删 claude-code-proxy+codex-proxy+super-admin+version-preview-manager 等 9 文件）/插件 SDK MIT 化/插件导航侧栏接入/新依赖 vue-draggable-plus@0.6.1；补丁面 38 枚重锚改道＋3 枚退役（687/768 lock 收口并入 573 重算 lock、745 目标文件上游整删），净基线 clean+inject 496 枚零失败幂等二连；custom/ 面 ia2 versionPreview 三处退役、守门断言随上游 plugin: 前缀/AgentManagerCard/blob: CSP/MANAGED_SERVERS 4→5 形态；spec 2026-11-19-vendor-upgrade-studio-v0828；**声明前进、cockpit 包不重发**（两包口径=只发 full＋yuan everything）；版本规则同下条——完整底座版本与 hermes-studio 对齐，`-studio.N` 为本仓扩展发布序（**底座换血扩展序归 1**），真源=本文件版本节首行）
 
