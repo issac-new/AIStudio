@@ -106,7 +106,12 @@ def test_new_session_gets_clean_error_at_active_session_limit(monkeypatch):
     with patch.object(GatewayRunner, "_handle_message_with_agent", fail_if_agent_runs):
         result = asyncio.run(runner._handle_message(event))
 
-    assert "(1/1)" in result
+    # v0.23.3 容量契约演进（run_busy._queue_capacity_retry，run11 实证锚定）：
+    # 容量满不再回 "(1/1)" clean-error 字符串，改为静默进有界容量重试队列，
+    # 槽位释放后自动重放（sidecar runtime/capacity_retry.json 可观测）。
+    assert result is None
+    queue = getattr(runner, "_capacity_retry_queue", None) or []
+    assert len(queue) == 1, "容量满应进入容量重试队列等待槽位（v0.23.3 契约）"
     assert new_key not in runner._running_agents
     runner.session_store.get_or_create_session.assert_not_called()
 
