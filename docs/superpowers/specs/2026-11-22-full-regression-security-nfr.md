@@ -22,6 +22,8 @@
 11. **Ycode 工程面收口**：`pnpm typecheck` 修复后 0 错误；`test:engineering` 168 文件/1039 用例通过（9 平台跳过）；`db:schema:check`、CUA 独立套件、`build` 全绿；CLI `check`（registry/typecheck/turbo test）在 TURBO_CONCURRENCY=2 下仅 dynamic-workflow 4 例红，其中 2 例空载复跑即绿、包级串行复跑 52/52 全绿——定谳＝性能阈值断言的负载假红（`toBeLessThan(10000)` 实测 21086 于并行窗口），非产品回归；catalog-check 3.19.1 快照一致。
 12. **swarm-yuan sweep 30 分钟超时定谳**：逐阶段实测 metrics 33s/shellcheck 33s/golden 105s/gate-fixtures 131s/cli-ab 178s/bootstrap 35s 全过（合计约 8.6min）＋锁测试 140（jobs=2 含 19 串行独占）＋e2e 三条——30min 预算在负载下不足，非死锁；唯一红＝summary 夹具 compliant：floor-guard 以 merge-base(origin/main)→工作树 diff 为输入，本分支的断言替换（ISSUE-002/010 的等强/更强新断言）与 zcode-patches/002 内上游自带 `eslint-disable` 上下文行被机械判降标——分支窗口假红，合并后 main 上 diff 清空自愈（与 F8「注入态 diff 非本仓动作」同族；patch 载体目录豁免列入后续 F8 扩展挂账）。
 
+4. **R2 守卫精确放行测试注册清单**（Mechanical）：补丁 002 需把 `packages/shared/test/taskMigrationSource.regression-1.test.ts` 登记进 zcode 工程套件唯一 include 事实源 `scripts/engineering-test-files.json`（scripts/ 首段，被 R2 全拦）。放行仅此单文件（Set 精确匹配），目录级边界不放松；守卫注释留档理由。RELEASE-MANIFEST activePatchCount 同步 10→11（新增 012）。
+
 后续新发现必须先精确重放、完成根因分类并追记本 spec，再修改产品或测试。浏览器驱动缓存、宿主引擎连接和间歇超时先按环境/产品边界调查，不在根因未明时改代码。
 
 ## 决策记录
