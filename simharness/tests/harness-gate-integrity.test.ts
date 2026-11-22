@@ -1632,12 +1632,20 @@ describe('㉖ 完成契约门接线绊线（2026-11-01 方案×程序同步批�
     expect(existsSync(join(PRODUCT, 'runtime/completion_contract.py'))).toBe(true)
     const kdb = read(join(PRODUCT, 'runtime/hermes_cli/kanban_db.py'))
     expect(kdb).toContain('def _gate_completion_contract')
+    // 会话接线锚点随 v0.23.3 孪生对齐批（3ffcd3df8）演进：session_kanban.py 不再内嵌
+    // dod_contract 键（宿主生产正本同形态 0 处）；接线闭环＝dispatch 派发 env 注入
+    // （derive_contract→HERMES_KANBAN_DOD_CONTRACT）＋kanban_db 消费同一 env。
     const sk = read(join(PRODUCT, 'runtime/gateway/session_kanban.py'))
-    expect(sk).toContain('dod_contract')
-    const cli = read(join(PRODUCT, 'runtime/hermes_cli/kanban_parser.py'))
+    expect(sk).toContain('from gateway.session_contract import Submission')
+    expect(kdb).toContain('HERMES_KANBAN_DOD_CONTRACT')
+    // CLI 接收面随 v0.23.3 孪生对齐演进而迁移：kanban_parser.py 现为 argparse 树；
+    // --receipt 参数校验在 kanban.py，完成门消费提示在 kanban_db.py。
+    const cli = read(join(PRODUCT, 'runtime/hermes_cli/kanban.py'))
     expect(cli).toContain('--receipt')
+    expect(kdb).toContain('--receipt')
     const disp = read(join(PRODUCT, 'runtime/hermes_cli/kanban_db_dispatch.py'))
     expect(disp).toContain('HERMES_KANBAN_DOD_CONTRACT')
+    expect(disp).toContain('derive_contract')
   })
 })
 
