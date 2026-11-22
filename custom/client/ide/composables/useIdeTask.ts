@@ -100,7 +100,12 @@ export function useIdeTask() {
       // 串行逐板扫描 + 卡死请求把兜底视图冻在「正在解析」20s+）。8s 后按瞬时失败处理。
       detail = await withTimeout<DetailShape | null>(getTask(id) as Promise<DetailShape>, 8000)
     } catch (err) {
-      const e = err as { status?: number; message?: string }
+      const e = err as { status?: number; message?: string; timeout?: boolean }
+      // 超时（withTimeout reject）走 transientError 分流，不落入下方 notFound 判定；
+      // 与「详情端点 200 但无任务」的 fell-through 路径彻底分离。
+      if (e?.timeout) {
+        return { task: null, board: null, notFound: false, transientError: true }
+      }
       notFound = e?.status === 404 || /\b404\b|not found/i.test(String(e?.message ?? ''))
       if (notFound) {
         // 任务号兜底（2026-10-30 run23 复盘续作）：看板详情端点只认卡 id，
@@ -166,11 +171,16 @@ export function useIdeTask() {
     try { return decodeURIComponent(hit[1]) } catch { return hit[1] }
   }
 
-  /** 超时兜底（不取消底层请求；调用方按 null/超时语义继续）。 */
+  /** 超时兜底（不取消底层请求；超时 reject 带 timeout 标记，由调用方 catch 分流）。
+   * 2026-11-22 根因修复：旧版把超时吞成 resolve(null)——慢 404（详情端点 CLI 冷缓存
+   * 可 >8s）被 race 抢劫成「成功空」走 fell-through 路径产出 transientError，miss 判定
+   * 永不成立、简报抽屉常开（幽灵任务深链 hash 跳转 8s 探针窗实测）。超时是失败不是空。 */
   function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
     return Promise.race([
       p,
-      new Promise<T>((resolve) => { setTimeout(() => resolve(null as T), ms) }),
+      new Promise<T>((_resolve, reject) => {
+        setTimeout(() => reject(Object.assign(new Error('timeout'), { timeout: true })), ms)
+      }),
     ])
   }
 

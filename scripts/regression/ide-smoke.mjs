@@ -129,7 +129,9 @@ try {
   // 跨板解析是异步的（boards 列表 + 任务查询），固定 3s 单点判会偶发把「尚未回包」
   // 误判成「未收起」；轮询到 8s，只认最终稳态（仍关不上才算失败）。
   let ghostDrawer = 1
-  for (let i = 0; i < 10; i++) {
+  // 轮询窗 15s 必须大于 useIdeTask.getTask 的 withTimeout(8s)——原 8s 窗=超时时限，
+  // 超时路径（慢 404→transient→R7 收起）结构性永测不到（2026-11-22 F3 根治批）。
+  for (let i = 0; i < 30; i++) {
     ghostDrawer = await page.locator('[data-testid="ide-briefing-drawer"]').count()
     if (ghostDrawer === 0) break
     await page.waitForTimeout(500)

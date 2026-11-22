@@ -128,6 +128,17 @@ describe('ide?task= 深链自动展开简报', () => {
     })
   })
 
+  it('解析故障（getTask 永悬挂→withTimeout 超时）：抽屉自动收起（F3 根治二段——R7「不可解析即收起」含故障态，慢 404 不得常开盖栏）', async () => {
+    // getTask 永不落定：真实场景=详情端点 CLI 冷缓存 >8s 的慢 404；单测内由 withTimeout(8s)
+    // 超时分流。悬挂 promise 不 release，等超时 reject 走 transientError→收起。
+    getTaskMock.mockImplementation(() => new Promise(() => {}))
+    routeState.query = { task: 't_hang' }
+    mountShell()
+    await vi.waitFor(() => {
+      expect(activeWrapper!.find('[data-testid="ide-briefing-drawer"]').exists()).toBe(false)
+    }, { timeout: 12_000 })
+  })
+
   it('判死收起后导轨钮手动重开：抽屉保持打开走空态（2026-10-18 审计轮——miss 粘滞致手动开被当拍强关）', async () => {
     routeState.query = { task: 't_nosuch' }
     mountShell()
