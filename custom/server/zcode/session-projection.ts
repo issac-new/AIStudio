@@ -2,7 +2,7 @@
 // complete 物理帧归一化为统筹事件（session.upserted / session.removed /
 // conversation.frame / projection.status），推给驾驶舱数据面。
 //
-// 帧契约锚点（upstream/zcode @872ad96）：
+// 帧契约锚点（upstream/zcode @fec97590）：
 //   wire 封装 packages/shared/src/zcode-protocol-v4/wire.ts（complete 携带 logical
 //   frame 于 .frame；fragment 只有 dataBase64 分片，重组列后批，现状按 topic 计数
 //   并以 frame_fragment_skipped 透传）。
@@ -18,7 +18,7 @@ import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-re
 /**
  * 会话条目稳定投影形状（X5 契约归一化）。
  *
- * 取证锚点（upstream/zcode @872ad96）：sessions-index 条目即
+ * 取证锚点（upstream/zcode @fec97590）：sessions-index 条目即
  * packages/shared/src/zcode-protocol-v4/sessions-index.ts 的 sessionSummarySchema——
  * { sessionId, workspaceId, parentSessionId?, title, titleSource?, phase,
  *   sessionEnded, hasBackgroundWork, workflowActivity?, pendingInteraction?,
