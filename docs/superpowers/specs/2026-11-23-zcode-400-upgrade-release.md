@@ -41,14 +41,50 @@
    - 真实工具链（pnpm 10.33.2；`turbo run build` 于 `apps/zcode-cli` 25 任务全过）：011 所在包 `11 passed`；004 所在包 `10 files / 81 passed`；006 所在文件 `59 passed`；009 两文件 `36 passed`；012 文件 `7 passed | 1 skipped`；002 多源校验 `7 passed`；003/005/007/008 运行时 `3 passed`。
    - 006 的前置条件：只构建 CLI 依赖闭包时该文件有 3 条红（`documents` 等官方插件的 `dist/` 缺失，属上游测试的构建前置），全量构建工作区后 59/59。
 3. **宿主 RPC（已过）**：同步前守门 2 红（`proxy-channel.ts` 与上游源漂移；pin 失配），按归一化规则重拷后 10 文件闭包仅 `proxy-channel.ts` 变化，守门转绿（两件 15 passed）；`npm run typecheck:harness` exit 0；会话投影与桥接测试 `31 passed`。
-4. **引擎（部分完成）**：`npm run zcode:ensure` exit 0（pnpm install 4m37s、2712 包；`packages/server/dist/entry-http.js` 4.2MB）；CLI 闭包构建 `dist/zcode.cjs` 29.9MB。**待办**：隔离真引擎会话导入→回读闭环、CLI `--version`。
+4. **引擎（已过）**：`npm run zcode:ensure` exit 0（pnpm install 4m37s、2712 包；`packages/server/dist/entry-http.js` 4.2MB）；CLI 闭包构建 `dist/zcode.cjs` 29.9MB。隔离真引擎：`PORT=3031`，`HOME` 与 `ZCODE_DATA_BASE_DIR` 指向临时目录，`zcode-import-session-int.test.ts` → `1 passed`（`importSessionV4` 写入后 `listSessions` 回读到导入会话）。隔离实证：测试数据只落在隔离库（项目 `QA isolated import` 1 行，指向隔离目录的记录分布在 4 张表）；真实库中指向隔离目录的记录为 0。真实库内另有 25 条历史测试任务，创建于 2026-09-28～10-19，是该测试加显式开关之前的遗留，不在本批处置（属用户真实数据，留待裁决）。CLI `--version` 输出 `0.18.0`，读的是 `apps/zcode-cli/package.json`（旧基线 `0.17.1`），与仓根 4.0.0 分属两套版本号；宿主侧无对该版本串的依赖。
+   - 4.0 新增的启动前置：服务端要求凭据加密密钥可用，来源是系统钥匙串（条目账户名＝凭据文件绝对路径的哈希）或显式配置的 `ZCODE_CREDENTIAL_SECRET`／`ZCODE_CREDENTIAL_SECRET_FILE`。隔离实例的路径没有钥匙串条目，首次启动报 `CREDENTIAL_SECURE_STORAGE_UNAVAILABLE`，改用一次性密钥文件后启动成功。真实路径 `~/.zcode/v2/credentials.json` 对应的钥匙串条目经只读查询确认存在，故真实环境下 `zcode:serve` 不需要额外配置；真实环境的拉起本身未实测（IDE 正占用真实数据目录）。已写入运维参考 3.4 节。
 5. **词条快照（已过）**：`npm run catalog-check -- --refresh` 生成 `docs/superpowers/notes/zcode-400/`（4.0.0，7870 键／110 命名空间）；`npm run catalog-check` → `OK：4.0.0，7870 键 / 110 命名空间，与快照一致`。相对 3.19.1 快照（7869 键）新增 1 键、移除 0。
 6. **回归（待办）**：目标测试先行，合并前全量 `npm test`；`npm run release:check` 四模块对齐。
 7. **独立审查（待办）**：未参与实现的审查者核查 pristine 混入、补丁丢段、RPC 归一化是否掩盖差异、版本投影。
 8. **发版（待办）**：`release:preflight` 全过；打包产物尺寸与 SHA256 回验；GitHub Release 资产尺寸、远端 SUMS 逐字比对；ModelScope 推送后 `Content-Length` 逐字节一致。
 
+版本载体（已过）：`npm run release:check` → `四模块对账全绿（cockpit=0.8.30-studio.2 agent-teams=v0.23.3-team.2 ycode=4.0.0 yuan-skill=v2.103.0）`；`docs:check` → `手册投影块与真实载体一致（routes=129，version=1.0.20-overlay）`；手册与清单守门 4 文件 54 passed，文档单一事实源与清单锁文件守门 3 文件 15 passed。
+
 未验证项（如实列出）：010 所在桌面包（`packages/desktop`）的整体类型检查未跑成——其类型产物依赖 `tsc -b` 项目引用构建，`packages/shared`、`packages/services` 无 `build` 脚本，只构建依赖闭包后 `tsc -p tsconfig.main.json --noEmit` 仍报 470 条 TS6305 级联错误；已有证据限于补丁应用通过、依赖符号在 4.0 存续（`handleOpenWorkspacePath` 见 `src/main/desktopOAuthDeepLink.ts:188`）、赋值字面量与上游自身 argv 路径一致（`src/main/index.ts:1040`）。引擎真实调用模型（需 API 配置）不在本批验证；工作台真机 UI 走查不做；3.19.x＋4.0 新特性对本仓的功能级影响不逐项评估。
 
 ## 设计文档影响
 
-DESIGN_SYNC: touched —— 本批改变 `vendor/VENDOR.md` 钉版基线（zcode 行）、`RELEASE-MANIFEST.json` 的 `vendorBaseline` 与模块版本、`README.md`/`AGENTS.md` 当前版本行、`docs/DESIGN.md` §5.4 当前基线表、设计总账 §C 基线行与模块行；均须同批修订。
+DESIGN_SYNC: touched —— 本批改变 `vendor/VENDOR.md` 钉版基线（zcode 行）、`RELEASE-MANIFEST.json` 的 `vendorBaseline` 与模块版本、`README.md`/`AGENTS.md` 当前版本行、`docs/DESIGN.md` §5.4 当前基线表与核实日、`docs/DESIGN.md` §4.7 技能根约定（补 Ycode 分叉直读 `.claude/skills` 一句）、设计总账 §C 基线行与模块行；均须同批修订。
+
+## 任务卡
+
+### 完成条件
+
+Ycode 源码基线、宿主协议面、词条快照与版本载体同批进位：净基线全量重放 complete 且二次注入幂等；四条重做补丁去掉 fork 改动后配套用例必红；隔离真引擎跑通会话导入到回读；`release:check` 四模块对齐；双通道发布资产的尺寸与 SHA256 逐字节回验一致。
+
+### 输入与来源
+
+上游 `zai-org/zcode` main 头 `a4b44451`（与 tag v4.0.0 同一提交），经缓存仓 `upstream/zcode` 取得；`zcode-patches/series` 的 11 条活跃补丁；本机 `/Applications/ZCode.app` 4.0.0（词条快照事实源）。
+
+### 工作流边界
+
+只换 `vendor/zcode` 基线并适配其补丁、宿主 RPC 复制面、词条快照与版本载体。不升 hermes-studio 与 hermes-agent 基线；不写宿主 `~/.hermes/hermes-agent`；不做 3.19.x 与 4.0 新特性的逐项功能对照。
+
+### 工具与副作用
+
+`npm run vendor:sync -- zcode`、`npm run clean && npm run inject`、`turbo run build`（在 `vendor/zcode/apps/zcode-cli`）、vitest、`npm run catalog-check`、隔离引擎实例（独立端口与数据目录）。副作用限于检出内的影子部署目录与临时目录；宿主部署位 `~/.hermes/ycode/zcode.cjs` 只在合并后更新，覆盖前先备份。
+
+### 结果与证据
+
+注入清单 `.overlay-injected.json` 的 status 与逐补丁状态；二次注入前后的工作区指纹；各包 vitest 计数；`zcode-import-session-int.test.ts` 的通过记录与隔离库、真实库的只读比对；`release:check` 输出；发布资产的 SHA256 与远端尺寸。
+
+### 异常与恢复
+
+补丁失配按语义重做，并保留变异探针证据，不靠放宽上下文硬套。纯净重放守门为红时不得合并。集成测试只连隔离实例；一旦发现写入真实 `~/.zcode`，立即停止并排查数据目录解析。发布回验不一致时按 tag 规程处理，同一版本号不复用于不同内容。
+
+### 验收反例
+
+- 只确认补丁“能打上”而不跑测试：上游新增的技能根测试与 fork 行为冲突会漏检（009 实证）。
+- 只构建 CLI 依赖闭包就跑插件测试：3 条红来自官方插件产物缺失这一构建前置，会被误判成上游缺陷（006 实证）。
+- 在 `clean` 之前替换补丁文件：清理步骤用当前补丁反向应用会原子失败，带着旧补丁态进入正向应用（本轮实证）。
+- 集成测试连共享的 3030 引擎：会写进本机真实会话库（真实库中 25 条历史测试任务即此因）。
