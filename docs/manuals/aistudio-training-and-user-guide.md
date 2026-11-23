@@ -1041,7 +1041,7 @@ Windows 离线包面向 Windows 10/11 x64，是 Web 模式，不是 Electron 桌
 
 - 适用版本：AIStudio 1.0.18-overlay（package.json）
 - 路由计数：routes=128（page 86 / redirect 42）；stageTabs=37；visitStates=165
-- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.28-studio.3 · agent-teams v0.23.3-team.2 · ycode 3.18.2 · yuan-skill v2.103.0
+- 模块版本（RELEASE-MANIFEST.json）：cockpit 0.8.30-studio.1 · agent-teams v0.23.3-team.2 · ycode 3.18.2 · yuan-skill v2.103.0
 - 特性开关缺省（config/features.ts，经注册链解析）：agentManager=off · bpa=on · branding=on · cockpit=on · connectionsExtras=off · ekko=on · eval=on · expdual=on · extendedI18n=on · externalLinks=off · ide=on · imageAssist=off · kanbanEnhancements=on · matrixAdmin=off · matrixAuth=off · matrixChat=on · ontology=on · pet=off · skillgov=on · voice=off
 
 全量路由清单（行序=注册链输出序；redirect 类不可直访）：

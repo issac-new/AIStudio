@@ -29,7 +29,7 @@ Upstream base hermes-agent **v0.23.2 → v0.23.3** (`caafe5389a`, 1675 commits /
 - Previous releases in the 0.23.0 base line: v0.23.0-team.1..team.2 (below).
 
 ### What changed in v0.23.0-team.1 (2026-11-06)
-The current AIStudio **1.0.16-overlay** distribution carries agent teams **v0.23.3-team.1** (repo head; the published 1.0.16 assets carry v0.23.1-team.3), hermes-agent upstream **0.23.3** (repo head), yuan **v2.100.4**, and Ycode **3.18.2**. These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
+The current AIStudio **1.0.18-overlay** distribution carries agent teams **v0.23.3-team.2** (repo head; the published 1.0.18 assets carry the same), hermes-agent upstream **0.23.3** (repo head), yuan **v2.103.0**, and Ycode **3.18.2**. These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
 
 - **Base bump only**: hermes-agent base v0.22.7 → v0.23.0 (vendor upgrade 2026-11-06, spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`); extension counter reset to 1. No profile content changes.
 
