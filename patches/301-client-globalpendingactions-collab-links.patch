@@ -1,38 +1,38 @@
 diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/packages/client/src/components/layout/GlobalPendingActions.vue
+index 6b45cec69..775e4e45e 100644
 --- a/packages/client/src/components/layout/GlobalPendingActions.vue
 +++ b/packages/client/src/components/layout/GlobalPendingActions.vue
-@@ -310,18 +310,22 @@ function openPendingSource(action: GlobalPendingAction) {
+@@ -293,18 +293,21 @@ function openPendingSource(action: GlobalPendingAction) {
      const sessionId = action.pending.sessionId
      if (sessionId.startsWith('person-main-')) { void router.push({ name: 'hermes.person', query: { session: sessionId } }); return }
      const session = chatStore.sessions.find(item => item.id === sessionId)
-+    // overlay[nav]: 介入深链迁驾驶舱协作场景（ia2.collab* 家族）
++    // overlay[nav]: 介入深链迁驾驶舱协作场景；保留上游 sessionSource 回退与 profile 传递
      void router.push({
--      name: session?.source === 'global_agent' ? 'hermes.globalAgentSession' : 'hermes.session',
-+      name: session?.source === 'global_agent' ? 'ia2.collabGlobalAgentSession' : 'ia2.collabSession',
-       params: { sessionId },
+-      name: (action.pending.sessionSource || session?.source) === 'global_agent' ? 'hermes.globalAgentSession' : 'hermes.session',
++      name: (action.pending.sessionSource || session?.source) === 'global_agent' ? 'ia2.collabGlobalAgentSession' : 'ia2.collabSession',
+       params: { sessionId }, query: { profile: action.profile },
      })
      return
    }
    if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
 -    void router.push({ name: 'hermes.groupChatRoom', params: { roomId: action.pending.roomId } })
-+    // overlay[nav]: 群聊介入深链迁驾驶舱群画布（V5 补遗⑤ M3——全流程不出 /app 树）
++    // overlay[nav]: 群聊介入深链迁驾驶舱群画布
 +    void router.push({ name: 'ia2.groupRoom', params: { roomId: action.pending.roomId } })
      return
    }
-+  // overlay[nav]: 工作流审批介入深链迁驾驶舱审批收件箱（V5 补遗⑤ M4——
-+  // 运行审批已聚合 ApprovalPanel；workflow 编辑器页退出用户可达面）
++  // overlay[nav]: 工作流审批介入深链迁驾驶舱审批收件箱；保留上游 profile 传递
    void router.push({
 -    name: 'hermes.workflow',
 +    name: 'ia2.inbox',
-     query: { workflowId: action.workflowId, runId: action.runId, nodeId: action.nodeId, executionId: action.executionId },
+     query: { profile: action.profile, workflowId: action.workflowId, runId: action.runId, nodeId: action.nodeId, executionId: action.executionId },
    })
  }
-@@ -340,12 +344,14 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
+@@ -323,12 +326,14 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
      if (action.pending.sessionId.startsWith('person-main-')) return `/person?session=${encodeURIComponent(action.pending.sessionId)}`
      const sessionId = encodeURIComponent(action.pending.sessionId)
      const session = chatStore.sessions.find(item => item.id === action.pending.sessionId)
-+    // overlay[nav]: 通知点击 URL 同步迁 /app/collab 家族
-     return session?.source === 'global_agent'
++    // overlay[nav]: 通知点击 URL 同步迁 /app/collab 家族；保留上游 sessionSource 回退
+     return (action.pending.sessionSource || session?.source) === 'global_agent'
 -      ? `/hermes/global-agent/session/${sessionId}${profileQuery}`
 -      : `/hermes/session/${sessionId}${profileQuery}`
 +      ? `/app/collab/global-agent/session/${sessionId}${profileQuery}`
@@ -40,17 +40,17 @@ diff --git a/packages/client/src/components/layout/GlobalPendingActions.vue b/pa
    }
    if (action.kind === 'group-approval' || action.kind === 'group-clarify') {
 -    return `/hermes/group-chat/room/${encodeURIComponent(action.pending.roomId)}${profileQuery}`
-+    // overlay[nav]: 群聊通知点击 URL 迁驾驶舱群画布（V5 补遗⑤ M3）
++    // overlay[nav]: 群聊通知点击 URL 迁驾驶舱群画布
 +    return `/app/s/group/${encodeURIComponent(action.pending.roomId)}${profileQuery}`
    }
    const query = new URLSearchParams({
      profile: action.profile,
-@@ -354,7 +360,8 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
+@@ -337,7 +342,8 @@ function pendingSourceClickUrl(action: GlobalPendingAction): string {
      nodeId: action.nodeId,
      ...(action.executionId ? { executionId: action.executionId } : {}),
    })
 -  return `/hermes/workflow?${query.toString()}`
-+  // overlay[nav]: 工作流通知点击 URL 迁审批收件箱（V5 补遗⑤ M4）
++  // overlay[nav]: 工作流通知点击 URL 迁审批收件箱
 +  return `/app/inbox?${query.toString()}`
  }
  

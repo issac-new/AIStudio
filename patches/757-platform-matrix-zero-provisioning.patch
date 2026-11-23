@@ -174,10 +174,10 @@ index 9a5e3f7..ed68f46 100644
  
    // Update Matrix display name if provided
 diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/packages/server/src/modules/studio/repositories/users-store.ts
-index 7abda63..a6f603b 100644
+index 79420936c..10d41d34c 100644
 --- a/packages/server/src/modules/studio/repositories/users-store.ts
 +++ b/packages/server/src/modules/studio/repositories/users-store.ts
-@@ -308,6 +308,7 @@ export function createFromMatrix(data: {
+@@ -309,6 +309,7 @@ export function createFromMatrix(data: {
    avatarUrl: string
    homeserverUrl: string
    role: UserRole
@@ -185,7 +185,7 @@ index 7abda63..a6f603b 100644
  }): UserRecord | null {
    const db = getDb()
    if (!db) return null
-@@ -319,7 +320,7 @@ export function createFromMatrix(data: {
+@@ -320,7 +321,7 @@ export function createFromMatrix(data: {
      data.username,
      '', // No local password for Matrix users
      data.role,
@@ -194,7 +194,7 @@ index 7abda63..a6f603b 100644
      now,
      now,
      data.matrixUserId,
-@@ -328,9 +329,8 @@ export function createFromMatrix(data: {
+@@ -329,9 +330,8 @@ export function createFromMatrix(data: {
      data.homeserverUrl,
      'matrix'
    )
@@ -206,7 +206,7 @@ index 7abda63..a6f603b 100644
  }
  
  export function updateUser(input: {
-@@ -385,30 +385,81 @@ export function deleteUser(userId: UserId): boolean {
+@@ -389,31 +389,83 @@ export function deleteUser(userId: UserId): boolean {
    }
  }
  
@@ -246,6 +246,7 @@ index 7abda63..a6f603b 100644
 +    db.exec('ROLLBACK')
 +    throw err
 +  }
++  userAccessChanged(id)
 +}
 +
 +export function updateMatrixUserAccess(
@@ -293,10 +294,13 @@ index 7abda63..a6f603b 100644
      db.exec('ROLLBACK')
      throw err
    }
+-  userAccessChanged(id)
++  userAccessChanged(current.id)
 +  return findByMatrixUserId(matrixUserId)
  }
  
  export function createSuperAdmin(username: string, password: string): UserRecord | null {
+
 diff --git a/packages/server/src/modules/studio/middleware/auth.ts b/packages/server/src/modules/studio/middleware/auth.ts
 index b5254ae..24cb6d5 100644
 --- a/packages/server/src/modules/studio/middleware/auth.ts

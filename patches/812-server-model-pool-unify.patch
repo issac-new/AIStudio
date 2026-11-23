@@ -3,7 +3,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
 +++ b/packages/server/src/modules/studio/services/providers/hermes-projection.ts
 @@ -8,6 +8,10 @@
  import { safeFileStore } from '../../public/safe-file-store'
- import { internalModelCredential, providerProfileDir, providerSourceDir, providerAccountHome } from './account-store'
+ import { bindInternalModelSession, internalModelCredential, providerProfileDir, providerSourceDir, providerAccountHome } from './account-store'
  import { providerRouteNamespace, qualifyModelRoute, logicalModelSelection } from './model-routes'
 +// overlay[modelpool]（补丁 812，spec 2026-11-21-model-pool-unification）：统一模式下投影直钉
 +// cc-switch 上游，api_key=PROXY_MANAGED（真凭据在代理侧），模型名裸透传（namespace 前缀
@@ -95,7 +95,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
      if (keepLegacy) return { files: { [configPath]: YAML.dump(original, { lineWidth: -1, noRefs: true }), [marker]: stamp }, result: undefined }
      const env = String(current[envPath] || '').split(/\r?\n/).filter(line => !envKeys.has(line.trim().split('=', 1)[0].trim())).join('\n')
      const auth = JSON.parse(current[authPath] || '{}')
-@@ -99,6 +119,11 @@
+@@ -99,7 +119,12 @@
    const selected = logicalModelSelection(profile, provider, model)
    if (selected.provider === 'moa') return { model: selected.model, provider: selected.provider }
    await synchronizeHermesProvider(profile)
@@ -106,6 +106,7 @@ diff --git a/packages/server/src/modules/studio/services/providers/hermes-projec
 +  }
    const credential = await internalModelCredential(profile)
    const routedModel = qualifyModelRoute(await providerRouteNamespace(profile, selected.provider), selected.model)
+   const token = sessionId ? bindInternalModelSession(credential, profile, sessionId) : credential.token
    return { provider: 'ekkostudio', model: routedModel,
 diff --git a/packages/server/src/bootstrap/provider-gateway-client.ts b/packages/server/src/bootstrap/provider-gateway-client.ts
 --- a/packages/server/src/bootstrap/provider-gateway-client.ts

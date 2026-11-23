@@ -620,8 +620,9 @@ diff --git a/packages/server/src/modules/studio/repositories/users-store.ts b/pa
  export const DEFAULT_PROFILE_NAME = 'default'
  
  const SCRYPT_KEY_LEN = 64
-@@ -410,21 +411,16 @@ export function replaceUserProfiles(userId: UserId, profiles: string[], defaultP
+@@ -306,22 +307,17 @@ export function replaceUserProfiles(userId: UserId, profiles: string[], defaultP
    }
+   userAccessChanged(id)
  }
  
 -export function createDefaultSuperAdmin(): UserRecord | null {
