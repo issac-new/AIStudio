@@ -1666,7 +1666,7 @@ Ycode 通过受管构建与安装脚本落到部署位。
 |---|---|---|
 | hermes-studio | v0.8.30 | `vendor/VENDOR.md` |
 | hermes-agent | v0.23.3 | `vendor/VENDOR.md` |
-| zcode | 包版本 3.18.2（谱系 v3.16.1 系列） | `vendor/zcode/package.json` |
+| zcode | 包版本 4.0.0 | `vendor/zcode/package.json` |
 
 升级批次、补丁再生与退役记录归各自 spec 与 git 历史，不写入本节。
 补丁数量由 `patches/series` 与 `zcode-patches/series` 计算，不在正文维护。
