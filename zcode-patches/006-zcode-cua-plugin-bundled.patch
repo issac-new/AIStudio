@@ -1,9 +1,9 @@
 diff --git a/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts b/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts
-index 6707e068..37b765f8 100644
+index f84f9ef7c..924538eb1 100644
 --- a/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts
 +++ b/apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts
-@@ -447,14 +447,16 @@ export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] =
-     version: "0.7.2",
+@@ -465,14 +465,16 @@ export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] =
+     version: "0.8.0",
    },
    {
 -    // 产品决策：电脑控制回退为默认关闭，需用户在设置页显式开启。
@@ -15,11 +15,11 @@ index 6707e068..37b765f8 100644
 -    // packages/shared/src/plugin-marketplaces.ts 的名单（bootstrap 单测机械对照两者）、
 -    // isZCodeCuaInternalFeatureEnabled（打包层默认 true）与输入框入口 hidden 默认值的联动语义。
 +    // 上游产品决策：默认关闭（携带系统 Helper 依赖，首启即拉 Helper）。Ycode fork
-+    // （overlay 006，2026-10-21 v3.16.1 基线轮）只翻转默认启用：上游已自带
-+    // apps/zcode-cli/packages/zcode-cua-plugin 0.6.5 载荷（本补丁不再补包）；003/004
-+    // 把 CUA 运行时活体化为进程内 node-backend（mac=JXA+screencapture），无 Helper/
-+    // 无 sharp，「默认关」的成本依据在本 fork 不成立；SwarmStudio 的电脑操作开关
-+    // （/api/ide/computer-use → setPluginEnabled）承担显式关停，用户落盘的
++    // （overlay 006，2026-10-21 v3.16.1 基线轮；2026-11-23 随 zcode 4.0.0 重锚）只翻转
++    // 默认启用：上游已自带 apps/zcode-cli/packages/zcode-cua-plugin 载荷（本补丁不再
++    // 补包）；003/004 把 CUA 运行时活体化为进程内 node-backend（mac=JXA+screencapture），
++    // 无 Helper/无 sharp，「默认关」的成本依据在本 fork 不成立；SwarmStudio 的电脑操作
++    // 开关（/api/ide/computer-use → setPluginEnabled）承担显式关停，用户落盘的
 +    // enabledPlugins[id]=false 继续压过默认值（判定式 enabledPlugins[id] ?? defaultEnabled）。
 +    // 与 packages/shared/src/plugin-marketplaces.ts 名单同步（bootstrap 单测机械对照两者）。
 +    // ZCODE_CUA_DISABLE=1 仍为 fail-closed 总闸。
@@ -28,7 +28,7 @@ index 6707e068..37b765f8 100644
      hostMcpServerNames: ["node_repl"],
      // 用户露出名统一为「Computer Use / 电脑控制」。包名与 producer workspace 包仍保持 zcode-cua，
 diff --git a/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts b/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts
-index f6292064..07a0beeb 100644
+index 280a98aa1..fc90bdcbf 100644
 --- a/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts
 +++ b/apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts
 @@ -54,15 +54,16 @@ it("Settings 默认启用集合与 CLI 的官方插件声明一致", () => {
@@ -55,7 +55,7 @@ index f6292064..07a0beeb 100644
  });
  it("design 默认关闭，等待用户安装或启用", () => {
 diff --git a/packages/services/src/plugins/officialPluginCache.ts b/packages/services/src/plugins/officialPluginCache.ts
-index 3e072155..66044564 100644
+index 3e072155b..66044564a 100644
 --- a/packages/services/src/plugins/officialPluginCache.ts
 +++ b/packages/services/src/plugins/officialPluginCache.ts
 @@ -9,6 +9,9 @@ export const ZCODE_OFFICIAL_PLUGIN_MARKETPLACE = "zcode-plugins-official";
@@ -69,7 +69,7 @@ index 3e072155..66044564 100644
    // 宿主不贡献 skill/command/subagent，列在这里只为与 definitions 的 defaultEnabled 逐一对应
    // （见 @zcode/shared 的同名集合注释）；这份没有机械对照单测兜着，漏掉只会静默分叉。
 diff --git a/packages/shared/src/plugin-marketplaces.ts b/packages/shared/src/plugin-marketplaces.ts
-index af5562ba..2a57c525 100644
+index af5562bae..2a57c5251 100644
 --- a/packages/shared/src/plugin-marketplaces.ts
 +++ b/packages/shared/src/plugin-marketplaces.ts
 @@ -18,6 +18,10 @@ export const CLAUDE_OFFICIAL_PLUGIN_MARKETPLACE_ID = "claude-plugins-official";

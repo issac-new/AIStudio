@@ -1,8 +1,8 @@
 diff --git a/apps/zcode-cli/packages/core/src/mcp/index.ts b/apps/zcode-cli/packages/core/src/mcp/index.ts
-index 09bcc9c3..c0f970a5 100644
+index c885831..7300409 100644
 --- a/apps/zcode-cli/packages/core/src/mcp/index.ts
 +++ b/apps/zcode-cli/packages/core/src/mcp/index.ts
-@@ -30,6 +30,7 @@ import {
+@@ -31,6 +31,7 @@ import {
    normalizeMcpToolResultForModel,
  } from "./image-normalization.js";
  import { toMcpToolName, toModelVisibleMcpNamePart } from "./name.js";
@@ -10,7 +10,18 @@ index 09bcc9c3..c0f970a5 100644
  
  export {
    createMcpAppProvidedToolEntry,
-@@ -135,6 +136,14 @@ export function createMcpToolEntry(
+@@ -172,6 +173,10 @@ export function createMcpToolEntry(
+   presentation: { pluginId?: string } = {},
+   resolveLiveDescriptor?: RegisterMcpToolsOptions["resolveLiveDescriptor"],
+   target?: ResolvedMcpTool,
++  // overlay 011（2026-11-23 随 zcode 4.0.0 重锚）：4.0 起执行前会用 live 描述符重建
++  // 入口。此参由重建方传入注册态（模型产出参数时所依据的）schema 的
++  // sanitized→original 映射；undefined＝本入口即模型所见，用自己算出的映射。
++  modelFacingKeyMap?: Map<string, string> | null,
+ ): ToolEntry {
+   const readOnly = descriptor.annotations?.readOnlyHint === true;
+   // 缓存未携带执行注解，必须按可能破坏性调度，不能把未知当成 false。
+@@ -184,6 +189,19 @@ export function createMcpToolEntry(
    const isHostNodeReplExecution =
      descriptor.serverName === "node_repl" && descriptor.toolName === "js";
    const isCuaAppObservation = isZCodeCuaGetAppState(descriptor);
@@ -22,10 +33,15 @@ index 09bcc9c3..c0f970a5 100644
 +    createModelFacingMcpInputSchema(descriptor, isCuaAppObservation),
 +    descriptor.toolName,
 +  );
++  // 回译必须用「模型产出参数时所依据的那份 schema」的映射。消毒名的碰撞消歧依赖
++  // 兄弟参数名与顺序：live 描述符与注册态形状一旦不同，同一个原始参数的消毒名就会变，
++  // 按 live 映射回译会丢参或把参数错投给同名的另一个原生参数。
++  const restoreKeyMap =
++    modelFacingKeyMap === undefined ? sanitizedInputSchema.keyMap : modelFacingKeyMap;
    // 宿主 node_repl 的 js 能执行本机 Node 代码，不能沿用普通未知 MCP 的 medium/network
    // 默认值；否则权限 UI 会把文件/进程级能力错误描述成普通网络调用。
    const sideEffectScope: ModelToolSideEffectScope = isHostNodeReplExecution ? "system" : "network";
-@@ -188,7 +197,7 @@ export function createMcpToolEntry(
+@@ -237,7 +255,7 @@ export function createMcpToolEntry(
            modelContentProtection: OFFICIAL_CUA_FRAME_MODEL_CONTENT_PROTECTION,
          }
        : {}),
@@ -34,22 +50,31 @@ index 09bcc9c3..c0f970a5 100644
      outputSchema: McpToolOutputJsonSchema,
      metadata: {
        shouldDefer: true,
-@@ -247,7 +256,11 @@ export function createMcpToolEntry(
-         {
-           serverName: descriptor.serverName,
-           toolName: descriptor.toolName,
--          arguments: toMcpRuntimeArguments(input, isCuaAppObservation),
-+          arguments:
-+            restoreOriginalArgKeys(
-+              toMcpRuntimeArguments(input, isCuaAppObservation),
-+              sanitizedInputSchema.keyMap,
-+            ) ?? {},
-           trace: {
-             traceId: context.traceId,
-             spanId: context.spanId,
+@@ -301,7 +319,11 @@ export function createMcpToolEntry(
+           {
+             serverName: descriptor.serverName,
+             toolName: descriptor.toolName,
+-            arguments: toMcpRuntimeArguments(input, isCuaAppObservation),
++            arguments:
++              restoreOriginalArgKeys(
++                toMcpRuntimeArguments(input, isCuaAppObservation),
++                restoreKeyMap,
++              ) ?? {},
+             trace: {
+               traceId: context.traceId,
+               spanId: context.spanId,
+@@ -393,6 +415,8 @@ export function createMcpToolEntry(
+         presentation,
+         undefined,
+         resolved,
++        // 模型是照注册态 schema 产出参数的：live 入口沿用注册态回译映射。
++        sanitizedInputSchema.keyMap,
+       );
+       // 调度（提前执行、并发分组、可见性）按注册时定义做出；live 定义更严格时，
+       // 本次不调用 handler，也不在旧并发组内重试，下一次请求会拿到新定义。
 diff --git a/apps/zcode-cli/packages/core/src/mcp/schema-sanitizer.ts b/apps/zcode-cli/packages/core/src/mcp/schema-sanitizer.ts
 new file mode 100644
-index 00000000..1af098d5
+index 0000000..1af098d
 --- /dev/null
 +++ b/apps/zcode-cli/packages/core/src/mcp/schema-sanitizer.ts
 @@ -0,0 +1,183 @@
@@ -238,10 +263,10 @@ index 00000000..1af098d5
 +}
 diff --git a/apps/zcode-cli/packages/core/tests/mcp-schema-sanitizer.test.ts b/apps/zcode-cli/packages/core/tests/mcp-schema-sanitizer.test.ts
 new file mode 100644
-index 00000000..cb2743c5
+index 0000000..c1ef2b7
 --- /dev/null
 +++ b/apps/zcode-cli/packages/core/tests/mcp-schema-sanitizer.test.ts
-@@ -0,0 +1,182 @@
+@@ -0,0 +1,278 @@
 +/**
 + * overlay 011（Qwen Code 1.0 吸收轮）：MCP inputSchema 参数名消毒＋调用回译。
 + * 来源与设计约束见 ../src/mcp/schema-sanitizer.ts 头注。
@@ -422,5 +447,101 @@ index 00000000..cb2743c5
 +    };
 +    createMcpToolEntry("mcp__comfyui-bridge__generate", descriptor, fakeMcpPort([]), false);
 +    expect(Object.keys(inputSchema.properties)).toEqual(["8:BizyAir_NanoBanana2.aspect_ratio"]);
++  });
++
++  // zcode 4.0 起，带 advertisement cache 的工具在执行前会用 live 描述符重建入口
++  // （resolveForExecution）。消毒名的碰撞消歧依赖兄弟参数，注册态与 live 形状一旦不同，
++  // 同一个原始参数的消毒名就不同；模型是照注册态 schema 产出参数的。
++  function liveEntry(
++    registered: McpToolDescriptor,
++    live: McpToolDescriptor,
++    captured: Array<Record<string, unknown>>,
++  ) {
++    const entry = createMcpToolEntry(
++      "mcp__bridge__act",
++      registered,
++      fakeMcpPort(captured),
++      false,
++      {},
++      async () => ({
++        descriptor: live,
++        checkTarget: () => undefined,
++        authorizationReason: () => undefined,
++      }),
++    );
++    const resolve = entry.resolveForExecution;
++    if (!resolve) throw new Error("resolveForExecution 未挂载");
++    return { entry, resolve };
++  }
++
++  function propertyNames(schema: unknown): string[] {
++    return Object.keys((schema as { properties: Record<string, unknown> }).properties);
++  }
++
++  it("live 描述符删掉原生兄弟参数时，回译仍按注册态映射，不把消毒名漏给 server", async () => {
++    const registered: McpToolDescriptor = {
++      serverName: "bridge",
++      toolName: "act",
++      inputSchema: {
++        type: "object",
++        properties: {
++          "foo:bar": { type: "string" },
++          foo_bar: { type: "number" },
++        },
++      },
++    };
++    // live 只剩冒号名：改写后不再碰撞，消毒名退回 foo_bar，与注册态的 foo_bar_1 对不上。
++    const live: McpToolDescriptor = {
++      serverName: "bridge",
++      toolName: "act",
++      inputSchema: {
++        type: "object",
++        properties: { "foo:bar": { type: "string" } },
++      },
++    };
++    const captured: Array<Record<string, unknown>> = [];
++    const { entry, resolve } = liveEntry(registered, live, captured);
++    expect(propertyNames(entry.inputSchema)).toEqual(["foo_bar_1", "foo_bar"]);
++
++    const resolution = await resolve({});
++    if (resolution.status !== "ready") throw new Error(resolution.message);
++    // 校验面保持 live（上游语义：live 更严格时让模型下次按新定义重试），只有回译映射沿用注册态。
++    expect(propertyNames(resolution.entry.inputSchema)).toEqual(["foo_bar"]);
++
++    await resolution.entry.handler({ foo_bar_1: "v" }, context());
++    expect(captured).toEqual([{ "foo:bar": "v" }]);
++  });
++
++  it("live 描述符新增同名原生参数时，模型传来的消毒名不被错投给原生参数", async () => {
++    const registered: McpToolDescriptor = {
++      serverName: "bridge",
++      toolName: "act",
++      inputSchema: {
++        type: "object",
++        properties: { "foo:bar": { type: "string" } },
++      },
++    };
++    // live 多出原生 foo_bar：冒号名的消毒名变成 foo_bar_1，按 live 映射回译时模型的 foo_bar 不命中。
++    const live: McpToolDescriptor = {
++      serverName: "bridge",
++      toolName: "act",
++      inputSchema: {
++        type: "object",
++        properties: {
++          "foo:bar": { type: "string" },
++          foo_bar: { type: "string" },
++        },
++      },
++    };
++    const captured: Array<Record<string, unknown>> = [];
++    const { entry, resolve } = liveEntry(registered, live, captured);
++    expect(propertyNames(entry.inputSchema)).toEqual(["foo_bar"]);
++
++    const resolution = await resolve({});
++    if (resolution.status !== "ready") throw new Error(resolution.message);
++    expect(propertyNames(resolution.entry.inputSchema)).toEqual(["foo_bar_1", "foo_bar"]);
++
++    await resolution.entry.handler({ foo_bar: "v" }, context());
++    expect(captured).toEqual([{ "foo:bar": "v" }]);
 +  });
 +});

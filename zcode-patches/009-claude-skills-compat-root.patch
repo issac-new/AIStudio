@@ -1,8 +1,8 @@
 diff --git a/apps/zcode-cli/packages/adapters/src/skills/roots.ts b/apps/zcode-cli/packages/adapters/src/skills/roots.ts
-index 0000000..0000001 100644
---- a/apps/zcode-cli/packages/adapters/src/skills/roots.ts	2026-10-21 09:50:24
-+++ b/apps/zcode-cli/packages/adapters/src/skills/roots.ts	2026-10-26 20:08:13
-@@ -9,6 +9,7 @@
+index 1455a72..f9a4ee1 100644
+--- a/apps/zcode-cli/packages/adapters/src/skills/roots.ts
++++ b/apps/zcode-cli/packages/adapters/src/skills/roots.ts
+@@ -9,6 +9,7 @@ const PRIORITY_STEP = 10;
  const SKILLS_DIR = "skills";
  const ZCODE_DIR = ".zcode";
  const AGENTS_DIR = ".agents";
@@ -10,7 +10,7 @@ index 0000000..0000001 100644
  
  export interface SkillRootResolutionOptions {
    homeDirectory?: string;
-@@ -111,9 +112,14 @@
+@@ -112,9 +113,14 @@ function skillRootsForBase(
  ): SkillRoot[] {
    // 合并而不是 fallback：用户可能同时安装原生 `.zcode` skill 和兼容 `.agents` skill。
    // 同一级别仍保持 `.zcode` 优先，后续同名按 root 顺序解析。
@@ -25,3 +25,46 @@ index 0000000..0000001 100644
    ];
  }
  
+diff --git a/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts b/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts
+index 2b4db16..d6b63bf 100644
+--- a/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts
++++ b/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts
+@@ -222,12 +222,15 @@ it("watches skill roots but not existing skills, plain subdirectories or bundled
+     fixedDisabledPaths: [join(bundled, "workflow", "SKILL.md")],
+   });
+   expect(names(loaded.outcome)).toEqual(["alpha", "builtin"]);
++  // Ycode 分叉（overlay 009）：每级多一个 `.claude/skills` 兼容根，所以是 6 个而非上游的 4 个。
+   expect([...loaded.directories!].toSorted()).toEqual(
+     [
+       join(fixture.home, ".zcode", "skills"),
+       userRoot,
++      join(fixture.home, ".claude", "skills"),
+       join(fixture.workspace, ".zcode", "skills"),
+       join(fixture.workspace, ".agents", "skills"),
++      join(fixture.workspace, ".claude", "skills"),
+     ].toSorted(),
+   );
+   expect(loaded.files).toContain(join(userRoot, "SKILL.md"));
+@@ -239,6 +242,22 @@ it("watches skill roots but not existing skills, plain subdirectories or bundled
+   expect([...loaded.files].some((file) => file.startsWith(bundled))).toBe(false);
+ });
+ 
++// Ycode 分叉（overlay 009）：追加 `.claude/skills` 兼容根（Claude Code 生态落点）。
++// 上游只读 `.zcode`/`.agents`；这里钉住兼容根里的技能会被加载，且同一级同名时
++// 兼容根排在原生根之后——清单层不去重，按名查找取首个命中，所以顺序即优先级。
++it("loads skills from the `.claude/skills` compatibility roots behind the native roots", async () => {
++  await writeSkill(join(fixture.home, ".claude", "skills", "claude-user"), "claude-user");
++  await writeSkill(join(fixture.workspace, ".claude", "skills", "claude-project"), "claude-project");
++  await writeSkill(join(fixture.workspace, ".claude", "skills", "shared"), "shared", "from claude");
++  await writeSkill(join(fixture.workspace, ".agents", "skills", "shared"), "shared", "from agents");
++  const loaded = await load(fixture.options);
++  expect(names(loaded.outcome)).toEqual(["claude-project", "claude-user", "shared", "shared"]);
++  expect(loaded.outcome.skills.filter((skill) => skill.name === "shared").map((skill) => skill.path)).toEqual([
++    join(fixture.workspace, ".agents", "skills", "shared", "SKILL.md"),
++    join(fixture.workspace, ".claude", "skills", "shared", "SKILL.md"),
++  ]);
++});
++
+ it("publishes new and removed skill directories in an open source", async () => {
+   const source = await createSkillCatalogSource(fixture.options);
+   try {

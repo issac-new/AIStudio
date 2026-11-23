@@ -1238,6 +1238,8 @@ L3 spec-first 检查、L4 状态机守卫。
 目标技能命名 `<项目>-dev`，字符集归一为 `[A-Za-z0-9._-]`。
 项目可以直接使用 `.agents/skills`，
 也可以把 `.claude/skills` 的产物软链到 `~/.zcode/skills` 供兼容宿主发现。
+Ycode 分叉（`zcode-patches` 009）直接读取用户目录与工作区的 `.claude/skills`，
+同一级内排在 `.zcode`、`.agents` 两个原生根之后，这类会话内不需要软链。
 两条路径共享同一份产物，具体选择由目标宿主能力决定。
 当前 worker-coder 在首次编码前只保证生成与发现，
 完整性校验和升级发生在编码之后；ACP 驱动也没有独立技能检查。

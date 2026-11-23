@@ -1,20 +1,106 @@
 diff --git a/apps/zcode-cli/packages/node-repl-host/src/server.ts b/apps/zcode-cli/packages/node-repl-host/src/server.ts
-index e50333e..69f7492 100644
+index 5b4655d96..ad3065006 100644
 --- a/apps/zcode-cli/packages/node-repl-host/src/server.ts
 +++ b/apps/zcode-cli/packages/node-repl-host/src/server.ts
-@@ -373,7 +373,14 @@ export function captureComputerUseRuntimeFromEnvironment(
+@@ -451,9 +451,19 @@ export function captureComputerUseRuntimeFromEnvironment(
    env: NodeJS.ProcessEnv = process.env,
  ): ComputerUseRuntime | undefined {
-   const socketPath = env.ZCODE_CUA_PERMISSION_BROKER_SOCKET?.trim();
+   const socketPath = env[BROKER_SOCKET_ENV]?.trim();
 -  if (!socketPath) return undefined;
-+  if (!socketPath) {
-+    // overlay 004（Computer Use 桌面级 2026-09-29）：宿主未注入 broker socket 时
-+    // 回落自包含 Node 后端 runtime（@zcode/zcode-cua index 活体，进程内直调后端）。
-+    // 三端通用语义；ZCODE_CUA_DISABLE=1 保持 fail-closed（返回 undefined →
-+    // bridge 不注入 → SDK 报 unavailable，与产品闭包语义一致）。
+-  if (socketPath === IN_PROCESS_BROKER_SOCKET) {
+-    return createInProcessComputerUseRuntime(env);
++  if (!socketPath || socketPath === IN_PROCESS_BROKER_SOCKET) {
++    // overlay 004（Computer Use 桌面级 2026-09-29；2026-11-23 随 zcode 4.0.0 重锚）：
++    // 宿主未注入 broker socket，或 4.0 起独立 CLI 自签的哨兵值——两种「无桌面宿主」
++    // 形态都回落自包含 Node 后端 runtime（@zcode/zcode-cua index 活体，进程内直调）。
++    // 哨兵形态下 env 里留着字面量 "in-process"，而 runtime 缺省会读 env 自行推导 socket，
++    // 会把它当真实路径去连——必须先剥掉再建。上游该分支走依赖原生 addon 的进程内
++    // broker（开源构建恒报 not available in this build），本 fork 源码构建不带该 addon，
++    // 故在此接管。ZCODE_CUA_DISABLE=1 保持 fail-closed（返回 undefined → bridge
++    // 不注入 → SDK 报 unavailable，与产品闭包语义一致）。
 +    if (env.ZCODE_CUA_DISABLE === "1") return undefined;
-+    return createComputerUseRuntime();
-+  }
++    const embeddedEnv = { ...env };
++    delete embeddedEnv[BROKER_SOCKET_ENV];
++    return createComputerUseRuntime({ env: embeddedEnv });
+   }
    return createComputerUseRuntime({
      brokerSocketPath: socketPath,
-     refreshMarkerPath: env.ZCODE_CUA_PERMISSION_BROKER_REFRESH_MARKER?.trim(),
+diff --git a/apps/zcode-cli/packages/node-repl-host/test/in-process-cua-runtime.test.ts b/apps/zcode-cli/packages/node-repl-host/test/in-process-cua-runtime.test.ts
+index d1bd5b7e2..4e0dac50c 100644
+--- a/apps/zcode-cli/packages/node-repl-host/test/in-process-cua-runtime.test.ts
++++ b/apps/zcode-cli/packages/node-repl-host/test/in-process-cua-runtime.test.ts
+@@ -1,4 +1,4 @@
+-import { describe, expect, it } from "vitest";
++import { describe, expect, it, vi } from "vitest";
+ import type { InProcessComputerUseBroker } from "@zcode/zcode-cua/broker/in-process";
+ import { BROKER_SOCKET_ENV, IN_PROCESS_BROKER_SOCKET } from "@zcode/zcode-cua/broker/socketPath";
+ import {
+@@ -11,6 +11,22 @@ import {
+   findSeededCuaAddon,
+ } from "../src/server.js";
+ 
++// overlay 004：记录 createComputerUseRuntime 的入参。两个 fork 运行时与上游进程内
++// 运行时的方法名完全相同（execute/closeSession/dispose），无法靠形状区分；而哨兵
++// 形态下若把字面量 "in-process" 当 socket 路径传下去，runtime 会去连一个不存在的
++// socket——只能靠入参钉住。实现在原样委托给真实 createComputerUseRuntime。
++const runtimeOptions = vi.hoisted(() => [] as Array<Record<string, unknown>>);
++vi.mock("@zcode/zcode-cua", async (importOriginal) => {
++  const actual = await importOriginal<typeof import("@zcode/zcode-cua")>();
++  return {
++    ...actual,
++    createComputerUseRuntime: (options: Record<string, unknown> = {}) => {
++      runtimeOptions.push(options);
++      return actual.createComputerUseRuntime(options as never);
++    },
++  };
++});
++
+ const CONTEXT = { sessionId: "in-process-test", workspacePath: "/tmp" };
+ 
+ function abortedSignal(): AbortSignal {
+@@ -25,11 +41,43 @@ describe("in-process Computer Use runtime", () => {
+     expect(BROKER_SOCKET_ENV).toBe(ZCODE_CUA_BROKER_SOCKET_ENV_KEY);
+   });
+ 
+-  it("uses the in-process path only for the sentinel socket", () => {
+-    expect(captureComputerUseRuntimeFromEnvironment({})).toBeUndefined();
++  // overlay 004：上游开源形态下 env 为空不建 runtime、哨兵走依赖原生 addon 的进程内
++  // broker（开源构建恒报 not available in this build）。本 fork 的两种「无桌面宿主」
++  // 形态都回落自包含 Node 后端 runtime。
++  it("overlay 004：无宿主凭据与独立 CLI 哨兵两种形态都回落 fork 自包含 runtime，且不带 socket", () => {
++    const before = runtimeOptions.length;
++    expect(captureComputerUseRuntimeFromEnvironment({})).toBeDefined();
+     expect(
+       captureComputerUseRuntimeFromEnvironment({ ZCODE_CUA_PERMISSION_BROKER_SOCKET: "in-process" }),
+     ).toBeDefined();
++    expect(runtimeOptions).toHaveLength(before + 2);
++    for (const options of runtimeOptions.slice(before)) {
++      expect(options.brokerSocketPath).toBeUndefined();
++      expect(
++        (options.env as Record<string, string | undefined>)[ZCODE_CUA_BROKER_SOCKET_ENV_KEY],
++      ).toBeUndefined();
++    }
++  });
++
++  it("overlay 004：真实 socket 仍走外部 Helper（上游原行为不变）", () => {
++    const before = runtimeOptions.length;
++    expect(
++      captureComputerUseRuntimeFromEnvironment({ ZCODE_CUA_PERMISSION_BROKER_SOCKET: "/tmp/real-helper.sock" }),
++    ).toBeDefined();
++    expect(runtimeOptions).toHaveLength(before + 1);
++    expect(runtimeOptions[runtimeOptions.length - 1].brokerSocketPath).toBe("/tmp/real-helper.sock");
++  });
++
++  it("overlay 004：ZCODE_CUA_DISABLE=1 保持 fail-closed，两种形态都不建 runtime", () => {
++    const before = runtimeOptions.length;
++    expect(captureComputerUseRuntimeFromEnvironment({ ZCODE_CUA_DISABLE: "1" })).toBeUndefined();
++    expect(
++      captureComputerUseRuntimeFromEnvironment({
++        ZCODE_CUA_PERMISSION_BROKER_SOCKET: "in-process",
++        ZCODE_CUA_DISABLE: "1",
++      }),
++    ).toBeUndefined();
++    expect(runtimeOptions).toHaveLength(before);
+   });
+ 
+   it("starts the broker on the first execute, not on construction or closeSession", async () => {

@@ -1,6 +1,8 @@
 # zcode patch series (受管 fork,路由全部进 upstream/zcode)
 # 格式同 patches/series:每行一个 patch 文件名,# 注释行忽略。
-# 基线: origin/main @ fec97590 (v3.18.2 线, 2026-11-13 同步批；同步口径=上游 main 变更非版本 tag)。
+# 基线: origin/main @ a4b44451 (v4.0.0, 2026-11-23 同步批；同步口径=上游 main 变更非版本 tag，本次与 tag v4.0.0 同一提交)。
+# 2026-11-23 同步批（spec 2026-11-23-zcode-400-upgrade-release）：fec97590→a4b44451；
+# 004/006/009/011 重锚，其余 7 条直放，零退役；净基线 11/11 全过、二次注入幂等。台账见 vendor/VENDOR.md。
 # 2026-11-13 同步批：b95ebaff→fec97590；台账见 vendor/VENDOR.md。
 # 2026-11-11 同步批（spec 2026-11-11-zcode-3180-sync-and-qwen-absorb）：a9fe401e→b95ebaff
 # 单 sync 提交 5099 文件 +429348/−44745；002/006 锚漂移重生成（010 实测直放），净基线 10/10 全过。
@@ -33,6 +35,10 @@
 #      computer-use 插件（skill+SDK）整链在无桌面宿主注入的 CLI/引擎会话直接可用；
 #      ZCODE_CUA_DISABLE=1 保持 fail-closed。SDK 方法面别名（paste/set_value/
 #      left_click_drag/stop_computer_control）在 003 tool-map。
+#      2026-11-23 随 4.0.0 重锚：上游给独立 CLI 引入「进程内 broker＋哨兵值 in-process」
+#      （依赖原生 addon，开源树恒报不可用），本补丁接管哨兵分支——无宿主凭据与哨兵
+#      两形态统一回落自包含运行时，且先剥离 socket 变量（运行时缺省读 env，会把字面量
+#      in-process 当真实路径去连）；上游新增测试同步改写为三例 fork 语义。
 004-node-repl-cua-fallback.patch
 # 005（hold_key 工具失配根治，24h 审查轮 2026-09-30）：003 tool-map 的 hold_key 工具
 #      method 指向 "hold_key"，但 node-backend 只有 hold_key_down/hold_key_up 且
@@ -70,6 +76,10 @@
 # 实测基线：分叉与官方引擎均只读 .zcode/skills + .agents/skills，不读 .claude/skills
 #（skills list 三目录对照）。项目技能推荐落 .agents/skills（三引擎通吃）；本补丁
 # 只补分叉对既有 .claude/skills 资产的兼容，source 复用 agents，优先级排在原生根后。
+#      2026-11-23 随 4.0.0 重锚（spec 2026-11-23-zcode-400-upgrade-release D9）：补丁扩为
+#      两文件——上游新增 skill-catalog 测试写死每级恰好 2 个技能根，与兼容根冲突；测试段
+#      改为 6 个，并新增一例钉住兼容根被加载、同名时原生根排前（清单层不去重，按名
+#      查找取首个命中）。
 009-claude-skills-compat-root.patch
 
 # 010（2026-11-10 执行内核统一后续·open-file 深改，spec 2026-11-10-zcode-openfile-workspace）：
@@ -90,6 +100,10 @@
 #      handler 分发前经 keyMap 回译原名；顺带剪除 required 引用未定义属性的幽灵项
 #      （严格 provider 如 Moonshot 会整单拒收）。Qwen 逐项对照其余差距=零（失败分类
 #      18 类>8 类/压缩三级阶梯>两级/流恢复预算 10>2/MCP 池化已有，锚点见 spec D1）。
+#      2026-11-23 随 4.0.0 重锚（spec 2026-11-23-zcode-400-upgrade-release D8）：入口
+#      callTool 拆行致上下文漂移；另 4.0 执行前按 live 描述符重建入口
+#      （resolveForExecution），live 入口沿用注册态回译映射（校验面仍按 live），否则
+#      注册态与 live 形状不同时会漏参或把参数错投给原生同名参数；新增两例钉住。
 011-mcp-schema-sanitizer.patch
 # 012（2026-11-22 全量回归 Android 安全面）：macOS java_home 可能回退到其它大版本；
 # externalPath 安全校验后执行受信任 JVM -version 并核对主版本，项目内伪造 Java 仍先拒。
