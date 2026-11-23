@@ -8,13 +8,13 @@
 - 锚点：`scripts/platform/inject/manifest.mjs:157-215`（planIncrement 增量判定：baseline treeOids＋series 逐项 sha＋前缀一致 → `kind:'noop'`，**不验补丁落盘**）；`scripts/ensure-injected.mjs`（noop 早退路径）；`.overlay-injected.json`（gitignored 状态文件，`git checkout -- vendor/` 后残留）。
 - 根因层：v1.0.19 发版轮两次中毒实录——①主检出复基线（merge 前配方）后清单残留，后续 inject 判 noop，毒化树上 docs:sync 生成 130（page 88/redirect 42，pristine 顶层多出 `hermes.history`×2）误入手册 → CI parity 红（run 45105228226，junit failures=1）；②同因污染路由实验全程（matrix 开关假因果、钉面方案全错，靠 tag-commit 临时 worktree＋ensure-injected 真注入对照才定谳）。毒化判别法：`rg -c connectionsExtras vendor/hermes-studio/packages/client/src/components/hermes/connections/ConnectionsPanel.vue`（5=真注入）＋ s3-feature-gates 13/13。
 - 验收判据：①noop 路径加哨兵抽验（每 lane 抽 ≥1 枚补丁的落盘特征，失配→拒绝 noop 走全量重放）或等价树校验；②负例测试：注入后手工 revert vendor 再跑 ensure-injected，必须触发重放而非 noop；③机制预算登记 sunset＋配对删除/降级（仓规 13）；④全量 `npm test` 绿。
-- 状态：open（owner=zcode 发版轮；建议随下个 inject 面小批根治）。
+- 状态：**已根治（2026-11-23 N33 清偿批 `2026-11-23-n33-closeout-batch.md`）**——`scripts/platform/inject/lane-touch.mjs` noopSentinel 三态接入 inject/ensure-injected 两处 noop 分支；TDD 三例 RED→5/5 GREEN＋注入族 42/42＋健康 noop 不回归。验收③按 bugfix 口径收敛（既有 inject 机制内缺陷修复、非新门/钩子/脚本/账本，不触发 rule 13 登记——判定见清偿批 D3）。
 
 ### N33-2 REA 6.9→6.10 能力差异盘点
 - 锚点：`team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md` §3.1 REA 行（本机 6.10.1 已对齐 latest；§4.5 未写）。
 - 根因层：本批发版优先只做版本对齐（npm 11-20 发 6.10.1，双通道实测一致），能力差异未盘点。
 - 验收判据：台账新增 §4.5（release notes 主题→本机核验命令→breaking 面对照，先例 §4.4 格式）。
-- 状态：open（下轮点名刷新随批）。
+- 状态：**已盘点（同日 N33 清偿批）**——§4.5 入册（Evidence rev2 判定不适用本仓；Ghidra 12.2+JDK25 前提已满足）。
 
 ### N33-3 台账 9 条 🔴 升档候选待派卡裁决
 - 锚点：台账 §二 2026-11-23 批注＋分域行（addyosmani 164c/SkillOpt 429c/Sage 48c/ARL-Next v1.5.1 90c/OpenSecurity 200c/os-taxonomy 214c/DeepInfer nv-dev 29c/element-web develop 282c/CyberStrikeAI v1.8.1 24c）。
@@ -25,7 +25,7 @@
 ### N33-4 sia RETIRED 线到点复核（定时）
 - 锚点：台账 §3.2 sia 行（静默 89 天，观察至 2026-11-24）。
 - 验收判据：11-24 实测 pushed_at——零 push→按 §一.3 转 RETIRED；有 push→复活按新增量重判级。
-- 状态：dated（2026-11-24，下轮点名顺带）。
+- 状态：dated（2026-11-24）——11-23 中间检查实测 pushed_at=2026-08-26 零新 push（v0.6.0...main=1c 持平），按趋势 11-24 到线即转 RETIRED。
 
 ### N33-5 decisions.jsonl 哈希链历史断点的 verify-chain 容忍策略
 - 锚点：`.swarm-yuan/decisions.jsonl` 行 126-129（无链字段）＋130-140（`previous_checksum=''` 重启链后再断）；`trace-log.sh --verify-chain` 自此恒 FAIL。

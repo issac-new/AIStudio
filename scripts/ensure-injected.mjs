@@ -22,6 +22,7 @@ import {
 import { addedFilesFromPatch, missingFiles } from './lib/zcode-patch-manifest.mjs';
 import { installHooks } from './install-hooks.mjs';
 import { readManifestFile, isV2Manifest, planIncrement, IncrementRefusedError, isAcceptablePartial } from './platform/inject/manifest.mjs';
+import { noopSentinel } from './platform/inject/lane-touch.mjs';
 
 const overlayRoot = resolve(import.meta.dirname, '..');
 // 上游根与 inject.mjs 同源（cognition P0-3 契约）：不内联 vendor 判定。
@@ -180,6 +181,25 @@ if (manifest) {
     if (manifest.status === 'partial' && !isAcceptablePartial(manifest)) {
       console.error('[ensure-injected] 注入态为不可接受的 partial（非缺树跳过或部署未收口），不得视为成功。');
       console.error('[ensure-injected] 请核对 .overlay-injected.json 后 npm run clean && npm run inject 全量重放。');
+      process.exit(1);
+    }
+    // noop 哨兵（N33-1）：pretest 主路径不得被残留清单骗过——树被外部还原时
+    // 清单仍说 noop，此处现形并触发全量重放（v1.0.19 轮投影误植事故的正对口）。
+    const sentinel = noopSentinel(manifest, {
+      'hermes-studio': overlayRoots.hermesStudio,
+      'hermes-agent': overlayRoots.hermesAgent,
+      zcode: overlayRoots.zcode,
+    });
+    if (sentinel === 'reverted') {
+      console.warn('[ensure-injected] noop 哨兵：清单残留（声明 applied 但各 lane 工作树零差异，树已被外部还原，N33-1）——删除残留清单并触发全量重放。');
+      const { rmSync } = await import('node:fs');
+      rmSync(manifestPath, { force: true });
+      const r = spawnSync('node', ['scripts/inject.mjs'], { cwd: overlayRoot, stdio: 'inherit' });
+      process.exit(r.status ?? 1);
+    }
+    if (sentinel === 'mixed') {
+      console.error('[ensure-injected] noop 哨兵：部分 lane 已还原（混合态）——清单与树不一致且无法自动判定归属，拒绝 noop。');
+      console.error('[ensure-injected] 请 npm run clean && npm run inject 全量重放。');
       process.exit(1);
     }
     console.log(`[ensure-injected] 注入态与 series 前缀精确一致（v2 noop，status=${manifest.status}），无需动作。`);
