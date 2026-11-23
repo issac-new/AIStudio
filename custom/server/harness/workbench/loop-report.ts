@@ -21,6 +21,7 @@ import type { PromotionGateInput } from './loop-core'
 
 import { rsiConfig } from './loop-config'
 import { paretoReportOf } from './loop-pareto'
+import { selectionBiasAudit } from './loop-theory'
 
 /** 晋级门禁：缺证据不放行（源文「回归」与「--max-usd」的硬约束）。 */
 export function evaluatePromotion(input: PromotionGateInput): PromotionGateReport {
@@ -474,12 +475,21 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
   const probeForRoles = selForRoles
     ? proposal.probes.find((p) => p.variantId === selForRoles.id && p.status === 'recorded')
     : undefined
+  // 2026-11-23 RSI 数学轮：选择偏差读数——同样只披露不拦截（机制冻结裁定边界内）
+  const selectionBias = selectionBiasAudit({
+    scores: proposal.probes
+      .filter((p) => p.status === 'recorded' && typeof p.evidence?.passAt1 === 'number')
+      .map((p) => p.evidence?.passAt1),
+    noiseDelta: proposal.noise?.delta ?? null,
+    heldoutPassRate: proposal.heldout?.passRate ?? null,
+  })
   return {
     ok: blockers.length === 0,
     blockers,
     warnings,
     lexOrder,
     evidenceRoles: evidenceRoleLines({ proposal, probe: probeForRoles ?? null, noiseDelta: input.regularization?.noiseDelta ?? null }),
+    selectionBias,
   }
 }
 

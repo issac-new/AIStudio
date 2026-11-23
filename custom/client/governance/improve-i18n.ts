@@ -202,6 +202,26 @@ export interface ImproveCopy {
   evoUnexercised: string
   evoNoData: string
   evoRollbackMark: string
+  theoryTitle: string
+  theorySub: string
+  theoryGamma: string
+  theoryNextGain: string
+  theoryClass: string
+  theoryCeiling: string
+  theoryClassGeometric: string
+  theoryClassModerate: string
+  theoryClassNoDecay: string
+  theoryClassInsufficient: string
+  theoryCeilingReached: string
+  theoryCeilingNear: string
+  theoryCeilingNo: string
+  theoryCeilingUnknown: string
+  theoryProxy: string
+  theoryProxyNone: string
+  theoryProxyWatch: string
+  theoryProxyDiverging: string
+  theoryProxyInsufficient: string
+  theorySelection: string
   regTitle: string
   regSub: string
   regRound: string
@@ -453,6 +473,26 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     evoUnexercised: '从未探索的面（探索槽位应留给它们）',
     evoNoData: '暂无进化数据：先在同一面上走完 提案→探测→晋级 的循环。',
     evoRollbackMark: '已回滚',
+    theoryTitle: 'RSI 数学体检',
+    theorySub: '只读诊断：收缩衰减（γ̂ 与到顶信号）、代理-真实背离、多候选选择偏差；不参与晋级判定。',
+    theoryGamma: '收缩系数 γ̂',
+    theoryNextGain: '下一轮增益估计',
+    theoryClass: '衰减形态',
+    theoryCeiling: '封顶信号',
+    theoryClassGeometric: '几何衰减',
+    theoryClassModerate: '中度衰减',
+    theoryClassNoDecay: '未衰减',
+    theoryClassInsufficient: '样本不足',
+    theoryCeilingReached: '已到噪声带（建议改改进器）',
+    theoryCeilingNear: '接近封顶',
+    theoryCeilingNo: '未到顶',
+    theoryCeilingUnknown: '噪声带未标定（留空）',
+    theoryProxy: '代理-真实背离',
+    theoryProxyNone: '无背离',
+    theoryProxyWatch: '单轮背离（观察）',
+    theoryProxyDiverging: '连续背离（过拟合倾向）',
+    theoryProxyInsufficient: '样本不足',
+    theorySelection: '多候选未确认',
     regTitle: '正则化读数（按面）',
     regSub: 't=该面已采纳轮次；编辑预算随轮次余弦退火（后期强制少捆绑，让每次变化可归因）。',
     regRound: '轮次 t',
@@ -703,6 +743,26 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     evoUnexercised: 'Never-exercised surfaces (exploration slots belong to them)',
     evoNoData: 'No evolution data yet: finish a proposal→probe→promote cycle on one surface first.',
     evoRollbackMark: 'rolled back',
+    theoryTitle: 'RSI math check',
+    theorySub: 'Read-only diagnostics: contraction decay (γ̂ and ceiling signal), proxy-vs-realized divergence, and multi-candidate selection bias. Never part of promotion decisions.',
+    theoryGamma: 'Contraction γ̂',
+    theoryNextGain: 'Next-round gain estimate',
+    theoryClass: 'Decay shape',
+    theoryCeiling: 'Ceiling signal',
+    theoryClassGeometric: 'Geometric decay',
+    theoryClassModerate: 'Moderate decay',
+    theoryClassNoDecay: 'No decay',
+    theoryClassInsufficient: 'Insufficient',
+    theoryCeilingReached: 'Inside noise band (change the improver)',
+    theoryCeilingNear: 'Near ceiling',
+    theoryCeilingNo: 'Not at ceiling',
+    theoryCeilingUnknown: 'Noise band uncalibrated (left blank)',
+    theoryProxy: 'Proxy-vs-realized divergence',
+    theoryProxyNone: 'No divergence',
+    theoryProxyWatch: 'One round (watch)',
+    theoryProxyDiverging: 'Consecutive divergence (overfit tendency)',
+    theoryProxyInsufficient: 'Insufficient',
+    theorySelection: 'Multi-candidate unconfirmed',
     regTitle: 'Regularization by surface',
     regSub: 't = accepted rounds on the surface; the edit budget anneals with t (fewer bundled edits later, so each change stays attributable).',
     regRound: 'Round t',

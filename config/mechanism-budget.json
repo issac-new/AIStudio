@@ -306,6 +306,19 @@
       "pairedRemovals": [
         "t8-verify-kernel.py 一次性内核回环验证退役归档（git 历史可考）"
       ]
+    },
+    {
+      "at": "2026-11-23",
+      "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（RSI 数学诊断只作报告字段与面板读数，不入四类别）",
+      "reason": "RSI 递归自我改进数学吸收轮（spec 2026-11-23-rsi-recursive-theory）：loop-theory.ts 纯函数诊断（收缩衰减 γ̂、选择偏差、代理-真实背离）、晋级报告 selectionBias 字段、进化报告 theory 字段、HarnessImprovePanel「RSI 数学体检」节。零新增门码与账本；遵守 2026-11-01 机制扩展停止裁定",
+      "pairedRemovals": [
+        "诊断并入既有晋级报告与进化报告（可选字段）不加新门/新端点；面板节复用既有 HarnessImprovePanel 不加新页面——零类别增量，无独立退役动作"
+      ],
+      "sunset": {
+        "owner": "RSI 数学吸收轮（2026-11-23-rsi-recursive-theory）",
+        "reviewBy": "2027-02-23",
+        "retireWhen": "连续两轮推演无消费（面板读数无人看且无下游引用）或阈值被证伪时，并入 loop-report 或本 spec 附录"
+      }
     }
   ],
   "sunset": [

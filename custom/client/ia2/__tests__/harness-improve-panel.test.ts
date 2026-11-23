@@ -107,6 +107,22 @@ const overview = {
       ],
     }],
     unexercised: ['memory', 'plugins'],
+    theory: {
+      surfaces: [{
+        surfaceKey: 'system_prompt',
+        decay: {
+          rounds: 3, excludedNonPositive: 0, gamma: 0.333, r2: 0.98, lastGain: 0.01,
+          predictedNextGain: 0.0033, classification: 'geometric_decay', ceiling: 'reached',
+          note: 'γ̂=0.333（3 个正增益轮）；下一轮增益估计 0.3pp；已到噪声带：建议改改进器 U',
+        },
+      }],
+      proxyDivergence: { rounds: 3, divergingRounds: 2, streak: 2, verdict: 'diverging', note: '连续 2 轮背离' },
+      selectionBias: [
+        { proposalId: 'hw-000', surfaceKey: 'system_prompt', audit: { poolSize: 3, best: 0.7, runnerUp: 0.6, gap: 0.1, expectedOptimismZ: null, expectedOptimism: null, adjustedBest: null, realizedGap: 0.15, verdict: 'heldout_gap', note: '留出缺口' } },
+        { proposalId: 'hw-001', surfaceKey: 'system_prompt', audit: { poolSize: 2, best: 0.7, runnerUp: 0.69, gap: 0.01, expectedOptimismZ: null, expectedOptimism: null, adjustedBest: null, realizedGap: null, verdict: 'top2_within_noise', note: '池内噪声' } },
+      ],
+      note: '三项均为只读诊断，不参与 ok/blockers 判定',
+    },
   },
   champions: [],
   memoryPolicy: {
@@ -269,6 +285,11 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-reg-row-system_prompt"]').text()).toContain('系统提示词')
     expect(w.find('[data-testid="hi-evo-unexercised"]').text()).toContain('记忆')
     expect(w.find('[data-testid="hi-evo-unexercised"]').text()).toContain('插件')
+    expect(w.find('[data-testid="hi-rsi-theory"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-theory-decay"]').text()).toContain('几何衰减')
+    expect(w.find('[data-testid="hi-theory-decay"]').text()).toContain('已到噪声带')
+    expect(w.find('[data-testid="hi-theory-proxy"]').text()).toContain('连续背离')
+    expect(w.find('[data-testid="hi-theory-selection"]').text()).toContain('2/2')
     const strip = w.find('[data-testid="hi-reg-hw-001"]')
     expect(strip.text()).toContain('1/20')
     expect(strip.text()).toContain('未标定')
