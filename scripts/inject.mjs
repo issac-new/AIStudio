@@ -24,6 +24,7 @@ import {
   IncrementRefusedError, isAcceptablePartial,
 } from './platform/inject/manifest.mjs';
 import { isUnder } from './platform/inject/journal.mjs';
+import { noopSentinel } from './platform/inject/lane-touch.mjs';
 import { resolveUpstreamRoots as resolveUpstreamRootsLib } from './platform/lib/upstream-root.mjs';
 import { addedFilesFromPatch } from './lib/zcode-patch-manifest.mjs';
 
@@ -745,14 +746,35 @@ function main() {
         try {
           const inc = planIncrement(existingManifest, plan);
           if (inc.kind === 'noop') {
-            console.log('[inject] manifest v2 与 series 前缀精确一致（noop）：补丁面无事可做。');
-            items = [];
+            // noop 哨兵（N33-1）：清单说 applied 还不够，树必须真的带着补丁差异——
+            // 毒化形态（外部还原后清单残留）在此现形，不再静默跳过。
+            const sentinel = noopSentinel(existingManifest, {
+              'hermes-studio': hermesStudioRoot,
+              'hermes-agent': hermesAgentRoot,
+              zcode: zcodeRoot,
+            });
+            if (sentinel === 'reverted') {
+              console.warn('[inject] noop 哨兵：清单残留（声明 applied 但各 lane 工作树零差异，树已被外部还原，N33-1）——废弃残留清单，全量重放恢复注入态。');
+              rmSync(stateManifestPath, { force: true });
+              items = planItems;
+              baseManifest = null;
+              managedTree = false;
+            } else if (sentinel === 'mixed') {
+              console.error('[inject] noop 哨兵：部分 lane 已还原（混合态）——清单与树不一致且无法自动判定归属，拒绝 noop。');
+              console.error('[inject] 请 npm run clean && npm run inject 全量重放。');
+              process.exit(1);
+            } else {
+              console.log('[inject] manifest v2 与 series 前缀精确一致（noop）：补丁面无事可做。');
+              items = [];
+              baseManifest = existingManifest;
+              managedTree = true;
+            }
           } else {
             console.log(`[inject] 尾部增量 ${inc.items.length} 条：${inc.items.map((i) => i.name).join(', ')}`);
             items = inc.items;
+            baseManifest = existingManifest;
+            managedTree = true;
           }
-          baseManifest = existingManifest;
-          managedTree = true;
         } catch (e) {
           if (e instanceof IncrementRefusedError) {
             console.error(`[inject] ${e.message}`);

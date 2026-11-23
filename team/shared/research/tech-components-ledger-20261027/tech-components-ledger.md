@@ -38,7 +38,7 @@
 
 | 组件 | 基线（上次调研） | 上游现况（实测） | 判级/差异 | 处置与去向 |
 |------|------------------|------------------|-----------|------------|
-| REA MCP（rea-agents） | 6.10.1（11-23 本机对齐） | 6.10.1（npm 11-20 发；`rea --version`＋`npm ls -g` 双通道一致） | 🟢 已升级到位 | 11-23 实测本机已 6.10.1=latest；6.9→6.10 能力差异盘点挂下轮点名（repo main 领先 npm tag 2500c 属 monorepo 常态，不判级） |
+| REA MCP（rea-agents） | 6.10.1（11-23 本机对齐） | 6.10.1（npm 11-20 发；`rea --version`＋`npm ls -g` 双通道一致） | 🟢 已升级到位 | 11-23 实测本机已 6.10.1=latest；**6.9→6.10 能力差异已盘点（§4.5，同日 N33-2 清偿）**——Evidence rev2 无本仓持久化资产不适用、Ghidra 12.2+JDK25 前提已满足（repo main 领先 npm tag 2500c 属 monorepo 常态，不判级） |
 | Ghidra | 12.2（wrapper 实测已绑 `ghidra_12.2_PUBLIC`+JDK25，2026-11-07 订正） | 12.2 持平（releases/latest 仍 Ghidra_12.2_build；master 676c 为常态开发流，不按 repo commits 判级） | 🟢 已换绑 | 旧记录（12.1.4+temurin-21 待换绑）系台账滞后，§4.2 已订正 |
 | HexStrikeAI (0x4m4) | v6.0 源码深读立项（10-22） | 末 push 2026-08-03（11-23 复核静默 112 天，无复活） | 🟢 上游停滞 | RETIRED 2026-10-28（用户显式裁决豁免 85 天线；T1/T2 卡已收口，T3 融合卡 t_58855791 照常跑完） |
 | CyberStrikeAI (AIPentest) | v1.8.1（11-23 点名刷新） | **v1.8.1**（11-19 发）；v1.8.0...v1.8.1=24c；v1.8.1=main 头零漂移 | 🟡 release 密集；**升 🔴 候选交裁决**（已发版增量 24c>20，口径同 Cybermes 对齐锚） | 11-23 点名：24c 增量未读；delta 重跑与否交用户裁决。11-13 两报告（delta＋T2 深读）结论仍有效：引擎架构级更换存活、必吸收 3 项已落 evidence-governed-execution v1.1.0 |
@@ -134,6 +134,21 @@ breaking changes（已核对本机面）：`analyze_function` 默认 retained su
 5. **CLI/MCP 面**：guided workflows＋已装指南搜索；MCP 工具族选择＋compact 输出 schema；插件安装（Claude Code/Codex 自包含＋Cursor Marketplace＋CodeBuddy/LM Studio/Cline 注册）；Windows P0 DOS MZ＋RISC-V ilp32 admission。
 
 本机核验（11-13）：`rea --version`=6.9.0、`npm ls -g rea-agents`=6.9.0（双通道一致；台账旧记 6.8.0 系滞后）。wrapper（`~/lab/tools/rea-mcp-wrapper.sh`）GHIDRA 12.2＋JDK25 绑定不变。6.8→6.9 无 breaking 前提变化（Node 前提同 6.8 口径）。
+
+### 4.5 REA 6.9.0 → 6.10.1（2026-11-20 发布，N33-2 盘点）
+
+发布主题（官方 release notes，tag `rea-agents-6.10.0/6.10.1`）：
+
+1. **UEFI 三件离线工具**：firmware volumes/files/AMI NVRAM 的盘点与提取（`extract-uefi-firmware` 等 CLI＋MCP 面）。
+2. **新格式面**：Android boot images/OTA payloads、NES 2.0 容器、Maven POM/Gradle module-metadata/NuGet .nupkg 元数据（`inspect-maven-gradle-metadata`/`inspect-nuget-nupkg`）。
+3. **Evidence revision 2（大 breaking）**：file/process/debugger/browser 观测显式 subject 身份体系——`evidence_format: 2` 必填；`subject.identity` 取代 `subject.digest/format/architecture`（文件身份用 sha256）；Identity 参与 Evidence IDs → **旧观测/捆绑/快照必须用 6.10 重建**（重导出不更新身份），跨版本 `compare_artifacts` 前须重建 6.7-era artifact summaries；process captures 须 `manifest.root_process`；Rizin/GDB 会话身份 `{kind:"session",...}`；Ghidra/Hopper profiles 改 `analysis_profile.parameters.producer`；浏览器/PCAP/Android/native 各面 schema 收紧（Recreate 长尾清单见原 notes）。
+4. **Ghidra 12.2 lane 扩展**：DOS COM（线性 `0x100` load_address）＋RISC-V/MIPS32/PowerPC64 ELF 目标；前提=受支持 12.x build（≥12.2）＋该 build 声明范围 JDK（验证版 12.2=JDK≥25）。
+5. **IDA attached 注册收紧**：须显式 `"protocol":"native"`＋native 插件端点；legacy 1.4 proxy 注册须迁移。
+6. 6.10.1 patch：kuna serial job count 常量修复（#12735）。
+
+本机核验（2026-11-23）：`rea --version`=6.10.1；新面 --help 实测在位（extract-uefi-firmware/inspect-maven-gradle-metadata/inspect-nuget-nupkg/inspect-android-* 族）；wrapper `GHIDRA 12.2＋JDK25` 绑定不变且恰好满足 6.10 的 Ghidra 前提（无需动作）。
+
+**对本仓影响判定**：本仓对 REA 为实时调用型消费、无持久化 Evidence 资产——Evidence rev2 的「重建义务」不适用；Node 前提未见变化（沿用 6.8 口径 v24.22.1 ✓）。无迁移动作。
 
 ## 五、欠账与缺口登记
 
@@ -235,6 +250,7 @@ npm view @deepseek-ai/dsh dist-tags --json                                      
 
 ## 八、变更日志
 
+- 2026-11-23 N33 清偿批（spec `2026-11-23-n33-closeout-batch.md`）：REA 6.9→6.10.1 差异盘点入账（§4.5，Evidence rev2 判定不适用本仓）；noop-inject 哨兵根治（仓内 scripts 面，台账 N33-1 闭环）。
 - 2026-11-23 点名刷新批（§一.2 触发，用户令「更新台账到最新版并完成兼容升级」，spec `2026-11-23-tech-ledger-latest-compat.md`）：全表点名+RETIRED 复活检查实测；**vendor 单基线升级 studio v0.8.30**（5 补丁适配、clean+inject 510/510 零失败幂等二连）；agent v0.23.3/zcode 3.18.2 持平（zcode 安装版快照 3.19.1 另账，公开源码未发布）；**Ycode 宿主 RPC 复制面同步 fec97590**（retryable/profileId 透传、EventError 订阅结束语义；守门废除全文件豁免改确定性比较，RED→GREEN 实证）；rea-agents 6.10.1/DSH 0.2.2-rc.5 本机对齐 latest；判级升 🔴 候选 9 条记档交裁决（addyosmani/SkillOpt/Sage/ARL-Next/OpenSecurity/os-taxonomy 正名公开仓/DeepInfer nv-dev/element-web develop/CyberStrikeAI）；openagentontology 复活回观察；sia/HarnessEval-W 临线观察记档；ATT&CK v20.1 行订正。
 - 2026-11-13 点名刷新批（§一.2 触发，用户裁决「全做＋三 delta 重跑」，spec `2026-11-13-tech-ledger-refresh-vendor-upgrade.md`）：点名面+RETIRED 线全实测；vendor 双基线随批升级（studio v0.8.21 补丁 042/768 重锚；zcode v3.18.2 补丁零重生成 10/10 直放）；rea-agents 6.9.0 本机核验已最新（§4.4 能力差异入账）；Cybermes 复活 delta 收口＋必吸收 3 项落 security-domain-delegation v1.5.0；OpenExecutive v0.7.3/CyberStrikeAI v1.8.0 delta 收口（均外置盘 research/*-delta-20261113/）；§一.6 集成分支入 compare 基线立规（Cybermes 零漂移误判教训）；addyosmani 复活观察记档。
 - 2026-11-11 zcode 3.18.0 同步批：运行时基线三树 zcode 进位 a9fe401e→b95ebaff（v3.18.0，单 sync 提交 5099 文件；session-control/插件 extension host/worktree 隔离/登录 v2 随基线获得）；补丁 002/006 重生成＋新增 011（MCP inputSchema 参数名消毒＋调用回译，Qwen Code 1.0 逐项对照唯一确凿差距吸收项）。spec `2026-11-11-zcode-3180-sync-and-qwen-absorb.md`。
