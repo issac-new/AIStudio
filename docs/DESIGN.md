@@ -1653,13 +1653,13 @@ Ycode 通过受管构建与安装脚本落到部署位。
 不追逐上游 main 分支漂移。**例外：zcode** 按上游 main 同步、不看版本 tag
 （2026-10-25 用户裁定，见 `vendor/VENDOR.md`）。
 
-当前基线（核实日 2026-11-09）：
+当前基线（核实日 2026-11-23）：
 
 | 树 | 当前钉版 | 载体 |
 |---|---|---|
-| hermes-studio | v0.8.17 | `vendor/VENDOR.md` |
-| hermes-agent | v0.23.0 | `vendor/VENDOR.md` |
-| zcode | 包版本 3.17.2（谱系 v3.16.1 系列） | `vendor/zcode/package.json` |
+| hermes-studio | v0.8.30 | `vendor/VENDOR.md` |
+| hermes-agent | v0.23.3 | `vendor/VENDOR.md` |
+| zcode | 包版本 3.18.2（谱系 v3.16.1 系列） | `vendor/zcode/package.json` |
 
 升级批次、补丁再生与退役记录归各自 spec 与 git 历史，不写入本节。
 补丁数量由 `patches/series` 与 `zcode-patches/series` 计算，不在正文维护。
