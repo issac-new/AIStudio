@@ -1,3 +1,7 @@
+# v1.0.19-overlay（2026-11-23）
+
+台账最新版与兼容升级批（spec 2026-11-23-tech-ledger-latest-compat）：hermes-studio 底座 v0.8.28→**v0.8.30**（8a51d1bcf，16 提交/117 文件——approvals/clarifications 投递修复、单聊压缩摘要绑定房间主、插件三方风险提示、TLS 信任前移、Grok reasoning replay 会话亲和、内存上限写审批修复；5 枚补丁适配 042/301/640/757/812，clean+inject 510/510 零失败幂等二连，pristine 与上游逐字节对账含 launch.json 补录）；**Ycode 宿主 RPC 同步公开基线 fec97590**（retryable/profileId 错误字段透传、EventError 订阅结束语义入位；旧 pin 872ad96 清偿，全文件豁免守门废除改确定性比较——旧守门对三处协议漂移失明由 RED 4 项实证）；技术组件台账全量刷新（判级升 🔴 候选 9 条记档、openagentontology 复活回观察、os-taxonomy 正名公开仓、REA 6.10.1/DSH 0.2.2-rc.5 本机对齐 latest）；cockpit 进位 **0.8.30-studio.1**；独立审查 P0 零、P1×1＋P2×6 全清偿（含通知深链 /app/collab/session/:id 重定向落表）。回归证据：npm test **9885/0/11**、typecheck rc=0、release:check 四模块全绿、merge-invariants 通过。zcode 源码基线维持 3.18.2/fec97590（安装版快照 3.19.1 另账，公开源码未发布）。
+
 # v1.0.18-overlay（2026-11-23）
 
 全功能·非功能·安全回归修复批：Ycode 真实会话导入闭环（补丁 002 重写——shared 多源 schema 单一事实源＋importSessionV4 走真实 createSession(importedHistory)＋隔离引擎 listSessions 回读实证；012 Android JDK 主版本校验）；补丁 815 Python 3.14 兼容（re.split maxsplit）＋协程夹具根治（pytest 306/306 零警告）；补丁 816 看板 PATCH title/body 假成功根治（走 kanban edit）；team/shared/profiles.yaml 明文密钥全量 env 化＋无值示例（历史值须账号所有者轮换）＋注册表 10 域 owner 补齐＋orchestrator A2A 补段；Ycode 基线元数据三方一致守门（fec97590）。回归证据：npm test 9879/0、IDE smoke 双绿、隔离引擎导入/鉴权三态/跨 profile 403/并发唯一性活体全绿。

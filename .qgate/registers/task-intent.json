@@ -1,6 +1,6 @@
 {
-  "taskId": "full-regression-20261122",
-  "statement": "AIStudio 全功能·非功能·安全全量回归与缺陷修复（含前后端服务、swarm-yuan、Ycode；Ycode 002/012 真实会话导入与 Android JDK 校验、补丁 815 Python 3.14、816 看板 title/body 假成功、profiles 密钥 env 化、注册表/A2A 补段）",
+  "taskId": "release-v1019-20261123",
+  "statement": "v1.0.19-overlay 发版批：版本四载体进位（整体包 1.0.19-overlay；cockpit 维持 0.8.30-studio.1、teams v0.23.3-team.2、yuan v2.103.0）＋版本字面量传播面（RELEASE-NOTES 版本节/培训载体/team README/设计总账§C/设计导读）＋发布链（全量测试→preflight→打包→tag→GitHub Release→ModelScope everything 通道→releaseBatches 回填）",
   "scope": [
     "docs/**",
     "simharness/**",
@@ -38,8 +38,10 @@
     ".env.example"
   ],
   "acceptance": [
-    "When 运行 npm test Then 9879 全过"
+    "When 运行 npm test Then 全量零失败",
+    "When 运行 npm run release:check Then 四模块对账全绿",
+    "When 运行 npm run release:preflight Then 全过（junit/六门 fresh）"
   ],
-  "confirmedBy": "用户 2026-11-22 令「完成AIStudio…全功能及非功能、安全回归测试…并修复所有问题」",
-  "confirmedAt": "2026-11-22T17:38:35.857Z"
+  "confirmedBy": "用户 2026-11-23 令「重新发版下」",
+  "confirmedAt": "2026-11-23T02:00:00.000Z"
 }
