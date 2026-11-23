@@ -20,7 +20,12 @@
 - 锚点：台账 §二 2026-11-23 批注＋分域行（addyosmani 164c/SkillOpt 429c/Sage 48c/ARL-Next v1.5.1 90c/OpenSecurity 200c/os-taxonomy 214c/DeepInfer nv-dev 29c/element-web develop 282c/CyberStrikeAI v1.8.1 24c）。
 - 根因层：台账契约 §一.4「判级即派卡依据，放行前交用户裁决」——AI 不越权派卡。
 - 验收判据：用户逐条裁决派卡与否，裁决落 `.swarm-yuan/decisions.jsonl`（UserChallenge）。
-- 状态：awaiting-user。
+- 状态：**部分已裁决派卡（2026-11-23 用户 AskUserQuestion：三线全派）**——
+  ① **addyosmani/agent-skills 0.6.13...0.6.17=164c**（11-18 四版连发；review findings 验证主题）；
+  ② **microsoft/SkillOpt v0.2.0...main=429c**（v0.2.0=07-02；技能文档可训练状态＋验证集严格门）；
+  ③ **Sage v2.2.0...main=48c**（11-13 发 v2.2.0；「产出候选不激活」人审采纳＋声明式安全面）。
+  以上三卡按 delta-research-dispatch 冻结五件验收（精确 commit 总数=compare 实测已备/主题聚类表/基线过期结论清单/吸收建议三档/关键论断带 sha 锚点＋落盘路径）。
+  其余六线维持候选记档：**ARL-Next v1.5.1（90c）/OpenSecurity（200c）/os-taxonomy（214c）/DeepInfer nv-dev（29c）/element-web develop（282c）/CyberStrikeAI v1.8.1（24c）**——本轮用户未选，下轮点名随新实测再裁决。
 
 ### N33-4 sia RETIRED 线到点复核（定时）
 - 锚点：台账 §3.2 sia 行（静默 89 天，观察至 2026-11-24）。
