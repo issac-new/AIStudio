@@ -206,7 +206,7 @@ describe('P2 接线守门（runtime/controller/patch）', () => {
 
 describe('会话条目契约归一化（X5）', () => {
   // 引擎条目真实形状（取证：upstream/zcode packages/shared/src/zcode-protocol-v4/
-  // sessions-index.ts sessionSummarySchema，pin @fec97590）。
+  // sessions-index.ts sessionSummarySchema，pin @a4b44451）。
   const engineEntry = {
     sessionId: 's1', workspaceId: '/ws/proj', parentSessionId: 'p0', title: '修缺陷',
     titleSource: 'custom', phase: 'running', sessionEnded: false, hasBackgroundWork: true,

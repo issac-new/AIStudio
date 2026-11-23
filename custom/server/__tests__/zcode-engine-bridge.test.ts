@@ -61,7 +61,7 @@ describe('zcode engine bridge（R4-P1）', () => {
 
   it('index.ts：有意收窄导出面并声明当前 pin（不与上游全量 index 对齐）', () => {
     const index = readFileSync(resolve(VENDOR, 'index.ts'), 'utf8')
-    expect(index).toContain('pin @fec97590')
+    expect(index).toContain('pin @a4b44451')
     expect(index).toContain('export { VSBuffer } from "./buffer"')
     expect(index).toContain('export { Event, Emitter, CancellationToken, CancellationTokenSource, DisposableStore } from "./foundation"')
     expect(index).toContain('export type { IDisposable } from "./foundation"')
