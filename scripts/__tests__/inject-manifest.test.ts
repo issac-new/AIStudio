@@ -114,6 +114,57 @@ describe('manifest v2：planIncrement 严格增量', () => {
     expect(inc.items.map((i: any) => i.name)).toEqual(['003-c.patch'])
   })
 
+  // 两通道首尾相接：hermes 通道的尾部追加在拼接序列上排在 zcode 补丁之前，
+  // 按整条序列比前缀会被误判成中插（2026-11-23 全面复盘批：补丁 817 实录）。
+  it('正例：hermes 通道尾部追加、zcode 通道不变 → tail-append 只含新补丁', async () => {
+    const { planIncrement, emptyManifest, applyPlanToManifest } = await import('../platform/inject/manifest.mjs')
+    let m = emptyManifest(baseline)
+    m = applyPlanToManifest(m, item({ name: '816-studio.patch', sha256: '1'.repeat(64), seriesIndex: 498 }), { status: 'applied' })
+    m = applyPlanToManifest(m, zitem({ name: '012-zcode.patch', sha256: '2'.repeat(64), seriesIndex: 10 }), { status: 'applied' })
+    const plan = {
+      baseline,
+      items: [
+        item({ name: '816-studio.patch', sha256: '1'.repeat(64), seriesIndex: 498 }),
+        item({ name: '817-studio.patch', sha256: '3'.repeat(64), seriesIndex: 499 }),
+        zitem({ name: '012-zcode.patch', sha256: '2'.repeat(64), seriesIndex: 10 }),
+      ],
+    }
+    const inc = planIncrement(m, plan)
+    expect(inc.kind).toBe('tail-append')
+    expect(inc.items.map((i: any) => i.name)).toEqual(['817-studio.patch'])
+  })
+
+  it('负例：新补丁排在同通道已应用补丁之前 → 仍是 insert（放行只扩大到同通道尾部）', async () => {
+    const { planIncrement, emptyManifest, applyPlanToManifest } = await import('../platform/inject/manifest.mjs')
+    let m = emptyManifest(baseline)
+    m = applyPlanToManifest(m, item({ name: '816-studio.patch', sha256: '1'.repeat(64), seriesIndex: 0 }), { status: 'applied' })
+    m = applyPlanToManifest(m, zitem({ name: '012-zcode.patch', sha256: '2'.repeat(64), seriesIndex: 0 }), { status: 'applied' })
+    const plan = {
+      baseline,
+      items: [
+        item({ name: '817-studio.patch', sha256: '3'.repeat(64), seriesIndex: 1 }),
+        item({ name: '816-studio.patch', sha256: '1'.repeat(64), seriesIndex: 0 }),
+        zitem({ name: '012-zcode.patch', sha256: '2'.repeat(64), seriesIndex: 0 }),
+      ],
+    }
+    expect(() => planIncrement(m, plan)).toThrowError(expect.objectContaining({ reason: 'insert' }))
+  })
+
+  it('负例：两通道相对顺序颠倒 → reorder', async () => {
+    const { planIncrement, emptyManifest, applyPlanToManifest } = await import('../platform/inject/manifest.mjs')
+    let m = emptyManifest(baseline)
+    m = applyPlanToManifest(m, item({ name: '816-studio.patch', sha256: '1'.repeat(64), seriesIndex: 0 }), { status: 'applied' })
+    m = applyPlanToManifest(m, zitem({ name: '012-zcode.patch', sha256: '2'.repeat(64), seriesIndex: 0 }), { status: 'applied' })
+    const plan = {
+      baseline,
+      items: [
+        zitem({ name: '012-zcode.patch', sha256: '2'.repeat(64), seriesIndex: 0 }),
+        item({ name: '816-studio.patch', sha256: '1'.repeat(64), seriesIndex: 0 }),
+      ],
+    }
+    expect(() => planIncrement(m, plan)).toThrowError(expect.objectContaining({ reason: 'reorder' }))
+  })
+
   it('正例：全空 manifest + 全空 plan → noop', async () => {
     const { planIncrement, emptyManifest } = await import('../platform/inject/manifest.mjs')
     expect(planIncrement(emptyManifest(baseline), { baseline, items: [] })).toEqual({ kind: 'noop', items: [] })

@@ -1,0 +1,73 @@
+diff --git a/packages/server/src/modules/hermes/services/history/sessions-db.ts b/packages/server/src/modules/hermes/services/history/sessions-db.ts
+index 552a5fc..eaa351c 100644
+--- a/packages/server/src/modules/hermes/services/history/sessions-db.ts
++++ b/packages/server/src/modules/hermes/services/history/sessions-db.ts
+@@ -105,6 +105,14 @@ function sessionDbPathForProfile(profile?: string): string {
+   return join(getHermesBaseDir(), 'profiles', name, 'state.db')
+ }
+ 
++// HERMES_CUSTOM[v817] BEGIN
++// 会话库由 CLI 首次运行后才落盘：全新安装、从未启动的 profile 上文件缺席。
++// 读面按同文件既有口径降级为空结果，不让只读开库的异常冒成 500。
++function sessionDbExists(profile?: string): boolean {
++  return existsSync(profile ? sessionDbPathForProfile(profile) : sessionDbPath())
++}
++// HERMES_CUSTOM[v817] END
++
+ function normalizeNumber(value: unknown, fallback = 0): number {
+   if (value == null || value === '') return fallback
+   const num = Number(value)
+@@ -716,6 +724,8 @@ export async function getSessionMessagesFromDb(sessionId: string): Promise<{
+   messages: HermesMessageRow[]
+   session: HermesSessionRow | null
+ } | null> {
++  // HERMES_CUSTOM[v817]
++  if (!sessionDbExists()) return null
+   const db = await openSessionDb()
+   try {
+     const sessionRow = db.prepare(`
+@@ -740,6 +750,8 @@ export async function getSessionMessagesFromDb(sessionId: string): Promise<{
+ }
+ 
+ export async function getSessionDetailFromDb(sessionId: string): Promise<HermesSessionDetailRow | null> {
++  // HERMES_CUSTOM[v817]
++  if (!sessionDbExists()) return null
+   const db = await openSessionDb()
+   try {
+     const chain = loadSessionChain(db, sessionId)
+@@ -761,6 +773,8 @@ export async function getSessionDetailFromDb(sessionId: string): Promise<HermesS
+ }
+ 
+ export async function getSessionDetailFromDbWithProfile(sessionId: string, profile: string): Promise<HermesSessionDetailRow | null> {
++  // HERMES_CUSTOM[v817]
++  if (!sessionDbExists(profile)) return null
+   const { DatabaseSync } = await import('node:sqlite')
+   const dbPath = sessionDbPathForProfile(profile)
+   const db = new DatabaseSync(dbPath, { open: true, readOnly: true })
+@@ -789,6 +803,8 @@ export async function getSessionDetailPaginatedFromDbWithProfile(
+   offset = 0,
+   limit = 150,
+ ): Promise<PaginatedHermesSessionDetailResult | null> {
++  // HERMES_CUSTOM[v817]
++  if (!sessionDbExists(profile)) return null
+   const db = await openSessionDb(profile)
+   try {
+     const chain = loadSessionChain(db, sessionId)
+@@ -1633,6 +1649,8 @@ export async function listSessionSummaries(source?: string, limit = 2000, profil
+   if (!SQLITE_AVAILABLE) {
+     throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
+   }
++  // HERMES_CUSTOM[v817]
++  if (!sessionDbExists(profile)) return []
+ 
+   const { DatabaseSync } = await import('node:sqlite')
+   const dbPath = profile ? sessionDbPathForProfile(profile) : sessionDbPath()
+@@ -1660,6 +1678,8 @@ export async function listSessionSummaryGroups(
+   if (!SQLITE_AVAILABLE) {
+     throw new Error(`node:sqlite requires Node >= 22.5, current: ${process.versions.node}`)
+   }
++  // HERMES_CUSTOM[v817]
++  if (!sessionDbExists(profile)) return { groups: [], included: [] }
+ 
+   const db = await openSessionDb(profile)
+   try {

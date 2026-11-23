@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "note": "回归矩阵：本仓「有哪些测试面、各由哪条命令跑、在哪个关口必须跑」的唯一事实源。新增测试面必须在此登记；scripts/__tests__/regression-matrix.test.ts 守门：仓内发现的测试文件必须能对应到一个测试面，且带 covers 的测试面必须由推送前钩子或 CI 强制执行。",
+  "scopes": {
+    "prepush": "推送前钩子自动执行。always 面每次推送都跑；paths 面只在变更命中其 paths 时跑。根 vitest 全量不在此档（见 merge）。",
+    "merge": "合并到 main 前的人工纪律：npm run regress -- --scope merge。含根 vitest、类型检查、构建与 prepush 的全部面。",
+    "full": "发版或全量回归：npm run regress -- --scope full。另含 swarm-yuan 全量、Ycode 工程测试与发布检查。"
+  },
+  "python": {
+    "note": "pytest 面的解释器解析序；全部落空时该面记未执行（退出码 2），不静默跳过。",
+    "candidates": [
+      { "source": "env:AISTUDIO_PYTHON", "path": "${AISTUDIO_PYTHON}" },
+      { "source": "hermes-home-venv", "path": "${HERMES_HOME}/hermes-agent/.venv/bin/python" },
+      { "source": "default-hermes-venv", "path": "${HOME}/.hermes/hermes-agent/.venv/bin/python" }
+    ],
+    "fallback": { "source": "path:python3", "command": "python3", "probe": ["-c", "import yaml, dotenv"] }
+  },
+  "discovery": {
+    "note": "测试文件发现规则。exclude 逐条理由：vendor 与 node_modules 是上游与依赖自带的测试；.claude 是 worktree；dist 与 coverage 是构建产物；team/profiles 与 team/skills 是随 profile 打包的第三方插件，其自带测试不属于本仓测试面；custom/qgate/examples 是门禁框架的黄金场景与演示工程（含故意写错的样例），作为 qgate-persistence 测试的夹具被消费。",
+    "patterns": [
+      "**/*.test.ts",
+      "**/*.test.mts",
+      "**/*.test.mjs",
+      "**/*.test.sh",
+      "**/*.bats",
+      "**/test_*.py",
+      "**/*_test.py"
+    ],
+    "exclude": [
+      "vendor/**",
+      "node_modules/**",
+      ".claude/**",
+      "dist/**",
+      "coverage/**",
+      "team/profiles/**",
+      "team/skills/**",
+      "custom/qgate/examples/**"
+    ]
+  },
+  "axes": [
+    {
+      "id": "vitest",
+      "title": "根 vitest：custom 与 scripts 的守门测试（经 npm test，保留 pretest 的注入确认与 birpc 补丁）",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "test"], "timeoutMs": 1800000 },
+      "covers": ["custom/**/*.test.ts", "scripts/**/*.test.ts"],
+      "ci": { "workflow": "product-tests.yml", "anchor": "npx vitest run" }
+    },
+    {
+      "id": "typecheck-harness",
+      "title": "服务端类型检查",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "run", "typecheck:harness"], "timeoutMs": 900000 },
+      "covers": [],
+      "ci": { "workflow": "product-tests.yml", "anchor": "npm run typecheck:harness" }
+    },
+    {
+      "id": "typecheck-client",
+      "title": "客户端类型棘轮（只许减不许增）",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "run", "typecheck:client:ratchet"], "timeoutMs": 900000 },
+      "covers": [],
+      "ci": null
+    },
+    {
+      "id": "build",
+      "title": "前端构建与出厂口令扫描",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "run", "build"], "timeoutMs": 900000 },
+      "covers": [],
+      "ci": null
+    },
+    {
+      "id": "bundle-budget",
+      "title": "入口包体积预算",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "run", "check:bundle"], "timeoutMs": 300000, "requires": "build" },
+      "covers": [],
+      "ci": null
+    },
+    {
+      "id": "qgate",
+      "title": "qgate 门禁框架自测",
+      "scopes": ["prepush", "merge", "full"],
+      "prepush": "paths",
+      "paths": ["custom/qgate/**", ".qgate/**"],
+      "run": {
+        "cwd": "custom/qgate",
+        "steps": [["npx", "tsc", "-p", "tsconfig.json"], ["npx", "vitest", "run"]],
+        "timeoutMs": 900000
+      },
+      "covers": [],
+      "ci": { "workflow": "qgate.yml", "anchor": "npx vitest run" }
+    },
+    {
+      "id": "governance-budget",
+      "title": "治理 lint 与机制预算",
+      "scopes": ["prepush", "merge", "full"],
+      "prepush": "always",
+      "run": { "argv": ["node", "scripts/governance-lint.mjs", "--budget"], "timeoutMs": 180000 },
+      "covers": [],
+      "ci": { "workflow": "governance.yml", "anchor": "node scripts/governance-lint.mjs --budget" }
+    },
+    {
+      "id": "merge-invariants",
+      "title": "合并不变量：清单、文档索引、L2、收据",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["node", "scripts/merge-invariants.mjs", "--check"], "timeoutMs": 600000 },
+      "covers": [],
+      "ci": { "workflow": "governance.yml", "anchor": "node scripts/merge-invariants.mjs --check" },
+      "note": "推送前钩子已直接调用同一命令，此处不重复登记。"
+    },
+    {
+      "id": "sim-gates",
+      "title": "推演 harness：shell 门与 vitest",
+      "scopes": ["prepush", "merge", "full"],
+      "prepush": "always",
+      "run": { "argv": ["bash", "simharness/tests/run-gates.sh"], "timeoutMs": 1500000 },
+      "covers": ["simharness/**/*.test.ts", "simharness/**/*.test.sh"],
+      "ci": null,
+      "note": "run-gates.sh 内含 vitest --root simharness，不再单列独立入口。CI 未覆盖，由推送前钩子强制。"
+    },
+    {
+      "id": "py-runtime",
+      "title": "Python runtime 扩展测试",
+      "scopes": ["prepush", "merge", "full"],
+      "prepush": "always",
+      "run": {
+        "argv": ["${PYTHON}", "-m", "pytest", "runtime/tests", "-q", "-p", "no:cacheprovider"],
+        "env": { "PYTHONPATH": "vendor/hermes-agent:runtime" },
+        "timeoutMs": 900000
+      },
+      "covers": ["runtime/**/test_*.py"],
+      "ci": null,
+      "note": "CI 未覆盖，由推送前钩子强制。"
+    },
+    {
+      "id": "py-team",
+      "title": "team 部署资产契约测试",
+      "scopes": ["prepush", "merge", "full"],
+      "prepush": "always",
+      "run": {
+        "argv": ["${PYTHON}", "-m", "pytest", "team/tests", "-q", "-p", "no:cacheprovider"],
+        "timeoutMs": 600000
+      },
+      "covers": ["team/tests/**/test_*.py"],
+      "ci": null,
+      "note": "product-tests 工作流对 team/** 设了 paths-ignore，由推送前钩子强制。"
+    },
+    {
+      "id": "yuan-registry",
+      "title": "swarm-yuan 锁测试：注册表与生成源一致性",
+      "scopes": ["prepush", "merge", "full"],
+      "prepush": "paths",
+      "paths": ["skills/swarm-yuan/**"],
+      "run": { "argv": ["bash", "skills/swarm-yuan/tests/test-registry.sh"], "timeoutMs": 600000 },
+      "covers": [],
+      "ci": { "workflow": "swarm-yuan.yml", "anchor": "run-sweep.sh" }
+    },
+    {
+      "id": "yuan-self-gates",
+      "title": "swarm-yuan 生成器自举门（三档）",
+      "scopes": ["full"],
+      "prepush": "never",
+      "run": {
+        "argv": [
+          "bash", "-c",
+          "set -e; tmpdir=\"$(mktemp -d)\"; trap 'rm -rf \"$tmpdir\"' EXIT; cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh \"$tmpdir/\"; sed \"s|__REPO_ROOT__|${REPO_ROOT}|g\" ci/self-precheck.conf > \"$tmpdir/precheck.conf\"; for mode in --all --all-full --compliance-suite; do echo \"== self-gate $mode\"; bash \"$tmpdir/precheck.sh\" \"$mode\"; done"
+        ],
+        "cwd": "skills/swarm-yuan",
+        "timeoutMs": 900000
+      },
+      "covers": [],
+      "ci": { "workflow": "swarm-yuan.yml", "anchor": "--compliance-suite" }
+    },
+    {
+      "id": "yuan-sweep",
+      "title": "swarm-yuan 全量回归（锁测试、e2e、验证器）",
+      "scopes": ["full"],
+      "prepush": "never",
+      "run": {
+        "argv": ["bash", "skills/swarm-yuan/tests/run-sweep.sh"],
+        "env": { "SWEEP_JOBS": "2" },
+        "timeoutMs": 3600000
+      },
+      "covers": ["skills/swarm-yuan/**"],
+      "ci": { "workflow": "swarm-yuan.yml", "anchor": "run-sweep.sh" },
+      "note": "单实例锁：同一仓库树同时只许一个 sweep。"
+    },
+    {
+      "id": "yc-typecheck",
+      "title": "Ycode 类型检查",
+      "scopes": ["prepush", "full"],
+      "prepush": "paths",
+      "paths": ["zcode-patches/**", "vendor/zcode/**"],
+      "setup": [
+        { "argv": ["pnpm", "install", "--frozen-lockfile", "--prefer-offline"], "timeoutMs": 1200000 }
+      ],
+      "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "typecheck"], "timeoutMs": 1800000 },
+      "covers": [],
+      "ci": null,
+      "note": "CI 未覆盖，由推送前钩子按路径强制。"
+    },
+    {
+      "id": "yc-test-eng",
+      "title": "Ycode 工程测试（分叉补丁的回归所在）",
+      "scopes": ["prepush", "full"],
+      "prepush": "paths",
+      "paths": ["zcode-patches/**", "vendor/zcode/**"],
+      "setup": [
+        { "argv": ["pnpm", "install", "--frozen-lockfile", "--prefer-offline"], "cwd": "vendor/zcode", "timeoutMs": 1200000 },
+        {
+          "argv": ["pnpm", "--filter", "@zcode/contracts", "--filter", "@zcode/e2e-report", "build"],
+          "cwd": "vendor/zcode",
+          "timeoutMs": 900000
+        }
+      ],
+      "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "test:engineering"], "timeoutMs": 2400000 },
+      "covers": [],
+      "ci": null,
+      "note": "上游脚本依赖事先构建好的 @zcode/contracts 与 @zcode/e2e-report，未声明该前置；全新检出必须经本矩阵入口执行。清单来源 vendor/zcode/scripts/engineering-test-files.json。首次运行会联网下载 NSIS 工具集。"
+    },
+    {
+      "id": "yc-db-schema",
+      "title": "Ycode 库表契约",
+      "scopes": ["prepush", "full"],
+      "prepush": "paths",
+      "paths": ["zcode-patches/**", "vendor/zcode/**"],
+      "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "db:schema:check"], "timeoutMs": 600000 },
+      "covers": [],
+      "ci": null
+    },
+    {
+      "id": "yc-lint",
+      "title": "Ycode 静态检查与会话边界",
+      "scopes": ["prepush", "full"],
+      "prepush": "paths",
+      "paths": ["zcode-patches/**", "vendor/zcode/**"],
+      "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "lint"], "timeoutMs": 900000 },
+      "covers": [],
+      "ci": null
+    },
+    {
+      "id": "release-check",
+      "title": "发布清单与手册投影一致性",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "run", "release:check"], "timeoutMs": 600000 },
+      "covers": [],
+      "ci": null
+    },
+    {
+      "id": "catalog-check",
+      "title": "编码引擎配置目录快照",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["npm", "run", "catalog-check"], "timeoutMs": 300000 },
+      "covers": [],
+      "ci": null
+    }
+  ]
+}

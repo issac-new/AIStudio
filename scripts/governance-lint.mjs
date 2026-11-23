@@ -303,6 +303,25 @@ export function checkSunset(budget, asOf = new Date()) {
   return { problems, warnings, checked: sunset.length }
 }
 
+// 上限须等于在册数的类目（仓规 13 的配对要求只列了这四类；补丁随上游重锚日常增减，不贴死）。
+const RATCHET_LIMIT_KEYS = new Set(['gates', 'scripts', 'ledgers', 'npmScripts'])
+
+/** 预算上下限判定：超限即失败；四类的上限高于在册数同样失败（退役后须同批下调）。 */
+export function compareLimits(stats, limits) {
+  const problems = []
+  for (const [key, limit] of Object.entries(limits ?? {})) {
+    const actual = stats[key]
+    if (typeof actual !== 'number' || typeof limit !== 'number') continue
+    if (actual > limit) problems.push(`机制预算超限: ${key}=${actual} > ${limit}`)
+    else if (actual < limit && RATCHET_LIMIT_KEYS.has(key)) {
+      // 2026-11-23 复盘：台账写明 scripts 上限 139→71，limits 仍是 139、在册 74——
+      // 上限留出空余后加脚本不触发任何检查，预算约束空转。只报不修：下调是人的决定。
+      problems.push(`机制预算上限未随退役下调: ${key}=${actual} < ${limit}（退役后须同批下调 limits，上限不得高于在册数）`)
+    }
+  }
+  return problems
+}
+
 export function checkBudget(budget) {
   const problems = []
   const warnings = []
@@ -320,11 +339,7 @@ export function checkBudget(budget) {
   } catch {
     stats.gates = 0
   }
-  for (const [key, limit] of Object.entries(budget.limits ?? {})) {
-    if (typeof stats[key] === 'number' && stats[key] > limit) {
-      problems.push(`机制预算超限: ${key}=${stats[key]} > ${limit}`)
-    }
-  }
+  problems.push(...compareLimits(stats, budget.limits ?? {}))
   for (const entry of budget.sunset ?? []) {
     const miss = missingFields(entry, ['id', 'owner', 'reviewBy', 'retireWhen'])
     if (miss.length > 0) problems.push(`sunset 条目 ${entry.id ?? '(no-id)'} 缺 ${miss.join(',')}`)

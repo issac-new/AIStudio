@@ -1,0 +1,143 @@
+# 2026-11-23 全面复盘批：回归矩阵单一事实源、机制预算上限与在册数相符、会话列表缺库降级
+
+> 状态：in_progress
+> 基线：ac7e6612a（origin/main，v1.0.19-overlay）
+
+## 变更
+
+本批对 AIStudio 做一轮全面复盘：通读设计正本全文，对六类测试面逐个实跑回归，在隔离环境里对前后端服务做鉴权、安全、业务持久效果与全路由浏览器走查。复盘找到四类结构性问题并当批处理。
+
+### 复盘结论（按严重度）
+
+1. **“该跑哪些测试”在仓内没有定义，合并门只覆盖一部分测试面。** 设计正本 `docs/DESIGN.md` 第 6.1 节把 `npm test` 写成“全量测试”，仓规第 4 条把合并门写成“合并前 `npm test`”。但根 `vitest.config.ts:53` 的 include 只有 `custom/**` 与 `scripts/**`。推演 harness（377 个用例加 shell 门）、Python runtime（273 例）、team（32 例）、swarm-yuan、Ycode 五个面都在外面；“它们各由哪条命令跑、在哪个关口跑”只散落在 CI 工作流、历次 spec 和个人记忆里。2026-11-21 的两处真红（推演门断言过时、术语门新红）正是这个缺口的直接后果，当时的处置是“下轮记得单列”，没有立机制。
+2. **机制预算的上限与在册数脱节，预算约束实际不起作用。** `config/mechanism-budget.json` 的 2026-11-21 条目写明脚手架清理批把“scripts cap 139→71”，但 `limits.scripts` 至今是 139，按 lint 自身口径在册 74；`ledgers` 上限 6、在册 3。上限留出 65 的空余，意味着还能再加 65 个脚本而不触发任何检查，与仓规第 13 条“禁止只加不减”相悖。
+3. **Ycode 工程测试在全新检出下必然收集失败。** `pnpm test:engineering` 依赖事先构建好的 `@zcode/contracts` 与 `@zcode/e2e-report`，上游脚本没有声明这个前置。2026-11-22 回归轮是手工补构建后复跑，没有留下机制，本批在全新 worktree 里原样复发（`remoteOfficialPluginAssets.test.ts` 收集失败）。
+4. **会话库不存在时，会话列表接口返回 500。** 上游 `sessions-db.ts` 以只读方式打开 `state.db`，文件不存在（全新安装、从未启动过的 profile）就直接抛错。同文件其他读函数都有“库不存在即返回空”的守卫，唯独会话列表与详情几处没有。这违反仓内不变量“读模型缺源时返回空态，不阻断无关工作”。IDE 壳与协作历史页共 7 条路由命中。
+
+### 当批处理
+
+- **A 回归矩阵。** 新增 `config/regression-matrix.json` 作为“测试面清单”的唯一事实源：每个测试面登记触发路径、所属关口（推送前／合并前／全量）、执行命令与前置步骤。新增 `scripts/regression-matrix.mjs` 按矩阵规划并执行，退出码遵循 `config/cli-contract.json`；工具链缺席一律记“未执行”并给修复命令，不静默跳过，也不记成通过。推送前钩子在既有 qgate L0 门之后调用矩阵的推送前档。把关测试锁定四件事：没有测试面游离在任何关口之外、仓内发现的测试文件都能对应到一个测试面、CI 引用可解析、钩子确实接线。
+- **B 机制预算。** `limits` 改为等于在册数；`governance-lint` 增加“上限不得高于在册数”的判定，退役机制后忘记下调上限会在下一次预算检查时失败。
+- **C Ycode 前置。** Ycode 工程测试面在矩阵里声明前置步骤（安装依赖、构建两个包），经矩阵入口执行时自给自足。
+- **D 缺库降级。** 新增补丁 817，会话列表与详情读取在库文件不存在时返回空结果；新增回归测试先红后绿。
+- **E 设计正本修订**（见“设计文档影响”）。
+
+### 实施中新增处理
+
+- **注入规划器把通道尾部追加误判为中插。** 给 hermes-studio 通道登记补丁 817 时，`ensure-injected` 拒绝增量应用并要求全量重放。核对 `scripts/platform/inject/manifest.mjs`：它把两个通道的补丁拼成一条序列做前缀比对，而 hermes-studio 通道的尾部追加在拼接序列上排在 zcode 补丁之前——“尾部增量”这条通道对该通道从未生效，历次会话都被迫全量重放（上次 noop-inject 中毒事故正是出在这种流程上）。改为按通道比对前缀，通道间相对顺序另核；放行范围只扩大到同通道尾部。
+- **本机 ZCode 桌面版在会话期间升到 4.0.0**，仓内无对应词条快照，目录快照检查变红。按上一轮同类先例重建快照：4.0.0 共 7870 键、110 个命名空间，相对 3.19.1 新增 1 键（`automations.runNowHostMismatch`）、无删除。
+- **执行器的两个缺陷由真实运行抓到**：一是把解释器的“解析结果对象”而非路径传给了命令行（单面调用的用例覆盖不到，补了一条经真实解释器执行的装配线用例）；二是文档入口 `npm run regress -- --scope merge` 要求显式写子命令（改为省略即执行，补真进程用例）。
+
+### 任务卡
+
+**完成条件**
+
+1. `node scripts/regression-matrix.mjs run --scope prepush` 在当前树全绿；人为制造一个失败时退出码为 1，工具链缺席时为 2。
+2. 把关测试在“新增一个未登记的测试目录”时变红。
+3. `node scripts/governance-lint.mjs --budget` 对“上限高于在册数”的夹具报 problem。
+4. 会话库缺席时 `listSessionSummaries` 与 `listSessionSummaryGroups` 返回空结果，接口回读为 200。
+5. 合并前档与全量档各完整跑通一次，结果记入“验证”。
+
+**输入与来源**
+
+设计正本、仓规、根 `vitest.config.ts`、四个 CI 工作流、`.swarm-yuan/hooks/pre-push`、`config/mechanism-budget.json`、`scripts/governance-lint.mjs`、上游 `sessions-db.ts`；回归与走查的实测输出。
+
+**工作流边界**
+
+只改本仓。`vendor/` 内的行为变更走 `patches/`；不改上游脚本，不新增 CI 任务（CI 补面需要推送后才能验证，记为挂账）；不动宿主 hermes 安装树。
+
+**工具与副作用**
+
+推送前钩子每次推送多跑约 90 秒（推演 harness 门约 67 秒、Python 两面约 20 秒）；可用既有的 `QGATE_PREPUSH_ENFORCE=0` 降为告警、`QGATE_PREPUSH_SKIP=1` 关闭。不新增环境开关。
+
+**结果与证据**
+
+矩阵文件、执行器、把关测试、钩子差异、补丁 817 与其回归测试、`config/mechanism-budget.json` 差异、设计正本差异；各步命令输出见“验证”。
+
+**异常与恢复**
+
+执行器对超时、命令缺席、前置失败分别记失败或未执行并保留输出尾部；补丁 817 可按 series 登记反向撤出；预算上限改回原值只需改一个数字，回滚即恢复。
+
+**验收反例**
+
+- 把 `simharness/tests/` 从矩阵里删掉：把关测试必须报“测试面未登记”。
+- 把钩子里的调用行删掉：把关测试必须报“钩子未接线”。
+- 把 `limits.scripts` 改回 139：预算检查必须报 problem。
+- 撤掉补丁 817：会话库缺席的回归测试必须回到红灯。
+
+## 决策记录
+
+| # | 决策 | 依据 | 备选与否决理由 |
+|---|---|---|---|
+| D1 | 回归矩阵做成独立的清单文件加一个小执行器，不登记为 qgate 门 | qgate 的规划输出按“适用门”列出，但对 `simharness/**`、`runtime/**` 列出的门没有一个真正执行这些测试；把测试面登记成 qgate 门要动 profile 分档、证据类型与健康体检范围，且门数 47 已贴上限 48 | 登记为 qgate 门（否决：本批无法在本地验证其规划语义，接错只会在推送时暴露）；只改文档提醒（否决：11-21 已证明“下轮记得”不成立） |
+| D2 | 推送前档的快速面每次推送都跑，不做路径触发 | 11-21 的两处真红分别由 `runtime/` 与 `docs/` 的改动引入，却断在推演门上；触发路径写窄就会漏，而“漏”正是要根治的问题 | 按路径触发（否决：触发面无法证明完整） |
+| D3 | 根 vitest 全量仍留在合并前纪律，不进推送前钩子 | 沿用既有设计“全量测试门不放在推送层”，全量约 150 秒 | 全进钩子（否决：推送等待时间翻倍） |
+| D4 | 工具链缺席记“未执行”、退出码 2，默认拦截推送 | 仓规“未执行不得写成零问题”；退出码 2 与 4 的分工是既定契约 | 静默跳过（否决：等于把没跑记成通过） |
+| D5 | 机制预算只对门、脚本、账本、npm 脚本四类要求上限等于在册数，补丁两类不动 | 仓规第 13 条的配对要求只列了这四类；补丁随上游重锚日常增减，不适用“加一删一” | 六类全部贴死（否决：会让每次新增补丁都要先改预算，超出该规则本意） |
+| D6 | Ycode 前置构建写在矩阵的前置步骤里，不给上游 `package.json` 加钩子 | 该前置是上游脚本未声明的隐含假设；本仓只需保证经矩阵入口执行时自给自足 | 新增 zcode 补丁加 `pretest:engineering`（否决：为一个测试前置动上游脚本面，且同类入口 `test:engineering:affected` 仍会漏） |
+| D7 | 会话库缺出席位按“返回空”处理，不返回 503 | 同文件既有读函数的口径就是“库不存在返回空”；全新机器上这是正常初始状态而非故障 | 返回 503（否决：会把正常的空态呈现成故障） |
+| D8 | 配对项：退役零调用方的 npm 别名 `test:classes`，腾位给 `regress` | `test:classes` 在仓内无任何调用方，模块 `scripts/test-classify.mjs` 与其把关测试保留；npm 脚本上限已满 | 不加 npm 别名（否决：入口可发现性差，与“合并前跑什么”要能一句话说清相悖） |
+| D9 | `/ekko/skills` 恒显示“暂无技能”只记观察，不当批处置 | 它指向已退役的 Ekko 运行时，是退役入口还是改接 Hermes 技能属于产品决定 | 当批删路由（否决：越权替用户做产品决定） |
+
+## 验证
+
+每个缺陷执行“原命令精确重放、原生红灯、最小修复、原探针与相邻路径复验”。
+
+### 回归实跑（修复前基线，origin/main ac7e6612a，隔离 worktree）
+
+| 测试面 | 命令 | 结果 |
+|---|---|---|
+| 根 vitest | `npx vitest run` | 1240 文件通过、6 文件跳过；9906 用例通过、11 跳过 |
+| 服务端类型检查 | `npm run typecheck:harness` | 退出码 0 |
+| 客户端类型棘轮 | `npm run typecheck:client:ratchet` | 15 ≤ 基线 19 |
+| 机制预算 | `node scripts/governance-lint.mjs --budget` | 0 problem、56 warning |
+| 合并不变量 | `node scripts/merge-invariants.mjs --check` | 通过 |
+| 发布清单 | `npm run release:check` | 通过（routes=129） |
+| 目录快照 | `npm run catalog-check` | 通过（3.19.1） |
+| qgate 自测 | `custom/qgate` 下 tsc 加 vitest | 239 通过 |
+| 推演 harness | `bash simharness/tests/run-gates.sh` | 377 用例通过，shell 门通过 |
+| Python runtime | `pytest runtime/tests` | 273 通过 |
+| team | `pytest team/tests` | 32 通过 |
+| 构建 | `npm run build`、`npm run check:bundle` | 通过，入口包 22.37MB ≤ 25MB |
+| Ycode 类型检查 | `pnpm typecheck` | 0 错误 |
+| Ycode 工程测试 | `pnpm test:engineering` | 首跑 2 文件红（见结论 3）；补前置构建后 168 文件通过、2 跳过，1039 用例通过、9 跳过 |
+| Ycode 库表与规范 | `pnpm db:schema:check`、`pnpm lint` | 通过 |
+| swarm-yuan 锁测试 | `bash skills/swarm-yuan/tests/test-registry.sh` | 13 通过、0 失败 |
+| swarm-yuan 自举门 | `precheck.sh --all`、`--all-full`、`--compliance-suite` | 三档均通过 |
+| swarm-yuan 全量 | `SWEEP_JOBS=2 bash skills/swarm-yuan/tests/run-sweep.sh` | 7 面通过、0 失败（140 个锁测试，1906 秒） |
+
+Ycode 另一文件 `windowsInstallerCompile.test.ts` 首跑 120 秒超时，原因是首次运行要联网下载 NSIS 工具集且与并发负载叠加；缓存就位后独立复跑 26.5 秒通过，属环境因素。
+
+### 活体（隔离三 HOME，后端 8647、前端 8649）
+
+- 鉴权三态：无令牌 401、坏令牌 401、登录后 200。错误口令 401；连续 10 次错误口令后第 11 次起 429。
+- 公开面：`/health`、`/livez`、`/api/auth/status` 无令牌 200；`/api/docs`、`/api/matrix/gateway-credentials` 无令牌 401；伪造 `X-Forwarded-For`、`X-Real-IP` 不改变结果。
+- 负面契约：未知路由 404、非法 JSON 400、`alg=none` 令牌 401；5 条路径穿越探针返回 403／404／400，零泄漏；非白名单来源不回显 `Access-Control-Allow-Origin`。
+- 业务持久效果：建板后列表可见；建卡、改名后返回值与二次读取均为新值（补丁 816 的修复在活体上成立）。
+- IDE 冒烟：11／11 通过，页面零未捕获错误。
+- 全路由浏览器走查：166 个访问态（129 条路由加 37 个阶段页签），134 通过、23 个属环境降级（隔离环境未配置推演根与台账的 503、登录后规范重定向、占位资源的 404）。标红项逐个核实后只剩结论 4 一项为产品缺陷；`/studio/agents/:id/settings` 与三个插件页均为规范渲染，是走查脚本的文本口径误判。补丁 817 之后重跑：151 通过、14 个属环境降级、1 个标红（即上述 `/studio/agents/:id/settings` 的口径误判），会话接口的 500 全部消失。
+
+### 两处证伪（不计缺陷）
+
+- 服务端调用 `kanban complete` 报“依赖环境未提交”：hermes 的依赖环境按 `HERMES_HOME` 提交，隔离的空 HOME 下本就没有；同一条命令用真实 HOME 直接执行成功。
+- 登录页公告接口 502：外部公告源在当前网络不可达，属外部依赖缺席。
+
+### 修复后验证
+
+- **补丁 817（缺库降级）**：`custom/upstream-compat/__tests__/sessions-db-missing-home.test.ts` 修复前 4 例失败、1 例通过，修复后 5 例通过。活体复验：隔离 HOME 下 `state.db` 不存在时，会话列表与分组两个接口由 500 变为 200（返回空结果），不存在的会话详情为 404。
+- **注入规划器**：`scripts/__tests__/inject-manifest.test.ts` 新增 3 例——通道尾部追加在修复前以 `insert` 被拒、修复后放行；同通道中插与通道顺序颠倒两例始终拒绝。注入测试族 6 文件 50 例通过。补丁 817 经增量通道真实应用（日志“series 领先 manifest 1 条，自动补套”），第二次 `ensure-injected` 为空操作。
+- **回归矩阵**：`scripts/__tests__/regression-matrix.test.ts` 23 例通过（模块不存在时 21 例全红）。推送前档经新入口实跑，4 个测试面全部通过。合并前档实跑两轮：首轮 14 个测试面中 13 个通过，唯一红项是目录快照检查（宿主升级所致，见上）；快照重建后复跑，14 个测试面全部通过（根 vitest 133 秒，含补丁在干净树上的全量重放用例）。提交后的全量档结果在合并前追加于本节末尾。
+- **机制预算**：`scripts/__tests__/budget-retirement.test.ts` 新增 4 例先红后绿；`node scripts/governance-lint.mjs --budget` 为 0 problem；四类上限等于在册数（门 47、脚本 75、账本 3、npm 脚本 52）。
+- **目录快照**：`npm run catalog-check` 由红转绿（4.0.0，7870 键）。
+- **活体复验**：补丁后的隔离栈上 IDE 冒烟 11／11 通过；全路由浏览器走查的修复后数字见下。
+- **文档**：设计正本与新增 spec 经术语检查无新增 HARD 词（spec 0 处；`docs/DESIGN.md` 维持基线 38 处）；文档索引重生成 0 problem；合并不变量与发布清单检查通过。
+
+未做与未验证项收敛到 `2026-11-24-full-retro-pending-batch.md`（N34-1 至 N34-4）。其中须明确的一点：CI 仍未覆盖推演 harness、Python 与 Ycode 三个测试面，这三个面目前只靠推送前钩子强制；本批没有改工作流文件，也没有向远端推送，钩子的端到端行为只在本地验证。
+
+## 设计文档影响
+
+DESIGN_SYNC: touched
+
+- `docs/DESIGN.md`：6.1 节命令表把“全量测试 `npm test`”改为按关口列出；6.3 节验证分层补“回归矩阵”一段并改正推送前默认档位的陈述；6.4 节边界表更新跨轮指标一行并新增回归矩阵、会话库缺席、注入尾部增量三行；4.7 节补机制预算上限口径。
+- `AGENTS.md`：第 4 条合并前命令改为 `npm run regress -- --scope merge`；第 11 条补推送前钩子执行矩阵的说明；第 13 条补“四类上限须等于在册数”。
+- `docs/README.md`：run28 案例的“当前最新”表述改为如实口径。

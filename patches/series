@@ -1395,3 +1395,7 @@
 # 全量回归业务写面：patchTask 的 title/body 走既有 `kanban edit`，消除 200+旧任务假成功；
 # 真实 CLI 集成回归同时校验返回值与二次读取。
 816-studio-kanban-title-body-edit.patch
+# 全面复盘批活体：会话库 state.db 缺席（全新安装/未启动 profile）时列表与详情读面降级为空，
+# 只读开库异常不再冒成 500（IDE 壳与协作历史页 7 条路由）；回归测试在
+# custom/upstream-compat/__tests__/sessions-db-missing-home.test.ts。
+817-studio-sessions-db-missing-home.patch
