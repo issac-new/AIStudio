@@ -560,6 +560,50 @@ export function useHarnessImprovePanel() {
 
   const selectedEvo = computed(() => evoSurfacesWithTimeline.value.find((s) => s.surfaceKey === selectedEvoKey.value) ?? null)
 
+  /**
+   * RSI 数学体检（2026-11-23）：优先当前选中面；选中的面没有读数时退回第一有读数的面。
+   * 只读诊断，缺字段返回 null（旧载荷兼容）。
+   */
+  const theoryDecay = computed(() => {
+    const theory = data.value?.evolution?.theory
+    if (!theory || theory.surfaces.length === 0) return null
+    return theory.surfaces.find((s) => s.surfaceKey === selectedEvoKey.value) ?? theory.surfaces[0]
+  })
+
+  /** 多候选提案里「留出未确认」的条数：缺口/池内噪声/选择主导三态（只作读数量）。 */
+  const theoryUnconfirmed = computed(() => {
+    const list = data.value?.evolution?.theory?.selectionBias ?? []
+    const flags = new Set(['heldout_gap', 'top2_within_noise', 'selection_dominated'])
+    return list.filter((x) => flags.has(x.audit.verdict)).length
+  })
+
+  const theoryClassLabel = (c: 'insufficient' | 'geometric_decay' | 'moderate_decay' | 'no_decay'): string =>
+    c === 'geometric_decay'
+      ? L.value.theoryClassGeometric
+      : c === 'moderate_decay'
+        ? L.value.theoryClassModerate
+        : c === 'no_decay'
+          ? L.value.theoryClassNoDecay
+          : L.value.theoryClassInsufficient
+
+  const ceilingLabel = (c: 'reached' | 'near' | 'not_reached' | 'unknown'): string =>
+    c === 'reached'
+      ? L.value.theoryCeilingReached
+      : c === 'near'
+        ? L.value.theoryCeilingNear
+        : c === 'not_reached'
+          ? L.value.theoryCeilingNo
+          : L.value.theoryCeilingUnknown
+
+  const proxyVerdictLabel = (v: 'insufficient' | 'none' | 'watch' | 'diverging'): string =>
+    v === 'diverging'
+      ? L.value.theoryProxyDiverging
+      : v === 'watch'
+        ? L.value.theoryProxyWatch
+        : v === 'none'
+          ? L.value.theoryProxyNone
+          : L.value.theoryProxyInsufficient
+
   const CURVE_W = 320
   const CURVE_H = 120
   const CURVE_PAD = 10
@@ -614,6 +658,6 @@ export function useHarnessImprovePanel() {
   onMounted(() => void refresh())
 
   return {
-    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
+    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
   }
 }

@@ -452,6 +452,12 @@ export interface PromotionGateReport {
    * 只披露不拦截：不参与 ok/blockers 判定（2026-11-01 机制扩展停止裁定边界内）。
    */
   evidenceRoles?: EvidenceRoleLine[]
+  /**
+   * 选择偏差读数（2026-11-23 RSI 数学轮，原文 §4.1）：
+   * 多候选择优是带噪声的最大值选择——最优-次优间隔、最优-留出缺口与期望乐观值。
+   * 只披露不拦截：不参与 ok/blockers 判定（2026-11-01 机制扩展停止裁定边界内）。
+   */
+  selectionBias?: SelectionBiasAudit
 }
 
 /** 证据在哪些决策角色中被消费（edit_generation=产生修改；candidate_selection=筛选候选；final_judgement=最终判定） */
@@ -553,6 +559,72 @@ export interface EvolutionReport {
    * invariant/domain 且增益符号相反——一类涨一类跌，说明两类改动在互相抵消。
    */
   seesawSuspected: boolean
+  /**
+   * RSI 数学诊断（2026-11-23 吸收轮，原文 §1.3/§4.1/§4.2）：收缩衰减（γ̂ 与到顶信号）、
+   * 代理-真实背离、多候选提案的选择偏差聚合。只读，不参与任何门禁判定。
+   */
+  theory?: RsiTheoryReport
+}
+
+// ---------- RSI 数学诊断（2026-11-23 吸收轮；纯诊断，零门码） ----------
+
+export type SelectionBiasVerdict =
+  | 'single_candidate'
+  | 'insufficient'
+  | 'selection_dominated'
+  | 'top2_within_noise'
+  | 'robust'
+  | 'heldout_confirms'
+  | 'heldout_within_noise'
+  | 'heldout_gap'
+
+export interface SelectionBiasAudit {
+  poolSize: number
+  best: number | null
+  runnerUp: number | null
+  gap: number | null
+  /** 期望乐观值只在调用方给 σ 时计算：σ·E[max Z_k]。 */
+  expectedOptimismZ: number | null
+  expectedOptimism: number | null
+  adjustedBest: number | null
+  /** 可测缺口：池内最优 − 留出读数。混有分布迁移，不是纯选择偏差。 */
+  realizedGap: number | null
+  verdict: SelectionBiasVerdict
+  note: string
+}
+
+export type DecayClass = 'insufficient' | 'geometric_decay' | 'moderate_decay' | 'no_decay'
+export type CeilingSignal = 'reached' | 'near' | 'not_reached' | 'unknown'
+
+export interface DecayAudit {
+  /** 参与估计的正增益轮数。 */
+  rounds: number
+  /** 被剔除的非正增益轮数（回退/零增益）：混入会压低 γ、误判到顶。 */
+  excludedNonPositive: number
+  gamma: number | null
+  /** 过原点拟合的未中心化 R²；样本少时只作参考。 */
+  r2: number | null
+  lastGain: number | null
+  predictedNextGain: number | null
+  classification: DecayClass
+  ceiling: CeilingSignal
+  note: string
+}
+
+export interface ProxyDivergenceAudit {
+  rounds: number
+  divergingRounds: number
+  /** 末尾连续「代理涨、真实不动或跌」的轮数。 */
+  streak: number
+  verdict: 'insufficient' | 'none' | 'watch' | 'diverging'
+  note: string
+}
+
+export interface RsiTheoryReport {
+  surfaces: Array<{ surfaceKey: SurfaceKey; decay: DecayAudit }>
+  proxyDivergence: ProxyDivergenceAudit
+  selectionBias: Array<{ proposalId: string; surfaceKey: SurfaceKey; audit: SelectionBiasAudit }>
+  note: string
 }
 
 /** 一个编辑类别的归因读数（W2，2026-11-05）。 */

@@ -77,6 +77,11 @@ const {
   evoSurfacesWithTimeline,
   selectedEvoKey,
   selectedEvo,
+  theoryDecay,
+  theoryUnconfirmed,
+  theoryClassLabel,
+  ceilingLabel,
+  proxyVerdictLabel,
   CURVE_W,
   CURVE_H,
   CURVE_PAD,
@@ -580,6 +585,26 @@ const {
         <p v-if="data.evolution.unexercised.length" class="hi__meta" data-testid="hi-evo-unexercised">
           {{ L.evoUnexercised }}：<code v-for="k in data.evolution.unexercised" :key="k">{{ surfaceName(k) }}</code>
         </p>
+
+        <div v-if="data.evolution.theory" class="hi__block" data-testid="hi-rsi-theory">
+          <h4>{{ L.theoryTitle }}</h4>
+          <p class="hi__meta">{{ L.theorySub }}</p>
+          <p v-if="theoryDecay" class="hi__meta" data-testid="hi-theory-decay">
+            <b>{{ surfaceName(theoryDecay.surfaceKey) }}</b> ·
+            {{ L.theoryGamma }} {{ theoryDecay.decay.gamma == null ? '—' : theoryDecay.decay.gamma.toFixed(3) }} ·
+            {{ L.theoryNextGain }} {{ theoryDecay.decay.predictedNextGain == null ? '—' : fmtDelta(theoryDecay.decay.predictedNextGain) }} ·
+            {{ L.theoryClass }} {{ theoryClassLabel(theoryDecay.decay.classification) }} ·
+            {{ L.theoryCeiling }} {{ ceilingLabel(theoryDecay.decay.ceiling) }}
+          </p>
+          <p v-if="theoryDecay" class="hi__meta">{{ theoryDecay.decay.note }}</p>
+          <p class="hi__meta" data-testid="hi-theory-proxy">
+            {{ L.theoryProxy }}：{{ proxyVerdictLabel(data.evolution.theory.proxyDivergence.verdict) }}（{{ data.evolution.theory.proxyDivergence.streak }}）
+          </p>
+          <p class="hi__meta" data-testid="hi-theory-selection">
+            {{ L.theorySelection }}：{{ theoryUnconfirmed }}/{{ data.evolution.theory.selectionBias.length }}
+          </p>
+          <p class="hi__meta">{{ data.evolution.theory.note }}</p>
+        </div>
 
         <div v-if="data.evolution.classAttribution && data.evolution.classAttribution.length" class="hi__block" data-testid="hi-class-attribution">
           <h4>{{ L.classAttribution }}</h4>

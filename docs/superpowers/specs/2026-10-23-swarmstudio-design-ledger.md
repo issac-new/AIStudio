@@ -33,6 +33,9 @@
 | 组件库身份 | 面 key＋文件名 | `id=<kind>:<name>@<digest8>`；同 digest 幂等，同组件版本递增且旧版保留；空内容不入库（`2026-11-03-component-library.md`） |
 | 四挡→七档权限映射 | 4 项 | plan/build/guarded/yolo → plan/default/acceptEdits/bypassPermissions；唯一声明在 earned-autonomy，测试锁表（`2026-11-15-proactive-deferrals.md`） |
 | 会话溯源覆盖边界 | 3 源 | 审批账＋standing agenda＋evidence（含 delivery_snapshot diff）；会话档案与 fork 血缘未接入（如实声明，不冒充完整） |
+| 收缩衰减诊断 | 3 档 | 各面正增益轮估 γ̂：<0.5 几何衰减／0.5–0.85 中度／≥0.85 未衰减；增益落进噪声带判到顶，建议元改进（`2026-11-23-rsi-recursive-theory.md`） |
+| 选择偏差诊断 | 2 口径 | 最优-次优间隔对噪声带；最优-留出缺口（混有分布迁移）；期望乐观值仅在显式给 σ 时算 |
+| 代理-真实背离 | 连续 2 轮 | 代理涨、留出读数不动或跌连续两轮判过拟合倾向；单轮只观察 |
 | 主张回执判定 | 3 类未验证 | 无引用／解析不到／跨任务引用；空主张不判通过（`2026-11-03-claim-receipts-and-dispatch-capacity.md`） |
 | 派单并发准入 | 缺省不拦 | `ZCODE_MAX_CONCURRENT_RUNS` 未配（=0）即放行；饱和按 `ZCODE_CAPACITY_POLICY=reject|queue`；排队截止 `ZCODE_CAPACITY_QUEUE_TIMEOUT_MS` |
 | 验收断言家族 | 6 | `file_exists/file_readable/file_min_bytes/file_contains/command_ok/test_passed`；不可判定落 unchecked 且整体不放行（`2026-11-03-acceptance-checks.md`） |

@@ -489,3 +489,4 @@
 {"at":"2026-11-23T00:20:08Z","spec":"docs/superpowers/specs/2026-11-23-tech-ledger-latest-compat.md","receipt":"efddac72511c00d82262455962f8b10f194e0429","commit":"6bd65f9b4"}
 {"at":"2026-11-23T01:39:03Z","spec":"docs/superpowers/specs/2026-11-23-tech-ledger-latest-compat.md","receipt":"679b3ffedc2b59b774e7214a47be9ce25511480d","commit":"18e6624cd"}
 {"at":"2026-11-23T01:43:04Z","spec":"docs/superpowers/specs/2026-11-23-tech-ledger-latest-compat.md","receipt":"9c192690b6c1bce163f540b72a796fe9a0aa0b3f","commit":"b03f76cf4"}
+{"at":"2026-11-23T01:57:21Z","spec":"docs/superpowers/specs/2026-11-23-rsi-recursive-theory.md","receipt":"a02913aac17d736ed19ce4d79f50009c37be14e8","commit":"6bd65f9b4"}

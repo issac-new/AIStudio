@@ -4,6 +4,7 @@ import { rsiConfig } from './loop-config'
 import type { RsiConfig } from './loop-config'
 import { pruneSignal, stallDetection } from './loop-advice-hypothesis'
 import { verificationTierOf } from './loop-advice-tier'
+import { buildTheoryReport } from './loop-theory'
 import type {
   BehaviorContrast, Champion, ClassAttribution, EditClass, EvolutionReport, EvolutionRound, EvolutionSurface, ProbeMetrics,
   Proposal, ProposalStatus, RetirementCandidate, SurfaceKey,
@@ -282,6 +283,7 @@ export function evolutionReport(
     retirementCandidates: retirementCandidates(surfaces),
     classAttribution: attribution.rows,
     seesawSuspected: attribution.seesawSuspected,
+    theory: buildTheoryReport({ surfaces, proposals, champions }),
   }
 }
 

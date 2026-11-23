@@ -255,6 +255,54 @@ export interface EvolutionDto {
     tokenDeltaPct: number | null
     roundsSince: number
   }>
+  /** RSI 数学诊断（2026-11-23）：只读，不参与门禁判定。 */
+  theory?: TheoryDto
+}
+
+export interface DecayAuditDto {
+  rounds: number
+  excludedNonPositive: number
+  gamma: number | null
+  r2: number | null
+  lastGain: number | null
+  predictedNextGain: number | null
+  classification: 'insufficient' | 'geometric_decay' | 'moderate_decay' | 'no_decay'
+  ceiling: 'reached' | 'near' | 'not_reached' | 'unknown'
+  note: string
+}
+
+export interface SelectionBiasAuditDto {
+  poolSize: number
+  best: number | null
+  runnerUp: number | null
+  gap: number | null
+  expectedOptimismZ: number | null
+  expectedOptimism: number | null
+  adjustedBest: number | null
+  realizedGap: number | null
+  verdict:
+    | 'single_candidate'
+    | 'insufficient'
+    | 'selection_dominated'
+    | 'top2_within_noise'
+    | 'robust'
+    | 'heldout_confirms'
+    | 'heldout_within_noise'
+    | 'heldout_gap'
+  note: string
+}
+
+export interface TheoryDto {
+  surfaces: Array<{ surfaceKey: SurfaceKey; decay: DecayAuditDto }>
+  proxyDivergence: {
+    rounds: number
+    divergingRounds: number
+    streak: number
+    verdict: 'insufficient' | 'none' | 'watch' | 'diverging'
+    note: string
+  }
+  selectionBias: Array<{ proposalId: string; surfaceKey: SurfaceKey; audit: SelectionBiasAuditDto }>
+  note: string
 }
 
 export interface ProposalDto {
