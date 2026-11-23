@@ -74,6 +74,17 @@ jobs:
         run: npx playwright install chromium
       - name: 全量 vitest（与 basic-check 门同配方：串行文件防并行污染）
         run: npx vitest run --no-file-parallelism --reporter=junit --outputFile=.qgate/junit-report.xml
+      - name: 调试：生成路由清单并上传（ci-debug 临时，随调试分支删除）
+        run: |
+          node node_modules/vite-node/vite-node.mjs --config vitest.config.ts scripts/regression/route-manifest.ts > /tmp/rm-ci-debug.json
+          node -e "const m=require('/tmp/rm-ci-debug.json');console.log('CI-DEBUG-COUNTS',JSON.stringify(m.counts));console.log('CI-DEBUG-FEATURES',JSON.stringify(m.featureGates))"
+        if: always()
+      - name: 上传路由清单调试件
+        uses: actions/upload-artifact@v4
+        with:
+          name: rm-ci-debug
+          path: /tmp/rm-ci-debug.json
+        if: always()
       - name: 上传 junit 证据
         if: always()
         uses: actions/upload-artifact@v4
