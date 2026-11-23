@@ -1,7 +1,7 @@
 import { coalesceProviderPool, compareProviderProfiles, mergeProviderSnapshot, type ProviderSnapshot, type ProviderPoolState } from './account-pool'
 import { uniqueProviderLabels } from '../../contracts/provider-identity'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { chmod, mkdir, readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import YAML from 'js-yaml'
@@ -20,7 +20,7 @@ export interface ProviderSources {
 
 interface AccountScope { userId: number; profile?: string }
 interface ImportRecord { version: 1; profile: string; importedAt: string }
-export interface InternalModelCredential { userId: number; profile?: string; token: string }
+export interface InternalModelCredential { userId: number; profile?: string; token: string; sessionId?: string }
 
 const scopes = new AsyncLocalStorage<AccountScope>()
 const importing = new Map<number, Promise<void>>()
@@ -51,6 +51,7 @@ export function providerProfileDir(profile: string): string {
   return join(providerAccountHome(providerAccountId(profile)), 'profiles', digest(profile || 'default'))
 }
 
+export const providerRequestAccountId = () => scopes.getStore()?.userId
 export const providerRequestProfile = () => scopes.getStore()?.profile
 
 export function providerSourceDir(profile: string): string {
@@ -71,6 +72,10 @@ export function withProviderAccount<T>(userId: number | string, operation: () =>
   const id = Number(userId)
   if (!Number.isSafeInteger(id) || id <= 0) throw Object.assign(new Error('Studio user is required'), { status: 401 })
   return scopes.run({ userId: id, profile }, operation)
+}
+
+export function withoutProviderAccount<T>(operation: () => T): T {
+  return scopes.exit(operation)
 }
 
 export function withSocketProviderAccount<T extends (...args: any[]) => Promise<any>>(operation: T): T {
@@ -186,7 +191,31 @@ export async function internalModelCredential(profile: string): Promise<Internal
   return result
 }
 
+function signModelSession(token: string, value: string): string {
+  return createHmac('sha256', token).update('studio-model-session\0').update(value).digest('base64url')
+}
+
+/** Carry the bridge's session through the HTTP SDK without exposing its ID or account credential. */
+export function bindInternalModelSession(credential: InternalModelCredential, profile: string, sessionId: string): string {
+  const scope = signModelSession(credential.token, JSON.stringify([profile, sessionId]))
+  const binding = `${credential.userId}.${Buffer.from(profile).toString('base64url')}.${scope}`
+  return `studio_model_session_${binding}.${signModelSession(credential.token, binding)}`
+}
+
 export async function authenticateInternalModelCredential(token: string): Promise<InternalModelCredential | null> {
+  const match = /^studio_model_session_([1-9]\d{0,15})\.([A-Za-z0-9_-]{1,512})\.([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})$/.exec(token)
+  if (match) {
+    const [, account, encodedProfile, sessionId, signature] = match
+    const userId = Number(account)
+    if (!Number.isSafeInteger(userId) || findUserById(userId)?.status !== 'active') return null
+    const current = await text(join(providerAccountHome(userId), 'gateway-credential.json'))
+    if (!current) return null
+    const credential = JSON.parse(current) as InternalModelCredential
+    if (credential.userId !== userId) return null
+    const expected = signModelSession(credential.token, `${account}.${encodedProfile}.${sessionId}`)
+    if (!timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null
+    return { userId, profile: Buffer.from(encodedProfile, 'base64url').toString('utf8'), token, sessionId }
+  }
   if (!/^studio_model_[A-Za-z0-9_-]{43}$/.test(token)) return null
   let accounts: string[]
   try { accounts = await readdir(join(root(), 'users')) } catch { return null }

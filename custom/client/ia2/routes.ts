@@ -61,6 +61,8 @@ export const IA_LEGACY_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = 
   { from: '/app/comms/room/:roomId', to: '/app/s/room/:roomId' },
   { from: '/app/comms', to: '/app' },
   { from: '/app/collab/chat', to: '/app/s/chat' },
+  // 通知深链（patch 301 pendingSourceClickUrl 发本形态）；头注释 v12 承诺的映射落表
+  { from: '/app/collab/session/:sessionId', to: '/app/s/chat/:sessionId' },
   { from: '/app/collab/history/session/:sessionId', to: '/app/history/session/:sessionId' },
   { from: '/app/collab/history', to: '/app/history' },
   { from: '/app/collab/global-agent/session/:sessionId', to: '/app/agent/session/:sessionId' },

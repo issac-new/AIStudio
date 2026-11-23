@@ -1,40 +1,75 @@
 // overlay/custom/server/__tests__/zcode-engine-bridge.test.ts
 // R4-P1 守门：vendored rpc 同步断言 + 桥模块结构 + 健康面控制器 + patch 380 登记。
 // S4 守门：握手超时（WS open / RPC 每步）+ 失败分支统一 terminate（连接不泄漏）。
-import { describe, it, expect } from 'vitest'
+// 2026-11-23 兼容批：全文件豁免废除——改确定性预期内容比较（.js 后缀归一化 + X3 头注），
+// index.ts 因有意收窄导出单独断言；并补 retryable/profileId 透传与 EventError 订阅结束行为回归。
+import { describe, it, expect, vi } from 'vitest'
 import { readFileSync, existsSync, mkdtempSync, rmSync } from 'fs'
 import { resolve, join } from 'path'
-import { createHash } from 'crypto'
 import { tmpdir } from 'os'
 import net from 'net'
 import { WebSocketServer } from 'ws'
 import { connectZCodeEngine, wsMessageToVSBuffer } from '../zcode/engine-bridge'
 import { upstreamPath } from '../../test/upstream-root'
+import { ChannelClient, Emitter, VSBuffer } from '../zcode/vendor/rpc'
+import { BufferWriter, serialize } from '../zcode/vendor/rpc/serialization'
+import type { IMessagePassingProtocol } from '../zcode/vendor/rpc/protocol'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 const VENDOR = resolve(OVERLAY_ROOT, 'custom/server/zcode/vendor/rpc')
 const ZCODE_RPC_SRC = upstreamPath('zcode/packages/rpc/src')
 
-const VENDORED_FILES = ['buffer.ts', 'foundation.ts', 'serialization.ts', 'protocol.ts', 'channelClient.ts', 'proxy-channel.ts']
+/** 宿主实际 import 闭包（proxy-channel→channels→channelServer/delayedChannel 全链）。 */
+const CLOSURE_FILES = [
+  'buffer.ts', 'foundation.ts', 'serialization.ts', 'protocol.ts',
+  'channels.shared.ts', 'channelServer.ts', 'channelClient.ts',
+  'delayedChannel.ts', 'proxy-channel.ts', 'channels.ts',
+]
+/** 叶子模块（无相对 import，无头注）。 */
+const LEAF_FILES = new Set(['buffer.ts', 'foundation.ts'])
+const X3_POINTER = '// import 形态不变量见 channels.ts 头注释（相对 import 省略扩展名；迁移 ESM 前须回补）。'
+const X3_CHANNELS_HEADER = `// overlay vendored @zcode/rpc · import 形态不变量（X3）：
+// 本目录相对 import 一律省略扩展名（"./buffer" 而非 "./buffer.js"）。这是【有意
+// 不变量】而非隐患——当前运行链是 ts-node CJS（require 解析自动补 .ts）与 vitest
+// 转换链，省略形态合法；但 Node ESM 直跑即 ERR_MODULE_NOT_FOUND。迁移 ESM 前必须
+// 回补全部扩展名，并同步更新守门测试
+// custom/server/__tests__/zcode-vendor-rpc-import-form.test.ts（形态扫描断言）。
+// 其余文件头部一行指针指回本注释；升级重拷 upstream 源文件后指针会被抹掉，
+// 守门测试会 fail 提醒回放（勿绕过，回放指针即可）。
+`
+
+/** 确定性归一化：上游原文 → 仅移除相对 import 的 .js 后缀 → 加逐文件 X3 头注。
+ * 除此之外的任何字节差异都是协议漂移，不再有整文件豁免。 */
+function expectedVendored(file: string, upstreamText: string): string {
+  const stripped = upstreamText.replace(/(["'])(\.\.?\/[^"']+)\.js\1/g, '$1$2$1')
+  if (file === 'channels.ts') return X3_CHANNELS_HEADER + stripped
+  if (LEAF_FILES.has(file)) return stripped
+  return `${X3_POINTER}\n${stripped}`
+}
 
 describe('zcode engine bridge（R4-P1）', () => {
-  it('vendored rpc 与 upstream/zcode 源语义一致（逐字节 + 已知偏差清单豁免）', () => {
-    // 已知偏差：CJS/ts-node 兼容把 "./x.js" import 改写成 "./x"（ESM/CJS 互操作），
-    // 以及 channels.ts 收窄为 channels.shared.ts 直引。偏差清单即同步纪律的边界。
-    const KNOWN_DRIFT_FILES = new Set(['buffer.ts', 'foundation.ts', 'serialization.ts', 'protocol.ts', 'channelClient.ts', 'proxy-channel.ts', 'channels.shared.ts'])
-    for (const f of VENDORED_FILES) {
-      const ours = resolve(VENDOR, f)
+  it('vendored rpc 与上游源确定性一致（.js 归一化 + X3 头注，无整文件豁免）', () => {
+    for (const f of CLOSURE_FILES) {
+      const ours = readFileSync(resolve(VENDOR, f), 'utf8')
       const theirs = resolve(ZCODE_RPC_SRC, f)
-      expect(existsSync(ours), `缺 vendor 文件 ${f}`).toBe(true)
+      expect(existsSync(resolve(VENDOR, f)), `缺 vendor 文件 ${f}`).toBe(true)
       if (!existsSync(theirs)) continue // zcode 未克隆环境跳过对账
-      const digest = (p: string) => createHash('sha256').update(readFileSync(p)).digest('hex')
-      if (KNOWN_DRIFT_FILES.has(f)) {
-        // 仅断言文件存在且非空；字节级一致性由升级时的重拷纪律保证（见 index.ts 头注释）
-        expect(readFileSync(ours, 'utf8').length, `${f} 不应为空`).toBeGreaterThan(0)
-      } else {
-        expect(digest(ours), `${f} 与 upstream/zcode 源不一致——升级 pin 后须重拷并复核收窄导出`).toBe(digest(theirs))
-      }
+      const expected = expectedVendored(f, readFileSync(theirs, 'utf8'))
+      expect(ours, `${f} 与上游源存在超出声明形态差异的漂移——升级 pin 后须按同步纪律重拷`).toBe(expected)
     }
+  })
+
+  it('index.ts：有意收窄导出面并声明当前 pin（不与上游全量 index 对齐）', () => {
+    const index = readFileSync(resolve(VENDOR, 'index.ts'), 'utf8')
+    expect(index).toContain('pin @fec97590')
+    expect(index).toContain('export { VSBuffer } from "./buffer"')
+    expect(index).toContain('export { Event, Emitter, CancellationToken, CancellationTokenSource, DisposableStore } from "./foundation"')
+    expect(index).toContain('export type { IDisposable } from "./foundation"')
+    expect(index).toContain('export { serialize, deserialize } from "./serialization"')
+    expect(index).toContain('export { SocketProtocol } from "./protocol"')
+    expect(index).toContain('export { ChannelClient } from "./channelClient"')
+    expect(index).toContain('export { ProxyChannel } from "./proxy-channel"')
+    expect(index).not.toContain('PersistentProtocol') // 未被宿主引用的模块不引入
   })
 
   it('桥模块导出 connectZCodeEngine/probeZCodeEngine，握手序 hello→clientHello', () => {
@@ -62,6 +97,68 @@ describe('zcode engine bridge（R4-P1）', () => {
       const routes = readFileSync(routesPath, 'utf8')
       expect(routes).toContain("import { zcodeEngineRoutes } from '../custom/zcode/engine-controller'")
       expect(routes).toContain('app.use(zcodeEngineRoutes.routes())')
+    }
+  })
+})
+
+describe('RPC 协议行为回归（pin fec97590 新语义）', () => {
+  class FakeProtocol {
+    sent: VSBuffer[] = []
+    private emitter = new Emitter<VSBuffer>()
+    onMessage = this.emitter.event
+    send = (buffer: VSBuffer) => { this.sent.push(buffer) }
+    feed = (buffer: VSBuffer) => { this.emitter.fire(buffer) }
+  }
+  /** 帧 = header 数组 + 显式 body（undefined 也序列化占位——老实现会先解 body）。 */
+  const frame = (header: any[], body?: any): VSBuffer => {
+    const writer = new BufferWriter()
+    serialize(writer, header)
+    serialize(writer, body)
+    return writer.buffer
+  }
+  const makeClient = () => {
+    const proto = new FakeProtocol()
+    const client = new ChannelClient(proto as unknown as IMessagePassingProtocol)
+    proto.feed(frame([200])) // Initialize → Idle，后续 call/listen 同步发出
+    return { proto, client }
+  }
+
+  it('PromiseError 透传 retryable/profileId（上游新增字段不得丢失）', async () => {
+    const { proto, client } = makeClient()
+    const pending = client.getChannel('zcode-agent').call('helloConversationV4', { a: 1 })
+    expect(proto.sent.length).toBe(1) // Idle 后同步发出
+    // 响应 id=0（首个请求）；PromiseError 携带上游新增的 retryable/profileId
+    proto.feed(frame([202, 0], { message: 'boom', name: 'EngineError', stack: undefined, code: 'E_ENGINE', retryable: true, profileId: 'p-main' }))
+    const err: any = await pending.then(
+      () => { throw new Error('expected rejection') },
+      (e) => e,
+    )
+    expect(err).toBeInstanceOf(Error)
+    expect(err.message).toBe('boom')
+    expect(err.name).toBe('EngineError')
+    expect(err.code).toBe('E_ENGINE')
+    expect(err.retryable, '上游 fec97590 新增 retryable 字段必须透传').toBe(true)
+    expect(err.profileId, '上游 fec97590 新增 profileId 字段必须透传').toBe('p-main')
+    client.dispose()
+  })
+
+  it('EventError 结束订阅：错误不进事件流、console.error 留痕、旧 id 后续 Fire 不投递', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      const { proto, client } = makeClient()
+      const seen: unknown[] = []
+      const sub = client.getChannel('zcode-agent').listen('sessionsChanged')(e => { seen.push(e) })
+      expect(proto.sent.length).toBe(1) // EventListen id=0 已发出
+      proto.feed(frame([205, 0], { name: 'SubscribeError', message: 'denied', stack: undefined }))
+      expect(seen).toEqual([]) // 错误对象不得进入正常事件流
+      expect(errSpy).toHaveBeenCalledTimes(1)
+      expect(String(errSpy.mock.calls[0][0])).toContain('sessionsChanged')
+      proto.feed(frame([204, 0], 'must-not-deliver'))
+      expect(seen).toEqual([]) // handlers 已清理：订阅失败后旧 id 不再投递
+      sub.dispose()
+      client.dispose()
+    } finally {
+      errSpy.mockRestore()
     }
   })
 })

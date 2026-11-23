@@ -67,6 +67,18 @@ describe('ia2 路由树（v12 双视图）', () => {
     expect(loop.params.loopId).toBe('lp-1')
   })
 
+  it('通知深链 /app/collab/session/:id 迁 /app/s/chat/:id（v12 注释承诺落表，参数原样）', () => {
+    // patch 301 通知点击 URL 发 /app/collab/session/<id>；routes.ts 头注释承诺该映射，
+    // IA_LEGACY_REDIRECTS 曾缺行致落 catch-all（独立审查 P2-4）。resolve 不跟随 redirect，
+    // 断言命中重定向记录且函数式映射透传 sessionId（同族 roomId 含 !/: 字符先例）。
+    const router = makeRouter()
+    const moved = router.resolve('/app/collab/session/sess-9')
+    const record = moved.matched.slice(-1)[0] as { redirect?: unknown }
+    expect(typeof record.redirect).toBe('function')
+    const target = (record.redirect as (loc: { params: Record<string, string> }) => { path: string })({ params: { sessionId: 'sess-9' } })
+    expect(target.path).toBe('/app/s/chat/sess-9')
+  })
+
   it('工作台记录懒组件真实落到 WorkbenchView（D12：/app=旅程首页，三栏在 /app/collab）', async () => {
     const router = makeRouter()
     for (const path of ['/app/collab', '/app/s/chat/s1', '/app/s/room/r1']) {
