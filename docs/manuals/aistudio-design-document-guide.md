@@ -232,8 +232,8 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 2026-11-09 培训刷新批已按当前载体重核三处事实：
 
 1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.3／zcode 3.18.2／驾驶舱 0.8.30-studio.1／agent teams v0.23.3-team.2／yuan v2.103.0／整体包 1.0.18-overlay），核实日 2026-11-23（v0.8.30 底座换血批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
-2. 整合正本 §5.4 的当前基线表已归为 hermes-studio v0.8.17；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
-3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已归为 hermes-studio v0.8.17。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json:45,160`；`vendor/VENDOR.md:7,24`
+2. 整合正本 §5.4 的当前基线表已随 2026-11-23 批归为 hermes-studio v0.8.30；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
+3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已随 2026-11-23 批归为 hermes-studio v0.8.30。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json:45,160`；`vendor/VENDOR.md:7,24`
 
 历史报告与历史 spec 中仍会出现成文时点的旧值（v0.8.0、studio.1、team.1、v2.95.0、1.0.0-overlay、zcode 3.17.1）。识别规则是：版本一律以当前载体与 VENDOR 表格为准，文档里的版本只代表其成文时点，不能当作现行值。
 

@@ -23,15 +23,19 @@
 
 ## 验证
 
-以下为验收设计，结果须在完成后以实测回填：
+以下为实测回填（2026-11-23）：
 
-1. **来源与基线**：v0.8.30 tag、提交和包版本一致；vendor 换血文件面与上游 diff 对账；staged pristine 文件不含任何补丁效果。ZCode 公开 main、Release 和本机应用版本分别留证，不混写。
-2. **真实重放**：在 worktree 内 `npm run clean && npm run inject`，manifest `status=complete`、全部活跃补丁 applied、零 failed；再跑 pristine replay 守门和第二次 inject 验证幂等。失败件逐个记录直放、重锚、重建或退役依据。
-3. **RPC 目标测试**：先让现有“逐字节同步”测试在旧复制面上明确失败，再同步并归一化后转绿；覆盖 `ChannelClient` 错误字段透传、`EventError` 不当作正常事件、订阅失败清理 listener，以及原有 WS 超时和连接释放行为。运行 `npx vitest run custom/server/__tests__/zcode-engine-bridge.test.ts custom/server/__tests__/zcode-vendor-rpc-import-form.test.ts custom/server/__tests__/zcode-session-projection.test.ts`，并跑 `npm run typecheck:harness`。
-4. **Ycode 工程面**：在已有依赖与构建产物的基础上运行 `npm run zcode:ensure`、相关工程测试和 `npm run catalog-check`；若引擎版本或构建产物无法从证据确认，明确标注，不用文件存在代替版本证明。
-5. **Studio 回归**：受影响模块目标测试先行；合并前全量 `npm test`，并记录 passed/skipped/failed。UI 行为如被上游差量或补丁适配触及，补浏览器实物走查；未触及则不宣称 UI 验收。
-6. **台账与文档**：逐行有当日证据锚，分域行数与判级汇总机械对账；`npm run docs:sync`、`npm run release:check` 和受影响文档测试通过。历史快照和明确历史段落不被全局版本替换污染。
-7. **独立审查**：由未参与实现的审查者检查基线 pristine、补丁丢段、RPC 归一化是否掩盖真实差异、版本投影、台账证据和未验证项；发现按严重级修复并复审。
+1. **来源与基线**：v0.8.30 releases/latest=published 2026-11-21、tag 提交 `8a51d1bcf`、desktop package.json=0.8.30 三点一致；vendor-sync 后 staged 面与上游 `git diff --shortstat v0.8.28^{}..v0.8.30^{}` 精确吻合（**117 文件 +3885/−574**），非 vendor 路径零混入；pristine 基线以 `VENDOR_SYNC=1` 先行提交（79022ee）后才注入。ZCode：公开 main 与最新 Release 均 `fec97590`/3.18.2（在线核验），本机安装版 3.19.1（Info.plist）＋catalog-check 7869 键一致——三事实源分账记载。
+2. **真实重放**：净基线迭代五轮（根失败序列：042 版本锚→301→640→757→812，lane 级回滚为级联非根因）。终态 clean+inject **510/510 applied 零 failed**；第二次 inject 幂等（`manifest v2 与 series 前缀精确一致（noop）`）；pristine replay 守门 2/2 过（提交后，112.9s）。补丁处置：5 枚适配（042 版本上下文；301 并集上游 sessionSource+profile；640 保留 userAccessChanged 新上下文；757 重切用户存储段并补 Matrix 权限更新通知；812 统一池与 legacy bindInternalModelSession 并存），0 退役。
+3. **RPC 目标测试**：TDD 闭环——新守门在旧复制面上 **4 项 RED**（确定性内容差异、pin 停在 872ad96、retryable=undefined、EventError 被静默丢弃＝旧全文件豁免守门失明的实证）；同步 10 文件闭包后三测试文件 **34/34 GREEN**。`npm run typecheck:harness` rc=0。
+4. **Ycode 工程面**：`npm run zcode:ensure` 全量执行（pnpm install 59 workspace＋packages/server tsup 构建绿＋remote 构建＋CLI dist），幂等复跑「依赖与构建产物已就绪」；`npm run catalog-check` OK（3.19.1，7869 键/110 命名空间）。
+5. **Studio 回归**：受影响面目标测试先行（modelpool 52＋matrix-login 19＋patches-guard 7 等）；全量 `npm test` 结果见交付说明。UI 行为：301/757/812 触及客户端与账号面行为，以组件级与 REST 级测试覆盖（pendingactions 深链在 ia2 路由面有守门）；本批未做浏览器实物走查，如实记为未验证项。
+6. **台账与文档**：台账全表刷新（§二批注＋分域行＋§五＋§六验证锚＋§八变更日志）；`npm run docs:sync`/`docs:check` 一致（routes=128）；`npm run release:check` 四模块对账全绿（cockpit=0.8.30-studio.1/agent-teams=v0.23.3-team.2/ycode=3.18.2/yuan-skill=v2.103.0）；文档门 52/52（docs-ssot-guard/interactive-training-manual/training-manual/verify-release-manifest）。
+7. **独立审查**：独立审查者对 pristine 混入、补丁丢段、RPC 归一化、版本投影、台账数字抽查执行审查，结论回填交付说明。
+
+已知披露：`.swarm-yuan/decisions.jsonl` 哈希链存在两处历史断口（独立审查复核实测）——第 126-129 行（2026-11-16~18）无链字段；第 130-135 行为 `previous_checksum=''` 的重启链后第 136-140 行再断（2026-11-20~22 记录，均在本轮之前形成）。本轮新增第 141 行链字段齐全、`previous_checksum=''` 未伪造链接，不改写历史行，按红线披露。
+
+审查修复波（独立审查 P1×1＋P2×6 全处置）：P1 设计总账 §C 三行（teams/yuan/整体包）随载体真值清偿；P2-1 vendor `.claude/launch.json` 补录＋VENDOR.md 立规；P2-2 session-projection 头注补 lastOutcome 新字段说明；P2-3 本段披露补全；P2-4 通知深链 `/app/collab/session/:id` 重定向落表（TDD：stash 前 RED→修复后 GREEN）；P2-5 培训 HTML yuan 值对齐；P2-6 设计导读三处事实列表归新。
 
 ## 设计文档影响
 

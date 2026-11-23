@@ -22,7 +22,9 @@ import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-re
  * packages/shared/src/zcode-protocol-v4/sessions-index.ts 的 sessionSummarySchema——
  * { sessionId, workspaceId, parentSessionId?, title, titleSource?, phase,
  *   sessionEnded, hasBackgroundWork, workflowActivity?, pendingInteraction?,
- *   pendingInteractionSummary?, goalStatus?, lastActivityAt, lastAssistantPreview?, createdAt }
+ *   pendingInteractionSummary?, goalStatus?, lastActivityAt, lastAssistantPreview?,
+ *   createdAt, lastOutcome? }（lastOutcome 为 fec97590 相对旧 pin 872ad96 新增的可选
+ * 字段；X5 白名单按设计不透传未知字段，消费面需要时先扩本形状）
  * phase 枚举见 snapshot.ts sessionPhaseSchema：draft/prewarming/running/
  * completedSuccess/completedInterrupted/error。
  *

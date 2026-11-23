@@ -487,3 +487,4 @@
 {"at":"2026-11-22T15:28:09Z","spec":"docs/superpowers/specs/2026-11-22-release-v1.0.17-overlay.md","receipt":"4cbd65205ba78422f843324b11f5ddcaab34dc0e","commit":"bda4ef574"}
 {"at":"2026-11-22T19:59:44Z","spec":"docs/superpowers/specs/2026-11-23-product-tests-ci-green.md","receipt":"c58cb77b099f83dfbb4f5b440a654c881660b287","commit":"a1cd3127d"}
 {"at":"2026-11-23T00:20:08Z","spec":"docs/superpowers/specs/2026-11-23-tech-ledger-latest-compat.md","receipt":"efddac72511c00d82262455962f8b10f194e0429","commit":"6bd65f9b4"}
+{"at":"2026-11-23T01:39:03Z","spec":"docs/superpowers/specs/2026-11-23-tech-ledger-latest-compat.md","receipt":"679b3ffedc2b59b774e7214a47be9ce25511480d","commit":"18e6624cd"}

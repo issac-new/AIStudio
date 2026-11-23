@@ -88,11 +88,11 @@
 | hermes-agent 基线 | v0.23.3 | `vendor/VENDOR.md` |
 | zcode 基线谱系 | v3.16.1 系列（包版本 3.18.2 @fec97590，2026-11-13 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
 | 驾驶舱模块 | 0.8.30-studio.1 | `RELEASE-NOTES.md` |
-| agent teams 模块 | v0.23.3-team.1 | `team/VERSION` |
+| agent teams 模块 | v0.23.3-team.2 | `team/VERSION` |
 | Ycode 模块 | 3.18.2 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
-| yuan skill 模块 | v2.100.4 | `skills/swarm-yuan/CHANGELOG.md` |
-| 整体源码包 | 1.0.16-overlay | 仓根 `package.json` 与发布清单 |
+| yuan skill 模块 | v2.103.0 | `skills/swarm-yuan/CHANGELOG.md` |
+| 整体源码包 | 1.0.18-overlay | 仓根 `package.json` 与发布清单 |
 | 平台重写批次（2026-11-05~06） | P0 身份/执行/证据＋P1 注入/交付/发布门＋P2 推演/文档三域核心；补丁 757/758 两枚平台载体（原拟 755/756，让号后落 757/758；755 为 readpool 批占用）；分文未升模块版本号（随下个发布轮进位） | `docs/superpowers/specs/2026-11-05-platform-rewrite-design.md` 及其三段「实施验证」小节 |
 
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
