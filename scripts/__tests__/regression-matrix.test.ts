@@ -183,6 +183,26 @@ describe('执行器语义（真实子进程）', () => {
     expect([results[0].status, results[0].reason]).toEqual(['passed', null])
   })
 
+  // 2026-11-24 事故：推送前钩子里跑推演门，夹具继承 GIT_DIR 后改写了真实仓库并推到远端。
+  it('测试面的子进程不继承 GIT_ 开头的环境变量', async () => {
+    const { runPlan, scrubGitEnv } = await mod()
+    expect(scrubGitEnv({ GIT_DIR: '/real/.git', GIT_WORK_TREE: '/real', PATH: '/bin', HOME: '/h' })).toEqual({ PATH: '/bin', HOME: '/h' })
+    const axis = fixture({ run: { argv: ['node', '-e', 'process.exit(process.env.GIT_DIR || process.env.GIT_INDEX_FILE ? 9 : 0)'], timeoutMs: 20000 } })
+    const matrix = { python: { candidates: [], fallback: null }, axes: [axis] }
+    const results = await runPlan(matrix, { scope: 'prepush', axes: [{ axis, reason: 'always' }] }, {
+      root: tmp, env: { PATH: process.env.PATH, GIT_DIR: '/real/.git', GIT_INDEX_FILE: '/real/.git/index' }, stream: null,
+    })
+    expect([results[0].status, results[0].reason]).toEqual(['passed', null])
+  })
+
+  it('推演门入口脚本在起始处清掉 git 内部变量（直接调用脚本也受保护）', () => {
+    const gates = read('simharness/tests/run-gates.sh')
+    const unsetAt = gates.search(/^unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE/m)
+    const firstWork = gates.search(/^for t in /m)
+    expect(unsetAt).toBeGreaterThan(0)
+    expect(unsetAt).toBeLessThan(firstWork)
+  })
+
   it('退出码映射：全过 0；有失败 1；仅未执行 2；两者兼有 4', async () => {
     const { overallExit } = await mod()
     const r = (status: string) => ({ status })

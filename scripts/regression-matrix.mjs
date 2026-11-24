@@ -304,12 +304,21 @@ export function overallExit(results) {
   return { status: 'ok', exitCode: EXIT.ok, error: null, failures: [] }
 }
 
+// git 钩子会把 GIT_DIR 等内部变量传给子进程。测试夹具自带 git 操作（自建仓库、改名分支、
+// 截断历史），继承这些变量后不再自建仓库，操作会落到调用方所在的真实仓库与其远端
+// （2026-11-24 事故实录：推送前钩子里跑推演门，夹具改写了本仓 main 并推到了远端）。
+// 测试面的子进程一律不继承 GIT_ 开头的变量，按工作目录自行发现仓库，与普通终端一致。
+export function scrubGitEnv(env) {
+  return Object.fromEntries(Object.entries(env ?? {}).filter(([key]) => !key.startsWith('GIT_')))
+}
+
 export async function runPlan(matrix, selection, { root, env = process.env, onEvent = null, stream = null } = {}) {
   const python = resolvePython(matrix, env)?.python ?? null
+  const childEnv = scrubGitEnv(env)
   const results = []
   for (const axis of expandRequires(matrix, selection.axes.map((item) => item.axis))) {
     onEvent?.({ event: 'started', axis: axis.id, title: axis.title })
-    const result = await runAxis(axis, { root, env, python, stream })
+    const result = await runAxis(axis, { root, env: childEnv, python, stream })
     results.push(result)
     onEvent?.({ event: 'item_failed', axis: axis.id, status: result.status, reason: result.reason, durationMs: result.durationMs })
   }

@@ -331,7 +331,9 @@ export function checkBudget(budget) {
     patches: countLines('patches/series'),
     zcodePatches: countLines('zcode-patches/series'),
     scripts: countScriptsRecursive(),
-    ledgers: Object.values(LEDGERS).filter((f) => existsSync(join(ROOT, f))).length,
+    // 账本按「已登记的机制」计数，不按文件是否存在：gate-deny.jsonl 是被 git 忽略的运行态，
+    // 只在门禁第一次拒绝时才落盘，按文件数计会让预算随本机状态浮动（2026-11-24 复盘实录）。
+    ledgers: Object.keys(LEDGERS).length,
     npmScripts: Object.keys(readJson('package.json', { scripts: {} }).scripts ?? {}).length,
   }
   try {

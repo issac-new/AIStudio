@@ -99,5 +99,7 @@ describe('机制预算上限须等于在册数（仓规 13：退役后同批下�
     for (const key of ['gates', 'scripts', 'ledgers', 'npmScripts']) {
       expect(budget.limits[key], `${key} 上限须等于在册数`).toBe(r.stats[key])
     }
+    // 账本是运行态文件（gate-deny.jsonl 被 git 忽略，首次拒绝才落盘）：按登记数计，不随本机状态浮动。
+    expect(r.stats.ledgers).toBe(4)
   })
 })

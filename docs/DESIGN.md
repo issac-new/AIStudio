@@ -1780,7 +1780,9 @@ npm run serve
 推演 harness、Python runtime、team、swarm-yuan 与 Ycode 的测试都在它之外，
 它们的归属只在这份矩阵里登记。`scripts/regression-matrix.mjs` 按矩阵选择并执行：
 失败、未执行、超时三种结局分开记账，退出码遵循 5.3 的命令行契约——未执行不算通过，
-工具链缺席时给出补齐办法并以退出码 2 拦下。推送前档里，推演 harness 门、Python runtime
+工具链缺席时给出补齐办法并以退出码 2 拦下。执行器不给测试子进程传递 `GIT_` 开头的环境变量：
+推送前钩子由 git 启动、环境里带 `GIT_DIR` 等内部变量，而推演门的夹具会自建 git 仓库，
+继承这些变量就会波及调用方仓库及其远端（2026-11-24 事故）。推送前档里，推演 harness 门、Python runtime
 与 team 测试每次推送都跑（2026-11-21 的两处真红就是由 `runtime/` 与 `docs/` 的改动
 引起、却断在推演门上，触发路径写窄就会漏），Ycode 与 swarm-yuan 锁测试按变更路径触发；
 根 vitest 全量留给合并前纪律。把关测试 `scripts/__tests__/regression-matrix.test.ts`

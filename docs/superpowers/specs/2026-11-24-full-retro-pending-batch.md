@@ -1,29 +1,29 @@
 # 2026-11-24 全面复盘批挂账台账
 
-口径：按挂账台账化约定（2026-11-03 用户令），未做项收敛为编号台账，每条给锚点、根因层、验收判据与状态。本台账承接 `2026-11-23-full-retro-regression-matrix.md`（全面复盘批）做完之后真正剩下的面，编号续 N33 之后。
+口径：按挂账台账化约定（2026-11-03 用户令），未做项收敛为编号台账，每条给锚点、根因层、验收判据与状态。本台账承接 `2026-11-23-full-retro-regression-matrix.md`（全面复盘批）做完之后真正剩下的面，编号续 N34（`2026-11-24-zcode-400-pending-batch.md`，ZCode 4.0.0 发版批台账）之后。
 
 ## 待办
 
-### N34-1 CI 未覆盖推演 harness、Python 与 Ycode 三个测试面
+### N35-1 CI 未覆盖推演 harness、Python 与 Ycode 三个测试面
 - 锚点：`.github/workflows/product-tests.yml:13-27`（`paths-ignore` 含 `team/**`）；工作流步骤只跑 `typecheck:harness` 与根 vitest；`config/regression-matrix.json` 中 `sim-gates`、`py-runtime`、`py-team`、`yc-*` 的 `ci` 均为 `null`。
 - 根因层：CI 任务的路径过滤与步骤清单是手写的工作流文件，加任务只能在推送后验证，本批不推送，所以没有加。
 - 现状：这三个面由推送前钩子强制（`config/regression-matrix.json` 的推送前档）；绕过钩子的推送（`QGATE_PREPUSH_SKIP=1`）或未装钩子的克隆没有自动覆盖。
 - 验收判据：在分支上加 CI 任务并见到绿记录后再合入 main；矩阵里对应测试面的 `ci` 字段从 `null` 改为工作流与锚点；`product-tests` 的 `paths-ignore` 不再忽略 `team/**`。
 - 状态：open（P2）。
 
-### N34-2 `/ekko/skills` 指向已退役的运行时，页面恒显示“暂无技能”
+### N35-2 `/ekko/skills` 指向已退役的运行时，页面恒显示“暂无技能”
 - 锚点：路由 `ekko.skills`（`scripts/regression/route-manifest.ts` 生成的清单）；设计正本 4.2 节“通用对话内核只此一个（Ekko 运行时退役）”。
 - 根因层：运行时退役后入口没有按“受管迁移与保留”原则处理，既没有下线也没有改接到 Hermes 技能面。
 - 验收判据：用户裁决去向——下线该路由并在导航中移除，或改接 Hermes 技能清单；裁决后全路由走查该页不再出现空列表。
 - 状态：awaiting-user（产品决定）。
 
-### N34-3 机制预算里 14 条退役条件没有机检判定器
+### N35-3 机制预算里 14 条退役条件没有机检判定器
 - 锚点：`config/mechanism-budget.json` 的 `sunset` 数组（15 条，仅 `capability-matrix` 带 `check`）；`node scripts/governance-lint.mjs --budget` 报 14 条 `retireWhen 仅为自然语言` 告警。
 - 根因层：退役条件写成自然语言，到期是否达成只能靠人读。
 - 验收判据：7 条 `reviewBy=2026-12-05` 的条目在到期复核时逐条补 `check`，或按条件退役并移出 sunset 册；告警数随之下降。
 - 状态：dated（2026-12-05 首批到期）。
 
-### N34-4 sia 线到点复核已具备转退役条件，台账未改
+### N35-4 sia 线到点复核已具备转退役条件，台账未改
 - 锚点：`team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md` 第 69 行（`hexo-ai/sia`，观察至 2026-11-24）；`2026-11-23-compat-release-pending-batch.md` 的 N33-4。
 - 实测（2026-11-24）：`pushed_at=2026-08-26T17:02:30Z`，`v0.6.0...main` 领先 1 个提交，零新推送。
 - 验收判据：按台账 §一.3 把该行改为 RETIRED，同步 §八 变更日志与判级汇总计数。
@@ -38,11 +38,11 @@
 
 ## 计数
 
-待办 4（P2×1＝N34-1；awaiting-user 1＝N34-2；dated 1＝N34-3；已到期 1＝N34-4）｜已裁定不处置 4。
+待办 4（P2×1＝N35-1；awaiting-user 1＝N35-2；dated 1＝N35-3；已到期 1＝N35-4）｜已裁定不处置 4。
 
 ## 变更
 
-1. 立本台账：收敛全面复盘批（`2026-11-23-full-retro-regression-matrix.md`）之后剩余的面，编号 N34-1 至 N34-4。
+1. 立本台账：收敛全面复盘批（`2026-11-23-full-retro-regression-matrix.md`）之后剩余的面，编号 N35-1 至 N35-4。
 
 ## 决策记录
 
@@ -56,6 +56,36 @@
 
 - 四个待办项的锚点与本批实测数字均来自本会话的命令输出（`gh api repos/hexo-ai/sia`、`governance-lint --budget`、`config/regression-matrix.json`、路由清单）。
 - `node scripts/maintenance/gen-doc-indexes.mjs --write` 随批重建索引；`node scripts/merge-invariants.mjs --check` 通过。
+
+## 任务卡
+
+### 完成条件
+
+四条待办各自按其“验收判据”达成；未达成前不得改写状态。
+
+### 输入与来源
+
+全面复盘批的实测输出与 `config/regression-matrix.json`、`.github/workflows/product-tests.yml`、路由清单、`gh api repos/hexo-ai/sia` 的返回。
+
+### 工作流边界
+
+台账只登记不实施；实施走各自的批次并另立 spec。
+
+### 工具与副作用
+
+只读查询（`gh api`、`governance-lint`、路由清单）；无写入副作用。
+
+### 结果与证据
+
+每条的“实测”字段即证据；实施后的结果回填到对应批次的 spec，不回写本台账的锚点。
+
+### 异常与恢复
+
+条目长期无法达成时显式归档并写明原因，不无限顺延。
+
+### 验收反例
+
+把一条未达成的待办改成“已完成”：下一位接手者按验收判据复跑必须能当场发现。
 
 ## 设计文档影响
 
