@@ -47,7 +47,7 @@
 - 锚点：主规格「验证」第 4 项；`docs/manuals/aistudio-operations-reference.md` 3.4 节。
 - 根因层：验证时 IDE 正占用真实数据目录，不能对它启动第二个引擎。已有依据是钥匙串条目存在（只读查询）与账户名按路径哈希匹配的源码逻辑。
 - 验收判据：合并后在主检出拉起一次 `zcode:serve`，确认端口监听、健康探测通过，然后停止并回填。
-- 状态：本批合并后处理。
+- 状态：**已实测（2026-11-24 N34 清偿批）**——真实主目录（HOME＋`~/.zcode` 数据、走系统钥匙串）下，引擎服务 5 秒在 127.0.0.1:3030 监听就位（`http://127.0.0.1:3030`），停止后端口即释放；ZCode.app 桌面版同时在跑互不冲突。快照：`/tmp/z400-scripts/real-dir.txt` 指向的探针日志。
 
 ### N34-8 kanban 真 CLI 回归测试的可用性探针会静默跳过
 - 锚点：`custom/server/services/hermes/__tests__/kanban-title-edit.regression-1.test.ts:14,31`（`spawnSync('hermes', ['--version'], { timeout: 10_000 })` 非零即整组跳过）。
