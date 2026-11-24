@@ -41,7 +41,7 @@
 - 锚点：`docs/manuals/aistudio-design-document-guide.md:5`、`docs/manuals/aistudio-feature-inventory.md:5`、`docs/manuals/aistudio-operations-reference.md:5`、`docs/manuals/aistudio-design-document-index.md:4` 仍写快照基线 `3690ceba3`；设计导读引用的 `RELEASE-NOTES.md:55`、`RELEASE-MANIFEST.json:18,…` 等行号已随多次改写漂移；`docs/windows-x64-setup.md:5-12,81`（整体 1.0.18-overlay、agent teams v0.23.0-team.2、底座 0.23.0、yuan v2.100.1、Ycode 3.17.2）与 `scripts/offline-template/install/README-windows.md:3,28,31`（1.0.15-overlay、v0.23.1-team.2 等）的当前版本表停在几版之前。
 - 根因层：这些头注与版本表只在特定批次手工刷新，没有守门；本批在发版说明顶部新增条目后行号又移了一次。两份 Windows 说明的陈旧由独立审查发现（往期发版遗漏，相关测试只断言文件非空）。
 - 验收判据：下次文档批统一刷新为当前提交与当前载体值（Windows 说明里技能数量等需要重新核实的数字一并核对），并把行号锚点改为节标题锚或补一道锚点守门。
-- 状态：open（low，顺延到下一文档批）。
+- 状态：**已修复（2026-11-24 N34 清偿批，提交 7a9f9259f）**——四份手册头注、导读行号锚改节名锚、两份 Windows 说明版本表刷新为当前载体值。
 
 ### N34-7 真实环境下宿主引擎拉起未实测
 - 锚点：主规格「验证」第 4 项；`docs/manuals/aistudio-operations-reference.md` 3.4 节。
@@ -94,7 +94,7 @@
 
 ## 计数
 
-待办 3（例行 2＝N34-3/7；low 1＝N34-6）｜awaiting-user 2（N34-5、N34-12）｜open 1（N34-13）｜已修复待合并 6（N34-1/2/8/9/10/11）＋N34-4 已跑通｜已裁定不处置 4。
+待办 1（N34-3 差量对照，交用户裁决）｜awaiting-user 2（N34-5、N34-12，清理与否待用户明示）｜open 1（N34-13 引擎拒后不应答握手）｜已修复 8（N34-1/2/6/7/8/9/10/11，合并后随主干生效）＋N34-4 已跑通｜已裁定不处置 4。
 
 ## 变更
 
