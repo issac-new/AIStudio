@@ -750,6 +750,11 @@ router.post('/matrix-offboard/precheck', async (ctx) => {
 
 router.post('/matrix-offboard', async (ctx) => {
   if (superAdminDenied(ctx)) return
+  // 离职副作用（写工单并 git commit、停 Matrix 双账号、联动停用自然人、审计留痕）只允许
+  // 登录身份触发：未登录时 decisionActor 已写 401，必须当场 return——不得带着空 actor
+  // 继续执行后用 ctx.body 覆盖 401 响应体（2026-11-25 批一审查 Critical 修复）。
+  const actor = decisionActor(ctx)
+  if (!actor) return
   const b = ctx.request.body as Record<string, string | string[]>
   for (const k of ['localName', 'handoverTo', 'adminToken', 'homeserverUrl']) {
     if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
@@ -759,7 +764,7 @@ router.post('/matrix-offboard', async (ctx) => {
     taskIds: Array.isArray(b.taskIds) ? (b.taskIds as string[]) : [],
     reason: String(b.reason || ''), adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
     handoverProfile: b.handoverProfile ? String(b.handoverProfile) : undefined,
-    actor: decisionActor(ctx)?.username ?? '',
+    actor: actor.username,
   }) } catch (e) {
     // 仍有在岗执行单元：409 + 机读错误码与名单（Task 7；界面据此引导先退役）
     if (e instanceof OffboardBlockedError) {
