@@ -1,14 +1,16 @@
 // overlay/scripts/zcode-engine.mjs
 // zcode 引擎服务接入脚本（2026-09-23 源码底座轮 R2）。
 // 用法:
-//   node scripts/zcode-engine.mjs ensure   # 依赖+构建产物就绪(缺失或落后于基线才补)
+//   node scripts/zcode-engine.mjs ensure   # 依赖+构建产物就绪(依赖以锁文件为准,产物缺失才补)
 //   node scripts/zcode-engine.mjs serve    # ensure + 前台拉起引擎服务(:3030)
 //
 // 语义:
-//   - ensure 幂等:node_modules 缺失才安装;构建产物缺失、或落后于当前基线与补丁
-//     (产物旁 .aistudio-stamp 记录的构建指纹不一致)才重建,已就绪时秒回。
-//     2026-11-24 实录:此前只看产物在不在——vendor/zcode 换血到 4.0 后,主检出的
-//     引擎服务端产物仍停在 11-11 的 3.18.0 构建,zcode:serve 会原样拉起旧引擎。
+//   - ensure 幂等:依赖以锁文件为准——node_modules 在、且其中记录的指纹与当前
+//     pnpm-lock.yaml 的摘要一致才算就绪;否则补装。构建产物缺失、或落后于当前基线与
+//    补丁(产物旁 .aistudio-stamp 的构建指纹=vendor/zcode 在 HEAD 的树对象+zcode-patches
+//     逐文件内容,不一致即重建)才构建。两者都就绪时秒回(2026-11-24 实录:此前只看产物
+//     在不在——vendor/zcode 换血到 4.0 后,主检出的引擎服务端产物仍停在 11-11 的 3.18.0
+//     构建,zcode:serve 会原样拉起旧引擎)。
 //   - pnpm install 必须 ELECTRON_SKIP_BINARY_DOWNLOAD=1(否则 electron
 //     postinstall 挂死 GitHub 源,R1 实证);桌面构建需求另行全量装。
 //   - serve 前台托管(stdio inherit,Ctrl+C 传导);:3030 已被监听视为
@@ -34,8 +36,7 @@ const STAMP_NAME = '.aistudio-stamp';
 
 /**
  * 构建指纹:vendor/zcode 在 HEAD 的树对象(基线换血即变)＋zcode 补丁序列逐文件内容
- * (补丁改了、 reordered 即变)。纯函数,便于守门;两个产物(服务端、分叉 CLI)共用。
- * @param {{ treeOid: string | null, patches: Array<[string, string]> }} input
+ * (补丁改了、reordered 即变)。纯函数,便于守门;两个产物(服务端、分叉 CLI)共用。
  */
 export function sourceFingerprint({ treeOid, patches }) {
   const h = createHash('sha256');
@@ -46,7 +47,7 @@ export function sourceFingerprint({ treeOid, patches }) {
   return h.digest('hex');
 }
 
-/** 产物是否与指纹一致:产物在位且旁边戳记逐字相同。戳记缺失(被干净构建清掉等)视为落后。 */
+/** 产物是否与指纹一致:产物在位且旁边戳记逐字相同。戳记缺失视为落后。 */
 export function isBuildFresh(artifactPath, stampPath, fingerprint, exists = existsSync, read = readFileSync) {
   if (!exists(artifactPath) || !exists(stampPath)) return false;
   try {
@@ -56,7 +57,7 @@ export function isBuildFresh(artifactPath, stampPath, fingerprint, exists = exis
   }
 }
 
-/** zcode 根在仓内时取 HEAD 下该目录的树对象;仓外树或无 git(源码包解包树)返回 null。 */
+/** zcode 根在仓内时取 HEAD 下该目录的树对象;仓外树或无 git 返回 null。 */
 function baselineTreeOid() {
   const rel = relative(overlayRoot, zcodeRoot);
   if (!rel || rel.startsWith('..')) return null;
@@ -64,9 +65,12 @@ function baselineTreeOid() {
   return r.status === 0 ? r.stdout.trim() : null;
 }
 
-/** zcode 补丁序列(series 剥注释与空行)→ [补丁名, 补丁正文];与 inject.mjs readZcodeSeries 同目录口径。 */
+/** zcode 补丁序列(series 剥注释与空行)→ [补丁名, 补丁正文]。 */
 function zcodePatchTexts() {
-  const dir = process.env.OVERLAY_ZCODE_PATCH_DIR?.trim();
+  // 测试可注入补丁序列来源：夹具的 zcode 根在仓外，拿不到仓内序列；
+  // 缺省取仓内 zcode-patches/（与 inject.mjs 同目录口径）。
+  const dir = process.env.AISTUDIO_ZCODE_PATCHES_FOR_TESTS?.trim()
+    ?? process.env.OVERLAY_ZCODE_PATCH_DIR?.trim();
   const patchDir = dir ? resolve(dir) : resolve(overlayRoot, 'zcode-patches');
   const seriesPath = resolve(patchDir, 'series');
   if (!existsSync(seriesPath)) return [];
@@ -108,12 +112,50 @@ async function waitForPort(port, timeoutMs) {
   return false;
 }
 
+// allowFailure：命令失败时不退出进程，返回 false，由调用方决定是否带着现有产物继续。
 function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: zcodeRoot, ...opts });
+  const { allowFailure = false, ...spawnOpts } = opts;
+  const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: zcodeRoot, ...spawnOpts });
   if (r.status !== 0) {
     console.error(`[zcode-engine] 命令失败(exit ${r.status}): ${cmd} ${args.join(' ')}`);
+    if (allowFailure) return false;
     process.exit(1);
   }
+  return true;
+}
+
+const lockfile = resolve(zcodeRoot, 'pnpm-lock.yaml');
+// 依赖就绪指纹：记上一次装依赖时锁文件的摘要，放在 node_modules 里与它同生同灭。
+const lockStamp = resolve(zcodeRoot, 'node_modules', '.aistudio-lock-sha256');
+
+function lockfileDigest() {
+  return createHash('sha256').update(readFileSync(lockfile)).digest('hex');
+}
+
+// 依赖是否就绪以锁文件为准。只看目录在不在的旧判据认不出锁文件变化（基线升级、
+// zcode-patch 013 一类的依赖安全刷新），已有安装会一直带着旧依赖跑。
+// 指纹文件缺失按“未知”处理：补装一次由 pnpm 判定，锁文件没变时只多花几秒。
+// 锁文件本身不存在时退回只看目录——没有锁文件就无法比对，也不该用冻结模式安装。
+function missingDependencies() {
+  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) return 'node_modules 缺失';
+  if (!existsSync(lockfile)) return null;
+  if (!existsSync(lockStamp)) return '依赖就绪指纹缺失';
+  if (readFileSync(lockStamp, 'utf8').trim() !== lockfileDigest()) return '锁文件已变化';
+  return null;
+}
+
+// 返回是否装成；装成才写指纹，失败则下次启动重试。
+function installDependencies(reason, tag) {
+  const frozen = existsSync(lockfile);
+  log(tag, `${reason},执行 pnpm install${frozen ? ' --frozen-lockfile' : ''}(跳过 electron 二进制)`);
+  const ok = run('pnpm', frozen ? ['install', '--frozen-lockfile', '--prefer-offline'] : ['install'],
+    { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' }, allowFailure: true });
+  if (ok && existsSync(lockfile)) {
+    writeFileSync(lockStamp, `${lockfileDigest()}\n`);
+    // 依赖目录被替换时，已在运行的引擎进程内存里还是旧模块：提示重启，不替调用方杀进程。
+    if (reason === '锁文件已变化') log(tag, '依赖已按新锁文件更新:正在运行的引擎要重启后才会用上新依赖');
+  }
+  return ok;
 }
 
 async function ensure() {
@@ -121,9 +163,14 @@ async function ensure() {
     console.error(`[zcode-engine] upstream/zcode 不存在: ${zcodeRoot} —— 先克隆(pin 见 zcode-foundation-design.md D1)`);
     process.exit(1);
   }
-  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) {
-    log('ensure', 'node_modules 缺失,执行 pnpm install(跳过 electron 二进制)');
-    run('pnpm', ['install'], { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  const reason = missingDependencies();
+  if (reason) {
+    const ok = installDependencies(reason, 'ensure');
+    // 目录整个缺失时装不上就是不可用，退出；只是锁文件变了而补装失败（多为离线）时，
+    // 带着现有依赖继续——指纹不写，下次启动重试。可用性优先，但日志说明依赖可能落后于锁文件。
+    if (!ok && !existsSync(resolve(zcodeRoot, 'node_modules'))) process.exit(1);
+    if (!ok) log('ensure', '依赖补装未完成:继续使用现有依赖(可能与锁文件不一致,联网后重试会自动补装)');
+    // 依赖补装失败不更新产物戳记：下次启动产物指纹不匹配会重建，与依赖状态一并收敛。
   }
   const fingerprint = currentFingerprint();
   const stampPath = resolve(zcodeRoot, 'packages/server/dist', STAMP_NAME);
@@ -170,9 +217,10 @@ async function serve() {
 const CLI_ENTRY = resolve(zcodeRoot, 'apps/zcode-cli/packages/cli/dist/zcode.cjs');
 
 async function ensureCli() {
-  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) {
-    log('install-cli', 'node_modules 缺失,执行 pnpm install(跳过 electron 二进制)');
-    run('pnpm', ['install'], { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  const reason = missingDependencies();
+  if (reason) {
+    const ok = installDependencies(reason, 'install-cli');
+    if (!ok && !existsSync(resolve(zcodeRoot, 'node_modules'))) process.exit(1);
   }
   const fingerprint = currentFingerprint();
   const stampPath = resolve(CLI_ENTRY, '..', STAMP_NAME);
