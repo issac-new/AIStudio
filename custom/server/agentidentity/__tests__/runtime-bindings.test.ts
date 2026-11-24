@@ -37,6 +37,12 @@ describe('normalizeRuntimeBindings：纯函数', () => {
     if (!bad.ok) expect(bad.problems.join()).toContain('matrixAccounts')
   })
 
+  it('未知键（如拼错的 agent）→ 拒绝并点名，不静默忽略', () => {
+    const bad = normalizeRuntimeBindings({ agent: ['zcode'] })
+    expect(bad.ok).toBe(false)
+    if (!bad.ok) expect(bad.problems.join()).toContain('agent')
+  })
+
   it('空数组或全空白不保留；两个数组都空 → 空绑定（调用方据此剔除该键）', () => {
     expect(normalizeRuntimeBindings({ agents: ['zcode'], matrixAccounts: [] }))
       .toEqual({ ok: true, bindings: { agents: ['zcode'] } })

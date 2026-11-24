@@ -185,6 +185,13 @@ export function normalizeRuntimeBindings(
   }
   const problems: string[] = []
   const bindings: RuntimeBindings = {}
+  // 未知键（多为拼错的合法键）显式拒绝，不静默忽略——绑定是派单门的开关，
+  // 拼错被当成未绑定会让操作者误以为已生效，门实际不拦。
+  for (const key of Object.keys(raw)) {
+    if (!(BINDING_KEYS as readonly string[]).includes(key)) {
+      problems.push(`runtimeBindings 含未知键：${key}（合法键：agents、matrixAccounts）`)
+    }
+  }
   for (const key of BINDING_KEYS) {
     const value = (raw as Record<string, unknown>)[key]
     if (value === undefined) continue
