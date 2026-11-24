@@ -52,8 +52,9 @@ import { readdirSync } from 'fs'
 import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
-import { activePersonIds } from '../agentidentity/people'
+import { activePersonIds, listPeople } from '../agentidentity/people'
 import { getIdentity, rosterStatus } from '../agentidentity/agent-identity'
+import { assessUnitDispatchGate } from '../agentidentity/dispatch-gate'
 import { appendContributionReview, listContributionReviews } from '../agentidentity/judgments'
 import type { ContributionReviewInput, ContributionReviewRecord } from '../agentidentity/judgments'
 import { listCandidates, listInjectionLog } from '../expcandidates/exp-store'
@@ -495,7 +496,8 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
       })
       return
     }
-    // 约束校验（T1 validateTeam：owner/verifier 到位、person active、agent roster complete、高风险分离）。
+    // 约束校验（T1 validateTeam：owner/verifier 到位、person active、agent roster complete、高风险分离；
+    // 2026-11-24 数字员工批一追加 agent 派单门 unitGateOk——已绑定单元不可接单时拒）。
     // agent 名册判据走 agentidentity 真实现（D5：rosterStatus==='complete'）；名册读失败按
     // fail-closed 记 blocked（不能证明齐备即不齐备）。
     const rosterOk = (agentId: string): boolean => {
@@ -506,7 +508,31 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         return false
       }
     }
-    const validation = validateTeam(contract, { members: body.members }, activePersonIds(), rosterOk)
+    // 派单门（2026-11-24 数字员工批一）：已绑定 Agent 成员除户口齐备外，门不得为 block
+    // （未准入/变更中/已退役/责任卡失效）。未绑定身份（门读数 skipped）沿用现判据；
+    // 台账不可读（unknown）不拦（fail-soft 口径同派单链路）；求值异常按不可接单
+    // （与 rosterOk 的 fail-closed 同口径——不能证明可接单即不可接单）。
+    const unitGateOk = (agentId: string): boolean => {
+      try {
+        const identity = getIdentity(agentId)
+        if (!identity) return true // 身份不存在由 rosterOk 拦（blocked），门不重复评
+        const agents = identity.runtimeBindings?.agents ?? []
+        const matrixAccounts = identity.runtimeBindings?.matrixAccounts ?? []
+        const binding = agents[0] ?? matrixAccounts[0]
+        if (!binding) return true // 未绑定运行目标：门读数 skipped，只查户口齐备
+        const verdict = assessUnitDispatchGate({
+          target: binding,
+          targetKind: agents[0] ? 'agent' : 'matrix-account',
+          identities: [identity],
+          people: listPeople(),
+          mode: 'on',
+        })
+        return verdict.decision === 'pass' || verdict.decision === 'unknown'
+      } catch {
+        return false
+      }
+    }
+    const validation = validateTeam(contract, { members: body.members }, activePersonIds(), rosterOk, unitGateOk)
     if (validation.problems.length) {
       fail(ctx, 422, '团队约束校验失败', { code: 'invalid_input', problems: validation.problems })
       return

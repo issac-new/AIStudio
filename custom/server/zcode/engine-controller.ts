@@ -28,7 +28,7 @@ import Router from '@koa/router'
 import type { Context } from 'koa'
 import { ensureEngineProject, probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
-import { MentionDispatchService } from '../zcode/mention-dispatch'
+import { MentionDispatchService, collectUnitGate, parseMentions } from '../zcode/mention-dispatch'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
 import { ControlBaseUnavailableError, fetchControlBase, sendCasCommand, type ControlBase } from '../zcode/cas-command'
@@ -453,9 +453,11 @@ router.post('/mention/preview', async (ctx) => {
   const { willEnqueueRun } = await import('../zcode/will-enqueue')
   // 可达性事实用真实探测（与写路径同源：引擎离线如实回 runtime_offline，不再硬编码在线）；
   // 判定事实走服务只读快照 planFacts()（P-A(d)），不再反射私有字段。
+  // 预演没有任务上下文（能力读数不评），但派单门必须评：否则预演显示「将起跑」而
+  // 写路径被门拦（预演/写路径同源语义，数字员工批一 Task 4 对「预演控制器不改」的修正）。
   const engineOnline = await probeZCodeEngine().catch(() => false)
   const previews = willEnqueueRun(text, workspacePath, {
-    ...service.planFacts(),
+    ...service.planFacts({ unitGate: collectUnitGate(parseMentions(text)) }),
     mentionAuthor: callerOf(ctx)?.username, // 与写路径同源的 per-request 发起者（P-C(d)）
     engineOnline,
   })

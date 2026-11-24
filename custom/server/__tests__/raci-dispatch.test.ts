@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtemp, rm } from 'fs/promises'
+import { mkdtemp, rm, readFile, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { evaluateRules, BlockPolicyCategory, RULE_APPROVER_UNIQUENESS } from '../loop/engine/architecture-engine'
 import { RACIDispatchService } from '../services/kanban/raci-dispatch'
+import { getUserMemberships } from '../matrix/simulation'
 
 let dedupePath = ''
 async function freshDedupePath(): Promise<string> {
@@ -184,5 +185,64 @@ describe('RACI Dispatch', () => {
     expect(second.deduped).toBe(true)
     expect(second.roomId).toBe(first.roomId)
     await rm(dedupePath, { force: true }).catch(() => {})
+  })
+
+  // 数字员工批一 Task 4：责任人过执行单元派单门。身份 u-ret 绑定 @ret-agent:localhost、
+  // 阶段 retired；AGENT_IDENTITY_STORE 指到临时目录（不读开发机真实台账），经真实门判定。
+  describe('派单门（数字员工批一）', () => {
+    let idDir = ''
+    beforeEach(async () => {
+      idDir = await mkdtemp(join(tmpdir(), 'raci-gate-id-'))
+      process.env.AGENT_IDENTITY_STORE = idDir
+      const retiredUnit = {
+        id: 'aid-ret', name: 'u-ret', kind: 'agent', owner: 'alice', toolAllowlist: [],
+        credentials: [], delegations: [], createdAt: 1, updatedAt: 1,
+        runtimeBindings: { matrixAccounts: ['@ret-agent:localhost'] },
+        responsibilityCard: {
+          deliveryStandard: '可复现', riskTier: 'medium', primaryOwner: 'alice', escalation: ['e'],
+          pauseConditions: ['p'], takerOver: 'bob', testCaseVersion: 'tc-1',
+          costBudget: { limit: 1, unit: 'CNY' }, maintainer: 'alice', deploymentLocation: 'x',
+        },
+        lifecycle: { stage: 'retired', history: [] },
+      }
+      const personRow = (pid: string) => ({ id: pid, name: pid, emails: [], active: true, source: 'manual', createdAt: 1 })
+      await writeFile(join(idDir, 'identities.json'), JSON.stringify({ identities: [retiredUnit], nextSeq: 2, nextDelegationSeq: 1 }))
+      await writeFile(join(idDir, 'people.json'), JSON.stringify({ people: [personRow('alice'), personRow('bob')], nextSeq: 3 }))
+    })
+    afterEach(async () => {
+      delete process.env.AGENT_IDENTITY_STORE
+      await rm(idDir, { recursive: true, force: true })
+    })
+
+    const gateTask = (id: string, responsible: string[]) => ({
+      id,
+      title: 'Gate Task',
+      body: JSON.stringify({ raci: { responsible, approver: [], consulted: [], informed: [] } }),
+      status: 'todo',
+      assignee: null,
+    })
+
+    it('责任人账号全被派单门拦截 → 抛错，不建房、不写去重记录', async () => {
+      const path = await freshDedupePath()
+      await expect(RACIDispatchService.dispatch(gateTask('task-gate-all', ['@ret-agent:localhost']) as any, path))
+        .rejects.toThrow(/unit_retired/)
+      await expect(readFile(path, 'utf-8')).rejects.toMatchObject({ code: 'ENOENT' })
+      // 被拦账号没进房间（模拟通道成员关系为空）
+      expect(getUserMemberships('@ret-agent:localhost')).toHaveLength(0)
+    })
+
+    it('部分被拦 → 未被拦的账号照常派发，返回 ok 与 !sim- 房间号', async () => {
+      const result = await RACIDispatchService.dispatch(
+        gateTask('task-gate-partial', ['@ret-agent:localhost', '@ok-g2:localhost']) as any,
+        await freshDedupePath(),
+      )
+      expect(result.ok).toBe(true)
+      expect(result.roomId).toMatch(/^!sim-/)
+      // 被拦账号没进房间；未被拦的账号在房内
+      expect(getUserMemberships('@ret-agent:localhost')).toHaveLength(0)
+      expect(getUserMemberships('@ok-g2:localhost')).toHaveLength(1)
+    })
+
+    // 未绑定账号 → 行为不变：既有「succeeds in simulation mode with valid RACI」用例覆盖
   })
 })

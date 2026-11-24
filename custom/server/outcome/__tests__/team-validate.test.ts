@@ -138,3 +138,19 @@ describe('validateTeam 负面全集', () => {
     expect(validateTeam(baseContract, team, active, rosterOk).problems.join()).toContain('结果责任人')
   })
 })
+
+// 数字员工批一 Task 4：第 5 参 unitGateOk（执行单元派单门）。传入时对 agent 成员追加
+// 「不可接单」校验（roster 齐备但门 block 仍拒）；不传行为不变。
+describe('validateTeam 派单门（数字员工批一）', () => {
+  it('传入 unitGateOk 时：roster 齐备但不可接单 → 拒并点名原因', () => {
+    const team = validTeam({ members: [member(), member({ subjectId: 'p-2', role: 'reviewer', responsibility: '独立复核' }),
+      member({ subjectKind: 'agent', subjectId: 'ag-ok-1', role: 'executor', responsibility: '执行' })] })
+    const r = validateTeam(baseContract, team, active, rosterOk, (id) => id !== 'ag-ok-1')
+    expect(r.problems.join()).toContain('ag-ok-1')
+    expect(r.problems.join()).toContain('不可接单')
+  })
+
+  it('不传 unitGateOk → 行为不变', () => {
+    expect(validateTeam(baseContract, validTeam({ members: [member(), member({ subjectId: 'p-2', role: 'reviewer', responsibility: '独立复核' }), member({ subjectKind: 'agent', subjectId: 'ag-ok-1', role: 'x', responsibility: 'y' })] }), active, rosterOk).problems).toEqual([])
+  })
+})

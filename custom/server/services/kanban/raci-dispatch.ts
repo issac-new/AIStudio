@@ -5,6 +5,8 @@
 // 通道：有 Matrix 凭据（gateway dotenv 五件套）走真实 client-server 建群+邀人
 // （room-invite-gap 根治，原先只进内存模拟）；无凭据回落内存模拟（测试/无网关环境）。
 // 约束：custom 树禁止 import upstream 模块（overlay 树内无该文件），任务对象用结构化类型承接。
+// 责任人准入（2026-11-24 数字员工批一）：建房前逐账号过执行单元派单门
+// （agentidentity/dispatch-gate），全被拦抛错、部分被拦剔除——未绑定账号行为不变。
 // 依赖：custom/server/matrix/gateway-env.ts（凭据/RACI 类型）+
 //       custom/server/matrix/raci-matrix.ts（真实 Matrix HTTP 面）+
 //       custom/server/matrix/simulation.ts（无凭据回落的内存模拟）。
@@ -33,6 +35,7 @@ import {
   type MatrixDispatchEnv,
 } from '../../matrix/raci-matrix'
 import { TASK_ASSIGN_EVENT_TYPE, buildAssignContent } from '../../matrix/task-protocol'
+import { assessUnitDispatchGate, readUnitGateFacts } from '../../agentidentity/dispatch-gate'
 import { underWebUi } from '../../lib/paths'
 
 /** 派发所需的最小任务结构（KanbanTask 的结构化子集） */
@@ -121,8 +124,20 @@ export class RACIDispatchService {
       return { ok: false, roomId: null, error: 'approver 最多 1 人' }
     }
 
+    // 责任人过执行单元派单门（2026-11-24 数字员工批一）：未准入/变更中/已退役/责任卡失效
+    // 的账号不接 RACI 派发。全部被拦 → 抛错（上游只看抛错），此时去重记录尚未写入；
+    // 部分被拦 → 剔除后继续并 warn。门读数采集异常不拦（fail-soft，与派单链路同口径）。
+    const gated = RACIDispatchService.filterGateBlocked(raci.responsible)
+    if (gated.blocked.length > 0) {
+      console.warn(`[raci-dispatch] 责任人被派单门拦截，已剔除：${gated.blocked.join('，')}`)
+    }
+    if (gated.responsible.length === 0) {
+      throw new Error(`RACI 派发被单元派单门拦截：${gated.blocked.join('，')}`)
+    }
+    const raciDispatch = { ...raci, responsible: gated.responsible }
+
     try {
-      const mode = await RACIDispatchService.dispatchToMatrix(task, raci)
+      const mode = await RACIDispatchService.dispatchToMatrix(task, raciDispatch)
       await recordDispatch(dedupePath, task.id, mode.roomId)
       // 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：matrix 派发成功
       // 按 body phase（缺省 assigned=pending）登记进 taskledger。fail-soft 不阻断。
@@ -139,6 +154,29 @@ export class RACIDispatchService {
         error: err instanceof Error ? err.message : 'Matrix 派发失败',
       }
     }
+  }
+
+  /**
+   * 责任人门过滤：账号形态可能是 Matrix 全形也可能是 profile 名，按两种形态
+   * （matrix-account / agent）各求一次，任一为 block 即拦。返回剔除后的名单与被拦明细
+   * （账号+原因）；门读数采集异常不拦（fail-soft），只 warn。
+   */
+  private static filterGateBlocked(accounts: string[]): { responsible: string[]; blocked: string[] } {
+    const responsible: string[] = []
+    const blocked: string[] = []
+    for (const account of accounts) {
+      try {
+        const asAccount = assessUnitDispatchGate(readUnitGateFacts(account, 'matrix-account'))
+        const asAgent = assessUnitDispatchGate(readUnitGateFacts(account, 'agent'))
+        const hit = [asAccount, asAgent].find((v) => v.decision === 'block')
+        if (hit) blocked.push(`${account}（${hit.reasons.join('；')}）`)
+        else responsible.push(account)
+      } catch (err) {
+        console.warn(`[raci-dispatch] 门读数采集异常（不拦截 ${account}）：${err instanceof Error ? err.message : String(err)}`)
+        responsible.push(account)
+      }
+    }
+    return { responsible, blocked }
   }
 
   /** 建群+邀人+发摘要：有 Matrix 凭据走真实 client-server（room-invite-gap 根治），
