@@ -1,18 +1,20 @@
 // overlay/scripts/zcode-engine.mjs
 // zcode 引擎服务接入脚本（2026-09-23 源码底座轮 R2）。
 // 用法:
-//   node scripts/zcode-engine.mjs ensure   # 依赖+构建产物就绪(缺失才补)
+//   node scripts/zcode-engine.mjs ensure   # 依赖+构建产物就绪(依赖以锁文件为准,产物缺失才补)
 //   node scripts/zcode-engine.mjs serve    # ensure + 前台拉起引擎服务(:3030)
 //
 // 语义:
-//   - ensure 幂等:node_modules 与 dist 产物任一缺失才执行安装/构建,
+//   - ensure 幂等:依赖以锁文件为准——node_modules 在、且其中记录的指纹与当前
+//     pnpm-lock.yaml 的摘要一致才算就绪;否则补装。dist 产物缺失才构建。
 //     已就绪时秒回(不重复 pnpm install)。
 //   - pnpm install 必须 ELECTRON_SKIP_BINARY_DOWNLOAD=1(否则 electron
 //     postinstall 挂死 GitHub 源,R1 实证);桌面构建需求另行全量装。
 //   - serve 前台托管(stdio inherit,Ctrl+C 传导);:3030 已被监听视为
 //     引擎已在跑,不重复拉起(幂等)。
 import { spawn, spawnSync } from 'child_process';
-import { existsSync } from 'fs';
+import { createHash } from 'crypto';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { createConnection } from 'net';
 import { resolve } from 'path';
 
@@ -46,12 +48,50 @@ async function waitForPort(port, timeoutMs) {
   return false;
 }
 
+// allowFailure：命令失败时不退出进程，返回 false，由调用方决定是否带着现有产物继续。
 function run(cmd, args, opts = {}) {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: zcodeRoot, ...opts });
+  const { allowFailure = false, ...spawnOpts } = opts;
+  const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: zcodeRoot, ...spawnOpts });
   if (r.status !== 0) {
     console.error(`[zcode-engine] 命令失败(exit ${r.status}): ${cmd} ${args.join(' ')}`);
+    if (allowFailure) return false;
     process.exit(1);
   }
+  return true;
+}
+
+const lockfile = resolve(zcodeRoot, 'pnpm-lock.yaml');
+// 依赖就绪指纹：记上一次装依赖时锁文件的摘要，放在 node_modules 里与它同生同灭。
+const lockStamp = resolve(zcodeRoot, 'node_modules', '.aistudio-lock-sha256');
+
+function lockfileDigest() {
+  return createHash('sha256').update(readFileSync(lockfile)).digest('hex');
+}
+
+// 依赖是否就绪以锁文件为准。只看目录在不在的旧判据认不出锁文件变化（基线升级、
+// zcode-patch 013 一类的依赖安全刷新），已有安装会一直带着旧依赖跑。
+// 指纹文件缺失按“未知”处理：补装一次由 pnpm 判定，锁文件没变时只多花几秒。
+// 锁文件本身不存在时退回只看目录——没有锁文件就无法比对，也不该用冻结模式安装。
+function missingDependencies() {
+  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) return 'node_modules 缺失';
+  if (!existsSync(lockfile)) return null;
+  if (!existsSync(lockStamp)) return '依赖就绪指纹缺失';
+  if (readFileSync(lockStamp, 'utf8').trim() !== lockfileDigest()) return '锁文件已变化';
+  return null;
+}
+
+// 返回是否装成；装成才写指纹，失败则下次启动重试。
+function installDependencies(reason, tag) {
+  const frozen = existsSync(lockfile);
+  log(tag, `${reason},执行 pnpm install${frozen ? ' --frozen-lockfile' : ''}(跳过 electron 二进制)`);
+  const ok = run('pnpm', frozen ? ['install', '--frozen-lockfile', '--prefer-offline'] : ['install'],
+    { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' }, allowFailure: true });
+  if (ok && existsSync(lockfile)) {
+    writeFileSync(lockStamp, `${lockfileDigest()}\n`);
+    // 依赖目录被替换时，已在运行的引擎进程内存里还是旧模块：提示重启，不替调用方杀进程。
+    if (reason === '锁文件已变化') log(tag, '依赖已按新锁文件更新:正在运行的引擎要重启后才会用上新依赖');
+  }
+  return ok;
 }
 
 async function ensure() {
@@ -59,9 +99,13 @@ async function ensure() {
     console.error(`[zcode-engine] upstream/zcode 不存在: ${zcodeRoot} —— 先克隆(pin 见 zcode-foundation-design.md D1)`);
     process.exit(1);
   }
-  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) {
-    log('ensure', 'node_modules 缺失,执行 pnpm install(跳过 electron 二进制)');
-    run('pnpm', ['install'], { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  const reason = missingDependencies();
+  if (reason) {
+    const ok = installDependencies(reason, 'ensure');
+    // 目录整个缺失时装不上就是不可用，退出；只是锁文件变了而补装失败（多为离线）时，
+    // 带着现有依赖继续——指纹不写，下次启动重试。可用性优先，但日志说明依赖可能落后于锁文件。
+    if (!ok && !existsSync(resolve(zcodeRoot, 'node_modules'))) process.exit(1);
+    if (!ok) log('ensure', '依赖补装未完成:继续使用现有依赖(可能与锁文件不一致,联网后重试会自动补装)');
   }
   if (!existsSync(serverEntry)) {
     log('ensure', 'packages/server 构建产物缺失,执行最小面构建');
@@ -103,9 +147,10 @@ async function serve() {
 const CLI_ENTRY = resolve(zcodeRoot, 'apps/zcode-cli/packages/cli/dist/zcode.cjs');
 
 async function ensureCli() {
-  if (!existsSync(resolve(zcodeRoot, 'node_modules'))) {
-    log('install-cli', 'node_modules 缺失,执行 pnpm install(跳过 electron 二进制)');
-    run('pnpm', ['install'], { env: { ...process.env, ELECTRON_SKIP_BINARY_DOWNLOAD: '1' } });
+  const reason = missingDependencies();
+  if (reason) {
+    const ok = installDependencies(reason, 'install-cli');
+    if (!ok && !existsSync(resolve(zcodeRoot, 'node_modules'))) process.exit(1);
   }
   if (existsSync(CLI_ENTRY)) {
     log('install-cli', '分叉 CLI 构建产物已就绪');
