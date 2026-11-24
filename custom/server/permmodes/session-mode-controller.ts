@@ -71,11 +71,13 @@ sessionModeRoutes.put('/:profileId', requirePlatformSuperAdmin, async (ctx) => {
           // switchCollaborationMode 是引擎的比对基线命令（N34-1）：baseRevision 取自引擎只读查询，
           // 时间戳须是毫秒数；取不到修订号时不发命令（发出去必被引擎拒）。
           let res: { status: string; reasonCode?: string }
+          // commandId 在闭包外固定（cas-command 契约：stale 重试不变，重发同 id）。
+          const commandId = uuidV7Like()
           try {
             res = await sendCasCommand(bridge.agent, {
               workspacePath, sessionId,
               build: (base) => ({
-                commandId: uuidV7Like(),
+                commandId,
                 clientId: bridge.clientId,
                 sessionId,
                 type: 'switchCollaborationMode',

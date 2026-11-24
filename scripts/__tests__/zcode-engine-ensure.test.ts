@@ -50,7 +50,6 @@ function fixture(withNodeModules: boolean) {
     PATH: `${bin}:${process.env.PATH ?? ''}`,
     OVERLAY_UPSTREAM_ROOT: upstream,
     AISTUDIO_ZCODE_PATCHES_FOR_TESTS: resolve(__dirname, '../../zcode-patches'),
-    DEBUG_FP: '1',
     // install-cli 会把 CLI 产物装到 $HOME/.hermes/ycode——测试里必须指向临时目录
     HOME: tmp,
     FAKE_PNPM_LOG: log,

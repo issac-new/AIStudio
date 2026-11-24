@@ -5,6 +5,7 @@
 //   sendConversationCommandV4；fragment 帧重组列 P2（首批只消费 complete 帧）。
 import { createHash } from 'crypto'
 import { basename } from 'path'
+import { realpathSync } from 'fs'
 import WebSocket from 'ws'
 import { VSBuffer, SocketProtocol, ChannelClient, Emitter, ProxyChannel } from './vendor/rpc/index'
 
@@ -220,11 +221,22 @@ export async function connectZCodeEngine(homeDir: string, opts: EngineBridgeOpti
  */
 const ensuring = new Map<string, Promise<string>>()
 
+/** 路径规范化后再匹配/登记：剥尾斜杠、解析符号链接（realpathSync.native 失败回退原串）。 */
+function normalizeWorkspacePath(workspacePath: string): string {
+  const trimmed = workspacePath.replace(/[/\\]+$/, '')
+  try {
+    return realpathSync.native(trimmed)
+  } catch {
+    return trimmed
+  }
+}
+
 export async function ensureEngineProject(project: Pick<ZcodeEngineProjectService, 'readProjects' | 'saveProject'>, workspacePath: string): Promise<string> {
-  let inflight = ensuring.get(workspacePath)
+  const normalized = normalizeWorkspacePath(workspacePath)
+  let inflight = ensuring.get(normalized)
   if (!inflight) {
-    inflight = ensureEngineProjectUncached(project, workspacePath).finally(() => ensuring.delete(workspacePath))
-    ensuring.set(workspacePath, inflight)
+    inflight = ensureEngineProjectUncached(project, normalized).finally(() => ensuring.delete(normalized))
+    ensuring.set(normalized, inflight)
   }
   return inflight
 }
@@ -236,13 +248,15 @@ async function ensureEngineProjectUncached(project: Pick<ZcodeEngineProjectServi
   }
   const projects = await project.readProjects({ includeDeleted: false })
   if (Array.isArray(projects)) {
-    const existing = projects.find((p) => !p.deleted && p.roots?.length === 1 && p.roots[0]?.rootPath === workspacePath)
+    const existing = projects.find((p) => !p.deleted && p.roots?.length === 1 && normalizeWorkspacePath(String(p.roots[0]?.rootPath ?? '')) === workspacePath)
     const found = projectIdOf(existing)
     if (found) return found
   }
   const saved = await project.saveProject({ roots: [workspacePath], defaultName: basename(workspacePath) || workspacePath })
   const id = projectIdOf(saved)
   if (!id) throw new Error('project.ensure-failed：引擎未返回项目标识')
+  // 新建留痕：该函数每次派单建会话都调用，项目随派单累积时此日志是排查锚点。
+  console.log(`[zcode] 引擎项目登记：新建「${basename(workspacePath) || workspacePath}」→ ${id}（root=${workspacePath}）`)
   return id
 }
 

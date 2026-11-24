@@ -347,7 +347,7 @@ router.post('/fork', async (ctx) => {
         payload: { target: { rowId, entityId } },
       }),
     }))
-    ctx.body = { ok: r.status === 'accepted', status: r.status ?? 'unknown', reasonCode: r.reasonCode }
+    ctx.body = { ok: r?.status === 'accepted', status: r?.status ?? 'unknown', reasonCode: r?.reasonCode }
   } catch (err) {
     if (err instanceof ControlBaseUnavailableError) {
       fail(ctx, 409, err.message, { extra: { reason: err.reason, reasonCode: err.reason, detail: err.message } })

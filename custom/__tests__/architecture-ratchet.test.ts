@@ -49,10 +49,10 @@ describe('架构棘轮：只许减少', () => {
     // 信封出口仍走 fail()/ok()；批一 874→989 同型先例。
     // 批四归因（2026-11-21）：1012→1014＝+2（decision-recorder 新 record 函数 Result 形状
     // 1 处＋kanban-resolution.test schema_missing 断言字面量 1 处；断言/注释计数为棘轮既定口径）。
-    // 批五归因（2026-11-24 N34 清偿批）：1014→1019＝+5——custom/server/AGENTS.md 规则说明
-    // 3 处（K19 文字自身）＋测试辅助 __tests__/helpers/engine-command-validator.ts 2 处
-    // （parseCommandEnvelope 的 Result 联合形状，非 HTTP 响应面，与 result-contract 同族）。
-    // 无 HTTP 失败体新增。
+    // 批五归因（2026-11-24 N34 清偿批，独立审查复核）：1014→1019＝+5——测试辅助
+    // __tests__/helpers/engine-command-validator.ts 2 处（parseCommandEnvelope 的 Result 联合
+    // 形状，非 HTTP 响应面）＋zcode-engine-controller.test.ts 断言字面量 3 处；断言计数为
+    // 棘轮既定口径。无 HTTP 失败体新增。
     expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1019)
   })
 
