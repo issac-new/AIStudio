@@ -54,7 +54,7 @@ import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds, listPeople } from '../agentidentity/people'
 import { getIdentity, rosterStatus } from '../agentidentity/agent-identity'
-import { assessUnitDispatchGate } from '../agentidentity/dispatch-gate'
+import { assessUnitDispatchGate, DISPATCH_GATE_MODE_ENV } from '../agentidentity/dispatch-gate'
 import { appendContributionReview, listContributionReviews } from '../agentidentity/judgments'
 import type { ContributionReviewInput, ContributionReviewRecord } from '../agentidentity/judgments'
 import { listCandidates, listInjectionLog } from '../expcandidates/exp-store'
@@ -512,6 +512,10 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
     // （未准入/变更中/已退役/责任卡失效）。未绑定身份（门读数 skipped）沿用现判据；
     // 台账不可读（unknown）不拦（fail-soft 口径同派单链路）；求值异常按不可接单
     // （与 rosterOk 的 fail-closed 同口径——不能证明可接单即不可接单）。
+    // 开关与派单链路同口径（2026-11-25 批一审查修复）：曾硬编码 mode:'on'，off 后已退役
+    // 绑定单元在派单链路放行、在本端点仍被拒——同一开关两个口径，违反规格 0.6
+    // 「off 等价于批一之前的行为」。mode 读 WORKUNIT_DISPATCH_GATE（与 readUnitGateFacts
+    // 同一环境变量）；off 时门读数 skipped（gate_off），与 pass/unknown 一样不拦。
     const unitGateOk = (agentId: string): boolean => {
       try {
         const identity = getIdentity(agentId)
@@ -520,14 +524,15 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
         const matrixAccounts = identity.runtimeBindings?.matrixAccounts ?? []
         const binding = agents[0] ?? matrixAccounts[0]
         if (!binding) return true // 未绑定运行目标：门读数 skipped，只查户口齐备
+        const mode = process.env[DISPATCH_GATE_MODE_ENV] === 'off' ? 'off' : 'on'
         const verdict = assessUnitDispatchGate({
           target: binding,
           targetKind: agents[0] ? 'agent' : 'matrix-account',
           identities: [identity],
           people: listPeople(),
-          mode: 'on',
+          mode,
         })
-        return verdict.decision === 'pass' || verdict.decision === 'unknown'
+        return verdict.decision !== 'block'
       } catch {
         return false
       }
