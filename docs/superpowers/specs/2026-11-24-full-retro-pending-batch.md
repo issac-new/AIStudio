@@ -50,6 +50,20 @@
 - 验收判据：核实合并不变量的真实拦截点后改写该句，只引用存在的入口。
 - 状态：open（low，文档漂移）。
 
+### N35-8 katex 低危通告：修复版超出上游声明的依赖范围
+- 锚点：`vendor/hermes-studio/package.json` 的直接依赖 katex（受影响范围 0.11.0 至 0.18.1，修复版 0.18.2）；通告 GHSA-238p-pmpm-9mq7（既有原型污染可绕过信任限制）；经 `@vscode/markdown-it-katex` 引入的同一问题在扫描里另计一条。
+- 根因层：上游基线声明的 katex 版本范围不含修复版，升级属于依赖升级而非补丁级更新，可能影响公式渲染。
+- 现状：低危；本批的安全扫描在 studio 生产依赖里报出（`npm audit --omit=dev`）。同一批报出的 follow-redirects 高危已由补丁 818 修复，见 `2026-11-24-follow-redirects-override.md`。
+- 验收判据：上游基线升级到 katex 不低于 0.18.2 的版本，或经上游验证后在本仓用 overrides 钉版本；复扫 katex 相关两条归零，公式渲染走查无回归。
+- 状态：open（low，随上游基线升级）。
+
+### N35-9 宿主 hermes 更新后不同步，真实 CLI 回归测试在本机失败
+- 锚点：宿主 `hermes --version` 的两条警告（“此前有一次 `hermes update` 拉取了新代码但没有重启运行中的网关”“虚拟环境与锁文件不同步，请运行 `hermes pm install`”）；`hermes pm doctor` 报 `python: realized bytes do not match recorded digest`；受影响的用例 `custom/server/services/hermes/__tests__/kanban-title-edit.regression-1.test.ts`。
+- 根因层：宿主安装树被更新（或自动更新）后，依赖与网关进程没有跟上；不在仓内，本会话没有执行过 `hermes update` 或安装类命令。2026-11-24 18:55 同一用例在本机通过，20:03 失败。
+- 现状：宿主侧问题，可能是运行中的网关仍在用更新前的模块，需要宿主属主处置（`hermes pm install`、`hermes gateway restart`）。
+- 验收判据：宿主 `hermes --version` 不再有警告，`hermes pm doctor` 的 python 项通过，该用例在本机重新通过。
+- 状态：open（宿主侧，待属主处置）。
+
 ## 已裁定不处置
 
 - **Ycode `windowsInstallerCompile.test.ts` 首次运行超时**：首次运行要联网下载 NSIS 工具集，冷缓存叠加并发负载时超过 120 秒；缓存就位后独立复跑 26.5 秒通过。属环境因素，矩阵里该测试面的说明已写明。
@@ -60,13 +74,15 @@
 
 ## 计数
 
-待办 7（P2×1＝N35-1；awaiting-user 2＝N35-2、N35-5；dated 1＝N35-3；已到期 1＝N35-4；low 2＝N35-6、N35-7）｜已裁定不处置 5。
+待办 9（P2×1＝N35-1；awaiting-user 2＝N35-2、N35-5；dated 1＝N35-3；已到期 1＝N35-4；low 3＝N35-6、N35-7、N35-8；宿主侧 1＝N35-9）｜已裁定不处置 5。
 
 ## 变更
 
 1. 立本台账：收敛全面复盘批（`2026-11-23-full-retro-regression-matrix.md`）之后剩余的面，编号 N35-1 至 N35-5。
 2. 全量档复跑中新增 N35-5（降标守卫对断言替换的判定策略）。
-3. 合入 main 之后新增 N35-6（注入干跑在已注入的树上失败且不提示原因）与 N35-7（仓规引用不存在的脚本）。另：主 spec 的状态行仍为 in_progress——改动该 spec 的提交必须同时带上设计正本的修订（L2 design-sync），仅改状态行的提交被拦下，留待下次合法触及设计正本的批次顺带更新。
+3. 合入 main 之后新增 N35-6（注入干跑在已注入的树上失败且不提示原因）与 N35-7（仓规引用不存在的脚本）。
+4. 安全补测（依赖漏洞扫描）新增 N35-8（katex 低危，随上游基线升级）；同一扫描里的 follow-redirects 高危当批修复，见 `2026-11-24-follow-redirects-override.md`。
+5. 依赖修复批验证时新增 N35-9（宿主 hermes 更新后不同步）。另：主 spec 的状态行仍为 in_progress——改动该 spec 的提交必须同时带上设计正本的修订（L2 design-sync），仅改状态行的提交被拦下，留待下次合法触及设计正本的批次顺带更新。
 
 ## 决策记录
 
