@@ -42,14 +42,18 @@ describe('架构棘轮：只许减少', () => {
     expect(n, `新增了直接 ctx.body 赋值——请改用 custom/server/lib/http.ts（当前 ${n}）`).toBeLessThanOrEqual(1193)
   })
 
-  it('K19 `ok: false` 字面量不超过 1014 处（新失败体请用 fail()）', () => {
+  it('K19 `ok: false` 字面量不超过 1019 处（新失败体请用 fail()）', () => {
     const n = grepCount('ok:\\s*false', ['custom/server'])
     // 批三归因（2026-11-21）：996→1012＝+16，全部为纯函数 Result 形状（agenda.ts runSource
     // 三处、judgments/team 约束校验、outcome-controller 迁移助手等内部 result 联合），HTTP
     // 信封出口仍走 fail()/ok()；批一 874→989 同型先例。
     // 批四归因（2026-11-21）：1012→1014＝+2（decision-recorder 新 record 函数 Result 形状
     // 1 处＋kanban-resolution.test schema_missing 断言字面量 1 处；断言/注释计数为棘轮既定口径）。
-    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1014)
+    // 批五归因（2026-11-24 N34 清偿批）：1014→1019＝+5——custom/server/AGENTS.md 规则说明
+    // 3 处（K19 文字自身）＋测试辅助 __tests__/helpers/engine-command-validator.ts 2 处
+    // （parseCommandEnvelope 的 Result 联合形状，非 HTTP 响应面，与 result-contract 同族）。
+    // 无 HTTP 失败体新增。
+    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1019)
   })
 
   // K19 基线 874→989（2026-11-20 收口裁决，decisions.jsonl 同日留痕）：+115 全部由
