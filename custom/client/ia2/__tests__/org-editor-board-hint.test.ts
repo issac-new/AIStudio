@@ -14,6 +14,11 @@ const mockRegistry = vi.hoisted(() => ({
 }))
 vi.mock('@/custom/governance/api/adminRegistry', () => mockRegistry)
 vi.mock('../../matrix-server-info', () => ({ fetchMatrixServerInfo: vi.fn().mockResolvedValue({ homeserverUrl: 'https://x' }) }))
+// 离职向导（批一 Task 10）：前置检查走通用 request；改派/取卡/指派对象列表走看板客户端
+const mockClient = vi.hoisted(() => ({ request: vi.fn() }))
+vi.mock('@/api/client', () => mockClient)
+const mockKanban = vi.hoisted(() => ({ getTask: vi.fn(), reassignTask: vi.fn(), getAssignees: vi.fn() }))
+vi.mock('@/api/hermes/kanban', () => mockKanban)
 
 import OrgEditor from '../components/gov/OrgEditor.vue'
 
@@ -64,5 +69,119 @@ describe('OrgEditor 板列说明条（P1-2）', () => {
     await approve.trigger('click')
     await flushPromises()
     expect(mockRegistry.resolveOrgCosign).toHaveBeenCalledWith('approve', '', '复核通过')
+  })
+})
+
+// 数字员工批一 Task 10：离职向导——前置检查（只读）→ 逐卡改派（不回收在跑任务）→ 离职；
+// 半完成状态（已改派但离职失败）提供「改回原指派对象」恢复入口。
+describe('OrgEditor 离职向导（批一 Task 10）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRegistry.fetchRegistry.mockResolvedValue({ commit: 'abc1234', markdown: MARKDOWN })
+    mockRegistry.fetchOrgCosign.mockResolvedValue({ pending: null })
+    mockKanban.getAssignees.mockResolvedValue([{ name: 'chen-agent', on_disk: true, counts: null }])
+  })
+
+  /** 打开离职向导、填齐第一步（含管理员令牌与接手执行单元）并执行 */
+  async function fillAndRun(w: ReturnType<typeof mount>, taskIds = 'T-1, T-2') {
+    await w.find('[data-testid="oed-offboard-0"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="wiz-handover"]').setValue('chen')
+    await w.find('[data-testid="wiz-tasks"]').setValue(taskIds)
+    await w.find('[data-testid="wiz-reason"]').setValue('个人原因')
+    await w.find('[data-testid="wiz-token"]').setValue('tok-admin')
+    await w.find('[data-testid="wiz-profile"]').setValue('chen-agent')
+    await w.find('[data-testid="wiz-next2"]').trigger('click')
+    await w.find('[data-testid="wiz-run"]').trigger('click')
+    await flushPromises()
+  }
+
+  it('前置检查被阻止 → 显示在岗执行单元名单，不发起改派与离职', async () => {
+    mockClient.request.mockResolvedValue({
+      ok: true,
+      blockedUnits: [{ identityId: 'aid-9', name: 'req-bot', stage: 'running' }],
+      person: { status: 'not-linked' },
+    })
+    const w = mount(OrgEditor)
+    await flushPromises()
+    await fillAndRun(w)
+
+    expect(mockClient.request).toHaveBeenCalledWith(
+      '/api/governance/matrix-offboard/precheck', expect.objectContaining({ method: 'POST' }))
+    // 被拦单元名如实展示；改派与离职均未发起
+    expect(w.find('[data-testid="offboard-wizard"]').text()).toContain('req-bot')
+    expect(mockKanban.reassignTask).not.toHaveBeenCalled()
+    expect(mockRegistry.offboardAccount).not.toHaveBeenCalled()
+  })
+
+  it('前置检查通过 → 先改派再离职，结果显示逐卡核实与自然人联动', async () => {
+    mockClient.request.mockResolvedValue({
+      ok: true, blockedUnits: [], person: { status: 'deactivated', personId: 'p-1' },
+    })
+    mockKanban.getTask.mockImplementation(async (id: string) => ({ task: { id, assignee: 'bella' }, latest_summary: null, comments: [], events: [], runs: [] }))
+    mockKanban.reassignTask.mockResolvedValue({ ok: true })
+    mockRegistry.offboardAccount.mockResolvedValue({
+      handoverCommit: 'h1', deactivated: ['@bella:x', '@bella-agent:x'], auditCommit: 'a1',
+      taskHandover: [
+        { taskId: 'T-1', before: null, after: 'chen-agent', reassigned: true, note: '已改派至 chen-agent（服务端核实）' },
+        { taskId: 'T-2', before: null, after: 'chen-agent', reassigned: true, note: '已改派至 chen-agent（服务端核实）' },
+      ],
+      person: { status: 'deactivated', personId: 'p-1' },
+    })
+    const w = mount(OrgEditor)
+    await flushPromises()
+    await fillAndRun(w)
+
+    // 调用顺序：precheck → reassign ×2 → offboard
+    expect(mockKanban.reassignTask).toHaveBeenCalledTimes(2)
+    const preOrder = mockClient.request.mock.invocationCallOrder[0]!
+    const offOrder = mockRegistry.offboardAccount.mock.invocationCallOrder[0]!
+    expect(preOrder).toBeLessThan(mockKanban.reassignTask.mock.invocationCallOrder[0]!)
+    expect(mockKanban.reassignTask.mock.invocationCallOrder[1]!).toBeLessThan(offOrder)
+    // 离职移交不回收在跑任务：改派调用不得带 reclaim
+    expect(mockKanban.reassignTask).toHaveBeenCalledWith('T-1', 'chen-agent', { reason: '离职移交' })
+    expect(mockKanban.reassignTask).toHaveBeenCalledWith('T-2', 'chen-agent', { reason: '离职移交' })
+    // 接手执行单元透传离职接口，供服务端逐卡只读核实
+    expect(mockRegistry.offboardAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ localName: 'bella', handoverProfile: 'chen-agent' }))
+    // 结果区：逐卡核实 + 自然人联动
+    const text = w.find('[data-testid="offboard-wizard"]').text()
+    expect(text).toContain('已改派至 chen-agent（服务端核实）')
+    expect(w.find('[data-testid="wiz-person"]').text()).toContain('p-1')
+  })
+
+  it('离职失败且已有改派 → 列出已改派的卡并提供改回入口', async () => {
+    mockClient.request.mockResolvedValue({ ok: true, blockedUnits: [], person: { status: 'not-linked' } })
+    mockKanban.getTask.mockResolvedValue({ task: { id: 'T-1', assignee: 'bella' }, latest_summary: null, comments: [], events: [], runs: [] })
+    mockKanban.reassignTask.mockResolvedValue({ ok: true })
+    mockRegistry.offboardAccount.mockRejectedValue(new Error('API Error 502: 停用失败'))
+    const w = mount(OrgEditor)
+    await flushPromises()
+    await fillAndRun(w, 'T-1')
+
+    // 半完成状态：列出已改派的卡与原指派对象，提供恢复入口
+    const revertBtn = w.find('[data-testid="wiz-revert-T-1"]')
+    expect(revertBtn.exists()).toBe(true)
+    expect(revertBtn.text()).toContain('改回原指派对象')
+    expect(w.find('[data-testid="wiz-revert"]').text()).toContain('bella')
+
+    await revertBtn.trigger('click')
+    await flushPromises()
+    // 改回=以原指派对象再调同一改派接口（同样不带 reclaim）
+    expect(mockKanban.reassignTask).toHaveBeenLastCalledWith('T-1', 'bella', { reason: '离职中止改回' })
+  })
+
+  it('管理员令牌为空时不能进入执行', async () => {
+    const w = mount(OrgEditor)
+    await flushPromises()
+    await w.find('[data-testid="oed-offboard-0"]').trigger('click')
+    await flushPromises()
+    await w.find('[data-testid="wiz-handover"]').setValue('chen')
+    // 令牌留空：进不了第二步（执行按钮在第二步）
+    expect((w.find('[data-testid="wiz-next2"]').element as HTMLButtonElement).disabled).toBe(true)
+    await w.find('[data-testid="wiz-token"]').setValue('tok-admin')
+    expect((w.find('[data-testid="wiz-next2"]').element as HTMLButtonElement).disabled).toBe(false)
+    await w.find('[data-testid="wiz-next2"]').trigger('click')
+    expect((w.find('[data-testid="wiz-run"]').element as HTMLButtonElement).disabled).toBe(false)
   })
 })
