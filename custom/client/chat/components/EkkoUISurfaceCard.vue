@@ -10,6 +10,7 @@ import EkkoUISurface from '../ekko-ui/EkkoUISurface.vue'
 import {
   EKKO_UI_LIMITS,
   extractSurfaceSpec,
+  isSafeExternalUrl,
   isSurfaceToolName,
   parseSurfaceToolResult,
   surfaceIdFor,
@@ -107,6 +108,22 @@ function onSubmit(value: { actionId: string; payload: EkkoUIJsonValue }): void {
 function onCancel(value: { actionId: string }): void {
   sendAction(value.actionId)
 }
+
+/** v2：界面发起新一轮对话——与键盘输入同一条用户消息通道（spec D3）。 */
+function onTurn(value: { text: string }): void {
+  if (!value.text.trim()) return
+  chatStore.sendMessage(value.text)
+}
+function onCopy(value: { text: string }): void {
+  void navigator.clipboard?.writeText(value.text).catch(() => {
+    submitError.value = '复制失败：剪贴板不可用'
+  })
+}
+function onOpenUrl(value: { url: string }): void {
+  // 协议出口已复验 scheme，此处再挡一次（纵深防御）
+  if (!isSafeExternalUrl(value.url)) return
+  window.open(value.url, '_blank', 'noopener,noreferrer')
+}
 </script>
 
 <template>
@@ -138,6 +155,9 @@ function onCancel(value: { actionId: string }): void {
           :surface-id="surfaceId"
           @submit="onSubmit"
           @cancel="onCancel"
+          @turn="onTurn"
+          @copy="onCopy"
+          @open-url="onOpenUrl"
         />
         <p v-if="status === 'expired'" class="ekko-surface-card-note">等待超时，Agent 已收到超时结果。</p>
         <p v-else-if="status === 'cancelled'" class="ekko-surface-card-note">已取消，未向 Agent 发送任何内容。</p>

@@ -16,6 +16,7 @@
    - 求值预算：单表达式最多 256 步、深度 32，超限返回 undefined（fail-soft，不抛进渲染）。
    - 新部件 8 个：`chart`（bar/line/pie，原生 SVG，不引依赖）、`image`（https/data:image 白名单）、`metric`（指标卡）、`tabs` + `tab-panel`（本地切换）、`steps`、`empty`、`descriptions`。目录 30 → 38。
    - 新动作 3 个：`surface.turn`（文本由状态模板拼成，发起新一轮对话）、`surface.copy`、`surface.open_url`（https/mailto 白名单，动态值在动作出口处复验）。
+   - 属性绑定包装：`{$state: path}` 与 `{$template: 文本}` 对字符串类属性放行（对齐渲染器既有行为——此前渲染器支持但校验器拒绝，属校验器滞后）；`{$expr: 表达式}` 为 v2 独有，校验期递归校验内层表达式。
    - 能力协商结构 `EkkoUICapabilities` + `clientCapabilities()`：protocolVersions 含 v1/v2，features 按批启用（本批 blocking=true，persistent/updates/logicRuntime/appBlock=false）。
    - v1 与 v2 双协议并存：v1 spec 按 v1 目录与表达式校验，行为逐字节不变；v2 独有节点/部件/动作在 v1 spec 中一律拒绝。
 2. **渲染器**（`EkkoUINode.vue`、`EkkoUISurface.vue`）：新部件映射原生 HTML + Pure Ink token（chart 为内联 SVG）；新动作 outcome 经 `turn`/`copy`/`open-url` 事件上抛；`map` 局部作用域经 provide 链路传递。

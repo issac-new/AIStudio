@@ -6,11 +6,13 @@
  * 已校验的声明映射到原生 HTML + Pure Ink token，不接收任意 CSS/HTML。
  * 输入通过 bind 两向绑定到 surface state；只有 submit/cancel 会跨边界。
  */
-import { computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { EKKO_UI_SURFACE_CONTEXT } from './context'
 import {
   evaluateExpression,
   getStateValue,
+  isSafeImageSrc,
+  type EkkoUIExpression,
   type EkkoUIJsonValue,
   type EkkoUINode,
   type EkkoUIStyle,
@@ -40,7 +42,7 @@ function truthy(value: EkkoUIJsonValue | undefined): boolean {
   return Object.keys(value).length > 0
 }
 
-/** 支持 { $state: 'path' } 与 { $template: '…{path}…' } 两种声明式取值。 */
+/** 支持 { $state: 'path' }、{ $template: '…{path}…' } 与 { $expr: 表达式 }（v2）三种声明式取值。 */
 function resolveValue(value: EkkoUIJsonValue | undefined, depth = 0): EkkoUIJsonValue | undefined {
   if (depth > 6 || value === undefined || value === null) return value
   if (Array.isArray(value)) return value.map(item => resolveValue(item, depth + 1) as EkkoUIJsonValue)
@@ -57,6 +59,9 @@ function resolveValue(value: EkkoUIJsonValue | undefined, depth = 0): EkkoUIJson
         const found = getStateValue(ctx.state, path)
         return found === undefined || found === null ? '' : String(found)
       })
+    }
+    if (keys.length === 1 && keys[0] === '$expr') {
+      return evaluateExpression((value as Record<string, unknown>).$expr as EkkoUIExpression, { state: ctx.state })
     }
     const out: Record<string, EkkoUIJsonValue> = {}
     for (const [key, item] of Object.entries(value)) out[key] = resolveValue(item, depth + 1) as EkkoUIJsonValue
@@ -201,6 +206,134 @@ function cell(row: EkkoUIJsonValue, key: string): string {
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
+
+// ---------------------------------------------------------------------------
+// v2 部件
+// ---------------------------------------------------------------------------
+
+interface ChartDatum { label: string; value: number }
+const chartData = computed<ChartDatum[]>(() => {
+  const raw = prop('data')
+  if (!Array.isArray(raw)) return []
+  return raw.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const record = item as Record<string, EkkoUIJsonValue>
+    const value = Number(record.value)
+    if (!Number.isFinite(value)) return []
+    return [{ label: String(record.label ?? ''), value }]
+  }).slice(0, 24)
+})
+const chartHeight = computed(() => Math.max(80, Math.min(480, Number(prop('height') || 160))))
+const chartMax = computed(() => Math.max(1e-9, ...chartData.value.map(datum => Math.abs(datum.value))))
+const chartBars = computed(() => {
+  const width = 600
+  const slot = width / Math.max(1, chartData.value.length)
+  const barWidth = Math.min(48, slot * 0.62)
+  return chartData.value.map((datum, index) => {
+    const height = (Math.abs(datum.value) / chartMax.value) * 78
+    return {
+      x: index * slot + (slot - barWidth) / 2,
+      y: 82 - height,
+      width: barWidth,
+      height,
+      label: datum.label,
+      labelX: index * slot + slot / 2,
+    }
+  })
+})
+const chartPoints = computed(() => {
+  const width = 600
+  const slot = width / Math.max(1, chartData.value.length)
+  return chartData.value.map((datum, index) => ({
+    x: index * slot + slot / 2,
+    y: 82 - (Math.abs(datum.value) / chartMax.value) * 78,
+    label: datum.label,
+  }))
+})
+const chartPolyline = computed(() => chartPoints.value.map(point => `${point.x},${point.y}`).join(' '))
+const chartSlices = computed(() => {
+  const total = chartData.value.reduce((sum, datum) => sum + Math.max(0, datum.value), 0)
+  let offset = 25
+  return chartData.value.map((datum, index) => {
+    const share = total > 0 ? (Math.max(0, datum.value) / total) * 100 : 0
+    const slice = { share, offset, label: datum.label, index }
+    offset += share
+    return slice
+  })
+})
+
+const imageSrc = computed(() => {
+  const raw = prop('src')
+  if (typeof raw !== 'string' || !isSafeImageSrc(raw)) return ''
+  return raw
+})
+const imageStyle = computed(() => {
+  const out: Record<string, string> = {}
+  const maxWidth = Number(prop('maxWidth'))
+  if (Number.isFinite(maxWidth) && maxWidth > 0) out.maxWidth = `${Math.min(1200, maxWidth)}px`
+  const ratio = prop('aspectRatio')
+  if (typeof ratio === 'string' && /^\d{1,3}:\d{1,3}$/.test(ratio)) out.aspectRatio = ratio.replace(':', ' / ')
+  return out
+})
+
+const metricValue = computed(() => {
+  const raw = prop('value')
+  if (raw === undefined || raw === null) return ''
+  if (typeof raw === 'object') return JSON.stringify(raw)
+  return String(raw)
+})
+
+interface TabPanel { id: string; label: string; node: EkkoUINode }
+const tabPanels = computed<TabPanel[]>(() => children.value
+  .filter(child => child.type === 'tab-panel')
+  .map(child => ({ id: child.id, label: String((child.props?.label as string) || child.id), node: child })))
+const localTab = ref('')
+const activeTab = computed(() => {
+  if (localTab.value && tabPanels.value.some(panel => panel.id === localTab.value)) return localTab.value
+  const fromState = getStateValue(ctx.state, `__tabs.${props.node.id}`)
+  if (typeof fromState === 'string' && tabPanels.value.some(panel => panel.id === fromState)) return fromState
+  return tabPanels.value[0]?.id || ''
+})
+const activePanel = computed(() => tabPanels.value.find(panel => panel.id === activeTab.value))
+function switchTab(panelId: string): void {
+  if (ctx.interactive) {
+    ctx.setValue(`__tabs.${props.node.id}`, panelId)
+  } else {
+    localTab.value = panelId
+  }
+}
+
+interface StepItem { title: string; description: string; status: 'done' | 'active' | 'todo' }
+const stepItems = computed<StepItem[]>(() => {
+  const raw = prop('items')
+  if (!Array.isArray(raw)) return []
+  return raw.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const record = item as Record<string, EkkoUIJsonValue>
+    const status = record.status === 'done' || record.status === 'active' ? record.status : 'todo'
+    return [{
+      title: String(record.title ?? ''),
+      description: record.description ? String(record.description) : '',
+      status: status as StepItem['status'],
+    }]
+  }).slice(0, 12)
+})
+
+interface DescriptionItem { label: string; value: string }
+const descriptionItems = computed<DescriptionItem[]>(() => {
+  const raw = prop('items')
+  if (!Array.isArray(raw)) return []
+  return raw.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return []
+    const record = item as Record<string, EkkoUIJsonValue>
+    const value = record.value
+    return [{
+      label: String(record.label ?? ''),
+      value: value === null || value === undefined ? '' : (typeof value === 'object' ? JSON.stringify(value) : String(value)),
+    }]
+  }).slice(0, 40)
+})
+const descriptionColumns = computed(() => Math.max(1, Math.min(3, Number(prop('columns') || 1))))
 </script>
 
 <template>
@@ -460,6 +593,155 @@ function cell(row: EkkoUIJsonValue, key: string): string {
         </tbody>
       </table>
     </div>
+
+    <!-- v2：图表（原生 SVG，视觉走 token） -->
+    <div v-else-if="def === 'chart'" class="ekko-node ekko-chart" :class="styleClass">
+      <svg
+        v-if="chartData.length"
+        :viewBox="`0 0 600 100`"
+        :style="{ height: `${chartHeight}px` }"
+        width="100%"
+        preserveAspectRatio="none"
+        role="img"
+      >
+        <template v-if="prop('kind') === 'bar'">
+          <rect
+            v-for="(bar, index) in chartBars"
+            :key="index"
+            class="ekko-chart-bar"
+            :x="bar.x"
+            :y="bar.y"
+            :width="bar.width"
+            :height="bar.height"
+            rx="2"
+          />
+          <text
+            v-for="(bar, index) in chartBars"
+            :key="`l${index}`"
+            class="ekko-chart-label"
+            data-chart-label
+            :x="bar.labelX"
+            y="97"
+            text-anchor="middle"
+          >{{ bar.label }}</text>
+        </template>
+        <template v-else-if="prop('kind') === 'line'">
+          <polyline class="ekko-chart-line" :points="chartPolyline" fill="none" />
+          <circle
+            v-for="(point, index) in chartPoints"
+            :key="index"
+            class="ekko-chart-dot"
+            :cx="point.x"
+            :cy="point.y"
+            r="2.4"
+          />
+          <text
+            v-for="(point, index) in chartPoints"
+            :key="`l${index}`"
+            class="ekko-chart-label"
+            data-chart-label
+            :x="point.x"
+            y="97"
+            text-anchor="middle"
+          >{{ point.label }}</text>
+        </template>
+        <template v-else>
+          <circle
+            v-for="slice in chartSlices"
+            :key="slice.index"
+            class="ekko-chart-slice"
+            :class="`slice-${slice.index % 4}`"
+            cx="50"
+            cy="50"
+            r="40"
+            pathLength="100"
+            :stroke-dasharray="`${slice.share} ${100 - slice.share}`"
+            :stroke-dashoffset="-slice.offset"
+          />
+          <text
+            v-for="slice in chartSlices"
+            :key="`l${slice.index}`"
+            class="ekko-chart-label"
+            data-chart-label
+            x="112"
+            :y="24 + slice.index * 14"
+          >{{ slice.label }}</text>
+        </template>
+      </svg>
+      <p v-else class="ekko-empty">（无数据）</p>
+    </div>
+
+    <!-- v2：图片（scheme 已在校验期与出口双重白名单） -->
+    <img
+      v-else-if="def === 'image' && imageSrc"
+      class="ekko-node ekko-image"
+      :class="styleClass"
+      :src="imageSrc"
+      :alt="prop('alt') ? String(prop('alt')) : ''"
+      :style="imageStyle"
+      loading="lazy"
+    >
+
+    <!-- v2：指标卡 -->
+    <div v-else-if="def === 'metric'" class="ekko-node ekko-metric" :class="styleClass">
+      <span class="ekko-metric-label">{{ prop('label') }}</span>
+      <span class="ekko-metric-line">
+        <span class="ekko-metric-value">{{ metricValue }}</span>
+        <span v-if="prop('unit')" class="ekko-metric-unit">{{ prop('unit') }}</span>
+        <span v-if="prop('trend')" class="ekko-metric-trend" :class="`trend-${prop('trend')}`" aria-hidden="true">
+          {{ prop('trend') === 'up' ? '▲' : prop('trend') === 'down' ? '▼' : '◆' }}
+        </span>
+      </span>
+    </div>
+
+    <!-- v2：标签页（本地切换，不跨边界） -->
+    <div v-else-if="def === 'tabs'" class="ekko-node ekko-tabs" :class="styleClass">
+      <div class="ekko-tabs-head" role="tablist">
+        <button
+          v-for="panel in tabPanels"
+          :key="panel.id"
+          type="button"
+          role="tab"
+          :aria-selected="panel.id === activeTab ? 'true' : 'false'"
+          :class="{ active: panel.id === activeTab }"
+          @click="switchTab(panel.id)"
+        >{{ panel.label }}</button>
+      </div>
+      <div v-if="activePanel" class="ekko-tabs-body" role="tabpanel">
+        <EkkoUINode v-for="child in activePanel.node.children || []" :key="child.id" :node="child" />
+      </div>
+    </div>
+    <template v-else-if="def === 'tab-panel'"><!-- 面板仅经 tabs 渲染 --></template>
+
+    <!-- v2：步骤条 -->
+    <ol v-else-if="def === 'steps'" class="ekko-node ekko-steps" :class="styleClass">
+      <li v-for="(step, index) in stepItems" :key="index" :class="`is-${step.status}`">
+        <span class="ekko-steps-dot" aria-hidden="true" />
+        <div class="ekko-steps-body">
+          <strong>{{ step.title }}</strong>
+          <small v-if="step.description">{{ step.description }}</small>
+        </div>
+      </li>
+    </ol>
+
+    <!-- v2：空态 -->
+    <div v-else-if="def === 'empty'" class="ekko-node ekko-empty-state" :class="styleClass">
+      <p class="ekko-empty-state-text">{{ text }}</p>
+      <small v-if="prop('hint')">{{ prop('hint') }}</small>
+    </div>
+
+    <!-- v2：键值描述列表 -->
+    <dl
+      v-else-if="def === 'descriptions'"
+      class="ekko-node ekko-descriptions"
+      :class="styleClass"
+      :style="{ gridTemplateColumns: `repeat(${descriptionColumns}, minmax(0, 1fr))` }"
+    >
+      <div v-for="(item, index) in descriptionItems" :key="index" class="ekko-descriptions-row">
+        <dt>{{ item.label }}</dt>
+        <dd>{{ item.value }}</dd>
+      </div>
+    </dl>
   </template>
 </template>
 
@@ -741,6 +1023,122 @@ h4.ekko-heading, h5.ekko-heading, h6.ekko-heading { font-size: 14px; }
 .tone-success { color: var(--success); }
 .tone-warning { color: var(--warning); }
 .tone-danger { color: var(--error); }
+
+/* v2：图表 */
+.ekko-chart { display: flex; flex-direction: column; gap: 4px; }
+.ekko-chart-bar { fill: var(--ekko-skin-accent, var(--accent-primary)); fill-opacity: 0.85; }
+.ekko-chart-line { stroke: var(--ekko-skin-accent, var(--accent-primary)); stroke-width: 2; }
+.ekko-chart-dot { fill: var(--ekko-skin-accent, var(--accent-primary)); }
+.ekko-chart-slice { fill: none; stroke-width: 22; }
+.ekko-chart-slice.slice-0 { stroke: var(--ekko-skin-accent, var(--accent-primary)); }
+.ekko-chart-slice.slice-1 { stroke: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 62%, var(--success)); }
+.ekko-chart-slice.slice-2 { stroke: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 45%, var(--warning)); }
+.ekko-chart-slice.slice-3 { stroke: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 55%, var(--text-muted)); }
+.ekko-chart-label { fill: var(--text-secondary); font-size: 6px; font-family: var(--font-mono, ui-monospace, monospace); }
+
+/* v2：图片 */
+.ekko-image {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-standard, 6px);
+  border: 1px solid color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 16%, var(--border-color));
+}
+
+/* v2：指标卡 */
+.ekko-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--ekko-space-sm, 8px) var(--ekko-space-md, 12px);
+  border-radius: var(--radius-standard, 6px);
+  border: 1px solid color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 22%, var(--border-color));
+  background: color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 6%, transparent);
+}
+.ekko-metric-label { font-size: 11px; color: var(--text-secondary); letter-spacing: 0.03em; }
+.ekko-metric-line { display: flex; align-items: baseline; gap: 6px; }
+.ekko-metric-value {
+  font-size: 22px;
+  font-weight: 650;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-primary);
+}
+.ekko-metric-unit { font-size: 12px; color: var(--text-secondary); }
+.ekko-metric-trend { font-size: 11px; }
+.ekko-metric-trend.trend-up { color: var(--success); }
+.ekko-metric-trend.trend-down { color: var(--error); }
+.ekko-metric-trend.trend-flat { color: var(--text-muted); }
+
+/* v2：标签页 */
+.ekko-tabs { display: flex; flex-direction: column; gap: var(--ekko-space-sm, 8px); }
+.ekko-tabs-head {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 14%, var(--border-light));
+}
+.ekko-tabs-head button {
+  padding: 5px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.ekko-tabs-head button:hover { color: var(--text-primary); }
+.ekko-tabs-head button.active {
+  color: var(--ekko-skin-accent, var(--accent-primary));
+  border-bottom-color: var(--ekko-skin-accent, var(--accent-primary));
+}
+.ekko-tabs-head button:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 22%, transparent); border-radius: 3px; }
+.ekko-tabs-body { display: flex; flex-direction: column; gap: var(--ekko-space-sm, 8px); }
+
+/* v2：步骤条 */
+.ekko-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--ekko-space-sm, 8px); }
+.ekko-steps li { display: flex; align-items: flex-start; gap: 8px; }
+.ekko-steps-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex: none;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+.ekko-steps li.is-done .ekko-steps-dot { background: var(--success); border-color: var(--success); box-shadow: 0 0 5px color-mix(in srgb, var(--success) 55%, transparent); }
+.ekko-steps li.is-active .ekko-steps-dot { background: var(--ekko-skin-accent, var(--accent-primary)); border-color: var(--ekko-skin-accent, var(--accent-primary)); box-shadow: 0 0 6px color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 60%, transparent); }
+.ekko-steps-body { display: flex; flex-direction: column; gap: 1px; }
+.ekko-steps-body strong { font-size: 13px; font-weight: 500; }
+.ekko-steps-body small { font-size: 11px; color: var(--text-secondary); }
+
+/* v2：空态 */
+.ekko-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--ekko-space-lg, 16px);
+  border: 1px dashed color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 25%, var(--border-color));
+  border-radius: var(--radius-standard, 6px);
+  color: var(--text-muted);
+  text-align: center;
+}
+.ekko-empty-state-text { margin: 0; font-size: 13px; }
+.ekko-empty-state small { font-size: 11px; }
+
+/* v2：描述列表 */
+.ekko-descriptions { margin: 0; display: grid; gap: var(--ekko-space-sm, 8px); }
+.ekko-descriptions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--ekko-space-xs, 4px) var(--ekko-space-sm, 8px);
+  border-left: 2px solid color-mix(in srgb, var(--ekko-skin-accent, var(--accent-primary)) 35%, transparent);
+}
+.ekko-descriptions-row dt { font-size: 11px; color: var(--text-secondary); }
+.ekko-descriptions-row dd { margin: 0; font-size: 13px; color: var(--text-primary); word-break: break-word; }
+
 .radius-none { border-radius: 0; }
 .radius-sm { border-radius: var(--radius-sm, 3px); }
 .radius-lg { border-radius: var(--radius-large, 12px); }

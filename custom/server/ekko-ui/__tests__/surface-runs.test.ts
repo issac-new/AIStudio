@@ -126,4 +126,15 @@ describe('SurfaceRuns', () => {
     runs.begin('ctx-2', 's2', 'default', () => ({ isWorking: false }))
     expect(() => runs.request('ctx-2', 'default', { spec: spec() })).toThrowError(/no active turn/i)
   })
+
+  it('双协议：v2 受理，未知协议拒绝', async () => {
+    const { runs } = harness()
+    const pending = runs.request('ctx-1', 'default', { spec: spec({ protocol: 'ekko-ui/v2' }), timeout_ms: 5000 })
+    await Promise.resolve()
+    runs.respond('s1', surfaceIdFor('s1', 'booking'), 1, 'cancel', undefined)
+    await expect(pending).resolves.toMatchObject({ status: 'cancelled' })
+
+    expect(() => runs.request('ctx-1', 'default', { spec: spec({ protocol: 'ekko-ui/v9' }) }))
+      .toThrowError(/spec\.protocol must be/i)
+  })
 })
