@@ -12,6 +12,7 @@ export interface AgentLoad {
 export type RouteDecision =
   | { kind: 'assigned'; agent: AgentDescriptor }
   | { kind: 'no-match' }
+  | { kind: 'unroutable'; covering: number }
   | { kind: 'queued'; reason: 'max-parallel' }
 
 /** maxParallel 缺省语义：保守取 1（agent 未声明并发上限时按串行处理，声明值可放宽）。 */
@@ -27,9 +28,13 @@ export function isLoadOccupying(status: string): boolean {
 /**
  * 能力路由决策（M-B 验收门 1 的决策表）：
  * - 匹配语义：agent 必须覆盖 assign.capability 的全部标签（严格超集，确定性）；
+ * - 落地前提（数字员工批一 Task 5）：只有声明了运行配置名 profile 的 Agent 才参与
+ *   路由——路由结果要作为看板卡实际 assignee，无 profile 者无法落地；
  * - 候选中按「在途最少优先，同载按 agentId 字典序」取一（确定性，可测）；
  * - 无任何覆盖者 → no-match（调用方回执 failed 'no-capability-match'）；
- * - 有覆盖者但全部达到 maxParallel → queued（调用方入队，槽位释放后重试）；
+ * - 有覆盖者但全部无 profile → unroutable（调用方回执 failed 'no-routable-profile'，
+ *   不悄悄回落原目标）；
+ * - 有候选但全部达到 maxParallel → queued（调用方入队，槽位释放后重试）；
  * - capability 为空/缺失 → no-match（调用方对无标签 assign 不应调用本函数，走既有三级回退）。
  */
 export function selectAgent(
@@ -40,11 +45,13 @@ export function selectAgent(
   const required = assign.capability ?? []
   if (required.length === 0) return { kind: 'no-match' }
   const loadOf = (agentId: string): number => loads.find(l => l.agentId === agentId)?.running ?? 0
-  const covering = agents
-    .filter(a => required.every(tag => a.capabilities.includes(tag)))
+  const coveringAll = agents.filter(a => required.every(tag => a.capabilities.includes(tag)))
+  if (coveringAll.length === 0) return { kind: 'no-match' }
+  const covering = coveringAll
+    .filter(a => typeof a.profile === 'string' && a.profile.length > 0)
     .map(a => ({ agent: a, running: loadOf(a.agentId) }))
     .sort((x, y) => x.running - y.running || (x.agent.agentId < y.agent.agentId ? -1 : 1))
-  if (covering.length === 0) return { kind: 'no-match' }
+  if (covering.length === 0) return { kind: 'unroutable', covering: coveringAll.length }
   const eligible = covering.filter(e => e.running < (e.agent.maxParallel ?? DEFAULT_MAX_PARALLEL))
   if (eligible.length === 0) return { kind: 'queued', reason: 'max-parallel' }
   return { kind: 'assigned', agent: eligible[0].agent }

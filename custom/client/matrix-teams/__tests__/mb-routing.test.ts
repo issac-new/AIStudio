@@ -20,8 +20,8 @@ const agent = (over: Partial<AgentDescriptor> = {}): AgentDescriptor => ({
 
 describe('selectAgent 决策表', () => {
   it('全覆盖标签 → assigned，取在途最少者', () => {
-    const busy = agent({ agentId: 'busy', capabilities: ['coding'] })
-    const idle = agent({ agentId: 'idle', capabilities: ['coding'] })
+    const busy = agent({ agentId: 'busy', capabilities: ['coding'], profile: 'worker-busy' })
+    const idle = agent({ agentId: 'idle', capabilities: ['coding'], profile: 'worker-idle' })
     const d = selectAgent({ capability: ['coding'] }, [busy, idle], [
       { agentId: 'busy', running: 2 }, { agentId: 'idle', running: 0 },
     ])
@@ -32,18 +32,24 @@ describe('selectAgent 决策表', () => {
     expect(selectAgent({ capability: ['coding', 'test'] }, [onlyCode], [])).toEqual({ kind: 'no-match' })
   })
   it('同载并列按 agentId 字典序（确定性）', () => {
-    const b = agent({ agentId: 'b' }), a = agent({ agentId: 'a' })
+    const b = agent({ agentId: 'b', profile: 'worker-b' }), a = agent({ agentId: 'a', profile: 'worker-a' })
     const tie = selectAgent({ capability: ['coding'] }, [b, a], [])
     expect(tie).toMatchObject({ kind: 'assigned', agent: { agentId: 'a' } })
   })
   it('满 maxParallel → queued；声明 maxParallel=2 时 running=1 仍可接', () => {
-    const solo = agent({ agentId: 'solo' }) // maxParallel 缺省
+    const solo = agent({ agentId: 'solo', profile: 'worker-solo' }) // maxParallel 缺省
     expect(selectAgent({ capability: ['coding'] }, [solo], [{ agentId: 'solo', running: DEFAULT_MAX_PARALLEL }])).toEqual({ kind: 'queued', reason: 'max-parallel' })
-    const dual = agent({ agentId: 'dual', maxParallel: 2 })
+    const dual = agent({ agentId: 'dual', maxParallel: 2, profile: 'worker-dual' })
     expect(selectAgent({ capability: ['coding'] }, [dual], [{ agentId: 'dual', running: 1 }])).toMatchObject({ kind: 'assigned', agent: { agentId: 'dual' } })
   })
   it('capability 为空 → no-match（无标签 assign 不走能力路由）', () => {
     expect(selectAgent({}, [agent()], [])).toEqual({ kind: 'no-match' })
+  })
+  it('selectAgent：无 profile 的 Agent 不参与路由；全覆盖者都无 profile → unroutable', () => {
+    const noProfile = agent({ agentId: 'np' })
+    expect(selectAgent({ capability: ['coding'] }, [noProfile], [])).toEqual({ kind: 'unroutable', covering: 1 })
+    const withProfile = agent({ agentId: 'wp', profile: 'worker-coder' })
+    expect(selectAgent({ capability: ['coding'] }, [noProfile, withProfile], [])).toMatchObject({ kind: 'assigned', agent: { agentId: 'wp' } })
   })
   it('isLoadOccupying：created/running/waiting-human 占额，done/failed 释放', () => {
     expect(isLoadOccupying('created')).toBe(true)
@@ -137,7 +143,7 @@ const profileEv = (agents: AgentDescriptor[]) => sdkEv(AGENT_PROFILE_EVENT_TYPE,
 describe('能力路由落地（M-B）', () => {
   it('agent.profile 经 timeline 汇入 localAgents → capability 命中建卡 + kv 记 routedAgentId + created 回执', async () => {
     const store = useTaskDispatchStore()
-    await store.handleTimelineEvent(profileEv([agent({ agentId: 'coder', capabilities: ['coding'] })]), { roomId: '!reg:sv' })
+    await store.handleTimelineEvent(profileEv([agent({ agentId: 'coder', capabilities: ['coding'], profile: 'worker-coder' })]), { roomId: '!reg:sv' })
     expect(store.localAgents).toHaveLength(1)
     await store.receiveAssign(assign({ capability: ['coding'] }))
     expect(created).toHaveLength(1)
@@ -153,7 +159,7 @@ describe('能力路由落地（M-B）', () => {
   })
   it('满 maxParallel → 入队不建卡不回执；槽位释放后 pollAndReport 排空建卡', async () => {
     const store = useTaskDispatchStore()
-    await store.handleTimelineEvent(profileEv([agent({ agentId: 'coder', capabilities: ['coding'] })]), { roomId: '!reg:sv' })
+    await store.handleTimelineEvent(profileEv([agent({ agentId: 'coder', capabilities: ['coding'], profile: 'worker-coder' })]), { roomId: '!reg:sv' })
     // 占位：他人在途一张（coder running=1，缺省 maxParallel=1 → 满）
     saveDispatchIndex({ 'old-task': { localTaskId: 'kb-0', lastStatus: 'running', lastSyncedAt: 1, routedAgentId: 'coder' } })
     await store.receiveAssign(assign({ capability: ['coding'] }))
@@ -165,6 +171,25 @@ describe('能力路由落地（M-B）', () => {
     expect(created).toHaveLength(1)
     expect(sentEvents.find(e => e.type === TASK_EVENT_TYPES.receipt)?.content).toMatchObject({ status: 'created' })
     expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ routedAgentId: 'coder' })
+  })
+  it('store：看板卡 assignee 等于路由选中 Agent 的 profile', async () => {
+    const store = useTaskDispatchStore()
+    await store.handleTimelineEvent(profileEv([agent({ agentId: 'coder', profile: 'worker-coder' })]), { roomId: '!reg:sv' })
+    await store.receiveAssign(assign({ capability: ['coding'] }))
+    expect(created[0].assignee).toBe('worker-coder')
+    expect(loadDispatchIndex()['11111111-2222-3333-4444-555555555555']).toMatchObject({ routedAgentId: 'coder', routedProfile: 'worker-coder' })
+  })
+  it('store：覆盖者无 profile → failed 回执 no-routable-profile，不建卡、不回落原目标', async () => {
+    const store = useTaskDispatchStore()
+    await store.handleTimelineEvent(profileEv([agent({ agentId: 'coder' })]), { roomId: '!reg:sv' })
+    await store.receiveAssign(assign({ capability: ['coding'] }))
+    expect(created).toHaveLength(0)
+    expect(sentEvents.find(e => e.type === TASK_EVENT_TYPES.receipt)?.content).toMatchObject({ status: 'failed', reason: 'no-routable-profile' })
+  })
+  it('无能力标签的 assign 不走路由，assignee 仍是原目标 profile（行为不变）', async () => {
+    const store = useTaskDispatchStore()
+    await store.receiveAssign(assign())
+    expect(created[0].assignee).toBe('pb2')
   })
   it('sendSubtasks → N 条 assign 事件各带 parentId 且继承 phase', async () => {
     const store = useTaskDispatchStore()
