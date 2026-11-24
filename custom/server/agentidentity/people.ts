@@ -111,6 +111,11 @@ export function upsertPerson(
     ? store.people.find((p) => p.emails.some((e) => emails.includes(e)))
     : undefined
   const existing = byId ?? byEmail
+  // 显式 id 未命中、邮箱却属另一个人时拒绝合并（2026-11-25 批一审查修复）：静默把
+  // 别人返回并改写会让「登录名=自然人 id」的署名前提错配——fail-soft 不造假，宁可拒。
+  if (!byId && input.id && byEmail && byEmail.id !== input.id) {
+    return { ok: false, problems: [`id ${input.id} 与邮箱已属他人（${byEmail.id}），不能合并`] }
+  }
   if (existing) {
     existing.name = name
     existing.emails = [...new Set([...existing.emails, ...emails])]

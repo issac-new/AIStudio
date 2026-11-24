@@ -26,6 +26,29 @@ describe('people registry', () => {
     expect(listPeople()).toHaveLength(1)
   })
 
+  it('显式 id 未命中但邮箱已属他人 → 拒绝合并且不改写原人（2026-11-25 批一审查修复）', () => {
+    // 登录名=自然人 id 是署名前提：显式 id 被静默吞掉、返回并改写别人，直接破坏该环路。
+    const a = upsertPerson({ name: '甲', emails: ['a@x'], source: 'manual' }, 't')
+    expect(a.ok).toBe(true)
+    if (!a.ok || !a.person) return
+    const originalId = a.person.id
+    const r = upsertPerson({ id: 'admin', name: '管理员', emails: ['a@x'] }, 't')
+    expect(r.ok).toBe(false)
+    expect(r.problems.join()).toMatch(/不能合并|他人/)
+    // 原人未被改写，也未新建人
+    expect(getPerson(originalId)?.name).toBe('甲')
+    expect(getPerson('admin')).toBeNull()
+    expect(listPeople()).toHaveLength(1)
+    // 显式 id 命中本人时维持原行为（幂等更新，不受新闸影响）
+    const again = upsertPerson({ id: originalId, name: '甲某', emails: ['a@x'] }, 't')
+    expect(again.ok).toBe(true)
+    expect(getPerson(originalId)?.name).toBe('甲某')
+    // 未传 id 走邮箱命中也维持原行为
+    const byEmail = upsertPerson({ name: '甲又', emails: ['a@x'] }, 't')
+    expect(byEmail.ok).toBe(true)
+    expect(byEmail.person?.id).toBe(originalId)
+  })
+
   it('空名字拒绝', () => {
     expect(upsertPerson({ name: '  ', emails: [], source: 'manual' }, 't').ok).toBe(false)
   })
