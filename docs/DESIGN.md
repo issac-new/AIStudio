@@ -1661,6 +1661,11 @@ Shell 与 Python 只做词表镜像，并由一致性测试断言。
 hermes-agent 基线已经随仓保存。
 运行时扩展通过 `runtime-manifest.json` 和注册脚本部署。
 Ycode 通过受管构建与安装脚本落到部署位。
+构建产物按指纹对齐基线与补丁（`scripts/zcode-engine.mjs` 的 `.aistudio-stamp`，
+指纹＝`vendor/zcode` 在 HEAD 的树对象＋`zcode-patches/` 逐文件内容；不符即重建），
+不只看产物在不在——4.0 换血后曾出现产物停在旧基线构建、`zcode:serve` 拉起旧引擎的事故。
+以服务端形态启动时，引擎以「独立宿主」身份持库：会话必须属于已登记项目，
+未登记工作区建会话即拒；Studio 派单在建会话前经项目通道登记（`custom/server/zcode/engine-bridge.ts`）。
 Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号，
 与基线包版本是两套编号，不互相推算。
 基线升级只由上游稳定发版触发；未发版时保持钉版，
