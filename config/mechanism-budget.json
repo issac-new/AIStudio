@@ -25,6 +25,20 @@
 },
 {
    "at": "2026-11-24",
+   "delta": "+1 域模块（custom/server/agentidentity/dispatch-gate.ts 执行单元派单门）＋+1 环境开关（WORKUNIT_DISPATCH_GATE）＋+2 端点（POST /api/governance/agent-identity/:id/card/sign 写、POST /api/governance/matrix-offboard/precheck 只读）＋+1 组可缺省身份字段（AgentIdentity.runtimeBindings）/ +0 patches / +0 scripts / +0 gates / +0 ledgers / +0 npm scripts；不占任何预算上限",
+   "reason": "数字员工批一（spec 2026-11-24-digital-employee-batch1-lifecycle-loop）：上岗—派单—执行—退出闭环——身份绑定、派单门、签署绑定卡片版本、退役自动撤权、离职前置检查与改派核实",
+   "pairedRemovals": [
+    "两处「只打印警告」的能力检查在已绑定目标上被派单门硬拦截取代（unit_gate/capability_block 原因码，测试断言锁死）",
+    "责任台账里手填的迁移人、签署人输入框与写死的退出占位文字删除（改由服务端取登录身份）"
+   ],
+   "sunset": {
+    "owner": "数字员工批一",
+    "reviewBy": "2026-12-08",
+    "retireWhen": "全部在用执行单元完成绑定、且连续两轮真实运行门零误拦后，派单门并入内核领取门、本层门退役；或连续两轮零绑定时降级为只读读数"
+   }
+},
+{
+   "at": "2026-11-24",
    "delta": "+1 script（scripts/regression-matrix.mjs 回归矩阵执行器）/ +1 配置（config/regression-matrix.json，不在计数类目）/ +1 patch（817 会话库缺席时读面降级）/ +0 gates / +0 ledgers；npm 脚本净 0：+regress −test:classes；limits 对齐在册数 gates 48→47、scripts 139→75、ledgers 6→4（账本改按已登记机制计数，不按文件是否存在）",
    "reason": "全面复盘批（spec 2026-11-23-full-retro-regression-matrix）：「该跑哪些测试面」此前在仓内无定义，合并门只覆盖 custom 与 scripts 两个目录；预算上限与在册数脱节（台账写明 scripts 上限 139→71，limits 仍是 139、在册 74）",
    "pairedRemovals": [
