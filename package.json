@@ -22,7 +22,7 @@
     "pretest": "node scripts/ensure-injected.mjs && node scripts/ensure-vitest-birpc-patch.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:classes": "node scripts/test-classify.mjs --write",
+    "regress": "node scripts/regression-matrix.mjs",
     "training": "node scripts/start-training-manual.mjs",
     "typecheck:harness": "tsc --ignoreConfig --noEmit --target ESNext --module ESNext --moduleResolution bundler --strict false --strictNullChecks --skipLibCheck --esModuleInterop --resolveJsonModule --types node $(find custom/server -type f -name '*.ts' ! -name '*.test.ts' | sort)",
     "test:ide-smoke": "node scripts/regression/ide-smoke.mjs",

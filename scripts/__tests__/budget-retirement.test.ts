@@ -60,3 +60,46 @@ describe('机制预算退役判定', () => {
     expect(budget.sunset.some((e: { check?: unknown }) => !!e.check)).toBe(true)
   })
 })
+
+describe('机制预算上限须等于在册数（仓规 13：退役后同批下调）', () => {
+  // 2026-11-23 复盘实录：台账写明 scripts 上限 139→71，limits 仍是 139、在册 74，
+  // 预算约束空转两日。上限高于在册数时，加脚本不触发任何检查。
+  const why = '（退役后须同批下调 limits，上限不得高于在册数）'
+  type Compare = (stats: Record<string, number>, limits: Record<string, number>) => string[]
+
+  it('上限高于在册数 → 逐类报 problem', async () => {
+    const { compareLimits } = await import('../governance-lint.mjs') as { compareLimits: Compare }
+    expect(compareLimits(
+      { scripts: 74, gates: 47, ledgers: 3, npmScripts: 52 },
+      { scripts: 139, gates: 47, ledgers: 6, npmScripts: 52 },
+    )).toEqual([
+      `机制预算上限未随退役下调: scripts=74 < 139${why}`,
+      `机制预算上限未随退役下调: ledgers=3 < 6${why}`,
+    ])
+  })
+
+  it('上限等于在册数不报；超限仍报超限', async () => {
+    const { compareLimits } = await import('../governance-lint.mjs') as { compareLimits: Compare }
+    expect(compareLimits({ scripts: 75, npmScripts: 52 }, { scripts: 75, npmScripts: 52 })).toEqual([])
+    expect(compareLimits({ scripts: 76 }, { scripts: 75 })).toEqual(['机制预算超限: scripts=76 > 75'])
+  })
+
+  it('补丁两类不适用贴死规则（随上游重锚日常增减）', async () => {
+    const { compareLimits } = await import('../governance-lint.mjs') as { compareLimits: Compare }
+    expect(compareLimits({ patches: 499, zcodePatches: 11 }, { patches: 562, zcodePatches: 14 })).toEqual([])
+  })
+
+  it('仓内真实预算：四类上限与在册数逐项相等，整体零 problem', async () => {
+    const { checkBudget } = await import('../governance-lint.mjs') as {
+      checkBudget: (budget: unknown) => { problems: string[]; stats: Record<string, number> }
+    }
+    const budget = JSON.parse(readFileSync(join(ROOT, 'config/mechanism-budget.json'), 'utf8'))
+    const r = checkBudget(budget)
+    expect(r.problems).toEqual([])
+    for (const key of ['gates', 'scripts', 'ledgers', 'npmScripts']) {
+      expect(budget.limits[key], `${key} 上限须等于在册数`).toBe(r.stats[key])
+    }
+    // 账本是运行态文件（gate-deny.jsonl 被 git 忽略，首次拒绝才落盘）：按登记数计，不随本机状态浮动。
+    expect(r.stats.ledgers).toBe(4)
+  })
+})

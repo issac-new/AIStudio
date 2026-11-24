@@ -496,4 +496,7 @@
 {"at":"2026-11-23T12:34:19Z","spec":"docs/superpowers/specs/2026-11-23-zcode-400-upgrade-release.md","receipt":"dd168fc2c23cfa240bb108f40072c7f12ab7fd72","commit":"ac7e6612a"}
 {"at":"2026-11-23T15:25:56Z","spec":"docs/superpowers/specs/2026-11-23-zcode-400-upgrade-release.md","receipt":"c3e01f8744abab4458df9fbd140e3f6a847e273a","commit":"48d42e189"}
 {"at":"2026-11-23T16:14:49Z","spec":"docs/superpowers/specs/2026-11-23-zcode-400-upgrade-release.md","receipt":"8b5b1924a418392d7e33cc7f14ca6e10b3cfb4ed","commit":"76a39821e"}
+{"at":"2026-11-23T23:49:29Z","spec":"docs/superpowers/specs/2026-11-23-full-retro-regression-matrix.md","receipt":"0517045c1c5352a6217b3e014848c08c6de641ec","commit":"ac7e6612a"}
 {"at":"2026-11-24T01:00:41Z","spec":"docs/superpowers/specs/2026-11-23-zcode-400-upgrade-release.md","receipt":"cc08855fb7d16aec01ac40a107f9d0a2bb06cf49","commit":"de1c37b55"}
+{"at":"2026-11-24T04:50:59Z","spec":"docs/superpowers/specs/2026-11-23-full-retro-regression-matrix.md","receipt":"00668e48e341ddbd575337839ae634a6079d8f55","commit":"8fc35a845"}
+{"at":"2026-11-24T10:53:37Z","spec":"docs/superpowers/specs/2026-11-23-full-retro-regression-matrix.md","receipt":"74d7b2f85540231a4ff311d2e17bfa2826376281","commit":"ec1e00d39"}

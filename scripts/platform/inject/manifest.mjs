@@ -181,37 +181,58 @@ export function planIncrement(manifest, plan) {
       }
     }
   }
-  const manifestNames = manifest.patches.map((p) => p.name);
-  const planNames = items.map((p) => p.name);
-  const manifestSet = new Set(manifestNames);
-  // 前缀比对先行（rename/reorder/insert/modify 在位级判定——集合级删除检查
-  // 会把「同 sha 异名」误报成 removed，必须让位级分类先咬住）。
-  const common = Math.min(manifest.patches.length, items.length);
-  for (let i = 0; i < common; i++) {
-    const m = manifest.patches[i];
-    const p = items[i];
-    if (m.name !== p.name) {
-      if (m.sha256 === p.sha256) {
-        throw new IncrementRefusedError('rename', `${m.name} → ${p.name}（同内容异名）`);
-      }
-      if (manifestSet.has(p.name)) {
-        throw new IncrementRefusedError('reorder', `位置 ${i}：${m.name} 与 ${p.name} 顺序变化`);
-      }
-      throw new IncrementRefusedError('insert', `位置 ${i} 出现新补丁 ${p.name}（前缀内中插）`);
+  // 分通道比对（2026-11-23 全面复盘批）：plan 把各通道的补丁首尾相接，非末位通道
+  // （如 hermes-studio）的尾部追加在拼接序列上排在后一通道之前，按整条序列比前缀
+  // 会被误判成中插——尾部增量因此对非末位通道从未生效（补丁 817 实录）。每个通道
+  // 是独立的注入目标树，所以前缀约束按通道成立；通道间的相对顺序另按首次出现序核对。
+  const laneOf = (p) => `${p.channel}/${p.target}`;
+  const laneOrder = (list) => {
+    const order = [];
+    for (const p of list) {
+      const lane = laneOf(p);
+      if (!order.includes(lane)) order.push(lane);
     }
-    if (m.sha256 !== p.sha256) {
-      throw new IncrementRefusedError('modify', `${m.name} 内容变化（sha256 不符）`);
-    }
-    if (m.channel !== p.channel || m.target !== p.target) {
-      throw new IncrementRefusedError('modify', `${m.name} 路由变化（${m.channel}/${m.target} → ${p.channel}/${p.target}）`);
-    }
+    return order;
+  };
+  const manifestLanes = laneOrder(manifest.patches);
+  const planLanes = laneOrder(items);
+  // 已出现通道的相对顺序不得变化，新通道只能排在末尾。
+  if (planLanes.slice(0, manifestLanes.length).join('\u0000') !== manifestLanes.join('\u0000')) {
+    throw new IncrementRefusedError('reorder', `通道顺序变化（${manifestLanes.join(' → ') || '空'} → ${planLanes.join(' → ')}）`);
   }
-  // 前缀全匹配但 manifest 更长：尾部已应用补丁从 series 消失=删除。
-  if (manifest.patches.length > items.length) {
-    const removed = manifestNames.slice(items.length);
-    throw new IncrementRefusedError('removed', removed.join(', '));
+  const tail = [];
+  for (const lane of planLanes) {
+    const manifestLane = manifest.patches.filter((p) => laneOf(p) === lane);
+    const planLane = items.filter((p) => laneOf(p) === lane);
+    // 位级判定先行（rename/reorder/insert/modify）——集合级删除检查会把
+    // 「同 sha 异名」误报成 removed，必须让位级分类先咬住。
+    const laneSet = new Set(manifestLane.map((p) => p.name));
+    const common = Math.min(manifestLane.length, planLane.length);
+    for (let i = 0; i < common; i++) {
+      const m = manifestLane[i];
+      const p = planLane[i];
+      if (m.name !== p.name) {
+        if (m.sha256 === p.sha256) {
+          throw new IncrementRefusedError('rename', `${m.name} → ${p.name}（同内容异名）`);
+        }
+        if (laneSet.has(p.name)) {
+          throw new IncrementRefusedError('reorder', `位置 ${i}：${m.name} 与 ${p.name} 顺序变化`);
+        }
+        throw new IncrementRefusedError('insert', `位置 ${i} 出现新补丁 ${p.name}（前缀内中插）`);
+      }
+      if (m.sha256 !== p.sha256) {
+        throw new IncrementRefusedError('modify', `${m.name} 内容变化（sha256 不符）`);
+      }
+      if (m.channel !== p.channel || m.target !== p.target) {
+        throw new IncrementRefusedError('modify', `${m.name} 路由变化（${m.channel}/${m.target} → ${p.channel}/${p.target}）`);
+      }
+    }
+    // 前缀全匹配但 manifest 更长：该通道尾部已应用补丁从 series 消失=删除。
+    if (manifestLane.length > planLane.length) {
+      throw new IncrementRefusedError('removed', manifestLane.slice(planLane.length).map((p) => p.name).join(', '));
+    }
+    tail.push(...planLane.slice(manifestLane.length));
   }
-  const tail = items.slice(manifest.patches.length);
   return { kind: tail.length === 0 ? 'noop' : 'tail-append', items: tail };
 }
 

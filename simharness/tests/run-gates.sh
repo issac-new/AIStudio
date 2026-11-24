@@ -4,6 +4,12 @@
 # node_modules。此前只借道 overlay（其 node_modules 软链 upstream，产品仓 v0.7.30
 # 升级重装时 vitest 缺席，守门链断——守门依赖不得随产品仓升级漂移）。
 set -euo pipefail
+# 2026-11-24 事故防线：被 git 钩子调用时，环境里带 GIT_DIR 等内部变量；下面的夹具会自建
+# git 仓库、改名分支、截断历史，继承这些变量后操作会落到调用方所在的真实仓库与其远端。
+# 入口处一律清掉，让夹具和在普通终端里一样按工作目录自建仓库。
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH GIT_INDEX_VERSION \
+  GIT_NAMESPACE GIT_CEILING_DIRECTORIES GIT_DISCOVERY_ACROSS_FILESYSTEM
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 # sh 守门先跑（2026-10-10 起：此前 sh 守门无聚合入口从未被自动执行，run12 源层
 # HARD=0 在 F1-F18/V8.5 轮回潮 167 处即此缺口——守门不跑等于没有守门）。

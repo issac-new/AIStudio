@@ -1,14 +1,29 @@
 {
-  "recordedAt": "2026-11-06",
+  "recordedAt": "2026-11-24",
   "limits": {
-    "gates": 48,
+    "gates": 47,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 139,
-    "ledgers": 6,
+    "scripts": 75,
+    "ledgers": 4,
     "npmScripts": 52
   },
   "changes": [
+{
+   "at": "2026-11-24",
+   "delta": "+1 script（scripts/regression-matrix.mjs 回归矩阵执行器）/ +1 配置（config/regression-matrix.json，不在计数类目）/ +1 patch（817 会话库缺席时读面降级）/ +0 gates / +0 ledgers；npm 脚本净 0：+regress −test:classes；limits 对齐在册数 gates 48→47、scripts 139→75、ledgers 6→4（账本改按已登记机制计数，不按文件是否存在）",
+   "reason": "全面复盘批（spec 2026-11-23-full-retro-regression-matrix）：「该跑哪些测试面」此前在仓内无定义，合并门只覆盖 custom 与 scripts 两个目录；预算上限与在册数脱节（台账写明 scripts 上限 139→71，limits 仍是 139、在册 74）",
+   "pairedRemovals": [
+    "npm 别名 test:classes 退役（仓内零调用方；模块 scripts/test-classify.mjs 与其守门测试保留）",
+    "simharness vitest 独立入口并入 run-gates.sh（矩阵只登记一个推演测试面）"
+   ],
+   "sunset": {
+    "owner": "quality",
+    "reviewBy": "2027-02-24",
+    "retireWhen": "测试面改登记为 qgate 门（复用其证据与豁免面）后，矩阵执行器退役；config/regression-matrix.json 保留为迁移清单",
+    "check": { "type": "filePresent", "path": "scripts/regression-matrix.mjs" }
+   }
+},
 {
    "at": "2026-11-21",
    "delta": "+2 域文件（expcandidates/probation.ts 试用期惰性结算＋effect-report.ts record 维度归因）＋exp-controller 增 1 只读端点（GET /api/expcandidates/effects）/ +0 patches / +0 scripts / +0 gates / +0 npm scripts；ExpInjectionRecord 扩 taskId/kind/column 字段（追加兼容，旧数据按缺省）",

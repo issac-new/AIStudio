@@ -1260,6 +1260,8 @@ Ycode 分叉（`zcode-patches` 009）直接读取用户目录与工作区的 `.c
 分发面与生成器侧分离，避免让目标技能承担生成器的版本注记。
 证据分 A/B/C，二手转述不得进基线。
 新增概念必须说明消费者、验证方式和退役条件，不能只增不减。
+机制预算对门、脚本、账本和 npm 脚本四类要求上限等于在册数：退役机制后同批下调上限，
+上限高于在册数与超限同样算预算失守（补丁两类随上游重锚日常增减，不按此贴死）。
 
 能力层决策台账只增不改。修正以新决策记录并标注替代关系，不回写历史结论。
 外部机制按兼容性和证据选择性吸收，不整体移植另一套架构。
@@ -1731,7 +1733,9 @@ npm run serve
 | 前端 | `npm run dev`，默认监听 8649 |
 | 本机 gateway | 8650，profile 复用入口 |
 | 注入与还原 | `npm run inject` / `npm run clean` |
-| 全量测试 | `npm test` |
+| 根 vitest（只覆盖 `custom/` 与 `scripts/`，不是全量） | `npm test` |
+| 回归矩阵：合并前 | `npm run regress -- --scope merge`（根 vitest、类型检查、构建，加推送前的全部测试面） |
+| 回归矩阵：全量 | `npm run regress -- --scope full`（另含 swarm-yuan 全量、Ycode 工程测试与发布检查） |
 | 服务端类型检查 | `npm run typecheck:harness` |
 | 全量构建 | `npm run build:full` |
 | 基线同步 | `npm run vendor:sync`，提交需显式 `VENDOR_SYNC=1` |
@@ -1767,8 +1771,24 @@ npm run serve
 准确边界是：新克隆执行任一 npm 入口后即具备提交强拦，裸 `git commit` 之前仍是 git 自身
 机制说了算。
 
-本地推送前额外执行 qgate 的 L0 门集（trigger 传 pre_commit），默认只告警、
-`QGATE_PREPUSH_ENFORCE=1` 时拦截；全量测试门不放在这一层。
+本地推送前执行 qgate 的 L0 门集（trigger 传 pre_commit）和回归矩阵的推送前档，
+默认强制拦截，`QGATE_PREPUSH_ENFORCE=0` 降为告警，`QGATE_PREPUSH_SKIP=1` 关闭；
+根 vitest 全量不放在这一层。
+
+**回归矩阵。** `config/regression-matrix.json` 是“有哪些测试面、各由哪条命令跑、在哪个
+关口必须跑”的唯一事实源。根 `npm test` 只执行 `custom/` 与 `scripts/` 两个目录；
+推演 harness、Python runtime、team、swarm-yuan 与 Ycode 的测试都在它之外，
+它们的归属只在这份矩阵里登记。`scripts/regression-matrix.mjs` 按矩阵选择并执行：
+失败、未执行、超时三种结局分开记账，退出码遵循 5.3 的命令行契约——未执行不算通过，
+工具链缺席时给出补齐办法并以退出码 2 拦下。执行器不给测试子进程传递 `GIT_` 开头的环境变量：
+推送前钩子由 git 启动、环境里带 `GIT_DIR` 等内部变量，而推演门的夹具会自建 git 仓库，
+继承这些变量就会波及调用方仓库及其远端（2026-11-24 事故）。推送前档里，推演 harness 门、Python runtime
+与 team 测试每次推送都跑（2026-11-21 的两处真红就是由 `runtime/` 与 `docs/` 的改动
+引起、却断在推演门上，触发路径写窄就会漏），Ycode 与 swarm-yuan 锁测试按变更路径触发；
+根 vitest 全量留给合并前纪律。把关测试 `scripts/__tests__/regression-matrix.test.ts`
+锁定四件事：仓内发现的测试文件都能对应到一个测试面、带测试文件的面由钩子或 CI 强制、
+矩阵里的 CI 引用可解析、钩子与入口确实接线。CI 目前仍未覆盖推演 harness、Python 与
+Ycode 三个测试面，这三个面只靠推送前钩子强制。
 
 每条需求在附表 A 有承接章节；能自动验证的走测试，
 不能自动验证的走查并留证据。
@@ -1814,11 +1834,14 @@ npm run serve
 | 总监派发（2026-11-06 O7，run28 后复核） | director 姿态已完成首跑，记录 14 次自主派发；需求草稿移交、等待自主任务书、超时降级 strict、`self-dispatch.jsonl` 独立台账与报告净额实算均已进入实跑；缺省零行为不变 | 按轮对照自主派发与 `dispatch-preset` 计数，核对自主派发确由组织产出而非脚本代写 |
 | 黄金集门检（2026-11-06 G4 子门，run28 后复核） | 30 例 P2P 材料已在 run28 完成观察态真跑并落 `evidence/evals/golden-gate.json`；实测 14 例误杀，说明判分器尚未校准，当前仍不阻断主门 | 保持观察态并校准误杀；未达到校准判据前不得升为硬门，也不得把本轮主门通过解释为黄金集全过 |
 | 帧证据二态（2026-11-06，run28 后复核） | run28 帧采集与独立核验已完成；报错态与整板空白态判据已修，问题帧翻红、补拍与降级凭证均按真实状态呈现 | 继续按注册帧形态核验，保留报错、空白和缺帧的负面结论；摘要不得写「全部实拍」，隔离与降级步不计入可核验实拍 |
-| 跨轮指标留档（2026-11-06 O1，run28 后复核） | `docs/governance/run-metrics.jsonl` 已有 run27 与 run28 两轮记录，连续两轮判据已具备实际输入 | 按既定指标阈值消费两轮序列；缺轮、断档或指标缺席仍如实标注，不把两轮留档直接写成长期趋势结论 |
+| 跨轮指标留档（2026-11-06 O1，run28 后复核；2026-11-24 更新） | `docs/governance/run-metrics.jsonl` 已有 run27 至 run31 五轮记录（另含 run7 一轮），连续两轮判据已具备实际输入 | 按既定指标阈值消费两轮序列；缺轮、断档或指标缺席仍如实标注，不把两轮留档直接写成长期趋势结论 |
 | 执行证据链（2026-11-12 handbook 吸收） | run-trace schema 1.2（span_kind/Context Manifest/step/compaction/HITL span）在插件侧实现并有行为门；HITL 只做同 trace 边界标记（trace_boundary=interrupt/resume），不新建 trace 文件；Manifest 权限模式与信任级来自部署 env，缺省不猜；schema 1.2 事件须插件部署到目标 profile 后才出现在新 trace（旧 JSONL 读侧兼容已守门） | 以真实会话 trace 核对 span_kind 覆盖与 manifest 指纹稳定性；不得据旧 1.1 trace 宣称已有该面 |
 | 恢复真值与多 agent 预算（2026-11-12 handbook 吸收） | Action Ledger/幂等三态/恢复查未结算已接线（guard 默认关）；LLM 请求硬准入未接——`call_id/attempt_id` 已随 span 落账，预算租约先立账本语义，接入点属执行内核统一范围；团队停止 enforce 默认关且委派深度仅采纳调用方显式值（台账无 parent 链不猜）；黄金集 F2P 用合成负例，非 ground truth | 硬准入接入前不得宣称"LLM 调用受预算拦截"；深度事实须有真实 parent 链来源后才可注入；F2P 读数只证明判据区分力下限 |
 | 交接合同闭环（2026-11-13 超级智能体吸收批一） | 看板 PATCH/DELETE/decompose 三写入口接入 `authorizeTaskIds`＋`requestBoard`（隐藏 profile 404 与 complete/block 同权，补丁 770）；证据压缩器归档失败即 passthrough（无全文不摘要、模型零调用，补丁 771）；delegate_task 每任务 `strict_output_schema` 显式严格合同（失败关闭；interrupted/执行错误/max_iterations 原因优先不被覆盖；默认宽松行为字节级不变，补丁 772） | 严格模式仅由调用方显式声明生效，不得描述为默认行为；归档失败保真由 runtime/tests 与补丁内 vendor 测试双面锁定；三入口授权与既有写路径同权以控制器行为测试核验 |
 | 任务版本化与分级验证（2026-11-14 超级智能体吸收批二） | tasks 行级 `version` 乐观锁——所有改任务行路径（操作者动词＋claim/recompute_ready/reclaim 等内核迁移）事务内递增，携带 `expected_version` 不匹配即 409，缺省兼容放行记 legacy 事件；task_events 每行五字段 envelope（version/actor/time/reason/trace_id）；卡级 `verification` 三档（standard 缺省/independent=review handoff 回执/strict:pr=PR acceptance 必过），complete_task 单点拦、拒绝不自动改状态；runtime 六镜像（kanban_db/kanban_db_connect/kanban/kanban_parser/kanban_tools/kanban_tools_schemas）随批同构 | 兼容期 legacy 流量可识别可收敛；等级证据只认 kanban 库内源（PR acceptance store/review lane），Person/claims 留后续接入点；Vue 客户端 expectedVersion 发送挂账下一批 |
+| 回归矩阵（2026-11-24） | `config/regression-matrix.json` 登记全部测试面及其关口，推送前钩子执行其推送前档，口径见 6.3。CI 仍未覆盖推演 harness、Python 与 Ycode 三个测试面，`product-tests` 对 `team/**` 设了路径忽略——这三个面目前只靠钩子强制 | 把关测试断言发现、归属、CI 引用与钩子接线四项；给 CI 补这三个面须先在分支上验证再合入，不得只改工作流文件 |
+| 会话库缺席（2026-11-24） | `$HERMES_HOME/state.db` 尚未生成时（全新安装、从未启动过的 profile），会话列表与详情读面返回空结果（补丁 817）；此前只读开库直接抛错，IDE 壳与协作历史页共 7 条路由得到 500 | `custom/upstream-compat/__tests__/sessions-db-missing-home.test.ts` 先红后绿；库存在时走原路径，行为不变 |
+| 注入尾部增量（2026-11-24） | 增量注入改为按通道比对前缀：非末位通道的尾部追加不再被误判成中插；此前给 hermes-studio 通道每加一枚补丁都被迫全量重放 | `inject-manifest` 三例（通道尾部追加放行、同通道中插仍拒、通道顺序颠倒仍拒）；补丁 817 经增量通道真实应用 |
 
 这些边界是实现检查项，不是新的设计原则。
 主要代码锚点为 `zcode-acp-delegate.py` 的 `resolve_engine_bin_env`、
