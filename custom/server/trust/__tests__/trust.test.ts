@@ -21,6 +21,9 @@ async function startHttp(): Promise<void> {
   const trustRoutes = (await import('../controller')).default
   const app = new Koa()
   app.use(async (ctx: any, next: () => Promise<unknown>) => {
+    // 测试注入登录态：post(..., { username }) 发 x-test-user 头，此处转为 ctx.state.user
+    const testUser = ctx.get('x-test-user')
+    if (testUser) ctx.state.user = { id: testUser, username: testUser, role: 'super_admin' }
     if (ctx.method === 'POST' || ctx.method === 'PUT' || ctx.method === 'PATCH') {
       const chunks: Buffer[] = []
       for await (const chunk of ctx.req) chunks.push(Buffer.from(chunk))
@@ -40,9 +43,11 @@ const get = async (path: string): Promise<{ status: number; body: any }> => {
   return { status: res.status, body: await res.json() }
 }
 
-const post = async (path: string, body: unknown): Promise<{ status: number; body: any }> => {
+const post = async (path: string, body: unknown, as?: { username: string }): Promise<{ status: number; body: any }> => {
+  const headers: Record<string, string> = { 'content-type': 'application/json' }
+  if (as) headers['x-test-user'] = as.username // 中间件据此注入登录态（仅测试）
   const res = await fetch(`http://127.0.0.1:${port}${path}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers, body: JSON.stringify(body),
   })
   return { status: res.status, body: await res.json() }
 }
@@ -422,6 +427,20 @@ describe('HTTP 投影', () => {
     const r = await post('/cases/not-exist/admit', { actor: 'manager' })
     expect(r.status).toBe(404)
     expect(r.body.ok).toBe(false)
+  })
+
+  it('请求体 actor 被忽略：有登录用户时记登录名（数字员工批一）', async () => {
+    await post('/cases', { title: 'T', workspaceRoot: ws, actor: 'mallory', claims: [] }, { username: 'alice' })
+    const ledger = await get('/ledger')
+    const opened = ledger.body.events.find((e: { kind: string }) => e.kind === 'case_opened')
+    expect(opened.actor).toBe('alice')
+  })
+
+  it('无登录用户时回落 operator，不读请求体 actor（数字员工批一）', async () => {
+    await post('/cases', { title: 'T', workspaceRoot: ws, actor: 'mallory', claims: [] })
+    const ledger = await get('/ledger')
+    const opened = ledger.body.events.find((e: { kind: string }) => e.kind === 'case_opened')
+    expect(opened.actor).toBe('operator')
   })
 
   it('挂在既有 /api/harness 之下，路径 /api/harness/trust/* 可达', async () => {

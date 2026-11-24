@@ -42,9 +42,9 @@ function bodyOf(ctx: Ctx): Record<string, unknown> {
   return b && typeof b === 'object' && !Array.isArray(b) ? (b as Record<string, unknown>) : {}
 }
 
-function actorOf(ctx: Ctx, body: Record<string, unknown>): string {
-  const explicit = typeof body.actor === 'string' ? body.actor.trim() : ''
-  if (explicit) return explicit
+function actorOf(ctx: Ctx, _body: Record<string, unknown>): string {
+  // 操作者只取登录身份，请求体 actor 不采纳（防冒填）。无登录用户回落 operator，
+  // 不改变单机部署的放行姿态。_body 保留参数位，与既有调用点签名一致。
   const user = (ctx.state as { user?: Record<string, unknown> } | undefined)?.user
   const fromUser = user && (typeof user.username === 'string' ? user.username : typeof user.name === 'string' ? user.name : '')
   return fromUser || 'operator'
