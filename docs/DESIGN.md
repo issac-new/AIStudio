@@ -1659,6 +1659,8 @@ Shell 与 Python 只做词表镜像，并由一致性测试断言。
 hermes-agent 基线已经随仓保存。
 运行时扩展通过 `runtime-manifest.json` 和注册脚本部署。
 Ycode 通过受管构建与安装脚本落到部署位。
+Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号，
+与基线包版本是两套编号，不互相推算。
 基线升级只由上游稳定发版触发；未发版时保持钉版，
 不追逐上游 main 分支漂移。**例外：zcode** 按上游 main 同步、不看版本 tag
 （2026-10-25 用户裁定，见 `vendor/VENDOR.md`）。
