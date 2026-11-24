@@ -783,6 +783,7 @@
 - [2026-11-24-follow-redirects-override.md](../superpowers/specs/2026-11-24-follow-redirects-override.md)
 - [2026-11-24-full-retro-pending-batch.md](../superpowers/specs/2026-11-24-full-retro-pending-batch.md)
 - [2026-11-24-n34-pending-batch-closeout.md](../superpowers/specs/2026-11-24-n34-pending-batch-closeout.md)
+- [2026-11-24-ycode-deps-security-refresh.md](../superpowers/specs/2026-11-24-ycode-deps-security-refresh.md)
 - [2026-11-24-zcode-400-pending-batch.md](../superpowers/specs/2026-11-24-zcode-400-pending-batch.md)
 
 ## archive（2 份，不计入上述根目录）
