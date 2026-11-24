@@ -1,6 +1,6 @@
 # 2026-11-24 回归安全面清偿：follow-redirects 高危通告（补丁 818）
 
-> 状态：in_progress
+> 状态：merged（2026-11-24；合并提交 929989c5f）
 > 基线：3ebe7cbbc（main）
 
 ## 变更
@@ -65,6 +65,7 @@
 - **覆盖机制**：独立小工程（axios 1.20.0 加同一条 `overrides`）安装后，follow-redirects 解析到 1.16.3。
 - **补丁应用**：`npm run ensure-injected` 以尾部增量应用 818，结论 complete；第二次运行为空操作。
 - **干净基线重放**：合并前档里的根 vitest 含“补丁系列在干净树上的全量重放”用例，通过；根 vitest 合计 9943 个用例通过、1 个失败、11 个跳过。失败的 1 个是调用宿主 `hermes` 命令的真实 CLI 回归测试（`kanban-title-edit.regression-1`），原因是宿主 hermes 当时处于更新后不同步的状态（挂账 N35-9），与本补丁无关；合并前档其余 13 个测试面全部通过。
+- **合入后（主检出）**：`npm update follow-redirects` 只改动 1 个包，已装版本 1.16.3；共享依赖树顶层条目前后一致（622 对 622）。复扫 `npm audit --omit=dev`：高危归零，余 2 个低危（katex，N35-8）。最终树上的全量 vitest：1242 个文件通过、6 个跳过，9944 个用例通过、11 个跳过，零失败——前述真实 CLI 用例此时通过，原因是宿主 hermes 的不同步状态在其后自行恢复（20:18 复查，两条警告消失、`hermes pm doctor` 的 python 项通过），见挂账 N35-9 的更新。
 
 ## 设计文档影响
 
