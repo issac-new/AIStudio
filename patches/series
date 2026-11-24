@@ -1399,3 +1399,7 @@
 # 只读开库异常不再冒成 500（IDE 壳与协作历史页 7 条路由）；回归测试在
 # custom/upstream-compat/__tests__/sessions-db-missing-home.test.ts。
 817-studio-sessions-db-missing-home.patch
+# 全功能回归安全面（2026-11-24）：studio 生产依赖里 axios 的间接依赖 follow-redirects 1.16.0 有三条高危通告
+# （跨源重定向时凭据头处理不当，GHSA-q3jh-wrc6-jgq8 等），修复版 1.16.3 在 axios 声明的范围内；
+# 沿用清单既有的 overrides 机制钉版本，上游升级后自然吸收。装好后须在 vendor/hermes-studio 重跑 npm install。
+818-studio-follow-redirects-override.patch
