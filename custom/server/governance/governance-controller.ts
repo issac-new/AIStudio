@@ -763,11 +763,10 @@ router.post('/matrix-offboard', async (ctx) => {
   }) } catch (e) {
     // 仍有在岗执行单元：409 + 机读错误码与名单（Task 7；界面据此引导先退役）
     if (e instanceof OffboardBlockedError) {
-      ctx.status = 409
-      ctx.body = { ok: false, code: e.code, error: e.message, blockedUnits: e.blockedUnits }
+      fail(ctx, 409, e.message, { code: e.code, extra: { blockedUnits: e.blockedUnits } })
       return
     }
-    ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) }
+    fail(ctx, 502, String(e instanceof Error ? e.message : e))
   }
 })
 
