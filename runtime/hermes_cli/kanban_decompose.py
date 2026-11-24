@@ -13,6 +13,16 @@ expected failures). ``fanout=false`` collapses to the ``specify`` behaviour
 (tighten + promote, no children), making ``decompose`` a strict superset.
 Unknown assignees are rewritten to ``default_assignee`` — a child NEVER ends
 up with ``assignee=None``.
+
+OVERLAY DELTA (team-parallel phase 3, 2026-10-09): parallel granularity
+enforcement per ``overlay/docs/superpowers/specs/2026-10-09-parallel-capability-foundation-spec.md``
+§3 — every child carries ``estimate_days`` (person-days, 0.25–1.0 enforced);
+oversized children (>1 person-day) trigger ONE re-plan round with explicit
+feedback, then clamp-with-audit as last resort; estimates persist via
+``kanban_db.set_estimate`` so dispatch-time workload ordering
+(``_reorder_ready_by_workload``) sees them immediately. Base: upstream
+hermes-agent ``hermes_cli/kanban_decompose.py`` (v0.7.3x era); upgrade rounds
+re-apply this delta via migrate-patches.
 """
 
 from __future__ import annotations
@@ -55,7 +65,8 @@ Output a single JSON object with this exact shape:
         "title": "<concrete task title, imperative voice, <= 80 chars>",
         "body":  "<detailed spec for the worker on this child task>",
         "assignee": "<profile name from the roster, or null for default>",
-        "parents": [<int>, ...]
+        "parents": [<int>, ...],
+        "estimate_days": <number>
       },
       ...
     ]
@@ -65,10 +76,15 @@ Rules:
   - "parents" is a list of INDICES (0-based) into this same "tasks" list,
     expressing actual data dependencies. Tasks with no parents run in
     PARALLEL. Tasks with parents wait until every parent completes.
-  - Prefer parallelism. If two tasks can be done independently, give
-    them no parents so the dispatcher fans them out at once.
+  - Prefer parallelism. If two tasks can be done independently, give them
+    no parents so the dispatcher fans them out at once.
   - Use 2-6 tasks for normal work. Don't create 20 tiny tasks. Don't
     cram everything into 1 task.
+  - PARALLEL GRANULARITY: every child MUST be small enough for ONE worker
+    in at most 1 person-day. Set "estimate_days" between 0.25 and 1.0
+    (0.25 = a quarter day, 0.5 = half a day, 1.0 = a full day). If a piece
+    of work needs MORE than 1 person-day, SPLIT it into multiple smaller
+    sibling tasks with honest dependencies instead of one big task.
   - Pick assignees from the roster by matching the task to the profile's
     DESCRIPTION (not just the name). When nothing matches well, use null
     and the system will route to the default_assignee.
@@ -83,12 +99,13 @@ return:
     "rationale": "<one sentence>",
     "title": "<tightened title>",
     "body":  "<concrete spec for a single worker>",
-    "assignee": "<profile name from the roster, or null for default>"
+    "assignee": "<profile name from the roster, or null for default>",
+    "estimate_days": <number>
   }
 
 In that case the task stays as one work item, just with a tightened spec and
-a concrete assignee. If no profile fits, use null and the system will route to
-the default_assignee.
+a concrete assignee. If no profile fits, use null and the system will route
+to the default_assignee.
 
 No preamble, no closing remarks, no code fences. Output only the JSON object.
 """
@@ -102,11 +119,25 @@ Body:
 Available profiles (assignees you may pick from):
 {roster}
 
-Default assignee (used when no profile fits a task): {default_assignee}
-"""
+Default assignee (used when no profile fits a task): {default_assignee}"""
+
+_REPLAN_TEMPLATE = """
+
+RE-PLAN REQUIRED (parallel granularity): your previous plan gave tasks
+{oversize_idx} estimates above 1 person-day. Produce a NEW plan in which EVERY
+task is at most 1 person-day ("estimate_days" 0.25–1.0): split the oversized
+tasks into smaller siblings, keep dependencies honest (parents indices), and
+keep the rest of the plan. Same output format as before."""
 
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
+
+# Parallel granularity envelope (spec §3: children are fan-out units of
+# <=1 person-day; hard clamp bounds keep malformed LLM numbers harmless).
+_ESTIMATE_MIN = 0.25
+_ESTIMATE_MAX = 2.0
+_ESTIMATE_CAP = 1.0
+_ESTIMATE_DEFAULT = 1.0
 
 
 @dataclass
@@ -119,6 +150,7 @@ class DecomposeOutcome:
     fanout: bool = False
     child_ids: list[str] | None = None
     new_title: Optional[str] = None
+    clamped: int = 0  # children force-clamped down to the 1-person-day cap
 
 
 def _profile_author() -> str:
@@ -190,6 +222,22 @@ def _normalize_assignee_choice(assignee: object, *, default_assignee: str, valid
     return chosen if chosen in valid_names else default_assignee
 
 
+def _normalize_estimate(value: object) -> tuple[float, bool]:
+    """``(days, over_cap)`` — coerce an LLM-supplied estimate into the
+    ``[_ESTIMATE_MIN, _ESTIMATE_MAX]`` envelope. Non-numeric/nonsense falls
+    back to a conservative 1.0 (same default the workload reorder uses for
+    unestimated tasks). ``over_cap`` flags entries above the 1-person-day
+    parallel cap (pre-clamp) so the caller can trigger the re-plan round."""
+    try:
+        days = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return _ESTIMATE_DEFAULT, False
+    if days <= 0 or days != days:  # negative or NaN
+        return _ESTIMATE_DEFAULT, False
+    clamped = min(max(days, _ESTIMATE_MIN), _ESTIMATE_MAX)
+    return round(clamped, 2), days > _ESTIMATE_CAP
+
+
 @dataclass
 class _Routing:
     """Config-derived routing context for one decomposition."""
@@ -232,6 +280,11 @@ def _apply_single(task: kb.Task, parsed: dict, routing: _Routing, author: str) -
         ok = kb.specify_triage_task(
             conn, task.id, title=title_val, body=body_val, assignee=assignee_val, author=author,
         )
+        days, _ = _normalize_estimate(parsed.get("estimate_days"))
+        try:
+            kb.set_estimate(conn, task.id, days, {"source": "decompose"})
+        except Exception:  # estimate is advisory metadata; never block promotion on it
+            logger.warning("decompose: estimate persist failed for %s", task.id, exc_info=True)
     if not ok:
         return DecomposeOutcome(task.id, False, "task moved out of triage before promotion")
     return DecomposeOutcome(task.id, True, "single task (no fanout)", fanout=False, new_title=title_val)
@@ -261,14 +314,45 @@ def _clean_children(task_id: str, raw_tasks: list, routing: _Routing) -> tuple[l
         parents = entry.get("parents") or []
         if not isinstance(parents, list):
             parents = []
+        days, over_cap = _normalize_estimate(entry.get("estimate_days"))
+        if over_cap:
+            logger.info(
+                "decompose: task %s child %d estimate %r over 1-person-day cap — re-plan round pending",
+                task_id, idx, entry.get("estimate_days"),
+            )
         children.append({
             "title": title.strip()[:200],
             "body": body.strip() if isinstance(body, str) else "",
             "assignee": chosen,
             # Drop non-int, out-of-range and self parent indices.
             "parents": [p for p in parents if isinstance(p, int) and 0 <= p < len(raw_tasks) and p != idx],
+            "estimate_days": days,
+            "over_cap": over_cap,
         })
     return children, ""
+
+
+def _oversize_feedback(children: list[dict]) -> str:
+    idxs = ", ".join(str(i) for i, c in enumerate(children) if c.get("over_cap"))
+    return _REPLAN_TEMPLATE.format(oversize_idx=idxs or "several")
+
+
+def _persist_child_estimates(task_id: str, child_ids: list[str], children: list[dict]) -> int:
+    """Write each child's estimate (own txn each, mirrors ``--persist`` path;
+    every set emits an ``estimate_set`` audit event). Returns how many were
+    force-clamped to the cap after the re-plan round."""
+    clamped = 0
+    with kbc.connect_closing() as conn:
+        for cid, child in zip(child_ids, children):
+            days = child["estimate_days"]
+            if child.get("over_cap"):
+                days = _ESTIMATE_CAP
+                clamped += 1
+            try:
+                kb.set_estimate(conn, cid, days, {"source": "decompose", "graph_root": task_id})
+            except Exception:
+                logger.warning("decompose: estimate persist failed for child %s", cid, exc_info=True)
+    return clamped
 
 
 def _apply_fanout(task_id: str, parsed: dict, routing: _Routing, author: str) -> DecomposeOutcome:
@@ -295,9 +379,34 @@ def _apply_fanout(task_id: str, parsed: dict, routing: _Routing, author: str) ->
         return DecomposeOutcome(task_id, False, f"DB error: {type(exc).__name__}")
     if child_ids is None:
         return DecomposeOutcome(task_id, False, "task already decomposed or moved out of triage")
+    clamped = _persist_child_estimates(task_id, child_ids, children)
+    note = f"decomposed into {len(child_ids)} children"
+    if clamped:
+        note += f" ({clamped} clamped to 1.0d after re-plan round)"
     return DecomposeOutcome(
-        task_id, True, f"decomposed into {len(child_ids)} children", fanout=True, child_ids=child_ids,
+        task_id, True, note, fanout=True, child_ids=child_ids, clamped=clamped,
     )
+
+
+def _call_decompose_llm(
+    task, routing: _Routing, *, feedback: str = "", timeout: Optional[int] = None,
+) -> tuple[Optional[dict], Optional[str]]:
+    """One aux round; ``feedback`` non-empty switches to the re-plan prompt."""
+    raw, reason = _call_aux(
+        "decompose", task.id, aux_task="kanban_decomposer", system=_SYSTEM_PROMPT,
+        user=_USER_TEMPLATE.format(
+            **_task_prompt_fields(task),
+            roster=_format_roster(routing.roster),
+            default_assignee=routing.default_assignee,
+        ) + feedback,
+        max_tokens=4000, timeout=timeout or 180, log=logger,
+    )
+    if raw is None:
+        return None, reason
+    parsed = _extract_json_blob(raw, _FENCE_RE)
+    if parsed is None:
+        return None, "LLM returned malformed JSON"
+    return parsed, None
 
 
 def decompose_task(
@@ -308,27 +417,47 @@ def decompose_task(
 ) -> DecomposeOutcome:
     """Decompose a triage task into a graph of child tasks. Expected failures
     (not in triage, no aux client, API error, malformed/empty reply) surface
-    as ``ok=False``."""
+    as ``ok=False``.
+
+    Parallel granularity (overlay delta): when the first plan contains
+    children over 1 person-day, ONE re-plan round runs with explicit
+    feedback; if the re-plan still oversizes (or fails), those children are
+    clamped to 1.0d with audit and the fan-out proceeds — dispatch weighting
+    still sees honest totals via the estimate events."""
     task, reason = _load_triage_task(task_id)
     if task is None:
         return DecomposeOutcome(task_id, False, reason)
 
     routing = _load_routing(root_assignee=task.assignee)
-    raw, reason = _call_aux(
-        "decompose", task_id, aux_task="kanban_decomposer", system=_SYSTEM_PROMPT,
-        user=_USER_TEMPLATE.format(
-            **_task_prompt_fields(task),
-            roster=_format_roster(routing.roster),
-            default_assignee=routing.default_assignee,
-        ),
-        max_tokens=4000, timeout=timeout or 180, log=logger,
-    )
-    if raw is None:
-        return DecomposeOutcome(task_id, False, reason)
-
-    parsed = _extract_json_blob(raw, _FENCE_RE)
+    parsed, reason = _call_decompose_llm(task, routing, timeout=timeout)
     if parsed is None:
-        return DecomposeOutcome(task_id, False, "LLM returned malformed JSON")
+        return DecomposeOutcome(task_id, False, reason or "LLM returned malformed JSON")
+
+    # Granularity re-plan round: at most one, only for fan-out plans with
+    # over-cap children. The retry reuses the same prompt plus explicit
+    # feedback naming the oversized tasks.
+    if parsed.get("fanout"):
+        raw_tasks = parsed.get("tasks") or []
+        if isinstance(raw_tasks, list) and raw_tasks:
+            children, _ = _clean_children(task_id, raw_tasks, routing)
+            if children and any(c.get("over_cap") for c in children):
+                logger.info(
+                    "decompose: %s first plan oversize (%d over cap) — re-plan round",
+                    task_id, sum(1 for c in children if c.get("over_cap")),
+                )
+                reparsed, r2 = _call_decompose_llm(
+                    task, routing, feedback=_oversize_feedback(children), timeout=timeout,
+                )
+                if reparsed is not None and reparsed.get("fanout"):
+                    rt = reparsed.get("tasks") or []
+                    if isinstance(rt, list) and rt:
+                        re_children, _ = _clean_children(task_id, rt, routing)
+                        if re_children and not any(c.get("over_cap") for c in re_children):
+                            parsed = reparsed  # re-plan landed inside the envelope
+                        else:
+                            logger.info(
+                                "decompose: %s re-plan still oversize — clamping to 1.0d", task_id,
+                            )
 
     audit_author = author or _profile_author()
     if not parsed.get("fanout"):

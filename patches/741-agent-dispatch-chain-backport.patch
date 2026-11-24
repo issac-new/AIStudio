@@ -1188,10 +1188,10 @@ diff --git a/gateway/session_kanban.py b/gateway/session_kanban.py
 index 711fb7a06..7e499aa10 100644
 --- a/gateway/session_kanban.py
 +++ b/gateway/session_kanban.py
-@@ -58,10 +58,22 @@ def build_kanban_policy(connection, params, config):
-     if policy.model is None:
-         from gateway.run import _resolve_gateway_model
-         policy = replace(policy, model=_resolve_gateway_model(policy.config()))
+@@ -50,10 +50,22 @@ def build_kanban_policy(connection, params, config):
+     cwd = task.workspace_path
+     private = {}
+     policy = kanban_launch_policy(task, cwd, config, private)
 +    # DoD 完成契约（模型波动加固 A，2026-11-01）：在会话策略构建（=派发）瞬间从
 +    # task.body 派生并冻进 kanban_json——worker 内层 agent 进程 env 不继承外层
 +    # 派发进程，契约必须随会话策略走（bind_worker_context 导出）。mode=off 不占键。

@@ -8,22 +8,21 @@ import json
 from pathlib import Path
 import sqlite3
 
-from persistence.core.errors import AuthorityRefusal as RuntimeStoreError  # v0.23.3 重构后残引修正
+from persistence.core.errors import AuthorityRefusal
 
 
 def build_kanban_policy(connection, params, config):
     from hermes_cli import kanban_db as kb
     from hermes_cli.profiles import resolve_profile_env
-    from gateway.session_policy import build_policy
     authority, actor = connection.authority, connection.actor
     if not connection.native_owner or 'session:create' not in actor.capabilities:
-        raise RuntimeStoreError('permission_denied')
+        raise AuthorityRefusal('permission_denied')
     if actor.profile_id != authority.profile_id:
-        raise RuntimeStoreError('profile_mismatch')
+        raise AuthorityRefusal('profile_mismatch')
     if (set(params) not in ({'board', 'task_id', 'run_id', 'claim_lock'}, {'board', 'task_id', 'run_id', 'claim_lock', 'db'})
             or any(not isinstance(params[k], str) or not params[k] for k in ('board', 'task_id', 'claim_lock'))
             or type(params['run_id']) is not int):
-        raise RuntimeStoreError('invalid_params')
+        raise AuthorityRefusal('invalid_params')
     try:
         board = kb._require_slug(params['board'])
         path = Path(params['db']).resolve(strict=True) if 'db' in params else kb.kanban_db_path(board=board).resolve()
@@ -34,34 +33,39 @@ def build_kanban_policy(connection, params, config):
             if (task is None or run is None or task.status != 'running' or run['status'] != 'running'
                     or task.current_run_id != params['run_id'] or run['task_id'] != task.id
                     or task.claim_lock != params['claim_lock'] or run['claim_lock'] != task.claim_lock):
-                raise RuntimeStoreError('stale_kanban_claim')
+                raise AuthorityRefusal('stale_kanban_claim')
             if Path(resolve_profile_env(task.assignee)).resolve() != Path(authority.profile_id).resolve():
-                raise RuntimeStoreError('profile_mismatch')
+                raise AuthorityRefusal('profile_mismatch')
             bound = conn.execute("SELECT payload FROM task_events WHERE task_id=? AND run_id=? AND kind='owner_admitted' ORDER BY id DESC LIMIT 1",
                                  (task.id, task.current_run_id)).fetchone()
             if bound and json.loads(bound[0])['request_id'] != 'kanban:' + json.dumps([board, task.id, task.current_run_id], separators=(',', ':')):
-                raise RuntimeStoreError('stale_kanban_claim')
+                raise AuthorityRefusal('stale_kanban_claim')
             context = kb.build_worker_context(conn, task.id)
             skills = list(task.skills or ())
             if kb._retry_status_for_run(conn, task.id, task.current_run_id) == 'review':
                 # Same rule as the dispatcher's review lane: the reviewer always loads sdlc-review.
                 skills = list(dict.fromkeys([*skills, 'sdlc-review']))
     except (ValueError, OSError, sqlite3.Error) as exc:
-        raise RuntimeStoreError('invalid_kanban_claim') from exc
+        raise AuthorityRefusal('invalid_kanban_claim') from exc
     cwd = task.workspace_path
-    params_policy = {'source': 'cli', 'cwd': cwd}
-    for name, value in (('model', task.model_override), ('provider', task.provider_override), ('reasoning', task.reasoning_effort)):
-        if value:
-            params_policy[name] = value
     private = {}
-    policy = build_policy(params_policy, config, private_secrets=private)
-    if policy.model is None:
-        from gateway.run import _resolve_gateway_model
-        policy = replace(policy, model=_resolve_gateway_model(policy.config()))
+    policy = kanban_launch_policy(task, cwd, config, private)
+    # DoD 完成契约（模型波动加固 A，2026-11-01）：在会话策略构建（=派发）瞬间从
+    # task.body 派生并冻进 kanban_json——worker 内层 agent 进程 env 不继承外层
+    # 派发进程，契约必须随会话策略走（bind_worker_context 导出）。mode=off 不占键。
+    dod_contract = None
+    try:
+        from completion_contract import derive_contract
+        _dod = derive_contract(task.body or "")
+        if _dod.get("mode") != "off":
+            dod_contract = _dod
+    except Exception:
+        dod_contract = None
     context = dict(params, workspace=cwd, branch=task.branch_name, tenant=task.tenant,
         profile=task.assignee, workspaces_root=str(kb.workspaces_root(board=board).resolve()),
         skills=skills, goal_mode=task.goal_mode, goal_max_turns=task.goal_max_turns,
         goal_text='\n\n'.join(p for p in (task.title, task.body) if p), context=context,
+        **({"dod_contract": dod_contract} if dod_contract else {}),
         max_runtime_seconds=task.max_runtime_seconds, accept_hooks=True)
     context['db'] = str(path)
     request = json.loads(policy.request_json)
@@ -70,9 +74,29 @@ def build_kanban_policy(connection, params, config):
                    request_json=json.dumps(request, sort_keys=True), kanban_json=json.dumps(context)), private
 
 
+def kanban_launch_policy(task, cwd, config, private=None):
+    """The launch policy a claimed card runs, its model resolved by ``task_model`` (shared with the
+    dispatcher's pre-spawn refusal). Refuses ``invalid_params`` (field ``model``) only when nothing
+    can name one, before a receipt or a worker exists."""
+    from gateway.session_policy import build_policy
+    from hermes_cli.kanban_worker_preflight import missing_model_detail, task_model
+    params = {'source': 'cli', 'cwd': cwd}
+    for name, value in (('model', task.model_override), ('provider', task.provider_override), ('reasoning', task.reasoning_effort)):
+        if value:
+            params[name] = value
+    policy = build_policy(params, config, private_secrets={} if private is None else private)
+    if policy.model is None:
+        model, unresolved = task_model(task, config)
+        if unresolved:
+            from hermes_constants import get_hermes_home
+            raise AuthorityRefusal('invalid_params', field='model', detail=missing_model_detail(task.assignee, get_hermes_home()))
+        policy = replace(policy, model=model)
+    return policy
+
+
 async def run_task(connection, params):
     if not connection.native_owner or 'session:create' not in connection.actor.capabilities:
-        raise RuntimeStoreError('permission_denied')
+        raise AuthorityRefusal('permission_denied')
     from gateway.run import _load_gateway_config
     from gateway.session_local import create_local_session
     from gateway.session_contract import Submission
@@ -93,12 +117,12 @@ async def run_task(connection, params):
     request_id = 'kanban:' + json.dumps([params.get('board'), params.get('task_id'), params.get('run_id')], separators=(',', ':'))
     sid = local_session_id(authority.profile_id, connection.actor.subject, request_id)
     saved = store.bindings.receipt(sid) if store.sessions.get(sid) is not None else None
-    if saved:
+    if saved is not None:
         policy = restore_policy(saved.policy)
         context = json.loads(policy.kanban_json or '{}')
         if (not connection.native_owner or set(params) not in ({'board', 'task_id', 'run_id', 'claim_lock'}, {'board', 'task_id', 'run_id', 'claim_lock', 'db'})
                 or any(params[k] != context.get(k) for k in params)):
-            raise RuntimeStoreError('permission_denied')
+            raise AuthorityRefusal('permission_denied')
         from gateway.session_local_recovery import restore_local_session
         ref = restore_local_session(authority, sid)
     else:
@@ -123,11 +147,11 @@ async def run_task(connection, params):
                                   (params['task_id'], params['run_id'])).fetchone()
             if marker:
                 if json.loads(marker[0])['session_id'] != ref.session_id:
-                    raise RuntimeStoreError('stale_kanban_claim')
+                    raise AuthorityRefusal('stale_kanban_claim')
             else:
                 task = kb.get_task(conn, params['task_id'])
                 if not (task and task.status == 'running' and task.current_run_id == params['run_id'] and task.claim_lock == params['claim_lock']):
-                    raise RuntimeStoreError('stale_kanban_claim')
+                    raise AuthorityRefusal('stale_kanban_claim')
                 kb._append_event(conn, task.id, 'owner_admitted',
                     {'db': owner_db, 'session_id': ref.session_id,
                      'request_id': request_id, 'pid': os.getpid(), 'birth': worker_birth(psutil.Process())},
@@ -173,6 +197,12 @@ def bind_worker_context(frame):
             env[key] = value
     if context['goal_mode']:
         env['HERMES_KANBAN_GOAL_MODE'] = '1'
+    # DoD 契约随会话策略到内层 agent（内核完成门 complete_task 读这两个 env）。
+    dod = context.get('dod_contract')
+    if isinstance(dod, dict):
+        env['HERMES_KANBAN_DOD_CONTRACT'] = json.dumps(dod, ensure_ascii=False, separators=(',', ':'))
+        if dod.get('sourceSha256'):
+            env['HERMES_KANBAN_DOD_SOURCE_SHA256'] = dod['sourceSha256']
     from hermes_cli.kanban_db_dispatch import _worker_terminal_timeout_env
     for key in ('TERMINAL_TIMEOUT', 'TERMINAL_MAX_FOREGROUND_TIMEOUT'):
         value = _worker_terminal_timeout_env(context['max_runtime_seconds'], os.environ.get(key))
@@ -185,7 +215,7 @@ def bind_worker_context(frame):
             task = kb.get_task(conn, context['task_id'])
             if (task is None or task.status != 'running' or task.current_run_id != context['run_id']
                     or task.claim_lock != context['claim_lock']):
-                raise RuntimeStoreError('stale_kanban_claim')
+                raise AuthorityRefusal('stale_kanban_claim')
             # The dispatcher's spawned worker stays the run's pid (reclaim, timeout and operator
             # kills target it; ``_watch_submitter`` ties this interpreter's life to it). The bound
             # interpreter is recorded beside it so a sweep can tell when the attempt is truly gone.
@@ -251,7 +281,7 @@ def _worker_workspace(frame):
     from gateway.session_authorities import served_profile_name
     from gateway.session_context import clear_session_vars, set_session_vars
     from gateway.session_policy import bind_turn_workspace, restore_policy
-    from hermes_state_keys import profile_from_session_key
+    from session_keys import profile_from_session_key
     policy = restore_policy(frame['policy'])
     route = frame.get('route') or session_id
     # The profile its in-process turns bind, so persistent Docker keys the container they and the

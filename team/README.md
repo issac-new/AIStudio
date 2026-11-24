@@ -12,9 +12,13 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 ### Version
 
-Current: **v0.23.3-team.1** (base bumped 2026-11-20 with the vendor upgrade to hermes-agent v0.23.3; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.23.2-team.1.
+Current: **v0.23.4-team.1** (base bumped 2026-11-24 with the vendor upgrade to hermes-agent v0.23.4; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.23.3-team.2.
 
-### What changed in this release (v0.23.3-team.1)
+### What changed in this release (v0.23.4-team.1)
+
+Upstream base hermes-agent **v0.23.3 → v0.23.4** (`3ac54e1012`, 1143 commits / 1316 files). Headline upstream changes: cron morning-brief chain hardening (read-only briefs, blueprint skills preserved), gateway session-prompt hooks (inert snapshot copies, owner-scope param redaction), profile/plugin mutual exclusion, shared-metrics daily snapshot, Gemini 4 model catalog. Five overlay patches hand-reanchored onto the new baseline (391/612/732/741/786); replay: **511/511 patches applied, idempotent double-run complete**. Runtime overlay re-mirrored 30 files against the new injected baseline; the watchdog hostile-load hotfix stays runtime-carried per D9 (restored after mirror refresh). Spec `docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md`.
+
+### What changed in v0.23.3-team.1 (2026-11-20)
 
 Upstream base hermes-agent **v0.23.2 → v0.23.3** (`caafe5389a`, 1675 commits / 3948 files). Headline upstream change: the session-store layer was consolidated — 60+ root `hermes_state_*.py` modules merged into a `persistence/` package. Overlay patches re-anchored accordingly: prefix-chain table (485) and readpool TTL (755) moved into the new package (patch routing table extended with `persistence/`), followups storage adapted to the new `state_meta` API. Replay: 489/489 patches applied, combined-tree pytest green net of pre-existing reds, runtime overlay 194/194 in sync.
 
@@ -29,7 +33,7 @@ Upstream base hermes-agent **v0.23.2 → v0.23.3** (`caafe5389a`, 1675 commits /
 - Previous releases in the 0.23.0 base line: v0.23.0-team.1..team.2 (below).
 
 ### What changed in v0.23.0-team.1 (2026-11-06)
-The current AIStudio **1.0.20-overlay** distribution carries agent teams **v0.23.3-team.2** (repo head; the published 1.0.19 and 1.0.18 assets carry the same), hermes-agent upstream **0.23.3** (repo head), yuan **v2.103.0**, and Ycode **4.0.0** (repo head; the published 1.0.19 and 1.0.18 assets carry 3.18.2). These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
+The current AIStudio **1.0.20-overlay** distribution carries agent teams **v0.23.4-team.1** (repo head; the published 1.0.19 and 1.0.18 assets carry the same), hermes-agent upstream **0.23.4** (repo head), yuan **v2.103.0**, and Ycode **4.0.0** (repo head; the published 1.0.19 and 1.0.18 assets carry 3.18.2). These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
 
 - **Base bump only**: hermes-agent base v0.22.7 → v0.23.0 (vendor upgrade 2026-11-06, spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`); extension counter reset to 1. No profile content changes.
 

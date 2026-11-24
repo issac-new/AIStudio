@@ -76,9 +76,23 @@ def _cmd_boards_create(args: argparse.Namespace) -> int:
     if rc:
         return rc
     already = kb.board_exists(normed) and normed != kb.DEFAULT_BOARD
+    # HERMES_CUSTOM[v020] BEGIN: resolve --project scope
+    project_id = None
+    project_path = None
+    project_ref = getattr(args, "project", None)
+    if project_ref:
+        from hermes_cli import projects_db as pdb
+        with pdb.connect_closing() as pconn:
+            proj = pdb.get_project(pconn, project_ref.strip())
+        if proj is None:
+            return _err(f"kanban boards create: project {project_ref!r} does not exist", 2)
+        project_id = proj.id
+        project_path = proj.primary_path or None
+    # HERMES_CUSTOM[v020] END
     meta = kb.create_board(
         normed, name=args.name, description=args.description, icon=args.icon, color=args.color,
-        default_workdir=args.default_workdir,
+        default_workdir=args.default_workdir or project_path,  # HERMES_CUSTOM[v020]
+        project_id=project_id,  # HERMES_CUSTOM[v020]
     )
     print(f"Board {meta['slug']!r} {'already exists' if already else 'created'}.\n"
           f"  Display name: {meta.get('name', '')}\n"
@@ -206,6 +220,35 @@ def _cmd_boards_import(args: argparse.Namespace) -> int:
     return 0
 
 
+# HERMES_CUSTOM[v020] BEGIN: boards set-project handler
+def _cmd_boards_set_project(args: argparse.Namespace) -> int:
+    normed, rc = _board_slug_arg(args, "set-project", must_exist=True)
+    if rc:
+        return rc
+    ref = args.project
+    if ref is not None and ref.lower() in {"none", "-", "null", ""}:
+        ref = None
+    if ref is None:
+        kb.write_board_metadata(normed, project_id="")
+        print(f"Board {normed!r} project scope cleared.")
+        return 0
+    from hermes_cli import projects_db as pdb
+    with pdb.connect_closing() as pconn:
+        proj = pdb.get_project(pconn, ref.strip())
+    if proj is None:
+        return _err(f"kanban boards set-project: project {ref!r} does not exist", 2)
+    meta = kb.write_board_metadata(
+        normed,
+        project_id=proj.id,
+        default_workdir=proj.primary_path or None,
+    )
+    print(f"Board {normed!r} scoped to project {proj.name!r} ({proj.slug}).")
+    if meta.get("default_workdir"):
+        print(f"  default_workdir: {meta['default_workdir']}")
+    return 0
+# HERMES_CUSTOM[v020] END
+
+
 _BOARD_HANDLERS = {
     "list": _cmd_boards_list, "ls": _cmd_boards_list,
     "create": _cmd_boards_create, "new": _cmd_boards_create,
@@ -214,6 +257,7 @@ _BOARD_HANDLERS = {
     "show": _cmd_boards_show, "current": _cmd_boards_show,
     "rename": _cmd_boards_rename,
     "set-default-workdir": _cmd_boards_set_default_workdir,
+    "set-project": _cmd_boards_set_project,  # HERMES_CUSTOM[v020]
     "export": _cmd_boards_export,
     "import": _cmd_boards_import,
 }

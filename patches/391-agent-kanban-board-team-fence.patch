@@ -2,7 +2,7 @@ diff --git a/hermes_cli/kanban_db_dispatch.py b/hermes_cli/kanban_db_dispatch.py
 index aef2866f9..e293588ea 100644
 --- a/hermes_cli/kanban_db_dispatch.py
 +++ b/hermes_cli/kanban_db_dispatch.py
-@@ -1692,10 +1692,70 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
+@@ -1692,9 +1692,69 @@ def _is_handoff_event(kind: str, payload: Optional[str]) -> bool:
      return bool(to) and "from" in data and data["from"] != to
  
  
@@ -62,8 +62,7 @@ index aef2866f9..e293588ea 100644
 +
 +
 +def _profile_exists_fn(board: Optional[str] = None) -> Optional[Callable[[str], bool]]:
-     """``profile_exists`` from ``hermes_cli.profiles``; ``None`` when it cannot be
-     imported and no allowlist is set (callers then trust the assignee).
+     """``profile_exists_here``; ``None`` when unimportable and no allowlist is set (callers then trust the assignee).
  
 +    HERMES_CUSTOM[board-team-fence]: with ``board`` given and a ``profiles`` team
 +    list in its ``board.json``, the predicate additionally requires the assignee
@@ -74,7 +73,7 @@ index aef2866f9..e293588ea 100644
      With ``kanban.dispatch_profiles`` set (#110995) the predicate also requires the
      assignee to be listed, fail-closed: a ``default`` card is only claimable by homes that
      opted in, and a set allowlist whose gate cannot be built claims nothing (#147531)."""
-@@ -1707,7 +1767,8 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
+@@ -1706,7 +1766,8 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
          _kb._log.warning("kanban: hermes_cli.profiles unimportable — claiming no cards", exc_info=True)
          return lambda _name: False
      allowlist = _dispatch_profile_allowlist(normalize_profile_name)
@@ -84,7 +83,7 @@ index aef2866f9..e293588ea 100644
          return profile_exists
  
      def _gated(name: str) -> bool:
-@@ -1715,7 +1776,11 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
+@@ -1714,7 +1775,11 @@ def _profile_exists_fn() -> Optional[Callable[[str], bool]]:
              canon = normalize_profile_name(name)
          except ValueError:
              return False
@@ -97,7 +96,7 @@ index aef2866f9..e293588ea 100644
  
      return _gated
  
-@@ -2073,7 +2138,7 @@ def _dispatch_lane_task(
+@@ -2072,7 +2137,7 @@ def _dispatch_lane_task(
      # would fail ``hermes -p <assignee>`` at startup and loop ready→crash→ready
      # forever. Bucketed apart from skipped_unassigned: the operator cannot fix
      # it by assigning a profile, and health telemetry suppresses "stuck" for it.
@@ -106,7 +105,7 @@ index aef2866f9..e293588ea 100644
      if profile_exists is not None and not profile_exists(assignee):
          result.skipped_nonspawnable.append(task_id)
          # Per-task diagnostic so ``show``/``tail`` name the missing profile instead of leaving
-@@ -2277,6 +2342,7 @@ def _any_spawnable_review(
+@@ -2276,6 +2341,7 @@ def _any_spawnable_review(
      *,
      per_profile_cap: Optional[int] = None,
      per_profile_running: Optional[dict[str, int]] = None,
@@ -114,7 +113,7 @@ index aef2866f9..e293588ea 100644
  ) -> bool:
      """Mirror review dispatch gates before reserving ready-lane capacity.
  
-@@ -2288,7 +2354,7 @@ def _any_spawnable_review(
+@@ -2287,7 +2353,7 @@ def _any_spawnable_review(
      """
      if not review_rows:
          return False
@@ -123,7 +122,7 @@ index aef2866f9..e293588ea 100644
      running = per_profile_running or {}
      for row in review_rows:
          assignee = row["assignee"]
-@@ -2303,7 +2369,7 @@ def _any_spawnable_review(
+@@ -2302,7 +2368,7 @@ def _any_spawnable_review(
      return False
  
  
@@ -132,7 +131,7 @@ index aef2866f9..e293588ea 100644
      """``kanban.default_assignee`` when it names a real profile this home may
      claim (``kanban.dispatch_profiles`` gated, same predicate as the spawn
      gate). Otherwise ``None`` so an unassigned shared-board card is never
-@@ -2312,7 +2378,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
+@@ -2311,7 +2377,7 @@ def _resolve_default_assignee(default_assignee: Optional[str]) -> Optional[str]:
      else ``None`` — the fail-closed gate claims nothing (#147531)."""
      name = (default_assignee or "").strip() or None
      if name:
@@ -141,7 +140,7 @@ index aef2866f9..e293588ea 100644
          if profile_exists is not None and not profile_exists(name):
              return None
      return name
-@@ -2384,6 +2450,7 @@ def _dispatch_once_locked(
+@@ -2383,6 +2449,7 @@ def _dispatch_once_locked(
      if spawn_budget is not None and spawn_budget > 0 and _any_spawnable_review(
          conn, review_rows,
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
@@ -149,7 +148,7 @@ index aef2866f9..e293588ea 100644
      ):
          ready_budget = max(spawn_budget - 1, 0)
      lane_kwargs: dict[str, Any] = dict(
-@@ -2391,7 +2458,7 @@ def _dispatch_once_locked(
+@@ -2390,7 +2457,7 @@ def _dispatch_once_locked(
          failure_limit=failure_limit, spawn_fn=spawn_fn,
          per_profile_cap=per_profile_cap, per_profile_running=per_profile_running,
      )
