@@ -62,13 +62,13 @@ BEGIN {
 }
 /^diff / { infile = 1; inhead = 1; file = ""; old = ""; next }
 /^@@/ { inhead = 0; next }
-inhead && /^--- / { old = substr($0, 5); next }
+inhead && /^--- / { old = substr($0, 5); sub(/^[ab]\//, "", old); next }
 inhead && /^\+\+\+ / {
   f = substr($0, 5)
-  if (f == "/dev/null") { file = old; DEL[file] = 1 } else { file = f }
-  sub(/^[ab]\//, "", file)
-  if (f == "/dev/null") sub(/^[ab]\//, "", old)
-  if (f == "/dev/null") file = old
+  # 被删除文件的记录键必须是不带 a/ 前缀的仓库路径：END 段按 ^vendor/ 排除、按 DEL 成员跳过
+  # 已删文件的逐行判定，都依赖键的形态。此前先记键再去前缀，两条规则对被删除文件从未生效
+  # （2026-11-24 复盘：上游基线升级删掉的 5 个 vendor 测试文件被误判为降标）。
+  if (f == "/dev/null") { file = old; DEL[file] = 1 } else { file = f; sub(/^[ab]\//, "", file) }
   next
 }
 inhead { next }

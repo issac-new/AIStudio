@@ -24,6 +24,23 @@ describe('矩阵自身合法', () => {
     expect(matrix.axes.length).toBeGreaterThan(10)
   })
 
+  // 2026-11-24 事故：yc-typecheck 的 setup 步骤漏写 cwd，pnpm install 落在仓库根——
+  // 而根 node_modules 软链到共享依赖树，pnpm 把共享树当作无依赖目标重写了状态文件。
+  it('凡带 pnpm 的 setup/run 步骤必须声明工作目录（不得落在仓库根/共享依赖树）', async () => {
+    const { loadMatrix } = await mod()
+    const matrix = loadMatrix(ROOT)
+    const bad: string[] = []
+    for (const axis of matrix.axes) {
+      const steps = [...(axis.setup ?? []), ...(axis.run?.steps ?? []), axis.run?.argv ? axis.run : null].filter(Boolean)
+      for (const step of steps) {
+        const usesPnpm = (step.argv ?? []).includes('pnpm')
+        if (usesPnpm && !step.cwd) bad.push(`${axis.id}: ${step.argv.join(' ')}`)
+        if (usesPnpm && axis.run?.argv?.includes('pnpm') && !axis.run.cwd) bad.push(`${axis.id}: run ${axis.run.argv.join(' ')}`)
+      }
+    }
+    expect(bad, `带 pnpm 的步骤必须声明 cwd：\n${bad.join('\n')}`).toEqual([])
+  })
+
   it('id 唯一；每个测试面都由自动关口承接（推送前钩子或 CI）', async () => {
     const { loadMatrix } = await mod()
     const matrix = loadMatrix(ROOT)
