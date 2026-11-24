@@ -63,6 +63,14 @@ export interface AuditRequirement {
   note?: string
 }
 
+/** 运行时绑定（2026-11-24 数字员工批一）：执行单元显式绑定的派单目标。
+ *  agents=派单目标名（@提及用的名字），matrixAccounts=Matrix 账号全形。
+ *  缺省=未绑定，不受派单门约束（存量身份不回填，见规格 D1/D11）；两个数组都空时整个键不落。 */
+export interface RuntimeBindings {
+  agents?: string[]
+  matrixAccounts?: string[]
+}
+
 export interface AgentIdentity {
   /** 身份 id（aid-序号；稳定主键） */
   id: string
@@ -80,6 +88,8 @@ export interface AgentIdentity {
   responsibilityCard?: ResponsibilityCard
   /** 五阶段生命周期（2026-11-06 起）：缺省按 registered 展示，不批量回填 */
   lifecycle?: Lifecycle
+  /** 运行时绑定（2026-11-24 起）：存量身份可缺；同一目标只能被一个身份绑定 */
+  runtimeBindings?: RuntimeBindings
   credentials: CredentialRecord[]
   delegations: DelegationRecord[]
   createdAt: number
@@ -159,6 +169,54 @@ export function validateIdentityInput(input: Partial<AgentIdentity> & { name?: u
     problems.push('kind 须为 human|agent|bot|service')
   }
   if (input.toolAllowlist !== undefined && !Array.isArray(input.toolAllowlist)) problems.push('toolAllowlist 须为字符串数组')
+  return problems
+}
+
+const BINDING_KEYS = ['agents', 'matrixAccounts'] as const
+
+/** 运行时绑定的字段规范化：去空白、去重，空数组不保留。未传=未声明（空绑定）；
+ *  非对象、字段不是数组或元素非字符串一律拒绝——畸形值落账会让派单门按错位的目标匹配。 */
+export function normalizeRuntimeBindings(
+  raw: unknown,
+): { ok: true; bindings: RuntimeBindings } | { ok: false; problems: string[] } {
+  if (raw === undefined) return { ok: true, bindings: {} }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return { ok: false, problems: ['runtimeBindings 须为对象（{ agents?, matrixAccounts? }）'] }
+  }
+  const problems: string[] = []
+  const bindings: RuntimeBindings = {}
+  for (const key of BINDING_KEYS) {
+    const value = (raw as Record<string, unknown>)[key]
+    if (value === undefined) continue
+    if (!Array.isArray(value) || value.some((v) => typeof v !== 'string')) {
+      problems.push(`runtimeBindings.${key} 须为字符串数组`)
+      continue
+    }
+    const targets: string[] = []
+    for (const v of value) {
+      const target = v.trim()
+      if (target && !targets.includes(target)) targets.push(target)
+    }
+    if (targets.length) bindings[key] = targets
+  }
+  return problems.length ? { ok: false, problems } : { ok: true, bindings }
+}
+
+/** 绑定唯一性：同一数组内一个目标只能被一个身份绑定——派单门按目标反查身份，重复即无法
+ *  确定信谁。两个数组各比各的：派单目标名与 Matrix 账号全形是两套目标，门按目标种类分别查找。
+ *  自身不计，改绑到自己已占的目标是幂等更新。 */
+function bindingConflicts(identities: AgentIdentity[], selfId: string | undefined, bindings: RuntimeBindings): string[] {
+  const problems: string[] = []
+  for (const other of identities) {
+    if (other.id === selfId) continue
+    for (const key of BINDING_KEYS) {
+      for (const target of bindings[key] ?? []) {
+        if (other.runtimeBindings?.[key]?.includes(target)) {
+          problems.push(`运行时目标已被身份 ${other.id}（${other.name}）绑定：${target}`)
+        }
+      }
+    }
+  }
   return problems
 }
 
@@ -251,6 +309,7 @@ export function registerIdentity(
     toolAllowlist?: string[]
     capabilityBoundary?: CapabilityBoundary
     auditRequirement?: AuditRequirement
+    runtimeBindings?: RuntimeBindings
   },
   actor: string,
 ): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
@@ -259,6 +318,15 @@ export function registerIdentity(
   const store = readStore()
   if (store.identities.some((i) => i.name === input.name.trim())) {
     return { ok: false, problems: [`同名身份已存在：${input.name.trim()}（身份名唯一，复用请走 update）`] }
+  }
+  // 运行时绑定：未传不写该键（存量注册结果不变）；传了先规范化再查唯一性，都过才落盘
+  let bindings: RuntimeBindings | undefined
+  if (input.runtimeBindings !== undefined) {
+    const normalized = normalizeRuntimeBindings(input.runtimeBindings)
+    if (!normalized.ok) return { ok: false, problems: normalized.problems }
+    const conflicts = bindingConflicts(store.identities, undefined, normalized.bindings)
+    if (conflicts.length) return { ok: false, problems: conflicts }
+    bindings = Object.keys(normalized.bindings).length ? normalized.bindings : undefined
   }
   const now = Date.now()
   const identity: AgentIdentity = {
@@ -269,6 +337,7 @@ export function registerIdentity(
     toolAllowlist: input.toolAllowlist ?? [],
     ...(input.capabilityBoundary ? { capabilityBoundary: normalizeBoundary(input.capabilityBoundary) } : {}),
     ...(input.auditRequirement ? { auditRequirement: normalizeAudit(input.auditRequirement) } : {}),
+    ...(bindings ? { runtimeBindings: bindings } : {}),
     credentials: [],
     delegations: [],
     createdAt: now,
@@ -308,6 +377,7 @@ export function updateIdentity(
     kind?: IdentityKind
     capabilityBoundary?: CapabilityBoundary
     auditRequirement?: AuditRequirement
+    runtimeBindings?: RuntimeBindings
   },
   actor: string,
 ): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
@@ -331,6 +401,15 @@ export function updateIdentity(
   }
   if (patch.auditRequirement !== undefined) {
     identity.auditRequirement = normalizeAudit(patch.auditRequirement)
+  }
+  if (patch.runtimeBindings !== undefined) {
+    const normalized = normalizeRuntimeBindings(patch.runtimeBindings)
+    if (!normalized.ok) return { ok: false, problems: normalized.problems }
+    const conflicts = bindingConflicts(store.identities, id, normalized.bindings)
+    if (conflicts.length) return { ok: false, problems: conflicts }
+    // 整体替换（同 mxids 口径，不猜合并意图）：空绑定=解绑，删键并释放目标
+    if (Object.keys(normalized.bindings).length) identity.runtimeBindings = normalized.bindings
+    else delete identity.runtimeBindings
   }
   identity.updatedAt = Date.now()
   writeStore(store)
