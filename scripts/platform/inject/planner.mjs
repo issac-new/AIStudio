@@ -6,13 +6,13 @@
 // 单一事实源约定：
 //   - patch 目标路由复用 inject.mjs 的 HERMES_AGENT_PATCH_PREFIXES 谓词
 //     （isHermesAgentPatchPath），本模块不复制前缀清单。
-//   - 新增文件解析复用 scripts/lib/zcode-patch-manifest.mjs 的
-//     addedFilesFromPatch（纯解析，zcode/hermes 两通道同构）。
+//   - 新增文件与已跟踪文件解析复用 scripts/lib/zcode-patch-manifest.mjs 的
+//     addedFilesFromPatch / trackedFilesFromPatch（纯解析，zcode/hermes 两通道同构）。
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { isHermesAgentPatchPath } from '../../inject.mjs';
-import { addedFilesFromPatch } from '../../lib/zcode-patch-manifest.mjs';
+import { addedFilesFromPatch, trackedFilesFromPatch } from '../../lib/zcode-patch-manifest.mjs';
 
 /** series 文本 → 有序补丁名清单（剥 # 注释与空行；与 inject.mjs readSeries 同口径）。 */
 export function parseSeriesText(seriesText) {
@@ -68,8 +68,9 @@ function readPatchOrThrow(dir, name, channel) {
  * @param zcodeSeriesText zcode-patches/series 文本（zcode 通道）
  * @param patchDir hermes 补丁目录字符串或 {hermes, zcode} 目录对象
  * @returns PlanItem[]：hermes 通道（series 序）在前、zcode 通道在后；
- *   每项 {channel, target, name, sha256, seriesIndex, addedFiles[]}，
- *   seriesIndex 为通道内序号，sha256 为补丁文件字节 SHA-256。
+ *   每项 {channel, target, name, sha256, seriesIndex, addedFiles[], trackedFiles[]}，
+ *   seriesIndex 为通道内序号，sha256 为补丁文件字节 SHA-256；
+ *   trackedFiles＝补丁改过的已跟踪文件（noop 哨兵的落盘证据面，不写入清单）。
  */
 export function buildPlan(seriesText, zcodeSeriesText, patchDir) {
   const dirs = resolvePatchDirs(patchDir);
@@ -85,6 +86,7 @@ export function buildPlan(seriesText, zcodeSeriesText, patchDir) {
       sha256: createHash('sha256').update(bytes).digest('hex'),
       seriesIndex,
       addedFiles: addedFilesFromPatch(text),
+      trackedFiles: trackedFilesFromPatch(text),
     });
   });
   const zcodeNames = parseSeriesText(zcodeSeriesText);
@@ -99,6 +101,7 @@ export function buildPlan(seriesText, zcodeSeriesText, patchDir) {
       seriesIndex,
       // zcode 通道同样按补丁声明记录新增文件（clean 分树删除的清单面）
       addedFiles: addedFilesFromPatch(text),
+      trackedFiles: trackedFilesFromPatch(text),
     });
   });
   return items;

@@ -23,6 +23,27 @@ export function addedFilesFromPatch(patchText) {
   return out
 }
 
+/**
+ * 从单个 patch 文本解析「已跟踪文件」相对路径（前置镜像已存在的文件：修改、删除、
+ * 重命名的源；去重，保持声明顺序）。与 addedFilesFromPatch 互为补集——新增文件不计。
+ * 消费方：noop 哨兵（lane-touch.mjs）按这些路径核对补丁的已跟踪改动是否还在位。
+ */
+export function trackedFilesFromPatch(patchText) {
+  const out = []
+  const seen = new Set()
+  const blocks = String(patchText).split(/^diff --git /m).slice(1)
+  for (const block of blocks) {
+    const header = block.split('\n')[0] ?? ''
+    const m = /^a\/(.+?) b\/(.+)$/.exec(header)
+    if (!m) continue
+    const isNew = /^new file mode /m.test(block) || /^--- \/dev\/null$/m.test(block)
+    if (isNew || seen.has(m[1])) continue
+    seen.add(m[1])
+    out.push(m[1])
+  }
+  return out
+}
+
 /** 声明的文件里哪些在工作树缺席。 */
 export function missingFiles(declared, exists) {
   return declared.filter((rel) => !exists(rel))

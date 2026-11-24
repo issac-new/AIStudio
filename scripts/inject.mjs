@@ -24,7 +24,7 @@ import {
   IncrementRefusedError, isAcceptablePartial,
 } from './platform/inject/manifest.mjs';
 import { isUnder } from './platform/inject/journal.mjs';
-import { noopSentinel } from './platform/inject/lane-touch.mjs';
+import { sentinelReport, sweepResidualAddedFiles, describeSentinelLanes } from './platform/inject/lane-touch.mjs';
 import { resolveUpstreamRoots as resolveUpstreamRootsLib } from './platform/lib/upstream-root.mjs';
 import { addedFilesFromPatch } from './lib/zcode-patch-manifest.mjs';
 
@@ -746,21 +746,34 @@ function main() {
         try {
           const inc = planIncrement(existingManifest, plan);
           if (inc.kind === 'noop') {
-            // noop 哨兵（N33-1）：清单说 applied 还不够，树必须真的带着补丁差异——
-            // 毒化形态（外部还原后清单残留）在此现形，不再静默跳过。
-            const sentinel = noopSentinel(existingManifest, {
+            // noop 哨兵（N33-1/N34-9）：清单说 applied 还不够——补丁改过的已跟踪文件必须
+            // 真的还在工作树状态里。毒化形态（外部还原后清单残留，含「只还原已跟踪、
+            // 新增文件残留」的半还原态）在此现形，不再静默跳过。
+            const sentinel = sentinelReport(existingManifest, planItems, {
               'hermes-studio': hermesStudioRoot,
               'hermes-agent': hermesAgentRoot,
               zcode: zcodeRoot,
             });
-            if (sentinel === 'reverted') {
-              console.warn('[inject] noop 哨兵：清单残留（声明 applied 但各 lane 工作树零差异，树已被外部还原，N33-1）——废弃残留清单，全量重放恢复注入态。');
+            if (sentinel.verdict === 'reverted') {
+              console.warn('[inject] noop 哨兵：清单残留（声明 applied 但各 lane 的已跟踪改动一个都不在，树已被外部还原，N33-1/N34-9）——废弃残留清单，全量重放恢复注入态。');
+              const swept = sweepResidualAddedFiles(existingManifest, {
+                'hermes-studio': hermesStudioRoot, 'hermes-agent': hermesAgentRoot, zcode: zcodeRoot,
+              });
+              if (swept.skipped > 0) {
+                console.error(`[inject] 哨兵：残留的补丁新增文件有 ${swept.skipped} 处越出目标树或无法删除——清单不可信，拒绝自动重放。`);
+                console.error('[inject] 请 npm run clean && npm run inject 全量重放。');
+                process.exit(1);
+              }
+              if (swept.removed > 0) {
+                console.warn(`[inject] 哨兵：清理残留的补丁新增文件 ${swept.removed} 个（git 还原不清理未跟踪文件，不清则重放失败）。`);
+              }
               rmSync(stateManifestPath, { force: true });
               items = planItems;
               baseManifest = null;
               managedTree = false;
-            } else if (sentinel === 'mixed') {
-              console.error('[inject] noop 哨兵：部分 lane 已还原（混合态）——清单与树不一致且无法自动判定归属，拒绝 noop。');
+            } else if (sentinel.verdict === 'mixed') {
+              console.error('[inject] noop 哨兵：混合态——部分补丁的已跟踪改动不在位（清单与树不一致且无法自动判定归属），拒绝 noop。');
+              for (const line of describeSentinelLanes(sentinel)) console.error(`[inject]   ${line}`);
               console.error('[inject] 请 npm run clean && npm run inject 全量重放。');
               process.exit(1);
             } else {
