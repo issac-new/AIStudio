@@ -34,7 +34,7 @@ import { evaluatePostureAdmission, resolvePosturePolicy } from './posture-admiss
 import { emergencyStopAll } from './emergency-stop'
 import { queryImpact } from './governance-impact'
 import { crossMachineDispatchStats } from './governance-crossdispatch'
-import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, createAccountInvite, backfillDefaultAvatars, detectAdminRowChange, readOrgCosign, openOrgCosign, resolveOrgCosign, writeOrgBreakGlass } from './registry-admin'
+import { isRegistryKind, readRegistry, writeRegistry, provisionMatrixAccount, offboardAccount, precheckOffboard, OffboardBlockedError, createAccountInvite, backfillDefaultAvatars, detectAdminRowChange, readOrgCosign, openOrgCosign, resolveOrgCosign, writeOrgBreakGlass } from './registry-admin'
 import { collectAssigneeStats, collectSquadStats, deriveUsage, computeSloReport, costSummary, dispatchStats, collectQgateRuns, collectQgateVerdicts } from './governance-analytics'
 import { capacityOverview } from './capacity-analytics'
 import { auditLog } from './governance-audit'
@@ -730,6 +730,24 @@ router.post('/matrix-avatars/backfill', async (ctx) => {
 })
 
 
+// 离职前置检查（Task 7，只读）：与离职接口同闸同入参校验——校验管理员令牌、
+// 列出阻止离职的在岗执行单元、预览自然人联动；不写任何文件。
+router.post('/matrix-offboard/precheck', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  const b = ctx.request.body as Record<string, string | string[]>
+  for (const k of ['localName', 'handoverTo', 'adminToken', 'homeserverUrl']) {
+    if (!b[k]) { ctx.status = 400; ctx.body = { error: `缺 ${k}` }; return }
+  }
+  try {
+    const r = await precheckOffboard({
+      localName: String(b.localName), handoverTo: String(b.handoverTo),
+      taskIds: Array.isArray(b.taskIds) ? (b.taskIds as string[]) : [],
+      reason: String(b.reason || ''), adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
+    })
+    ctx.body = { ok: true, blockedUnits: r.blockedUnits, person: r.person }
+  } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
+})
+
 router.post('/matrix-offboard', async (ctx) => {
   if (superAdminDenied(ctx)) return
   const b = ctx.request.body as Record<string, string | string[]>
@@ -740,8 +758,17 @@ router.post('/matrix-offboard', async (ctx) => {
     localName: String(b.localName), handoverTo: String(b.handoverTo),
     taskIds: Array.isArray(b.taskIds) ? (b.taskIds as string[]) : [],
     reason: String(b.reason || ''), adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
+    handoverProfile: b.handoverProfile ? String(b.handoverProfile) : undefined,
     actor: decisionActor(ctx)?.username ?? '',
-  }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
+  }) } catch (e) {
+    // 仍有在岗执行单元：409 + 机读错误码与名单（Task 7；界面据此引导先退役）
+    if (e instanceof OffboardBlockedError) {
+      ctx.status = 409
+      ctx.body = { ok: false, code: e.code, error: e.message, blockedUnits: e.blockedUnits }
+      return
+    }
+    ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) }
+  }
 })
 
 
