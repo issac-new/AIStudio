@@ -2,7 +2,7 @@
 
 > 面向环境管理员、运维人员和讲师预演。本文回答怎样启动、怎样核对、怎样处置故障，不替代学员的页面操作手册。
 >
-> 事实基线：commit `3690ceba3`，整体版本 `1.0.19-overlay`，日期 `2026-11-23`。版本载体见 `package.json:2-6` 与 `RELEASE-MANIFEST.json:18,54,74,93,122-140`。
+> 事实基线：commit `3690ceba3`，整体版本 `1.0.20-overlay`，日期 `2026-11-24`。版本载体见 `package.json:2-6` 与 `RELEASE-MANIFEST.json:18,54,74,93,122-140`。
 >
 > **验证声明**：本文是对当前源码、配置和守门文档的静态核对。所有命令都是可执行示例，**不代表本手册编写时已启动服务、访问真实账号、调用模型、运行 worker、连接 Matrix 或验证 Windows 实机**。示例输出只说明判读方法，不是本次采集结果。
 
@@ -198,6 +198,8 @@ ZCODE_SERVER_HOST=127.0.0.1 npm run zcode:serve
 ```
 
 `zcode:ensure` 在缺依赖或构建产物时执行 pnpm install/build，属于【写】；`install-cli` 覆盖安装到 `~/.hermes/ycode/zcode.cjs`。`scripts/zcode-engine.mjs:57-74,99-135`。`zcode:serve` 已监听 3030 时会跳过重复拉起，只以 TCP 在位判断“引擎已在跑”，预演还需做第 13 节的 WS 和业务核验。`scripts/zcode-engine.mjs:76-96`。
+
+引擎以服务端形态启动时（`zcode:serve`），要求凭据加密密钥可用；旧基线 3.18.2 已是如此，不是 4.0 新增的要求。默认读系统钥匙串里与本机 `~/.zcode/v2/credentials.json` 路径对应的条目（桌面版首次运行时创建）；读不到就拒绝启动，报 `CREDENTIAL_SECURE_STORAGE_UNAVAILABLE`。用真实主目录启动不需要额外配置。在隔离目录或没装桌面版的机器上启动，必须显式提供 `ZCODE_CREDENTIAL_SECRET_FILE`（权限 0600、32 到 4096 字节的文件）或 `ZCODE_CREDENTIAL_SECRET`，两者只配一个。隔离实例应另配全新的 `HOME`、`ZCODE_DATA_BASE_DIR` 与 `PORT`，否则会写进本机真实会话库。`vendor/zcode/packages/shared/src/credential-security/systemCredentialCipher.ts:49-63,250-272,685-704`
 
 ### 3.5 正确的换装与重启顺序
 
@@ -439,7 +441,7 @@ powershell -ExecutionPolicy Bypass -File install\install-windows.ps1
 1. `aistudio-full-<ver>-src.tar.gz`。
 2. `swarm-yuan-offline-<ver>-everything.zip`，附配套 SHA256SUMS。
 
-GitHub Release 与 ModelScope 都只发布 full 与 yuan everything 两件主资产及配套 SHA256SUMS；四模块源码包和 DMG/zip 构建物不再上传，旧远端资产默认保留。当前整体版本为 1.0.19-overlay，四个模块分别为 cockpit 0.8.30-studio.1、agent-teams v0.23.3-team.2、Ycode 3.18.2、yuan v2.103.0。`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`、`RELEASE-MANIFEST.json:18,54,74,93,122-140,157-158`、`RELEASE-NOTES.md:3,48-55`。
+GitHub Release 与 ModelScope 都只发布 full 与 yuan everything 两件主资产及配套 SHA256SUMS；四模块源码包和 DMG/zip 构建物不再上传，旧远端资产默认保留。当前整体版本为 1.0.20-overlay，四个模块分别为 cockpit 0.8.30-studio.2、agent-teams v0.23.3-team.2、Ycode 4.0.0、yuan v2.103.0。`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`、`RELEASE-MANIFEST.json:18,54,74,93,122-140,157-158`、`RELEASE-NOTES.md:3,48-55`。
 
 **【只读】发布对账和 dry-run：**
 
@@ -456,13 +458,13 @@ npm run release:packages -- --dry-run
 ```bash
 cd <本仓根目录>
 npm run release:packages
-SWARM_YUAN_OFFLINE_VER=1.0.19-overlay \
+SWARM_YUAN_OFFLINE_VER=1.0.20-overlay \
   bash skills/swarm-yuan/scripts/make-offline-bundle.sh --everything
 cd <本仓根目录>/dist
 shasum -a 256 \
-  release/aistudio-full-1.0.19-overlay-src.tar.gz \
-  swarm-yuan-offline-1.0.19-overlay-everything.zip \
-  > release/SHA256SUMS-v1.0.19-overlay.txt
+  release/aistudio-full-1.0.20-overlay-src.tar.gz \
+  swarm-yuan-offline-1.0.20-overlay-everything.zip \
+  > release/SHA256SUMS-v1.0.20-overlay.txt
 ```
 
 full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-release-packages.mjs:49-94`。最后一段命令为两件资产生成配套校验文件，文件名和双通道布局遵循 `docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:7-9`。注意 everything 资产名的版本前**没有 `v`**，SUMS 文件名则使用 `SHA256SUMS-v<版本>.txt`。yuan 的 everything 当前采用 R134：`--no-vendor + knowledge + docs + github-src`，技能本体随包，**可经 pip/npm 镜像安装的运行时不内嵌**，所以 everything 不等于完全断网自足。`skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,53-65`、`docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md:32-36`、`RELEASE-NOTES.md:48-52`。
@@ -473,7 +475,7 @@ full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-re
 cd <本仓根目录>/dist/release
 shasum -a 256 -c SHA256SUMS
 cd <本仓根目录>/dist
-shasum -a 256 -c release/SHA256SUMS-v1.0.19-overlay.txt
+shasum -a 256 -c release/SHA256SUMS-v1.0.20-overlay.txt
 ```
 
 Windows 用 `Get-FileHash <文件> -Algorithm SHA256` 逐件核对。上传和远端替换属于【外部写】，需要单独发布授权；发布后还要回下载并重新算 hash，不能以本地打包成功代替远端验证。当前发布纪律见 `docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md:18-32`。

@@ -2,15 +2,16 @@
 // complete 物理帧归一化为统筹事件（session.upserted / session.removed /
 // conversation.frame / projection.status），推给驾驶舱数据面。
 //
-// 帧契约锚点（upstream/zcode @fec97590）：
+// 帧契约锚点（upstream/zcode @a4b44451）：
 //   wire 封装 packages/shared/src/zcode-protocol-v4/wire.ts（complete 携带 logical
 //   frame 于 .frame；fragment 只有 dataBase64 分片，重组列后批，现状按 topic 计数
 //   并以 frame_fragment_skipped 透传）。
 //   logical frame transport.ts createTopicFrameSchema：{topic, subscriptionId,
 //   fromSeq, toSeq, sentAt, payload:{kind:'snapshot'|'deltas',...}}；
 //   sessions-index delta op ∈ session.upserted / session.removed（sessions-index.ts）。
-//   服务面 zcodeAgentService.ts:5494 subscribeSessionsIndexV4 / :5473
-//   onDynamicConversationFrame / onDynamicSessionsIndexFrame（workspace 键回调，
+//   服务面 packages/services/src/zcode-agent/zcodeAgentService.ts（纯净树行号；补丁 002 在
+//   其上方插入 87 行，注入态各加 87）：:7774 subscribeSessionsIndexV4 / :7724
+//   onDynamicConversationFrame / :7862 onDynamicSessionsIndexFrame（workspace 键回调，
 //   帧自带 topic 供路由）。
 import { EventEmitter } from 'events'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
@@ -18,13 +19,14 @@ import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-re
 /**
  * 会话条目稳定投影形状（X5 契约归一化）。
  *
- * 取证锚点（upstream/zcode @fec97590）：sessions-index 条目即
+ * 取证锚点（upstream/zcode @a4b44451）：sessions-index 条目即
  * packages/shared/src/zcode-protocol-v4/sessions-index.ts 的 sessionSummarySchema——
- * { sessionId, workspaceId, parentSessionId?, title, titleSource?, phase,
- *   sessionEnded, hasBackgroundWork, workflowActivity?, pendingInteraction?,
- *   pendingInteractionSummary?, goalStatus?, lastActivityAt, lastAssistantPreview?,
- *   createdAt, lastOutcome? }（lastOutcome 为 fec97590 相对旧 pin 872ad96 新增的可选
- * 字段；X5 白名单按设计不透传未知字段，消费面需要时先扩本形状）
+ * { sessionId, workspaceId, parentSessionId?, title, titleSource?, lastOutcome?,
+ *   phase, sessionEnded, hasBackgroundWork, hasCompactWork?, workflowActivity?,
+ *   pendingInteraction?, pendingInteractionSummary?, goalStatus?, lastActivityAt,
+ *   lastAssistantPreview?, createdAt }（lastOutcome 为 fec97590 相对旧 pin 872ad96
+ *   新增、hasCompactWork 为 a4b44451（4.0.0）新增的可选字段；X5 白名单按设计不透传
+ *   未知字段，消费面需要时先扩本形状）
  * phase 枚举见 snapshot.ts sessionPhaseSchema：draft/prewarming/running/
  * completedSuccess/completedInterrupted/error。
  *

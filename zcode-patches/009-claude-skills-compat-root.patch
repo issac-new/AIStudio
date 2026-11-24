@@ -1,8 +1,30 @@
+diff --git a/apps/zcode-cli/packages/adapters/src/skills/catalog.ts b/apps/zcode-cli/packages/adapters/src/skills/catalog.ts
+index 54ea59a..9e8d461 100644
+--- a/apps/zcode-cli/packages/adapters/src/skills/catalog.ts
++++ b/apps/zcode-cli/packages/adapters/src/skills/catalog.ts
+@@ -42,6 +42,8 @@ import { findWorktreeRoot, resolveDefaultSkillRoots } from "./roots.js";
+ 
+ const ZCODE_DIR = ".zcode";
+ const AGENTS_DIR = ".agents";
++// Ycode 分叉（overlay 009）：用户级 `.claude/skills` 兼容根的监听边界，用法见 createSharedSkillCatalogEntry。
++const CLAUDE_DIR = ".claude";
+ 
+ export interface SkillCatalogSourceOptions {
+   /** 不传时取当前用户目录。 */
+@@ -224,6 +226,8 @@ async function createSharedSkillCatalogEntry(
+     bounds: [
+       join(home, ZCODE_DIR),
+       join(home, AGENTS_DIR),
++      // Ycode 分叉（overlay 009）：兼容根与原生根同等待遇——skills 子目录缺失时只在 ~/.claude 之内向上找锚点。
++      join(home, CLAUDE_DIR),
+       projectBound,
+       ...(options.additionalDirectories ?? []),
+       options.pluginStorageRoot,
 diff --git a/apps/zcode-cli/packages/adapters/src/skills/roots.ts b/apps/zcode-cli/packages/adapters/src/skills/roots.ts
-index 0000000..0000001 100644
---- a/apps/zcode-cli/packages/adapters/src/skills/roots.ts	2026-10-21 09:50:24
-+++ b/apps/zcode-cli/packages/adapters/src/skills/roots.ts	2026-10-26 20:08:13
-@@ -9,6 +9,7 @@
+index 1455a72..f9a4ee1 100644
+--- a/apps/zcode-cli/packages/adapters/src/skills/roots.ts
++++ b/apps/zcode-cli/packages/adapters/src/skills/roots.ts
+@@ -9,6 +9,7 @@ const PRIORITY_STEP = 10;
  const SKILLS_DIR = "skills";
  const ZCODE_DIR = ".zcode";
  const AGENTS_DIR = ".agents";
@@ -10,7 +32,7 @@ index 0000000..0000001 100644
  
  export interface SkillRootResolutionOptions {
    homeDirectory?: string;
-@@ -111,9 +112,14 @@
+@@ -112,9 +113,14 @@ function skillRootsForBase(
  ): SkillRoot[] {
    // 合并而不是 fallback：用户可能同时安装原生 `.zcode` skill 和兼容 `.agents` skill。
    // 同一级别仍保持 `.zcode` 优先，后续同名按 root 顺序解析。
@@ -25,3 +47,63 @@ index 0000000..0000001 100644
    ];
  }
  
+diff --git a/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts b/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts
+index 2b4db16..7a0a5f9 100644
+--- a/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts
++++ b/apps/zcode-cli/packages/adapters/tests/skill-catalog.test.ts
+@@ -222,12 +222,15 @@ it("watches skill roots but not existing skills, plain subdirectories or bundled
+     fixedDisabledPaths: [join(bundled, "workflow", "SKILL.md")],
+   });
+   expect(names(loaded.outcome)).toEqual(["alpha", "builtin"]);
++  // Ycode 分叉（overlay 009）：每级多一个 `.claude/skills` 兼容根，所以是 6 个而非上游的 4 个。
+   expect([...loaded.directories!].toSorted()).toEqual(
+     [
+       join(fixture.home, ".zcode", "skills"),
+       userRoot,
++      join(fixture.home, ".claude", "skills"),
+       join(fixture.workspace, ".zcode", "skills"),
+       join(fixture.workspace, ".agents", "skills"),
++      join(fixture.workspace, ".claude", "skills"),
+     ].toSorted(),
+   );
+   expect(loaded.files).toContain(join(userRoot, "SKILL.md"));
+@@ -239,6 +242,39 @@ it("watches skill roots but not existing skills, plain subdirectories or bundled
+   expect([...loaded.files].some((file) => file.startsWith(bundled))).toBe(false);
+ });
+ 
++// Ycode 分叉（overlay 009）：追加 `.claude/skills` 兼容根（Claude Code 生态落点）。
++// 上游只读 `.zcode`/`.agents`；这里钉住兼容根里的技能会被加载，且同一级同名时
++// 兼容根排在原生根之后——清单层不去重，按名查找取首个命中，所以顺序即优先级。
++it("loads skills from the `.claude/skills` compatibility roots behind the native roots", async () => {
++  await writeSkill(join(fixture.home, ".claude", "skills", "claude-user"), "claude-user");
++  await writeSkill(join(fixture.workspace, ".claude", "skills", "claude-project"), "claude-project");
++  await writeSkill(join(fixture.workspace, ".claude", "skills", "shared"), "shared", "from claude");
++  await writeSkill(join(fixture.workspace, ".agents", "skills", "shared"), "shared", "from agents");
++  const loaded = await load(fixture.options);
++  expect(names(loaded.outcome)).toEqual(["claude-project", "claude-user", "shared", "shared"]);
++  expect(loaded.outcome.skills.filter((skill) => skill.name === "shared").map((skill) => skill.path)).toEqual([
++    join(fixture.workspace, ".agents", "skills", "shared", "SKILL.md"),
++    join(fixture.workspace, ".claude", "skills", "shared", "SKILL.md"),
++  ]);
++});
++
++// 兼容根同样要被监听：4.0 的目录监听只在「边界」之内向上找锚点，用户级边界原只有
++// .zcode 与 .agents。~/.claude 已存在而 skills 子目录尚未创建（装过 Claude Code 的常见
++// 形态）时，之后新建的技能必须能被正在运行的会话发现，与原生 .agents 的行为一致。
++it("watches the user-level `.claude/skills` compatibility root when its skills directory appears later", async () => {
++  await mkdir(join(fixture.home, ".claude"), { recursive: true });
++  const source = await createSkillCatalogSource(fixture.options);
++  try {
++    expect(names(source.getSnapshot())).toEqual([]);
++    await writeSkill(join(fixture.home, ".claude", "skills", "late-claude"), "late-claude");
++    await vi.waitFor(() => expect(names(source.getSnapshot())).toEqual(["late-claude"]), {
++      timeout: 5_000,
++    });
++  } finally {
++    source.close();
++  }
++});
++
+ it("publishes new and removed skill directories in an open source", async () => {
+   const source = await createSkillCatalogSource(fixture.options);
+   try {

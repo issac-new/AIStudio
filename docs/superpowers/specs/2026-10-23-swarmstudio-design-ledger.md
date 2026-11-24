@@ -89,13 +89,13 @@
 |---|---|---|
 | hermes-studio 基线 | v0.8.30 | `vendor/VENDOR.md` |
 | hermes-agent 基线 | v0.23.3 | `vendor/VENDOR.md` |
-| zcode 基线谱系 | v3.16.1 系列（包版本 3.18.2 @fec97590，2026-11-13 同步批），同步跟随上游 main | `vendor/VENDOR.md` |
-| 驾驶舱模块 | 0.8.30-studio.1 | `RELEASE-NOTES.md` |
+| zcode 基线谱系 | 4.0.0 线（包版本 4.0.0 @a4b44451，2026-11-23 同步批，与 tag v4.0.0 同一提交），同步跟随上游 main | `vendor/VENDOR.md` |
+| 驾驶舱模块 | 0.8.30-studio.2 | `RELEASE-NOTES.md` |
 | agent teams 模块 | v0.23.3-team.2 | `team/VERSION` |
-| Ycode 模块 | 3.18.2 | `vendor/zcode/package.json` |
+| Ycode 模块 | 4.0.0 | `vendor/zcode/package.json` |
 | Electron 桌面 runtime | 独立钉版，不与 agent teams 模块互推 | `vendor/hermes-studio/packages/desktop/build/runtime-release.json` |
 | yuan skill 模块 | v2.103.0 | `skills/swarm-yuan/CHANGELOG.md` |
-| 整体源码包 | 1.0.19-overlay | 仓根 `package.json` 与发布清单 |
+| 整体源码包 | 1.0.20-overlay | 仓根 `package.json` 与发布清单 |
 | 平台重写批次（2026-11-05~06） | P0 身份/执行/证据＋P1 注入/交付/发布门＋P2 推演/文档三域核心；补丁 757/758 两枚平台载体（原拟 755/756，让号后落 757/758；755 为 readpool 批占用）；分文未升模块版本号（随下个发布轮进位） | `docs/superpowers/specs/2026-11-05-platform-rewrite-design.md` 及其三段「实施验证」小节 |
 
 zcode 的基线谱系、包版本和补丁序列是三个不同口径。
@@ -109,6 +109,7 @@ zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 2026-11-11 v1.0.15 发布轮核对：驾驶舱 studio.1→studio.2（identity-chat/执行内核 P0b-P1/技能存储合一/IDE 收窄等 custom 23 文件＋patches 17 文件实质变更，声明前进包不重发）、teams team.1→team.2（补丁 763-766＋runtime 技能存储＋acp-client P0b）、yuan v2.100.2→v2.100.3（技能根统一批收编＋门禁注释修正）、整体包 1.0.14→1.0.15；zcode/ycode 行持平（3.17.2，活跃补丁 9）。同批清偿 identity-chat 批2 守门债（K19 双棘轮＋raci 白名单，spec 2026-11-10-identity-chat-matrix-batch2 域内）。
 2026-11-17 run31 方案同步批核对：studio 行随基线升 v0.8.21（312425cca，2026-11-13 双升级批）、zcode/ycode 行随同步升 3.18.2（fec97590，同批；**VENDOR.md zcode 表行当批被 merge 撤出漏入**——b8b6202c0 第三次清偿只救回 studio 行，本批随 VENDOR_SYNC=1 第四次清偿补 zcode 行）、驾驶舱/teams/yuan/整体包四行随 v1.0.16 发布轮进位（0.8.20-studio.3／v0.23.1-team.3／v2.100.4／1.0.16-overlay，载体 RELEASE-NOTES/team/VERSION/CHANGELOG/package.json 实测）；agent 行持平 v0.23.1。此前核实日停在 2026-11-09，本批清偿设计导读先行于总账本体的漂移。
 2026-11-23 台账最新版与兼容升级批核对：studio 行随基线升 v0.8.30（8a51d1bcf，v0.8.28→v0.8.30 为 16 提交/117 文件，5 枚补丁适配、clean+inject 510/510 零失败幂等二连）、驾驶舱行随底座换血归 0.8.30-studio.1（扩展序归 1，声明前进包不重发）；agent/zcode/ycode/teams 行持平（v0.23.3／3.18.2 @fec97590／v2.103.0／v0.23.3-team.2）。Ycode 宿主 RPC 复制面同批同步 fec97590（旧 pin 872ad96 清偿，守门废除全文件豁免）。安装版快照 ZCode.app 3.19.1 属另账事实源，公开源码未发布，不入基线行。spec 2026-11-23-tech-ledger-latest-compat。
+2026-11-23 ZCode 4.0.0 同步发版批核对：zcode/ycode 行随基线升 4.0.0（a4b44451＝tag v4.0.0＝上游 main 头，差量 2209 文件含未发布源码的 3.19.x 全部变更；补丁 11 条零退役，004/006/009/011 重做、其余原样应用；clean+inject 510/510 零失败幂等二连）、驾驶舱行同底座进 0.8.30-studio.2、整体源码包行进 1.0.20-overlay；studio/agent/teams 行持平（v0.8.30／v0.23.3／v0.23.3-team.2）。上一段「安装版另账」的口径自本批作废：上游源码已公开，本机安装版 4.0.0 与源码基线合一。Ycode 宿主 RPC 复制面同批同步 a4b44451。spec 2026-11-23-zcode-400-upgrade-release。
 2026-11-09 培训刷新批核对（成文时点在同日台账刷新批之前，所记载体值为当时快照）：hermes-studio 基线维持 v0.8.17；v1.0.14 发布载体已将驾驶舱、agent teams、yuan skill 与整体源码包分别进位到 0.8.17-studio.2、v0.23.0-team.2、v2.100.1、1.0.14-overlay，Ycode 维持 3.17.2。本表只汇总当前载体值，此前核对段保留其成文时点，不回写历史。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。
 桌面安装身份与产物名中的 SwarmStudio 属于兼容标识，

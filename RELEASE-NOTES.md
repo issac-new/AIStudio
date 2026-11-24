@@ -1,3 +1,16 @@
+# v1.0.20-overlay（2026-11-24）
+
+本版把 Ycode 的源码基线从 ZCode 3.18.2 升到 4.0.0，并同步宿主协议面与词条快照（规格见 spec 2026-11-23-zcode-400-upgrade-release）。
+
+- **基线换血**：`vendor/zcode` 由 `fec97590` 换到上游 main `a4b44451`（与 tag v4.0.0 是同一提交，2026-11-23 发布）。差量 2209 个文件；3.19.x 从未发布源码，所以这次差量同时包含 3.19.x 与 4.0 的变更。换血后逐文件对账：路径集合 19,355 个全部相同，内容 19,354 个逐字节相同，唯一差异是 `packages/android/gradlew.bat` 的换行符规范化（换血前入库的就是同一形态）。整树替换顺带清掉 2 个混入基线的守门钩子留痕文件。
+- **补丁适配**：`zcode-patches` 活跃 11 条全部保留。7 条原样应用，4 条随新基线重做。004（桌面控制回落）接管 4.0 新增的「进程内 broker」哨兵分支，并在创建运行时前剥离 socket 变量；006 的 design 插件版本上下文漂移，重切后语义不变；009（`.claude/skills` 兼容技能根）扩为三文件，配套调整上游新增的技能根测试，补上 4.0 新增的目录监听边界，并补两例用例钉住 fork 行为；011（MCP 参数名消毒）补上 4.0 执行前重建入口时的回译语义。净基线 clean+inject 510/510 零失败，二次注入幂等。四条重做的补丁各做了一次变异探针：去掉 fork 改动后，配套用例必红。
+- **宿主协议面**：`custom/server/zcode/vendor/rpc/` 同步到 `a4b44451`，10 个文件里只有 `proxy-channel.ts` 有差量，守门测试由红转绿。会话投影的契约头注补上 4.0 新增的可选字段，并把早已失真的上游行号锚点改准。
+- **词条快照**：新增 `docs/superpowers/notes/zcode-400/`（4.0.0，7870 键、110 个命名空间），相对 3.19.1 快照只多 1 个键。
+- **引擎验证**：隔离的真引擎（独立端口、独立数据目录）跑通会话导入到回读的闭环，并核实没有写入本机真实数据；CLI `--version` 输出 0.18.0（这是 CLI 工作区自己的版本号，旧基线为 0.17.1）。
+- **未做与未验证**：补丁 010 所在桌面包的整体类型检查没有跑成（需要上游全量项目引用构建）；3.19.x 与 4.0 的新特性对本仓的功能级影响没有逐项评估，挂账处理。
+- **已知问题（存量，本版未修）**：兼容性自查发现，IDE 的分叉、检查点恢复、权限模式实时切换三类命令，宿主构造的信封缺少引擎要求的基线字段（模式切换的时间戳类型也不对），按引擎的命令校验规则会被拒绝。这一点已用校验函数实测，尚未在真实界面上复现。相关规则在升级前后完全相同，不是本次升级带来的。另有一项待确认：独立引擎对未登记为项目的工作区拒绝建会话，是否影响真实使用流程还需要实测。两项记入挂账台账 `2026-11-24-zcode-400-pending-batch.md`（N34-1、N34-2）。
+- **回归证据**：npm test **9905 过 / 0 败 / 12 跳过**（1239 个测试文件通过、7 个跳过，用时 134 秒）；typecheck:harness 零错误；release:check 四模块全绿；纯净树全量重放守门通过。12 条跳过里有 1 条是 kanban 真 CLI 回归测试，当次因可用性探针超时被跳过，单独复跑通过（探针超时贴近 `hermes --version` 冷启动耗时，已记入挂账台账 N34-8）。
+
 # v1.0.19-overlay（2026-11-23）
 
 台账最新版与兼容升级批（spec 2026-11-23-tech-ledger-latest-compat）：hermes-studio 底座 v0.8.28→**v0.8.30**（8a51d1bcf，16 提交/117 文件——approvals/clarifications 投递修复、单聊压缩摘要绑定房间主、插件三方风险提示、TLS 信任前移、Grok reasoning replay 会话亲和、内存上限写审批修复；5 枚补丁适配 042/301/640/757/812，clean+inject 510/510 零失败幂等二连，pristine 与上游逐字节对账含 launch.json 补录）；**Ycode 宿主 RPC 同步公开基线 fec97590**（retryable/profileId 错误字段透传、EventError 订阅结束语义入位；旧 pin 872ad96 清偿，全文件豁免守门废除改确定性比较——旧守门对三处协议漂移失明由 RED 4 项实证）；技术组件台账全量刷新（判级升 🔴 候选 9 条记档、openagentontology 复活回观察、os-taxonomy 正名公开仓、REA 6.10.1/DSH 0.2.2-rc.5 本机对齐 latest）；cockpit 进位 **0.8.30-studio.1**；独立审查 P0 零、P1×1＋P2×6 全清偿（含通知深链 /app/collab/session/:id 重定向落表）。回归证据：npm test **9885/0/11**、typecheck rc=0、release:check 四模块全绿、merge-invariants 通过。zcode 源码基线维持 3.18.2/fec97590（安装版快照 3.19.1 另账，公开源码未发布）。
@@ -66,6 +79,7 @@
 本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
 
 ## 版本
+AIStudio 驾驶舱 **0.8.30-studio.2**（2026-11-24 v1.0.20-overlay 发布轮：Ycode 源码基线 3.18.2→**4.0.0**（a4b44451），补丁 004/006/009/011 随新基线重做、其余 7 条原样应用，宿主 RPC 复制面同步 a4b44451，会话投影契约锚点改准，词条快照 zcode-400；同底座扩展序进位，**声明前进、cockpit 包不重发**；版本规则同下条）
 AIStudio 驾驶舱 **0.8.30-studio.1**（2026-11-23 台账最新版与兼容升级批：hermes-studio 底座换血 v0.8.28→**v0.8.30**（8a51d1bcf，16 提交/117 文件 +3885/−574——approvals/clarifications 投递修复/单聊压缩摘要绑定房间主/插件三方风险提示/TLS 信任前移/Grok reasoning replay 会话亲和/内存上限写审批修复；补丁面 5 枚适配：042 版本锚、301 并集上游 sessionSource+profile 深链、640·757 用户存储链保留 userAccessChanged 新事件并让 Matrix 权限更新同通知、812 统一池 cc-switch 直钉与 legacy bindInternalModelSession 并存；clean+inject 510/510 零失败幂等二连）；Ycode 宿主 RPC 同步公开基线 fec97590（retryable/profileId 透传、EventError 订阅结束语义入位；全文件豁免守门废除改确定性比较）；技术组件台账全量刷新（openagentontology 复活回观察、os-taxonomy 正名公开仓、REA/DSH 本机对齐 latest）；spec 2026-11-23-tech-ledger-latest-compat；**声明前进、cockpit 包不重发**；版本规则同下——底座换血扩展序归 1，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.8.28-studio.3**（2026-11-23 v1.0.18-overlay 发布轮：全功能·非功能·安全回归修复批——补丁 815 Python 3.14/816 看板 title-body/Ycode 002 真实会话导入与 012 Android JDK 校验/profiles 密钥 env 化＋注册表 owner 补齐＋A2A 补段；同底座扩展序进位，声明前进、包不重发）
 AIStudio 驾驶舱 **0.8.28-studio.2**（2026-11-22 v1.0.17-overlay 发布轮：双底座线收敛＋全功能回归＋根治批八项——模型池统一/P1-P4 串联 REST 化/AI 原生组织三批/科技感皮肤/IDE 幽灵抽屉修复/F8 技能 vendor 盲区；同底座扩展序进位，补丁面 812/813/814 三枚新增）

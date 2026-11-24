@@ -1238,6 +1238,9 @@ L3 spec-first 检查、L4 状态机守卫。
 目标技能命名 `<项目>-dev`，字符集归一为 `[A-Za-z0-9._-]`。
 项目可以直接使用 `.agents/skills`，
 也可以把 `.claude/skills` 的产物软链到 `~/.zcode/skills` 供兼容宿主发现。
+Ycode 分叉（`zcode-patches` 009）直接读取用户目录与工作区的 `.claude/skills`，
+同一级内排在 `.zcode`、`.agents` 两个原生根之后，这类会话内不需要软链。
+兼容根与原生根一样受目录监听：`~/.claude/skills` 在会话开始后才创建时，新建的技能同样会被发现。
 两条路径共享同一份产物，具体选择由目标宿主能力决定。
 当前 worker-coder 在首次编码前只保证生成与发现，
 完整性校验和升级发生在编码之后；ACP 驱动也没有独立技能检查。
@@ -1660,13 +1663,13 @@ Ycode 通过受管构建与安装脚本落到部署位。
 不追逐上游 main 分支漂移。**例外：zcode** 按上游 main 同步、不看版本 tag
 （2026-10-25 用户裁定，见 `vendor/VENDOR.md`）。
 
-当前基线（核实日 2026-11-23）：
+当前基线（核实日 2026-11-24）：
 
 | 树 | 当前钉版 | 载体 |
 |---|---|---|
 | hermes-studio | v0.8.30 | `vendor/VENDOR.md` |
 | hermes-agent | v0.23.3 | `vendor/VENDOR.md` |
-| zcode | 包版本 3.18.2（谱系 v3.16.1 系列） | `vendor/zcode/package.json` |
+| zcode | 包版本 4.0.0 | `vendor/zcode/package.json` |
 
 升级批次、补丁再生与退役记录归各自 spec 与 git 历史，不写入本节。
 补丁数量由 `patches/series` 与 `zcode-patches/series` 计算，不在正文维护。

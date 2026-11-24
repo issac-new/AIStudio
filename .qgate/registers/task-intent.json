@@ -1,6 +1,6 @@
 {
-  "taskId": "release-v1019-20261123",
-  "statement": "v1.0.19-overlay 发版批：版本四载体进位（整体包 1.0.19-overlay；cockpit 维持 0.8.30-studio.1、teams v0.23.3-team.2、yuan v2.103.0）＋版本字面量传播面（RELEASE-NOTES 版本节/培训载体/team README/设计总账§C/设计导读）＋发布链（全量测试→preflight→打包→tag→GitHub Release→ModelScope everything 通道→releaseBatches 回填）",
+  "taskId": "zcode-400-upgrade-release-v1020-20261124",
+  "statement": "ZCode 4.0.0 同步升级与 v1.0.20-overlay 发版批：vendor/zcode 基线 3.18.2（fec97590）换血至 4.0.0（a4b44451）＋zcode-patches 11 条重放适配（004/006/009/011 随新基线重做、其余原样应用）＋宿主 RPC 复制面与会话投影契约锚点同步 a4b44451＋词条快照 zcode-400＋版本载体进位（整体包 1.0.20-overlay、cockpit 0.8.30-studio.2、ycode 4.0.0；teams v0.23.3-team.2 与 yuan v2.103.0 维持）＋版本字面量传播面（RELEASE-NOTES 版本节/培训载体/team README/技术组件台账/设计总账§C/设计导读/运维参考）＋发布链（全量测试→preflight→打包→tag→GitHub Release→ModelScope everything 通道→releaseBatches 回填）＋合并后更新引擎部署位 ~/.hermes/ycode/zcode.cjs（覆盖前先备份）",
   "scope": [
     "docs/**",
     "simharness/**",
@@ -38,10 +38,11 @@
     ".env.example"
   ],
   "acceptance": [
+    "When 运行 npm run clean && npm run inject Then 注入清单 status=complete 且 510 条补丁全部 applied",
     "When 运行 npm test Then 全量零失败",
     "When 运行 npm run release:check Then 四模块对账全绿",
     "When 运行 npm run release:preflight Then 全过（junit/六门 fresh）"
   ],
-  "confirmedBy": "用户 2026-11-23 令「重新发版下」",
-  "confirmedAt": "2026-11-23T02:00:00.000Z"
+  "confirmedBy": "用户 2026-11-23 令「Zcode已升级至4.0，同步完成AIStudio的相关升级」；方案确认时裁决「合并后接着发版」",
+  "confirmedAt": "2026-11-23T12:00:00.000Z"
 }

@@ -3,8 +3,8 @@
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
 - 快照基线：`3690ceba3`。
-- 当前版本：`1.0.19-overlay`。
-- 核实日期：2026-11-12（v1.0.16 发布轮复核）。
+- 当前版本：`1.0.20-overlay`。
+- 核实日期：2026-11-23（v1.0.20 发布轮版本载体复核）。
 - 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 631 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
@@ -178,22 +178,22 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 | 对象 | 当前值 | 权威载体 |
 |---|---|---|
-| 整体源码包 | `1.0.19-overlay`，tag `v1.0.19-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
-| 驾驶舱模块声明 | `0.8.30-studio.1` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
+| 整体源码包 | `1.0.20-overlay`，tag `v1.0.20-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
+| 驾驶舱模块声明 | `0.8.30-studio.2` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
 | agent teams | `v0.23.3-team.2` | `team/VERSION`，机器载体 `team/version.json` |
-| Ycode | `3.18.2` | `vendor/zcode/package.json` |
+| Ycode | `4.0.0` | `vendor/zcode/package.json` |
 | yuan skill | `v2.103.0` | `skills/swarm-yuan/CHANGELOG.md` |
 
 这些值可直接在 `RELEASE-MANIFEST.json:18,47-101,122-140` 与 `RELEASE-NOTES.md:55` 对账。驾驶舱在 2026-11-11 v1.0.15 发布轮随 identity-chat/执行内核/技能存储等实质变更声明前进到 0.8.20-studio.2，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
 
-上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.30、`8a51d1bcf`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.3、`caafe5389a`；zcode 包版本为 3.18.2、`fec97590`（安装版快照 3.19.1 为另账事实源，公开源码未发布不得互推）。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
+上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.30、`8a51d1bcf`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.3、`caafe5389a`；zcode 包版本为 4.0.0、`a4b44451`（与 tag v4.0.0 及本机安装版 4.0.0 同一；自 2026-11-23 起源码基线与安装版合一，此前「安装版另账」的说法作废）。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
 
 ### 3.2 每版只发哪两件资产
 
 当前两件主资产是：
 
-1. `aistudio-full-1.0.19-overlay-src.tar.gz`。
-2. `swarm-yuan-offline-1.0.19-overlay-everything.zip`。
+1. `aistudio-full-1.0.20-overlay-src.tar.gz`。
+2. `swarm-yuan-offline-1.0.20-overlay-everything.zip`。
 
 两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件；ModelScope 的 `aistudio/` 只替换 full 包，`swarm-yuan/` 按版本目录放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:130-160`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
 
@@ -231,7 +231,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 2026-11-09 培训刷新批已按当前载体重核三处事实：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.3／zcode 3.18.2／驾驶舱 0.8.30-studio.1／agent teams v0.23.3-team.2／yuan v2.103.0／整体包 1.0.19-overlay），核实日 2026-11-23（v0.8.30 底座换血批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
+1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.3／zcode 4.0.0／驾驶舱 0.8.30-studio.2／agent teams v0.23.3-team.2／yuan v2.103.0／整体包 1.0.20-overlay），核实日 2026-11-23（ZCode 4.0.0 同步发版批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
 2. 整合正本 §5.4 的当前基线表已随 2026-11-23 批归为 hermes-studio v0.8.30；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
 3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已随 2026-11-23 批归为 hermes-studio v0.8.30。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json:45,160`；`vendor/VENDOR.md:7,24`
 
