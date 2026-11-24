@@ -204,9 +204,9 @@ it('matrix-account 目标按 runtimeBindings.matrixAccounts 匹配', () => {
   expect(v).toMatchObject({ decision: 'pass', identityId: 'aid-001' })
 })
 it('readUnitGateFacts：env=off 时 mode=off；未设时 mode=on', async () => {
-  process.env.DISPATCH_GATE_MODE_ENV = 'off'
+  process.env.WORKUNIT_DISPATCH_GATE = 'off'
   expect((await readUnitGateFacts('zcode', 'agent')).mode).toBe('off')
-  delete process.env.DISPATCH_GATE_MODE_ENV
+  delete process.env.WORKUNIT_DISPATCH_GATE
   expect((await readUnitGateFacts('zcode', 'agent')).mode).toBe('on')
 })
 ```
@@ -384,6 +384,7 @@ git commit -m "feat(governance): 责任台账接口补全、署名绑定登录�
 **Files:**
 - Modify: `custom/server/zcode/dispatch-reasons.ts`
 - Modify: `custom/server/zcode/mention-dispatch.ts`
+- Modify: `custom/server/zcode/engine-controller.ts`（预演路由补门读数）
 - Modify: `custom/server/services/kanban/raci-dispatch.ts`
 - Modify: `custom/server/outcome/team-validate.ts`
 - Modify: `custom/server/outcome/outcome-controller.ts`（`PUT /:id/team` 一处）
@@ -780,6 +781,7 @@ git commit -m "feat(governance): 离职前置检查、自然人联动停用与�
 
 **Files:**
 - Modify: `custom/client/governance/components/AgentIdentitySection.vue`
+- Modify: `custom/server/governance/governance-controller.ts`（仅 `GET /agent-identity` 一处：响应增 `gaps` 字段）
 - Test: `custom/client/governance/__tests__/agent-identity-section.test.ts`（新建；现有 `workunit-sections.test.ts` 未覆盖该组件）
 
 **Interfaces:**
@@ -813,9 +815,9 @@ Expected: FAIL。
 
 - [ ] **Step 3：实现**
 
-登记表单增：工具白名单（每行一个）、能做什么、不做什么（每行一条）、抽样比例（数字 0–1）、留存天数（数字）。登记请求带 `toolAllowlist` 与两组新字段。表格增「户口缺口」列：前端用身份的 `capabilityBoundary / auditRequirement / toolAllowlist` 按 `rosterGaps` 同样的判据计算（判据只在服务端定义；界面改为调用 `GET /api/governance/agent-identity` 响应里新增的 `gaps` 字段，避免前端复制规则——在控制器 `GET /agent-identity` 的响应里加 `gaps: listRosterGaps().rows`）。每行增「补全」按钮，展开编辑责任人、白名单、能力边界、审计要求、绑定目标，提交到 `:id/update`。底部说明改为：工具白名单与委托白名单已在工具调用前执法；凭证状态与生命周期派单门（绑定后）为记录与派单约束，不吊销真实凭证。
+登记表单增：工具白名单（每行一个）、能做什么、不做什么（每行一条）、抽样比例（数字 0–1）、留存天数（数字）。登记请求带 `toolAllowlist` 与两组新字段。`GET /api/governance/agent-identity` 的响应增 `gaps: listRosterGaps().rows`（每行 `{id, name, kind, status, gaps}`，来自 `agent-identity.ts` 既有的 `listRosterGaps`）。界面按 `id` 对应到表格行，显示 `status === 'blocked'` 的行的缺口说明。这样户口判据只在服务端定义一份。该路由目前直接写 `ctx.body = { ok: true, identities, events }`（`governance-controller.ts:764-766`），在同一对象里加 `gaps` 键即可，不改既有键。
 
-Controllers 的那一处响应字段扩充属于本任务（`governance-controller.ts` 的 `GET /agent-identity`），Files 里补上。
+底部说明改为：工具白名单与委托白名单已在工具调用前执法；凭证状态与生命周期派单门（绑定后）为记录与派单约束，不吊销真实凭证。
 
 - [ ] **Step 4：运行，确认通过并回归治理界面测试**
 
