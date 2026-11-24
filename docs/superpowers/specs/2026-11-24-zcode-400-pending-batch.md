@@ -1,0 +1,124 @@
+# 2026-11-24 ZCode 4.0.0 升级与 v1.0.20 发版挂账台账
+
+口径：按挂账台账化约定（2026-11-03 用户令），未做项收敛为编号台账，每条给锚点、根因层、验收判据、状态。本台账承接 `2026-11-23-zcode-400-upgrade-release.md`（升级发版批）之后真正剩下的面，编号续 N33 序列。
+
+## 待办
+
+### N34-1 宿主三类命令信封被引擎校验拒绝（存量缺陷，P1 候选）
+- 锚点：宿主构造点 `custom/server/zcode/engine-controller.ts:317-324`（`/fork` 的 `forkAssistant`）、`custom/server/zcode/checkpoint-options.ts:37-62`（检查点恢复的 `editUserQuery` 与 `applyFileRewind`）、`custom/server/permmodes/session-mode-controller.ts:71-80`（`switchCollaborationMode`，第 79 行 `issuedAt` 传 ISO 字符串）。引擎侧规则在纯净 4.0 树 `vendor/zcode/packages/shared/src/zcode-protocol-v4/command.ts:406-432`（两份命令名单）与 `:455-480`（`parseCommandEnvelope`），时间戳类型在 `…/zcode-protocol-v4/core.ts:20`（`timestampSchema = z.number()`）。
+- 根因层：引擎命令入口（`apps/zcode-cli/packages/bootstrap/src/zcode-protocol-v4/command-inbox.ts:175`）对每条信封做校验：名单内的命令缺 `baseRevision` 即拒，按行定位的命令缺 `baseLogEpoch` 即拒，`issuedAt` 必须是毫秒数。宿主这三类信封都没带基线字段，模式切换的时间戳类型也不对。两份名单与校验函数在 `fec97590` 与 `a4b44451` 之间逐行相同，所以这是存量缺陷，不是本次升级带来的回归。
+- 实测：用 4.0 的 `parseCommandEnvelope` 直接校验宿主当前形态——`forkAssistant`、`editUserQuery`、`applyFileRewind` 均 `REJECT baseRevision:custom`；`switchCollaborationMode` 字符串时间戳 `REJECT issuedAt:invalid_type`、不带 `baseRevision` `REJECT baseRevision:custom`；补齐字段后四者均 `OK`；提及派发用的 `sendText` `OK`。经真实通道复现未做成：命令通道在信封校验之前先检查模型可用性，隔离引擎没有配置模型，全部返回「当前没有可用的模型供应商和模型」。
+- 验收判据：①宿主为这四类命令补齐 `baseRevision`（按行定位的另补 `baseLogEpoch`），取值来自宿主已订阅的会话控制快照；`issuedAt` 改为毫秒数。②新增守门测试，直接用 `parseCommandEnvelope` 断言宿主构造的信封通过。③在配置了模型的真实引擎上，分叉、检查点恢复、模式切换各实测一例拿到 `accepted`。
+- 状态：open，待用户裁决排期。本批只登记不修复。
+
+### N34-2 独立引擎建会话要求工作区是已登记项目（待确认是否影响真实流程）
+- 锚点：纯净 4.0 树 `vendor/zcode/packages/services/src/project-storage/remote-policy.ts:19-30`（`assertRemoteTaskDirectories`），调用点 `…/project-storage/project-repository.ts:143,503,697`；宿主调用点 `custom/server/zcode/mention-dispatch.ts:470`。
+- 根因层：请求归属主机不是 `local` 时，工作区必须是该主机标识下已登记的项目，否则抛 `project.remote-project-required`。独立引擎默认用主机名作标识，而本机真实库里 19 个项目的归属主机全是 `local`。该函数与三个调用点在新旧基线间没有变化。2026-11-22 的回归批已经为「导入会话」通道处理过同一要求（补丁 002 让 `importSessionV4` 接受 `projectId`，规格 `2026-11-22-full-regression-security-nfr.md`）；「建会话」通道的宿主参数里没有项目 id，未见对应处理。
+- 实测：隔离引擎上对未登记的工作区调用 `createSession`，得到 `project.remote-project-required`；登记项目后越过了这一关。
+- 存疑：宿主真实流程里提及派发是否受影响，只读代码定不了，需要在配置了模型的真实环境里，对一个没在 ZCode 桌面版打开过的工作区实测。
+- 验收判据：完成上述实测并记录结果；若失败，补项目登记步骤，或确认引擎启动标识口径并在运维参考写明。
+- 状态：open，待确认。
+
+### N34-3 3.19.x 与 4.0 新特性对本仓的功能级逐项对照
+- 锚点：主规格「变更」第 8 条（明确不做）；`vendor/VENDOR.md` 的 2026-11-23 同步批两段。
+- 根因层：3.19.x 从未发布源码，本次差量 2209 个文件同时含两版变更，本批只保证既有功能与补丁在新基线上成立，没有评估上游新增了哪些本仓可以吸收的能力。
+- 验收判据：产出对照表（特性、对本仓的影响、是否吸收、依据），逐条交用户裁决。
+- 状态：open。
+
+### N34-4 补丁 010 所在桌面包的整体类型检查未跑成
+- 锚点：主规格「验证」段的未验证项；`vendor/zcode/packages/desktop/tsconfig.main.json`。
+- 根因层：桌面包的类型产物依赖 `tsc -b` 项目引用构建，`packages/shared`、`packages/services` 没有 `build` 脚本；只构建依赖闭包后 `tsc -p tsconfig.main.json --noEmit` 仍报 470 条 TS6305 级联错误。该包不在本 fork 的构建产物面。
+- 验收判据：用上游的项目引用构建方式跑通后 `tsconfig.main.json` 零错；或由用户裁决该包不在 fork 产物面、予以豁免并记档。
+- 状态：open（low）。
+
+### N34-5 真实 ZCode 数据库里的历史测试数据
+- 锚点：`~/.zcode/v2/tasks-index.sqlite`——25 条带 `verify-import-` 标记的任务与 1 个名为 `QA isolated import` 的项目，创建于 2026-09-28 至 10-19。
+- 根因层：本仓的会话导入集成测试在 2026-10-19 加显式开关之前，固定连共享引擎并直接写入真实数据。
+- 验收判据：由用户裁决是否清理；清理须先备份该库。
+- 状态：awaiting-user。属用户真实数据，本批不动。
+
+### N34-6 手册里的快照基线提交、行号锚点与 Windows 说明版本表陈旧
+- 锚点：`docs/manuals/aistudio-design-document-guide.md:5`、`docs/manuals/aistudio-feature-inventory.md:5`、`docs/manuals/aistudio-operations-reference.md:5`、`docs/manuals/aistudio-design-document-index.md:4` 仍写快照基线 `3690ceba3`；设计导读引用的 `RELEASE-NOTES.md:55`、`RELEASE-MANIFEST.json:18,…` 等行号已随多次改写漂移；`docs/windows-x64-setup.md:5-12,81`（整体 1.0.18-overlay、agent teams v0.23.0-team.2、底座 0.23.0、yuan v2.100.1、Ycode 3.17.2）与 `scripts/offline-template/install/README-windows.md:3,28,31`（1.0.15-overlay、v0.23.1-team.2 等）的当前版本表停在几版之前。
+- 根因层：这些头注与版本表只在特定批次手工刷新，没有守门；本批在发版说明顶部新增条目后行号又移了一次。两份 Windows 说明的陈旧由独立审查发现（往期发版遗漏，相关测试只断言文件非空）。
+- 验收判据：下次文档批统一刷新为当前提交与当前载体值（Windows 说明里技能数量等需要重新核实的数字一并核对），并把行号锚点改为节标题锚或补一道锚点守门。
+- 状态：open（low）。
+
+### N34-7 真实环境下宿主引擎拉起未实测
+- 锚点：主规格「验证」第 4 项；`docs/manuals/aistudio-operations-reference.md` 3.4 节。
+- 根因层：验证时 IDE 正占用真实数据目录，不能对它启动第二个引擎。已有依据是钥匙串条目存在（只读查询）与账户名按路径哈希匹配的源码逻辑。
+- 验收判据：合并后在主检出拉起一次 `zcode:serve`，确认端口监听、健康探测通过，然后停止并回填。
+- 状态：本批合并后处理。
+
+### N34-8 kanban 真 CLI 回归测试的可用性探针会静默跳过
+- 锚点：`custom/server/services/hermes/__tests__/kanban-title-edit.regression-1.test.ts:14,31`（`spawnSync('hermes', ['--version'], { timeout: 10_000 })` 非零即整组跳过）。
+- 根因层：本机实测 `hermes --version` 冷启动 11 秒、预热后 1～2 秒，探针超时 10 秒贴近冷启动耗时。全量测试在负载下会把它跳过而不报失败（本批第二次全量 9905/0/12 比第一次多出的 1 条跳过即此），回归覆盖面静默缩水。该测试由 2026-11-22 回归修复批引入，与本批无关。
+- 验收判据：探针超时放宽到冷启动耗时的数倍并对「命令存在但超时」给出显式提示；或改为一次性预热线程复用结果。全量测试报告中该用例不得因探针超时而跳过。
+- 状态：open（low）。
+
+## 已裁定不处置（本轮）
+
+- **`packages/android/gradlew.bat` 换行符与上游不同**：本机 `core.autocrlf=input` 在入库时转换，换血前入库的就是同一 blob，按既有口径保留。
+- **技能清单里同名技能不去重**：`.zcode`、`.agents`、`.claude` 三个根之间同名技能都列出，按名查找取首个命中。这是上游对原生根的既有设计，009 的兼容根沿用同一语义，已用测试钉住。
+- **测试描述名「pin fec97590 新语义」**：`custom/server/__tests__/zcode-engine-bridge.test.ts` 里这个描述指的是该版本引入的错误字段语义，属历史指称，不改。
+- **词条快照目录 `zcode-3191` 保留**：安装版 3.19.1 的历史快照，与新的 `zcode-400` 并存。
+
+## 计数
+
+待办 8（P1 候选 1＝N34-1；待确认 1＝N34-2；例行 3＝N34-3/5/7；low 3＝N34-4/6/8）｜awaiting-user 1（N34-5 并入待办计数）｜已裁定不处置 4。
+
+## 变更
+
+1. 立本台账：收敛 ZCode 4.0.0 升级发版批的全部剩余面，编号 N34-1..8。
+2. 登记兼容性自查中发现的两项存量问题（N34-1、N34-2），均只登记不修复。
+3. 并入独立审查的遗留项：N34-6 增补两份 Windows 说明的陈旧版本表；N34-8 登记全量测试复跑时暴露的回归测试静默跳过。
+
+## 决策记录
+
+| # | 决策 | 依据 | 备选与否决理由 |
+|---|---|---|---|
+| D1 | 两项存量发现只登记、不在本批修复 | 它们在新旧基线间逐行相同，不属于升级引入的回归；范围外的顺手修复按规则列为清单待批 | 随手修掉（否决：修复需要从会话控制快照取基线字段并做真实引擎验证，超出本批范围，且未经用户裁决） |
+| D2 | N34-1 列 P1 候选而不是直接定 P1 | 校验规则已被纯函数实测证实，但宿主真实界面上的表现还没有在配置了模型的环境里看到 | 直接定 P1（否决：缺最后一环实测，不拔高） |
+| D3 | 编号续 N33 序列为 N34 | 延续挂账台账的编号约定，便于复盘 spec 引用 | 另起一套编号（否决：割裂与 N33 的承接关系） |
+
+## 验证
+
+- N34-1：`parseCommandEnvelope` 对宿主七种信封形态的校验结果见该条「实测」；`fec97590` 与 `a4b44451` 的两份名单与函数体经 `diff` 逐行相同。
+- N34-2：隔离引擎两次调用（未登记→`project.remote-project-required`；登记后越过）；真实库只读查询得到 19 个项目归属主机均为 `local`。
+- N34-5：真实库只读查询，25 条任务的创建时间分布为 2026-09-28 至 10-19；指向隔离目录的记录为 0。
+- N34-7：`security find-generic-password` 只读查询，真实路径对应的条目存在、隔离路径无条目。
+- 本台账的锚点行号取自纯净 4.0 树（`git show HEAD:vendor/zcode/<路径>`）与当前工作树，提交前逐条核对。
+
+## 设计文档影响
+
+DESIGN_SYNC: none。本台账是待办收敛与过程留痕，不触及整合正本与数字总账；N34-1、N34-2 将来修复时按各自验收判据另做门验证与设计同步。
+
+## 任务卡
+
+### 完成条件
+
+本批剩余面逐条有编号、锚点、验收判据与状态；两项存量发现被后续批次的 spec 按编号引用，不再重复展开。
+
+### 输入与来源
+
+主规格 `2026-11-23-zcode-400-upgrade-release.md` 的变更、验证与未验证项；兼容性自查的命令输出；真实库与钥匙串的只读查询结果。
+
+### 工作流边界
+
+只登记与分类，不修改宿主代码、引擎基线或用户真实数据。
+
+### 工具与副作用
+
+文本编辑一处（本文件）；只读查询不产生副作用。
+
+### 结果与证据
+
+待办 8 条、不处置 4 条、计数一行；每条待办带可机械核对的验收判据。
+
+### 异常与恢复
+
+后续批次关闭某条时在该条「状态」回填依据与提交号；判定不再成立时移入「已裁定不处置」并写明理由，不删条目。
+
+### 验收反例
+
+- 只写「待修」而没有锚点和验收判据，后续无法机械核对是否关闭。
+- 把存量问题混进升级批顺手修掉，会让发版内容超出已裁决的范围。

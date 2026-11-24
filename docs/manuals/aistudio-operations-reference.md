@@ -199,7 +199,7 @@ ZCODE_SERVER_HOST=127.0.0.1 npm run zcode:serve
 
 `zcode:ensure` 在缺依赖或构建产物时执行 pnpm install/build，属于【写】；`install-cli` 覆盖安装到 `~/.hermes/ycode/zcode.cjs`。`scripts/zcode-engine.mjs:57-74,99-135`。`zcode:serve` 已监听 3030 时会跳过重复拉起，只以 TCP 在位判断“引擎已在跑”，预演还需做第 13 节的 WS 和业务核验。`scripts/zcode-engine.mjs:76-96`。
 
-ZCode 4.0 起，引擎服务启动时要求凭据加密密钥可用。默认读系统钥匙串里与本机 `~/.zcode/v2/credentials.json` 路径对应的条目（桌面版首次运行时创建）；读不到就拒绝启动，报 `CREDENTIAL_SECURE_STORAGE_UNAVAILABLE`。用真实主目录启动不需要额外配置。在隔离目录或没装桌面版的机器上启动，必须显式提供 `ZCODE_CREDENTIAL_SECRET_FILE`（权限 0600、32 到 4096 字节的文件）或 `ZCODE_CREDENTIAL_SECRET`，两者只配一个。隔离实例应另配全新的 `HOME`、`ZCODE_DATA_BASE_DIR` 与 `PORT`，否则会写进本机真实会话库。`vendor/zcode/packages/shared/src/credential-security/systemCredentialCipher.ts:49-63,250-272,685-704`
+引擎以服务端形态启动时（`zcode:serve`），要求凭据加密密钥可用；旧基线 3.18.2 已是如此，不是 4.0 新增的要求。默认读系统钥匙串里与本机 `~/.zcode/v2/credentials.json` 路径对应的条目（桌面版首次运行时创建）；读不到就拒绝启动，报 `CREDENTIAL_SECURE_STORAGE_UNAVAILABLE`。用真实主目录启动不需要额外配置。在隔离目录或没装桌面版的机器上启动，必须显式提供 `ZCODE_CREDENTIAL_SECRET_FILE`（权限 0600、32 到 4096 字节的文件）或 `ZCODE_CREDENTIAL_SECRET`，两者只配一个。隔离实例应另配全新的 `HOME`、`ZCODE_DATA_BASE_DIR` 与 `PORT`，否则会写进本机真实会话库。`vendor/zcode/packages/shared/src/credential-security/systemCredentialCipher.ts:49-63,250-272,685-704`
 
 ### 3.5 正确的换装与重启顺序
 

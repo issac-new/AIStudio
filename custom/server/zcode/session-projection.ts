@@ -9,9 +9,10 @@
 //   logical frame transport.ts createTopicFrameSchema：{topic, subscriptionId,
 //   fromSeq, toSeq, sentAt, payload:{kind:'snapshot'|'deltas',...}}；
 //   sessions-index delta op ∈ session.upserted / session.removed（sessions-index.ts）。
-//   服务面 packages/services/src/zcode-agent/zcodeAgentService.ts：:7861
-//   subscribeSessionsIndexV4 / :7811 onDynamicConversationFrame / :7949
-//   onDynamicSessionsIndexFrame（workspace 键回调，帧自带 topic 供路由）。
+//   服务面 packages/services/src/zcode-agent/zcodeAgentService.ts（纯净树行号；补丁 002 在
+//   其上方插入 87 行，注入态各加 87）：:7774 subscribeSessionsIndexV4 / :7724
+//   onDynamicConversationFrame / :7862 onDynamicSessionsIndexFrame（workspace 键回调，
+//   帧自带 topic 供路由）。
 import { EventEmitter } from 'events'
 import { coerceDispatchReasonCode, type DispatchReasonCode } from './dispatch-reasons'
 

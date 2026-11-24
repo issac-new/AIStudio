@@ -77,9 +77,12 @@
 #（skills list 三目录对照）。项目技能推荐落 .agents/skills（三引擎通吃）；本补丁
 # 只补分叉对既有 .claude/skills 资产的兼容，source 复用 agents，优先级排在原生根后。
 #      2026-11-23 随 4.0.0 重锚（spec 2026-11-23-zcode-400-upgrade-release D9）：补丁扩为
-#      两文件——上游新增 skill-catalog 测试写死每级恰好 2 个技能根，与兼容根冲突；测试段
+#      三文件——①上游新增 skill-catalog 测试写死每级恰好 2 个技能根，与兼容根冲突；测试段
 #      改为 6 个，并新增一例钉住兼容根被加载、同名时原生根排前（清单层不去重，按名
-#      查找取首个命中）。
+#      查找取首个命中）。②上游 4.0 的目录监听只在「边界」之内向上找锚点（catalog.ts
+#      createSharedSkillCatalogEntry 的 bounds），用户级边界原只有 .zcode 与 .agents；
+#      ~/.claude 存在而 skills 子目录尚未创建时，之后新建的技能不会被发现——补丁把
+#      ~/.claude 加进边界，并用一例活体监听测试钉住（独立审查发现）。
 009-claude-skills-compat-root.patch
 
 # 010（2026-11-10 执行内核统一后续·open-file 深改，spec 2026-11-10-zcode-openfile-workspace）：
