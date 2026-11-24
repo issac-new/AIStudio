@@ -505,3 +505,4 @@
 {"at": "2026-11-24T12:11:56Z", "spec": "docs/superpowers/specs/2026-11-24-follow-redirects-override.md", "receipt": "55bcb78fb2da8b6dbec546360a2d69887c21ecee", "commit": "3ebe7cbbc"}
 {"at": "2026-11-24T12:45:24Z", "spec": "docs/superpowers/specs/2026-11-24-full-retro-pending-batch.md", "receipt": "cc75e3249adbb927a21768865852b376c380b571", "commit": "55c719f2e"}
 {"at": "2026-11-24T15:18:38Z", "spec": "docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md", "receipt": "a074a4b4101f3cd29f29faf27a3c1b76ca55eac3", "commit": "a3aa9b675"}
+{"at": "2026-11-24T15:33:20Z", "spec": "docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md", "receipt": "5be48489ef88e0618f43cc69eca38763a060c0c2", "commit": "85fd84be8"}

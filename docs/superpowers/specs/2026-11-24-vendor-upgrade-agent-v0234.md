@@ -37,7 +37,7 @@
 - [x] 载体链一致性：team/VERSION＝version.json（base 0.23.4/upstreamCommit 3ac54e1012/extN 1）＝RELEASE-MANIFEST＝VENDOR.md 表行＝AGENTS.md/README；**release:check 四模块全绿（agent-teams=v0.23.4-team.1）**；requirements range `<0.24` 已覆盖仅注释。
 - [x] 投影面：docs:sync 投影块重写＋docs:check 绿；手册断言数组进位 v0.23.4-team.1；team/README（en/zh）现状行与 What changed 新节随批；design-document-guide 快照＋数字总账（基线行/teams 行/2026-11-24 核对段）随批；gen-doc-indexes --write 后 --check 0 problem（761/761/308）＋冲突标记扫描零命中。
 - [x] `npm test` 全量：**9941 过/2 红→0 红**（两红=手册族版本字面量断言：training-manual HTML meta 行＋operations-reference 模块版本行＋design-document-guide 快照两行滞留 v0.23.3-team.2，随批进位后 28/28 复绿；根因=版本传播面清单漏列三手册文件，本轮已全量 grep 扫尾）＋12 跳过，零环境性红。
-- [ ] 独立审查（蓝军）。
+- [x] 独立审查（蓝军）总判 **PASS-with-findings 零 P0/P1 可合并**（agent 审查 7 项全过＋主会话复跑核验树三元组 27,571 行零差异）：基线纯净性（ls-tree 三元组=tag 逐行等＋blob 抽验 5/5）、五枚手解纯锚迁/正确消费新 API（612 _Pageable 新消费/741 kanban_launch_policy 门面化语义等价/786 尾上下文含 _status_reporter）、注入面组合反向逐字节相等（612 反向还原=pristine；conversation_loop 四补丁链、dispatch 七补丁链合成=注入态）、载体链八处全绿、runtime D9 四还原实证（hostile 12/守卫 precheck 首行调用/AC 报告版/tier=T1）＋镜像面 11 差异全有账、提交卫生（vendor 面 name-status 1316 行逐行等=零注入态＋临时文件零命中＋收据无 drift）、投影面 release:check/docs:check 复跑绿。P2 两条：①培训手册 SVG 总览图残留三旧版本标签（存量债，挂账 N-4）②文件面计数口径 1317(name-only)/1316(name-status) 自洽备注。
 - [ ] merge 后 main 抽验：vendor/hermes-agent 面 diff 非零；merge 树与分支树零差异（纯壳合并）；主检出注入态重建。
 
 ## 设计文档影响
@@ -50,4 +50,5 @@ DESIGN_SYNC: touched —— `vendor/VENDOR.md`（台账正本：表行 commit/�
 |---|---|---|
 | N-1 | 宿主 `~/.hermes/hermes-agent` 部署面收口后滞留 v0.23.3+热修融合态 | 独立批带网关重启窗口（v0233 N-1 收口配方：错配考古＋SMOKE＋kickstart）；本批不触宿主 |
 | N-2 | SIM 盖章 | 对象已拆除（v0233 N-2 终态），下次 run mx-setup 重建即 v0.23.4 面，无需独立批 |
-| N-3 | 在途他批新补丁按属主 rebase 重锚 | 收口 fetch 后实测；本地 main 领先仅两个 docs 提交，预期零补丁冲突 |
+| N-4 | 培训手册 SVG 总览图残留旧版本标签（0.8.20-studio.2／v0.23.1-team.2／3.18.0，父提交存量非本批引入；守门只正向断言拦不住旧值残留） | 随下批手册轮清理；同族残余面可加负向断言守门（旧值禁入） |
+| N-3 | 在途他批 rebase 集成 | 收口 fetch 实测：main 前进至 b63e5e2d（ycode 依赖安全刷新 zcode-patch 013＋docs 两笔）；agent 面零新补丁（013 属 zcode 树），预期 agent 重放零重锚；已知冲突面=spec-receipts（并集按 at）/design-document-index（重生成）/RELEASE-MANIFEST（两侧异区域自动并） |
