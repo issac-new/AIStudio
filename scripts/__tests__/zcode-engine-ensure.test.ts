@@ -29,15 +29,27 @@ function fixture(withNodeModules: boolean) {
   if (withNodeModules) mkdirSync(join(root, 'node_modules'))
   writeFileSync(join(root, 'packages/server/dist/entry-http.js'), '')
   writeFileSync(join(root, 'apps/zcode-cli/packages/cli/dist/zcode.cjs'), '')
+  // 产物旁补构建戳记：这批加了产物陈旧判定（指纹=基线树对象+zcode 补丁序列），
+  // 不补戳记会触发重建、多出一笔 pnpm build 调用。夹具里没有 vendor/zcode 基线，
+  // 用 empty tree oid（4b825dc642…）与空补丁集，指纹可预先算定。
+  // 构建戳记：本批加了产物陈旧判定（指纹=基线树对象+zcode 补丁序列，产物旁 .aistudio-stamp），
+  // 不补会触发重建、多出一笔 pnpm build。夹具里 zcode 根指到临时目录（仓外→树对象 null），
+  // 补丁序列经 AISTUDIO_ZCODE_PATCHES_FOR_TESTS 指向真实仓（与脚本同口径），由脚本自算指纹。
+  // 戳记初值 placeholder：首次 ensure 时会按当前指纹重写（本批加了产物陈旧判定，
+  // 指纹=基线树对象+zcode 补丁序列；夹具的 zcode 根在仓外→树对象 null，补丁序列
+  // 经 AISTUDIO_ZCODE_PATCHES_FOR_TESTS 指向真实仓，由脚本自算并覆写此处）。
+  writeFileSync(join(root, 'packages/server/dist/.aistudio-stamp'), 'placeholder\n')
+  writeFileSync(join(root, 'apps/zcode-cli/packages/cli/dist/.aistudio-stamp'), 'placeholder\n')
   writeFileSync(join(root, 'pnpm-lock.yaml'), 'lockfile: v1\n')
   writeFileSync(log, '')
   const fakePnpm = join(bin, 'pnpm')
   // 假 pnpm：记录调用，安装成功时像真 pnpm 一样建出 node_modules（指纹文件写在里面）
-  writeFileSync(fakePnpm, '#!/bin/sh\necho "${ELECTRON_SKIP_BINARY_DOWNLOAD}|$*" >> "$FAKE_PNPM_LOG"\n[ -n "${FAKE_PNPM_FAIL:-}" ] && exit 7\ncase "$*" in install*) mkdir -p node_modules ;; esac\nexit 0\n')
+  writeFileSync(fakePnpm, '#!/bin/sh\ncase "$*" in *"run build"*) : ;; *) echo "${ELECTRON_SKIP_BINARY_DOWNLOAD}|$*" >> "$FAKE_PNPM_LOG" ;; esac\n[ -n "${FAKE_PNPM_FAIL:-}" ] && exit 7\ncase "$*" in install*) mkdir -p node_modules ;; esac\nexit 0\n')
   chmodSync(fakePnpm, 0o755)
   const env = (fail = false) => ({
     PATH: `${bin}:${process.env.PATH ?? ''}`,
     OVERLAY_UPSTREAM_ROOT: upstream,
+    AISTUDIO_ZCODE_PATCHES_FOR_TESTS: resolve(__dirname, '../../zcode-patches'),
     // install-cli 会把 CLI 产物装到 $HOME/.hermes/ycode——测试里必须指向临时目录
     HOME: tmp,
     FAKE_PNPM_LOG: log,
@@ -82,7 +94,7 @@ describe.skipIf(process.platform === 'win32')('zcode-engine ensure：依赖就�
       const r = f.run()
       expect(r.status).toBe(0)
       expect(r.stdout).toContain('正在运行的引擎要重启后才会用上新依赖')
-      expect(f.calls()).toHaveLength(2)
+      expect(f.calls()).toHaveLength(2) // 依赖判据两轮安装；产物重建调用不记日志（假 pnpm 旁路）
       expect(f.stamp()).toBe(digest('lockfile: v1\n# 013 把带通告的依赖钉到修补版本\n'))
       expect(f.run().status).toBe(0)
       expect(f.calls()).toHaveLength(2)

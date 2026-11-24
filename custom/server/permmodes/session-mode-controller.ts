@@ -63,22 +63,34 @@ sessionModeRoutes.put('/:profileId', requirePlatformSuperAdmin, async (ctx) => {
       liveSwitch = 'not_switchable'
     } else {
       try {
-        const [{ connectZCodeEngine }, { uuidV7Like }] = await Promise.all([
-          import('../zcode/engine-bridge'), import('../zcode/mention-dispatch'),
+        const [{ connectZCodeEngine }, { uuidV7Like }, { ControlBaseUnavailableError, sendCasCommand }] = await Promise.all([
+          import('../zcode/engine-bridge'), import('../zcode/mention-dispatch'), import('../zcode/cas-command'),
         ])
         const bridge = await connectZCodeEngine(process.env.ZCODE_HOME ?? process.env.HOME ?? '~')
         try {
-          const res = await bridge.agent.sendConversationCommandV4({
-            workspacePath,
-            envelope: {
-              commandId: uuidV7Like(),
-              clientId: bridge.clientId,
-              sessionId,
-              type: 'switchCollaborationMode',
-              payload: { mode: engineMode },
-              issuedAt: new Date().toISOString(),
-            },
-          })
+          // switchCollaborationMode 是引擎的比对基线命令（N34-1）：baseRevision 取自引擎只读查询，
+          // 时间戳须是毫秒数；取不到修订号时不发命令（发出去必被引擎拒）。
+          let res: { status: string; reasonCode?: string }
+          // commandId 在闭包外固定（cas-command 契约：stale 重试不变，重发同 id）。
+          const commandId = uuidV7Like()
+          try {
+            res = await sendCasCommand(bridge.agent, {
+              workspacePath, sessionId,
+              build: (base) => ({
+                commandId,
+                clientId: bridge.clientId,
+                sessionId,
+                type: 'switchCollaborationMode',
+                payload: { mode: engineMode },
+                issuedAt: Date.now(),
+                baseRevision: base.revision,
+              }),
+            })
+          } catch (e) {
+            // 取不到会话修订号：命令没有发出，如实回报原因码（不装已切）
+            if (!(e instanceof ControlBaseUnavailableError)) throw e
+            res = { status: 'rejected', reasonCode: e.reason }
+          }
           liveSwitch = res.status === 'accepted' || res.status === 'ok'
             ? 'applied'
             : { error: `status=${res.status}${res.reasonCode ? ` reasonCode=${res.reasonCode}` : ''}` }

@@ -11,6 +11,20 @@
   "changes": [
 {
    "at": "2026-11-24",
+   "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（既有 noop 哨兵的判别修订，不新增机制）",
+   "reason": "N34 挂账清偿批（spec 2026-11-24-n34-pending-batch-closeout）：N34-9 注入哨兵盲区——git checkout/reset 只还原已跟踪文件、补丁新增文件残留时旧哨兵把半还原态判成健康；判别改为路径级已跟踪证据，判已还原时先清残留新增文件再重放，单通道部分还原仍只拒绝",
+   "pairedRemovals": [
+    "哨兵旧的通道级判别函数 treeDirty 随修订删除，由 treeStatusPaths 取代（同一文件，不新增脚本）",
+    "reverted 自愈清残留复用 v2 clean 的删除面（清单逐项 addedFiles），不另设清理命令"
+   ],
+   "sunset": {
+    "owner": "inject（N34 清偿批）",
+    "reviewBy": "2027-02-24",
+    "retireWhen": "注入清单逐补丁记录落盘摘要并据此判定空操作时，哨兵退役"
+   }
+},
+{
+   "at": "2026-11-24",
    "delta": "+1 script（scripts/regression-matrix.mjs 回归矩阵执行器）/ +1 配置（config/regression-matrix.json，不在计数类目）/ +1 patch（817 会话库缺席时读面降级）/ +0 gates / +0 ledgers；npm 脚本净 0：+regress −test:classes；limits 对齐在册数 gates 48→47、scripts 139→75、ledgers 6→4（账本改按已登记机制计数，不按文件是否存在）",
    "reason": "全面复盘批（spec 2026-11-23-full-retro-regression-matrix）：「该跑哪些测试面」此前在仓内无定义，合并门只覆盖 custom 与 scripts 两个目录；预算上限与在册数脱节（台账写明 scripts 上限 139→71，limits 仍是 139、在册 74）",
    "pairedRemovals": [

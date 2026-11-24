@@ -504,5 +504,8 @@
 {"at": "2026-11-24T11:55:53Z", "spec": "docs/superpowers/specs/2026-11-24-zcode-400-pending-batch.md", "receipt": "df87d94dc43413fd4d7031fa1a8f5c95a84b3ad0", "commit": "81f0a0616"}
 {"at": "2026-11-24T12:11:56Z", "spec": "docs/superpowers/specs/2026-11-24-follow-redirects-override.md", "receipt": "55bcb78fb2da8b6dbec546360a2d69887c21ecee", "commit": "3ebe7cbbc"}
 {"at": "2026-11-24T12:45:24Z", "spec": "docs/superpowers/specs/2026-11-24-full-retro-pending-batch.md", "receipt": "cc75e3249adbb927a21768865852b376c380b571", "commit": "55c719f2e"}
+{"at": "2026-11-24T13:04:19Z", "spec": "docs/superpowers/specs/2026-11-23-zcode-400-upgrade-release.md", "receipt": "d4d0c2530c50157957a937c3a491f16eaa8fcbe2", "commit": "55c719f2e"}
 {"at": "2026-11-24T15:18:38Z", "spec": "docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md", "receipt": "a074a4b4101f3cd29f29faf27a3c1b76ca55eac3", "commit": "a3aa9b675"}
 {"at": "2026-11-24T15:33:20Z", "spec": "docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md", "receipt": "5be48489ef88e0618f43cc69eca38763a060c0c2", "commit": "85fd84be8"}
+{"at": "2026-11-24T15:35:05Z", "spec": "docs/superpowers/specs/2026-11-23-zcode-400-upgrade-release.md", "receipt": "d4d0c2530c50157957a937c3a491f16eaa8fcbe2", "commit": "f5231ec87"}
+{"at":"2026-11-24T15:49:59Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"08f45b786"}

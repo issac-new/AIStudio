@@ -9,7 +9,7 @@ import { resolve, join } from 'path'
 import { tmpdir } from 'os'
 import net from 'net'
 import { WebSocketServer } from 'ws'
-import { connectZCodeEngine, wsMessageToVSBuffer } from '../zcode/engine-bridge'
+import { connectZCodeEngine, ensureEngineProject, wsMessageToVSBuffer } from '../zcode/engine-bridge'
 import { upstreamPath } from '../../test/upstream-root'
 import { ChannelClient, Emitter, VSBuffer } from '../zcode/vendor/rpc'
 import { BufferWriter, serialize } from '../zcode/vendor/rpc/serialization'
@@ -78,6 +78,7 @@ describe('zcode engine bridge（R4-P1）', () => {
     expect(bridge).toContain('export async function probeZCodeEngine')
     expect(bridge.indexOf('helloConversationV4')).toBeLessThan(bridge.indexOf('initializeConversationV4'))
     expect(bridge).toContain("client.getChannel('zcode-agent')")
+    expect(bridge).toContain("client.getChannel('project')") // N34-2：项目通道随桥一并代理
     expect(bridge).toContain('clientKind: \'web\'')
     expect(bridge).toContain('sendConversationCommandV4') // 写路径走 v4，不用废弃 sendPrompt
     expect(bridge).not.toContain('sendPrompt')
@@ -229,5 +230,39 @@ describe('ws 帧归一化（X4）：文本帧/二进制帧都正确进解码器'
     expect([...wsMessageToVSBuffer(Buffer.from([1, 2, 3])).buffer]).toEqual([1, 2, 3])
     expect([...wsMessageToVSBuffer(new Uint8Array([4, 5]).buffer).buffer]).toEqual([4, 5])
     expect([...wsMessageToVSBuffer([Buffer.from([6]), Buffer.from([7, 8])]).buffer]).toEqual([6, 7, 8])
+  })
+})
+
+describe('建会话前的项目登记（N34-2）', () => {
+  type Project = { id: string; hostId: string; name: string; deleted: boolean; roots: Array<{ rootPath: string }> }
+  const makeProject = (overrides: Partial<Project> & { id: string; root: string }): Project =>
+    ({ hostId: 'remote:server:h', name: 'x', deleted: false, roots: [{ rootPath: overrides.root }], ...overrides })
+
+  it('已有同根目录的未删除单根项目 → 复用其 id，不新建', async () => {
+    const saveProject = vi.fn()
+    const project = { readProjects: async () => [makeProject({ id: 'p-local', root: '/w', hostId: 'local' }), makeProject({ id: 'p-a', root: '/other' }), makeProject({ id: 'p-b', root: '/w' })], saveProject }
+    await expect(ensureEngineProject(project, '/w')).resolves.toBe('p-local')
+    expect(saveProject).not.toHaveBeenCalled()
+  })
+
+  it('没有 → 新建单根项目；已删除或根目录不一致的不算', async () => {
+    const saveProject = vi.fn(async () => makeProject({ id: 'new', root: '/w' }))
+    const project = { readProjects: async () => [makeProject({ id: 'gone', root: '/w', deleted: true }), makeProject({ id: 'multi', root: '/w', roots: [{ rootPath: '/w' }, { rootPath: '/w2' }] })], saveProject }
+    await expect(ensureEngineProject(project, '/w')).resolves.toBe('new')
+    expect(saveProject).toHaveBeenCalledWith({ roots: ['/w'], defaultName: 'w' })
+  })
+
+  it('同一工作区的并发调用合并成一次新建；引擎未返回标识即报错', async () => {
+    let created = 0
+    const project = {
+      readProjects: async () => (created ? [makeProject({ id: 'once', root: '/w' })] : []),
+      saveProject: async () => { created += 1; await new Promise((r) => setTimeout(r, 5)); return makeProject({ id: 'once', root: '/w' }) },
+    }
+    const ids = await Promise.all([ensureEngineProject(project, '/w'), ensureEngineProject(project, '/w'), ensureEngineProject(project, '/w')])
+    expect(ids).toEqual(['once', 'once', 'once'])
+    // 合并只对进行中的调用生效：完成后再次调用走查询复用
+    await expect(ensureEngineProject(project, '/w')).resolves.toBe('once')
+    expect(created).toBe(1)
+    await expect(ensureEngineProject({ readProjects: async () => [], saveProject: async () => ({}) as Project }, '/w')).rejects.toThrow(/project\.ensure-failed/)
   })
 })

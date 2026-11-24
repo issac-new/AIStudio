@@ -1661,6 +1661,11 @@ Shell 与 Python 只做词表镜像，并由一致性测试断言。
 hermes-agent 基线已经随仓保存。
 运行时扩展通过 `runtime-manifest.json` 和注册脚本部署。
 Ycode 通过受管构建与安装脚本落到部署位。
+构建产物按指纹对齐基线与补丁（`scripts/zcode-engine.mjs` 的 `.aistudio-stamp`，
+指纹＝`vendor/zcode` 在 HEAD 的树对象＋`zcode-patches/` 逐文件内容；不符即重建），
+不只看产物在不在——4.0 换血后曾出现产物停在旧基线构建、`zcode:serve` 拉起旧引擎的事故。
+以服务端形态启动时，引擎以「独立宿主」身份持库：会话必须属于已登记项目，
+未登记工作区建会话即拒；Studio 派单在建会话前经项目通道登记（`custom/server/zcode/engine-bridge.ts`）。
 Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号，
 与基线包版本是两套编号，不互相推算。
 基线升级只由上游稳定发版触发；未发版时保持钉版，
@@ -1692,8 +1697,9 @@ Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号�
 1. 整体源码包 `aistudio-full-<版本>-src.tar.gz`。
 2. swarm-yuan 离线 everything 包。
 
-GitHub Release 只挂这两件；ModelScope 的 `aistudio/` 只替换 full 包，
-仓根放 everything 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。
+GitHub Release 只挂这两件。ModelScope 只更新 `swarm-yuan/` 目录：按版本放 everything
+离线包与单条 `SHA256SUMS-v<版本>.txt`，旧版本保留；整体源码包只在 GitHub Release 发布，
+ModelScope 的 `aistudio/` 目录保留 1.0.15 与 1.0.16 两版历史件，不再更新。
 四模块源码包与 DMG/zip 构建物不再上传远端，也不再是默认打包目标。
 版本前进不等于模块包重发：模块声明进位而内容未变时，按资产政策不重发该模块包。
 
