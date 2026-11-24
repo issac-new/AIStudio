@@ -778,6 +778,7 @@ import {
   listIdentities, registerIdentity, updateIdentity, addCredential, revokeCredential,
   delegate, revokeDelegation, activeDelegationChain, listEvents,
   getCardView, transitionIdentity, updateResponsibilityCard, signResponsibilityCard,
+  listRosterGaps,
   type AuditRequirement, type CapabilityBoundary, type RuntimeBindings,
 } from '../agentidentity/agent-identity'
 import { appendJudgment, listJudgments, type JudgmentKind } from '../agentidentity/judgments'
@@ -796,7 +797,8 @@ function objectField<V>(body: Record<string, unknown>, key: string): V | undefin
 }
 
 router.get('/agent-identity', async (ctx) => {
-  ctx.body = { ok: true, identities: listIdentities(), events: listEvents(50) }
+  // gaps 与 identities 同包下发：户口判据只在服务端 rosterGaps 定义一份，界面按 id 对行显示
+  ctx.body = { ok: true, identities: listIdentities(), events: listEvents(50), gaps: listRosterGaps().rows }
 })
 
 router.post('/agent-identity/register', async (ctx) => {
