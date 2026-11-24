@@ -33,19 +33,31 @@ vi.mock('../column-dispatch', async (importOriginal) => {
 // 控制器接线（X1 闸 / 共享单例）依赖投影 runtime 与引擎桥——zcode-engine-controller.test.ts 同款替身。
 const runtimeMock = vi.hoisted(() => {
   const state = { agentCalls: 0, sessions: 0, texts: [] as string[], online: true }
+  const bridge = {
+    project: {
+      readProjects: async () => [],
+      saveProject: async () => ({ id: 'proj-test', hostId: 'remote:server:h', name: 'p', roots: [] }),
+    },
+    agent: {
+      createSession: async () => {
+        state.sessions += 1
+        return { session: { sessionId: `sess-${state.sessions}` } }
+      },
+      sendConversationCommandV4: async (p: { envelope: Record<string, unknown> }) => {
+        state.texts.push(String((p.envelope.payload as { text: string }).text))
+        return { status: 'accepted' }
+      },
+    },
+  }
   const runtime = {
     async withAgent(fn: (agent: unknown) => Promise<unknown>) {
       state.agentCalls += 1
-      return fn({
-        createSession: async () => {
-          state.sessions += 1
-          return { session: { sessionId: `sess-${state.sessions}` } }
-        },
-        sendConversationCommandV4: async (p: { envelope: Record<string, unknown> }) => {
-          state.texts.push(String((p.envelope.payload as { text: string }).text))
-          return { status: 'accepted' }
-        },
-      })
+      return fn(bridge.agent)
+    },
+    // N34-2：派单引擎端口经 withBridge 登记项目后建会话。
+    async withBridge(fn: (bridge: unknown) => Promise<unknown>) {
+      state.agentCalls += 1
+      return fn(bridge)
     },
   }
   return { state, runtime }
@@ -53,8 +65,21 @@ const runtimeMock = vi.hoisted(() => {
 vi.mock('../../zcode/projection-runtime', () => ({ getZcodeProjectionRuntime: () => runtimeMock.runtime }))
 vi.mock('../../zcode/engine-bridge', () => ({ probeZCodeEngine: () => Promise.resolve(runtimeMock.state.online) }))
 
+// N34-2 后派单端口经 withBridge 登记项目——列编排用桩替换引擎端口，不触真引擎连接。
+setDispatchEngineFactoryForTests(() => ({
+  probe: async () => runtimeMock.state.online,
+  createSession: async () => {
+    runtimeMock.state.sessions += 1
+    return { session: { sessionId: `sess-${runtimeMock.state.sessions}` } }
+  },
+  sendCommand: async (p: { envelope: Record<string, unknown> }) => {
+    runtimeMock.state.texts.push(String((p.envelope.payload as { text: string }).text))
+    return { status: 'accepted' }
+  },
+}))
+
 import { columnAutomationRoutes } from '../column-automation-controller'
-import { zcodeEngineRoutes, getMentionDispatch, resetMentionDispatchForTests } from '../../zcode/engine-controller'
+import { zcodeEngineRoutes, getMentionDispatch, resetMentionDispatchForTests, setDispatchEngineFactoryForTests } from '../../zcode/engine-controller'
 import { setWorkspaceAccessDepsForTests } from '../../zcode/workspace-access'
 
 type Handler = (ctx: Record<string, unknown>) => Promise<void>

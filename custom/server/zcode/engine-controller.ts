@@ -80,6 +80,16 @@ async function isAuthEnabled(): Promise<boolean> {
 }
 
 let dispatchSingleton: MentionDispatchService | null = null
+/** 测试注入口：替换引擎端口（column-automation 用桩不连真引擎）；置 null 恢复默认。 */
+let dispatchEngineFactoryForTests: (() => {
+  probe: () => Promise<boolean>
+  createSession: (p: { workspacePath: string; config?: { mode?: string }; projectId?: string }) => Promise<{ session: { sessionId: string } }>
+  sendCommand: (p: { workspacePath: string; envelope: Record<string, unknown> }) => Promise<{ status: string; reasonCode?: string }>
+}) | null = null
+export function setDispatchEngineFactoryForTests(factory: typeof dispatchEngineFactoryForTests): void {
+  dispatchEngineFactoryForTests = factory
+  dispatchSingleton = null
+}
 
 /**
  * 派单服务单例：引擎面经投影 runtime（ensureConnected + 桥上调用）。
@@ -89,16 +99,17 @@ let dispatchSingleton: MentionDispatchService | null = null
 export function getMentionDispatch(): MentionDispatchService {
   if (dispatchSingleton) return dispatchSingleton
   const runtime = getZcodeProjectionRuntime()
+  const enginePort = (dispatchEngineFactoryForTests?.() ?? {
+    probe: () => probeZCodeEngine(),
+    // N34-2：独立形态引擎要求会话属于已登记项目——先按工作区登记（幂等复用），再带项目标识建会话。
+    createSession: (p: { workspacePath: string; config?: { mode?: string } }) => runtime.withBridge(async (bridge) => {
+      const projectId = await ensureEngineProject(bridge.project, p.workspacePath)
+      return bridge.agent.createSession({ ...p, projectId })
+    }),
+    sendCommand: (p: { workspacePath: string; envelope: Record<string, unknown> }) => runtime.withAgent((agent) => agent.sendConversationCommandV4(p)),
+  })
   dispatchSingleton = new MentionDispatchService({
-    engine: {
-      probe: () => probeZCodeEngine(),
-      // N34-2：独立形态引擎要求会话属于已登记项目——先按工作区登记（幂等复用），再带项目标识建会话。
-      createSession: (p) => runtime.withBridge(async (bridge) => {
-        const projectId = await ensureEngineProject(bridge.project, p.workspacePath)
-        return bridge.agent.createSession({ ...p, projectId })
-      }),
-      sendCommand: (p) => runtime.withAgent((agent) => agent.sendConversationCommandV4(p)),
-    },
+    engine: enginePort,
     clientId: 'swarmstudio-mention-bus',
     knownAgents: ['zcode', ...(('' + (process.env.ZCODE_MENTION_AGENTS ?? '')).split(',').filter(Boolean))],
     deferredAgents: ['claude-code', 'codex', 'pi', 'grok', 'dsh', 'opencode', 'mimo'],
