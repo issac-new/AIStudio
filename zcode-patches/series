@@ -111,3 +111,17 @@
 # 012（2026-11-22 全量回归 Android 安全面）：macOS java_home 可能回退到其它大版本；
 # externalPath 安全校验后执行受信任 JVM -version 并核对主版本，项目内伪造 Java 仍先拒。
 012-android-jdk-major-check.patch
+# 013（2026-11-24 全面复盘批·安全回归，spec 2026-11-24-ycode-deps-security-refresh）：
+#      Ycode 生产依赖安全刷新。基线锁文件 `pnpm audit --prod` 报 266 条通告（严重 3、高危 93），
+#      上游 main 仍停在 a4b44451，没有更新可同步。做法：根 package.json 的 pnpm.overrides 追加
+#      38 条，把带通告的包钉到同大版本内的最小修补版本；pnpm-lock.yaml 是据此重新解析的结果
+#      （只含这些包及其子依赖的变化）。刷新后余 13 条（严重 0、高危 5），都要跨大版本才能修，
+#      或属 Electron 本体，见挂账台账 N35-10。
+#      为什么用 overrides 而不用 pnpm update：update 会把工作区各项目的直接依赖一并升到范围内
+#      最新版（实测连带 48 个与通告无关的包，其中有发布不足两天的版本）；带通告的包又多被
+#      第三方父包钉死精确版本，只有 overrides 能改。
+#      生效条件：装依赖时解析。已有安装须重跑 pnpm install——`node scripts/zcode-engine.mjs ensure`
+#      按锁文件指纹识别并自动补装。验证面：类型检查、工程测试、库表结构检查、lint。
+#      基线升级时：上游若已刷新锁文件，本补丁多半冲突。先在新基线上复扫，通告已清则退役；
+#      未清则在新基线上重做（步骤见 spec），不要带着冲突硬合。
+013-deps-security-overrides.patch

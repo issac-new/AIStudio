@@ -33,7 +33,9 @@ describe('zcode-patches 受管机制（R2 守门）', () => {
     // 002（2026-11-22 回归批）：测试注册清单 scripts/engineering-test-files.json 是
     // zcode 工程套件唯一 include 事实源——新测试入套件必经此文件；精确放行该单文件，
     // 其余 scripts/ 目标仍全拦（R2 边界不放松到目录级）。
-    const TARGET_ALLOWLIST = new Set(['scripts/engineering-test-files.json'])
+    // 013（2026-11-24 依赖安全刷新）：根 package.json 的 pnpm.overrides 与 pnpm-lock.yaml
+    // 是依赖解析的落点，安全刷新只能改这两处；同样精确放行，不放开到“根目录任意文件”。
+    const TARGET_ALLOWLIST = new Set(['scripts/engineering-test-files.json', 'package.json', 'pnpm-lock.yaml'])
     for (const p of series) {
       const text = readOverlay(`zcode-patches/${p}`)
       const targets = [...text.matchAll(/^diff --git a\/(.+?) b\//gm)].map((m) => m[1])
@@ -69,9 +71,36 @@ describe('zcode-patches 受管机制（R2 守门）', () => {
     const tsupPath = resolve(ZCODE_ROOT, 'packages/zcode-server-cli/tsup.config.ts')
     if (!existsSync(tsupPath)) return // zcode 树不存在时跳过（未克隆环境）
     // 001 已在 v3.16.1 基线轮退役（yazl 由上游原生外置），改用 003 的运行时产物作注入标记。
-    expect(
-      existsSync(resolve(ZCODE_ROOT, 'packages/zcode-cua/node-backend.js')),
-      'CUA 运行时缺失——zcode 补丁未注入？先 npm run inject',
-    ).toBe(true)
+      expect(
+        existsSync(resolve(ZCODE_ROOT, 'packages/zcode-cua/node-backend.js')),
+        'CUA 运行时缺失——zcode 补丁未注入？先 npm run inject',
+      ).toBe(true)
+  })
+
+  // 013 的修复只在注入态的锁文件与覆盖项里，源码补丁的“文件存在”标记在这里用不上：
+  // 补丁没打上时树看起来完全正常，只是依赖还停在带通告的版本。期望值取自补丁文件本身。
+  it('注入态：依赖安全刷新（013）的覆盖项已在 zcode 树的 package.json 与锁文件里（补丁只在干净树上生效一次）', () => {
+    const patchName = series.find((p) => /^013-.*\.patch$/.test(p))
+    expect(patchName, 'series 未登记 013').toBeTruthy()
+    const text = readOverlay(`zcode-patches/${patchName}`)
+    const manifestHunk = text.slice(text.indexOf('diff --git a/package.json '), text.indexOf('diff --git a/pnpm-lock.yaml '))
+    const overrides = [...manifestHunk.matchAll(/^\+\s+"([^"]+)": "([^"]+)",?$/gm)].map((m) => [m[1], m[2]] as const)
+    expect(overrides.length).toBeGreaterThan(20)
+    if (!existsSync(resolve(ZCODE_ROOT, 'package.json'))) return // zcode 树不存在时跳过（未克隆环境）
+    const injected = existsSync(resolve(ZCODE_ROOT, 'packages/zcode-cua/node-backend.js'))
+    const manifest = readFileSync(resolve(ZCODE_ROOT, 'package.json'), 'utf8')
+    const lock = readFileSync(resolve(ZCODE_ROOT, 'pnpm-lock.yaml'), 'utf8')
+    for (const [selector, version] of overrides) {
+      const inManifest = manifest.includes(`${JSON.stringify(selector)}: ${JSON.stringify(version)}`)
+      // 锁文件顶部 overrides 段按 YAML 单引号记选择器
+      const inLock = lock.includes(`'${selector}': ${version}`) || lock.includes(`${selector}: ${version}`)
+      if (injected) {
+        expect(inManifest, `${selector} 未写入注入态 package.json——013 未注入？先 npm run inject`).toBe(true)
+        expect(inLock, `${selector} 未出现在注入态锁文件`).toBe(true)
+      } else {
+        // 干净树（未注入）不应带着覆盖项：说明有人绕过补丁通道直接改了 vendor
+        expect(inManifest, `干净树上已有 ${selector}——vendor 基线被直接改动`).toBe(false)
+      }
+    }
   })
 })
