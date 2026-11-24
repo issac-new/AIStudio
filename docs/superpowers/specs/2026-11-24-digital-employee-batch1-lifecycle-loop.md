@@ -1,7 +1,7 @@
 # 数字员工 3.0 吸收·批一：上岗—派单—执行—退出闭环 设计 spec
 
 > 日期：2026-11-24
-> 状态：设计已批准并入库（2026-11-24 用户指令「批准」；方向授权为用户在方案 A/B/C 中指令「执行A」）。D1、D2 随批复确认。产品代码尚未实施；实施进度见 `docs/superpowers/plans/2026-11-24-digital-employee-batch1.md`。
+> 状态：已实施，待独立审查（2026-11-24 用户指令「批准」；方向授权为用户在方案 A/B/C 中指令「执行A」；D1、D2 随批复确认）。回归矩阵合并前档全绿、八步浏览器实操全过；实施进度与逐任务记录见 `docs/superpowers/plans/2026-11-24-digital-employee-batch1.md` 与 `.superpowers/sdd/2026-11-24-digital-employee-batch1/progress.md`。
 > 来源：《大模型驱动的数字员工3.0建设应用白皮书》（中国工商银行金融科技研究院、华为技术有限公司、北京金融科技产业联盟，2024 年 9 月，51 页）差异吸收。本仓此前无该白皮书的同源吸收轮；最接近的天猫数字员工文章吸收（`2026-10-23-tmall-digital-worker-absorption.md`）来源不同，其已落地的介入归因、协作画像、交付效能面本批不重建。
 > 相关正本：`2026-11-06-workunit-responsibility-ledger.md`（执行单元责任台账）、`2026-11-19-capability-pool-foundation.md`（能力池）、`2026-11-19-ai-native-operating-model-design.md`（AI 原生组织运行模型）。
 > 行号基准：`custom/`、`docs/` 位置核对于主干 `b9ff5a025`；`vendor/` 位置核对于干净检出（未注入补丁），已注入的主工作区里行号会不同。
@@ -198,19 +198,31 @@
 
 ## 验证
 
-实施时执行并在收口时回填结果。
+以下为实施后的真实结果（2026-11-24/25，分支 feat/digital-employee-batch1）。
 
-- 纯函数：`dispatch-gate.test.ts` 覆盖四态全表（关闭、未绑定、台账不可读、五种阶段、责任卡有效与失效）。
-- 接口：`workunit-routes.test.ts` 改为带登录态；新增字段透传与规范化、未登录 401、请求体冒填迁移人不生效、登录身份非在岗 400、退役自动撤权、自然人停用与 `mxids` 透传、离职 409 前置检查与联动、移交工单核实行。
-- 业务负责人签署：无登录 401、非在岗 400；保存责任卡不采纳请求体里的签署字段；签署后改动卡片内容则签署失效；凭失效签署或无版本指纹的旧签署准入被拒。
-- 离职顺序：前置检查不写任何文件、令牌无效即拒、命中在岗执行单元时返回名单；前置检查未过时不发起改派。
-- 派单：用真实 `MentionDispatchService` 配替身引擎，验证未准入、变更中、已退役的已绑定单元被拒且引擎未被调用；未绑定、门关闭时照常起跑；台账不可读时起跑且读数为 `unknown`；能力 `block` 被拒、`warn` 与 `unknown` 放行带警告；列编排经同一服务得到 `unit_gate` 结果。RACI 与团队确认各一组。
-- 路由：`mb-routing.test.ts` 断言看板卡指派对象等于路由选中 Agent 的 `profile`；无 `profile` 的 Agent 不参与路由并回执失败；协议解析接受并拒收非法 `profile`。
-- 界面：`workunit-sections.test.ts` 用替身请求走通「保存带准入证据的责任卡 → 准入 → 运行」，断言请求体字段；变更后重启提交两条证据；退役提交真实退出事项且请求体不含迁移人与占位文字；目标阶段下拉按阶段过滤。身份面板与离职向导同法。
-- 信任域：请求体 `actor` 被忽略。
-- 变异探针（四项，做完改回并记录）：门函数改成恒通过；迁移人改回取请求体；签署人改回取请求体；路由结果改回不用于指派。每项对应守门测试必须变红。
-- 浏览器实操：隔离实例（独立 `HERMES_WEB_UI_HOME`，`NODE_ENV=production`）按 0.1 的完成条件走一遍并留文字记录。
-- 全量：目标套件、`npm test`、`npm run typecheck:harness`（新模块并入点名清单）、推送前门禁。
+- 纯函数：`dispatch-gate.test.ts` 12 例覆盖四态全表，先测后实现，全绿。
+- 接口：`workunit-routes.test.ts` 带登录态改写后 19/19；新增字段透传与规范化、未登录 401、请求体冒填迁移人不生效、登录身份非在岗 400、退役自动撤权、自然人停用与 `mxids` 透传、离职前置检查与联动、移交工单核实行全绿。
+- 业务负责人签署：无登录 401、非在岗 400；保存责任卡不采纳请求体签署字段；签后改卡内容则签署失效；凭失效或无版本指纹的旧签署准入被拒——全绿。
+- 派单：`zcode-mention-dispatch.test.ts` 用真实 `MentionDispatchService` 配替身引擎，未准入/变更中/已退役已绑定单元被拒且引擎未调用、未绑定与门关闭照常起跑、台账不可读读数 `unknown`、能力 block 拒/warn 与 unknown 放行，全绿；RACI、团队确认、预演同源各一组。
+- 路由：`mb-routing.test.ts` 断言看板卡指派对象等于路由选中 Agent 的 `profile`，无 `profile` 回执 `no-routable-profile`，全绿。
+- 变异探针（四项均变红后改回）：门函数恒通过、迁移人改回取请求体、签署人改回取请求体、路由结果改回不用于指派。
+- 全量门禁：`npm run regress -- --scope merge` **14 面 14 通过 0 失败 0 未执行**；`npm run typecheck:harness` 退出码 0。
+- 浏览器实操（隔离实例 `HERMES_WEB_UI_HOME=/tmp/de-batch1-live`、`NODE_ENV=production`、端口 8651、Bearer 认证）八步全过：
+  1. 以登录名登记并启用自然人 `admin`（id=admin）；
+  2. 登记五要素齐备＋绑定 `zcode-live` 的身份；
+  3. 保存带三组准入证据的责任卡；
+  4. 以登录身份签署（signedBy=admin、有版本指纹、stale=false）；
+  5. 准入→运行（迁移人=admin，body 不带 by）；
+  5b. 服务探针（真实判定核＋门）：running 放行（start/queued）、retired 拦截（unit_gate/unit_retired）；HTTP 预演因目标未注册返 `target_unavailable`（与门无关，环境缺真实 zcode 引擎）；
+  6. 登记凭证＋建委托；
+  7. 退役自动撤权 `revoked={credentials:1}`、凭证读回 revoked，探针回归稳定；
+  8. `WORKUNIT_DISPATCH_GATE=off` 重启，running 与 retired 都 `start/queued`（等价回滚）。
+- 实操发现的真实缺口：自然人登记时若已存在同邮箱记录会按邮箱匹配、忽略显式 `id`（首签因此报「签署人必须是在岗自然人」，重建 id=admin 的自然人后通过）；zcode 引擎预演端点真实路径为 `/api/zcode-engine/mention/preview`。
+
+### 守门修复（回归矩阵抓出并当场修）
+
+- K19 `ok:false` 棘轮 1014→1024：governance-controller 两处手写 HTTP 失败体改 `fail()`；+10 为批一纯函数 Result 返回值（同既往批次 874→989→1014 范式），归因入库。
+- `zcode-session-projection` 枚举冻结守门补 `unit_gate`/`capability_block`（任务 4 新增原因码，守门漏同步）。
 
 ## 设计文档影响
 
