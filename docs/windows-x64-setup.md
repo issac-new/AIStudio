@@ -4,11 +4,11 @@
 
 | 组件 | 当前版本 |
 |---|---|
-| AIStudio 整体 | 1.0.18-overlay |
-| agent teams | v0.23.0-team.2 |
-| hermes-agent 上游底座 | 0.23.0 |
-| yuan | v2.100.1 |
-| Ycode | 3.17.2 |
+| AIStudio 整体 | 1.0.20-overlay |
+| agent teams | v0.23.3-team.2 |
+| hermes-agent 上游底座 | 0.23.3 |
+| yuan | v2.103.0 |
+| Ycode | 4.0.0（包版本；基线 a4b44451） |
 
 ## 一、当前形态与边界
 
@@ -78,7 +78,7 @@ npm run dev
 npm run offline:package
 ```
 
-产物为 `dist/offline/aistudio-offline-<full版>-win64.zip`；当前整体版本对应 `aistudio-offline-1.0.18-overlay-win64.zip`。包内包含全仓源码快照、本机 hermes-agent 工作树快照、脱敏 env/zcode 模板和 PowerShell 安装链。hermes-agent 快照的实际基线与本地改动量以当次生成的 `HERMES-AGENT-SNAPSHOT.md` 和 `local-mods.patch` 为准，不使用固定文件数。
+产物为 `dist/offline/aistudio-offline-<full版>-win64.zip`；当前整体版本对应 `aistudio-offline-1.0.20-overlay-win64.zip`（以发版时实际包名为准）。包内包含全仓源码快照、本机 hermes-agent 工作树快照、脱敏 env/zcode 模板和 PowerShell 安装链。hermes-agent 快照的实际基线与本地改动量以当次生成的 `HERMES-AGENT-SNAPSHOT.md` 和 `local-mods.patch` 为准，不使用固定文件数。
 
 ### 3.2 在 Windows 目标机安装
 

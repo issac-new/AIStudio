@@ -1,7 +1,7 @@
 # AIStudio 设计文档机械索引
 
 面向讲师与文档维护者。本索引按文件名机械覆盖 `docs/superpowers/specs/*.md` 的全部直接根文件，并单列 `archive/*.md`；每个文件名都是可点击的相对链接。设计文档的角色、阅读顺序与冲突处理见[《AIStudio 设计文档导读》](aistudio-design-document-guide.md)。
-- 快照基线：`3690ceba3`；核实日：2026-11-24；版本线：`1.0.20-overlay`（v1.0.20 发布轮）。
+- 快照基线：`d06ad3027`（N34 清偿批工作分支头，合并后以主干为准）；核实日：2026-11-24；版本线：`1.0.20-overlay`（v1.0.20 发布轮）。
 - 唯一设计正本：`docs/DESIGN.md`（本目录中 `2026-10-23-swarmstudio-integrated-design.md` 仅为旧址指针，不含设计内容）。
 - 根目录不递归 `assets/` 等子目录；`archive/` 单独计数，不重复并入根目录。归档中的 HTML 不在本次 Markdown 覆盖范围。
 **这是动态文件清单，不代表全部现行。** 链接存在不等于文档已批准、机制已实施或能力已验证；未提交新增文件也不等于已经合入。文件名日期只用于分组，同组按文件名排序，不表示评审或合入顺序。现行角色以[《设计文档导航》](../superpowers/specs/2026-10-21-ncwk-unified-product-design.md)与整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。需要逐份主旨时查[《附录 A》](../superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md)；本索引不复制其人工摘要。
