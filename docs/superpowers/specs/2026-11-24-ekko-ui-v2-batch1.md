@@ -41,18 +41,21 @@
 - **D6：chart 用原生 SVG 实现，不引图表库**。hermes-studio 客户端无既有图表依赖，引入 ECharts/G2 会让 vendor 补丁面与包体同步膨胀；bar/line/pie 三形态用内联 SVG 足够覆盖研发卡片场景，且天然跟随宿主 token。
 - **D7：表达式求值带预算（256 步 / 深度 32）**。`map` 嵌套与长 concat 链可构造指数级求值，预算超限返回 undefined 并计入校验期深度检查；渲染不因此崩溃（fail-soft）。
 - **D8：能力协商结构本批落地但全部按批启用**。`clientCapabilities()` 返回真实能力集（blocking=true，其余 false），为批二/三/四的 features 翻转预留单一读取点；本批不改变任何现有行为。
+- **D9（TDD 中发现的 DoS 面，随批根治）：体积估算与表达式校验全部预算化**。TDD 的 DAG 用例（同一对象既作 then 又作 else，40 层）把校验挂死数小时——根因有二：① `byteLength` 用 `JSON.stringify` 量体积，共享子树按引用路径展开成 2^40 节点；② 表达式校验的深度限制挡不住 DAG（访问路径数是指数量级）。修复：客户端与服务端的 `byteLength` 改为带 10 万访问上限的递归估算（共享子树按出现次数重复计，与序列化语义一致）；表达式校验与求值共用 256 步访问预算，耗尽即抛 `ExpressionBudgetExceeded` 立即展开递归（逐点返回挡不住指数遍历）。回归守门用例断言 2 秒内拒绝。
 
 ## 验证
 
-- 目标测试（先写测试后实现）：
-  - `custom/client/chat/ekko-ui/__tests__/protocol.test.ts` 扩充：v2 合法 spec（含 map/format/if/coalesce）、新部件属性校验、新动作校验、v1 spec 拒绝 v2 节点（expression.unknown / node.type.unknown / action.unknown）、求值预算超限、image scheme 白名单、open_url 动态值出口复验。
-  - `custom/client/chat/ekko-ui/__tests__/renderer.test.ts` 扩充：chart 三形态渲染、metric/tabs/steps/empty/descriptions 渲染与交互、tabs 本地切换不跨边界。
-  - `custom/client/chat/__tests__/ekko-ui-card.test.ts` 扩充：surface.turn 调 sendMessage、copy 写剪贴板、open_url 拦截 javascript: 等非法 scheme。
-  - `custom/server/ekko-ui/__tests__/surface-runs.test.ts` 扩充：v2 protocol 受理、v1 仍受理、未知 protocol 拒绝。
-- 类型：`npm run typecheck:harness` 零错误；`npm run typecheck:client` 基线零新增。
-- 守门：`raw-hex-budget` / `wcag-contrast` 绿（新部件全部走 token，无裸 hex）。
-- 回归：合并前 `npm run regress -- --scope merge`。
-- 实物走查（合并前）：dev 起服，真实 Hermes 会话让 Agent 发「发布成本估算器」（range + metric + chart + map 循环清单），拖滑杆即时重算零模型调用；亮暗两态截图复核。
+- 单测（2026-11-25 全绿，67 例）：
+  - `custom/client/chat/ekko-ui/__tests__/protocol-v2.test.ts`（18 例）：v2 合法 spec、新 AST 全家族（arith/compare/format/length/concat/if/coalesce/map/object/array/var）、新部件校验、新动作校验与出口、v1 拒绝 v2 节点、**DAG 共享子树快速拒绝（DoS 回归守门）**、image scheme 白名单、$state/$template/$expr 绑定、tabs 父子约束、能力协商。
+  - `custom/client/chat/ekko-ui/__tests__/protocol.test.ts`（16 例，v1 原样）：v1 行为不变。
+  - `custom/client/chat/ekko-ui/__tests__/renderer-v2.test.ts`（7 例）：chart 三形态 SVG、metric $expr、tabs 本地切换不跨边界、steps/empty/descriptions、image 动态非法 scheme 不渲染、map 循环行、turn/copy/open_url 事件上抛。
+  - `custom/client/chat/__tests__/ekko-ui-card-v2.test.ts`（3 例）：surface.turn 走 chatStore.sendMessage、copy 写剪贴板、open_url 复验 scheme 后 window.open。
+  - `custom/server/ekko-ui/__tests__/surface-runs.test.ts`（10 例，含新增双协议用例）：v2 受理、未知协议拒绝。
+- 类型：`npm run typecheck:harness` 零错误；`npm run typecheck:client:ratchet` 15 ≤ 基线 19（零新增）。
+- 守门：`raw-hex-budget` / `wcag-contrast` 8 例全绿（新部件全部走 token 派生，零裸 hex）。
+- 全量 `npm test`：9971 过 / 2 失败（均为新 spec 未入文档索引）→ `gen-doc-indexes --write` 补账后两文件 29 例转绿 → 全量复跑确认（结果见交付说明）。
+- 实物走查（2026-11-25，走查页非真实会话）：`walkthrough-v2/`（临时目录，不入库）挂「发布成本估算器」v2 spec（range + metric $expr + chart $expr map + tabs + steps + descriptions + 三动作按钮），vite 打包 + 无头 Chrome 取证：亮色/暗色两帧渲染正常；DOM 转储核验 metric 显示 ¥232.00（arith+format 即时求值）、chart SVG 在位、tabs 双面板、steps 三态；`?demo=turn` 自动点击「按此方案继续」后事件日志出现 `turn: {"text":"按 8 席方案继续，月费 ¥232.00"}`——动作管线端到端成立。
+- 未做（诚实声明）：真实 Hermes 会话的 v2 端到端（Agent 经 MCP 工具发 v2 spec）未走查——v2 的 Agent 侧发现依赖校验器可修复错误（D4），目录工具与提示引导在批二补齐后统一走查；v1 会话路径已由 2026-11-16 批验证且本批零改动。
 
 ## 设计文档影响
 
