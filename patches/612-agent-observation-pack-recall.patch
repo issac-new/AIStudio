@@ -389,7 +389,7 @@ index f75efbeb62..88762fb2bb 100644
  STORAGE_DIR = os.path.join(tempfile.gettempdir(), "hermes-results")
  _ARCHIVE_SUBDIRS = (SPILLOVER_SUBDIR, PRUNED_SUBDIR)
  # Fallback spillover age only (unreadable config); the real default is the session
-@@ -520,6 +523,19 @@
+@@ -520,7 +523,20 @@
          return content, False
      last_nl = content.rfind("\n", 0, max_chars)
      return content[:last_nl + 1 if last_nl > max_chars // 2 else max_chars], True
@@ -408,7 +408,8 @@ index f75efbeb62..88762fb2bb 100644
 +    return tail
  
  
- def _tool_metadata_block(fields: dict) -> str:
+ class _Pageable(NamedTuple):
+     """A spill file laid out as ``lead + text + trail``; only ``text`` is the result's own text."""
 @@ -666,22 +682,31 @@
  
  
@@ -446,10 +447,12 @@ index f75efbeb62..88762fb2bb 100644
          + f"\n{PERSISTED_OUTPUT_CLOSING_TAG}")
  
  
-@@ -711,11 +736,19 @@
-     persisted_content = _pageable_text(content)
+@@ -711,13 +736,21 @@
+     page = _pageable_text(content)
+     persisted_content = page.content
      filename = _safe_result_filename(tool_use_id)
-     preview, has_more = generate_preview(persisted_content, max_chars=config.preview_size)
+     preview, has_more = _head_tail_preview(page, config.preview_size) or generate_preview(
+         persisted_content, max_chars=config.preview_size)
 +    tail = generate_tail_excerpt(persisted_content)
  
      def _persisted(path: str, host_suffix: str = "") -> str:

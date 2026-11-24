@@ -51,6 +51,7 @@ _EXPECTED_WRITE_ERRNOS = {errno.EACCES, errno.EPERM, errno.EROFS}
 # Read-size guard. Model-agnostic, so characters proxy tokens: 100K chars is
 # ~25-35K tokens across typical tokenisers. Configurable: file_read_max_chars.
 _DEFAULT_MAX_READ_CHARS = 100_000
+_ARCHIVE_GUTTER_CHARS = 16  # '<n>|' line-number gutter plus newline, generously
 def _get_max_read_chars() -> int:
     """Return ``file_read_max_chars`` from config.yaml (default on missing/invalid). No module
     cache: ``load_config_readonly`` is already mtime+path cached, and a process-lifetime slot
@@ -429,18 +430,41 @@ def _read_extracted_document(path: str, _resolved, offset: int, limit: int, task
     from tools.read_extract import (
         ANYDOC_EXTENSIONS, EXTRACTABLE_EXTENSIONS, MAX_DOCUMENT_BYTES, ExtractionError,
         extract_document_bytes, is_extractable_document)
+    from tools.tool_output_limits import get_max_line_length
+    from tools.tool_result_storage import is_pruned_archive, pageable_archive_text
     if hosted_scope() is not None:
         return None  # extraction parses the bytes in host temp files and host tools; the binary guard answers
 
-    if not is_extractable_document(str(_resolved)):
+    # A pruned tool result is archived byte-exact, so JSON output (or any one-line output) is a line the
+    # per-line cap would cut with no way to continue: page its text, long lines wrapped at the cap.
+    archived = is_pruned_archive(str(_resolved))
+    wrapped, wrap_width = False, 0
+    if not (archived or is_extractable_document(str(_resolved))):
         return None
     file_ops = _get_file_ops(task_id)
+    if archived and (sync_manager := getattr(getattr(file_ops, "env", None), "_sync_manager", None)) is not None:
+        # A file-synced sandbox gets new cache files on its next (rate-limited) sync; an archive written since
+        # must be there before this read, or the model is told it expired.
+        try:
+            sync_manager.sync(force=True)
+        except Exception:  # health: allow BLE001 -- a failed push leaves the read to report what the sandbox has
+            logger.debug("Archive sync before read failed for %s", path, exc_info=True)
+    # The sandbox resolves its own ``~`` and cwd: _resolved expanded them with the host's, so a sandbox
+    # gets the path as the model gave it, like the ordinary read in read_file_tool.
+    byte_path = str(_resolved) if _file_ops_uses_host_paths(file_ops) else path
     try:
-        binary = file_ops.read_file_bytes(str(_resolved), max_bytes=MAX_DOCUMENT_BYTES)
+        binary = file_ops.read_file_bytes(byte_path, max_bytes=MAX_DOCUMENT_BYTES)
         if binary.error or binary.base64_content is None:
             raise ExtractionError(binary.error or "Document bytes unavailable")
         document_bytes = base64.b64decode(binary.base64_content, validate=True)
-        extracted_text = extract_document_bytes(document_bytes, str(_resolved))
+        if archived:
+            # Each wrapped line, gutter included, must also fit the read budget: a line the budget cuts
+            # mid-way advances next_offset past its remainder.
+            wrap_width = max(1, min(get_max_line_length(), _get_max_read_chars() - _ARCHIVE_GUTTER_CHARS))
+            extracted_text, wrapped = pageable_archive_text(
+                document_bytes.decode("utf-8", errors="replace"), str(_resolved), wrap_width)
+        else:
+            extracted_text = extract_document_bytes(document_bytes, str(_resolved))
     except (ExtractionError, ValueError, base64.binascii.Error) as exc:
         logger.debug("document extraction failed for %s", path, exc_info=True)
         # Binary formats surface the specific failure (fallthrough would only
@@ -460,7 +484,6 @@ def _read_extracted_document(path: str, _resolved, offset: int, limit: int, task
     total_lines = len(lines)
     end_line = offset + limit - 1
     page_text = "\n".join(lines[offset - 1:end_line])
-    from tools.tool_output_limits import get_max_line_length
     max_line_length = get_max_line_length()
     truncated_lines = any(len(line) > max_line_length for line in page_text.split('\n'))
     result_dict = {
@@ -469,6 +492,8 @@ def _read_extracted_document(path: str, _resolved, offset: int, limit: int, task
         "file_size": binary.file_size,
         "truncated": total_lines > end_line,
         "extracted_document": True}
+    if wrapped:  # the archive file itself is byte-exact; only this view splits its long lines
+        result_dict["long_lines_wrapped_at"] = wrap_width
     if result_dict["truncated"]:
         result_dict["hint"] = (
             f"Use offset={end_line + 1} to continue reading "
@@ -902,14 +927,87 @@ def _whole_file_rewrite_hint(task_id: str, resolved: str | None, new_content: st
     )
 
 
+# --- Action Fusion (SoL-Pi) ------------------------------------------------
+# Fused edit+verify: write_file/patch accept ``then_run``, a validation command that
+# executes inside the SAME tool call once the write lands. Saves one model decision
+# round per edit→check cycle (SoL-Pi's Action Fusion mechanism: 3 API calls → 2).
+_THEN_RUN_TIMEOUT_S = 120
+_THEN_RUN_OUTPUT_HEAD = 4000
+_THEN_RUN_OUTPUT_TAIL = 2000
+
+
+def _then_run_hash_ok(file_ops, path: str, expected_sha: str | None) -> bool:
+    """Content-hash guard immediately before running ``then_run``: skip the fused
+    validation whenever anything modified the file between the write and the command —
+    checking different bytes than were written reports a phantom pass/fail the model
+    cannot distinguish from a real result. A backend that cannot hash fails closed
+    (skip the command, say why) rather than run unverified."""
+    if not expected_sha:
+        return False
+    try:
+        res = file_ops._exec(f"sha256sum {file_ops._escape_shell_arg(path)} 2>/dev/null")
+        first = str(getattr(res, "stdout", "") or "").strip().split()
+        return bool(first) and first[0] == expected_sha
+    except Exception:
+        return False
+
+
+def _run_then_run_fused(file_ops, command: str, guard_paths: list,
+                        session_id: str | None = None) -> dict:
+    """Execute the fused validation command; returns the ``then_run`` result block.
+
+    ``guard_paths``: ``[(path, expected_sha256)]`` — every entry must still match its
+    write-time hash (paths the write verified; ``expected_sha=None`` fails closed).
+    Output is bounded head+tail: compile/test noise is front-loaded, verdicts land at
+    the end. Ledger event either way (efficiency accounting counts skips too)."""
+    from tools.efficiency_ledger import record_efficiency_event
+
+    import time as _time
+    started = _time.monotonic()
+    for g_path, g_sha in guard_paths:
+        if not _then_run_hash_ok(file_ops, g_path, g_sha):
+            block = {"command": command, "skipped":
+                     f"content-hash guard: {g_path} changed on disk after the write "
+                     "(or its hash could not be verified); validation NOT run — "
+                     "re-check the file before trusting any result.", "path": g_path}
+            record_efficiency_event("action_fusion", command=command, outcome="skipped_guard",
+                                    session_id=session_id)
+            return block
+    try:
+        res = file_ops._exec(command, timeout=_THEN_RUN_TIMEOUT_S)
+        exit_code = int(getattr(res, "exit_code", 1))
+        output = str(getattr(res, "stdout", "") or "")
+    except Exception as exc:  # noqa: BLE001 — a failed validation is a result, not a tool crash
+        block = {"command": command, "exit_code": 1,
+                 "output": f"then_run execution failed: {type(exc).__name__}: {exc}"[:_THEN_RUN_OUTPUT_HEAD]}
+        record_efficiency_event("action_fusion", command=command, outcome="exec_error",
+                                session_id=session_id)
+        return block
+    if len(output) > _THEN_RUN_OUTPUT_HEAD + _THEN_RUN_OUTPUT_TAIL:
+        omitted = len(output) - _THEN_RUN_OUTPUT_HEAD - _THEN_RUN_OUTPUT_TAIL
+        output = (output[:_THEN_RUN_OUTPUT_HEAD]
+                  + f"\n[…{omitted:,} chars omitted…]\n"
+                  + output[-_THEN_RUN_OUTPUT_TAIL:])
+    duration = round(_time.monotonic() - started, 2)
+    record_efficiency_event("action_fusion", command=command, exit_code=exit_code,
+                            outcome="ran", duration_s=duration, session_id=session_id)
+    return {"command": command, "exit_code": exit_code, "output": output,
+            "duration_s": duration}
+
+
 def write_file_tool(path: str, content: str, task_id: str = "default",
                     cross_profile: bool = False,
-                    session_id: str | None = None) -> str:
+                    session_id: str | None = None,
+                    then_run: str | None = None) -> str:
     """Write content to a file.
 
     ``cross_profile`` bypasses the sandbox-mirror lost-write guards only
     (unadvertised in the schema; the mirror rejection error teaches it — the
     cross-PROFILE guard it was named for no longer exists).
+
+    ``then_run`` (Action Fusion, SoL-Pi): optional validation command executed in
+    the same tool call right after a successful write — the edit+verify round
+    trip collapses from two model decisions into one.
     """
     # write_file checks the binary-document guard before the mirror guard.
     err = (_check_sensitive_path(path, task_id)
@@ -960,6 +1058,11 @@ def write_file_tool(path: str, content: str, task_id: str = "default",
                     # same-task writes stay unblocked (patch_tool carries it).
                     _mark_full_write_baseline(_resolved, task_id, getattr(result, "_content_sha256", None))
                 _note_edited(task_id, [path], path_to_resolved, session_id)
+                if then_run:
+                    result_dict["then_run"] = _run_then_run_fused(
+                        _get_file_ops(task_id), then_run,
+                        [(_resolved or path, getattr(result, "_content_sha256", None))],
+                        session_id=session_id)
         return json.dumps(result_dict, ensure_ascii=False)
     except Exception as e:
         if _is_expected_write_exception(e):
@@ -1001,11 +1104,12 @@ def _collect_v4a_header_paths(patch: str) -> tuple[list[str], list[str], list[st
 def patch_tool(mode: str = "replace", path: str | None = None, old_string: str | None = None,
                new_string: str | None = None, replace_all: bool = False, patch: str | None = None,
                task_id: str = "default", cross_profile: bool = False,
-               session_id: str | None = None) -> str:
+               session_id: str | None = None, then_run: str | None = None) -> str:
     """Patch a file using replace mode or V4A patch format.
 
     ``cross_profile``: same semantics as ``write_file``'s flag (mirror-guard
-    bypass only; unadvertised).
+    bypass only; unadvertised). ``then_run``: fused validation command (Action
+    Fusion — see ``write_file_tool``).
     """
     _paths_to_check = [path] if path else []
     _content_write_paths = list(_paths_to_check)
@@ -1067,6 +1171,13 @@ def patch_tool(mode: str = "replace", path: str | None = None, old_string: str |
                 _carry_full_write_baselines(task_id, _known, getattr(result, "_writes", ()), _path_to_resolved)
                 # Clear failure counters so a future miss starts a fresh count.
                 _reset_patch_failures(task_id, [_r for _r in _path_to_resolved.values() if _r])
+                if then_run:
+                    # Guard on the write-time hashes the patch itself recorded (3rd
+                    # tuple slot = new-content sha, the bytes now on disk).
+                    result_dict["then_run"] = _run_then_run_fused(
+                        file_ops, then_run,
+                        [(_w[0], _w[2]) for _w in getattr(result, "_writes", ())],
+                        session_id=session_id)
         # old_string-not-found hint. Failure escalation is tracked for replace
         # mode only (V4A misses are rare); the generic hint is suppressed when
         # patch_replace already attached a richer "Did you mean?" snippet.
@@ -1222,6 +1333,7 @@ WRITE_FILE_SCHEMA = {
         "properties": {
             "path": {"type": "string", "description": "Path to the file to write (will be created if it doesn't exist, overwritten if it does)"},
             "content": {"type": "string", "description": "Complete content to write to the file"},
+            "then_run": {"type": "string", "description": "Optional validation command fused into this call (runs in the current working directory, like the terminal tool): executed immediately after a successful write, guarded by a content-hash check that the written file is unchanged. Its exit code and output are merged into this result. Use it instead of a separate terminal round-trip, e.g. 'python -m py_compile main.py', 'node --check app.js', 'npm test -- --runTestsByPath tests/x.test.js'. Timeout 120s; output bounded to head+tail."},
             # NOTE: the handler still accepts `cross_profile` (bool) — it now
             # bypasses only the #32049 sandbox-mirror lost-write guards, whose
             # rejection error teaches it. Unadvertised: the cross-PROFILE
@@ -1268,6 +1380,7 @@ PATCH_SCHEMA = {
                 "description": "Replace all occurrences instead of requiring a unique match (default: false)",
                 "default": False,
             },
+            "then_run": {"type": "string", "description": "Optional validation command fused into this call (runs in the current working directory, like the terminal tool): executed immediately after a successful edit, guarded by a content-hash check that the edited file is unchanged. Its exit code and output are merged into this result — collapses the edit→verify cycle into one call."},
             # NOTE: handler still accepts `cross_profile` — see write_file's
             # NOTE (mirror-guard bypass only; unadvertised by design).
             # NOTE: handler still accepts `mode` + `patch` (V4A) from ANY
@@ -1387,6 +1500,7 @@ def _handle_write_file(args, **kw):
         path=args["path"], content=args["content"], task_id=tid,
         cross_profile=bool(args.get("cross_profile", False)),
         session_id=kw.get("session_id"),
+        then_run=args.get("then_run"),
     ))
 
 
@@ -1409,6 +1523,7 @@ def _handle_patch(args, **kw):
         replace_all=args.get("replace_all", False), patch=args.get("patch"), task_id=tid,
         cross_profile=bool(args.get("cross_profile", False)),
         session_id=kw.get("session_id"),
+        then_run=args.get("then_run"),
     ))
 
 

@@ -811,7 +811,7 @@ diff --git a/gateway/run_startup.py b/gateway/run_startup.py
 index 000000000..111111111 100644
 --- a/gateway/run_startup.py
 +++ b/gateway/run_startup.py
-@@ -1615,7 +1615,8 @@ class GatewayStartupMixin:
+@@ -1617,9 +1617,10 @@ class GatewayStartupMixin:
          "_kanban_notifier_watcher", "_kanban_dispatcher_watcher",
      )
      _POST_RECONNECT_WATCHERS = (
@@ -819,6 +819,8 @@ index 000000000..111111111 100644
 +        "_handoff_watcher", "_async_delegation_watcher", "_loop_wakeup_watcher", "_followup_watcher",
 +        "_profile_reconcile_watcher",
          "_delegation_auto_resume_watcher")
+ 
+     _status_reporter: Optional[StatusReporter] = None
  
      def _start_spawn_background_watchers(self) -> None:
 

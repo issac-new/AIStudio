@@ -18,11 +18,14 @@ _TASK_DICT_FIELDS = (
     "workspace_kind", "workspace_path", "branch_name", "project_id",
     "created_by", "created_at", "started_at", "completed_at", "result",
     "skills", "max_runtime_seconds", "max_retries", "model_override", "provider_override",
-    # Capability pool Task 8：dispatch 侧能力需求（与 skills 语义分离）。
-    "required_capabilities",
     "reasoning_effort",  # HERMES_CUSTOM[v020]
     "raci",  # HERMES_CUSTOM[raci]
     "session_id", "workflow_template_id", "current_step_key", "completion_contract", "last_failure_error",
+    # 批二 CAS 读面（2026-11-18 run31 复盘 N32-6）：version/verification 进 CLI JSON 序列化——
+    # 此前写面有乐观锁读面无钥（客户端无法从 REST 构造 expected_version；探针组 17 正例降级取证）。
+    "version", "verification",
+    # Capability pool Task 8：dispatch 侧能力需求（JSON 数组，与 skills 语义分离）。
+    "required_capabilities",
 )
 _SHOW_RUN_FIELDS = (
     "id", "profile", "step_key", "status", "outcome", "summary", "error",
@@ -87,6 +90,7 @@ def _obj_dict(obj: Any, fields: tuple[str, ...]) -> dict[str, Any]:
 def _task_to_dict(t: kb.Task) -> dict[str, Any]:
     d = _obj_dict(t, _TASK_DICT_FIELDS)
     d["skills"] = list(t.skills) if t.skills else []
-    # required_capabilities：None→null（未声明）与 []（显式空）两态不同，不折叠。
+    # required_capabilities：None→null（未声明），[]→[]（显式空）；不做 skills 式的
+    # null→[] 折叠——两态语义不同（capabilitypool 供需面依赖该区分）。
     d["required_capabilities"] = list(t.required_capabilities) if t.required_capabilities is not None else None
     return d

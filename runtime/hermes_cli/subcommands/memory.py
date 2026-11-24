@@ -31,4 +31,17 @@ def build_memory_parser(subparsers, *, cmd_memory: Callable) -> None:
     _reset_parser.add_argument(
         "--target", choices=["all", "memory", "user"], default="all",
         help="Which store to reset: 'all' (default), 'memory', or 'user'")
+    _set_parser = memory_sub.add_parser(
+        "set", help="Atomically write a built-in memory file (memory/user/soul)")
+    _set_parser.add_argument(
+        "section", choices=["memory", "user", "soul"],
+        help="Target file: memory→memories/MEMORY.md, user→memories/USER.md, soul→SOUL.md")
+    _set_parser.add_argument(
+        "--file", required=True,
+        help="Read the new content from this local file (single-writer funnel "
+            "for studio edits / agent tools; the write itself is atomic)")
+    _set_parser.add_argument(
+        "--expect-mtime", dest="expect_mtime", default=None,
+        help="Optional CAS guard (epoch ms or ISO-8601): refuse with exit code 3 "
+            "if the target file's mtime differs (concurrent-writer protection)")
     memory_parser.set_defaults(func=cmd_memory)

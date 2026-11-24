@@ -738,12 +738,12 @@ class GatewayInboundMixin(
         for row in [] if paused else rows:
             if row.status == 'queued' and row.principal_id.startswith('messaging:'):
                 # Claimed meanwhile (stale_generation): it runs as main's post-claim race does.
-                with suppress(RuntimeStoreError):
+                with suppress(AuthorityRefusal):
                     await authority.cancel_queued(actor, ref, row.admission_id)
         handle = authority._handle(ref)
         if handle.execution_state == 'running':
             # Settled meanwhile (stale_generation): there is no claimed turn left to stop.
-            with suppress(RuntimeStoreError):
+            with suppress(AuthorityRefusal):
                 await authority.interrupt(actor, ref, handle.execution_generation)
 
     def _hm_in_telegram_grace(self, event: MessageEvent, source: SessionSource, _quick_key: str) -> bool:
@@ -1295,7 +1295,7 @@ class GatewayInboundMixin(
     ) -> tuple[bool, Optional[str]]:
         """``(True, reply)`` when the routed profile's session authority owned this message
         (preempted, plugin-consumed or admitted to its durable FIFO); ``(False, None)`` to continue
-        on the in-process path. Raises ``RuntimeStoreError('profile_mismatch')`` for a scope this
+        on the in-process path. Raises ``AuthorityRefusal('profile_mismatch')`` for a scope this
         process does not serve."""
         # The message handler entered the routed profile's scope; its authority owns this turn.
         from gateway.session_authorities import active_authority
@@ -1315,8 +1315,8 @@ class GatewayInboundMixin(
         if (authority is None and not is_internal and not event.get_command()
                 and getattr(self, 'session_authority', None) is not None):
             # Scoped to a home this process does not serve: never fall back to the launch ledger.
-            from persistence.core.errors import AuthorityRefusal as RuntimeStoreError
-            raise RuntimeStoreError('profile_mismatch')
+            from persistence.core.errors import AuthorityRefusal
+            raise AuthorityRefusal('profile_mismatch')
         return False, None
 
     async def _hm_admit_to_fifo(
@@ -1415,7 +1415,21 @@ class GatewayInboundMixin(
         # passes the "already running" guard and spins up a duplicate agent for the same session.
         _active_session_lease, _limit_message = self._claim_active_session_slot(_quick_key, source)
         if _limit_message is not None:
-            logger.info("Rejecting new active session %s: max_concurrent_sessions reached", _quick_key)
+            # Capacity refusals are operational signals, not chat content: echoed into the
+            # room the "session limit" notice is itself a new room message that re-triggers
+            # every agent's dispatch, and every one of those refusals echoes again — a
+            # self-sustaining notification storm in multi-agent rooms. Hold the rejected
+            # event for a silent retry when a slot frees instead of dropping it, and keep
+            # the refusal in the logs only. Ownership/coordination refusals still reply:
+            # they name an actionable conflict on THIS session and cannot amplify across
+            # agents the same way.
+            from hermes_cli.active_sessions import MAX_CONCURRENT_SESSIONS
+            if getattr(_limit_message, "reason", None) in (None, MAX_CONCURRENT_SESSIONS):
+                logger.info(
+                    "Capacity refusal for %s: queued silently for retry when a slot frees "
+                    "(not echoed to chat)", _quick_key)
+                self._queue_capacity_retry(event, source, _quick_key)
+                return None
             return _limit_message
 
         event, source, is_internal = self._hm_rescue_orphaned_fifo(event, source, is_internal, _quick_key)
@@ -1936,7 +1950,7 @@ class GatewayInboundMixin(
         Description *and* local cache path are injected so the model understands the image without
         a tool call and can re-examine it with vision_analyze."""
         from tools.vision_tools import vision_analyze_tool
-        from agent.memory_context import sanitize_context
+        from session_rules.turns import sanitize_context
 
         analysis_prompt = (
             "Concisely describe this image in 2-4 sentences "

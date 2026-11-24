@@ -866,7 +866,8 @@ def rename_room(
 def append_event(
     store: Persistence, *, placement: HostedPlacement, room_id: Any, event_id: Any, kind: Any, actor: Any,
     payload: Any, authority_gateway_id: Any = None, authority_epoch: Any = None, now: float | None = None,
-    expected_latest_seq: int | None = None, control_reserve: bool = False) -> dict[str, Any]:
+    expected_latest_seq: int | None = None, control_reserve: bool = False,
+    collab_event_id: Any = None) -> dict[str, Any]:
     """Append one immutable event and allocate its per-room sequence atomically; repeating an ``event_id``
     with identical content returns the original, different content fails closed. ``control_reserve`` lets a
     bounded gateway notice use the control headroom, so a room whose log is full can still say why."""
@@ -883,6 +884,14 @@ def append_event(
     authority_epoch = _require_positive_int(authority_epoch, "authority_epoch")
     if not isinstance(payload, dict):
         raise HostedRoomError("payload must be an object")
+    # 跨机协作事件锚点（可选，边界设计 §6-T4b）：本事件由哪个 Matrix $event_id 驱动，
+    # 并入 payload 落盘（零 schema 变更）；幂等冲突比对随 payload_json 一并参与。
+    # v0.23.3 起 append_event 为门面（校验后委托 store 层），锚点并入点随迁：dict 校验后
+    # 直接并入，非 dict 由上游 isinstance 校验报错（延迟 resolve 机制已被上游移除）。
+    if collab_event_id is not None:
+        if not isinstance(collab_event_id, str) or not collab_event_id:
+            raise HostedRoomError("collab_event_id must be a non-empty string")
+        payload = {**payload, "collab_event_id": collab_event_id}
     _payload_json(payload)
     now = _now(now)
     return store.hosted_rooms.append_event(
