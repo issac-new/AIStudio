@@ -74,7 +74,7 @@
 
 ## 产物分发口径
 
-自 2026-11-03 起，每版 GitHub Release 只上传 `aistudio-full-<ver>-src.tar.gz` 与 `swarm-yuan-offline-<ver>-everything.zip` 两件主资产及配套 SHA256SUMS 校验件；ModelScope 的 `aistudio/` 只替换 full 包，仓根放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。
+自 2026-11-03 起，每版 GitHub Release 只上传 `aistudio-full-<ver>-src.tar.gz` 与 `swarm-yuan-offline-<ver>-everything.zip` 两件主资产及配套 SHA256SUMS 校验件。ModelScope 只更新 `swarm-yuan/` 目录：按版本放置 everything zip 与单条 `SHA256SUMS-v<版本>.txt`，旧版本保留；整体源码包只在 GitHub Release 发布，ModelScope 的 `aistudio/` 目录保留 1.0.15、1.0.16 两版历史件，不再更新（实际自 1.0.17 起每版只传 `swarm-yuan/` 两件，本节表述于 2026-11-24 订正）。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。
 
 本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
 

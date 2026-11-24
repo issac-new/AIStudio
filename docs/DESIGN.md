@@ -1692,8 +1692,9 @@ Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号�
 1. 整体源码包 `aistudio-full-<版本>-src.tar.gz`。
 2. swarm-yuan 离线 everything 包。
 
-GitHub Release 只挂这两件；ModelScope 的 `aistudio/` 只替换 full 包，
-仓根放 everything 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。
+GitHub Release 只挂这两件。ModelScope 只更新 `swarm-yuan/` 目录：按版本放 everything
+离线包与单条 `SHA256SUMS-v<版本>.txt`，旧版本保留；整体源码包只在 GitHub Release 发布，
+ModelScope 的 `aistudio/` 目录保留 1.0.15 与 1.0.16 两版历史件，不再更新。
 四模块源码包与 DMG/zip 构建物不再上传远端，也不再是默认打包目标。
 版本前进不等于模块包重发：模块声明进位而内容未变时，按资产政策不重发该模块包。
 

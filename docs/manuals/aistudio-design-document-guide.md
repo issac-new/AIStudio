@@ -195,7 +195,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 1. `aistudio-full-1.0.20-overlay-src.tar.gz`。
 2. `swarm-yuan-offline-1.0.20-overlay-everything.zip`。
 
-两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件；ModelScope 的 `aistudio/` 只替换 full 包，`swarm-yuan/` 按版本目录放置 everything zip 与 `SHA256SUMS-v<版本>.txt`，旧版本保留。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:130-160`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
+两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件；ModelScope 只更新 `swarm-yuan/` 目录，按版本放置 everything zip 与单条 `SHA256SUMS-v<版本>.txt`，旧版本保留，整体源码包不上传 ModelScope（其 `aistudio/` 目录保留 1.0.15、1.0.16 两版历史件）。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:130-160`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
 
 默认 `npm run release:packages` 只打整体包；确需本地生成四模块加整体的 4+1 全量时，必须显式使用 `--all-modules`。模块边界和 `packageIncludes` 仍保留，用于发布检查与改动归属，不因上传面收窄而删除。`scripts/make-release-packages.mjs:38-50`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:11-15`
 
