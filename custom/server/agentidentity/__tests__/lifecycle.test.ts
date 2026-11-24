@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { canTransition, initialLifecycle, stageOf } from '../lifecycle'
-import type { ResponsibilityCard } from '../responsibility'
+import { cardRevision, type ResponsibilityCard } from '../responsibility'
 import type { Person } from '../people'
 
 const people: Person[] = [
@@ -12,9 +12,10 @@ const card: ResponsibilityCard = {
   escalation: ['e'], pauseConditions: ['p'], takerOver: 'p-2',
   testCaseVersion: 'tc-1', costBudget: { limit: 1, unit: 'CNY/轮' },
   maintainer: 'p-1', deploymentLocation: 'loc',
-  businessOwnerSign: { signedBy: 'p-1', signedAt: 1 },
   admissionEvidence: { representativeTasks: ['t'], edgeCases: ['e'], dataPermissionReview: ['d'], recordedAt: 1 },
 }
+// 签署须带版本指纹（2026-11-24 批一）：指纹按卡内容实时计算，stale=false 旧契约夹具才能过新准入门
+card.businessOwnerSign = { signedBy: 'p-1', signedAt: 1, cardRevision: cardRevision(card), stale: false }
 const base = { name: 'u', owner: 'o', toolAllowlist: [], responsibilityCard: card, lifecycle: initialLifecycle() }
 
 describe('lifecycle', () => {

@@ -740,7 +740,7 @@ router.post('/matrix-offboard', async (ctx) => {
     localName: String(b.localName), handoverTo: String(b.handoverTo),
     taskIds: Array.isArray(b.taskIds) ? (b.taskIds as string[]) : [],
     reason: String(b.reason || ''), adminToken: String(b.adminToken), homeserverUrl: String(b.homeserverUrl),
-    actor: b.actor ? String(b.actor) : undefined,
+    actor: decisionActor(ctx)?.username ?? '',
   }) } catch (e) { ctx.status = 502; ctx.body = { error: String(e instanceof Error ? e.message : e) } }
 })
 
@@ -750,15 +750,22 @@ router.post('/matrix-offboard', async (ctx) => {
 import {
   listIdentities, registerIdentity, updateIdentity, addCredential, revokeCredential,
   delegate, revokeDelegation, activeDelegationChain, listEvents,
-  getCardView, transitionIdentity, updateResponsibilityCard,
+  getCardView, transitionIdentity, updateResponsibilityCard, signResponsibilityCard,
+  type AuditRequirement, type CapabilityBoundary, type RuntimeBindings,
 } from '../agentidentity/agent-identity'
 import { appendJudgment, listJudgments, type JudgmentKind } from '../agentidentity/judgments'
-import { activatePerson, listPeople, upsertPerson } from '../agentidentity/people'
+import { activatePerson, deactivatePerson, listPeople, upsertPerson } from '../agentidentity/people'
 import type { ResponsibilityCard } from '../agentidentity/responsibility'
 import type { TransitionInput } from '../agentidentity/lifecycle'
 
 function govActorOf(ctx: { state?: { user?: { username?: string } } }): string {
   return ctx.state?.user?.username ?? 'anonymous'
+}
+
+/** 请求体键存在且为对象时才透传（否则不传该键，保持存量注册结果不变）。 */
+function objectField<V>(body: Record<string, unknown>, key: string): V | undefined {
+  const v = body[key]
+  return v !== undefined && typeof v === 'object' && v !== null && !Array.isArray(v) ? v as V : undefined
 }
 
 router.get('/agent-identity', async (ctx) => {
@@ -768,11 +775,18 @@ router.get('/agent-identity', async (ctx) => {
 router.post('/agent-identity/register', async (ctx) => {
   if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  // 户口三要素透传（域层各做规范化）：仅请求体键存在且为对象时传入
+  const capabilityBoundary = objectField<CapabilityBoundary>(b, 'capabilityBoundary')
+  const auditRequirement = objectField<AuditRequirement>(b, 'auditRequirement')
+  const runtimeBindings = objectField<RuntimeBindings>(b, 'runtimeBindings')
   const res = registerIdentity({
     name: String(b.name ?? ''),
     kind: (['human', 'agent', 'bot', 'service'].includes(String(b.kind)) ? String(b.kind) : 'agent') as 'human' | 'agent' | 'bot' | 'service',
     owner: String(b.owner ?? ''),
     toolAllowlist: Array.isArray(b.toolAllowlist) ? (b.toolAllowlist as unknown[]).map(String) : [],
+    ...(capabilityBoundary ? { capabilityBoundary } : {}),
+    ...(auditRequirement ? { auditRequirement } : {}),
+    ...(runtimeBindings ? { runtimeBindings } : {}),
   }, govActorOf(ctx as never))
   if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
   ctx.body = res
@@ -781,9 +795,15 @@ router.post('/agent-identity/register', async (ctx) => {
 router.post('/agent-identity/:id/update', async (ctx) => {
   if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  const capabilityBoundary = objectField<CapabilityBoundary>(b, 'capabilityBoundary')
+  const auditRequirement = objectField<AuditRequirement>(b, 'auditRequirement')
+  const runtimeBindings = objectField<RuntimeBindings>(b, 'runtimeBindings')
   const res = updateIdentity(String(ctx.params.id ?? ''), {
     owner: b.owner === undefined ? undefined : String(b.owner),
     toolAllowlist: Array.isArray(b.toolAllowlist) ? (b.toolAllowlist as unknown[]).map(String) : undefined,
+    ...(capabilityBoundary ? { capabilityBoundary } : {}),
+    ...(auditRequirement ? { auditRequirement } : {}),
+    ...(runtimeBindings ? { runtimeBindings } : {}),
   }, govActorOf(ctx as never))
   if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
   ctx.body = res
@@ -839,7 +859,6 @@ router.get('/agent-identity/:id/chain', async (ctx) => {
 
 function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
   const cost = (b.costBudget ?? {}) as Record<string, unknown>
-  const sign = b.businessOwnerSign as Record<string, unknown> | undefined
   const ev = b.admissionEvidence as Record<string, unknown> | undefined
   const strs = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : [])
   return {
@@ -854,9 +873,7 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
     costBudget: { limit: Number(cost.limit ?? 0), unit: String(cost.unit ?? '') },
     maintainer: String(b.maintainer ?? ''),
     deploymentLocation: String(b.deploymentLocation ?? ''),
-    ...(sign && typeof sign === 'object'
-      ? { businessOwnerSign: { signedBy: String(sign.signedBy ?? ''), signedAt: Number(sign.signedAt ?? 0), ...(sign.note ? { note: String(sign.note) } : {}) } }
-      : {}),
+    // 签署不随卡保存：businessOwnerSign 只走 /card/sign 独立端点（绑定版本指纹，防冒填）
     ...(ev && typeof ev === 'object'
       ? {
           admissionEvidence: {
@@ -883,13 +900,26 @@ router.put('/agent-identity/:id/card', async (ctx) => {
   ok(ctx, { identity: res.identity })
 })
 
+router.post('/agent-identity/:id/card/sign', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  // 签署人取服务端登录身份；签署绑定当前卡版本指纹，此后改卡面内容须重签
+  const actor = decisionActor(ctx)
+  if (!actor) return
+  const res = signResponsibilityCard(String(ctx.params.id ?? ''), actor.username, listPeople())
+  if (!res.ok) { fail(ctx, 400, '责任卡签署未通过', { code: 'invalid-sign', problems: res.problems }); return }
+  ok(ctx, { card: res.card })
+})
+
 router.post('/agent-identity/:id/transition', async (ctx) => {
   if (superAdminDenied(ctx)) return
+  // 迁移人与退出确认人只信登录身份；请求体 by / exit.confirmedBy 不采纳（防冒填）
+  const actor = decisionActor(ctx)
+  if (!actor) return
   const b = bodyOf(ctx)
   const exit = b.exit as Record<string, unknown> | undefined
   const input: TransitionInput = {
     to: String(b.to ?? '') as TransitionInput['to'],
-    by: String(b.by ?? ''),
+    by: actor.username,
     reason: String(b.reason ?? ''),
     evidenceRefs: Array.isArray(b.evidenceRefs) ? b.evidenceRefs.map(String) : [],
     ...(exit && typeof exit === 'object'
@@ -897,14 +927,15 @@ router.post('/agent-identity/:id/transition', async (ctx) => {
           exit: {
             kind: String(exit.kind ?? 'pause') as 'pause' | 'revoke' | 'decommission',
             items: Array.isArray(exit.items) ? exit.items.map(String) : [],
-            ...(exit.confirmedBy ? { confirmedBy: String(exit.confirmedBy) } : {}),
+            confirmedBy: actor.username,
           },
         }
       : {}),
   }
-  const res = transitionIdentity(String(ctx.params.id ?? ''), input, govActorOf(ctx as never))
+  const res = transitionIdentity(String(ctx.params.id ?? ''), input, actor.username)
   if (!res.ok) { fail(ctx, 400, '状态迁移未通过', { code: 'invalid-transition', problems: res.problems }); return }
-  ok(ctx, { identity: res.identity })
+  // 退役时同一次落盘已撤销凭证与委托，revoked 计数并入响应身份（域层返回的独立字段）
+  ok(ctx, { identity: res.identity && res.revoked ? { ...res.identity, revoked: res.revoked } : res.identity })
 })
 
 router.get('/agent-identity/:id/judgments', async (ctx) => {
@@ -913,6 +944,9 @@ router.get('/agent-identity/:id/judgments', async (ctx) => {
 
 router.post('/agent-identity/:id/judgments', async (ctx) => {
   if (superAdminDenied(ctx)) return
+  // 署名签署人取登录身份，请求体 signedBy 不采纳
+  const actor = decisionActor(ctx)
+  if (!actor) return
   const b = bodyOf(ctx)
   const res = appendJudgment({
     unitId: String(ctx.params.id ?? ''),
@@ -920,7 +954,7 @@ router.post('/agent-identity/:id/judgments', async (ctx) => {
     subjectRef: String(b.subjectRef ?? ''),
     rationale: String(b.rationale ?? ''),
     evidenceRefs: Array.isArray(b.evidenceRefs) ? b.evidenceRefs.map(String) : [],
-  }, String(b.signedBy ?? ''), listPeople())
+  }, actor.username, listPeople())
   if (!res.ok) { fail(ctx, 400, '署名记录未通过', { code: 'invalid-judgment', problems: res.problems }); return }
   ok(ctx, { record: res.record })
 })
@@ -937,6 +971,8 @@ router.post('/people', async (ctx) => {
     name: String(b.name ?? ''),
     emails: Array.isArray(b.emails) ? b.emails.map(String) : [],
     source: b.source === 'git' ? 'git' : 'manual',
+    // mxid 桥透传：数组时传，否则不传（整体替换/清空语义由域层 upsert 决定）
+    ...(Array.isArray(b.mxids) ? { mxids: b.mxids.map(String) } : {}),
   }, govActorOf(ctx as never))
   if (!res.ok) { fail(ctx, 400, '自然人登记未通过', { code: 'invalid-person', problems: res.problems }); return }
   ok(ctx, { person: res.person })
@@ -947,6 +983,17 @@ router.post('/people/:id/activate', async (ctx) => {
   const res = activatePerson(String(ctx.params.id ?? ''), govActorOf(ctx as never))
   if (!res.ok) { fail(ctx, 404, '自然人不存在', { code: 'not-found', problems: res.problems }); return }
   ok(ctx, { person: res.person })
+})
+
+router.post('/people/:id/deactivate', async (ctx) => {
+  if (superAdminDenied(ctx)) return
+  // 停用操作者与理由取登录身份；重复停用幂等，referencedBy 提示仍引用此人的未退役单元
+  const actor = decisionActor(ctx)
+  if (!actor) return
+  const b = bodyOf(ctx)
+  const res = await deactivatePerson(String(ctx.params.id ?? ''), actor.username, String(b.reason ?? ''))
+  if (!res.ok) { fail(ctx, 404, '自然人不存在', { code: 'not-found', problems: res.problems }); return }
+  ok(ctx, { person: res.person, referencedBy: res.referencedBy })
 })
 
 

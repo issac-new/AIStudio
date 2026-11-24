@@ -13,8 +13,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
-import { listPeople } from './people'
-import { cardGaps, validateCard, type ResponsibilityCard } from './responsibility'
+import { listPeople, type Person } from './people'
+import { cardGaps, cardRevision, validateCard, type ResponsibilityCard } from './responsibility'
 import { canTransition, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
@@ -588,12 +588,22 @@ export function updateResponsibilityCard(
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
   const prevOwner = identity.responsibilityCard?.primaryOwner
-  identity.responsibilityCard = card
+  // 签署不随请求体写入（防冒填）：HTTP 层的 cardFromBody 已丢弃该字段；域层对直接调用方
+  // 传入的签署对象保持兼容（以请求传入为准，否则保留既有签署），只按新卡面指纹重算 stale。
+  // 指纹不含签署与准入证据，故补登证据不会让签署失效，改卡面内容才会。
+  const prevSign = identity.responsibilityCard?.businessOwnerSign
+  const keptSign = card.businessOwnerSign ?? prevSign
+  const { businessOwnerSign: _dropSign, ...content } = card
+  const next: ResponsibilityCard = { ...(content as ResponsibilityCard) }
+  if (keptSign) {
+    next.businessOwnerSign = { ...keptSign, stale: cardRevision(next) !== keptSign.cardRevision }
+  }
+  identity.responsibilityCard = next
   const lc = normalizeLifecycle(identity.lifecycle)
   // 主责任人变更不是静默改名：已准入/运行中的单元强制转入变更态，重启须两条证据
-  if (prevOwner && prevOwner !== card.primaryOwner && lc.stage !== 'registered') {
+  if (prevOwner && prevOwner !== next.primaryOwner && lc.stage !== 'registered') {
     lc.history.push({
-      from: lc.stage, to: 'changing', at: Date.now(), by: card.primaryOwner,
+      from: lc.stage, to: 'changing', at: Date.now(), by: next.primaryOwner,
       reason: 'owner-change', evidenceRefs: [],
     })
     lc.stage = 'changing'
@@ -605,11 +615,34 @@ export function updateResponsibilityCard(
   return { ok: true, problems: [], identity: { ...identity } }
 }
 
+/** 业务负责人签署责任卡（独立动作，2026-11-24 数字员工批一）：签署人须为在岗自然人，
+ *  签署绑定当前卡版本指纹；此后卡面内容变更会让签署失效（stale），须重新签署。 */
+export function signResponsibilityCard(
+  id: string,
+  signedBy: string,
+  people: Person[],
+): { ok: boolean; problems: string[]; card?: ResponsibilityCard } {
+  const problems: string[] = []
+  const signer = people.find((p) => p.id === signedBy)
+  if (!signer || !signer.active) problems.push('签署人必须是在岗自然人')
+  const store = readStore()
+  const identity = store.identities.find((i) => i.id === id)
+  if (!identity) return { ok: false, problems: [...problems, `身份不存在：${id}`] }
+  if (!identity.responsibilityCard) problems.push('责任卡未填写，无法签署')
+  if (problems.length) return { ok: false, problems }
+  const card = identity.responsibilityCard!
+  card.businessOwnerSign = { signedBy, signedAt: Date.now(), cardRevision: cardRevision(card), stale: false }
+  identity.updatedAt = Date.now()
+  writeStore(store)
+  appendEvent({ actor: signedBy, action: 'update', targetId: id, detail: 'card-sign' })
+  return { ok: true, problems: [], card: { ...card } }
+}
+
 export function transitionIdentity(
   id: string,
   input: TransitionInput,
   actor: string,
-): { ok: boolean; problems: string[]; identity?: AgentIdentity } {
+): { ok: boolean; problems: string[]; identity?: AgentIdentity; revoked?: { credentials: number; delegationsOut: number; delegationsIn: number } } {
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
@@ -623,11 +656,46 @@ export function transitionIdentity(
   })
   lc.stage = input.to
   if (input.to === 'retired') lc.exit = { ...input.exit!, confirmedAt: Date.now() }
+  // 退役即撤权：同一次落盘内撤销全部 active 凭证与未撤销委托（出边+入边），逐条留事件
+  let revoked: { credentials: number; delegationsOut: number; delegationsIn: number } | undefined
+  if (input.to === 'retired') {
+    const now = Date.now()
+    let credentials = 0
+    for (const c of identity.credentials) {
+      if (c.status !== 'active') continue
+      c.status = 'revoked'
+      c.revokedAt = now
+      c.revokedBy = actor
+      credentials += 1
+      appendEvent({ actor, action: 'revoke-credential', targetId: id, detail: `随单元退役：${c.kind}:${c.label}` })
+    }
+    let delegationsOut = 0
+    for (const d of identity.delegations) {
+      if (d.revokedAt) continue
+      d.revokedAt = now
+      d.revokedBy = actor
+      delegationsOut += 1
+      appendEvent({ actor, action: 'revoke-delegation', targetId: id, detail: `随单元退役：${d.id}（${d.from}→${d.to}）` })
+    }
+    let delegationsIn = 0
+    for (const other of store.identities) {
+      if (other.id === id) continue
+      for (const d of other.delegations) {
+        if (d.revokedAt || d.to !== id) continue
+        d.revokedAt = now
+        d.revokedBy = actor
+        delegationsIn += 1
+        other.updatedAt = now
+        appendEvent({ actor, action: 'revoke-delegation', targetId: other.id, detail: `随单元退役：${d.id}（${d.from}→${d.to}）` })
+      }
+    }
+    revoked = { credentials, delegationsOut, delegationsIn }
+  }
   identity.lifecycle = lc
   identity.updatedAt = Date.now()
   writeStore(store)
   appendEvent({ actor, action: 'update', targetId: id, detail: `lifecycle:${from}->${input.to}` })
-  return { ok: true, problems: [], identity: { ...identity } }
+  return { ok: true, problems: [], identity: { ...identity }, revoked }
 }
 
 export function getCardView(id: string): {
