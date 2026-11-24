@@ -1,6 +1,6 @@
 # 2026-11-23 Ycode 基线升至 ZCode 4.0.0＋v1.0.20-overlay 发版批
 
-> 状态：实施中。依据用户指令「Zcode 已升级至 4.0（zai-org/zcode），同步完成 AIStudio 的相关升级」，以及方案确认时的裁决「合并后接着发版」。
+> 状态：已收口（2026-11-24，main fe7a9f6bc，tag v1.0.20-overlay→c97dfb140，双通道已发布回验）。依据用户指令「Zcode 已升级至 4.0（zai-org/zcode），同步完成 AIStudio 的相关升级」，以及方案确认时的裁决「合并后接着发版」。
 
 ## 变更
 
