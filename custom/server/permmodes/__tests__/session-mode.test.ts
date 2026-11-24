@@ -11,11 +11,14 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { PlatformPrincipal } from '../../../platform/contracts/identity'
+import { loadEngineCommandValidator } from '../../__tests__/helpers/engine-command-validator'
 
 const engine = vi.hoisted(() => ({
   connect: vi.fn(),
   send: vi.fn(),
   close: vi.fn(),
+  /** 只读取水位（N34-1）：switchCollaborationMode 是引擎的比对基线命令。 */
+  rowsRange: vi.fn(),
 }))
 vi.mock('../../zcode/engine-bridge', () => ({ connectZCodeEngine: engine.connect }))
 vi.mock('../../zcode/mention-dispatch', () => ({ uuidV7Like: () => 'command-test' }))
@@ -47,10 +50,12 @@ beforeEach(() => {
   engine.connect.mockReset()
   engine.send.mockReset()
   engine.close.mockReset()
+  engine.rowsRange.mockReset()
   engine.send.mockResolvedValue({ status: 'accepted' })
+  engine.rowsRange.mockResolvedValue({ rows: [], atSeq: 4, atRevision: 4, atLogEpoch: 'epoch-1', hasMore: false })
   engine.connect.mockResolvedValue({
     clientId: 'client-test',
-    agent: { sendConversationCommandV4: engine.send },
+    agent: { sendConversationCommandV4: engine.send, conversationRowsRangeV4: engine.rowsRange },
     close: engine.close,
   })
 })
@@ -142,6 +147,27 @@ describe('REST 查/切/清', () => {
     expect(del.json.removed).toBe(true)
     const get2 = await req('GET', '/api/hermes/permmodes/session-mode/chen')
     expect(get2.json.sessionMode).toBeNull()
+  })
+
+  it('会话内立即切：信封带会话修订号与毫秒时间戳，通过引擎命令入口校验（N34-1）', async () => {
+    const put = await req('PUT', '/api/hermes/permmodes/session-mode/chen', { mode: 'plan', sessionId: 's1', workspacePath: '/tmp/w' })
+    expect(put.status).toBe(200)
+    expect(put.json.liveSwitch).toBe('applied')
+    expect(engine.rowsRange).toHaveBeenCalledWith({ workspacePath: '/tmp/w', sessionId: 's1', limit: 1 })
+    expect(engine.send).toHaveBeenCalledTimes(1)
+    const params = engine.send.mock.calls[0][0] as { workspacePath: string; envelope: Record<string, unknown> }
+    expect(params.envelope).toMatchObject({ type: 'switchCollaborationMode', sessionId: 's1', baseRevision: 4, payload: { mode: 'plan' } })
+    expect(typeof params.envelope.issuedAt).toBe('number')
+    const v = (await loadEngineCommandValidator())(params.envelope)
+    expect(v.ok, v.issues.join('；')).toBe(true)
+  })
+
+  it('会话内立即切：取不到会话修订号时不发命令，liveSwitch 带明确错误', async () => {
+    engine.rowsRange.mockRejectedValue(new Error('proto.sessionNotFound'))
+    const put = await req('PUT', '/api/hermes/permmodes/session-mode/chen', { mode: 'plan', sessionId: 's1', workspacePath: '/tmp/w' })
+    expect(put.status).toBe(200)
+    expect(engine.send).not.toHaveBeenCalled()
+    expect(String((put.json.liveSwitch as { error?: string }).error)).toContain('session_base_unavailable')
   })
 
   it('普通 admin 不得切 bypassPermissions；存储、引擎调用和连接均无副作用', async () => {

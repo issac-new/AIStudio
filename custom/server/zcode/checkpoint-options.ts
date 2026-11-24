@@ -22,6 +22,9 @@ export interface RecoveryTarget {
   clientId: string
   /** summarize-from-here 档的摘要落点提示（原查询文本，摘要指令引用）。 */
   originalQueryText?: string
+  /** 会话当前的比对基线（N34-1）：引擎对 editUserQuery/applyFileRewind 强制要求——缺则在命令入口即拒。 */
+  baseRevision: number
+  baseLogEpoch: string
 }
 
 export interface CommandEnvelopeOut {
@@ -30,7 +33,11 @@ export interface CommandEnvelopeOut {
   sessionId: string
   type: string
   payload: Record<string, unknown>
+  /** 毫秒数（引擎 timestampSchema＝z.number()；ISO 字符串会被拒）。 */
   issuedAt: number
+  /** 仅按行定位的命令携带（引擎 ROW_TARGETING_COMMANDS）。 */
+  baseRevision?: number
+  baseLogEpoch?: string
 }
 
 /** 四档 → zcode v4 命令信封（可能两条：summarize 档先切分支再发摘要指令）。 */
@@ -41,19 +48,23 @@ export function buildRecoveryEnvelopes(mode: CheckpointRecoveryMode, target: Rec
     case 'code-and-conversation':
       // rewind：先安全恢复该轮文件，再截断会话分支（双恢复）。
       return [{ commandId: uuidV7Like(), ...base, type: 'editUserQuery', issuedAt: now,
+                 baseRevision: target.baseRevision, baseLogEpoch: target.baseLogEpoch,
                  payload: { target: rowTarget, newText: target.originalQueryText ?? '', workspaceMode: 'rewind' } }]
     case 'conversation-only':
       // preserve：只切会话分支，工作区不动。
       return [{ commandId: uuidV7Like(), ...base, type: 'editUserQuery', issuedAt: now,
+                 baseRevision: target.baseRevision, baseLogEpoch: target.baseLogEpoch,
                  payload: { target: rowTarget, newText: target.originalQueryText ?? '', workspaceMode: 'preserve' } }]
     case 'code-only':
       // 文件撤销，不截断聊天历史。
       return [{ commandId: uuidV7Like(), ...base, type: 'applyFileRewind', issuedAt: now,
+                 baseRevision: target.baseRevision, baseLogEpoch: target.baseLogEpoch,
                  payload: { target: rowTarget } }]
     case 'summarize-from-here':
       // 先 preserve 切分支（保原文重发位），随后一条摘要指令：从该点压缩为交接摘要。
       return [
         { commandId: uuidV7Like(), ...base, type: 'editUserQuery', issuedAt: now,
+          baseRevision: target.baseRevision, baseLogEpoch: target.baseLogEpoch,
           payload: { target: rowTarget, newText: target.originalQueryText ?? '', workspaceMode: 'preserve' } },
         { commandId: uuidV7Like(), ...base, type: 'sendText', issuedAt: now + 1,
           payload: { text: `请把该点之后的会话压缩为一段交接摘要：已完成/未完成/下一步/坑点。保留可验证锚点（file:line、命令、路径），不要展开对话原文。`, requestedDelivery: 'startNow' } },

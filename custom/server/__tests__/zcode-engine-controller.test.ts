@@ -5,6 +5,8 @@
 // 部分成功 partial:true（防整单重试双写），逐条 rejected 不再谎报 ok:true。
 // X1 收口：/projection/watch|unwatch 同归属闸（403 invocation_not_allowed，引擎侧零调用）。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
 const runtimeMock = vi.hoisted(() => {
   const state = {
@@ -15,7 +17,12 @@ const runtimeMock = vi.hoisted(() => {
     failSession: false,
     agentCalls: 0,
     agentQueue: [] as Array<{ status?: string; reasonCode?: string } | Error>,
+    /** 下发给引擎的信封（按发送顺序）。 */
+    sent: [] as Array<Record<string, unknown>>,
+    /** 只读取水位的应答队列（N34-1）：空队列回默认基线。 */
+    rowsRangeQueue: [] as Array<Record<string, unknown> | Error>,
   }
+  const defaultBase = { rows: [], atSeq: 1, atRevision: 7, atLogEpoch: 'epoch-1', hasMore: false }
   const runtime = {
     connected: false,
     watching: [] as unknown[],
@@ -32,13 +39,35 @@ const runtimeMock = vi.hoisted(() => {
       if (state.failSession) throw new Error('subscription_failed: boom')
     },
     async unwatch(p: string) { state.calls.push(`unwatch:${p}`) },
+    /** 建会话调用（N34-2 守门：须带 projectId）。 */
+    createSessionCalls: [] as Array<Record<string, unknown>>,
+    savedProjects: [] as Array<Record<string, unknown>>,
+    async withBridge(fn: (bridge: unknown) => Promise<unknown>) {
+      state.agentCalls += 1
+      return fn({
+        project: {
+          readProjects: async () => [],
+          saveProject: async (input: Record<string, unknown>) => { state.savedProjects.push(input); return { id: 'proj-1', hostId: 'remote:server:h', name: 'w', roots: [{ rootPath: input.roots?.[0] }] } },
+        },
+        agent: {
+          createSession: async (params: Record<string, unknown>) => { state.createSessionCalls.push(params); return { session: { sessionId: 's-9' } } },
+          sendConversationCommandV4: async () => ({ status: 'accepted' }),
+        },
+      })
+    },
     async withAgent(fn: (agent: unknown) => Promise<unknown>) {
       state.agentCalls += 1
       return fn({
-        sendConversationCommandV4: async () => {
+        sendConversationCommandV4: async (params: { envelope: Record<string, unknown> }) => {
+          state.sent.push(params.envelope)
           const next = state.agentQueue.shift()
           if (next instanceof Error) throw next
           return next ?? { status: 'accepted' }
+        },
+        conversationRowsRangeV4: async () => {
+          const next = state.rowsRangeQueue.shift()
+          if (next instanceof Error) throw next
+          return next ?? defaultBase
         },
       })
     },
@@ -51,6 +80,7 @@ vi.mock('../zcode/projection-runtime', () => ({
 }))
 
 import { zcodeEngineRoutes } from '../zcode/engine-controller'
+import { loadEngineCommandValidator } from './helpers/engine-command-validator'
 import { canUseWorkspace, setWorkspaceAccessDepsForTests } from '../zcode/workspace-access'
 
 type Handler = (ctx: Record<string, unknown>) => Promise<void>
@@ -77,6 +107,102 @@ beforeEach(() => {
   runtimeMock.state.failSession = false
   runtimeMock.state.agentCalls = 0
   runtimeMock.state.agentQueue = []
+  runtimeMock.state.sent = []
+  runtimeMock.state.rowsRangeQueue = []
+  runtimeMock.state.createSessionCalls = []
+  runtimeMock.state.savedProjects = []
+})
+
+describe('测试隔离', () => {
+  it('测试进程的派单台账不指向真实数据目录（用例会把派发结果写进台账）', async () => {
+    const { dispatchLedgerPath } = await import('../governance/dispatch-ledger')
+    const real = join(homedir(), '.hermes-web-ui', 'overlay', 'dispatch-ledger.jsonl')
+    expect(dispatchLedgerPath()).not.toBe(real)
+  })
+})
+
+describe('派单建会话前的项目登记（N34-2）', () => {
+  it('引擎端口：先按工作区登记项目，再带 projectId 建会话（独立形态引擎要求会话属于已登记项目）', async () => {
+    const { getMentionDispatch } = await import('../zcode/engine-controller')
+    const service = getMentionDispatch() as unknown as { engine: { createSession: (p: { workspacePath: string }) => Promise<unknown> } }
+    const r = await service.engine.createSession({ workspacePath: '/w/p' })
+    expect(r).toMatchObject({ session: { sessionId: 's-9' } })
+    expect(runtimeMock.state.savedProjects).toEqual([{ roots: ['/w/p'], defaultName: 'p' }])
+    expect(runtimeMock.state.createSessionCalls).toEqual([{ workspacePath: '/w/p', projectId: 'proj-1' }])
+  })
+})
+
+describe('比对基线字段（N34-1）：引擎对分叉、检查点恢复的命令强制要求 baseRevision/baseLogEpoch', () => {
+  const forkBody = { workspacePath: '/w/p', sessionId: 's1', rowId: 3, entityId: 'e1' }
+  const base = (revision: number) => ({ rows: [], atSeq: revision, atRevision: revision, atLogEpoch: 'epoch-1', hasMore: false })
+
+  it('/fork：信封带基线并通过引擎的 parseCommandEnvelope', async () => {
+    const ctx = fakeCtx({ ...forkBody })
+    await handlerFor('POST', '/fork')(ctx)
+    expect(ctx.body).toMatchObject({ ok: true, status: 'accepted' })
+    const env = runtimeMock.state.sent
+    expect(env).toHaveLength(1)
+    expect(env[0]).toMatchObject({ type: 'forkAssistant', sessionId: 's1', baseRevision: 7, baseLogEpoch: 'epoch-1', payload: { target: { rowId: 3, entityId: 'e1' } } })
+    expect(typeof env[0].issuedAt).toBe('number')
+    const v = (await loadEngineCommandValidator())(env[0])
+    expect(v.ok, v.issues.join('；')).toBe(true)
+  })
+
+  it('/fork：引擎回「基线已旧」→ 重取基线用同一 commandId 重发', async () => {
+    runtimeMock.state.rowsRangeQueue = [base(7), base(8)]
+    runtimeMock.state.agentQueue = [{ status: 'stale', reasonCode: 'proto.staleRevision' }]
+    const ctx = fakeCtx({ ...forkBody })
+    await handlerFor('POST', '/fork')(ctx)
+    expect(ctx.body).toMatchObject({ ok: true, status: 'accepted' })
+    const env = runtimeMock.state.sent
+    expect(env).toHaveLength(2)
+    expect(env[1]).toMatchObject({ baseRevision: 8 })
+    expect(env[1].commandId).toBe(env[0].commandId)
+  })
+
+  it('/fork：连续过时到达上限 → 如实回报 stale，不再重试', async () => {
+    runtimeMock.state.agentQueue = [
+      { status: 'stale', reasonCode: 'proto.staleRevision' },
+      { status: 'stale', reasonCode: 'proto.staleRevision' },
+      { status: 'stale', reasonCode: 'proto.staleRevision' },
+    ]
+    const ctx = fakeCtx({ ...forkBody })
+    await handlerFor('POST', '/fork')(ctx)
+    expect(ctx.body).toMatchObject({ ok: false, status: 'stale', reasonCode: 'proto.staleRevision' })
+    expect(runtimeMock.state.sent).toHaveLength(3)
+  })
+
+  it('取不到基线（引擎没有该会话）→ 409 session_base_unavailable，命令零下发', async () => {
+    runtimeMock.state.rowsRangeQueue = [new Error('proto.sessionNotFound')]
+    const ctx = fakeCtx({ ...forkBody })
+    await handlerFor('POST', '/fork')(ctx)
+    expect(ctx.status).toBe(409)
+    expect(ctx.body).toMatchObject({ ok: false, reason: 'session_base_unavailable', reasonCode: 'session_base_unavailable' })
+    expect(runtimeMock.state.sent).toHaveLength(0)
+  })
+
+  it('/checkpoint/recover：四档下发的每个信封都通过引擎校验；取不到基线时零下发', async () => {
+    const validate = await loadEngineCommandValidator()
+    for (const mode of ['code-and-conversation', 'conversation-only', 'code-only', 'summarize-from-here']) {
+      runtimeMock.state.sent = []
+      runtimeMock.state.agentQueue = []
+      const ctx = fakeCtx({ ...forkBody, mode })
+      await handlerFor('POST', '/checkpoint/recover')(ctx)
+      expect(ctx.body, mode).toMatchObject({ ok: true })
+      expect(runtimeMock.state.sent.length, mode).toBeGreaterThan(0)
+      for (const env of runtimeMock.state.sent) {
+        const v = validate(env)
+        expect(v.ok, `${mode} / ${String(env.type)} 被引擎拒绝：${v.issues.join('；')}`).toBe(true)
+      }
+    }
+    runtimeMock.state.sent = []
+    runtimeMock.state.rowsRangeQueue = [new Error('boom')]
+    const refused = fakeCtx({ ...forkBody, mode: 'code-only' })
+    await handlerFor('POST', '/checkpoint/recover')(refused)
+    expect(refused.status).toBe(409)
+    expect(refused.body).toMatchObject({ ok: false, reason: 'session_base_unavailable' })
+    expect(runtimeMock.state.sent).toHaveLength(0)
+  })
 })
 
 describe('/projection/watch（S6）', () => {

@@ -26,11 +26,12 @@
  */
 import Router from '@koa/router'
 import type { Context } from 'koa'
-import { probeZCodeEngine } from '../zcode/engine-bridge'
+import { ensureEngineProject, probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
 import { MentionDispatchService } from '../zcode/mention-dispatch'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
+import { ControlBaseUnavailableError, fetchControlBase, sendCasCommand, type ControlBase } from '../zcode/cas-command'
 import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
 import { loadUpstreamModule } from '../lib/upstream'
 import { fail } from '../lib/http'
@@ -91,7 +92,11 @@ export function getMentionDispatch(): MentionDispatchService {
   dispatchSingleton = new MentionDispatchService({
     engine: {
       probe: () => probeZCodeEngine(),
-      createSession: (p) => runtime.withAgent((agent) => agent.createSession(p)),
+      // N34-2：独立形态引擎要求会话属于已登记项目——先按工作区登记（幂等复用），再带项目标识建会话。
+      createSession: (p) => runtime.withBridge(async (bridge) => {
+        const projectId = await ensureEngineProject(bridge.project, p.workspacePath)
+        return bridge.agent.createSession({ ...p, projectId })
+      }),
       sendCommand: (p) => runtime.withAgent((agent) => agent.sendConversationCommandV4(p)),
     },
     clientId: 'swarmstudio-mention-bus',
@@ -314,18 +319,29 @@ router.post('/fork', async (ctx) => {
   }
   if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
-  const envelope = {
-    commandId: `${Date.now()}-fork-${rowId}`,
-    clientId: 'swarmstudio-ide',
-    sessionId,
-    type: 'forkAssistant',
-    issuedAt: Date.now(),
-    payload: { target: { rowId, entityId } },
-  }
+  // forkAssistant 是引擎的比对基线命令（N34-1）：baseRevision/baseLogEpoch 取自引擎只读查询，
+  // 引擎回「基线已旧」时由 sendCasCommand 重取重发（commandId 重试不变）。
+  const commandId = `${Date.now()}-fork-${rowId}`
   try {
-    const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
-    ctx.body = { ok: r?.status === 'accepted', status: r?.status ?? 'unknown', reasonCode: r?.reasonCode }
+    const r = await runtime.withAgent((agent) => sendCasCommand(agent, {
+      workspacePath, sessionId,
+      build: (base) => ({
+        commandId,
+        clientId: 'swarmstudio-ide',
+        sessionId,
+        type: 'forkAssistant',
+        issuedAt: Date.now(),
+        baseRevision: base.revision,
+        baseLogEpoch: base.logEpoch,
+        payload: { target: { rowId, entityId } },
+      }),
+    }))
+    ctx.body = { ok: r.status === 'accepted', status: r.status ?? 'unknown', reasonCode: r.reasonCode }
   } catch (err) {
+    if (err instanceof ControlBaseUnavailableError) {
+      fail(ctx, 409, err.message, { extra: { reason: err.reason, reasonCode: err.reason, detail: err.message } })
+      return
+    }
     const detail = err instanceof Error ? err.message : String(err)
     fail(ctx, 503, detail, { extra: { reason: 'engine_unreachable', detail } })
   }
@@ -347,17 +363,39 @@ router.post('/checkpoint/recover', async (ctx) => {
   // X1 归属闸：checkpoint 恢复即向引擎发命令，未注册/不可见的 workspace 不得触发。
   if (workspaceAccessDenied(ctx, workspacePath)) return
   const runtime = getZcodeProjectionRuntime()
+  // 比对基线（N34-1）：editUserQuery/applyFileRewind 必须带会话当前的修订号与日志纪元。
+  // 先取基线；取不到即明确失败，不发必被引擎拒的信封（引擎不可达归 503 词表值）。
+  let base: ControlBase
+  try {
+    base = await runtime.withAgent((agent) => fetchControlBase(agent, workspacePath, sessionId))
+  } catch (err) {
+    if (err instanceof ControlBaseUnavailableError) {
+      fail(ctx, 409, err.message, { extra: { reason: err.reason, reasonCode: err.reason, detail: err.message } })
+      return
+    }
+    const detail = err instanceof Error ? err.message : String(err)
+    fail(ctx, 503, detail, { extra: { reason: /handshake/i.test(detail) ? 'handshake_failed' : 'engine_unreachable', detail } })
+    return
+  }
   const envelopes = buildRecoveryEnvelopes(mode, {
     workspacePath, sessionId, rowId, entityId,
     clientId: 'swarmstudio-checkpoint',
     originalQueryText: typeof originalQueryText === 'string' ? originalQueryText : undefined,
+    baseRevision: base.revision,
+    baseLogEpoch: base.logEpoch,
   }, Date.now())
   // 逐条 try、逐条回报（S8）：summarize 档两条命令可能一条已生效一条失败，一条失败即
   // 503 会让调用方整单重试（双写）；逐条 rejected 也不能谎报 ok:true。ok 由全部命令推导。
   const commands: Array<{ commandId: string; type: string; status?: string; reasonCode?: string; ok: boolean; detail?: string; transportError?: boolean }> = []
   for (const envelope of envelopes) {
     try {
-      const r = await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
+      // 带基线的信封经 sendCasCommand 发送（基线已旧时重取重发）；摘要指令不带基线，直发。
+      const r = envelope.baseRevision === undefined
+        ? await runtime.withAgent((agent) => agent.sendConversationCommandV4({ workspacePath, envelope: envelope as unknown as Record<string, unknown> }))
+        : await runtime.withAgent((agent) => sendCasCommand(agent, {
+          workspacePath, sessionId, base,
+          build: (b) => ({ ...envelope, baseRevision: b.revision, baseLogEpoch: b.logEpoch }),
+        }))
       const accepted = !r.status || r.status === 'accepted' || r.status === 'ok'
       commands.push({ commandId: envelope.commandId, type: envelope.type, status: r.status, reasonCode: r.reasonCode, ok: accepted })
     } catch (err) {
