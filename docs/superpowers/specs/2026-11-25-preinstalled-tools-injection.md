@@ -79,6 +79,10 @@
 | D5 | 改为补丁 015 接上游 `resolveSpawnEnv`，不靠宿主塞 env 继承 | 隔离实测：宿主注入到引擎进程的 PATH/变量到不了命令层——Bash 命令在登录 shell 里跑，macOS path_helper 重建 PATH、变量经运行时解析重写；上游正门（`options.preinstalledToolsBinDir` → `ZCODE_PREINSTALLED_TOOLS_AVAILABLE`＋PATH 前缀→Bash 快照）本就对独立服务端形态成立，缺的只是两处接线 | 宿主塞 env（否决：实测无效）；改 CLI `apps/zcode-cli` 侧 env（否决：改动面大且偏离上游设计意图） |
 | D6 | 补丁只补接线、不改语义：变量缺省时两处行为逐字不变 | 上游把选项注释为桌面专属，但机械行为对独立服务端同样成立；补丁最小化＝只加一条 env 读取＋一行转发 | 在 entry-http 里重写 spawn 逻辑（否决：侵入上游语义，升级易冲突） |
 
+## P7 增补（2026-11-26 全量回归轮）
+
+- **类型声明缺失**：原 015 只加了 `createServerHostServices` 转发 hunk，未在 node.ts:3604 内联选项类型补 `preinstalledToolsBinDir?: string`。纯净基线全量重放后 `yc-typecheck` 面抓出 TS2339（此前推送门跑 yc 面时注入被宿主混合态预检中止，vendor 是纯净态故未暴露）。补丁扩为三 hunk（entry-http 两处＋node.ts 类型行），对纯净双文件 `git apply --check` 通过；全量 clean+inject 重放 504/504 complete、二次幂等。
+
 ## 验证
 
 立项时的只读核实（2026-11-25）已确认：本机 `production/bin` 8 入口在位、Agent 侧契约原文（`apps/zcode-cli/docs/design/v2/preinstalled-document-tools.md:20`「Web 服务端和独立 CLI 不注入」）。

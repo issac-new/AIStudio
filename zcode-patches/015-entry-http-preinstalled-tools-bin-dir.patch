@@ -36,3 +36,14 @@ diff --git a/packages/services/src/node.ts b/packages/services/src/node.ts
    });
    return { services, workspaceIdentityMapper, migrationFailedPathCount };
  }
+diff --git a/packages/services/src/node.ts b/packages/services/src/node.ts
+--- a/packages/services/src/node.ts
++++ b/packages/services/src/node.ts
+@@ -3609,6 +3609,7 @@ export async function createServerHostServices(options: {
+   zcodeBuiltinProviderConfigFilePath: string;
+   providerProvisioningTargetEnabled?: boolean;
+   credentialCipherProvider?: CredentialCipher;
++  preinstalledToolsBinDir?: string;
+ }) {
+   // 无桌面环境不能等到首次登录或 Provisioning 才发现系统库缺失。
+   const credentialCipherProvider =
