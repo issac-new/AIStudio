@@ -247,6 +247,15 @@
       "ci": { "workflow": "regression-axes.yml", "anchor": "--axis yc-lint" }
     },
     {
+      "id": "dependency-audit",
+      "title": "依赖漏洞审计（studio 与 Ycode 生产依赖，清单外的高危或严重才失败）",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["node", "scripts/dependency-audit.mjs"], "timeoutMs": 600000 },
+      "covers": [],
+      "ci": null
+    },
+    {
       "id": "release-check",
       "title": "发布清单与手册投影一致性",
       "scopes": ["merge", "full"],

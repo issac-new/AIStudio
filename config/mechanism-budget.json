@@ -4,11 +4,22 @@
     "gates": 47,
     "patches": 562,
     "zcodePatches": 14,
-    "scripts": 75,
+    "scripts": 76,
     "ledgers": 4,
     "npmScripts": 52
   },
   "changes": [
+    {
+      "at": "2026-11-25",
+      "delta": "+1 脚本（scripts/dependency-audit.mjs）",
+      "reason": "依赖漏洞审计面收进自动关口（挂账 N35-11）：studio 与 Ycode 生产依赖，比对 config/accepted-vulnerabilities.json，清单外的高危或严重才失败。属既有能力的关口化，非新造机制，无需配对删除。",
+      "pairedRemovals": [],
+      "sunset": {
+        "owner": "quality",
+        "reviewBy": "2027-02-25",
+        "retireWhen": "依赖审计并入上游基线自带的检查，或清单机制被更通用的漏洞治理取代时退役"
+      }
+    },
 {
    "at": "2026-11-24",
    "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（既有 noop 哨兵的判别修订，不新增机制）",
