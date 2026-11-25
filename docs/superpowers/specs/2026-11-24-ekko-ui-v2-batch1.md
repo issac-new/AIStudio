@@ -61,6 +61,7 @@
   - 第二轮：`vitest` 面转绿；`sim-gates` 面 `capability-probes` 钩子超时（D12）。
   - 第三轮（三处修正后）：**14 面全过，0 失败 0 未执行**——根 vitest 1247 文件、10013 过 11 跳过；qgate 22 文件 239 过；sim-gates 30 文件 377 过；类型检查双绿；构建、包体预算、治理预算、合并不变量、py-runtime、py-team、yuan-registry、release-check、catalog-check 全过。
   - 变基前（2026-11-25 00:21，基座 `a3aa9b675`）全量 `npm test`：9973 过 11 跳过；其前一跑 9971 过 2 败，两败均为新 spec 未入文档索引，`gen-doc-indexes --write` 补账后转绿。
+  - 第四轮（第三轮之后主干被推进到 `9dd49ac5b`，重新变基；**最终合并结果**）：**14 面全过，0 失败 0 未执行**——根 vitest 10116 过 11 跳过；qgate 239 过；sim-gates 377 过；其余各面全过。此轮之后仅追加了本行所在的纯文档提交，其涉及的文档契约测试与合并不变量面另行复验。变基中收据按并集解：新主干合并时丢了此前主干的 4 条收据（涉及 full-retro-pending-batch、zcode-400-upgrade-release、vendor-upgrade-agent-v0234），随本批补回。
 - 实物走查（2026-11-25，走查页非真实会话）：`walkthrough-v2/`（临时目录，不入库）挂「发布成本估算器」v2 spec（range + metric $expr + chart $expr map + tabs + steps + descriptions + 三动作按钮），vite 打包 + 无头 Chrome 取证：亮色/暗色两帧渲染正常；DOM 转储核验 metric 显示 ¥232.00（arith+format 即时求值）、chart SVG 在位、tabs 双面板、steps 三态；`?demo=turn` 自动点击「按此方案继续」后事件日志出现 `turn: {"text":"按 8 席方案继续，月费 ¥232.00"}`——动作管线端到端成立。
 - 未做（诚实声明）：真实 Hermes 会话的 v2 端到端（Agent 经 MCP 工具发 v2 spec）未走查——v2 的 Agent 侧发现依赖校验器可修复错误（D4），目录工具与提示引导在批二补齐后统一走查；v1 会话路径已由 2026-11-16 批验证且本批零改动。
 
