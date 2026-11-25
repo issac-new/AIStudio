@@ -251,6 +251,239 @@ actions:
     reversible: true
     level: shared_state
     note: 跨轮会话目标台账,同 kanban_request_review 分级
+  # --- Studio 用法工具（MCP 服务 ekko-studio-use，以 toolset=use 启动）---
+  # 2026-11-25 逐个定级并登记（spec 2026-11-25-mcp-action-contracts-remaining，用户选做法 A「只登记」）。
+  # 定级依据是各工具实际调用的接口与方法：只读=无副作用；只写本人本档位数据且可撤销=本地可逆；
+  # 不可逆删除、改配置或凭据、起自主运行、手机 App 与隐私=不可逆。
+  # 注意：这道闸门对已登记的工具只做参数级契约校验，reversible 与 level 是分类标签、不构成拦截，
+  # 参数合规即放行（见 docs/DESIGN.md「动作契约闸门」）。下列「不可逆」只如实标注副作用。
+  mcp__ekko_studio_use__ekko_studio_use_chat_run:
+    side_effects: spawn_process
+    reversible: false
+    level: shared_state
+    note: 起一轮对话或编码代理运行；须用户明确要求,不得用作内部委派
+  mcp__ekko_studio_use__ekko_studio_use_sessions_list:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读会话列表
+  mcp__ekko_studio_use__ekko_studio_use_sessions_count:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读会话计数
+  mcp__ekko_studio_use__ekko_studio_use_usage_stats:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读用量统计
+  mcp__ekko_studio_use__ekko_studio_use_session_get:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读单个会话
+  mcp__ekko_studio_use__ekko_studio_use_session_messages:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读会话消息
+  mcp__ekko_studio_use__ekko_studio_use_session_context:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读会话上下文
+  mcp__ekko_studio_use__ekko_studio_use_session_delete:
+    side_effects: db_delete
+    reversible: false
+    level: shared_state
+    note: 删除会话及其全部消息,不可逆
+  mcp__ekko_studio_use__ekko_studio_use_session_rename:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 会话改标题,可改回
+  mcp__ekko_studio_use__ekko_studio_use_profiles_list:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读档位列表
+  mcp__ekko_studio_use__ekko_studio_use_available_models:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读可用模型
+  mcp__ekko_studio_use__ekko_studio_use_model_provider_get:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读模型对应的供应商
+  mcp__ekko_studio_use__ekko_studio_use_provider_add:
+    side_effects: config_write
+    reversible: false
+    level: shared_state
+    note: 新增或更新供应商并设为该档位默认,影响此后所有请求
+  mcp__ekko_studio_use__ekko_studio_use_provider_delete:
+    side_effects: credential_write
+    reversible: false
+    level: high_risk
+    note: 删除供应商或清除内建凭据,不可逆
+  mcp__ekko_studio_use__ekko_studio_use_worker_status:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读工作进程状态
+  mcp__ekko_studio_use__ekko_studio_use_mobile_location:
+    side_effects: privacy_read
+    reversible: false
+    level: shared_state
+    note: 取用户当前位置；手机端会让用户确认
+  mcp__ekko_studio_use__ekko_studio_use_mobile_calendar:
+    side_effects: device_write
+    reversible: false
+    level: shared_state
+    note: 经用户手机 App 读写日历；手机端会让用户确认
+  mcp__ekko_studio_use__ekko_studio_use_mobile_reminders:
+    side_effects: device_write
+    reversible: false
+    level: shared_state
+    note: 经用户手机 App 读写提醒；手机端会让用户确认
+  mcp__ekko_studio_use__ekko_studio_use_mobile_health:
+    side_effects: privacy_read
+    reversible: false
+    level: shared_state
+    note: 读健康数据；手机端会让用户确认
+  mcp__ekko_studio_use__ekko_studio_use_workflows_list:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读工作流列表
+  mcp__ekko_studio_use__ekko_studio_use_workflow_get:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读单个工作流
+  mcp__ekko_studio_use__ekko_studio_use_workflow_create:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 新建工作流定义,可删可改
+  mcp__ekko_studio_use__ekko_studio_use_workflow_update:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 改工作流定义,可改回
+  mcp__ekko_studio_use__ekko_studio_use_workflow_delete:
+    side_effects: db_delete
+    reversible: false
+    level: shared_state
+    note: 删除工作流,不可逆
+  mcp__ekko_studio_use__ekko_studio_use_workflow_runs_list:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读工作流运行记录
+  mcp__ekko_studio_use__ekko_studio_use_workflow_run_start:
+    side_effects: spawn_process
+    reversible: false
+    level: shared_state
+    note: 异步起工作流运行
+  mcp__ekko_studio_use__ekko_studio_use_workflow_run_stop:
+    side_effects: process_control
+    reversible: true
+    level: local_reversible
+    note: 停止一个运行,可重跑
+  mcp__ekko_studio_use__ekko_studio_use_workflow_rerun_node:
+    side_effects: spawn_process
+    reversible: false
+    level: shared_state
+    note: 从某节点重跑工作流
+  mcp__ekko_studio_use__ekko_studio_use_workflow_run_delete:
+    side_effects: db_delete
+    reversible: false
+    level: shared_state
+    note: 删除工作流运行记录及其节点会话,不可逆
+  # --- Studio 浏览器工具（MCP 服务 ekko-studio-browser，以 toolset=browser 启动）---
+  # 快照、读文本、截图、等待、网络与控制台日志为只读；标签页操作与下载到内存可撤销；
+  # 打开网址会向外部站点发请求、点击输入会上屏操作、上传会把本机文件交给网页，标为不可逆。
+  mcp__ekko_studio_browser__ekko_studio_browser_tabs:
+    side_effects: browser_action
+    reversible: true
+    level: local_reversible
+    note: 列出、新建、激活、关闭、释放内嵌浏览器的标签页
+  mcp__ekko_studio_browser__ekko_studio_browser_navigate:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+    note: 打开网址或页内前进、后退、刷新、停止；打开网址会向外部站点发请求
+  mcp__ekko_studio_browser__ekko_studio_browser_snapshot:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读页面无障碍快照
+  mcp__ekko_studio_browser__ekko_studio_browser_read_text:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读页面文本
+  mcp__ekko_studio_browser__ekko_studio_browser_interact:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+    note: 在页面上点击、输入、拖拽,可能提交表单或对外发内容
+  mcp__ekko_studio_browser__ekko_studio_browser_batch:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+    note: 一次执行 1-50 个页面交互动作
+  mcp__ekko_studio_browser__ekko_studio_browser_screenshot:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读页面截图
+  mcp__ekko_studio_browser__ekko_studio_browser_upload:
+    side_effects: data_egress
+    reversible: false
+    level: high_risk
+    note: 把本机文件内容交给网页,数据外流
+  mcp__ekko_studio_browser__ekko_studio_browser_download:
+    side_effects: data_ingress
+    reversible: true
+    level: local_reversible
+    note: 下载文件到 Desktop 内存,不落盘
+  mcp__ekko_studio_browser__ekko_studio_browser_wait:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读等待页面文本出现或消失
+  mcp__ekko_studio_browser__ekko_studio_browser_dialog:
+    side_effects: browser_action
+    reversible: false
+    level: shared_state
+    note: 回应页面的提示或确认弹窗
+  mcp__ekko_studio_browser__ekko_studio_browser_network:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 读或清除一段有界网络日志缓存
+  mcp__ekko_studio_browser__ekko_studio_browser_console:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 读或清除一段有界控制台日志缓存
+  # --- Studio 接口工具（MCP 服务 ekko-studio-api，以 toolset=api 启动）---
+  # 读接口文档为只读。通用接口调用没有接口白名单：方法与路径由模型给出，校验只验接口在文档里、
+  # 必填参数齐。放行它等于可经它删除会话、修改供应商、起运行——这是用户选做法 A 时知悉的后果；
+  # 给它加接口白名单属于产品改动，不在登记范围。
+  mcp__ekko_studio_api__ekko_studio_api_openapi_get:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读接口文档
+  mcp__ekko_studio_api__ekko_studio_api_request:
+    side_effects: external_call
+    reversible: false
+    level: high_risk
+    note: 调用任意 Studio 接口；没有接口白名单，经它可删会话、改供应商、起运行
 tool_mapping:
   browser_navigate:
   - browser_exec

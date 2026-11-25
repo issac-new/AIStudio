@@ -192,6 +192,14 @@ v2 起界面可计算——表达式含算术、比较、格式化、条件与�
 v2 批二起界面可持久：Agent 用非阻塞工具创建界面后立即拿到回执，之后按稳定节点 id 打补丁续改同一块界面（基准版本号不符即拒绝）；
 界面与用户填过的值落库（ekko-ui-surfaces.db），会话重新打开后恢复到最新版本；
 用户提交时由客户端发起一轮新的对话，把界面编号、版本、动作与提交内容带回 Agent（见 specs/2026-11-25-ekko-ui-v2-batch2.md）。
+**动作契约闸门**（Agent 调 MCP 工具前的一道确定性检查，逻辑在 runtime/agent/action_gate.py，契约正本在
+team/profiles/_shared/action-contracts.yaml）：它是一道**登记闸门**而不是权限闸门——工具没在契约里登记就按默认策略拦下；
+已登记的工具只做参数级契约校验（必填参数齐不齐、枚举参数在不在白名单），参数合规即放行，
+条目里的 reversible 与 level 只是如实标注副作用的分类标签、不构成拦截，也没有「问过用户再放行」的路径。
+模式分两档：action_gate.mode 为 enforce 的档位真拦（现 orchestrator 与 skill-eval-sandbox），其余档位走默认 shadow（只记录到
+~/.hermes/profiles/_shared/action_gate_shadow.jsonl，不拦）。新增 MCP 工具必须同时登记，否则在 enforce 档位里不可用；
+守门 custom/server/ekko-ui/__tests__/ekko-ui-patch-wiring.test.ts 锁四个 ekko-studio 服务的每个工具都有登记且键逐字对应
+（见 specs/2026-11-25-mcp-action-contracts-remaining.md）。
 视觉与主题全归宿主（默认皮肤＝科技感玻璃拟态：皮肤交互色 --ekko-skin-accent 由宿主定义，亮 #0891b2/暗 #22d3ee 随主题切换，
 Agent 无任何颜色/主题控制面，见 specs/2026-11-18-ekko-ui-tech-skin.md）；阻塞式界面用户一次提交后以结构化结果回到同一轮执行，持久式界面提交后发起一轮新的对话。
 Agent 不能发送 HTML、脚本或任意样式；危险操作审批与简单澄清保持独立职责，
