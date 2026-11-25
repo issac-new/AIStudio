@@ -23,9 +23,12 @@ const OUT = process.env.IDE_SMOKE_OUT?.trim() || mkdtempSync(join(tmpdir(), 'ide
 mkdirSync(OUT, { recursive: true })
 
 const results = []
-function record(name, ok, detail = '') {
-  results.push({ name, ok, detail })
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
+function record(name, ok, detail = '', skip = false) {
+  // skip：环境条件项（如隔离空库无会话），显式许可（IDE_SMOKE_ALLOW_NO_SESSION=1）下不计入失败；
+  // 判定弱化必须由调用方（走查面包装器）显式开启，活体环境默认仍按 FAIL 报红。
+  results.push({ name, ok, detail, skip })
+  const tag = skip ? 'SKIP' : ok ? 'PASS' : 'FAIL'
+  console.log(`${tag} ${name}${detail ? ` — ${detail}` : ''}`)
 }
 
 async function waitText(page, selector, timeout = 10_000) {
@@ -117,6 +120,8 @@ try {
     await page.waitForTimeout(5_000)
     const title = await page.locator('.ide-chat__title').innerText().catch(() => '')
     record('会话深链命中', Boolean(title.trim()) && (await page.locator('.ide-chat').count()) > 0, title.slice(0, 40))
+  } else if (process.env.IDE_SMOKE_ALLOW_NO_SESSION === '1') {
+    record('会话深链命中', true, '无活动会话：隔离空库的环境条件项，显式跳过（IDE_SMOKE_ALLOW_NO_SESSION=1）', true)
   } else {
     record('会话深链命中', false, '无活动会话可验证')
   }
@@ -170,6 +175,7 @@ try {
   await browser.close()
 }
 
-const failed = results.filter(r => !r.ok)
-console.log(`\nIDE smoke: ${results.length - failed.length}/${results.length} passed; evidence: ${OUT}`)
+const failed = results.filter(r => !r.ok && !r.skip)
+const skipped = results.filter(r => r.skip).length
+console.log(`\nIDE smoke: ${results.length - failed.length - skipped}/${results.length} passed${skipped ? `，${skipped} skip` : ''}; evidence: ${OUT}`)
 process.exit(failed.length ? 1 : 0)

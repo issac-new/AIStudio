@@ -10,21 +10,26 @@
 //   - 后端 Koa：npm run serve（8647；ts-node 冷编译 35-50s），就绪=GET /health → 200，上限 150s。
 //     8647 已有服务应答时视为活体后端：直接借用，不接管、teardown 不代杀（与 8649 的拒绝语义不同：
 //     vite 端口被占无法确定服务身份故拒绝，后端按 /health 判定是同一应用）。
-//   - 自起后端默认注入 HERMES_WEB_UI_DEV_BOOTSTRAP=1（已设则不覆盖）：空库首登建 super_admin，
-//     非空库时该变量天然无效，不改变既有账户行为。
+//   - 自起后端默认注入 NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> +
+//     HERMES_WEB_UI_DEV_BOOTSTRAP=1（密闭化）：首登建 super_admin 于隔离 HOME，主检出惯态账户库
+//     与宿主网关凭据不参与判定；teardown 不删隔离目录。
+//     探针侧随之获得 IDE_SMOKE_ALLOW_NO_SESSION=1（隔离空库无会话，「会话深链」按环境条件 SKIP，
+//     不计入失败）。借用活体后端或调用方显式设 TEST_DB_DIR 时两者都不注入，探针按实态判红。
 //
 // 登录态环境语义（探针假定已认证，实测登录闸三态）：
 //   - 活体环境（惯态检出：账户库有 active 账户＋网关凭据已配）：网关一键进入路径接管，历史轮 11/11。
-//   - 隔离环境（HERMES_WEB_UI_HOME=<空目录> + 空账户库 + DEV_BOOTSTRAP=1）：admin/dev-bootstrap
-//     首登建号，探针可达 10/11——唯一红是「会话深链」：空库无会话可验证，属环境条件项非产品缺陷。
+//   - 密闭环境（默认：NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> + DEV_BOOTSTRAP=1
+//     + 探针 ALLOW_NO_SESSION=1）：空库首登建号，探针 10 pass + 1 skip，面退出 0——「会话深链」
+//     在空库属环境条件项非产品缺陷。TEST_DB_DIR 不用（serve 态 isDev 分支读不到它）。
 //   - 半环境（账户库无 active 账户且无网关凭据）：登录闸拦下全部 UI 步骤（2/10，2026-11-26 实测），
 //     处置：激活账户或配网关凭据后再跑，包装器不代改账户库。
 //
 // 输出统一带 [ide-smoke-walkthrough] 前缀便于矩阵日志识别；仓库根以 process.cwd() 锚定
 // （矩阵执行器以仓库根为 cwd 调起各面）。端口被占先 lsof -ti :8649 确认归属，属别人的不要杀。
-import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, mkdtempSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { spawn } from 'node:child_process'
+import { tmpdir } from 'node:os'
 
 const FACE = 'ide-smoke-walkthrough'
 const VITE_PORT = 8649
@@ -36,6 +41,8 @@ const BACKEND_READY_TIMEOUT_MS = 150_000
 const POLL_MS = 1_000
 const TERM_GRACE_MS = 8_000
 const PROBE = 'scripts/regression/ide-smoke.mjs'
+// 自起隔离库目录（密闭化时生成；null=借用活体后端或调用方自管）
+let isolatedDbDir = null
 
 const log = (line) => process.stderr.write(`[${FACE}] ${line}\n`)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -126,7 +133,13 @@ function runProbe(root) {
   return new Promise((done) => {
     const child = spawn('node', [PROBE], {
       cwd: root,
-      env: { ...process.env, IDE_SMOKE_BASE: VITE_BASE },
+      env: {
+        ...process.env,
+        IDE_SMOKE_BASE: VITE_BASE,
+        // 仅自起隔离库时许可「无会话」条件跳过（探针只读不造会话，空库本就无深链目标）；
+        // 活体借用后端时保持默认，无会话按 FAIL 如实报红。
+        ...(isolatedDbDir ? { IDE_SMOKE_ALLOW_NO_SESSION: '1' } : {}),
+      },
       stdio: 'inherit',
     })
     child.on('error', (err) => {
@@ -157,7 +170,23 @@ async function main() {
     log(`后端 ${BACKEND_PORT} 已就绪（活体借用，不接管）`)
   } else {
     log(`自起后端：npm run serve（8647；ts-node 冷编译 35-50s，就绪上限 ${BACKEND_READY_TIMEOUT_MS / 1000}s）`)
-    const bootEnv = process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}
+    // 密闭化（2026-11-26 全面复盘 P7）：serve 态的 DB 目录解析（infrastructure/database/index.ts:12-18）
+    // 在 isDev 分支写死 cwd/packages/server/data，HERMES_WEB_UI_TEST_DB_DIR 只对 isTest 生效——
+    // 故按既立隔离走查配方（2026-11-13 全功能回归轮）用 NODE_ENV=production + HERMES_WEB_UI_HOME=
+    // 一次性空目录：production 分支 DB_DIR=config.appHome=HOME 隔离点，主检出惯态账户库与宿主网关
+    // 凭据都不参与判定；DEV_BOOTSTRAP 是纯 env 门（auth.ts:216），production 态照常空库建号。
+    // 调用方显式已设 HOME 时尊重之（不再额外设 probe 豁免）。目录保留不删，作为面证据一部分。
+    let bootEnv
+    if (process.env.HERMES_WEB_UI_HOME !== undefined) {
+      bootEnv = process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}
+    } else {
+      isolatedDbDir = mkdtempSync(join(tmpdir(), 'ide-smoke-home-'))
+      bootEnv = {
+        NODE_ENV: 'production',
+        HERMES_WEB_UI_HOME: isolatedDbDir,
+        ...(process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}),
+      }
+    }
     backend = spawnDetached(['npm', 'run', 'serve'], root, bootEnv)
     let bootFailed = false
     backend.child.on('error', (err) => {
