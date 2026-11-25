@@ -91,6 +91,32 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     expect(html).not.toContain('导读')
   })
 
+  // 版本只在发布清单定义一次：手册里的版本标签必须等于载体，否则新版本号出现过、
+  // 旧版本号仍留在图里也能通过上面的正向断言（2026-11-24 蓝军 P2-1 实录）。
+  it('总览图与附录台账的版本标签等于发布清单，旧值残留即红', () => {
+    type Module = { version?: string; baselineCommit?: string; activePatchCount?: string | number }
+    const manifest = JSON.parse(readFileSync(resolve(root, 'RELEASE-MANIFEST.json'), 'utf8')) as {
+      modules: Record<string, Module>
+    }
+    const teams = JSON.parse(readFileSync(resolve(root, 'team/version.json'), 'utf8')) as { base: string }
+    const studioVersion = (JSON.parse(readFileSync(resolve(root, 'vendor/hermes-studio/package.json'), 'utf8')) as { version: string }).version
+    const label = (caption: string) => {
+      const match = html.match(new RegExp(`${caption} · ([\\w.\\-]+)<`))
+      expect(match, `总览图缺版本标签：${caption}`).not.toBeNull()
+      return match?.[1] ?? ''
+    }
+    expect(label('人机界面')).toBe(manifest.modules.cockpit?.version)
+    expect(label('组织控制')).toBe(manifest.modules['agent-teams']?.version)
+    expect(label('本机执行')).toBe(manifest.modules.ycode?.version)
+    expect(label('机制执行')).toBe(manifest.modules['yuan-skill']?.version)
+    expect(html).toContain(`hermes-studio ${studioVersion}（ekko-studio）· hermes-agent ${teams.base}（NousResearch）`)
+    const patchIds = readFileSync(resolve(root, 'zcode-patches/series'), 'utf8')
+      .split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'))
+      .map(name => name.slice(0, 3))
+    expect(patchIds).toHaveLength(Number(manifest.modules.ycode?.activePatchCount))
+    expect(html).toContain(`<b>基线 ${manifest.modules.ycode?.version}</b></td><td>${manifest.modules.ycode?.baselineCommit}；活跃补丁 ${patchIds.length} 枚（${patchIds[0]}—${patchIds[patchIds.length - 1]}）`)
+  })
+
   it('启动器放行该页并保持只读安全边界', async () => {
     server = createTrainingServer()
     await new Promise<void>(resolveListen => server!.listen(0, '127.0.0.1', () => resolveListen()))
