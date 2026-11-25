@@ -1,6 +1,6 @@
 # Ekko UI v2 批一：协议 v2 与表达力（C 方案第一切片）
 
-- 状态：in-progress（2026-11-24）
+- 状态：implemented（2026-11-25；批二至批四待立项）
 - 性质：能力扩展批（A 类纯 custom/，零新增补丁）
 - 上游依据：`vendor/hermes-studio/packages/ekko-agent/docs/interactive-ui-plan.md`（表达式扩展以版本化 AST 节点加入、能力协商、目录按需查询）
 - 源头依据：ChatGPT 智能界面（DIL）一手逆向调研（2026-11-24，本会话）：派生值/条件/循环是「可计算卡片」的核心；动作按能力收口（turn/copy/openUrl）；制品可版本化
