@@ -2,7 +2,7 @@
   "recordedAt": "2026-11-25",
   "limits": {
     "gates": 47,
-    "patches": 562,
+    "patches": 504,
     "zcodePatches": 14,
     "scripts": 76,
     "ledgers": 4,
@@ -10,12 +10,25 @@
   },
   "changes": [
     {
+      "at": "2026-11-26",
+      "delta": "+0 全部类别；limits.patches 562→504 对齐在册数（2026-11-26 全面复盘批，spec 2026-11-26-full-retro-design-revision-batch）",
+      "reason": "patches 上限虚高 58 属预算约束空转（governance-lint 棘轮键集不含 patches、DESIGN.md 豁免条款与总则三口径不一）；本轮起补丁两类纳入「上限=在册」同一要求，vendor 换血或让号增减时同批调整上限，豁免条款废止。历史勘误：2026-11-25 两条 entry-http 条目中的 014 系让号前编号（现为 015）；同日批二条目「在册 505」与 series 实测 504 不符，以 series 为准。",
+      "pairedRemovals": [
+        "DESIGN.md「补丁两类不按上限贴死」的豁免条款（随本条废止改写）"
+      ],
+      "sunset": {
+        "owner": "quality",
+        "reviewBy": "2027-02-26",
+        "retireWhen": "patches/zcodePatches 两类随上游基线策略变更不再需要预算约束时，从 limits 删除两键并在 DESIGN.md 记录口径"
+      }
+    },
+    {
       "at": "2026-11-25",
-      "delta": "+0 脚本（预装工具注入逻辑内联既有 scripts/zcode-engine.mjs，导出纯函数 preinstalledToolsEnv）／+1 zcode 补丁（014：entry-http 环境变量入口＋createServerHostServices 选项转发，两文件 36 行，变量缺省时行为逐字不变）",
+      "delta": "+0 脚本（预装工具注入逻辑内联既有 scripts/zcode-engine.mjs，导出纯函数 preinstalledToolsEnv）／+1 zcode 补丁（015：entry-http 环境变量入口＋createServerHostServices 选项转发，两文件 36 行，变量缺省时行为逐字不变；2026-11-26 勘误：原编号 014，合入期与 deps 安全刷新撞号让号为 015）",
       "reason": "ZCode 4.0 能力吸收 P1（spec 2026-11-25-zcode-400-capability-absorption 与 2026-11-25-preinstalled-tools-injection）：宿主检测桌面版预装入口目录后只传位置（ZCODE_PREINSTALLED_TOOLS_BIN_DIR），引擎 resolveSpawnEnv 向 Agent 下发 ZCODE_PREINSTALLED_TOOLS_AVAILABLE 与 PATH 前缀（Bash 快照兜住登录 shell 重写）。上游该选项只接了桌面入口，独立服务端缺两处接线，补丁只补接线不改语义。",
       "pairedRemovals": [
         "零新增文件：检出逻辑内联既有脚本（sourceFingerprint 导出先例）",
-        "宿主直接塞 env 的初版实现（PATH 前缀＋变量继承）随实测推翻删除，由补丁 014 的上游正门取代"
+        "宿主直接塞 env 的初版实现（PATH 前缀＋变量继承）随实测推翻删除，由补丁 015（原编号 014，让号见 2026-11-26 勘误）的上游正门取代"
       ],
       "sunset": {
         "owner": "zcode 能力吸收 P1",
