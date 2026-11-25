@@ -523,3 +523,4 @@
 {"at": "2026-11-25T03:04:28Z", "spec": "docs/superpowers/specs/2026-11-23-compat-release-pending-batch.md", "receipt": "9df71b32be5d18e8e5780ca4f07a01a1147117c8", "commit": "30dfa2515"}
 {"at": "2026-11-25T03:56:02Z", "spec": "docs/superpowers/specs/2026-11-25-yuan-guide-v2103-alignment.md", "receipt": "24b69c92181ee48142cce6701366c17c833b13a9", "commit": "0aaf8f810"}
 {"at":"2026-11-25T03:57:02Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"3b8e42ae6"}
+{"at":"2026-11-25T05:06:22Z","spec":"docs/superpowers/specs/2026-11-25-yuan-guide-v2103-alignment.md","receipt":"0e672632ad6bb2aa5f162eb2694b88374e98615b","commit":"0fa0b0657"}
