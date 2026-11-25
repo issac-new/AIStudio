@@ -28,10 +28,10 @@ import Router from '@koa/router'
 import type { Context } from 'koa'
 import { ensureEngineProject, probeZCodeEngine } from '../zcode/engine-bridge'
 import { getZcodeProjectionRuntime } from '../zcode/projection-runtime'
-import { MentionDispatchService, collectUnitGate, parseMentions } from '../zcode/mention-dispatch'
+import { MentionDispatchService, collectUnitGate, parseMentions, uuidV7Like } from '../zcode/mention-dispatch'
 import { appendDispatchOutcome } from '../governance/dispatch-ledger'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../zcode/checkpoint-options'
-import { ControlBaseUnavailableError, fetchControlBase, sendCasCommand, type ControlBase } from '../zcode/cas-command'
+import { ControlBaseUnavailableError, createEngineSession, fetchControlBase, sendCasCommand, type ControlBase } from '../zcode/cas-command'
 import { canUseWorkspace, type WorkspaceCaller } from '../zcode/workspace-access'
 import { loadUpstreamModule } from '../lib/upstream'
 import { fail } from '../lib/http'
@@ -101,12 +101,22 @@ export function getMentionDispatch(): MentionDispatchService {
   const runtime = getZcodeProjectionRuntime()
   const enginePort = (dispatchEngineFactoryForTests?.() ?? {
     probe: () => probeZCodeEngine(),
-    // N34-2：独立形态引擎要求会话属于已登记项目——先按工作区登记（幂等复用），再带项目标识建会话。
+    // N34-2：独立形态引擎要求会话属于已登记项目——先按工作区登记（幂等复用），再经 4.0 建会话
+    // 命令带项目标识建会话（旧远程过程调用方法建出的会话无法执行回合，见 cas-command.ts）。
     createSession: (p: { workspacePath: string; config?: { mode?: string } }) => runtime.withBridge(async (bridge) => {
       const projectId = await ensureEngineProject(bridge.project, p.workspacePath)
-      return bridge.agent.createSession({ ...p, projectId })
+      const sessionId = await createEngineSession(bridge.agent, {
+        workspacePath: p.workspacePath, projectId, clientId: bridge.clientId, commandId: uuidV7Like(),
+        ...(p.config ? { config: p.config } : {}),
+      })
+      return { session: { sessionId } }
     }),
-    sendCommand: (p: { workspacePath: string; envelope: Record<string, unknown> }) => runtime.withAgent((agent) => agent.sendConversationCommandV4(p)),
+    // 连接作用域（clientMismatch 根治，2026-11-25 隔离引擎实测）：引擎对 terminal-client 连接要求
+    // 每条命令的 envelope.clientId 等于握手登记的桥接 clientId（zcodeAgentConnectionScope.ts
+    // sendConversationCommandV4 → fault.command.clientMismatch）。派单服务内部带的是自己的业务标识，
+    // 发送前在此归一——不归一时真实引擎一律拒收（建会话能成功、发文本必被拒）。
+    sendCommand: (p: { workspacePath: string; envelope: Record<string, unknown> }) => runtime.withBridge(async (bridge) =>
+      bridge.agent.sendConversationCommandV4({ workspacePath: p.workspacePath, envelope: { ...p.envelope, clientId: bridge.clientId } })),
   })
   dispatchSingleton = new MentionDispatchService({
     engine: enginePort,
@@ -334,11 +344,13 @@ router.post('/fork', async (ctx) => {
   // 引擎回「基线已旧」时由 sendCasCommand 重取重发（commandId 重试不变）。
   const commandId = `${Date.now()}-fork-${rowId}`
   try {
-    const r = await runtime.withAgent((agent) => sendCasCommand(agent, {
+    // clientId 用桥接持久化标识（连接作用域校验，见 sendCommand 端口注释）——
+    // 此前的写死标识 'swarmstudio-ide' 会被真实引擎拒 fault.command.clientMismatch。
+    const r = await runtime.withBridge((bridge) => sendCasCommand(bridge.agent, {
       workspacePath, sessionId,
       build: (base) => ({
         commandId,
-        clientId: 'swarmstudio-ide',
+        clientId: bridge.clientId,
         sessionId,
         type: 'forkAssistant',
         issuedAt: Date.now(),
@@ -377,8 +389,15 @@ router.post('/checkpoint/recover', async (ctx) => {
   // 比对基线（N34-1）：editUserQuery/applyFileRewind 必须带会话当前的修订号与日志纪元。
   // 先取基线；取不到即明确失败，不发必被引擎拒的信封（引擎不可达归 503 词表值）。
   let base: ControlBase
+  let bridgeClientId: string
   try {
-    base = await runtime.withAgent((agent) => fetchControlBase(agent, workspacePath, sessionId))
+    // 基线与 clientId 同一次桥接取（连接作用域校验：命令 clientId 必须等于握手登记值）。
+    const got = await runtime.withBridge(async (bridge) => ({
+      base: await fetchControlBase(bridge.agent, workspacePath, sessionId),
+      clientId: bridge.clientId,
+    }))
+    base = got.base
+    bridgeClientId = got.clientId
   } catch (err) {
     if (err instanceof ControlBaseUnavailableError) {
       fail(ctx, 409, err.message, { extra: { reason: err.reason, reasonCode: err.reason, detail: err.message } })
@@ -390,7 +409,7 @@ router.post('/checkpoint/recover', async (ctx) => {
   }
   const envelopes = buildRecoveryEnvelopes(mode, {
     workspacePath, sessionId, rowId, entityId,
-    clientId: 'swarmstudio-checkpoint',
+    clientId: bridgeClientId,
     originalQueryText: typeof originalQueryText === 'string' ? originalQueryText : undefined,
     baseRevision: base.revision,
     baseLogEpoch: base.logEpoch,

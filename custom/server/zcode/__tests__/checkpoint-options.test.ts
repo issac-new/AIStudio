@@ -4,6 +4,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { CHECKPOINT_RECOVERY_MODES, buildRecoveryEnvelopes, isCheckpointRecoveryMode } from '../checkpoint-options'
 import { loadEngineCommandValidator, REPO_ROOT } from '../../__tests__/helpers/engine-command-validator'
+import { buildCreateSessionEnvelope } from '../cas-command'
 
 const OVERLAY_ROOT = resolve(__dirname, '../../../..')
 // baseRevision/baseLogEpoch＝会话当前的比对基线（N34-1：引擎对按行定位的命令强制要求）
@@ -75,6 +76,12 @@ describe('引擎命令入口校验（N34-1）', () => {
     const [summarize, send] = buildRecoveryEnvelopes('summarize-from-here', T, 1000)
     expect(validate({ ...send, issuedAt: new Date(0).toISOString() }).ok).toBe(false) // 时间戳须是毫秒数
     expect(validate(summarize).ok).toBe(true)
+  })
+
+  it('派单建会话命令的信封通过引擎校验（4.0 实际创建路径；N34-2 第二步）', async () => {
+    const validate = await loadEngineCommandValidator()
+    const v = validate(buildCreateSessionEnvelope({ clientId: 'c1', commandId: 'cmd-1', workspacePath: '/w/p', config: { mode: 'build' }, issuedAt: 1000 }))
+    expect(v.ok, v.issues.join('；')).toBe(true)
   })
 
   it('引擎协议源文件在位（守门不是空跑）', () => {

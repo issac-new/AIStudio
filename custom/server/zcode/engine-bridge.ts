@@ -5,7 +5,6 @@
 //   sendConversationCommandV4；fragment 帧重组列 P2（首批只消费 complete 帧）。
 import { createHash } from 'crypto'
 import { basename } from 'path'
-import { realpathSync } from 'fs'
 import WebSocket from 'ws'
 import { VSBuffer, SocketProtocol, ChannelClient, Emitter, ProxyChannel } from './vendor/rpc/index'
 
@@ -19,7 +18,12 @@ export interface ZcodeEngineAgentService {
   listSessions(params: { workspacePath: string }): Promise<Array<{ sessionId: string }>>
   subscribeConversationV4(params: { workspacePath: string; sessionId: string }): Promise<{ ack: { subscriptionId: string; mode: string } }>
   subscribeSessionsIndexV4(params: { workspacePath: string }): Promise<{ ack: { subscriptionId: string; mode?: string } }>
-  sendConversationCommandV4(params: { workspacePath: string; envelope: Record<string, unknown> }): Promise<{ status: string; reasonCode?: string }>
+  // projectId＋建会话命令：服务端转发前按 clientId＋commandId 预留任务并绑定该项目（N34-2 第二步）；
+  // result＝命令回执的附带结果（如 createSession 的 sessionId、forkAssistant 的子会话 id）。
+  // 连接作用域（2026-11-25 隔离引擎实测）：terminal-client 角色下，每条命令的 envelope.clientId
+  // 必须等于握手登记的桥接 clientId（vendor/zcode …/zcodeAgentConnectionScope.ts
+  // sendConversationCommandV4 → fault.command.clientMismatch）。宿主所有写入口统一用 bridge.clientId。
+  sendConversationCommandV4(params: { workspacePath: string; projectId?: string; envelope: Record<string, unknown> }): Promise<{ status: string; reasonCode?: string; result?: unknown }>
   // 只读取水位（N34-1）：返回里的 atRevision/atLogEpoch 是服务端取值时的修订号与日志纪元，
   // 即比对基线命令（forkAssistant/editUserQuery/applyFileRewind/switchCollaborationMode…）
   // 信封必须携带的 baseRevision/baseLogEpoch。走 ProxyChannel 动态代理，调用面见 cas-command.ts。
@@ -155,6 +159,14 @@ export async function connectZCodeEngine(homeDir: string, opts: EngineBridgeOpti
   const token = opts.token ?? process.env.ZCODE_SERVER_AUTH_TOKEN ?? ''
   const target = token ? `${url}?token=${encodeURIComponent(token)}` : url
   const ws = new WebSocket(target)
+  // 首帧竞态（N34-13）：引擎在连接建立的同一拍就发出 RPC 初始化帧，可能与连接应答合并成
+  // 同一个网络包到达。协议监听必须在等待 'open' 之前挂好——若等 'open' 之后再挂，这一帧会在
+  // 监听挂上之前被派发而丢失，ChannelClient 停在「未初始化」、此后所有请求排队不发，
+  // 表现为握手超时（隔离引擎实测：约一成的新连接中招）。守门见
+  // custom/server/__tests__/zcode-engine-bridge-open-race.test.ts。
+  const client = new ChannelClient(new SocketProtocol(wrapNodeSocket(ws)))
+  const agent = ProxyChannel.toService<ZcodeEngineAgentService>(client.getChannel('zcode-agent'))
+  const project = ProxyChannel.toService<ZcodeEngineProjectService>(client.getChannel('project'))
   const openTimeoutMs = opts.openTimeoutMs ?? HANDSHAKE_OPEN_TIMEOUT_MS
   const rpcTimeoutMs = opts.rpcTimeoutMs ?? HANDSHAKE_RPC_TIMEOUT_MS
   try {
@@ -166,9 +178,6 @@ export async function connectZCodeEngine(homeDir: string, opts: EngineBridgeOpti
       openTimeoutMs,
       `zcode 引擎连接超时（connect timeout ${openTimeoutMs}ms）`,
     )
-    const client = new ChannelClient(new SocketProtocol(wrapNodeSocket(ws)))
-    const agent = ProxyChannel.toService<ZcodeEngineAgentService>(client.getChannel('zcode-agent'))
-    const project = ProxyChannel.toService<ZcodeEngineProjectService>(client.getChannel('project'))
 
     const hello = await withTimeout(
       agent.helloConversationV4(), rpcTimeoutMs,
@@ -207,6 +216,8 @@ export async function connectZCodeEngine(homeDir: string, opts: EngineBridgeOpti
     }
   } catch (err) {
     // 失败分支统一 terminate 再抛（S4）：此前 hello/initialize 抛错路径不关 ws，连接泄漏。
+    // 协议监听在等待 'open' 之前就已挂上（见上），失败时一并撤掉，避免在未打开的连接上留监听。
+    try { client.dispose?.(new Error('connect failed')) } catch { /* 已断 */ }
     try { ws.terminate() } catch { /* 已断 */ }
     throw err
   }
@@ -218,25 +229,20 @@ export async function connectZCodeEngine(homeDir: string, opts: EngineBridgeOpti
  * （project.invalid-directory-open），所以这里分两步：先在项目通道里按根目录找未删除的
  * 单根项目，找不到再新建。新建的项目归在引擎自己的宿主身份下，不进桌面版本机项目列表。
  * 同一工作区的并发调用在进程内合并成一次，避免同时 miss 建出重复项目。
+ *
+ * 路径形态约束（2026-11-25 隔离引擎实测，回归锁见 zcode-engine-bridge.test.ts）：登记与查找
+ * 一律沿用调用方给定的路径字符串，不做真实路径改写。引擎建会话时按「项目根目录 === 会话
+ * 工作区」逐字校验（不符即拒 project.cwd-not-in-roots），而会话用的是同一个给定字符串；
+ * 若这里改写成真实路径（解析 /tmp、符号链接），两者就对不上。代价：同一目录的不同写法
+ * 会各得一个项目——每次新建都有一行日志，累积可见。
  */
 const ensuring = new Map<string, Promise<string>>()
 
-/** 路径规范化后再匹配/登记：剥尾斜杠、解析符号链接（realpathSync.native 失败回退原串）。 */
-function normalizeWorkspacePath(workspacePath: string): string {
-  const trimmed = workspacePath.replace(/[/\\]+$/, '')
-  try {
-    return realpathSync.native(trimmed)
-  } catch {
-    return trimmed
-  }
-}
-
 export async function ensureEngineProject(project: Pick<ZcodeEngineProjectService, 'readProjects' | 'saveProject'>, workspacePath: string): Promise<string> {
-  const normalized = normalizeWorkspacePath(workspacePath)
-  let inflight = ensuring.get(normalized)
+  let inflight = ensuring.get(workspacePath)
   if (!inflight) {
-    inflight = ensureEngineProjectUncached(project, normalized).finally(() => ensuring.delete(normalized))
-    ensuring.set(normalized, inflight)
+    inflight = ensureEngineProjectUncached(project, workspacePath).finally(() => ensuring.delete(workspacePath))
+    ensuring.set(workspacePath, inflight)
   }
   return inflight
 }
@@ -248,7 +254,7 @@ async function ensureEngineProjectUncached(project: Pick<ZcodeEngineProjectServi
   }
   const projects = await project.readProjects({ includeDeleted: false })
   if (Array.isArray(projects)) {
-    const existing = projects.find((p) => !p.deleted && p.roots?.length === 1 && normalizeWorkspacePath(String(p.roots[0]?.rootPath ?? '')) === workspacePath)
+    const existing = projects.find((p) => !p.deleted && p.roots?.length === 1 && p.roots[0]?.rootPath === workspacePath)
     const found = projectIdOf(existing)
     if (found) return found
   }

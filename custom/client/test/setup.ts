@@ -6,7 +6,8 @@ import { join } from 'node:path'
 // 派单台账默认落 ~/.hermes-web-ui（真实数据）。测试未显式指定台账路径时改落一次性临时
 // 文件，避免用例把派发结果写进真实台账（2026-11-24 实录：真实台账 3485 行里 3034 行是
 // 测试写入的 /w/anywhere）。显式设置了 HERMES_WEB_UI_HOME 的用例沿用其隔离目录。
-// 守门：custom/server/__tests__/zcode-engine-controller.test.ts「测试进程的派单台账不指向真实数据目录」。
+// 守门：custom/server/__tests__/zcode-engine-controller.test.ts「测试隔离」两例。第二道防线在
+// dispatch-ledger.ts 的 dispatchLedgerPath（vitest 进程自判），不依赖本设置文件是否被加载。
 if (!process.env.GOVERNANCE_DISPATCH_LEDGER?.trim() && !process.env.HERMES_WEB_UI_HOME?.trim()) {
   process.env.GOVERNANCE_DISPATCH_LEDGER = join(mkdtempSync(join(tmpdir(), 'aistudio-vitest-ledger-')), 'dispatch-ledger.jsonl')
 }

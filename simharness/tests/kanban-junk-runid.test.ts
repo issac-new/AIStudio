@@ -13,7 +13,11 @@ describe('patch 754：kanban 毒 run 指针免疫', () => {
   it('五断言全绿（reclaim 兜底/读点 None/goal superseded/dir 拒与不误伤）', () => {
     const env = { ...process.env, KANBAN_VENDOR_ROOT: VENDOR }
     delete env.HERMES_HOME // 夹具自建临时 HERMES_HOME，宿主值防串库
-    const r = spawnSync('python3', [FIXTURE], {
+    // 解释器回落（2026-11-25，清偿批 C CI 暴露）：夹具导入 hermes-agent，系统 python3 在
+    // CI 上缺 ruamel 等第三方依赖而 ModuleNotFoundError（stdout 空、断言红）。优先用回归
+    // 矩阵传入的 AISTUDIO_PYTHON（CI 已装好依赖的 venv）；本机不设时维持原样。
+    const python = process.env.AISTUDIO_PYTHON ?? 'python3'
+    const r = spawnSync(python, [FIXTURE], {
       encoding: 'utf8',
       env,
       timeout: 120_000,

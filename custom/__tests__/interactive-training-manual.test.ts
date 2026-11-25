@@ -515,6 +515,14 @@ describe('AIStudio 交互培训课程契约', () => {
     // 指南里该事实块是 <div class="fact"><b>205</b><span>配置变量 = core 31 + …</span></div>，按标签结构匹配。
     expect(guide, '技术指南的配置变量事实块').toContain(`<div class="fact"><b>${confVarsTotal}</b><span>配置变量 = core ${confVarCounts[0]} + arch ${confVarCounts[1]} + compliance ${confVarCounts[2]}</span></div>`)
     expect(guide).toContain(`<title>swarm-yuan Skill 技术指南 · ${yuanVersion}</title>`)
+    // 新增的第 11 节「独立审查协议」整节必须在；节内引用的 floor-guard 行号须指向 vendor 排除行（蓝军 P0 的回归锁）。
+    expect(guide, '技术指南缺独立审查协议节').toContain('<section id="review-protocol">')
+    expect(guide, '独立审查协议节缺 floor-guard 排除引用').toContain('scripts/floor-guard.sh:')
+    const floorRef = /scripts\/floor-guard\.sh:([\d,]+)/.exec(guide)?.[1] ?? ''
+    const floorLines = readFileSync(resolve(root, 'skills/swarm-yuan/scripts/floor-guard.sh'), 'utf8').split('\n')
+    for (const n of floorRef.split(',').filter(Boolean).map(Number)) {
+      expect(floorLines[n - 1] ?? '', `floor-guard.sh:${n} 应为 vendor 排除行`).toContain('vendor')
+    }
     const developerGuide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'), 'utf8')
     expect(developerGuide, '研发指南当前版本').toContain(`**当前版本**：${yuanVersion}`)
     expect(guide).toContain('href="/aistudio-swarm-yuan-developer-guide.md"')
