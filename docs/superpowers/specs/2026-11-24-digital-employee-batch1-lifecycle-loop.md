@@ -217,11 +217,11 @@
   6. 登记凭证＋建委托；
   7. 退役自动撤权 `revoked={credentials:1}`、凭证读回 revoked，探针回归稳定；
   8. `WORKUNIT_DISPATCH_GATE=off` 重启，running 与 retired 都 `start/queued`（等价回滚）。
-- 实操发现的真实缺口：自然人登记时若已存在同邮箱记录会按邮箱匹配、忽略显式 `id`（首签因此报「签署人必须是在岗自然人」，重建 id=admin 的自然人后通过）；zcode 引擎预演端点真实路径为 `/api/zcode-engine/mention/preview`。
+- 实操发现的真实缺口：自然人登记时若已存在同邮箱记录会按邮箱匹配、忽略显式 `id`（首签因此报「签署人必须是在岗自然人」，重建 id=admin 的自然人后通过）；zcode 引擎预演端点真实路径为 `/api/zcode-engine/mention/preview`。前者已由终审修复 `99bd9efd1` 根治：显式 `id` 未命中且邮箱已属他人时拒绝合并并点名占用者，不再并入他人记录。
 
 ### 守门修复（回归矩阵抓出并当场修）
 
-- K19 `ok:false` 棘轮 1014→1024：governance-controller 两处手写 HTTP 失败体改 `fail()`；+10 为批一纯函数 Result 返回值（同既往批次 874→989→1014 范式），归因入库。
+- K19 `ok:false` 棘轮：批前基点 1014→1024（任务 1 +8、任务 3 +2、任务 7 +1、离职被拦分支改 `fail()` −1）；governance-controller 两处手写 HTTP 失败体（409 被拦、502 上游失败）改 `fail()`，其中仅 409 一处计入本棘轮。2026-11-25 变基到 `ccfa55a22`（对方 N34 批已把基线抬到 1019）后逐提交实测终值 **1030**＝净 +11，比变基前多出的 1 处是终审修复（`people.ts upsertPerson` 邮箱属他人拒合并，落在棘轮提交之后，守门自该笔起超限 1 处，修复前实跑红 `expected 1030 ≤ 1029`）。+11 全部由批一提交引入、与 vendor 升级无关，逐笔归因写入 `architecture-ratchet.test.ts` 注释。
 - `zcode-session-projection` 枚举冻结守门补 `unit_gate`/`capability_block`（任务 4 新增原因码，守门漏同步）。
 
 ## 设计文档影响

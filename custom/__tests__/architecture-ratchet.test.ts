@@ -42,7 +42,7 @@ describe('架构棘轮：只许减少', () => {
     expect(n, `新增了直接 ctx.body 赋值——请改用 custom/server/lib/http.ts（当前 ${n}）`).toBeLessThanOrEqual(1193)
   })
 
-  it('K19 `ok: false` 字面量不超过 1029 处（新失败体请用 fail()）', () => {
+  it('K19 `ok: false` 字面量不超过 1030 处（新失败体请用 fail()）', () => {
     const n = grepCount('ok:\\s*false', ['custom/server'])
     // 批三归因（2026-11-21）：996→1012＝+16，全部为纯函数 Result 形状（agenda.ts runSource
     // 三处、judgments/team 约束校验、outcome-controller 迁移助手等内部 result 联合），HTTP
@@ -53,13 +53,17 @@ describe('架构棘轮：只许减少', () => {
     // __tests__/helpers/engine-command-validator.ts 2 处（parseCommandEnvelope 的 Result 联合
     // 形状，非 HTTP 响应面）＋zcode-engine-controller.test.ts 断言字面量 3 处；断言计数为
     // 棘轮既定口径。无 HTTP 失败体新增。
-    // 批五归因 b（2026-11-24 数字员工批一）：1019→1024＝+5，全部为批一纯函数 Result 形状
-    // （agent-identity.ts 绑定规范化/冲突/停用域函数返回值、offboard-handover.ts 核实结果联合），
-    // HTTP 信封出口仍走 fail()/ok()；matrxi-offboard 被拦分支已改 fail()，同型先例见批一/批三。
-    // 批六归因（2026-11-25 变基 origin/main）：1024→1029＝+5——变基后 custom/server 基线为
-    // vendor hermes-agent v0.23.4（含 vendor 侧新增的 Result 形状/断言字面量），非本批改动引入；
-    // 未逐笔归因到具体文件（vendor 升级面大），按实测值抬基线，HTTP 失败体仍须走 fail()。
-    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1029)
+    // 批一归因（2026-11-24 数字员工批一；2026-11-25 变基到 ccfa55a22 后按提交逐笔实测，口径＝
+    // 本测试同一条 git grep 逐提交计数）：1019→1030＝净 +11，全部由批一提交引入——
+    //   b8d81f8ba 任务 1 +8：agent-identity.ts normalizeRuntimeBindings 3 处、registerIdentity
+    //   与 updateIdentity 各 2 处，people.ts deactivatePerson 1 处；
+    //   50fbd5ae3 任务 3 +2：agent-identity.ts signResponsibilityCard 2 处；
+    //   046c74a74 任务 7 +1：governance-controller /matrix-offboard 被拦分支手写 HTTP 失败体
+    //   （真实 HTTP 面），由 d7fed4112 −1 改走 fail() 清零；
+    //   99bd9efd1 终审修复 +1：people.ts upsertPerson 邮箱属他人拒合并。
+    // 除已清的那 1 处外均为纯函数 Result 联合，HTTP 信封出口仍走 fail()/ok()；同型先例见
+    // 上文 K19 874→989 与批三归因。
+    expect(n, `新增了手写 ok:false——请改用 fail()/unavailable()`).toBeLessThanOrEqual(1030)
   })
 
   // K19 基线 874→989（2026-11-20 收口裁决，decisions.jsonl 同日留痕）：+115 全部由
