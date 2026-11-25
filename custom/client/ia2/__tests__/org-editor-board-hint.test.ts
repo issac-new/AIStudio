@@ -114,6 +114,32 @@ describe('OrgEditor 离职向导（批一 Task 10）', () => {
     expect(mockRegistry.offboardAccount).not.toHaveBeenCalled()
   })
 
+  // 审查挂账6/6：被拦后此前结果页只有「关闭」，须关掉重开——已填内容丢失。
+  // 守门钉住「被拦后返回→表单值仍在」，返回后可径直再执行。
+  it('前置检查被拦 → 返回修改入口回到第一步且已填内容保留，可直接再执行', async () => {
+    mockClient.request.mockResolvedValue({
+      ok: true,
+      blockedUnits: [{ identityId: 'aid-9', name: 'req-bot', stage: 'running' }],
+    })
+    const w = mount(OrgEditor)
+    await flushPromises()
+    await fillAndRun(w)
+
+    const back = w.find('[data-testid="wiz-back-edit"]')
+    expect(back.exists()).toBe(true)
+    await back.trigger('click')
+    // 回到第一步：表单值全部仍在（wizard state 不重置）
+    expect((w.find('[data-testid="wiz-handover"]').element as HTMLInputElement).value).toBe('chen')
+    expect((w.find('[data-testid="wiz-tasks"]').element as HTMLInputElement).value).toBe('T-1, T-2')
+    expect((w.find('[data-testid="wiz-reason"]').element as HTMLInputElement).value).toBe('个人原因')
+    expect((w.find('[data-testid="wiz-token"]').element as HTMLInputElement).value).toBe('tok-admin')
+    expect((w.find('[data-testid="wiz-profile"]').element as HTMLSelectElement).value).toBe('chen-agent')
+    // 被拦名单已清：改完可直接再走「下一步 → 执行」，旧被拦名单不再残留
+    expect(w.find('[data-testid="wiz-back-edit"]').exists()).toBe(false)
+    await w.find('[data-testid="wiz-next2"]').trigger('click')
+    expect((w.find('[data-testid="wiz-run"]').element as HTMLButtonElement).disabled).toBe(false)
+  })
+
   it('前置检查通过 → 先改派再离职，结果显示逐卡核实与自然人联动', async () => {
     mockClient.request.mockResolvedValue({
       ok: true, blockedUnits: [], person: { status: 'deactivated', personId: 'p-1' },

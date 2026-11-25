@@ -40,6 +40,7 @@ const T = computed(() => zh.value ? {
   revertTitle: '已改派的卡（离职未完成，可逐卡改回）：',
   revert: '改回原指派对象',
   reverted: '已改回',
+  backToEdit: '返回修改（已填内容保留）',
   close: '关闭',
 } : {
   wizTitle: 'Offboarding wizard',
@@ -65,6 +66,7 @@ const T = computed(() => zh.value ? {
   revertTitle: 'Reassigned cards (offboarding incomplete — revert one by one):',
   revert: 'Revert to original assignee',
   reverted: 'Reverted',
+  backToEdit: 'Back to edit (kept inputs)',
   close: 'Close',
 })
 
@@ -229,6 +231,13 @@ async function revertCard(card: ReassignedCard) {
     w.reassignNotes.push(`${card.taskId} 改回失败：${String(e instanceof Error ? e.message : e)}`)
   } finally { busy.value = false }
 }
+
+// 前置检查被拦后返回修改（审查挂账6/6）：回第一步改移交对象/令牌，已填表单值
+// 保留（wizard state 不重置）；blocked/result 清掉，防再次执行成功后残留旧被拦名单。
+function backFromBlocked() {
+  const w = wizard.value; if (!w) return
+  w.blocked = []; w.result = ''; w.step = 1
+}
 </script>
 
 <template>
@@ -326,6 +335,8 @@ async function revertCard(card: ReassignedCard) {
             <span v-else>{{ T.reverted }}</span>
           </p>
         </div>
+        <!-- 前置检查被拦：可返回上一步修改（已填内容保留），不再只能关闭重开（审查挂账6/6） -->
+        <button v-if="wizard.blocked.length" data-testid="wiz-back-edit" :disabled="busy" @click="backFromBlocked">{{ T.backToEdit }}</button>
         <button @click="wizard = null">{{ T.close }}</button>
       </template>
     </div>
