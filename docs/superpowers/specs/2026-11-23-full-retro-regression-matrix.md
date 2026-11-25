@@ -1,6 +1,6 @@
 # 2026-11-23 全面复盘批：回归矩阵单一事实源、机制预算上限与在册数相符、会话列表缺库降级
 
-> 状态：in_progress
+> 状态：已实施（2026-11-25 收尾：本批各面均已合入主干，挂账由 `2026-11-24-full-retro-pending-batch.md` 承接，清偿见 `2026-11-25-full-retro-pending-closeout.md`）
 > 基线：ac7e6612a（origin/main，v1.0.19-overlay）
 
 ## 变更

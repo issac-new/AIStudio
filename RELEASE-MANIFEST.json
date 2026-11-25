@@ -83,7 +83,7 @@
       ],
       "notes": "以 zcode 底座版本为基线版本（用户修订 2026-10-27）：version=vendor/zcode/package.json 的 version 字段（4.0.0，2026-11-23 同步批自 3.18.2 跨 major 进位）；基线 commit a4b44451（＝tag v4.0.0，2026-11-23 同步批）见 zcode-patches/series 头，activePatchCount=活跃补丁数（当前 11：002-012，本批 004/006/009/011 随新基线重做、其余原样应用）。CLI 入口 `--version` 输出的是 CLI 工作区版本（apps/zcode-cli/package.json，4.0.0 基线下为 0.18.0），与仓根 4.0.0 分属两套版本号。",
       "baselineCommit": "a4b44451",
-      "activePatchCount": "12"
+      "activePatchCount": "13"
     },
     "yuan-skill": {
       "name": "yuan skill（swarm-yuan 项目技能生成器）",
