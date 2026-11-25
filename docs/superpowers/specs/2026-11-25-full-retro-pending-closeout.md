@@ -71,7 +71,7 @@
 
 把守卫换回旧版：范围测试 7 例里应红 3 例，新增夹具应红 4 组，其中“夹具目录即项目目录”一组会因宿主仓库里别处的在途改动转红。把注入干跑新逻辑去掉：已注入的树上应重新输出链式检查失败。
 
-- **CI（待回填）**：分支 `chore/ci-regression-axes` 推送后 `regression-axes` 的运行记录。
+- **CI**：分支 `chore/ci-regression-axes` 推送后 `regression-axes` 三次运行。首跑失败（推演面两个守门在 Ubuntu 红、Python 两面绿）；二跑守门修好、kanban 测试红（系统 python3 缺 ruamel）；三跑两个作业全 success（45553179051）。CI 暴露的三处都已修：stat/sed 的 BSD 写法改可移植、kanban 测试解释器回落到 AISTUDIO_PYTHON。
 
 ## 决策记录
 

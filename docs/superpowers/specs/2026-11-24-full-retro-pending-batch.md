@@ -9,7 +9,7 @@
 - 根因层：CI 任务的路径过滤与步骤清单是手写的工作流文件，加任务只能在推送后验证，本批不推送，所以没有加。
 - 现状：这三个面由推送前钩子强制（`config/regression-matrix.json` 的推送前档）；绕过钩子的推送（`QGATE_PREPUSH_SKIP=1`）或未装钩子的克隆没有自动覆盖。
 - 验收判据：在分支上加 CI 任务并见到绿记录后再合入 main；矩阵里对应测试面的 `ci` 字段从 `null` 改为工作流与锚点；`product-tests` 的 `paths-ignore` 不再忽略 `team/**`。
-- 状态：open（P2）。
+- 状态：**已修复（2026-11-25 清偿批 C）**——新增 `.github/workflows/regression-axes.yml` 两个作业覆盖推演、Python、Ycode 七个面，命令即回归矩阵的测试面；分支 `chore/ci-regression-axes` 推送后 CI 三次运行，最终 success（含 CI 暴露并修好的三处跨端/环境坑）。矩阵里这七面的 ci 字段已指向该工作流。
 
 ### N35-2 `/ekko/skills` 指向已退役的运行时，页面恒显示“暂无技能”
 - 锚点：路由 `ekko.skills`（`scripts/regression/route-manifest.ts` 生成的清单）；设计正本 4.2 节“通用对话内核只此一个（Ekko 运行时退役）”。
@@ -97,7 +97,7 @@
 
 ## 计数
 
-待办 7（P2×2＝N35-1、N35-12；awaiting-user 2＝N35-2、N35-11；low 1＝N35-8；观察 1＝N35-9；随上游基线升级 1＝N35-10）｜已完成 5（N35-3、N35-4、N35-5、N35-6、N35-7）｜已裁定不处置 5。
+待办 6（P2×1＝N35-12；awaiting-user 2＝N35-2、N35-11；low 1＝N35-8；观察 1＝N35-9；随上游基线升级 1＝N35-10）｜已完成 6（N35-1、N35-3、N35-4、N35-5、N35-6、N35-7）｜已裁定不处置 5。
 
 ## 变更
 
