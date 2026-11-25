@@ -9,13 +9,13 @@
 - 根因层：CI 任务的路径过滤与步骤清单是手写的工作流文件，加任务只能在推送后验证，本批不推送，所以没有加。
 - 现状：这三个面由推送前钩子强制（`config/regression-matrix.json` 的推送前档）；绕过钩子的推送（`QGATE_PREPUSH_SKIP=1`）或未装钩子的克隆没有自动覆盖。
 - 验收判据：在分支上加 CI 任务并见到绿记录后再合入 main；矩阵里对应测试面的 `ci` 字段从 `null` 改为工作流与锚点；`product-tests` 的 `paths-ignore` 不再忽略 `team/**`。
-- 状态：open（P2）。
+- 状态：**已修复（2026-11-25 清偿批 C）**——新增 `.github/workflows/regression-axes.yml` 两个作业覆盖推演、Python、Ycode 七个面，命令即回归矩阵的测试面；分支 `chore/ci-regression-axes` 推送后 CI 三次运行，最终 success（含 CI 暴露并修好的三处跨端/环境坑）。矩阵里这七面的 ci 字段已指向该工作流。
 
 ### N35-2 `/ekko/skills` 指向已退役的运行时，页面恒显示“暂无技能”
 - 锚点：路由 `ekko.skills`（`scripts/regression/route-manifest.ts` 生成的清单）；设计正本 4.2 节“通用对话内核只此一个（Ekko 运行时退役）”。
 - 根因层：运行时退役后入口没有按“受管迁移与保留”原则处理，既没有下线也没有改接到 Hermes 技能面。
 - 验收判据：用户裁决去向——下线该路由并在导航中移除，或改接 Hermes 技能清单；裁决后全路由走查该页不再出现空列表。
-- 状态：awaiting-user（产品决定）。
+- 状态：**已更正并结案（2026-11-25 清偿批 D）**——初版判断有误。`/ekko/skills` 并非指向已退役的运行时：补丁 760（2026-11-10「Ekko 与 Hermes 技能库统一」，规格 `2026-11-10-ekko-hermes-skill-store-unification`）已让该页直接读写 Hermes 的 `~/.hermes/profiles/<p>/skills` 技能树，旧的 `~/.ekko/skills` 逐 profile 副本由一次性迁移器搬空后删除。11-24 在隔离 HOME 的走查里看到「暂无技能」，是空技能库的正确表现，不是页面坏了。补丁 760/762/764 与统一规格测试均在位。不改产品。
 
 ### N35-3 机制预算里 14 条退役条件没有机检判定器
 - 锚点：`config/mechanism-budget.json` 的 `sunset` 数组（15 条，仅 `capability-matrix` 带 `check`）；`node scripts/governance-lint.mjs --budget` 报 14 条 `retireWhen 仅为自然语言` 告警。
@@ -55,7 +55,7 @@
 - 根因层：上游基线声明的 katex 版本范围不含修复版，升级属于依赖升级而非补丁级更新，可能影响公式渲染。
 - 现状：低危；本批的安全扫描在 studio 生产依赖里报出（`npm audit --omit=dev`）。同一批报出的 follow-redirects 高危已由补丁 818 修复，见 `2026-11-24-follow-redirects-override.md`。
 - 验收判据：上游基线升级到 katex 不低于 0.18.2 的版本，或经上游验证后在本仓用 overrides 钉版本；复扫 katex 相关两条归零，公式渲染走查无回归。
-- 状态：open（low，随上游基线升级）。
+- 状态：**已更正并结案（2026-11-25 清偿批 B）**——今天复查有两处变化。①高危已清：昨天补丁 818 把 `vendor/hermes-studio` 的 overrides 钉到 ^1.16.3，但共享依赖树当时还装着旧版 1.16.0；本次 `npm update follow-redirects` 后实装 1.16.3，studio 生产依赖的高危归零。②katex 低危仍在，但性质更正：受影响的是顶层 `katex@0.17.0`（声明 ^0.17.0）与经 `@vscode/markdown-it-katex` 引入的嵌套 `katex@0.16.47`，都在 0.18.1 及以下；修复版 0.18.2 超出两条声明的范围，是真正的依赖升级（可能影响公式渲染），随上游基线处理。挂账的本意是“随上游基线升级”，现状相符，结案。
 
 ### N35-9 宿主 hermes 更新后不同步，真实 CLI 回归测试在本机失败
 - 锚点：宿主 `hermes --version` 的两条警告（“此前有一次 `hermes update` 拉取了新代码但没有重启运行中的网关”“虚拟环境与锁文件不同步，请运行 `hermes pm install`”）；`hermes pm doctor` 报 `python: realized bytes do not match recorded digest`；受影响的用例 `custom/server/services/hermes/__tests__/kanban-title-edit.regression-1.test.ts`。
@@ -97,7 +97,7 @@
 
 ## 计数
 
-待办 7（P2×2＝N35-1、N35-12；awaiting-user 2＝N35-2、N35-11；low 1＝N35-8；观察 1＝N35-9；随上游基线升级 1＝N35-10）｜已完成 5（N35-3、N35-4、N35-5、N35-6、N35-7）｜已裁定不处置 5。
+待办 4（P2×1＝N35-12；awaiting-user 1＝N35-11；观察 1＝N35-9；随上游基线升级 1＝N35-10）｜已完成 8（N35-1、N35-2、N35-3、N35-4、N35-5、N35-6、N35-7、N35-8）｜已裁定不处置 5。
 
 ## 变更
 
@@ -108,6 +108,7 @@
 5. 依赖修复批验证时新增 N35-9（宿主 hermes 更新后不同步）。
 6. Ycode 依赖安全刷新批新增 N35-10（刷新后仍余的 13 条通告）、N35-11（依赖漏洞扫描不在自动关口）与 N35-12（开发依赖另有 64 条通告），见 `2026-11-24-ycode-deps-security-refresh.md`。另：主 spec 的状态行仍为 in_progress——改动该 spec 的提交必须同时带上设计正本的修订（L2 design-sync），仅改状态行的提交被拦下，留待下次合法触及设计正本的批次顺带更新。
 7. 清偿批 A 结案 N35-3 至 N35-7，并补记 N35-9 的复查结果；见 `2026-11-25-full-retro-pending-closeout.md`。
+8. 清偿批 B 更正并结案 N35-8（katex：高危已清、低危随上游基线）；清偿批 D 更正并结案 N35-2（/ekko/skills 为误记，技能库统一后的正确表现）。
 
 ## 决策记录
 

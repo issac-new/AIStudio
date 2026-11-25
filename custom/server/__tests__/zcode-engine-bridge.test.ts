@@ -4,7 +4,7 @@
 // 2026-11-23 兼容批：全文件豁免废除——改确定性预期内容比较（.js 后缀归一化 + X3 头注），
 // index.ts 因有意收窄导出单独断言；并补 retryable/profileId 透传与 EventError 订阅结束行为回归。
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync, existsSync, mkdtempSync, rmSync } from 'fs'
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from 'fs'
 import { resolve, join } from 'path'
 import { tmpdir } from 'os'
 import net from 'net'
@@ -264,5 +264,28 @@ describe('建会话前的项目登记（N34-2）', () => {
     await expect(ensureEngineProject(project, '/w')).resolves.toBe('once')
     expect(created).toBe(1)
     await expect(ensureEngineProject({ readProjects: async () => [], saveProject: async () => ({}) as Project }, '/w')).rejects.toThrow(/project\.ensure-failed/)
+  })
+
+  it('登记的根目录与调用方给定的工作区路径逐字相同——不做真实路径改写（2026-11-25 回归锁）', async () => {
+    // 回归实录：曾在这里把路径规范化（解析符号链接）后再登记，而建会话仍用原始路径；
+    // 引擎按「项目根目录 === 会话工作区」逐字校验，于是 /tmp、符号链接这类非真实路径形态
+    // 的工作区一律被拒 project.cwd-not-in-roots（隔离引擎实测）。登记必须沿用给定形态。
+    const dir = mkdtempSync(join(tmpdir(), 'engine-project-form-'))
+    try {
+      const real = join(dir, 'real-ws')
+      const link = join(dir, 'link-ws')
+      mkdirSync(real)
+      symlinkSync(real, link)
+      let saved: { roots?: string[] } | null = null
+      const project = {
+        readProjects: async () => [] as Project[],
+        saveProject: async (input: { roots?: string[] }) => { saved = input; return makeProject({ id: 'form-1', root: String(input.roots?.[0]) }) },
+      }
+      await expect(ensureEngineProject(project, link)).resolves.toBe('form-1')
+      expect(saved?.roots, '登记根目录须逐字等于给定路径').toEqual([link])
+      expect(saved?.roots?.[0]).not.toBe(real)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

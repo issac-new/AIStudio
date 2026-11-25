@@ -2,10 +2,11 @@
 
 本手册面向第一次接触 swarm-yuan 的研发、测试、技术负责人和技能维护者。全书以**研发人员能力的 SOP 化**为总主线：把行业标准与项目经验转化为可查询的组织资产、可执行的研发流程和可复核的交付证据。学员最终应能生成可信的项目技能，用它约束日常研发，判读门禁与测试证据，并在项目变化后更新技能。
 
-- **当前版本**：v2.100.3，依据 `RELEASE-MANIFEST.json:88-101` 与 `skills/swarm-yuan/CHANGELOG.md:3-11`。
+- **当前版本**：v2.103.0，依据 `RELEASE-MANIFEST.json` 的 `modules.yuan-skill.version` 与 `skills/swarm-yuan/CHANGELOG.md:3-8`。
 - **事实优先级**：当前脚本、配置和测试优先于有效 spec 与设计 README；历史案例只证明其所属版本和场景。易变数字以 `skills/swarm-yuan/assets/facts.conf` 为正本。
 - **编写范围**：本手册核对了当前源码与有效文档，没有在本轮执行安装、生成、激活、真实项目研发、真实 ACP 编码回合或其他真实模型编码。文中的历史数字均标明版本，不能当作本轮复测结果。
 - **核心分工**：生成器产出目标技能，目标技能约束研发；门禁检查过程与结构，真实测试和独立审查核验业务结果。
+- **独立审查协议（v2.101.0 起）**：节点⑦的审查由没有见过作者会话的审阅者执行，只给文档与被引用源码。S1 全局审视、S2 理解度、S3 设计批判、S4 实现就绪依次过；`not run` 不等于零发现，连续两轮 clean 才算收敛；环境没有子代理时停机，不得用同上下文自审代替。`REVIEW_RECORD_REQUIRED=1` 时 `check_review` 机检留痕字段、评审上下文与禁词。协议正本见 `skills/swarm-yuan/references/independent-review-protocol.md`，技术页见 `/aistudio-swarm-yuan-guide.html#review-protocol`。
 
 ## 导读：这门课怎样学
 
@@ -750,7 +751,7 @@ bash install-offline.sh --minimal --agents
 | 最小单元质量与拼装流水线 | 复用既有 Mapper/Service/前端单元，新增最小胶水，按 spec、分支测试、独立审查、合入和 main 回归推进 |
 | 独立全面检查 | 静态框架门禁、真实测试、分片物理直查、独立审查与双故障注入分别提供不同证据 |
 
-该轮曾检测 10 个框架，完成订单编辑 feature 与双故障注入 fix。它证明当次生成链、特定测试和三层拦截咬合，不证明当前 v2.100.3 自动获得同样数字，也不证明所有 JVM 项目都覆盖；另有一个可独立重跑的合成练习 `skills/swarm-yuan/tests/e2e/run-fieldchange-e2e.sh`，用临时 Java 样例验证字段映射和任务清单。合成练习便于教学，但不能替代真实业务项目。
+该轮曾检测 10 个框架，完成订单编辑 feature 与双故障注入 fix。它证明当次生成链、特定测试和三层拦截咬合，不证明当前 v2.103.0 自动获得同样数字，也不证明所有 JVM 项目都覆盖；另有一个可独立重跑的合成练习 `skills/swarm-yuan/tests/e2e/run-fieldchange-e2e.sh`，用临时 Java 样例验证字段映射和任务清单。合成练习便于教学，但不能替代真实业务项目。
 
 ## 19. 实训一：再生成时怎样保留真值并激活
 
@@ -903,7 +904,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"                               
 
 | 主题 | 当前事实源 |
 |---|---|
-| 版本与发布 | `RELEASE-MANIFEST.json:88-101`；`skills/swarm-yuan/CHANGELOG.md:3-11` |
+| 版本与发布 | `RELEASE-MANIFEST.json` 的 `modules.yuan-skill`；`skills/swarm-yuan/CHANGELOG.md:3-8` |
 | 产品总原则与四论 | `team/profiles/orchestrator/SOUL.md:3-4`；`runtime/hermes-records/design/hermes-complete-design-doc.md:3`；`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118` |
 | 三层投影 | `team/profiles/orchestrator/SOUL.md:3-4`（一句话＋三层原句）；`docs/DESIGN.md:17-19`、`:404-414` 仅作组件职责与分层图辅助 |
 | 标准与个性化研发能力 | `skills/swarm-yuan/references/standards-compliance.md`；`skills/swarm-yuan/references/security-spec.md`；`skills/swarm-yuan/references/domain-knowledge.md`；`skills/swarm-yuan/scripts/mine-habits.sh` |

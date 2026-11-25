@@ -551,9 +551,9 @@ const SCENES = [
     phase: 'rules', navShort: '技能供给', caseEvidenceIds: ['skill-activation-boundary'],
     handoff: { consumes: [{ scene: 'product-spec-design', artifact: 'spec-review' }], produces: 'skill-supply', next: 'operations-readiness' },
  part: 'development', title: 'swarm-yuan 技术机制：从生成器到可验证编码', short: 'swarm-yuan 技术机制', route: '/app/ide', duration: 11000, layer: 'simulation', practiceRef: '17.1',
-    summary: 'swarm-yuan v2.100.1 是项目研发技能生成器。目标技能保存项目知识与工作流，.swarm-yuan 保存运行态；strict 激活、日常状态机、spec-first 和 ACP 会话分别承担不同证明责任。',
+    summary: 'swarm-yuan v2.103.0 是项目研发技能生成器。目标技能保存项目知识与工作流，.swarm-yuan 保存运行态；strict 激活、日常状态机、spec-first 和 ACP 会话分别承担不同证明责任。',
     action: '从文件边界进入生成与激活，再沿状态机、L1-L4、precheck 和 ACP 证据链检查真实研发，而不是只看 active 字样。',
-    proof: '能核查 59 门、204 变量、standard 32 的实际执行面，并分别提供激活、当次技能读取、正确 cwd/引擎身份、测试和独立评审证据。',
+    proof: '能核查 59 门、205 变量、standard 32 的实际执行面，并分别提供激活、当次技能读取、正确 cwd/引擎身份、测试和独立评审证据。',
     focus: 'swarm', target: '拆解技术机制',
     inputs: ['生成器 scripts/、目标技能 SKILL.md/references/、项目 .swarm-yuan 运行态', 'activation-report、gate-runs、ACP 返回与 delegate 日志'],
     steps: [
@@ -561,7 +561,7 @@ const SCENES = [
       '按 Step 1-13 生成 draft，再依次完成框架与 spec-first 接线、verify_completeness、inventory strict、预算、manifest 和 activation-report；失败保持 draft。',
       '理解 SCHEMA_EPOCH 只兼容历史决策：边界前只校 JSON/incomplete，边界后仍执行完整 schema；shortcut 不新增门禁，lessons.md 升级保留。',
       '把日常九节点映射到 open/design/build/verify/archive/operate 六状态；transition 只 guard 和更新，不执行测试、merge 或 release。',
-      '分别核对 L1 写时、L2 提交、L3 precheck、L4 build guard；59 门中 --all=12、--all-full=standard 32、compliance=19，配置变量 204=30+126+48。',
+      '分别核对 L1 写时、L2 提交、L3 precheck、L4 build guard；59 门中 --all=12、--all-full=standard 32、compliance=19，配置变量 205=31+126+48；节点⑦的独立审查另按协议执行，审阅者只拿文档与被引用源码，not run 不等于零发现，连续两轮 clean 才算收敛，没有子代理就停机而不是同上下文自审。',
       '最后核对 worker 先准备技能、ACP cwd、实际 Skill 调用、engine_bin_source/engine_bin、RESULT 与 worker 复核；R134 仍需 npm/pip 镜像，不是完全气隙自足。',
     ],
     stepGuide: [
@@ -584,7 +584,7 @@ const SCENES = [
       ].join('\n') },
     },
     deliverables: ['生成器/目标技能/运行态边界图', 'strict 激活与 gate-runs 证据包', 'ACP 当次加载、引擎身份和独立复核记录'],
-    checks: ['59/204/32 没有写成 53 个交付验收门', 'SCHEMA_EPOCH 没有放松边界后的新记录 strict', 'provider=zcode 没有被当作 Ycode 分叉身份证据'],
+    checks: ['59/205/32 没有写成 53 个交付验收门', 'SCHEMA_EPOCH 没有放松边界后的新记录 strict', 'provider=zcode 没有被当作 Ycode 分叉身份证据'],
     pitfalls: ['把生成目录或 ok:true 当成 active 和业务正确', '把状态机通过或历史 ACP 成功当成当前任务已验证'],
     references: [{ label: 'swarm-yuan 完整研发指南', href: '/aistudio-swarm-yuan-developer-guide.md' }],
     nodes: [

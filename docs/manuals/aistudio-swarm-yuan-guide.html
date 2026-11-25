@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="swarm-yuan v2.100.1 技术指南：生成器与目标技能边界、Step 1-13、strict 激活、状态机、spec-first、precheck、ACP 证据与 R134 离线包边界。">
-  <title>swarm-yuan Skill 技术指南 · v2.100.1</title>
+  <meta name="description" content="swarm-yuan v2.103.0 技术指南：生成器与目标技能边界、Step 1-13、strict 激活、状态机、spec-first、precheck、ACP 证据与 R134 离线包边界。">
+  <title>swarm-yuan Skill 技术指南 · v2.103.0</title>
   <style>
     :root {
       color-scheme: light;
@@ -256,11 +256,11 @@
   <a class="skip-link" href="#main">跳到正文</a>
   <header class="hero">
     <div class="hero-inner">
-      <p class="eyebrow">AIStudio · 技术手册 · 2026-11-09</p>
+      <p class="eyebrow">AIStudio · 技术手册 · 2026-11-25</p>
       <h1>swarm-yuan Skill 技术指南</h1>
       <p class="lead">面向需要生成、维护和审计项目技能的技术人员。以当前源码解释文件边界、生成与激活顺序、门禁返回码、状态机和 ACP 证据，不用宣传口径代替实现。</p>
       <div class="hero-meta">
-        <span>当前版本：<strong>v2.100.1</strong></span>
+        <span>当前版本：<strong>v2.103.0</strong></span>
         <span>事实源：生成器脚本、注册表、配置与历史验证记录</span>
         <span>页面：内联 CSS · 无 JavaScript · 无外部依赖</span>
       </div>
@@ -285,10 +285,11 @@
         <li><a href="#spec-first">08 · L1-L4 拦截</a></li>
         <li><a href="#precheck">09 · precheck 判读</a></li>
         <li><a href="#verification">10 · 测试与变异</a></li>
-        <li><a href="#acp">11 · worker 与 ACP 证据</a></li>
-        <li><a href="#r134">12 · R134 离线包</a></li>
-        <li><a href="#acceptance">13 · 交付核对</a></li>
-        <li><a href="#source-index">14 · 源码索引</a></li>
+        <li><a href="#review-protocol">11 · 独立审查协议</a></li>
+        <li><a href="#acp">12 · worker 与 ACP 证据</a></li>
+        <li><a href="#r134">13 · R134 离线包</a></li>
+        <li><a href="#acceptance">14 · 交付核对</a></li>
+        <li><a href="#source-index">15 · 源码索引</a></li>
       </ol>
     </nav>
 
@@ -296,11 +297,11 @@
       <section id="calibration">
         <span class="section-no">01 / CALIBRATION</span>
         <h2>先校准数字：59、53、32 各指什么</h2>
-        <p class="lede">本页对应 yuan <strong>v2.100.1</strong>。数字以 <code>assets/facts.conf</code> 和 precheck 注册数组为准，不沿用过期注释。</p>
+        <p class="lede">本页对应 yuan <strong>v2.103.0</strong>。数字以 <code>assets/facts.conf</code> 和 precheck 注册数组为准，不沿用过期注释。</p>
         <div class="fact-band" aria-label="当前关键数字">
           <div class="fact"><b>59</b><span>check_* 函数总数 = FULL 53 + advisory-only 6</span></div>
           <div class="fact"><b>32</b><span>--all-full = 32 个 standard 序列成员（核心 12 + 架构 20）</span></div>
-          <div class="fact"><b>204</b><span>配置变量 = core 30 + arch 126 + compliance 48</span></div>
+          <div class="fact"><b>205</b><span>配置变量 = core 31 + arch 126 + compliance 48</span></div>
         </div>
         <div class="table-wrap">
           <table>
@@ -440,7 +441,25 @@
 
         <h3>references/lessons.md：升级保留已有项目内容</h3>
         <p><code>lessons.md</code> 已登记进 <code>PROJECT_SPECIFIC_FILES</code>。守门测试先 create，再手加 lessons 与 SKILL.md 入口行，连续两次 upgrade 比较 MD5，锁定 lessons 和入口文件的字节级保留与二次升级幂等性。</p>
-        <p class="source">源码与字节锁：<a href="../../skills/swarm-yuan/scripts/generate-skill.sh">generate-skill.sh:187-198</a>；<a href="../../skills/swarm-yuan/tests/test-lessons-preserve.sh">test-lessons-preserve.sh:37-73</a>。</p>
+        <h3>活文档漂移：指纹没变，内容也可能已经漂移</h3>
+        <p>结构指纹（<code>project-fingerprint.sh --diff</code>）回答的是"文件数、扩展名分布、路径集变没变"，同路径文件的原地修改它完全看不见。技能维护里还要回答"文档里的断言和源码事实还对不对"，这是另一套程序：逐条读文档与源码做比对。两者不是替代关系——指纹负责"发现该重新看"，漂移报告负责"重新看时看什么"。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>活文档漂移的比对程序</caption>
+            <thead><tr><th>步骤</th><th>做什么</th><th>不能怎样做</th></tr></thead>
+            <tbody>
+              <tr><td>提取断言</td><td>逐节读文档，抽出可验证的断言：文件路径、符号名、命令、配置键、行为描述、数字</td><td>把"看起来一致"当结论</td></tr>
+              <tr><td>定位源码</td><td>先用组件库清单与 relations 边集，再走检索阶梯</td><td>凭文件名猜对应实现</td></tr>
+              <tr><td>逐条判定</td><td>一致／漂移／无法判定；无法判定标"未覆盖"</td><td>把"未覆盖"折算为一致</td></tr>
+              <tr><td>写报告</td><td>按模板落到 <code>docs/reviews/YYYY-MM-DD-drift-report.md</code>，同日多轮追加不覆盖</td><td>只写"看起来一致"；无漂移也要写"已核对 N 条断言，覆盖文档 M 份"</td></tr>
+              <tr><td>修复</td><td>改文档或改代码，二选一，并在报告里写理由</td><td>只改一边留假一致；改文档属于决策，须落 <code>decisions.jsonl</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>四类漂移：缺失功能（文档说有、源码没有）、模型不全（文档的实体、字段、状态机少于源码）、逻辑捷径（文档写的分支、校验、失败路径在源码里被简化或绕过）、架构分歧（模块边界、依赖方向与文档不一致）。反向也要查：源码里存在而文档完全没覆盖的逻辑，同样算漂移。触发点有三个：反馈回路每轮、发布前、spec 归档时对 <code>DESIGN_SYNC: touched</code> 的设计文档核对声明与实现一致。</p>
+        <h3>回合计数分层：落盘产物内部也要有层序</h3>
+        <p>产物落盘优先（Artifact-First）管的是"聊天里只回路径与关键决策"，不管落盘产物内部怎么排。回合适读性三条判据补的是后者：答案优先，读者第一眼看到结论行，过程行排在折叠区或附属文件；折叠不等于删除，折叠区的工具输出必须仍可全文检索，审查者能按命令名、路径名、错误串反查证据；回合是分层单位，以"一次提问→一次交付"为折叠单元，不在回合内部再折，否则因果链断裂、检索跳失。</p>
+        <p class="source">源码与字节锁：<a href="../../skills/swarm-yuan/scripts/generate-skill.sh">generate-skill.sh:187-198</a>；<a href="../../skills/swarm-yuan/tests/test-lessons-preserve.sh">test-lessons-preserve.sh:37-73</a>。漂移方法论：<a href="../../skills/swarm-yuan/references/living-docs-drift-methodology.md">living-docs-drift-methodology.md:7-61</a>；报告模板：<a href="../../skills/swarm-yuan/assets/drift-report-template.md">assets/drift-report-template.md</a>；指纹与漂移的接线：<a href="../../skills/swarm-yuan/SKILL.md">SKILL.md:106</a>；回合分层：<a href="../../skills/swarm-yuan/references/context-engineering-layering.md">context-engineering-layering.md:212-220</a>；Artifact-First：<a href="../../skills/swarm-yuan/SKILL.md">SKILL.md:35</a>。</p>
       </section>
 
       <section id="state-machine">
@@ -529,6 +548,9 @@ GATE_RUNS_DIR=.swarm-yuan/gate-runs \
 
         <h3>.gate-fail-flag 的清除权属于覆盖式运行</h3>
         <p>FAIL/ERROR 会写项目根 <code>.swarm-yuan/.gate-fail-flag</code>，供白名单拦截。只有 <code>--all</code>、<code>--all-full</code>、<code>--compliance-suite</code> 等覆盖式运行全绿才清旧标记；单个门禁变绿不能证明其它失败已修复。</p>
+        <h3>扫描范围不含 vendor/</h3>
+        <p>钉版上游基线（<code>vendor/</code>）自有版本与注入态脏文件不是本仓的升级动作，三类门把它们排除在扫描对象之外，与仓法对 <code>vendor/</code> 的提交挡护同语义：spec-first 的变更收集不过滤时，基线升级带进来的文件会被当成"可写源码区改动"；降标守卫不跳过时，上游升级删掉的基线测试文件会被误判为"测试变松"；依赖扫描不过滤时，基线自带的依赖版本会被报成本仓待升级项。排除的是扫描对象，不是放宽判据——<code>vendor/</code> 之外的同型问题照常拦截。</p>
+        <p class="source">三处排除：<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:86-98</a>（<code>_git_changed_files</code>，第 94 行）；<a href="../../skills/swarm-yuan/scripts/floor-guard.sh">scripts/floor-guard.sh:100,111,116</a>；<a href="../../skills/swarm-yuan/assets/gates-warn.sh">assets/gates-warn.sh:1082,1153</a>（<code>check_deps</code>）。</p>
         <p class="source">源码：<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:1255-1321,1338-1467,1879-1898,1969-1975,2031-2087</a>；配置链：<a href="../../skills/swarm-yuan/assets/precheck.conf">assets/precheck.conf:98-119</a>。</p>
       </section>
 
@@ -550,8 +572,99 @@ GATE_RUNS_DIR=.swarm-yuan/gate-runs \
         <p class="source">源码：<a href="../../skills/swarm-yuan/assets/gates/quality/test.sh">assets/gates/quality/test.sh:3-90</a>；<a href="../../skills/swarm-yuan/references/generation-flow.md">generation-flow.md:89-99</a>；<a href="../../skills/swarm-yuan/verifier/v2/external-validity.md">verifier/v2/external-validity.md:1-13,47-52</a>。</p>
       </section>
 
+      <section id="review-protocol">
+        <span class="section-no">11 / INDEPENDENT REVIEW</span>
+        <h2>独立审查靠信息不对称，不靠语气指令</h2>
+        <p class="lede">节点⑦的审查是强制口径：审阅者在开始审查前没有见过作者的结论和推理，独立性由此产生。同一上下文里说"请严格审查"不满足判据。适用范围是需要先做设计决策的 spec、plan、架构产物；一行配置、报错明确的修复走平常流程。</p>
+
+        <h3>三个角色，独立性判据只有一条</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>审查中的三类参与者</caption>
+            <thead><tr><th>角色</th><th>能看到</th><th>负责</th><th>不得</th></tr></thead>
+            <tbody>
+              <tr><td>作者</td><td>需求、历史决策、探查结果、全部会话上下文</td><td>起草、回应 finding</td><td>用自审代替冷读；向审阅者传自己的结论</td></tr>
+              <tr><td>冷读审阅者</td><td>待审文档路径、被引用源码路径、审查标准</td><td>找未言明假设、含糊需求、实现风险、经不起追问的结论</td><td>读会话历史；读作者推理；接受口头补充；参与起草</td></tr>
+              <tr><td>裁决人</td><td>目标与约束</td><td>拍板取舍、批准或驳回设计</td><td>被 AI 代替拍板</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>派发时给什么、不给什么</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>冷读派发的输入边界</caption>
+            <thead><tr><th>白名单（必须带）</th><th>黑名单（禁止带）</th></tr></thead>
+            <tbody>
+              <tr><td>待审文档的绝对路径或仓库根相对路径</td><td>会话历史、聊天记录、作者的设计推理</td></tr>
+              <tr><td>文档逐字引用的源码路径，或引用的最小片段</td><td>先前轮次的 findings（复审只传上一轮 finding 的处置证据与本轮增量 diff）</td></tr>
+              <tr><td>本协议路径与本阶段用到的标准</td><td>"作者认为已解决""这里已经讨论过"一类结论</td></tr>
+              <tr><td>阶段名、输出文件路径、findings 表格式</td><td>未落盘的 URL、口头承诺、聊天里的临时决定；要引用先落盘，再传路径</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>派发 prompt 带一句固定声明：<em>"你没有此前的会话历史。不要询问作者为什么这样设计，只按文档和源码判断。"</em></p>
+
+        <h3>S1—S4 四个阶段各问什么</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>审查阶段与失败条件</caption>
+            <thead><tr><th>阶段</th><th>输入</th><th>判据</th><th>失败时</th></tr></thead>
+            <tbody>
+              <tr><td>S1 全局审视</td><td>全文、需求边界</td><td>范围是否必要、能否复用既有单元、是否过早陷入实现细节、是否在解决根问题</td><td>上下文不足立即停，列出缺失项要求补；不靠猜继续</td></tr>
+              <tr><td>S2 理解度</td><td>只有待审文档，不给项目背景与作者解释</td><td>刚加入项目的新人能否复述四件事：做什么、不做什么、边界在哪、怎么验证</td><td>任一核心节无法复述即 Blocker；文风问题不算</td></tr>
+              <tr><td>S3 设计批判</td><td>文档、被引用源码、五维清单</td><td>未言明假设、含糊需求、实现风险、边界条件、共享状态与隐藏耦合</td><td>finding 不带 <code>file:line</code> 证据的降级为附录，不压主报告</td></tr>
+              <tr><td>S4 实现就绪</td><td>文档、就绪判据、计划改动范围</td><td>实现者是否还要做设计决策；写边界是否明确；回滚与验证是否可执行</td><td>把取舍留给实现者即未就绪</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>每个方案在 S3 必须回答三问：用户没看到什么？最强反方论据是什么？反方是否成立？没有反方论据视为审查未完成。复审只审本轮增量 diff 与上一轮 finding 的处置证据；已由用户裁决的取舍不重开，发现"已修复项再现"则重开并标 <code>churn</code>。</p>
+
+        <div class="danger"><strong>审查类活动不能降级。</strong>派发阶梯按可用能力逐级下降：有命名子代理→派新上下文子代理；只有通用子代理→派通用子代理并先让它读角色定义；不能嵌套→主会话直接派一个全新子代理；<strong>完全没有子代理→停机</strong>，输出 <code>review-unavailable</code> 并记 <code>not run</code>，节点⑦不得通过。审阅者超时、崩溃或读不到角色与标准时重试一次，仍失败记 <code>not run</code>，不得记为零发现；阶梯不得跳级，也不得用同上下文自审冒充。探查、互不依赖的多文件实施等非审查类并行可以内联执行，但必须标 <code>degraded</code> 并在交付说明披露——这是审查与其他活动的唯一分界。用户显式豁免时，须在 <code>decisions.jsonl</code> 落 UserChallenge 记录（豁免理由、残余风险、批准人）。</div>
+
+        <h3>收敛：not run 不等于零发现</h3>
+        <div class="table-wrap">
+          <table>
+            <caption>收敛语义</caption>
+            <thead><tr><th>概念</th><th>定义</th></tr></thead>
+            <tbody>
+              <tr><td>clean 轮</td><td>必需阶段全部 completed＋零 must-fix＋零 should-fix（或已明确处置）＋零 <code>not run</code>。有 <code>not run</code> 的轮次一律不 clean</td></tr>
+              <tr><td>converged</td><td>连续两轮 clean；首轮 clean 不算收敛</td></tr>
+              <tr><td>轮数上限</td><td>5 轮；第 5 轮仍不 clean 升级用户裁决，不得自行放行</td></tr>
+              <tr><td>三态</td><td><code>settled</code>（用户已接受的取舍，不重开）、<code>fixed</code>（已修复，再现即重开并标 churn）、<code>churn</code>（新发现可回退修复环重跑）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>反谄媚与留痕字段</h3>
+        <p>findings 在前，优点不设专段；确需肯定只写事实。"通过"必须扛住 S1—S4，且必须列残余风险；零发现必须写成 <code>未发现（已检查范围：…；已核对断言：…）</code>。禁用词命中即不合格（英文如 brilliant、great、smart、perfect、robust；中文如 完美、优秀、健壮、显然、毫无疑问），禁止复述用户措辞再认可，禁止道歉开场。</p>
+        <div class="table-wrap">
+          <table>
+            <caption>审查记录必含字段</caption>
+            <thead><tr><th>字段</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td>评审人</td><td>子代理标识或人工姓名</td></tr>
+              <tr><td>评审上下文</td><td><code>fresh</code>／<code>degraded</code>／<code>unavailable</code>；只有 <code>fresh</code> 构成有效独立审查</td></tr>
+              <tr><td>冷读输入</td><td>文档路径＋源码路径；声明未传会话历史与作者推理</td></tr>
+              <tr><td>阶段完成表</td><td>S1—S4 各自 <code>completed</code>／<code>not run</code>＋产出文件</td></tr>
+              <tr><td>理解度结论</td><td>可复述／Blocker＋复述标题</td></tr>
+              <tr><td>findings 表</td><td>严重度／<code>file:line</code>／证据／修复／不修后果</td></tr>
+              <tr><td>收敛声明</td><td>round N、是否 clean、连续 clean 轮数、残余风险</td></tr>
+              <tr><td>禁词自检</td><td>扫描命令与结果</td></tr>
+              <tr><td>未运行项</td><td>显式列出，不折算为零发现</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>机检开关与最小可行做法</h3>
+        <p><code>check_review</code> 只在 <code>REVIEW_RECORD_REQUIRED=1</code> 时核验上表；默认档只 warn，存量项目不被批量转红。开启后六类情形直接 fail：协议字段缺失、字段仍是占位符、未声明评审上下文、<code>reviewer_context</code> 不是 <code>fresh</code> 却给通过结论、<code>not_run_count&gt;0</code> 却声明 clean 或 converged、命中禁词。守门测试 <a href="../../skills/swarm-yuan/tests/test-review-protocol.sh">tests/test-review-protocol.sh:119-181</a> 用一份合规记录加五类反例锁住这六条判据，本批实跑 15 passed、0 failed。</p>
+        <p>项目小、人手少时不必一次上全四阶段。最小闭环是三件事：派一个干净上下文的子代理，只给文档与源码；让它先复述（S2）再挑刺（S3），findings 必须带 <code>file:line</code>；把"评审上下文"和"未运行项"写进审查记录。做到这三件，就消掉了"同上下文自审"和"无人反对即通过"两类假通过。</p>
+        <p>与第 10 节的关系：门禁绿、测试有效、审查收敛是三份独立的证据，不能互相折算。机检能拦住"没写 not run"和"degraded 却通过"，拦不住审阅者读得不用心——那部分只能靠 S2 的复述和 S3 的反方论据来暴露。</p>
+        <p class="source">协议正本：<a href="../../skills/swarm-yuan/references/independent-review-protocol.md">references/independent-review-protocol.md:1-126</a>；机检：<a href="../../skills/swarm-yuan/assets/gates-strict.sh">assets/gates-strict.sh:1349-1445</a>；记录模板：<a href="../../skills/swarm-yuan/assets/review-record-template.md">assets/review-record-template.md:9-84</a>；测试：<a href="../../skills/swarm-yuan/tests/test-review-protocol.sh">tests/test-review-protocol.sh:119-181</a>；工作流接线：<a href="../../skills/swarm-yuan/SKILL.md">SKILL.md:77,99</a>。</p>
+      </section>
+
       <section id="acp">
-        <span class="section-no">11 / WORKER → ACP → ENGINE</span>
+        <span class="section-no">12 / WORKER → ACP → ENGINE</span>
         <h2>worker→ACP→编码引擎：证据必须按层闭合</h2>
         <p class="lede">provider 名称、ACP 会话、引擎身份、技能调用和业务测试是不同事实。任何一层都不能替下一层签字。</p>
         <div class="flow">人和 Kanban
@@ -609,7 +722,7 @@ worker 亲自复核 → Kanban handoff / 独立验证</div>
       </section>
 
       <section id="r134">
-        <span class="section-no">12 / R134 OFFLINE BOUNDARY</span>
+        <span class="section-no">13 / R134 OFFLINE BOUNDARY</span>
         <h2>everything 不是完全气隙环境的“全内嵌包”</h2>
         <p class="lede">当前有效口径是 R134，R145“全内嵌”已撤销。everything 与默认档互补，不是互相包含。</p>
         <pre><code>--everything
@@ -634,7 +747,7 @@ worker 亲自复核 → Kanban handoff / 独立验证</div>
       </section>
 
       <section id="acceptance">
-        <span class="section-no">13 / ACCEPTANCE</span>
+        <span class="section-no">14 / ACCEPTANCE</span>
         <h2>交付核对：每项都要对应当次证据</h2>
         <ul class="checklist">
           <li>目标技能通过 strict 激活，不是只有 draft 骨架；activation report 与当前技能目录对应。</li>
@@ -652,7 +765,7 @@ worker 亲自复核 → Kanban handoff / 独立验证</div>
       </section>
 
       <section id="source-index">
-        <span class="section-no">14 / SOURCE INDEX</span>
+        <span class="section-no">15 / SOURCE INDEX</span>
         <h2>源码与证据索引</h2>
         <p class="lede">排障时先读实现，再读历史记录。历史 spec 用来限定证据时间和范围，不覆盖当前代码。</p>
         <div class="table-wrap">
@@ -671,6 +784,9 @@ worker 亲自复核 → Kanban handoff / 独立验证</div>
               <tr><td>ACP 证据</td><td><a href="../../runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py">runtime/.../zcode-acp-delegate.py</a>；<a href="../../team/profiles/worker-coder/SOUL.md">team/profiles/worker-coder/SOUL.md</a></td></tr>
               <tr><td>真实探针记录</td><td><a href="../superpowers/specs/2026-10-26-delegate-task-context.md">delegate-task-context.md</a>；<a href="../superpowers/specs/2026-11-07-vendor-upgrade-studio-v0817.md">vendor-upgrade-studio-v0817.md</a></td></tr>
               <tr><td>R134</td><td><a href="../../skills/swarm-yuan/scripts/make-offline-bundle.sh">make-offline-bundle.sh</a>；<a href="../superpowers/specs/2026-11-03-offline-everything-complete.md">2026-11-03-offline-everything-complete.md</a></td></tr>
+              <tr><td>独立审查协议</td><td><a href="../../skills/swarm-yuan/references/independent-review-protocol.md">references/independent-review-protocol.md</a>；<a href="../../skills/swarm-yuan/assets/review-record-template.md">assets/review-record-template.md</a>；<a href="../../skills/swarm-yuan/tests/test-review-protocol.sh">tests/test-review-protocol.sh</a></td></tr>
+              <tr><td>活文档漂移</td><td><a href="../../skills/swarm-yuan/references/living-docs-drift-methodology.md">references/living-docs-drift-methodology.md</a>；<a href="../../skills/swarm-yuan/assets/drift-report-template.md">assets/drift-report-template.md</a></td></tr>
+              <tr><td>vendor/ 扫描排除</td><td><a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:86-98</a>；<a href="../../skills/swarm-yuan/scripts/floor-guard.sh">scripts/floor-guard.sh</a>；<a href="../../skills/swarm-yuan/assets/gates-warn.sh">assets/gates-warn.sh:1082,1153</a></td></tr>
               <tr><td>完整研发指南</td><td><a href="/aistudio-swarm-yuan-developer-guide.md">docs/manuals/aistudio-swarm-yuan-developer-guide.md</a></td></tr>
             </tbody>
           </table>
@@ -681,7 +797,7 @@ worker 亲自复核 → Kanban handoff / 独立验证</div>
 
   <footer class="footer">
     <div class="footer-inner">
-      <p><strong>swarm-yuan v2.100.1 技术指南</strong> · 核实日期 2026-11-09</p>
+      <p><strong>swarm-yuan v2.103.0 技术指南</strong> · 核实日期 2026-11-25</p>
       <p>本页是源码级技术说明，不声称本轮重新执行了安装、生成、激活或真实 ACP 回合。历史实证的证明范围按第 11 节限定。</p>
       <p><a href="/aistudio-swarm-yuan-developer-guide.md">通过培训启动器打开完整研发指南</a> · <a href="#main">回到正文顶部</a></p>
     </div>

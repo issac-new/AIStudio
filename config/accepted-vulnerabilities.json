@@ -1,0 +1,19 @@
+{
+  "note": "已接受的依赖安全通告（2026-11-25 清偿批 N35-11）。dependency-audit.mjs 比对：清单内的不拦，清单外的高危或严重才失败（退出码 1）。每条条目注记原因与去向；修复或上游基线升级后从清单移除。",
+  "accepted": [
+    "katex@0.11.0 - 0.18.1",
+    "GHSA-w5hq-g745-h8pq",
+    "GHSA-22p9-wv53-3rq4",
+    "GHSA-4x5r-pxfx-6jf8",
+    "GHSA-v245-v573-v5vm",
+    "GHSA-8988-4f7v-96qf",
+    "GHSA-c475-qrg2-pj4r",
+    "GHSA-238p-pmpm-9mq7",
+    "GHSA-mrhx-c7xc-m3w5",
+    "GHSA-jr5w-w6x2-84p9",
+    "GHSA-rmxm-3fg6-px4f",
+    "GHSA-g3hv-75wg-m249",
+    "GHSA-5pm8-86m8-9m6r",
+    "GHSA-r4jh-29pc-gfqr"
+  ]
+}

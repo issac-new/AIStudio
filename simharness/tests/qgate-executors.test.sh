@@ -90,9 +90,9 @@ for k in basic-check sast-audit arch-fitness acceptance-coverage intent-drift re
   fi
 done
 # 值错→fail（在案但内容不合规——区分于缺件）：去锁标记
-sed -i '' 's/frozen: true/frozen: false/' "$CEN/docs/requirements/RFD-001.freeze.md"
+sed -i.bak 's/frozen: true/frozen: false/' "$CEN/docs/requirements/RFD-001.freeze.md"
 [ "$(run_check intent-drift >/dev/null 2>&1; echo $?)" -ne 0 ] || fail "①b intent-drift 无锁应 fail"
-sed -i '' 's/frozen: false/frozen: true/' "$CEN/docs/requirements/RFD-001.freeze.md"
+sed -i.bak 's/frozen: false/frozen: true/' "$CEN/docs/requirements/RFD-001.freeze.md"
 # 报告红→fail（在案但 failed>0）
 mkdir -p "$CEN/docs/test"
 printf '# 测试报告\nTEST-FAIL cases=10 passed=9 failed=1\n' > "$CEN/docs/test/RFD-001-test-report.md"

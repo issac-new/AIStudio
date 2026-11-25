@@ -10,6 +10,12 @@
 //   baseRevision 须等于当前修订号、baseLogEpoch 须等于当前纪元，否则回 stale
 //   （proto.staleRevision / proto.staleLogEpoch）。stale 的命令不入幂等表，同一 commandId 重发安全。
 //
+// 建会话（N34-2 第二步，2026-11-25 隔离引擎实测）：新会话必须经 v4「建会话命令」创建——这是
+// 4.0 的实际创建路径（纯净基线 command.ts createSession 段注释）。服务端在转发前按 clientId＋
+// commandId 预留任务并绑定 projectId，再交子进程执行。宿主此前用的旧远程过程调用方法
+// agent.createSession 建出的会话无法执行回合：发文本稳定报 fault.command.executionFailed
+// （FOREIGN KEY constraint failed，子进程会话库里没有会话行），三次实测一致。
+//
 // 基线取自引擎只读查询 conversationRowsRangeV4 返回的 atRevision/atLogEpoch（服务端取值时的
 // 水位与纪元，transport.ts v4ConversationRowsRangeResultSchema）：按需拉取，每次都是新值。
 // 不取自宿主会话投影——投影只消费完整帧、跳过分片帧，长会话的快照恰恰是分片的，
@@ -46,6 +52,45 @@ export async function fetchControlBase(agent: Pick<CasAgent, 'conversationRowsRa
     throw new ControlBaseUnavailableError('引擎未返回会话修订号与日志纪元（只读查询结果形状不符）')
   }
   return { revision: r.atRevision, logEpoch: r.atLogEpoch }
+}
+
+/** 宿主→引擎的建会话命令信封（payload.workspaceId＝本地工作区路径；sessionId 按协议为 null）。 */
+export function buildCreateSessionEnvelope(input: {
+  clientId: string
+  commandId: string
+  workspacePath: string
+  config?: { mode?: string }
+  issuedAt?: number
+}): Record<string, unknown> {
+  return {
+    commandId: input.commandId,
+    clientId: input.clientId,
+    sessionId: null,
+    type: 'createSession',
+    issuedAt: input.issuedAt ?? Date.now(),
+    payload: { workspaceId: input.workspacePath, ...(input.config ? { config: input.config } : {}) },
+  }
+}
+
+/**
+ * 经 4.0 建会话命令创建会话，返回会话 id。未获接受（或回执结果不是建会话）即抛错，
+ * 错误消息带出状态与原因码——调用方据此归类失败，不把失败当成功。
+ */
+export async function createEngineSession(
+  agent: Pick<ZcodeEngineAgentService, 'sendConversationCommandV4'>,
+  opts: { workspacePath: string; projectId: string; clientId: string; commandId: string; config?: { mode?: string } },
+): Promise<string> {
+  const ack = await agent.sendConversationCommandV4({
+    workspacePath: opts.workspacePath,
+    projectId: opts.projectId,
+    envelope: buildCreateSessionEnvelope(opts),
+  })
+  const result = ack?.result as { type?: string; sessionId?: string } | null | undefined
+  if ((ack?.status === 'accepted' || ack?.status === 'duplicate') && result?.type === 'createSession'
+    && typeof result.sessionId === 'string' && result.sessionId) {
+    return result.sessionId
+  }
+  throw new Error(`createSession: status=${ack?.status ?? 'unknown'}${ack?.reasonCode ? ` reasonCode=${ack.reasonCode}` : ''}${result?.type ? ` result=${result.type}` : ''}`)
 }
 
 export interface CasSendOptions {

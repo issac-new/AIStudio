@@ -473,7 +473,7 @@
 - [2026-10-31-three-zone-undone-closure.md](../superpowers/specs/2026-10-31-three-zone-undone-closure.md)
 - [2026-10-31-zcode-3171-sync.md](../superpowers/specs/2026-10-31-zcode-3171-sync.md)
 
-## 2026-11（315 份）
+## 2026-11（318 份）
 
 - [2026-11-01-chat-turn-recovery-design.md](../superpowers/specs/2026-11-01-chat-turn-recovery-design.md)
 - [2026-11-01-design-sync-rsi-exec.md](../superpowers/specs/2026-11-01-design-sync-rsi-exec.md)
@@ -790,6 +790,9 @@
 - [2026-11-24-zcode-400-pending-batch.md](../superpowers/specs/2026-11-24-zcode-400-pending-batch.md)
 - [2026-11-25-full-retro-pending-closeout.md](../superpowers/specs/2026-11-25-full-retro-pending-closeout.md)
 - [2026-11-25-manual-sync-host-v0234.md](../superpowers/specs/2026-11-25-manual-sync-host-v0234.md)
+- [2026-11-25-n34-pending-batch-2.md](../superpowers/specs/2026-11-25-n34-pending-batch-2.md)
+- [2026-11-25-yuan-guide-v2103-alignment.md](../superpowers/specs/2026-11-25-yuan-guide-v2103-alignment.md)
+- [2026-11-25-zcode-400-capability-absorption.md](../superpowers/specs/2026-11-25-zcode-400-capability-absorption.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
@@ -797,8 +800,13 @@
 - [README.md](../superpowers/specs/archive/README.md)
 ## 维护口径
 新增、删除或移动 spec 后，应重新按文件系统核对本清单及计数，不用附录 A 的滚动人工计数代替盘点。判断某份文档是否仍是现行依据时，回到设计导航、整合正本、对应专题 spec 与实现证据交叉核实；不要由本索引的收录动作推断文档状态。
-- 当前工作树根目录：**768 份 Markdown**（HEAD 全量跟踪；能力池批二点五＋AI 原生组织运行模型批一各 +1——2026-11-19-capability-pool-foundation、2026-11-19-ai-native-operating-model-design；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
-- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 315 份；合计 768 份。
+<<<<<<< HEAD
+- 当前工作树根目录：**771 份 Markdown**（HEAD 全量跟踪；能力池批二点五＋AI 原生组织运行模型批一各 +1——2026-11-19-capability-pool-foundation、2026-11-19-ai-native-operating-model-design；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 318 份；合计 771 份。
+=======
+- 当前工作树根目录：**767 份 Markdown**（HEAD 全量跟踪；能力池批二点五＋AI 原生组织运行模型批一各 +1——2026-11-19-capability-pool-foundation、2026-11-19-ai-native-operating-model-design；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
+- 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 314 份；合计 767 份。
+>>>>>>> 384aafe (docs(ledger): N34 台账批二回填——N34-5/12 已清理、N34-13 归因改写为宿主桥接首帧竞态、N34-1 补验证、N34-2 第二步、N34-3 对照产出（订正 N34-3 被误填的状态）)
 - 当前工作树根目录：**719 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。
 - 根目录分组计数：2026-06 为 29 份；2026-07 为 3 份；2026-08 为 3 份；2026-09 为 51 份；2026-10 为 367 份；2026-11 为 266 份；合计 719 份。
 - 当前工作树根目录：**681 份 Markdown**（HEAD 全量跟踪；2026-11-13 四批并进——matrix 账号切换×2＋台账点名刷新与 vendor 双升级 1＋台账裁决执行 1；此前多批计数漂移 6 于 2026-11-12 批按文件系统实测对齐）；`archive/` 直接根：**2 份 Markdown**。

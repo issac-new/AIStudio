@@ -123,7 +123,7 @@
       "prepush": "always",
       "run": { "argv": ["bash", "simharness/tests/run-gates.sh"], "timeoutMs": 1500000 },
       "covers": ["simharness/**/*.test.ts", "simharness/**/*.test.sh"],
-      "ci": null,
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis sim-gates" },
       "note": "run-gates.sh 内含 vitest --root simharness，不再单列独立入口。CI 未覆盖，由推送前钩子强制。"
     },
     {
@@ -137,7 +137,7 @@
         "timeoutMs": 900000
       },
       "covers": ["runtime/**/test_*.py"],
-      "ci": null,
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis py-runtime" },
       "note": "CI 未覆盖，由推送前钩子强制。"
     },
     {
@@ -150,7 +150,7 @@
         "timeoutMs": 600000
       },
       "covers": ["team/tests/**/test_*.py"],
-      "ci": null,
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis py-team" },
       "note": "product-tests 工作流对 team/** 设了 paths-ignore，由推送前钩子强制。"
     },
     {
@@ -204,7 +204,7 @@
       ],
       "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "typecheck"], "timeoutMs": 1800000 },
       "covers": [],
-      "ci": null,
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis yc-typecheck" },
       "note": "CI 未覆盖，由推送前钩子按路径强制。"
     },
     {
@@ -223,7 +223,7 @@
       ],
       "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "test:engineering"], "timeoutMs": 2400000 },
       "covers": [],
-      "ci": null,
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis yc-test-eng" },
       "note": "上游脚本依赖事先构建好的 @zcode/contracts 与 @zcode/e2e-report，未声明该前置；全新检出必须经本矩阵入口执行。清单来源 vendor/zcode/scripts/engineering-test-files.json。首次运行会联网下载 NSIS 工具集。"
     },
     {
@@ -234,7 +234,7 @@
       "paths": ["zcode-patches/**", "vendor/zcode/**"],
       "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "db:schema:check"], "timeoutMs": 600000 },
       "covers": [],
-      "ci": null
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis yc-db-schema" }
     },
     {
       "id": "yc-lint",
@@ -243,6 +243,15 @@
       "prepush": "paths",
       "paths": ["zcode-patches/**", "vendor/zcode/**"],
       "run": { "cwd": "vendor/zcode", "argv": ["pnpm", "lint"], "timeoutMs": 900000 },
+      "covers": [],
+      "ci": { "workflow": "regression-axes.yml", "anchor": "--axis yc-lint" }
+    },
+    {
+      "id": "dependency-audit",
+      "title": "依赖漏洞审计（studio 与 Ycode 生产依赖，清单外的高危或严重才失败）",
+      "scopes": ["merge", "full"],
+      "prepush": "never",
+      "run": { "argv": ["node", "scripts/dependency-audit.mjs"], "timeoutMs": 600000 },
       "covers": [],
       "ci": null
     },
