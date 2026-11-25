@@ -60,49 +60,84 @@ describe('补丁 820：MCP 五个工具', () => {
 
 describe('动作契约登记（action-gate）', () => {
   // 2026-11-25 真实会话走查：surface_create 报 not registered in action contracts。
-  // 代理运行时有 fail-closed 的动作闸门，工具没在契约里显式登记就按「不可逆」拦截；
+  // 代理运行时有一道动作闸门，工具没在契约里显式登记就按默认策略「不可逆」拦截；
   // 批一的 show_surface 当初也漏了，单测与接线断言都覆盖不到这一层。
-  // 范围只锁 interaction 服务：浏览器/用法/接口三个服务的 45 个工具是存量债，另行裁决。
-  // 键名格式：服务在配置里叫 ekko-studio-interaction（连字符），上线时经净化变成
-  // mcp__ekko_studio_interaction__ekko_studio_<工具名>（下划线）——以克隆库里模型实际发出的名字为准。
+  // 同日把其余三个服务（用法、浏览器、接口）共 44 个工具逐个定级并登记（spec
+  // 2026-11-25-mcp-action-contracts-remaining，用户选做法 A「只登记」），守门随之扩到四个服务。
+  // 键名格式：服务在配置里用连字符（ekko-studio-interaction），上线时经净化变成下划线，
+  // 故键是 mcp__ekko_studio_<服务名>__ekko_studio_<工具名>——以克隆库里模型实际发出的名字为准。
   const contracts = readFileSync(resolve(__dirname, '../../../../team/profiles/_shared/action-contracts.yaml'), 'utf8')
-  const registered = new Set(Array.from(contracts.matchAll(/^ {2}mcp__ekko_studio_interaction__ekko_studio_([a-z0-9_]+):/gm), match => match[1]))
+  // MCP 脚本里的工具集 -> 模型发出的键前缀。服务在配置里用连字符，上线时经净化变成下划线：
+  // ekko-studio-interaction -> mcp__ekko_studio_interaction__，其余三个同理。
+  const TOOLSET_KEY_PREFIX: Record<string, string> = {
+    plan: 'mcp__ekko_studio_interaction__ekko_studio_',
+    use: 'mcp__ekko_studio_use__ekko_studio_',
+    browser: 'mcp__ekko_studio_browser__ekko_studio_',
+    api: 'mcp__ekko_studio_api__ekko_studio_',
+  }
+  // 契约里登记的键（只取 ekko_studio 的四个服务），原样保存，不做名字反解
+  const registeredKeys = new Set(Array.from(contracts.matchAll(/^ {2}(mcp__ekko_studio_[a-z_]+__ekko_studio_[a-z0-9_]+):/gm), match => match[1]))
 
-  it('注入态 MCP 脚本里 interaction 服务的每个工具都在契约里有登记', () => {
+  /** 注入态 MCP 脚本里的工具定义：工具集 -> 工具名集合（去掉 ekko_studio_ 前缀）。 */
+  function definedTools(): Map<string, Set<string>> {
     // 锁注入态（同 kanban-patch-409-guard 等先例）：npm test 的 pretest 先跑 ensure-injected，漏注入即红
     const scriptPath = resolve(__dirname, '../../../../vendor/hermes-studio/bin/ekko-studio-mcp.mjs')
     expect(existsSync(scriptPath), 'MCP 脚本在（未注入树先跑 npm run inject）').toBe(true)
     const script = readFileSync(scriptPath, 'utf8')
     // 工具定义：name: 'ekko_studio_xxx'，其后 400 字符内给出所属 toolset。
-    // interaction 服务在配置里以 toolset=plan 启动（见宿主 config.yaml 的 ekko-studio-interaction.args）。
     const defined = new Map<string, string>()
     for (const match of script.matchAll(/name:\s*'(ekko_studio_[a-z0-9_]+)'[\s\S]{0,400}?toolset:\s*'([a-z_]+)'/g)) {
       if (!defined.has(match[1])) defined.set(match[1], match[2])
     }
-    // 比较口径统一为去掉 ekko_studio_ 前缀的工具名（与 registered 的捕获组一致）
-    const interaction = [...defined].filter(([, toolset]) => toolset === 'plan')
-      .map(([name]) => name.replace(/^ekko_studio_/, ''))
-    expect(interaction.length).toBeGreaterThanOrEqual(9)
-    const missing = interaction.filter(name => !registered.has(name))
-    expect(missing, `以下 interaction 工具未在 team/profiles/_shared/action-contracts.yaml 登记，会被 action-gate 拦截：${missing.join(' ')}`).toEqual([])
+    const byToolset = new Map<string, Set<string>>()
+    for (const [name, toolset] of defined) {
+      if (!byToolset.has(toolset)) byToolset.set(toolset, new Set())
+      byToolset.get(toolset)!.add(name.replace(/^ekko_studio_/, ''))
+    }
+    return byToolset
+  }
+
+  it('注入态 MCP 脚本里四个服务的每个工具都在契约里有登记', () => {
+    for (const [toolset, prefix] of Object.entries(TOOLSET_KEY_PREFIX)) {
+      const tools = definedTools().get(toolset) ?? new Set<string>()
+      expect(tools.size, `${toolset} 工具集在脚本里应有工具定义`).toBeGreaterThan(0)
+      const missing = [...tools].filter(name => !registeredKeys.has(`${prefix}${name}`))
+      expect(missing, `以下 ${toolset} 工具集的工具未在 team/profiles/_shared/action-contracts.yaml 登记，会被 action-gate 拦截：${missing.join(' ')}`).toEqual([])
+    }
   })
 
-  it('本批六个界面工具都已登记（五个持久式 + 阻塞式）', () => {
-    for (const name of ['surface_create', 'surface_update', 'surface_inspect', 'surface_close', 'surface_catalog', 'show_surface']) {
-      expect(registered.has(name), name).toBe(true)
+  it('契约里每个 ekko-studio 登记的键，都在 MCP 脚本里有同名工具（防键写错等于没登记）', () => {
+    const known = new Set<string>()
+    for (const [toolset, tools] of definedTools()) {
+      const prefix = TOOLSET_KEY_PREFIX[toolset]
+      if (!prefix) continue
+      for (const name of tools) known.add(`${prefix}${name}`)
     }
+    const dangling = [...registeredKeys].filter(key => !known.has(key))
+    expect(dangling, `以下登记在 MCP 脚本里找不到同名工具（键写错，或工具已退役）：${dangling.join(' ')}`).toEqual([])
+  })
+
+  it('界面工具与四个服务的登记数量符合预期', () => {
+    const I = TOOLSET_KEY_PREFIX.plan
+    // 交互服务：五个持久式 + 阻塞式 + 澄清 + 计划 + 两个会话目标
+    for (const name of ['surface_create', 'surface_update', 'surface_inspect', 'surface_close', 'surface_catalog', 'show_surface']) {
+      expect(registeredKeys.has(`${I}${name}`), name).toBe(true)
+    }
+    const count = (prefix: string) => [...registeredKeys].filter(key => key.startsWith(prefix)).length
+    expect(count(TOOLSET_KEY_PREFIX.plan)).toBe(10)
+    expect(count(TOOLSET_KEY_PREFIX.use)).toBe(29)
+    expect(count(TOOLSET_KEY_PREFIX.browser)).toBe(13)
+    expect(count(TOOLSET_KEY_PREFIX.api)).toBe(2)
   })
 
   it('登记条目的键是模型发出的全名，与 MCP 脚本里的工具名逐字对应', () => {
     // 闸门拿到的是原始工具名（mcp__<净化后的服务名>__<工具名>），不做去前缀，键写错等于没登记。
-    // 实测口径：服务名 ekko-studio-interaction 净化后为 ekko_studio_interaction（下划线）。
-    const script = readFileSync(resolve(__dirname, '../../../../vendor/hermes-studio/bin/ekko-studio-mcp.mjs'), 'utf8')
-    for (const name of registered) {
-      expect(contracts).toContain(`mcp__ekko_studio_interaction__ekko_studio_${name}:`)
-      expect(script).toContain(`name: 'ekko_studio_${name}'`)
-    }
     // 净化规则的反向断言：契约里不应出现带连字符的服务名写法（那是配错键的典型形态）
     expect(contracts).not.toMatch(/^ {2}mcp__ekko-studio-/m)
+    // 四个服务在契约里各有一段登记
+    for (const prefix of Object.values(TOOLSET_KEY_PREFIX)) {
+      expect(contracts).toContain(`\n  ${prefix}`)
+    }
   })
 })
 
