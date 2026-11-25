@@ -5,7 +5,7 @@
 // 部分成功 partial:true（防整单重试双写），逐条 rejected 不再谎报 ok:true。
 // X1 收口：/projection/watch|unwatch 同归属闸（403 invocation_not_allowed，引擎侧零调用）。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const runtimeMock = vi.hoisted(() => {
@@ -23,6 +23,27 @@ const runtimeMock = vi.hoisted(() => {
     rowsRangeQueue: [] as Array<Record<string, unknown> | Error>,
   }
   const defaultBase = { rows: [], atSeq: 1, atRevision: 7, atLogEpoch: 'epoch-1', hasMore: false }
+  // 桥接与代理共用同一个假 agent：修复后 /fork、检查点恢复也经 withBridge 取 clientId，
+  // 两处调用面必须看到一致的录制行为。
+  const makeAgent = () => ({
+    // 旧远程过程调用方法：宿主不得再用（返回一个明显不对的结果，误用即被断言抓出）
+    createSession: async () => { throw new Error('legacy createSession RPC 不应被调用') },
+    sendConversationCommandV4: async (params: { envelope: Record<string, unknown> }) => {
+      if (params.envelope?.type === 'createSession') {
+        state.createSessionCalls.push(params)
+        return state.createSessionAck ?? { status: 'accepted', result: { type: 'createSession', sessionId: 's-9' } }
+      }
+      state.sent.push(params.envelope)
+      const next = state.agentQueue.shift()
+      if (next instanceof Error) throw next
+      return next ?? { status: 'accepted' }
+    },
+    conversationRowsRangeV4: async () => {
+      const next = state.rowsRangeQueue.shift()
+      if (next instanceof Error) throw next
+      return next ?? defaultBase
+    },
+  })
   const runtime = {
     connected: false,
     watching: [] as unknown[],
@@ -39,37 +60,25 @@ const runtimeMock = vi.hoisted(() => {
       if (state.failSession) throw new Error('subscription_failed: boom')
     },
     async unwatch(p: string) { state.calls.push(`unwatch:${p}`) },
-    /** 建会话调用（N34-2 守门：须带 projectId）。 */
+    /** 建会话调用（N34-2 守门：须经 v4 建会话命令、带 projectId）。 */
     createSessionCalls: [] as Array<Record<string, unknown>>,
+    /** 建会话命令回执注入（缺省＝accepted＋createSession 结果）。 */
+    createSessionAck: null as null | Record<string, unknown>,
     savedProjects: [] as Array<Record<string, unknown>>,
     async withBridge(fn: (bridge: unknown) => Promise<unknown>) {
       state.agentCalls += 1
       return fn({
+        clientId: 'client-bridge-test',
         project: {
           readProjects: async () => [],
           saveProject: async (input: Record<string, unknown>) => { state.savedProjects.push(input); return { id: 'proj-1', hostId: 'remote:server:h', name: 'w', roots: [{ rootPath: input.roots?.[0] }] } },
         },
-        agent: {
-          createSession: async (params: Record<string, unknown>) => { state.createSessionCalls.push(params); return { session: { sessionId: 's-9' } } },
-          sendConversationCommandV4: async () => ({ status: 'accepted' }),
-        },
+        agent: makeAgent(),
       })
     },
     async withAgent(fn: (agent: unknown) => Promise<unknown>) {
       state.agentCalls += 1
-      return fn({
-        sendConversationCommandV4: async (params: { envelope: Record<string, unknown> }) => {
-          state.sent.push(params.envelope)
-          const next = state.agentQueue.shift()
-          if (next instanceof Error) throw next
-          return next ?? { status: 'accepted' }
-        },
-        conversationRowsRangeV4: async () => {
-          const next = state.rowsRangeQueue.shift()
-          if (next instanceof Error) throw next
-          return next ?? defaultBase
-        },
-      })
+      return fn(makeAgent())
     },
   }
   return { state, runtime }
@@ -111,6 +120,7 @@ beforeEach(() => {
   runtimeMock.state.rowsRangeQueue = []
   runtimeMock.state.createSessionCalls = []
   runtimeMock.state.savedProjects = []
+  runtimeMock.state.createSessionAck = null
 })
 
 describe('测试隔离', () => {
@@ -119,16 +129,79 @@ describe('测试隔离', () => {
     const real = join(homedir(), '.hermes-web-ui', 'overlay', 'dispatch-ledger.jsonl')
     expect(dispatchLedgerPath()).not.toBe(real)
   })
+
+  it('未显式指定路径时，vitest 进程内的台账路径由解析函数自判落临时文件（不依赖全局设置文件）', async () => {
+    // N34-12 第二道防线：分支尚未含 setup.ts 隔离、或别的入口直接 import 本模块时，
+    // 真实台账 (~/.hermes-web-ui/overlay/dispatch-ledger.jsonl) 不得被测试写入。
+    const { dispatchLedgerPath } = await import('../governance/dispatch-ledger')
+    const saved = { ledger: process.env.GOVERNANCE_DISPATCH_LEDGER, home: process.env.HERMES_WEB_UI_HOME }
+    try {
+      delete process.env.GOVERNANCE_DISPATCH_LEDGER
+      delete process.env.HERMES_WEB_UI_HOME
+      expect(process.env.VITEST, '本用例须在 vitest 进程内运行').toBeTruthy()
+      const p = dispatchLedgerPath()
+      expect(p.startsWith(tmpdir()), `应落临时目录，实际 ${p}`).toBe(true)
+      expect(p.endsWith('dispatch-ledger.jsonl')).toBe(true)
+      expect(dispatchLedgerPath()).toBe(p) // 同进程稳定，不每次新建目录
+      // 显式隔离目录仍被尊重（只设 HERMES_WEB_UI_HOME 的用例沿用其隔离目录）
+      process.env.HERMES_WEB_UI_HOME = join(tmpdir(), 'aistudio-isolated-webui-probe')
+      expect(dispatchLedgerPath()).toBe(join(tmpdir(), 'aistudio-isolated-webui-probe', 'overlay', 'dispatch-ledger.jsonl'))
+    } finally {
+      if (saved.ledger === undefined) delete process.env.GOVERNANCE_DISPATCH_LEDGER
+      else process.env.GOVERNANCE_DISPATCH_LEDGER = saved.ledger
+      if (saved.home === undefined) delete process.env.HERMES_WEB_UI_HOME
+      else process.env.HERMES_WEB_UI_HOME = saved.home
+    }
+  })
 })
 
 describe('派单建会话前的项目登记（N34-2）', () => {
-  it('引擎端口：先按工作区登记项目，再带 projectId 建会话（独立形态引擎要求会话属于已登记项目）', async () => {
+  it('引擎端口：先按工作区登记项目，再经 4.0 建会话命令带 projectId 建会话', async () => {
     const { getMentionDispatch } = await import('../zcode/engine-controller')
-    const service = getMentionDispatch() as unknown as { engine: { createSession: (p: { workspacePath: string }) => Promise<unknown> } }
-    const r = await service.engine.createSession({ workspacePath: '/w/p' })
+    const service = getMentionDispatch() as unknown as { engine: { createSession: (p: { workspacePath: string; config?: { mode?: string } }) => Promise<unknown> } }
+    const r = await service.engine.createSession({ workspacePath: '/w/p', config: { mode: 'guarded' } })
     expect(r).toMatchObject({ session: { sessionId: 's-9' } })
     expect(runtimeMock.state.savedProjects).toEqual([{ roots: ['/w/p'], defaultName: 'p' }])
-    expect(runtimeMock.state.createSessionCalls).toEqual([{ workspacePath: '/w/p', projectId: 'proj-1' }])
+    expect(runtimeMock.state.createSessionCalls).toHaveLength(1)
+    const call = runtimeMock.state.createSessionCalls[0]
+    // 4.0 的实际创建路径＝v4 建会话命令（旧远程过程调用方法 createSession 建出的会话无法执行回合，
+    // 隔离引擎实测发文本报 FOREIGN KEY constraint failed）。
+    expect(call.projectId).toBe('proj-1')
+    expect(call.workspacePath).toBe('/w/p')
+    expect(call.envelope).toMatchObject({
+      type: 'createSession',
+      sessionId: null, // 协议约定：createSession 时为 null
+      clientId: 'client-bridge-test',
+      payload: { workspaceId: '/w/p', config: { mode: 'guarded' } },
+    })
+    expect(typeof call.envelope.commandId).toBe('string')
+    expect(typeof call.envelope.issuedAt).toBe('number')
+  })
+
+  it('引擎端口：发文本信封的 clientId 归一到桥接持久化标识（引擎连接作用域校验）', async () => {
+    // 引擎连接作用域（terminal-client 角色）要求每条命令的 envelope.clientId 等于握手登记的
+    // clientId（zcodeAgentConnectionScope.ts sendConversationCommandV4 → fault.command.clientMismatch）。
+    // 派单服务内部带的是自己的标识，引擎端口发送前必须归一——否则真实引擎一律拒收。
+    const { getMentionDispatch } = await import('../zcode/engine-controller')
+    const service = getMentionDispatch() as unknown as {
+      engine: { sendCommand: (p: { workspacePath: string; envelope: Record<string, unknown> }) => Promise<unknown> },
+    }
+    await service.engine.sendCommand({
+      workspacePath: '/w/p',
+      envelope: { commandId: 'cmd-x', clientId: 'swarmstudio-mention-bus', sessionId: 's1', type: 'sendText', payload: { text: 'hi' }, issuedAt: 1 },
+    })
+    expect(runtimeMock.state.sent).toHaveLength(1)
+    expect(runtimeMock.state.sent[0].clientId).toBe('client-bridge-test')
+  })
+
+  it('引擎端口：建会话命令未获接受即抛错并带出状态与原因码（不把失败当成功）', async () => {
+    const { getMentionDispatch } = await import('../zcode/engine-controller')
+    runtimeMock.state.createSessionAck = { status: 'rejected', reasonCode: 'project.remote-project-required' }
+    const service = getMentionDispatch() as unknown as { engine: { createSession: (p: { workspacePath: string }) => Promise<unknown> } }
+    await expect(service.engine.createSession({ workspacePath: '/w/p' })).rejects.toThrow(/createSession: status=rejected reasonCode=project\.remote-project-required/)
+    runtimeMock.state.createSessionAck = { status: 'accepted', result: { type: 'inputAccepted' } } // 结果类型不符也不算成功
+    await expect(service.engine.createSession({ workspacePath: '/w/p' })).rejects.toThrow(/result=inputAccepted/)
+    runtimeMock.state.createSessionAck = null
   })
 })
 
@@ -143,6 +216,8 @@ describe('比对基线字段（N34-1）：引擎对分叉、检查点恢复的�
     const env = runtimeMock.state.sent
     expect(env).toHaveLength(1)
     expect(env[0]).toMatchObject({ type: 'forkAssistant', sessionId: 's1', baseRevision: 7, baseLogEpoch: 'epoch-1', payload: { target: { rowId: 3, entityId: 'e1' } } })
+    // 连接作用域校验：命令 clientId 必须等于握手登记的桥接标识（写死标识会被真实引擎拒 fault.command.clientMismatch）
+    expect(env[0].clientId).toBe('client-bridge-test')
     expect(typeof env[0].issuedAt).toBe('number')
     const v = (await loadEngineCommandValidator())(env[0])
     expect(v.ok, v.issues.join('；')).toBe(true)
@@ -191,6 +266,8 @@ describe('比对基线字段（N34-1）：引擎对分叉、检查点恢复的�
       expect(ctx.body, mode).toMatchObject({ ok: true })
       expect(runtimeMock.state.sent.length, mode).toBeGreaterThan(0)
       for (const env of runtimeMock.state.sent) {
+        // 连接作用域校验：每个信封的 clientId 必须等于握手登记的桥接标识
+        expect(env.clientId, mode).toBe('client-bridge-test')
         const v = validate(env)
         expect(v.ok, `${mode} / ${String(env.type)} 被引擎拒绝：${v.issues.join('；')}`).toBe(true)
       }
