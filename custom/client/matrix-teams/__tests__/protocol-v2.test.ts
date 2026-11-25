@@ -70,6 +70,13 @@ describe('parseAgentProfileContent（M-A 计划 T3-8）', () => {
     expect(parseAgentProfileContent({ ...ok, agents: [{ ...ok.agents[0], maxParallel: 1.5 }] })).toBeNull()
     expect(parseAgentProfileContent({ ...ok, schemaVersion: 1 })).toBeNull()
   })
+  it('agent.profile：合法 profile 保留；非法字符整条拒收', () => {
+    const parsed = parseAgentProfileContent({ ...ok, agents: [{ ...ok.agents[0], profile: 'worker-coder' }] })
+    expect(parsed).not.toBeNull()
+    expect(parsed?.agents[0].profile).toBe('worker-coder')
+    // 含空格与感叹号：字符集外 → 整条拒收（不静默丢字段，防错配路由）
+    expect(parseAgentProfileContent({ ...ok, agents: [{ ...ok.agents[0], profile: 'bad profile!' }] })).toBeNull()
+  })
 })
 
 describe('parseAgentMessageContent（M-A 计划 T3-9）', () => {

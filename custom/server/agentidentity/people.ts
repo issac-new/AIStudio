@@ -2,10 +2,12 @@
 // 自然人名单：责任卡的主责任人 / 复核人 / 接管人 / 维护人只能引用这里 active 的人。
 // 存储与身份册同目录（AGENT_IDENTITY_STORE > underWebUi('agent-identity')），独立文件 people.json。
 // 候选可由种子脚本从 git 作者派生，默认 inactive；启用须显式调用 activatePerson。
+// 停用走 deactivatePerson（记停用时间、操作者、理由；重复停用幂等），不直接改 active。
 import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
+import type { Stage } from './lifecycle'
 
 export interface Person {
   id: string
@@ -18,6 +20,11 @@ export interface Person {
   source: 'git' | 'manual'
   createdAt: number
   activatedAt?: number
+  /** 停用记录（2026-11-24 数字员工批一）：由 deactivatePerson 写入。重新启用不清除——保留为
+   *  最近一次停用，再次停用时刷新。责任卡是否失效只看 active（responsibility.ts 的 validateCard）。 */
+  deactivatedAt?: number
+  deactivatedBy?: string
+  deactivatedReason?: string
 }
 
 interface StoreShape { people: Person[]; nextSeq: number }
@@ -104,6 +111,11 @@ export function upsertPerson(
     ? store.people.find((p) => p.emails.some((e) => emails.includes(e)))
     : undefined
   const existing = byId ?? byEmail
+  // 显式 id 未命中、邮箱却属另一个人时拒绝合并（2026-11-25 批一审查修复）：静默把
+  // 别人返回并改写会让「登录名=自然人 id」的署名前提错配——fail-soft 不造假，宁可拒。
+  if (!byId && input.id && byEmail && byEmail.id !== input.id) {
+    return { ok: false, problems: [`id ${input.id} 与邮箱已属他人（${byEmail.id}），不能合并`] }
+  }
   if (existing) {
     existing.name = name
     existing.emails = [...new Set([...existing.emails, ...emails])]
@@ -137,4 +149,47 @@ export function activatePerson(
   person.activatedAt = Date.now()
   writeStore(store)
   return { ok: true, problems: [], person: { ...person } }
+}
+
+/** 仍引用某自然人的未退役执行单元（责任卡的主责任人/复核人/接管人/维护人任一命中）。
+ *  身份册在函数体内动态 import：agent-identity 静态依赖本模块取 listPeople，本模块若静态
+ *  反向依赖即成环。 */
+async function referencingUnits(personId: string): Promise<Array<{ id: string; name: string; stage: Stage }>> {
+  const { listIdentities } = await import('./agent-identity')
+  const { stageOf } = await import('./lifecycle')
+  const referencedBy: Array<{ id: string; name: string; stage: Stage }> = []
+  for (const identity of listIdentities()) {
+    const card = identity.responsibilityCard
+    if (!card || stageOf(identity) === 'retired') continue
+    if (
+      card.primaryOwner === personId || card.reviewer === personId
+      || card.takerOver === personId || card.maintainer === personId
+    ) {
+      referencedBy.push({ id: identity.id, name: identity.name, stage: stageOf(identity) })
+    }
+  }
+  return referencedBy
+}
+
+/** 停用自然人：置 active=false 并记停用时间、操作者与理由。重复停用幂等——已停用则不写盘，
+ *  三字段保持首次停用的记录。referencedBy 列出仍引用此人的未退役执行单元，只供提示，不阻断停用。 */
+export async function deactivatePerson(
+  id: string,
+  actor: string,
+  reason: string,
+): Promise<{ ok: boolean; problems: string[]; person?: Person; referencedBy: Array<{ id: string; name: string; stage: Stage }> }> {
+  const store = readStore()
+  const person = store.people.find((p) => p.id === id)
+  if (!person) return { ok: false, problems: [`自然人不存在：${id}`], referencedBy: [] }
+  // 先读身份册再写盘：读失败（台账损坏如实上抛）时停用整体不发生，不留引用未知的半截状态
+  const referencedBy = await referencingUnits(id)
+  // 「重复停用」= 此前已有停用记录；从未启用过的人首次被停用仍要落记录
+  if (person.active || person.deactivatedAt === undefined) {
+    person.active = false
+    person.deactivatedAt = Date.now()
+    person.deactivatedBy = actor
+    person.deactivatedReason = reason
+    writeStore(store)
+  }
+  return { ok: true, problems: [], person: { ...person }, referencedBy }
 }

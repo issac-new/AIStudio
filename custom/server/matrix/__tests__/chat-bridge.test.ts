@@ -19,7 +19,7 @@ function jsonRes(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } })
 }
 
-function makeGcs(agents: BridgeGcMessage[] = []) {
+function makeGcs(agents: BridgeGcMessage[] = [], agentViews?: Array<Record<string, unknown>>) {
   const published: Array<{ roomId: string; senderId: string; senderName: string; content: string }> = []
   let roomExists = true
   const gcs: GroupChatServerLike = {
@@ -32,7 +32,7 @@ function makeGcs(agents: BridgeGcMessage[] = []) {
       getRoom: () => (roomExists ? { id: 'g1' } : null),
       getMessagesForContext: () => agents,
     }),
-    getRoomAgentViews: () => [{ agentId: 'a1', name: 'maker', agent: 'hermes' }],
+    getRoomAgentViews: () => agentViews ?? [{ agentId: 'a1', name: 'maker', agent: 'hermes' }],
     bridgeEvents: new EventEmitter() as unknown as GroupChatServerLike['bridgeEvents'],
   }
   return { gcs, published, setRoomExists: (v: boolean) => { roomExists = v }, events: gcs.bridgeEvents as unknown as EventEmitter }
@@ -251,6 +251,37 @@ describe('agent.profile v2 声明', () => {
     const { parseAgentProfileContent } = await import('../../../client/matrix-teams/protocol')
     const parsed = parseAgentProfileContent(body)
     expect(parsed?.agents[0].capabilities).toEqual(['coding', 'review'])
+    rmSync(home, { recursive: true, force: true })
+  })
+
+  it('agent.profile 声明带出房间 Agent 的 profile；非法值不带该字段', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'v14-bridge-profile-'))
+    const fake = makeGcs([], [
+      { name: 'wc', agentId: 'a1', agent: 'hermes', profile: 'worker-coder' },
+      { name: 'bad', agentId: 'a2', agent: 'hermes', profile: 'bad profile!' },
+    ])
+    const states: Array<{ body: Record<string, unknown> }> = []
+    const bridge = new ChatBridge({
+      env: ENV, mappings: [MAP], gcs: fake.gcs,
+      fetchImpl: (async (u: unknown, init?: RequestInit) => {
+        if (String(u).includes('/state/')) {
+          states.push({ body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown> })
+        }
+        return jsonRes({ event_id: '$n' })
+      }) as unknown as typeof fetch,
+      stateFile: join(home, 'state.json'),
+    })
+    await bridge.start()
+    bridge.stop()
+    expect(states).toHaveLength(1)
+    const agents = states[0].body.agents as Array<Record<string, unknown>>
+    expect(agents[0].profile).toBe('worker-coder')
+    expect('profile' in agents[1]).toBe(false)
+    // 与客户端协议解析器对账：合法 profile 保留、非法值不拖垮整条声明
+    const { parseAgentProfileContent } = await import('../../../client/matrix-teams/protocol')
+    const parsed = parseAgentProfileContent(states[0].body)
+    expect(parsed?.agents[0].profile).toBe('worker-coder')
+    expect(parsed?.agents[1].profile).toBeUndefined()
     rmSync(home, { recursive: true, force: true })
   })
 })

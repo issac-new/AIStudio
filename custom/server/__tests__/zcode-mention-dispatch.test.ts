@@ -3,10 +3,31 @@
 // coalesced 单 pending 槽 / runtime_offline / target_unavailable / deferred /
 // command_rejected 透传 reasonCode）+ 控制器接线。multica 语义锚：
 // docs/upstream-analysis/multica.md §3.1（逐 mention outcome + 单 pending 槽）。
-import { describe, it, expect } from 'vitest'
+//
+// 数字员工批一 Task 4：派单门段用例把 AGENT_IDENTITY_STORE 指到 mkdtemp 直写台账
+// （不读开发机真实身份册）；门读数全部经真实 readUnitGateFacts/assessUnitDispatchGate，
+// 只有任务能力快照与能力读数走 vi.mock（门本身不被 mock 掉）。
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { parseMentions, MentionDispatchService, uuidV7Like, type DispatchEnginePort, type MentionOutcome } from '../zcode/mention-dispatch'
+import { parseMentions, planDispatch, MentionDispatchService, uuidV7Like, type DispatchEnginePort, type MentionOutcome } from '../zcode/mention-dispatch'
+import { assessUnitDispatchGate, readUnitGateFacts } from '../agentidentity/dispatch-gate'
+import { fetchTaskTitleAndBodyByTaskId } from '../kanban/dispatch-readiness'
+import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
+
+// 能力快照/能力读数只在这两个用例里被调用（带 taskId 且声明能力需求）；缺省实现
+// 保证其余用例即便误触也走原 fail-soft 语义（快照 null / 读数 pass）。
+vi.mock('../kanban/dispatch-readiness', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../kanban/dispatch-readiness')>()
+  return { ...mod, fetchTaskTitleAndBodyByTaskId: vi.fn(async () => null) }
+})
+vi.mock('../capabilitypool/readiness', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../capabilitypool/readiness')>()
+  return { ...mod, assessTaskCapabilityReadiness: vi.fn((): ReturnType<typeof assessTaskCapabilityReadiness> => ({ decision: 'pass', reasons: [], candidates: [], evidenceRefs: [] })) }
+})
 
 const OVERLAY_ROOT = resolve(__dirname, '../../..')
 
@@ -157,6 +178,171 @@ describe('派单链（MentionDispatchService）', () => {
     expect((await svc.dispatch({ workspacePath: '/w', text: '@zcode b' }))[0].reason).toBe('queued')
     tick += 200 // 过 TTL
     expect((await svc.dispatch({ workspacePath: '/w', text: '@zcode c' }))[0].reason).toBe('queued')
+  })
+})
+
+// ── 数字员工批一 Task 4：派单门接入统一判定核 ──────────────────────────────
+// 夹具：AGENT_IDENTITY_STORE 指向 mkdtemp，直写 identities.json/people.json（同目录约定）；
+// 门读数经真实 readUnitGateFacts/assessUnitDispatchGate 采集，门本身不被 mock。
+describe('派单门（数字员工批一）', () => {
+  let dir = ''
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'mention-gate-'))
+    process.env.AGENT_IDENTITY_STORE = dir
+  })
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+    delete process.env.AGENT_IDENTITY_STORE
+    delete process.env.WORKUNIT_DISPATCH_GATE
+  })
+
+  // 与 dispatch-gate.test.ts 同源的责任卡夹具：卡面要素齐备 + 责任人 alice/bob 在岗 → 门 pass
+  const VALID_CARD = {
+    deliveryStandard: '可复现', riskTier: 'medium', primaryOwner: 'alice', escalation: ['e'],
+    pauseConditions: ['p'], takerOver: 'bob', testCaseVersion: 'tc-1',
+    costBudget: { limit: 1, unit: 'CNY' }, maintainer: 'alice', deploymentLocation: 'x',
+  }
+  const personRow = (id: string) => ({ id, name: id, emails: [], active: true, source: 'manual', createdAt: 1 })
+  const unitRow = (over: Record<string, unknown> = {}) => ({
+    id: 'aid-001', name: 'u-1', kind: 'agent', owner: 'alice', toolAllowlist: [],
+    credentials: [], delegations: [], createdAt: 1, updatedAt: 1,
+    runtimeBindings: { agents: ['zcode'] },
+    responsibilityCard: VALID_CARD,
+    lifecycle: { stage: 'running', history: [] },
+    ...over,
+  })
+  const seedLedger = (identities: unknown[], people: unknown[] = [personRow('alice'), personRow('bob')]) => {
+    writeFileSync(join(dir, 'identities.json'), JSON.stringify({ identities, nextSeq: identities.length + 1, nextDelegationSeq: 1 }))
+    writeFileSync(join(dir, 'people.json'), JSON.stringify({ people, nextSeq: people.length + 1 }))
+  }
+  const gateFacts = (over: Record<string, unknown> = {}) => ({
+    knownAgents: new Set(['zcode']),
+    deferredAgents: new Set() as Set<string>,
+    pendingSince: new Map() as Map<string, number>,
+    pendingTtlMs: 1000,
+    now: 0,
+    ...over,
+  })
+
+  it('已绑定单元阶段 running → 照常起跑；读数 pass 随结果可见', async () => {
+    seedLedger([unitRow()])
+    // 读数 pass 随结果可见：真实门读数并入判定核后仍判 start（queued）
+    const verdict = assessUnitDispatchGate(readUnitGateFacts('zcode', 'agent'))
+    expect(verdict.decision).toBe('pass')
+    const plan = planDispatch(
+      { token: { target: 'zcode', kind: 'agent' }, workspacePath: '/ws/p', engineOnline: true },
+      { ...gateFacts(), unitGate: new Map([['zcode', verdict]]) },
+    )
+    expect(plan).toMatchObject({ action: 'start', reason: 'queued' })
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下' })
+    expect(result[0]).toMatchObject({ reason: 'queued', target: 'zcode' })
+    expect(engine.sessions).toBe(1)
+  })
+
+  it('已绑定单元阶段 retired → reject unit_gate，引擎未被调用', async () => {
+    seedLedger([unitRow({ lifecycle: { stage: 'retired', history: [] } })])
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下' })
+    expect(result[0].reason).toBe('unit_gate')
+    expect(result[0].detail).toContain('unit_retired')
+    expect(engine.sessions).toBe(0)
+  })
+
+  it.each(['registered', 'changing'])('阶段 %s → reject unit_gate', async (stage) => {
+    seedLedger([unitRow({ lifecycle: { stage, history: [] } })])
+    const svc = new MentionDispatchService({ engine: fakeEngine(), clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下' })
+    expect(result[0].reason).toBe('unit_gate')
+    expect(result[0].detail).toContain(`unit_${stage}`)
+  })
+
+  it('未绑定目标 → 行为不变（queued）', async () => {
+    seedLedger([]) // 身份册里没有任何绑定 zcode 的身份
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下' })
+    expect(result[0].reason).toBe('queued')
+    expect(engine.sessions).toBe(1)
+  })
+
+  it('门关闭（WORKUNIT_DISPATCH_GATE=off）→ retired 单元照常起跑', async () => {
+    seedLedger([unitRow({ lifecycle: { stage: 'retired', history: [] } })])
+    process.env.WORKUNIT_DISPATCH_GATE = 'off'
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下' })
+    expect(result[0].reason).toBe('queued')
+    expect(engine.sessions).toBe(1)
+  })
+
+  it('台账不可读 → 起跑且 unitGate 读数为 unknown', async () => {
+    writeFileSync(join(dir, 'identities.json'), 'not-json{{{') // 台账内容非法 JSON
+    const facts = readUnitGateFacts('zcode', 'agent')
+    expect(facts.identities).toBeNull()
+    expect(assessUnitDispatchGate(facts).decision).toBe('unknown')
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下' })
+    expect(result[0].reason).toBe('queued')
+    expect(engine.sessions).toBe(1)
+  })
+
+  it('多目标文本：一个被拦、其余照常起跑', async () => {
+    seedLedger([
+      unitRow({ id: 'aid-ret', name: 'u-ret', runtimeBindings: { agents: ['ret-x'] }, lifecycle: { stage: 'retired', history: [] } }),
+      unitRow({ id: 'aid-002', name: 'u-zcode' }),
+    ])
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c', knownAgents: ['ret-x', 'zcode'] })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@ret-x @zcode 修一下' })
+    expect(result[0]).toMatchObject({ reason: 'unit_gate', target: 'ret-x' })
+    expect(result[1]).toMatchObject({ reason: 'queued', target: 'zcode' })
+    expect(engine.sessions).toBe(1) // 只有 zcode 起了 run
+  })
+
+  it('门通过但能力读数为 block → reject capability_block', async () => {
+    seedLedger([unitRow()])
+    vi.mocked(fetchTaskTitleAndBodyByTaskId).mockResolvedValue({ title: 't', body: null, assignee: null, skills: [], required_capabilities: ['cap:x'] })
+    vi.mocked(assessTaskCapabilityReadiness).mockReturnValue({ decision: 'block', reasons: ['capability_not_supplied:x'], candidates: [], evidenceRefs: [] })
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下', taskId: 't_x' })
+    expect(result[0].reason).toBe('capability_block')
+    expect(result[0].detail).toContain('capability_not_supplied:x')
+    expect(engine.sessions).toBe(0)
+  })
+
+  it('门通过、能力读数 warn → 起跑并带警告', async () => {
+    seedLedger([unitRow()])
+    vi.mocked(fetchTaskTitleAndBodyByTaskId).mockResolvedValue({ title: 't', body: null, assignee: null, skills: [], required_capabilities: ['cap:x'] })
+    const warnReadiness = { decision: 'warn' as const, reasons: ['capability_thin:x'], candidates: [], evidenceRefs: [] }
+    vi.mocked(assessTaskCapabilityReadiness).mockReturnValue(warnReadiness)
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下', taskId: 't_x' })
+    expect(result[0].reason).toBe('queued')
+    // 判定核面：warn 追加进 plan.warnings（告警而非拦截）
+    const verdict = assessUnitDispatchGate(readUnitGateFacts('zcode', 'agent'))
+    const plan = planDispatch(
+      { token: { target: 'zcode', kind: 'agent' }, workspacePath: '/ws/p', engineOnline: true },
+      { ...gateFacts(), unitGate: new Map([['zcode', verdict]]), capabilityReadiness: warnReadiness },
+    )
+    expect(plan.action).toBe('start')
+    expect(plan.warnings?.join()).toContain('capability_thin:x')
+  })
+
+  it('能力 block 对未绑定目标不拦截（维持只警告）', async () => {
+    seedLedger([]) // 未绑定：门读数 skipped，能力硬门只适用于已绑定单元
+    vi.mocked(fetchTaskTitleAndBodyByTaskId).mockResolvedValue({ title: 't', body: null, assignee: null, skills: [], required_capabilities: ['cap:x'] })
+    vi.mocked(assessTaskCapabilityReadiness).mockReturnValue({ decision: 'block', reasons: ['capability_not_supplied:x'], candidates: [], evidenceRefs: [] })
+    const engine = fakeEngine()
+    const svc = new MentionDispatchService({ engine, clientId: 'c' })
+    const result = await svc.dispatch({ workspacePath: '/ws/p', text: '@zcode 修一下', taskId: 't_x' })
+    expect(result[0].reason).toBe('queued')
+    expect(engine.sessions).toBe(1)
   })
 })
 

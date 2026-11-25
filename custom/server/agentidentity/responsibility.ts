@@ -4,6 +4,7 @@
 //
 // 分离规则按研究文档 2.1 的强监管限定：只有 riskTier='high' 强制复核人且不得与
 // 主责任人为同一人；中低风险允许单人，但卡面会显示「未分离」缺口供人判断。
+import { createHash } from 'node:crypto'
 import type { Person } from './people'
 
 export interface AdmissionEvidence {
@@ -25,7 +26,7 @@ export interface ResponsibilityCard {
   costBudget: { limit: number; unit: string }
   maintainer: string
   deploymentLocation: string
-  businessOwnerSign?: { signedBy: string; signedAt: number; note?: string }
+  businessOwnerSign?: { signedBy: string; signedAt: number; note?: string; cardRevision?: string; stale?: boolean }
   admissionEvidence?: AdmissionEvidence
 }
 
@@ -70,6 +71,15 @@ export function cardGaps(
   if (opts.forAdmission) {
     if (!card.businessOwnerSign || !nonEmpty(card.businessOwnerSign.signedBy)) {
       gaps.push({ field: 'business-owner-sign', detail: '准入前须由业务负责人签署责任卡' })
+    } else {
+      // 签署绑定卡版本指纹：内容改动后旧签署失效（stale），须重新签署
+      if (card.businessOwnerSign.stale) {
+        gaps.push({ field: 'business-owner-sign', detail: '业务负责人签署已失效（责任卡内容已变更），须重新签署' })
+      }
+      // 存量签署缺版本指纹时无法判定对应哪个版本，一律要求重签
+      if (!nonEmpty(card.businessOwnerSign.cardRevision)) {
+        gaps.push({ field: 'business-owner-sign', detail: '旧签署无版本指纹，须重签' })
+      }
     }
     const ev = card.admissionEvidence
     if (!ev || !arrNonEmpty(ev.representativeTasks) || !arrNonEmpty(ev.edgeCases) || !arrNonEmpty(ev.dataPermissionReview)) {
@@ -77,6 +87,25 @@ export function cardGaps(
     }
   }
   return gaps
+}
+
+/** 规范化 JSON（键字典序排序）——同一内容恒得同一串，是版本指纹的输入。 */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`
+  }
+  return JSON.stringify(value ?? null)
+}
+
+/** 责任卡版本指纹：去掉签署与准入证据后规范化 JSON 的 SHA-256 十六进制。
+ *  签署对象与准入证据不进指纹——改证据不该让签署失效，改卡面内容才失效。 */
+export function cardRevision(card: ResponsibilityCard): string {
+  const { businessOwnerSign: _sign, admissionEvidence: _evidence, ...content } = card
+  return createHash('sha256').update(canonicalJson(content)).digest('hex')
 }
 
 /** 中低风险卡若登记了与主责任人相同的复核人，视为「未分离」提示（不阻断）。 */

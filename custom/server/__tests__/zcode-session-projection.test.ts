@@ -58,6 +58,8 @@ describe('dispatch reason 词表（第一批吸收 #1，multica MUL-4525 模式�
       'frame_fragment_skipped', 'frame_malformed', 'command_rejected', 'internal_error',
       'capacity_exhausted', 'capacity_timeout',
       'team_stop',
+      // 数字员工批一 Task 4 追加（只增不改序）：执行单元派单门与能力硬门
+      'unit_gate', 'capability_block',
     ])
   })
 

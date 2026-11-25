@@ -13,8 +13,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
-import { listPeople } from './people'
-import { cardGaps, validateCard, type ResponsibilityCard } from './responsibility'
+import { listPeople, type Person } from './people'
+import { cardGaps, cardRevision, validateCard, type ResponsibilityCard } from './responsibility'
 import { canTransition, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
@@ -63,6 +63,14 @@ export interface AuditRequirement {
   note?: string
 }
 
+/** 运行时绑定（2026-11-24 数字员工批一）：执行单元显式绑定的派单目标。
+ *  agents=派单目标名（@提及用的名字），matrixAccounts=Matrix 账号全形。
+ *  缺省=未绑定，不受派单门约束（存量身份不回填，见规格 D1/D11）；两个数组都空时整个键不落。 */
+export interface RuntimeBindings {
+  agents?: string[]
+  matrixAccounts?: string[]
+}
+
 export interface AgentIdentity {
   /** 身份 id（aid-序号；稳定主键） */
   id: string
@@ -80,6 +88,8 @@ export interface AgentIdentity {
   responsibilityCard?: ResponsibilityCard
   /** 五阶段生命周期（2026-11-06 起）：缺省按 registered 展示，不批量回填 */
   lifecycle?: Lifecycle
+  /** 运行时绑定（2026-11-24 起）：存量身份可缺；同一目标只能被一个身份绑定 */
+  runtimeBindings?: RuntimeBindings
   credentials: CredentialRecord[]
   delegations: DelegationRecord[]
   createdAt: number
@@ -159,6 +169,61 @@ export function validateIdentityInput(input: Partial<AgentIdentity> & { name?: u
     problems.push('kind 须为 human|agent|bot|service')
   }
   if (input.toolAllowlist !== undefined && !Array.isArray(input.toolAllowlist)) problems.push('toolAllowlist 须为字符串数组')
+  return problems
+}
+
+const BINDING_KEYS = ['agents', 'matrixAccounts'] as const
+
+/** 运行时绑定的字段规范化：去空白、去重，空数组不保留。未传=未声明（空绑定）；
+ *  非对象、字段不是数组或元素非字符串一律拒绝——畸形值落账会让派单门按错位的目标匹配。 */
+export function normalizeRuntimeBindings(
+  raw: unknown,
+): { ok: true; bindings: RuntimeBindings } | { ok: false; problems: string[] } {
+  if (raw === undefined) return { ok: true, bindings: {} }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return { ok: false, problems: ['runtimeBindings 须为对象（{ agents?, matrixAccounts? }）'] }
+  }
+  const problems: string[] = []
+  const bindings: RuntimeBindings = {}
+  // 未知键（多为拼错的合法键）显式拒绝，不静默忽略——绑定是派单门的开关，
+  // 拼错被当成未绑定会让操作者误以为已生效，门实际不拦。
+  for (const key of Object.keys(raw)) {
+    if (!(BINDING_KEYS as readonly string[]).includes(key)) {
+      problems.push(`runtimeBindings 含未知键：${key}（合法键：agents、matrixAccounts）`)
+    }
+  }
+  for (const key of BINDING_KEYS) {
+    const value = (raw as Record<string, unknown>)[key]
+    if (value === undefined) continue
+    if (!Array.isArray(value) || value.some((v) => typeof v !== 'string')) {
+      problems.push(`runtimeBindings.${key} 须为字符串数组`)
+      continue
+    }
+    const targets: string[] = []
+    for (const v of value) {
+      const target = v.trim()
+      if (target && !targets.includes(target)) targets.push(target)
+    }
+    if (targets.length) bindings[key] = targets
+  }
+  return problems.length ? { ok: false, problems } : { ok: true, bindings }
+}
+
+/** 绑定唯一性：同一数组内一个目标只能被一个身份绑定——派单门按目标反查身份，重复即无法
+ *  确定信谁。两个数组各比各的：派单目标名与 Matrix 账号全形是两套目标，门按目标种类分别查找。
+ *  自身不计，改绑到自己已占的目标是幂等更新。 */
+function bindingConflicts(identities: AgentIdentity[], selfId: string | undefined, bindings: RuntimeBindings): string[] {
+  const problems: string[] = []
+  for (const other of identities) {
+    if (other.id === selfId) continue
+    for (const key of BINDING_KEYS) {
+      for (const target of bindings[key] ?? []) {
+        if (other.runtimeBindings?.[key]?.includes(target)) {
+          problems.push(`运行时目标已被身份 ${other.id}（${other.name}）绑定：${target}`)
+        }
+      }
+    }
+  }
   return problems
 }
 
@@ -251,6 +316,7 @@ export function registerIdentity(
     toolAllowlist?: string[]
     capabilityBoundary?: CapabilityBoundary
     auditRequirement?: AuditRequirement
+    runtimeBindings?: RuntimeBindings
   },
   actor: string,
 ): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
@@ -259,6 +325,15 @@ export function registerIdentity(
   const store = readStore()
   if (store.identities.some((i) => i.name === input.name.trim())) {
     return { ok: false, problems: [`同名身份已存在：${input.name.trim()}（身份名唯一，复用请走 update）`] }
+  }
+  // 运行时绑定：未传不写该键（存量注册结果不变）；传了先规范化再查唯一性，都过才落盘
+  let bindings: RuntimeBindings | undefined
+  if (input.runtimeBindings !== undefined) {
+    const normalized = normalizeRuntimeBindings(input.runtimeBindings)
+    if (!normalized.ok) return { ok: false, problems: normalized.problems }
+    const conflicts = bindingConflicts(store.identities, undefined, normalized.bindings)
+    if (conflicts.length) return { ok: false, problems: conflicts }
+    bindings = Object.keys(normalized.bindings).length ? normalized.bindings : undefined
   }
   const now = Date.now()
   const identity: AgentIdentity = {
@@ -269,6 +344,7 @@ export function registerIdentity(
     toolAllowlist: input.toolAllowlist ?? [],
     ...(input.capabilityBoundary ? { capabilityBoundary: normalizeBoundary(input.capabilityBoundary) } : {}),
     ...(input.auditRequirement ? { auditRequirement: normalizeAudit(input.auditRequirement) } : {}),
+    ...(bindings ? { runtimeBindings: bindings } : {}),
     credentials: [],
     delegations: [],
     createdAt: now,
@@ -308,6 +384,7 @@ export function updateIdentity(
     kind?: IdentityKind
     capabilityBoundary?: CapabilityBoundary
     auditRequirement?: AuditRequirement
+    runtimeBindings?: RuntimeBindings
   },
   actor: string,
 ): { ok: true; identity: AgentIdentity } | { ok: false; problems: string[] } {
@@ -331,6 +408,15 @@ export function updateIdentity(
   }
   if (patch.auditRequirement !== undefined) {
     identity.auditRequirement = normalizeAudit(patch.auditRequirement)
+  }
+  if (patch.runtimeBindings !== undefined) {
+    const normalized = normalizeRuntimeBindings(patch.runtimeBindings)
+    if (!normalized.ok) return { ok: false, problems: normalized.problems }
+    const conflicts = bindingConflicts(store.identities, id, normalized.bindings)
+    if (conflicts.length) return { ok: false, problems: conflicts }
+    // 整体替换（同 mxids 口径，不猜合并意图）：空绑定=解绑，删键并释放目标
+    if (Object.keys(normalized.bindings).length) identity.runtimeBindings = normalized.bindings
+    else delete identity.runtimeBindings
   }
   identity.updatedAt = Date.now()
   writeStore(store)
@@ -502,12 +588,22 @@ export function updateResponsibilityCard(
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
   const prevOwner = identity.responsibilityCard?.primaryOwner
-  identity.responsibilityCard = card
+  // 签署不随请求体写入（防冒填）：HTTP 层的 cardFromBody 已丢弃该字段；域层对直接调用方
+  // 传入的签署对象保持兼容（以请求传入为准，否则保留既有签署），只按新卡面指纹重算 stale。
+  // 指纹不含签署与准入证据，故补登证据不会让签署失效，改卡面内容才会。
+  const prevSign = identity.responsibilityCard?.businessOwnerSign
+  const keptSign = card.businessOwnerSign ?? prevSign
+  const { businessOwnerSign: _dropSign, ...content } = card
+  const next: ResponsibilityCard = { ...(content as ResponsibilityCard) }
+  if (keptSign) {
+    next.businessOwnerSign = { ...keptSign, stale: cardRevision(next) !== keptSign.cardRevision }
+  }
+  identity.responsibilityCard = next
   const lc = normalizeLifecycle(identity.lifecycle)
   // 主责任人变更不是静默改名：已准入/运行中的单元强制转入变更态，重启须两条证据
-  if (prevOwner && prevOwner !== card.primaryOwner && lc.stage !== 'registered') {
+  if (prevOwner && prevOwner !== next.primaryOwner && lc.stage !== 'registered') {
     lc.history.push({
-      from: lc.stage, to: 'changing', at: Date.now(), by: card.primaryOwner,
+      from: lc.stage, to: 'changing', at: Date.now(), by: next.primaryOwner,
       reason: 'owner-change', evidenceRefs: [],
     })
     lc.stage = 'changing'
@@ -519,11 +615,34 @@ export function updateResponsibilityCard(
   return { ok: true, problems: [], identity: { ...identity } }
 }
 
+/** 业务负责人签署责任卡（独立动作，2026-11-24 数字员工批一）：签署人须为在岗自然人，
+ *  签署绑定当前卡版本指纹；此后卡面内容变更会让签署失效（stale），须重新签署。 */
+export function signResponsibilityCard(
+  id: string,
+  signedBy: string,
+  people: Person[],
+): { ok: boolean; problems: string[]; card?: ResponsibilityCard } {
+  const problems: string[] = []
+  const signer = people.find((p) => p.id === signedBy)
+  if (!signer || !signer.active) problems.push('签署人必须是在岗自然人')
+  const store = readStore()
+  const identity = store.identities.find((i) => i.id === id)
+  if (!identity) return { ok: false, problems: [...problems, `身份不存在：${id}`] }
+  if (!identity.responsibilityCard) problems.push('责任卡未填写，无法签署')
+  if (problems.length) return { ok: false, problems }
+  const card = identity.responsibilityCard!
+  card.businessOwnerSign = { signedBy, signedAt: Date.now(), cardRevision: cardRevision(card), stale: false }
+  identity.updatedAt = Date.now()
+  writeStore(store)
+  appendEvent({ actor: signedBy, action: 'update', targetId: id, detail: 'card-sign' })
+  return { ok: true, problems: [], card: { ...card } }
+}
+
 export function transitionIdentity(
   id: string,
   input: TransitionInput,
   actor: string,
-): { ok: boolean; problems: string[]; identity?: AgentIdentity } {
+): { ok: boolean; problems: string[]; identity?: AgentIdentity; revoked?: { credentials: number; delegationsOut: number; delegationsIn: number } } {
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
@@ -537,11 +656,46 @@ export function transitionIdentity(
   })
   lc.stage = input.to
   if (input.to === 'retired') lc.exit = { ...input.exit!, confirmedAt: Date.now() }
+  // 退役即撤权：同一次落盘内撤销全部 active 凭证与未撤销委托（出边+入边），逐条留事件
+  let revoked: { credentials: number; delegationsOut: number; delegationsIn: number } | undefined
+  if (input.to === 'retired') {
+    const now = Date.now()
+    let credentials = 0
+    for (const c of identity.credentials) {
+      if (c.status !== 'active') continue
+      c.status = 'revoked'
+      c.revokedAt = now
+      c.revokedBy = actor
+      credentials += 1
+      appendEvent({ actor, action: 'revoke-credential', targetId: id, detail: `随单元退役：${c.kind}:${c.label}` })
+    }
+    let delegationsOut = 0
+    for (const d of identity.delegations) {
+      if (d.revokedAt) continue
+      d.revokedAt = now
+      d.revokedBy = actor
+      delegationsOut += 1
+      appendEvent({ actor, action: 'revoke-delegation', targetId: id, detail: `随单元退役：${d.id}（${d.from}→${d.to}）` })
+    }
+    let delegationsIn = 0
+    for (const other of store.identities) {
+      if (other.id === id) continue
+      for (const d of other.delegations) {
+        if (d.revokedAt || d.to !== id) continue
+        d.revokedAt = now
+        d.revokedBy = actor
+        delegationsIn += 1
+        other.updatedAt = now
+        appendEvent({ actor, action: 'revoke-delegation', targetId: other.id, detail: `随单元退役：${d.id}（${d.from}→${d.to}）` })
+      }
+    }
+    revoked = { credentials, delegationsOut, delegationsIn }
+  }
   identity.lifecycle = lc
   identity.updatedAt = Date.now()
   writeStore(store)
   appendEvent({ actor, action: 'update', targetId: id, detail: `lifecycle:${from}->${input.to}` })
-  return { ok: true, problems: [], identity: { ...identity } }
+  return { ok: true, problems: [], identity: { ...identity }, revoked }
 }
 
 export function getCardView(id: string): {

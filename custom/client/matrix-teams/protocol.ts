@@ -271,10 +271,17 @@ export function parseReceiptContent(raw: unknown): ReceiptContent | null {
 
 // ── v2：Agent 能力注册（注册房 state 事件，本机 bot 只写自己的条目） ──
 
+/** 运行配置名字符集（能力路由落地看板卡 assignee 的合法取值）。
+ *  镜像：服务端 custom/server/matrix/chat-bridge.ts 的 AGENT_PROFILE_RE 同式——
+ *  两侧各自独立、不互相 import，改一端必须同步另一端。 */
+const AGENT_PROFILE_RE = /^[A-Za-z0-9._-]{1,64}$/
+
 export interface AgentDescriptor {
   agentId: string
   agentType: string
   capabilities: string[]
+  /** 数字员工批一 Task 5：本机运行配置名；能力路由选中后作为看板卡实际 assignee。 */
+  profile?: string
   maxParallel?: number
   needsHumanConfirm?: string[]
   permissions?: string[]
@@ -304,6 +311,13 @@ export function parseAgentProfileContent(raw: unknown): AgentProfileContent | nu
     if (!agentType || agentType.length > MAX_AGENT_TYPE) return null
     const capabilities = parseStringList(a.capabilities, MAX_CAPABILITIES, MAX_CAPABILITY_LEN)
     if (capabilities === null || capabilities.some(c => !isCapability(c))) return null
+    // profile 增量可选：存在但字符集/长度非法 → 整条拒收（不静默丢字段，
+    // 防「声明了运行配置却被悄悄略过」造成的错配路由）。
+    let profile: string | undefined
+    if (a.profile !== undefined) {
+      if (typeof a.profile !== 'string' || !AGENT_PROFILE_RE.test(a.profile)) return null
+      profile = a.profile
+    }
     const maxParallel = num(a.maxParallel)
     if (maxParallel !== undefined && (!Number.isInteger(maxParallel) || maxParallel < 1)) return null
     let needsHumanConfirm: string[] | undefined
@@ -320,7 +334,7 @@ export function parseAgentProfileContent(raw: unknown): AgentProfileContent | nu
     }
     agents.push({
       agentId, agentType, capabilities,
-      maxParallel, needsHumanConfirm, permissions, lastReportAt: num(a.lastReportAt),
+      profile, maxParallel, needsHumanConfirm, permissions, lastReportAt: num(a.lastReportAt),
     })
   }
   return { schemaVersion: DELIVERY_SCHEMA_VERSION, agents, updatedBy, updatedAt }

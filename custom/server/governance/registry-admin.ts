@@ -10,6 +10,10 @@ import path from 'node:path'
 import { repoRoot } from './governance-controller'
 import { createMatrixUser, setMatrixUserActive, validateMatrixToken, getMatrixUserState, assignDefaultAvatar, listMatrixUsers } from '../matrix/admin-service'
 import { UnsafeUrlError } from '../security/url-guard'
+import { listIdentities } from '../agentidentity/agent-identity'
+import { stageOf } from '../agentidentity/lifecycle'
+import { deactivatePerson, listPeople } from '../agentidentity/people'
+import { verifyTaskHandover, type TaskHandoverRow } from './offboard-handover'
 
 const exec = promisify(execFile)
 
@@ -232,6 +236,88 @@ export async function backfillDefaultAvatars(inp: BackfillAvatarsInput): Promise
 export interface OffboardInput {
   localName: string; handoverTo: string; taskIds: string[]
   reason: string; adminToken: string; homeserverUrl: string; actor?: string
+  /** 接手执行单元（运行配置名）：填了才逐卡核实改派结果；不填=仅登记（Task 7） */
+  handoverProfile?: string
+}
+
+/** 阻止离职的执行单元（身份册绑定该 AI 助理账号且阶段为准入/运行/变更中）。 */
+export interface OffboardBlockedUnit { identityId: string; name: string; stage: string }
+
+/** 自然人联动结果：deactivated=命中并已（或将要）停用；not-linked=无命中，不做推断。 */
+export interface OffboardPersonLink { status: 'deactivated' | 'not-linked'; personId?: string }
+
+/** 仍有在岗执行单元时的离职拦截（409 载体）：路由按 code 映射状态码与响应体。 */
+export class OffboardBlockedError extends Error {
+  readonly code = 'offboard_blocked'
+  constructor(readonly blockedUnits: OffboardBlockedUnit[]) {
+    super('offboard_blocked：仍有在岗执行单元，先完成退役交接：'
+      + blockedUnits.map((u) => `${u.name}（${u.identityId}，${u.stage}）`).join('、'))
+    this.name = 'OffboardBlockedError'
+  }
+}
+
+/** server 名推导（provision/offboard/precheck 同一口径）：127.0.0.1 部署按 matrix.test。 */
+function serverNameOf(homeserverUrl: string): string {
+  return new URL(homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(homeserverUrl).hostname
+}
+
+/** 离职账号全形的 localpart（与 provisionMatrixAccount 同款白名单——name 拼进
+ *  offboarding 文件路径，无校验可穿越 repoRoot）。 */
+function offboardLocalName(localName: string): string {
+  const name = localName.trim().replace(/^@/, '').split(':')[0]
+  if (!/^[a-z0-9_.-]+$/i.test(name)) throw new Error(`非法用户名：${name}`)
+  return name
+}
+
+/** 前置检查①：绑定 `@<name>-agent:<server>` 且仍在岗（admitted/running/changing）
+ *  的执行单元——它们必须先完成退役交接，否则离职会把在跑单元的账号停掉。 */
+function findOffboardBlock(inp: OffboardInput, serverName: string): OffboardBlockedUnit[] {
+  const name = offboardLocalName(inp.localName)
+  const target = `@${name}-agent:${serverName}`
+  const blocked: OffboardBlockedUnit[] = []
+  for (const identity of listIdentities()) {
+    if (!identity.runtimeBindings?.matrixAccounts?.includes(target)) continue
+    const stage = stageOf(identity)
+    if (stage === 'admitted' || stage === 'running' || stage === 'changing') {
+      blocked.push({ identityId: identity.id, name: identity.name, stage })
+    }
+  }
+  return blocked
+}
+
+/** 自然人匹配：mxids 显式值等于 `@<name>:<server>` 全形或裸 localpart，且在岗。
+ *  只按显式登记值匹配，不从 email 推断（与 people.ts 的 mxids 口径一致）。 */
+function findLinkedPerson(name: string, serverName: string) {
+  const full = `@${name}:${serverName}`
+  return listPeople().find((p) => p.active && (p.mxids ?? []).some((m) => m === full || m === name)) ?? null
+}
+
+/** 前置检查②（只读预览）：命中即在响应里标 deactivated，不落盘。 */
+function previewLinkedPerson(name: string, serverName: string): OffboardPersonLink {
+  const person = findLinkedPerson(name, serverName)
+  return person ? { status: 'deactivated', personId: person.id } : { status: 'not-linked' }
+}
+
+/** 离职联动：停用时一并停用命中的在岗自然人（记操作者与理由）。 */
+async function deactivateLinkedPerson(name: string, serverName: string, actor: string, reason: string): Promise<OffboardPersonLink> {
+  const person = findLinkedPerson(name, serverName)
+  if (!person) return { status: 'not-linked' }
+  const res = await deactivatePerson(person.id, actor, reason)
+  if (!res.ok) throw new Error(`自然人联动停用失败：${res.problems.join('；')}`)
+  return { status: 'deactivated', personId: person.id }
+}
+
+/** 离职前置检查（只读）：校验管理员令牌、列出阻止离职的在岗执行单元、预览自然人
+ *  联动——不写任何文件。令牌无效即抛（沿用离职同款文案）。 */
+export async function precheckOffboard(inp: OffboardInput): Promise<{
+  blockedUnits: OffboardBlockedUnit[]
+  person: OffboardPersonLink
+}> {
+  const name = offboardLocalName(inp.localName)
+  const who = await validateMatrixToken(inp.adminToken, inp.homeserverUrl)
+  if (!who) throw new Error('adminToken 无效（synapse whoami 失败），已拒绝落盘')
+  const serverName = serverNameOf(inp.homeserverUrl)
+  return { blockedUnits: findOffboardBlock(inp, serverName), person: previewLinkedPerson(name, serverName) }
 }
 
 export interface InviteInput {
@@ -265,24 +351,38 @@ export async function createAccountInvite(inp: InviteInput): Promise<{
 }
 
 
-/** P8 离职三步向导（服务端落实三步原子序）：①移交工单 ②停用双账号 ③审计留痕——每步独立提交可回溯。 */
+/** P8 离职三步向导（服务端落实三步原子序）：①移交工单 ②停用双账号 ③审计留痕——每步独立提交可回溯。
+ *  Task 7 追加：写任何文件之前先做一次与 precheckOffboard 同款的前置检查（防两次调用之间
+ *  状态变化），仍有在岗执行单元即抛 OffboardBlockedError（409）；停用账号成功后联动停用
+ *  mxids 命中的在岗自然人；填了接手执行单元时逐卡只读核实改派结果写进工单与响应。 */
 export async function offboardAccount(inp: OffboardInput): Promise<{
   handoverCommit: string; deactivated: string[]; auditCommit: string
+  taskHandover: TaskHandoverRow[]; person: OffboardPersonLink
 }> {
-  const name = inp.localName.trim().replace(/^@/, '').split(':')[0]
-  // 与 provisionMatrixAccount 同款白名单：name 拼进 offboarding 文件路径，无校验可穿越 repoRoot
-  if (!/^[a-z0-9_.-]+$/i.test(name)) throw new Error(`非法用户名：${name}`)
+  const name = offboardLocalName(inp.localName)
   // 先鉴权后写盘：adminToken 无效时不得产生任何工单/审计文件与 git 提交
   const who = await validateMatrixToken(inp.adminToken, inp.homeserverUrl)
   if (!who) throw new Error('adminToken 无效（synapse whoami 失败），已拒绝落盘')
   const base = { adminToken: inp.adminToken, homeserverUrl: inp.homeserverUrl }
-  // ① 任务移交工单
+  // server 名与 provisionMatrixAccount 同口径推导（此前硬编码 matrix.test，换 homeserver 即停错对象）
+  const serverName = serverNameOf(inp.homeserverUrl)
+  // 前置检查（与 precheckOffboard 共用判据）：写任何文件之前拦截在岗执行单元
+  const blockedUnits = findOffboardBlock(inp, serverName)
+  if (blockedUnits.length) throw new OffboardBlockedError(blockedUnits)
+  // 逐卡改派核实（只读）：taskIds 与 handoverProfile 都有才核实；未填接手执行单元=仅登记。
+  // 改派写路径在界面侧走既有看板改派接口，本端点不挪卡（规格 D10/D13）。
+  const handoverProfile = inp.handoverProfile?.trim() ?? ''
+  const taskHandover: TaskHandoverRow[] = inp.taskIds.length && handoverProfile
+    ? await verifyTaskHandover(inp.taskIds, handoverProfile)
+    : inp.taskIds.map((taskId) => ({ taskId, before: null, after: null, reassigned: false, note: '仅登记' }))
+  // ① 任务移交工单（每个任务号后追加核实结果）
   const doc = [
     `# 离职移交工单：${name}（${new Date().toISOString()}）`,
     '',
     `- 接手人：${inp.handoverTo}`,
     `- 原因：${inp.reason}`,
     `- 移交任务：${inp.taskIds.length ? inp.taskIds.join(', ') : '（无在办）'}`,
+    ...taskHandover.map((row) => `  - ${row.taskId}：${row.note}`),
     '',
   ].join('\n')
   const handoverPath = `docs/admin/offboarding-${name}.md`
@@ -294,8 +394,6 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   // ② 停用 matrix 双账号
   const deactivated: string[] = []
   const failed: string[] = []
-  // server 名与 provisionMatrixAccount 同口径推导（此前硬编码 matrix.test，换 homeserver 即停错对象）
-  const serverName = new URL(inp.homeserverUrl).hostname === '127.0.0.1' ? 'matrix.test' : new URL(inp.homeserverUrl).hostname
   for (const uid of [`@${name}:${serverName}`, `@${name}-agent:${serverName}`]) {
     // 空数组静默成功实锤（2026-10-06 govprobe/r31probe 两轮复现）：先探存在性——
     // missing/deactivated 跳过；存在但停用被拒（权限不足/端点异常）必须炸出来，
@@ -308,6 +406,8 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   if (failed.length) {
     throw new Error(`停用失败：${failed.join('、')}（synapse 拒绝——①移交工单已提交，②停用未完成，处理后重跑即可，三步幂等）`)
   }
+  // ②b 自然人联动：mxids 命中该账号的在岗自然人随离职停用（Task 7）
+  const person = await deactivateLinkedPerson(name, serverName, inp.actor || 'account-admin', inp.reason || '离职联动')
   // ③ 审计留痕（append-only 台账）：appendFile 直追加，不做读-改-写全量覆写
   //（并发 offboard 各自读旧全文再覆写会互相丢行）。
   const trailPath = 'docs/admin/audit-trail.md'
@@ -322,7 +422,7 @@ export async function offboardAccount(inp: OffboardInput): Promise<{
   await git(['add', trailPath])
   await git(['commit', '-m', `离职③审计留痕：${name}`])
   const auditCommit = await currentCommit()
-  return { handoverCommit, deactivated, auditCommit }
+  return { handoverCommit, deactivated, auditCommit, taskHandover, person }
 }
 
 // ── org 编制 admin 行双人会签守卫（2026-10-22「治理者由谁治理」缺口补）────

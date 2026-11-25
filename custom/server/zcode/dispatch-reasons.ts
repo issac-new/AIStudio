@@ -40,6 +40,9 @@ export const DISPATCH_REASON_CODES = [
   'capacity_timeout',        // 排队等待超过截止仍未拿到槽位
   // ── 团队治理（2026-11-12 handbook 吸收，只追加）──
   'team_stop',               // 团队级停止条件命中（深度/派生数/返工/无进展）
+  // ── 执行单元派单门（2026-11-24 数字员工批一，只追加）──
+  'unit_gate',               // 执行单元派单门拦截（未准入/变更中/已退役/责任卡失效）
+  'capability_block',        // 能力硬门拦截：门通过后能力池对任务需求全量无供给
 ] as const
 
 export type DispatchReasonCode = (typeof DISPATCH_REASON_CODES)[number]

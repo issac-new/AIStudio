@@ -225,6 +225,11 @@ export interface BridgeAgentCapability {
 const CAPABILITY_CACHE_MS = 60_000
 let capabilityCache: { at: number; map: Map<string, BridgeAgentCapability> } | null = null
 
+/** 运行配置名字符集（数字员工批一 Task 5：能力路由落地看板卡 assignee 的合法取值）。
+ *  镜像：客户端 custom/client/matrix-teams/protocol.ts 的 AGENT_PROFILE_RE 同式——
+ *  两侧各自独立、不互相 import，改一端必须同步另一端。 */
+const AGENT_PROFILE_RE = /^[A-Za-z0-9._-]{1,64}$/
+
 /** 默认能力来源：能力图手工声明区；文件缺席/坏档时返回空能力，不阻断声明。 */
 function defaultCapabilitiesFor(agentName: string): BridgeAgentCapability | null {
   const now = Date.now()
@@ -484,12 +489,18 @@ export class ChatBridge {
             ?? (Array.isArray(v.permissions)
               ? v.permissions.filter((s): s is string => typeof s === 'string')
               : undefined)
+          // 运行配置名（数字员工批一 Task 5）：视图带 profile 且字符集合规才声明；
+          // 非法值静默略过该字段（客户端解析器对非法 profile 整条拒收，不能把坏值发出去）。
+          const profile = typeof v.profile === 'string' && AGENT_PROFILE_RE.test(v.profile)
+            ? v.profile
+            : undefined
           return {
             agentId: agentId.slice(0, 64),
             name: agentName,
             agent: agentType,
             agentType: agentType.slice(0, 32),
             capabilities,
+            ...(profile ? { profile } : {}),
             ...(maxParallel !== undefined ? { maxParallel } : {}),
             ...(needsHumanConfirm ? { needsHumanConfirm } : {}),
             ...(permissions ? { permissions } : {}),

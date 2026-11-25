@@ -184,11 +184,19 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       return 'failed'
     }
     // M-B 能力路由：带 capability 标签的 assign 先过决策表（spec v1.2 §6）。
+    // 数字员工批一 Task 5：路由选中的 Agent 以其运行配置名 profile 落地为看板卡
+    // 实际 assignee；覆盖者都无 profile 时明确失败（no-routable-profile），不悄悄
+    // 回落原目标——路由结果必须起作用，否则等于没路由。
     let routedAgentId: string | undefined
+    let routedProfile: string | undefined
     if (assign.capability?.length) {
       const decision = selectAgent(assign, localAgents.value, agentLoads())
       if (decision.kind === 'no-match') {
         await sendReceipt(assign.taskId, 'failed', { reason: 'no-capability-match' })
+        return 'failed'
+      }
+      if (decision.kind === 'unroutable') {
+        await sendReceipt(assign.taskId, 'failed', { reason: 'no-routable-profile' })
         return 'failed'
       }
       if (decision.kind === 'queued') {
@@ -196,6 +204,7 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
         return 'queued'
       }
       routedAgentId = decision.agent.agentId
+      routedProfile = decision.agent.profile // selectAgent 只放行 profile 非空者
     }
     // priority 透传：协议层 AssignContent.priority 为 string，kanban 建卡要求 number——
     // 数值字符串有限强转，非数值（含 undefined）不携带（不硬编 0：0 是有效优先级，undefined 才是"未指定"）。
@@ -205,10 +214,10 @@ export const useTaskDispatchStore = defineStore('matrix-task-dispatch', () => {
       const task = await createTask({
         title: `[外派-${assign.taskId.slice(0, 6)}] ${assign.title}`,
         body: assign.body,
-        assignee: profile,
+        assignee: routedProfile ?? profile,
         priority: prio,
       })
-      const entry: DispatchIndexEntry & { routedAgentId?: string } = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now(), routedAgentId }
+      const entry: DispatchIndexEntry & { routedAgentId?: string } = { localTaskId: task.id, lastStatus: 'created', lastSyncedAt: Date.now(), routedAgentId, routedProfile }
       // 落盘前重读：createTask await 窗口内轮询（pollAndReport）可能已写他人状态，
       // 基于旧快照合并会静默回滚那次写入（同 pollAndReport:242 的新读合并口径）。
       saveDispatchIndex({ ...loadDispatchIndex(), [assign.taskId]: entry })

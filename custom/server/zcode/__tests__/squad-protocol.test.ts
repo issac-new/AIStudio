@@ -264,4 +264,19 @@ describe('分派预演 WillEnqueueRun（multica 写读共用谓词语义，矩�
     const offline = willEnqueueRun('@zcode 干活', '/w2', { ...svc.planFacts(), engineOnline: false } as never)
     expect(offline[0]).toMatchObject({ reason: 'runtime_offline', willRun: false })
   })
+
+  // 数字员工批一 Task 4：预演与写路径同源——门读数（unitGate）并入事实后预演同样拦。
+  it('unitGate 并入事实后，预演对已退役单元预测 unit_gate / willRun=false', async () => {
+    const { willEnqueueRun } = await import('../will-enqueue')
+    const facts = { knownAgents: new Set(['zcode']), deferredAgents: new Set(), pendingSince: new Map(), pendingTtlMs: 1000, now: 0,
+      engineOnline: true, unitGate: new Map([['zcode', { target: 'zcode', applicable: true, decision: 'block', reasons: ['unit_retired'] }]]) }
+    expect(willEnqueueRun('@zcode 修一下', '/ws/p', facts as never)[0]).toMatchObject({ willRun: false, reason: 'unit_gate' })
+  })
+
+  it('无 unitGate 时预演行为不变', async () => {
+    const { willEnqueueRun } = await import('../will-enqueue')
+    const facts = { knownAgents: new Set(['zcode']), deferredAgents: new Set(), pendingSince: new Map(), pendingTtlMs: 1000, now: 0,
+      engineOnline: true }
+    expect(willEnqueueRun('@zcode 修一下', '/ws/p', facts as never)[0]).toMatchObject({ willRun: true, reason: 'queued' })
+  })
 })

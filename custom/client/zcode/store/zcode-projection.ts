@@ -101,6 +101,9 @@ export const REASON_CHIP_TEXT: Record<string, string> = {
   capacity_timeout: '排队超时',
   // ── 团队治理（2026-11-12）──
   team_stop: '团队停止条件',
+  // ── 执行单元派单门（2026-11-24 数字员工批一，只追加）──
+  unit_gate: '单元未就绪',
+  capability_block: '能力无供给',
 }
 
 export interface ProjectionState {

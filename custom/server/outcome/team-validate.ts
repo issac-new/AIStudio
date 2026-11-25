@@ -10,6 +10,8 @@
 //   此处是团队面的纵深防御）；
 // - person 成员必须 active（people 域权威）；agent 成员 rosterOk(subjectId) 必须真
 //   （D5：rosterStatus==='complete' 判据=name/can/cannot 三字段，不发明「可用阶段」新枚举）；
+// - agent 成员在 roster 齐备后还须过派单门（2026-11-24 数字员工批一，第 5 参 unitGateOk
+//   可选）：已绑定单元在未准入/变更中/已退役/责任卡失效时不可接单，未绑定（skipped）不拦；
 // - members 非空且逐成员 subjectKind/subjectId/role/responsibility 齐备。
 // status 不在本函数职责内（store confirmTeam 已校验枚举）；draft 提案与 active 确认
 // 适用同一套成员约束——候选不因 draft 降门槛。
@@ -21,6 +23,10 @@ export type TeamContractFacts = Pick<
   OutcomeContract,
   'ownerPersonId' | 'verificationOwnerId' | 'riskTier'
 >
+
+/** 派单门判据（2026-11-24 数字员工批一）：agentId 是否可接单（true=可）。由调用方注入：
+ *  端点用 agentidentity 真实现求门（未绑定/读数 unknown 返回 true），测试注入回调。 */
+export type UnitGateOk = (agentId: string) => boolean
 
 export interface TeamValidation {
   /** 空=团队约束满足。problems 点名具体成员/责任人，供端点 422 invalid_input 回传。 */
@@ -36,6 +42,7 @@ export function validateTeam(
   team: unknown,
   activePersonIds: Set<string>,
   rosterOk: (agentId: string) => boolean,
+  unitGateOk?: UnitGateOk,
 ): TeamValidation {
   const problems: string[] = []
   const t = (team ?? {}) as { members?: unknown }
@@ -77,12 +84,14 @@ export function validateTeam(
   )
     problems.push('高风险合同 owner 与 verifier 不得为同一自然人')
 
-  // person 必须 active（people 域权威）；agent 必须 roster complete（D5）
+  // person 必须 active（people 域权威）；agent 必须 roster complete（D5）；
+  // roster 齐备后再过派单门（2026-11-24 数字员工批一，第 5 参可选）
   for (const id of persons) {
     if (!activePersonIds.has(id)) problems.push(`person 成员 ${id} 不是 active 自然人`)
   }
   for (const id of agents) {
     if (!rosterOk(id)) problems.push(`agent 成员 ${id} 名册未齐备（rosterStatus=blocked）`)
+    else if (unitGateOk && !unitGateOk(id)) problems.push(`agent 成员 ${id} 不可接单（unit_gate）`)
   }
 
   return { problems }

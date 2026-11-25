@@ -12,8 +12,8 @@
 // sessionId + commandId，并联动会话投影（watchSession）。
 //
 // 判定同源（P-A(d)）：写路径 dispatchOne 与预演 will-enqueue.ts 共用 planDispatch
-// 这一份纯判定核（目标解析→known/deferred→自触发→槽→可达性），预演不再与写路径
-// 各判各的（曾实测漂移：leader 在 deferred 名单/引擎离线时预演说「将起跑」）。
+// 这一份纯判定核（目标解析→known/deferred→自触发→派单门/能力读数→槽→可达性），
+// 预演不再与写路径各判各的（曾实测漂移：leader 在 deferred 名单/引擎离线时预演说「将起跑」）。
 //
 // 命令信封契约：upstream/zcode packages/shared/src/zcode-protocol-v4/command.ts:323
 // commandEnvelopeSchema（commandId uuid v7 风格客户端生成、createSession 时
@@ -35,6 +35,8 @@ import { collectTeamStopFacts } from './team-stop-facts'
 import { registerEntry } from '../taskledger/taskledger-store'
 import { fetchTaskTitleAndBodyByTaskId } from '../kanban/dispatch-readiness'
 import { assessTaskCapabilityReadiness } from '../capabilitypool/readiness'
+import type { CapabilityReadiness } from '../capabilitypool/types'
+import { assessUnitDispatchGate, readUnitGateFacts, type UnitGateVerdict } from '../agentidentity/dispatch-gate'
 import {
   resolveSquad, isSelfTrigger, buildSquadBriefing, recordEvaluation,
   type SquadDefinition,
@@ -141,7 +143,8 @@ export interface DispatchParams {
 // ── 纯判定核（P-A(d)）────────────────────────────────────────────────────────
 // 写路径（dispatchOne）与预演（will-enqueue.ts willEnqueueRun）共用这一份判定序，
 // 单一事实源，杜绝两套判定漂移：目标解析（squad→leader）→ known/deferred 档 →
-// 自触发抑制 → pending 槽 → 引擎可达性。纯函数零副作用，事实由 PlanFacts 注入。
+// 自触发抑制 → 执行单元派单门/能力读数 → pending 槽 → 引擎可达性。纯函数零副作用，
+// 事实由 PlanFacts 注入。
 
 export interface PlanFacts {
   knownAgents: ReadonlySet<string>
@@ -157,6 +160,14 @@ export interface PlanFacts {
   capacity?: { runningTotal: number; maxRunning: number; policy?: 'reject' | 'queue'; waitedMs?: number; queueTimeoutMs?: number }
   /** 团队级停止事实（2026-11-12 handbook 吸收；缺省=不评团队条件）。 */
   team?: TeamStopFacts
+  /**
+   * 执行单元派单门读数（2026-11-24 数字员工批一；键为实际执行目标 runsFor）。decision=block
+   * 即拦（unit_gate）；skipped（未绑定）/unknown（台账不可读）/pass 不拦。由写路径 dispatch
+   * 与预演入口（engine-controller /mention/preview）经 collectUnitGate 采集注入。
+   */
+  unitGate?: ReadonlyMap<string, UnitGateVerdict>
+  /** 能力读数（dispatch 带 taskId 且任务声明能力需求时采集；缺省=不评能力硬门）。 */
+  capabilityReadiness?: CapabilityReadiness | null
 }
 
 export interface PlanRequest {
@@ -187,6 +198,28 @@ export interface DispatchPlan {
 export function resolveRunsFor(token: { target: string; kind: 'agent' | 'squad' }): string {
   if (token.kind !== 'squad') return token.target
   return resolveSquad(token.target)?.leader ?? token.target
+}
+
+/**
+ * 门读数采集（2026-11-24 数字员工批一）：对 mentions 的每个实际执行目标（agent=自身、
+ * squad=leader）按 targetKind:'agent' 求门读数，键=runsFor（与 planDispatch 查找键同源）。
+ * 写路径 dispatch 与预演入口（engine-controller /mention/preview）共用本函数，保证预演与
+ * 写路径看到的是同一份门事实。采集异常记空 Map 并 warn——读不到台账本身由门判 unknown
+ * （不拦），这里只兜采集链路的意外异常。
+ */
+export function collectUnitGate(mentions: MentionToken[]): Map<string, UnitGateVerdict> {
+  const map = new Map<string, UnitGateVerdict>()
+  try {
+    for (const token of mentions) {
+      const runsFor = resolveRunsFor(token)
+      if (map.has(runsFor)) continue
+      map.set(runsFor, assessUnitDispatchGate(readUnitGateFacts(runsFor, 'agent')))
+    }
+  } catch (err) {
+    console.warn(`[mention-dispatch] 派单门读数采集异常（不阻断派发）：${err instanceof Error ? err.message : String(err)}`)
+    return new Map()
+  }
+  return map
 }
 
 export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
@@ -221,6 +254,23 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
     const def = resolveSquad(squad.name)
     if (def && isSelfTrigger(def, req.mentionAuthor)) {
       return wrap({ action: 'reject', reason: 'self_trigger_suppressed', detail: `leader ${squad.leader} @ 自己的 squad，不再触发` })
+    }
+  }
+  // 2.3) 执行单元派单门（2026-11-24 数字员工批一）：已绑定单元在未准入/变更中/已退役/
+  // 责任卡失效时不接新派单；未绑定（skipped）与台账不可读（unknown）不拦（fail-soft）。
+  const gate = facts.unitGate?.get(runsFor)
+  if (gate?.decision === 'block') {
+    return wrap({ action: 'reject', reason: 'unit_gate', detail: gate.reasons.join('；') })
+  }
+  // 门通过后的能力硬门：全池无供给 → 拒；供给紧张 → 只追加告警。未绑定目标（门非 pass）
+  // 维持只警告——能力硬门只约束已准入执行单元（规格：存量未绑定行为不变）。
+  if (gate?.decision === 'pass' && facts.capabilityReadiness) {
+    const readiness = facts.capabilityReadiness
+    if (readiness.decision === 'block') {
+      return wrap({ action: 'reject', reason: 'capability_block', detail: `能力池无供给：${readiness.reasons.join('；')}` })
+    }
+    if (readiness.decision === 'warn') {
+      warnings = [...(warnings ?? []), `能力读数 warn：${readiness.reasons.join('；')}`]
     }
   }
   // 2.5) 团队级停止条件（2026-11-12 handbook 吸收）：enforce 才 reject，否则只告警。
@@ -287,19 +337,30 @@ export class MentionDispatchService {
    * 成功路径同步登记统一任务生命周期账本（wx 挂账 #7 接线；fail-soft 不阻断派发）。
    */
   async dispatch(params: DispatchParams): Promise<MentionOutcome[]> {
+    // 能力读数先取（带 taskId 且任务声明能力需求才评）：结果随事实注入判定核——
+    // 门 pass 后 block 是硬拒（capability_block），warn 只追加告警；未绑定目标不评硬门。
+    let capabilityReadiness: CapabilityReadiness | null = null
     if (params.taskId) {
       const snapshot = await fetchTaskTitleAndBodyByTaskId(params.taskId).catch(() => null)
       if (snapshot?.required_capabilities?.length) {
-        const readiness = assessTaskCapabilityReadiness({ requiredTags: snapshot.required_capabilities, assignee: snapshot.assignee })
-        if (readiness.decision !== 'pass') {
-          console.warn(`[mention-dispatch] 能力准入 ${readiness.decision}（warn，不阻断）：${readiness.reasons.join('；')}`)
+        capabilityReadiness = assessTaskCapabilityReadiness({ requiredTags: snapshot.required_capabilities, assignee: snapshot.assignee })
+        if (capabilityReadiness.decision !== 'pass') {
+          console.warn(`[mention-dispatch] 能力读数 ${capabilityReadiness.decision}（绑定单元的硬拦截由判定核裁）：${capabilityReadiness.reasons.join('；')}`)
         }
       }
     }
     const tokens = parseMentions(params.text)
+    // 门读数按实际执行目标（agent=自身、squad=leader）采集，一次派发一份，同批 mention 共用；
+    // 读盘一次以上纯浪费（台账在一次派发内不会变）。注意这里只传门/能力两维事实——
+    // pending 槽等易变事实必须逐 mention 取活值（单 pending 槽：同批第二 mention 要看见
+    // 第一 mention 落的槽，预合并 coalesced），见 dispatchLocked。
+    const extra: Partial<Pick<PlanFacts, 'unitGate' | 'capabilityReadiness'>> = {
+      unitGate: collectUnitGate(tokens),
+      capabilityReadiness,
+    }
     const outcomes: MentionOutcome[] = []
     for (const token of tokens) {
-      outcomes.push(await this.dispatchOne(params, token))
+      outcomes.push(await this.dispatchOne(params, token, extra))
     }
     for (const o of outcomes) registerMentionLedger(o)
     return outcomes
@@ -328,8 +389,10 @@ export class MentionDispatchService {
   /**
    * 只读判定快照（P-A(d)）：预演面（/mention/preview）共用判定核的事实输入。
    * 取代对私有字段的反射强转——新增字段在此收口，快照即契约。
+   * extra（2026-11-24 数字员工批一）：门读数/能力读数由调用方采集后原样并入；
+   * 无参调用行为不变（unitGate/capabilityReadiness 缺席=判定核不评这两门）。
    */
-  planFacts(): PlanFacts {
+  planFacts(extra?: Partial<Pick<PlanFacts, 'unitGate' | 'capabilityReadiness'>>): PlanFacts {
     return {
       knownAgents: new Set(this.known),
       deferredAgents: new Set(this.deferred),
@@ -338,6 +401,7 @@ export class MentionDispatchService {
       now: this.now(),
       // 进程级准入：活跃 pending 槽数即「本进程在跑的派单」下界（保守，不含别处起的 run）
       capacity: capacityFromEnv(process.env, this.pending.size),
+      ...(extra ?? {}),
     }
   }
 
@@ -358,12 +422,20 @@ export class MentionDispatchService {
     }
   }
 
-  private async dispatchOne(params: DispatchParams, token: MentionToken): Promise<MentionOutcome> {
+  private async dispatchOne(
+    params: DispatchParams,
+    token: MentionToken,
+    extra: Partial<Pick<PlanFacts, 'unitGate' | 'capabilityReadiness'>>,
+  ): Promise<MentionOutcome> {
     // 锁键 = (workspace, 实际执行 agent)：squad token 与 @leader 共享同一槽、同一把锁。
-    return this.withSlotLock(this.slotKey(params.workspacePath, resolveRunsFor(token)), () => this.dispatchLocked(params, token))
+    return this.withSlotLock(this.slotKey(params.workspacePath, resolveRunsFor(token)), () => this.dispatchLocked(params, token, extra))
   }
 
-  private async dispatchLocked(params: DispatchParams, token: MentionToken): Promise<MentionOutcome> {
+  private async dispatchLocked(
+    params: DispatchParams,
+    token: MentionToken,
+    extra: Partial<Pick<PlanFacts, 'unitGate' | 'capabilityReadiness'>>,
+  ): Promise<MentionOutcome> {
     const base = {
       type: 'mention.outcome' as const,
       workspaceId: params.workspacePath,
@@ -381,7 +453,9 @@ export class MentionDispatchService {
     let engineOnline = false
     try { engineOnline = await this.engine.probe() } catch { engineOnline = false }
 
-    const planFacts = this.planFacts()
+    // 判定事实逐 mention 取活值（planFacts 现取 pending 槽——同批后续 mention 必须看见
+    // 前面 mention 落的槽才能合并 coalesced），门读数/能力读数用入口传入的一次派发快照。
+    const planFacts = this.planFacts(extra)
     if (token.kind === 'squad') {
       // 团队级事实只在 squad 委托时采集；普通 @agent 保持原判定面。
       planFacts.team = collectTeamStopFacts({ teamId: token.target, now: this.now() })

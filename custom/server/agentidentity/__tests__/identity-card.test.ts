@@ -6,7 +6,7 @@ import {
   _useStoreDirForTests, getCardView, registerIdentity, transitionIdentity, updateResponsibilityCard,
 } from '../agent-identity'
 import { _usePeopleStoreForTests, activatePerson, upsertPerson } from '../people'
-import type { ResponsibilityCard } from '../responsibility'
+import { cardRevision, type ResponsibilityCard } from '../responsibility'
 
 let dir: string
 let p1 = ''
@@ -14,7 +14,7 @@ let p2 = ''
 let unitId = ''
 
 function card(primaryOwner: string, reviewer?: string): ResponsibilityCard {
-  return {
+  const c: ResponsibilityCard = {
     deliveryStandard: '交付可复现的测试报告与证据链',
     riskTier: 'medium',
     primaryOwner,
@@ -26,9 +26,11 @@ function card(primaryOwner: string, reviewer?: string): ResponsibilityCard {
     costBudget: { limit: 100, unit: 'CNY/轮' },
     maintainer: p1,
     deploymentLocation: 'studio:8802',
-    businessOwnerSign: { signedBy: p1, signedAt: Date.now() },
     admissionEvidence: { representativeTasks: ['t1'], edgeCases: ['e1'], dataPermissionReview: ['d1'], recordedAt: Date.now() },
   }
+  // 签署须带版本指纹（2026-11-24 批一）：指纹按卡内容实时计算，准入门才认这份签署
+  c.businessOwnerSign = { signedBy: p1, signedAt: Date.now(), cardRevision: cardRevision(c), stale: false }
+  return c
 }
 
 beforeEach(() => {

@@ -1385,6 +1385,44 @@ describe('Outcome REST 控制器（/api/hermes/outcomes）', () => {
       expect(storeMod.getTeam(id)).toBeNull() // 全拒收：零团队痕迹
     })
 
+    it('派单门开关同口径：WORKUNIT_DISPATCH_GATE=off 时已绑定已退役的 agent 成员放行，on 时拒', async () => {
+      // 2026-11-25 批一审查修复：规格 0.6 承诺 off 等价于批一之前的行为，但 unitGateOk
+      // 曾硬编码 mode:'on'——同一开关在派单链路放行、在团队确认端点仍拒，两个口径。
+      // 造一个户口齐备、已绑定运行目标、已退役的执行单元（退役态直接写库，绕过 API 全链）。
+      const agentIdentity = await import('../../agentidentity/agent-identity')
+      const reg = agentIdentity.registerIdentity({
+        name: 'retired-runner', kind: 'agent', owner: 'team',
+        toolAllowlist: ['read_file'],
+        capabilityBoundary: { can: ['执行构建'], cannot: ['改发布'] },
+        auditRequirement: { sampling: 0.5, retentionDays: 30 },
+        runtimeBindings: { agents: ['ag-retired-1'] },
+      }, 'seed')
+      if (!reg.ok) throw new Error(`夹具登记失败：${reg.problems.join('；')}`)
+      const file = join(tmpAgentId, 'identities.json')
+      const store = JSON.parse(readFileSync(file, 'utf8'))
+      store.identities.find((i: { id: string }) => i.id === reg.identity.id).lifecycle = { stage: 'retired', history: [] }
+      writeFileSync(file, JSON.stringify(store, null, 2))
+
+      const id = await seedContract('active')
+      const members = [
+        ...teamBody(0).members as Array<Record<string, unknown>>,
+        { subjectKind: 'agent', subjectId: reg.identity.id, role: 'executor', responsibility: '执行构建' },
+      ]
+      // 门开（未设 env=on）：已退役单元被拒，问题清单点名 unit_gate
+      const on = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, { members }))
+      expect(on.status).toBe(422)
+      expect((on.body.problems as string[]).join()).toContain('unit_gate')
+      // 门关（off）：同一成员放行——与派单链路口径一致
+      process.env.WORKUNIT_DISPATCH_GATE = 'off'
+      try {
+        const off = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0, { members }))
+        expect(off.status).toBe(200)
+        expect((off.body.team as { version: number }).version).toBe(1)
+      } finally {
+        delete process.env.WORKUNIT_DISPATCH_GATE
+      }
+    })
+
     it('幂等重放：重复提交同 team 输入 → 200 replayed 返回当前团队，版本不递增、事件不重复', async () => {
       const id = await seedContract('active')
       const first = await put(base, `/api/hermes/outcomes/${id}/team`, teamBody(0))

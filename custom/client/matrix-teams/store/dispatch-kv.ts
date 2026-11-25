@@ -8,6 +8,8 @@ export interface DispatchIndexEntry {
   localTaskId: string
   lastStatus: ReceiptStatus
   lastSyncedAt: number
+  /** 数字员工批一 Task 5：能力路由选中 Agent 的运行配置名（看板卡实际 assignee）。 */
+  routedProfile?: string
 }
 
 export function loadDispatchIndex(): Record<string, DispatchIndexEntry> {
