@@ -1,7 +1,7 @@
 # 数字员工 3.0 吸收·批一：上岗—派单—执行—退出闭环 设计 spec
 
 > 日期：2026-11-24
-> 状态：已实施，待独立审查（2026-11-24 用户指令「批准」；方向授权为用户在方案 A/B/C 中指令「执行A」；D1、D2 随批复确认）。回归矩阵合并前档全绿、八步浏览器实操全过；实施进度与逐任务记录见 `docs/superpowers/plans/2026-11-24-digital-employee-batch1.md` 与 `.superpowers/sdd/2026-11-24-digital-employee-batch1/progress.md`。
+> 状态：已实施，整分支独立审查通过（2026-11-24 用户指令「批准」；方向授权为用户在方案 A/B/C 中指令「执行A」；D1、D2 随批复确认）。回归矩阵合并档在代码定稿提交上 14 面 14 通过、八步浏览器实操全过；实施计划见 `docs/superpowers/plans/2026-11-24-digital-employee-batch1.md`；审查结论、已修发现与挂账见「验证」段。
 > 来源：《大模型驱动的数字员工3.0建设应用白皮书》（中国工商银行金融科技研究院、华为技术有限公司、北京金融科技产业联盟，2024 年 9 月，51 页）差异吸收。本仓此前无该白皮书的同源吸收轮；最接近的天猫数字员工文章吸收（`2026-10-23-tmall-digital-worker-absorption.md`）来源不同，其已落地的介入归因、协作画像、交付效能面本批不重建。
 > 相关正本：`2026-11-06-workunit-responsibility-ledger.md`（执行单元责任台账）、`2026-11-19-capability-pool-foundation.md`（能力池）、`2026-11-19-ai-native-operating-model-design.md`（AI 原生组织运行模型）。
 > 行号基准：`custom/`、`docs/` 位置核对于主干 `b9ff5a025`；`vendor/` 位置核对于干净检出（未注入补丁），已注入的主工作区里行号会不同。
@@ -224,6 +224,26 @@
 - K19 `ok:false` 棘轮：批前基点 1014→1024（任务 1 +8、任务 3 +2、任务 7 +1、离职被拦分支改 `fail()` −1）；governance-controller 两处手写 HTTP 失败体（409 被拦、502 上游失败）改 `fail()`，其中仅 409 一处计入本棘轮。2026-11-25 变基到 `ccfa55a22`（对方 N34 批已把基线抬到 1019）后逐提交实测终值 **1030**＝净 +11，比变基前多出的 1 处是终审修复（`people.ts upsertPerson` 邮箱属他人拒合并，落在棘轮提交之后，守门自该笔起超限 1 处，修复前实跑红 `expected 1030 ≤ 1029`）。+11 全部由批一提交引入、与 vendor 升级无关，逐笔归因写入 `architecture-ratchet.test.ts` 注释。
 - `zcode-session-projection` 枚举冻结守门补 `unit_gate`/`capability_block`（任务 4 新增原因码，守门漏同步）。
 - `zcode-usage` 活体探针（2026-11-25 变基后复验抓出的存量红，main `ccfa55a22` 单跑同红，本批未改该模块）：探针只取最近 10 个会话找样本，被一批 12 个「单轮、零工具」的定时任务会话占满（真库实测首个齐备样本排第 13）；新会话的首字时延与只读工具标记读数正常，不是产品回归。同族根因第三次出现（前两次只改窗口口径），这次改根：在会话列表（上限 100）里按 `toolCalls>0` 逐个找齐备样本，同文件的上下文探针同样去掉「最近 10 个」限制。夹具验证：拥挤夹具（前 12 个零工具）旧版红、新版绿；全无只读工具的夹具新版仍红；真库全文件 4/4 绿。
+- 变基后复验（代码定稿提交 `195b955ba`）：回归矩阵合并档 14 面 14 通过、0 失败、0 未执行（vitest 面 1250 个文件、10087 条用例通过，11 条跳过）。
+
+### 整分支独立审查（2026-11-25）
+
+结论：需修——Critical 1 项、Important 2 项；G1–G6 中 G4 因前两项未完全达成，其余达成。三项均在合并前修掉，各配守门测试且先测后实现，主会话限定复审通过：
+
+- Critical｜未登录调 `POST /matrix-offboard` 仍执行全部离职副作用（写工单、停账号、联动停用自然人）：身份闸处改为未登录立即 401 返回，离职人取服务端登录身份（`63c0ec05c`；守门 `custom/server/governance/__tests__/offboard-routes.test.ts`）。
+- Important｜`WORKUNIT_DISPATCH_GATE=off` 对团队确认端点不生效：`unitGateOk` 改读同一环境变量，放行判定改为「门不是 block」——开关关闭时读数是 `skipped`，旧判定会把它当成拒（`6357127d5`；守门加在 `outcome-controller.test.ts`）。
+- Important｜自然人登记时邮箱碰撞会静默吞掉显式 `id` 并改写他人：`upsertPerson` 在显式 `id` 未命中而邮箱已属他人时拒绝合并（`99bd9efd1`；守门加在 `people.test.ts`）。
+
+审查同时留下六项不拦合并的问题，挂账如下（行号核对于 `195b955ba`）：
+
+| # | 位置 | 现状 | 影响 |
+|---|---|---|---|
+| 1 | `custom/server/zcode/mention-dispatch.ts:278-284` | 团队停止条件命中且非强制时，`warnings = [detail]` 整体覆盖 | 此前追加的能力紧张告警丢失 |
+| 2 | `custom/server/outcome/team-validate.ts:94` | 拒绝文案硬编码 `unit_gate` | 团队确认被拒时分不清是未准入、变更中、已退役还是责任卡失效 |
+| 3 | `custom/server/zcode/mention-dispatch.ts:210-223` | `collectUnitGate` 任一目标读取抛错即丢弃整张读数表 | 已成功采集的读数一并丢失（不拦派单的行为不变） |
+| 4 | `custom/server/services/kanban/raci-dispatch.ts:128-141` | 部分责任人被拦后剔除并继续派发，随后照常写去重记录 | 同任务重试按去重直接返回原房间，被拦的责任人不会再被尝试 |
+| 5 | `custom/server/governance/governance-controller.ts:798-801` | `objectField` 对字符串、数组等非对象形态静默返回 `undefined` | 等价于没传该字段，调用方得不到 400 提示 |
+| 6 | `custom/client/ia2/components/gov/OrgEditor.vue:181-194,331` | 前置检查被拦后向导停在结果页，结果页只有「关闭」 | 须关掉重开才能修改移交对象，已填内容丢失 |
 
 ## 设计文档影响
 
@@ -235,17 +255,16 @@ DESIGN_DOCS: docs/DESIGN.md
 
 ## 未做/未验证
 
-- 本文件是设计稿，未改产品代码，未运行测试。断点表与各节引用的代码位置经独立的建设者检查逐条核对属实。
-- 建设者检查未核对、现已由主会话读代码核实的项：RACI 调用方对失败的处理（只对抛错打警告，见第二节接线点二）；`reassign --reclaim` 的行为（不回收则拒绝改派在跑任务，见第五节）；驾驶舱标签本地化所在文件（`custom/client/zcode/store/zcode-projection.ts`）。
-- 仍未核对、留给实施计划执行时确认的项：服务端 AgentDescriptor 镜像类型的位置；三份界面测试的夹具细节。
+- 预演入口的派单门读数只经服务探针验证（真实判定核＋门）；HTTP 预演端点在本机缺真实 zcode 引擎，返回 `target_unavailable`，未做真实引擎端到端验证。
+- 宿主运行时未部署：本批零补丁、不改运行时模板，注入时的运行时同步落在工作区内的影子目录，宿主安装树未被触碰。
+- 整分支审查留下的六项问题未修，见上文挂账表。
+- 标杆牵引三批中的批二、批三未开工。
 - 内核领取门与跨机接收端门未设（见非目标），因此「退役后队列中的存量任务」与「跨机直派」不在本批保障范围。
 - 桥接重启前，带能力标签的跨机指派会因缺少 `profile` 明确失败；窗口长短取决于部署重启时机，未实测。
 
-## 留给实施计划的事项
+## 实施计划事项的落地结果（2026-11-25）
 
-- 开工前先把分支变基到最新本地主干。本文件写作期间主干被其它会话推进到 `3ebe7cbbc`；已核对该推进未触及本批任何代码文件，只改了 `docs/DESIGN.md` 的其它段落（§4.6 责任台账段仍在 `:1200`）与机制预算文件（上限已下调，本批零新增不受影响）。
-- 补丁号：本批预计零补丁；如需变更回到用户裁决。
-- 现有测试夹具（`PlanFacts`、团队校验、离职用例）随新增可选字段同步，不改变既有断言。
-- 决策留痕：本批以本文件「决策记录」段为准（D1–D13）。`.swarm-yuan/decisions.jsonl` 在主干上的哈希链已断（存量：第 136 行是被换行截开的残片，与本批无关；`trace-log.sh --verify-chain` 可复现），本批不向其续写；修复历史行须用户授权，修复后用 `skills/swarm-yuan/assets/trace-log.sh --decision` 补记，不手拼 JSON 行。
-- 新 spec 重生成文档索引（`node scripts/maintenance/gen-doc-indexes.mjs --write`）。
-- 实施计划：`docs/superpowers/plans/2026-11-24-digital-employee-batch1.md`。
+- 分支两次变基：开工前一次，收口前变基到 `ccfa55a22`；补丁零枚，未触 `vendor/**` 与 `patches/**`。
+- 既有测试夹具（`PlanFacts`、团队校验、离职用例）随新增可选字段同步，未改既有断言；枚举冻结守门只追加 `unit_gate`、`capability_block` 两个原因码。
+- 决策留痕以本文件「决策记录」段（D1–D13）为准。经用户授权，`.swarm-yuan/decisions.jsonl` 已完成哈希链重基线（145 行内容逐字段不变，链字段按文件顺序重算）；本批两条决策（派单门只约束显式绑定的执行单元、签署改为独立动作并定下离职顺序）经 `skills/swarm-yuan/assets/trace-log.sh --decision` 写入，`--verify-chain` 通过（148 行）。
+- 实施计划：`docs/superpowers/plans/2026-11-24-digital-employee-batch1.md`。逐任务过程账本 `.superpowers/sdd/2026-11-24-digital-employee-batch1/progress.md` 是本地忽略文件，随工作区收口删除；其中需要留存的裁定已体现在本文件，挂账见「验证」段。
