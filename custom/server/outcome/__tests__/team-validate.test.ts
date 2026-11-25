@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { validateTeam } from '../team-validate'
 import type { TeamContractFacts } from '../team-validate'
+import { UNIT_GATE_REASON, DISPATCH_REASON_CODES } from '../../zcode/dispatch-reasons'
 
 const baseContract: TeamContractFacts = {
   ownerPersonId: 'p-1',
@@ -152,5 +153,17 @@ describe('validateTeam 派单门（数字员工批一）', () => {
 
   it('不传 unitGateOk → 行为不变', () => {
     expect(validateTeam(baseContract, validTeam({ members: [member(), member({ subjectId: 'p-2', role: 'reviewer', responsibility: '独立复核' }), member({ subjectKind: 'agent', subjectId: 'ag-ok-1', role: 'x', responsibility: 'y' })] }), active, rosterOk).problems).toEqual([])
+  })
+
+  // 审查挂账2/6：拒绝码此前内联 `unit_gate` 字面量（违反词表冻结条款「禁止私造
+  // 表外字符串」的反向面——文案与词表脱钩漂移）。守门两钉：
+  // ① UNIT_GATE_REASON 是词表成员（词表删条目→①红；常量被改名/挪走→import 失败即红）；
+  // ② 拒绝文案携带的码=UNIT_GATE_REASON（实现改回内联字面量且与词表脱钩→②红）。
+  it('拒绝码出自统一词表（UNIT_GATE_REASON ∈ DISPATCH_REASON_CODES）且文案引用该常量', () => {
+    expect(DISPATCH_REASON_CODES).toContain(UNIT_GATE_REASON)
+    const team = validTeam({ members: [member(), member({ subjectId: 'p-2', role: 'reviewer', responsibility: '独立复核' }),
+      member({ subjectKind: 'agent', subjectId: 'ag-ok-1', role: 'executor', responsibility: '执行' })] })
+    const r = validateTeam(baseContract, team, active, rosterOk, () => false)
+    expect(r.problems.join()).toContain(`不可接单（${UNIT_GATE_REASON}）`)
   })
 })

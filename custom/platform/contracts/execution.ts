@@ -44,8 +44,10 @@ function parseMcpName(tool: string): { server: string; tool: string } | null {
   return { server: rest.slice(0, i).toLowerCase(), tool: rest.slice(i + 2).toLowerCase() }
 }
 
-/** 工具名首/末段动词→类别（命中即返回；顺序无关，互斥设计）。 */
-const MCP_TOOL_VERBS: { re: RegExp; cat: ToolCategory }[] = [
+/** 工具名首/末段动词→类别（命中即返回；顺序无关，互斥设计）。
+ *  导出（2026-11-26 契约区分守门）：与治理动作契约（action-contracts.yaml）的
+ *  职责边界守门测试据此断言两套登记的字段面与词空间不同，防误合并。 */
+export const MCP_TOOL_VERBS: { re: RegExp; cat: ToolCategory }[] = [
   // 动词首形态（list_issues/get_user…MCP 主流命名）；末段宾语不限
   { re: /^(?:get|list|search|read|query|fetch|find|describe|show|view|browse|count|check|validate|inspect|export|download|lookup|retrieve|discover)(?:_|$)/, cat: 'read' },
   { re: /^(?:create|update|delete|set|write|insert|upsert|remove|drop|patch|put|post|send|publish|upload|move|copy|rename|archive|restore|assign|comment|reply|add|new|edit|modify)(?:_|$)/, cat: 'write' },

@@ -75,6 +75,22 @@ export async function simulateCreateRoom(
 }
 
 /**
+ * 模拟补邀用户进既有房间（2026-11-26 审查挂账4/6）：RACI 派发被派单门拦下的
+ * 责任人在门恢复后重试时补邀进原房间。幂等：已在房成员跳过（对齐真实通道
+ * invite 的 already-in-room 幂等语义）；房间不存在抛错（补邀只应发生在
+ * dedupe 记录指向的既有房间上，缺席属调用方 bug 不静默）。
+ */
+export async function simulateInviteUser(
+  roomId: string,
+  userId: string,
+): Promise<void> {
+  const existing = memberships.find(m => m.roomId === roomId)
+  if (!existing) throw new Error(`simulateInviteUser: room not found: ${roomId}`)
+  if (memberships.some(m => m.roomId === roomId && m.userId === userId)) return
+  memberships.push({ roomId, userId, role: 'member' })
+}
+
+/**
  * 获取房间的完整消息历史
  */
 export function getRoomHistory(roomId: string): SimulatedMessage[] {

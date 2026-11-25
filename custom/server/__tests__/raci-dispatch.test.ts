@@ -243,6 +243,66 @@ describe('RACI Dispatch', () => {
       expect(getUserMemberships('@ok-g2:localhost')).toHaveLength(1)
     })
 
+    // 审查挂账4/6：部分被拦此前照常写去重记录（不带被拦明细），同任务重试按去重
+    // 直接返回原房间——被拦责任人永远不再被尝试。修复后被拦者在案（blocked 字段），
+    // 重试重过门：门未变保持记录；门恢复者补邀进原房间并从在案名单移除。
+    describe('被拦责任人重试补邀（审查挂账4/6）', () => {
+      const RETIRED = { id: 'aid-ret', name: 'u-ret', kind: 'agent', owner: 'alice', toolAllowlist: [],
+        credentials: [], delegations: [], createdAt: 1, updatedAt: 1,
+        runtimeBindings: { matrixAccounts: ['@ret-agent:localhost'] },
+        responsibilityCard: {
+          deliveryStandard: '可复现', riskTier: 'medium', primaryOwner: 'alice', escalation: ['e'],
+          pauseConditions: ['p'], takerOver: 'bob', testCaseVersion: 'tc-1',
+          costBudget: { limit: 1, unit: 'CNY' }, maintainer: 'alice', deploymentLocation: 'x',
+        },
+        lifecycle: { stage: 'retired', history: [] },
+      }
+
+      it('部分被拦派发成功 → 被拦者在案；门未变时重试 deduped 且仍不进房', async () => {
+        const path = await freshDedupePath()
+        const first = await RACIDispatchService.dispatch(
+          gateTask('task-gate-retry-keep', ['@ret-agent:localhost', '@ok-g3:localhost']) as any, path)
+        expect(first.ok).toBe(true)
+        // 在案：sidecar 记录含被拦账号原值
+        const record = JSON.parse(await readFile(path, 'utf-8'))['task-gate-retry-keep']
+        expect(record.blocked).toEqual(['@ret-agent:localhost'])
+
+        const second = await RACIDispatchService.dispatch(
+          gateTask('task-gate-retry-keep', ['@ret-agent:localhost', '@ok-g3:localhost']) as any, path)
+        expect(second).toMatchObject({ ok: true, deduped: true, roomId: first.roomId })
+        // 门未变：被拦账号仍未进房、仍不在案名单被误清
+        expect(getUserMemberships('@ret-agent:localhost')).toHaveLength(0)
+        expect(JSON.parse(await readFile(path, 'utf-8'))['task-gate-retry-keep'].blocked).toEqual(['@ret-agent:localhost'])
+        await rm(path, { force: true }).catch(() => {})
+      })
+
+      it('门恢复后重试 → deduped 返回原房间且被拦者补邀进房、在案清空；再重试幂等', async () => {
+        const path = await freshDedupePath()
+        const first = await RACIDispatchService.dispatch(
+          gateTask('task-gate-retry-recover', ['@ret-agent:localhost', '@ok-g5:localhost']) as any, path)
+        expect(first.ok).toBe(true)
+        expect(getUserMemberships('@ret-agent:localhost')).toHaveLength(0)
+
+        // 门恢复：u-ret 阶段 retired→running（责任卡夹具齐备 → pass）
+        RETIRED.lifecycle = { stage: 'running', history: [] }
+        await writeFile(join(idDir, 'identities.json'), JSON.stringify({ identities: [RETIRED], nextSeq: 2, nextDelegationSeq: 1 }))
+        const second = await RACIDispatchService.dispatch(
+          gateTask('task-gate-retry-recover', ['@ret-agent:localhost', '@ok-g5:localhost']) as any, path)
+        expect(second).toMatchObject({ ok: true, deduped: true, roomId: first.roomId })
+        // 补邀兑现：被拦者已进原房间
+        expect(getUserMemberships('@ret-agent:localhost')).toHaveLength(1)
+        expect(getUserMemberships('@ret-agent:localhost')[0]!.roomId).toBe(first.roomId)
+        // 在案清空：blocked 字段不再存在
+        expect(JSON.parse(await readFile(path, 'utf-8'))['task-gate-retry-recover'].blocked).toBeUndefined()
+        // 再次重试：deduped 幂等，不产生重复成员
+        const third = await RACIDispatchService.dispatch(
+          gateTask('task-gate-retry-recover', ['@ret-agent:localhost', '@ok-g5:localhost']) as any, path)
+        expect(third).toMatchObject({ ok: true, deduped: true })
+        expect(getUserMemberships('@ret-agent:localhost')).toHaveLength(1)
+        await rm(path, { force: true }).catch(() => {})
+      })
+    })
+
     // 未绑定账号 → 行为不变：既有「succeeds in simulation mode with valid RACI」用例覆盖
   })
 })

@@ -17,6 +17,9 @@
 // 适用同一套成员约束——候选不因 draft 降门槛。
 import type { OutcomeContract, OutcomeTeamMember } from './types'
 import { TEAM_SUBJECT_KINDS } from './types'
+// 拒绝码出自统一词表（审查挂账2/6）：不内联 `unit_gate` 字面量，引用派单门词表常量
+// （zcode/dispatch-reasons.ts 冻结条款：使用方禁止私造表外 reason 字符串）。
+import { UNIT_GATE_REASON } from '../zcode/dispatch-reasons'
 
 /** 校验所需合同事实（只取三字段，测试与 T2 端点无需构造整份合同）。 */
 export type TeamContractFacts = Pick<
@@ -91,7 +94,7 @@ export function validateTeam(
   }
   for (const id of agents) {
     if (!rosterOk(id)) problems.push(`agent 成员 ${id} 名册未齐备（rosterStatus=blocked）`)
-    else if (unitGateOk && !unitGateOk(id)) problems.push(`agent 成员 ${id} 不可接单（unit_gate）`)
+    else if (unitGateOk && !unitGateOk(id)) problems.push(`agent 成员 ${id} 不可接单（${UNIT_GATE_REASON}）`)
   }
 
   return { problems }

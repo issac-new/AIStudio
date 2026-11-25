@@ -22,6 +22,7 @@ import {
 import { registerEntry } from '../../taskledger/taskledger-store'
 import {
   simulateCreateRoom,
+  simulateInviteUser,
   simulateSendMessage,
 } from '../../matrix/simulation'
 import {
@@ -52,6 +53,9 @@ export interface RaciDispatchTask {
 interface DispatchRecord {
   roomId: string
   dispatchedAt: number
+  /** 部分责任人被派单门拦下时的在案名单（审查挂账4/6）：重试时对这些账号重过门，
+   *  门恢复者补邀进原房间并从名单移除；全部恢复后字段清空（不写 undefined 键）。 */
+  blocked?: string[]
 }
 
 type DedupeMap = Record<string, DispatchRecord>
@@ -74,10 +78,11 @@ async function readDedupe(path: string): Promise<DedupeMap> {
 let dedupeWriteQueue: Promise<void> = Promise.resolve()
 const inFlightDispatch = new Map<string, Promise<DispatchResult>>()
 
-function recordDispatch(path: string, taskId: string, roomId: string): Promise<void> {
+function recordDispatch(path: string, taskId: string, roomId: string, blocked?: string[]): Promise<void> {
   const run = dedupeWriteQueue.then(async () => {
     const map = await readDedupe(path)
-    map[taskId] = { roomId, dispatchedAt: Date.now() }
+    // blocked 空=无在案被拦者（或已全部补邀恢复），不写 undefined 键保持记录面干净
+    map[taskId] = { roomId, dispatchedAt: Date.now(), ...(blocked?.length ? { blocked } : {}) }
     await mkdir(dirname(path), { recursive: true })
     const tmp = `${path}.tmp`
     await writeFile(tmp, JSON.stringify(map, null, 2), 'utf8')
@@ -110,6 +115,21 @@ export class RACIDispatchService {
   private static async doDispatch(task: RaciDispatchTask, dedupePath: string): Promise<DispatchResult> {
     const seen = (await readDedupe(dedupePath))[task.id]
     if (seen?.roomId) {
+      // 审查挂账4/6：部分被拦的在案账号重试时重过门，门恢复者补邀进原房间并刷新
+      // 记录（补邀失败不吞 dedupe 返回，只 warn 留待下次重试）；门未变则记录保持。
+      const recorded = seen.blocked ?? []
+      if (recorded.length > 0) {
+        const recheck = RACIDispatchService.filterGateBlocked(recorded)
+        if (recheck.responsible.length > 0) {
+          try {
+            await RACIDispatchService.inviteIntoRoom(seen.roomId, recheck.responsible)
+            console.warn(`[raci-dispatch] 重试补邀门已恢复的责任人进房：${recheck.responsible.join('，')}`)
+            await recordDispatch(dedupePath, task.id, seen.roomId, recheck.blocked)
+          } catch (err) {
+            console.warn(`[raci-dispatch] 重试补邀失败（留待下次）：${err instanceof Error ? err.message : String(err)}`)
+          }
+        }
+      }
       return { ok: true, roomId: seen.roomId, deduped: true }
     }
 
@@ -126,19 +146,20 @@ export class RACIDispatchService {
 
     // 责任人过执行单元派单门（2026-11-24 数字员工批一）：未准入/变更中/已退役/责任卡失效
     // 的账号不接 RACI 派发。全部被拦 → 抛错（上游只看抛错），此时去重记录尚未写入；
-    // 部分被拦 → 剔除后继续并 warn。门读数采集异常不拦（fail-soft，与派单链路同口径）。
+    // 部分被拦 → 剔除后继续并 warn，被拦者在案进去重记录（重试时重过门补邀，挂账4/6）。
+    // 门读数采集异常不拦（fail-soft，与派单链路同口径）。
     const gated = RACIDispatchService.filterGateBlocked(raci.responsible)
-    if (gated.blocked.length > 0) {
-      console.warn(`[raci-dispatch] 责任人被派单门拦截，已剔除：${gated.blocked.join('，')}`)
+    if (gated.blockedDetail.length > 0) {
+      console.warn(`[raci-dispatch] 责任人被派单门拦截，已剔除：${gated.blockedDetail.join('，')}`)
     }
     if (gated.responsible.length === 0) {
-      throw new Error(`RACI 派发被单元派单门拦截：${gated.blocked.join('，')}`)
+      throw new Error(`RACI 派发被单元派单门拦截：${gated.blockedDetail.join('，')}`)
     }
     const raciDispatch = { ...raci, responsible: gated.responsible }
 
     try {
       const mode = await RACIDispatchService.dispatchToMatrix(task, raciDispatch)
-      await recordDispatch(dedupePath, task.id, mode.roomId)
+      await recordDispatch(dedupePath, task.id, mode.roomId, gated.blocked)
       // 统一任务生命周期账本接线（wx 挂账 #7，2026-10-27 清偿批）：matrix 派发成功
       // 按 body phase（缺省 assigned=pending）登记进 taskledger。fail-soft 不阻断。
       try {
@@ -156,27 +177,43 @@ export class RACIDispatchService {
     }
   }
 
+  /** 补邀进既有房间：有 Matrix 凭据走真实 invite（幂等已-in-room），无凭据回落模拟补邀。 */
+  private static async inviteIntoRoom(roomId: string, accounts: string[]): Promise<void> {
+    const env = resolveMatrixDispatchEnv()
+    if (env) {
+      for (const account of accounts) await matrixInviteUser(env, roomId, account)
+      return
+    }
+    for (const account of accounts) await simulateInviteUser(roomId, account)
+  }
+
   /**
    * 责任人门过滤：账号形态可能是 Matrix 全形也可能是 profile 名，按两种形态
-   * （matrix-account / agent）各求一次，任一为 block 即拦。返回剔除后的名单与被拦明细
-   * （账号+原因）；门读数采集异常不拦（fail-soft），只 warn。
+   * （matrix-account / agent）各求一次，任一为 block 即拦。返回剔除后的名单、被拦
+   * 账号原值（blocked，供在案记录与重试重过门）与被拦明细（blockedDetail=账号+原因，
+   * 供日志与报错）；门读数采集异常不拦（fail-soft），只 warn。
    */
-  private static filterGateBlocked(accounts: string[]): { responsible: string[]; blocked: string[] } {
+  private static filterGateBlocked(accounts: string[]): { responsible: string[]; blocked: string[]; blockedDetail: string[] } {
     const responsible: string[] = []
     const blocked: string[] = []
+    const blockedDetail: string[] = []
     for (const account of accounts) {
       try {
         const asAccount = assessUnitDispatchGate(readUnitGateFacts(account, 'matrix-account'))
         const asAgent = assessUnitDispatchGate(readUnitGateFacts(account, 'agent'))
         const hit = [asAccount, asAgent].find((v) => v.decision === 'block')
-        if (hit) blocked.push(`${account}（${hit.reasons.join('；')}）`)
-        else responsible.push(account)
+        if (hit) {
+          blocked.push(account)
+          blockedDetail.push(`${account}（${hit.reasons.join('；')}）`)
+        } else {
+          responsible.push(account)
+        }
       } catch (err) {
         console.warn(`[raci-dispatch] 门读数采集异常（不拦截 ${account}）：${err instanceof Error ? err.message : String(err)}`)
         responsible.push(account)
       }
     }
-    return { responsible, blocked }
+    return { responsible, blocked, blockedDetail }
   }
 
   /** 建群+邀人+发摘要：有 Matrix 凭据走真实 client-server（room-invite-gap 根治），
