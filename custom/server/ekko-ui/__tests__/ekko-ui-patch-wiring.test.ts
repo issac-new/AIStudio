@@ -58,8 +58,6 @@ describe('补丁 820：MCP 五个工具', () => {
   })
 })
 
-describe('补丁 821：接线', () => {
-  const text = patch('821-studio-ekko-ui-persistent-wiring.patch')
 
   it('路由装配挂上持久式界面路由', () => {
     expect(text).toContain("import { persistentSurfaceRoutes } from '../custom/ekko-ui/persistent-controller'")
@@ -84,3 +82,14 @@ describe('补丁 821：接线', () => {
     expect(text).toContain('<EkkoUISurfaceCard v-else-if="isEkkoSurfaceTool"')
   })
 })
+
+describe('协议目录的模块格式作用域', () => {
+  it('custom/client/chat/ekko-ui/package.json 存在且无 type 字段（截断根 type:module 继承）', () => {
+    // 缺失时 ts-node 把 protocol.ts 当 ESM，服务端启动即 ERR_REQUIRE_ESM（2026-11-25 走查实测）
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../../client/chat/ekko-ui/package.json'), 'utf8'))
+    expect(pkg.type).toBeUndefined()
+  })
+})
+
+describe('补丁 821：接线', () => {
+  const text = patch('821-studio-ekko-ui-persistent-wiring.patch')
