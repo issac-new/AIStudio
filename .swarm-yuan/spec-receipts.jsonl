@@ -520,3 +520,4 @@
 {"at": "2026-11-25T01:31:29Z", "spec": "docs/superpowers/specs/2026-11-24-ekko-ui-v2-batch1.md", "receipt": "a77360edeb914c90eda86c96a0af3de9758b3209", "commit": "420fe1d0b"}
 {"at":"2026-11-25T01:41:17Z","spec":"docs/superpowers/specs/2026-11-24-ekko-ui-v2-batch1.md","receipt":"db78961e9fe65a18356a6c07d64bdfa95a8628d5","commit":"719b0b64f"}
 {"at":"2026-11-25T02:41:28Z","spec":"docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md","receipt":"6a934fdfe0c4d8347fe91d0267205d6f5544cfdc","commit":"30dfa2515"}
+{"at":"2026-11-25T03:56:02Z","spec":"docs/superpowers/specs/2026-11-25-yuan-guide-v2103-alignment.md","receipt":"24b69c92181ee48142cce6701366c17c833b13a9","commit":"0aaf8f810"}
