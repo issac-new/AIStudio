@@ -195,6 +195,62 @@ actions:
     level: shared_state
     reversible: true
     note: 打回可重审
+  # --- Studio 对话内界面工具（MCP 服务 ekko-studio-interaction，以 toolset=plan 启动）---
+  # 键是模型发出的工具全名：服务名上线时经净化，连字符变下划线，故为 mcp__ekko_studio_interaction__…。
+  # 未登记即被 action-gate 拦截（默认策略不可逆）；2026-11-25 Ekko UI v2 批二真实会话走查实测：
+  # surface_create 报 not registered。分级依据：读类无副作用；写类只写 ekko-ui-surfaces.db 中
+  # 本人本会话的界面（服务端按 profile 与用户校验归属，他人一律 404），规格经完整校验、不含 HTML
+  # 与脚本，界面可关闭可续改，故归本地可逆。任一条件变化（写他人界面、放开校验）须改为 shared_state。
+  mcp__ekko_studio_interaction__ekko_studio_surface_catalog:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读界面部件目录与写法
+  mcp__ekko_studio_interaction__ekko_studio_surface_inspect:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读本人界面的当前规格与状态
+  mcp__ekko_studio_interaction__ekko_studio_surface_create:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 在本人当前会话创建界面,可续改可关闭
+  mcp__ekko_studio_interaction__ekko_studio_surface_update:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 按基准版本续改本人界面,版本过期即拒绝
+  mcp__ekko_studio_interaction__ekko_studio_surface_close:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 关闭本人界面,只读保留
+  mcp__ekko_studio_interaction__ekko_studio_show_surface:
+    side_effects: db_write
+    reversible: true
+    level: local_reversible
+    note: 阻塞式表单,等用户提交,仅本人当前会话
+  mcp__ekko_studio_interaction__ekko_studio_update_plan:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 每轮执行计划,同 todo_list 分级
+  mcp__ekko_studio_interaction__ekko_studio_list_session_tasks:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 只读会话目标台账
+  mcp__ekko_studio_interaction__ekko_studio_clarify:
+    side_effects: none
+    reversible: NA
+    level: local_reversible
+    note: 向用户提一个澄清问题并等待回答,不写任何状态,仅本人当前轮
+  mcp__ekko_studio_interaction__ekko_studio_update_session_tasks:
+    side_effects: db_write
+    reversible: true
+    level: shared_state
+    note: 跨轮会话目标台账,同 kanban_request_review 分级
 tool_mapping:
   browser_navigate:
   - browser_exec

@@ -240,6 +240,56 @@ describe('目录投影', () => {
     ])
     expect(catalogProjection({ query: 'zzz-no-match' }).components).toEqual([])
   })
+
+  // 2026-11-25 真实会话走查：目录只列动作名，模型把 type 写成 action、又给 payload 多包了一层 $expr，连试三次才对。
+  it('目录给出每个动作的字段形状与可照抄的样例，且每个样例自身合法', () => {
+    const shapes = catalogProjection().actionShapes
+    expect(shapes.map(item => item.type).sort()).toEqual(catalogProjection().actions.slice().sort())
+    for (const shape of shapes) {
+      // 样例去掉外层包装后必须是合法动作：把动作挂到一个按钮的 click 上做整体校验
+      const spec = {
+        protocol: EKKO_UI_PROTOCOL_V2, surfaceId: 'probe', fallbackText: 'x',
+        state: { form: { seats: 8, agree: false }, items: ['a'], result: 'r' },
+        root: { id: 'root', type: 'stack', children: [
+          { id: 'b', type: 'button', props: { text: 'x' }, events: { click: JSON.parse(shape.example) } },
+          { id: 't', type: 'tabs', children: [{ id: 'detail', type: 'tab-panel', props: { label: '明细' }, children: [{ id: 'd', type: 'text', props: { text: 'y' } }] }] },
+        ] },
+      }
+      expect(validateSpec(spec), `${shape.type} 的样例应当合法：${JSON.stringify(validateSpec(spec).errors)}`).toMatchObject({ ok: true })
+    }
+    const submit = shapes.find(item => item.type === 'surface.submit')
+    expect(submit?.example).toBe('{"type":"surface.submit","actionId":"submit","payload":{"kind":"state","path":""}}')
+    expect(submit?.fields).toContain('path":""')
+    expect(catalogProjection().notes.join('\n')).toContain('不要包 $expr')
+  })
+
+  it('按动作名查目录能查到写法（查不到部件的词也能命中动作）', () => {
+    expect(catalogProjection({ query: 'submit' }).actionShapes.map(item => item.type)).toEqual(['surface.submit'])
+    expect(catalogProjection({ query: 'submit' }).components).toEqual([])
+    // 查部件时动作写法不被查询词误伤掉：range 不命中任何动作
+    expect(catalogProjection({ query: 'range' }).actionShapes).toEqual([])
+  })
+
+  it('提交负载的正确写法一次通过；包了 $expr 时指出怎么改', () => {
+    const specWith = (payload: unknown) => ({
+      protocol: EKKO_UI_PROTOCOL_V2, surfaceId: 's', fallbackText: 'x', state: { seats: 8 },
+      root: { id: 'root', type: 'stack', children: [
+        { id: 'seats-slider', type: 'range', bind: 'seats', props: { min: 1, max: 50 } },
+        { id: 'submit-btn', type: 'button', props: { text: '提交估算', variant: 'primary' },
+          events: { click: [{ type: 'surface.submit', actionId: 'submit', payload }] } },
+      ] },
+    })
+    // 第三次（正确）：裸表达式
+    expect(validateSpec(specWith({ kind: 'state', path: '' }))).toMatchObject({ ok: true })
+    // 第二次：多包了一层 $expr —— 指向「去掉外层」，而不是「未知表达式类型：undefined」
+    const wrapped = validateSpec(specWith({ $expr: { kind: 'state', path: '' } }))
+    expect(wrapped.ok).toBe(false)
+    if (wrapped.ok) return
+    expect(wrapped.errors).toHaveLength(1)
+    expect(wrapped.errors[0].path).toBe('root.children[1].events.click[0].payload')
+    expect(wrapped.errors[0].message).toContain('不要包 $expr')
+    expect(wrapped.errors[0].message).not.toContain('undefined')
+  })
 })
 
 describe('回执摘要与续接消息', () => {

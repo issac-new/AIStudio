@@ -695,6 +695,10 @@ function validateExpression(expr: unknown, path: string, sink: ValidationSink, v
   if (depth > EKKO_UI_LIMITS.maxExpressionDepth) throw new ExpressionBudgetExceeded('depth')
   if (!isPlainObject(expr)) return fail(sink, path, 'expression.invalid', '表达式必须是对象')
   const kind = (expr as Record<string, unknown>).kind
+  // 取值位置直接写表达式：写成 {$expr:{…}} 是把组件属性的包装用法搬了过来，指出怎么改
+  if (kind === undefined && bindingWrapper(expr) === '$expr') {
+    return fail(sink, path, 'expression.wrapped', '这里直接写表达式对象，不要包 $expr（去掉外层 $expr，写出 {kind, …}）')
+  }
   if (version === 1 && typeof kind === 'string' && V2_EXPRESSION_KINDS.has(kind)) {
     return fail(sink, path, 'expression.unknown', `未知表达式类型：${kind}（v1 不支持，需 ekko-ui/v2；v1 可用：${expressionKinds(1)}）`)
   }
@@ -1538,7 +1542,10 @@ export interface EkkoUICatalog {
   specShape: string
   components: EkkoUICatalogComponent[]
   expressions: Array<{ kind: string; syntax: string }>
+  /** 动作名列表（保持原样，供按键名取详情）。 */
   actions: string[]
+  /** 动作写法：字段形状与一个可直接照抄的样例。 */
+  actionShapes: Array<{ type: string; fields: string; example: string }>
   notes: string[]
 }
 
@@ -1561,6 +1568,28 @@ const EXPRESSION_SYNTAX: Array<{ kind: string; syntax: string }> = [
   { kind: 'map', syntax: '{kind:"map", list:<表达式>, item:"it", index?:"i", body:<表达式>} —— 列表循环（v2）' },
   { kind: 'object', syntax: '{kind:"object", fields:{label:<表达式>, value:<表达式>}}（v2）' },
   { kind: 'array', syntax: '{kind:"array", values:[<表达式>, …]}（v2）' },
+]
+
+/**
+ * 动作写法表（目录用）。样例是真实会话里模型第一次就写对的形状：
+ * 2026-11-25 走查实测，目录只列动作名时模型把 type 写成 action、又给 payload 多包了一层
+ * $expr，连试三次才对——动作的字段形状必须在目录里给全，并配一个能照抄的样例。
+ * 动作字段的取值位置（value/index/payload/text/url）直接写表达式对象，不包 $expr；
+ * $expr 只用于组件属性取值。
+ */
+const ACTION_SHAPES: Array<{ type: string; fields: string; example: string }> = [
+  { type: 'state.set', fields: '{type, path, value:<表达式>}', example: '{"type":"state.set","path":"form.seats","value":{"kind":"literal","value":8}}' },
+  { type: 'state.merge', fields: '{type, path, value:<表达式>} —— 把对象并入该路径（v2）', example: '{"type":"state.merge","path":"form","value":{"kind":"object","fields":{"seats":{"kind":"literal","value":8}}}}' },
+  { type: 'state.toggle', fields: '{type, path} —— 布尔取反', example: '{"type":"state.toggle","path":"form.agree"}' },
+  { type: 'array.append', fields: '{type, path, value:<表达式>}', example: '{"type":"array.append","path":"items","value":{"kind":"literal","value":"新项"}}' },
+  { type: 'array.remove', fields: '{type, path, index:<表达式>}', example: '{"type":"array.remove","path":"items","index":{"kind":"literal","value":0}}' },
+  { type: 'surface.submit', fields: '{type, actionId, payload:<表达式>} —— 提交；payload 取整个状态写 {"kind":"state","path":""}', example: '{"type":"surface.submit","actionId":"submit","payload":{"kind":"state","path":""}}' },
+  { type: 'surface.cancel', fields: '{type, actionId}', example: '{"type":"surface.cancel","actionId":"skip"}' },
+  { type: 'surface.close', fields: '{type} —— 关闭界面（v2）', example: '{"type":"surface.close"}' },
+  { type: 'surface.turn', fields: '{type, text:<表达式>} —— 用文本发起下一轮对话（v2）', example: '{"type":"surface.turn","text":{"kind":"concat","values":[{"kind":"literal","value":"按 "},{"kind":"state","path":"seats"},{"kind":"literal","value":" 个座位重新估算"}]}}' },
+  { type: 'surface.copy', fields: '{type, text:<表达式>} —— 复制到剪贴板（v2）', example: '{"type":"surface.copy","text":{"kind":"state","path":"result"}}' },
+  { type: 'surface.open_url', fields: '{type, url:<表达式>} —— 打开 https/mailto 链接（v2）', example: '{"type":"surface.open_url","url":{"kind":"literal","value":"https://example.com"}}' },
+  { type: 'tabs.open', fields: '{type, nodeId, value} —— 切到指定页签（v2）', example: '{"type":"tabs.open","nodeId":"tabs","value":"detail"}' },
 ]
 
 function propTypeText(rule: EkkoUIPropRule): string {
@@ -1593,6 +1622,9 @@ export function catalogProjection(options: { query?: string; category?: string }
     props: Object.fromEntries(Object.entries(def.props).map(([name, rule]) => [name, propTypeText(rule)])),
   }))
   const caps = clientCapabilities()
+  // 动作写法表：有查询词时只留名字或字段说明命中查询词的动作（如 q="submit"），无查询词时全量
+  const actionShapes = ACTION_SHAPES.filter(shape => !query
+    || `${shape.type} ${shape.fields}`.toLowerCase().includes(query))
   return {
     protocols: caps.protocolVersions,
     features: caps.features,
@@ -1601,10 +1633,12 @@ export function catalogProjection(options: { query?: string; category?: string }
     components,
     expressions: EXPRESSION_SYNTAX,
     actions: actionTypes(2).split(' '),
+    actionShapes,
     notes: [
       '节点形状：{id, type, props?, style?, bind?, visibleWhen?, events?, children?}；id 在界面内唯一且稳定，补丁按 id 寻址。',
       '输入类部件用 bind 绑定状态路径（如 bind:"form.name"）；属性取值可以写 {$state:"路径"}、{$template:"共 {count} 项"} 或（v2）{$expr:<表达式>}。',
       'events 里写本地动作（state.set 等）；只有 surface.submit / surface.cancel / surface.turn / surface.copy / surface.open_url 会离开界面。',
+      '动作的键名是 type（不是 action）：{"type":"surface.submit","actionId":"submit","payload":{"kind":"state","path":""}}。动作的 value/index/payload/text/url 位置直接写表达式对象，不要包 $expr——$expr 只用于组件属性取值。',
       '未知部件、属性、事件、动作、表达式一律拒绝，校验错误会列出可用值。',
       'style 只接受枚举字段（display direction columns gap padding width align tone radius），不能写任意 CSS；不能发送 HTML、脚本或可执行地址。',
       'image.src 只允许 https: 或 data:image/*;base64；surface.open_url 只允许 https: 与 mailto:。',
