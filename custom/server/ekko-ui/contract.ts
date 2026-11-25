@@ -1,9 +1,11 @@
 /**
- * Ekko UI Surface 的服务端传输契约。
+ * Ekko UI Surface 的服务端传输契约（阻塞式 show_surface 使用的部分）。
  *
- * 注意分层：组件目录与属性白名单属于渲染器（custom/client/chat/ekko-ui），
- * 服务端只做传输级校验（JSON 形状、字节/深度/节点数、危险键、提交大小），
- * 避免把 UI 语义复制成第二份事实源；渲染器仍会独立校验并 fail closed。
+ * 分层：本文件只做传输级校验（JSON 形状、字节/深度/节点数、危险键、提交大小），
+ * 供阻塞式界面使用。部件目录与属性白名单的事实源在协议模块
+ * （custom/client/chat/ekko-ui/protocol.ts）。批二起持久式界面在服务端经
+ * protocol-bridge.ts 引用协议模块做语义校验（补丁要能被模型当场修复），
+ * 不在本文件复制第二份目录。
  */
 
 export const SURFACE_MAX_SPEC_BYTES = 64 * 1024
@@ -102,6 +104,21 @@ function scan(value: unknown, depth: number, state: { nodes: number }): void {
     if (UNSAFE_KEYS.has(key)) throw new SurfaceError(`spec contains forbidden key: ${key}`)
     scan(item, depth + 1, state)
   }
+}
+
+/** 递归检查深度、节点数、危险键与字符串长度，并施加规格字节上限。
+ *  阻塞式与持久式界面共用：先在本函数完成传输级拦截，再做各自的语义校验。 */
+export function scanSurfaceValue(value: unknown): void {
+  scan(value, 0, { nodes: 0 })
+  if (byteLength(value) > SURFACE_MAX_SPEC_BYTES) {
+    throw new SurfaceError(`spec exceeds ${SURFACE_MAX_SPEC_BYTES} bytes`)
+  }
+}
+
+/** 持久式界面的状态与提交内容也走同一套传输级检查，但用各自的大小上限。 */
+export function scanSurfacePayload(value: unknown, maxBytes: number, label: string): void {
+  scan(value, 0, { nodes: 0 })
+  if (byteLength(value) > maxBytes) throw new SurfaceError(`${label} exceeds ${maxBytes} bytes`, 413)
 }
 
 export function parseSurfaceRequest(input: Record<string, unknown>): SurfaceRequestInput {

@@ -1363,6 +1363,12 @@ function collectIds(root: EkkoUINode): string[] {
   return ids
 }
 
+/** 保留类型的深拷贝：只用于纯 JSON 数据（节点、样式、规格）。入参已经过形状校验，
+ *  JSON 往返不会丢字段；与 cloneJson 的区别是返回值沿用入参的类型而不是通用 JSON 类型。 */
+function cloneTyped<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 /**
  * 把补丁应用到规格上，再对结果整体重校验。不修改入参。
  * 补丁本身不合法、目标不存在、或打完后规格不合法，都返回 ok=false 与可修复的错误。
@@ -1371,7 +1377,8 @@ export function applySurfacePatches(spec: EkkoUISpec, patches: unknown): EkkoUIP
   const shapeErrors = validateSurfacePatches(patches)
   if (shapeErrors.length) return { ok: false, errors: shapeErrors, changed: [] }
 
-  const next: EkkoUISpec = { ...spec, root: cloneJson(spec.root), state: spec.state ? cloneJson(spec.state) : {} }
+  const state: EkkoUIState = spec.state ? cloneTyped(spec.state) : {}
+  const next: EkkoUISpec = { ...spec, root: cloneTyped(spec.root), state }
   const changed: string[] = []
   const errors: EkkoUIValidationError[] = []
   const mark = (id: string): void => { if (!changed.includes(id)) changed.push(id) }
@@ -1388,14 +1395,14 @@ export function applySurfacePatches(spec: EkkoUISpec, patches: unknown): EkkoUIP
       case 'set-props': {
         const found = findNode(next.root, patch.nodeId)
         if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
-        found.node.props = { ...(found.node.props || {}), ...cloneJson(patch.props) }
+        found.node.props = { ...(found.node.props || {}), ...patch.props }
         mark(patch.nodeId)
         break
       }
       case 'set-style': {
         const found = findNode(next.root, patch.nodeId)
         if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
-        found.node.style = cloneJson(patch.style)
+        found.node.style = { ...patch.style }
         mark(patch.nodeId)
         break
       }
@@ -1406,7 +1413,7 @@ export function applySurfacePatches(spec: EkkoUISpec, patches: unknown): EkkoUIP
         }
         const found = findNode(next.root, patch.nodeId)
         if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
-        const replacement = cloneJson(patch.node)
+        const replacement = cloneTyped(patch.node)
         if (!found.parent) next.root = replacement
         else found.parent.children = (found.parent.children || []).map(child => child.id === patch.nodeId ? replacement : child)
         mark(patch.nodeId)
@@ -1422,16 +1429,17 @@ export function applySurfacePatches(spec: EkkoUISpec, patches: unknown): EkkoUIP
           }
           found.node.children = []
         }
-        const inserted = cloneJson(patch.node)
+        const children = found.node.children
+        const inserted = cloneTyped(patch.node)
         if (patch.afterId !== undefined) {
-          const position = found.node.children.findIndex(child => child.id === patch.afterId)
+          const position = children.findIndex(child => child.id === patch.afterId)
           if (position < 0) {
-            reject(`${at}.afterId`, 'patch.after_id', `afterId 不是 ${patch.parentId} 的直接子节点：${patch.afterId}（可用：${found.node.children.map(child => child.id).join(' ') || '无'}）`)
+            reject(`${at}.afterId`, 'patch.after_id', `afterId 不是 ${patch.parentId} 的直接子节点：${patch.afterId}（可用：${children.map(child => child.id).join(' ') || '无'}）`)
             break
           }
-          found.node.children.splice(position + 1, 0, inserted)
+          children.splice(position + 1, 0, inserted)
         } else {
-          found.node.children.push(inserted)
+          children.push(inserted)
         }
         mark(patch.parentId)
         mark(inserted.id)
@@ -1449,7 +1457,7 @@ export function applySurfacePatches(spec: EkkoUISpec, patches: unknown): EkkoUIP
         break
       }
       case 'set-state':
-        setStateValue(next.state, patch.path, cloneJson(patch.value))
+        setStateValue(state, patch.path, cloneTyped(patch.value))
         mark(`state:${patch.path}`)
         break
       default:
@@ -1480,7 +1488,7 @@ function canonicalJson(value: EkkoUIJsonValue | undefined): string {
 export function surfaceDigest(spec: EkkoUISpec): string {
   // 入参应是已通过校验的规格；体积估算自带访问上限，异常输入只会得到 overflow
   if (byteLength(spec) > EKKO_UI_LIMITS.maxSpecBytes * 4) return 'overflow'
-  const text = canonicalJson({ root: spec.root, state: spec.state ?? null })
+  const text = canonicalJson(JSON.parse(JSON.stringify({ root: spec.root, state: spec.state ?? null })) as EkkoUIJsonValue)
   let hash = 0x811c9dc5
   for (let i = 0; i < text.length; i++) {
     hash ^= text.charCodeAt(i)
@@ -1534,7 +1542,7 @@ export interface EkkoUICatalog {
   notes: string[]
 }
 
-const EXPRESSION_SYNTAX: ReadonlyArray<{ kind: string; syntax: string }> = [
+const EXPRESSION_SYNTAX: Array<{ kind: string; syntax: string }> = [
   { kind: 'literal', syntax: '{kind:"literal", value:<JSON 值>}' },
   { kind: 'state', syntax: '{kind:"state", path:"a.b"} —— 读状态路径' },
   { kind: 'event', syntax: '{kind:"event", path:"value"} —— 读事件参数' },

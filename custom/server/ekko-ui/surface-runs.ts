@@ -37,6 +37,15 @@ export class SurfaceRuns {
     this.bindings.set(contextId, { sessionId, profile, resolve })
   }
 
+  /**
+   * 批二：把当前轮的上下文解析成会话，供非阻塞创建沿用同一套活动轮校验——
+   * 没有活动轮就不能创建，后台子代理与委派任务因此天然不可用（spec D7）。
+   */
+  resolveTurn(contextId: string, profile: string): { sessionId: string; runId: string } {
+    const { binding, runId } = this.active(contextId, profile)
+    return { sessionId: binding.sessionId, runId }
+  }
+
   private active(contextId: string, profile: string): { binding: Binding; runId: string } {
     const binding = this.bindings.get(contextId)
     if (!binding || binding.profile !== profile) throw new SurfaceError('Surface context is unavailable or has expired', 409)
