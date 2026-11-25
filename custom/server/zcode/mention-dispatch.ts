@@ -204,20 +204,22 @@ export function resolveRunsFor(token: { target: string; kind: 'agent' | 'squad' 
  * 门读数采集（2026-11-24 数字员工批一）：对 mentions 的每个实际执行目标（agent=自身、
  * squad=leader）按 targetKind:'agent' 求门读数，键=runsFor（与 planDispatch 查找键同源）。
  * 写路径 dispatch 与预演入口（engine-controller /mention/preview）共用本函数，保证预演与
- * 写路径看到的是同一份门事实。采集异常记空 Map 并 warn——读不到台账本身由门判 unknown
- * （不拦），这里只兜采集链路的意外异常。
+ * 写路径看到的是同一份门事实。
+ * 逐目标隔离采集（审查挂账3/6）：此前整个循环包在一个 try 里，任一目标读取抛错即
+ * 丢弃整张读数表（已成功采集的读数一并丢失）。现单目标失败只影响该目标——按门自身
+ * 的 fail-soft 口径记 unknown（ledger_unavailable，不拦），成功目标读数保留。
  */
 export function collectUnitGate(mentions: MentionToken[]): Map<string, UnitGateVerdict> {
   const map = new Map<string, UnitGateVerdict>()
-  try {
-    for (const token of mentions) {
-      const runsFor = resolveRunsFor(token)
-      if (map.has(runsFor)) continue
+  for (const token of mentions) {
+    const runsFor = resolveRunsFor(token)
+    if (map.has(runsFor)) continue
+    try {
       map.set(runsFor, assessUnitDispatchGate(readUnitGateFacts(runsFor, 'agent')))
+    } catch (err) {
+      console.warn(`[mention-dispatch] 派单门读数采集异常（不阻断派发，目标 ${runsFor} 记 unknown）：${err instanceof Error ? err.message : String(err)}`)
+      map.set(runsFor, { target: runsFor, applicable: false, decision: 'unknown', reasons: ['ledger_unavailable'] })
     }
-  } catch (err) {
-    console.warn(`[mention-dispatch] 派单门读数采集异常（不阻断派发）：${err instanceof Error ? err.message : String(err)}`)
-    return new Map()
   }
   return map
 }
