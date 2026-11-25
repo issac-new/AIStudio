@@ -825,8 +825,7 @@ router.post('/agent-identity/register', async (ctx) => {
   // 户口三要素形态显式校验（审查挂账5/6）：键存在但非普通对象即 400 点名，不再静默吞
   const malformed = invalidObjectFields(b, ['capabilityBoundary', 'auditRequirement', 'runtimeBindings'])
   if (malformed.length) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: malformed.map((k) => `${k} 须为对象`) }
+    fail(ctx, 400, '户口三要素键存在但形态非对象', { problems: malformed.map((k) => `${k} 须为对象`) })
     return
   }
   // 户口三要素透传（域层各做规范化）：仅请求体键存在且为对象时传入
@@ -842,7 +841,7 @@ router.post('/agent-identity/register', async (ctx) => {
     ...(auditRequirement ? { auditRequirement } : {}),
     ...(runtimeBindings ? { runtimeBindings } : {}),
   }, govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
@@ -852,8 +851,7 @@ router.post('/agent-identity/:id/update', async (ctx) => {
   // 户口三要素形态显式校验（审查挂账5/6）：同 register，不再静默吞
   const malformed = invalidObjectFields(b, ['capabilityBoundary', 'auditRequirement', 'runtimeBindings'])
   if (malformed.length) {
-    ctx.status = 400
-    ctx.body = { ok: false, problems: malformed.map((k) => `${k} 须为对象`) }
+    fail(ctx, 400, '户口三要素键存在但形态非对象', { problems: malformed.map((k) => `${k} 须为对象`) })
     return
   }
   const capabilityBoundary = objectField<CapabilityBoundary>(b, 'capabilityBoundary')
@@ -866,7 +864,7 @@ router.post('/agent-identity/:id/update', async (ctx) => {
     ...(auditRequirement ? { auditRequirement } : {}),
     ...(runtimeBindings ? { runtimeBindings } : {}),
   }, govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
@@ -878,7 +876,7 @@ router.post('/agent-identity/:id/credential', async (ctx) => {
     label: String(b.label ?? ''),
     note: b.note === undefined ? undefined : String(b.note),
   }, govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
@@ -886,7 +884,7 @@ router.post('/agent-identity/:id/credential/revoke', async (ctx) => {
   if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
   const res = revokeCredential(String(ctx.params.id ?? ''), String(b.label ?? ''), govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
@@ -899,14 +897,14 @@ router.post('/agent-identity/:id/delegate', async (ctx) => {
     expiresAt: typeof b.expiresAt === 'number' ? b.expiresAt : undefined,
     toolAllowlist: Array.isArray(b.toolAllowlist) ? (b.toolAllowlist as unknown[]).map(String) : undefined,
   }, govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
 router.post('/agent-identity/:id/delegation/:did/revoke', async (ctx) => {
   if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const res = revokeDelegation(String(ctx.params.id ?? ''), String(ctx.params.did ?? ''), govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
@@ -1072,7 +1070,7 @@ router.post('/heldout/sets', async (ctx) => {
     ? (b.items as Array<{ prompt?: unknown; expected?: unknown }>).map((it) => ({ prompt: String(it?.prompt ?? ''), expected: String(it?.expected ?? '') }))
     : []
   const res = createSet({ name: String(b.name ?? ''), items }, govActorOf(ctx as never))
-  if (!res.ok) { ctx.status = 400; ctx.body = { ok: false, problems: res.problems }; return }
+  if (!res.ok) { fail(ctx, 400, '户口登记校验未通过', { problems: res.problems }); return }
   ctx.body = res
 })
 
