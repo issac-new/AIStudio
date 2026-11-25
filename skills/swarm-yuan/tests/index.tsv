@@ -20,6 +20,7 @@ test-doc-numbers.sh	1	yes	general	-
 test-effective-conf.sh	2	yes	general	-
 test-fail-gate-hook.sh	2	yes	general	-
 test-failure-detector.sh	2	yes	general	-
+test-floor-guard-scope.sh	2	yes	general	2026-11-25
 test-framework-conf-consistency.sh	2	yes	general	-
 test-framework-evidence.sh	2	yes	general	-
 test-fw-declarative-gates.sh	2	yes	general	-
