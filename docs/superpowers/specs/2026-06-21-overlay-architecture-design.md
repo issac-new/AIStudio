@@ -2,6 +2,7 @@
 
 > 日期: 2026-06-21
 > 状态: **已实施**(2026-06-21)。40 patch + 74 custom 文件 + 6 registry + 构建验证通过。
+> 时点声明(2026-11-26 补): 本篇为 2026-06-21 立项时点快照,文中全部数字与目录布局(三上游仓/40 patch/studio v0.6.18 等)不随批次回填;现行事实源=vendor/VENDOR.md(钉版)、patches/series 与 zcode-patches/series(补丁在册)、config/mechanism-budget.json(机制预算)、docs/DESIGN.md(现行整合正本)。此后架构演进(单仓整合、agent 面补丁注入、zcode 树接入)见 DESIGN.md 与各自升级 spec。
 > 关联: 基于 `CUSTOMIZATIONS.md` 侵入点清单、`scripts/sync-upstream.sh`、现有 `custom/` 目录成果
 
 ## 1. 背景与目标
@@ -377,3 +378,10 @@ npm --prefix overlay run test           # overlay 测试套件(功能对等)
 - 若未来确需对 hermes-agent 做定制,另起 spec 设计 Python 仓的隔离机制(本期明确不动)
 - 将 `element-web` 构建脚本(`build-element-web.mjs`)迁入 overlay,使三仓依赖关系统一从 overlay 编排
 - overlay 仓的 CI:自动跑 inject + 测试 + 构建
+
+## 设计文档影响
+
+DESIGN_SYNC: touched
+DESIGN_DOCS: docs/superpowers/specs/2026-06-21-overlay-architecture-design.md
+
+- 本文件头部时点声明（2026-11-26 全面复盘批，spec 2026-11-26-full-retro-design-revision-batch）：标注本篇为 2026-06-21 立项时点快照、文中数字与目录布局不随批次回填、指明现行事实源载体（vendor/VENDOR.md、patches/series、zcode-patches/series、config/mechanism-budget.json、docs/DESIGN.md）。正文其余内容不修订。

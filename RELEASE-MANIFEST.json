@@ -98,7 +98,7 @@
       "packageIncludes": [
         "skills/swarm-yuan/"
       ],
-      "notes": "四模块中发布链最成熟：CHANGELOG semver＋.bundle-version 溯源＋体积预算门禁齐备。"
+      "notes": "四模块中发布链最成熟：CHANGELOG semver＋.bundle-version 溯源（打包期由 make-offline-bundle.sh 写入产物，仓内无此文件属预期）＋体积预算门禁齐备。"
     }
   },
   "releaseBatches": [

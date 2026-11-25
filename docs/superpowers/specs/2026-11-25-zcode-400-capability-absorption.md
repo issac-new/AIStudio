@@ -1,6 +1,6 @@
 # 2026-11-25 ZCode 4.0 能力吸收立项：预装文档工具、设计插件试用、信任通道与微压缩观察登记
 
-> 状态：in-progress（2026-11-25 立项；分支 feat/zcode-400-absorb，基线 81824d5d9）
+> 状态：部分收口（2026-11-26 回填；立项批已合 main b97a12c3c；P1 预装工具已合入 a39679cb3；P2 设计插件试用待开工；P3/P4 触发制登记维持）
 > 承接：`2026-11-24-zcode-400-pending-batch.md` N34-3（四项可吸收能力，用户 2026-11-25 令「立项完成吧」）；对照报告 `/Volumes/nvme2230/lab/research/zcode-4000-delta-assessment-20261125/report.md`
 
 ## 变更
