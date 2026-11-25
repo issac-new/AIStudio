@@ -14,8 +14,8 @@ import {
 
 const dbPath = process.env.ZCODE_CLI_DB?.trim() || join(homedir(), '.zcode', 'cli', 'db', 'db.sqlite')
 
-function ctx(): Context {
-  return { query: {}, status: 200, body: undefined } as unknown as Context
+function ctx(query: Record<string, unknown> = {}): Context {
+  return { query, status: 200, body: undefined } as unknown as Context
 }
 
 describe.skipIf(!existsSync(dbPath))('zcode-usage 真库探针', () => {
@@ -49,23 +49,18 @@ describe.skipIf(!existsSync(dbPath))('zcode-usage 真库探针', () => {
   }, 60_000)
 
   it('rounds/tools：真会话有轮有 TTFT 真值、工具有时间线', () => {
-    const cs = ctx()
-    // 取接口单页上限（clampLimit 上限 100）：固定小窗口会两次时敏复发——
-    // ae2296f31 已把 1→10，2026-11-25 实测一串自动任务产生 12 个单轮零工具会话，
-    // 再次把合格样本挤出前 10。
-    cs.query = { limit: '100' }
+    const cs = ctx({ limit: '100' })
     handleUsageSessions(cs)
     const sessions = (cs.body as { sessions: UsageSessionRow[] }).sessions
-    // 同自扰根因：活跃会话回合未收口 ttft 为 null——取首个 rounds(ttft) 与
-    // tools(readOnly) 同会话齐备的样本（原语义=单会话三维齐备）。
-    // 零工具会话不可能满足 tools(readOnly)：按会话行自带的 toolCalls 预筛，省两次端点往返。
+    // 样本不限定「最近 N 个」：最近会话可能整批是回合未收口的活跃会话（ttft 为 null），
+    // 也可能整批是无工具的单轮定时任务（2026-11-25 实测前 12 个全是舆情/雷达类自动化
+    // 会话，首个齐备样本排第 13）。探针语义＝真库上存在 rounds(ttft) 与 tools(readOnly)
+    // 同会话齐备者，所以在会话列表（上限 100）里按 toolCalls>0 逐个找，直到找到。
     let rounds: UsageRoundRow[] = []
     let tools: UsageToolRow[] = []
     let picked: UsageSessionRow | undefined
-    let withTools = 0
     for (const s of sessions) {
       if (!(s.toolCalls > 0)) continue
-      withTools += 1
       const cr = ctx()
       handleUsageRounds(cr, s.id)
       const rs = (cr.body as { rounds: UsageRoundRow[] }).rounds
@@ -75,10 +70,7 @@ describe.skipIf(!existsSync(dbPath))('zcode-usage 真库探针', () => {
       const ts = (ct.body as { tools: UsageToolRow[] }).tools
       if (ts.length > 0 && ts.some(t => t.readOnly)) { rounds = rs; tools = ts; picked = s; break }
     }
-    expect(
-      picked,
-      `最近 ${sessions.length} 个会话（其中有工具调用 ${withTools} 个）内应存在 rounds(ttft)/tools(readOnly) 齐备者`,
-    ).toBeDefined()
+    expect(picked, `会话列表 ${sessions.length} 条中应存在 rounds(ttft)/tools(readOnly) 齐备者`).toBeDefined()
     expect(rounds.length).toBeGreaterThan(0)
     expect(rounds.some(r => r.ttftMs != null && r.ttftMs > 0)).toBe(true)
     expect(tools.length).toBeGreaterThan(0)
@@ -88,18 +80,19 @@ describe.skipIf(!existsSync(dbPath))('zcode-usage 真库探针', () => {
 
 describe.skipIf(!existsSync(dbPath))('zcode-context 真库探针（Phase 2）', () => {
   it('context：requests 精确值非空/构成六类折叠/压缩事件可数', () => {
-    const cs = ctx()
+    const cs = ctx({ limit: '100' })
     handleUsageSessions(cs)
     const sessions = (cs.body as { sessions: UsageSessionRow[] }).sessions
-    // 同自扰根因：活跃会话上下文请求 token 未落——前 10 会话取首个 requests 完备样本
+    // 同上不限定「最近 N 个」：活跃会话上下文请求 token 未落——在会话列表（上限 100）里
+    // 取首个 requests 完备样本。
     let body: UsageContext | undefined
-    for (const s of sessions.slice(0, 10)) {
+    for (const s of sessions) {
       const c = ctx()
       handleUsageContext(c, s.id)
       const b = c.body as UsageContext
       if (b.requests.length > 0 && b.requests[0].promptTokens > 0) { body = b; break }
     }
-    expect(body, '前 10 会话中应存在 requests/promptTokens 完备者').toBeDefined()
+    expect(body, `会话列表 ${sessions.length} 条中应存在 requests/promptTokens 完备者`).toBeDefined()
     expect(body!.requests.length).toBeGreaterThan(0)
     expect(body!.requests[0].promptTokens).toBeGreaterThan(0)
     const keys = body!.est.categories.map(x => x.key)
