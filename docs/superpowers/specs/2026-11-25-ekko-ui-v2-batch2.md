@@ -132,3 +132,5 @@ DESIGN_SYNC: touched
 - `docs/manuals/aistudio-feature-inventory.md`「对话内声明式界面」行：补五个 MCP 工具、八个接口、落库位置与边界。
 - 协议、补丁操作、目录、事件名的单一事实源仍是 `custom/client/chat/ekko-ui/protocol.ts` 与本规格；后续改动先改规格再改实现。
 - 不改变阻塞式 `show_surface` 的行为与契约；不改上游数据库结构；不新增 npm 脚本、门禁或账本。
+
+合入期记录（2026-11-25）：① **补丁撞号**——主干在本批工作期间合入 `fix/ycode-dev-deps-refresh`，含 `819-studio-follow-redirects-lockfile.patch`；本批原编号 819/820 与它撞号，整批让到 820/821（series、预算登记、接线断言、本规格同步改号）。教训：任务收口前必须重新确认主干 series 尾部，不能用开工时的编号假设。② **注入态误恢复**——rebase 前为让工作区干净暂存了 vendor 注入态，rebase 后恢复它反而污染了基线，inject 报「混合态」，`002-import-session-rpc.patch` 打不上并连带跳过 7 个补丁；处置是丢弃该暂存、`npm run clean && npm run inject` 全量重建（已核实暂存的 vendor 改动不是本批产出）。判别「补丁打不上是否本批引入」的可靠方法是 `git restore` 到 HEAD 后单独 `git apply --check`。③ 合并档回归首轮有 3 面（py-runtime、sim-gates、release-check）报红，全部由上述注入态残缺造成，干净重建后三面复跑全绿；另注意 `npm run regress` 即使有面失败也以 0 退出，必须读 `[regress] ✗` 行与「N 面，M 通过」摘要判定。
