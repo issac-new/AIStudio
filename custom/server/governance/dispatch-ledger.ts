@@ -11,8 +11,8 @@
  * 去重口径：commandId（引擎命令 uuid v7）跨 kind 唯一；column 条目比 mention 条目
  * 归因更细（specialist/role/column），统计时同 commandId 优先取 column 条目。
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { atomicWriteText } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
@@ -44,9 +44,26 @@ export interface DispatchLedgerEntry {
 
 const CAP = 2000
 
+/**
+ * 测试进程的台账落点（2026-11-25，N34-12 的第二道防线）。
+ * 全局测试设置 custom/client/test/setup.ts 已把「未指定路径」的测试指到临时文件，但那只对
+ * 加载了该设置文件的入口生效——分支尚未含该修复、或别的入口直接 import 本模块时，用例会把
+ * 派发结果追加进真实台账（实录：真实台账 3507 行里 3056 行是 /w/anywhere 的测试写入）。
+ * 判定下沉到这里：vitest 进程内、未显式指定台账路径、也未显式隔离 HERMES_WEB_UI_HOME 时，
+ * 一律落本进程专属的临时文件。条件与 setup.ts 逐字一致，两边同向收紧。
+ */
+let vitestLedgerFile: string | null = null
+function testProcessLedgerPath(): string {
+  if (!vitestLedgerFile) {
+    vitestLedgerFile = join(mkdtempSync(join(tmpdir(), 'aistudio-vitest-ledger-')), 'dispatch-ledger.jsonl')
+  }
+  return vitestLedgerFile
+}
+
 export function dispatchLedgerPath(): string {
   const env = process.env.GOVERNANCE_DISPATCH_LEDGER?.trim()
   if (env) return resolve(env.replace(/^~/, homedir()))
+  if (process.env.VITEST && !process.env.HERMES_WEB_UI_HOME?.trim()) return testProcessLedgerPath()
   return underWebUi('overlay', 'dispatch-ledger.jsonl')
 }
 
