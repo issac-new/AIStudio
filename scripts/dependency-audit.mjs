@@ -8,7 +8,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const ACCEPTED_PATH = resolve(ROOT, 'config/accepted-vulnerabilities.json')
@@ -20,7 +20,7 @@ const jsonMode = args.includes('--json')
 // 每项含 via 通告数组），pnpm 顶层是 advisories（按通告聚合，每项含 findings）。统一成
 // [{id, name, severity}]：id 取 GitHub advisory 号（GHSA-…）或 CVE，匹配不到时回退到
 // “包@影响版本”作键——清单里的条目也按同一口径写。
-function normalize(raw, tool) {
+export function normalize(raw, tool) {
   let j
   try {
     j = JSON.parse(raw.slice(raw.indexOf('{')))
@@ -62,12 +62,53 @@ function audit(cwd, tool, registry) {
   }
 }
 
+// 清单加载（2026-11-26 批 C 结构化 v2）：条目形态兼容两种——
+//   字符串 = legacy 形态，视为仅 {id}、无元数据（计入总数、不计入完整度，不告警）；
+//   对象   = v2 形态 {id, package, reason, tracking, retireWhen}。
+// 对象缺 id：跳过并产出 stderr 告警（不拦）；对象缺 package/reason/retireWhen：逐条告警（不拦）。
+// 退出码语义不受清单形态影响——匹配口径始终是 accepted.has(f.id)。
+export function loadAccepted(rawText) {
+  const warnings = []
+  let doc
+  try {
+    doc = JSON.parse(rawText)
+  } catch (e) {
+    throw new Error(`清单不是合法 JSON: ${String(e.message).slice(0, 120)}`)
+  }
+  const raw = Array.isArray(doc?.accepted) ? doc.accepted : []
+  if (!Array.isArray(doc?.accepted)) warnings.push('清单缺 accepted 数组，按空清单处理')
+  const ids = new Set()
+  let total = 0
+  let complete = 0
+  for (const [index, entry] of raw.entries()) {
+    total += 1
+    if (typeof entry === 'string') {
+      ids.add(entry)
+      continue
+    }
+    if (entry && typeof entry === 'object') {
+      if (typeof entry.id !== 'string' || !entry.id.trim()) {
+        warnings.push(`清单条目缺 id，已跳过: #${index}`)
+        continue
+      }
+      ids.add(entry.id)
+      const missing = ['package', 'reason', 'retireWhen'].filter((key) => typeof entry[key] !== 'string' || !entry[key].trim())
+      if (missing.length) warnings.push(`清单条目缺元数据: ${entry.id}（缺 ${missing.join('/')}）`)
+      else complete += 1
+      continue
+    }
+    warnings.push(`清单条目形态不可识别（既非字符串也非对象），已跳过: #${index}`)
+  }
+  return { ids, total, complete, warnings }
+}
+
 function main() {
   if (!existsSync(ACCEPTED_PATH)) {
     console.error(`[dependency-audit] 缺已接受通告清单 ${ACCEPTED_PATH}`)
     process.exit(2)
   }
-  const accepted = new Set(JSON.parse(readFileSync(ACCEPTED_PATH, 'utf8')).accepted ?? [])
+  const { ids: accepted, total, complete, warnings } = loadAccepted(readFileSync(ACCEPTED_PATH, 'utf8'))
+  for (const w of warnings) console.error(`[dependency-audit] ${w}`)
   const registry = 'https://registry.npmjs.org/'
   const surfaces = [
     { id: 'studio', cwd: resolve(ROOT, 'vendor/hermes-studio'), tool: 'npm' },
@@ -99,13 +140,18 @@ function main() {
     })
     blocking += novelSerious.length
   }
-  if (jsonMode) console.log(JSON.stringify({ status: blocking > 0 ? 'fail' : 'pass', blocking, unavailable, report }, null, 2))
+  // 清单 v2 元数据完整度：完整=v2 对象且 id/package/reason/retireWhen 齐全（tracking 是台账编号，不参与判定）。
+  const metadata = { total, complete }
+  if (jsonMode) console.log(JSON.stringify({ status: blocking > 0 ? 'fail' : 'pass', blocking, unavailable, acceptedMetadata: metadata, report }, null, 2))
   else {
     for (const r of report) console.log(`[dependency-audit] ${r.surface}: 共 ${r.total}（清单内 ${r.accepted}，新出现 ${r.novel}，其中高危/严重 ${r.novelSerious}）`)
+    console.log(`[dependency-audit] 清单元数据完整度 ${complete}/${total}`)
     for (const u of unavailable) console.warn(`[dependency-audit] 未执行: ${u}`)
   }
   if (unavailable.length === surfaces.length) process.exit(2) // 两个面都跑不了才算工具链缺席
   process.exit(blocking > 0 ? 1 : 0)
 }
 
-main()
+// 作为 CLI 执行时才跑 main；被单测 import 时保持无副作用（清单解析走导出的 loadAccepted）。
+const isCli = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isCli) main()
