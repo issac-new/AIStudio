@@ -25,11 +25,18 @@ const props = withDefaults(defineProps<{
   submission?: EkkoUIJsonValue
   title?: string
   surfaceId?: string
+  /** 批二：持久式界面传入用户已填的值。规格续改时以「新规格初值 + 这些值」为底，不丢用户输入。
+   *  不传则维持原行为（规格变化即重置为新初值）。 */
+  initialState?: EkkoUIState
+  /** 批二：用户在界面上改了值之后的通知（持久式界面据此回存）。 */
+  onStateChange?: (state: EkkoUIState) => void
 }>(), {
   interactive: true,
   submission: undefined,
   title: '',
   surfaceId: '',
+  initialState: undefined,
+  onStateChange: undefined,
 })
 
 const emit = defineEmits<{
@@ -56,6 +63,8 @@ function resetState(spec: EkkoUISpec | null, submission: EkkoUIJsonValue | undef
   const base: EkkoUIState = spec?.state ? cloneJson(spec.state) : {}
   for (const key of Object.keys(state)) delete state[key]
   Object.assign(state, base)
+  // 持久式界面：用户已填的值盖在新初值之上（规格 D10）
+  if (props.initialState) Object.assign(state, cloneJson(props.initialState))
   if (submission && typeof submission === 'object' && !Array.isArray(submission)) {
     Object.assign(state, cloneJson(submission as Record<string, EkkoUIJsonValue>))
   }
@@ -64,6 +73,9 @@ function resetState(spec: EkkoUISpec | null, submission: EkkoUIJsonValue | undef
 watch(() => [validSpec.value, props.submission] as const, ([spec, submission]) => {
   resetState(spec, submission)
 }, { immediate: true, deep: false })
+
+// 持久式界面：状态一变就通知宿主回存（宿主自己做合并节流）
+watch(state, () => { props.onStateChange?.(cloneJson(state)) }, { deep: true })
 
 const errors = reactive(new Map<string, string>())
 
