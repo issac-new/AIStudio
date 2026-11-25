@@ -550,7 +550,7 @@ GATE_RUNS_DIR=.swarm-yuan/gate-runs \
         <p>FAIL/ERROR 会写项目根 <code>.swarm-yuan/.gate-fail-flag</code>，供白名单拦截。只有 <code>--all</code>、<code>--all-full</code>、<code>--compliance-suite</code> 等覆盖式运行全绿才清旧标记；单个门禁变绿不能证明其它失败已修复。</p>
         <h3>扫描范围不含 vendor/</h3>
         <p>钉版上游基线（<code>vendor/</code>）自有版本与注入态脏文件不是本仓的升级动作，三类门把它们排除在扫描对象之外，与仓法对 <code>vendor/</code> 的提交挡护同语义：spec-first 的变更收集不过滤时，基线升级带进来的文件会被当成"可写源码区改动"；降标守卫不跳过时，上游升级删掉的基线测试文件会被误判为"测试变松"；依赖扫描不过滤时，基线自带的依赖版本会被报成本仓待升级项。排除的是扫描对象，不是放宽判据——<code>vendor/</code> 之外的同型问题照常拦截。</p>
-        <p class="source">三处排除：<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:86-98</a>（<code>_git_changed_files</code>，第 94 行）；<a href="../../skills/swarm-yuan/scripts/floor-guard.sh">scripts/floor-guard.sh:83,94,99</a>；<a href="../../skills/swarm-yuan/assets/gates-warn.sh">assets/gates-warn.sh:1082,1153</a>（<code>check_deps</code>）。</p>
+        <p class="source">三处排除：<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:86-98</a>（<code>_git_changed_files</code>，第 94 行）；<a href="../../skills/swarm-yuan/scripts/floor-guard.sh">scripts/floor-guard.sh:100,111,116</a>；<a href="../../skills/swarm-yuan/assets/gates-warn.sh">assets/gates-warn.sh:1082,1153</a>（<code>check_deps</code>）。</p>
         <p class="source">源码：<a href="../../skills/swarm-yuan/assets/precheck.sh">assets/precheck.sh:1255-1321,1338-1467,1879-1898,1969-1975,2031-2087</a>；配置链：<a href="../../skills/swarm-yuan/assets/precheck.conf">assets/precheck.conf:98-119</a>。</p>
       </section>
 
@@ -620,7 +620,7 @@ GATE_RUNS_DIR=.swarm-yuan/gate-runs \
         </div>
         <p>每个方案在 S3 必须回答三问：用户没看到什么？最强反方论据是什么？反方是否成立？没有反方论据视为审查未完成。复审只审本轮增量 diff 与上一轮 finding 的处置证据；已由用户裁决的取舍不重开，发现"已修复项再现"则重开并标 <code>churn</code>。</p>
 
-        <div class="danger"><strong>审查类活动不能降级。</strong>派发阶梯按可用能力逐级下降：有命名子代理→派新上下文子代理；只有通用子代理→派通用子代理并先让它读角色定义；不能嵌套→主会话直接派一个全新子代理；<strong>完全没有子代理→停机</strong>，输出 <code>review-unavailable</code> 并记 <code>not run</code>，节点⑦不得通过。探查、互不依赖的多文件实施等非审查类并行可以内联执行，但必须标 <code>degraded</code> 并在交付说明披露——这是审查与其他活动的唯一分界。用户显式豁免时，须在 <code>decisions.jsonl</code> 落 UserChallenge 记录（豁免理由、残余风险、批准人）。</div>
+        <div class="danger"><strong>审查类活动不能降级。</strong>派发阶梯按可用能力逐级下降：有命名子代理→派新上下文子代理；只有通用子代理→派通用子代理并先让它读角色定义；不能嵌套→主会话直接派一个全新子代理；<strong>完全没有子代理→停机</strong>，输出 <code>review-unavailable</code> 并记 <code>not run</code>，节点⑦不得通过。审阅者超时、崩溃或读不到角色与标准时重试一次，仍失败记 <code>not run</code>，不得记为零发现；阶梯不得跳级，也不得用同上下文自审冒充。探查、互不依赖的多文件实施等非审查类并行可以内联执行，但必须标 <code>degraded</code> 并在交付说明披露——这是审查与其他活动的唯一分界。用户显式豁免时，须在 <code>decisions.jsonl</code> 落 UserChallenge 记录（豁免理由、残余风险、批准人）。</div>
 
         <h3>收敛：not run 不等于零发现</h3>
         <div class="table-wrap">
@@ -660,7 +660,7 @@ GATE_RUNS_DIR=.swarm-yuan/gate-runs \
         <p><code>check_review</code> 只在 <code>REVIEW_RECORD_REQUIRED=1</code> 时核验上表；默认档只 warn，存量项目不被批量转红。开启后六类情形直接 fail：协议字段缺失、字段仍是占位符、未声明评审上下文、<code>reviewer_context</code> 不是 <code>fresh</code> 却给通过结论、<code>not_run_count&gt;0</code> 却声明 clean 或 converged、命中禁词。守门测试 <a href="../../skills/swarm-yuan/tests/test-review-protocol.sh">tests/test-review-protocol.sh:119-181</a> 用一份合规记录加五类反例锁住这六条判据，本批实跑 15 passed、0 failed。</p>
         <p>项目小、人手少时不必一次上全四阶段。最小闭环是三件事：派一个干净上下文的子代理，只给文档与源码；让它先复述（S2）再挑刺（S3），findings 必须带 <code>file:line</code>；把"评审上下文"和"未运行项"写进审查记录。做到这三件，就消掉了"同上下文自审"和"无人反对即通过"两类假通过。</p>
         <p>与第 10 节的关系：门禁绿、测试有效、审查收敛是三份独立的证据，不能互相折算。机检能拦住"没写 not run"和"degraded 却通过"，拦不住审阅者读得不用心——那部分只能靠 S2 的复述和 S3 的反方论据来暴露。</p>
-        <p class="source">协议正本：<a href="../../skills/swarm-yuan/references/independent-review-protocol.md">references/independent-review-protocol.md:1-126</a>；机检：<a href="../../skills/swarm-yuan/assets/gates-strict.sh">assets/gates-strict.sh:1349-1445</a>；记录模板：<a href="../../skills/swarm-yuan/assets/review-record-template.md">assets/review-record-template.md:10-84</a>；测试：<a href="../../skills/swarm-yuan/tests/test-review-protocol.sh">tests/test-review-protocol.sh:119-181</a>；工作流接线：<a href="../../skills/swarm-yuan/SKILL.md">SKILL.md:77,99</a>。</p>
+        <p class="source">协议正本：<a href="../../skills/swarm-yuan/references/independent-review-protocol.md">references/independent-review-protocol.md:1-126</a>；机检：<a href="../../skills/swarm-yuan/assets/gates-strict.sh">assets/gates-strict.sh:1349-1445</a>；记录模板：<a href="../../skills/swarm-yuan/assets/review-record-template.md">assets/review-record-template.md:9-84</a>；测试：<a href="../../skills/swarm-yuan/tests/test-review-protocol.sh">tests/test-review-protocol.sh:119-181</a>；工作流接线：<a href="../../skills/swarm-yuan/SKILL.md">SKILL.md:77,99</a>。</p>
       </section>
 
       <section id="acp">
