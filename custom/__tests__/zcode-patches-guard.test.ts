@@ -77,30 +77,41 @@ describe('zcode-patches 受管机制（R2 守门）', () => {
       ).toBe(true)
   })
 
-  // 013 的修复只在注入态的锁文件与覆盖项里，源码补丁的“文件存在”标记在这里用不上：
+  // 013/014 的修复只在注入态的锁文件与覆盖项里，源码补丁的“文件存在”标记在这里用不上：
   // 补丁没打上时树看起来完全正常，只是依赖还停在带通告的版本。期望值取自补丁文件本身。
-  it('注入态：依赖安全刷新（013）的覆盖项已在 zcode 树的 package.json 与锁文件里（补丁只在干净树上生效一次）', () => {
-    const patchName = series.find((p) => /^013-.*\.patch$/.test(p))
-    expect(patchName, 'series 未登记 013').toBeTruthy()
-    const text = readOverlay(`zcode-patches/${patchName}`)
-    const manifestHunk = text.slice(text.indexOf('diff --git a/package.json '), text.indexOf('diff --git a/pnpm-lock.yaml '))
-    const overrides = [...manifestHunk.matchAll(/^\+\s+"([^"]+)": "([^"]+)",?$/gm)].map((m) => [m[1], m[2]] as const)
-    expect(overrides.length).toBeGreaterThan(20)
+  // 014（2026-11-25，挂账清偿批 B）起覆盖面泛化到序列里全部依赖类补丁（NNN-deps-*），
+  // 以后再加同类补丁不必改这里。
+  it('注入态：依赖安全刷新（序列里全部 deps 类补丁）的覆盖项已在 zcode 树的 package.json 与锁文件里（补丁只在干净树上生效一次）', () => {
+    const depsPatches = series.filter((p) => /^0\d{2}-deps-.*\.patch$/.test(p))
+    expect(depsPatches.some((p) => p.startsWith('013-')), 'series 未登记 013').toBe(true)
+    expect(depsPatches.some((p) => p.startsWith('014-')), 'series 未登记 014').toBe(true)
+    let total = 0
     if (!existsSync(resolve(ZCODE_ROOT, 'package.json'))) return // zcode 树不存在时跳过（未克隆环境）
     const injected = existsSync(resolve(ZCODE_ROOT, 'packages/zcode-cua/node-backend.js'))
     const manifest = readFileSync(resolve(ZCODE_ROOT, 'package.json'), 'utf8')
     const lock = readFileSync(resolve(ZCODE_ROOT, 'pnpm-lock.yaml'), 'utf8')
-    for (const [selector, version] of overrides) {
-      const inManifest = manifest.includes(`${JSON.stringify(selector)}: ${JSON.stringify(version)}`)
-      // 锁文件顶部 overrides 段按 YAML 单引号记选择器
-      const inLock = lock.includes(`'${selector}': ${version}`) || lock.includes(`${selector}: ${version}`)
-      if (injected) {
-        expect(inManifest, `${selector} 未写入注入态 package.json——013 未注入？先 npm run inject`).toBe(true)
-        expect(inLock, `${selector} 未出现在注入态锁文件`).toBe(true)
-      } else {
-        // 干净树（未注入）不应带着覆盖项：说明有人绕过补丁通道直接改了 vendor
-        expect(inManifest, `干净树上已有 ${selector}——vendor 基线被直接改动`).toBe(false)
+    for (const patchName of depsPatches) {
+      const text = readOverlay(`zcode-patches/${patchName}`)
+      const manifestHunk = text.slice(text.indexOf('diff --git a/package.json '), text.indexOf('diff --git a/pnpm-lock.yaml '))
+      // 只取 overrides 段里的新增行；同一份补丁若还改了 patchedDependencies（如 014 把 vitest
+      // 补丁登记的版本号改成 4.1.12），那几行的值是补丁文件路径，不是版本号，不能当覆盖项去锁文件里找。
+      const overridesHunk = manifestHunk.slice(0, manifestHunk.indexOf('patchedDependencies') === -1 ? undefined : manifestHunk.indexOf('"patchedDependencies": {'))
+      const overrides = [...overridesHunk.matchAll(/^\+\s+"([^"]+)": "([^"]+)",?$/gm)].map((m) => [m[1], m[2]] as const)
+      expect(overrides.length, `${patchName} 里没有覆盖项`).toBeGreaterThan(0)
+      for (const [selector, version] of overrides) {
+        total += 1
+        const inManifest = manifest.includes(`${JSON.stringify(selector)}: ${JSON.stringify(version)}`)
+        // 锁文件顶部 overrides 段按 YAML 单引号记选择器
+        const inLock = lock.includes(`'${selector}': ${version}`) || lock.includes(`${selector}: ${version}`)
+        if (injected) {
+          expect(inManifest, `${selector} 未写入注入态 package.json——${patchName} 未注入？先 npm run inject`).toBe(true)
+          expect(inLock, `${selector} 未出现在注入态锁文件`).toBe(true)
+        } else {
+          // 干净树（未注入）不应带着覆盖项：说明有人绕过补丁通道直接改了 vendor
+          expect(inManifest, `干净树上已有 ${selector}——vendor 基线被直接改动`).toBe(false)
+        }
       }
     }
+    expect(total, '依赖类补丁的覆盖项总数').toBeGreaterThan(40)
   })
 })

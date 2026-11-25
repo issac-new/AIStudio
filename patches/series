@@ -1403,3 +1403,9 @@
 # （跨源重定向时凭据头处理不当，GHSA-q3jh-wrc6-jgq8 等），修复版 1.16.3 在 axios 声明的范围内；
 # 沿用清单既有的 overrides 机制钉版本，上游升级后自然吸收。装好后须在 vendor/hermes-studio 重跑 npm install。
 818-studio-follow-redirects-override.patch
+# 819（2026-11-25 挂账清偿批 B）：与 818 配套，把锁文件里 follow-redirects 的条目钉到 1.16.3。
+# 818 只在清单的 overrides 里声明了 ^1.16.3，锁文件仍记 1.16.0——而 npm audit 看的是锁文件：
+# 任何按入库锁文件审计的地方（新克隆、CI）照旧报三条高危，尽管普通 npm install 会把实装修好。
+# 只改该条目的 version/resolved/integrity 三个字段；唯一依赖方 axios 的范围 ^1.16.0 包含 1.16.3。
+# 先例：576（chromium-bidi 的构建依赖也写进了锁文件）。上游基线升级后随 818 一并退役。
+819-studio-follow-redirects-lockfile.patch
