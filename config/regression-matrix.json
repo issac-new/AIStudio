@@ -272,6 +272,29 @@
       "run": { "argv": ["npm", "run", "catalog-check"], "timeoutMs": 300000 },
       "covers": [],
       "ci": null
+    },
+    {
+      "id": "ide-smoke-walkthrough",
+      "title": "IDE 工作区浏览器走查（自起 dev server 的全链冒烟）",
+      "type": "walkthrough",
+      "scopes": ["full"],
+      "prepush": "never",
+      "manual": true,
+      "run": { "argv": ["node", "scripts/regression/run-ide-smoke-face.mjs"], "timeoutMs": 1200000 },
+      "covers": ["scripts/regression/**"],
+      "ci": null,
+      "note": "2026-11-26 全面复盘批 B（D3）：包装脚本自起 dev 全链（8647 后端＋8649 前端；8647 已有 /health 应答则视为活体后端借用不接管）→轮询就绪→ide-smoke 探针→teardown 只杀自起树；起 dev 拖慢日常档，不进 merge/prepush，仅 full 档人工触发。裁判 scripts/regression/ide-smoke.mjs 只读、有退出码；依赖本机 Chrome 与登录态（惯态：账户库有 active 账户或网关凭据；空库时包装器注入 DEV_BOOTSTRAP 首登建号，空库首轮「会话深链」可能因无会话不可验证）。"
+    },
+    {
+      "id": "capability-matrix",
+      "title": "能力验收矩阵发布门检查",
+      "scopes": ["full"],
+      "prepush": "never",
+      "manual": true,
+      "run": { "argv": ["node", "scripts/capability-matrix.mjs", "--check", "--write"], "timeoutMs": 300000 },
+      "covers": [],
+      "ci": null,
+      "note": "2026-11-26 全面复盘批 B（D7）：取 release:preflight 链末成员 node scripts/capability-matrix.mjs --check --write；有命令有产出故不豁免而登记。静态评估秒级，仅 full 档人工触发。"
     }
   ]
 }
