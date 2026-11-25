@@ -81,7 +81,12 @@
 
 ## P7 增补（2026-11-26 全量回归轮）
 
-- **类型声明缺失**：原 015 只加了 `createServerHostServices` 转发 hunk，未在 node.ts:3604 内联选项类型补 `preinstalledToolsBinDir?: string`。纯净基线全量重放后 `yc-typecheck` 面抓出 TS2339（此前推送门跑 yc 面时注入被宿主混合态预检中止，vendor 是纯净态故未暴露）。补丁扩为三 hunk（entry-http 两处＋node.ts 类型行），对纯净双文件 `git apply --check` 通过；全量 clean+inject 重放 504/504 complete、二次幂等。
+- **类型声明缺失**：原 015 只加了 `createServerHostServices` 转发 hunk，未在 node.ts:3604 内联选项类型补 `preinstalledToolsBinDir?: string`。纯净基线全量重放后 `yc-typecheck` 面抓出 TS2339（此前推送门跑 yc 面时注入被宿主混合态预检中止，vendor 是纯净态故未暴露）。补丁扩为三 hunk（entry-http 两处＋node.ts 类型行），对纯净双文件 `git apply --check` 通过。
+
+实测（订正于同日：本条初稿写作「504/504 complete、二次幂等」，其中应用数写错、幂等性当时未测）：
+- 全量 clean+inject 重放（`RUNTIME_DEPLOY_TARGET` 指向一次性影子目录）：applied 518/518（`patches/series` 504＋`zcode-patches/series` 14），FAILED 0，清单 `status=complete`。
+- 二次注入：补丁面「清单与 series 前缀精确一致（noop）」；整条命令退出码 1，原因是运行时部署预检默认打真实宿主，遇宿主覆盖层混合态（31 个文件与模板不同被保留）判 partial 后中止，中止发生在预检阶段，未应用任何补丁、未改写清单，已注入工作态完好。宿主混合态是既有挂账（`host-overlay-mismatch-after-v0234`），与本补丁无关，待用户裁决，本轮不动宿主。
+- 重放途中另有一坑：一次失败会话的清单不记 015 触碰的两个文件，`npm run clean` 无从还原，残留脏文件使后续每次重放都在 015 处报 does not apply；处置=`git restore vendor/zcode` ＋ `git clean -f` 清掉补丁新增的未跟踪件后再重放。
 
 ## 验证
 
