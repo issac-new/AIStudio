@@ -4,11 +4,24 @@
     "gates": 47,
     "patches": 504,
     "zcodePatches": 14,
-    "scripts": 76,
+    "scripts": 77,
     "ledgers": 4,
     "npmScripts": 52
   },
   "changes": [
+    {
+      "at": "2026-11-26",
+      "delta": "+1 脚本（scripts/regression/run-ide-smoke-face.mjs 走查面包装）",
+      "reason": "ide-smoke 走查收编为回归矩阵强制面（spec 2026-11-26-full-retro-design-revision-batch 批 B，决策 D3）",
+      "pairedRemovals": [
+        "ide-smoke 由人手跑的游离入口降级：npm run test:ide-smoke 裸入口不再是执行通道，仅作为矩阵面内部实现细节保留"
+      ],
+      "sunset": {
+        "owner": "quality",
+        "reviewBy": "2027-02-26",
+        "retireWhen": "走查面被更通用的浏览器 e2e 面取代或 ide-smoke 探针退役时删除包装脚本并同批下调上限"
+      }
+    },
     {
       "at": "2026-11-26",
       "delta": "+0 全部类别；limits.patches 562→504 对齐在册数（2026-11-26 全面复盘批，spec 2026-11-26-full-retro-design-revision-batch）",

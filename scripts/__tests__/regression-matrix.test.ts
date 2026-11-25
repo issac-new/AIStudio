@@ -1,5 +1,7 @@
 // 回归矩阵守门（2026-11-23 全面复盘批）。
-// 锁四件事：①没有测试面游离在自动关口之外；②仓内发现的测试文件都能对应到一个测试面；
+// 锁四件事：①没有测试面游离在自动关口之外（manual=true 的全量档人工面是唯一显式例外，
+// 须 scopes 恰为 [full] 且带 note 理由——2026-11-26 批 B 随 ide-smoke-walkthrough /
+// capability-matrix 登记引入）；②仓内发现的测试文件都能对应到一个测试面；
 // ③矩阵里的 CI 引用可解析；④钩子、npm 入口与仓规确实接线。
 // 另锁执行器语义：失败、未执行、超时分别记账，退出码遵循 config/cli-contract.json。
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
@@ -41,16 +43,23 @@ describe('矩阵自身合法', () => {
     expect(bad, `带 pnpm 的步骤必须声明 cwd：\n${bad.join('\n')}`).toEqual([])
   })
 
-  it('id 唯一；每个测试面都由自动关口承接（推送前钩子或 CI）', async () => {
+  it('id 唯一；每个测试面都由自动关口承接（推送前钩子或 CI），人工面须显式 manual', async () => {
     const { loadMatrix } = await mod()
     const matrix = loadMatrix(ROOT)
     const ids = matrix.axes.map((a: any) => a.id)
     expect(new Set(ids).size).toBe(ids.length)
     const orphans = matrix.axes
       .filter((a: any) => (a.covers?.length ?? 0) > 0)
-      .filter((a: any) => !['always', 'paths'].includes(a.prepush) && !a.ci)
+      .filter((a: any) => !['always', 'paths'].includes(a.prepush) && !a.ci && a.manual !== true)
       .map((a: any) => a.id)
-    expect(orphans, '带 covers 的测试面必须由 prepush 或 ci 强制').toEqual([])
+    expect(orphans, '带 covers 的测试面必须由 prepush 或 ci 强制；唯一例外是 manual=true 的全量档人工面').toEqual([])
+    // manual 逃逸通道必须闭合（2026-11-26 批 B）：只许 full 档、必须写 note 理由，
+    // 防止「标个 manual 免强制」被滥用成默认出口。
+    const badManual = matrix.axes
+      .filter((a: any) => a.manual === true)
+      .filter((a: any) => JSON.stringify(a.scopes) !== JSON.stringify(['full']) || !a.note)
+      .map((a: any) => a.id)
+    expect(badManual, 'manual 面必须 scopes 恰为 ["full"] 且带 note 说明为何不进自动关口').toEqual([])
   })
 
   it('非测试面的检查项至少归属一个人工或自动关口', async () => {
@@ -58,7 +67,7 @@ describe('矩阵自身合法', () => {
     const matrix = loadMatrix(ROOT)
     const loose = matrix.axes
       .filter((a: any) => !(a.covers?.length ?? 0))
-      .filter((a: any) => !['always', 'paths'].includes(a.prepush) && !a.ci && !(a.scopes ?? []).includes('merge'))
+      .filter((a: any) => !['always', 'paths'].includes(a.prepush) && !a.ci && !(a.scopes ?? []).includes('merge') && a.manual !== true)
       .map((a: any) => a.id)
     expect(loose).toEqual([])
   })
