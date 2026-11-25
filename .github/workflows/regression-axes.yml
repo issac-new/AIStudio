@@ -1,0 +1,135 @@
+name: regression-axes
+
+# 回归矩阵补面（2026-11-25，挂账 N35-1）。
+# 背景：推演 harness、Python runtime/team、Ycode 这七个测试面此前只靠本地推送前钩子强制，
+# 绕过钩子的推送与未装钩子的克隆没有自动覆盖；product-tests 的路径忽略里还排除了 team/**。
+# 口径：命令就是回归矩阵里的测试面（config/regression-matrix.json），由
+# scripts/regression-matrix.mjs 执行——与本地推送前、合并前同一个执行器、同一份定义，
+# 失败、未执行、超时分账，退出码遵循 config/cli-contract.json。这里不另写一套步骤。
+# 触发：正向路径过滤——只有触及这些面所依赖的路径时才跑，无关改动不花 CI 时间。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'simharness/**'
+      - 'runtime/**'
+      - 'team/**'
+      - 'vendor/hermes-agent/**'
+      - 'patches/**'
+      - 'vendor/zcode/**'
+      - 'zcode-patches/**'
+      - 'scripts/regression-matrix.mjs'
+      - 'scripts/ensure-injected.mjs'
+      - 'scripts/inject.mjs'
+      - 'scripts/platform/inject/**'
+      - 'config/regression-matrix.json'
+      - 'config/cli-contract.json'
+      - '.github/workflows/regression-axes.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'simharness/**'
+      - 'runtime/**'
+      - 'team/**'
+      - 'vendor/hermes-agent/**'
+      - 'patches/**'
+      - 'vendor/zcode/**'
+      - 'zcode-patches/**'
+      - 'scripts/regression-matrix.mjs'
+      - 'scripts/ensure-injected.mjs'
+      - 'scripts/inject.mjs'
+      - 'scripts/platform/inject/**'
+      - 'config/regression-matrix.json'
+      - 'config/cli-contract.json'
+      - '.github/workflows/regression-axes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-axes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sim-python:
+    name: 推演 harness 与 Python（sim-gates、py-runtime、py-team）
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 注入与补丁重放类检查需要历史；推演夹具会自建临时仓库
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: 注入①（补丁重放——与 product-tests 同配方，先注入再装依赖）
+        run: node scripts/ensure-injected.mjs
+      - name: 安装 studio 依赖（推演 vitest 借用根 node_modules；推演 sh 夹具用到 node）
+        run: npm install --no-audit --no-fund --ignore-scripts
+        working-directory: vendor/hermes-studio
+      - name: 注入②（补 node_modules 软链——①时 vendor 尚未装依赖，软链被跳过）
+        run: node scripts/ensure-injected.mjs
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: vendor/hermes-agent/uv.lock
+      - name: 安装 hermes-agent 依赖环境（按 uv.lock 冻结安装；不装项目本体）
+        # 两处与直觉相反，均来自本机用全新虚拟环境的预演（2026-11-25）：
+        # ① 锁文件的 environments 只覆盖 Python 3.14 及以上，3.12 直接拒绝同步；
+        # ② 上游把 default-groups 设为空，测试工具组（pytest）必须显式加装。
+        run: uv sync --frozen --no-install-project --group dev --python 3.14 --project vendor/hermes-agent
+      - name: 补两个 team 测试直接依赖的库（不在 hermes-agent 的依赖里，本地一直借用宿主环境）
+        run: uv pip install --python vendor/hermes-agent/.venv/bin/python pyyaml python-dotenv
+      - name: 推演 harness 与 Python 两个测试面
+        run: |
+          set -o pipefail
+          node scripts/regression-matrix.mjs run --axis sim-gates --axis py-runtime --axis py-team --format json | tee sim-python.json
+        env:
+          AISTUDIO_PYTHON: ${{ github.workspace }}/vendor/hermes-agent/.venv/bin/python
+      - name: 上传结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-axes-sim-python
+          path: sim-python.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+  ycode:
+    name: Ycode（类型检查、工程测试、库表结构、lint）
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2  # vendor/zcode/package.json 的 packageManager；锁文件由该版本生成
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: vendor/zcode/pnpm-lock.yaml
+      - name: 注入（Ycode 补丁随同应用——锁文件补丁必须先于安装落盘）
+        run: node scripts/ensure-injected.mjs
+      - name: 安装 Ycode 依赖（冻结锁文件；跳过 Electron 二进制下载）
+        run: pnpm install --frozen-lockfile
+        working-directory: vendor/zcode
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Ycode 四条测试面
+        run: |
+          set -o pipefail
+          node scripts/regression-matrix.mjs run --axis yc-typecheck --axis yc-test-eng --axis yc-db-schema --axis yc-lint --format json | tee ycode.json
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: 上传结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-axes-ycode
+          path: ycode.json
+          retention-days: 14
+          if-no-files-found: ignore
