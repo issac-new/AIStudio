@@ -1,19 +1,103 @@
 {
-  "note": "已接受的依赖安全通告（2026-11-25 清偿批 N35-11）。dependency-audit.mjs 比对：清单内的不拦，清单外的高危或严重才失败（退出码 1）。每条条目注记原因与去向；修复或上游基线升级后从清单移除。",
+  "note": "已接受的依赖安全通告（2026-11-25 清偿批 N35-11 入册，2026-11-26 全面复盘批 C 结构化 v2）。条目形态 v2：对象 {id, package, reason, tracking, retireWhen}——id 保留 dependency-audit.mjs 匹配口径（npm 审计经 normalize 回退成「包@影响范围」串，pnpm 审计用 GHSA 号），package 是通告所在包，tracking 是挂账台账编号，retireWhen 是退役条件（上游出修复版复扫归零即从清单移除）。脚本兼容读取：字符串条目=legacy 形态（视为仅 id、无元数据，不计入完整度）；对象缺 id 跳过并告警、缺 package/reason/retireWhen 逐条告警，均不拦截。比对规则不变：清单内的不拦，清单外的高危或严重才失败（退出码 1）。",
   "accepted": [
-    "katex@0.11.0 - 0.18.1",
-    "GHSA-w5hq-g745-h8pq",
-    "GHSA-22p9-wv53-3rq4",
-    "GHSA-4x5r-pxfx-6jf8",
-    "GHSA-v245-v573-v5vm",
-    "GHSA-8988-4f7v-96qf",
-    "GHSA-c475-qrg2-pj4r",
-    "GHSA-238p-pmpm-9mq7",
-    "GHSA-mrhx-c7xc-m3w5",
-    "GHSA-jr5w-w6x2-84p9",
-    "GHSA-rmxm-3fg6-px4f",
-    "GHSA-g3hv-75wg-m249",
-    "GHSA-5pm8-86m8-9m6r",
-    "GHSA-r4jh-29pc-gfqr"
+    {
+      "id": "katex@0.11.0 - 0.18.1",
+      "package": "katex",
+      "reason": "studio 面低危（GHSA-238p-pmpm-9mq7，既有原型污染可绕过信任限制）。id 是 npm 审计的回退形态：npm audit 的 via.source 是数字通告号，normalize 后回退为「包@影响范围」，故与 GHSA 形态各留一条。顶装 katex@0.17.0（声明 ^0.17.0）与经 @vscode/markdown-it-katex 引入的嵌套 0.16.x 均受影响；修复版 0.18.2 超出两条声明的范围，属依赖升级（可能影响公式渲染）。",
+      "tracking": "N35-8",
+      "retireWhen": "上游基线 katex 升级到不低于 0.18.2 的版本，或经上游验证后在本仓用 overrides 钉版本；复扫 katex 相关条目归零且公式渲染走查无回归后移除。"
+    },
+    {
+      "id": "GHSA-w5hq-g745-h8pq",
+      "package": "uuid",
+      "reason": "Ycode 面中危：uuid 9.0.1（经 http-mitm-proxy 引入），修复线 ≥11.1.1，被父包钉在旧大版本，覆盖项强行跨大版本等于替父包做未验证兼容承诺。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 uuid ≥11.1.1，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-22p9-wv53-3rq4",
+      "package": "linkify-it",
+      "reason": "Ycode 面高危：linkify-it 3.0.3（经 ansi-to-react 引入，渲染模型输出时的二次复杂度拒绝服务），修复线 ≥5.0.1，需 5.x 跨大版本。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 linkify-it ≥5.0.1，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-4x5r-pxfx-6jf8",
+      "package": "@babel/core",
+      "reason": "Ycode 面低危：@babel/core 7.29.0，只在代码生成工具 shadcn 的子树里，修复线 ≥7.29.6（补丁级）。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 @babel/core ≥7.29.6，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-v245-v573-v5vm",
+      "package": "linkify-it",
+      "reason": "Ycode 面高危：linkify-it 3.0.3 的第二条通告（同经 ansi-to-react 引入），修复线 ≥5.0.2。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 linkify-it ≥5.0.2，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-8988-4f7v-96qf",
+      "package": "@opentelemetry/core",
+      "reason": "Ycode 面中危：@opentelemetry/core 2.6.1（OpenTelemetry 家族成组钉版），修复线 ≥2.8.0。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 @opentelemetry/core ≥2.8.0，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-c475-qrg2-pj4r",
+      "package": "basic-ftp",
+      "reason": "Ycode 面高危：basic-ftp 5.3.1（经 get-uri 引入，只在 PAC 代理解析 ftp 地址时用到），修复线 ≥6.2.1，需 6.x 跨大版本。2026-11-25 审计面变异探针实证条目：从清单移除即转红。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 basic-ftp ≥6.2.1，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-238p-pmpm-9mq7",
+      "package": "katex",
+      "reason": "GHSA-238p-pmpm-9mq7 的 GHSA 形态条目（同通告的 studio 侧见 katex@0.11.0 - 0.18.1）：Ycode 面 katex 0.16.45（pnpm 审计按 GHSA 号记），修复线 ≥0.18.2，需跨大版本。",
+      "tracking": "N35-8/N35-10",
+      "retireWhen": "上游基线 katex 升级到不低于 0.18.2（studio 与 Ycode 两侧同条件），复扫两处 katex 条目归零后一并移除。"
+    },
+    {
+      "id": "GHSA-mrhx-c7xc-m3w5",
+      "package": "zod",
+      "reason": "Ycode 面高危：zod 3.25.76（经 @jimp/plugin-blit 引入的图片处理插件链），修复线 ≥4.6.6，需 4.x 跨大版本。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 zod ≥4.6.6，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-jr5w-w6x2-84p9",
+      "package": "electron",
+      "reason": "Ycode 面高危：electron 44.7.0（桌面应用运行时本体的精确钉版，对某张被攻陷中间证书的缓解），修复线 ≥44.9.1。升级属桌面端整包变更，2026-11-25 清偿批实测未验证该条，由基线属主连同桌面端端到端验证一起处置。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线 electron ≥44.9.1 且桌面端整包验证通过后，复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-rmxm-3fg6-px4f",
+      "package": "@hono/node-server",
+      "reason": "Ycode 面中危：@hono/node-server 1.19.x（013 刷新后实装 1.19.19，同源的另两条通告已由该版修掉），修复线 ≥2.1.3，需 2.x 跨大版本。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 @hono/node-server ≥2.1.3，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "package": "minimatch",
+      "reason": "Ycode 面中危：minimatch 10.2.5（经 @ts-morph/common 引入），修复线 ≥11.0.1，需跨大版本。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 minimatch ≥11.0.1，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-5pm8-86m8-9m6r",
+      "package": "basic-ftp",
+      "reason": "Ycode 面中危：basic-ftp 5.3.1 的第二条通告（同经 get-uri 引入），修复线 ≥6.2.4。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 basic-ftp ≥6.2.4，新基线复扫该条消失即移除。"
+    },
+    {
+      "id": "GHSA-r4jh-29pc-gfqr",
+      "package": "basic-ftp",
+      "reason": "Ycode 面中危：basic-ftp 5.3.1 的第三条通告（同经 get-uri 引入），修复线 ≥6.2.3。",
+      "tracking": "N35-10",
+      "retireWhen": "上游基线升级后 basic-ftp ≥6.2.3，新基线复扫该条消失即移除。"
+    }
   ]
 }
