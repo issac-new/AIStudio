@@ -790,6 +790,7 @@
 - [2026-11-24-zcode-400-pending-batch.md](../superpowers/specs/2026-11-24-zcode-400-pending-batch.md)
 - [2026-11-25-full-retro-pending-closeout.md](../superpowers/specs/2026-11-25-full-retro-pending-closeout.md)
 - [2026-11-25-manual-sync-host-v0234.md](../superpowers/specs/2026-11-25-manual-sync-host-v0234.md)
+- [2026-11-25-yuan-guide-v2103-alignment.md](../superpowers/specs/2026-11-25-yuan-guide-v2103-alignment.md)
 
 ## archive（2 份，不计入上述根目录）
 归档文件只承担历史保留作用。`README.md` 说明归档范围，V2 运行手册描述旧拓扑与旧流程，均不得据此指导当前实现。
