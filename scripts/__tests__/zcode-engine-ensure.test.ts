@@ -166,3 +166,51 @@ describe.skipIf(process.platform === 'win32')('zcode-engine ensure：依赖就�
     } finally { f.dispose() }
   })
 })
+
+// ── 预装文档工具注入面（2026-11-25 P1，spec 2026-11-25-preinstalled-tools-injection）──
+// 守门四态：production 命中返回 env（PATH 前缀＋变量）；目录缺失→null；
+// bin 为空目录→null（半成品不注入）；身份回退序 production 缺失→preview 命中。
+import { preinstalledToolsEnv } from '../zcode-engine.mjs'
+
+describe('preinstalledToolsEnv：预装文档工具宿主注入（P1）', () => {
+  const makeHome = (identities: Array<{ id: string; entries: string[] }>) => {
+    const home = mkdtempSync(join(tmpdir(), 'zcode-preinst-'))
+    for (const { id, entries } of identities) {
+      const bin = join(home, '.zcode', 'preinstalled-tools', id, 'bin')
+      mkdirSync(bin, { recursive: true })
+      for (const e of entries) writeFileSync(join(bin, e), '#!/bin/sh\n', { mode: 0o755 })
+    }
+    return home
+  }
+
+  it('production bin 就绪 → 返回 binDir（PATH 前缀与变量由引擎 resolveSpawnEnv 下发，宿主只传位置）', () => {
+    const home = makeHome([{ id: 'production', entries: ['pdftotext', 'zcode-python'] }])
+    const r = preinstalledToolsEnv(home)
+    expect(r).not.toBeNull()
+    expect(r!.binDir).toBe(join(home, '.zcode', 'preinstalled-tools', 'production', 'bin'))
+  })
+
+  it('目录缺失 → null（不注入、无报错）', () => {
+    const home = mkdtempSync(join(tmpdir(), 'zcode-preinst-empty-'))
+    expect(preinstalledToolsEnv(home)).toBeNull()
+  })
+
+  it('bin 为空目录 → null（半成品不注入）', () => {
+    const home = makeHome([{ id: 'production', entries: [] }])
+    expect(preinstalledToolsEnv(home)).toBeNull()
+  })
+
+  it('production 缺失时回退 preview（身份序）', () => {
+    const home = makeHome([{ id: 'preview', entries: ['pdftotext'] }])
+    const r = preinstalledToolsEnv(home)
+    expect(r?.binDir).toBe(join(home, '.zcode', 'preinstalled-tools', 'preview', 'bin'))
+  })
+
+  it('production 优先于 preview（身份序不逆）', () => {
+    const home = makeHome([
+      { id: 'production', entries: ['pdftotext'] },
+      { id: 'preview', entries: ['pdftotext'] },
+    ])
+    expect(preinstalledToolsEnv(home)?.binDir).toContain('production')
+  })
+})

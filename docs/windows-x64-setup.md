@@ -16,6 +16,7 @@
 2. **`OVERLAY_UPSTREAM_ROOT` 只是显式覆盖入口。** 未设置时使用仓内 `vendor/`；只有明确要改用另一套上根基线时才设置它。它不是 Windows 安装的必填项，也不要求恢复历史多仓目录。
 3. **Windows 离线包是 Web 模式。** 它包含源码、agent 快照和安装链，不包含 Electron 桌面壳、Windows 桌面安装包或桌面运行时。
 4. **“离线”不等于完全断网、零依赖。** 目标机仍需预装 Node.js、Python、Git，并能访问可用的 pip/npm 镜像。完全气隙环境必须提前把完整依赖同步到内部镜像或本地源，并另行验收。
+5. **预装文档工具在离线机不可用。** 派单会话可用的文档工具链（Python、qpdf、Pandoc、Poppler、LibreOffice）由桌面版 ZCode 在本机下载准备；离线机没有桌面版预装目录，引擎不注入（行为与未装桌面版的机器一致），文档类插件按上游规则回退——使用系统已有程序，或由插件引导安装。
 5. **`simharness/` 是独立推演 harness。** 单仓整合或设置 `OVERLAY_UPSTREAM_ROOT` 都不会因此把它自动加入 Electron 桌面包；源码快照中的 harness 源文件也不等于桌面运行时组件。
 
 ## 二、当前单仓开发环境

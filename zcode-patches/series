@@ -125,3 +125,4 @@
 #      基线升级时：上游若已刷新锁文件，本补丁多半冲突。先在新基线上复扫，通告已清则退役；
 #      未清则在新基线上重做（步骤见 spec），不要带着冲突硬合。
 013-deps-security-overrides.patch
+014-entry-http-preinstalled-tools-bin-dir.patch

@@ -1041,3 +1041,4 @@
 {"at": "2026-11-25T05:02:43Z", "spec": "docs/superpowers/specs/2026-11-25-n34-pending-batch-2.md", "receipt": "74097251c6b37718b3498ed5404ad9f7986c6445", "commit": "30dfa2515"}
 {"at": "2026-11-25T05:06:22Z", "spec": "docs/superpowers/specs/2026-11-25-yuan-guide-v2103-alignment.md", "receipt": "0e672632ad6bb2aa5f162eb2694b88374e98615b", "commit": "0fa0b0657"}
 {"at":"2026-11-25T05:49:59Z","spec":"docs/superpowers/specs/2026-11-24-zcode-400-pending-batch.md","receipt":"39c9fb69cdadbfb9f77e8e6e74f033e1a493aded","commit":"81824d5d9"}
+{"at":"2026-11-25T08:44:38Z","spec":"docs/superpowers/specs/2026-11-25-preinstalled-tools-injection.md","receipt":"1d8759c1cace158036ce5b220467fb6428fe8588","commit":"0cfdbf678"}
