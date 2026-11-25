@@ -15,6 +15,9 @@ export const SURFACE_MAX_STRING = 4000
 export const SURFACE_REVISION = 1
 export const SURFACE_TIMEOUT_MS = 300_000
 export const SURFACE_PROTOCOL = 'ekko-ui/v1'
+export const SURFACE_PROTOCOL_V2 = 'ekko-ui/v2'
+/** 服务端受理的协议版本（传输级；语义校验在渲染器，v2 独有节点由渲染器按版本拒绝）。 */
+export const SURFACE_SUPPORTED_PROTOCOLS: ReadonlySet<string> = new Set([SURFACE_PROTOCOL, SURFACE_PROTOCOL_V2])
 
 const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor'])
 const SURFACE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
@@ -51,7 +54,34 @@ export interface SurfaceSubmission {
 }
 
 function byteLength(value: unknown): number {
-  try { return Buffer.byteLength(JSON.stringify(value), 'utf8') } catch { return Number.MAX_SAFE_INTEGER }
+  // 预算化估算：DAG 型输入（共享子树）经 JSON.stringify 会按引用路径数展开，
+  // 40 层共享 if 即 2^40 节点，stringify 会把请求处理挂死（2026-11-24 实测）。
+  // 共享子树按出现次数重复计（与序列化语义一致），访问超上限视为超限。
+  let visits = 0
+  const MAX_VISITS = 100_000
+  const estimate = (v: unknown): number => {
+    if (++visits > MAX_VISITS) return Number.MAX_SAFE_INTEGER
+    if (v === null || v === undefined) return 4
+    switch (typeof v) {
+      case 'string': return v.length + 2
+      case 'number':
+      case 'boolean': return 8
+      case 'object': {
+        if (Array.isArray(v)) {
+          let sum = 2
+          for (const item of v) sum += estimate(item) + 1
+          return sum
+        }
+        let sum = 2
+        for (const [key, item] of Object.entries(v as Record<string, unknown>)) {
+          sum += key.length + 4 + estimate(item)
+        }
+        return sum
+      }
+      default: return 8
+    }
+  }
+  try { return estimate(value) } catch { return Number.MAX_SAFE_INTEGER }
 }
 
 /** 递归检查深度、节点数、危险键与字符串长度。 */
@@ -78,7 +108,9 @@ export function parseSurfaceRequest(input: Record<string, unknown>): SurfaceRequ
   const raw = input.spec
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new SurfaceError('spec must be an object')
   const spec = raw as Record<string, unknown>
-  if (spec.protocol !== SURFACE_PROTOCOL) throw new SurfaceError(`spec.protocol must be ${SURFACE_PROTOCOL}`)
+  if (typeof spec.protocol !== 'string' || !SURFACE_SUPPORTED_PROTOCOLS.has(spec.protocol)) {
+    throw new SurfaceError(`spec.protocol must be ${SURFACE_PROTOCOL} or ${SURFACE_PROTOCOL_V2}`)
+  }
   if (typeof spec.surfaceId !== 'string' || !SURFACE_ID_RE.test(spec.surfaceId)) {
     throw new SurfaceError('spec.surfaceId must be 1-64 letters, digits, underscores or dashes')
   }

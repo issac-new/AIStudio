@@ -35,6 +35,9 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (event: 'submit', value: { actionId: string; payload: EkkoUIJsonValue }): void
   (event: 'cancel', value: { actionId: string }): void
+  (event: 'turn', value: { text: string }): void
+  (event: 'copy', value: { text: string }): void
+  (event: 'open-url', value: { url: string }): void
 }>()
 
 const validation = computed(() => validateSpec(props.spec))
@@ -159,6 +162,18 @@ const showFooterSubmit = computed(() => props.interactive && !submitAction.value
 const showFooterCancel = computed(() => props.interactive && !hasCancelAction.value)
 
 function handleOutcome(outcome: EkkoUIActionOutcome): void {
+  if (outcome.turn) {
+    emit('turn', outcome.turn)
+    return
+  }
+  if (outcome.copy) {
+    emit('copy', outcome.copy)
+    return
+  }
+  if (outcome.openUrl) {
+    emit('open-url', outcome.openUrl)
+    return
+  }
   if (outcome.cancel) {
     emit('cancel', { actionId: outcome.cancel.actionId })
     return
