@@ -23,6 +23,15 @@ source "$HERE/mx-lib.sh"    # 解析 SIM_ROOT=夹具 → CREDS_DIR=$FX/creds；�
 
 PRELOAD_SRC="$HERE/preload"
 fails=0
+# inode/权限跨端：GNU(BSD coreutils) 用 stat -c，BSD(macOS) 用 stat -f；CI 上此前按 BSD 写法跑，
+# GNU 的 -f 是文件系统信息、格式串不产出 inode，三处断言静默落空 → 测试假绿/在 CI 上真红。
+if stat -c '%i' /dev/null >/dev/null 2>&1; then
+  _stat_ino() { stat -c '%i' "$1"; }
+  _stat_perm() { stat -c '%a' "$1"; }
+else
+  _stat_ino() { stat -f '%i' "$1"; }
+  _stat_perm() { stat -f '%Lp' "$1"; }
+fi
 ok()   { echo "  ok  $1"; }
 bad()  { echo "  FAIL $1"; fails=$((fails+1)); }
 
@@ -41,16 +50,16 @@ if [[ "$sec" =~ ^[0-9a-f]{64}$ ]]; then
 else
   bad "auth-jwt-secret 生成格式异常：${sec:0:20}…"
 fi
-perm=$(stat -f '%Lp' "$CREDS_DIR/auth-jwt-secret")
+perm=$(_stat_perm "$CREDS_DIR/auth-jwt-secret")
 [[ "$perm" == "600" ]] && ok "auth-jwt-secret 0600" || bad "auth-jwt-secret 权限异常：$perm（want 600）"
 
 # ── ② 幂等：相同不动（无重写，inode 不变）＋密钥绝不覆盖 ──
-ino_jwt_before=$(stat -f '%i' "$CREDS_DIR/jwt-secret-preload.cjs")
-ino_log_before=$(stat -f '%i' "$CREDS_DIR/studio-access-log-preload.cjs")
+ino_jwt_before=$(_stat_ino "$CREDS_DIR/jwt-secret-preload.cjs")
+ino_log_before=$(_stat_ino "$CREDS_DIR/studio-access-log-preload.cjs")
 sec_before="$sec"
 ensure_studio_preload_files
-[[ "$(stat -f '%i' "$CREDS_DIR/jwt-secret-preload.cjs")" == "$ino_jwt_before" \
-   && "$(stat -f '%i' "$CREDS_DIR/studio-access-log-preload.cjs")" == "$ino_log_before" ]] \
+[[ "$(_stat_ino "$CREDS_DIR/jwt-secret-preload.cjs")" == "$ino_jwt_before" \
+   && "$(_stat_ino "$CREDS_DIR/studio-access-log-preload.cjs")" == "$ino_log_before" ]] \
   && ok "相同不动：两 preload 副本 inode 不变（无 cp 重写）" \
   || bad "幂等失效：相同内容被重写（inode 变了）"
 [[ "$(cat "$CREDS_DIR/auth-jwt-secret")" == "$sec_before" ]] \

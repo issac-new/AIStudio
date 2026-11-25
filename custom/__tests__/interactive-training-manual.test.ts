@@ -497,9 +497,26 @@ describe('AIStudio 交互培训课程契约', () => {
 
   it('run28 复核幕与 swarm-yuan 技术页覆盖当前实现和证据边界', () => {
     const guide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-guide.html'), 'utf8')
-    for (const text of ['swarm-yuan Skill', 'v2.100.1', '59', '204', '32 个 standard', 'SCHEMA_EPOCH', 'shortcut:', 'references/lessons.md', 'check_spec_first_wiring', 'engine_bin_source', 'state-machine.sh guard build']) {
-      expect(guide).toContain(text)
+    // 版本与配置变量数不写死：读载体。此前此处断言 'v2.100.1' 与 '204'，手册停在旧版仍全绿。
+    const yuanVersion = (JSON.parse(readFileSync(resolve(root, 'RELEASE-MANIFEST.json'), 'utf8')) as {
+      modules: Record<string, { version?: string }>
+    }).modules['yuan-skill']?.version ?? ''
+    const factsConf = readFileSync(resolve(root, 'skills/swarm-yuan/assets/facts.conf'), 'utf8')
+    const confVarCounts = ['CORE', 'ARCH', 'COMPLIANCE'].map((part) => {
+      const match = new RegExp(`^FACT_CONF_VARS_${part}=(\\d+)`, 'm').exec(factsConf)
+      expect(match, `facts.conf 缺 FACT_CONF_VARS_${part}`).not.toBeNull()
+      return Number(match?.[1])
+    })
+    const confVarsTotal = confVarCounts.reduce((sum, count) => sum + count, 0)
+    for (const text of ['swarm-yuan Skill', yuanVersion, '59', String(confVarsTotal), '32 个 standard', 'SCHEMA_EPOCH', 'shortcut:', 'references/lessons.md', 'check_spec_first_wiring', 'engine_bin_source', 'state-machine.sh guard build']) {
+      expect(guide, `技术指南缺少：${text}`).toContain(text)
     }
+    // 配置变量的分解必须等于 facts.conf 的三个分项；三份手册的版本必须等于发布清单。
+    // 指南里该事实块是 <div class="fact"><b>205</b><span>配置变量 = core 31 + …</span></div>，按标签结构匹配。
+    expect(guide, '技术指南的配置变量事实块').toContain(`<div class="fact"><b>${confVarsTotal}</b><span>配置变量 = core ${confVarCounts[0]} + arch ${confVarCounts[1]} + compliance ${confVarCounts[2]}</span></div>`)
+    expect(guide).toContain(`<title>swarm-yuan Skill 技术指南 · ${yuanVersion}</title>`)
+    const developerGuide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'), 'utf8')
+    expect(developerGuide, '研发指南当前版本').toContain(`**当前版本**：${yuanVersion}`)
     expect(guide).toContain('href="/aistudio-swarm-yuan-developer-guide.md"')
     const { SCENES } = courseData()
     const run28 = SCENES.find(scene => scene.id === 'project-run28-case')
@@ -515,8 +532,14 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(tech!.part).toBe('development')
     expect(tech!.phase).toBe('rules')
     expect(tech!.focus).toBe('swarm')
-    for (const text of ['v2.100.1', 'SCHEMA_EPOCH', 'shortcut', 'lessons.md', 'standard 32', 'engine_bin_source', 'R134']) {
-      expect(`${tech!.summary}${tech!.steps.join('')}${tech!.example.given}${tech!.example.when}`).toContain(text)
+    const techSceneText = `${tech!.summary}${tech!.steps.join('')}${tech!.example.given}${tech!.example.when}`
+    for (const text of [yuanVersion, 'SCHEMA_EPOCH', 'shortcut', 'lessons.md', 'standard 32', 'engine_bin_source', 'R134']) {
+      expect(techSceneText, `swarm-yuan 技术幕缺少：${text}`).toContain(text)
+    }
+    expect(techSceneText).toContain(`配置变量 ${confVarsTotal}=${confVarCounts.join('+')}`)
+    // 独立审查协议（v2.101.0 起）的两条核心判据要出现在这一幕里
+    for (const text of ['not run 不等于零发现', '连续两轮 clean 才算收敛']) {
+      expect(techSceneText, `swarm-yuan 技术幕缺独立审查判据：${text}`).toContain(text)
     }
     expect(html).toContain("goTo(SCENES.findIndex(scene => scene.id === 'development-swarm-yuan-tech'))")
     expect(html).toContain('href="#scene=development-swarm-yuan-tech"')
