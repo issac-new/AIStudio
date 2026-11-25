@@ -1,3 +1,4 @@
+diff --git a/packages/server/src/entry-http.ts b/packages/server/src/entry-http.ts
 --- a/packages/server/src/entry-http.ts
 +++ b/packages/server/src/entry-http.ts
 @@ -18,6 +18,13 @@
@@ -22,6 +23,7 @@
      });
  
    createHttpServer(services, port, {
+diff --git a/packages/services/src/node.ts b/packages/services/src/node.ts
 --- a/packages/services/src/node.ts
 +++ b/packages/services/src/node.ts
 @@ -3654,6 +3654,9 @@
