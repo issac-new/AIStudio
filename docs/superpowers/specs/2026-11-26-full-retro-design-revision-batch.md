@@ -1,6 +1,6 @@
 # 2026-11-26 全面复盘·设计修订·实施批（回归前改进批）
 
-> 状态：实施中（2026-11-26 起，main 249a1ba3b 基线）。用户指令：提交合入清分支之后，「全面复盘并改进 AIStudio，修订整体设计，并实施完成，最后完成全功能及非功能、安全的回归测试并修复暴露问题，发版 GitHub 与 modelscope」。本 spec 承载复盘结论、设计修订与实施项；全量回归与发版另有收口记录回填本文件验证节。
+> 状态：实施完成（2026-11-26；四批全部合入 main，全量回归与发版结果待回填本文件验证节）。基线 aac12a62d；批 B/C/D 各自 worktree 并行实施后逐个 --no-ff 合入。用户指令：提交合入清分支之后，「全面复盘并改进 AIStudio，修订整体设计，并实施完成，最后完成全功能及非功能、安全的回归测试并修复暴露问题，发版 GitHub 与 modelscope」。本 spec 承载复盘结论、设计修订与实施项；全量回归与发版另有收口记录回填本文件验证节。
 
 写给谁看：本仓 AI 会话与后续接手者；判定「这轮改进做了什么、为什么、怎么验收」。
 
@@ -41,11 +41,12 @@
 
 ## 四、验证
 
-1. 批 A：`node scripts/governance-lint.mjs --budget` 退出 0 且 patches 类不再报虚高；`node scripts/merge-invariants.mjs --check` 全过；8 个状态行抽查与 git log 实际合并态一致。
-2. 批 B：`npx vitest run scripts/__tests__/regression-matrix.test.ts` 绿（新面登记＋守门适配）；`npm run regress -- --scope full` 时 ide-smoke-walkthrough 与 capability-matrix 两面可执行（全量回归轮实测回填）。
-3. 批 C：`node scripts/dependency-audit.mjs` 退出 0 且逐条字段齐全输出；CSRF 测试 `npx vitest run custom/server/security/__tests__/` 绿；变异探针（去掉 CSRF 防线断言目标行后测试必红）实测回填。
-4. 批 D：六项各自守门测试绿＋`npx vitest run <六项测试路径>` 全绿；两套契约区分守门绿。
-5. 合并后：`npm run regress -- --scope merge` 过；全量回归（P6 阶段）21＋2 面执行并回填本节。
+1. 批 A：`node scripts/governance-lint.mjs --budget` 退出 0 且 patches 类不再报虚高；`node scripts/merge-invariants.mjs --check` 全过；8 个状态行抽查与 git log 实际合并态一致。【已过：合并 aa3607f 系→aac12a62d（合入 main 171bae910），lint 0 problems，不变量 pass，索引 775】
+2. 批 B：`npx vitest run scripts/__tests__/regression-matrix.test.ts` 绿（新面登记＋守门适配）；`npm run regress -- --scope full` 时 ide-smoke-walkthrough 与 capability-matrix 两面可执行（全量回归轮实测回填）。【已过：守门 26/26；包装面实跑 11/11 exit 0（95s：后端就绪 46s＋前端 2s＋探针 39s，teardown 双端口清零）；capability-matrix 经执行器 runAxis passed（36s）；预算 lint 0 problems；守门补 manual=true 逃逸通道闭合断言（manual 面必须 scopes=["full"] 且带 note 理由）。登录闸三态语义发现与处置见包装脚本头注：worktree 空库首轮需 DEV_BOOTSTRAP 建 super_admin，惯态库不受影响】
+3. 批 C：`node scripts/dependency-audit.mjs` 退出 0 且逐条字段齐全输出；CSRF 测试 `npx vitest run custom/server/security/__tests__/` 绿；变异探针（去掉 CSRF 防线断言目标行后测试必红）实测回填。【已过：审计真跑退出 0、元数据完整度 14/14；CSRF 13 例绿（安全面合计 32）；变异探针守卫改坏→1 failed（目标断言红）→还原绿。VULN-05 守卫实测在补丁 120 非 vendor 原文，测试分文本锚点＋行为断言两层；上游无 cookie 会话与 CSRF token 机制，凭据只走 Authorization header 已按现状钉住】
+4. 批 D：六项各自守门测试绿＋`npx vitest run <六项测试路径>` 全绿；两套契约区分守门绿。【已过：七文件 61 例绿＋宽回归 75 文件 789 例绿＋typecheck:harness 0；变异探针×7 全部改坏红/还原绿。实施 spec 2026-11-26-digital-employee-review-defects.md 随批入库；OrgEditor 真实浏览器走查留全量回归轮】
+5. 合并后：`npm run regress -- --scope merge` 过；全量回归（P6 阶段）21＋2 面执行并回填本节。【合并复核已过：批 C 目标 42/42、批 D 守门 61/61、批 B 守门 26/26 在 main 复跑绿；merge 档与全量档待回归轮】
+6. 预算册批 B 增补（裁决授权）：scripts 上限 76→77，sunset owner=quality、reviewBy 2027-02-26、retireWhen 挂 e2e 取代或探针退役；pairedRemovals=ide-smoke 裸入口降级为面内实现细节。【已过：lint 0 problems】
 
 ## 五、设计文档影响
 

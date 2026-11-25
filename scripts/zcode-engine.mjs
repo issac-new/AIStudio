@@ -55,7 +55,7 @@ export function sourceFingerprint({ treeOid, patches }) {
  * Agent 侧注入链路＝createServerHostServices 的 preinstalledToolsBinDir 选项
  * （services/node.ts resolveSpawnEnv 向 Agent 下发 ZCODE_PREINSTALLED_TOOLS_AVAILABLE
  * 与 PATH 前缀，随 Bash 快照与工具环境生效）。独立服务端入口 entry-http 未接该选项，
- * 由补丁 014 补环境变量入口 ZCODE_PREINSTALLED_TOOLS_BIN_DIR。
+ * 由补丁 015 补环境变量入口 ZCODE_PREINSTALLED_TOOLS_BIN_DIR。
  * 本函数只做存在性检测，不下载、不镜像（离线机无桌面版目录→null，插件按上游
  * 规则 2/3 回退：用系统已有程序或由插件引导安装）。命中返回 { binDir }，未就绪
  * （目录缺失或 bin 为空目录）返回 null。
@@ -223,7 +223,7 @@ async function serve() {
     log('serve', `:${ENGINE_PORT} 已被监听,引擎已在跑,跳过拉起(幂等)`);
     return;
   }
-  // 预装文档工具注入（P1）：检测到桌面版预装入口目录→经补丁 014 的环境变量入口
+  // 预装文档工具注入（P1）：检测到桌面版预装入口目录→经补丁 015 的环境变量入口
   // ZCODE_PREINSTALLED_TOOLS_BIN_DIR 交给引擎（引擎 resolveSpawnEnv 向 Agent 下发
   // 变量与 PATH 前缀，随 Bash 快照与工具环境生效）；未检测到则不设、不报错
   // （离线机/无桌面版机器行为不变，插件走上游回退规则）。日志两态都留，便于排查。
