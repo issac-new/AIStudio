@@ -800,6 +800,20 @@ function objectField<V>(body: Record<string, unknown>, key: string): V | undefin
   return v !== undefined && typeof v === 'object' && v !== null && !Array.isArray(v) ? v as V : undefined
 }
 
+/**
+ * 对象键形态显式校验（审查挂账5/6）：键存在但不是普通对象（null/数组/标量）
+ * 时返回键名清单，由端点回 400 点名——此前 objectField 对这类形态静默返回
+ * undefined，等价于「没传该字段」，调用方得不到任何提示。键不存在不算形态错。
+ */
+function invalidObjectFields(body: Record<string, unknown>, keys: string[]): string[] {
+  const bad: string[] = []
+  for (const key of keys) {
+    const v = body[key]
+    if (v !== undefined && (typeof v !== 'object' || v === null || Array.isArray(v))) bad.push(key)
+  }
+  return bad
+}
+
 router.get('/agent-identity', async (ctx) => {
   // gaps 与 identities 同包下发：户口判据只在服务端 rosterGaps 定义一份，界面按 id 对行显示
   ctx.body = { ok: true, identities: listIdentities(), events: listEvents(50), gaps: listRosterGaps().rows }
@@ -808,6 +822,13 @@ router.get('/agent-identity', async (ctx) => {
 router.post('/agent-identity/register', async (ctx) => {
   if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  // 户口三要素形态显式校验（审查挂账5/6）：键存在但非普通对象即 400 点名，不再静默吞
+  const malformed = invalidObjectFields(b, ['capabilityBoundary', 'auditRequirement', 'runtimeBindings'])
+  if (malformed.length) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: malformed.map((k) => `${k} 须为对象`) }
+    return
+  }
   // 户口三要素透传（域层各做规范化）：仅请求体键存在且为对象时传入
   const capabilityBoundary = objectField<CapabilityBoundary>(b, 'capabilityBoundary')
   const auditRequirement = objectField<AuditRequirement>(b, 'auditRequirement')
@@ -828,6 +849,13 @@ router.post('/agent-identity/register', async (ctx) => {
 router.post('/agent-identity/:id/update', async (ctx) => {
   if (superAdminDenied(ctx)) return  // 写面与 registry/matrix 写端点同闸（24h 审查补）
   const b = (ctx.request.body ?? {}) as Record<string, unknown>
+  // 户口三要素形态显式校验（审查挂账5/6）：同 register，不再静默吞
+  const malformed = invalidObjectFields(b, ['capabilityBoundary', 'auditRequirement', 'runtimeBindings'])
+  if (malformed.length) {
+    ctx.status = 400
+    ctx.body = { ok: false, problems: malformed.map((k) => `${k} 须为对象`) }
+    return
+  }
   const capabilityBoundary = objectField<CapabilityBoundary>(b, 'capabilityBoundary')
   const auditRequirement = objectField<AuditRequirement>(b, 'auditRequirement')
   const runtimeBindings = objectField<RuntimeBindings>(b, 'runtimeBindings')
