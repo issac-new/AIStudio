@@ -42,6 +42,9 @@
 - **D7：表达式求值带预算（256 步 / 深度 32）**。`map` 嵌套与长 concat 链可构造指数级求值，预算超限返回 undefined 并计入校验期深度检查；渲染不因此崩溃（fail-soft）。
 - **D8：能力协商结构本批落地但全部按批启用**。`clientCapabilities()` 返回真实能力集（blocking=true，其余 false），为批二/三/四的 features 翻转预留单一读取点；本批不改变任何现有行为。
 - **D9（TDD 中发现的 DoS 面，随批根治）：体积估算与表达式校验全部预算化**。TDD 的 DAG 用例（同一对象既作 then 又作 else，40 层）把校验挂死数小时——根因有二：① `byteLength` 用 `JSON.stringify` 量体积，共享子树按引用路径展开成 2^40 节点；② 表达式校验的深度限制挡不住 DAG（访问路径数是指数量级）。修复：客户端与服务端的 `byteLength` 改为带 10 万访问上限的递归估算（共享子树按出现次数重复计，与序列化语义一致）；表达式校验与求值共用 256 步访问预算，耗尽即抛 `ExpressionBudgetExceeded` 立即展开递归（逐点返回挡不住指数遍历）。回归守门用例断言 2 秒内拒绝。
+- **D10（合并门存量红，当轮根治）：zcode-usage 真库探针的时敏复发**。变基后跑合并档回归，`custom/server/controllers/ide/__tests__/zcode-usage.live.test.ts`「rounds/tools」一例红；在主干检出 `ccfa55a22` 单跑同红，定性为存量红。根因不是数据形状损坏：该探针在「最近 10 个会话」里找轮次首字时延与只读工具齐备的样本，2026-11-25 实测最近 12 个会话是一个自动任务的连续运行（单轮、零工具调用），合格样本被挤出窗口（第 13 个起即有）。`ae2296f31` 已把窗口从 1 放宽到 10，本次二次复发，属上次未根治。修法：窗口取接口单页上限 100，并按会话行自带的 `toolCalls` 预筛零工具会话；断言本意不变（真实数据里存在三维齐全的会话），失败信息带上扫描数与有工具调用的会话数。只改测试，不改接口。
+- **D11（变基教训，随批订正）：索引生成器不清嵌套冲突标记**。变基末提交在 `docs/manuals/aistudio-design-document-index.md` 冲突，以 `gen-doc-indexes --write` 解冲突后生成器报「0 问题」，但「维护口径」节里的冲突块被原样保留并进入提交，由 `interactive-training-manual` 契约测试在合并档回归中拦下（同 `5d3b99b8f` 的老坑）。订正：手工保留主干一侧（765 份）后重生成，并复查全仓无 `<<<<<<<`/`>>>>>>>` 残留。规则：索引冲突先手工清标记再重生成，生成器的「0 问题」不覆盖冲突标记。
+- **D12（合并门已知间歇风险二次复发，当轮根治）：推演侧 vitest 钩子超时与用例超时对齐**。修正后的第二轮合并档回归里 `sim-gates` 面 `tests/capability-probes.test.ts` 的 `beforeAll` 超时（默认 10 秒，实测 10.01 秒，用例未开始即跳过）；该文件单跑 5.3 秒，当时机器负载均值 232（10 核）。`2026-11-22-full-regression-security-nfr.md` 已记录过同一超时（「首次超时，第二次全绿，按间歇稳定性风险保留记录」），本次复发。根因是配置自身不一致：`simharness/vitest.config.ts` 给用例 120 秒（要真实起服务、跑探测脚本），却没设钩子上限，做真实准备的 `beforeAll` 沿用框架默认 10 秒。修法：配置层补 `hookTimeout: 120_000` 与 `testTimeout` 对齐，一处修护全部真实准备钩子；断言零变更。同批清理了本会话昨晚遗留的孤儿测试进程（工作目录在本 worktree，空转 528 分钟 CPU，系 D9 指数校验缺陷的遗留）。
 
 ## 验证
 
@@ -53,7 +56,11 @@
   - `custom/server/ekko-ui/__tests__/surface-runs.test.ts`（10 例，含新增双协议用例）：v2 受理、未知协议拒绝。
 - 类型：`npm run typecheck:harness` 零错误；`npm run typecheck:client:ratchet` 15 ≤ 基线 19（零新增）。
 - 守门：`raw-hex-budget` / `wcag-contrast` 8 例全绿（新部件全部走 token 派生，零裸 hex）。
-- 全量 `npm test`：9971 过 / 2 失败（均为新 spec 未入文档索引）→ `gen-doc-indexes --write` 补账后两文件 29 例转绿 → 全量复跑确认（结果见交付说明）。
+- 合并档回归 `npm run regress -- --scope merge`（变基到主干 `ccfa55a22` 之后，2026-11-25）：
+  - 第一轮：14 面 13 过；`vitest` 面 2 红——设计索引冲突标记（D11）与真库探针（D10）。
+  - 第二轮：`vitest` 面转绿；`sim-gates` 面 `capability-probes` 钩子超时（D12）。
+  - 第三轮（三处修正后）：**14 面全过，0 失败 0 未执行**——根 vitest 1247 文件、10013 过 11 跳过；qgate 22 文件 239 过；sim-gates 30 文件 377 过；类型检查双绿；构建、包体预算、治理预算、合并不变量、py-runtime、py-team、yuan-registry、release-check、catalog-check 全过。
+  - 变基前（2026-11-25 00:21，基座 `a3aa9b675`）全量 `npm test`：9973 过 11 跳过；其前一跑 9971 过 2 败，两败均为新 spec 未入文档索引，`gen-doc-indexes --write` 补账后转绿。
 - 实物走查（2026-11-25，走查页非真实会话）：`walkthrough-v2/`（临时目录，不入库）挂「发布成本估算器」v2 spec（range + metric $expr + chart $expr map + tabs + steps + descriptions + 三动作按钮），vite 打包 + 无头 Chrome 取证：亮色/暗色两帧渲染正常；DOM 转储核验 metric 显示 ¥232.00（arith+format 即时求值）、chart SVG 在位、tabs 双面板、steps 三态；`?demo=turn` 自动点击「按此方案继续」后事件日志出现 `turn: {"text":"按 8 席方案继续，月费 ¥232.00"}`——动作管线端到端成立。
 - 未做（诚实声明）：真实 Hermes 会话的 v2 端到端（Agent 经 MCP 工具发 v2 spec）未走查——v2 的 Agent 侧发现依赖校验器可修复错误（D4），目录工具与提示引导在批二补齐后统一走查；v1 会话路径已由 2026-11-16 批验证且本批零改动。
 
