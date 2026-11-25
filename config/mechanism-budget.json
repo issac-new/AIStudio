@@ -373,6 +373,20 @@
         "reviewBy": "2027-02-23",
         "retireWhen": "连续两轮推演无消费（面板读数无人看且无下游引用）或阈值被证伪时，并入 loop-report 或本 spec 附录"
       }
+    },
+    {
+      "at": "2026-11-25",
+      "delta": "+2 patches（820 MCP 五个持久式界面工具、821 持久式界面接线）/ +0 gates / +0 scripts / +0 ledgers / +0 npm scripts；limits 不动（patches 上限 562 高于在册 505，无需对齐）",
+      "reason": "Ekko UI v2 批二（spec 2026-11-25-ekko-ui-v2-batch2）：界面持久化与非阻塞生命周期——创建即返回、按版本续改、刷新后恢复、提交发起一轮新对话、目录按需查询",
+      "pairedRemovals": [
+        "批一规格 D4 预告的 MCP 目录工具在本批落地（兑现），阻塞式 show_surface 描述里硬编码的部件清单同批删除（单一事实源回到协议模块）",
+        "820/821 随上游 hermes-studio 吸收持久式界面能力后自然退役：上游提供同等 MCP 工具与路由时，两枚补丁从 series 移除"
+      ],
+      "sunset": {
+        "owner": "ekko-ui v2",
+        "reviewBy": "上游 hermes-studio 提供持久式界面能力的版本发布时",
+        "retireWhen": "上游原生提供 surface_create/update/inspect/close/catalog 工具与对应路由时，820/821 从 series 退役"
+      }
     }
   ],
   "sunset": [

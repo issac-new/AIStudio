@@ -1,7 +1,7 @@
 # Ekko UI v2 批二：持久化与非阻塞生命周期（C 方案第二切片）
 
 - 状态：in-progress（2026-11-25）
-- 性质：能力扩展批。主体是 A 类（`custom/` 下纯新增），另有 B 类补丁两枚：819（MCP 工具）、820（路由挂载、宿主接线与智能体使用说明）
+- 性质：能力扩展批。主体是 A 类（`custom/` 下纯新增），另有 B 类补丁两枚：820（MCP 工具）、821（路由挂载、宿主接线与智能体使用说明）；原编号 819/820 与主干已有的 819（follow-redirects 锁文件补丁）撞号，整批后移一位
 - 上游依据：`vendor/hermes-studio/packages/ekko-agent/docs/interactive-ui-plan.md`——「Surface 更新」节（单调递增的 revision、乐观并发、按稳定节点 id 的六种补丁）、「Host Interface」节、「持久化」节（`ekko_ui_surfaces` 表）、实施阶段第六阶段（长期 Surface 与 continuation turn）
 - 源头依据：ChatGPT 智能界面一手逆向（2026-11-24，本会话）——界面随消息存在；用户状态按部件身份保存；界面与模型通信的唯一通道是发一条新的用户消息；「刷新后状态保留」是它自己没解决的点
 - 前序：`docs/superpowers/specs/2026-11-24-ekko-ui-v2-batch1.md`（协议 v2 与表达力）
@@ -25,8 +25,8 @@
    - `persistent-surfaces.ts`：非阻塞宿主，依赖由外部注入（`{ store, resolveTurn, publish }`），提供创建、更新、查看、关闭、保存状态、记录提交六个操作。
    - `persistent-controller.ts`：koa 路由。
    - `SurfaceRuns.resolveTurn`：把当前轮的上下文编号解析成会话，沿用 v1 的活动轮校验。
-3. **MCP 工具**（补丁 819，`vendor/hermes-studio/bin/ekko-studio-mcp.mjs`）：新增五个工具，并订正 `ekko_studio_show_surface` 的描述。
-4. **挂载与接线**（补丁 820）：`packages/server/src/bootstrap/routes.ts` 挂上路由；`packages/server/src/modules/studio/sockets/chat-run.ts` 把两个能力登记给自定义侧（向会话推事件、解析当前轮会话）；`services/task-plan-runs.ts` 与 `services/clarification-runs.ts` 的两段指令补上 v2 说明。
+3. **MCP 工具**（补丁 820，`vendor/hermes-studio/bin/ekko-studio-mcp.mjs`）：新增五个工具，并订正 `ekko_studio_show_surface` 的描述。
+4. **挂载与接线**（补丁 821）：`packages/server/src/bootstrap/routes.ts` 挂上路由；`packages/server/src/modules/studio/sockets/chat-run.ts` 把两个能力登记给自定义侧（向会话推事件、解析当前轮会话）；`services/task-plan-runs.ts` 与 `services/clarification-runs.ts` 的两段指令补上 v2 说明。
 5. **客户端**（`custom/client/chat/`）：新增 `ekko-ui/surface-sync.ts`（界面登记表、接口调用、套接字订阅）；`EkkoUISurfaceCard.vue` 支持 `surface_create` 的卡片从服务端取最新版本与状态、把状态回存、收到更新事件后重渲染、提交后发起一轮新对话；`EkkoUISurface.vue` 增加初始状态入口并在规格更新时保留用户已填的值。
 
 接口一览（均挂在 `/api/studio/surfaces` 下）：
@@ -105,7 +105,7 @@
 3. 宿主单测（`custom/server/ekko-ui/__tests__/persistent-surfaces.test.ts`）：创建发布 `presented`、更新发布 `updated` 并带新规格、关闭发布 `closed`；版本冲突 409 且带当前版本；归属不符 404；关闭后更新被拒；校验失败 422 且错误文案含可用值；开关关闭时 503；没有活动轮时创建被拒。
 4. 路由单测（`custom/server/ekko-ui/__tests__/persistent-controller.test.ts`）：各路由的状态码与响应形状；写操作失败为非 2xx。
 5. 客户端单测（`custom/client/chat/__tests__/ekko-ui-card-persistent.test.ts`）：`surface_create` 卡片挂载时向服务端取数；状态变化后合并写回；收到 `ui.surface.updated` 后重渲染；规格更新后已填的值保留；提交后调用发消息通道且文本含编号、版本、动作与内容。
-6. 补丁接线标记断言（`custom/server/ekko-ui/__tests__/ekko-ui-patch-wiring.test.ts`）：819 含五个工具的注册与处理器分支；820 含路由挂载、依赖登记与两段指令。
+6. 补丁接线标记断言（`custom/server/ekko-ui/__tests__/ekko-ui-patch-wiring.test.ts`）：820 含五个工具的注册与处理器分支；821 含路由挂载、依赖登记与两段指令。
 7. 类型：`npm run typecheck:harness` 零错误；`npm run typecheck:client:ratchet` 不超基线；上游服务端类型检查 `tsc --noEmit -p packages/server/tsconfig.json` 零错误。
 8. 补丁：`npm run inject` 全量重放零失败，连续两次结果一致。
 9. 守门：`raw-hex-budget`、`wcag-contrast` 绿。

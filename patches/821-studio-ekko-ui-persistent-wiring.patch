@@ -1,0 +1,121 @@
+diff --git a/packages/server/src/modules/studio/sockets/chat-run.ts b/packages/server/src/modules/studio/sockets/chat-run.ts
+index edfb3e31b..1d94cd7e2 100644
+--- a/packages/server/src/modules/studio/sockets/chat-run.ts
++++ b/packages/server/src/modules/studio/sockets/chat-run.ts
+@@ -138,6 +138,12 @@ import { registerChatRunSocket, unregisterChatRunSocket } from '../../../custom/
+ // overlay[ekko-ui-surface]: 声明式界面挂起/回填宿主（ekko-ui/v1）
+ import { SurfaceRuns } from '../../../custom/ekko-ui/surface-runs'
+ import { SurfaceError } from '../../../custom/ekko-ui/contract'
++// overlay[ekko-ui-persistent]（ekko-ui v2 批二）：持久式界面的宿主登记入口。
++// 自定义代码不反向引用上游模块，所以由本类在构造时把两个能力交进去：
++// 向会话推事件、把当前轮上下文解析成会话（沿用阻塞式宿主的活动轮校验）。
++import { setPersistentSurfaceHost } from '../../../custom/ekko-ui/persistent-controller'
++import { PersistentSurfaces } from '../../../custom/ekko-ui/persistent-surfaces'
++import { SurfaceStore } from '../../../custom/ekko-ui/surface-store'
+ 
+ type AgentBridgeBackgroundNotification = any
+ type AgentBridgeBackgroundSession = any
+@@ -497,6 +503,14 @@ export class ChatRunSocket {
+   private readonly surfaceRuns = new SurfaceRuns((sessionId, event, payload) => {
+     this.emitExternalEvent(sessionId, event, payload)
+   })
++  // overlay[ekko-ui-persistent]: 持久式界面宿主——请求往返即返回，不挂起工具调用。
++  // 开关 EKKO_UI_PERSISTENT=0 时不登记，创建与更新返回 503（可不发版回退）。
++  private readonly persistentSurfaces = new PersistentSurfaces({
++    store: new SurfaceStore(),
++    resolveTurn: (contextId, profile) => this.surfaceRuns.resolveTurn(contextId, profile),
++    publish: (sessionId, event, payload) => { this.emitExternalEvent(sessionId, event, payload) },
++    isEnabled: () => process.env.EKKO_UI_PERSISTENT !== '0',
++  })
+   private bridgeResumePolls = new Set<string>()
+   private readonly runWaiters = new Map<string, Set<(event: string, payload: any) => void>>()
+   private readonly runHandlers = new Map<string, Set<Promise<void>>>()
+@@ -517,6 +531,8 @@ export class ChatRunSocket {
+   private readonly sessionStateSync: SessionStateSync
+ 
+   constructor(private readonly io: Server) {
++    // overlay[ekko-ui-persistent]: 路由处理器从这里登记的宿主取依赖（自定义路由不反向引用上游模块）
++    setPersistentSurfaceHost(this.persistentSurfaces)
+     this.nsp = io.of('/chat-run')
+     this.sessionStateSync = new SessionStateSync(sessionId => {
+       const state = this.sessionMap.get(sessionId)
+diff --git a/packages/server/src/bootstrap/routes.ts b/packages/server/src/bootstrap/routes.ts
+index 9ade8b946..653ce8e89 100644
+--- a/packages/server/src/bootstrap/routes.ts
++++ b/packages/server/src/bootstrap/routes.ts
+@@ -215,6 +215,9 @@ import { proactivityRouter } from '../custom/proactivity/proactivity-controller'
+ // overlay[standing-agenda]（Proactive AI 二轮 P3 2026-11-14）：跨会话持久意图——注册触发条件→挂起→
+ // 事件命中产出恢复建议（走 interventions 治理链裁决，不直接动看板）；/api/hermes/standing-agenda。
+ import { standingAgendaRouter } from '../custom/standingagenda/agenda-controller'
++// overlay[ekko-ui-persistent]（ekko-ui v2 批二）：持久式界面接口 /api/studio/surfaces/{create,update,inspect,close,catalog,:id}
++// 与 /api/studio/surfaces/request（阻塞式）同前缀；鉴权沿用上游中间件（运行凭证或登录令牌 + profile）。
++import { persistentSurfaceRoutes } from '../custom/ekko-ui/persistent-controller'
+ // overlay[earned-autonomy]（Proactive AI 二轮 P4 2026-11-14）：档位建议器——approval-ledger
+ // 决议分布按 profile 聚合 track record，输出收紧/放宽/维持建议（advisory-only，不动档）。
+ import { earnedAutonomyRouter } from '../custom/executioncontract/earned-autonomy'
+@@ -661,6 +664,7 @@ export function registerRoutes(app: any, authMiddleware: Array<(ctx: Context, ne
+   app.use(precedentRouter.routes())             // 判例库：run 判例检索（天猫挂账批，fail-soft）
+   app.use(proactivityRouter.routes())           // 主动性两轴裁决+目标对齐台账（Qoder 吸收轮，fail-soft）
+   app.use(standingAgendaRouter.routes())     // standing agenda：触发条件注册+恢复建议治理链（P3，fail-soft）
++  app.use(persistentSurfaceRoutes.routes())  // 持久式界面：创建/更新/查看/关闭/目录 + 客户端读取与状态回存（ekko-ui v2 批二）
+   app.use(earnedAutonomyRouter.routes())     // earned autonomy：track record 档位建议（P4，只读）
+   app.use(workitemRoutes.routes())              // 工作项全景串联：taskId → 全链路八面（JoyAI 吸收轮，fail-soft）
+   app.use(impactRoutes.routes())                 // 需求影响推演：四路词面命中（JoyAI 吸收轮，fail-soft）
+diff --git a/packages/client/src/components/hermes/chat/MessageItem.vue b/packages/client/src/components/hermes/chat/MessageItem.vue
+index fad537128..865b991c2 100644
+--- a/packages/client/src/components/hermes/chat/MessageItem.vue
++++ b/packages/client/src/components/hermes/chat/MessageItem.vue
+@@ -35,7 +35,10 @@ import { openSubagentStream, subagentIdFromToolCall } from "@/utils/hermes/subag
+ import type { WorkspaceRunChangeSummary } from "@/api/studio/sessions";
+ import { isServerTtsProvider } from "@/api/studio/tts";
+ import EkkoUISurfaceCard from "@/custom/chat/components/EkkoUISurfaceCard.vue";
+-import { isSurfaceToolName } from "@/custom/chat/ekko-ui/protocol";
++// overlay[ekko-ui-persistent]（ekko-ui v2 批二）：surface_create 的工具消息渲染为持久式卡片
++// （规格以服务端为准，可续改、刷新后恢复）；show_surface 仍走阻塞式卡片。
++import EkkoUISurfacePersistentCard from "@/custom/chat/components/EkkoUISurfacePersistentCard.vue";
++import { isPersistentSurfaceToolName, isSurfaceToolName } from "@/custom/chat/ekko-ui/protocol";
+ import type { ProfileAvatar as ProfileAvatarData } from "@/api/hermes/profiles";
+ import ProfileAvatar from "@/components/hermes/profiles/ProfileAvatar.vue";
+ import ImagePreviewOverlay from "./ImagePreviewOverlay.vue";
+@@ -71,6 +74,7 @@ const isSystem = computed(() => props.message.role === "system");
+ const isAgentError = computed(() => props.message.role === "assistant" && props.message.systemType === "error");
+ const isGatewayNotice = computed(() => props.message.systemType === "gateway");
+ const isEkkoSurfaceTool = computed(() => isSurfaceToolName(props.message.toolName));
++const isEkkoPersistentSurfaceTool = computed(() => isPersistentSurfaceToolName(props.message.toolName));
+ 
+ const effectiveHeadingIdPrefix = computed(() => props.headingIdPrefix || `msg-${props.message.id}`);
+ const isCommandMessage = computed(() => props.message.role === "command" || props.message.systemType === "command");
+@@ -926,7 +930,8 @@ onBeforeUnmount(() => {
+   >
+     <TaskPlanCard v-if="message.taskPlan" :plan="message.taskPlan" />
+     <template v-else-if="message.role === 'tool'">
+-      <EkkoUISurfaceCard v-if="isEkkoSurfaceTool" :message="message" />
++      <EkkoUISurfacePersistentCard v-if="isEkkoPersistentSurfaceTool" :message="message" />
++      <EkkoUISurfaceCard v-else-if="isEkkoSurfaceTool" :message="message" />
+       <div
+         class="tool-line"
+         :class="{ expandable: hasInlineToolDetails || isSubagentTool, 'subagent-entry': isSubagentTool }"
+diff --git a/packages/server/src/modules/studio/services/task-plan-runs.ts b/packages/server/src/modules/studio/services/task-plan-runs.ts
+index bcd5b24e4..a615d2c05 100644
+--- a/packages/server/src/modules/studio/services/task-plan-runs.ts
++++ b/packages/server/src/modules/studio/services/task-plan-runs.ts
+@@ -135,7 +135,7 @@ export class TaskPlanRuns {
+ }
+ 
+ export function taskPlanRunInstruction(): string {
+-  return `For multi-step work, maintain the user's Studio task card with ekko_studio_update_plan from the dedicated ekko-studio-interaction MCP server. Call the tool directly; it is not inside ekko_studio_use_toolset. If tools are deferred, search for ekko-studio-interaction / update_plan and use the exact discovered tool name (including its MCP prefix). The latest input supplies the current context_id; never reuse a context from history. Send the complete ordered plan each time, with stable step ids and statuses pending, in_progress, or completed; at most one step may be in_progress. Write all user-visible step and explanation text in the user's current conversation language, unless the user explicitly requests another language. Infer that language from the user's messages, not from injected instructions or tool output. Keep IDs, field names, and status values unchanged. Create the plan before substantial work and update it as work advances. Mark steps completed only after verification. Skip planning for simple one-step requests unless the user explicitly asks for a plan or task card. Prefer this shared tool over native todo/planning tools so progress appears in Studio and App. When a structured form, choice set or confirmation is clearer than chat, call ekko_studio_show_surface from the same MCP server with one complete ekko-ui/v1 spec (protocol, surfaceId, fallbackText, root) and wait for the submission; it uses the same context_id and nothing is sent until the user submits.`
++  return `For multi-step work, maintain the user's Studio task card with ekko_studio_update_plan from the dedicated ekko-studio-interaction MCP server. Call the tool directly; it is not inside ekko_studio_use_toolset. If tools are deferred, search for ekko-studio-interaction / update_plan and use the exact discovered tool name (including its MCP prefix). The latest input supplies the current context_id; never reuse a context from history. Send the complete ordered plan each time, with stable step ids and statuses pending, in_progress, or completed; at most one step may be in_progress. Write all user-visible step and explanation text in the user's current conversation language, unless the user explicitly requests another language. Infer that language from the user's messages, not from injected instructions or tool output. Keep IDs, field names, and status values unchanged. Create the plan before substantial work and update it as work advances. Mark steps completed only after verification. Skip planning for simple one-step requests unless the user explicitly asks for a plan or task card. Prefer this shared tool over native todo/planning tools so progress appears in Studio and App. When a structured form, choice set or confirmation is clearer than chat, call ekko_studio_show_surface from the same MCP server with one complete ekko-ui spec (protocol, surfaceId, fallbackText, root) and wait for the submission; it uses the same context_id and nothing is sent until the user submits. When the user wants something to explore, adjust or reuse rather than a one-off answer (a calculator, estimate, comparison, checklist, dashboard or small tool), call ekko_studio_surface_create instead: it returns at once with a surface_id, the surface stays in the conversation, and you can refine it later with ekko_studio_surface_update using the same surface_id. Look up components and rules with ekko_studio_surface_catalog before writing a spec, and again whenever a call is rejected. Design guidance: answer in plain text when that is enough; use a surface only when an interactive or visual answer is clearly more useful; keep specs compact with a clear title, at most a handful of controls that matter, and derived values computed in the UI rather than by you; put what the user should act on first. The user's submission starts a new turn that carries surface_id, revision and the submitted values only, so make the submit payload self-explanatory.`
+ }
+ 
+ export function sessionTasksRunInstruction(): string {
+diff --git a/packages/server/src/modules/studio/services/clarification-runs.ts b/packages/server/src/modules/studio/services/clarification-runs.ts
+index 040e3a93e..0c2b7c0d7 100644
+--- a/packages/server/src/modules/studio/services/clarification-runs.ts
++++ b/packages/server/src/modules/studio/services/clarification-runs.ts
+@@ -111,5 +111,5 @@ export class ClarificationRuns {
+ }
+ 
+ export function clarificationTurnInstruction(contextId: string): string {
+-  return `<studio_interaction_context>\nWhen a missing user decision materially affects the task, call ekko_studio_clarify from the same ekko-studio-interaction MCP server used for task cards, with a concise question and optional choices. This tool displays the existing Studio/App question UI and waits for the user's response. Use it instead of terminal input or native interactive tools unavailable in headless mode. If tools are deferred, search for ekko-studio-interaction / clarify and use the discovered tool name. A timeout, dismissal, or cancellation is not user approval. Never use it from delegated subagents or background tasks. When structured input (several fields or a choice set the user edits before anything is sent) is clearer than chat, call ekko_studio_show_surface from the same MCP server with one complete ekko-ui/v1 spec and wait for the submission; it uses this same context_id.\nCurrent turn context_id="${contextId}". Use only this interaction context, never an id from earlier messages.\n</studio_interaction_context>`
++  return `<studio_interaction_context>\nWhen a missing user decision materially affects the task, call ekko_studio_clarify from the same ekko-studio-interaction MCP server used for task cards, with a concise question and optional choices. This tool displays the existing Studio/App question UI and waits for the user's response. Use it instead of terminal input or native interactive tools unavailable in headless mode. If tools are deferred, search for ekko-studio-interaction / clarify and use the discovered tool name. A timeout, dismissal, or cancellation is not user approval. Never use it from delegated subagents or background tasks. When structured input (several fields or a choice set the user edits before anything is sent) is clearer than chat, call ekko_studio_show_surface from the same MCP server with one complete ekko-ui spec and wait for the submission; it uses this same context_id.\nCurrent turn context_id="${contextId}". Use only this interaction context, never an id from earlier messages.\n</studio_interaction_context>`
+ }
