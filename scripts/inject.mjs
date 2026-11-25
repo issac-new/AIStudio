@@ -1091,14 +1091,58 @@ export function checkPatchChain(opts = {}) {
   };
 }
 
+// 干跑前的注入态识别（2026-11-25，挂账 N35-6）：--check 以当前工作树为输入。已注入的树上
+// 补丁已经落盘，链式检查在每个通道的第一枚补丁处即失败，输出形似“补丁坏了”，使用者会
+// 误去重生成补丁。这里用 noop 哨兵同一套证据先判树的形态，再决定要不要跑链式检查。
+//   返回 null    —— 树是干净的（无清单、清单里没有已应用项、或清单残留而树已被还原），照常干跑
+//   返回说明文字 —— 已注入或半注入：干跑没有意义，调用方直接打印并以非零退出
+// 纯函数，清单与哨兵报告由调用方提供，便于守门测试覆盖三种形态。
+export function injectedTreeDiagnosis(manifest, sentinel) {
+  if (!isV2Manifest(manifest)) return null;
+  const applied = (manifest.patches ?? []).filter((p) => p.status === 'applied');
+  if (applied.length === 0) return null;
+  if (sentinel.verdict === 'reverted') return null;
+  if (sentinel.verdict === 'mixed') {
+    return [
+      '[inject] 当前树处于半注入态：注入清单声明补丁已应用，但工作树里只有一部分补丁改动在位（清单与树不一致）。',
+      '[inject] --check 以当前工作树为输入，这种形态下无法干跑。',
+      ...describeSentinelLanes(sentinel).map((line) => `[inject]   ${line}`),
+      '[inject] 处理：npm run clean 还原到干净基线后重跑 --check，或在未注入的新检出里跑。',
+    ].join('\n');
+  }
+  return [
+    `[inject] 当前树已注入：注入清单记录 ${applied.length} 条补丁已应用，且改动都在工作树上。`,
+    '[inject] --check 以当前工作树为输入——补丁已经落盘，链式检查必然在第一枚补丁处失败，那样的结果不代表补丁有问题，所以没有执行。',
+    '[inject] 请在干净树（未注入的新检出，或 npm run clean 之后）上干跑；日常确认注入态用 npm run ensure-injected。',
+  ].join('\n');
+}
+
+// 生产实现：读真实清单与计划，按三个通道的真实 git 状态判别。清单读不出时交给链式检查下结论。
+export function injectedTreeNotice() {
+  if (!existsSync(stateManifestPath)) return null;
+  const manifest = readManifestFile(stateManifestPath);
+  if (!injectedTreeDiagnosis(manifest, { verdict: 'ok', lanes: {} })) return null;
+  const sentinel = sentinelReport(manifest, buildOverlayPlan(), {
+    'hermes-studio': hermesStudioRoot,
+    'hermes-agent': hermesAgentRoot,
+    zcode: zcodeRoot,
+  });
+  return injectedTreeDiagnosis(manifest, sentinel);
+}
+
 // --check 干跑档（cognition P0-2）：与日常注入解耦的显式 CLI，升级预检/PR 按需调用。
 if (isDirectRun && process.argv.includes('--check')) {
+  const treeNotice = injectedTreeNotice();
+  if (treeNotice) {
+    console.error(treeNotice);
+    process.exit(1);
+  }
   const r = checkPatchChain();
   console.log(`[inject] --check 干跑 ${r.total} 条补丁（studio ${r.groups.studio} / agent ${r.groups.agent}）：失败 ${r.failures.length}，跳过 ${r.skipped.length}`);
   for (const f of r.failures) console.error(`  FAIL ${f.patch}: ${f.reason}`);
   for (const sk of r.skipped) console.warn(`  SKIP ${sk.patch}: ${sk.reason}`);
   if (r.failures.length > 0) {
-    console.error('[inject] 若目标树已注入过，先 npm run clean；否则为上游基线/补丁上下文失配，须重生成对应补丁');
+    console.error('[inject] 干跑前未识别出注入态（清单缺席，或树已被还原）；此时失败为上游基线/补丁上下文失配，须重生成对应补丁');
   }
   process.exit(r.failures.length > 0 ? 1 : 0);
 }

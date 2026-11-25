@@ -4,11 +4,12 @@
 # 机制来源：addyosmani/agent-skills constraint-driven-development/references/floor-guard.md。
 # 契约：
 #   输入 = merge base 到工作树的 diff（含新增/删除行 + 未跟踪文件）
+#   范围 = --root 所指目录（缺省整个仓库）；项目只是大仓库里一个子目录时，别的目录的改动不判
 #   只报五类降标：阈值下调 / 测试变松 / 断言删除 / 静默检查器 / 新增例外行
 #   "Tightening is silent, loosening is loud." —— 收紧不报，放宽才响
 # 退出码：0 干净；1 有降标（阻断）；2 无法运行（非 git 仓/无 merge base）——2 绝不读成 0
 #
-# 用法: bash floor-guard.sh [--base <ref>] [--root <仓库根>]
+# 用法: bash floor-guard.sh [--base <ref>] [--root <仓库根或项目目录>]
 #   默认 base：BASE_BRANCH（env/conf）→ origin/main → main → HEAD~1
 
 set -u
@@ -26,6 +27,13 @@ done
 
 if [[ -n "$ROOT" ]]; then cd "$ROOT" 2>/dev/null || { echo "floor-guard: root 不可进入：$ROOT" >&2; exit 2; }; fi
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "floor-guard: 非 git 仓库，无法判定（exit 2）" >&2; exit 2; }
+
+# 判定范围＝启动时所在目录（--root）相对仓库根的子路径，就在仓库根时为整个仓库。
+# 2026-11-25（挂账 N35-5）：此前一律上溯到仓库根、比较整个仓库。项目目录只是大仓库里一个
+# 子目录时（单仓里的技能目录、仓库内的门禁夹具），别的目录里未推送的断言改动也被判进来，
+# 守卫在各自机器上随别人的在途改动变红。逐行严格的规则不变，变的只是“判谁的改动”。
+SCOPE="$(git rev-parse --show-prefix 2>/dev/null)"
+[[ -n "$SCOPE" ]] || SCOPE="."
 
 TOP="$(git rev-parse --show-toplevel 2>/dev/null)"
 [[ -n "$TOP" ]] || { echo "floor-guard: 取不到仓库根（exit 2）" >&2; exit 2; }
@@ -45,9 +53,9 @@ TMP="$(mktemp "${TMPDIR:-/tmp}/swarm-floor.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 
 {
-  git diff --unified=0 "$MB" -- . 2>/dev/null || { echo "floor-guard: diff 失败（exit 2）" >&2; exit 2; }
+  git diff --unified=0 "$MB" -- "$SCOPE" 2>/dev/null || { echo "floor-guard: diff 失败（exit 2）" >&2; exit 2; }
   # 未跟踪文件：git diff 看不到新文件
-  git ls-files --others --exclude-standard 2>/dev/null | while IFS= read -r f; do
+  git ls-files --others --exclude-standard -- "$SCOPE" 2>/dev/null | while IFS= read -r f; do
     [[ -n "$f" ]] || continue
     git diff --no-index --unified=0 /dev/null "$f" 2>/dev/null || true
   done
@@ -56,8 +64,16 @@ trap 'rm -f "$TMP"' EXIT
 awk '
 BEGIN {
   SUPPRESS = "@ts-ignore|@ts-nocheck|eslint-disable|biome-ignore|# *noqa|# *type: *ignore|istanbul ignore|nosemgrep|gitleaks:allow|Stryker disable"
-  STUB = "throw new (Error|NotImplemented)[^\\n]*[Nn]ot implemented|catch[[:space:]]*\\([A-Za-z_]*\\)[[:space:]]*\\{[[:space:]]*\\}|catch[[:space:]]*\\{[[:space:]]*\\}|\\bTODO\\b|pass[[:space:]]*#[[:space:]]*stub"
-  SKIPONLY = "\\.(skip|todo)\\b|\\bxit\\(|\\bxdescribe\\(|@pytest\\.mark\\.skip|t\\.Skip\\("
+  # 词边界用显式字符类表达。awk 正则里的 \b 是退格符而不是词边界（2026-11-25 实测：macOS awk
+  # 20200816 上 \bTODO\b、\.skip\b 一条都不命中），此前含 \b 的规则（.skip/.todo、xit(、
+  # xdescribe(、TODO）从未生效——“测试变松”这一类一直是死的，而夹具只测过阈值下调与断言删除。
+  WB = "(^|[^A-Za-z0-9_])"
+  WE = "([^A-Za-z0-9_]|$)"
+  STUB = "throw new (Error|NotImplemented)[^\\n]*[Nn]ot implemented|catch[[:space:]]*\\([A-Za-z_]*\\)[[:space:]]*\\{[[:space:]]*\\}|catch[[:space:]]*\\{[[:space:]]*\\}|" WB "TODO" WE "|pass[[:space:]]*#[[:space:]]*stub"
+  # 通用的 .skip/.todo 只在测试文件里判：普通代码里的 reader.skip( 之类不是测试动作
+  SKIP_TEST = "\\.(skip|todo)" WE
+  SKIP_ANY = WB "xit\\(|" WB "xdescribe\\(|@pytest\\.mark\\.skip|t\\.Skip\\("
+  TESTFILE = "(\\.test\\.|\\.spec\\.|_test\\.|test_)"
   n = 0
 }
 /^diff / { infile = 1; inhead = 1; file = ""; old = ""; next }
@@ -79,14 +95,15 @@ END {
   for (i = 1; i <= na; i++) {
     split(ADD[i], p, "\t"); f = p[1]; t = p[2]
     # 文档与守卫自身不参与"代码动作"判定：md 里描述这些模式不是降标行为，
-    # 守卫自身携带的检测正则也不是（否则守卫一落地就把自己判成降标）
+    # 守卫自身携带的检测正则也不是（否则守卫一落地就把自己判成降标）；
+    # 守卫的夹具目录同理——夹具里必须原样写着 .skip(、TODO 这些待判定的字样。
     if (f ~ /^vendor\//) { continue }
-    if (f ~ /\.md$/ || f ~ /floor-guard.*\.sh$/ || f ~ /test-floor-guard/) {
+    if (f ~ /\.md$/ || f ~ /floor-guard.*\.sh$/ || f ~ /test-floor-guard/ || f ~ /gate-fixtures\/floor-guard\//) {
       if (f ~ /CONSTRAINTS/ && t ~ /^\| *[WE][0-9]+ *\|/) { printf "降标[新增例外] %s: %s\n", f, substr(t, 1, 120); bad++ }
       continue
     }
     if (t ~ SUPPRESS) { printf "降标[静默检查器] %s: %s\n", f, substr(t, 1, 120); bad++ }
-    else if (t ~ SKIPONLY) { printf "降标[测试变松] %s: %s\n", f, substr(t, 1, 120); bad++ }
+    else if (t ~ SKIP_ANY || (f ~ TESTFILE && t ~ SKIP_TEST)) { printf "降标[测试变松] %s: %s\n", f, substr(t, 1, 120); bad++ }
     else if (t ~ STUB) { printf "降标[未完成工作] %s: %s\n", f, substr(t, 1, 120); bad++ }
     else if (f ~ /(CONSTRAINTS|precheck[a-z.]*\.conf|rules\.d\/.*\.rules)$/ && t ~ /^\| *[WE][0-9]+ *\|/) { printf "降标[新增例外] %s: %s\n", f, substr(t, 1, 120); bad++ }
   }

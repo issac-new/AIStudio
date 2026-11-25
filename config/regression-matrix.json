@@ -171,7 +171,7 @@
       "run": {
         "argv": [
           "bash", "-c",
-          "set -e; tmpdir=\"$(mktemp -d)\"; trap 'rm -rf \"$tmpdir\"' EXIT; cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh \"$tmpdir/\"; sed \"s|__REPO_ROOT__|${REPO_ROOT}|g\" ci/self-precheck.conf > \"$tmpdir/precheck.conf\"; for mode in --all --all-full --compliance-suite; do echo \"== self-gate $mode\"; bash \"$tmpdir/precheck.sh\" \"$mode\"; done"
+          "set -e; tmpdir=\"$(mktemp -d)\"; trap 'rm -rf \"$tmpdir\"' EXIT; cp assets/precheck.sh assets/gates-strict.sh assets/gates-warn.sh assets/gates-advisory.sh \"$tmpdir/\"; cp scripts/floor-guard.sh \"$tmpdir/\"; sed \"s|__REPO_ROOT__|${REPO_ROOT}|g\" ci/self-precheck.conf > \"$tmpdir/precheck.conf\"; for mode in --all --all-full --compliance-suite; do echo \"== self-gate $mode\"; bash \"$tmpdir/precheck.sh\" \"$mode\"; done"
         ],
         "cwd": "skills/swarm-yuan",
         "timeoutMs": 900000
