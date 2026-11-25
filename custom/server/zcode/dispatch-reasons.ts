@@ -47,6 +47,13 @@ export const DISPATCH_REASON_CODES = [
 
 export type DispatchReasonCode = (typeof DISPATCH_REASON_CODES)[number]
 
+/**
+ * 派单门拦截码（审查挂账2/6）：消费方引用本常量而非内联 `unit_gate` 字面量——
+ * 词表单一事实源纪律（本文件头部冻结条款：使用方禁止私造表外 reason 字符串）。
+ * 类型约束于词表：从 DISPATCH_REASON_CODES 删除该条目时 typecheck:harness 即红。
+ */
+export const UNIT_GATE_REASON: DispatchReasonCode = 'unit_gate'
+
 /** 边界校验（引擎侧透传字符串 / 持久化读回时用），未知值回退 internal_error。 */
 export function coerceDispatchReasonCode(v: unknown): DispatchReasonCode {
   return typeof v === 'string' && (DISPATCH_REASON_CODES as readonly string[]).includes(v)
