@@ -530,6 +530,7 @@
 {"at":"2026-11-25T08:01:10Z","spec":"docs/superpowers/specs/2026-11-24-full-retro-pending-batch.md","receipt":"bfe11a1bcf590b05aca6c2e2f0a20b9bebfa0aea","commit":"2e9a2e319"}
 {"at":"2026-11-25T08:35:35Z","spec":"docs/superpowers/specs/2026-11-25-ekko-ui-v2-batch2.md","receipt":"2e2853882ed6aa3ba5740d368a77a91a2ed576b9","commit":"b2b0b591e"}
 {"at":"2026-11-25T08:40:15Z","spec":"docs/superpowers/specs/2026-11-24-full-retro-pending-batch.md","receipt":"b2f3eb69f20071df7e34ac9b63d4b223922411da","commit":"c7140ed24"}
+{"at":"2026-11-25T08:44:38Z","spec":"docs/superpowers/specs/2026-11-25-preinstalled-tools-injection.md","receipt":"1d8759c1cace158036ce5b220467fb6428fe8588","commit":"0cfdbf678"}
 {"at":"2026-11-25T09:03:43Z","spec":"docs/superpowers/specs/2026-11-25-ekko-ui-v2-batch2.md","receipt":"9a2bb088193957abe598d432dc285db5f8cfb9fb","commit":"6ab9a52e2"}
 {"at":"2026-11-25T09:25:39Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"33905a2269f04b3d898f66ec8e8a39bdde07e57f","commit":"04e0f5315"}
 {"at":"2026-11-25T13:26:57Z","spec":"docs/superpowers/specs/2026-11-25-full-retro-pending-closeout.md","receipt":"c765315ff0d1d857bb3dfda8a7031fcfef085c66","commit":"5cc0ac68d"}

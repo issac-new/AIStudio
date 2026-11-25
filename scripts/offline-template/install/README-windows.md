@@ -54,6 +54,7 @@ powershell -ExecutionPolicy Bypass -File install\install-windows.ps1
 
 - **验证证据不得互相替代**：当前 Windows 产品回归、最新离线包实机安装验收、完全气隙验收是三组独立验证。本手册是安装说明，不是这三项的通过报告；不能以既有产品回归推定最新安装或气隙验收通过，也不宣称三组验证已经全部完成。只有各组分别留下当次环境、包版本、命令和结果记录，才能分别声明通过。
 - **完全气隙不能只靠复制本 zip**：必须预装上述运行时，并提前把完整 pip/npm 依赖树同步到内部镜像或本地源；该场景需要单独验收。
+- **预装文档工具在离线机不可用**：派单会话的文档工具链（Python、qpdf、Pandoc、Poppler、LibreOffice）由桌面版 ZCode 下载准备；本包不带桌面运行时（见头部），离线机无预装目录时引擎不注入，文档类插件回退系统已有程序或引导安装。
 - **Electron 桌面线不在本包**：需要另捆 electron win32-x64 二进制和桌面运行时，并在 Windows 主机构建，属于独立交付与验证通道。源码包中的 `simharness\` 也不是桌面运行时组件。
 - `node-pty` 若镜像上的版本不含 win32 预编译，终端类功能在离线机不可用（Web 主功能不受影响）；打包报告会记录实测结论。
 - 离线模板按 hermes-agent **0.23.3** 口径配套。`hermes-agent-src` 是打包时刻的本机工作树快照，本地修改、新增和删除文件数由打包器**动态统计**，追溯见 `local-mods.patch`＋`HERMES-AGENT-SNAPSHOT.md`；它与包内 `aistudio\vendor\hermes-agent`（钉版 0.23.3 上游基线）是**两棵树**，studio 运行时消费的是 `%USERPROFILE%\.hermes\hermes-agent` 这棵。

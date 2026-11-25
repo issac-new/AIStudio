@@ -1,0 +1,38 @@
+diff --git a/packages/server/src/entry-http.ts b/packages/server/src/entry-http.ts
+--- a/packages/server/src/entry-http.ts
++++ b/packages/server/src/entry-http.ts
+@@ -18,6 +18,13 @@
+   const host = process.env["ZCODE_SERVER_HOST"]?.trim() || process.env["HOST"]?.trim() || undefined;
+   const staticRoot = process.env["ZCODE_WEB_STATIC_ROOT"]?.trim() || undefined;
+   const authToken = process.env["ZCODE_SERVER_AUTH_TOKEN"]?.trim() || undefined;
++  // overlay[015]：独立服务端形态的预装文档工具入口接线（AIStudio P1）。上游把
++  // preinstalledToolsBinDir 注释为桌面 Local Host 专属且只在桌面入口传参；选项本身的
++  // 机械行为（非 desktop-attached-remote 时向 Agent 下发 ZCODE_PREINSTALLED_TOOLS_AVAILABLE
++  // 与 PATH 前缀，见 createLocalServices 的 resolveSpawnEnv）对独立服务端同样成立。
++  // 变量缺省时行为逐字不变。
++  const preinstalledToolsBinDir =
++    process.env["ZCODE_PREINSTALLED_TOOLS_BIN_DIR"]?.trim() || undefined;
+   const topicResourcePeers = createTopicResourcePeers();
+   const serverId = resolveHttpServerId();
+   const { services, workspaceIdentityMapper, migrationFailedPathCount } =
+@@ -26,6 +33,7 @@
+       sourceServerId: serverId,
+       zcodeBuiltinProviderConfigFilePath,
+       providerProvisioningTargetEnabled: Boolean(authToken),
++      ...(preinstalledToolsBinDir ? { preinstalledToolsBinDir } : {}),
+     });
+ 
+   createHttpServer(services, port, {
+diff --git a/packages/services/src/node.ts b/packages/services/src/node.ts
+--- a/packages/services/src/node.ts
++++ b/packages/services/src/node.ts
+@@ -3654,6 +3654,9 @@
+     topicResourceRelayChannel: options.topicResourceRelayChannel,
+     projectStorageHostId,
+     sourceServerWorkspaceService,
++    // overlay[015]：把宿主给的预装工具入口目录转给 createLocalServices，落地在
++    // resolveSpawnEnv 的 ZCODE_PREINSTALLED_TOOLS_AVAILABLE 与 PATH 前缀下发。
++    ...(options.preinstalledToolsBinDir ? { preinstalledToolsBinDir: options.preinstalledToolsBinDir } : {}),
+   });
+   return { services, workspaceIdentityMapper, migrationFailedPathCount };
+ }

@@ -139,3 +139,8 @@
 #      uuid 8/9、@hono/node-server、glob、minimatch、esbuild 0.27、katex 0.16），或无修复版（extract-zip），
 #      或属 Electron 本体；见挂账 N35-10、N35-12。上游刷新锁文件后按 013 的退役条件一并处理。
 014-deps-dev-security-overrides.patch
+# 015（2026-11-26 合入期让号，原编号 014，spec 2026-11-25-preinstalled-tools-injection）：ZCode 4.0 吸收 P1
+#      预装文档工具接入——独立服务端入口读 ZCODE_PREINSTALLED_TOOLS_BIN_DIR 并透传 createLocalServices，
+#      上游 resolveSpawnEnv 据此向 Agent 下发可用性与 PATH 前缀。变量缺省时行为逐字不变。
+#      让号原因：与挂账清偿批 B 的 014-deps-dev-security-overrides 撞号，主干侧已先行合入，本侧改号。
+015-entry-http-preinstalled-tools-bin-dir.patch
