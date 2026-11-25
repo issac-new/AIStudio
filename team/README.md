@@ -16,7 +16,7 @@ Current: **v0.23.4-team.1** (base bumped 2026-11-24 with the vendor upgrade to h
 
 ### What changed in this release (v0.23.4-team.1)
 
-Upstream base hermes-agent **v0.23.3 → v0.23.4** (`3ac54e1012`, 1143 commits / 1316 files). Headline upstream changes: cron morning-brief chain hardening (read-only briefs, blueprint skills preserved), gateway session-prompt hooks (inert snapshot copies, owner-scope param redaction), profile/plugin mutual exclusion, shared-metrics daily snapshot, Gemini 4 model catalog. Five overlay patches hand-reanchored onto the new baseline (391/612/732/741/786); replay: **511/511 patches applied, idempotent double-run complete**. Runtime overlay re-mirrored 30 files against the new injected baseline; the watchdog hostile-load hotfix stays runtime-carried per D9 (restored after mirror refresh). Spec `docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md`.
+Upstream base hermes-agent **v0.23.3 → v0.23.4** (`8fc0374447`, 1143 commits / 1316 files). Headline upstream changes: cron morning-brief chain hardening (read-only briefs, blueprint skills preserved), gateway session-prompt hooks (inert snapshot copies, owner-scope param redaction), profile/plugin mutual exclusion, shared-metrics daily snapshot, Gemini 4 model catalog. Five overlay patches hand-reanchored onto the new baseline (391/612/732/741/786); replay: **511/511 patches applied, idempotent double-run complete**. Runtime overlay re-mirrored 30 files against the new injected baseline; the watchdog hostile-load hotfix stays runtime-carried per D9 (restored after mirror refresh). Spec `docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md`.
 
 ### What changed in v0.23.3-team.1 (2026-11-20)
 
