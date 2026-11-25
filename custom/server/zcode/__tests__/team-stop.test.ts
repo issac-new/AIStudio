@@ -42,6 +42,31 @@ describe('团队级停止条件（handbook 多 Agent 关）', () => {
     expect(warned.action).toBe('start')
     expect(warned.warnings?.[0]).toContain('团队停止条件')
   })
+
+  // 审查挂账1/6：团队停止告警此前 `warnings = [detail]` 整体覆盖，先前追加的
+  // 能力紧张告警丢失。守门：两维告警同场时并存（追加语义），顺序=判定序。
+  it('planDispatch：能力 warn 与团队停止告警并存（追加不覆盖）', () => {
+    const base: PlanFacts = {
+      knownAgents: new Set(['zcode']),
+      deferredAgents: new Set(),
+      pendingSince: new Map(),
+      pendingTtlMs: 30 * 60_000,
+      now: 1_000_000,
+    }
+    const req = { token: { target: 'zcode', kind: 'agent' as const }, workspacePath: '/w', engineOnline: true }
+    const gate = { target: 'zcode', applicable: true, decision: 'pass' as const, reasons: [] }
+    const plan = planDispatch(req, {
+      ...base,
+      unitGate: new Map([['zcode', gate]]),
+      capabilityReadiness: { decision: 'warn', reasons: ['capability_thin:x'], candidates: [], evidenceRefs: [] },
+      team: { dispatched: 12, enforce: false },
+    })
+    expect(plan.action).toBe('start')
+    expect(plan.warnings).toHaveLength(2)
+    expect(plan.warnings?.[0]).toContain('能力读数 warn')
+    expect(plan.warnings?.[0]).toContain('capability_thin:x')
+    expect(plan.warnings?.[1]).toContain('团队停止条件')
+  })
 })
 
 describe('collectTeamStopFacts（只采可推导事实）', () => {

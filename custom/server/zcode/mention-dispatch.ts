@@ -281,7 +281,8 @@ export function planDispatch(req: PlanRequest, facts: PlanFacts): DispatchPlan {
       if (facts.team.enforce) {
         return wrap({ action: 'reject', reason: 'team_stop', detail })
       }
-      warnings = [detail]
+      // 追加而非整体覆盖：能力紧张等先前追加的告警不得被团队停止告警冲掉（审查挂账1/6）
+      warnings = [...(warnings ?? []), detail]
     }
   }
   // 3) pending 槽：活跃 → 并入；过期 → 放行重派（TTL 语义见 MentionDispatchOptions.pendingTtlMs）。
