@@ -1,0 +1,104 @@
+diff --git a/bin/ekko-studio-mcp.mjs b/bin/ekko-studio-mcp.mjs
+index 66aa8848c..7ea910cbe 100755
+--- a/bin/ekko-studio-mcp.mjs
++++ b/bin/ekko-studio-mcp.mjs
+@@ -247,7 +247,7 @@ async function requestEnvelope(path, options = {}) {
+     : defaultProfile()
+   // Explicit run bindings take precedence. Shared Hermes MCP connections can
+   // select a restricted group-plan credential without changing process state.
+-  const contextId = ['/api/studio/task-plans/update', '/api/studio/session-tasks/list', '/api/studio/session-tasks/update', '/api/studio/surfaces/request'].includes(path)
++  const contextId = ['/api/studio/task-plans/update', '/api/studio/session-tasks/list', '/api/studio/session-tasks/update', '/api/studio/surfaces/request', '/api/studio/surfaces/create'].includes(path)
+     ? String(options.body?.context_id || '') : undefined
+   const runCredential = readRunCredential(profile, contextId)
+   const token = runCredential?.token || readToken(options.token, options.allowTokenFile !== false, profile)
+@@ -1239,13 +1239,61 @@ const tools = [
+   {
+     name: 'ekko_studio_show_surface',
+     toolset: 'plan',
+-    description: 'Present one declarative ekko-ui/v1 surface (a form, choice set or confirmation the user edits before anything is sent) in Studio/App and wait for the user to submit, cancel or for the timeout. Send the complete spec in one call: {protocol:"ekko-ui/v1", surfaceId, title?, fallbackText, state?, root, submitSchema?}. root is a component tree using only catalog components (box/stack/row/grid/card/divider/spacer, text/heading/code/badge/alert, form/field/input/textarea/number/select/radio/checkbox/switch/range/date/time, button/button-group, list/table/progress); inputs bind to state paths via "bind", buttons emit local actions via "events". Result: {status:"submitted"|"cancelled"|"expired"|"closed", surface_id, revision, action_id?, payload?}. A timeout, dismissal or cancellation is not consent. Use only the latest interaction context_id. Unavailable to background tasks and delegated subagents.',
++    description: 'Present one declarative ekko-ui surface (a form, choice set or confirmation the user edits before anything is sent) in Studio/App and BLOCK until the user submits, cancels or the timeout (default 5 minutes). Use it only when the next step cannot proceed without the user\'s structured answer. Send the complete spec in one call: {protocol:"ekko-ui/v2", surfaceId, title?, fallbackText, state?, root, submitSchema?}. Call ekko_studio_surface_catalog first for the component list and property rules; never send HTML, CSS or scripts. Result: {status:"submitted"|"cancelled"|"expired"|"closed", surface_id, revision, action_id?, payload?}. A timeout, dismissal or cancellation is not consent. Use only the latest interaction context_id. Unavailable to background tasks and delegated subagents. For a card, calculator or dashboard the user keeps using (or that you will refine later), use ekko_studio_surface_create instead: it returns at once.',
+     inputSchema: inputSchema({
+       context_id: { type: 'string', description: 'Current turn interaction context supplied by Studio.' },
+-      spec: { type: 'object', description: 'Complete ekko-ui/v1 spec. Unknown components or props are rejected; never send HTML, CSS or scripts.' },
++      spec: { type: 'object', description: 'Complete ekko-ui spec. Unknown components or props are rejected and the error lists the allowed values; never send HTML, CSS or scripts.' },
+       timeout_ms: { type: 'number', minimum: 1000, maximum: 300000, description: 'Wait time for the user submission. Defaults to 300000 (5 minutes).' },
+     }, ['context_id', 'spec']),
+   },
++  {
++    name: 'ekko_studio_surface_create',
++    toolset: 'plan',
++    description: 'Create a persistent interactive surface (a card, calculator, dashboard or form the user keeps using) in Studio/App and RETURN AT ONCE with {surface_id, revision, status, digest, title}; nothing waits. The surface stays available after the turn, survives page reload, and can be refined later with ekko_studio_surface_update. Send one complete spec: {protocol:"ekko-ui/v2", surfaceId (a stable slug, unique in this conversation), title?, fallbackText, state?, root}. Call ekko_studio_surface_catalog first for the component list, property rules and expression syntax. When the user submits, Studio starts a new turn whose message carries surface_id, revision, action and the submitted values, so write the spec so that the submit payload alone is enough for you to continue. Invalid specs are rejected with the allowed values; never send HTML, CSS or scripts. Needs the latest interaction context_id; unavailable to background tasks and delegated subagents.',
++    inputSchema: inputSchema({
++      context_id: { type: 'string', description: 'Current turn interaction context supplied by Studio.' },
++      spec: { type: 'object', description: 'Complete ekko-ui/v2 spec.' },
++      title: { type: 'string', maxLength: 200, description: 'Optional card title; defaults to spec.title.' },
++    }, ['context_id', 'spec']),
++  },
++  {
++    name: 'ekko_studio_surface_update',
++    toolset: 'plan',
++    description: 'Refine an existing persistent surface in place (the same card updates; no second card appears). Send EITHER patches (preferred, token-efficient) OR a full replacement spec, plus base_revision: the revision you last created, updated or inspected. Patches address nodes by their stable id: {op:"set-props", nodeId, props} merges props; {op:"set-style", nodeId, style} replaces style; {op:"replace-node", nodeId, node} replaces a node (node.id must equal nodeId); {op:"insert-child", parentId, afterId?, node} inserts a node (after the sibling afterId, else at the end); {op:"remove-node", nodeId} deletes a node (never the root); {op:"set-state", path, value} changes a state initial value. Returns {surface_id, revision, digest, changed}. A stale base_revision returns 409 with current_revision: call ekko_studio_surface_inspect, then retry. The user\'s already-entered values are kept for inputs that still exist.',
++    inputSchema: inputSchema({
++      surface_id: { type: 'string', description: 'surface_id returned by surface_create.' },
++      base_revision: { type: 'integer', minimum: 1, description: 'The revision you are patching: your last created, updated or inspected revision.' },
++      patches: { type: 'array', minItems: 1, maxItems: 64, description: 'Patch operations applied in order.', items: { type: 'object' } },
++      spec: { type: 'object', description: 'Full replacement spec (instead of patches). surfaceId must stay the same.' },
++    }, ['surface_id', 'base_revision']),
++  },
++  {
++    name: 'ekko_studio_surface_inspect',
++    toolset: 'plan',
++    description: 'Read a persistent surface: its revision, status, title, digest and a compact node outline (ids, types, bindings, props). Use it before updating when you are unsure of the current revision or node ids, or to read what the user has entered (include_state). Optionally read one full node with node_id.',
++    inputSchema: inputSchema({
++      surface_id: { type: 'string', description: 'surface_id returned by surface_create.' },
++      node_id: { type: 'string', description: 'Optional node id: returns that node in full.' },
++      include_state: { type: 'boolean', description: 'Also return the values the user has entered.' },
++    }, ['surface_id']),
++  },
++  {
++    name: 'ekko_studio_surface_close',
++    toolset: 'plan',
++    description: 'Close a persistent surface: it becomes read-only for the user and can no longer be updated. Idempotent.',
++    inputSchema: inputSchema({
++      surface_id: { type: 'string', description: 'surface_id returned by surface_create.' },
++    }, ['surface_id']),
++  },
++  {
++    name: 'ekko_studio_surface_catalog',
++    toolset: 'plan',
++    description: 'Look up the ekko-ui surface catalog on demand (it is not in your instructions): components with their props, events and bindings, expression syntax, actions, limits and the spec shape. Call it before ekko_studio_surface_create or ekko_studio_show_surface, and whenever a surface call is rejected. Optional q filters by type, category, description or prop name; optional category is one of layout, content, input, action, data.',
++    inputSchema: inputSchema({
++      q: { type: 'string', maxLength: 64, description: 'Case-insensitive filter, e.g. "chart" or "range".' },
++      category: { type: 'string', enum: ['layout', 'content', 'input', 'action', 'data'], description: 'Exact category filter.' },
++    }, []),
++  },
+   {
+     name: 'ekko_studio_update_plan',
+     toolset: 'plan',
+@@ -2115,6 +2163,26 @@ async function callToolInner(name, args = {}, signal) {
+       return jsonText(await request('/api/studio/surfaces/request', withAuthArgs(args, {
+         method: 'POST', body: pickDefined(args, ['context_id', 'spec', 'timeout_ms']), signal,
+       })))
++    case 'ekko_studio_surface_create':
++      return jsonText(await request('/api/studio/surfaces/create', withAuthArgs(args, {
++        method: 'POST', body: pickDefined(args, ['context_id', 'spec', 'title']), signal,
++      })))
++    case 'ekko_studio_surface_update':
++      return jsonText(await request('/api/studio/surfaces/update', withAuthArgs(args, {
++        method: 'POST', body: pickDefined(args, ['surface_id', 'base_revision', 'patches', 'spec']), signal,
++      })))
++    case 'ekko_studio_surface_inspect':
++      return jsonText(await request('/api/studio/surfaces/inspect', withAuthArgs(args, {
++        method: 'POST', body: pickDefined(args, ['surface_id', 'node_id', 'include_state']), signal,
++      })))
++    case 'ekko_studio_surface_close':
++      return jsonText(await request('/api/studio/surfaces/close', withAuthArgs(args, {
++        method: 'POST', body: pickDefined(args, ['surface_id']), signal,
++      })))
++    case 'ekko_studio_surface_catalog':
++      return jsonText(await request('/api/studio/surfaces/catalog', withAuthArgs(args, {
++        method: 'GET', query: pickDefined(args, ['q', 'category']), signal,
++      })))
+     case 'ekko_studio_update_plan':
+       return jsonText(await request('/api/studio/task-plans/update', withAuthArgs(args, {
+         method: 'POST', body: pickDefined(args, ['context_id', 'explanation', 'plan']),

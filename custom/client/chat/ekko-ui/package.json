@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "comment": "显式声明 CJS(无 type:module):overlay 根 package.json 的 type:module 会让 ts-node 把本目录的 .ts 当 ES module——custom/server/ekko-ui/protocol-bridge.ts 经 CJS require 引用 protocol.ts 时 ERR_REQUIRE_ESM(2026-11-25 批二走查实测)。本 package.json 截断继承,与 custom/server/package.json 同一机制;浏览器侧经 Vite 打包,type 字段不参与解析,客户端与 vitest 均不受影响。"
+}

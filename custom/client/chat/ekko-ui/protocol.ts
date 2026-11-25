@@ -4,10 +4,13 @@
  * 单一事实源：组件目录、可用属性、事件、动作、限制、校验规则都在本文件。
  * 上游规划见 vendor/hermes-studio/packages/ekko-agent/docs/interactive-ui-plan.md；
  * v1 覆盖「一次 createSurface 携带完整组件树」的切片，v2 在其上扩展可计算表达式、
- * 新部件与新动作（spec：docs/superpowers/specs/2026-11-24-ekko-ui-v2-batch1.md）。
+ * 新部件与新动作（spec：docs/superpowers/specs/2026-11-24-ekko-ui-v2-batch1.md）；
+ * v2 批二加按稳定节点 id 的补丁、可修复错误、目录投影、回执摘要与续接消息格式
+ * （spec：docs/superpowers/specs/2026-11-25-ekko-ui-v2-batch2.md）。
  *
  * 约束：
- * - 纯 TS，无 DOM/Vue/Naive 依赖，可在浏览器、Node 与测试中直接使用。
+ * - 纯 TS，无 DOM/Vue/Naive 依赖，可在浏览器、Node 与测试中直接使用。服务端经
+ *   custom/server/ekko-ui/protocol-bridge.ts 引用本文件做补丁校验与目录投影，不另抄一份。
  * - Agent 只发声明式 JSON：禁止 HTML、脚本、任意 CSS、事件属性与可执行 URL。
  * - 未知组件/属性/事件/动作一律拒绝；校验失败由宿主显示 fallbackText，不静默降级。
  * - v1 与 v2 双协议并存：v2 独有的表达式/部件/动作在 v1 spec 中一律拒绝。
@@ -35,6 +38,12 @@ export const EKKO_UI_LIMITS = {
   maxExpressionDepth: 32,
   /** map 循环模板的列表长度上限（v2）。 */
   maxMapItems: 200,
+  /** 单次更新最多包含的补丁条数（v2 批二）。 */
+  maxPatchOperations: 64,
+  /** 单个会话可创建的持久界面上限（v2 批二）。 */
+  maxSurfacesPerSession: 60,
+  /** 续接消息里提交内容的字符上限，超出截断并注明原长（v2 批二）。 */
+  maxTurnPayloadChars: 8000,
 } as const
 
 export type EkkoUIJsonValue =
@@ -257,6 +266,21 @@ const V2_EXPRESSION_KINDS = new Set([
 ])
 const V2_ACTION_TYPES = new Set(['surface.turn', 'surface.copy', 'surface.open_url', 'tabs.open'])
 const V2_COMPONENT_TYPES = new Set(['chart', 'image', 'metric', 'tabs', 'tab-panel', 'steps', 'empty', 'descriptions'])
+
+const V1_EXPRESSION_KINDS = ['literal', 'state', 'event', 'equals', 'not', 'and', 'or']
+const V1_ACTION_TYPES = ['state.set', 'state.merge', 'state.toggle', 'array.append', 'array.remove', 'surface.submit', 'surface.cancel', 'surface.close']
+
+// 校验错误要能被 Agent 直接修复：未知即列出可用值。MCP 只把 error 一句话带回模型，
+// 所以清单写进 message 而不是另开字段。顺序＝目录顺序或类型声明顺序。
+function catalogTypes(version: 1 | 2): string {
+  return EKKO_UI_CATALOG.map(def => def.type).filter(type => version === 2 || !V2_COMPONENT_TYPES.has(type)).join(' ')
+}
+function expressionKinds(version: 1 | 2): string {
+  return (version === 2 ? [...V1_EXPRESSION_KINDS, ...V2_EXPRESSION_KINDS] : V1_EXPRESSION_KINDS).join(' ')
+}
+function actionTypes(version: 1 | 2): string {
+  return (version === 2 ? [...V1_ACTION_TYPES, ...V2_ACTION_TYPES] : V1_ACTION_TYPES).join(' ')
+}
 
 const UNSAFE_PATH_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor'])
 
@@ -671,8 +695,12 @@ function validateExpression(expr: unknown, path: string, sink: ValidationSink, v
   if (depth > EKKO_UI_LIMITS.maxExpressionDepth) throw new ExpressionBudgetExceeded('depth')
   if (!isPlainObject(expr)) return fail(sink, path, 'expression.invalid', '表达式必须是对象')
   const kind = (expr as Record<string, unknown>).kind
+  // 取值位置直接写表达式：写成 {$expr:{…}} 是把组件属性的包装用法搬了过来，指出怎么改
+  if (kind === undefined && bindingWrapper(expr) === '$expr') {
+    return fail(sink, path, 'expression.wrapped', '这里直接写表达式对象，不要包 $expr（去掉外层 $expr，写出 {kind, …}）')
+  }
   if (version === 1 && typeof kind === 'string' && V2_EXPRESSION_KINDS.has(kind)) {
-    return fail(sink, path, 'expression.unknown', `未知表达式类型：${kind}（v1 不支持，需 ekko-ui/v2）`)
+    return fail(sink, path, 'expression.unknown', `未知表达式类型：${kind}（v1 不支持，需 ekko-ui/v2；v1 可用：${expressionKinds(1)}）`)
   }
   switch (kind) {
     case 'literal':
@@ -792,7 +820,7 @@ function validateExpression(expr: unknown, path: string, sink: ValidationSink, v
       return
     }
     default:
-      return fail(sink, path, 'expression.unknown', `未知表达式类型：${String(kind)}`)
+      return fail(sink, path, 'expression.unknown', `未知表达式类型：${String(kind)}（可用：${expressionKinds(version)}）`)
   }
 }
 
@@ -800,10 +828,10 @@ function validateAction(action: unknown, path: string, sink: ValidationSink, ver
   if (!isPlainObject(action)) return fail(sink, path, 'action.invalid', '动作必须是对象')
   const type = (action as Record<string, unknown>).type
   if (typeof type !== 'string' || !ACTION_TYPES.has(type)) {
-    return fail(sink, path, 'action.unknown', `未知动作类型：${String(type)}`)
+    return fail(sink, path, 'action.unknown', `未知动作类型：${String(type)}（可用：${actionTypes(version)}）`)
   }
   if (version === 1 && V2_ACTION_TYPES.has(type)) {
-    return fail(sink, path, 'action.unknown', `未知动作类型：${type}（v1 不支持，需 ekko-ui/v2）`)
+    return fail(sink, path, 'action.unknown', `未知动作类型：${type}（v1 不支持，需 ekko-ui/v2；v1 可用：${actionTypes(1)}）`)
   }
   const record = action as Record<string, unknown>
   switch (type) {
@@ -893,7 +921,8 @@ function validateProps(def: EkkoUIComponentDefinition, props: unknown, path: str
   for (const [key, value] of Object.entries(props)) {
     const rule = def.props[key]
     if (!rule) {
-      fail(sink, `${path}.${key}`, 'prop.unknown', `组件 ${def.type} 不支持属性：${key}`)
+      const available = Object.keys(def.props)
+      fail(sink, `${path}.${key}`, 'prop.unknown', `组件 ${def.type} 不支持属性：${key}（可用：${available.length ? available.join(' ') : '无'}）`)
       continue
     }
     if (!checkPropValue(rule, value, `${path}.${key}`, sink, version)) {
@@ -1029,11 +1058,11 @@ export function validateSpec(input: unknown): EkkoUIValidationResult {
     }
     const nodeType = typeof node.type === 'string' ? node.type : ''
     if (version === 1 && V2_COMPONENT_TYPES.has(nodeType)) {
-      return fail(sink, `${path}.type`, 'node.type.unknown', `未知组件：${nodeType}（v1 不支持，需 ekko-ui/v2）`)
+      return fail(sink, `${path}.type`, 'node.type.unknown', `未知组件：${nodeType}（v1 不支持，需 ekko-ui/v2；v1 可用：${catalogTypes(1)}）`)
     }
     const def = catalogDefinition(nodeType)
     if (!def) {
-      return fail(sink, `${path}.type`, 'node.type.unknown', `未知组件：${String(node.type)}`)
+      return fail(sink, `${path}.type`, 'node.type.unknown', `未知组件：${String(node.type)}（可用：${catalogTypes(version)}）`)
     }
     if (nodeType === 'tab-panel' && parentType !== 'tabs') {
       fail(sink, `${path}.type`, 'node.parent', 'tab-panel 必须位于 tabs 内')
@@ -1060,7 +1089,8 @@ export function validateSpec(input: unknown): EkkoUIValidationResult {
       } else {
         for (const [eventName, actions] of Object.entries(node.events)) {
           if (!def.events.includes(eventName)) {
-            fail(sink, `${path}.events.${eventName}`, 'node.event.unknown', `组件 ${def.type} 不支持事件：${eventName}`)
+            fail(sink, `${path}.events.${eventName}`, 'node.event.unknown',
+              `组件 ${def.type} 不支持事件：${eventName}（${def.events.length ? `可用：${def.events.join(' ')}` : '该组件不可交互，可用事件：无'}）`)
             continue
           }
           const list = Array.isArray(actions) ? actions : [actions]
@@ -1113,13 +1143,30 @@ export function validateSpec(input: unknown): EkkoUIValidationResult {
 // ---------------------------------------------------------------------------
 
 export const SURFACE_TOOL_BASENAME = 'show_surface'
+/** 批二：非阻塞创建工具——它的工具消息是持久界面在时间线上的锚点。 */
+export const PERSISTENT_SURFACE_TOOL_BASENAME = 'surface_create'
 
-/** MCP 工具名可能带 mcp__server__ 前缀，也可能被客户端改名；按末段匹配。 */
-export function isSurfaceToolName(name: unknown): boolean {
-  if (typeof name !== 'string') return false
+/** MCP 工具名可能带 mcp__server__ 前缀，也可能被客户端改名；归一到去掉服务前缀的末段。 */
+function surfaceToolBasename(name: unknown): string {
+  if (typeof name !== 'string') return ''
   const base = name.split('__').pop() || name
-  const normalized = base.replace(/^ekko_studio_/, '').replace(/^ekko-/, '').replace(/-/g, '_')
-  return normalized === SURFACE_TOOL_BASENAME || normalized === 'ui_surface'
+  return base.replace(/^ekko_studio_/, '').replace(/^ekko-/, '').replace(/-/g, '_')
+}
+
+/** 工具消息是否渲染为界面卡片：阻塞式 show_surface 与持久式 surface_create。
+ *  surface_update / surface_inspect / surface_close / surface_catalog 是普通工具轨迹。 */
+export function isSurfaceToolName(name: unknown): boolean {
+  const base = surfaceToolBasename(name)
+  return base === SURFACE_TOOL_BASENAME || base === 'ui_surface' || base === PERSISTENT_SURFACE_TOOL_BASENAME
+}
+
+export function isPersistentSurfaceToolName(name: unknown): boolean {
+  return surfaceToolBasename(name) === PERSISTENT_SURFACE_TOOL_BASENAME
+}
+
+export function isBlockingSurfaceToolName(name: unknown): boolean {
+  const base = surfaceToolBasename(name)
+  return base === SURFACE_TOOL_BASENAME || base === 'ui_surface'
 }
 
 function parseMaybeJson(value: unknown): unknown {
@@ -1182,6 +1229,426 @@ export function surfaceIdFor(sessionId: string, specSurfaceId: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// 可修复错误（v2 批二）
+// ---------------------------------------------------------------------------
+
+/** 把校验错误压成一句话。MCP 脚本只把响应体的 error 一句话带回模型，
+ *  所以修复所需的路径与原因要全部落在这句里。 */
+export function formatValidationErrors(errors: readonly EkkoUIValidationError[], max = 5): string {
+  const shown = errors.slice(0, max).map(error => `${error.path || 'spec'}：${error.message}`)
+  const rest = errors.length - shown.length
+  return `${errors.length} 处问题——${shown.join('；')}${rest > 0 ? `；另有 ${rest} 处` : ''}`
+}
+
+// ---------------------------------------------------------------------------
+// Patches（v2 批二：按稳定节点 id 续改；spec D4）
+// ---------------------------------------------------------------------------
+
+export const EKKO_UI_PATCH_OPS = ['set-props', 'set-style', 'replace-node', 'insert-child', 'remove-node', 'set-state'] as const
+export type EkkoUIPatchOp = (typeof EKKO_UI_PATCH_OPS)[number]
+
+export type EkkoUIPatch =
+  /** 合并写入指定属性，未给出的属性保留。 */
+  | { op: 'set-props'; nodeId: string; props: Record<string, EkkoUIJsonValue> }
+  /** 整体替换样式。 */
+  | { op: 'set-style'; nodeId: string; style: EkkoUIStyle }
+  /** 整节点替换；node.id 必须等于 nodeId，保持 id 稳定。 */
+  | { op: 'replace-node'; nodeId: string; node: EkkoUINode }
+  /** 插入子节点：有 afterId 时插在它之后，否则追加到末尾。 */
+  | { op: 'insert-child'; parentId: string; afterId?: string; node: EkkoUINode }
+  /** 删除节点；根节点不可删。 */
+  | { op: 'remove-node'; nodeId: string }
+  /** 改状态初值。 */
+  | { op: 'set-state'; path: string; value: EkkoUIJsonValue }
+
+export interface EkkoUIPatchResult {
+  ok: boolean
+  spec?: EkkoUISpec
+  errors: EkkoUIValidationError[]
+  /** 受影响的节点 id，去重，按首次出现排序；状态改动记作 state:<路径>。 */
+  changed: string[]
+}
+
+const NODE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/
+const MAX_PATCH_ERRORS = 50
+
+function isJsonValue(value: unknown, depth = 0): boolean {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true
+  if (typeof value === 'number') return Number.isFinite(value)
+  if (depth > EKKO_UI_LIMITS.maxDepth) return false
+  if (Array.isArray(value)) return value.every(item => isJsonValue(item, depth + 1))
+  if (isPlainObject(value)) return Object.values(value).every(item => isJsonValue(item, depth + 1))
+  return false
+}
+
+/** 补丁的形状校验：操作名、必填字段、标识符格式、取值是否为合法 JSON。 */
+export function validateSurfacePatches(patches: unknown): EkkoUIValidationError[] {
+  const sink: ValidationSink = { errors: [] }
+  if (!Array.isArray(patches) || patches.length === 0) {
+    return [{ path: 'patches', code: 'patches.invalid', message: `patches 必须是 1-${EKKO_UI_LIMITS.maxPatchOperations} 条补丁的数组` }]
+  }
+  if (patches.length > EKKO_UI_LIMITS.maxPatchOperations) {
+    return [{ path: 'patches', code: 'patches.limit', message: `补丁条数超过上限 ${EKKO_UI_LIMITS.maxPatchOperations}` }]
+  }
+  // 体积估算自带访问上限：共享子树型输入在深入遍历之前就被挡下
+  if (byteLength(patches) > EKKO_UI_LIMITS.maxSpecBytes) {
+    return [{ path: 'patches', code: 'patches.bytes', message: `补丁总体积超过 ${EKKO_UI_LIMITS.maxSpecBytes} 字节上限` }]
+  }
+  const needId = (value: unknown, path: string, code: string): boolean => {
+    if (typeof value !== 'string' || !NODE_ID_RE.test(value)) {
+      fail(sink, path, code, '必须是 1-64 位字母、数字、下划线或短横线')
+      return false
+    }
+    return true
+  }
+  patches.forEach((patch, index) => {
+    if (sink.errors.length >= MAX_PATCH_ERRORS) return
+    const at = `patches[${index}]`
+    if (!isPlainObject(patch)) return fail(sink, at, 'patch.invalid', '补丁必须是对象')
+    const op = patch.op
+    if (typeof op !== 'string' || !(EKKO_UI_PATCH_OPS as readonly string[]).includes(op)) {
+      return fail(sink, `${at}.op`, 'patch.op.unknown', `未知补丁操作：${String(op)}（可用：${EKKO_UI_PATCH_OPS.join(' ')}）`)
+    }
+    switch (op) {
+      case 'set-props':
+        needId(patch.nodeId, `${at}.nodeId`, 'patch.nodeId')
+        if (!isPlainObject(patch.props) || Object.keys(patch.props).some(key => !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(key))) {
+          fail(sink, `${at}.props`, 'patch.props', 'props 必须是属性名到取值的对象')
+        }
+        return
+      case 'set-style':
+        needId(patch.nodeId, `${at}.nodeId`, 'patch.nodeId')
+        if (!isPlainObject(patch.style)) fail(sink, `${at}.style`, 'patch.style', 'style 必须是对象')
+        return
+      case 'replace-node':
+        needId(patch.nodeId, `${at}.nodeId`, 'patch.nodeId')
+        if (!isPlainObject(patch.node) || typeof patch.node.id !== 'string') fail(sink, `${at}.node`, 'patch.node', 'node 必须是带字符串 id 的节点对象')
+        return
+      case 'insert-child': {
+        needId(patch.parentId, `${at}.parentId`, 'patch.parentId')
+        if (patch.afterId !== undefined) needId(patch.afterId, `${at}.afterId`, 'patch.afterId')
+        if (!isPlainObject(patch.node) || typeof patch.node.id !== 'string') fail(sink, `${at}.node`, 'patch.node', 'node 必须是带字符串 id 的节点对象')
+        return
+      }
+      case 'remove-node':
+        needId(patch.nodeId, `${at}.nodeId`, 'patch.nodeId')
+        return
+      case 'set-state':
+        if (typeof patch.path !== 'string' || !isSafeStatePath(patch.path) || patch.path === '') {
+          fail(sink, `${at}.path`, 'patch.state_path', '状态路径不合法或为空')
+        }
+        if (patch.value === undefined || !isJsonValue(patch.value)) fail(sink, `${at}.value`, 'patch.value', 'value 必须是合法的 JSON 值')
+        return
+      default:
+    }
+  })
+  return sink.errors
+}
+
+interface FoundNode { node: EkkoUINode; parent: EkkoUINode | null }
+
+function findNode(root: EkkoUINode, id: string): FoundNode | null {
+  const queue: FoundNode[] = [{ node: root, parent: null }]
+  while (queue.length) {
+    const current = queue.shift()!
+    if (current.node.id === id) return current
+    for (const child of current.node.children || []) queue.push({ node: child, parent: current.node })
+  }
+  return null
+}
+
+function collectIds(root: EkkoUINode): string[] {
+  const ids: string[] = []
+  const walk = (node: EkkoUINode): void => {
+    ids.push(node.id)
+    for (const child of node.children || []) walk(child)
+  }
+  walk(root)
+  return ids
+}
+
+/** 保留类型的深拷贝：只用于纯 JSON 数据（节点、样式、规格）。入参已经过形状校验，
+ *  JSON 往返不会丢字段；与 cloneJson 的区别是返回值沿用入参的类型而不是通用 JSON 类型。 */
+function cloneTyped<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+/**
+ * 把补丁应用到规格上，再对结果整体重校验。不修改入参。
+ * 补丁本身不合法、目标不存在、或打完后规格不合法，都返回 ok=false 与可修复的错误。
+ */
+export function applySurfacePatches(spec: EkkoUISpec, patches: unknown): EkkoUIPatchResult {
+  const shapeErrors = validateSurfacePatches(patches)
+  if (shapeErrors.length) return { ok: false, errors: shapeErrors, changed: [] }
+
+  const state: EkkoUIState = spec.state ? cloneTyped(spec.state) : {}
+  const next: EkkoUISpec = { ...spec, root: cloneTyped(spec.root), state }
+  const changed: string[] = []
+  const errors: EkkoUIValidationError[] = []
+  const mark = (id: string): void => { if (!changed.includes(id)) changed.push(id) }
+  const reject = (path: string, code: string, message: string): void => {
+    if (errors.length < MAX_PATCH_ERRORS) errors.push({ path, code, message })
+  }
+  const missing = (at: string, id: string): void =>
+    reject(at, 'patch.target_missing', `节点不存在：${id}（可用 id：${collectIds(next.root).join(' ')}）`)
+
+  for (const [index, patch] of (patches as EkkoUIPatch[]).entries()) {
+    if (errors.length >= MAX_PATCH_ERRORS) break
+    const at = `patches[${index}]`
+    switch (patch.op) {
+      case 'set-props': {
+        const found = findNode(next.root, patch.nodeId)
+        if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
+        found.node.props = { ...(found.node.props || {}), ...patch.props }
+        mark(patch.nodeId)
+        break
+      }
+      case 'set-style': {
+        const found = findNode(next.root, patch.nodeId)
+        if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
+        found.node.style = { ...patch.style }
+        mark(patch.nodeId)
+        break
+      }
+      case 'replace-node': {
+        if (patch.node.id !== patch.nodeId) {
+          reject(`${at}.node.id`, 'patch.id_mismatch', `replace-node 的 node.id（${patch.node.id}）必须与 nodeId（${patch.nodeId}）一致`)
+          break
+        }
+        const found = findNode(next.root, patch.nodeId)
+        if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
+        const replacement = cloneTyped(patch.node)
+        if (!found.parent) next.root = replacement
+        else found.parent.children = (found.parent.children || []).map(child => child.id === patch.nodeId ? replacement : child)
+        mark(patch.nodeId)
+        break
+      }
+      case 'insert-child': {
+        const found = findNode(next.root, patch.parentId)
+        if (!found) { missing(`${at}.parentId`, patch.parentId); break }
+        if (!found.node.children) {
+          if (!catalogDefinition(found.node.type)?.acceptsChildren) {
+            reject(`${at}.parentId`, 'patch.parent_no_children', `组件 ${found.node.type} 不接受子节点，不能作为 parentId`)
+            break
+          }
+          found.node.children = []
+        }
+        const children = found.node.children
+        const inserted = cloneTyped(patch.node)
+        if (patch.afterId !== undefined) {
+          const position = children.findIndex(child => child.id === patch.afterId)
+          if (position < 0) {
+            reject(`${at}.afterId`, 'patch.after_id', `afterId 不是 ${patch.parentId} 的直接子节点：${patch.afterId}（可用：${children.map(child => child.id).join(' ') || '无'}）`)
+            break
+          }
+          children.splice(position + 1, 0, inserted)
+        } else {
+          children.push(inserted)
+        }
+        mark(patch.parentId)
+        mark(inserted.id)
+        break
+      }
+      case 'remove-node': {
+        const found = findNode(next.root, patch.nodeId)
+        if (!found) { missing(`${at}.nodeId`, patch.nodeId); break }
+        if (!found.parent) {
+          reject(`${at}.nodeId`, 'patch.root_removed', '不能删除根节点')
+          break
+        }
+        found.parent.children = (found.parent.children || []).filter(child => child.id !== patch.nodeId)
+        mark(patch.nodeId)
+        break
+      }
+      case 'set-state':
+        setStateValue(state, patch.path, cloneTyped(patch.value))
+        mark(`state:${patch.path}`)
+        break
+      default:
+    }
+  }
+  if (errors.length) return { ok: false, errors, changed: [] }
+
+  // 打完后整体重校验：补丁可能引入重复 id、非法父子关系、未知部件或超限
+  const validation = validateSpec(next)
+  if (!validation.ok) return { ok: false, errors: validation.errors, changed: [] }
+  return { ok: true, spec: validation.spec, errors: [], changed }
+}
+
+// ---------------------------------------------------------------------------
+// 回执摘要与续接消息（v2 批二）
+// ---------------------------------------------------------------------------
+
+function canonicalJson(value: EkkoUIJsonValue | undefined): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`
+  }
+  return JSON.stringify(value === undefined ? null : value)
+}
+
+/** 规格与状态初值的 32 位散列（FNV-1a），只用于识别版本，不作安全用途。
+ *  标题与兜底文本不参与：它们不改变界面结构。 */
+export function surfaceDigest(spec: EkkoUISpec): string {
+  // 入参应是已通过校验的规格；体积估算自带访问上限，异常输入只会得到 overflow
+  if (byteLength(spec) > EKKO_UI_LIMITS.maxSpecBytes * 4) return 'overflow'
+  const text = canonicalJson(JSON.parse(JSON.stringify({ root: spec.root, state: spec.state ?? null })) as EkkoUIJsonValue)
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
+/** 持久界面提交后，客户端用它拼出新一轮的用户消息（spec D1）：
+ *  模型需要的编号、版本、动作与提交内容都在一条普通消息里。 */
+export function formatSurfaceTurnMessage(input: {
+  title?: string
+  surfaceId: string
+  revision: number
+  actionId: string
+  payload?: EkkoUIJsonValue
+}): string {
+  const head = `【界面提交】${input.title ? `「${input.title}」` : '界面'}（surface_id=${input.surfaceId}，revision=${input.revision}，action=${input.actionId}）`
+  if (input.payload === undefined) return head
+  let body = JSON.stringify(input.payload, null, 1) ?? ''
+  if (body.length > EKKO_UI_LIMITS.maxTurnPayloadChars) {
+    const original = body.length
+    body = `${body.slice(0, EKKO_UI_LIMITS.maxTurnPayloadChars)}…（已截断，原长 ${original}）`
+  }
+  return `${head}\n提交内容：\n${body}`
+}
+
+// ---------------------------------------------------------------------------
+// 目录投影（v2 批二：目录工具的数据面，spec D8）
+// ---------------------------------------------------------------------------
+
+export interface EkkoUICatalogComponent {
+  type: string
+  category: string
+  description: string
+  acceptsChildren: boolean
+  events: string[]
+  bindValueType?: string
+  /** 属性名到类型说明，形如 "number"、"enum(bar|line|pie)"；必填以 * 结尾。 */
+  props: Record<string, string>
+}
+
+export interface EkkoUICatalog {
+  protocols: string[]
+  features: EkkoUICapabilities['features']
+  limits: Record<string, number>
+  specShape: string
+  components: EkkoUICatalogComponent[]
+  expressions: Array<{ kind: string; syntax: string }>
+  /** 动作名列表（保持原样，供按键名取详情）。 */
+  actions: string[]
+  /** 动作写法：字段形状与一个可直接照抄的样例。 */
+  actionShapes: Array<{ type: string; fields: string; example: string }>
+  notes: string[]
+}
+
+const EXPRESSION_SYNTAX: Array<{ kind: string; syntax: string }> = [
+  { kind: 'literal', syntax: '{kind:"literal", value:<JSON 值>}' },
+  { kind: 'state', syntax: '{kind:"state", path:"a.b"} —— 读状态路径' },
+  { kind: 'event', syntax: '{kind:"event", path:"value"} —— 读事件参数' },
+  { kind: 'equals', syntax: '{kind:"equals", left:<表达式>, right:<表达式>}' },
+  { kind: 'not', syntax: '{kind:"not", value:<表达式>}' },
+  { kind: 'and', syntax: '{kind:"and", values:[<表达式>, …]}' },
+  { kind: 'or', syntax: '{kind:"or", values:[<表达式>, …]}' },
+  { kind: 'var', syntax: '{kind:"var", name:"it", path:"qty"} —— 读 map 绑定的局部变量（v2）' },
+  { kind: 'arith', syntax: '{kind:"arith", op:"+", left:<表达式>, right:<表达式>} —— op: + - * / %（v2）' },
+  { kind: 'compare', syntax: '{kind:"compare", op:">", left:<表达式>, right:<表达式>} —— op: > >= < <=（v2）' },
+  { kind: 'format', syntax: '{kind:"format", as:"currency", value:<表达式>, decimals?:2, currency?:"¥"} —— as: number currency percent date（v2）' },
+  { kind: 'length', syntax: '{kind:"length", value:<表达式>}（v2）' },
+  { kind: 'concat', syntax: '{kind:"concat", values:[<表达式>, …]} —— 拼成文本（v2）' },
+  { kind: 'if', syntax: '{kind:"if", cond:<表达式>, then:<表达式>, else:<表达式>}（v2）' },
+  { kind: 'coalesce', syntax: '{kind:"coalesce", values:[<表达式>, …]} —— 取第一个非空（v2）' },
+  { kind: 'map', syntax: '{kind:"map", list:<表达式>, item:"it", index?:"i", body:<表达式>} —— 列表循环（v2）' },
+  { kind: 'object', syntax: '{kind:"object", fields:{label:<表达式>, value:<表达式>}}（v2）' },
+  { kind: 'array', syntax: '{kind:"array", values:[<表达式>, …]}（v2）' },
+]
+
+/**
+ * 动作写法表（目录用）。样例是真实会话里模型第一次就写对的形状：
+ * 2026-11-25 走查实测，目录只列动作名时模型把 type 写成 action、又给 payload 多包了一层
+ * $expr，连试三次才对——动作的字段形状必须在目录里给全，并配一个能照抄的样例。
+ * 动作字段的取值位置（value/index/payload/text/url）直接写表达式对象，不包 $expr；
+ * $expr 只用于组件属性取值。
+ */
+const ACTION_SHAPES: Array<{ type: string; fields: string; example: string }> = [
+  { type: 'state.set', fields: '{type, path, value:<表达式>}', example: '{"type":"state.set","path":"form.seats","value":{"kind":"literal","value":8}}' },
+  { type: 'state.merge', fields: '{type, path, value:<表达式>} —— 把对象并入该路径（v2）', example: '{"type":"state.merge","path":"form","value":{"kind":"object","fields":{"seats":{"kind":"literal","value":8}}}}' },
+  { type: 'state.toggle', fields: '{type, path} —— 布尔取反', example: '{"type":"state.toggle","path":"form.agree"}' },
+  { type: 'array.append', fields: '{type, path, value:<表达式>}', example: '{"type":"array.append","path":"items","value":{"kind":"literal","value":"新项"}}' },
+  { type: 'array.remove', fields: '{type, path, index:<表达式>}', example: '{"type":"array.remove","path":"items","index":{"kind":"literal","value":0}}' },
+  { type: 'surface.submit', fields: '{type, actionId, payload:<表达式>} —— 提交；payload 取整个状态写 {"kind":"state","path":""}', example: '{"type":"surface.submit","actionId":"submit","payload":{"kind":"state","path":""}}' },
+  { type: 'surface.cancel', fields: '{type, actionId}', example: '{"type":"surface.cancel","actionId":"skip"}' },
+  { type: 'surface.close', fields: '{type} —— 关闭界面（v2）', example: '{"type":"surface.close"}' },
+  { type: 'surface.turn', fields: '{type, text:<表达式>} —— 用文本发起下一轮对话（v2）', example: '{"type":"surface.turn","text":{"kind":"concat","values":[{"kind":"literal","value":"按 "},{"kind":"state","path":"seats"},{"kind":"literal","value":" 个座位重新估算"}]}}' },
+  { type: 'surface.copy', fields: '{type, text:<表达式>} —— 复制到剪贴板（v2）', example: '{"type":"surface.copy","text":{"kind":"state","path":"result"}}' },
+  { type: 'surface.open_url', fields: '{type, url:<表达式>} —— 打开 https/mailto 链接（v2）', example: '{"type":"surface.open_url","url":{"kind":"literal","value":"https://example.com"}}' },
+  { type: 'tabs.open', fields: '{type, nodeId, value} —— 切到指定页签（v2）', example: '{"type":"tabs.open","nodeId":"tabs","value":"detail"}' },
+]
+
+function propTypeText(rule: EkkoUIPropRule): string {
+  let text: string = rule.type
+  if (rule.type === 'enum' && rule.values?.length) text = `enum(${rule.values.join('|')})`
+  else if (rule.type === 'number') {
+    const bounds = [rule.min !== undefined ? `>=${rule.min}` : '', rule.max !== undefined ? `<=${rule.max}` : ''].filter(Boolean)
+    if (bounds.length) text = `number(${bounds.join(' ')})`
+  } else if (rule.type === 'string' && rule.maxLength !== undefined) text = `string(<=${rule.maxLength})`
+  return rule.required ? `${text}*` : text
+}
+
+/** 目录投影：部件、表达式写法、动作、上限与能力位，从本文件的目录与常量直接生成。
+ *  query 按部件类型、类别、说明与属性名做不区分大小写的包含匹配；category 精确匹配。 */
+export function catalogProjection(options: { query?: string; category?: string } = {}): EkkoUICatalog {
+  const query = options.query?.trim().toLowerCase() || ''
+  const category = options.category?.trim() || ''
+  const components = EKKO_UI_CATALOG.filter(def => {
+    if (category && def.category !== category) return false
+    if (!query) return true
+    const haystack = [def.type, def.category, def.description, ...Object.keys(def.props)].join(' ').toLowerCase()
+    return haystack.includes(query)
+  }).map(def => ({
+    type: def.type,
+    category: def.category,
+    description: def.description,
+    acceptsChildren: def.acceptsChildren,
+    events: [...def.events],
+    ...(def.bindValueType ? { bindValueType: def.bindValueType } : {}),
+    props: Object.fromEntries(Object.entries(def.props).map(([name, rule]) => [name, propTypeText(rule)])),
+  }))
+  const caps = clientCapabilities()
+  // 动作写法表：有查询词时只留名字或字段说明命中查询词的动作（如 q="submit"），无查询词时全量
+  const actionShapes = ACTION_SHAPES.filter(shape => !query
+    || `${shape.type} ${shape.fields}`.toLowerCase().includes(query))
+  return {
+    protocols: caps.protocolVersions,
+    features: caps.features,
+    limits: Object.fromEntries(Object.entries(EKKO_UI_LIMITS)),
+    specShape: '{protocol:"ekko-ui/v2", surfaceId:"稳定 slug", title?, fallbackText:"无法渲染时的兜底文本", state?:{…}, root:<节点>}',
+    components,
+    expressions: EXPRESSION_SYNTAX,
+    actions: actionTypes(2).split(' '),
+    actionShapes,
+    notes: [
+      '节点形状：{id, type, props?, style?, bind?, visibleWhen?, events?, children?}；id 在界面内唯一且稳定，补丁按 id 寻址。',
+      '输入类部件用 bind 绑定状态路径（如 bind:"form.name"）；属性取值可以写 {$state:"路径"}、{$template:"共 {count} 项"} 或（v2）{$expr:<表达式>}。',
+      'events 里写本地动作（state.set 等）；只有 surface.submit / surface.cancel / surface.turn / surface.copy / surface.open_url 会离开界面。',
+      '动作的键名是 type（不是 action）：{"type":"surface.submit","actionId":"submit","payload":{"kind":"state","path":""}}。动作的 value/index/payload/text/url 位置直接写表达式对象，不要包 $expr——$expr 只用于组件属性取值。',
+      '未知部件、属性、事件、动作、表达式一律拒绝，校验错误会列出可用值。',
+      'style 只接受枚举字段（display direction columns gap padding width align tone radius），不能写任意 CSS；不能发送 HTML、脚本或可执行地址。',
+      'image.src 只允许 https: 或 data:image/*;base64；surface.open_url 只允许 https: 与 mailto:。',
+      '上限：' + Object.entries(EKKO_UI_LIMITS).map(([key, value]) => `${key}=${value}`).join(' ') + '。',
+      '规格保持紧凑；续改优先用补丁而不是整版重发。',
+    ],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Capability negotiation
 // ---------------------------------------------------------------------------
 
@@ -1199,7 +1666,7 @@ export interface EkkoUICapabilities {
 }
 
 /**
- * 当前客户端的能力集。features 按批启用：批二翻 persistent/updates，
+ * 当前客户端的能力集。features 按批启用：批二已翻 persistent/updates，
  * 批三翻 logicRuntime，批四翻 appBlock——本函数是唯一的读取点。
  */
 export function clientCapabilities(): EkkoUICapabilities {
@@ -1209,8 +1676,8 @@ export function clientCapabilities(): EkkoUICapabilities {
     limits: EKKO_UI_LIMITS,
     features: {
       blocking: true,
-      persistent: false,
-      updates: false,
+      persistent: true,
+      updates: true,
       logicRuntime: false,
       appBlock: false,
     },

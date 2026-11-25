@@ -1403,9 +1403,18 @@
 # （跨源重定向时凭据头处理不当，GHSA-q3jh-wrc6-jgq8 等），修复版 1.16.3 在 axios 声明的范围内；
 # 沿用清单既有的 overrides 机制钉版本，上游升级后自然吸收。装好后须在 vendor/hermes-studio 重跑 npm install。
 818-studio-follow-redirects-override.patch
+
 # 819（2026-11-25 挂账清偿批 B）：与 818 配套，把锁文件里 follow-redirects 的条目钉到 1.16.3。
 # 818 只在清单的 overrides 里声明了 ^1.16.3，锁文件仍记 1.16.0——而 npm audit 看的是锁文件：
 # 任何按入库锁文件审计的地方（新克隆、CI）照旧报三条高危，尽管普通 npm install 会把实装修好。
 # 只改该条目的 version/resolved/integrity 三个字段；唯一依赖方 axios 的范围 ^1.16.0 包含 1.16.3。
 # 先例：576（chromium-bidi 的构建依赖也写进了锁文件）。上游基线升级后随 818 一并退役。
 819-studio-follow-redirects-lockfile.patch
+# 对话内声明式界面 v2 批二（2026-11-25，spec 2026-11-25-ekko-ui-v2-batch2）：持久式界面。
+# 820：ekko-studio-interaction MCP 新增五个非阻塞工具 surface_create / _update / _inspect / _close / _catalog，
+# 并订正 show_surface 描述里硬编码的部件清单（改为指向目录工具，消除第二份事实源）。须在 779 之后。
+820-mcp-ekko-studio-persistent-surfaces.patch
+# 821：持久式界面接线——路由装配挂 /api/studio/surfaces/* 八个接口；套接字服务类把「向会话推事件」
+# 与「解析当前轮会话」交给自定义宿主（自定义代码不反向引用上游模块）；给 Agent 的两段说明补 v2 指引；
+# 聊天挂载点让 surface_create 的工具消息渲染为持久式卡片。须在 777/778/779 之后。
+821-studio-ekko-ui-persistent-wiring.patch

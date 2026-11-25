@@ -333,13 +333,13 @@ describe('v2 动作', () => {
 })
 
 describe('能力协商', () => {
-  it('clientCapabilities 返回双协议与按批启用的 features', () => {
+  it('clientCapabilities 返回双协议与按批启用的 features（批二起持久与更新置真）', () => {
     const caps = clientCapabilities()
     expect(caps.protocolVersions).toContain(EKKO_UI_PROTOCOL)
     expect(caps.protocolVersions).toContain(EKKO_UI_PROTOCOL_V2)
     expect(caps.features.blocking).toBe(true)
-    expect(caps.features.persistent).toBe(false)
-    expect(caps.features.updates).toBe(false)
+    expect(caps.features.persistent).toBe(true)
+    expect(caps.features.updates).toBe(true)
     expect(caps.features.logicRuntime).toBe(false)
     expect(caps.features.appBlock).toBe(false)
     expect(caps.components.length).toBeGreaterThanOrEqual(38)
