@@ -5,6 +5,11 @@
 //   - naive-ui 遮罩拦点击：clearMasks（Escape×3）+ domClick evaluate 直点
 //   - 复用表单场景：第二次开表单前整页 reload（组件 showForm 状态残留）
 // 截图统一落 SHOTS 目录，缺陷记录走 record()。
+//
+// @playwright/test 版本单一源（2026-11-26 全面复盘批 B）：本目录走查/冒烟脚本的
+// playwright 依赖不经根 package.json 声明，由根 node_modules 符号链接借用
+// vendor/hermes-studio 的安装树满足；版本单一源 = vendor/hermes-studio/package.json:139
+// （"@playwright/test"，注入后活体态行号）。根侧重复声明会制造双版本漂移面，禁止。
 import { chromium } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
 
