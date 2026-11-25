@@ -44,6 +44,26 @@ describe('机制预算退役判定', () => {
     expect(r.warnings.some(w => w.includes('已达退役条件'))).toBe(true)
   })
 
+  it('symbolPresent 判定器：宿主文件里符号消失即提示已达退役条件，符号仍在则静默', () => {
+    const entry = (path: string, find: string) => ({
+      sunset: [{ id: 'sym', owner: 'quality', reviewBy: '2026-12-20', retireWhen: '并入钩子后', check: { type: 'symbolPresent', path, find } }],
+      changes: [],
+    })
+    const at = new Date('2026-11-06T00:00:00Z')
+    expect(checkSunset(entry('scripts/governance-lint.mjs', 'checkSunset'), at).warnings).toEqual([])
+    expect(checkSunset(entry('scripts/governance-lint.mjs', 'definitely-absent-symbol'), at).warnings.some(w => w.includes('已达退役条件'))).toBe(true)
+    // 宿主文件整个不在，同样算达到条件
+    expect(checkSunset(entry('scripts/__tests__/no-such-host.mjs', 'x'), at).warnings.some(w => w.includes('已达退役条件'))).toBe(true)
+  })
+
+  it('判定器类型写错即拦截——不能让一条退役条件看起来有机检、实际什么都没查', () => {
+    const budget = {
+      sunset: [{ id: 'typo', owner: 'quality', reviewBy: '2026-12-20', retireWhen: 'x', check: { type: 'filePresents', path: 'scripts/governance-lint.mjs' } }],
+      changes: [],
+    }
+    expect(checkSunset(budget, new Date('2026-11-06T00:00:00Z')).problems.some(p => p.includes('未知判定器类型'))).toBe(true)
+  })
+
   it('声称已退役却仍在 sunset 册 → 拦截', () => {
     const budget = {
       sunset: [{ id: 'walkthrough', owner: 'governance', reviewBy: '2026-12-05', retireWhen: '三页签覆盖后' }],
@@ -52,12 +72,21 @@ describe('机制预算退役判定', () => {
     expect(checkSunset(budget, new Date('2026-11-06T00:00:00Z')).problems.some(p => p.includes('仍在 sunset 册'))).toBe(true)
   })
 
-  it('仓内真实预算：矛盾声明已修订，且至少一条 sunset 具备机检判定器', () => {
+  // 2026-11-25（挂账 N35-3 清偿）：15 条登记此前只有 1 条带判定器，其余 14 条的退役条件
+  // 到期是否达成只能靠人读。现在每条都必须带判定器——新增登记漏写即在此失败。
+  it('仓内真实预算：矛盾声明已修订，且每条 sunset 都带机检判定器', () => {
+    type Entry = { id: string; check?: { type?: string } }
     const budget = JSON.parse(readFileSync(join(ROOT, 'config/mechanism-budget.json'), 'utf8'))
     const r = checkSunset(budget, new Date('2026-11-06T00:00:00Z'))
     expect(r.checked).toBeGreaterThan(0)
     expect(r.problems.some(p => p.includes('仍在 sunset 册'))).toBe(false)
-    expect(budget.sunset.some((e: { check?: unknown }) => !!e.check)).toBe(true)
+    for (const e of budget.sunset as Entry[]) {
+      expect(e.check?.type, `${e.id} 缺机检判定器`).toMatch(/^(filePresent|symbolPresent)$/)
+    }
+    // 当前没有任何条目处于“机制已移除而册子没同步”的状态
+    expect(r.warnings.filter(w => w.includes('已达退役条件'))).toEqual([])
+    expect(r.warnings.filter(w => w.includes('无机检判定器'))).toEqual([])
+    expect(r.problems).toEqual([])
   })
 })
 

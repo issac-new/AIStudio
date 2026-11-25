@@ -275,8 +275,19 @@ function countScriptsRecursive(dir = 'scripts') {
   return n
 }
 
+function readText(file) {
+  try {
+    return readFileSync(file, 'utf8')
+  } catch {
+    return null
+  }
+}
+
 // 退役机可机检（2026-11-06 复盘 P2-1）：登记墙不能替代退役判定。
 // 检测三类失真：reviewBy 过期、retireWhen 无判定器、声称退役却仍在册。
+// 判定器两种：filePresent（机制有自己的文件，文件被移除即达退役条件）、
+// symbolPresent（机制是宿主文件里的一个符号，符号消失即达退役条件）。
+// 两者判的都是“退役动作已发生而册子没同步”；条件本身是否达成，仍由 reviewBy 到期复核。
 export function checkSunset(budget, asOf = new Date()) {
   const problems = []
   const warnings = []
@@ -290,8 +301,20 @@ export function checkSunset(budget, asOf = new Date()) {
     }
     if (!e.check) {
       warnings.push(`sunset ${e.id}: retireWhen 仅为自然语言，无机检判定器`)
-    } else if (e.check.type === 'filePresent' && !existsSync(join(ROOT, e.check.path ?? ''))) {
-      warnings.push(`sunset ${e.id}: 判定器已达退役条件（${e.check.path} 缺席），须移出 sunset 册`)
+    } else if (e.check.type === 'filePresent') {
+      if (!existsSync(join(ROOT, e.check.path ?? ''))) {
+        warnings.push(`sunset ${e.id}: 判定器已达退役条件（${e.check.path} 缺席），须移出 sunset 册`)
+      }
+    } else if (e.check.type === 'symbolPresent') {
+      // 符号型机制没有独立脚本，活在宿主文件里（如提交钩子库里的一个函数）：
+      // 符号从宿主文件消失、或宿主文件本身不在，都算达到退役条件。
+      const host = readText(join(ROOT, e.check.path ?? ''))
+      if (host === null || !host.includes(String(e.check.find ?? ''))) {
+        warnings.push(`sunset ${e.id}: 判定器已达退役条件（${e.check.path} 已无 ${e.check.find}），须移出 sunset 册`)
+      }
+    } else {
+      // 判定器类型写错不能静默失效：否则一条退役条件看起来有机检、实际什么都没查。
+      problems.push(`sunset ${e.id}: 未知判定器类型 ${e.check.type}（可用 filePresent、symbolPresent）`)
     }
   }
   for (const c of budget?.changes ?? []) {

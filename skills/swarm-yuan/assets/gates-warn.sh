@@ -2283,7 +2283,9 @@ check_floor_guard() {
     return 0
   fi
   local out rc
-  out=$(bash "$_runner" --root "${PROJECT_DIR:-.}" 2>&1); rc=$?
+  # 判定范围：FLOOR_GUARD_ROOT（可选）→ PROJECT_DIR。项目只是大仓库里一个子目录时，用前者
+  # 限定到项目自身，守卫不再把别的目录的未推送改动判进来（2026-11-25，挂账 N35-5）。
+  out=$(bash "$_runner" --root "${FLOOR_GUARD_ROOT:-${PROJECT_DIR:-.}}" 2>&1); rc=$?
   case "$rc" in
     0) pass "降标守卫通过：${out}" ;;
     1)

@@ -20,7 +20,7 @@
 - **基线三树（版本轴归 VENDOR.md）**：hermes-studio 已发 v0.8.0（2026-10-30，`f67b587b9`，基线后 58c，跨 minor；补丁 329 目标路径被上游移走，属硬冲突）；hermes-agent 仍 v0.22.5（main 领先 3087c，无新稳定 tag）；zcode 上游 main 到 v3.17.1 线（`a60ba6a7`，单提交 5231 文件，包版本 3.16.2→3.17.1，按「跟 main」政策待升级轮）。
 - 🔴 **3 条**：semantica（v0.7.0 未发版，217c）、OpenExecutive（v0.6.8，基线 30319d9 后 124c；v0.6.6→v0.6.8 又 28c）、mattpocock/skills（v1.3.2，v1.3.1 后 51c）。
 - 🟡 **10 条**：Ghidra（12.2 待 JDK 25 换绑）、CyberStrikeAI（release 密集，T2 卡在跑）、Autopt（43c，delta 已完成）、Cybermes（v3.5.0，10-31 复测代码零漂移，吸收决策期）、DSH（latest=next=0.2.1-rc.5，alpha=0.2.2-alpha.2）、better-harness（v0.7.0-alpha2，基线后 67c）、pi-harness（v1.4.0，248c）、AgentENV（v0.2.4，21c，论文型不派卡）、x402（2026-08-26 首提交后 295c）、A2A（稳定 1.0.1，tag 面已出 v1.1.0-rc，v1.0.1 后 92c）。
-- 🟢 **28 条**：其余全部 + HelixHarness（2026-10-29 开源 1.0.0，五项机制已吸收）。含 RETIRED 4 条（AP2/ACP/openclaw-sec/HexStrikeAI）+ laya 决策退役线（Startlux-Decision）+ 完结线（ARL-Next/REAP/OpenSecurity/RedEvoAgent/LongHorizon/HarnessEval-W/Dream-RSI 系/Graph-Engineering/commerce-agents/FIBO/os-taxonomy/ATT&CK 已落地/DeepInfer/deepseek-recipe/Sonic）。
+- 🟢 **28 条**：其余全部 + HelixHarness（2026-10-29 开源 1.0.0，五项机制已吸收）。含 RETIRED 5 条（AP2/ACP/openclaw-sec/HexStrikeAI/sia）+ laya 决策退役线（Startlux-Decision）+ 完结线（ARL-Next/REAP/OpenSecurity/RedEvoAgent/LongHorizon/HarnessEval-W/Dream-RSI 系/Graph-Engineering/commerce-agents/FIBO/os-taxonomy/ATT&CK 已落地/DeepInfer/deepseek-recipe/Sonic）。
 - 🔴 delta 产物落位：外置盘 research/{semantica,openexec,agent-skills,autopt,cybermes,x402}-delta-20261028/ 各一份报告（卡 t_5bf395b3/t_fb51a770/t_21d69a77/t_767b724d/t_17bc9db5/t_b0c916bb 全 done）。
 - **必吸收项已全部落地（2026-10-28 13:38 收口，卡 t_87adf8cb/t_f304f7b4 done）**：semantica-runtime 两条 0.7.0 地雷规避+锚点刷新；prompt-injection-guard 反 padding 三关+八分类；skill-fleet-consistency-audit 第五层 unattended 分类；security-domain-delegation v1.4.0 两节（scope-as-code 四字段+out-of-scope 优先+max_requests 熔断 / sanitizeSlug 防穿越红线）；pay-orchestrator STANDARDS-MATRIX 4 处刷新（auth-capture 第四 scheme/§42 upfront 已实现/§43 SDK spendControls 纵深/双周 SOP rev-list>50 触发器）。agent-skills/Autopt 无必吸收项（结论性收口）。
 - 修正记录：x402 原汇总误归 🟡，10-28 复测 ≥100c 封顶升 🔴；Cybermes commits 面波动（since 10-19=0）但 tags v3.5.0 在顶且当日 push，按版本轴维持 🔴；10-31 复测代码零漂移，转 🟡 吸收决策期。
@@ -67,7 +67,7 @@
 | HelixHarness (didi) | 2026-10-29 开源 1.0.0（单提交 ad6c1bff） | ad6c1bff...main 16c；feature 线 20c 恰未破阈（11-23 实测，末 push 11-21） | 🟡 微增 | 五项机制已吸收（spec 内容收据、四层上下文读取计量、F2P/P2P 校准合同、隐藏断言与澄清冻结、命令式验收）；见 `2026-10-30-helixharness-absorption.md` |
 | google-research/harness2 | 2026-10-31 首次调研（v0 免论文 2610.14224） | 基线 1cfe254 后 18c（11-23 实测） | 🟡 微增 | Propose–Probe–Compose＋八面组件＝本仓改进台同源上游；其同任务行为对比编排记入 R2 参考（报告 §三） |
 | microsoft/SkillOpt | 2026-10-31 首次调研（v0.2.0，论文 2605.23904） | v0.2.0...main **429c**（11-23 实测） | 🟢→**🔴 候选交裁决** | 技能文档=可训练状态＋验证集严格门＋夜间 Sleep 演化；文本学习率对应本仓编辑预算；增量卡派否交用户 |
-| hexo-ai/sia | 2026-10-31 首次调研 | v0.6.0 后 1c；静默 89 天（11-23 实测） | 🟢 临线观察至 2026-11-24 | 届时零 push 即按 §一.3 转 RETIRED |
+| hexo-ai/sia | 2026-10-31 首次调研 | v0.6.0 后 1c；末 push 08-26（11-25 复核静默 90 天，零新 push） | 🟢 RETIRED（11-25 复核未复活） | 调研档案保留，停上游跟进 |
 | ZHangZHengEric/Sage | 2026-10-31 首次调研 | tag 顶 **v2.2.0**（11-13 发）；v2.2.0...main 48c、11 月以来 135c | 🟢→**🔴 候选交裁决** | 「产出候选不激活」人审采纳＋声明式安全面＝与本仓定位最接近的安全门参照；增量卡派否交用户 |
 
 ### 3.3 Agent 编排/多智能体域（4 条，survey 型引用）
@@ -261,6 +261,7 @@ npm run catalog-check                                                       # OK
 
 ## 八、变更日志
 
+- 2026-11-25 sia 转 RETIRED（挂账 N35-4 与 N33-4 的到点复核）：实测 pushed_at=2026-08-26T17:02:30Z、零新 push，静默 90 天达线；§3.2 该行改 RETIRED，判级汇总的 RETIRED 计数 4→5（🟢 总数 28 不变，退役线仍计在 🟢）；档案保留，停上游跟进。
 - 2026-11-23 ZCode 4.0.0 同步发版批（spec `2026-11-23-zcode-400-upgrade-release.md`）：**zcode 基线 3.18.2 @fec97590→4.0.0 @a4b44451**（差量 2209 文件，含未发布源码的 3.19.x 全部变更；pristine 逐文件对账 19,354/19,355 相同，唯一差异为 gradlew.bat 换行符既有偏差；清掉 2 个混入基线的钩子留痕文件）；补丁 11 条零退役（004 接管哨兵分支／006 上下文重切／009 扩为两文件并配套上游新测试／011 补 live 入口回译语义；净基线 510/510 零失败幂等，四条变异探针配套用例必红）；宿主 RPC 复制面同步 a4b44451；词条快照 zcode-400；隔离真引擎会话导入→回读闭环通过；cockpit 0.8.30-studio.2／整体包 1.0.20-overlay。未做：3.19.x 与 4.0 的新特性对本仓的功能级逐项对照（挂账）。
 - 2026-11-23 N33 清偿批（spec `2026-11-23-n33-closeout-batch.md`）：REA 6.9→6.10.1 差异盘点入账（§4.5，Evidence rev2 判定不适用本仓）；noop-inject 哨兵根治（仓内 scripts 面，台账 N33-1 闭环）。
 - 2026-11-23 点名刷新批（§一.2 触发，用户令「更新台账到最新版并完成兼容升级」，spec `2026-11-23-tech-ledger-latest-compat.md`）：全表点名+RETIRED 复活检查实测；**vendor 单基线升级 studio v0.8.30**（5 补丁适配、clean+inject 510/510 零失败幂等二连）；agent v0.23.3/zcode 3.18.2 持平（zcode 安装版快照 3.19.1 另账，公开源码未发布）；**Ycode 宿主 RPC 复制面同步 fec97590**（retryable/profileId 透传、EventError 订阅结束语义；守门废除全文件豁免改确定性比较，RED→GREEN 实证）；rea-agents 6.10.1/DSH 0.2.2-rc.5 本机对齐 latest；判级升 🔴 候选 9 条记档交裁决（addyosmani/SkillOpt/Sage/ARL-Next/OpenSecurity/os-taxonomy 正名公开仓/DeepInfer nv-dev/element-web develop/CyberStrikeAI）；openagentontology 复活回观察；sia/HarnessEval-W 临线观察记档；ATT&CK v20.1 行订正。

@@ -369,85 +369,142 @@
       "id": "qgate-health",
       "owner": "quality",
       "reviewBy": "2026-12-05",
-      "retireWhen": "qgate health 并入 status 且 status 默认输出 DEGRADED 后"
+      "retireWhen": "qgate health 并入 status 且 status 默认输出 DEGRADED 后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/qgate-health.mjs"
+      }
     },
     {
       "id": "governance-lint",
       "owner": "quality",
       "reviewBy": "2026-12-05",
-      "retireWhen": "pre-push 内联校验且不再需要独立报告后"
+      "retireWhen": "pre-push 内联校验且不再需要独立报告后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/governance-lint.mjs"
+      }
     },
     {
       "id": "recurrence-report",
       "owner": "quality",
       "reviewBy": "2026-12-05",
-      "retireWhen": "复发率连续两轮下降并并入复盘模板后"
+      "retireWhen": "复发率连续两轮下降并并入复盘模板后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/recurrence-report.mjs"
+      }
     },
     {
       "id": "merge-invariants",
       "owner": "release",
       "reviewBy": "2026-12-05",
-      "retireWhen": "CI 覆盖合并后不变量检查后"
+      "retireWhen": "远端改为服务端强制（分支保护或规则集要求该检查必过）后，本地推送前的拦截退役。CI 已在 governance.yml 覆盖该检查；本地拦截按仓规 13 刻意保留，旧条件“CI 覆盖后”写成时即已达成，2026-11-25 到期复核订正",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/merge-invariants.mjs"
+      }
     },
     {
       "id": "audit-sample",
       "owner": "audit",
       "reviewBy": "2026-12-05",
-      "retireWhen": "独立审计代理接管抽样调度后"
+      "retireWhen": "独立审计代理接管抽样调度后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/audit-sample.mjs"
+      }
     },
     {
       "id": "mutation-probe",
       "owner": "quality",
       "reviewBy": "2026-12-05",
-      "retireWhen": "门健康度连续 3 轮全绿后降为季度抽检"
+      "retireWhen": "门健康度连续 3 轮全绿后降为季度抽检",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/mutation-probe.mjs"
+      }
     },
     {
       "id": "coverage-changed",
       "owner": "quality",
       "reviewBy": "2026-12-05",
-      "retireWhen": "vitest 原生 changed-line 阈值可用后"
+      "retireWhen": "vitest 原生 changed-line 阈值可用后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/coverage-changed.mjs"
+      }
     },
     {
       "id": "gen-doc-indexes",
       "owner": "docs",
       "reviewBy": "2026-12-05",
-      "retireWhen": "索引由 docs-ssot-guard 自动生成后"
+      "retireWhen": "索引由 docs-ssot-guard 自动生成后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/maintenance/gen-doc-indexes.mjs"
+      }
     },
     {
       "id": "spec-fidelity",
       "owner": "quality",
       "reviewBy": "2026-12-20",
-      "retireWhen": "spec 质量检查并入 L2 提交钩子且存量基线清空后"
+      "retireWhen": "spec 质量检查并入 L2 提交钩子且存量基线清空后",
+      "check": {
+        "type": "symbolPresent",
+        "path": "skills/swarm-yuan/assets/spec-first-lib.sh",
+        "find": "spf_spec_fidelity_check"
+      }
     },
     {
       "id": "harness-doctor",
       "owner": "harness",
       "reviewBy": "2026-12-20",
-      "retireWhen": "nine-layers 端点覆盖同等检查且 CI 消费后"
+      "retireWhen": "nine-layers 端点覆盖同等检查且 CI 消费后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/harness-doctor.mjs"
+      }
     },
     {
       "id": "spec-archive",
       "owner": "docs",
       "reviewBy": "2026-12-20",
-      "retireWhen": "主规格库 registry 由状态机自动维护后"
+      "retireWhen": "主规格库 registry 由状态机自动维护后",
+      "check": {
+        "type": "filePresent",
+        "path": "scripts/spec-archive.mjs"
+      }
     },
     {
       "id": "ai-native-scorecard",
       "owner": "harness",
       "reviewBy": "2026-12-20",
-      "retireWhen": "四套成熟度自检合一后"
+      "retireWhen": "四套成熟度自检合一后",
+      "check": {
+        "type": "filePresent",
+        "path": "custom/server/harness/ai-native-scorecard.ts"
+      }
     },
     {
       "id": "context-overhead",
       "owner": "observability",
       "reviewBy": "2026-12-20",
-      "retireWhen": "token 口径成本账覆盖上下文比值后"
+      "retireWhen": "token 口径成本账覆盖上下文比值后",
+      "check": {
+        "type": "filePresent",
+        "path": "custom/server/obssignals/context-overhead.ts"
+      }
     },
     {
       "id": "termination-codes",
       "owner": "loop",
       "reviewBy": "2026-12-20",
-      "retireWhen": "四族终止词表统一为单一枚举后"
+      "retireWhen": "四族终止词表统一为单一枚举后",
+      "check": {
+        "type": "filePresent",
+        "path": "custom/server/loop/termination.ts"
+      }
     },
     {
       "id": "capability-matrix",
