@@ -2,6 +2,8 @@
 // 「改进实验」面板守门：八面/提案/门禁/经验库渲染，错误降级，动作触发。
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (k: string) => k, locale: { value: 'zh' } }),
@@ -348,7 +350,8 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-theory-traj-2-constraint_preservation"]').text()).toBe('未评估')
     expect(w.find('[data-testid="hi-theory-traj-3-improvement_validity"]').attributes('title')).toContain('线上回归')
     expect(w.find('[data-testid="hi-theory-evaluator"]').text()).toContain('有变更')
-    expect(w.find('[data-testid="hi-theory-evaluator"]').text()).toContain('1/2')
+    // 计数说明带单位：几对相邻后继里变了几对、几对缺指纹（光给「1/2」读者不知道是什么比什么）
+    expect(w.find('[data-testid="hi-theory-evaluator"]').text()).toContain('相邻后继共 2 对：变了 1 对，缺指纹无法比较 0 对')
     expect(w.find('[data-testid="hi-theory-residue"]').text()).toContain('现存后继 1 个')
     const strip = w.find('[data-testid="hi-reg-hw-001"]')
     expect(strip.text()).toContain('1/20')
@@ -409,6 +412,34 @@ describe('HarnessImprovePanel', () => {
     expect(dots).toHaveLength(3)
     expect(dots.filter((d) => d.classes('hi__curveDot--rolledBack'))).toHaveLength(1)
     expect(dots[2].find('title').text()).toContain('已回滚')
+    w.unmount()
+  })
+
+  it('轨迹表的「未评估」格：只改底边，且选择器压得过单元格通用规则（浏览器走查抓出的两处缺陷）', () => {
+    // jsdom 不编译 scoped 样式，组件测试看不出画出来的样子——这里守样式源。两条都是走查实锤：
+    // ① 表格单元格只有底边有线宽，整格设 border-style 会按默认粗细在另外三边各画一条，框出一个方框；
+    // ② 单元格通用规则是「类＋元素」，单个类选择器压不过它，底边虚线写了也不生效。
+    const source = readFileSync(resolve(__dirname, '../views/gov/HarnessImprovePanel.vue'), 'utf8')
+    expect(source).toMatch(/\.hi__table td\s*\{[^}]*border-bottom:/)
+    const rule = source.match(/([^\n{}]*?)\.hi__trajcell--not_evaluated\s*\{([^}]*)\}/)
+    expect(rule).not.toBeNull()
+    expect(rule![1].trim().endsWith('td')).toBe(true)
+    const declarations = rule![2]
+    expect(declarations).toContain('border-bottom-style: dashed')
+    expect(declarations).not.toMatch(/(^|[\s;])border(-style|-width)?:/)
+  })
+
+  it('没有相邻后继可比时，评估条件一行不带计数说明', async () => {
+    const single = JSON.parse(JSON.stringify(overview))
+    const surface = single.evolution.theory.trajectory.surfaces[0]
+    surface.steps = surface.steps.slice(0, 1)
+    surface.evaluatorDrift = { pairs: 0, compared: 0, changes: [], unknownPairs: [], changed: 0, unknown: 0, verdict: 'insufficient', note: '后继只有 1 个' }
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(single)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const line = w.find('[data-testid="hi-theory-evaluator"]').text()
+    expect(line).toContain('样本不足')
+    expect(line).not.toContain('相邻后继共')
     w.unmount()
   })
 

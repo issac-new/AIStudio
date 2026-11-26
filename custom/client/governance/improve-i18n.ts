@@ -240,6 +240,7 @@ export interface ImproveCopy {
   theoryEvaluatorChanged: string
   theoryEvaluatorUnknown: string
   theoryEvaluatorInsufficient: string
+  theoryEvaluatorCount: string
   theoryResidue: string
   regTitle: string
   regSub: string
@@ -530,6 +531,7 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     theoryEvaluatorChanged: '有变更，两侧分数不能直接比',
     theoryEvaluatorUnknown: '无法比较（缺指纹）',
     theoryEvaluatorInsufficient: '样本不足',
+    theoryEvaluatorCount: '相邻后继共 {pairs} 对：变了 {changed} 对，缺指纹无法比较 {unknown} 对',
     theoryResidue: '回滚残留',
     regTitle: '正则化读数（按面）',
     regSub: 't=该面已采纳轮次；编辑预算随轮次余弦退火（后期强制少捆绑，让每次变化可归因）。',
@@ -819,6 +821,7 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     theoryEvaluatorChanged: 'changed; scores on the two sides are not directly comparable',
     theoryEvaluatorUnknown: 'not comparable (fingerprints missing)',
     theoryEvaluatorInsufficient: 'Insufficient',
+    theoryEvaluatorCount: '{pairs} adjacent successor pairs: {changed} changed, {unknown} not comparable because fingerprints are missing',
     theoryResidue: 'Rollback residue',
     regTitle: 'Regularization by surface',
     regSub: 't = accepted rounds on the surface; the edit budget anneals with t (fewer bundled edits later, so each change stays attributable).',

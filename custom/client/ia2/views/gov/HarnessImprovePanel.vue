@@ -90,6 +90,7 @@ const {
   trustRoleLabel,
   trajectoryCellLabel,
   evaluatorDriftLabel,
+  evaluatorDriftCount,
   CURVE_W,
   CURVE_H,
   CURVE_PAD,
@@ -639,7 +640,7 @@ const {
               </tbody>
             </table>
             <p class="hi__meta" data-testid="hi-theory-evaluator">
-              {{ L.theoryEvaluator }}：{{ evaluatorDriftLabel(theoryTrajectory.evaluatorDrift.verdict) }}（{{ theoryTrajectory.evaluatorDrift.changed }}/{{ theoryTrajectory.evaluatorDrift.pairs }}）
+              {{ L.theoryEvaluator }}：{{ evaluatorDriftLabel(theoryTrajectory.evaluatorDrift.verdict) }}<template v-if="theoryTrajectory.evaluatorDrift.pairs > 0">（{{ evaluatorDriftCount(theoryTrajectory.evaluatorDrift.pairs, theoryTrajectory.evaluatorDrift.changed, theoryTrajectory.evaluatorDrift.unknown) }}）</template>
             </p>
           </template>
           <p v-if="theoryResidue" class="hi__meta" data-testid="hi-theory-residue">{{ L.theoryResidue }}：{{ theoryResidue.note }}</p>
@@ -814,10 +815,12 @@ const {
 .hi__chip--risk-low { color: var(--success); }
 .hi__chip--risk-medium { color: var(--ia-stale); border-style: dashed; }
 .hi__chip--risk-high { color: var(--danger); }
-/* 后继轨迹表格的格态：满足/不满足/未评估三色，文字与底色都区分，不只靠颜色 */
+/* 后继轨迹表格的格态：满足/不满足/未评估三色，未评估另把底边改成虚线——格态文字本身写明，不只靠颜色。
+   选择器带上 td：单元格通用规则是「类＋元素」，单个类选择器压不过它（浏览器走查读计算样式抓出）。
+   只改底边——单元格只有底边有线宽，整格设边框样式会按默认粗细框出一个方框（同次走查抓出）。 */
 .hi__trajcell--pass { color: var(--success); }
 .hi__trajcell--fail { color: var(--danger); font-weight: 600; }
-.hi__trajcell--not_evaluated { color: var(--text-muted); border-style: dashed; }
+.hi__table td.hi__trajcell--not_evaluated { color: var(--text-muted); border-bottom-style: dashed; }
 .hi__chip--verdict-improved { color: var(--success); }
 .hi__chip--verdict-regressed { color: var(--danger); }
 .hi__chip--verdict-neutral { color: var(--text-muted); }
