@@ -1066,7 +1066,7 @@ mx_drift_audit() { # <patchname> <patchfile> <tree> —— 只在「语义已在
           /^diff --git / { inf = 0 }
           inf && /^\+/ { print substr($0, 2) }
         ' "$pf")
-        [ "$found" = 1 ] && log "漂移自愈：${pname} 目标文件 ${tf} 已回灌（源=$_hf）"
+        [ "$found" = 1 ] && log "漂移自愈：${pname} 目标文件 ${tf} 已回灌（源=${_hf}）"
       fi
       if [ "$found" = 0 ]; then
         fail "漂移守卫：${pname} 半应用态（$tf 缺补丁新增内容，宿主回灌亦不可用）——deploy-agent-runtime --apply --force 收敛或回灌 runtime/ 模板后重跑"
