@@ -476,6 +476,11 @@ export interface PromotionGateInput {
   applyEnvEnabled: boolean
   targetDigestNow?: string | null
   targetExists?: boolean
+  /**
+   * 树提案写盘的当前磁盘摘要（2026-11-26 可信 RSI 批二，D21）：路径→摘要，null=文件不存在。
+   * 与 proposal.treeBase 逐文件比对，任一不一致即 target_drift；任一侧缺席跳过（存量/无法判定不拦）。
+   */
+  treeDigestsNow?: Record<string, string | null> | null
   /** RRSI 正则化读数（service 层现算；缺席时相关门禁跳过）。 */
   regularization?: RegularizationDerived | null
   /** 泄漏批评者（S1）发现，service 层按证据集扫描后注入；晋级硬拦。 */

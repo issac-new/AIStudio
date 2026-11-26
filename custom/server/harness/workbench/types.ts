@@ -354,6 +354,12 @@ export interface Proposal {
   skillDifferential?: { withSkill: number | null; withoutSkill: number | null; delta: number | null } | null
   /** 多文件候选的根（相对 HERMES_HOME）；缺省=单文件模式。 */
   treeRoot?: string | null
+  /**
+   * 树候选创建时的磁盘快照（2026-11-26 可信 RSI 批二，D21）：路径→创建时内容摘要，
+   * 摘要 null=创建时文件不存在。写盘门 target_drift 用它对齐单文件的漂移语义；
+   * 仅写盘名单内的面填充，存量提案缺字段按无法判定处理、不拦。
+   */
+  treeBase?: Array<{ path: string; digest: string | null }> | null
   /** managed 面的相对 HERMES_HOME 目标文件；advisory 面只作锚点展示。 */
   targetPath: string | null
   risk: RiskTier

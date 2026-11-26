@@ -171,6 +171,16 @@ describe('多文件回滚（JSON 树快照）：先全部校验，再恢复', ()
     expect(readFileSync(skill, 'utf8')).toBe('external skill')
   })
 
+  it('树回滚的错误文案只有一层「回滚失败：」头部（D22：apply 层不重复包）', () => {
+    const p = treePromotion([soulTouched('new persona'), skillTouched('new skill')], 'hw-tree-prefix')
+    writeFileSync(file, 'new persona')
+    writeFileSync(skill, 'external skill')
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(false)
+    expect(res.error).toContain('拒绝回滚覆盖')
+    expect(res.error?.startsWith('回滚失败：')).toBe(false)
+  })
+
   it('校验失败后现场不变，排除外部改动后再回滚一次就能完成', () => {
     const p = treePromotion([soulTouched('new persona'), skillTouched('new skill')], 'hw-tree-retry')
     writeFileSync(file, 'new persona')

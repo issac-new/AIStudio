@@ -892,4 +892,34 @@ describe('Harmony：保留率与整块重写', () => {
     const r = evaluatePromotion({ proposal: p, currentChampion: null, applyRequested: false, applyEnvEnabled: false })
     expect(r.warnings.map((w) => w.code)).toContain('whole_harness_rewrite')
   })
+
+  it('树提案写盘：逐文件比对创建时快照 treeBase（2026-11-26 可信 RSI 批二，D21）', () => {
+    const p = fixture()
+    p.variants = [{ id: 'v1', label: 'A', content: '', digest: 'tree', diffSummary: { added: 1, removed: 0, unchanged: 0 }, files: [{ path: 'skills/s1/SKILL.md', content: 'new', digest: 'd1' }] }]
+    p.treeBase = [
+      { path: 'skills/s1/SKILL.md', digest: 'base-skill' },
+      { path: 'skills/s1/NEW.md', digest: null },
+    ]
+    const input = { proposal: p, currentChampion: null, applyRequested: true, applyEnvEnabled: true }
+
+    // 创建时快照与磁盘一致 → 不拦
+    const clean = evaluatePromotion({ ...input, treeDigestsNow: { 'skills/s1/SKILL.md': 'base-skill', 'skills/s1/NEW.md': null } })
+    expect(clean.blockers.some((b) => b.code === 'target_drift')).toBe(false)
+
+    // 任一文件被外部改动 → 拦且文案带路径；创建时不存在的文件被新建也算改动
+    const drifted = evaluatePromotion({ ...input, treeDigestsNow: { 'skills/s1/SKILL.md': 'external', 'skills/s1/NEW.md': null } })
+    const driftBlockers = drifted.blockers.filter((b) => b.code === 'target_drift')
+    expect(driftBlockers).toHaveLength(1)
+    expect(driftBlockers[0].message).toContain('skills/s1/SKILL.md')
+    const recreated = evaluatePromotion({ ...input, treeDigestsNow: { 'skills/s1/SKILL.md': 'base-skill', 'skills/s1/NEW.md': 'someone' } })
+    expect(recreated.blockers.filter((b) => b.code === 'target_drift').map((b) => b.message).join()).toContain('skills/s1/NEW.md')
+
+    // 存量提案（无 treeBase）不拦；门禁输入缺当前摘要不拦（无法判定不拦）
+    delete p.treeBase
+    const legacy = evaluatePromotion({ ...input, treeDigestsNow: { 'skills/s1/SKILL.md': 'whatever' } })
+    expect(legacy.blockers.some((b) => b.code === 'target_drift')).toBe(false)
+    p.treeBase = [{ path: 'skills/s1/SKILL.md', digest: 'base-skill' }]
+    const noInput = evaluatePromotion({ proposal: p, currentChampion: null, applyRequested: true, applyEnvEnabled: true })
+    expect(noInput.blockers.some((b) => b.code === 'target_drift')).toBe(false)
+  })
 })

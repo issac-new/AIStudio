@@ -171,7 +171,8 @@ export function rollbackProposalFile(proposal: Proposal): ApplyResult {
       }
     }
   } catch (e) {
-    return { ok: false, error: `回滚失败：${e instanceof Error ? e.message : String(e)}` }
+    // D22：这里不再包「回滚失败：」头部——service 层统一包一层，此前两层重复
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
   return { ok: true, digest: promotion.digest }
 }

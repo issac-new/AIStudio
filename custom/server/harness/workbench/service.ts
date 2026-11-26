@@ -2,7 +2,7 @@
 // 改进实验台服务层：状态机 + 证据绑定 + 门禁 + 写盘/回滚。
 // 所有对外的写操作都走 mutateStore 串行化；错误抛 ServiceError（带 HTTP 状态）。
 import { execFile } from 'child_process'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { appendApprovalLog } from '../../approval-inbox/approval-log'
 import { listCandidates } from '../../expcandidates/exp-store'
 import type { ExpCandidate } from '../../expcandidates/exp-types'
@@ -274,6 +274,23 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
     }
   })
 
+  // 树候选创建时的磁盘快照（D21）：写盘门用它把 target_drift 漂移语义对齐到多文件候选。
+  // 仅写盘名单内的面填充（advisory 面不可写盘，无漂移语义）；路径取全部候选的并集，
+  // 晋级门只比选中候选触碰到的路径。创建时文件不存在记 digest null。
+  let treeBase: Proposal['treeBase'] = null
+  if (['system_prompt', 'skills'].includes(input.surfaceKey) && variants.some((v) => v.files && v.files.length > 0)) {
+    const paths = new Set<string>()
+    for (const v of variants) {
+      for (const f of v.files ?? []) paths.add(f.path)
+      for (const d of v.deletions ?? []) paths.add(d)
+    }
+    treeBase = [...paths].sort().map((path) => {
+      const r = resolveManagedTarget(input.surfaceKey, path, hermesHome(), { requireExists: false, relaxPattern: true })
+      const digest = r.ok && r.abs && existsSync(r.abs) ? fileDigest(r.abs) : null
+      return { path, digest }
+    })
+  }
+
   return mutateStore((store) => {
     const id = nextId(store, 'hw')
     const now = nowIso()
@@ -284,6 +301,7 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
       surfaceKey: input.surfaceKey,
       targetPath,
       treeRoot: input.treeRoot ? String(input.treeRoot).trim() || null : null,
+      treeBase,
       profile: input.profile?.trim() || profileFromTarget(targetPath),
       risk: def.risk,
       mode: input.mode === 'sequential' ? 'sequential' : 'parallel',
@@ -937,11 +955,22 @@ export async function promoteProposal(
   const champion = currentChampionOf(store.champions, p0.surfaceKey, p0.id)
   let targetDigestNow: string | null | undefined
   let targetExists: boolean | undefined
+  let treeDigestsNow: Record<string, string | null> | null = null
   if (opts.apply) {
     const resolved = p0.targetPath ? resolveManagedTarget(p0.surfaceKey, p0.targetPath, hermesHome()) : null
     if (resolved) {
       targetExists = resolved.ok
       targetDigestNow = resolved.ok && resolved.abs ? fileDigest(resolved.abs) : null
+    }
+    // 树提案写盘：按选中候选的触碰路径采集当前磁盘摘要，门禁逐文件比对创建时快照（D21）
+    const selectedNow = composedVariant(p0)
+    if (p0.treeBase && p0.treeBase.length > 0 && selectedNow?.files && selectedNow.files.length > 0) {
+      const paths = new Set<string>([...selectedNow.files.map((f) => f.path), ...(selectedNow.deletions ?? [])])
+      treeDigestsNow = {}
+      for (const path of paths) {
+        const r = resolveManagedTarget(p0.surfaceKey, path, hermesHome(), { requireExists: false, relaxPattern: true })
+        treeDigestsNow[path] = r.ok && r.abs && existsSync(r.abs) ? fileDigest(r.abs) : null
+      }
     }
   }
   // 豁免先落提案（Agnes 批一 a）：min_k 豁免必须留痕在案才被晋级门承认——
@@ -967,6 +996,7 @@ export async function promoteProposal(
     applyEnvEnabled: applyEnabled(),
     targetDigestNow,
     targetExists,
+    treeDigestsNow,
     regularization: regularizationOf(store, p0),
     leakage: leakageForProposal(p0),
     evidenceSetSplits: evidenceSetSplitsFor(p0),
