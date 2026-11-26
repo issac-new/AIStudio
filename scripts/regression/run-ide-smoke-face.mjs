@@ -13,7 +13,8 @@
 //   - 自起后端默认注入（密闭化，2026-11-26 加固）：NODE_ENV=production + 三 HOME 隔离
 //     （HERMES_WEB_UI_HOME / HERMES_HOME / HERMES_KANBAN_HOME = 一次性空目录）+
 //     HERMES_WEB_UI_DEV_BOOTSTRAP=1 + HERMES_WEB_UI_DISABLE_SKILL_INJECTION=1（不写宿主技能目录）
-//     + HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART=1（不起网关与 agent-bridge，探针只走 UI）。
+//     + HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART=1（不起网关；agent-bridge 仍会启动但其
+//     --hermes-home 指向隔离目录，依赖安装与写入都落在隔离侧，实测日志锚定）。探针只走 UI。
 //     首登建 super_admin 于隔离 HOME；teardown 不删隔离目录。
 //     探针侧随之获得 IDE_SMOKE_ALLOW_NO_SESSION=1（隔离空库无会话，「会话深链」按环境条件 SKIP，
 //     不计入失败）。借用活体后端或调用方显式设 TEST_DB_DIR 时两者都不注入，探针按实态判红。
