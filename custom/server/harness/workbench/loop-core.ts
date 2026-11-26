@@ -9,13 +9,23 @@ import { join } from 'path'
 import { gainRetention } from './multi-objective'
 import { parseHookPolicy } from '../../goalbudget/stage-ladder'
 import type {
-  BehaviorContrast, Champion, EvolutionReport, EvolutionRound, EvolutionSurface, GateBlocker,
+  BehaviorContrast, Champion, DecisionCause, EvolutionReport, EvolutionRound, EvolutionSurface, GateBlocker,
   ParetoPoint, ParetoReport, ParetoTier, ProbeMetrics, PromotionGateReport, Proposal,
   ProposalStatus, QualityVerdict, RegularizationDerived, RetirementCandidate, SurfaceKey, Variant,
 } from './types'
 
 export const MAX_VARIANTS = 8
 export const DEFAULT_BUDGET_CAP_USD = 5
+
+/**
+ * 一个被否决提案的原因归属（2026-11-26 Palantir 架构吸收轮）：驳回取 approval.cause，回滚取 rollback.cause。
+ * null 表示未分类，起草器按提案自身处理（与引入归属前一致）。
+ */
+export function vetoCauseOf(p: Pick<Proposal, 'status' | 'approval' | 'rollback'>): DecisionCause | null {
+  if (p.status === 'rejected') return p.approval?.cause ?? null
+  if (p.status === 'rolled_back') return p.rollback?.cause ?? null
+  return null
+}
 
 /**
  * 源文 core/context.py:419 的防泄漏标记：harness/经验文件不得携带评测器自己的判词，

@@ -22,6 +22,7 @@ import type { PromotionGateInput } from './loop-core'
 import { rsiConfig } from './loop-config'
 import { paretoReportOf } from './loop-pareto'
 import { selectionBiasAudit } from './loop-theory'
+import { reviewAssessment } from './loop-review'
 
 /** 晋级门禁：缺证据不放行（源文「回归」与「--max-usd」的硬约束）。 */
 export function evaluatePromotion(input: PromotionGateInput): PromotionGateReport {
@@ -229,7 +230,7 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
         passAt1: ev?.passAt1 ?? null,
         baselinePassAt1: baseline,
         heldoutPassRate: proposal.heldout?.passRate ?? null,
-        heldoutBaselinePassRate: ev?.heldoutBaselinePassRate ?? null,
+        heldoutBaselinePassRate: ev?.heldoutBaselinePassRate ?? proposal.heldoutBaselinePassRate ?? null,
       })
       if (retained.retention != null && retained.retention < 0.3 && (retained.evolveGain ?? 0) > 0) {
         const msg = `增益保留率 ${(retained.retention * 100).toFixed(0)}%（演化增益 +${((retained.evolveGain ?? 0) * 100).toFixed(1)}pp → 留出增益 ${(((retained.heldoutGain ?? 0)) * 100).toFixed(1)}pp）——换分布后增益基本没留住，可能背下了优化集分布`
@@ -503,6 +504,12 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
     lexOrder,
     evidenceRoles: evidenceRoleLines({ proposal, probe: probeForRoles ?? null, noiseDelta: input.regularization?.noiseDelta ?? null }),
     selectionBias,
+    // 2026-11-26 Palantir 架构吸收轮：审阅结论——只披露不拦截，不参与 ok/blockers/warnings
+    assessment: reviewAssessment({
+      proposal,
+      selectionBias,
+      noiseDelta: input.regularization?.noiseDelta ?? null,
+    }),
   }
 }
 

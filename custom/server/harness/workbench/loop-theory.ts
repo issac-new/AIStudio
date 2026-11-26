@@ -350,7 +350,7 @@ export function buildTheoryReport(input: {
     if (!p) continue
     const probe = p.probes.find((x) => x.variantId === c.variantId && x.status === 'recorded')
     const proxyDelta = probe?.contrast?.passAt1Delta ?? null
-    const heldoutBaseline = probe?.evidence?.heldoutBaselinePassRate ?? null
+    const heldoutBaseline = probe?.evidence?.heldoutBaselinePassRate ?? p.heldoutBaselinePassRate ?? null
     const heldout = p.heldout?.passRate ?? null
     proxyRows.push({
       proxyDelta,

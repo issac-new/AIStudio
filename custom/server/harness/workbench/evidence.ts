@@ -2,8 +2,10 @@
 // 探测证据适配器：从 Eval Studio 的真实运行拉取读数。
 // 纪律：找不到运行 / 没有聚合 → 返回 null，由服务层 400 拒绝；绝不接受手填指标。
 import { getRun, getSet, getSetRevision } from '../../eval/store'
-import type { EvalRun } from '../../eval/types'
-import type { ProbeMetrics, RegressionEvidence } from './types'
+import { attemptPassed } from '../../eval/aggregate'
+import { classifyRootCause } from '../../eval/badcase-distill'
+import type { Attempt, EvalRun } from '../../eval/types'
+import type { CaseFlips, FailureCluster, ProbeMetrics, RegressionEvidence } from './types'
 
 /**
  * 评估条件指纹（2026-11-26 可信 RSI 正文级轮）：取评测运行起跑时冻结的试卷指纹与裁判指纹。
@@ -53,6 +55,75 @@ export function readEvalEvidence(runId: string): ProbeMetrics | null {
     latencyMs: a.byLayer.efficiency.avgDurationMs,
     commandChecks: commandChecksOf(run),
   }
+}
+
+/** 一份运行里每道题的首样本（样本序号从 1 起）；运行或试卷取不到返回 null。 */
+function firstSampleAttemptsOf(runId: string | null | undefined): { run: EvalRun; first: Map<string, Attempt> } | null {
+  const id = String(runId ?? '').trim()
+  if (!id) return null
+  const run = getRun(id)
+  if (!run || !getSet(run.setId)) return null
+  const first = new Map<string, Attempt>()
+  for (const a of run.attempts) {
+    if (a.sampleIdx === 1 && !first.has(a.taskId)) first.set(a.taskId, a)
+  }
+  return { run, first }
+}
+
+/**
+ * 失败根因分布（2026-11-26 Palantir 架构吸收轮）：首样本未通过的题逐题调用评测域的确定性分类，
+ * 按根因计数并留至多三个题号作样例。判定端离线导致无法归类的题记 undecidable。
+ * null=运行或试卷取不到（未采集）；空数组=采集过且没有失败题。
+ */
+export function failureClustersOf(runId: string): FailureCluster[] | null {
+  const found = firstSampleAttemptsOf(runId)
+  if (!found) return null
+  const { run, first } = found
+  const set = getSet(run.setId)!
+  const buckets = new Map<string, { count: number; sampleTaskIds: string[] }>()
+  for (const task of set.tasks) {
+    const attempt = first.get(task.id)
+    if (!attempt || attemptPassed(task, attempt)) continue
+    const classified = classifyRootCause(set, run, task.id, 1)
+    const rootCause = 'rootCause' in classified ? classified.rootCause : 'undecidable'
+    const bucket = buckets.get(rootCause) ?? { count: 0, sampleTaskIds: [] }
+    bucket.count += 1
+    if (bucket.sampleTaskIds.length < 3) bucket.sampleTaskIds.push(task.id)
+    buckets.set(rootCause, bucket)
+  }
+  return [...buckets.entries()]
+    .map(([rootCause, b]) => ({ rootCause, count: b.count, sampleTaskIds: b.sampleTaskIds }))
+    .sort((a, b) => b.count - a.count || (a.rootCause < b.rootCause ? -1 : a.rootCause > b.rootCause ? 1 : 0))
+}
+
+/**
+ * 逐题对错翻转（2026-11-26 Palantir 架构吸收轮）：与基线运行逐题比首样本的通过与失败。
+ * 只比两份运行都有首样本的题；评测运行不保存逐题输出文本，所以不比输出内容。
+ * null=基线或候选运行取不到，或没有可比较的题。
+ */
+export function caseFlipsOf(baselineRunId: string | null | undefined, candidateRunId: string): CaseFlips | null {
+  const base = firstSampleAttemptsOf(baselineRunId)
+  const cand = firstSampleAttemptsOf(candidateRunId)
+  if (!base || !cand) return null
+  const basePassed = new Map<string, boolean>()
+  for (const [taskId, attempt] of base.first) {
+    const task = getSet(base.run.setId)!.tasks.find((t) => t.id === taskId)
+    if (task) basePassed.set(taskId, attemptPassed(task, attempt))
+  }
+  const flips: CaseFlips = { compared: 0, fixed: [], broken: [], bothPassed: 0, bothFailed: 0 }
+  for (const [taskId, attempt] of cand.first) {
+    const before = basePassed.get(taskId)
+    if (before === undefined) continue
+    const task = getSet(cand.run.setId)!.tasks.find((t) => t.id === taskId)
+    if (!task) continue
+    const after = attemptPassed(task, attempt)
+    flips.compared += 1
+    if (before && after) flips.bothPassed += 1
+    else if (!before && !after) flips.bothFailed += 1
+    else if (!before && after) flips.fixed.push(taskId)
+    else flips.broken.push(taskId)
+  }
+  return flips.compared > 0 ? flips : null
 }
 
 /**

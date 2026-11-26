@@ -457,6 +457,19 @@
         "reviewBy": "上游 hermes-studio 提供持久式界面能力的版本发布时",
         "retireWhen": "上游原生提供 surface_create/update/inspect/close/catalog 工具与对应路由时，820/821 从 series 退役"
       }
+    },
+    {
+      "at": "2026-11-26",
+      "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（审阅结论、失败根因、逐题对比、原因归属都是既有报告与记录上的可选字段，不入四类别）",
+      "reason": "Palantir 自我改进架构吸收轮（spec 2026-11-26-palantir-self-improvement-architecture）：晋级报告 assessment（loop-review.ts 纯函数）、探针 failureClusters 与 caseFlips、驳回与回滚的 cause、留出基线读数写入路径。零新增门码与账本；遵守 2026-11-01 机制扩展停止裁定",
+      "pairedRemovals": [
+        "新增内容并入既有晋级报告、探针记录与提案记录（可选字段）不加新门/新端点/新账本；面板块复用既有 HarnessImprovePanel 不加新页面——零类别增量，无独立退役动作"
+      ],
+      "sunset": {
+        "owner": "Palantir 自我改进架构吸收轮（2026-11-26-palantir-self-improvement-architecture）",
+        "reviewBy": "2027-02-26",
+        "retireWhen": "审阅结论与原因归属连续两轮推演无消费（面板读数无人看、起草器提示词无人改）时降级为纯报告字段并移除面板块"
+      }
     }
   ],
   "sunset": [

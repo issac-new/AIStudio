@@ -8,7 +8,7 @@ import { buildTheoryReport } from './loop-theory'
 import { successorMarks } from './loop-joint-evidence'
 import type { ComponentEntry } from './component-library'
 import type {
-  BehaviorContrast, Champion, ClassAttribution, EditClass, EvolutionReport, EvolutionRound, EvolutionSurface, ProbeMetrics,
+  BehaviorContrast, Champion, ClassAttribution, DecisionCause, EditClass, EvolutionReport, EvolutionRound, EvolutionSurface, ProbeMetrics,
   Proposal, ProposalStatus, RetirementCandidate, SurfaceKey,
 } from './types'
 
@@ -20,7 +20,11 @@ export interface EvolutionHistoryEntry {
   title: string
   /** adopted=冠军轮次与增益；rejected=裁决理由；rolled_back=回滚理由。 */
   detail: string
+  /** 被否决的原因归属（2026-11-26 Palantir 架构吸收轮）；adopted 或未分类为 null。 */
+  cause: DecisionCause | null
 }
+
+const CAUSE_LABEL: Record<DecisionCause, string> = { proposal: '原因属于提案自身', external: '外部环境所致，假设未被证伪', undetermined: '原因未定' }
 
 /**
  * D7 提案端全历史注入（DGM/ADAS 档案思想在起草侧的消费面）：
@@ -49,30 +53,36 @@ export function proposerEvolutionHistory(
       ? proposal!.probes.find((x) => x.variantId === selected.id && x.status === 'recorded')
       : undefined
     const delta = probe?.contrast?.passAt1Delta
+    const cause = rolled ? (proposal?.rollback?.cause ?? null) : null
     entries.push({
       kind: rolled ? 'rolled_back' : 'adopted',
       proposalId: c.proposalId,
       title: proposal?.title ?? c.label,
+      cause,
       detail: rolled
-        ? `第 ${round} 轮冠军后回滚${proposal?.rollback?.reason ? `（${proposal.rollback.reason.slice(0, 120)}）` : ''}`
+        ? `第 ${round} 轮冠军后回滚${causePrefix(cause)}${proposal?.rollback?.reason ? `（${proposal.rollback.reason.slice(0, 120)}）` : ''}`
         : `第 ${round} 轮冠军${delta != null ? `（pass@1 Δ${(delta * 100).toFixed(1)}pp）` : ''}`,
     })
   }
   for (const p of mine) {
     if (champProposal.has(p.id)) continue
     if (p.status === 'rejected') {
+      const cause = p.approval?.cause ?? null
       entries.push({
         kind: 'rejected',
         proposalId: p.id,
         title: p.title,
-        detail: `裁决驳回${p.approval?.note ? `（${p.approval.note.slice(0, 120)}）` : ''}`,
+        cause,
+        detail: `裁决驳回${causePrefix(cause)}${p.approval?.note ? `（${p.approval.note.slice(0, 120)}）` : ''}`,
       })
     } else if (p.status === 'rolled_back') {
+      const cause = p.rollback?.cause ?? null
       entries.push({
         kind: 'rolled_back',
         proposalId: p.id,
         title: p.title,
-        detail: `回滚${p.rollback?.reason ? `（${p.rollback.reason.slice(0, 120)}）` : ''}`,
+        cause,
+        detail: `回滚${causePrefix(cause)}${p.rollback?.reason ? `（${p.rollback.reason.slice(0, 120)}）` : ''}`,
       })
     }
   }
@@ -82,6 +92,11 @@ export function proposerEvolutionHistory(
   }).length
   const summary = `已采纳 ${adopted} 轮 / 回滚 ${entries.filter((e) => e.kind === 'rolled_back').length} / 拒绝 ${entries.filter((e) => e.kind === 'rejected').length}（提案总数 ${mine.length}）`
   return { entries, summary }
+}
+
+/** 未分类不写前缀（与引入归属前的文案逐字一致）；外部环境与未定写明，起草器据此区别对待。 */
+function causePrefix(cause: DecisionCause | null): string {
+  return cause && cause !== 'proposal' ? `［${CAUSE_LABEL[cause]}］` : ''
 }
 
 export interface DeletionProposalDirective {

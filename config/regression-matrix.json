@@ -649,7 +649,7 @@
         "scripts/regression/governance-rsi-walkthrough*"
       ],
       "ci": null,
-      "note": "2026-11-26 可信 RSI 后续批（spec 2026-11-26-trustworthy-rsi-fulltext 决策 D17-D20）：包装器以 --isolated 严格隔离自起前后端（HERMES_HOME/KANBAN_HOME 也指隔离目录），探针种入含已回滚后继与已写盘冠军的台账，系统 Chrome 无头走查改进实验与生命周期两面板（暗色宽屏中文基线／亮色／窄屏／英文，读渲染文字与计算后的样式含对比度≥4.5），经真实接口回滚演练（单文件恢复基线；多文件外部改动 409 全有或全无）。写盘型走查不许借用别人的后端（D18）。手动单跑：node scripts/regression/run-ide-smoke-face.mjs --face governance-rsi-walkthrough --probe scripts/regression/governance-rsi-walkthrough.mjs --isolated --backend-env HARNESS2_APPLY=1。纯函数单测 governance-rsi-walkthrough.test.ts 随根 vitest 面常跑。"
+      "note": "2026-11-26 可信 RSI 后续批（spec 2026-11-26-trustworthy-rsi-fulltext 决策 D17-D20）：包装器以 --isolated 严格隔离自起前后端（HERMES_HOME/KANBAN_HOME 也指隔离目录），探针种入含已回滚后继与已写盘冠军的台账，系统 Chrome 无头走查改进实验与生命周期两面板（暗色宽屏中文基线／亮色／窄屏／英文，读渲染文字与计算后的样式含对比度≥4.5），经真实接口回滚演练（单文件恢复基线；多文件外部改动 409 全有或全无；回滚带原因归属：非法取值 400、外部环境可保存并在后继轨迹读出）。另断言审阅结论块（置信档、评估条件可比性、限制与支撑读数、参与候选筛选的证据）、逐题对比与失败根因两行读数、驳回与回滚的原因归属下拉（2026-11-26 Palantir 架构吸收轮）。写盘型走查不许借用别人的后端（D18）。手动单跑：node scripts/regression/run-ide-smoke-face.mjs --face governance-rsi-walkthrough --probe scripts/regression/governance-rsi-walkthrough.mjs --isolated --backend-env HARNESS2_APPLY=1；系统 Chrome 无法启动的宿主上加 --probe-env WALK_CHANNEL=msedge 改用 Edge。对比度检查在暗色与亮色两种条件下都做（去向条、轨迹格与表头、审阅结论标签、限制行与标题），选择器一个元素都没匹配到判未过。纯函数单测 governance-rsi-walkthrough.test.ts 随根 vitest 面常跑。"
     },
     {
       "id": "capability-matrix",

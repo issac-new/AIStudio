@@ -39,6 +39,7 @@ const {
   paretoEntryOf,
   freshnessLabel,
   probeOf,
+  CAUSE_OPTIONS, reviewConfidenceLabel, reviewEvaluatorLabel, vetoCauseLabel, flipLine, clusterLine, clusterTitle,
   refresh,
   create,
   addVariant,
@@ -302,6 +303,8 @@ const {
                       <span v-if="v.files.length > 4" class="hi__meta">+{{ v.files.length - 4 }}</span>
                     </div>
                     <div v-if="v.deletions?.length" class="hi__del">-{{ v.deletions.length }} {{ L.deletionsCount }}</div>
+                    <div v-if="flipLine(probeOf(p, v.id))" class="hi__meta" :data-testid="`hi-flips-${p.id}-${v.id}`">{{ flipLine(probeOf(p, v.id)) }}</div>
+                    <div v-if="clusterLine(probeOf(p, v.id))" class="hi__meta" :data-testid="`hi-clusters-${p.id}-${v.id}`" :title="clusterTitle(probeOf(p, v.id))">{{ clusterLine(probeOf(p, v.id)) }}</div>
                   </td>
                   <td><span class="hi__add">+{{ v.diffSummary.added }}</span> / <span class="hi__del">-{{ v.diffSummary.removed }}</span></td>
                   <td>
@@ -349,6 +352,32 @@ const {
             <ul v-if="p.derived.gate.warnings.length" class="hi__warn">
               <li v-for="w in p.derived.gate.warnings" :key="w.code"><code>{{ w.code }}</code> {{ w.message }}</li>
             </ul>
+            <div v-if="p.derived.gate.assessment" class="hi__review" :data-testid="`hi-review-${p.id}`">
+              <b>{{ L.reviewTitle }}：{{ L.reviewConfidence }} {{ reviewConfidenceLabel(p.derived.gate.assessment.confidence) }}</b>
+              <div class="hi__row">
+                <span class="hi__chip" :class="`hi__chip--confidence-${p.derived.gate.assessment.confidence}`" :data-testid="`hi-review-confidence-${p.id}`">{{ reviewConfidenceLabel(p.derived.gate.assessment.confidence) }}</span>
+                <span class="hi__chip" :class="`hi__chip--evaluator-${p.derived.gate.assessment.evaluatorComparability}`" :data-testid="`hi-review-evaluator-${p.id}`">
+                  {{ reviewEvaluatorLabel(p.derived.gate.assessment.evaluatorComparability) }}<template v-if="p.derived.gate.assessment.evaluatorChangedFields.length">（{{ p.derived.gate.assessment.evaluatorChangedFields.join('、') }}）</template>
+                </span>
+                <template v-if="p.derived.gate.lexOrder">
+                  <span class="hi__chip" :class="`hi__chip--lex-${p.derived.gate.lexOrder.safety}`">{{ L.lexSafety }} {{ p.derived.gate.lexOrder.safety === 'pass' ? L.lexPass : L.lexFail }}</span>
+                  <span class="hi__chip" :class="`hi__chip--lex-${p.derived.gate.lexOrder.quality}`">{{ L.lexQuality }} {{ p.derived.gate.lexOrder.quality === 'pass' ? L.lexPass : L.lexFail }}</span>
+                  <span class="hi__chip" :class="`hi__chip--lex-${p.derived.gate.lexOrder.cost}`">{{ L.lexCost }} {{ p.derived.gate.lexOrder.cost === 'pass' ? L.lexPass : L.lexFail }}</span>
+                </template>
+                <span
+                  v-if="p.derived.gate.evidenceRoles?.length" class="hi__meta" :data-testid="`hi-review-roles-${p.id}`"
+                  :title="p.derived.gate.evidenceRoles.map((r) => r.note).join('\n')"
+                >{{ L.reviewEvidenceRoles }}：{{ p.derived.gate.evidenceRoles.map((r) => r.evidence).join('、') }}</span>
+              </div>
+              <template v-if="p.derived.gate.assessment.strengths.length">
+                <span class="hi__meta">{{ L.reviewStrengths }}</span>
+                <ul :data-testid="`hi-review-strengths-${p.id}`"><li v-for="(s, i) in p.derived.gate.assessment.strengths" :key="i">{{ s }}</li></ul>
+              </template>
+              <template v-if="p.derived.gate.assessment.limitations.length">
+                <span class="hi__meta">{{ L.reviewLimitations }}</span>
+                <ul class="hi__warn" :data-testid="`hi-review-limitations-${p.id}`"><li v-for="(s, i) in p.derived.gate.assessment.limitations" :key="i">{{ s }}</li></ul>
+              </template>
+            </div>
           </div>
 
           <div v-if="p.derived.regularization" class="hi__reg" :data-testid="`hi-reg-${p.id}`">
@@ -418,6 +447,12 @@ const {
                 <input v-model="formFor(p.id).actor" :placeholder="L.actor" />
                 <input v-model="formFor(p.id).note" :placeholder="L.note" />
                 <button type="button" class="hi__btn hi__btn--primary" @click="decide(p, 'approve')">{{ L.approve }}</button>
+                <select
+                  v-model="formFor(p.id).rejectCause" :title="L.vetoCauseHint" :aria-label="L.vetoCause"
+                  :data-testid="`hi-reject-cause-${p.id}`"
+                >
+                  <option v-for="c in CAUSE_OPTIONS" :key="c" :value="c">{{ vetoCauseLabel(c) }}</option>
+                </select>
                 <button type="button" class="hi__btn" @click="decide(p, 'reject')">{{ L.reject }}</button>
               </div>
 
@@ -490,7 +525,12 @@ const {
               </div>
 
               <div v-if="p.status === 'promoted'" class="hi__row">
-                <input v-model="formFor(p.id).rollbackReason" :placeholder="L.rollbackReason" /><button
+                <input v-model="formFor(p.id).rollbackReason" :placeholder="L.rollbackReason" /><select
+                  v-model="formFor(p.id).rollbackCause" :title="L.vetoCauseHint" :aria-label="L.vetoCause"
+                  :data-testid="`hi-rollback-cause-${p.id}`"
+                >
+                  <option v-for="c in CAUSE_OPTIONS" :key="c" :value="c">{{ vetoCauseLabel(c) }}</option>
+                </select><button
           v-if="p.status === 'promoted' && (p.surfaceKey === 'memory' || p.surfaceKey === 'tool_guidance')"
           type="button" class="hi__btn" data-testid="hi-export-artifacts" @click="exportSurfaceArtifacts(p)"
         >{{ L.exportArtifacts }}</button>
@@ -629,7 +669,7 @@ const {
               </thead>
               <tbody>
                 <tr v-for="s in theoryTrajectory.steps" :key="s.proposalId" :data-testid="`hi-theory-traj-row-${s.round}`">
-                  <td>{{ s.round }}{{ s.rolledBack ? ` · ${L.evoRollbackMark}` : '' }}</td>
+                  <td>{{ s.round }}{{ s.rolledBack ? ` · ${L.evoRollbackMark}` : '' }}{{ s.rollbackCause ? ` · ${vetoCauseLabel(s.rollbackCause)}` : '' }}</td>
                   <td><code>{{ s.proposalId }}</code></td>
                   <td
                     v-for="role in TRAJECTORY_ROLES" :key="role"
@@ -812,6 +852,17 @@ const {
 .hi__chip { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid currentColor; }
 .hi__chip--ok { color: var(--success); }
 .hi__chip--muted { color: var(--text-muted); }
+/* 审阅结论（2026-11-26 Palantir 架构吸收轮）：置信档与评估条件可比性沿用既有的语义色变量，不写裸色值 */
+.hi__chip--confidence-sufficient { color: var(--success); }
+.hi__chip--confidence-limited { color: var(--ia-stale); border-style: dashed; }
+.hi__chip--confidence-insufficient { color: var(--danger); }
+.hi__chip--confidence-unknown { color: var(--text-muted); border-style: dashed; }
+.hi__chip--evaluator-same { color: var(--success); }
+.hi__chip--evaluator-changed { color: var(--danger); }
+.hi__chip--evaluator-unknown { color: var(--ia-stale); border-style: dashed; }
+.hi__chip--lex-pass { color: var(--success); }
+.hi__chip--lex-fail { color: var(--danger); }
+.hi__review { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color); }
 .hi__chip--risk-low { color: var(--success); }
 .hi__chip--risk-medium { color: var(--ia-stale); border-style: dashed; }
 .hi__chip--risk-high { color: var(--danger); }

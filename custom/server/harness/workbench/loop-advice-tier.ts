@@ -23,7 +23,8 @@ export function verificationTierOf(proposal: Proposal): VerificationTier {
   // W6（2026-11-05）：命令式验收器读数进档——任务声明 outcome.argv 且已有 attempt 结果。
   if (ev.commandChecks != null && ev.commandChecks.total > 0) tiers.push('command')
   if (ev.regression != null) tiers.push('regression')
-  if (ev.heldout != null) tiers.push('heldout')
+  // 留出读数生产上落在提案级（attachHeldout 写 p.heldout），探针级只在测试夹具里出现——两级都看
+  if (ev.heldout != null || proposal.heldout != null) tiers.push('heldout')
   // 判分主导＝无回归/留出硬证据而 judgeOnline（LLM 判分参与）
   if (tiers.length === 0 && ev.judgeOnline) tiers.push('judge')
   if (tiers.length === 0) tiers.push('none')

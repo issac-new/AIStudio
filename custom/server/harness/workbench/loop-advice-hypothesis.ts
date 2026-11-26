@@ -1,5 +1,6 @@
 // 文件职责：假设相似度/重提抑制/停滞与剪枝信号（自 loop-advice.ts 纯移动，行为不变）。
 import type { Proposal, RegularizationDerived, SurfaceKey } from './types'
+import { vetoCauseOf } from './loop-core'
 
 // ---- 历史证据表（P2）：失败假设不复提 ----
 
@@ -38,8 +39,10 @@ export function hypothesisRetries(
   threshold: number = HYPOTHESIS_RETRY_THRESHOLD,
 ): RegularizationDerived['hypothesisRetry'] {
   return proposals
+    // 2026-11-26 Palantir 架构吸收轮：因外部环境被否决的假设没有被证伪，不计入「失败假设不复提」
     .filter((p) => p.surfaceKey === surfaceKey && p.id !== currentProposalId
-      && (p.status === 'rejected' || p.status === 'rolled_back'))
+      && (p.status === 'rejected' || p.status === 'rolled_back')
+      && vetoCauseOf(p) !== 'external')
     .map((p) => ({ p, similarity: hypothesisSimilarity(hypothesis, p.hypothesis) }))
     .filter((x) => x.similarity >= threshold)
     .sort((a, b) => b.similarity - a.similarity)

@@ -33,6 +33,7 @@ import {
   type SurfaceKey,
   type WorkbenchOverviewDto,
   type ConstraintCheckDto,
+  type DecisionCauseDto,
   type TrajectoryCellStatusDto,
   type TrajectoryDto,
   type TrustRoleDto,
@@ -60,6 +61,9 @@ export function useHarnessImprovePanel() {
     selectedVariant: string
     rationale: string
     rollbackReason: string
+    /** 驳回与回滚的原因归属；缺省「提案自身」，与改动前的行为一致。 */
+    rejectCause: DecisionCauseDto
+    rollbackCause: DecisionCauseDto
     actor: string
     note: string
     apply: boolean
@@ -142,7 +146,7 @@ export function useHarnessImprovePanel() {
   function formFor(id: string): ProposalForm {
     if (!forms[id]) {
       forms[id] = {
-        baselineRunId: '', selectedVariant: '', rationale: '', rollbackReason: '', actor: '', note: '',
+        baselineRunId: '', selectedVariant: '', rationale: '', rollbackReason: '', rejectCause: 'proposal', rollbackCause: 'proposal', actor: '', note: '',
         apply: false, cue: '', lesson: '', evidence: '', confidence: 'medium',
         autoSetId: '', autoRegressionSetId: '', autoMaxTasks: 5, noiseRunIds: '',
       }
@@ -188,6 +192,69 @@ export function useHarnessImprovePanel() {
 
   function riskLabel(r: 'low' | 'medium' | 'high'): string {
     return r === 'high' ? L.value.riskHigh : r === 'medium' ? L.value.riskMedium : L.value.riskLow
+  }
+
+  /** 原因归属三值，表单下拉的固定顺序。 */
+  const CAUSE_OPTIONS: readonly DecisionCauseDto[] = ['proposal', 'external', 'undetermined']
+
+  const ROOT_CAUSE_KEYS: Record<string, keyof typeof improveMessages.zh> = {
+    risk_violation: 'causeRiskViolation',
+    action_loop: 'causeActionLoop',
+    budget_exhausted: 'causeBudgetExhausted',
+    outcome_mismatch: 'causeOutcomeMismatch',
+    trajectory_defect: 'causeTrajectoryDefect',
+    result_defect: 'causeResultDefect',
+    undecidable: 'causeUndecidable',
+  }
+
+  /** 审阅结论的置信档（2026-11-26 Palantir 架构吸收轮）。 */
+  function reviewConfidenceLabel(c: string | undefined): string {
+    const L0 = L.value
+    if (c === 'sufficient') return L0.reviewSufficient
+    if (c === 'limited') return L0.reviewLimited
+    if (c === 'insufficient') return L0.reviewInsufficient
+    return L0.reviewUnknown
+  }
+
+  function reviewEvaluatorLabel(v: string | undefined): string {
+    const L0 = L.value
+    if (v === 'same') return L0.reviewEvaluatorSame
+    if (v === 'changed') return L0.reviewEvaluatorChanged
+    return L0.reviewEvaluatorUnknown
+  }
+
+  function vetoCauseLabel(c: string | null | undefined): string {
+    const L0 = L.value
+    if (c === 'external') return L0.vetoCauseExternal
+    if (c === 'undetermined') return L0.vetoCauseUndetermined
+    return L0.vetoCauseProposal
+  }
+
+  function rootCauseLabel(cause: string): string {
+    const key = ROOT_CAUSE_KEYS[cause]
+    return key ? L.value[key] : cause
+  }
+
+  /** 逐题对比一行：四类计数都带单位；没有读数返回空串（模板据此不渲染）。 */
+  function flipLine(probe: ProbeDto | undefined): string {
+    const f = probe?.caseFlips
+    if (!f) return ''
+    const L0 = L.value
+    return `${L0.caseFlips}：${L0.caseFixed} ${f.fixed.length} ${L0.taskUnit} · ${L0.caseBroken} ${f.broken.length} ${L0.taskUnit} · ${L0.caseBothPassed} ${f.bothPassed} ${L0.taskUnit} · ${L0.caseBothFailed} ${f.bothFailed} ${L0.taskUnit}`
+  }
+
+  /** 失败根因一行：只有类别与题数，带单位；未采集或没有失败题返回空串。 */
+  function clusterLine(probe: ProbeDto | undefined): string {
+    const clusters = probe?.evidence?.failureClusters
+    if (!clusters || clusters.length === 0) return ''
+    return `${L.value.failureClusters}：${clusters.map((c) => `${rootCauseLabel(c.rootCause)} ${c.count} ${L.value.taskUnit}`).join(' · ')}`
+  }
+
+  /** 失败根因的样例题号，放进悬停提示。 */
+  function clusterTitle(probe: ProbeDto | undefined): string {
+    const clusters = probe?.evidence?.failureClusters
+    if (!clusters || clusters.length === 0) return ''
+    return clusters.map((c) => `${rootCauseLabel(c.rootCause)}：${c.sampleTaskIds.join('、') || '—'}`).join('\n')
   }
 
   function verdictLabel(q: string | undefined): string {
@@ -340,7 +407,7 @@ export function useHarnessImprovePanel() {
 
   async function decide(p: ProposalDto, decision: 'approve' | 'reject'): Promise<void> {
     const f = formFor(p.id)
-    await act(() => decideWorkbenchProposal(p.id, decision, f.actor.trim() || 'operator', f.note.trim()))
+    await act(() => decideWorkbenchProposal(p.id, decision, f.actor.trim() || 'operator', f.note.trim(), decision === 'reject' ? f.rejectCause : undefined))
   }
 
   async function createProbes(p: ProposalDto): Promise<void> {
@@ -418,7 +485,7 @@ export function useHarnessImprovePanel() {
 
   async function rollback(p: ProposalDto): Promise<void> {
     const f = formFor(p.id)
-    await act(() => rollbackWorkbenchProposal(p.id, f.rollbackReason.trim()))
+    await act(() => rollbackWorkbenchProposal(p.id, f.rollbackReason.trim(), f.rollbackCause))
   }
 
   async function importExperiences(): Promise<void> {
@@ -705,6 +772,6 @@ export function useHarnessImprovePanel() {
   onMounted(() => void refresh())
 
   return {
-    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, theoryTrajectory, theoryResidue, TRAJECTORY_ROLES, trajectoryChip, trajectoryVerdictLabel, trustRoleLabel, trajectoryCellLabel, evaluatorDriftLabel, evaluatorDriftCount, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
+    L, data, busy, error, actionError, showCreate, CAUSE_OPTIONS, reviewConfidenceLabel, reviewEvaluatorLabel, vetoCauseLabel, flipLine, clusterLine, clusterTitle, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, theoryTrajectory, theoryResidue, TRAJECTORY_ROLES, trajectoryChip, trajectoryVerdictLabel, trustRoleLabel, trajectoryCellLabel, evaluatorDriftLabel, evaluatorDriftCount, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
   }
 }

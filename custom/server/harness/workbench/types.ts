@@ -219,6 +219,19 @@ export interface ProbeMetrics {
     setRevision?: number | null
     judge?: { models: string[]; backend: string; tauYes: number; tauNo: number } | null
   } | null
+  /**
+   * 失败根因分布（2026-11-26 Palantir 架构吸收轮）：评测运行里首样本未通过的题，
+   * 逐题调用评测域 classifyRootCause 后按根因计数。null=未采集（运行或试卷取不到）；
+   * 空数组=采集过且没有失败题。只留题号作样例，不带断言原文（评测内容不出评测域）。
+   */
+  failureClusters?: FailureCluster[] | null
+}
+
+/** 一个根因类别的失败题数与样例题号。rootCause 取值见 eval/badcase-distill 的 BadCaseRootCause；undecidable=判定端离线无法归类。 */
+export interface FailureCluster {
+  rootCause: string
+  count: number
+  sampleTaskIds: string[]
 }
 
 export type QualityVerdict = 'improved' | 'regressed' | 'neutral' | 'unknown'
@@ -269,7 +282,34 @@ export interface Probe {
   recordedAt?: string
   /** 一键自动探测任务态（running 的服务重启后失联，需重新发起）。 */
   autoRun?: AutoRunState
+  /**
+   * 逐题对错翻转（2026-11-26 Palantir 架构吸收轮）：记录探测时与基线运行逐题比首样本。
+   * null=未采集（基线运行取不到，或两份运行没有都带首样本的题）。
+   */
+  caseFlips?: CaseFlips | null
 }
+
+/**
+ * 基线与候选的逐题对比。只比首样本的通过与失败——评测运行不保存逐题输出文本。
+ * 四类计数之和等于 compared。
+ */
+export interface CaseFlips {
+  /** 两份运行都有首样本的题数。 */
+  compared: number
+  /** 基线未过、候选通过。 */
+  fixed: string[]
+  /** 基线通过、候选未过。 */
+  broken: string[]
+  bothPassed: number
+  bothFailed: number
+}
+
+/**
+ * 人工否决一个提案的原因归属（2026-11-26 Palantir 架构吸收轮）。
+ * proposal=问题出在提案自身；external=外部环境（故障、配置、数据等与假设无关的原因）；undetermined=判不清。
+ * 起草器据此区别对待：只有提案自身的进「禁止换皮重提」清单。
+ */
+export type DecisionCause = 'proposal' | 'external' | 'undetermined'
 
 export interface ApprovalRecord {
   decision: 'approved' | 'rejected'
@@ -280,6 +320,8 @@ export interface ApprovalRecord {
   at: string
   /** 全局审批账本条目 id（approval-log）。 */
   approvalLogId?: string
+  /** 驳回的原因归属；只在 decision=rejected 时有意义。缺席=未分类，起草器按提案自身处理（与引入前一致）。 */
+  cause?: DecisionCause | null
 }
 
 export interface CompositionRecord {
@@ -311,6 +353,8 @@ export interface RollbackRecord {
   reason: string
   restoredDigest: string | null
   fileRestored: boolean
+  /** 回滚的原因归属；缺席=未分类，起草器按提案自身处理（与引入前一致）。 */
+  cause?: DecisionCause | null
 }
 
 /**
@@ -350,6 +394,12 @@ export interface Proposal {
   constraints?: ConstraintRecord | null
   /** 密封留出集读数（R6，二批）；缺席=未测。 */
   heldout?: { runId: string; n: number; passRate: number } | null
+  /**
+   * 留出集上的基线通过率（2026-11-26 Palantir 架构吸收轮）：绑定留出读数时一并提交基线答案算出。
+   * 探针级 ProbeMetrics.heldoutBaselinePassRate 优先，本字段是其提案级来源；
+   * 两者都在才有增益保留率与「代理涨、真实不涨」诊断。
+   */
+  heldoutBaselinePassRate?: number | null
   /** 技能差分（R9，三批）：有技能/无技能同集增益差；null=未测。 */
   skillDifferential?: { withSkill: number | null; withoutSkill: number | null; delta: number | null } | null
   /** 多文件候选的根（相对 HERMES_HOME）；缺省=单文件模式。 */
@@ -474,6 +524,26 @@ export interface PromotionGateReport {
    * 只披露不拦截：不参与 ok/blockers 判定（2026-11-01 机制扩展停止裁定边界内）。
    */
   selectionBias?: SelectionBiasAudit
+  /**
+   * 审阅结论（2026-11-26 Palantir 架构吸收轮）：置信档、限制与支撑读数、基线与候选的评估条件可比性。
+   * 只披露不拦截：不参与 ok/blockers 判定。
+   */
+  assessment?: ReviewAssessment
+}
+
+/** 置信档：未知=选中候选没有已记录探测；不足=读数本身不够（采样、评估条件、质量判定）；有限=读数可用但验证不完整；充分=没有任何限制。 */
+export type ReviewConfidence = 'sufficient' | 'limited' | 'insufficient' | 'unknown'
+
+export interface ReviewAssessment {
+  confidence: ReviewConfidence
+  /** 基线与候选是否在同一评估条件下评测。 */
+  evaluatorComparability: 'same' | 'changed' | 'unknown'
+  /** 评估条件里发生变更的字段（试卷指纹 setHash／版本 setRevision／裁判 judge）。 */
+  evaluatorChangedFields: string[]
+  /** 支撑结论的读数，每条是一个事实。 */
+  strengths: string[]
+  /** 限制结论适用范围或可信度的事实；每条带读数，不下判断以外的结论。 */
+  limitations: string[]
 }
 
 /** 证据在哪些决策角色中被消费（edit_generation=产生修改；candidate_selection=筛选候选；final_judgement=最终判定） */
@@ -663,6 +733,8 @@ export interface SuccessorStep {
   promotedAt: string
   rolledBack: boolean
   rollbackReason: string | null
+  /** 回滚的原因归属；未回滚或未分类为 null。 */
+  rollbackCause: DecisionCause | null
   cells: Record<TrustRole, TrajectoryCellStatus>
   /** 每个角色的判定依据（人读）。 */
   reasons: Record<TrustRole, string>

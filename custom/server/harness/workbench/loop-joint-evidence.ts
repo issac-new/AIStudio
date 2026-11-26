@@ -179,6 +179,7 @@ export function successorStep(p: Proposal | undefined, mark: SuccessorMark, roun
     promotedAt: mark.promotedAt,
     rolledBack: mark.rolledBack,
     rollbackReason: p?.rollback?.reason ?? null,
+    rollbackCause: mark.rolledBack ? (p?.rollback?.cause ?? null) : null,
     cells,
     reasons,
   }
@@ -233,6 +234,37 @@ function judgeKey(judge: NonNullable<EvaluatorFingerprint['judge']>): string {
   return JSON.stringify([[...judge.models].sort(), judge.backend, judge.tauYes, judge.tauNo])
 }
 
+export interface EvaluatorDiff {
+  /** 取值不同的字段。 */
+  changed: string[]
+  /** 任一侧缺值、比不了的字段；整份指纹缺席时为 ['evaluator']。 */
+  unknown: string[]
+  /** 是否至少有一个字段真比过（不论是否变更）。 */
+  compared: boolean
+}
+
+/**
+ * 两份评估条件指纹的逐字段比较（2026-11-26 Palantir 架构吸收轮抽出，相邻后继与基线候选两处共用）。
+ * 任一侧缺指纹或某字段缺值记入 unknown，不按相同处理。
+ */
+export function evaluatorDiff(a: EvaluatorFingerprint | null | undefined, b: EvaluatorFingerprint | null | undefined): EvaluatorDiff {
+  if (!a || !b) return { changed: [], unknown: ['evaluator'], compared: false }
+  const changed: string[] = []
+  const unknown: string[] = []
+  if (a.setHash == null || b.setHash == null) unknown.push('setHash')
+  else if (a.setHash !== b.setHash) changed.push('setHash')
+  const revisionA = a.setRevision ?? null
+  const revisionB = b.setRevision ?? null
+  if (revisionA == null || revisionB == null) unknown.push('setRevision')
+  else if (revisionA !== revisionB) changed.push('setRevision')
+  const judgeA = a.judge ?? null
+  const judgeB = b.judge ?? null
+  if (!judgeA || !judgeB) unknown.push('judge')
+  else if (judgeKey(judgeA) !== judgeKey(judgeB)) changed.push('judge')
+  // 有字段真比过（不论是否变更）就计入已比较；一个字段都没比上的只记无法比较。
+  return { changed, unknown, compared: changed.length > 0 || unknown.length < 3 }
+}
+
 /** 相邻后继之间的评估条件变更（同一面内比较；不同面用不同评测集，不跨面合并）。 */
 export function evaluatorDrift(steps: Array<{ round: number; evaluator?: EvaluatorFingerprint | null }>): EvaluatorDriftAudit {
   const changes: EvaluatorChange[] = []
@@ -241,31 +273,17 @@ export function evaluatorDrift(steps: Array<{ round: number; evaluator?: Evaluat
   for (let i = 1; i < steps.length; i += 1) {
     const a = steps[i - 1]
     const b = steps[i]
+    const diff = evaluatorDiff(a.evaluator, b.evaluator)
     if (!a.evaluator || !b.evaluator) {
-      unknownPairs.push({ fromRound: a.round, toRound: b.round, fields: ['evaluator'] })
+      unknownPairs.push({ fromRound: a.round, toRound: b.round, fields: diff.unknown })
       continue
     }
-    const fields: string[] = []
-    const missing: string[] = []
-    if (a.evaluator.setHash == null || b.evaluator.setHash == null) missing.push('setHash')
-    else if (a.evaluator.setHash !== b.evaluator.setHash) fields.push('setHash')
-    const revisionA = a.evaluator.setRevision ?? null
-    const revisionB = b.evaluator.setRevision ?? null
-    if (revisionA == null || revisionB == null) missing.push('setRevision')
-    else if (revisionA !== revisionB) fields.push('setRevision')
-    const judgeA = a.evaluator.judge ?? null
-    const judgeB = b.evaluator.judge ?? null
-    if (!judgeA || !judgeB) missing.push('judge')
-    else if (judgeKey(judgeA) !== judgeKey(judgeB)) fields.push('judge')
-    // 有字段真比过（不论是否变更）就计入已比较；一个字段都没比上的只记无法比较。
-    if (fields.length > 0) {
-      changes.push({ fromRound: a.round, toRound: b.round, fields, from: a.evaluator, to: b.evaluator })
-      compared += 1
-    } else if (missing.length < 3) {
-      compared += 1
+    if (diff.changed.length > 0) {
+      changes.push({ fromRound: a.round, toRound: b.round, fields: diff.changed, from: a.evaluator, to: b.evaluator })
     }
-    if (fields.length === 0 && missing.length > 0) {
-      unknownPairs.push({ fromRound: a.round, toRound: b.round, fields: missing })
+    if (diff.compared) compared += 1
+    if (diff.changed.length === 0 && diff.unknown.length > 0) {
+      unknownPairs.push({ fromRound: a.round, toRound: b.round, fields: diff.unknown })
     }
   }
 

@@ -61,7 +61,31 @@ export interface RegressionDto {
   passAt1?: number | null
 }
 
+/** 人工否决一个提案的原因归属（2026-11-26 Palantir 架构吸收轮）。 */
+export type DecisionCauseDto = 'proposal' | 'external' | 'undetermined'
+
+/** 一个根因类别的失败题数与样例题号。 */
+export interface FailureClusterDto {
+  rootCause: string
+  count: number
+  sampleTaskIds: string[]
+}
+
+/**
+ * 审阅结论（2026-11-26 Palantir 架构吸收轮）：置信档、限制与支撑读数、基线与候选的评估条件可比性。
+ * 旧服务端不带该字段，面板按缺席处理。
+ */
+export interface ReviewAssessmentDto {
+  confidence: 'sufficient' | 'limited' | 'insufficient' | 'unknown'
+  evaluatorComparability: 'same' | 'changed' | 'unknown'
+  evaluatorChangedFields: string[]
+  strengths: string[]
+  limitations: string[]
+}
+
 export interface ProbeMetricsDto {
+  /** 失败根因分布；null=未采集，空数组=没有失败题。 */
+  failureClusters?: FailureClusterDto[] | null
   evalRunId: string
   setId: string
   setRevision?: number
@@ -134,6 +158,8 @@ export interface ProbeDto {
   createdAt: string
   recordedAt?: string
   autoRun?: AutoRunStateDto
+  /** 与基线运行逐题比首样本的对错翻转；null/缺席=未采集。 */
+  caseFlips?: { compared: number; fixed: string[]; broken: string[]; bothPassed: number; bothFailed: number } | null
 }
 
 export interface ApprovalDto {
@@ -143,6 +169,8 @@ export interface ApprovalDto {
   variantSetDigest: string
   at: string
   approvalLogId?: string
+  /** 驳回的原因归属；缺席=未分类。 */
+  cause?: DecisionCauseDto | null
 }
 
 export interface PromotionDto {
@@ -305,6 +333,8 @@ export interface TrajectoryDto {
       promotedAt: string
       rolledBack: boolean
       rollbackReason: string | null
+      /** 回滚的原因归属；旧服务端不带。 */
+      rollbackCause?: DecisionCauseDto | null
       cells: Record<TrustRoleDto, TrajectoryCellStatusDto>
       reasons: Record<TrustRoleDto, string>
     }>
@@ -380,19 +410,30 @@ export interface ProposalDto {
   baseline: ProbeMetricsDto | null
   base: { content: string; digest: string; revision: string | null; exists: boolean } | null
   noise?: NoiseCalibrationDto | null
+  /** 留出集上的基线通过率；与 heldout 一起才有增益保留率。 */
+  heldoutBaselinePassRate?: number | null
   variants: VariantDto[]
   probes: ProbeDto[]
   approval: ApprovalDto | null
   composition: CompositionDto | null
   promotion: PromotionDto | null
-  rollback: { actor: string; at: string; reason: string; restoredDigest: string | null; fileRestored: boolean } | null
+  rollback: { actor: string; at: string; reason: string; restoredDigest: string | null; fileRestored: boolean; cause?: DecisionCauseDto | null } | null
   /** 约束保持断言记录（D5，对齐服务端 Proposal.constraints）；null=尚未录入。 */
   constraints?: ConstraintRecordDto | null
   createdBy: string
   createdAt: string
   updatedAt: string
   derived: {
-    gate: { ok: boolean; blockers: GateBlockerDto[]; warnings: GateBlockerDto[] }
+    gate: {
+      ok: boolean
+      blockers: GateBlockerDto[]
+      warnings: GateBlockerDto[]
+      assessment?: ReviewAssessmentDto
+      /** 字典序分层（安全 > 质量 > 成本）；旧服务端不带。 */
+      lexOrder?: { safety: 'pass' | 'fail'; quality: 'pass' | 'fail'; cost: 'pass' | 'fail' }
+      /** 证据角色披露：每份证据在哪些决策角色里被消费；旧服务端不带。 */
+      evidenceRoles?: Array<{ evidence: string; roles: string[]; note: string }>
+    }
     cost: { total: number; complete: boolean; missing: string[] }
     recordedProbes: number
     totalProbes: number
@@ -534,10 +575,10 @@ export function submitWorkbenchProposal(id: string): Promise<{ ok: boolean; prop
 }
 
 export function decideWorkbenchProposal(
-  id: string, decision: 'approve' | 'reject', actor: string, note = '',
+  id: string, decision: 'approve' | 'reject', actor: string, note = '', cause?: DecisionCauseDto | null,
 ): Promise<{ ok: boolean; proposal: ProposalDto }> {
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/decide`, {
-    method: 'POST', body: JSON.stringify({ decision, actor, note }),
+    method: 'POST', body: JSON.stringify({ decision, actor, note, ...(cause ? { cause } : {}) }),
   })
 }
 
@@ -668,10 +709,10 @@ export function promoteWorkbenchProposal(
 }
 
 export function rollbackWorkbenchProposal(
-  id: string, reason: string,
+  id: string, reason: string, cause?: DecisionCauseDto | null,
 ): Promise<{ ok: boolean; proposal: ProposalDto }> {
   return request(`/api/harness/workbench/proposals/${encodeURIComponent(id)}/rollback`, {
-    method: 'POST', body: JSON.stringify({ reason }),
+    method: 'POST', body: JSON.stringify({ reason, ...(cause ? { cause } : {}) }),
   })
 }
 
