@@ -230,6 +230,11 @@ export interface DonorQuery {
   /** 当前基线正文：用于过滤「已经在基线里」的组件（逐行 Jaccard ≥0.6）。 */
   baseContent?: string | null
   limit?: number
+  /**
+   * 已回滚的来源提案（提案号→回滚原因）。来自这些提案的条目仍可提供，但带标注：
+   * 回滚只退役经验并撤掉冠军指针，不动组件库条目，条目的增益没有在回滚后复验。
+   */
+  rolledBackSources?: Array<{ proposalId: string; reason: string | null }>
 }
 
 export interface DonorCandidate {
@@ -237,6 +242,8 @@ export interface DonorCandidate {
   /** 排序分：同面可迁移性 + 跨域价值 + 证据强度。 */
   score: number
   crossDomain: boolean
+  /** 来源提案已被回滚时给出原因；来源仍在位时缺席。 */
+  rolledBackSource?: { reason: string | null }
 }
 
 export interface DonorSelection {
@@ -281,6 +288,7 @@ export function selectDonors(query: DonorQuery): DonorSelection {
     if (!current || entry.version > current.version) latest.set(key, entry)
   }
   const offered: DonorCandidate[] = []
+  const rolledBackBy = new Map((query.rolledBackSources ?? []).map((r) => [r.proposalId, r]))
   for (const entry of latest.values()) {
     const content = entry.files && entry.files.length > 0
       ? entry.files.map((f) => f.content).join('\n')
@@ -293,7 +301,8 @@ export function selectDonors(query: DonorQuery): DonorSelection {
     const sameSurface = entry.surfaceKey === query.surfaceKey
     const delta = entry.evidence.delta ?? 0
     const score = (sameSurface ? 1.5 : 0.5) + (crossDomain ? 1.5 : 0) + Math.min(2, delta * 20)
-    offered.push({ entry, score, crossDomain })
+    const rolled = rolledBackBy.get(entry.evidence.proposalId)
+    offered.push({ entry, score, crossDomain, ...(rolled ? { rolledBackSource: { reason: rolled.reason } } : {}) })
   }
   offered.sort((a, b) => b.score - a.score)
   return { offered: offered.slice(0, limit), skipped }

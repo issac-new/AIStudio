@@ -387,6 +387,25 @@ describe('W3 组件库消费', () => {
     expect(result.offered[0].entry.name).toBe('tone.md')
     expect(result.offered[0].crossDomain).toBe(true)
   })
+
+  it('来源提案已回滚的 donor 仍提供，但带回滚标注；来源在位的没有标注（2026-11-26 可信 RSI）', () => {
+    seed({ id: 'hw-rolled', targetPath: 'profiles/r/dedupe.md', surfaceKey: 'skills' }, 'rolled body line1\nline2', 0.12, 'coding')
+    seed({ id: 'hw-live', targetPath: 'profiles/l/tone.md', surfaceKey: 'skills' }, 'live body line1\nline2', 0.08, 'coding')
+
+    const result = selectDonors({
+      surfaceKey: 'skills',
+      domain: 'coding',
+      limit: 5,
+      rolledBackSources: [{ proposalId: 'hw-rolled', reason: '线上回归' }],
+    })
+    const rolled = result.offered.find((d) => d.entry.name === 'dedupe.md')!
+    const live = result.offered.find((d) => d.entry.name === 'tone.md')!
+    expect(rolled.rolledBackSource).toEqual({ reason: '线上回归' })
+    expect(live.rolledBackSource).toBeUndefined()
+
+    const plain = selectDonors({ surfaceKey: 'skills', domain: 'coding', limit: 5 })
+    expect(plain.offered.every((d) => d.rolledBackSource === undefined)).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------

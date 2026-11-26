@@ -121,6 +121,51 @@ const overview = {
         { proposalId: 'hw-000', surfaceKey: 'system_prompt', audit: { poolSize: 3, best: 0.7, runnerUp: 0.6, gap: 0.1, expectedOptimismZ: null, expectedOptimism: null, adjustedBest: null, realizedGap: 0.15, verdict: 'heldout_gap', note: '留出缺口' } },
         { proposalId: 'hw-001', surfaceKey: 'system_prompt', audit: { poolSize: 2, best: 0.7, runnerUp: 0.69, gap: 0.01, expectedOptimismZ: null, expectedOptimism: null, adjustedBest: null, realizedGap: null, verdict: 'top2_within_noise', note: '池内噪声' } },
       ],
+      trajectory: {
+        surfaces: [{
+          surfaceKey: 'system_prompt',
+          steps: [
+            {
+              round: 1, proposalId: 'hw-000', promotedAt: '2026-10-01T00:00:00Z', rolledBack: false, rollbackReason: null,
+              cells: { improvement_validity: 'pass', constraint_preservation: 'pass', effective_oversight: 'pass' },
+              reasons: { improvement_validity: '增益超出噪声带', constraint_preservation: '约束断言通过', effective_oversight: '结构检查：批准人 reviewer' },
+            },
+            {
+              round: 2, proposalId: 'hw-001', promotedAt: '2026-10-02T00:00:00Z', rolledBack: false, rollbackReason: null,
+              cells: { improvement_validity: 'not_evaluated', constraint_preservation: 'not_evaluated', effective_oversight: 'pass' },
+              reasons: { improvement_validity: '没有独立留出集读数', constraint_preservation: '未记录约束断言', effective_oversight: '结构检查：批准人 reviewer' },
+            },
+            {
+              round: 3, proposalId: 'hw-002', promotedAt: '2026-10-03T00:00:00Z', rolledBack: true, rollbackReason: '线上回归',
+              cells: { improvement_validity: 'fail', constraint_preservation: 'not_evaluated', effective_oversight: 'pass' },
+              reasons: { improvement_validity: '已回滚：线上回归。被采纳的修改没有站住', constraint_preservation: '未记录约束断言', effective_oversight: '结构检查：批准人 reviewer；该版本已被 operator 回滚' },
+            },
+          ],
+          roleCounts: {
+            improvement_validity: { pass: 1, fail: 1, not_evaluated: 1 },
+            constraint_preservation: { pass: 1, fail: 0, not_evaluated: 2 },
+            effective_oversight: { pass: 3, fail: 0, not_evaluated: 0 },
+          },
+          verdict: 'fail',
+          firstFail: { round: 3, proposalId: 'hw-002', role: 'improvement_validity', reason: '已回滚：线上回归' },
+          firstUnevaluated: { round: 2, proposalId: 'hw-001', role: 'improvement_validity', reason: '没有独立留出集读数' },
+          evaluatorDrift: {
+            pairs: 2, compared: 2, changed: 1, unknown: 0,
+            changes: [{ fromRound: 2, toRound: 3, fields: ['setHash'] }],
+            unknownPairs: [],
+            verdict: 'changed',
+            note: '1 处相邻后继之间评估条件变了',
+          },
+          note: '第 3 个后继（hw-002）在「改进有效性」上不满足：已回滚：线上回归。按联合判定的口径，整条轨迹不通过',
+        }],
+        rollbackResidue: {
+          rolledBack: 1,
+          rows: [{ proposalId: 'hw-002', title: '旧提案', rolledBackAt: '2026-10-04T00:00:00Z', reason: '线上回归', componentEntries: 2, inheritedBy: ['hw-001'] }],
+          componentEntries: 2, inheritedBy: 1, libraryProvided: true,
+          note: '1 个提案已回滚；组件库里来自它们的条目 2 个，直接引用这些条目的现存后继 1 个',
+        },
+        note: '只读诊断，不参与晋级判定',
+      },
       note: '三项均为只读诊断，不参与 ok/blockers 判定',
     },
   },
@@ -290,6 +335,21 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-theory-decay"]').text()).toContain('已到噪声带')
     expect(w.find('[data-testid="hi-theory-proxy"]').text()).toContain('连续背离')
     expect(w.find('[data-testid="hi-theory-selection"]').text()).toContain('2/2')
+    // 后继轨迹联合判定（2026-11-26）：结论、回滚后继数、逐版本三角色格态、评估条件变更、回滚残留
+    expect(w.find('[data-testid="hi-theory-trajectory-verdict"]').text()).toBe('不通过')
+    expect(w.find('[data-testid="hi-theory-trajectory"]').text()).toContain('后继 3')
+    expect(w.find('[data-testid="hi-theory-trajectory"]').text()).toContain('采纳后回滚 1')
+    expect(w.find('[data-testid="hi-theory-trajectory-note"]').text()).toContain('第 3 个后继')
+    expect(w.find('[data-testid="hi-theory-trajectory-note"]').text()).toContain('整条轨迹不通过')
+    expect(w.findAll('[data-testid^="hi-theory-traj-row-"]')).toHaveLength(3)
+    expect(w.find('[data-testid="hi-theory-traj-row-3"]').text()).toContain('已回滚')
+    expect(w.find('[data-testid="hi-theory-traj-1-improvement_validity"]').text()).toBe('满足')
+    expect(w.find('[data-testid="hi-theory-traj-3-improvement_validity"]').text()).toBe('不满足')
+    expect(w.find('[data-testid="hi-theory-traj-2-constraint_preservation"]').text()).toBe('未评估')
+    expect(w.find('[data-testid="hi-theory-traj-3-improvement_validity"]').attributes('title')).toContain('线上回归')
+    expect(w.find('[data-testid="hi-theory-evaluator"]').text()).toContain('有变更')
+    expect(w.find('[data-testid="hi-theory-evaluator"]').text()).toContain('1/2')
+    expect(w.find('[data-testid="hi-theory-residue"]').text()).toContain('现存后继 1 个')
     const strip = w.find('[data-testid="hi-reg-hw-001"]')
     expect(strip.text()).toContain('1/20')
     expect(strip.text()).toContain('未标定')
@@ -319,6 +379,36 @@ describe('HarnessImprovePanel', () => {
     expect(w.find('[data-testid="hi-evolution"]').exists()).toBe(false)
     expect(w.find('[data-testid="hi-reg-hw-001"]').exists()).toBe(false)
     expect(w.find('[data-testid="hi-proposal-hw-001"]').exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('旧服务端的 theory 不带 trajectory：联合判定块与回滚残留行不渲染，其余读数照常（2026-11-26）', async () => {
+    const legacy = JSON.parse(JSON.stringify(overview))
+    delete legacy.evolution.theory.trajectory
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(legacy)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w.find('[data-testid="hi-theory-decay"]').exists()).toBe(true)
+    expect(w.find('[data-testid="hi-theory-trajectory"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-theory-trajectory-note"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-theory-traj-table"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-theory-residue"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('进化曲线给已回滚的后继留点：回滚点带回滚样式与标记（2026-11-26）', async () => {
+    const withRolled = JSON.parse(JSON.stringify(overview))
+    withRolled.evolution.surfaces[0].timeline.push({
+      round: 3, proposalId: 'hw-002', variantLabel: 'C', promotedAt: '2026-10-03T00:00:00Z', rolledBack: true,
+      passAt1: 0.65, tokens: 900, costUsd: 0.9, noiseDelta: 0.02, passAt1Delta: -0.05,
+    })
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(withRolled)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const dots = w.findAll('[data-testid="hi-evo-curve-system_prompt"] circle')
+    expect(dots).toHaveLength(3)
+    expect(dots.filter((d) => d.classes('hi__curveDot--rolledBack'))).toHaveLength(1)
+    expect(dots[2].find('title').text()).toContain('已回滚')
     w.unmount()
   })
 

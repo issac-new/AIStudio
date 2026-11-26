@@ -30,7 +30,7 @@
 | RRSI: Regularized Recursive Self-Improvement of Agent Harnesses | 2026 | 2609.24972 | 把正则化落在搜索过程而非编辑空间；退火编辑预算、历史感知提案、泄漏批评者、噪声地板、成本规则、剪枝 | 改进实验台七机制的原始出处；已落地 | 已核验摘要与作者 |
 | Harness-Delta Attribution: Dissecting Gains From Harness Evolution | 2026 | 2610.22466 | 把 harness 演化增益拆成过拟合/测试时算力/残差；21 个设置中过拟合平均 54%、算力 14% | 晋级门加「等预算基线归因」；本轮已落 D1 | 已核验摘要 |
 | Rethinking the Evaluation of Harness Evolution for Agents | 2026 | 2607.12227 | 现有评测缺等预算基线、训练/测试信号混用；Terminal-Bench 2.1 上 harness 演化打不过简单并行采样 | 探测必须带同预算基线；pass@1 为主、pass@k 仅诊断 | 已核验摘要 |
-| Trustworthy Recursive Self-Improvement in the Era of Large Models | 2026 | 2610.35193 | 首个可信 RSI 系统综述；三透镜（改进有效性/约束保持/有效监督）+ S1–S4 + RI | 约束保持门；监督能力自查；递归深度锁 1 | 已核验摘要 |
+| Trustworthy Recursive Self-Improvement in the Era of Large Models | 2026 | 2610.35193 | 可信 RSI 系统综述（82 页）：三个分析角色（改进有效性/约束保持/有效监督）+ S1–S4 + RI；主张分更新、后继、元改进三层；图 8 对 20 项研究 × 13 个证据维度编码，公平、隐私、干预与「修订后的改进器产出的更新」大面积未评估 | 约束保持门；监督能力自查；递归深度锁 1；后继轨迹联合判定；评估器溯源；回滚到达派生物；主张层级证据图（后四项见 `2026-11-26-trustworthy-rsi-fulltext.md`） | 已核验全文（正文 p4–56 与附录 p80–82；图 8、图 9、表 8 另渲染原页核对） |
 | A Survey of Self-Evolving Agents: What, When, How, and Where to Evolve | 2025-2026 | 2507.21046 | 四维分类学：演进对象（模型/记忆/工具/架构）、时序（测试内/测试间）、算法、场景 | RSI 成熟度分级可对齐四维；避免只盯提示词一层 | 已核验摘要 |
 | Bad Genius: Counterfactual-Guided Harness Evolution Beyond Task-Specific Shortcuts | 2026 | 2609.18366 | CHASE：用「保持任务语义、变换执行协议」的反事实基准检验增益是否崩塌 | 泄漏扫描从静态文本匹配升级为可执行反事实 | 已核验摘要 |
 | Darwin Gödel Machine | 2025 | 2505.22954 | 经验验证替代数学证明；档案采样（低分祖先也可当父代）；SWE-bench 20%→50% | 冠军链改档案 DAG，保留被拒分支作垫脚石 | 已核验摘要 |

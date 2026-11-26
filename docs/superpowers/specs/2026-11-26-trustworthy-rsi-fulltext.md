@@ -1,0 +1,83 @@
+# 可信递归自我改进综述正文级吸收：后继轨迹联合判定、回滚残留面、评估者溯源、主张层级证据图（2026-11-26）
+
+> 状态：已实施（用户指令「深入调研 https://mp.weixin.qq.com/s/oZmVpSe23azAg3xSH3OQgw 完善AIStudio」）
+> 来源：《Trustworthy Recursive Self-Improvement in the Era of Large Models: Foundation, Risks, Evaluation and Open Challenges》（中国人民大学高瓴人工智能学院＋中国科学院大学，arXiv 2610.35193v1，82 页）；公众号导读《82页重磅RSI综述！拆解AI可信自我改进难题》（模智空间 2026-10-30）。
+> 采集精度：正文级。PDF 全文按页提取（正文 p4–56、附录 p80–82），图 8、图 9、表 8 另渲染原页核对。
+> 同源说明：本综述在 2026-10-31 日常调研轮只做到「已核验摘要」（`docs/reports/2026-10-31-rsi-survey-and-tech-stack.md` §三），当时落地约束保持门 D5。本轮是同一来源的第二轮，只做摘要级看不到、且仓内对账确认缺失的内容。
+
+## 变更
+
+### 调研结论（四个决定性发现）
+
+1. **只看终点会漏掉中间版本的失败。** 综述要求后继序列保留失败分支并维护带版本的记录（§7.2，p46–47）；联合判定的口径是：声明视界内每个计划评估点上全部必需要求都成立，轨迹才算通过，中间任一代出现违规，首末两代都达标也不算（§7.3，p48）。图 8 对 20 项研究 × 13 个证据维度的 260 格编码显示：任务性能一行几乎全部已评估，公平、隐私、干预三行大面积未评估，「由修订后的改进器产出的更新」一行只有 2 项研究评估（p44）。
+2. **回滚必须到达派生物。** 源记录删除后派生技能仍然存活；综述要求恢复覆盖受影响的技能、记忆与外部产物，并区分「只清源头」与「源头加后代一起清」（§8.1.3，p50；§8.2.3，p52；表 6，p40；§5.3.4，p34）。
+3. **评估器变了，分数就不能直接比。** 综述要求记录每个评估器的数据、提示、代码与修改权；评估器变更后对同一批冻结快照重评，才恢复可比性（§7.3，p47；§3.3.3，p20；§8.2.2，p52）。
+4. **主张分三层，各要不同的证据，未评估要显式写出来。** 更新层、后继层、元改进层（§2.3，p14）；表 8 给出八组要求的纵向检查清单，并要求把不完整的联合评估标为未评估（p48–49）。综述统计 114 项研究里 26 项自称改进了改进流程，其中只有 4 项用相同起点与匹配预算比较了新旧改进器（§7.2，p47）。
+
+### 仓内对账（基线 main b6b93c207）
+
+| 发现 | 仓内现状（锚） | 净缺口 |
+|---|---|---|
+| 1 后继序列 | `rollbackProposal` 直接删除冠军记录（`service.ts:1093`）；进化时间线只由冠军记录构造（`loop-advice-evolution.ts:213-233`）。类型里的 `rolledBack` 字段与面板的回滚点样式都在，但数据永远不带回滚轮 | 曲线与收缩系数估计只看幸存者；没有轨迹级联合判定，也没有未评估标注 |
+| 2 回滚残留 | 回滚只把该提案写入的经验条目退役（`service.ts:1101-1107`）；组件库条目保留，`selectDonors` 只看增益是否为正（`component-library.ts:268-285`），不看来源提案是否已回滚；起草器只接受 offered 列表（`service.ts:553-556`） | 已回滚的零件可以被再次注入新提案；残留范围不可见 |
+| 3 评估者溯源 | 评测运行已冻结试卷指纹 `setHash`、版本 `setRevision` 与裁判指纹 `judgeFingerprint`（`eval/types.ts:602-623`），探针适配器 `readEvalEvidence` 没有把它们带进 `ProbeMetrics`（`evidence.ts:7-35`） | 跨轮通过率在评估条件变更后仍被直接比较 |
+| 4 主张层级 | `rsi-lifecycle.ts` 回答「每条环路缺哪段」，`rsi-maturity.ts` 回答「到几级」 | 没有「更新、后继、元改进三层 × 八组要求」的证据图；公平、隐私、元改进层的未评估是静默的 |
+
+已覆盖、本轮不重做的部分：更新层的独立报告（密封留出集、等预算基线、反事实变体、噪声标定）；「继承的改动被调用并遵从」的执行证迹；回滚写盘的漂移拒绝（`apply.ts:110-112`、`128-130`）；候选可写根只到 `profiles`、`skills` 与 `harness-schedule.json`（`surface-registry.ts:344-378`），审批、审计、留出集、评测库都在候选写不到的目录；递归深度锁 1（`rsi-maturity.ts:155-157`）。
+
+### 交付
+
+- 新增 `custom/server/harness/workbench/loop-joint-evidence.ts`：纯函数。`successorSequence` 按晋级时间列出某面的全部后继（含已回滚）；`trajectoryAudit` 对每个后继按三个角色定态并给出轨迹联合判定；`evaluatorDrift` 找出相邻后继之间评估条件的变更；`rollbackResidue` 统计已回滚提案在组件库与后继里的残留；`buildTrajectoryReport` 装配。
+- `loop-advice-evolution.ts`：时间线补入已回滚的后继（`rolledBack: true`），轮次按晋级时间重排。
+- `types.ts`：`ProbeMetrics.evaluator`（可选）；`RsiTheoryReport.trajectory`；轨迹相关类型。
+- `evidence.ts`：`readEvalEvidence` 带入试卷指纹与裁判指纹。
+- `component-library.ts`、`service.ts`：`selectDonors` 接收回滚来源表，来自已回滚提案的 donor 带标注；起草提示里的 donor 行写明来源已回滚与原因。
+- `rsi-lifecycle.ts`：报告增加 `claimLevels`（八组要求 × 三层的声明式证据图）。
+- 客户端：`governance/api/workbench.ts` 类型；`HarnessImprovePanel.vue` 的「RSI 数学体检」块下增加「后继轨迹联合判定」；`RsiLifecycleSection.vue` 增加主张层级证据表；i18n 中英成对。
+- 测试：`custom/server/harness/workbench/__tests__/loop-joint-evidence.test.ts`（新）；`four-paper-absorption.test.ts` 补 donor 回滚标注用例；`rsi-lifecycle.test.ts`、`harness-controller.test.ts`、`harness-improve-panel.test.ts` 各补用例；`custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`（新）。
+
+### 验收判据
+
+验收方式：下面五条逐条由测试锁定，命令与结果见「验证」一节。
+
+- 已回滚的后继出现在时间线里，轮次连续，未回滚轮数不变。
+- 轨迹联合判定三种结论各有用例：任一后继任一角色判失败即不通过并给出首个失败轮；没有失败但有未评估即未评估并给出首个未评估轮；全部已评估才通过。没有后继时结论是未评估，不是通过。
+- 相邻后继的试卷或裁判指纹任一字段变更即记一次变更并逐字段列出；任一侧缺指纹记为未知，不按相同处理。
+- 已回滚提案的组件库条目数与直接继承它的现存后继数可从报告读出；来自已回滚提案的 donor 带标注。
+- 证据图八行三列齐全，已评估与部分的格子必须带存在的锚点。
+
+## 决策记录
+
+| # | 决策 | 理由 | 否决的备选 | 可逆 |
+|---|---|---|---|---|
+| D1 | 全批只做只读诊断，不加门码 | 遵守 2026-11-01「机制扩展停止」裁定：判断规则不再增加 | 给回滚残留或评估条件变更加 blocker（否决：新规则没有退役路径） | 是 |
+| D2 | 时间线补入已回滚后继 | 类型字段与面板回滚点样式早已为此设计，只是回滚实现删了冠军记录，数据到不了；消费者都已按未回滚过滤，补入只影响展示与诊断 | 另建一份后继序列端点（否决：两份序列会漂移） | 是 |
+| D3 | 回滚残留先可见、不隔离 | 设计正本写明「整机冠军会随回滚消失，零件库不会」；是否停止提供已回滚来源的 donor 是对这条设计的修改，交人裁决 | 直接从 offered 里剔除（否决：未经裁决改行为） | 是 |
+| D4 | 联合判定里未评估是一等结论 | 综述要求把不完整的联合评估标为未评估；约束断言默认不强制记录，多数轨迹的真实状态就是未评估 | 把缺证据按通过处理（否决：造假） | 是 |
+| D5 | 评估条件比较只在相邻后继之间做，缺指纹记未知 | 历史探针没有指纹，推定相同没有依据 | 用当前评测集配置回填历史（否决：事后值不代表当时） | 是 |
+| D6 | 证据图是声明式盘点，锚点由测试抽查 | 与生命周期矩阵同范式；运行时探测答不了「哪类主张从未被评估」 | 运行时探测（否决：公平、隐私两类没有可探测的读数） | 是 |
+| D7 | 元改进层如实标未评估 | 递归深度锁 1，改进机制不被候选改写，配对延续实验在仓内不适用；这是设计取舍不是欠账 | 标已评估（否决：没有做过实验） | 是 |
+| D8 | 收缩系数只用未回滚的后继估，时间线仍列出回滚轮 | 回滚轮的增益没有站住，混入会高估每轮收益；时间线保留回滚轮供人看到中间版本的失败 | 全部后继一起估（否决：与只取站住的增益相矛盾） | 是 |
+| D9 | 已回滚的后继在改进有效性一格记不满足，并带回滚原因 | 回滚是系统自己认定这次采纳不该成立；联合判定要求每个版本都成立，原因留给人和核对 | 回滚轮留空不计（否决：等于把一次失败从轨迹里抹掉） | 是 |
+| D10 | 改进有效性要有独立留出集读数才算评估过；有效监督只做结构检查 | 演化集读数参与了候选筛选，不能同时当独立证据；回滚效果没有实测面，结构检查不冒充实测 | 有增益读数即记满足（否决：把未经独立确认的增益写成成立） | 是 |
+
+## 验证
+
+- `custom/server/harness/workbench/__tests__/loop-joint-evidence.test.ts`（28 例，新增）：后继序列含已回滚且按时间排序、没有晋级记录的回滚提案不计；三个角色的定态分支（回滚、风险否决、质量退化、回归失败、留出回落、通过率下降；断言失败、安全读数下降；无批准、写盘后无快照）；联合判定三种结论与两个首见轮、不满足优先于未评估、没有后继按未评估计；评估条件变更的逐字段列出、缺指纹、只有版本号变更；回滚残留的三种情形；空台账不编造数字；进化报告集成（时间线含回滚轮、未回滚轮数不变、收缩系数剔除回滚轮、组件库条目按库计数）；评估条件指纹取冻结值。
+- `custom/server/harness/workbench/__tests__/four-paper-absorption.test.ts`（+1 例）：来自已回滚提案的 donor 带标注且仍在 offered 里，来源在位的没有标注。
+- `custom/server/harness/__tests__/rsi-lifecycle.test.ts`（+4 例）：证据图八行三列无重复、格态枚举、已评估与部分格子的锚点指向真实路径、汇总计数一致、元改进层五格未评估。
+- `custom/server/harness/__tests__/harness-controller.test.ts`（既有用例补断言）：`/api/harness/rsi-lifecycle` 返回 24 格且计数一致。
+- `custom/client/ia2/__tests__/harness-improve-panel.test.ts`（+2 例）：联合判定结论、回滚后继数、逐版本三角色格态、评估条件变更、回滚残留；旧载荷缺 trajectory 不渲染；曲线给回滚后继留点并带回滚样式。
+- `custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`（4 例，新增）：八行三列与汇总、旧载荷不渲染、缺格显示「—」、接口失败不编造。
+- 目标测试命令：`npx vitest run custom/server/harness/workbench custom/server/harness/__tests__/rsi-lifecycle.test.ts custom/server/harness/__tests__/harness-controller.test.ts custom/client/ia2/__tests__/harness-improve-panel.test.ts custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`——27 个文件 333 例通过。
+- 合并前回归：`npm run regress -- --scope merge`——15 个面 15 通过、0 失败、0 未执行；其中根 vitest 1269 个文件通过、6 个跳过，10329 例通过、11 例跳过、0 失败（本批新增 39 例）；类型检查与客户端类型棘轮（15 ≤ 基线 19）通过。
+- 静态门：机制预算 lint 0 problem；文档索引 777 份 0 problem；合并不变量通过。
+
+## 设计文档影响
+
+DESIGN_SYNC: touched
+
+- `docs/DESIGN.md`（整合正本 §4.8）：改进环路一段补后继轨迹的读法——时间线含已回滚的后继；联合判定三种结论；评估条件变更后分数不直接比较；回滚后的残留范围可见。
+- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：§A 增两行（后继轨迹联合判定、主张层级证据图）。
+- `docs/manuals/aistudio-design-document-index.md`：`gen-doc-indexes --write` 机械登记。
+- `config/mechanism-budget.json`：`changes[]` 增一条（零类别增量，附退役条件）。

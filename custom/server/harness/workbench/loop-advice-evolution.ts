@@ -5,6 +5,8 @@ import type { RsiConfig } from './loop-config'
 import { pruneSignal, stallDetection } from './loop-advice-hypothesis'
 import { verificationTierOf } from './loop-advice-tier'
 import { buildTheoryReport } from './loop-theory'
+import { successorMarks } from './loop-joint-evidence'
+import type { ComponentEntry } from './component-library'
 import type {
   BehaviorContrast, Champion, ClassAttribution, EditClass, EvolutionReport, EvolutionRound, EvolutionSurface, ProbeMetrics,
   Proposal, ProposalStatus, RetirementCandidate, SurfaceKey,
@@ -211,19 +213,24 @@ export function evolutionSurfaceReport(
   cfg: RsiConfig,
 ): EvolutionSurface {
   const mine = proposals.filter((p) => p.surfaceKey === surfaceKey)
-  const champChain = champions
-    .filter((c) => c.surfaceKey === surfaceKey)
-    .sort((a, b) => (a.promotedAt < b.promotedAt ? -1 : 1))
   const byId = new Map(mine.map((p) => [p.id, p]))
-  const timeline: EvolutionRound[] = champChain.map((c, idx) => {
-    const p = byId.get(c.proposalId)
+  // 2026-11-26 可信 RSI 正文级轮：时间线列出全部后继，含后来被回滚的——只看幸存者会漏掉
+  // 中间版本的失败（综述 §7.2）。回滚实现删了冠军记录，已回滚的后继从提案的晋级记录恢复。
+  const marks = successorMarks(surfaceKey, proposals, champions)
+  const labelOf = new Map<string, string>()
+  for (const c of champions) {
+    if (c.surfaceKey === surfaceKey) labelOf.set(c.proposalId, c.label)
+  }
+  const timeline: EvolutionRound[] = marks.map((m, idx) => {
+    const p = byId.get(m.proposalId)
     const ev = p ? selectedEvidenceOf(p) : null
+    const selected = p ? composedVariant(p) : null
     return {
       round: idx + 1,
-      proposalId: c.proposalId,
-      variantLabel: c.label,
-      promotedAt: c.promotedAt,
-      rolledBack: c.rolledBack === true,
+      proposalId: m.proposalId,
+      variantLabel: labelOf.get(m.proposalId) ?? selected?.label ?? p?.title ?? m.proposalId,
+      promotedAt: m.promotedAt,
+      rolledBack: m.rolledBack,
       passAt1: ev?.evidence.passAt1 ?? null,
       tokens: ev?.evidence.tokens ?? null,
       costUsd: ev?.evidence.costUsd ?? null,
@@ -263,6 +270,7 @@ export function evolutionReport(
   proposals: Proposal[],
   champions: Champion[],
   cfg: RsiConfig = rsiConfig(),
+  extra: { libraryEntries?: ComponentEntry[] | null } = {},
 ): EvolutionReport {
   const surfaces = surfaceKeys
     .map((key) => evolutionSurfaceReport(key, proposals, champions, cfg))
@@ -283,7 +291,7 @@ export function evolutionReport(
     retirementCandidates: retirementCandidates(surfaces),
     classAttribution: attribution.rows,
     seesawSuspected: attribution.seesawSuspected,
-    theory: buildTheoryReport({ surfaces, proposals, champions }),
+    theory: buildTheoryReport({ surfaces, proposals, champions, libraryEntries: extra.libraryEntries ?? null }),
   }
 }
 

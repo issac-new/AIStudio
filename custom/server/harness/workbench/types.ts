@@ -209,6 +209,16 @@ export interface ProbeMetrics {
   safetyRate?: number | null
   /** 留出集基线读数（可选）：只有它与会话内基线都在，才算得出增益保留率。 */
   heldoutBaselinePassRate?: number | null
+  /**
+   * 评估条件指纹（2026-11-26 可信 RSI 正文级轮）：试卷内容指纹与裁判指纹，取自评测运行
+   * 起跑时的冻结值。评估器换过之后，前后两轮的通过率不能直接比较。
+   * 缺席＝历史探针没有带出来，比较时按未知处理，不按相同处理。
+   */
+  evaluator?: {
+    setHash: string | null
+    setRevision?: number | null
+    judge?: { models: string[]; backend: string; tauYes: number; tauNo: number } | null
+  } | null
 }
 
 export type QualityVerdict = 'improved' | 'regressed' | 'neutral' | 'unknown'
@@ -624,6 +634,110 @@ export interface RsiTheoryReport {
   surfaces: Array<{ surfaceKey: SurfaceKey; decay: DecayAudit }>
   proxyDivergence: ProxyDivergenceAudit
   selectionBias: Array<{ proposalId: string; surfaceKey: SurfaceKey; audit: SelectionBiasAudit }>
+  /** 后继轨迹联合判定、评估条件变更、回滚残留（2026-11-26 可信 RSI 正文级轮）。 */
+  trajectory?: TrajectoryReport
+  note: string
+}
+
+// ---------- 后继轨迹联合判定（2026-11-26 可信 RSI 正文级轮；只读，零门码） ----------
+
+/** 综述的三个分析角色；它们互补，不是改进流程的三个阶段。 */
+export type TrustRole = 'improvement_validity' | 'constraint_preservation' | 'effective_oversight'
+
+/** pass＝有读数且满足；fail＝有读数且不满足；not_evaluated＝没有可判定的证据。 */
+export type TrajectoryCellStatus = 'pass' | 'fail' | 'not_evaluated'
+
+export type TrajectoryVerdict = 'pass' | 'fail' | 'not_evaluated'
+
+/** 后继序列里的一个版本：一次被采纳的修改，含后来被回滚的。 */
+export interface SuccessorStep {
+  /** 按采纳时间从 1 起编，已回滚的版本也占号。 */
+  round: number
+  proposalId: string
+  promotedAt: string
+  rolledBack: boolean
+  rollbackReason: string | null
+  cells: Record<TrustRole, TrajectoryCellStatus>
+  /** 每个角色的判定依据（人读）。 */
+  reasons: Record<TrustRole, string>
+}
+
+export interface TrajectoryFirstHit {
+  round: number
+  proposalId: string
+  role: TrustRole
+  reason: string
+}
+
+export interface TrajectoryAudit {
+  surfaceKey: SurfaceKey
+  steps: SuccessorStep[]
+  /** 各角色的格态计数。 */
+  roleCounts: Record<TrustRole, Record<TrajectoryCellStatus, number>>
+  verdict: TrajectoryVerdict
+  /** 判失败时第一个失败的版本与角色；没有失败则为 null。 */
+  firstFail: TrajectoryFirstHit | null
+  /** 没有失败但有未评估时，第一个未评估的版本与角色；否则为 null。 */
+  firstUnevaluated: TrajectoryFirstHit | null
+  /** 该面相邻后继之间的评估条件变更（不同面用不同评测集，不跨面合并）。 */
+  evaluatorDrift: EvaluatorDriftAudit
+  note: string
+}
+
+export interface EvaluatorFingerprint {
+  setHash: string | null
+  setRevision?: number | null
+  judge?: { models: string[]; backend: string; tauYes: number; tauNo: number } | null
+}
+
+export interface EvaluatorChange {
+  fromRound: number
+  toRound: number
+  /** 发生变更的字段：setHash／setRevision／judge。 */
+  fields: string[]
+  from: EvaluatorFingerprint
+  to: EvaluatorFingerprint
+}
+
+export interface EvaluatorDriftAudit {
+  /** 后继对数。 */
+  pairs: number
+  /** 至少比较了一个字段的后继对数。 */
+  compared: number
+  changes: EvaluatorChange[]
+  /** 无法比较的后继对及缺失的字段。 */
+  unknownPairs: Array<{ fromRound: number; toRound: number; fields: string[] }>
+  changed: number
+  unknown: number
+  verdict: 'insufficient' | 'unknown' | 'stable' | 'changed'
+  note: string
+}
+
+export interface RollbackResidueRow {
+  proposalId: string
+  title: string
+  rolledBackAt: string | null
+  reason: string | null
+  /** 组件库里来自该提案的条目数；组件库未接入时为 null。 */
+  componentEntries: number | null
+  /** 直接引用了这些条目的现存后继提案号。 */
+  inheritedBy: string[]
+}
+
+export interface RollbackResidueAudit {
+  rolledBack: number
+  rows: RollbackResidueRow[]
+  /** 组件库里来自已回滚提案的条目总数；组件库未接入时为 null。 */
+  componentEntries: number | null
+  /** 引用了上述条目的现存后继个数。 */
+  inheritedBy: number
+  libraryProvided: boolean
+  note: string
+}
+
+export interface TrajectoryReport {
+  surfaces: TrajectoryAudit[]
+  rollbackResidue: RollbackResidueAudit
   note: string
 }
 

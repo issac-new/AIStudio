@@ -292,6 +292,56 @@ export interface SelectionBiasAuditDto {
   note: string
 }
 
+export type TrustRoleDto = 'improvement_validity' | 'constraint_preservation' | 'effective_oversight'
+export type TrajectoryCellStatusDto = 'pass' | 'fail' | 'not_evaluated'
+
+/** 后继轨迹联合判定（2026-11-26 可信 RSI 正文级轮）：只读诊断。 */
+export interface TrajectoryDto {
+  surfaces: Array<{
+    surfaceKey: SurfaceKey
+    steps: Array<{
+      round: number
+      proposalId: string
+      promotedAt: string
+      rolledBack: boolean
+      rollbackReason: string | null
+      cells: Record<TrustRoleDto, TrajectoryCellStatusDto>
+      reasons: Record<TrustRoleDto, string>
+    }>
+    roleCounts: Record<TrustRoleDto, Record<TrajectoryCellStatusDto, number>>
+    verdict: 'pass' | 'fail' | 'not_evaluated'
+    firstFail: { round: number; proposalId: string; role: TrustRoleDto; reason: string } | null
+    firstUnevaluated: { round: number; proposalId: string; role: TrustRoleDto; reason: string } | null
+    evaluatorDrift: {
+      pairs: number
+      compared: number
+      changes: Array<{ fromRound: number; toRound: number; fields: string[] }>
+      unknownPairs: Array<{ fromRound: number; toRound: number; fields: string[] }>
+      changed: number
+      unknown: number
+      verdict: 'insufficient' | 'unknown' | 'stable' | 'changed'
+      note: string
+    }
+    note: string
+  }>
+  rollbackResidue: {
+    rolledBack: number
+    rows: Array<{
+      proposalId: string
+      title: string
+      rolledBackAt: string | null
+      reason: string | null
+      componentEntries: number | null
+      inheritedBy: string[]
+    }>
+    componentEntries: number | null
+    inheritedBy: number
+    libraryProvided: boolean
+    note: string
+  }
+  note: string
+}
+
 export interface TheoryDto {
   surfaces: Array<{ surfaceKey: SurfaceKey; decay: DecayAuditDto }>
   proxyDivergence: {
@@ -302,6 +352,8 @@ export interface TheoryDto {
     note: string
   }
   selectionBias: Array<{ proposalId: string; surfaceKey: SurfaceKey; audit: SelectionBiasAuditDto }>
+  /** 旧服务端不带该字段，面板按缺席处理。 */
+  trajectory?: TrajectoryDto
   note: string
 }
 

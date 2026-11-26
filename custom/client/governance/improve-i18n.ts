@@ -222,6 +222,25 @@ export interface ImproveCopy {
   theoryProxyDiverging: string
   theoryProxyInsufficient: string
   theorySelection: string
+  trajTitle: string
+  trajVerdictPass: string
+  trajVerdictFail: string
+  trajVerdictUnevaluated: string
+  trajSuccessors: string
+  trajRound: string
+  trajProposal: string
+  trajRoleValidity: string
+  trajRoleConstraint: string
+  trajRoleOversight: string
+  trajCellPass: string
+  trajCellFail: string
+  trajCellUnevaluated: string
+  theoryEvaluator: string
+  theoryEvaluatorStable: string
+  theoryEvaluatorChanged: string
+  theoryEvaluatorUnknown: string
+  theoryEvaluatorInsufficient: string
+  theoryResidue: string
   regTitle: string
   regSub: string
   regRound: string
@@ -493,6 +512,25 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     theoryProxyDiverging: '连续背离（过拟合倾向）',
     theoryProxyInsufficient: '样本不足',
     theorySelection: '多候选未确认',
+    trajTitle: '后继轨迹联合判定',
+    trajVerdictPass: '通过',
+    trajVerdictFail: '不通过',
+    trajVerdictUnevaluated: '未评估',
+    trajSuccessors: '后继',
+    trajRound: '轮次',
+    trajProposal: '提案',
+    trajRoleValidity: '改进有效性',
+    trajRoleConstraint: '约束保持',
+    trajRoleOversight: '有效监督',
+    trajCellPass: '满足',
+    trajCellFail: '不满足',
+    trajCellUnevaluated: '未评估',
+    theoryEvaluator: '评估条件（相邻后继之间）',
+    theoryEvaluatorStable: '指纹一致',
+    theoryEvaluatorChanged: '有变更，两侧分数不能直接比',
+    theoryEvaluatorUnknown: '无法比较（缺指纹）',
+    theoryEvaluatorInsufficient: '样本不足',
+    theoryResidue: '回滚残留',
     regTitle: '正则化读数（按面）',
     regSub: 't=该面已采纳轮次；编辑预算随轮次余弦退火（后期强制少捆绑，让每次变化可归因）。',
     regRound: '轮次 t',
@@ -763,6 +801,25 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     theoryProxyDiverging: 'Consecutive divergence (overfit tendency)',
     theoryProxyInsufficient: 'Insufficient',
     theorySelection: 'Multi-candidate unconfirmed',
+    trajTitle: 'Successor trajectory joint verdict',
+    trajVerdictPass: 'Pass',
+    trajVerdictFail: 'Fail',
+    trajVerdictUnevaluated: 'Not evaluated',
+    trajSuccessors: 'successors',
+    trajRound: 'Round',
+    trajProposal: 'Proposal',
+    trajRoleValidity: 'Improvement validity',
+    trajRoleConstraint: 'Constraint preservation',
+    trajRoleOversight: 'Effective oversight',
+    trajCellPass: 'Met',
+    trajCellFail: 'Not met',
+    trajCellUnevaluated: 'Not evaluated',
+    theoryEvaluator: 'Evaluation conditions (between adjacent successors)',
+    theoryEvaluatorStable: 'fingerprints match',
+    theoryEvaluatorChanged: 'changed; scores on the two sides are not directly comparable',
+    theoryEvaluatorUnknown: 'not comparable (fingerprints missing)',
+    theoryEvaluatorInsufficient: 'Insufficient',
+    theoryResidue: 'Rollback residue',
     regTitle: 'Regularization by surface',
     regSub: 't = accepted rounds on the surface; the edit budget anneals with t (fewer bundled edits later, so each change stays attributable).',
     regRound: 'Round t',

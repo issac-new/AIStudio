@@ -2,7 +2,27 @@
 // 探测证据适配器：从 Eval Studio 的真实运行拉取读数。
 // 纪律：找不到运行 / 没有聚合 → 返回 null，由服务层 400 拒绝；绝不接受手填指标。
 import { getRun, getSet, getSetRevision } from '../../eval/store'
+import type { EvalRun } from '../../eval/types'
 import type { ProbeMetrics, RegressionEvidence } from './types'
+
+/**
+ * 评估条件指纹（2026-11-26 可信 RSI 正文级轮）：取评测运行起跑时冻结的试卷指纹与裁判指纹。
+ * 运行没带的项记 null——比较时按无法比较处理，不按相同。
+ */
+export function evaluatorOfRun(run: Pick<EvalRun, 'setHash' | 'setRevision' | 'judgeFingerprint'>): NonNullable<ProbeMetrics['evaluator']> {
+  return {
+    setHash: run.setHash ?? null,
+    setRevision: run.setRevision ?? null,
+    judge: run.judgeFingerprint
+      ? {
+          models: [...run.judgeFingerprint.models],
+          backend: run.judgeFingerprint.backend,
+          tauYes: run.judgeFingerprint.tauYes,
+          tauNo: run.judgeFingerprint.tauNo,
+        }
+      : null,
+  }
+}
 
 export function readEvalEvidence(runId: string): ProbeMetrics | null {
   const id = String(runId ?? '').trim()
@@ -15,6 +35,7 @@ export function readEvalEvidence(runId: string): ProbeMetrics | null {
     setId: run.setId,
     setRevision: run.setRevision,
     evidenceMode: run.evidenceMode ?? 'explicit',
+    evaluator: evaluatorOfRun(run),
     k: run.k,
     passAt1: a.passAt1,
     passAtK: a.passAtK,

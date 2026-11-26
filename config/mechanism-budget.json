@@ -11,6 +11,19 @@
   "changes": [
     {
       "at": "2026-11-26",
+      "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（可信 RSI 诊断只作报告字段与面板读数，不入四类别）",
+      "reason": "可信递归自我改进综述正文级吸收轮（spec 2026-11-26-trustworthy-rsi-fulltext）：loop-joint-evidence.ts 纯函数诊断（后继轨迹联合判定、评估条件变更、回滚残留）、进化时间线补入已回滚的后继、探针带出评估条件指纹、已回滚来源的组件库 donor 带标注、生命周期审计端点附主张层级证据图。零新增门码、脚本与账本；遵守 2026-11-01 机制扩展停止裁定",
+      "pairedRemovals": [
+        "诊断并入既有进化报告与生命周期审计端点（可选字段）不加新门、新端点；面板复用既有 HarnessImprovePanel 与 RsiLifecycleSection 不加新页面——零类别增量，无独立退役动作"
+      ],
+      "sunset": {
+        "owner": "可信 RSI 正文级吸收轮（2026-11-26-trustworthy-rsi-fulltext）",
+        "reviewBy": "2027-02-26",
+        "retireWhen": "连续两轮推演无消费（面板读数无人看且无下游引用），或人裁决停止提供已回滚来源的 donor 使回滚残留面失去对象时，并入 loop-theory 或本 spec 附录"
+      }
+    },
+    {
+      "at": "2026-11-26",
       "delta": "+1 脚本（scripts/regression/run-ide-smoke-face.mjs 走查面包装）",
       "reason": "ide-smoke 走查收编为回归矩阵强制面（spec 2026-11-26-full-retro-design-revision-batch 批 B，决策 D3）",
       "pairedRemovals": [
