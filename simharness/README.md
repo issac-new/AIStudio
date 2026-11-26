@@ -4,7 +4,7 @@
 
 **P4 归档预备态（2026-11-21 P2-P4 收尾批）**：能力面已全部产品化——P1 对账（simrun 监督域三端点＋/app/sim 六面板＋graph-rest 全套）、P2/P3 本批（场景库＋拍摄位注册表 REST 投影，补丁 811）、驱动绑定在案（supervisor `spawnDriver` 直 spawn aipay-scenario.sh，产品端点 start→真实驱动）。**归档执行挂 SIM 重建端到端验证**（实体缺席，验收不可伪）；届时场景/capture-plan 数据随归档迁移，REST 端点按 fail-soft 空态语义继续可用。主驱动脚本按 26 步推进，六道强制关卡（G1 需求冻结到 G6 复盘）不过不放行，全部结论带代码提交号+任务卡号双凭证。
 
-> **运行基面现状（2026-11-21 状态同步批）**：SIM 实体环境已随 2026-11-18 归档轮拆除（SIM_ROOT 仅剩 logs/，42 profile 与 agent-src 供给不在）；下次推演由 `mux/mx-setup.sh` 从零重建，重建即对齐宿主当前基面（hermes-agent v0.23.3＋runtime 清单 71 件，含 watchdog hostile-load 热修承载）。程序本体无需版本适配：4d config 盖章走产品自身 `migrate_config` 幂等迁移（版本自适应），agent 供给链 `deploy-agent-runtime --runtime` 独立于宿主安装树。
+> **运行基面现状（2026-11-26 run32 同步批）**：SIM 实体环境维持 2026-11-18 归档轮拆除态；开跑前由 `mux/mx-setup.sh` 从零重建。推演执行基线随仓内 vendor 基线进位：hermes-agent v0.23.4（8fc0374447）＋runtime 清单（热修承载在内）。**快照源（2026-11-26 新增开关）**：宿主 `~/.hermes/hermes-agent` 覆盖层有 31 件滞后（H-1 待裁决）——run32 起供给缺省走仓内基线导出：`HERMES_AGENT_SRC_PRISTINE=1 bash mux/mx-setup.sh`（`git archive` 基线→打补丁→runtime 部署，与注入态等价；`=0` 或 unset 回落宿主快照源）。程序本体无需版本适配：4d config 盖章走产品自身 `migrate_config` 幂等迁移（版本自适应），agent 供给链 `deploy-agent-runtime --runtime` 独立于宿主安装树。
 
 与产品本体的关系（2026-10-27 融合批）：六闸判读/判词/熔断/UAT/配对/台账阈值/评测判据/治理指标的计算正本在产品治理域（`custom/server/governance/lifecycle|run-metrics`、`custom/server/eval/e2e-verdict`），本目录经 `mux/governance-client.sh` 调用并落证据（fail-closed：服务不可达=空判词/缺件/阻断，不假过）；启动/脚手架自监测/导演串接/截屏/集群视野/报告撰写保留在此。产品源码在本仓根，`vendor/` 是钉版基线，`custom/` 与 `patches/` 是 AIStudio 二次开发。本目录只消费产品、不改动产品，隔离边界由 `tests/isolation-boundary.test.sh` 三断言看守。推演方案唯一正本=[《AIStudio 全流程推演方案》](../docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)，26 步主链、六道关卡、验收标准都在那里，本 README 不重复。
 

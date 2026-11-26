@@ -33,8 +33,9 @@ fi
 # 白名单=只读消费面（run13 复盘补：custom/qgate 只读 CLI 执行〔release-report 证据〕、
 # runtime/plugins 只读配置读取〔style-charter〕——均为 harness→产品只读方向，非反向依赖；
 # 2026-11-01 补 runtime/hermes_cli：721 建卡幂等两文件定点补位读 runtime 模板，
-# 只写 SIM 快照不写产品仓）
-wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/plugins|runtime/hermes_cli|package\.json|\.overlay-injected|rev-parse'
+# 只写 SIM 快照不写产品仓；2026-11-26 补 archive：pristine 基线导出读 HEAD 子树
+# 〔spec 2026-11-26-run32-plan-sync 决策 2——git archive 只读不写仓，产物落 SIM_ROOT/var〕）
+wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/plugins|runtime/hermes_cli|package\.json|\.overlay-injected|rev-parse|archive'
 bad2=$(grep -rn 'OVERLAY_ROOT' "$HERE"/*.sh "$HERE"/mux/*.sh 2>/dev/null \
   | grep -vE "^\S+:\s*#" \
   | grep '\$OVERLAY_ROOT' | grep -vE "$wl" | head -5 || true)
@@ -45,9 +46,11 @@ else
 fi
 
 # ── ③ 不写产品/上游树 ──
+# 只读动词豁免含 archive（2026-11-26）：git archive 只读对象库写 stdout（pristine 基线
+# 导出，spec 2026-11-26-run32-plan-sync 决策 2），不属写原语。
 bad3=$(grep -rnE '(rm |mv |cp |rsync |tee |git -C )[^#]*\$(OVERLAY_ROOT|NCWK_ROOT)/?(upstream)?' \
   "$HERE"/*.sh "$HERE"/mux/*.sh 2>/dev/null \
-  | grep -vE '^\S+:\s*#|git -C [^#]*\b(rev-parse|log|status|diff|ls-files|grep|show)\b|read-only|只读' | head -5 || true)
+  | grep -vE '^\S+:\s*#|git -C [^#]*\b(rev-parse|log|status|diff|ls-files|grep|show|archive)\b|read-only|只读' | head -5 || true)
 if [[ -n "$bad3" ]]; then
   echo "FAIL ③ harness 写原语指向产品/上游树："; echo "$bad3"; fails=1
 else

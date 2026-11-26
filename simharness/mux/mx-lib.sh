@@ -97,6 +97,13 @@ HERMES_ROOT="$SIM_ROOT/hermes"            # 单 hermes root（gateway 的 HERMES
 AGENT_SRC="$SIM_ROOT/hermes-agent-src"    # SIM 自有 agent 源码快照（隔离轮；mx-setup 供给）
 PRODUCT_DIST="$SIM_ROOT/product-dist"     # SIM 自有 studio 构建快照（隔离轮；mx-setup 供给）
 
+# 派单层逃生（2026-11-26 run32 同步批，方案 §5.17 第 1 条）：补丁 803 起未标层卡缺省
+# 按 T2 执行、派发器认领前验证持久化授权（kanban_db_dispatch.py:2289-2300）——推演建卡
+# 不带层标记，T2 语义下无授权记录即 needs_decision 不派发（全员停摆）。推演组织模型未
+# 接入授权持久化，缺省 T1 恢复 run31 直通语义；env 仅进推演进程树，产品宿主档不变。
+KANBAN_UNMARKED_TIER="${MX_KANBAN_UNMARKED_TIER:-T1}"
+export KANBAN_UNMARKED_TIER
+
 # playwright 浏览器定址（2026-10-28 磁盘水位清扫实测根治）：默认缓存
 # ~/Library/Caches/ms-playwright 当日被宿主水位清扫两次整目录抹除，采集链
 # （r18-frames/capture-ui 族）随之断供。统一锚到 SIM_ROOT 盘外路径（npx
@@ -702,6 +709,8 @@ ensure_studio_up() { # studio 幂等拉起（R31：可先于 gateway——/healt
   ORGLOOP_LEDGER_TSV="${ORGLOOP_LEDGER_TSV:-$MX_LEDGER_LINK}" \
   SIM_BRANCHES_REPO="${SIM_BRANCHES_REPO:-$SIM_ROOT/central/aipaydev}" \
   SIM_ANCHOR_REPO="${SIM_ANCHOR_REPO:-$SIM_ROOT/central/aipaydev}" \
+  SIM_SCENARIOS_ROOT="${SIM_SCENARIOS_ROOT:-$HARNESS_ROOT/simharness/scenarios}" \
+  SIM_CAPTURE_PLAN_PATH="${SIM_CAPTURE_PLAN_PATH:-$HARNESS_ROOT/simharness/mux/capture-plan.env}" \
   HERMES_SKIP_UPDATE=1 HERMES_WEB_UI_HOME="$WEBUI_HOME" HERMES_WEBUI_STATE_DIR="$WEBUI_HOME" \
   AGENT_IDENTITY_STORE="$WEBUI_HOME/agent-identity" HERMES_INCIDENT_TRACE_DIR="$HERMES_ROOT/traces" \
   EVAL_STORE="$WEBUI_HOME/eval" REDTEAM_STORE="$WEBUI_HOME/redteam" HELDOUT_STORE="$WEBUI_HOME/heldout" \
@@ -838,8 +847,54 @@ mx_agent_provision_key() { # <host-tree> <patch-dir> → 快照幂等键
   printf 's%s+p%s\n' "$source_fp" "$patch_fp"
 }
 
+# ── always-on 三 watcher 运行态取证（2026-11-26 run32 同步批，方案 §5.17 第 6 条；
+#    §5.15 第 1 条立法的取证生产方）——开跑段与报告步各调用一次，落
+#    evidence/always-on-watchers.jsonl。只读；日志/台账缺席如实记 0 或 -1（文件缺位）。
+mx_alwayson_watchers_evidence() { # <phase> [evid_dir]
+  local phase="${1:-unknown}" evid="${2:-${EVID_DIR:-}}"
+  [[ -n "$evid" ]] || return 0
+  mkdir -p "$evid" 2>/dev/null || return 0
+  local gl="$LOGS_DIR/gateway.log"
+  local _f=0 _d=0 _dp=0 _dr=0 _drec=-1
+  if [[ -r "$gl" ]]; then
+    _f=$(grep -c 'followup' "$gl" 2>/dev/null) || _f=0
+    _d=$(grep -c 'dreaming' "$gl" 2>/dev/null) || _d=0
+    _dp=$(grep -c 'deferred' "$gl" 2>/dev/null) || _dp=0
+    _dr=$(grep -c 'dream' "$gl" 2>/dev/null) || _dr=0
+  fi
+  local djl="$HERMES_ROOT/approvals/deferred.json"
+  if [[ -r "$djl" ]]; then
+    _drec=$(jq 'length' "$djl" 2>/dev/null) || _drec=-1
+  fi
+  printf '{"at":"%s","phase":"%s","gateway_log":"%s","keywords":{"followup":%s,"dreaming":%s,"deferred":%s,"dream":%s},"deferred_records":%s}\n' \
+    "$(date -u +%FT%TZ)" "$phase" "$gl" "$_f" "$_d" "$_dp" "$_dr" "$_drec" >> "$evid/always-on-watchers.jsonl"
+  log "always-on 取证（${phase}）：followup=${_f} dreaming=${_d} deferred=${_dp} dream=${_dr} deferred_records=${_drec}"
+}
+
 mx_provision_agent_src() {
   local host_tree="${HERMES_AGENT_SRC_FROM:-$HOME/.hermes/hermes-agent}"
+  # pristine 导出源（2026-11-26 run32 同步批，方案 §5.17 第 2 条）：宿主覆盖层漂移
+  # （H-1）期间从本仓基线导出纯净树——git archive 子树后 git 化，后续流程（内容指纹
+  # 建键→拷 tracked→打补丁→runtime 部署）不变。默认仍宿主源；H-1 解决后可回归。
+  if [[ "${HERMES_AGENT_SRC_PRISTINE:-0}" == "1" ]]; then
+    host_tree="$SIM_ROOT/var/agent-pristine"
+    local _pk; _pk="$(mx_agent_patch_content_fp "$PATCH_DIR")"
+    local _hk; _hk="$(git -C "$OVERLAY_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    local _ek="${_hk}-${_pk}"
+    local _cur_ek; _cur_ek=$(_mx_provenance "$SIM_ROOT/var/agent-pristine.provenance.json" --read 2>/dev/null | sed -n 's/.*"export_key": "\([^"]*\)".*/\1/p')
+    if [[ -d "$host_tree/.git" && "$_cur_ek" == "$_ek" ]]; then
+      log "pristine 基线导出已在位（key=${_ek}）——复用"
+    else
+      rm -rf "$host_tree"; mkdir -p "$host_tree"
+      git -C "$OVERLAY_ROOT" archive "HEAD:vendor/hermes-agent" | tar -x -C "$host_tree" \
+        || { rm -rf "$host_tree"; fail "pristine 基线导出失败（git archive vendor/hermes-agent）"; }
+      git -C "$host_tree" init -q && git -C "$host_tree" add -A \
+        && git -C "$host_tree" -c user.name=sim-pristine -c user.email=sim@pristine commit -qm "pristine @ ${_ek}" \
+        || { rm -rf "$host_tree"; fail "pristine 导出 git 化失败"; }
+      _mx_provenance "$SIM_ROOT/var/agent-pristine.provenance.json" "export_key=${_ek}" "overlay_head=${_hk}"
+      log "✓ pristine 基线导出就绪（overlay=${_hk} patches=${_pk}）"
+    fi
+  fi
   [[ -d "$host_tree/.git" ]] || { log "⚠ 宿主 hermes-agent 非 git 仓（${host_tree}）——跳过源码快照供给，执行面维持回落态"; return 0; }
   local head; head=$(git -C "$host_tree" rev-parse HEAD)
   # 快照键只取运行源码白名单与补丁实际内容。HEAD 是来源档案，不再作为换键条件；

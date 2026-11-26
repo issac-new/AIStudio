@@ -74,7 +74,9 @@ beforeAll(async () => {
     // run31 组 15-16：standing-agenda/run-outcome/outbox/approval-ledger/evidence 的缺省根
     // 全部解析自 web-ui 根（lib/paths underWebUi）——隔离进临时目录，杜绝读写真机 ~/.hermes-web-ui；
     // 会话档目录同步隔离（earned-autonomy 只读面不写档，防渗漏）
-    'HERMES_WEB_UI_HOME', 'HERMES_SESSION_MODES_DIR']) {
+    'HERMES_WEB_UI_HOME', 'HERMES_SESSION_MODES_DIR',
+    // run32 组 18：场景库/拍摄位数据源显式指向本仓 simharness（不依赖 vitest cwd）
+    'SIM_SCENARIOS_ROOT', 'SIM_CAPTURE_PLAN_PATH']) {
     prevEnv[k] = process.env[k]
   }
   process.env.HERMES_HOME = join(dir, 'home')
@@ -93,6 +95,10 @@ beforeAll(async () => {
   process.env.HERMES_DISCOVERY_RUN_DIR = join(dir, 'eval-store', 'discovery-runs')
   process.env.HERMES_WEB_UI_HOME = join(dir, 'webui')
   process.env.HERMES_SESSION_MODES_DIR = join(dir, 'session-modes')
+  // run32 组 18 夹具：数据源锚到本仓 simharness（与 vitest cwd 无关的确定性路径）
+  const simHarnessDir = resolve(__dirname, '..')
+  process.env.SIM_SCENARIOS_ROOT = join(simHarnessDir, 'scenarios')
+  process.env.SIM_CAPTURE_PLAN_PATH = join(simHarnessDir, 'mux', 'capture-plan.env')
 
   // run31 组 15 夹具：standing-agenda 种子记录（带 cardId+status）——使 cardId/status
   // 过滤正例在单测里真实命中（活体板无记录时探针如实 skip，夹具保证判据可验）。
@@ -143,6 +149,11 @@ beforeAll(async () => {
   const { standingAgendaRouter } = await import('../../custom/server/standingagenda/agenda-controller')
   const { runOutcomeRouter } = await import('../../custom/server/notify/run-outcome-controller')
   const { outboxRouter } = await import('../../custom/server/outbox/outbox-controller')
+  // run32 组 18：sim-product 产品面三路由（场景库/拍摄位/运行监督——路径自带完整
+  // /api/sim 与 /api/simrun prefix，挂根即可；cwd=仓根时默认数据路径直接可达）
+  const simScenariosRoutes = (await import('../../custom/server/controllers/sim/scenarios')).default
+  const simCapturePlanRoutes = (await import('../../custom/server/controllers/sim/capture-plan')).default
+  const simRunRoutes = (await import('../../custom/server/simrun/router')).default
   // vendor 技能面的生产装配：profile-config 等依赖注入在 import 时接线（与 studio
   // 启动同源），不接则 readConfigYamlForProfile 抛「not been configured」→全 500
   await import('../../vendor/hermes-studio/packages/server/src/bootstrap/agent-profile-adapter')
@@ -167,6 +178,9 @@ beforeAll(async () => {
   root.use(standingAgendaRouter.routes(), standingAgendaRouter.allowedMethods())
   root.use(runOutcomeRouter.routes(), runOutcomeRouter.allowedMethods())
   root.use(outboxRouter.routes(), outboxRouter.allowedMethods())
+  root.use(simScenariosRoutes.routes(), simScenariosRoutes.allowedMethods())
+  root.use(simCapturePlanRoutes.routes(), simCapturePlanRoutes.allowedMethods())
+  root.use(simRunRoutes.routes(), simRunRoutes.allowedMethods())
   root.use(skillRoutes.routes(), skillRoutes.allowedMethods())
   const app = new Koa()
   app.use(bodyParser())
@@ -194,7 +208,7 @@ afterAll(() => {
 })
 
 describe('mx-capability-probes', () => {
-  it('十七组探测全绿，产物 capability-probes.json 落盘且计数自洽', async () => {
+  it('十八组探测全绿，产物 capability-probes.json 落盘且计数自洽', async () => {
     const out = join(dir, 'evidence')
     const r = await runProbe(['--base', base, '--out', out])
     expect(r.code, `probe 退出码非 0：${r.stderr || r.stdout}`).toBe(0)
@@ -210,12 +224,13 @@ describe('mx-capability-probes', () => {
     expect(report.failed).toBe(0)
     expect(report.passed).toBe(report.total)
     expect(report.total).toBeGreaterThanOrEqual(46)
-    // 十七组齐全（组名是方案 §5.11 的十四条验证面；W4 扩组 harness-contract；
-    // run31 扩组 proactive-r2/always-on/kanban-version——方案 §5.15）
+    // 十八组齐全（组名是方案 §5.11 的十四条验证面；W4 扩组 harness-contract；
+    // run31 扩组 proactive-r2/always-on/kanban-version——方案 §5.15；
+    // run32 扩组 sim-product——方案 §5.17/§5.11 组 18）
     const groups = [
       'proactivity', 'handoff', 'acceptance', 'claims', 'workbench', 'schedule', 'dispatch',
       'fourgap', 'projectworkflow', 'execution-records', 'userenv', 'userperms', 'skills', 'harness-contract',
-      'proactive-r2', 'always-on', 'kanban-version',
+      'proactive-r2', 'always-on', 'kanban-version', 'sim-product',
     ]
     for (const g of groups) {
       expect(report.byGroup[g], `缺组 ${g}`).toBeTruthy()
@@ -251,6 +266,17 @@ describe('mx-capability-probes', () => {
       expect(p.ok, `kanban-version 探针未过：${JSON.stringify(p.detail)}`).toBe(true)
       expect(JSON.stringify(p.detail), '单测环境 kanban 面未挂，必须 skip 而非误判').toContain('skipped')
     }
+    // run32 组 18：sim-product 三面只读——cwd=仓根时场景库/拍摄位默认路径可达
+    // （非空正例），运行监督在 OBS_SIM_ROOT 缺席时 enabled:false＋reason（fail-soft 语义）
+    const spProbes = report.results.filter((x) => x.group === 'sim-product')
+    expect(spProbes.length, 'sim-product 探针数不足').toBe(4)
+    for (const p of spProbes) {
+      expect(p.ok, `sim-product 探针未过：${JSON.stringify(p.detail)}`).toBe(true)
+    }
+    const spList = report.results.find((x) => x.group === 'sim-product' && x.name.includes('发现面'))
+    expect(JSON.stringify(spList?.detail), '夹具 cwd=仓根，场景库必须非空').toContain('"available":true')
+    const spMonitor = report.results.find((x) => x.group === 'sim-product' && x.name.includes('运行监督'))
+    expect(JSON.stringify(spMonitor?.detail), '监督状态须如实回 disabled（OBS_SIM_ROOT 缺席）').toContain('"enabled":false')
   })
 
   it('服务不可达时仍写产物并退出 2（run27 分型：环境态≠能力失效，不静默不误冻）', async () => {

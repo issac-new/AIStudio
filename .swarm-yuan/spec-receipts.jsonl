@@ -545,3 +545,4 @@
 {"at":"2026-11-26T07:53:56Z","spec":"docs/superpowers/specs/2026-11-26-release-v1.0.21-overlay.md","receipt":"222e054b7114becf6e43d887592225250d48000c","commit":"a6440a9e2"}
 {"at":"2026-11-26T07:53:56Z","spec":"docs/superpowers/specs/2026-11-26-full-retro-design-revision-batch.md","receipt":"9c7b12d8c55d45c2b669b5293ae0bea1316933ce","commit":"a6440a9e2"}
 {"at":"2026-11-26T07:53:56Z","spec":"docs/superpowers/specs/2026-11-26-modelscope-full-package-policy.md","receipt":"ee10bcad1405b1add9edb7afc6492aa1addfc9e2","commit":"a6440a9e2"}
+{"at":"2026-11-26T14:22:38Z","spec":"docs/superpowers/specs/2026-11-26-run32-plan-sync.md","receipt":"a84b7cede35c62d62d7a0b89e36f4026f13af39c","commit":"16e9155b7"}
