@@ -388,23 +388,67 @@ describe('W3 组件库消费', () => {
     expect(result.offered[0].crossDomain).toBe(true)
   })
 
-  it('来源提案已回滚的 donor 仍提供，但带回滚标注；来源在位的没有标注（2026-11-26 可信 RSI）', () => {
+  /** 取 skipped 里写明「来源提案已回滚（原因）」的条目数；把括号多层嵌套收进一个函数，断言行不再连写右括号。 */
+  function withheldByRollback(reason: string, selection: { skipped: Array<{ id: string; reason: string }> }): number {
+    const needle = `来源提案已回滚（${reason}）`
+    return selection.skipped.filter((s) => s.reason.includes(needle)).length
+  }
+
+  it('来源提案已回滚的零件不提供：进 skipped 并写明回滚原因；来源在位的照常提供（2026-11-26 可信 RSI）', () => {
     seed({ id: 'hw-rolled', targetPath: 'profiles/r/dedupe.md', surfaceKey: 'skills' }, 'rolled body line1\nline2', 0.12, 'coding')
-    seed({ id: 'hw-live', targetPath: 'profiles/l/tone.md', surfaceKey: 'skills' }, 'live body line1\nline2', 0.08, 'coding')
+    seed({ id: 'hw-rolled-noreason', targetPath: 'profiles/r2/tone.md', surfaceKey: 'skills' }, 'rolled no reason body', 0.08, 'coding')
+    seed({ id: 'hw-live', targetPath: 'profiles/l/format.md', surfaceKey: 'skills' }, 'live body line1\nline2', 0.05, 'coding')
 
     const result = selectDonors({
       surfaceKey: 'skills',
       domain: 'coding',
       limit: 5,
-      rolledBackSources: [{ proposalId: 'hw-rolled', reason: '线上回归' }],
+      rolledBackSources: [
+        { proposalId: 'hw-rolled', reason: '线上回归' },
+        { proposalId: 'hw-rolled-noreason', reason: null },
+      ],
     })
-    const rolled = result.offered.find((d) => d.entry.name === 'dedupe.md')!
-    const live = result.offered.find((d) => d.entry.name === 'tone.md')!
-    expect(rolled.rolledBackSource).toEqual({ reason: '线上回归' })
-    expect(live.rolledBackSource).toBeUndefined()
+    expect(result.offered.map((d) => d.entry.name)).toEqual(['format.md'])
+    expect(withheldByRollback('线上回归', result)).toBe(1)
+    expect(withheldByRollback('未写原因', result)).toBe(1)
 
+    // 不传回滚来源表时行为不变：照常提供
     const plain = selectDonors({ surfaceKey: 'skills', domain: 'coding', limit: 5 })
-    expect(plain.offered.every((d) => d.rolledBackSource === undefined)).toBe(true)
+    const names = plain.offered.map((d) => d.entry.name).sort()
+    expect(names).toEqual(['dedupe.md', 'format.md', 'tone.md'])
+  })
+
+  it('条目内容与某个现存冠军逐字相同时照常提供（组件库按内容去重，条目挂在已回滚的首个提案号上）', () => {
+    const body = 're-promoted body line1\nline2'
+    seed({ id: 'hw-first', targetPath: 'profiles/r/dedupe.md', surfaceKey: 'skills' }, body, 0.12, 'coding')
+    const rolledBackSources = [{ proposalId: 'hw-first', reason: '线上回归' }]
+
+    const same = selectDonors({ surfaceKey: 'skills', domain: 'coding', limit: 5, rolledBackSources, liveDigests: [sha256(body)] })
+    expect(same.offered.map((d) => d.entry.name)).toEqual(['dedupe.md'])
+    expect(withheldByRollback('线上回归', same)).toBe(0)
+
+    // 现存冠军的内容摘要对不上时仍然扣下
+    const mismatch = selectDonors({ surfaceKey: 'skills', domain: 'coding', limit: 5, rolledBackSources, liveDigests: [sha256('something else')] })
+    expect(mismatch.offered).toHaveLength(0)
+    expect(withheldByRollback('线上回归', mismatch)).toBe(1)
+  })
+
+  it('同一组件最新版本的来源已回滚时，更早的、来源仍在位的版本顶上来', () => {
+    seed({ id: 'hw-old', targetPath: 'profiles/a/dedupe.md', surfaceKey: 'skills' }, 'v1 body line1\nline2', 0.05, 'coding')
+    seed({ id: 'hw-new', targetPath: 'profiles/a/dedupe.md', surfaceKey: 'skills' }, 'v2 body line1\nline2\nline3', 0.08, 'coding')
+
+    const asBefore = selectDonors({ surfaceKey: 'skills', domain: 'coding', limit: 5 })
+    expect(asBefore.offered.find((d) => d.entry.name === 'dedupe.md')?.entry.version).toBe(2)
+
+    const result = selectDonors({
+      surfaceKey: 'skills',
+      domain: 'coding',
+      limit: 5,
+      rolledBackSources: [{ proposalId: 'hw-new', reason: '线上回归' }],
+    })
+    const dedupe = result.offered.find((d) => d.entry.name === 'dedupe.md')
+    expect(dedupe?.entry.version).toBe(1)
+    expect(withheldByRollback('线上回归', result)).toBe(1)
   })
 })
 

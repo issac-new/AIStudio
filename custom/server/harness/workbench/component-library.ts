@@ -223,6 +223,7 @@ export function _resetLibraryForTests(): void {
 // Evo² 的 donor 机制：一条进化路线上验证有效的机制，可以作为另一条路线的候选来源；
 // PluginRSI 的插件库同理。本仓此前只入库不消费，已验证零件闲置。这里补「取件」这一半：
 // 只提供有正增益证据的组件，且**已在基线里的组件不提供**——送进去只会诱导重复改写。
+// 来源提案已回滚的组件也不提供（2026-11-26 可信 RSI 正文级轮）：回滚要到达派生物。
 
 export interface DonorQuery {
   surfaceKey: SurfaceKey
@@ -231,10 +232,16 @@ export interface DonorQuery {
   baseContent?: string | null
   limit?: number
   /**
-   * 已回滚的来源提案（提案号→回滚原因）。来自这些提案的条目仍可提供，但带标注：
-   * 回滚只退役经验并撤掉冠军指针，不动组件库条目，条目的增益没有在回滚后复验。
+   * 已回滚的来源提案（提案号→回滚原因）。来源已回滚的条目不提供，记 skipped 并写明原因：
+   * 回滚撤掉了冠军指针，条目的增益没有在回滚后复验，继续提供等于让起草器把刚撤掉的零件写回新提案。
+   * 条目本身保留（零件库不随回滚消失）。
    */
   rolledBackSources?: Array<{ proposalId: string; reason: string | null }>
+  /**
+   * 现存冠军的内容摘要。条目内容与某个现存冠军逐字相同时照常提供——组件库按内容去重，
+   * 条目挂在首个提案号上，逐字相同的内容被重新晋级后，来源提案号可能仍是已回滚的那个。
+   */
+  liveDigests?: readonly string[]
 }
 
 export interface DonorCandidate {
@@ -242,8 +249,6 @@ export interface DonorCandidate {
   /** 排序分：同面可迁移性 + 跨域价值 + 证据强度。 */
   score: number
   crossDomain: boolean
-  /** 来源提案已被回滚时给出原因；来源仍在位时缺席。 */
-  rolledBackSource?: { reason: string | null }
 }
 
 export interface DonorSelection {
@@ -270,7 +275,7 @@ function lineJaccard(a: Set<string>, b: Set<string>): number {
 
 /**
  * 取可用 donor：同 (kind,name) 只留最新版本，只收 evidence.delta>0 的条目。
- * 已与基线高度重合的条目不提供（记 skipped，留痕供审计）。
+ * 已与基线高度重合的条目不提供；来源已回滚的条目也不提供（都记 skipped，留痕供审计）。
  */
 export function selectDonors(query: DonorQuery): DonorSelection {
   const lib = readLibrary()
@@ -278,9 +283,17 @@ export function selectDonors(query: DonorQuery): DonorSelection {
   const baseLines = lineSet(query.baseContent ?? '')
   const skipped: Array<{ id: string; reason: string }> = []
   const latest = new Map<string, ComponentEntry>()
+  const rolledBackBy = new Map((query.rolledBackSources ?? []).map((r) => [r.proposalId, r]))
+  const liveDigests = new Set(query.liveDigests ?? [])
   for (const entry of lib.entries) {
     if (entry.evidence?.delta == null || entry.evidence.delta <= 0) {
       skipped.push({ id: entry.id, reason: '无正增益证据（donor 必须是验证有效的零件）' })
+      continue
+    }
+    // 来源已回滚的条目在选「最新版本」之前就剔掉：同一组件更早的、来源仍在位的版本才能顶上来。
+    const rolled = rolledBackBy.get(entry.evidence.proposalId)
+    if (rolled && !liveDigests.has(entry.digest)) {
+      skipped.push({ id: entry.id, reason: `来源提案已回滚（${rolled.reason?.trim() || '未写原因'}），不再作为可借用零件提供` })
       continue
     }
     const key = `${entry.kind}::${entry.name}`
@@ -288,7 +301,6 @@ export function selectDonors(query: DonorQuery): DonorSelection {
     if (!current || entry.version > current.version) latest.set(key, entry)
   }
   const offered: DonorCandidate[] = []
-  const rolledBackBy = new Map((query.rolledBackSources ?? []).map((r) => [r.proposalId, r]))
   for (const entry of latest.values()) {
     const content = entry.files && entry.files.length > 0
       ? entry.files.map((f) => f.content).join('\n')
@@ -301,8 +313,7 @@ export function selectDonors(query: DonorQuery): DonorSelection {
     const sameSurface = entry.surfaceKey === query.surfaceKey
     const delta = entry.evidence.delta ?? 0
     const score = (sameSurface ? 1.5 : 0.5) + (crossDomain ? 1.5 : 0) + Math.min(2, delta * 20)
-    const rolled = rolledBackBy.get(entry.evidence.proposalId)
-    offered.push({ entry, score, crossDomain, ...(rolled ? { rolledBackSource: { reason: rolled.reason } } : {}) })
+    offered.push({ entry, score, crossDomain })
   }
   offered.sort((a, b) => b.score - a.score)
   return { offered: offered.slice(0, limit), skipped }

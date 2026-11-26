@@ -210,10 +210,10 @@ export const RSI_CLAIM_LEVEL_CELLS: RsiClaimCell[] = [
   { requirement: 'validity', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/multi-objective.ts', note: '有增益保留率与回归样本库；保留率要留出基线在场才算得出，未覆盖的能力无从判断' },
   { requirement: 'behavioral', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/loop-joint-evidence.ts', note: '后继序列逐个按三个角色定态；约束断言靠人记录，没有记录的后继在这一格是未评估' },
   { requirement: 'fairness', level: 'successor', status: 'not_evaluated', anchor: '', note: '没有跨版本的分组结果读数' },
-  { requirement: 'security', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/loop-joint-evidence.ts', note: '回滚残留可见（组件库条目与直接引用它的后继）；派生内容的投毒传播没有检测' },
+  { requirement: 'security', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/loop-joint-evidence.ts', note: '回滚残留可见（组件库条目、引用它的后继、起点建立在它之上的提案）；派生内容的投毒传播没有检测，起点建立在已回滚产物之上的多文件提案带写盘晋级时没有漂移检查' },
   { requirement: 'privacy', level: 'successor', status: 'not_evaluated', anchor: '', note: '继承下来的记忆与技能里是否带着敏感信息，没有检查' },
   { requirement: 'transparency', level: 'successor', status: 'examined', anchor: 'custom/server/harness/workbench/component-library.ts', note: '冠军链、组件库条目（带来源提案与产出侧来源信息）与经验库都保留版本' },
-  { requirement: 'control', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/service.ts', note: '回滚恢复文件并退役经验；组件库条目与已引用它的后继不动，是否停止提供这类零件交人裁决' },
+  { requirement: 'control', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/service.ts', note: '回滚恢复文件并退役经验，多文件回滚先全部校验再恢复；来源已回滚的零件不再提供给起草器；起点建立在它之上的提案只列出，不自动撤回' },
   { requirement: 'accountability', level: 'successor', status: 'examined', anchor: 'custom/server/harness/workbench/store.ts', note: '提案全史保留批准、晋级与回滚记录，回滚含操作人与原因' },
   // ---- 元改进层：改进机制本身被修订 ----
   { requirement: 'validity', level: 'meta', status: 'not_evaluated', anchor: '', note: '晋级规则、起草提示与调度策略由人经规格修订；修订前后没有做过同起点、同预算的配对延续实验' },

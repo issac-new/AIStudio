@@ -489,7 +489,7 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     basePreview = baseContent.length > 6000 ? `${baseContent.slice(0, 6000)}\n…（截断）` : baseContent
   }
   // W3（2026-11-05）：组件库 donor——已验证的零件可以跨域搬，但已在基线里的不提供（只会诱导重复改写）。
-  // 2026-11-26：来源提案已回滚的条目仍提供，但带标注——回滚不动组件库，条目的增益没有在回滚后复验。
+  // 2026-11-26：来源提案已回滚的零件不提供（进 skipped 留痕）；条目内容与某个现存冠军逐字相同时照常提供。
   const donors = selectDonors({
     surfaceKey: input.surfaceKey,
     domain: input.domain ?? 'general',
@@ -498,15 +498,15 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     rolledBackSources: store.proposals
       .filter((p) => p.status === 'rolled_back')
       .map((p) => ({ proposalId: p.id, reason: p.rollback?.reason ?? null })),
+    liveDigests: store.proposals
+      .filter((p) => p.status === 'promoted' && p.promotion?.digest)
+      .map((p) => p.promotion!.digest),
   })
   const donorLines = donors.offered.map((d) => {
     const body = (d.entry.files && d.entry.files.length > 0
       ? d.entry.files.map((f) => f.content).join('\n')
       : d.entry.content).slice(0, 600)
-    const rolled = d.rolledBackSource
-      ? `；来源提案已回滚（${d.rolledBackSource.reason?.trim() || '未写原因'}），该零件的增益没有在回滚后复验，引用须重新验证`
-      : ''
-    return `- [${d.entry.id}] ${d.entry.kind}/${d.entry.name}（增益 +${((d.entry.evidence.delta ?? 0) * 100).toFixed(1)}pp${d.crossDomain ? '，跨域' : ''}${rolled}）：\n${body}`
+    return `- [${d.entry.id}] ${d.entry.kind}/${d.entry.name}（增益 +${((d.entry.evidence.delta ?? 0) * 100).toFixed(1)}pp${d.crossDomain ? '，跨域' : ''}）：\n${body}`
   })
 
   const prompt = [

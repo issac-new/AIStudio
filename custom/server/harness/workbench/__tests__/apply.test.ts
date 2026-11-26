@@ -90,4 +90,109 @@ describe('rollbackProposalFile', () => {
     expect(res.ok).toBe(true)
     expect(readFileSync(file, 'utf8')).toBe('old persona')
   })
+
+  it('带 .bak 快照的单文件回滚：文件恢复到基线内容并返回基线摘要（快照文件只用来选分支，不读它）', () => {
+    const p = proposal()
+    const backupPath = join(dir, 'store', 'backups', 'hw-001-1.bak')
+    p.promotion = { ...p.promotion!, backupPath }
+    writeFileSync(file, 'new persona')
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(true)
+    expect(res.digest).toBe(sha256('old persona'))
+    expect(readFileSync(file, 'utf8')).toBe('old persona')
+    expect(existsSync(backupPath)).toBe(false)
+  })
+
+  it('带 .bak 快照的单文件回滚：文件被外部改动时拒绝覆盖', () => {
+    const p = proposal()
+    p.promotion = { ...p.promotion!, backupPath: join(dir, 'store', 'backups', 'hw-001-1.bak') }
+    writeFileSync(file, 'external edit')
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(false)
+    expect(res.error).toContain('拒绝回滚覆盖')
+    expect(readFileSync(file, 'utf8')).toBe('external edit')
+  })
+})
+
+describe('多文件回滚（JSON 树快照）：先全部校验，再恢复', () => {
+  interface Touched { path: string; abs: string; existed: boolean; oldContent: string | null; action: 'write' | 'delete'; newContent: string | null }
+  let skill: string
+
+  beforeEach(() => {
+    mkdirSync(join(process.env.HERMES_HOME, 'skills/s1'), { recursive: true })
+    skill = join(process.env.HERMES_HOME, 'skills/s1/SKILL.md')
+  })
+
+  /** 把一份树快照写到备份目录，返回指向它的已写盘晋级记录。 */
+  function treePromotion(touched: Touched[], id: string): Proposal {
+    const backupDir = join(dir, 'store', 'backups')
+    mkdirSync(backupDir, { recursive: true })
+    const backupPath = join(backupDir, `${id}-tree-1.json`)
+    writeFileSync(backupPath, JSON.stringify({ touched }))
+    const p = proposal()
+    return { ...p, id, surfaceKey: 'skills', promotion: { actor: 'a', at: 'now', digest: 'tree-digest', applied: true, backupPath } }
+  }
+
+  const soulTouched = (newContent: string): Touched => ({ path: 'profiles/p1/SOUL.md', abs: file, existed: true, oldContent: 'old persona', action: 'write', newContent })
+  const skillTouched = (newContent: string): Touched => ({ path: 'skills/s1/SKILL.md', abs: skill, existed: true, oldContent: 'old skill', action: 'write', newContent })
+
+  it('全部文件仍等于晋级时内容：各自恢复到改前内容；晋级时新建的文件被删掉、删掉的文件被重建', () => {
+    const fresh = join(process.env.HERMES_HOME, 'skills/s1/FRESH.md')
+    const removed = join(process.env.HERMES_HOME, 'skills/s1/REMOVED.md')
+    const p = treePromotion([
+      soulTouched('new persona'),
+      skillTouched('new skill'),
+      { path: 'skills/s1/FRESH.md', abs: fresh, existed: false, oldContent: null, action: 'write', newContent: 'fresh' },
+      { path: 'skills/s1/REMOVED.md', abs: removed, existed: true, oldContent: 'removed earlier', action: 'delete', newContent: null },
+    ], 'hw-tree-ok')
+    writeFileSync(file, 'new persona')
+    writeFileSync(skill, 'new skill')
+    writeFileSync(fresh, 'fresh')
+
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(true)
+    expect(readFileSync(file, 'utf8')).toBe('old persona')
+    expect(readFileSync(skill, 'utf8')).toBe('old skill')
+    expect(existsSync(fresh)).toBe(false)
+    expect(readFileSync(removed, 'utf8')).toBe('removed earlier')
+  })
+
+  it('后面一个文件被外部改动：返回失败，前面本来能恢复的文件一个都不动（全有或全无）', () => {
+    const p = treePromotion([soulTouched('new persona'), skillTouched('new skill')], 'hw-tree-drift')
+    writeFileSync(file, 'new persona')
+    writeFileSync(skill, 'external skill')
+
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(false)
+    expect(res.error).toContain('skills/s1/SKILL.md')
+    expect(res.error).toContain('拒绝回滚覆盖')
+    // 逐文件交替时会先把 SOUL.md 恢复成 old persona；先全部校验则它保持晋级后的内容
+    expect(readFileSync(file, 'utf8')).toBe('new persona')
+    expect(readFileSync(skill, 'utf8')).toBe('external skill')
+  })
+
+  it('校验失败后现场不变，排除外部改动后再回滚一次就能完成', () => {
+    const p = treePromotion([soulTouched('new persona'), skillTouched('new skill')], 'hw-tree-retry')
+    writeFileSync(file, 'new persona')
+    writeFileSync(skill, 'external skill')
+    expect(rollbackProposalFile(p).ok).toBe(false)
+
+    writeFileSync(skill, 'new skill')
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(true)
+    expect(readFileSync(file, 'utf8')).toBe('old persona')
+    expect(readFileSync(skill, 'utf8')).toBe('old skill')
+  })
+
+  it('被删除的文件与被重建的删除路径同样在校验阶段拦下', () => {
+    const removed = join(process.env.HERMES_HOME, 'skills/s1/REMOVED.md')
+    const p = treePromotion([soulTouched('new persona'), { path: 'skills/s1/REMOVED.md', abs: removed, existed: true, oldContent: 'x', action: 'delete', newContent: null }], 'hw-tree-rebuilt')
+    writeFileSync(file, 'new persona')
+    writeFileSync(removed, 'rebuilt')
+
+    const res = rollbackProposalFile(p)
+    expect(res.ok).toBe(false)
+    expect(res.error).toContain('被外部重建')
+    expect(readFileSync(file, 'utf8')).toBe('new persona')
+  })
 })

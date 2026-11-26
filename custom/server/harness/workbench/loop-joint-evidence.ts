@@ -15,8 +15,8 @@
 import { composedVariant } from './loop-core'
 import type { ComponentEntry } from './component-library'
 import type {
-  BehaviorContrast, Champion, EvaluatorChange, EvaluatorDriftAudit, EvaluatorFingerprint, EvolutionSurface, ProbeMetrics,
-  Proposal, RollbackResidueAudit, RollbackResidueRow, SuccessorStep, SurfaceKey, TrajectoryAudit, TrajectoryCellStatus,
+  BehaviorContrast, BuiltOnByRow, BuiltOnVia, Champion, EvaluatorChange, EvaluatorDriftAudit, EvaluatorFingerprint, EvolutionSurface, ProbeMetrics,
+  Proposal, ProposalStatus, RollbackResidueAudit, RollbackResidueRow, SuccessorStep, SurfaceKey, TrajectoryAudit, TrajectoryCellStatus,
   TrajectoryFirstHit, TrajectoryReport, TrustRole,
 } from './types'
 
@@ -292,19 +292,62 @@ export function evaluatorDrift(steps: Array<{ round: number; evaluator?: Evaluat
   return { pairs, compared, changes, unknownPairs, changed: changes.length, unknown: unknownPairs.length, verdict, note }
 }
 
+/** 在途：已创建、尚未晋级也未被否决。 */
+const RESIDUE_OPEN_STATUSES: readonly ProposalStatus[] = ['draft', 'submitted', 'approved', 'probing', 'composed']
+const RESIDUE_LIVE_STATUSES: ReadonlySet<ProposalStatus> = new Set<ProposalStatus>(['promoted', ...RESIDUE_OPEN_STATUSES])
+
 /**
- * 回滚残留：已回滚提案在组件库里留下多少条目，又被多少现存后继直接引用。
- * 组件库条目未传入时，条目数记 null——不按 0 计。
+ * 提案晋级时的选中内容落在某个目标路径上的摘要。单文件候选只有一个摘要；多文件候选取同路径
+ * 那条文件的摘要（整棵树的摘要与单文件摘要不是同一个哈希域，不能直接比）；没落到这个路径返回 null。
  */
-export function rollbackResidue(input: { proposals: Proposal[]; libraryEntries?: ComponentEntry[] | null }): RollbackResidueAudit {
+function promotedDigestAt(p: Proposal, targetPath: string | null): string | null {
+  const selected = composedVariant(p)
+  if (selected?.files && selected.files.length > 0) {
+    return targetPath ? selected.files.find((f) => f.path === targetPath)?.digest ?? null : null
+  }
+  return selected?.digest ?? p.promotion?.digest ?? null
+}
+
+/**
+ * 回滚残留：已回滚提案在组件库里留下多少条目、被多少现存后继引用，
+ * 以及有多少提案的起点建立在它的产物之上（冠军链或起点摘要两条依据，在途的也列）。
+ * 只列出，不改动任何提案。组件库条目未传入时，条目数记 null——不按 0 计。
+ */
+export function rollbackResidue(input: {
+  proposals: Proposal[]
+  champions?: Champion[]
+  libraryEntries?: ComponentEntry[] | null
+}): RollbackResidueAudit {
   const library = input.libraryEntries ?? null
+  const champions = input.champions ?? []
   const rolled = input.proposals.filter((p) => p.status === 'rolled_back')
   const live = input.proposals.filter((p) => p.status === 'promoted')
+  const byId = new Map(input.proposals.map((p) => [p.id, p]))
   const rows: RollbackResidueRow[] = rolled
     .map((p) => {
       const entries = library ? library.filter((e) => e.evidence?.proposalId === p.id) : null
       const ids = new Set((entries ?? []).map((e) => e.id))
       const inheritedBy = ids.size > 0 ? live.filter((s) => (s.donorRefs ?? []).some((id) => ids.has(id))).map((s) => s.id) : []
+      // 起点继承：按提案号聚合判定依据。回滚不改写后继冠军记录里的前驱字段，冠军链会一直指着已回滚的提案。
+      const via = new Map<string, Set<BuiltOnVia>>()
+      const mark = (proposalId: string, how: BuiltOnVia): void => {
+        const s = byId.get(proposalId)
+        if (!s || !RESIDUE_LIVE_STATUSES.has(s.status)) return
+        const set = via.get(proposalId) ?? new Set<BuiltOnVia>()
+        set.add(how)
+        via.set(proposalId, set)
+      }
+      for (const c of champions) {
+        if (c.previousProposalId === p.id) mark(c.proposalId, 'champion')
+      }
+      for (const s of input.proposals) {
+        if (s.id === p.id || !s.base || !RESIDUE_LIVE_STATUSES.has(s.status)) continue
+        const digest = promotedDigestAt(p, s.targetPath)
+        if (digest != null && digest === s.base.digest) mark(s.id, 'base')
+      }
+      const builtOnBy: BuiltOnByRow[] = [...via.entries()]
+        .map(([proposalId, kinds]) => ({ proposalId, status: byId.get(proposalId)!.status, via: [...kinds].sort() }))
+        .sort((a, b) => (a.status !== b.status ? (a.status === 'promoted' ? -1 : 1) : a.proposalId < b.proposalId ? -1 : 1))
       return {
         proposalId: p.id,
         title: p.title,
@@ -312,20 +355,37 @@ export function rollbackResidue(input: { proposals: Proposal[]; libraryEntries?:
         reason: p.rollback?.reason ?? null,
         componentEntries: entries ? entries.length : null,
         inheritedBy,
+        builtOnBy,
       }
     })
-    .sort((a, b) => ((a.rolledBackAt ?? '') < (b.rolledBackAt ?? '') ? 1 : -1))
+    .sort((a, b) => ((a.rolledBackAt ?? '') < (b.rolledBackAt ?? '') ? -1 : 1))
   const componentEntries = library ? rows.reduce((sum, r) => sum + (r.componentEntries ?? 0), 0) : null
   const inheritedBy = new Set(rows.flatMap((r) => r.inheritedBy)).size
+  const builtOn = new Map<string, ProposalStatus>()
+  for (const r of rows) for (const b of r.builtOnBy) builtOn.set(b.proposalId, b.status)
+  const builtOnByOpen = [...builtOn.values()].filter((s) => RESIDUE_OPEN_STATUSES.includes(s)).length
 
   let note: string
-  if (rolled.length === 0) note = '没有已回滚的提案'
-  else if (!library) note = `${rolled.length} 个提案已回滚；组件库未接入，残留条目数未知`
-  else if (componentEntries === 0) note = `${rolled.length} 个提案已回滚；组件库里没有来自它们的条目`
-  else {
-    note = `${rolled.length} 个提案已回滚；组件库里来自它们的条目 ${componentEntries} 个，直接引用这些条目的现存后继 ${inheritedBy} 个。回滚只退役经验并撤掉冠军指针，不动组件库条目`
+  if (rolled.length === 0) {
+    note = '没有已回滚的提案'
+  } else {
+    const parts: string[] = []
+    if (!library) parts.push('组件库未接入，残留条目数未知')
+    else if (componentEntries === 0) parts.push('组件库里没有来自它们的条目')
+    else parts.push(`组件库里来自它们的条目 ${componentEntries} 个，引用这些条目的现存后继 ${inheritedBy} 个`)
+    if (builtOn.size > 0) parts.push(`起点建立在它们之上的提案 ${builtOn.size} 个（其中 ${builtOnByOpen} 个仍在途）`)
+    note = `${rolled.length} 个提案已回滚；${parts.join('；')}。回滚恢复文件、退役经验并撤掉冠军指针；来源已回滚的零件不再提供给起草器；起点建立在它之上的提案只列出，不自动撤回`
   }
-  return { rolledBack: rolled.length, rows, componentEntries, inheritedBy, libraryProvided: library != null, note }
+  return {
+    rolledBack: rolled.length,
+    rows,
+    componentEntries,
+    inheritedBy,
+    builtOnBy: builtOn.size,
+    builtOnByOpen,
+    libraryProvided: library != null,
+    note,
+  }
 }
 
 /** 从既有台账装配轨迹诊断。纯读：不写盘，不改任何门禁输入。 */
@@ -337,9 +397,13 @@ export function buildTrajectoryReport(input: {
 }): TrajectoryReport {
   return {
     surfaces: input.surfaces.map((s) => trajectoryAudit(s.surfaceKey, input.proposals, input.champions)),
-    rollbackResidue: rollbackResidue({ proposals: input.proposals, libraryEntries: input.libraryEntries ?? null }),
+    rollbackResidue: rollbackResidue({
+      proposals: input.proposals,
+      champions: input.champions,
+      libraryEntries: input.libraryEntries ?? null,
+    }),
     note:
       '只读诊断，不参与晋级判定：联合判定里任一后继任一角色不满足即不通过，证据不全按未评估计；' +
-      '有效监督是结构检查（批准留痕与可恢复快照），回滚效果未实测；评估条件比较只在同一面的相邻后继之间做。',
+      '有效监督一格是结构检查（批准留痕与可恢复快照），不在这一格里实测回滚；评估条件比较只在同一面的相邻后继之间做。',
   }
 }
