@@ -118,11 +118,17 @@ if [[ ! -d "$STUDIO_DIST/server" ]]; then
 fi
 HERMES_BIN="${HERMES_BIN:-$SIM_ROOT/bin/hermes-sim}"
 if [[ ! -x "$HERMES_BIN" ]]; then
-  # 宿主 venv 回落路径跨端：mac=venv/bin/hermes；Git Bash=venv\\Scripts\\hermes
+  # 宿主 venv 回落多候选（2026-11-26 run32 重建实录：0.23.x 起宿主拆 .venv/venv.py311
+  # 并存、旧 venv/ 消失——单钉 venv/bin/hermes 必假失败挡供给，与上方 venv_py 候选序同源；
+  # 首个存在且可执行者胜出，跨端 Git Bash 形态保留）
   if mxp_is_gbash; then
-    HERMES_BIN="$HOME/.hermes/hermes-agent/venv/Scripts/hermes.exe"
+    for _hb in "$HOME/.hermes/hermes-agent/.venv/Scripts/hermes.exe" "$HOME/.hermes/hermes-agent/venv/Scripts/hermes.exe"; do
+      [[ -x "$_hb" ]] && { HERMES_BIN="$_hb"; break; }
+    done
   else
-    HERMES_BIN="$HOME/.hermes/hermes-agent/venv/bin/hermes"
+    for _hb in "$HOME/.hermes/hermes-agent/.venv/bin/hermes" "$HOME/.hermes/hermes-agent/venv.py311/bin/hermes" "$HOME/.hermes/hermes-agent/venv/bin/hermes"; do
+      [[ -x "$_hb" ]] && { HERMES_BIN="$_hb"; break; }
+    done
   fi
   echo "[mx-lib] ⚠ hermes-sim wrapper 缺位，网关回落宿主 venv（执行面共享宿主源码树，自更新互擦风险——mx-setup 供给快照可根治）" >&2
 fi
