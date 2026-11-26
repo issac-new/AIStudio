@@ -135,12 +135,14 @@ export function rollbackProposalFile(proposal: Proposal): ApplyResult {
     }
     return { ok: true, digest: proposal.base.digest }
   }
-  // 树快照（JSON：touched 三态恢复）
+  // 树快照（JSON：touched 三态恢复）。先把每个文件的校验做完，全部通过才开始恢复——
+  // 逐文件交替校验与恢复时，后面的文件校验失败，前面的已经改了；重试会在已恢复的文件上失败，回滚无法再完成。
   try {
     const snap = JSON.parse(readFileSync(promotion.backupPath, 'utf8')) as {
       touched: Array<{ path: string; abs: string; existed: boolean; oldContent: string | null; action: 'write' | 'delete'; newContent: string | null }>
     }
     if (!Array.isArray(snap.touched)) throw new Error('快照格式非法')
+    const restores: Array<{ path: string; run: () => void }> = []
     for (const t of snap.touched) {
       const r = resolveManagedTarget(proposal.surfaceKey, t.path, hermesHome(), { requireExists: false, relaxPattern: true })
       if (!r.ok || !r.abs) throw new Error(`回滚路径 ${t.path} 不可写：${r.error}`)
@@ -148,11 +150,24 @@ export function rollbackProposalFile(proposal: Proposal): ApplyResult {
         if (!existsSync(r.abs)) throw new Error(`文件 ${t.path} 已被外部删除，请人工处理`)
         const expected = sha256(t.newContent ?? '')
         if (fileDigest(r.abs) !== expected) throw new Error(`文件 ${t.path} 在晋级后被外部修改，拒绝回滚覆盖`)
-        if (t.existed) atomicWrite(r.abs, t.oldContent ?? '')
-        else unlinkSync(r.abs)
+        const abs = r.abs
+        const oldContent = t.oldContent ?? ''
+        restores.push(t.existed ? { path: t.path, run: () => atomicWrite(abs, oldContent) } : { path: t.path, run: () => unlinkSync(abs) })
       } else {
         if (existsSync(r.abs)) throw new Error(`删除路径 ${t.path} 在晋级后被外部重建，拒绝回滚覆盖`)
-        atomicWrite(r.abs, t.oldContent ?? '')
+        const abs = r.abs
+        const oldContent = t.oldContent ?? ''
+        restores.push({ path: t.path, run: () => atomicWrite(abs, oldContent) })
+      }
+    }
+    // 恢复阶段的磁盘错误无法回退：如实报告恢复到哪个文件、此前已恢复几个，并指出快照位置供人工核对。
+    for (let i = 0; i < restores.length; i += 1) {
+      try {
+        restores[i].run()
+      } catch (e) {
+        throw new Error(
+          `恢复「${restores[i].path}」时失败：${e instanceof Error ? e.message : String(e)}；此前已恢复 ${i} 个文件，请对照快照 ${promotion.backupPath} 人工核对`,
+        )
       }
     }
   } catch (e) {

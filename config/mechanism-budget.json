@@ -4,11 +4,25 @@
     "gates": 47,
     "patches": 504,
     "zcodePatches": 14,
-    "scripts": 77,
+    "scripts": 79,
     "ledgers": 4,
     "npmScripts": 52
   },
   "changes": [
+    {
+      "at": "2026-11-26",
+      "delta": "+2 scripts（governance-rsi-walkthrough.mjs 治理改进台走查探针＋governance-rsi-walkthrough-lib.mjs 其纯函数层）/ +0 gates / +0 ledgers / +0 npm scripts；limits.scripts 77→79 对齐在册数（77+2 新增）",
+      "reason": "可信 RSI 后续批（spec 2026-11-26-trustworthy-rsi-fulltext 决策 D17-D20）：浏览器走查收编为回归矩阵人工面 governance-rsi-walkthrough（full 档）——隔离环境自起＋种数据＋暗色/亮色/窄屏/英文四条件读计算样式＋真实接口回滚演练；本轮三轮临时走查抓出三处组件测试看不见的界面缺陷（整格设边框画出方框／单类选择器压不过「.table td」／计数无单位），临时脚本放 /tmp 重启即失，收编以防回退。包装器 run-ide-smoke-face.mjs 参数化属改造非新增，不计预算",
+      "pairedRemovals": [
+        "样式验收判定权降级：HarnessImprovePanel 与 RsiLifecycleSection 的样式源正则用例从「验收依据」降为「快速检查」（判定权移交给走查面的计算样式断言——计算样式只有真实浏览器读得到）；两个用例保留但改名并注明判定权已移交",
+        "走查面连续两轮推演无消费或 IDE 走查面扩展覆盖同域时，探针与库一并退役、limits.scripts 同批下调 78→76"
+      ],
+      "sunset": {
+        "owner": "可信 RSI 后续批（2026-11-26-trustworthy-rsi-fulltext）",
+        "reviewBy": "2027-02-26",
+        "retireWhen": "连续两轮推演无消费（面板读数无人看且无下游引用），或 IDE 走查面扩展覆盖治理面板同域时，探针与库退役并同批下调上限"
+      }
+    },
     {
       "at": "2026-11-26",
       "delta": "+0 gates / +0 scripts / +0 ledgers / +0 npm scripts（可信 RSI 诊断只作报告字段与面板读数，不入四类别）",

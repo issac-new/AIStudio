@@ -13,7 +13,7 @@ import {
 } from '../loop-joint-evidence'
 import { evaluatorOfRun } from '../evidence'
 import { evolutionReport } from '../loop-advice-evolution'
-import { diffSummary, sha256, variantSetDigest } from '../loop-core'
+import { diffSummary, sha256, treeDigest, variantSetDigest } from '../loop-core'
 import type { ComponentEntry } from '../component-library'
 import type {
   BehaviorContrast, Champion, EvaluatorFingerprint, Probe, ProbeMetrics, Proposal, QualityVerdict, TrustRole, TrajectoryCellStatus,
@@ -387,13 +387,20 @@ describe('回滚残留', () => {
     promotedAt: '2026-11-01T00:00:00Z',
     promotedBy: 'reviewer',
   })
+  /** 一个「起点建立在 rolled 产物之上」的后继：目标文件在它创建时的内容就是 rolled 晋级时写进去的内容。 */
+  const builtOn = (rolled: Proposal, id: string, patch: Record<string, unknown> = {}): Proposal => {
+    const product = rolled.variants[0]
+    return { ...successor({ id, promotedAt: '2026-11-06T00:00:00Z', ...patch } as SuccessorInput), ...patch, base: { content: product.content, digest: product.digest, revision: null, exists: true } }
+  }
 
   it('没有已回滚提案', () => {
     const live = successor({ id: 'hw-live' })
-    expect(rollbackResidue({ proposals: [live], libraryEntries: [entry('memory:a', 'hw-live')] })).toMatchObject({ rolledBack: 0, componentEntries: 0, inheritedBy: 0 })
+    expect(rollbackResidue({ proposals: [live], libraryEntries: [entry('memory:a', 'hw-live')] })).toMatchObject({
+      rolledBack: 0, componentEntries: 0, inheritedBy: 0, builtOnBy: 0, builtOnByOpen: 0,
+    })
   })
 
-  it('组件库接入后能读出残留条目数与直接引用它的现存后继', () => {
+  it('组件库接入后能读出残留条目数与引用它的现存后继；说明写明零件不再提供、起点继承只列出', () => {
     const rolled = successor({ id: 'hw-rolled', status: 'rolled_back', rollbackReason: '线上回归' })
     const heir = successor({ id: 'hw-heir', promotedAt: '2026-11-06T00:00:00Z', donorRefs: ['memory:a@1'] })
     const other = successor({ id: 'hw-other', promotedAt: '2026-11-07T00:00:00Z', donorRefs: ['memory:z@9'] })
@@ -401,9 +408,12 @@ describe('回滚残留', () => {
       proposals: [rolled, heir, other],
       libraryEntries: [entry('memory:a@1', 'hw-rolled'), entry('memory:b@2', 'hw-rolled'), entry('memory:z@9', 'hw-other')],
     })
-    expect(audit).toMatchObject({ rolledBack: 1, componentEntries: 2, inheritedBy: 1, libraryProvided: true })
-    expect(audit.rows[0]).toMatchObject({ proposalId: 'hw-rolled', componentEntries: 2, inheritedBy: ['hw-heir'] })
-    expect(audit.note).toContain('不动组件库条目')
+    expect(audit).toMatchObject({ rolledBack: 1, componentEntries: 2, inheritedBy: 1, builtOnBy: 0, libraryProvided: true })
+    expect(audit.rows[0]).toMatchObject({ proposalId: 'hw-rolled', componentEntries: 2, inheritedBy: ['hw-heir'], builtOnBy: [] })
+    expect(audit.note).toContain('引用这些条目的现存后继 1 个')
+    expect(audit.note).toContain('来源已回滚的零件不再提供给起草器')
+    expect(audit.note).toContain('只列出，不自动撤回')
+    expect(audit.note).not.toContain('起点建立在它们之上')
   })
 
   it('组件库未接入时条目数记未知，不按 0 计', () => {
@@ -412,6 +422,72 @@ describe('回滚残留', () => {
     expect(audit.componentEntries).toBeNull()
     expect(audit.libraryProvided).toBe(false)
     expect(audit.note).toContain('未接入')
+  })
+
+  it('冠军链：后继的冠军记录以已回滚提案为前驱 → 列出，依据 champion', () => {
+    const rolled = successor({ id: 'hw-r', status: 'rolled_back' })
+    const heir = successor({ id: 'hw-s', promotedAt: '2026-11-06T00:00:00Z' })
+    const chain = { ...championOf(heir), previousProposalId: 'hw-r', previousDigest: rolled.variants[0].digest }
+    const audit = rollbackResidue({ proposals: [rolled, heir], champions: [chain] })
+    expect(audit.rows[0].builtOnBy).toEqual([{ proposalId: 'hw-s', status: 'promoted', via: ['champion'] }])
+    expect(audit).toMatchObject({ builtOnBy: 1, builtOnByOpen: 0 })
+    expect(audit.note).toContain('起点建立在它们之上的提案 1 个（其中 0 个仍在途）')
+  })
+
+  it('起点摘要：后继创建时目标文件的摘要等于已回滚提案晋级时的选中摘要 → 列出，依据 base；对不上的不列', () => {
+    const rolled = successor({ id: 'hw-r', status: 'rolled_back', applied: true, backupPath: '/tmp/r-tree.json' })
+    const fromProduct = builtOn(rolled, 'hw-s')
+    const unrelated = successor({ id: 'hw-u', promotedAt: '2026-11-07T00:00:00Z' })
+    const audit = rollbackResidue({ proposals: [rolled, fromProduct, unrelated] })
+    expect(audit.rows[0].builtOnBy).toEqual([{ proposalId: 'hw-s', status: 'promoted', via: ['base'] }])
+  })
+
+  it('两条依据同时成立时合并成一条；在途提案也列并计入「仍在途」，已晋级的排在前面', () => {
+    const rolled = successor({ id: 'hw-r', status: 'rolled_back' })
+    const heir = builtOn(rolled, 'hw-s')
+    const draft = { ...builtOn(rolled, 'hw-d'), status: 'draft' as const, promotion: null, composition: null, approval: null }
+    const chain = { ...championOf(heir), previousProposalId: 'hw-r' }
+    const audit = rollbackResidue({ proposals: [rolled, heir, draft], champions: [chain] })
+    expect(audit.rows[0].builtOnBy).toEqual([
+      { proposalId: 'hw-s', status: 'promoted', via: ['base', 'champion'] },
+      { proposalId: 'hw-d', status: 'draft', via: ['base'] },
+    ])
+    expect(audit).toMatchObject({ builtOnBy: 2, builtOnByOpen: 1 })
+    expect(audit.note).toContain('起点建立在它们之上的提案 2 个（其中 1 个仍在途）')
+  })
+
+  it('多文件候选：比较同路径文件的摘要；拿整棵树的摘要去比单文件摘要不算命中', () => {
+    const files = [
+      { path: 'profiles/p1/SOUL.md', content: 'tree soul', digest: sha256('tree soul') },
+      { path: 'skills/s1/SKILL.md', content: 'tree skill', digest: sha256('tree skill') },
+    ]
+    const tree = { id: 'v1', label: 'A', content: '', digest: treeDigest(files, []), diffSummary: diffSummary('base', 'base'), files }
+    const rolled: Proposal = {
+      ...successor({ id: 'hw-tree', status: 'rolled_back' }),
+      variants: [tree],
+      composition: { variantId: 'v1', digest: tree.digest, rationale: 'x', actor: 'reviewer', at: 'now' },
+      promotion: { actor: 'operator', at: 'now', digest: tree.digest, applied: true, backupPath: '/tmp/tree.json' },
+    }
+    const onSkillFile: Proposal = {
+      ...successor({ id: 'hw-s1' }),
+      targetPath: 'skills/s1/SKILL.md',
+      base: { content: 'tree skill', digest: sha256('tree skill'), revision: null, exists: true },
+    }
+    const treeDigestAsFileDigest: Proposal = {
+      ...successor({ id: 'hw-s2' }),
+      base: { content: 'x', digest: tree.digest, revision: null, exists: true },
+    }
+    const audit = rollbackResidue({ proposals: [rolled, onSkillFile, treeDigestAsFileDigest] })
+    expect(audit.rows[0].builtOnBy).toEqual([{ proposalId: 'hw-s1', status: 'promoted', via: ['base'] }])
+  })
+
+  it('被否决的后继不列，即使它的冠军记录仍指向前驱；起点建立在别的提案之上的不列', () => {
+    const rolled = successor({ id: 'hw-r', status: 'rolled_back' })
+    const rejected = { ...builtOn(rolled, 'hw-x'), status: 'rejected' as const }
+    const chain = { ...championOf(rejected), previousProposalId: 'hw-r' }
+    const audit = rollbackResidue({ proposals: [rolled, rejected], champions: [chain] })
+    expect(audit.rows[0].builtOnBy).toEqual([])
+    expect(audit.builtOnBy).toBe(0)
   })
 })
 

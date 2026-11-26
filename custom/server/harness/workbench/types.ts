@@ -713,6 +713,16 @@ export interface EvaluatorDriftAudit {
   note: string
 }
 
+/** 「起点建立在已回滚产物之上」的判定依据。 */
+export type BuiltOnVia = 'champion' | 'base'
+
+export interface BuiltOnByRow {
+  proposalId: string
+  status: ProposalStatus
+  /** champion=后继的冠军记录以已回滚提案为前驱；base=后继创建时目标文件的摘要等于已回滚提案晋级时的选中摘要。 */
+  via: BuiltOnVia[]
+}
+
 export interface RollbackResidueRow {
   proposalId: string
   title: string
@@ -720,8 +730,10 @@ export interface RollbackResidueRow {
   reason: string | null
   /** 组件库里来自该提案的条目数；组件库未接入时为 null。 */
   componentEntries: number | null
-  /** 直接引用了这些条目的现存后继提案号。 */
+  /** 引用了这些条目的现存后继提案号。 */
   inheritedBy: string[]
+  /** 起点建立在已回滚产物之上的提案（已晋级与在途的都列），带状态与判定依据。 */
+  builtOnBy: BuiltOnByRow[]
 }
 
 export interface RollbackResidueAudit {
@@ -731,6 +743,10 @@ export interface RollbackResidueAudit {
   componentEntries: number | null
   /** 引用了上述条目的现存后继个数。 */
   inheritedBy: number
+  /** 起点建立在已回滚产物之上的提案个数（跨已回滚提案去重）。 */
+  builtOnBy: number
+  /** 其中仍在途的个数（草稿到已组合，尚未晋级也未被否决）。 */
+  builtOnByOpen: number
   libraryProvided: boolean
   note: string
 }

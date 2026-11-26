@@ -1,40 +1,48 @@
 #!/usr/bin/env node
-// ide-smoke-walkthrough 矩阵面包装（2026-11-26 全面复盘批 B，spec D3）。
-// 自起 dev 全链 → 轮询就绪 → 跑 IDE 冒烟探针 scripts/regression/ide-smoke.mjs
-// 并透传其退出码 → teardown 只杀本脚本自起的进程树。仅登记回归矩阵 full 档
-// （config/regression-matrix.json）；手动单跑等价：
-//   cd <仓库根> && node scripts/regression/run-ide-smoke-face.mjs
+// 走查面包装器（2026-11-26 全面复盘批 B 起 ide-smoke-walkthrough 专用；2026-11-26 可信 RSI
+// 后续批参数化，spec 2026-11-26-trustworthy-rsi-fulltext 决策 D19）：自起 dev 全链 →
+// 轮询就绪 → 跑探针并透传退出码 → teardown 只杀本脚本自起的进程树。矩阵登记与手动单跑：
+//   cd <仓库根> && node scripts/regression/run-ide-smoke-face.mjs            # 默认：IDE 冒烟面
+//   cd <仓库根> && node scripts/regression/run-ide-smoke-face.mjs --face <名> --probe <路径> \
+//     --isolated --backend-env HARNESS2_APPLY=1 --probe-env KEY=VAL          # 自定义走查面
+//
+// 参数：
+//   --face <名>            日志前缀（缺省 ide-smoke-walkthrough）
+//   --probe <路径>         探针脚本（仓库相对；缺省 scripts/regression/ide-smoke.mjs）
+//   --isolated             严格隔离：HERMES_HOME/HERMES_KANBAN_HOME 也指向一次性空目录（写盘、
+//                          看板等全部落在隔离目录），且后端端口被占时拒绝启动（不借用别人的后端
+//                          ——写盘型走查必须只对着自己种的隔离数据，见决策 D18）
+//   --backend-env K=V      追加给后端的环境变量（可重复；调用方显式设过的 HOME 类变量仍优先）
+//   --probe-env K=V        追加给探针的环境变量（可重复）
 //
 // 链路构成（实测 2026-11-26）：
 //   - 前端 vite：npm run dev（8649；predev 自动 ensure-injected 约 20s），就绪=GET 8649 → 200，上限 90s。
 //   - 后端 Koa：npm run serve（8647；ts-node 冷编译 35-50s），就绪=GET /health → 200，上限 150s。
-//     8647 已有服务应答时视为活体后端：直接借用，不接管、teardown 不代杀（与 8649 的拒绝语义不同：
-//     vite 端口被占无法确定服务身份故拒绝，后端按 /health 判定是同一应用）。
+//     非 --isolated 时，8647 已有服务应答视为活体后端：借用，不接管、teardown 不代杀（与 8649 的
+//     拒绝语义不同：vite 端口被占无法确定服务身份故拒绝，后端按 /health 判定是同一应用）。
 //   - 自起后端默认注入 NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> +
 //     HERMES_WEB_UI_DEV_BOOTSTRAP=1（密闭化）：首登建 super_admin 于隔离 HOME，主检出惯态账户库
-//     与宿主网关凭据不参与判定；teardown 不删隔离目录。
-//     探针侧随之获得 IDE_SMOKE_ALLOW_NO_SESSION=1（隔离空库无会话，「会话深链」按环境条件 SKIP，
-//     不计入失败）。借用活体后端或调用方显式设 TEST_DB_DIR 时两者都不注入，探针按实态判红。
+//     与宿主网关凭据不参与判定；teardown 不删隔离目录。探针侧随之获得
+//     ISOLATED_HOME_DIR=<目录>（隔离目录根），需要种数据的探针由此定位；未传时缺省为空。
 //
 // 登录态环境语义（探针假定已认证，实测登录闸三态）：
 //   - 活体环境（惯态检出：账户库有 active 账户＋网关凭据已配）：网关一键进入路径接管，历史轮 11/11。
-//   - 密闭环境（默认：NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> + DEV_BOOTSTRAP=1
-//     + 探针 ALLOW_NO_SESSION=1）：空库首登建号，探针 10 pass + 1 skip，面退出 0——「会话深链」
-//     在空库属环境条件项非产品缺陷。TEST_DB_DIR 不用（serve 态 isDev 分支读不到它）。
-//     隔离范围只有两样：账户库，以及随 HOME 读取的网关一键进入凭据。后端进程仍与本机其它
-//     数据源连通（界面顶栏会显示它们的实时状态），探针只读、不对这些状态做断言；要触发写
-//     操作的走查不能拿这套栈直接对着本机数据做，须自行在网络层拦截或另建夹具。
-//   - 半环境（账户库无 active 账户且无网关凭据）：登录闸拦下全部 UI 步骤（2/10，2026-11-26 实测），
-//     处置：激活账户或配网关凭据后再跑，包装器不代改账户库。
+//   - 密闭环境（默认：NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> + DEV_BOOTSTRAP=1）：
+//     空库首登建号。TEST_DB_DIR 不用（serve 态 isDev 分支读不到它）。
+//     隔离范围：账户库、随 HOME 读取的网关一键进入凭据；--isolated 时再加写盘目标与看板。
+//     探针若要触发写操作必须用 --isolated，不能拿这套栈直接对着本机数据做。
+//   - 半环境（账户库无 active 账户且无网关凭据）：登录闸拦下全部 UI 步骤；处置：激活账户或
+//     配网关凭据后再跑，包装器不代改账户库。
 //
-// 输出统一带 [ide-smoke-walkthrough] 前缀便于矩阵日志识别；仓库根以 process.cwd() 锚定
-// （矩阵执行器以仓库根为 cwd 调起各面）。端口被占先 lsof -ti :8649 确认归属，属别人的不要杀。
+// 输出统一带 [面名] 前缀便于矩阵日志识别；仓库根以 process.cwd() 锚定（矩阵执行器以仓库根为
+// cwd 调起各面）。端口被占先 lsof -ti :8649 确认归属，属别人的不要杀。
 import { existsSync, mkdtempSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { spawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 
-const FACE = 'ide-smoke-walkthrough'
+const DEFAULT_FACE = 'ide-smoke-walkthrough'
+const DEFAULT_PROBE = 'scripts/regression/ide-smoke.mjs'
 const VITE_PORT = 8649
 const BACKEND_PORT = 8647
 const VITE_BASE = `http://localhost:${VITE_PORT}`
@@ -43,11 +51,41 @@ const VITE_READY_TIMEOUT_MS = 90_000
 const BACKEND_READY_TIMEOUT_MS = 150_000
 const POLL_MS = 1_000
 const TERM_GRACE_MS = 8_000
-const PROBE = 'scripts/regression/ide-smoke.mjs'
-// 自起隔离库目录（密闭化时生成；null=借用活体后端或调用方自管）
+
+/** --face/--probe/--isolated/--backend-env/--probe-env；写死默认，非参数形态照旧可用。 */
+function parseArgs(argv) {
+  const opts = { face: DEFAULT_FACE, probe: DEFAULT_PROBE, isolated: false, backendEnv: [], probeEnv: [] }
+  for (let i = 0; i < argv.length; i += 1) {
+    const a = argv[i]
+    if (a === '--face') opts.face = argv[++i] ?? ''
+    else if (a === '--probe') opts.probe = argv[++i] ?? ''
+    else if (a === '--isolated') opts.isolated = true
+    else if (a === '--backend-env' || a === '--probe-env') {
+      const kv = String(argv[++i] ?? '')
+      const eq = kv.indexOf('=')
+      if (eq <= 0) {
+        process.stderr.write(`[${opts.face}] 参数 ${a} 需要 K=V 形式，收到「${kv}」\n`)
+        process.exit(3)
+      }
+      ;(a === '--backend-env' ? opts.backendEnv : opts.probeEnv).push([kv.slice(0, eq), kv.slice(eq + 1)])
+    } else {
+      process.stderr.write(`[${opts.face}] 未知参数：${a}\n`)
+      process.exit(3)
+    }
+  }
+  if (!opts.face || !opts.probe) {
+    process.stderr.write(`[${opts.face}] --face 与 --probe 都不能为空\n`)
+    process.exit(3)
+  }
+  return opts
+}
+
+const OPTS = parseArgs(process.argv.slice(2))
+const PROBE = OPTS.probe
+// 自起隔离目录根（密闭化时生成；null=借用活体后端或调用方自管）。
 let isolatedDbDir = null
 
-const log = (line) => process.stderr.write(`[${FACE}] ${line}\n`)
+const log = (line) => process.stderr.write(`[${OPTS.face}] ${line}\n`)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 // 子进程输出先吸收（成功路径不刷屏，矩阵 tail 保留本面前缀与探针输出），失败时倒尾部。
@@ -138,10 +176,10 @@ function runProbe(root) {
       cwd: root,
       env: {
         ...process.env,
-        IDE_SMOKE_BASE: VITE_BASE,
-        // 仅自起隔离库时许可「无会话」条件跳过（探针只读不造会话，空库本就无深链目标）；
-        // 活体借用后端时保持默认，无会话按 FAIL 如实报红。
-        ...(isolatedDbDir ? { IDE_SMOKE_ALLOW_NO_SESSION: '1' } : {}),
+        WALK_BASE: VITE_BASE,
+        // 默认面（ide-smoke）的既有语义：自起隔离库时空库无会话按环境条件 SKIP。
+        ...(isolatedDbDir ? { IDE_SMOKE_ALLOW_NO_SESSION: '1', ISOLATED_HOME_DIR: isolatedDbDir } : {}),
+        ...Object.fromEntries(OPTS.probeEnv),
       },
       stdio: 'inherit',
     })
@@ -166,29 +204,37 @@ async function main() {
     return 2
   }
 
-  // 后端：8647 有 /health 应答=活体借用；否则自起并在 teardown 终止。
+  // 后端：8647 有 /health 应答=活体借用；--isolated 时拒绝借用（写盘型走查只对隔离数据）。
   const backendStatus = await httpStatus(`${BACKEND_BASE}/health`)
   let backend = null
-  if (backendStatus === 200) {
+  if (backendStatus === 200 && !OPTS.isolated) {
     log(`后端 ${BACKEND_PORT} 已就绪（活体借用，不接管）`)
+  } else if (backendStatus === 200 && OPTS.isolated) {
+    log(`后端 ${BACKEND_PORT} 已有服务应答，但 --isolated 模式不许借用别人的后端（要往家目录写数据）——确认端口归属并停掉后再跑`)
+    return 2
   } else {
     log(`自起后端：npm run serve（8647；ts-node 冷编译 35-50s，就绪上限 ${BACKEND_READY_TIMEOUT_MS / 1000}s）`)
-    // 密闭化（2026-11-26 全面复盘 P7）：serve 态的 DB 目录解析（infrastructure/database/index.ts:12-18）
-    // 在 isDev 分支写死 cwd/packages/server/data，HERMES_WEB_UI_TEST_DB_DIR 只对 isTest 生效——
-    // 故按既立隔离走查配方（2026-11-13 全功能回归轮）用 NODE_ENV=production + HERMES_WEB_UI_HOME=
-    // 一次性空目录：production 分支 DB_DIR=config.appHome=HOME 隔离点，主检出惯态账户库与宿主网关
-    // 凭据都不参与判定；DEV_BOOTSTRAP 是纯 env 门（auth.ts:216），production 态照常空库建号。
-    // 调用方显式已设 HOME 时尊重之（不再额外设 probe 豁免）。目录保留不删，作为面证据一部分。
+    // 密闭化（2026-11-26 全面复盘 P7）：serve 态的 DB 目录解析在 isDev 分支写死 cwd/packages/server/data，
+    // 故用 NODE_ENV=production + HERMES_WEB_UI_HOME=一次性空目录：production 分支 DB_DIR=HOME 隔离点，
+    // 主检出惯态账户库与宿主网关凭据不参与判定；DEV_BOOTSTRAP 是纯 env 门，production 态照常空库建号。
+    // 调用方显式已设 HOME 时尊重之。目录保留不删，作为面证据一部分。
+    // --isolated：HERMES_HOME（写盘目标）与 HERMES_KANBAN_HOME（看板）也指向隔离目录，
+    // 后端 env 追加项（如 HARNESS2_APPLY=1）在此一并注入。
     let bootEnv
     if (process.env.HERMES_WEB_UI_HOME !== undefined) {
       bootEnv = process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}
     } else {
-      isolatedDbDir = mkdtempSync(join(tmpdir(), 'ide-smoke-home-'))
+      isolatedDbDir = mkdtempSync(join(tmpdir(), `${OPTS.face}-home-`))
       bootEnv = {
         NODE_ENV: 'production',
         HERMES_WEB_UI_HOME: isolatedDbDir,
         ...(process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}),
+        ...(OPTS.isolated
+          ? { HERMES_HOME: join(isolatedDbDir, 'hermes'), HERMES_KANBAN_HOME: join(isolatedDbDir, 'kanban') }
+          : {}),
+        ...Object.fromEntries(OPTS.backendEnv),
       }
+      log(`隔离目录：${isolatedDbDir}（teardown 保留，作为面证据）`)
     }
     backend = spawnDetached(['npm', 'run', 'serve'], root, bootEnv)
     let bootFailed = false
@@ -197,7 +243,13 @@ async function main() {
       log(`后端启动失败：${err.message}`)
     })
     const up = await waitReady(`${BACKEND_BASE}/health`, BACKEND_READY_TIMEOUT_MS, '后端', () => bootFailed, backend.tail)
-    if (!up) return 1
+    if (!up) {
+      // 2026-11-26 后续批（决策 D19）：后端未就绪也要清理自起进程——原实现在这里直接 return，
+      // 自起的后端进程组被留下（detached 成组，不会被后续面的 teardown 收走）。
+      log('teardown（后端未就绪）：终止自起进程树')
+      await killTree(backend.child)
+      return 1
+    }
   }
 
   log(`自起前端：npm run dev（8649；predev 注入约 20s，就绪上限 ${VITE_READY_TIMEOUT_MS / 1000}s）`)
