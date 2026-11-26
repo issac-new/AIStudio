@@ -69,15 +69,16 @@ function buildSeed() {
   const proposal = (p) => seed.proposals.push(p)
 
   // ① 单文件已写盘冠军：system_prompt/SOUL.md（回滚演练主对象）
+  const p1Variants = [variant('v1', 'A', NEW_SOUL)]
   const p1 = {
     id: 'hw-0001', title: '提交前跑单元测试', hypothesis: '收紧输出约束可减少返工', surfaceKey: 'system_prompt',
     targetPath: soulFile.path, risk: 'medium', mode: 'parallel', domain: 'general', editClass: 'invariant',
     status: 'promoted', budgetCapUsd: 5, evidenceRefs: ['eval:run-base'], experienceIds: [], baselineRunId: 'run-base',
     baseline: metrics({ passAt1: 0.5 }),
     base: { content: OLD_SOUL, digest: sha(OLD_SOUL), revision: null, exists: true },
-    variants: [variant('v1', 'A', NEW_SOUL)],
+    variants: p1Variants,
     probes: [probe('pr-1', 'v1', metrics({ passAt1: 0.62 }), contrast(0.12))],
-    approval: approved('reviewer', seed.now, 'v1'),
+    approval: approved('reviewer', seed.now, p1Variants),
     composition: composition('v1', NEW_SOUL),
     promotion: { actor: 'operator', at: seed.now, digest: sha(NEW_SOUL), applied: true, verificationTier: 'heldout' },
     rollback: null, createdBy: 'operator', createdAt: seed.now, updatedAt: seed.now,
@@ -132,15 +133,16 @@ function buildSeed() {
     { path: skillFile.path, content: NEW_SKILL, digest: sha(NEW_SKILL) },
     { path: freshFile.path, content: freshFile.nextContent, digest: sha(freshFile.nextContent) },
   ]
+  const p4Variants = [{ id: 'v1', label: 'A', content: '', digest: treeDigest(files, []), diffSummary: { added: 4, removed: 2, unchanged: 0 }, files: files.map((f) => ({ path: f.path, content: f.content, digest: f.digest })) }]
   const p4 = {
     id: 'hw-0004', title: '多文件技能候选', hypothesis: '拆分技能正文与索引', surfaceKey: 'skills',
     targetPath: null, treeRoot: 'skills', risk: 'high', mode: 'parallel', domain: 'general', editClass: 'invariant',
     status: 'promoted', budgetCapUsd: 5, evidenceRefs: ['eval:run-base'], experienceIds: [], baselineRunId: 'run-base',
     baseline: metrics({ passAt1: 0.5 }),
     base: null,
-    variants: [{ id: 'v1', label: 'A', content: '', digest: treeDigest(files, []), diffSummary: { added: 4, removed: 2, unchanged: 0 }, files: files.map((f) => ({ path: f.path, content: f.content, digest: f.digest })) }],
+    variants: p4Variants,
     probes: [probe('pr-4', 'v1', metrics({ passAt1: 0.66 }), contrast(0.16))],
-    approval: approved('reviewer', seed.now, 'v1'),
+    approval: approved('reviewer', seed.now, p4Variants),
     composition: composition('v1', ''),
     promotion: { actor: 'operator', at: '2026-11-26T10:20:00.000Z', digest: treeDigest(files, []), applied: true, backupPath: null, verificationTier: 'heldout' }, // backupPath 由 writeSeed 写树快照后回填
     rollback: null, createdBy: 'operator', createdAt: seed.now, updatedAt: seed.now,
@@ -149,9 +151,36 @@ function buildSeed() {
   seed.onDisk[freshFile.path] = freshFile.nextContent
   proposal(p4)
   seed.champions.push(champion('ch-0004', p4, 'v1', treeDigest(files, []), '2026-11-26T10:20:00.000Z'))
-  seed.tree = { proposalId: 'hw-0004', touched: [soulFile, skillFile, freshFile].filter((f) => f.path !== soulFile.path), promotionDigest: treeDigest(files, []) }
+  seed.tree = { proposalId: 'hw-0004', touched: [skillFile, freshFile], promotionDigest: treeDigest(files, []) }
   seed.soul = { proposalId: 'hw-0001', files: [soulFile], championDigest: sha(NEW_SOUL) }
   seed.single = { proposalId: 'hw-0001', oldContent: OLD_SOUL, newContent: NEW_SOUL, promotionDigest: sha(NEW_SOUL), baseDigest: sha(OLD_SOUL) }
+
+  // ⑤ composed 树提案（演练 C：写盘漂移门）——创建于全部冠军与回滚之后，
+  // treeBase 指向回滚恢复后的磁盘现状（SKILL.md=OLD_SKILL，NEW.md 不存在）
+  const skillRel = skillFile.path
+  const p5Variants = [{ id: 'v1', label: 'A', content: '', digest: sha(OLD_SKILL.replace('旧技能正文', '二次修订正文')), diffSummary: { added: 1, removed: 1, unchanged: 2 }, files: [{ path: skillRel, content: OLD_SKILL.replace('旧技能正文', '二次修订正文'), digest: sha(OLD_SKILL.replace('旧技能正文', '二次修订正文')) }] }]
+  const p5 = {
+    id: 'hw-0005', title: '技能正文二次修订', hypothesis: '基于回滚后基线再做一次修订', surfaceKey: 'skills',
+    targetPath: null, risk: 'high', mode: 'parallel', domain: 'general', editClass: 'invariant',
+    status: 'composed', budgetCapUsd: 5, evidenceRefs: ['eval:run-base'], experienceIds: [], baselineRunId: 'run-base',
+    baseline: metrics({ passAt1: 0.55 }),
+    base: null,
+    variants: p5Variants,
+    probes: [{
+      id: 'pr-5', variantId: 'v1', status: 'recorded', evalRunId: 'run-base',
+      evidence: metrics({ passAt1: 0.61, regression: { runId: 'run-reg-5', suiteName: '回归样本库', total: 4, failed: 0, failedTaskIds: [] }, executionTrace: { status: 'observed', markers: ['walk-skill'], hit: ['walk-skill'], hitRatio: 1, scannedChars: 200, source: 'stream-json', at: '2026-11-26T11:30:00.000Z' } }),
+      contrast: contrast(0.06), createdAt: '2026-11-26T11:30:00.000Z', recordedAt: '2026-11-26T11:30:00.000Z', recordedBy: 'walkthrough',
+    }],
+    approval: approved('reviewer', '2026-11-26T11:30:00.000Z', p5Variants),
+    composition: composition('v1', ''),
+    promotion: null, rollback: null, createdBy: 'operator', createdAt: '2026-11-26T11:30:00.000Z', updatedAt: '2026-11-26T11:30:00.000Z',
+    treeBase: [
+      { path: skillRel, digest: sha(OLD_SKILL) },
+      { path: freshFile.path, digest: null },
+    ],
+  }
+  proposal(p5)
+  seed.drift = { proposalId: 'hw-0005', path: skillRel, baseDigest: sha(OLD_SKILL) }
   return seed
 }
 
@@ -174,8 +203,10 @@ function probe(id, variantId, evidence, contrastOf) {
 function variant(id, label, content) {
   return { id, label, content, digest: sha(content), diffSummary: { added: 2, removed: 1, unchanged: 8 } }
 }
-function approved(actor, at, variantId) {
-  return { decision: 'approved', actor, note: '证据齐全', variantSetDigest: sha(`set:${variantId}`), at }
+function approved(actor, at, variants) {
+  // 与 loop-core variantSetDigest 同源：「id:digest」排序拼接的 sha256（批准绑定候选集合，任何变化即 approval_stale）
+  const parts = variants.map((v) => `${v.id}:${v.digest}`).sort().join('\n')
+  return { decision: 'approved', actor, note: '证据齐全', variantSetDigest: sha(parts), at }
 }
 function composition(variantId, content) {
   return { variantId, digest: sha(content), rationale: '通过率提升', actor: 'reviewer', at: '2026-11-26T10:00:00.000Z' }
@@ -257,14 +288,33 @@ function apiFactory(token) {
   return {
     proposals: () => call('/api/harness/workbench/proposals'),
     rollback: (id, reason) => call(`/api/harness/workbench/proposals/${id}/rollback`, { method: 'POST', body: JSON.stringify({ reason }) }),
+    promote: (id, body) => call(`/api/harness/workbench/proposals/${id}/promote`, { method: 'POST', body: JSON.stringify(body) }),
     overview: () => call('/api/harness/workbench/overview'),
     lifecycle: () => call('/api/harness/rsi-lifecycle'),
   }
 }
 
 // ---------------------------------------------------------------------------
-// 浏览器侧
+// 凭据与浏览器侧
 // ---------------------------------------------------------------------------
+
+/**
+ * 直连登录（D18 配套）：登录端点公开（routes/auth.ts），空库 + HERMES_WEB_UI_DEV_BOOTSTRAP=1
+ * 首登建号（auth.ts:212-218）。不用页面内 devAutoLogin——它会先探「本机 gateway 凭据」，
+ * 该读取不被 HERMES_WEB_UI_HOME 隔离（读的是真实宿主 dotenv），本机网关已配凭据时
+ * SPA 改走 matrix-login，签发的会话对隔离后端无效（实测整轮 401 的根因）。
+ * 返回有效 JWT 或 null（null=探针按环境不满足退出 2）。
+ */
+async function directLogin() {
+  const res = await fetch(`${API}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: 'dev-bootstrap' }),
+  })
+  const body = await res.json().catch(() => null)
+  const token = body?.token || body?.jwt
+  return res.status === 200 && token ? String(token) : null
+}
 
 async function openPanel(page, tab) {
   await page.goto(`${BASE}/#/app/stage/govern?tab=${tab}`, { waitUntil: 'domcontentloaded', timeout: 60_000 })
@@ -338,24 +388,34 @@ async function main() {
   const startedAt = Date.now()
   mkdirSync(SHOTS, { recursive: true })
 
-  // 0. 种数据（进页面之前——后端每次读盘，重启不缓存）
+  // 0. 种数据（进页面之前——后端每次读盘，重启不缓存）＋直连登录拿有效 JWT
   const seed = buildSeed()
   const store = writeSeed(seed)
+  const bootToken = await directLogin()
+  record('直连登录取得有效凭据', Boolean(bootToken), bootToken ? 'admin/dev-bootstrap（登录端点公开，空库建号）' : 'login 未返回 token——检查 HERMES_WEB_UI_DEV_BOOTSTRAP 是否=1')
+  if (!bootToken) {
+    // 浏览器尚未启动，无可清理
+    process.exitCode = 2
+    return
+  }
+  const api = apiFactory(bootToken)
 
-  // 起浏览器，等自动登录写好 JWT（entry.mts devAutoLogin：admin/dev-bootstrap → hermes_api_key）
+  // 起浏览器：addInitScript 在应用任何脚本之前预注入有效会话——
+  // SPA 不再走 devAutoLogin/网关让位路径（其凭据对隔离后端无效，见 directLogin 注释）
   const browser = await chromium.launch({ channel: process.env.WALK_CHANNEL?.trim() || 'chrome', headless: process.env.WALK_HEADFUL !== '1' })
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, locale: 'zh-CN' })
+  await context.addInitScript((t) => localStorage.setItem('hermes_api_key', t), bootToken)
   const page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', (err) => pageErrors.push(String(err).slice(0, 300)))
 
   try {
     await openPanel(page, 'improve')
-    const authed = await page.waitForFunction(() => !!localStorage.getItem('hermes_api_key'), null, { timeout: 60_000 }).then(() => true).catch(() => false)
-    record('自动登录写入接口凭据', authed)
-    if (!authed) throw new Error('隔离库自动登录未完成，见包装器日志')
-    const token = await page.evaluate(() => localStorage.getItem('hermes_api_key'))
-    const api = apiFactory(token)
+    const sessionOk = await page.waitForFunction(
+      () => document.querySelector('[data-testid="harness-improve"]') !== null || location.hash.includes('/person') === false,
+      null, { timeout: 60_000 },
+    ).then(() => true).catch(() => false)
+    record('SPA 带预注入会话启动', sessionOk, page.url())
 
     // 接口可用性（种数据是否被读到）
     const overview = await api.overview()
@@ -481,6 +541,23 @@ async function main() {
       const retry = await api.rollback('hw-0004', '走查回滚演练：多文件排除外部改动后重试')
       record('排除外部改动后重试成功', retry.status === 200, `http=${retry.status}`)
       record('重试后新建文件被删、原文件恢复基线', !existsSync(freshPath) && readFileSync(skillPath, 'utf8') === OLD_SKILL)
+    }
+
+    // 7. 演练 C：树提案写盘漂移门（D21）——创建时快照之后的磁盘被外部改动 → 409 target_drift，文件不动
+    {
+      const driftPath = join(HERMES_HOME, seed.drift.path)
+      record('演练 C 前置：磁盘与 hw-0005 创建时快照一致', readFileSync(driftPath, 'utf8') === OLD_SKILL)
+      writeFileSync(driftPath, 'external second revision')
+      const promoted = await api.promote('hw-0005', { apply: true, actor: 'operator' })
+      const bodyText = JSON.stringify(promoted.body ?? {})
+      record('外部改动后写盘晋级 HTTP 409', promoted.status === 409, `http=${promoted.status}`)
+      record('409 blockers 含 target_drift 且文案带路径', bodyText.includes('target_drift') && bodyText.includes(seed.drift.path), bodyText.slice(0, 200))
+      record('漂移拦截后文件保持外部改动态（未写盘）', readFileSync(driftPath, 'utf8') === 'external second revision')
+      // 排除外部改动后再晋级：门过、真写盘、候选内容落盘
+      writeFileSync(driftPath, OLD_SKILL)
+      const promoted2 = await api.promote('hw-0005', { apply: true, actor: 'operator' })
+      record('排除外部改动后写盘晋级成功', promoted2.status === 200, `http=${promoted2.status}`)
+      record('晋级后文件=候选内容', readFileSync(driftPath, 'utf8') === OLD_SKILL.replace('旧技能正文', '二次修订正文'))
     }
 
     // 7. 主张层级证据图端点（挂同一审计域）

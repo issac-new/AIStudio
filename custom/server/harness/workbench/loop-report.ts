@@ -444,6 +444,19 @@ export function evaluatePromotion(input: PromotionGateInput): PromotionGateRepor
       blockers.push({ code: 'target_missing', message: '目标文件不存在（不创建新文件）' })
     } else if (!isTreeProposal && input.targetDigestNow != null && proposal.base && input.targetDigestNow !== proposal.base.digest) {
       blockers.push({ code: 'target_drift', message: '目标文件在提案后被外部修改，写盘会覆盖他人改动' })
+    } else if (isTreeProposal && (proposal.treeBase?.length ?? 0) > 0 && input.treeDigestsNow) {
+      // 2026-11-26 可信 RSI 批二（D21）：树提案与单文件同一条漂移语义——逐文件比对创建时
+      // 快照与当前磁盘；任一不一致即拦。存量提案（无 treeBase）或门禁输入缺席跳过（无法判定不拦）。
+      for (const entry of proposal.treeBase!) {
+        const now = input.treeDigestsNow[entry.path]
+        if (now === undefined) continue // 该路径不在本次选中候选的触碰集，写盘不会动它
+        if (now !== entry.digest) {
+          blockers.push({
+            code: 'target_drift',
+            message: `文件 ${entry.path} 在提案后被外部修改（创建时${entry.digest ? '有内容' : '不存在'}，现在${now ? '有内容' : '已不存在'}），写盘会覆盖他人改动`,
+          })
+        }
+      }
     }
   }
 
