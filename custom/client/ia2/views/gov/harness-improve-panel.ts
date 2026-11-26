@@ -644,6 +644,13 @@ export function useHarnessImprovePanel() {
           ? L.value.theoryEvaluatorUnknown
           : L.value.theoryEvaluatorInsufficient
 
+  /** 评估条件变更的计数说明：几对相邻后继里变了几对、几对缺指纹无法比较。光给「2/2」读者不知道是什么比什么。 */
+  const evaluatorDriftCount = (pairs: number, changed: number, unknown: number): string =>
+    L.value.theoryEvaluatorCount
+      .replace('{pairs}', String(pairs))
+      .replace('{changed}', String(changed))
+      .replace('{unknown}', String(unknown))
+
   const CURVE_W = 320
   const CURVE_H = 120
   const CURVE_PAD = 10
@@ -698,6 +705,6 @@ export function useHarnessImprovePanel() {
   onMounted(() => void refresh())
 
   return {
-    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, theoryTrajectory, theoryResidue, TRAJECTORY_ROLES, trajectoryChip, trajectoryVerdictLabel, trustRoleLabel, trajectoryCellLabel, evaluatorDriftLabel, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
+    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, theoryTrajectory, theoryResidue, TRAJECTORY_ROLES, trajectoryChip, trajectoryVerdictLabel, trustRoleLabel, trajectoryCellLabel, evaluatorDriftLabel, evaluatorDriftCount, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
   }
 }

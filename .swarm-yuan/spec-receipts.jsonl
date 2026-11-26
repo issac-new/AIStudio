@@ -540,3 +540,4 @@
 {"at":"2026-11-25T17:24:35Z","spec":"docs/superpowers/specs/2026-11-26-full-retro-design-revision-batch.md","receipt":"a48c3eed5d3ce813d304b535931ed73a4bf4c9aa","commit":"backfill"}
 {"at":"2026-11-25T18:44:57Z","spec":"docs/superpowers/specs/2026-06-21-overlay-architecture-design.md","receipt":"f3f906d4e083cac8884049086f4ebdea2da08f9f","commit":"e00902085"}
 {"at":"2026-11-26T01:42:14Z","spec":"docs/superpowers/specs/2026-11-26-trustworthy-rsi-fulltext.md","receipt":"6ec8424c59502f6aea0c7cf34f3661a7fc77f0a2","commit":"b6b93c207"}
+{"at":"2026-11-26T03:20:40Z","spec":"docs/superpowers/specs/2026-11-26-trustworthy-rsi-fulltext.md","receipt":"93bd314ac404000b10204c596eaaa1388f3209e6","commit":"a814feea1"}

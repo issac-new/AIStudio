@@ -35,6 +35,7 @@
 - `rsi-lifecycle.ts`：报告增加 `claimLevels`（八组要求 × 三层的声明式证据图）。
 - 客户端：`governance/api/workbench.ts` 类型；`HarnessImprovePanel.vue` 的「RSI 数学体检」块下增加「后继轨迹联合判定」；`RsiLifecycleSection.vue` 增加主张层级证据表；i18n 中英成对。
 - 测试：`custom/server/harness/workbench/__tests__/loop-joint-evidence.test.ts`（新）；`four-paper-absorption.test.ts` 补 donor 回滚标注用例；`rsi-lifecycle.test.ts`、`harness-controller.test.ts`、`harness-improve-panel.test.ts` 各补用例；`custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`（新）。
+- `config/mechanism-budget.json`：`changes[]` 增一条（零类别增量，附退役条件）；本规格由机械索引登记。这两处随规格首次入库，之后的修订不改变它们的内容。
 
 ### 验收判据
 
@@ -60,6 +61,8 @@
 | D8 | 收缩系数只用未回滚的后继估，时间线仍列出回滚轮 | 回滚轮的增益没有站住，混入会高估每轮收益；时间线保留回滚轮供人看到中间版本的失败 | 全部后继一起估（否决：与只取站住的增益相矛盾） | 是 |
 | D9 | 已回滚的后继在改进有效性一格记不满足，并带回滚原因 | 回滚是系统自己认定这次采纳不该成立；联合判定要求每个版本都成立，原因留给人和核对 | 回滚轮留空不计（否决：等于把一次失败从轨迹里抹掉） | 是 |
 | D10 | 改进有效性要有独立留出集读数才算评估过；有效监督只做结构检查 | 演化集读数参与了候选筛选，不能同时当独立证据；回滚效果没有实测面，结构检查不冒充实测 | 有增益读数即记满足（否决：把未经独立确认的增益写成成立） | 是 |
+| D11 | 评估条件的计数说明写成「相邻后继共 N 对：变了 X 对，缺指纹无法比较 Y 对」 | 只给「X/N」读者不知道是什么比什么；换了评估器的那个后继两侧各算一处，要能从文字读出来（浏览器走查抓出） | 只显示比例（否决：没有单位） | 是 |
+| D12 | 格态的边线规则选择器带上 td，自动化用例检查选择器前缀 | 单元格通用规则是「类＋元素」，单个类选择器压不过它，边线写了也不生效（浏览器走查读计算样式抓出）；轨迹表只改底边，整格设边框会按默认粗细框出方框 | 只守规则里写了什么（否决：规则存在不等于生效） | 是 |
 
 ## 验证
 
@@ -67,17 +70,17 @@
 - `custom/server/harness/workbench/__tests__/four-paper-absorption.test.ts`（+1 例）：来自已回滚提案的 donor 带标注且仍在 offered 里，来源在位的没有标注。
 - `custom/server/harness/__tests__/rsi-lifecycle.test.ts`（+4 例）：证据图八行三列无重复、格态枚举、已评估与部分格子的锚点指向真实路径、汇总计数一致、元改进层五格未评估。
 - `custom/server/harness/__tests__/harness-controller.test.ts`（既有用例补断言）：`/api/harness/rsi-lifecycle` 返回 24 格且计数一致。
-- `custom/client/ia2/__tests__/harness-improve-panel.test.ts`（+2 例）：联合判定结论、回滚后继数、逐版本三角色格态、评估条件变更、回滚残留；旧载荷缺 trajectory 不渲染；曲线给回滚后继留点并带回滚样式。
-- `custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`（4 例，新增）：八行三列与汇总、旧载荷不渲染、缺格显示「—」、接口失败不编造。
-- 目标测试命令：`npx vitest run custom/server/harness/workbench custom/server/harness/__tests__/rsi-lifecycle.test.ts custom/server/harness/__tests__/harness-controller.test.ts custom/client/ia2/__tests__/harness-improve-panel.test.ts custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`——27 个文件 333 例通过。
-- 合并前回归：`npm run regress -- --scope merge`——15 个面 15 通过、0 失败、0 未执行；其中根 vitest 1269 个文件通过、6 个跳过，10329 例通过、11 例跳过、0 失败（本批新增 39 例）；类型检查与客户端类型棘轮（15 ≤ 基线 19）通过。
+- `custom/client/ia2/__tests__/harness-improve-panel.test.ts`（+4 例）：联合判定结论、回滚后继数、逐版本三角色格态、评估条件变更与带单位的计数说明、回滚残留；旧载荷缺 trajectory 不渲染；曲线给回滚后继留点并带回滚样式；「未评估」格的样式源检查用例（只改底边，且选择器带 td）；没有相邻后继可比时不带计数说明。
+- `custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`（5 例，新增）：八行三列与汇总、旧载荷不渲染、缺格显示「—」、接口失败不编造、三种格态边线规则带 td 前缀的样式源检查用例。
+- 目标测试命令：`npx vitest run custom/server/harness/workbench custom/server/harness/__tests__/rsi-lifecycle.test.ts custom/server/harness/__tests__/harness-controller.test.ts custom/client/ia2/__tests__/harness-improve-panel.test.ts custom/client/governance/__tests__/rsi-lifecycle-section.test.ts`——27 个文件 336 例通过。
+- 变异探针：把两张表的四个格态选择器去掉 td 前缀，两个样式源检查用例同时判红；还原后通过。
+- 合并前回归：`npm run regress -- --scope merge`——15 个面 15 通过、0 失败、0 未执行；其中根 vitest 1269 个文件通过、6 个跳过，10332 例通过、11 例跳过、0 失败（本批新增 42 例）；类型检查与客户端类型棘轮（15 ≤ 基线 19）通过。
 - 静态门：机制预算 lint 0 problem；文档索引 777 份 0 problem；合并不变量通过。
+- 浏览器实物走查（隔离环境自起：前后端的家目录都指向临时目录，种入含一个已回滚后继的台账；系统 Chrome 无头打开两个页签，读渲染文字与计算后的样式，截图留档）：共三轮。第一轮 19 项通过、1 项未过——未过项是走查脚本自己的预期写错（换了裁判的后继两侧各算一处变更，界面显示的 2 处是对的），但截图抓出两处界面缺陷：轨迹表「未评估」格被整格虚线框住，评估条件的计数「2/2」没有单位。第二轮 20 项通过、1 项未过——读计算样式发现边线规则被单元格通用规则盖住，轨迹表的底边虚线与证据表三种格态的左侧边线都没有生效。修复后第三轮 22 项全部通过：轨迹表「未评估」格三边无边线、底边 1 像素虚线；证据表已评估实线、部分虚线、未评估点线，均为 2 像素且非透明。
 
 ## 设计文档影响
 
 DESIGN_SYNC: touched
 
-- `docs/DESIGN.md`（整合正本 §4.8）：改进环路一段补后继轨迹的读法——时间线含已回滚的后继；联合判定三种结论；评估条件变更后分数不直接比较；回滚后的残留范围可见。
-- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：§A 增两行（后继轨迹联合判定、主张层级证据图）。
-- `docs/manuals/aistudio-design-document-index.md`：`gen-doc-indexes --write` 机械登记。
-- `config/mechanism-budget.json`：`changes[]` 增一条（零类别增量，附退役条件）。
+- `docs/DESIGN.md`（整合正本 §4.8）：改进环路一段写后继轨迹的读法——时间线含已回滚的后继；联合判定三种结论；评估条件变更后分数不直接比较，变更处数按相邻后继对计；回滚后的残留范围可见。
+- `docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md`：§A 三行（后继轨迹联合判定、评估条件变更比较、主张层级证据图）。

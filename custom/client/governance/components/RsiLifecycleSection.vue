@@ -207,14 +207,16 @@ onMounted(() => void refresh())
 .rl__gaplist li { font-size: 11px; }
 .rl__gap--nr { color: var(--danger); }
 .rl__gap--partial { color: var(--ia-stale); }
-/* 主张层级证据图：三种格态用颜色加边线样式双重区分（实线/虚线/点线），与上方环路矩阵同一套读法 */
+/* 主张层级证据图：三种格态用颜色加边线样式双重区分（实线/虚线/点线），格态文字本身写明，与上方环路矩阵同一套读法。
+   格态选择器带上 td：单元格通用规则是「类＋元素」且写了 border-left 简写，单个类选择器压不过它，
+   边线会停在透明实线（浏览器走查读计算样式抓出）。 */
 .rl__claims { border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px; }
 .rl__claimsub { margin: 0; font-size: 11px; opacity: 0.7; }
 .rl__claimtable { width: 100%; border-collapse: collapse; font-size: 11px; }
 .rl__claimtable th { text-align: left; font-weight: 600; opacity: 0.75; border-bottom: 1px solid var(--border-color); padding: 3px 4px; }
 .rl__claimtable td { border-bottom: 1px solid rgb(0 0 0 / 4%); padding: 3px 6px; border-left: 2px solid transparent; }
-.rl__claimcell--examined { color: var(--success); border-left-color: var(--success); }
-.rl__claimcell--partial { color: var(--ia-stale); border-left-color: var(--ia-stale); border-left-style: dashed; }
-.rl__claimcell--not_evaluated { color: var(--danger); border-left-color: var(--danger); border-left-style: dotted; }
+.rl__claimtable td.rl__claimcell--examined { color: var(--success); border-left-color: var(--success); }
+.rl__claimtable td.rl__claimcell--partial { color: var(--ia-stale); border-left-color: var(--ia-stale); border-left-style: dashed; }
+.rl__claimtable td.rl__claimcell--not_evaluated { color: var(--danger); border-left-color: var(--danger); border-left-style: dotted; }
 .rl__meta { font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.5); border-radius: 6px; padding: 4px 8px; }
 </style>

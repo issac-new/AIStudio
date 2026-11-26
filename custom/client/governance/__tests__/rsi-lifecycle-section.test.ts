@@ -123,6 +123,27 @@ describe('RsiLifecycleSection 主张层级证据图', () => {
     w.unmount()
   })
 
+  it('格态边线规则带 td 前缀，压得过单元格通用规则（浏览器走查抓出：边线停在透明实线）', async () => {
+    // jsdom 不编译 scoped 样式，这里守样式源：单元格通用规则是「类＋元素」且写了 border-left 简写，
+    // 单个类选择器压不过它——边线颜色与样式写了也不生效，三种格态实际只靠文字颜色区分。
+    const { readFileSync } = await import('fs')
+    const { resolve } = await import('path')
+    const source = readFileSync(resolve(__dirname, '../components/RsiLifecycleSection.vue'), 'utf8')
+    expect(source).toMatch(/\.rl__claimtable td\s*\{[^}]*border-left:/)
+    // 已评估只换边线颜色，线型取通用规则的实线；部分与未评估另改线型。
+    const expectations: Array<[Status, RegExp]> = [
+      ['examined', /border-left-color:/],
+      ['partial', /border-left-style: dashed/],
+      ['not_evaluated', /border-left-style: dotted/],
+    ]
+    for (const [status, declaration] of expectations) {
+      const rule = source.match(new RegExp(`([^\\n{}]*?)\\.rl__claimcell--${status}\\s*\\{([^}]*)\\}`))
+      expect(rule, status).not.toBeNull()
+      expect(rule![1].trim().endsWith('td'), status).toBe(true)
+      expect(rule![2], status).toMatch(declaration)
+    }
+  })
+
   it('接口失败时显示错误行，不编造证据图', async () => {
     const w = await mountWith(null, { ok: false, status: 500, json: async () => ({}) } as unknown as Response)
     expect(w.find('[data-testid="harness-rsi-claims"]').exists()).toBe(false)
