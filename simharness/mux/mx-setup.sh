@@ -76,8 +76,13 @@ touch "$SIM_ROOT/var/agent-src.stamp"
 
 # ── 1b. overlay/runtime 部署（B1 结构化 raci 等 7 文件；与 inject 出口同源，
 #        mx 流程不经 inject 故显式幂等同步，失败只告警不阻断）─────────────
+# pristine 源（2026-11-26 run32）加 --force：SIM 树=纯净上游基线（缺补丁语义锚），
+# runtime 模板才是整理态权威——缺省「保留目标」策略会保住无锚基线版（612 年龄锚
+# 缺失实录）；宿主快照模式维持缺省策略（防宿主热修被模板旧版覆盖，AGENTS.md §10）。
+_deploy_force=()
+[[ "${HERMES_AGENT_SRC_PRISTINE:-0}" == "1" ]] && _deploy_force=(--force)
 if [[ -f "$OVERLAY_ROOT/scripts/deploy-agent-runtime.mjs" ]]; then
-  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply --runtime "$AGENT_SRC" ) \
+  ( cd "$OVERLAY_ROOT" && node scripts/deploy-agent-runtime.mjs --apply "${_deploy_force[@]}" --runtime "$AGENT_SRC" ) \
     || log "runtime 部署告警（结构化 raci 等能力依赖它，需人工复核 deploy-agent-runtime）"
 fi
 
