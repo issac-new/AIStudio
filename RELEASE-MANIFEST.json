@@ -180,7 +180,7 @@
       "commit": "806ddd1830e4fa9fd30076a09380bb07ad4f4391",
       "treeHash": "7276efce8ba5efd7fc0e424567039d784783dd77",
       "createdAt": "2026-11-26",
-      "note": "v1.0.21 发布轮实际打包 commit 806ddd183（tree 7276efce）；标签显式指向该打包提交；release:gate 15 步全过（bundle 身份 2b5dd5905632 复算相符，518 补丁/19 资产）；回归矩阵全量档 23 面 23 通过（199a18ad1 首跑，标签提交 806ddd183 独立检出复跑同过，vitest 10291 过 11 跳过）；全量测试门 JUnit 10302 例 0 失败 0 错误；整体源码包 347,540,372 字节（sha256 8f2c82c9ff8bbfa6…）、everything 离线档 80,396,045 字节（sha256 918b3ddcde640ba2…）；GitHub Release 三资产下载回验 SHA-256 一致并与本地逐字节相同；ModelScope swarm-yuan/ everything zip＋SHA256SUMS-v1.0.21（6aca259，远端扫描 ACCEPTED，下载回验逐字节相同）。"
+      "note": "v1.0.21 发布轮实际打包 commit 806ddd183（tree 7276efce）；标签显式指向该打包提交；release:gate 15 步全过（bundle 身份 2b5dd5905632 复算相符，518 补丁/19 资产）；回归矩阵全量档 23 面 23 通过（199a18ad1 首跑，标签提交 806ddd183 独立检出复跑同过，vitest 10291 过 11 跳过）；全量测试门 JUnit 10302 例 0 失败 0 错误；整体源码包 347,540,372 字节（sha256 8f2c82c9ff8bbfa6…）、everything 离线档 80,396,045 字节（sha256 918b3ddcde640ba2…）；GitHub Release 三资产下载回验 SHA-256 一致并与本地逐字节相同；ModelScope swarm-yuan/ everything zip＋SHA256SUMS-v1.0.21（6aca259，远端扫描 ACCEPTED，下载回验逐字节相同），full 源码包补发（61ed4ce，2026-11-26 用户裁决口径变更，下载回验 SHA-256 一致）。"
     }
   ],
   "packaging": {
@@ -211,7 +211,7 @@
     ],
     "repoLevelNote": "repoLevelPaths 是仓级基建/资产，只随整体包分发，不单独成模块包；四条模块包按各自 packageIncludes 圈定。新增顶层目录时须在此登记或归入某模块，否则只出现在整体包且无归属声明。",
     "checksums": "SHA256SUMS（随 dist/release/ 目录）",
-    "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道分工：Github Release 挂两件主资产及校验件；ModelScope 只更新 swarm-yuan/ 目录（everything zip＋单条 SHA256SUMS-v<版本>.txt，旧版本保留），整体源码包不上传 ModelScope——其 aistudio/ 目录保留 1.0.15、1.0.16 两版历史件，不再更新（2026-11-24 订正，此前表述停在 1.0.16 的双目录做法；实际自 1.0.17 起每版只传 swarm-yuan/ 两件））。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端也不打包——make-release-packages 默认只打整体包，--all-modules 显式打 4+1 全量（逃生通道）。"
+    "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道分工：Github Release 挂两件主资产及校验件；ModelScope 更新 swarm-yuan/ 目录（everything zip＋整体源码包＋单条 SHA256SUMS-v<版本>.txt，旧版本保留；2026-11-26 用户裁决「modelscope也要发full包」改为双通道同件并收敛口径挂账 N34-11——此前 1.0.17～1.0.20 只传 everything，其 aistudio/ 目录保留 1.0.15、1.0.16 两版历史件不再更新））。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端也不打包——make-release-packages 默认只打整体包，--all-modules 显式打 4+1 全量（逃生通道）。"
   },
   "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.8.30（2026-11-23 升级批） / hermes-agent v0.23.4（2026-11-24 升级批） / zcode 包版本 4.0.0、基线 a4b44451（2026-11-23 同步批，与 tag v4.0.0 及本机安装版 4.0.0 同一）。模块大版本对齐基准，与产品扩展序不互推）"
 }

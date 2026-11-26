@@ -72,6 +72,7 @@
 - 根因层：发布清单与设计文档的表述停在 2026-11-03 的口径，用户级规则与其后三版的实际做法是另一个口径。
 - 验收判据：用户裁决以哪份为准后，`docs/DESIGN.md` §5.5、`RELEASE-MANIFEST.json` 的 `artifactDistribution` 与用户级规则三处表述一致。
 - 状态：**已对齐（2026-11-24 N34 清偿批首提交 26b384046）**——以用户级规则与近四版实际做法为准，设计文档/发布清单/发版说明/设计导读手册四方表述一致。
+- 再收敛（2026-11-26 用户裁决「modelscope也要发full包」）：ModelScope 每版补发整体源码包、双通道同件，设计正本 §5.5 与发布清单 artifactDistribution 随批改齐（spec 2026-11-26-modelscope-full-package-policy）。
 
 ### N34-12 真实派单台账里的测试污染数据
 - 锚点：`~/.hermes-web-ui/overlay/dispatch-ledger.jsonl`——3485 行里 3034 行是测试写入的 `/w/anywhere`（工作区形态即 `zcode-engine-controller.test.ts` 归属闸用例的固定值）。
