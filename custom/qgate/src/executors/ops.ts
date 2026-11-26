@@ -731,8 +731,12 @@ export async function runOpsExecutor(executor: ExecutorSpec, input: OpsExecutorI
       const reList = /export\s+(?:type\s+)?\{([^}]+)\}(?:\s*from\s*['"][^'"]+['"])?/g
       while ((m = reList.exec(content)) !== null) {
         for (const part of m[1].split(',')) {
-          const seg = part.trim()
+          let seg = part.trim()
           if (!seg) continue
+          // 内联 type 修饰（TS 4.5：export { type X } 与 export { type X as Y }）——
+          // 与导入侧同一剥离纪律；不剥则导出面记成字面 "type X"，导入侧剥完对账必悬空
+          // （2026-11-26 发版轮 Ekko UI 批二 protocol-bridge 实锤，准出链 L1 逮住）
+          if (/^type\s+/.test(seg)) seg = seg.replace(/^type\s+/, '')
           const asMatch = /^([\w$]+)\s+as\s+([\w$]+)$/.exec(seg)
           names.add(asMatch ? asMatch[2] : seg.split(':')[0].trim())
         }

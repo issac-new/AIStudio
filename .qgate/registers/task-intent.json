@@ -1,6 +1,6 @@
 {
-  "taskId": "zcode-400-upgrade-release-v1020-20261124",
-  "statement": "ZCode 4.0.0 同步升级与 v1.0.20-overlay 发版批：vendor/zcode 基线 3.18.2（fec97590）换血至 4.0.0（a4b44451）＋zcode-patches 11 条重放适配（004/006/009/011 随新基线重做、其余原样应用）＋宿主 RPC 复制面与会话投影契约锚点同步 a4b44451＋词条快照 zcode-400＋版本载体进位（整体包 1.0.20-overlay、cockpit 0.8.30-studio.2、ycode 4.0.0；teams v0.23.3-team.2 与 yuan v2.103.0 维持）＋版本字面量传播面（RELEASE-NOTES 版本节/培训载体/team README/技术组件台账/设计总账§C/设计导读/运维参考）＋发布链（全量测试→preflight→打包→tag→GitHub Release→ModelScope everything 通道→releaseBatches 回填）＋合并后更新引擎部署位 ~/.hermes/ycode/zcode.cjs（覆盖前先备份）",
+  "taskId": "full-retro-regression-release-v1021-20261126",
+  "statement": "全面复盘·设计修订·全量回归与 v1.0.21-overlay 发版批：在途分支合入与分支清理后，四路复盘（挂账台账、设计三方一致性、测试覆盖、安全面）→设计修订四批（账本与正本勘正、回归矩阵卫生与浏览器走查面收编、已接受通告清单结构化与 CSRF 回归、数字员工批一审查六项修复）→全功能·非功能·安全全量回归（回归矩阵 23 面）并修复暴露问题（补丁 015 选项类型声明、走查面密闭化、HTTP 出口收编 fail()）→版本载体进位（整体包 1.0.21-overlay、驾驶舱 0.8.30-studio.3；agent teams v0.23.4-team.1、yuan v2.103.0、Ycode 4.0.0 维持）→发布链（全量回归→准出链打包→everything 离线档→预检→标签指向实际打包提交→GitHub Release→ModelScope swarm-yuan/ 目录→releaseBatches 回填）",
   "scope": [
     "docs/**",
     "simharness/**",
@@ -38,11 +38,13 @@
     ".env.example"
   ],
   "acceptance": [
-    "When 运行 npm run clean && npm run inject Then 注入清单 status=complete 且 510 条补丁全部 applied",
+    "When 运行 npm run clean && npm run inject Then 注入清单 status=complete 且 518 条补丁全部 applied",
+    "When 运行 npm run regress -- --scope full Then 23 个测试面全部通过",
     "When 运行 npm test Then 全量零失败",
     "When 运行 npm run release:check Then 四模块对账全绿",
-    "When 运行 npm run release:preflight Then 全过（junit/六门 fresh）"
+    "When 运行 node scripts/make-release-packages.mjs Then 准出链通过且写出整体源码包",
+    "When 发布完成 Then 从 GitHub Release 与 ModelScope 下载的资产 SHA-256 与本地一致"
   ],
-  "confirmedBy": "用户 2026-11-23 令「Zcode已升级至4.0，同步完成AIStudio的相关升级」；方案确认时裁决「合并后接着发版」",
-  "confirmedAt": "2026-11-23T12:00:00.000Z"
+  "confirmedBy": "用户 2026-11-26 目标指令（提交合入 main、清理无用分支、全面复盘并改进 AIStudio、修订整体设计并实施、完成全功能及非功能与安全的回归测试并修复暴露的问题、发版 github 及 modelscope）",
+  "confirmedAt": "2026-11-26T00:07:48.219Z"
 }

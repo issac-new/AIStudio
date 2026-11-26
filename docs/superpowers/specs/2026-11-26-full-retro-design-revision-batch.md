@@ -1,6 +1,6 @@
 # 2026-11-26 全面复盘·设计修订·实施批（回归前改进批）
 
-> 状态：实施完成（2026-11-26；四批全部合入 main，全量回归与发版结果待回填本文件验证节）。基线 aac12a62d；批 B/C/D 各自 worktree 并行实施后逐个 --no-ff 合入。用户指令：提交合入清分支之后，「全面复盘并改进 AIStudio，修订整体设计，并实施完成，最后完成全功能及非功能、安全的回归测试并修复暴露问题，发版 GitHub 与 modelscope」。本 spec 承载复盘结论、设计修订与实施项；全量回归与发版另有收口记录回填本文件验证节。
+> 状态：实施完成（2026-11-26；四批全部合入 main，全量回归终轮 23 面 23 通过，见验证节 7～10；发版另见 `2026-11-26-release-v1.0.21-overlay.md`）。基线 aac12a62d；批 B/C/D 各自 worktree 并行实施后逐个 --no-ff 合入。用户指令：提交合入清分支之后，「全面复盘并改进 AIStudio，修订整体设计，并实施完成，最后完成全功能及非功能、安全的回归测试并修复暴露问题，发版 GitHub 与 modelscope」。本 spec 承载复盘结论、设计修订与实施项；全量回归与发版另有收口记录回填本文件验证节。
 
 写给谁看：本仓 AI 会话与后续接手者；判定「这轮改进做了什么、为什么、怎么验收」。
 
@@ -47,6 +47,13 @@
 4. 批 D：六项各自守门测试绿＋`npx vitest run <六项测试路径>` 全绿；两套契约区分守门绿。【已过：七文件 61 例绿＋宽回归 75 文件 789 例绿＋typecheck:harness 0；变异探针×7 全部改坏红/还原绿。实施 spec 2026-11-26-digital-employee-review-defects.md 随批入库；OrgEditor 真实浏览器走查留全量回归轮】
 5. 合并后：`npm run regress -- --scope merge` 过；全量回归（P6 阶段）21＋2 面执行并回填本节。【合并复核已过：批 C 目标 42/42、批 D 守门 61/61、批 B 守门 26/26 在 main 复跑绿；merge 档与全量档待回归轮】
 6. 预算册批 B 增补（裁决授权）：scripts 上限 76→77，sunset owner=quality、reviewBy 2027-02-26、retireWhen 挂 e2e 取代或探针退役；pairedRemovals=ide-smoke 裸入口降级为面内实现细节。【已过：lint 0 problems】
+7. 全量回归终轮（2026-11-26，代码态 main a774da2f0，其后仅文档提交）：`npm run regress -- --scope full` **23 面 23 通过、0 失败、0 未执行**。当次只截了日志尾部，逐面明细没有留全（执行器不落报告文件）；留存的逐面记录只有 catalog-check 通过 1s、ide-smoke-walkthrough 通过 104s、capability-matrix 通过 0s。完整逐面日志在发版提交上重跑一次后记入发版规格的验证节。
+8. 首轮全量 20/23，三红面的定谳与修复：
+   - yc-typecheck：补丁 015 缺选项类型声明，补类型 hunk 后通过（经过见 `2026-11-25-preinstalled-tools-injection.md` 的 P7 增补）。
+   - vitest 面：合并档首轮 13/15 时，架构棘轮 1030→1032——批 D 在 governance-controller.ts 新增两处手写 `ok:false` 信封，改走 `lib/http` 的 `fail()` 后回到 1030（e00902085）；deploy-agent-runtime 与 inject-clean-v2 共 9 例红，是调用侧把 `RUNTIME_DEPLOY_TARGET` 带进了测试子进程、盖掉了夹具自己的目标目录所致，不带该变量全量 10290 过 0 败。
+   - ide-smoke-walkthrough 2/10：自起后端落在主检出的惯态账户库上（`HERMES_WEB_UI_TEST_DB_DIR` 只对 isTest 生效，serve 态的 isDev 分支把库目录写死为 cwd/packages/server/data），登录闸拦下全部界面步骤；改用既立隔离配方（`NODE_ENV=production`＋一次性 `HERMES_WEB_UI_HOME`）后 10 过 1 条件跳过（a774da2f0）。隔离的只有账户库与随 HOME 读取的网关一键进入凭据，后端仍与本机其它数据源连通，这套栈只用于只读走查。
+9. 合并档：`npm run regress -- --scope merge` 15 面 13 过——vitest 与 build 两面红在注入被宿主混合态的部署预检中止（预检阶段中止，未应用任何补丁），不是测试失败；注入改指一次性影子目录后 build 通过、全量见第 7 条。按仓规应在各批合并前跑合并档，本轮是在四批合并之后才跑，属流程偏离，如实记下。
+10. OrgEditor 离职向导实物走查（批 D 第 6 项的补验）：真实浏览器（Chrome 无头）＋自起密闭栈；走到被拦态需要能过 synapse whoami 的 Matrix 管理员令牌，不在走查中使用宿主令牌，故前置检查的响应由浏览器网络层拦截提供，离职接口与改派接口一律中止。首轮 16 过 1 败——败的一项「执行按钮可用」是脚本在服务信息请求返回前（实测该请求 1345～1477 毫秒）做了单点读数，属脚本时序问题，改为等待并计时后通过。变异探针：临时移除「返回修改」按钮后，走查在「被拦态出现返回修改按钮且可点」变红并中止（7 过 1 败于 8 项，退出码 1）；还原后 **17 过 0 败**（退出码 0）：被拦态出现按钮、返回后回到第一步且移交对象／离职原因／管理员令牌／下拉选择全部保留、修改后不重开向导即可再次执行到被拦态、关闭仍可用、离职与改派接口零调用、无页面错误、收尾后两端口零残留。本机治理仓 `org.md` 花名册没有成员行，脚本点「新增成员」补了一行空行后发起向导（只是页面状态，未保存）。走查脚本放在仓外，属一次性验证，未入库。
 
 ## 五、设计文档影响
 
@@ -56,4 +63,5 @@ DESIGN_DOCS: docs/DESIGN.md, docs/superpowers/specs/2026-06-21-overlay-architect
 - `docs/DESIGN.md` 基线表行（:1708）：hermes-agent v0.23.3→v0.23.4（实际钉版对齐，批 A 同批修订）。
 - `docs/DESIGN.md` 机制预算条款（:1292-1293）：废止补丁两类「不按上限贴死」豁免，改为「重锚或让号增减时同批把上限调到在册数」，先例 patches 562→504（批 A 同批修订）。
 - `docs/superpowers/specs/2026-06-21-overlay-architecture-design.md`：头部补时点声明（2026-06-21 快照不随批次回填数字，指明现行事实源载体），正文不回填（批 A 同批修订）。
+- `docs/DESIGN.md` 回归矩阵段（6.3）：把关测试由「锁定四件事」改为五件事（新增：`manual: true` 的面只允许在全量档且必须写明理由）；写入首个浏览器走查面 `ide-smoke-walkthrough` 的构成与适用范围（只读走查）、能力验收矩阵面 `capability-matrix`；订正与附表 A 自相矛盾的陈旧句——推演、Python 与 Ycode 七个测试面自 2026-11-25 起已由 CI 的 `regression-axes.yml` 覆盖（批 B 落地、全量回归轮修订）。
 - 其余文档不触及；新增测试面对应的矩阵正本 spec（`2026-11-23-full-retro-regression-matrix.md`）状态行已在批 A 回填，新增两面落地记录回填本 spec 验证节，不新开设计文档。

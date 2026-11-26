@@ -1,3 +1,21 @@
+# v1.0.21-overlay（2026-11-26）
+
+本版承载 v1.0.20 之后合入主线的全部批次，并完成一轮全功能、非功能与安全回归（规格见 spec 2026-11-26-release-v1.0.21-overlay；此前的复盘与改进见 spec 2026-11-26-full-retro-design-revision-batch）。
+
+本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
+
+- **基线与补丁**：hermes-agent 上游底座由 v0.23.3 升到 v0.23.4，agent teams 载体随之为 v0.23.4-team.1；hermes-studio 维持 v0.8.30；Ycode 维持 4.0.0（a4b44451）。补丁在册由 510 增至 518：`patches/series` 499→504，`zcode-patches/series` 11→14。
+- **Ycode 新增三条补丁**：013 生产依赖安全刷新（严重通告归零）；014 开发依赖安全刷新（通告 77→20）；015 独立服务端接入预装文档工具（读 `ZCODE_PREINSTALLED_TOOLS_BIN_DIR` 并透传给 `createLocalServices`，变量缺省时行为不变）。
+- **依赖安全**：依赖漏洞审计进入自动关口（合并档与全量档）；已接受通告清单逐条写明包名、挂账编号与退役条件；新增 CSRF 专项回归 13 例；follow-redirects 以 overrides 钉到 1.16.3（补丁 818、819）。
+- **回归治理**：回归矩阵 `config/regression-matrix.json` 成为「有哪些测试面、各在哪个关口跑」的唯一事实源（`npm run regress -- --scope merge|full`），现有 23 个测试面；本版收编首个浏览器走查面 `ide-smoke-walkthrough` 与能力验收矩阵面 `capability-matrix`。CI 新增 `regression-axes.yml`，用同一执行器覆盖推演、Python 与 Ycode 七个测试面。注入的 noop 判定补上路径级哨兵，半还原态不再被当成健康。
+- **数字员工批一**：上岗、派单、执行、退出的闭环——身份册可登记运行时绑定、派单门、责任卡签署、离职前置检查与改派核实。独立审查留下的六项缺陷在本版修复。
+- **Ekko UI v2 批一与批二**：协议 v2 的表达能力（可计算表达式、新部件、新动作、能力协商），以及界面的持久化与非阻塞生命周期。
+- **动作契约**：ekko-studio MCP 其余三个服务的 44 个工具逐个定级并登记。
+- **手册**：swarm-yuan 手册进位 v2.103.0 并补独立审查协议一节；培训手册随宿主 v0.23.4 同步。
+- **回归证据（发版提交 199a18ad1 上实测）**：回归矩阵全量档 **23 面 23 通过、0 失败、0 未执行**（根 vitest **10290 过 / 0 败 / 11 跳过**，1267 个测试文件通过；类型双门、构建与包体积预算、推演门、Python 两面、swarm-yuan 全量、Ycode 四面、依赖审计、发布一致性、配置快照、IDE 走查、能力矩阵逐面通过）；依赖审计 studio 1 条、Ycode 12 条全部在已接受清单内、新出现 0。
+- **版本**：整体包 1.0.21-overlay、驾驶舱 0.8.30-studio.3；agent teams v0.23.4-team.1、Ycode 4.0.0、yuan v2.103.0 不变。
+- **已知问题与未做**：Ycode 仍有一批依赖通告只能随上游基线升级解决（挂账 N35-10），其中 Electron 44.7.0→44.9.1 的升级与桌面端整包验证未做。Ekko UI v2 批二的三条路径（MCP 创建卡片、「提交后新一轮对话」、刷新恢复）只有单元测试覆盖，未做真实浏览器端到端。数字员工批一的 HTTP 预演端点未做真实引擎端到端验证。《前端功能清单》（`docs/manuals/aistudio-feature-inventory.md`）停在 2026-11-24 的盘点，不含数字员工批一与 Ekko UI v2。桌面端安装包（DMG）本版未构建。已立项未开工：Ekko UI v2 批三与批四、数字员工批二与批三、ZCode 4.0 能力吸收 P2（设计插件试用验证）、AGNES 批 1b。
+
 # v1.0.20-overlay（2026-11-24）
 
 本版把 Ycode 的源码基线从 ZCode 3.18.2 升到 4.0.0，并同步宿主协议面与词条快照（规格见 spec 2026-11-23-zcode-400-upgrade-release）。
@@ -79,6 +97,7 @@
 本地执行 `npm run release:check` 核对版本，再执行 `npm run release:packages` 默认只打整体包；确需本地生成 4+1 全量时显式使用 `--all-modules`。此长期规则取代 2026-10-28 的 local-only 口径，历史发布条目保留当时事实。
 
 ## 版本
+AIStudio 驾驶舱 **0.8.30-studio.3**（2026-11-26 v1.0.21-overlay 发布轮：hermes-agent 底座 v0.23.3→**v0.23.4**（agent teams 载体 v0.23.4-team.1）、Ycode 补丁 11→14（013 生产依赖安全刷新／014 开发依赖安全刷新／015 预装文档工具接线）、依赖审计关口与已接受通告清单结构化、回归矩阵 23 面并收编浏览器走查面、数字员工批一、Ekko UI v2 批一与批二、MCP 动作契约登记 44 个工具；同底座扩展序进位，**声明前进、cockpit 包不重发**；版本规则同下条）
 AIStudio 驾驶舱 **0.8.30-studio.2**（2026-11-24 v1.0.20-overlay 发布轮：Ycode 源码基线 3.18.2→**4.0.0**（a4b44451），补丁 004/006/009/011 随新基线重做、其余 7 条原样应用，宿主 RPC 复制面同步 a4b44451，会话投影契约锚点改准，词条快照 zcode-400；同底座扩展序进位，**声明前进、cockpit 包不重发**；版本规则同下条）
 AIStudio 驾驶舱 **0.8.30-studio.1**（2026-11-23 台账最新版与兼容升级批：hermes-studio 底座换血 v0.8.28→**v0.8.30**（8a51d1bcf，16 提交/117 文件 +3885/−574——approvals/clarifications 投递修复/单聊压缩摘要绑定房间主/插件三方风险提示/TLS 信任前移/Grok reasoning replay 会话亲和/内存上限写审批修复；补丁面 5 枚适配：042 版本锚、301 并集上游 sessionSource+profile 深链、640·757 用户存储链保留 userAccessChanged 新事件并让 Matrix 权限更新同通知、812 统一池 cc-switch 直钉与 legacy bindInternalModelSession 并存；clean+inject 510/510 零失败幂等二连）；Ycode 宿主 RPC 同步公开基线 fec97590（retryable/profileId 透传、EventError 订阅结束语义入位；全文件豁免守门废除改确定性比较）；技术组件台账全量刷新（openagentontology 复活回观察、os-taxonomy 正名公开仓、REA/DSH 本机对齐 latest）；spec 2026-11-23-tech-ledger-latest-compat；**声明前进、cockpit 包不重发**；版本规则同下——底座换血扩展序归 1，真源=本文件版本节首行）
 AIStudio 驾驶舱 **0.8.28-studio.3**（2026-11-23 v1.0.18-overlay 发布轮：全功能·非功能·安全回归修复批——补丁 815 Python 3.14/816 看板 title-body/Ycode 002 真实会话导入与 012 Android JDK 校验/profiles 密钥 env 化＋注册表 owner 补齐＋A2A 补段；同底座扩展序进位，声明前进、包不重发）

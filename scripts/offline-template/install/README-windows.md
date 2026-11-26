@@ -1,6 +1,6 @@
 # AIStudio 离线安装手册（Windows amd64 · Web 模式）
 
-> 当前配套版本：AIStudio **1.0.20-overlay**；agent teams **v0.23.3-team.2**；hermes-agent 上游底座 **0.23.3**；yuan **v2.103.0**；Ycode **4.0.0**。
+> 当前配套版本：AIStudio **1.0.21-overlay**；agent teams **v0.23.4-team.1**；hermes-agent 上游底座 **0.23.4**；yuan **v2.103.0**；Ycode **4.0.0**。
 >
 > 本包是 **Web 模式**的源码与安装链，**不含 Electron 桌面壳、Windows 桌面安装包或桌面运行时**。
 >
