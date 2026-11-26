@@ -1843,12 +1843,13 @@ npm run serve
 根 vitest 全量留给合并前纪律。把关测试 `scripts/__tests__/regression-matrix.test.ts`
 锁定五件事：仓内发现的测试文件都能对应到一个测试面、带测试文件的面由钩子或 CI 强制、
 矩阵里的 CI 引用可解析、钩子与入口确实接线、标了 `manual: true` 的面只允许在全量档
-且必须写明理由。`manual: true` 是“不自带测试文件、靠命令退出码判定”的面的登记方式
-（2026-11-26 起），不得用作逃逸通道。矩阵自 2026-11-26 起含第一个浏览器走查面
+且必须写明理由。`manual: true` 是“不进自动关口、只在全量档执行”的面的登记方式
+（2026-11-26 起）：必须 scopes 恰为全量档且在 note 写明理由，不得用作逃逸通道。矩阵自 2026-11-26 起含第一个浏览器走查面
 `ide-smoke-walkthrough`：包装脚本自起前后端（后端用 `NODE_ENV=production` 加一次性
 `HERMES_WEB_UI_HOME` 把账户库隔离开，登录走开发引导门），就绪后执行只读冒烟探针，
-结束后只终止自己起的进程树；探针的判定逻辑另由单元测试覆盖。隔离的只有账户库与随
-HOME 读取的网关一键进入凭据，后端仍与本机其它数据源连通，所以这套栈只用于只读走查。
+结束后只终止自己起的进程树；探针的判定逻辑另由单元测试覆盖。隔离覆盖账户库、看板与 agent 家（三 HOME 同指一次性目录），并以环境开关禁用技能注入
+（不写宿主技能目录）与网关自启；agent-bridge 仍会启动，但其数据根指向隔离目录，写入
+落在隔离侧。后端进程仍可能读到本机其它配置面，所以这套栈只用于只读走查。
 另登记能力验收矩阵面 `capability-matrix`。同日新增写盘型走查面
 `governance-rsi-walkthrough`（治理改进实验台）：同一包装脚本参数化复用（`--face`／
 `--probe`／`--isolated`／`--backend-env`），严格隔离模式下写盘目标与看板的家目录也指向
@@ -1911,7 +1912,7 @@ Ycode 七个测试面自
 | 恢复真值与多 agent 预算（2026-11-12 handbook 吸收） | Action Ledger/幂等三态/恢复查未结算已接线（guard 默认关）；LLM 请求硬准入未接——`call_id/attempt_id` 已随 span 落账，预算租约先立账本语义，接入点属执行内核统一范围；团队停止 enforce 默认关且委派深度仅采纳调用方显式值（台账无 parent 链不猜）；黄金集 F2P 用合成负例，非 ground truth | 硬准入接入前不得宣称"LLM 调用受预算拦截"；深度事实须有真实 parent 链来源后才可注入；F2P 读数只证明判据区分力下限 |
 | 交接合同闭环（2026-11-13 超级智能体吸收批一） | 看板 PATCH/DELETE/decompose 三写入口接入 `authorizeTaskIds`＋`requestBoard`（隐藏 profile 404 与 complete/block 同权，补丁 770）；证据压缩器归档失败即 passthrough（无全文不摘要、模型零调用，补丁 771）；delegate_task 每任务 `strict_output_schema` 显式严格合同（失败关闭；interrupted/执行错误/max_iterations 原因优先不被覆盖；默认宽松行为字节级不变，补丁 772） | 严格模式仅由调用方显式声明生效，不得描述为默认行为；归档失败保真由 runtime/tests 与补丁内 vendor 测试双面锁定；三入口授权与既有写路径同权以控制器行为测试核验 |
 | 任务版本化与分级验证（2026-11-14 超级智能体吸收批二） | tasks 行级 `version` 乐观锁——所有改任务行路径（操作者动词＋claim/recompute_ready/reclaim 等内核迁移）事务内递增，携带 `expected_version` 不匹配即 409，缺省兼容放行记 legacy 事件；task_events 每行五字段 envelope（version/actor/time/reason/trace_id）；卡级 `verification` 三档（standard 缺省/independent=review handoff 回执/strict:pr=PR acceptance 必过），complete_task 单点拦、拒绝不自动改状态；runtime 六镜像（kanban_db/kanban_db_connect/kanban/kanban_parser/kanban_tools/kanban_tools_schemas）随批同构 | 兼容期 legacy 流量可识别可收敛；等级证据只认 kanban 库内源（PR acceptance store/review lane），Person/claims 留后续接入点；Vue 客户端 expectedVersion 发送挂账下一批 |
-| 回归矩阵（2026-11-24） | `config/regression-matrix.json` 登记全部测试面及其关口，推送前钩子执行其推送前档，口径见 6.3。推演 harness、Python 与 Ycode 七个测试面自 2026-11-25 起由 `regression-axes.yml` 覆盖（命令就是回归矩阵里的测试面，正向路径触发，含 `team/**`）；此前只靠钩子强制 | 把关测试断言发现、归属、CI 引用与钩子接线四项；给 CI 补这三个面须先在分支上验证再合入，不得只改工作流文件；设计侧记录（2026-11-25）：本批已全部实施，后续三批清偿（挂账台账 N35-1 至 N35-12）见 `docs/superpowers/specs/2026-11-25-full-retro-pending-closeout.md` |
+| 回归矩阵（2026-11-24） | `config/regression-matrix.json` 登记全部测试面及其关口，推送前钩子执行其推送前档，口径见 6.3。推演 harness、Python 与 Ycode 七个测试面自 2026-11-25 起由 `regression-axes.yml` 覆盖（命令就是回归矩阵里的测试面，正向路径触发，含 `team/**`）；此前只靠钩子强制 | 把关测试断言五项——发现、归属、CI 引用、钩子接线、manual 逃逸通道闭合（manual 面必须 scopes 恰为全量档且带注记理由，2026-11-26 由四项扩五项）；给 CI 补这三个面须先在分支上验证再合入，不得只改工作流文件；设计侧记录（2026-11-25）：本批已全部实施，后续三批清偿（挂账台账 N35-1 至 N35-12）见 `docs/superpowers/specs/2026-11-25-full-retro-pending-closeout.md` |
 | 会话库缺席（2026-11-24） | `$HERMES_HOME/state.db` 尚未生成时（全新安装、从未启动过的 profile），会话列表与详情读面返回空结果（补丁 817）；此前只读开库直接抛错，IDE 壳与协作历史页共 7 条路由得到 500 | `custom/upstream-compat/__tests__/sessions-db-missing-home.test.ts` 先红后绿；库存在时走原路径，行为不变 |
 | 注入尾部增量（2026-11-24） | 增量注入改为按通道比对前缀：非末位通道的尾部追加不再被误判成中插；此前给 hermes-studio 通道每加一枚补丁都被迫全量重放 | `inject-manifest` 三例（通道尾部追加放行、同通道中插仍拒、通道顺序颠倒仍拒）；补丁 817 经增量通道真实应用 |
 | Ycode 依赖安全刷新（2026-11-24） | Ycode 基线锁文件的生产依赖审计报出 266 条通告（严重 3、高危 93），上游没有更新可同步。zcode-patch 013 在根 `package.json` 的 `pnpm.overrides` 追加 38 条，把带通告的包钉到同大版本内的最小修补版本，锁文件随之重新解析；刷新后余 13 条（严重 0、高危 5），都要跨大版本才能修或属 Electron 本体，挂账待裁决。引擎依赖是否就绪改为以锁文件为准：`node_modules` 里记录锁文件指纹，指纹落后即补装；此前只看目录在不在，已有安装不会跟进锁文件变化。续批（同日）：开发依赖同样处理（zcode-patch 014，含测试框架升到 4.1.12），Ycode 全部依赖通告 77→20 条，剩下的都只能跨大版本才能修或属 Electron 本体；依赖审计进合并前档与全量档（`dependency-audit` 面），比对已接受通告清单，清单之外的高危或严重才失败 | 把关测试逐条核对覆盖项已在 `vendor/zcode` 的 `package.json` 与锁文件里，干净树不得带覆盖项；`zcode-engine-ensure` 八例锁指纹判据与失败时的降级；Ycode 四条验证面在同一棵树上全过 |

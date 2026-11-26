@@ -20,19 +20,25 @@
 //   - 后端 Koa：npm run serve（8647；ts-node 冷编译 35-50s），就绪=GET /health → 200，上限 150s。
 //     非 --isolated 时，8647 已有服务应答视为活体后端：借用，不接管、teardown 不代杀（与 8649 的
 //     拒绝语义不同：vite 端口被占无法确定服务身份故拒绝，后端按 /health 判定是同一应用）。
-//   - 自起后端默认注入 NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> +
-//     HERMES_WEB_UI_DEV_BOOTSTRAP=1（密闭化）：首登建 super_admin 于隔离 HOME，主检出惯态账户库
-//     与宿主网关凭据不参与判定；teardown 不删隔离目录。探针侧随之获得
-//     ISOLATED_HOME_DIR=<目录>（隔离目录根），需要种数据的探针由此定位；未传时缺省为空。
+//   - 自起后端默认注入（密闭化，2026-11-26 加固）：NODE_ENV=production + 三 HOME 隔离
+//     （HERMES_WEB_UI_HOME / HERMES_HOME / HERMES_KANBAN_HOME = 一次性空目录）+
+//     HERMES_WEB_UI_DEV_BOOTSTRAP=1 + HERMES_WEB_UI_DISABLE_SKILL_INJECTION=1（不写宿主技能目录
+//     ——skill-injector 原按宿主根同步，实测扫过宿主 57 个技能目录）+
+//     HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART=1（不起网关；agent-bridge 仍会启动但其
+//     --hermes-home 指向隔离目录，依赖安装与写入都落在隔离侧，实测日志锚定）。
+//     首登建 super_admin 于隔离 HOME；teardown 不删隔离目录。探针侧随之获得
+//     ISOLATED_HOME_DIR=<目录>（隔离目录根，需要种数据的探针由此定位；--isolated 写盘走查用）
+//     与 IDE_SMOKE_ALLOW_NO_SESSION=1（隔离空库无会话，「会话深链」按环境条件 SKIP，不计失败）。
 //
 // 登录态环境语义（探针假定已认证，实测登录闸三态）：
 //   - 活体环境（惯态检出：账户库有 active 账户＋网关凭据已配）：网关一键进入路径接管，历史轮 11/11。
-//   - 密闭环境（默认：NODE_ENV=production + HERMES_WEB_UI_HOME=<一次性空目录> + DEV_BOOTSTRAP=1）：
-//     空库首登建号。TEST_DB_DIR 不用（serve 态 isDev 分支读不到它）。
-//     隔离范围：账户库、随 HOME 读取的网关一键进入凭据；--isolated 时再加写盘目标与看板。
-//     探针若要触发写操作必须用 --isolated，不能拿这套栈直接对着本机数据做。
-//   - 半环境（账户库无 active 账户且无网关凭据）：登录闸拦下全部 UI 步骤；处置：激活账户或
-//     配网关凭据后再跑，包装器不代改账户库。
+//   - 密闭环境（默认：三 HOME 隔离 + DEV_BOOTSTRAP=1 + 双禁用）：空库首登建号。TEST_DB_DIR 不用
+//     （serve 态 isDev 分支读不到它）。隔离覆盖：账户库、看板、agent 家、技能注入（禁用）、
+//     网关自启（禁用）；--isolated 时再加写盘目标子目录（写盘型走查只对隔离数据，且拒绝借用后端）。
+//     后端进程仍可能读到本机其它配置面，探针只读、不对这些状态做断言；要触发写操作的走查
+//     必须 --isolated，或自行在网络层拦截另建夹具。
+//   - 半环境（账户库无 active 账户且无网关凭据）：登录闸拦下全部 UI 步骤（2/10，2026-11-26 实测），
+//     处置：激活账户或配网关凭据后再跑，包装器不代改账户库。
 //
 // 输出统一带 [面名] 前缀便于矩阵日志识别；仓库根以 process.cwd() 锚定（矩阵执行器以仓库根为
 // cwd 调起各面）。端口被占先 lsof -ti :8649 确认归属，属别人的不要杀。
@@ -225,9 +231,21 @@ async function main() {
       bootEnv = process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}
     } else {
       isolatedDbDir = mkdtempSync(join(tmpdir(), `${OPTS.face}-home-`))
+      // 加固（2026-11-26 发版后审查实锤）：只隔 WEB_UI 不够——
+      // ① bootstrap 的技能注入器（skill-injector）按 detectHermesRootHome 探测真实 ~/.hermes，
+      //    逐档位同步内置技能（实测扫了宿主 57 个技能目录；当次 injected=[] 属内容恰好一致，
+      //    换检出即覆盖宿主技能）——HERMES_WEB_UI_DISABLE_SKILL_INJECTION=1 治本；
+      // ② 网关自启与 agent-bridge 绑定真实 default 档位（无独立 HOME 开关）——
+      //    HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART=1 不起；探针只走 UI 不需要网关；
+      // ③ 看板根解析序 HERMES_KANBAN_HOME→HERMES_HOME→~/.hermes，agent 面消费 HERMES_HOME——
+      //    两个都指隔离目录（2026-11-21 批三隔离配方：只隔 WEB_UI 会读到宿主真实看板）。
       bootEnv = {
         NODE_ENV: 'production',
         HERMES_WEB_UI_HOME: isolatedDbDir,
+        HERMES_HOME: isolatedDbDir,
+        HERMES_KANBAN_HOME: isolatedDbDir,
+        HERMES_WEB_UI_DISABLE_SKILL_INJECTION: '1',
+        HERMES_WEB_UI_DISABLE_GATEWAY_AUTOSTART: '1',
         ...(process.env.HERMES_WEB_UI_DEV_BOOTSTRAP === undefined ? { HERMES_WEB_UI_DEV_BOOTSTRAP: '1' } : {}),
         ...(OPTS.isolated
           ? { HERMES_HOME: join(isolatedDbDir, 'hermes'), HERMES_KANBAN_HOME: join(isolatedDbDir, 'kanban') }

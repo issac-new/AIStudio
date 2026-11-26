@@ -2,7 +2,7 @@
 
 > 面向环境管理员、运维人员和讲师预演。本文回答怎样启动、怎样核对、怎样处置故障，不替代学员的页面操作手册。
 >
-> 事实基线：commit `b6b93c207`（v1.0.21 发版批的主干基点），整体版本 `1.0.21-overlay`，日期 `2026-11-26`。版本载体见 `package.json` 的 version 字段与 `RELEASE-MANIFEST.json` 的 modules/packaging 节。
+> 事实基线：commit `199a18ad1`（v1.0.21 版本进位提交，本页所载版本事实在该提交落定），整体版本 `1.0.21-overlay`，日期 `2026-11-26`。版本载体见 `package.json` 的 version 字段与 `RELEASE-MANIFEST.json` 的 modules/packaging 节。
 >
 > **验证声明**：本文是对当前源码、配置和守门文档的静态核对。所有命令都是可执行示例，**不代表本手册编写时已启动服务、访问真实账号、调用模型、运行 worker、连接 Matrix 或验证 Windows 实机**。示例输出只说明判读方法，不是本次采集结果。
 
@@ -467,7 +467,7 @@ shasum -a 256 \
   > release/SHA256SUMS-v1.0.21-overlay.txt
 ```
 
-full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-release-packages.mjs:49-94`。最后一段命令为两件资产生成配套校验文件，文件名和双通道布局遵循 `docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:7-9`。注意 everything 资产名的版本前**没有 `v`**，SUMS 文件名则使用 `SHA256SUMS-v<版本>.txt`。yuan 的 everything 当前采用 R134：`--no-vendor + knowledge + docs + github-src`，技能本体随包，**可经 pip/npm 镜像安装的运行时不内嵌**，所以 everything 不等于完全断网自足。`skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,53-65`、`docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md:32-36`、`RELEASE-NOTES.md:48-52`。
+full 默认只打整体包并生成 `dist/release/SHA256SUMS`。`scripts/make-release-packages.mjs` 的准出前置段（release:gate 调用与 dry-run 分流）。最后一段命令为两件资产生成配套校验文件，文件名和双通道布局遵循 `docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md` 的两包口径节。注意 everything 资产名的版本前**没有 `v`**，SUMS 文件名则使用 `SHA256SUMS-v<版本>.txt`。yuan 的 everything 当前采用 R134：`--no-vendor + knowledge + docs + github-src`，技能本体随包，**可经 pip/npm 镜像安装的运行时不内嵌**，所以 everything 不等于完全断网自足。`skills/swarm-yuan/scripts/make-offline-bundle.sh:33-47,53-65`、`docs/superpowers/specs/2026-11-07-r143-runtime-refresh-regression-release.md:32-36`、`RELEASE-NOTES.md:48-52`。
 
 **【只读】本地校验示例：**
 
@@ -478,9 +478,9 @@ cd <本仓根目录>/dist
 shasum -a 256 -c release/SHA256SUMS-v1.0.21-overlay.txt
 ```
 
-Windows 用 `Get-FileHash <文件> -Algorithm SHA256` 逐件核对。上传和远端替换属于【外部写】，需要单独发布授权；发布后还要回下载并重新算 hash，不能以本地打包成功代替远端验证。当前发布纪律见 `docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md:18-32`。
+Windows 用 `Get-FileHash <文件> -Algorithm SHA256` 逐件核对。上传和远端替换属于【外部写】，需要单独发布授权；发布后还要回下载并重新算 hash，不能以本地打包成功代替远端验证。当前发布纪律见 `docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md` 的发布纪律节与 `RELEASE-MANIFEST.json` 的 `packaging.note`。
 
-**ModelScope 当前状态不能写成“全量回验完成”。**该通道在 v1.0.12 由用户明确恢复，v1.0.14/v1.0.15 持续发布 full 与 everything 双件（v1.0.15 起与仓内 ZCode Windows 配置包并存）；LFS 上传和 SUMS 云端内容回验已完成，但大文件完整下载哈希回验受平台传播延迟与本机传输中断影响，尚未完成。运维报告必须分开登记“已上传”“文件树已登记”“SUMS 已回验”“大文件哈希待复验”，不得沿用早期暂停口径，也不得把上传成功冒充完整验收。`RELEASE-NOTES.md:3,7,48-52`；`docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md:25-32`。
+**ModelScope 状态须按版本分别登记，不能写成笼统的“全量回验完成”。**该通道在 v1.0.12 由用户明确恢复，此后各版持续发布 everything 与 SHA256SUMS 两件（口径见 `RELEASE-MANIFEST.json` 的 `artifactDistribution` 与 `releaseBatches` 各条 note）。v1.0.14/v1.0.15 曾存在“SUMS 已回验、大文件完整下载哈希待复验”的中间态；自 v1.0.19 起各版（含 v1.0.21）均为“上传＋远端扫描 ACCEPTED＋下载回验逐字节相同”的完整闭环。运维报告必须按版本写明所处状态，不得把上传成功冒充完整验收。`RELEASE-NOTES.md:3,7,48-52`；`docs/superpowers/specs/2026-11-08-release-v1.0.14-overlay.md:25-32`。
 
 ## 13. 只读健康检查命令与判读
 
