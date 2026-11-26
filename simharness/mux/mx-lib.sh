@@ -97,6 +97,13 @@ HERMES_ROOT="$SIM_ROOT/hermes"            # 单 hermes root（gateway 的 HERMES
 AGENT_SRC="$SIM_ROOT/hermes-agent-src"    # SIM 自有 agent 源码快照（隔离轮；mx-setup 供给）
 PRODUCT_DIST="$SIM_ROOT/product-dist"     # SIM 自有 studio 构建快照（隔离轮；mx-setup 供给）
 
+# 快照源模式持久化（2026-11-26 run32 重建实录）：pristine 是环境属性而非单命令参数
+# ——mx-setup 用 env 开启导出后写模式戳，mx-up/mx-run 等后续进程自动继承；env 显式
+# 设置优先于戳（切回宿主源：HERMES_AGENT_SRC_PRISTINE=0 重跑 setup）。
+if [[ -z "${HERMES_AGENT_SRC_PRISTINE:-}" && -r "$SIM_ROOT/var/agent-src.mode" ]]; then
+  HERMES_AGENT_SRC_PRISTINE="$(head -1 "$SIM_ROOT/var/agent-src.mode")"
+fi
+
 # 派单层逃生（2026-11-26 run32 同步批，方案 §5.17 第 1 条）：补丁 803 起未标层卡缺省
 # 按 T2 执行、派发器认领前验证持久化授权（kanban_db_dispatch.py:2289-2300）——推演建卡
 # 不带层标记，T2 语义下无授权记录即 needs_decision 不派发（全员停摆）。推演组织模型未
@@ -901,16 +908,24 @@ mx_provision_agent_src() {
       log "✓ pristine 基线导出就绪（overlay=${_hk} patches=${_pk}）"
     fi
   fi
+  # 模式戳落盘（持久化给后续 mx-* 进程）＋来源模式入 provenance（宿主/pristine 互切
+  # 时 key 可能同值——heal 曾把宿主文件灌进 pristine 快照，来源模式不同即强制重灌）
+  mkdir -p "$SIM_ROOT/var" 2>/dev/null || true
+  printf '%s\n' "${HERMES_AGENT_SRC_PRISTINE:-0}" > "$SIM_ROOT/var/agent-src.mode"
+  local _src_mode="host"
+  [[ "${HERMES_AGENT_SRC_PRISTINE:-0}" == "1" ]] && _src_mode="pristine"
   [[ -d "$host_tree/.git" ]] || { log "⚠ 宿主 hermes-agent 非 git 仓（${host_tree}）——跳过源码快照供给，执行面维持回落态"; return 0; }
   local head; head=$(git -C "$host_tree" rev-parse HEAD)
   # 快照键只取运行源码白名单与补丁实际内容。HEAD 是来源档案，不再作为换键条件；
   # docs-only 提交/脏态不得重灌并抹掉快照内补丁创建文件（run31 15:30 事故）。
   local key; key="$(mx_agent_provision_key "$host_tree" "$PATCH_DIR")"
   local cur; cur=$(_mx_provenance "$AGENT_SRC.provenance.json" --read | sed -n 's/.*"snapshot_key": "\([^"]*\)".*/\1/p')
-  if [[ "$cur" == "$key" && -x "$SIM_ROOT/bin/hermes-sim" && -d "$AGENT_SRC/gateway" ]]; then
-    log "agent 源码快照已在位且同步（key=${key}）——跳过"
+  local _cur_mode; _cur_mode=$(_mx_provenance "$AGENT_SRC.provenance.json" --read 2>/dev/null | sed -n 's/.*"source_mode": "\([^"]*\)".*/\1/p')
+  if [[ "$cur" == "$key" && "$_cur_mode" == "$_src_mode" && -x "$SIM_ROOT/bin/hermes-sim" && -d "$AGENT_SRC/gateway" ]]; then
+    log "agent 源码快照已在位且同步（key=${key} mode=${_src_mode}）——跳过"
     return 0
   fi
+  [[ -n "$_cur_mode" && "$_cur_mode" != "$_src_mode" ]] && log "快照来源模式切换（${_cur_mode:-unknown}→${_src_mode}）——整树重灌（清掉异源 heal 灌入件）"
   log "供给 agent 源码快照：${host_tree} 工作态 @ ${key} → $AGENT_SRC"
   local tmp="$AGENT_SRC.tmp.$$"
   rm -rf "$tmp"; mkdir -p "$tmp"
@@ -961,7 +976,7 @@ WRAPPY
 exec "$venv_py" -I "$SIM_ROOT/bin/hermes-sim.py" "\$@"
 WRAP
   chmod +x "$SIM_ROOT/bin/hermes-sim"
-  _mx_provenance "$AGENT_SRC.provenance.json" "snapshot_key=$key" "source_head=$head" "source_tree=$host_tree" "harness_commit=$(git -C "$HARNESS_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  _mx_provenance "$AGENT_SRC.provenance.json" "snapshot_key=$key" "source_mode=$_src_mode" "source_head=$head" "source_tree=$host_tree" "harness_commit=$(git -C "$HARNESS_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   log "✓ agent 源码快照就绪（wrapper=$SIM_ROOT/bin/hermes-sim）"
   # V8.29 垫片供给（巡检官卡面聚合器）：bin/hermes 无板 list/diagnostics 归一——
   # 产品巡检官卡类采集面依赖；mx-clean 重建后自动恢复（供给源=mux/mx-hermes-shim.py）
@@ -1051,7 +1066,7 @@ mx_drift_audit() { # <patchname> <patchfile> <tree> —— 只在「语义已在
           /^diff --git / { inf = 0 }
           inf && /^\+/ { print substr($0, 2) }
         ' "$pf")
-        [ "$found" = 1 ] && log "漂移自愈：${pname} 目标文件 ${tf} 已从宿主回灌"
+        [ "$found" = 1 ] && log "漂移自愈：${pname} 目标文件 ${tf} 已回灌（源=$_hf）"
       fi
       if [ "$found" = 0 ]; then
         fail "漂移守卫：${pname} 半应用态（$tf 缺补丁新增内容，宿主回灌亦不可用）——deploy-agent-runtime --apply --force 收敛或回灌 runtime/ 模板后重跑"
