@@ -277,6 +277,7 @@ trap 'mx_cleanup' EXIT
 # 本轮首次开跑时刻（幂等：续跑轮不重置——repo_has 新鲜度窗口的锚点，run5 教训）
 [ -n "$(sget run_started_at)" ] || sset run_started_at "$(date +%s)"
 note "===== aipaydev 推演开始（START_STEP=${START_STEP}${UNTIL_STEP:+ UNTIL_STEP=$UNTIL_STEP}）====="
+mx_alwayson_watchers_evidence start   # always-on 取证生产方（§5.15 第 1 条/§5.17 第 6 条；报告步再取一次）
 # 模型通道不可用就别开局：否则每步只报「超时」，会把额度耗尽记成产品缺陷。
 # LLM 依赖区间为 [dispatch, uat]（agent 回合步骤）：执行区间与它有交集才要求通道；
 # smoke..reqgate 与 workmgr/audit/retro/ide 均为导演侧动作，无 LLM 依赖
@@ -3664,6 +3665,7 @@ PYD
   python3 "$SCRIPT_DIR/mux/mx-report-audit.py" ${RUN_ID:+--run "$RUN_ID"} \
     || fail "报告审计（合并后复跑）FAIL（R15 第 0 章/证据九/评测闭环须真断言）"
   sset report_done "$(date +%s)"
+  mx_alwayson_watchers_evidence finish  # 终局取证（观察窗第二轮=dreaming sunset 判据的 run32 读数）
   # 步 26 采集已前移至首次审计前（report_done 键）——此处不再重拍（幂等键在位即跳过，
   # 保留调用无副作用，删掉是为省一次浏览器启动）。
 

@@ -95,7 +95,7 @@ AIStudio 是一个让 AI 像一家软件公司一样干活的桌面工作台。�
 > - 术语：产品面与推演域术语以总述词表为单一事实源。
 > - 文风验收线：正文散文长句清零（保留主句+必要参数括注形态），表格枚举与冻结面步条为公文合法保留形态。
 
-> **运行基面（2026-11-21 状态同步）**：宿主 `~/.hermes/hermes-agent` 已同步至 hermes-agent v0.23.3 稳态（基线 caafe5389a＋runtime 清单 71 件——含 watchdog hostile-load 热修承载；deploy 对账 194 相同/0 差异，网关重启稳定，详见 spec 2026-11-20-vendor-upgrade-agent-v0233 N-1 清偿记录行）。SIM 实体环境已随 2026-11-18 归档轮拆除（SIM_ROOT 仅剩 logs/）；本文各「宿主供给/SIM 快照」条款在下次推演重建时生效——重建入口 `mux/mx-setup.sh`（自带 agent 供给部署与 config 幂等盖章，重建即 v0.23.3 全新面），程序本体无版本适配缺口。本文以下条款为重建后运行规则，不因拆除失效。
+> **运行基面（2026-11-26 状态同步）**：推演执行基线随仓内 vendor 基线进位至 hermes-agent v0.23.4（提交 8fc0374447）／hermes-studio v0.8.30／zcode 4.0.0／整体包 v1.0.21-overlay（数字总账 §C 同日核对）。宿主 `~/.hermes/hermes-agent` 基线已到 v0.23.4 但覆盖层 31 件滞后于仓内模板（H-1，spec `2026-11-25-manual-sync-host-v0234`，待用户裁决）——推演快照供给不受其影响：`HERMES_AGENT_SRC_PRISTINE=1` 时 mx-setup 从本仓基线导出纯净树再打补丁（§5.17 第 2 条），宿主源在 H-1 解决前不作 run32 供给源。SIM 实体环境维持 2026-11-18 归档轮拆除态；重建入口 `mux/mx-setup.sh`（agent 供给部署与 config 幂等盖章自带），run32 开跑前按本批条款重建。本文以下条款为重建后运行规则，不因拆除失效。
 
 ## 一、方案目标
 
@@ -1652,7 +1652,7 @@ sequenceDiagram
 
 ```bash
 cd simharness                         # 推演 harness 工作目录
-bash mux/mx-setup.sh                  # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）
+HERMES_AGENT_SRC_PRISTINE=1 bash mux/mx-setup.sh  # 环境供给（账号/看板/团队/记忆库/中央仓，可反复跑）；run32 起缺省走仓内基线导出快照源（§5.17 第 2 条；=0 回落宿主源）
 bash mux/mx-up.sh                     # 起单 gateway + 单 studio
 bash mux/mx-prelaunch-check.sh         # 开跑前三十四项核验（门禁全绿/主脚本语法/新能力在位/工作树干净/服务健康/中央仓谱系/采集链/上轮四查/无在途进程/叙事注册/账号板/审批环/评测三方同步/write_file/清偿门+延后清账/监督器/真值三件套/IA 版本/Harness 运行支持/IDE 工作区/阶段页签/评测接线/治理结果七项/跨轮工件零残留/OCR 工具链在位/工作区 origin 单一性——全绿才开跑）
 RUN_ID=<轮次> bash aipay-scenario.sh  # 26 步一键推演
@@ -2934,13 +2934,13 @@ run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露
 3. **采集缺口在步内暴露**：R18 必采证据（对话全文／操作前后帧／环节效果／skill 过程帧／门禁灯帧）的采集失败不得静默（禁 `|| true` 吞错）；每必采步末用 `r18_matrix.step_ok`（与报告审计器同一事实源）复判一次，未达标当场登记 `r18-required-missing`——审计环只做终审，不做首次发现。
 4. **人工件前移到最早可判定点**：逐轮人工正本（PART1 一页读懂）未注册时，收尾链按实测时间线与闸键自动起草（数据真实、标签明示「自动起草·待人工润色」、落 `part1-auto-draft` 问题单），人工注册仍优先——禁止让「缺一个人工件」在末步卡住整轮（run26 白等 58 分钟）。
 
-### 5.11 新能力验证面（2026-11-03 立；2026-11-04 扩组至十三组并接驱动；同日 W4 扩至十四组；2026-11-17 run31 扩至十七组）
+### 5.11 新能力验证面（2026-11-03 立；2026-11-04 扩组至十三组并接驱动；同日 W4 扩至十四组；2026-11-17 run31 扩至十七组；2026-11-26 run32 扩至十八组）
 
 > 立条背景：2026-11-03 一天内落了七组新能力（主动性介入治理／交接质量账本／确定性验收断言／主张-回执核验／组件库与多目标搜索／探测并发与调度面／派单容量准入），其中多数**只有 HTTP 面、没有独立 UI 承载**——`capture-plan.env` 的截图采集位采不到。若推演不取证，这些能力就是「写完了没人验」，下一轮又变成新的存量债。
 >
 > 2026-11-04 扩组：四性四格判据（姿态准入／AC 追溯／阶段交接键／模型指纹，spec 2026-11-03-four-gap-*）与 AgentTeams 吸收四批＋挂账清偿（项目一级状态机与拓扑／编码执行记录／技能导出三道限／profile 环境变量编辑面／权限变更审计，spec 2026-11-04-agentteams-*）同样只有 HTTP 面，并入本表成十三组。同轮补上上轮遗留缺口：探测脚本已立而驱动未接（每轮证据缺席只落审计 WARN）——现由 testpass 步自动对生效 studio 全量探测一次，失败即拦 G4。
 >
-> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（十七组齐、失败可见）。
+> 取证工装：`simharness/mux/mx-capability-probes.mjs`（端点级探测，正例取读数、负例必须红），产物 `capability-probes.json` 落 run 证据目录；脚本自身的端到端把关是 `simharness/tests/capability-probes.test.ts`（十八组齐、失败可见）。
 
 | # | 能力 | 正例判据（必须可机械核对） | 负例判据（必须红） |
 |---|---|---|---|
@@ -2960,9 +2960,10 @@ run25（20261102-v8-run25，11 小时 04 分、六闸全过）收尾阶段暴露
 | 14 | Harness 契约面（W1-W4） | `GET /api/harness/execution-join?runId=x` 回 `ok:true` 且四源各带 `{available,reason?}`（缺席必须带原因——fail-soft 不猜数）；`GET /api/harness/tool-contracts` 回契约表（≥40 条）且 `version=2026-11-04.1`（W1 执法轮版本锚）；taskmodel 正例：有卡回 `schemaVersion=1`＋`available` 四细项（空板如实缺省记 skip，组 9 先例） | ①execution-join 无 runId/taskId → 400；②taskmodel 不存在任务 → 404；③taskmodel 缺 board → 400（快道按板库直读） |
 | 15 | Proactive 二轮端点（2026-11-17 组） | earned-autonomy 建议面 `enforcement='advisory-only'`；lineage 三源聚合四数组＋coverage 计数＋未覆盖声明在位（路径 `/api/harness/lineage`）；standing-agenda `?cardId=`/`?status=` 过滤命中回显 | apply 缺 profile→400；冷启动 hold→409 `no_tighten`（零写入）；lineage 无 key→400 `invalid_key`；agenda 未知 cardId→空集 200、未知 id→404 |
 | 16 | Always-on 账面（2026-11-17 组） | run-outcome 账本/stats（total=0 时 `silenceShare=null` 不猜数）；outbox 只读端点＋backlog 读数 | 词表外 runKind→400（校验先于落账）；非法 recipient→400（校验先于入队＋零痕迹复核）；dispatch 类 POST 不探（会真派发通知） |
-| 17 | kanban 行级版本（2026-11-17 组） | 任务列表形状断言（version/verification 两列在 CLI JSON 面缺席＝如实取证——`_TASK_DICT_FIELDS` 未扩列，批二读面断点挂账下批补丁） | `expectedVersion=-1` 提交 complete→409 `version_conflict`（构造性永不匹配，事务回滚）＋拒后卡面状态未变复核；无在册卡 skip-safe |
+| 17 | kanban 行级版本（2026-11-17 组；2026-11-26 读面扩列清偿） | 任务列表形状断言：version/verification 两列已进 CLI JSON 读面（补丁 793）——在场即断言数值形状；单测环境不挂 vendor 路由时 skip-safe 如实取证 | `expectedVersion=-1` 提交 complete→409 `version_conflict`（构造性永不匹配，事务回滚）＋拒后卡面状态未变复核；无在册卡 skip-safe |
+| 18 | sim-product 产品面（2026-11-26 组；路线图 P1/P2/P3 重建端到端载体） | `GET /api/sim/scenarios` 回 `{available,scenarios:[{name,roster?}]}`（注入 `SIM_SCENARIOS_ROOT` 后 available:true 且数组非空；缺席时 available:false 同样如实）；`GET /api/sim/capture-plan` 回 `{available,plan[]}` 四态投影（词表 page/none/repo/file 内）；`GET /api/simrun/supervisor/status` 回 `{ts,state,events[]}`（state.enabled 布尔；disabled 须带 reason） | ——（三面只读投影无拒绝语义，组 5/6/7 先例） |
 
-**准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。十七组里第 4 组若无真实证据台账、第 9 组若无带 project_id 的未终结项目、第 17 组若无在册卡，允许只跑可得例并在报告写明缺省理由，属如实缺省而非跳过。**生产方**：testpass 步驱动自动执行（2026-11-04 接线；此前立法无生产方、每轮证据缺席），退出码非 0 → `g4_capability_blocked`＋g4_pass 不置位。
+**准出规则**：`capability-probes.json` 必须在场，`failed=0`；任一负例转绿（本该拒的放行了）即判 G4 不通过——负例是这些能力的存在理由，负例失效等于能力失效。十八组里第 4 组若无真实证据台账、第 9 组若无带 project_id 的未终结项目、第 17 组若无在册卡，允许只跑可得例并在报告写明缺省理由，属如实缺省而非跳过。**生产方**：testpass 步驱动自动执行（2026-11-04 接线；此前立法无生产方、每轮证据缺席），退出码非 0 → `g4_capability_blocked`＋g4_pass 不置位。
 
 ### 5.12 run28 复盘条款（2026-11-11 立，N28/N29 全量吸收；run29 起生效）
 
@@ -3000,7 +3001,7 @@ run30（20261113-v8-run30，21h08m，A2 二段式停机终局；六闸 delivery 
 1. **凭证核验三分支判定**：交付凭证「文件在 commit」的核验用精确路径 ls-tree（命中=非空输出/真缺席=空输出 rc0/通道错=fatal——三分支语义唯一干净；实测通配 pathspec 不跨目录、:(glob) 不受支持、cat-file 缺席也 fatal 不可分流）。git 调用 stderr 一律留证（截 200 字符进 note）；同 sha 连续 ≥5 次缺席启用双通道交叉（全树宽匹配作第二意见），矛盾＝「核验通道异常」记单暂停虚报判词（执法器故障不定罪 agent 也不虚放）；回灌文案动态携带真实失败形态（含通道异常时给 BLOCKED+自证出口）。
 2. **烧机收据第三态 burn-waived**：`mx-mechanism-receipt.py waive`——fail 收据且 reasons 含 `fail_lines=1`+`goal_step_not_reached`（单点外部归因代理判据）＋reason 必填留档→写 `burn-waivers.jsonl`（24h TTL 自动失效）；verify-latest 认新鲜豁免转 WAIVED。外部通道故障不再阻塞开跑（run30 实录 6h 阻塞）；从未烧机/多重失败均不豁免（fail-closed）。
 3. **熔断提醒指数退避**：间隔 `_NG→2×→4×` 封顶 1800s，首催准点（300s 时限保留）；10 次升级记入问题单语义不变。run30 实录固定 300s 对冷态/深睡 agent 是纯轰炸（G2 环 14 次 70min 零响应）。
-4. **开跑时间学（G-d）**：开跑窗 09:00-11:00——全程落日间活跃段；G2/尾段（第 8-14h）避开 00:00-07:00 凌晨深睡窗（run30 实录凌晨段 agent 群体零交付 3h、在线工位=1）。守夜不再靠机制硬扛，靠开跑窗根本不落夜。
+4. **开跑时间学（G-d）**【2026-11-26 用户裁决废止】：~~开跑窗 09:00-11:00——全程落日间活跃段；G2/尾段（第 8-14h）避开 00:00-07:00 凌晨深睡窗~~（run30 实录凌晨段 agent 群体零交付 3h、在线工位=1——历史依据留档）。用户裁决「没有需要避开的时段，夜间正常跑」：开跑时刻不再受窗约束，凌晨段不设机制避让，处置回归值守形态谱系（既有判据不变），执行口径见 §5.17 第 5 条。
 5. **交付任务书统一件**：①testlog add/add 冲突警告四家任务书（C/S/N/MP）全覆盖（与 CHWX 族模板同句式；警告位不得拆「结论行 DEV-DONE-X。${ACP_NOTE:-}」断言锚）；②概设预写触发阈值=首份系分入库即派骨架（原次份 3600s 常未达回退集中，run30 概设段 3h22m 实录）。
 6. **A1 标定定案（D1 修正）**：director 通道 51 笔 success 3（5.9%）且全落日间、深夜 100% 失败（timeout/send-failed 混合）——**director 默认 preset 常态化，标定轮仅在日间活跃窗开**（§5.13 第 8 条折中方案的实测修正）；标定数据按 director-metrics.jsonl 留档口径不变。
 7. **指标留档终局门**：O1 留档（run-metrics.jsonl 追加）仅 `report_done` 在位的终局轮写——预检重放未终局轮不再产假投影行（run30 开跑轮「④自污染」结构性根治）。
@@ -3031,3 +3032,16 @@ run31（20261117-v8-run31，17h12m，report_done 正常终局；审计 0 FAIL/37
 6. **dreaming sunset 判据执行面**：dream 产出计数两轮观察窗第一轮=0（run31 终局取证）；run32 若再零产出即执行退役裁决（机制预算 sunset 判据）。
 7. **安全修复链组织面失效定谳**（全轮头条）：判词/闸门/熔断/提醒全对，修复执行全天未落地（chen 148 文件 WIP 终未提交、bella 四卡 blocked）——与 run30 凌晨深睡不同型（日间同发），凌晨豁免归因非唯一因；修复接单与落地组织机制重构属产品面新立项，非 harness 批。
 8. **§5.15 验收面全过在案**：探针组 15-17 活体 51/51；token 真值 4065 调用/输入 18.84M/输出 4.77M/缓存读 197.77M（session_model_usage 口径，provider 回报非估算；转录级估算口径已退役）；run-metrics 终局行由终局门写入（O1 合规）。
+
+### 5.17 run32 开跑前吸收条款（2026-11-26 立；run32 起生效）
+
+run31 终局后八天（2026-11-18~26）共 88 份规格入库，hermes-agent 基线两次进位（v0.23.3→v0.23.4，提交 8fc0374447）、studio 进 v0.8.30、zcode 进 4.0.0、整体包发至 v1.0.21-overlay；按「改变推演中 agent 实际遭遇的运行时行为或判读口径」筛选后吸收为八条（spec `2026-11-26-run32-plan-sync.md`）：
+
+1. **派单层缺省 T1（逃生口）**：补丁 803 起，未标层任务卡缺省按 T2 执行，派发器在认领前验证持久化授权、无授权即记 `needs_decision` 不派发（`tools/kanban_tools.py:82-86`、`hermes_cli/kanban_db_dispatch.py:2289-2300`）——推演建卡不带层标记，不处置即全员停摆。推演环境缺省注入 `KANBAN_UNMARKED_TIER=T1`（`MX_KANBAN_UNMARKED_TIER` 可覆盖），恢复 run31 直通语义；授权体系接入推演组织模型后整体撤除本口。env 仅进推演进程树，产品宿主档不受影响。
+2. **快照供给 pristine 开关**：宿主覆盖层 31 件滞后（H-1 待裁决）期间，推演 agent 源快照改走仓内基线导出——`HERMES_AGENT_SRC_PRISTINE=1` 时 mx-setup 以 `git archive HEAD -- vendor/hermes-agent` 导出纯净树并 git 化，再交回既有「内容指纹建键→拷贝→打补丁→runtime 部署」流程；纯净基线＋补丁序列＋runtime 部署与注入态等价（518/518 幂等已证）。宿主 `kanban_parser.py` 缺 `--project` 参数等 H-1 漂移不再触达推演；默认源仍为宿主，H-1 解决后可回归（供给键按内容指纹区分两源，切源即自然重灌）。
+3. **P2/P3 产品面数据源供给＋组 18 探针**：mx-up 起 studio 时补传 `SIM_SCENARIOS_ROOT=<仓>/simharness/scenarios` 与 `SIM_CAPTURE_PLAN_PATH=<仓>/simharness/mux/capture-plan.env`——两端点按进程 cwd 解析，此前在 SIM_ROOT 下必落空（路线图 P1/P2/P3 挂的「SIM 重建后端到端」真实断链）。验收载体=§5.11 组 18（场景发现／拍摄位四态／运行监督状态，只读）。
+4. **组 17 正例判据更新**：补丁 793 已把 version/verification 扩进 CLI JSON 读面——列表 JSON 在场即断言数值形状；仍缺席则如实取证记缺（单测环境不挂 vendor 路由时维持 skip-safe）。§5.15 第 3 条「读面断点挂账」就此清偿。
+5. **开跑窗废止（用户裁决 2026-11-26）**：「没有需要避开的时段，夜间正常跑」——§5.14 第 4 条不再约束开跑时刻；凌晨段不设机制避让，处置回归值守形态谱系（空转收场判据、指数退避提醒、二段式停机等既有条款不变）。
+6. **always-on 取证生产方补齐**：`evidence/always-on-watchers.jsonl` 由驱动自动落盘（开跑段与报告步各一行：gateway 日志三 watcher 关键词计数＋deferred 台账计数），值守不再手工取证；dreaming sunset 口径澄清=单项退役（补丁 788 移名单）与整批退役（三项判据，机制预算 retireWhen）两条独立判据并存——run32 dream 产出仍为 0 时，由 run32 复盘批执行单项退役（788 移名单、预算行更新、报告如实记录），run32 为观察窗第二轮。
+7. **token 值守读法**：真值聚合单一实现=报告生成器（`mx-report-gen.py:5133` 起读各 profile session_model_usage）；值守期对账直接调用该查询口径，不新增机制文件。
+8. **台账回填与基面进位**：N32 七项、N33-2/3 状态落锚回填（本批随批）；数字总账核实日进位 2026-11-26；档位卡活体标定继续留 run33（v0.23.4 批 kanban_verification_levels 测试三枚存量红未复跑，run32 任务书不强制档位卡，理由同 §5.15 第 3 条）。

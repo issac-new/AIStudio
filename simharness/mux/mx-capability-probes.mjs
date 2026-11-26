@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // mx-capability-probes.mjs —— 推演期新能力探测（2026-11-03 立，方案 §5.11；2026-11-04 扩组至十三组；同日 W4 未做项收口扩至十四组——harness 契约面；
 // 2026-11-17 run31 扩至十七组——proactive 二轮（earned-autonomy/lineage/standing-agenda 过滤）、
-// always-on（run-outcome/outbox 只读面）、kanban version（expected_version CAS 409），spec 2026-11-17-sim-probes-run31）。
+// always-on（run-outcome/outbox 只读面）、kanban version（expected_version CAS 409），spec 2026-11-17-sim-probes-run31；
+// 2026-11-26 run32 扩至十八组——sim-product 产品面（场景库/拍摄位/运行监督三只读 REST，路线图 P1/P2/P3 重建端到端载体），
+// 组 17 正例随补丁 793 读面扩列更新，spec 2026-11-26-run32-plan-sync）。
 //
 // 为什么单独一支脚本：新能力（主动性介入治理 / 交接质量 / 验收断言 / 主张回执 / 组件库与多目标 /
 // 探测并发与调度面 / 派单容量准入＋四性四格判据 / 项目状态机与拓扑 / 执行记录 / 环境变量编辑面 /
@@ -16,7 +18,7 @@
 //   --profile userenv 组探测的 profile 名（缺省 default；SIM 与测试夹具均有该档）
 //   --format  human|json（默认 human；json 模式 stdout 只出结果信封）
 //   --inspect-config 只报告基址/输出/凭据来源，不跑探测
-// 退出码（契约）：0=十七组全绿；1=有探测失败；2=全量 fetch failed＝基座不可达（环境态）；3=用法错误。
+// 退出码（契约）：0=十八组全绿；1=有探测失败；2=全量 fetch failed＝基座不可达（环境态）；3=用法错误。
 //
 // 纪律：脚本只读/只算，不写业务数据；acceptance 探测会在临时目录里造两个文件（探针自带清理）。
 // 状态机类端点（projectworkflow complete/pause）只打「不落库的拒绝分支」——成功路径会写
@@ -676,14 +678,14 @@ results.push(await probe('always-on', '负例：run-outcome 词表外必拒 400�
   return { runOutcome: 400, outbox: 400 }
 }))
 
-// ── 组 17：看板行级 version / expected_version 乐观锁（补丁 775/776，spec 2026-11-17-sim-probes-run31）──
-// 实测对账：列表/详情 JSON 面不序列化 version/verification（kanban_output.py _TASK_DICT_FIELDS
-// 未含此二列）——正例如实取证缺席事实；version 能力证明由 409 CAS 负例承担。
+// ── 组 17：看板行级 version / expected_version 乐观锁（补丁 775/776，spec 2026-11-17-sim-probes-run31；
+//    2026-11-26 正例随补丁 793 读面扩列更新——N32-6 清偿，spec 2026-11-26-run32-plan-sync）──
+// 补丁 793 后列表 JSON 应携 version/verification（runtime/hermes_cli/kanban_output.py
+// _TASK_DICT_FIELDS 已含此二列）——在场即断言数值形状；仍缺席＝如实取证记缺。
 // 负例非破坏性：version 列 DEFAULT 0 且触发器只递增→expectedVersion=-1 构造性必拒；
 // CAS 校验在写事务内先于 UPDATE（补丁 775 complete_task hunk）→拒绝即回滚。
-// 前置门排除：只选 status ∈ running/ready/blocked、无 completion_contract、无父卡的卡；
-// verification/goal_mode 无 REST 读面（残余风险见 spec D3——SIM 场景卡不带此二属性）。
-results.push(await probe('kanban-version', '看板列表可达＋version/verification 列表面缺席如实取证', async () => {
+// 前置门排除：只选 status ∈ running/ready/blocked、无 completion_contract、无父卡的卡。
+results.push(await probe('kanban-version', '看板列表可达＋version/verification 列形状（补丁 793 读面扩列）', async () => {
   const r = await call('GET', '/api/hermes/kanban?board=default&limit=20')
   if (r.status === 404) return { skipped: 'kanban REST 面未挂或不可达（单测环境不挂 vendor 路由——组 14 taskmodel 先例）' }
   expect(r.status === 200, `status=${r.status}`)
@@ -691,14 +693,20 @@ results.push(await probe('kanban-version', '看板列表可达＋version/verific
   expect(Array.isArray(tasks), 'tasks 缺失')
   for (const t of tasks) {
     expect(typeof t?.id === 'string', `任务形状非法：${JSON.stringify(t).slice(0, 120)}`)
+    if (t?.version !== undefined && t?.version !== null) {
+      expect(typeof t.version === 'number', `version 应为数值：${JSON.stringify(t).slice(0, 120)}`)
+    }
+    if (t?.verification !== undefined && t?.verification !== null) {
+      expect(typeof t.verification === 'string', `verification 应为字符串：${JSON.stringify(t).slice(0, 120)}`)
+    }
   }
   const withVersion = tasks.filter((t) => typeof t?.version === 'number').length
   return {
     tasks: tasks.length,
     versionFieldRate: tasks.length === 0 ? null : withVersion / tasks.length,
     note: withVersion === 0
-      ? '列表 JSON 面不携 version/verification（kanban_output.py _TASK_DICT_FIELDS 未序列化此二列）——读面断点如实取证，CAS 能力由本组负例证明'
-      : '列表面已携 version 字段',
+      ? '列表 JSON 未携 version（读面扩列后仍缺席）——如实取证记缺，CAS 能力由本组负例证明'
+      : '列表面已携 version/verification（补丁 793 读面扩列在位）',
   }
 }))
 
@@ -746,6 +754,65 @@ results.push(await probe('kanban-version', '负例：expected_version=-1 提交�
   const after = await call('GET', `/api/hermes/kanban/${encodeURIComponent(target.id)}?board=default`)
   expect(after.status === 200 && after.body?.task?.status === target.status, `被拒后任务状态不得变化：${target.status} → ${after.body?.task?.status}`)
   return { task: target.id, status: 409, code: 'version_conflict', statusUnchanged: true }
+}))
+
+// ── 组 18：sim-product 产品面（场景库/拍摄位/运行监督，2026-11-26 run32 组；
+//    路线图 P1/P2/P3「SIM 重建后端到端」验收载体，spec 2026-11-26-run32-plan-sync）──
+// 三面均为只读投影（fail-soft 空态合法），无拒绝语义可探——正例-only（组 5/6/7 先例）。
+// SIM 环境 mx-up 注入 SIM_SCENARIOS_ROOT/SIM_CAPTURE_PLAN_PATH（cwd=SIM_ROOT 时默认
+// 路径必落空）；单测夹具同样显式注入两 env 指向本仓 simharness。
+results.push(await probe('sim-product', '场景库发现面：available+scenarios 数组（条目含 name，roster 摘要可空）', async () => {
+  const r = await call('GET', '/api/sim/scenarios')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(typeof r.body?.available === 'boolean', 'available 缺失')
+  expect(Array.isArray(r.body?.scenarios), 'scenarios 缺失')
+  for (const s of r.body.scenarios) {
+    expect(typeof s?.name === 'string', `场景条目形状非法：${JSON.stringify(s).slice(0, 120)}`)
+  }
+  if (r.body.available) {
+    expect(r.body.scenarios.length >= 1, 'available:true 但场景表为空（SIM_SCENARIOS_ROOT 注入失配？）')
+  }
+  return { available: r.body.available, count: r.body.scenarios.length }
+}))
+
+results.push(await probe('sim-product', '场景详情面：首个场景 roster 摘要（users/instancedUsers 数组；缺 roster 如实记缺）', async () => {
+  const list = await call('GET', '/api/sim/scenarios')
+  if (list.status !== 200 || !list.body?.available || !list.body.scenarios?.length) {
+    return { skipped: `场景库空态（available=${list.body?.available}）——正例缺省如实记（组 9 先例）` }
+  }
+  const name = list.body.scenarios[0].name
+  const r = await call('GET', `/api/sim/scenarios/${encodeURIComponent(name)}`)
+  if (r.status === 404) return { skipped: `场景 ${name} 缺 roster 摘要（fail-soft 合法）` }
+  expect(r.status === 200, `status=${r.status}`)
+  expect(r.body?.name === name, 'name 回显失配')
+  const roster = r.body?.roster
+  expect(roster && Array.isArray(roster.users) && Array.isArray(roster.instancedUsers), 'roster.users/instancedUsers 缺失')
+  return { name, users: roster.users.length }
+}))
+
+results.push(await probe('sim-product', '拍摄位四态投影：available+plan 数组（step 非空、kind 词表内）', async () => {
+  const r = await call('GET', '/api/sim/capture-plan')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(typeof r.body?.available === 'boolean', 'available 缺失')
+  expect(Array.isArray(r.body?.plan), 'plan 缺失')
+  for (const e of r.body.plan) {
+    expect(typeof e?.step === 'string' && e.step.length > 0, `拍摄位条目缺 step：${JSON.stringify(e).slice(0, 120)}`)
+    expect(['page', 'none', 'repo', 'file'].includes(e?.kind), `kind 越界：${e?.kind}`)
+  }
+  return { available: r.body.available, entries: r.body.plan.length }
+}))
+
+results.push(await probe('sim-product', '运行监督状态面：ts+state(enabled 布尔)+events 数组（disabled 必带 reason）', async () => {
+  const r = await call('GET', '/api/simrun/supervisor/status')
+  expect(r.status === 200, `status=${r.status}`)
+  expect(typeof r.body?.ts === 'number', 'ts 缺失')
+  const st = r.body?.state
+  expect(st && typeof st === 'object' && typeof st.enabled === 'boolean', 'state.enabled 缺失')
+  expect(Array.isArray(r.body?.events), 'events 缺失')
+  if (!st.enabled) {
+    expect(typeof st.reason === 'string' && st.reason.length > 0, 'disabled 必须带 reason')
+  }
+  return { enabled: st.enabled, mode: st.mode ?? null, events: r.body.events.length }
 }))
 
 // ── 汇总 ────────────────────────────────────────────────────
