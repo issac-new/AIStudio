@@ -100,7 +100,8 @@ function buildSeed() {
     probes: [probe('pr-2', 'v1', metrics({ passAt1: 0.7, evaluator: evalFingerprint('glm-5.3') }), contrast(0.2))],
     composition: composition('v1', `${NEW_SOUL}\n- 再读一遍失败日志\n`),
     promotion: { actor: 'operator', at: '2026-11-26T10:30:00.000Z', digest: sha(`${NEW_SOUL}\n- 再读一遍失败日志\n`), applied: false, verificationTier: 'judge' },
-    rollback: { actor: 'operator', at: '2026-11-26T11:00:00.000Z', reason: '线上回归：提交后回归样本库 3 项失败', restoredDigest: mid, fileRestored: false },
+    // 2026-11-26 Palantir 架构吸收轮：回滚带原因归属——外部环境（假设没有被证伪，起草器不进禁止清单）
+    rollback: { actor: 'operator', at: '2026-11-26T11:00:00.000Z', reason: '线上回归：提交后回归样本库 3 项失败', restoredDigest: mid, fileRestored: false, cause: 'external' },
     heldout: null,
   }
   proposal(p2)
@@ -170,6 +171,8 @@ function buildSeed() {
       id: 'pr-5', variantId: 'v1', status: 'recorded', evalRunId: 'run-base',
       evidence: metrics({ passAt1: 0.61, regression: { runId: 'run-reg-5', suiteName: '回归样本库', total: 4, failed: 0, failedTaskIds: [] }, executionTrace: { status: 'observed', markers: ['walk-skill'], hit: ['walk-skill'], hitRatio: 1, scannedChars: 200, source: 'stream-json', at: '2026-11-26T11:30:00.000Z' } }),
       contrast: contrast(0.06), createdAt: '2026-11-26T11:30:00.000Z', recordedAt: '2026-11-26T11:30:00.000Z', recordedBy: 'walkthrough',
+      // 2026-11-26 Palantir 架构吸收轮：记录探测时由服务端算出的两份逐题读数（这里直接种入）
+      caseFlips: { compared: 5, fixed: ['t-3'], broken: ['t-9'], bothPassed: 3, bothFailed: 0 },
     }],
     approval: approved('reviewer', '2026-11-26T11:30:00.000Z', p5Variants),
     composition: composition('v1', ''),
@@ -179,8 +182,22 @@ function buildSeed() {
       { path: freshFile.path, digest: null },
     ],
   }
+  p5.probes[0].evidence = { ...p5.probes[0].evidence, failureClusters: [
+    { rootCause: 'result_defect', count: 2, sampleTaskIds: ['t-3', 't-7'] },
+    { rootCause: 'action_loop', count: 1, sampleTaskIds: ['t-9'] },
+  ] }
   proposal(p5)
   seed.drift = { proposalId: 'hw-0005', path: skillRel, baseDigest: sha(OLD_SKILL) }
+
+  // ⑥ 待裁决提案（memory 面，只建议）：原因归属下拉的走查对象
+  const p6Variants = [variant('v1', 'A', '# 记忆：先列约束再动笔\n')]
+  proposal({
+    id: 'hw-0006', title: '记忆先列约束', hypothesis: '先列约束再动笔可减少返工', surfaceKey: 'memory',
+    targetPath: null, risk: 'medium', mode: 'parallel', domain: 'general', editClass: 'invariant',
+    status: 'submitted', budgetCapUsd: 5, evidenceRefs: ['eval:run-base'], experienceIds: [], baselineRunId: 'run-base',
+    baseline: metrics({ passAt1: 0.5 }), base: null, variants: p6Variants, probes: [], approval: null, composition: null,
+    promotion: null, rollback: null, createdBy: 'operator', createdAt: seed.now, updatedAt: seed.now,
+  })
   return seed
 }
 
@@ -287,7 +304,7 @@ function apiFactory(token) {
   }
   return {
     proposals: () => call('/api/harness/workbench/proposals'),
-    rollback: (id, reason) => call(`/api/harness/workbench/proposals/${id}/rollback`, { method: 'POST', body: JSON.stringify({ reason }) }),
+    rollback: (id, reason, cause) => call(`/api/harness/workbench/proposals/${id}/rollback`, { method: 'POST', body: JSON.stringify({ reason, ...(cause ? { cause } : {}) }) }),
     promote: (id, body) => call(`/api/harness/workbench/proposals/${id}/promote`, { method: 'POST', body: JSON.stringify(body) }),
     overview: () => call('/api/harness/workbench/overview'),
     lifecycle: () => call('/api/harness/rsi-lifecycle'),
@@ -353,6 +370,9 @@ async function contrastChecks(page, ledger, sel, label) {
     }
     return out
   }, sel)
+  // 选择器一个元素都没匹配到＝这条检查空转。2026-11-26 修复：亮色段此前漏传台账参数，
+  // 标签被当成选择器，四条检查零匹配却不报错——亮色对比度从上一批起从未被真正检查过。
+  if (rows.length === 0) record(`${label}：选择器未匹配到任何元素（检查空转）`, false, sel)
   for (const row of rows) {
     const ratio = contrastRatio(row.color, row.background)
     const name = `${label}「${row.text || '(空)'}」对比度`
@@ -373,9 +393,9 @@ async function waitPanel(page, sel, attempts = 3) {
 async function runSurface(page, api, seed, ledger, label, applyFn) {
   record(`${label}：面板可打开`, await waitPanel(page, '[data-testid="hi-rsi-theory"]'), page.url())
   await applyFn()
-  contrastChecks(page, ledger, '[data-testid="hi-evolution"] .hi__chip', `${label}·去向条`)
-  contrastChecks(page, ledger, '[data-testid="hi-theory-traj-table"] td', `${label}·轨迹格`)
-  contrastChecks(page, ledger, '[data-testid="hi-theory-traj-table"] th', `${label}·轨迹表头`)
+  await contrastChecks(page, ledger, '[data-testid="hi-evolution"] .hi__chip', `${label}·去向条`)
+  await contrastChecks(page, ledger, '[data-testid="hi-theory-traj-table"] td', `${label}·轨迹格`)
+  await contrastChecks(page, ledger, '[data-testid="hi-theory-traj-table"] th', `${label}·轨迹表头`)
   await page.locator('[data-testid="hi-rsi-theory"]').screenshot({ path: join(SHOTS, `improve-${label}.png`) }).catch(() => {})
   await page.screenshot({ path: join(SHOTS, `improve-page-${label}.png`) }).catch(() => {})
 }
@@ -444,6 +464,28 @@ async function main() {
       const dots = await page.locator('[data-testid="hi-evo-curve-system_prompt"] circle').count()
       const rolledDots = await page.locator('[data-testid="hi-evo-curve-system_prompt"] circle.hi__curveDot--rolledBack').count()
       record('进化曲线 3 点含 1 个回滚点', dots === 3 && rolledDots === 1, `dots=${dots} rolled=${rolledDots}`)
+
+      // 审阅结论、逐题对比、失败根因、原因归属（2026-11-26 Palantir 架构吸收轮；走查对象是已组合的 hw-0005）
+      const review = (await text(page, '[data-testid="hi-review-hw-0005"]')).replace(/\s+/g, ' ')
+      record('审阅结论块：置信档有限并写明噪声未标定', /审阅结论：置信档 有限/.test(review) && /噪声带未标定/.test(review), review.slice(0, 200))
+      const confChip = await text(page, '[data-testid="hi-review-confidence-hw-0005"]')
+      record('审阅结论：置信档字样单独成块', confChip === '有限', confChip)
+      const evChip = await text(page, '[data-testid="hi-review-evaluator-hw-0005"]')
+      record('审阅结论：基线与候选同卷同裁判', /同一评估条件下评测/.test(evChip), evChip)
+      const roles = await text(page, '[data-testid="hi-review-roles-hw-0005"]')
+      record('审阅结论：参与候选筛选的证据列出证据名', /参与候选筛选的证据：evolve_probe/.test(roles), roles)
+      const strengths = await text(page, '[data-testid="hi-review-strengths-hw-0005"]')
+      record('审阅结论：支撑读数含回归全过与执行证迹命中', /历史回归 4 项全部通过/.test(strengths) && /命中/.test(strengths), strengths.slice(0, 160))
+      const flips = await text(page, '[data-testid="hi-flips-hw-0005-v1"]')
+      record('逐题对比一行读数带单位', flips === '逐题对比：修好 1 题 · 弄坏 1 题 · 都通过 3 题 · 都未通过 0 题', flips)
+      const clusters = await text(page, '[data-testid="hi-clusters-hw-0005-v1"]')
+      record('失败根因一行读数带单位', clusters === '失败根因：结果缺陷 2 题 · 动作死循环 1 题', clusters)
+      const row2 = await text(page, '[data-testid="hi-theory-traj-row-2"] td')
+      record('后继轨迹：回滚原因归属显示在轮次后', /外部环境/.test(row2), row2)
+      const rejectCause = await page.locator('[data-testid="hi-reject-cause-hw-0006"]').inputValue().catch(() => '')
+      record('待裁决提案带原因归属下拉，默认提案自身', rejectCause === 'proposal', rejectCause)
+      const rollbackCause = await page.locator('[data-testid="hi-rollback-cause-hw-0003"]').inputValue().catch(() => '')
+      record('已晋级提案回滚前可选原因归属，默认提案自身', rollbackCause === 'proposal', rollbackCause)
       // 溢出检查（窄屏条件另做一次）
       const overflow = await page.evaluate(() => {
         const table = document.querySelector('[data-testid="hi-theory-traj-table"]')
@@ -462,8 +504,13 @@ async function main() {
       await waitPanel(page, '[data-testid="hi-rsi-theory"]')
       const light = await page.evaluate(() => !document.documentElement.classList.contains('dark'))
       record('亮色：主题类切换生效', light)
-      await contrastChecks(page, '[data-testid="hi-evolution"] .hi__chip', '亮色·去向条')
-      await contrastChecks(page, '[data-testid="hi-theory-traj-table"] td', '亮色·轨迹格')
+      // 2026-11-26 修复：此前漏传台账参数（第 2 个实参），这四条检查一直零匹配、不产生记录也不报错
+      await contrastChecks(page, checks, '[data-testid="hi-evolution"] .hi__chip', '亮色·去向条')
+      await contrastChecks(page, checks, '[data-testid="hi-theory-traj-table"] td', '亮色·轨迹格')
+      await contrastChecks(page, checks, '[data-testid="hi-theory-traj-table"] th', '亮色·轨迹表头')
+      await contrastChecks(page, checks, '[data-testid="hi-review-hw-0005"] .hi__chip', '亮色·审阅结论标签')
+      await contrastChecks(page, checks, '[data-testid="hi-review-limitations-hw-0005"] li', '亮色·审阅限制行')
+      await contrastChecks(page, checks, '[data-testid="hi-review-hw-0005"] b', '亮色·审阅结论标题')
       await page.locator('[data-testid="hi-rsi-theory"]').screenshot({ path: join(SHOTS, 'improve-light.png') }).catch(() => {})
       // 恢复暗色
       await page.evaluate(() => localStorage.setItem('hermes_brightness', 'dark'))
@@ -501,6 +548,12 @@ async function main() {
       record('英文：html.lang=en 且结论字切英文', lang === 'en' && verdict === 'Fail', `lang=${lang} verdict=${verdict}`)
       const cell2 = await text(page, '[data-testid="hi-theory-traj-2-improvement_validity"]')
       record('英文：格态字切英文（Not met）', cell2 === 'Not met', cell2)
+      const reviewEn = (await text(page, '[data-testid="hi-review-hw-0005"]')).replace(/\s+/g, ' ')
+      record('英文：审阅结论标题与置信档切英文', /Review assessment：Confidence Limited/.test(reviewEn), reviewEn.slice(0, 120))
+      const flipsEn = await text(page, '[data-testid="hi-flips-hw-0005-v1"]')
+      record('英文：逐题对比一行切英文并带单位', flipsEn === 'Per-task comparison：Fixed 1 tasks · Broken 1 tasks · Both passed 3 tasks · Both failed 0 tasks', flipsEn)
+      const row2En = await text(page, '[data-testid="hi-theory-traj-row-2"] td')
+      record('英文：回滚原因归属切英文', /External environment/.test(row2En), row2En)
       await page.locator('[data-testid="hi-rsi-theory"]').screenshot({ path: join(SHOTS, 'improve-en.png') }).catch(() => {})
       // 恢复中文
       await page.evaluate(() => {
@@ -560,7 +613,20 @@ async function main() {
       record('晋级后文件=候选内容', readFileSync(driftPath, 'utf8') === OLD_SKILL.replace('旧技能正文', '二次修订正文'))
     }
 
-    // 7. 主张层级证据图端点（挂同一审计域）
+    // 8. 演练 D（2026-11-26 Palantir 架构吸收轮）：回滚带原因归属——非法取值被拒且不留半途状态；外部环境可保存并在后继轨迹读出
+    {
+      const bad = await api.rollback('hw-0003', '走查：非法归属', 'weather')
+      record('回滚带非法原因归属 → 400', bad.status === 400, `http=${bad.status} body=${JSON.stringify(bad.body).slice(0, 120)}`)
+      const untouched = await api.proposals()
+      record('400 之后 hw-0003 仍是已晋级（没有半途回滚）', (untouched.body?.proposals ?? []).find((x) => x.id === 'hw-0003')?.status === 'promoted')
+      const rolled = await api.rollback('hw-0003', '走查：机房断电导致探测中断', 'external')
+      record('回滚带原因归属=外部环境 HTTP 200', rolled.status === 200 && rolled.body?.proposal?.rollback?.cause === 'external', `http=${rolled.status} cause=${rolled.body?.proposal?.rollback?.cause}`)
+      const ov = await api.overview()
+      const steps = ov.body?.evolution?.theory?.trajectory?.surfaces?.find((x) => x.surfaceKey === 'system_prompt')?.steps ?? []
+      record('后继轨迹读出 hw-0003 的回滚原因归属=外部环境', steps.find((x) => x.proposalId === 'hw-0003')?.rollbackCause === 'external', JSON.stringify(steps.map((x) => [x.proposalId, x.rollbackCause])))
+    }
+
+    // 9. 主张层级证据图端点（挂同一审计域）
     {
       const lc = await api.lifecycle()
       const cells = lc.body?.claimLevels?.cells ?? []

@@ -8,7 +8,7 @@ import { appendApprovalLog } from '../../approval-inbox/approval-log'
 import { listCandidates } from '../../expcandidates/exp-store'
 import type { ExpCandidate } from '../../expcandidates/exp-types'
 import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } from './apply'
-import { attachRegression, readEvalEvidence, readRegressionEvidence } from './evidence'
+import { attachRegression, caseFlipsOf, failureClustersOf, readEvalEvidence, readRegressionEvidence } from './evidence'
 import type { RegressionEvidence } from './types'
 import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
@@ -125,7 +125,7 @@ export function derive(
         passAt1: ev?.passAt1 ?? null,
         baselinePassAt1: ev?.equalBudgetBaseline?.passAt1 ?? null,
         heldoutPassRate: proposal.heldout?.passRate ?? null,
-        heldoutBaselinePassRate: ev?.heldoutBaselinePassRate ?? null,
+        heldoutBaselinePassRate: ev?.heldoutBaselinePassRate ?? proposal.heldoutBaselinePassRate ?? null,
       })
       return {
         decomposition,
@@ -272,8 +272,10 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
       throw new ServiceError(400, '候选探测不能复用基线运行')
     }
     if (!p.baseline) throw new ServiceError(400, '提案缺少基线，无法做行为对比')
+    // 2026-11-26 Palantir 架构吸收轮：探针带失败根因分布，并与基线运行逐题比对错翻转
+    const clustered: ProbeMetrics = { ...metrics, failureClusters: failureClustersOf(input.evalRunId) }
     const withRegression: ProbeMetrics = {
-      ...(regression ? attachRegression(metrics, regression) : metrics),
+      ...(regression ? attachRegression(clustered, regression) : clustered),
       ...(equalBudget ? { equalBudgetBaseline: equalBudget } : {}),
       ...(counterfactual ? { counterfactual } : {}),
       // W1（2026-11-05）：执行证迹随探测一起落账；null/缺席=未采集（门按配置处置）。
@@ -285,6 +287,7 @@ export async function recordProbe(id: string, probeId: string, input: RecordProb
     probe.regressionRunId = input.regressionRunId ?? undefined
     probe.evidence = withRegression
     probe.contrast = contrast
+    probe.caseFlips = caseFlipsOf(p.baselineRunId, input.evalRunId)
     probe.note = String(input.note ?? '').slice(0, 500)
     probe.recordedBy = String(input.actor ?? 'operator')
     probe.recordedAt = nowIso()

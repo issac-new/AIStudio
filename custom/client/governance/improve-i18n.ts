@@ -290,6 +290,42 @@ export interface ImproveCopy {
   evolveDelta: string
   deleteProposal: string
   confirmDeleteProposal: string
+  reviewTitle: string
+  reviewConfidence: string
+  reviewSufficient: string
+  reviewLimited: string
+  reviewInsufficient: string
+  reviewUnknown: string
+  reviewStrengths: string
+  reviewLimitations: string
+  reviewEvidenceRoles: string
+  reviewEvaluatorSame: string
+  reviewEvaluatorChanged: string
+  reviewEvaluatorUnknown: string
+  caseFlips: string
+  caseFixed: string
+  caseBroken: string
+  caseBothPassed: string
+  caseBothFailed: string
+  taskUnit: string
+  failureClusters: string
+  vetoCause: string
+  vetoCauseHint: string
+  vetoCauseProposal: string
+  vetoCauseExternal: string
+  vetoCauseUndetermined: string
+  causeRiskViolation: string
+  causeActionLoop: string
+  causeBudgetExhausted: string
+  causeOutcomeMismatch: string
+  causeTrajectoryDefect: string
+  causeResultDefect: string
+  causeUndecidable: string
+  lexSafety: string
+  lexQuality: string
+  lexCost: string
+  lexPass: string
+  lexFail: string
 }
 
 export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
@@ -582,6 +618,42 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     evolveDelta: '进化集增量',
     deleteProposal: '删除占位草稿',
     confirmDeleteProposal: '删除这个纯占位草稿？（无探测、无裁决，无审计价值）',
+    reviewTitle: '审阅结论',
+    reviewConfidence: '置信档',
+    reviewSufficient: '充分',
+    reviewLimited: '有限',
+    reviewInsufficient: '不足',
+    reviewUnknown: '未知',
+    reviewStrengths: '支撑读数',
+    reviewLimitations: '限制',
+    reviewEvidenceRoles: '参与候选筛选的证据',
+    reviewEvaluatorSame: '基线与候选在同一评估条件下评测',
+    reviewEvaluatorChanged: '基线与候选的评估条件不同',
+    reviewEvaluatorUnknown: '基线与候选的评估条件无法比较',
+    caseFlips: '逐题对比',
+    caseFixed: '修好',
+    caseBroken: '弄坏',
+    caseBothPassed: '都通过',
+    caseBothFailed: '都未通过',
+    taskUnit: '题',
+    failureClusters: '失败根因',
+    vetoCause: '原因归属',
+    vetoCauseHint: '只有「提案自身」会进入起草器的禁止重提清单；「外部环境」表示假设没有被证伪。',
+    vetoCauseProposal: '提案自身',
+    vetoCauseExternal: '外部环境',
+    vetoCauseUndetermined: '判不清',
+    causeRiskViolation: '红线命中',
+    causeActionLoop: '动作死循环',
+    causeBudgetExhausted: '预算耗尽',
+    causeOutcomeMismatch: '终态不符',
+    causeTrajectoryDefect: '轨迹缺陷',
+    causeResultDefect: '结果缺陷',
+    causeUndecidable: '无法判定',
+    lexSafety: '安全',
+    lexQuality: '质量',
+    lexCost: '成本',
+    lexPass: '通过',
+    lexFail: '未过',
   },
   en: {
     title: 'Improvement experiments',
@@ -872,5 +944,41 @@ export const improveMessages: Record<'zh' | 'en', ImproveCopy> = {
     evolveDelta: 'Evolve delta',
     deleteProposal: 'Delete placeholder draft',
     confirmDeleteProposal: 'Delete this placeholder draft? (no probes, no decision, no audit value)',
+    reviewTitle: 'Review assessment',
+    reviewConfidence: 'Confidence',
+    reviewSufficient: 'Sufficient',
+    reviewLimited: 'Limited',
+    reviewInsufficient: 'Insufficient',
+    reviewUnknown: 'Unknown',
+    reviewStrengths: 'Supporting readings',
+    reviewLimitations: 'Limitations',
+    reviewEvidenceRoles: 'Evidence used in candidate selection',
+    reviewEvaluatorSame: 'Baseline and candidate evaluated under the same conditions',
+    reviewEvaluatorChanged: 'Baseline and candidate evaluated under different conditions',
+    reviewEvaluatorUnknown: 'Baseline and candidate conditions cannot be compared',
+    caseFlips: 'Per-task comparison',
+    caseFixed: 'Fixed',
+    caseBroken: 'Broken',
+    caseBothPassed: 'Both passed',
+    caseBothFailed: 'Both failed',
+    taskUnit: 'tasks',
+    failureClusters: 'Failure root causes',
+    vetoCause: 'Why it was vetoed',
+    vetoCauseHint: 'Only "The proposal itself" goes into the drafter do-not-resubmit list; "External environment" means the hypothesis was not falsified.',
+    vetoCauseProposal: 'The proposal itself',
+    vetoCauseExternal: 'External environment',
+    vetoCauseUndetermined: 'Cannot tell',
+    causeRiskViolation: 'Red line hit',
+    causeActionLoop: 'Action loop',
+    causeBudgetExhausted: 'Budget exhausted',
+    causeOutcomeMismatch: 'Outcome mismatch',
+    causeTrajectoryDefect: 'Trajectory defect',
+    causeResultDefect: 'Result defect',
+    causeUndecidable: 'Undecidable',
+    lexSafety: 'Safety',
+    lexQuality: 'Quality',
+    lexCost: 'Cost',
+    lexPass: 'Pass',
+    lexFail: 'Fail',
   },
 }

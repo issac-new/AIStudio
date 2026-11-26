@@ -792,3 +792,248 @@ describe('调度面 REST', () => {
     }
   })
 })
+
+// ---- 2026-11-26 Palantir 架构吸收轮：原因归属、起草输入、逐题对比、留出基线、editClass 转发 ----
+
+async function draftOn(surfaceKey: string, hypothesis: string): Promise<string> {
+  const created = await post('/api/harness/workbench/proposals', {
+    title: 't', hypothesis, surfaceKey, evidenceRefs: ['task:t1'], variants: [{ label: 'a', content: 'A' }],
+  })
+  expect(created.status).toBe(200)
+  const id = created.body.proposal.id
+  expect((await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-base' })).status).toBe(200)
+  expect((await post(`/api/harness/workbench/proposals/${id}/submit`, {})).status).toBe(200)
+  return id
+}
+
+const vv = (assertionId: string, value: string) => ({ assertionId, value, source: 's0' })
+const cAggregates = (passAt1: number) => ({
+  taskCount: 3, passAt1, passAtK: passAt1,
+  byLayer: { result: passAt1, trajectory: passAt1, risk: 'none' as const, efficiency: { avgTokens: 100, avgCostUsd: 0.01, avgSteps: 3, avgDurationMs: 500 } },
+  unknownRatio: 0, rubricDrilldownHint: false, riskVeto: false, statisticallyInsufficient: false, judgeOnline: true,
+})
+
+/** 造一份三题评测集与两份带样本的运行：候选把 c-result、c-risk 两题弄坏。 */
+async function seedCaseRuns(): Promise<string> {
+  const store = await import('../../../eval/store')
+  const made = store.createSet({
+    name: '逐题集', track: 'e2e',
+    tasks: [
+      { id: 'c-pass', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a1', text: 'ok', expect: 'yes', kind: 'result' }] },
+      { id: 'c-result', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'a1', text: 'ok', expect: 'yes', kind: 'result' }] },
+      { id: 'c-risk', problem: 'p', expectedBehavior: 'e', rubric: [{ id: 'r1', text: 'r', expect: 'no', kind: 'risk' }] },
+    ],
+  })
+  if (!made.ok) throw new Error(JSON.stringify(made))
+  store.appendRun({
+    id: 'run-c-base', setId: made.set.id, target: {}, k: 3, status: 'done', createdAt: Date.now(), aggregates: cAggregates(1),
+    attempts: [
+      { taskId: 'c-pass', sampleIdx: 1, verdicts: [vv('a1', 'yes')] },
+      { taskId: 'c-result', sampleIdx: 1, verdicts: [vv('a1', 'yes')] },
+      { taskId: 'c-risk', sampleIdx: 1, verdicts: [vv('r1', 'no')] },
+    ],
+  })
+  store.appendRun({
+    id: 'run-c-cand', setId: made.set.id, target: {}, k: 3, status: 'done', createdAt: Date.now(), aggregates: cAggregates(1 / 3),
+    attempts: [
+      { taskId: 'c-pass', sampleIdx: 1, verdicts: [vv('a1', 'yes')] },
+      { taskId: 'c-result', sampleIdx: 1, verdicts: [vv('a1', 'no')] },
+      { taskId: 'c-risk', sampleIdx: 1, verdicts: [vv('r1', 'yes')] },
+    ],
+  })
+  return made.set.id
+}
+
+describe('Palantir 架构吸收批 HTTP', () => {
+  it('驳回带原因归属：非法取值 400；external 保存；未传时字段不出现', async () => {
+    const id = await draftOn('memory', '假设甲')
+    const bad = await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'reject', actor: 'r', note: 'n', cause: 'weather' })
+    expect(bad.status).toBe(400)
+    const rejected = await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'reject', actor: 'r', note: '评测服务宕机', cause: 'external' })
+    expect(rejected.status).toBe(200)
+    expect(rejected.body.proposal.approval).toMatchObject({ decision: 'rejected', cause: 'external', note: '评测服务宕机' })
+
+    const legacy = await draftOn('memory', '假设乙')
+    const rejected2 = await post(`/api/harness/workbench/proposals/${legacy}/decide`, { decision: 'reject', actor: 'r', note: 'n' })
+    expect(rejected2.status).toBe(200)
+    expect('cause' in rejected2.body.proposal.approval).toBe(false)
+  })
+
+  it('批准时忽略原因归属（该字段只对驳回有意义）', async () => {
+    const id = await draftOn('memory', '假设丙')
+    const approved = await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'approve', actor: 'r', note: 'n', cause: 'external' })
+    expect(approved.status).toBe(200)
+    expect(approved.body.proposal.approval.decision).toBe('approved')
+    expect('cause' in approved.body.proposal.approval).toBe(false)
+  })
+
+  it('回滚带原因归属：非法取值 400 且提案不变；external 保存并在后继轨迹里读出', async () => {
+    const composed = await createSubmittedApproved()
+    expect((await post(`/api/harness/workbench/proposals/${composed.id}/promote`, { apply: false, actor: 'reviewer' })).status).toBe(200)
+    const bad = await post(`/api/harness/workbench/proposals/${composed.id}/rollback`, { reason: 'x', cause: 'oops' })
+    expect(bad.status).toBe(400)
+    expect((await get('/api/harness/workbench/proposals')).body.proposals.find((x: any) => x.id === composed.id).status).toBe('promoted')
+    const rolled = await post(`/api/harness/workbench/proposals/${composed.id}/rollback`, { reason: '机房断电', cause: 'external', actor: 'reviewer' })
+    expect(rolled.status).toBe(200)
+    expect(rolled.body.proposal.rollback).toMatchObject({ reason: '机房断电', cause: 'external' })
+    const { body } = await get('/api/harness/workbench/overview')
+    const steps = body.evolution.theory.trajectory.surfaces.find((s: any) => s.surfaceKey === 'system_prompt').steps
+    expect(steps.find((s: any) => s.proposalId === composed.id).rollbackCause).toBe('external')
+  })
+
+  it('起草提示词按原因归属分开：外部的与未定的另成两段，禁止清单里只剩提案自身与未分类的', async () => {
+    const ext = await draftOn('memory', '外部原因被否的假设E')
+    await post(`/api/harness/workbench/proposals/${ext}/decide`, { decision: 'reject', actor: 'r', note: '评测服务宕机', cause: 'external' })
+    const und = await draftOn('memory', '原因未定的假设D')
+    await post(`/api/harness/workbench/proposals/${und}/decide`, { decision: 'reject', actor: 'r', note: '说不清', cause: 'undetermined' })
+    const own = await draftOn('memory', '提案自身的问题P')
+    await post(`/api/harness/workbench/proposals/${own}/decide`, { decision: 'reject', actor: 'r', note: 'n', cause: 'proposal' })
+    const legacy = await draftOn('memory', '未分类的老假设L')
+    await post(`/api/harness/workbench/proposals/${legacy}/decide`, { decision: 'reject', actor: 'r', note: '成本超配额' })
+
+    const { suggestProposal } = await import('../service')
+    const captured: string[] = []
+    const captureCli = (async (_argv: string[], prompt: string) => {
+      captured.push(prompt)
+      return { ok: true, stdout: '{"title":"新思路","hypothesis":"换思路","content":"# 新思路"}' }
+    }) as never
+    await suggestProposal({ surfaceKey: 'memory', cli: captureCli })
+    const prompt = captured[0]
+    const externalSection = prompt.slice(prompt.indexOf('【因外部环境被否决的假设'))
+    expect(externalSection).toContain('没有被证伪，可以重提')
+    expect(externalSection).toContain(ext)
+    expect(externalSection).toContain('评测服务宕机')
+    expect(prompt).toContain('【原因未定的被否决假设')
+    expect(prompt.slice(prompt.indexOf('【原因未定的被否决假设'))).toContain(und)
+    const ban = prompt.slice(prompt.indexOf('同面已失败假设（禁止换皮重提）：'))
+    expect(ban).toContain('提案自身的问题P')
+    expect(ban).toContain('未分类的老假设L')
+    // 外部与未定的假设原文只可能出现在禁止清单里；它们不在，说明没进清单
+    expect(prompt).not.toContain('外部原因被否的假设E')
+    expect(prompt).not.toContain('原因未定的假设D')
+    expect(prompt).not.toContain('【同面近期探测的失败根因')
+  })
+
+  it('记录探测时附带失败根因与逐题对错翻转；起草提示词含根因分布且不含题号', async () => {
+    await seedCaseRuns()
+    const created = await post('/api/harness/workbench/proposals', {
+      title: '逐题', hypothesis: 'h', surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md',
+      budgetCapUsd: 5, evidenceRefs: ['task:c-pass'], variants: [{ label: 'A', content: 'persona A' }],
+    })
+    expect(created.status).toBe(200)
+    const id = created.body.proposal.id
+    const based = await post(`/api/harness/workbench/proposals/${id}/baseline`, { evalRunId: 'run-c-base' })
+    expect(based.body.proposal.baseline.failureClusters).toEqual([])
+    await post(`/api/harness/workbench/proposals/${id}/submit`, {})
+    await post(`/api/harness/workbench/proposals/${id}/decide`, { decision: 'approve', actor: 'reviewer', note: 'ok' })
+    await post(`/api/harness/workbench/proposals/${id}/probes`, {})
+    const listed = await get('/api/harness/workbench/proposals')
+    const probeId = listed.body.proposals.find((x: any) => x.id === id).probes[0].id
+    const recorded = await post(`/api/harness/workbench/proposals/${id}/probes/${probeId}/record`, { evalRunId: 'run-c-cand' })
+    expect(recorded.status).toBe(200)
+    const probe = recorded.body.proposal.probes.find((x: any) => x.id === probeId)
+    expect(probe.evidence.failureClusters).toEqual([
+      { rootCause: 'result_defect', count: 1, sampleTaskIds: ['c-result'] },
+      { rootCause: 'risk_violation', count: 1, sampleTaskIds: ['c-risk'] },
+    ])
+    expect(probe.caseFlips).toEqual({ compared: 3, fixed: [], broken: ['c-result', 'c-risk'], bothPassed: 1, bothFailed: 0 })
+    // 还没组合时没有选中候选：审阅结论是未知，不编造
+    expect(recorded.body.proposal.derived.gate.assessment).toEqual({
+      confidence: 'unknown', evaluatorComparability: 'unknown', evaluatorChangedFields: [], strengths: [],
+      limitations: ['选中候选没有已记录的探测读数，无法评估结论的可信度'],
+    })
+    const composedView = await post(`/api/harness/workbench/proposals/${id}/compose`, { variantId: 'v1', rationale: 'r' })
+    expect(composedView.status).toBe(200)
+    // 组合后晋级报告带审阅结论：噪声未标定 → 有限；基线与候选都没有指纹 → 无法比较
+    expect(composedView.body.proposal.derived.gate.assessment.confidence).toBe('limited')
+    expect(composedView.body.proposal.derived.gate.assessment.evaluatorComparability).toBe('unknown')
+    expect(composedView.body.proposal.derived.gate.assessment.limitations).toContain('噪声带标定'.replace('标定', '未标定') + '：增益无法与评测噪声区分')
+
+    const { suggestProposal } = await import('../service')
+    const captured: string[] = []
+    const captureCli = (async (_argv: string[], prompt: string) => {
+      captured.push(prompt)
+      return { ok: true, stdout: '{"title":"针对根因","hypothesis":"先修结果层","content":"# 针对根因"}' }
+    }) as never
+    await suggestProposal({ surfaceKey: 'system_prompt', targetPath: null, cli: captureCli })
+    const section = captured[0].slice(captured[0].indexOf('【同面近期探测的失败根因'))
+    expect(section).toContain('result_defect：1 题')
+    expect(section).toContain('risk_violation：1 题')
+    expect(section).not.toContain('c-result')
+    expect(section).not.toContain('c-risk')
+  })
+
+  it('留出基线读数：一并提交基线答案后，增益保留率有读数、背离诊断计入这一轮', async () => {
+    process.env.HELDOUT_STORE = join(dir, 'heldout')
+    try {
+      const heldout = await import('../../../heldout/held-out-store')
+      heldout._useStoreDirForTests(process.env.HELDOUT_STORE)
+      const hs = heldout.createSet({ name: '留出集', items: [{ prompt: 'q1', expected: 'a1' }, { prompt: 'q2', expected: 'a2' }] }, 'reviewer')
+      if (!hs.ok) throw new Error(JSON.stringify(hs))
+      const heldoutSetId = (await heldout.listSets())[0].id
+      const store = await import('../../../eval/store')
+      store.appendRun(runOf('run-eq', baseSetId, 0.5))
+
+      const composed = await createSubmittedApproved('run-probe')
+      // 只交候选答案：行为与改动前一致（没有留出基线读数）
+      const candOnly = await post(`/api/harness/workbench/proposals/${composed.id}/heldout`, {
+        setId: heldoutSetId, answers: [{ index: 0, answer: 'a1' }, { index: 1, answer: 'a1' }],
+      })
+      expect(candOnly.body.proposal.heldout).toMatchObject({ n: 2, passRate: 0.5 })
+      expect(candOnly.body.proposal.heldoutBaselinePassRate).toBeUndefined()
+      // 只交候选答案：保留率仍算不出（缺留出基线），与改动前一致
+      expect(candOnly.body.proposal.derived.search.retention.retention).toBeNull()
+      expect(candOnly.body.proposal.derived.search.retention.verdict).toContain('无法计算')
+
+      const id2 = await (async () => {
+        const created = await post('/api/harness/workbench/proposals', {
+          title: '留出基线', hypothesis: 'h', surfaceKey: 'system_prompt', targetPath: 'profiles/p1/SOUL.md', budgetCapUsd: 5,
+          evidenceRefs: ['task:t1'], variants: [{ label: 'A', content: 'persona A' }],
+        })
+        const pid = created.body.proposal.id
+        await post(`/api/harness/workbench/proposals/${pid}/baseline`, { evalRunId: 'run-base' })
+        await post(`/api/harness/workbench/proposals/${pid}/submit`, {})
+        await post(`/api/harness/workbench/proposals/${pid}/decide`, { decision: 'approve', actor: 'reviewer', note: 'ok' })
+        await post(`/api/harness/workbench/proposals/${pid}/probes`, {})
+        const listed = await get('/api/harness/workbench/proposals')
+        const probeId = listed.body.proposals.find((x: any) => x.id === pid).probes[0].id
+        const rec = await post(`/api/harness/workbench/proposals/${pid}/probes/${probeId}/record`, {
+          evalRunId: 'run-probe', regressionRunId: 'run-reg', equalBudgetBaselineRunId: 'run-eq',
+        })
+        expect(rec.status).toBe(200)
+        const composed = await post(`/api/harness/workbench/proposals/${pid}/compose`, { variantId: 'v1', rationale: 'r' })
+        expect(composed.status).toBe(200)
+        return pid
+      })()
+      const both = await post(`/api/harness/workbench/proposals/${id2}/heldout`, {
+        setId: heldoutSetId,
+        answers: [{ index: 0, answer: 'a1' }, { index: 1, answer: 'a2' }],
+        baselineAnswers: [{ index: 0, answer: 'a1' }, { index: 1, answer: 'wrong' }],
+      })
+      expect(both.status).toBe(200)
+      expect(both.body.proposal.heldout).toMatchObject({ n: 2, passRate: 1 })
+      expect(both.body.proposal.heldoutBaselinePassRate).toBe(0.5)
+      expect(both.body.proposal.derived.search.retention.retention).toBeCloseTo(0.5 / 0.3, 3)
+      expect(both.body.proposal.derived.search.retention.heldoutGain).toBeCloseTo(0.5, 6)
+      expect((await post(`/api/harness/workbench/proposals/${id2}/promote`, { apply: false, actor: 'reviewer' })).status).toBe(200)
+      const { body } = await get('/api/harness/workbench/overview')
+      expect(body.evolution.theory.proxyDivergence.rounds).toBe(1)
+    } finally {
+      delete process.env.HELDOUT_STORE
+    }
+  })
+
+  it('创建提案转发 editClass；非法取值不落', async () => {
+    const ok = await post('/api/harness/workbench/proposals', {
+      title: 't', hypothesis: 'h', surfaceKey: 'memory', evidenceRefs: ['task:t1'],
+      editClass: 'domain', variants: [{ label: 'a', content: 'A' }],
+    })
+    expect(ok.body.proposal.editClass).toBe('domain')
+    const bad = await post('/api/harness/workbench/proposals', {
+      title: 't', hypothesis: 'h', surfaceKey: 'memory', evidenceRefs: ['task:t1'],
+      editClass: 'whatever', variants: [{ label: 'a', content: 'A' }],
+    })
+    expect(bad.status).toBe(200)
+    expect(bad.body.proposal.editClass ?? null).toBeNull()
+  })
+})

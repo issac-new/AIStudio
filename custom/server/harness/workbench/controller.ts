@@ -16,7 +16,7 @@ import {
   componentLibrary,
   ensureSchedulePolicyFile,
 } from './service'
-import type { ExperienceStatus, SurfaceKey } from './types'
+import type { DecisionCause, ExperienceStatus, SurfaceKey } from './types'
 
 const router = new Router()
 
@@ -110,6 +110,8 @@ router.post('/proposals', async (ctx) => {
       budgetCapUsd: typeof b.budgetCapUsd === 'number' ? b.budgetCapUsd : Number(b.budgetCapUsd),
       evidenceRefs: Array.isArray(b.evidenceRefs) ? b.evidenceRefs.map(String) : [],
       experienceIds: Array.isArray(b.experienceIds) ? b.experienceIds.map(String) : [],
+      // 2026-11-26 Palantir 架构吸收轮：转发编辑类别——此前面板手工选的类别在这里被丢掉
+      editClass: b.editClass === 'invariant' || b.editClass === 'domain' || b.editClass === 'mixed' ? b.editClass : undefined,
       variants,
       profile: typeof b.profile === 'string' ? b.profile : null,
       createdBy: actorOf(ctx, b),
@@ -190,7 +192,7 @@ router.post('/proposals/:id/decide', async (ctx) => {
   try {
     ctx.body = {
       ok: true,
-      proposal: await decideProposal(ctx.params.id, decision, actorOf(ctx, b), String(b.note ?? '')),
+      proposal: await decideProposal(ctx.params.id, decision, actorOf(ctx, b), String(b.note ?? ''), b.cause as DecisionCause | null),
     }
   } catch (e) {
     fail(ctx, e)
@@ -329,6 +331,7 @@ router.post('/proposals/:id/heldout', async (ctx) => {
         setId: String(b.setId ?? ''),
         answers: Array.isArray(b.answers) ? b.answers : [],
         actor: actorOf(ctx, b),
+        ...(Array.isArray(b.baselineAnswers) ? { baselineAnswers: b.baselineAnswers } : {}),
       }),
     })
   } catch (e) {
@@ -429,7 +432,11 @@ router.post('/proposals/:id/rollback', async (ctx) => {
   try {
     ctx.body = {
       ok: true,
-      proposal: await rollbackProposal(ctx.params.id, { actor: actorOf(ctx, b), reason: String(b.reason ?? '') }),
+      proposal: await rollbackProposal(ctx.params.id, {
+        actor: actorOf(ctx, b),
+        reason: String(b.reason ?? ''),
+        cause: b.cause as DecisionCause | null,
+      }),
     }
   } catch (e) {
     fail(ctx, e)

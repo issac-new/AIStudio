@@ -7,7 +7,7 @@ import { appendApprovalLog } from '../../approval-inbox/approval-log'
 import { listCandidates } from '../../expcandidates/exp-store'
 import type { ExpCandidate } from '../../expcandidates/exp-types'
 import { applyEnabled, applyProposalFile, fileDigest, rollbackProposalFile } from './apply'
-import { attachRegression, readEvalEvidence, readRegressionEvidence } from './evidence'
+import { attachRegression, failureClustersOf, readEvalEvidence, readRegressionEvidence } from './evidence'
 import {
   DEFAULT_BUDGET_CAP_USD, MAX_VARIANTS, annealedEditBudget, behaviorContrast, candidateDiversity,
   composedVariant, diffSummary, diffSummaryTree, evaluatePromotion, evolutionReport,
@@ -15,7 +15,7 @@ import {
   leakageBlockers, maxEditCount, paretoReportOf, probeCost, proposalArchive,
   proposerEvolutionHistory, deletionProposalTemplate, pruneSignal, verificationTierOf,
   rsiConfig, sha256, stallDetection, submitReadiness,
-  surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest,
+  surfaceRound, treeDigest, validateTree, variantContent, variantSetDigest, vetoCauseOf,
 } from './loop'
 import { behavioralDiversity, decomposeSearch, gainRetention, objectivePointsOf } from './multi-objective'
 import { createSet, getSet, splitOfSet } from '../../eval/store'
@@ -31,7 +31,7 @@ import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normali
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
 import { experienceFreshness, memoryConsolidationPolicy, type ExperienceFreshness } from './experience-freshness'
 import type {
-  BehaviorContrast, Champion, EditableSurface, EditClass, EvolutionReport, Experience, ExperienceStatus,
+  BehaviorContrast, Champion, DecisionCause, EditableSurface, EditClass, EvolutionReport, Experience, ExperienceStatus,
   ConstraintCheck, GateBlocker, ParetoReport, Probe, ProbeMetrics, Proposal, ProposalStatus, PromotionGateReport,
   RegularizationDerived, SurfaceKey, Variant,
 } from './types'
@@ -340,7 +340,8 @@ export async function attachBaseline(id: string, evalRunId: string): Promise<Pro
       throw new ServiceError(409, '只有草稿/已提交提案可以更换基线')
     }
     p.baselineRunId = metrics.evalRunId
-    p.baseline = metrics
+    // 2026-11-26 Palantir 架构吸收轮：基线也带失败根因分布，审阅人能看到候选把哪一类失败修好了
+    p.baseline = { ...metrics, failureClusters: failureClustersOf(metrics.evalRunId) }
     p.updatedAt = nowIso()
     return view(store, p)
   })
@@ -475,12 +476,25 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
   const editBudget = annealedEditBudget(round, cfg)
   const stalled = stallDetection(mine, cfg.stallWindow)
   const prune = pruneSignal(mine, cfg.pruneN)
+  // 2026-11-26 Palantir 架构吸收轮：因外部环境或原因未定被否决的假设不进禁止清单，另成两段
   const failedHypotheses = mine
-    .filter((p) => p.status === 'rejected' || p.status === 'rolled_back')
+    .filter((p) => (p.status === 'rejected' || p.status === 'rolled_back') && (vetoCauseOf(p) ?? 'proposal') === 'proposal')
     .slice(-8)
     .map((p) => `- [${p.status}] ${p.hypothesis.slice(0, 160)}`)
   // D7（2026-10-31 P2 批）：全历史注入——冠军（含增益）/拒绝（含理由）/回滚（含理由）
   const history = proposerEvolutionHistory(store.proposals, store.champions, input.surfaceKey)
+  const vetoLine = (e: { proposalId: string; title: string; detail: string }) => `- ${e.proposalId}「${e.title}」：${e.detail}`
+  const externalVetoes = history.entries.filter((e) => e.cause === 'external').map(vetoLine)
+  const undeterminedVetoes = history.entries.filter((e) => e.cause === 'undetermined').map(vetoLine)
+  // 同面近期探测的失败根因分布：只汇总类别与数量，题号与断言原文不出评测域（泄漏批评者会拦）
+  const failureCounts = new Map<string, number>()
+  for (const p of mine) {
+    for (const probe of p.probes) {
+      if (probe.status !== 'recorded') continue
+      for (const c of probe.evidence?.failureClusters ?? []) failureCounts.set(c.rootCause, (failureCounts.get(c.rootCause) ?? 0) + c.count)
+    }
+  }
+  const failureLines = [...failureCounts.entries()].sort((a, b) => b[1] - a[1]).map(([cause, count]) => `- ${cause}：${count} 题`)
   // D10（2026-10-31 P2 批）：剪枝命中时给删除型提案模板（替代一句「优先做减法」）
   const deletion = deletionProposalTemplate(store.proposals, input.surfaceKey, cfg)
   // R8（2026-10-31 首批执行）：加权检索取代静态前 3——
@@ -540,7 +554,10 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     basePreview,
     '',
     `该面进化状态：已采纳 ${round} 轮（编辑预算 b_t=${editBudget}，本轮起草改动文件数必须 ≤ ${editBudget}）；${stalled ? '搜索停滞（连续提案无采纳，考虑换思路）；' : ''}该面提案总数 ${mine.length}。`,
-    `\n【该面进化全史（D7）】${history.summary}\n${history.entries.length ? history.entries.map((e) => `- [${e.kind === 'adopted' ? '已采纳' : e.kind === 'rejected' ? '被拒' : '已回滚'}] ${e.proposalId}「${e.title}」：${e.detail}`).join('\n') : '（该面尚无历史提案——首提案属结构性探索，带内增益可豁免）'}\n纪律：被拒/回滚假设禁止换皮重提；低分祖先常是垫脚石，可显式改造其思路（注明来源 proposal id）。`,
+    `\n【该面进化全史（D7）】${history.summary}\n${history.entries.length ? history.entries.map((e) => `- [${e.kind === 'adopted' ? '已采纳' : e.kind === 'rejected' ? '被拒' : '已回滚'}] ${e.proposalId}「${e.title}」：${e.detail}`).join('\n') : '（该面尚无历史提案——首提案属结构性探索，带内增益可豁免）'}\n纪律：被拒/回滚假设禁止换皮重提（带［外部环境所致］或［原因未定］标注的除外，见下文两段）；低分祖先常是垫脚石，可显式改造其思路（注明来源 proposal id）。`,
+    externalVetoes.length ? `\n【因外部环境被否决的假设（没有被证伪，可以重提；重提时写明这次如何排除该外部因素）】\n${externalVetoes.join('\n')}` : '',
+    undeterminedVetoes.length ? `\n【原因未定的被否决假设（重提前先确认它被否决的原因）】\n${undeterminedVetoes.join('\n')}` : '',
+    failureLines.length ? `\n【同面近期探测的失败根因（评测域的确定性分类，只看首样本；这里只有类别与数量）】\n${failureLines.join('\n')}\n起草时优先针对占比最高的根因提出修改。` : '',
     adoptedExperiences.length ? `\n已采纳经验（按置信×保鲜×面域加权取 top3）：\n${adoptedExperiences.join('\n')}` : '',
     staleRefreshList.length ? `\n【记忆整理（D11）】以下 stale 采纳经验建议在本提案中引用以刷新验证：\n${staleRefreshList.slice(0, 5).join('\n')}` : '',
     deletion.suggested ? `\n${deletion.scaffold}` : '',
@@ -636,14 +653,25 @@ export async function submitProposal(id: string): Promise<ProposalView> {
   })
 }
 
+const DECISION_CAUSES: readonly DecisionCause[] = ['proposal', 'external', 'undetermined']
+
+/** 原因归属入参校验：未传为 null；取值不在三值之内直接拒绝，不猜。 */
+export function parseDecisionCause(value: unknown): DecisionCause | null {
+  if (value == null || value === '') return null
+  if (typeof value === 'string' && (DECISION_CAUSES as readonly string[]).includes(value)) return value as DecisionCause
+  throw new ServiceError(400, '原因归属须为 proposal|external|undetermined')
+}
+
 export async function decideProposal(
   id: string,
   decision: 'approve' | 'reject',
   actor: string,
   note: string,
+  cause?: DecisionCause | null,
 ): Promise<ProposalView> {
   const who = String(actor ?? '').trim()
   if (!who) throw new ServiceError(400, '批准/驳回必须记录操作人')
+  const causeChecked = decision === 'reject' ? parseDecisionCause(cause) : null
   return mutateStore((store) => {
     const p = requireProposal(store, id)
     if (p.status !== 'submitted') throw new ServiceError(409, `当前状态 ${p.status} 不可裁决`)
@@ -654,6 +682,7 @@ export async function decideProposal(
       note: String(note ?? '').slice(0, 500),
       variantSetDigest: digest,
       at: nowIso(),
+      ...(causeChecked ? { cause: causeChecked } : {}),
     }
     p.status = decision === 'approve' ? 'approved' : 'rejected'
     p.updatedAt = nowIso()
@@ -714,13 +743,30 @@ export async function createProbes(
 
 export async function attachHeldout(
   id: string,
-  input: { setId: string; answers: Array<{ index: number; answer: string }>; actor?: string },
+  input: {
+    setId: string
+    answers: Array<{ index: number; answer: string }>
+    actor?: string
+    /** 基线对同一份密封题库的答案（可选）；给了才算得出留出集上的基线通过率。 */
+    baselineAnswers?: Array<{ index: number; answer: string }>
+  },
 ): Promise<ProposalView> {
   const { scoreSet } = await import('../../heldout/held-out-store')
-  const r = scoreSet(input.setId, input.answers, input.actor?.trim() || `workbench:${id}`)
+  const scorer = input.actor?.trim() || `workbench:${id}`
+  const r = scoreSet(input.setId, input.answers, scorer)
   if (!r.ok) {
     const problems = (r as { ok: false; problems: string[] }).problems
     throw new ServiceError(400, problems.join('；'))
+  }
+  // 2026-11-26 Palantir 架构吸收轮：基线答案走同一个调用方身份，占用同一份额度（不扩大防探测限额）
+  let heldoutBaselinePassRate: number | null = null
+  if (Array.isArray(input.baselineAnswers) && input.baselineAnswers.length > 0) {
+    const rb = scoreSet(input.setId, input.baselineAnswers, scorer)
+    if (!rb.ok) {
+      const problems = (rb as { ok: false; problems: string[] }).problems
+      throw new ServiceError(400, `基线答案未计入：${problems.join('；')}`)
+    }
+    heldoutBaselinePassRate = rb.result.passRate
   }
   return mutateStore((store) => {
     const p = requireProposal(store, id)
@@ -732,6 +778,7 @@ export async function attachHeldout(
       n: r.result.n,
       passRate: r.result.passRate,
     }
+    if (heldoutBaselinePassRate != null) p.heldoutBaselinePassRate = heldoutBaselinePassRate
     p.updatedAt = nowIso()
     return view(store, p)
   })
@@ -1117,10 +1164,11 @@ export async function promoteProposal(
 
 export async function rollbackProposal(
   id: string,
-  opts: { actor?: string; reason: string },
+  opts: { actor?: string; reason: string; cause?: DecisionCause | null },
 ): Promise<ProposalView> {
   const reason = String(opts.reason ?? '').trim()
   if (!reason) throw new ServiceError(400, '回滚必须写明原因')
+  const cause = parseDecisionCause(opts.cause)
   const store0 = readStore()
   const p0 = store0.proposals.find((x) => x.id === id)
   if (!p0) throw new ServiceError(404, `提案不存在：${id}`)
@@ -1137,6 +1185,7 @@ export async function rollbackProposal(
       reason,
       restoredDigest: fileRes.digest ?? p.base?.digest ?? null,
       fileRestored: p.promotion?.applied === true,
+      ...(cause ? { cause } : {}),
     }
     // 源文「没有收益就重新删除」：回滚时把该提案沉淀的经验一并退役，避免下一次还按旧教训提议。
     for (const exp of store.experiences) {

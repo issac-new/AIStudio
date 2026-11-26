@@ -660,3 +660,149 @@ describe('R7 建议产物导出与已应用标记', () => {
     expect(api.markWorkbenchSurfaceApplied).toHaveBeenCalledWith('hw-001', 'operator')
   })
 })
+
+describe('Palantir 架构吸收批（2026-11-26）：审阅结论、逐题对比、原因归属', () => {
+  const clone = () => JSON.parse(JSON.stringify(overview))
+
+  it('审阅结论块：置信档、评估条件可比性与变更字段、支撑读数、限制、字典序分层', async () => {
+    const data = clone()
+    data.proposals[0].derived.gate.assessment = {
+      confidence: 'insufficient', evaluatorComparability: 'changed', evaluatorChangedFields: ['setHash', 'judge'],
+      strengths: ['噪声带已标定（δ=5.0%）'],
+      limitations: ['评测采样 k=2（少于 3 次）：无法区分运气与能力', '基线与候选的评估条件不同（setHash、judge）：两次通过率不能直接比较'],
+    }
+    data.proposals[0].derived.gate.lexOrder = { safety: 'pass', quality: 'fail', cost: 'pass' }
+    data.proposals[0].derived.gate.evidenceRoles = [
+      { evidence: 'evolve_probe', roles: ['candidate_selection'], note: '演化集候选读数参与候选接受决策' },
+      { evidence: 'final', roles: ['final_judgement'], note: '独立最终验证在环外' },
+    ]
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(data)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const review = w.find('[data-testid="hi-review-hw-001"]')
+    expect(review.exists()).toBe(true)
+    expect(review.text()).toContain('审阅结论：置信档 不足')
+    expect(w.find('[data-testid="hi-review-confidence-hw-001"]').text()).toBe('不足')
+    const evaluator = w.find('[data-testid="hi-review-evaluator-hw-001"]').text()
+    expect(evaluator).toContain('基线与候选的评估条件不同')
+    expect(evaluator).toContain('setHash、judge')
+    expect(w.find('[data-testid="hi-review-strengths-hw-001"]').text()).toContain('噪声带已标定')
+    expect(w.find('[data-testid="hi-review-limitations-hw-001"]').text()).toContain('少于 3 次')
+    expect(review.text()).toContain('安全 通过')
+    expect(review.text()).toContain('质量 未过')
+    expect(review.text()).toContain('成本 通过')
+    const roles = w.find('[data-testid="hi-review-roles-hw-001"]')
+    expect(roles.text()).toBe('参与候选筛选的证据：evolve_probe、final')
+    expect(roles.attributes('title')).toContain('独立最终验证在环外')
+    w.unmount()
+  })
+
+  it('旧载荷（门禁结果没有 assessment）不渲染审阅结论块，也不渲染逐题对比与失败根因行', async () => {
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w.find('[data-testid="hi-review-hw-001"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-flips-hw-001-v1"]').exists()).toBe(false)
+    expect(w.find('[data-testid="hi-clusters-hw-001-v1"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('逐题对比与失败根因：一行读数都带单位；根因行的悬停提示带样例题号', async () => {
+    const data = clone()
+    data.proposals[0].probes[0].caseFlips = { compared: 4, fixed: ['t-fix'], broken: ['t-risk', 't-loop'], bothPassed: 1, bothFailed: 0 }
+    data.proposals[0].probes[0].evidence.failureClusters = [
+      { rootCause: 'result_defect', count: 2, sampleTaskIds: ['t-result', 't-only'] },
+      { rootCause: 'undecidable', count: 1, sampleTaskIds: ['t-offline'] },
+    ]
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(data)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w.find('[data-testid="hi-flips-hw-001-v1"]').text()).toBe('逐题对比：修好 1 题 · 弄坏 2 题 · 都通过 1 题 · 都未通过 0 题')
+    expect(w.find('[data-testid="hi-clusters-hw-001-v1"]').text()).toBe('失败根因：结果缺陷 2 题 · 无法判定 1 题')
+    expect(w.find('[data-testid="hi-clusters-hw-001-v1"]').attributes('title')).toContain('t-result、t-only')
+    // 没有记录探测的候选不出这两行
+    expect(w.find('[data-testid="hi-flips-hw-001-v2"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('采集过但没有失败题（空数组）不渲染根因行', async () => {
+    const data = clone()
+    data.proposals[0].probes[0].evidence.failureClusters = []
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(data)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w.find('[data-testid="hi-clusters-hw-001-v1"]').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('驳回：下拉默认「提案自身」；选「外部环境」后驳回，端点收到 cause；批准不带 cause', async () => {
+    const data = clone()
+    data.proposals[0].status = 'submitted'
+    api.fetchWorkbenchOverview.mockResolvedValue(data)
+    api.decideWorkbenchProposal.mockResolvedValue({ ok: true, proposal: { ...data.proposals[0], status: 'rejected' } })
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    const select = w.find('[data-testid="hi-reject-cause-hw-001"]')
+    expect((select.element as HTMLSelectElement).value).toBe('proposal')
+    expect(select.text()).toContain('外部环境')
+    expect(select.text()).toContain('判不清')
+    await select.setValue('external')
+    await w.findAll('button').filter((b) => b.text() === '驳回')[0].trigger('click')
+    await flushPromises()
+    expect(api.decideWorkbenchProposal).toHaveBeenLastCalledWith('hw-001', 'reject', 'operator', '', 'external')
+
+    const again = clone()
+    again.proposals[0].status = 'submitted'
+    api.fetchWorkbenchOverview.mockResolvedValue(again)
+    api.decideWorkbenchProposal.mockResolvedValue({ ok: true, proposal: { ...again.proposals[0], status: 'approved' } })
+    const w2 = mount(HarnessImprovePanel)
+    await flushPromises()
+    await w2.findAll('button').filter((b) => b.text() === '批准')[0].trigger('click')
+    await flushPromises()
+    expect(api.decideWorkbenchProposal).toHaveBeenLastCalledWith('hw-001', 'approve', 'operator', '', undefined)
+    w.unmount()
+    w2.unmount()
+  })
+
+  it('回滚：选「外部环境」后回滚，端点收到原因与 cause', async () => {
+    const data = clone()
+    data.proposals[0].status = 'promoted'
+    data.proposals[0].promotion = { actor: 'reviewer', at: 'now', digest: 'd', applied: false }
+    api.fetchWorkbenchOverview.mockResolvedValue(data)
+    api.rollbackWorkbenchProposal.mockResolvedValue({ ok: true, proposal: { ...data.proposals[0], status: 'rolled_back' } })
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect((w.find('[data-testid="hi-rollback-cause-hw-001"]').element as HTMLSelectElement).value).toBe('proposal')
+    await w.find('input[placeholder="回滚原因"]').setValue('机房断电')
+    await w.find('[data-testid="hi-rollback-cause-hw-001"]').setValue('external')
+    await w.findAll('button').filter((b) => b.text() === '回滚冠军')[0].trigger('click')
+    await flushPromises()
+    expect(api.rollbackWorkbenchProposal).toHaveBeenLastCalledWith('hw-001', '机房断电', 'external')
+    w.unmount()
+  })
+
+  it('后继轨迹表：回滚的原因归属跟在轮次后面；旧服务端不带归属时不显示', async () => {
+    const data = clone()
+    data.evolution.theory.trajectory.surfaces[0].steps[2].rollbackCause = 'external'
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(data)
+    const w = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w.find('[data-testid="hi-theory-traj-row-3"] td').text()).toContain('外部环境')
+    w.unmount()
+    const legacy = clone()
+    api.fetchWorkbenchOverview.mockResolvedValueOnce(legacy)
+    const w2 = mount(HarnessImprovePanel)
+    await flushPromises()
+    expect(w2.find('[data-testid="hi-theory-traj-row-3"] td').text()).not.toContain('提案自身')
+    w2.unmount()
+  })
+
+  it('审阅结论的样式规则只用既有色变量，不写裸色值（样式源检查）', () => {
+    const src = readFileSync(resolve(process.cwd(), 'custom/client/ia2/views/gov/HarnessImprovePanel.vue'), 'utf8')
+    for (const cls of ['confidence-sufficient', 'confidence-limited', 'confidence-insufficient', 'confidence-unknown', 'evaluator-same', 'evaluator-changed', 'evaluator-unknown', 'lex-pass', 'lex-fail']) {
+      const m = src.match(new RegExp(`\\.hi__chip--${cls} \\{([^}]*)\\}`))
+      expect(m, cls).not.toBeNull()
+      expect(m![1]).toMatch(/color: var\(--/)
+      expect(m![1]).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+    }
+  })
+})
