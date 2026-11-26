@@ -360,6 +360,32 @@ describe('ops symbols 导出面两形态补全（84 条长尾两枚根因的守�
   })
 })
 
+describe('ops symbols 导出面内联 type 修饰（TS 4.5 export { type X }）', () => {
+  it('export { type X } from 列表项剥 type 修饰入导出面；不剥则 import { type X } 必悬空（2026-11-26 发版轮 Ekko UI protocol-bridge 实锤）', async () => {
+    const ws = tmp()
+    mkdirSync(join(ws, 'lib'), { recursive: true })
+    writeFileSync(join(ws, 'package.json'), '{}')
+    // protocol.ts 真身 + bridge.ts 薄 re-export 层（内联 type 修饰形态）+ 两个消费方
+    writeFileSync(join(ws, 'lib', 'protocol.ts'), [
+      'export interface EkkoUISpec { root: string }',
+      'export const EKKO_UI_LIMITS = { max: 1 } as const',
+    ].join('\n'))
+    writeFileSync(join(ws, 'lib', 'bridge.ts'), [
+      "export {",
+      "  EKKO_UI_LIMITS,",
+      "  type EkkoUISpec,",
+      "} from './protocol'",
+    ].join('\n'))
+    writeFileSync(join(ws, 'app.ts'), [
+      "import { EKKO_UI_LIMITS, type EkkoUISpec } from './lib/bridge'",
+      "import type { EkkoUISpec as Spec2 } from './lib/bridge'",
+      'export const use = (s: EkkoUISpec): Spec2 | null => null; void use; void EKKO_UI_LIMITS',
+    ].join('\n'))
+    const ev = await runOps({ id: 'o', type: 'ops', mode: 'symbols', evidenceType: 'x' }, ws)
+    expect(ev.result).toBe('pass')
+  })
+})
+
 describe('ops symbols 导出面收官两形态（const enum + .vue script setup 隐式 default）', () => {
   it('export const enum 入导出面；.vue 文件隐式 default 可被具名外 import', async () => {
     const ws = tmp()
