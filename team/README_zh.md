@@ -154,7 +154,7 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 ## 版本
 
-当前版本：**v0.23.0-team.2**；上一版：**v0.23.0-team.1**。版本真源为 [VERSION](VERSION)。
+当前版本：**v0.23.4-team.1**；上一版：**v0.23.3-team.2**（0.23.4 换血批进位；其间的版本小节待补，挂账 N36 台账）。版本真源为 [VERSION](VERSION)。
 
 完整三位底座版本跟随 `vendor/VENDOR.md` 的 hermes-agent 基线，`-team.N` 是 AIStudio 团队扩展发布序。因此，**0.23.0 是上游底座版本**，**team.2 是该底座上的第二次团队扩展发布**，不是上游的 `team.2` 版本。
 
