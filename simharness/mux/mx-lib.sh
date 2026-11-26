@@ -1070,17 +1070,20 @@ mx_apply_agent_patches() {
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
     # pristine 源专通道（2026-11-26 run32 重建实录）：本清单补丁按 v0.22.x 基线撰写，
     # 对 v0.23.4 纯净树上下文多失配（604 起 apply --check 连环失配）；而 1b 的 runtime
-    # 覆盖层会整体替换目标文件（整理态已含各补丁语义）。凡目标文件全部被 runtime/
-    # 覆盖者直接跳过——跳过依据=下一步整体替换提供语义，非「已在位」造假；覆盖不到
-    # 的文件仍走 apply/语义检查/heal（heal 源 pristine 模式下优先 runtime 模板）。
+    # 覆盖层会整体替换目标文件（整理态已含各补丁语义）。凡**非测试**目标文件全部被
+    # runtime/ 覆盖者直接跳过——跳过依据=下一步整体替换提供语义，非「已在位」造假；
+    # tests/ 不计（SIM 执行面不跑仓内单测，覆盖层本就不携带）；覆盖不到的代码文件
+    # 仍走 apply/语义检查/heal（heal 源 pristine 模式下优先 runtime 模板）。
     if [[ "${HERMES_AGENT_SRC_PRISTINE:-0}" == "1" ]]; then
-      local _covered=1 _rtf
+      local _covered=1 _rtf _saw=0
       while IFS= read -r _rtf; do
         [ -n "$_rtf" ] || continue
+        case "$_rtf" in tests/*) continue ;; esac
+        _saw=1
         [[ -f "$OVERLAY_ROOT/runtime/$_rtf" ]] || { _covered=0; break; }
       done < <(git -C "$tree" apply --numstat "$pf" 2>/dev/null | awk '{print $3}')
-      if [[ "$_covered" == 1 && -n "$_rtf" ]]; then
-        log "运行时 patch 跳过（pristine 源：目标文件由 1b runtime 覆盖层整体替换）：$p"
+      if [[ "$_covered" == 1 && "$_saw" == 1 ]]; then
+        log "运行时 patch 跳过（pristine 源：代码目标由 1b runtime 覆盖层整体替换）：$p"
         continue
       fi
     fi
