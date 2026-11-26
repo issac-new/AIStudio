@@ -16,12 +16,21 @@ const L = computed(() => {
 interface Cell { stage: string; status: 'implemented' | 'partial' | 'nr'; anchor: string; note: string }
 interface Loop { key: string; title: string; what: string; component: string; cells: Cell[] }
 interface GapLine { loop: string; stage: string; status: 'implemented' | 'partial' | 'nr'; note: string }
+type ClaimStatus = 'examined' | 'partial' | 'not_evaluated'
+type ClaimLevel = 'update' | 'successor' | 'meta'
+type ClaimRequirement = 'validity' | 'behavioral' | 'fairness' | 'security' | 'privacy' | 'transparency' | 'control' | 'accountability'
+interface ClaimCell { requirement: ClaimRequirement; level: ClaimLevel; status: ClaimStatus; anchor: string; note: string }
 interface Report {
   loops: Loop[]
   summary: { implemented: number; partial: number; nr: number; total: number }
   gapLines: GapLine[]
+  /** 旧服务端不带该字段，表格按缺席处理。 */
+  claimLevels?: { cells: ClaimCell[]; summary: Record<ClaimStatus, number>; source: string; boundary: string }
   meta: { source: string; criteria: string; boundary: string }
 }
+
+const CLAIM_LEVELS: readonly ClaimLevel[] = ['update', 'successor', 'meta']
+const CLAIM_REQUIREMENTS: readonly ClaimRequirement[] = ['validity', 'behavioral', 'fairness', 'security', 'privacy', 'transparency', 'control', 'accountability']
 
 const data = ref<Report | null>(null)
 const error = ref('')
@@ -48,6 +57,34 @@ function authHeaders(): Record<string, string> {
 
 function statusLabel(s: Cell['status']): string {
   return s === 'implemented' ? (L.value?.rsiLcImplemented ?? 'implemented') : s === 'partial' ? (L.value?.rsiLcPartial ?? 'partial') : 'NR'
+}
+
+/** 证据图里的一格；缺格返回 null，表格显示「—」，不补成任何格态。 */
+function claimCell(requirement: ClaimRequirement, level: ClaimLevel): ClaimCell | null {
+  return data.value?.claimLevels?.cells.find((c) => c.requirement === requirement && c.level === level) ?? null
+}
+
+function claimStatusLabel(s: ClaimStatus): string {
+  return s === 'examined'
+    ? (L.value?.rsiClaimExamined ?? 'examined')
+    : s === 'partial'
+      ? (L.value?.rsiClaimPartial ?? 'partial')
+      : (L.value?.rsiClaimUnevaluated ?? 'not_evaluated')
+}
+
+function claimLevelLabel(level: ClaimLevel): string {
+  return level === 'update'
+    ? (L.value?.rsiClaimLevelUpdate ?? 'update')
+    : level === 'successor'
+      ? (L.value?.rsiClaimLevelSuccessor ?? 'successor')
+      : (L.value?.rsiClaimLevelMeta ?? 'meta')
+}
+
+function requirementLabel(requirement: ClaimRequirement): string {
+  const key = `rsiReq${requirement.charAt(0).toUpperCase()}${requirement.slice(1)}` as
+    | 'rsiReqValidity' | 'rsiReqBehavioral' | 'rsiReqFairness' | 'rsiReqSecurity'
+    | 'rsiReqPrivacy' | 'rsiReqTransparency' | 'rsiReqControl' | 'rsiReqAccountability'
+  return L.value?.[key] ?? requirement
 }
 
 onMounted(() => void refresh())
@@ -101,6 +138,36 @@ onMounted(() => void refresh())
         </li>
       </ul>
     </div>
+    <div v-if="data?.claimLevels" class="rl__claims" data-testid="harness-rsi-claims">
+      <div class="rl__gaptitle">{{ L?.rsiClaimTitle }}</div>
+      <p class="rl__claimsub">{{ L?.rsiClaimSub }}</p>
+      <div class="rl__summary" data-testid="harness-rsi-claims-summary">
+        <span class="rl__chip rl__chip--ok">{{ L?.rsiClaimExamined }} {{ data.claimLevels.summary.examined }}</span>
+        <span class="rl__chip rl__chip--partial">{{ L?.rsiClaimPartial }} {{ data.claimLevels.summary.partial }}</span>
+        <span class="rl__chip rl__chip--nr">{{ L?.rsiClaimUnevaluated }} {{ data.claimLevels.summary.not_evaluated }}</span>
+        <span class="rl__chip rl__chip--total">/ {{ data.claimLevels.cells.length }}</span>
+      </div>
+      <table class="rl__claimtable">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th v-for="lv in CLAIM_LEVELS" :key="lv" scope="col">{{ claimLevelLabel(lv) }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="req in CLAIM_REQUIREMENTS" :key="req" :data-testid="`harness-rsi-claim-row-${req}`">
+            <th scope="row">{{ requirementLabel(req) }}</th>
+            <td
+              v-for="lv in CLAIM_LEVELS" :key="lv"
+              :class="claimCell(req, lv) ? `rl__claimcell--${claimCell(req, lv)!.status}` : ''"
+              :title="claimCell(req, lv)?.note"
+              :data-testid="`harness-rsi-claim-${req}-${lv}`"
+            >{{ claimCell(req, lv) ? claimStatusLabel(claimCell(req, lv)!.status) : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="rl__meta" data-testid="harness-rsi-claims-note">{{ data.claimLevels.boundary }}</p>
+    </div>
     <div v-if="data" class="rl__meta" data-testid="harness-rsi-lc-note">{{ data.meta.criteria }}｜{{ data.meta.boundary }}</div>
   </div>
 </template>
@@ -140,5 +207,14 @@ onMounted(() => void refresh())
 .rl__gaplist li { font-size: 11px; }
 .rl__gap--nr { color: var(--danger); }
 .rl__gap--partial { color: var(--ia-stale); }
+/* 主张层级证据图：三种格态用颜色加边线样式双重区分（实线/虚线/点线），与上方环路矩阵同一套读法 */
+.rl__claims { border: 1px solid var(--border-color); border-radius: 8px; padding: 4px 8px; display: flex; flex-direction: column; gap: 4px; }
+.rl__claimsub { margin: 0; font-size: 11px; opacity: 0.7; }
+.rl__claimtable { width: 100%; border-collapse: collapse; font-size: 11px; }
+.rl__claimtable th { text-align: left; font-weight: 600; opacity: 0.75; border-bottom: 1px solid var(--border-color); padding: 3px 4px; }
+.rl__claimtable td { border-bottom: 1px solid rgb(0 0 0 / 4%); padding: 3px 6px; border-left: 2px solid transparent; }
+.rl__claimcell--examined { color: var(--success); border-left-color: var(--success); }
+.rl__claimcell--partial { color: var(--ia-stale); border-left-color: var(--ia-stale); border-left-style: dashed; }
+.rl__claimcell--not_evaluated { color: var(--danger); border-left-color: var(--danger); border-left-style: dotted; }
 .rl__meta { font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.5); border-radius: 6px; padding: 4px 8px; }
 </style>

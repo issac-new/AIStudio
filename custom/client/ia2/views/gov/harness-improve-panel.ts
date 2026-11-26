@@ -33,7 +33,13 @@ import {
   type SurfaceKey,
   type WorkbenchOverviewDto,
   type ConstraintCheckDto,
+  type TrajectoryCellStatusDto,
+  type TrajectoryDto,
+  type TrustRoleDto,
 } from '@/custom/governance/api/workbench'
+
+/** 三个分析角色（综述表 3），表格列序。 */
+const TRAJECTORY_ROLES: readonly TrustRoleDto[] = ['improvement_validity', 'constraint_preservation', 'effective_oversight']
 
 export function useHarnessImprovePanel() {
 
@@ -604,6 +610,40 @@ export function useHarnessImprovePanel() {
           ? L.value.theoryProxyNone
           : L.value.theoryProxyInsufficient
 
+  /** 当前选中面的后继轨迹联合判定；该面没有后继时退回第一条有后继的面。旧载荷缺字段返回 null。 */
+  const theoryTrajectory = computed<TrajectoryDto['surfaces'][number] | null>(() => {
+    const surfaces = data.value?.evolution?.theory?.trajectory?.surfaces ?? []
+    if (surfaces.length === 0) return null
+    return surfaces.find((s) => s.surfaceKey === selectedEvoKey.value) ?? surfaces[0]
+  })
+
+  const theoryResidue = computed(() => data.value?.evolution?.theory?.trajectory?.rollbackResidue ?? null)
+
+  const trajectoryChip = (v: 'pass' | 'fail' | 'not_evaluated'): string =>
+    v === 'fail' ? 'hi__chip--risk-high' : v === 'pass' ? 'hi__chip--ok' : 'hi__chip--muted'
+
+  const trajectoryVerdictLabel = (v: 'pass' | 'fail' | 'not_evaluated'): string =>
+    v === 'fail' ? L.value.trajVerdictFail : v === 'pass' ? L.value.trajVerdictPass : L.value.trajVerdictUnevaluated
+
+  const trustRoleLabel = (r: TrustRoleDto): string =>
+    r === 'improvement_validity'
+      ? L.value.trajRoleValidity
+      : r === 'constraint_preservation'
+        ? L.value.trajRoleConstraint
+        : L.value.trajRoleOversight
+
+  const trajectoryCellLabel = (c: TrajectoryCellStatusDto): string =>
+    c === 'fail' ? L.value.trajCellFail : c === 'pass' ? L.value.trajCellPass : L.value.trajCellUnevaluated
+
+  const evaluatorDriftLabel = (v: 'insufficient' | 'unknown' | 'stable' | 'changed'): string =>
+    v === 'changed'
+      ? L.value.theoryEvaluatorChanged
+      : v === 'stable'
+        ? L.value.theoryEvaluatorStable
+        : v === 'unknown'
+          ? L.value.theoryEvaluatorUnknown
+          : L.value.theoryEvaluatorInsufficient
+
   const CURVE_W = 320
   const CURVE_H = 120
   const CURVE_PAD = 10
@@ -658,6 +698,6 @@ export function useHarnessImprovePanel() {
   onMounted(() => void refresh())
 
   return {
-    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
+    L, data, busy, error, actionError, showCreate, constraintTexts, createForm, expForm, expDomainFilter, suggestForm, deletable, removeProposal, suggest, experienceDomains, filteredExperiences, formFor, probeInput, surfaceName, editClassLabel, statusLabel, contextLabel, riskLabel, verdictLabel, expStatusLabel, fmtPct, fmtDelta, fmtRatio, fmtNum, fmtUsd, short, paretoEntryOf, freshnessLabel, probeOf, refresh, create, addVariant, removeVariant, addFile, removeFile, attachBaseline, submit, decide, createProbes, autoProbe, autoStatusLabel, hasRunnableProbe, recordProbe, compose, promote, exportSurfaceArtifacts, markApplied, rollback, importExperiences, citeExperience, citedExperiencesOf, addExperience, setExperienceStatus, saveConstraints, archiveList, memoryPolicy, orphanChecked, staleChecked, toggleOrphan, toggleStale, retireCheckedOrphans, citeCheckedStale, calibrateNoise, evoSurfaceKey, evoSurfacesWithTimeline, selectedEvoKey, selectedEvo, theoryDecay, theoryUnconfirmed, theoryClassLabel, ceilingLabel, proxyVerdictLabel, theoryTrajectory, theoryResidue, TRAJECTORY_ROLES, trajectoryChip, trajectoryVerdictLabel, trustRoleLabel, trajectoryCellLabel, evaluatorDriftLabel, CURVE_W, CURVE_H, CURVE_PAD, curve, curvePath, latestProposalOfSurface
   }
 }

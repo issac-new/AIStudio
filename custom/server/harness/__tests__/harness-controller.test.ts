@@ -102,6 +102,10 @@ describe('四子路由 HTTP 投影', () => {
     expect(body.summary.implemented + body.summary.partial + body.summary.nr).toBe(35)
     expect(body.gapLines.length).toBe(body.summary.partial + body.summary.nr)
     expect(body.meta.criteria).toContain('NR')
+    // 2026-11-26 可信 RSI 正文级轮：八组要求 × 三层的证据图随同一个端点返回
+    expect(body.claimLevels.cells).toHaveLength(24)
+    const counted = body.claimLevels.summary.examined + body.claimLevels.summary.partial + body.claimLevels.summary.not_evaluated
+    expect(counted).toBe(24)
   })
 
   it('GET /api/harness/capability-catalog：200 + entries/gapSummary/meta；source 过滤生效', async () => {

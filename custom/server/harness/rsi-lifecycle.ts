@@ -62,12 +62,54 @@ export interface RsiLifecycleReport {
   summary: { implemented: number; partial: number; nr: number; total: number }
   /** 缺口行：全部 partial/nr 格（排序：nr 先，按环路×阶段） */
   gapLines: RsiLifecycleGapLine[]
+  /** 主张层级证据图（2026-11-26 可信 RSI 正文级轮）：八组要求 × 更新、后继、元改进三层。 */
+  claimLevels: RsiClaimLevelMap
   meta: {
     source: string
     /** 论文判据引用（审计语义正本） */
     criteria: string
     boundary: string
   }
+}
+
+// ---- 主张层级证据图（2026-11-26 可信 RSI 正文级轮；综述 §2.3、表 8、图 8） ----
+
+/** 综述表 8 的八组要求。 */
+export const RSI_TRUST_REQUIREMENTS = [
+  { key: 'validity', nameZh: '改进有效性' },
+  { key: 'behavioral', nameZh: '行为约束与对齐' },
+  { key: 'fairness', nameZh: '公平' },
+  { key: 'security', nameZh: '系统安全与韧性' },
+  { key: 'privacy', nameZh: '隐私与数据治理' },
+  { key: 'transparency', nameZh: '透明与可解释' },
+  { key: 'control', nameZh: '人类控制与可纠正' },
+  { key: 'accountability', nameZh: '问责与治理' },
+] as const
+
+export type RsiTrustRequirement = (typeof RSI_TRUST_REQUIREMENTS)[number]['key']
+
+/** 更新层问「这次修改可不可信」，后继层问「改动的效果是否留得住」，元改进层问「改进机制本身被修订后还成不成立」。 */
+export const RSI_CLAIM_LEVELS = ['update', 'successor', 'meta'] as const
+
+export type RsiClaimLevel = (typeof RSI_CLAIM_LEVELS)[number]
+
+/** examined＝有机制评估这一格；partial＝有机制但覆盖不全；not_evaluated＝没有评估过。 */
+export type RsiClaimCellStatus = 'examined' | 'partial' | 'not_evaluated'
+
+export interface RsiClaimCell {
+  requirement: RsiTrustRequirement
+  level: RsiClaimLevel
+  status: RsiClaimCellStatus
+  /** 机制锚点（仓库相对路径）；not_evaluated 可以留空。 */
+  anchor: string
+  note: string
+}
+
+export interface RsiClaimLevelMap {
+  cells: RsiClaimCell[]
+  summary: Record<RsiClaimCellStatus, number>
+  source: string
+  boundary: string
 }
 
 /** 五条真实更新环路的声明式矩阵（锚点以 2026-11-20 main f1f09ea3a 为基线） */
@@ -149,7 +191,52 @@ export const RSI_LIFECYCLE_LOOPS: RsiLifecycleLoop[] = [
   },
 ]
 
-/** 汇总与缺口行（纯函数；nr 先于 partial，环路×阶段序） */
+/**
+ * 主张层级证据图：八组要求 × 三层，针对改进实验台的更新环路（锚点以 2026-11-26 main b6b93c207 为基线）。
+ * 与上面的环路矩阵分工：矩阵答「每条环路缺哪段」，这张图答「哪一类主张从来没有被评估过」。
+ * 元改进层的「未评估」是设计取舍：递归深度锁 1，改进机制由人经规格修订，仓内没有做过配对延续实验。
+ */
+export const RSI_CLAIM_LEVEL_CELLS: RsiClaimCell[] = [
+  // ---- 更新层：一次被采纳的修改 ----
+  { requirement: 'validity', level: 'update', status: 'examined', anchor: 'custom/server/harness/workbench/loop-report.ts', note: '晋级门评估增益是否超出噪声带，并读留出集、等预算基线与反事实变体；留出集缺席默认告警，设 HARNESS2_RSI_REQUIRE_HELDOUT=1 才拦' },
+  { requirement: 'behavioral', level: 'update', status: 'partial', anchor: 'custom/server/harness/workbench/types.ts', note: '约束断言由人记录，记录了失败才拦；未记录默认告警，不强制' },
+  { requirement: 'fairness', level: 'update', status: 'not_evaluated', anchor: '', note: '改进对象是 agent harness，没有按人群拆分的结果读数；分组评估没有做过' },
+  { requirement: 'security', level: 'update', status: 'partial', anchor: 'custom/server/harness/workbench/loop-advice-leakage.ts', note: '有基准泄漏批评者与候选可写根限制；候选内容没有投毒或后门扫描' },
+  { requirement: 'privacy', level: 'update', status: 'not_evaluated', anchor: '', note: '候选写入 profiles 与 skills 之前没有敏感信息扫描' },
+  { requirement: 'transparency', level: 'update', status: 'examined', anchor: 'custom/server/lineage/lineage.ts', note: '提案差异摘要、证据角色披露与会话溯源三源聚合' },
+  { requirement: 'control', level: 'update', status: 'examined', anchor: 'custom/server/harness/workbench/apply.ts', note: '人工批准后才写盘；写盘前留快照，回滚遇到外部修改即拒绝覆盖' },
+  { requirement: 'accountability', level: 'update', status: 'examined', anchor: 'custom/server/approval-ledger', note: '批准写全局审批账本；提案记录批准人、批准时刻与批准时绑定的候选摘要' },
+  // ---- 后继层：被采纳的改动留到后续版本之后 ----
+  { requirement: 'validity', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/multi-objective.ts', note: '有增益保留率与回归样本库；保留率要留出基线在场才算得出，未覆盖的能力无从判断' },
+  { requirement: 'behavioral', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/loop-joint-evidence.ts', note: '后继序列逐个按三个角色定态；约束断言靠人记录，没有记录的后继在这一格是未评估' },
+  { requirement: 'fairness', level: 'successor', status: 'not_evaluated', anchor: '', note: '没有跨版本的分组结果读数' },
+  { requirement: 'security', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/loop-joint-evidence.ts', note: '回滚残留可见（组件库条目与直接引用它的后继）；派生内容的投毒传播没有检测' },
+  { requirement: 'privacy', level: 'successor', status: 'not_evaluated', anchor: '', note: '继承下来的记忆与技能里是否带着敏感信息，没有检查' },
+  { requirement: 'transparency', level: 'successor', status: 'examined', anchor: 'custom/server/harness/workbench/component-library.ts', note: '冠军链、组件库条目（带来源提案与产出侧来源信息）与经验库都保留版本' },
+  { requirement: 'control', level: 'successor', status: 'partial', anchor: 'custom/server/harness/workbench/service.ts', note: '回滚恢复文件并退役经验；组件库条目与已引用它的后继不动，是否停止提供这类零件交人裁决' },
+  { requirement: 'accountability', level: 'successor', status: 'examined', anchor: 'custom/server/harness/workbench/store.ts', note: '提案全史保留批准、晋级与回滚记录，回滚含操作人与原因' },
+  // ---- 元改进层：改进机制本身被修订 ----
+  { requirement: 'validity', level: 'meta', status: 'not_evaluated', anchor: '', note: '晋级规则、起草提示与调度策略由人经规格修订；修订前后没有做过同起点、同预算的配对延续实验' },
+  { requirement: 'behavioral', level: 'meta', status: 'not_evaluated', anchor: '', note: '机制修订后没有重验行为约束' },
+  { requirement: 'fairness', level: 'meta', status: 'not_evaluated', anchor: '', note: '机制修订后没有重验公平要求' },
+  { requirement: 'security', level: 'meta', status: 'not_evaluated', anchor: '', note: '机制修订后没有重验安全规则' },
+  { requirement: 'privacy', level: 'meta', status: 'not_evaluated', anchor: '', note: '机制修订后没有重验隐私与数据使用规则' },
+  { requirement: 'transparency', level: 'meta', status: 'examined', anchor: '.swarm-yuan/spec-receipts.jsonl', note: '机制修订走规格，规格入库带内容收据，改写可被判漂移' },
+  { requirement: 'control', level: 'meta', status: 'examined', anchor: 'custom/server/harness/rsi-maturity.ts', note: '递归深度锁 1：候选写不到晋级规则、审批账本与留出集，改进机制的修改权在人' },
+  { requirement: 'accountability', level: 'meta', status: 'examined', anchor: '.swarm-yuan/decisions.jsonl', note: '机制级决策进决策台账（哈希链），与规格收据可对账' },
+]
+
+/** 证据图的格态计数（纯函数）。 */
+export function buildRsiClaimLevelMap(): RsiClaimLevelMap {
+  const cells = RSI_CLAIM_LEVEL_CELLS
+  const count = (s: RsiClaimCellStatus): number => cells.filter((c) => c.status === s).length
+  return {
+    cells,
+    summary: { examined: count('examined'), partial: count('partial'), not_evaluated: count('not_evaluated') },
+    source: 'Trustworthy Recursive Self-Improvement in the Era of Large Models（arXiv 2610.35193v1）§2.3 主张三层、表 8 纵向检查清单、图 8 证据覆盖',
+    boundary: '声明式盘点（以改进实验台的更新环路为对象，锚点为静态声明，演进走 spec 2026-11-26-trustworthy-rsi-fulltext 修订）；元改进层的未评估是递归深度锁 1 的设计取舍',
+  }
+}
 export function buildRsiLifecycleReport(): RsiLifecycleReport {
   const cells = RSI_LIFECYCLE_LOOPS.flatMap((l) => l.cells)
   const count = (s: RsiCellStatus) => cells.filter((c) => c.status === s).length
@@ -164,6 +251,7 @@ export function buildRsiLifecycleReport(): RsiLifecycleReport {
     loops: RSI_LIFECYCLE_LOOPS,
     summary: { implemented: count('implemented'), partial: count('partial'), nr: count('nr'), total: cells.length },
     gapLines,
+    claimLevels: buildRsiClaimLevelMap(),
     meta: {
       source: 'When, Where, and How Experience Becomes Structure（alphaxiv 2611.recursive-self-improvement-llm-agentsv1）§4 七阶段＋Figure 5',
       criteria: 'NR＝未实现该阶段操作≠无最终评估；Evaluate（已发生的执行）≠Verify（候选改动）；七阶段是分析工具非流水线',

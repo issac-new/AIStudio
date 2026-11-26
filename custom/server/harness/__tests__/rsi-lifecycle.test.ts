@@ -3,7 +3,9 @@
 import { describe, expect, it } from 'vitest'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { buildRsiLifecycleReport, RSI_LIFECYCLE_LOOPS, RSI_LIFECYCLE_STAGES } from '../rsi-lifecycle'
+import {
+  buildRsiClaimLevelMap, buildRsiLifecycleReport, RSI_CLAIM_LEVELS, RSI_LIFECYCLE_LOOPS, RSI_LIFECYCLE_STAGES, RSI_TRUST_REQUIREMENTS,
+} from '../rsi-lifecycle'
 
 const repoRoot = join(__dirname, '../../../..')
 
@@ -73,5 +75,64 @@ describe('rsi-lifecycle 矩阵不变量', () => {
   it('meta 携带论文口径与边界声明（fail-soft 纪律：声明式矩阵非运行时探测）', () => {
     expect(report.meta.criteria).toContain('NR')
     expect(report.meta.boundary).toContain('rsi-maturity')
+  })
+})
+
+describe('rsi-claim-level 主张层级证据图不变量（2026-11-26 可信 RSI 正文级轮）', () => {
+  const map = buildRsiClaimLevelMap()
+  const report = buildRsiLifecycleReport()
+
+  it('八组要求 × 更新、后继、元改进三层，每格恰好一条', () => {
+    expect(map.cells).toHaveLength(RSI_TRUST_REQUIREMENTS.length * RSI_CLAIM_LEVELS.length)
+    const keys = new Set(map.cells.map((c) => `${c.requirement}:${c.level}`))
+    expect(keys.size).toBe(map.cells.length)
+    for (const requirement of RSI_TRUST_REQUIREMENTS) {
+      for (const level of RSI_CLAIM_LEVELS) expect(keys.has(`${requirement.key}:${level}`)).toBe(true)
+    }
+    expect(report.claimLevels).toEqual(map)
+  })
+
+  it('格态枚举合法；已评估与部分格子的锚点指向真实路径；汇总计数一致', () => {
+    let examined = 0
+    let partial = 0
+    let notEvaluated = 0
+    for (const cell of map.cells) {
+      if (cell.status === 'examined') examined += 1
+      else if (cell.status === 'partial') partial += 1
+      else if (cell.status === 'not_evaluated') notEvaluated += 1
+      else throw new Error(`非法格态：${cell.status}`)
+      if (cell.status === 'not_evaluated') {
+        expect(cell.note.length).toBeGreaterThan(0)
+        if (cell.anchor) expect(existsSync(join(repoRoot, cell.anchor)), `anchor missing: ${cell.anchor}`).toBe(true)
+      } else {
+        expect(cell.anchor.length).toBeGreaterThan(0)
+        expect(existsSync(join(repoRoot, cell.anchor)), `anchor missing: ${cell.anchor}`).toBe(true)
+        expect(cell.note.length).toBeGreaterThan(0)
+      }
+    }
+    expect(map.summary).toEqual({ examined, partial, not_evaluated: notEvaluated })
+    expect(examined + partial + notEvaluated).toBe(map.cells.length)
+  })
+
+  it('元改进层的有效性、行为、公平、安全、隐私五格如实标未评估（递归深度锁 1）；透明、控制、问责三格有机制', () => {
+    const meta = Object.fromEntries(map.cells.filter((c) => c.level === 'meta').map((c) => [c.requirement, c.status]))
+    expect(meta).toEqual({
+      validity: 'not_evaluated',
+      behavioral: 'not_evaluated',
+      fairness: 'not_evaluated',
+      security: 'not_evaluated',
+      privacy: 'not_evaluated',
+      transparency: 'examined',
+      control: 'examined',
+      accountability: 'examined',
+    })
+  })
+
+  it('公平与隐私在更新层和后继层都没有评估——未评估是显式结论，不是缺格', () => {
+    for (const level of ['update', 'successor'] as const) {
+      expect(map.cells.find((c) => c.level === level && c.requirement === 'fairness')!.status).toBe('not_evaluated')
+      expect(map.cells.find((c) => c.level === level && c.requirement === 'privacy')!.status).toBe('not_evaluated')
+    }
+    expect(map.boundary).toContain('声明式盘点')
   })
 })

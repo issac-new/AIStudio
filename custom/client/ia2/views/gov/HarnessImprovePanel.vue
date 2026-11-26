@@ -82,6 +82,14 @@ const {
   theoryClassLabel,
   ceilingLabel,
   proxyVerdictLabel,
+  theoryTrajectory,
+  theoryResidue,
+  TRAJECTORY_ROLES,
+  trajectoryChip,
+  trajectoryVerdictLabel,
+  trustRoleLabel,
+  trajectoryCellLabel,
+  evaluatorDriftLabel,
   CURVE_W,
   CURVE_H,
   CURVE_PAD,
@@ -603,6 +611,38 @@ const {
           <p class="hi__meta" data-testid="hi-theory-selection">
             {{ L.theorySelection }}：{{ theoryUnconfirmed }}/{{ data.evolution.theory.selectionBias.length }}
           </p>
+
+          <template v-if="theoryTrajectory">
+            <p class="hi__meta" data-testid="hi-theory-trajectory">
+              {{ L.trajTitle }}：
+              <span class="hi__chip" :class="trajectoryChip(theoryTrajectory.verdict)" data-testid="hi-theory-trajectory-verdict">{{ trajectoryVerdictLabel(theoryTrajectory.verdict) }}</span>
+              · {{ L.trajSuccessors }} {{ theoryTrajectory.steps.length }}（{{ L.evoRolledBackLabel }} {{ theoryTrajectory.steps.filter((s) => s.rolledBack).length }}）
+            </p>
+            <p class="hi__meta" data-testid="hi-theory-trajectory-note">{{ theoryTrajectory.note }}</p>
+            <table class="hi__table" data-testid="hi-theory-traj-table" v-if="theoryTrajectory.steps.length">
+              <thead>
+                <tr>
+                  <th>{{ L.trajRound }}</th><th>{{ L.trajProposal }}</th>
+                  <th v-for="role in TRAJECTORY_ROLES" :key="role">{{ trustRoleLabel(role) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in theoryTrajectory.steps" :key="s.proposalId" :data-testid="`hi-theory-traj-row-${s.round}`">
+                  <td>{{ s.round }}{{ s.rolledBack ? ` · ${L.evoRollbackMark}` : '' }}</td>
+                  <td><code>{{ s.proposalId }}</code></td>
+                  <td
+                    v-for="role in TRAJECTORY_ROLES" :key="role"
+                    :class="`hi__trajcell--${s.cells[role]}`" :title="s.reasons[role]"
+                    :data-testid="`hi-theory-traj-${s.round}-${role}`"
+                  >{{ trajectoryCellLabel(s.cells[role]) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="hi__meta" data-testid="hi-theory-evaluator">
+              {{ L.theoryEvaluator }}：{{ evaluatorDriftLabel(theoryTrajectory.evaluatorDrift.verdict) }}（{{ theoryTrajectory.evaluatorDrift.changed }}/{{ theoryTrajectory.evaluatorDrift.pairs }}）
+            </p>
+          </template>
+          <p v-if="theoryResidue" class="hi__meta" data-testid="hi-theory-residue">{{ L.theoryResidue }}：{{ theoryResidue.note }}</p>
           <p class="hi__meta">{{ data.evolution.theory.note }}</p>
         </div>
 
@@ -774,6 +814,10 @@ const {
 .hi__chip--risk-low { color: var(--success); }
 .hi__chip--risk-medium { color: var(--ia-stale); border-style: dashed; }
 .hi__chip--risk-high { color: var(--danger); }
+/* 后继轨迹表格的格态：满足/不满足/未评估三色，文字与底色都区分，不只靠颜色 */
+.hi__trajcell--pass { color: var(--success); }
+.hi__trajcell--fail { color: var(--danger); font-weight: 600; }
+.hi__trajcell--not_evaluated { color: var(--text-muted); border-style: dashed; }
 .hi__chip--verdict-improved { color: var(--success); }
 .hi__chip--verdict-regressed { color: var(--danger); }
 .hi__chip--verdict-neutral { color: var(--text-muted); }

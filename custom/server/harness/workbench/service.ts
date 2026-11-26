@@ -25,7 +25,7 @@ import type { AskFn } from '../../eval/judge'
 import type { OutcomeRunContext } from '../../eval/outcome'
 import { assertTreeRunnable, runProbeTasks, DEFAULT_TASK_COST_ESTIMATE_USD, type SpawnRun } from './probe-runner'
 import { nextId, mutateStore, readStore, persistAutoJob, listOrphanAutoJobs } from './store'
-import { listComponents, librarySummary, recordComponent, selectDonors } from './component-library'
+import { listComponents, librarySummary, readLibrary, recordComponent, selectDonors } from './component-library'
 import { currentProvenance } from '../../lib/provenance'
 import { ensureScheduleFile, readSchedulePolicy, validateSchedulePolicy, normalizeSchedulePolicy, DEFAULT_SCHEDULE_POLICY, SCHEDULE_REL } from './schedule-policy'
 import { collectSurfaces, hermesHome, resolveManagedTarget, surfaceDef } from './surface-registry'
@@ -108,7 +108,10 @@ export function overview(): {
     champions: store.champions,
     experiences,
     evolution: (() => {
-      const report = evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions)
+      // 组件库条目一并交给轨迹诊断：回滚不动组件库，残留条目数只有对上库才算得出。
+      const report = evolutionReport(surfaces.map((s) => s.key), store.proposals, store.champions, rsiConfig(), {
+        libraryEntries: readLibrary().entries,
+      })
       // R10（2026-10-31 三批）：任务族聚合增益（HCAST 范式）——族→平均增益＋背离警示。
       // family 标签来自 eval 集登记（EvalSet.family），探测证据带 setId 可溯源。
       const familyDeltas = new Map<string, number[]>()
@@ -486,17 +489,24 @@ export async function suggestProposal(input: SuggestProposalInput): Promise<Prop
     basePreview = baseContent.length > 6000 ? `${baseContent.slice(0, 6000)}\n…（截断）` : baseContent
   }
   // W3（2026-11-05）：组件库 donor——已验证的零件可以跨域搬，但已在基线里的不提供（只会诱导重复改写）。
+  // 2026-11-26：来源提案已回滚的条目仍提供，但带标注——回滚不动组件库，条目的增益没有在回滚后复验。
   const donors = selectDonors({
     surfaceKey: input.surfaceKey,
     domain: input.domain ?? 'general',
     baseContent,
     limit: 3,
+    rolledBackSources: store.proposals
+      .filter((p) => p.status === 'rolled_back')
+      .map((p) => ({ proposalId: p.id, reason: p.rollback?.reason ?? null })),
   })
   const donorLines = donors.offered.map((d) => {
     const body = (d.entry.files && d.entry.files.length > 0
       ? d.entry.files.map((f) => f.content).join('\n')
       : d.entry.content).slice(0, 600)
-    return `- [${d.entry.id}] ${d.entry.kind}/${d.entry.name}（增益 +${((d.entry.evidence.delta ?? 0) * 100).toFixed(1)}pp${d.crossDomain ? '，跨域' : ''}）：\n${body}`
+    const rolled = d.rolledBackSource
+      ? `；来源提案已回滚（${d.rolledBackSource.reason?.trim() || '未写原因'}），该零件的增益没有在回滚后复验，引用须重新验证`
+      : ''
+    return `- [${d.entry.id}] ${d.entry.kind}/${d.entry.name}（增益 +${((d.entry.evidence.delta ?? 0) * 100).toFixed(1)}pp${d.crossDomain ? '，跨域' : ''}${rolled}）：\n${body}`
   })
 
   const prompt = [

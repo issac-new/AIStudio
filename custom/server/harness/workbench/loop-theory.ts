@@ -12,6 +12,9 @@
 //      代理提升未转化为真实目标）。连续两轮「代理涨、真实不动或跌」即过拟合倾向。
 //
 // 纪律：缺数据返回 null 并写明缺口，不猜；留出缺口混有分布迁移，不宣称为纯选择偏差。
+// 2026-11-26 可信 RSI 正文级轮：另挂后继轨迹联合判定（见 loop-joint-evidence.ts），同样只读。
+import type { ComponentEntry } from './component-library'
+import { buildTrajectoryReport } from './loop-joint-evidence'
 import type {
   CeilingSignal,
   Champion,
@@ -323,11 +326,20 @@ const SELECTION_AUDIT_LIMIT = 20
  * 选择偏差按「池内最大读数当选中者」计算（与 compose 默认择优一致）；
  * 人工指定非最优候选时，读数只作参考。
  */
-export function buildTheoryReport(input: { surfaces: EvolutionSurface[]; proposals: Proposal[]; champions: Champion[] }): RsiTheoryReport {
+export function buildTheoryReport(input: {
+  surfaces: EvolutionSurface[]
+  proposals: Proposal[]
+  champions: Champion[]
+  /** 组件库条目；不传则回滚残留里的条目数记 null（不按 0 计）。 */
+  libraryEntries?: ComponentEntry[] | null
+}): RsiTheoryReport {
   const surfaces = input.surfaces.map((s) => ({
     surfaceKey: s.surfaceKey,
+    // 时间线含已回滚的后继；收缩系数只用未回滚轮估——回滚轮的增益没有站住，混入会高估每轮收益。
     decay: decayAudit(
-      s.timeline.map((r) => ({ round: r.round, delta: r.passAt1Delta, noiseDelta: r.noiseDelta })),
+      s.timeline
+        .filter((r) => !r.rolledBack)
+        .map((r) => ({ round: r.round, delta: r.passAt1Delta, noiseDelta: r.noiseDelta })),
     ),
   }))
   const byId = new Map(input.proposals.map((p) => [p.id, p]))
@@ -383,10 +395,17 @@ export function buildTheoryReport(input: { surfaces: EvolutionSurface[]; proposa
     surfaces,
     proxyDivergence: proxyDivergence(proxyRows),
     selectionBias,
+    trajectory: buildTrajectoryReport({
+      surfaces: input.surfaces,
+      proposals: input.proposals,
+      champions: input.champions,
+      libraryEntries: input.libraryEntries ?? null,
+    }),
     note:
-      '三项均为只读诊断，不参与 ok/blockers 判定：γ 只取正增益轮（回退轮剔除并计数）；' +
+      '均为只读诊断，不参与 ok/blockers 判定：γ 只取未回滚的正增益轮（其余轮剔除并计数）；' +
       '选择偏差的「最优-留出缺口」混有分布迁移，不能当纯因果衰减；' +
       '同一提案内跨评测集读数不混用（取众数集合）；' +
+      '后继轨迹的联合判定见 trajectory；' +
       '可学习性奖励 r=1−p 未落地（仓内无任务级难度历史）——见 spec 2026-11-23-rsi-recursive-theory 挂账。',
   }
 }
