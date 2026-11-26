@@ -559,7 +559,15 @@ describe('AIStudio 交互培训课程契约', () => {
   it('六团队手册覆盖独立交付主线、实现边界和所有参考材料', () => {
     const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
     const feature = readFileSync(resolve(root, 'docs/manuals/aistudio-feature-inventory.md'), 'utf8')
-    expect(feature).toContain('默认内容路由 | **80**')
+    // 功能清单的总数不写死：头部声明的默认内容页数必须等于各章声明数之和（2026-11-26 文档刷新批；
+    // 此前断言写死 80，清单多算一个已删除的页面并漏收五个上游页面时仍全绿）。
+    const contentTotal = Number(/默认内容路由 \| \*\*(\d+)\*\*/.exec(feature)?.[1])
+    const chapterTotals = [
+      ...feature.matchAll(/^## [二三四五六七八九]、[^\n]*?(\d+) 个内容路由/gm),
+    ].map(match => Number(match[1]))
+    expect(chapterTotals, '功能清单第二至九章应各有「N 个内容路由」声明').toHaveLength(8)
+    expect(contentTotal, '功能清单缺「默认内容路由 | **N**」').toBeGreaterThan(0)
+    expect(chapterTotals.reduce((sum, n) => sum + n, 0), '默认内容页数不等于各章声明之和').toBe(contentTotal)
     expect(feature).toContain('IDE 辅助栏页签 | **23**')
     for (const route of ['/app/projects', '/app/projects/:id', '/app/records', '/app/records/:kind/:id']) expect(feature).toContain(route)
     for (const text of [
@@ -598,8 +606,36 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(run28Case).toMatch(/open\s*=?\s*65/)
     for (const text of ['/app/projects', '/app/records', 'run28 裁决开立：先决定放行或冻结', 'contractGuardHook', '13/14']) expect(html).toContain(text)
     const yuanGuide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'), 'utf8')
-    for (const text of ['Step 1-13', '研发四阶段', 'L4 state-machine build guard', 'R134', '真实 ACP 编码回合', '59', '204', '`--all-full`=32', 'SCHEMA_EPOCH', 'shortcut:']) {
-      expect(yuanGuide).toContain(text)
+    // 门禁数与配置变量数不写死：读载体。此前此处断言 '204'，指南停在旧值时仍全绿
+    // （2026-11-26 文档刷新批改为结构断言；同文件上方技术指南断言已是同一写法）。
+    const factsForGuide = readFileSync(resolve(root, 'skills/swarm-yuan/assets/facts.conf'), 'utf8')
+    const factOf = (key: string): string => {
+      const match = new RegExp(`^${key}=(\\d+)`, 'm').exec(factsForGuide)
+      expect(match, `facts.conf 缺 ${key}`).not.toBeNull()
+      return String(match?.[1])
+    }
+    // 数字断言带语境：裸数字做子串匹配时，文档别处出现同一数字即可误过
+    // （2026-11-26 变异探针实证：改掉一处 205 后仍全绿）。绑定到陈述该数字的短语上。
+    // 随技能分发的档数读注册表的 distributed 列（standard/compliance/lite 三类计入分发）。
+    // 变异探针实证：只锁总数不锁分发数时，把 44 改回 42 仍全绿。
+    const referencesTsv = readFileSync(resolve(root, 'skills/swarm-yuan/assets/registry/references.tsv'), 'utf8')
+    const distributedCount = referencesTsv
+      .split('\n')
+      .filter((line) => line && !line.startsWith('#'))
+      .filter((line) => ['standard', 'compliance', 'lite'].includes(line.split('\t')[5] ?? ''))
+      .length
+    const core = factOf('FACT_CONF_VARS_CORE')
+    const arch = factOf('FACT_CONF_VARS_ARCH')
+    const comp = factOf('FACT_CONF_VARS_COMPLIANCE')
+    expect(Number(factOf('FACT_CONF_VARS'))).toBe(Number(core) + Number(arch) + Number(comp))
+    for (const text of [
+      'Step 1-13', '研发四阶段', 'L4 state-machine build guard', 'R134', '真实 ACP 编码回合', '`--all-full`=32', 'SCHEMA_EPOCH', 'shortcut:',
+      `门禁总数 ${factOf('FACT_GATES_TOTAL')}，`,
+      `配置变量为 ${factOf('FACT_CONF_VARS')}，即 core ${core}、arch ${arch}、compliance ${comp}`,
+      `${factOf('FACT_REFERENCES')} 份 references`,
+      `${factOf('FACT_REFERENCES')} 档中 ${distributedCount} 档随技能分发`,
+    ]) {
+      expect(yuanGuide, `研发指南缺少：${text}`).toContain(text)
     }
   })
 

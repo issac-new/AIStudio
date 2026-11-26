@@ -2,10 +2,10 @@
 
 本导读写给讲师和文档维护者，帮助读者选择正确事实源、按稳定机制授课，并在正本、专题 spec 与实现不一致时作出可核对的表述。它不承担第二份设计正本的职责；系统结构以整合正本为准，实际行为以当前代码、配置、测试和真实运行证据为准。
 
-- 快照基线：`199a18ad1`（v1.0.21 版本进位提交，本页所载版本与计数在该提交落定）。
+- 版本载体落定提交：`199a18ad1`（v1.0.21 版本进位提交，本页所载版本在该提交落定）；页面内容于 2026-11-26 文档刷新批按当前主干复核（spec `2026-11-26-docs-manual-refresh.md`）。配套机械索引头部另记它自己的快照提交，两者不必相同。
 - 当前版本：`1.0.21-overlay`。
-- 核实日期：2026-11-26（v1.0.21 发布轮版本载体复核）。
-- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖当前工作树 specs 根目录 777 份 Markdown 与 `archive/` 2 份 Markdown。该索引是动态快照，不代表全部文件都是现行依据。
+- 核实日期：2026-11-26（v1.0.21 发布轮版本载体复核；同日文档刷新批复核第 3.2、4.3、4.5、4.8 节）。
+- 配套清单：[《AIStudio 设计文档机械索引》](aistudio-design-document-index.md)覆盖 specs 根目录的 Markdown 与 `archive/` 下的 Markdown。该索引是动态快照，具体份数读索引头部生成行，不在此手抄，也不代表全部文件都是现行依据。
 
 ## 1. 应该先读哪份，冲突时听谁的
 
@@ -87,7 +87,7 @@
 
 正本 §4.2 的概念表未列 `scheduled`，这是已确认的正本缺项，详见第 4 章。授课和界面讲解应采用当前默认工作流的完整集合，同时说明各板可以配置列门，机制存在不等于每块板都已启用。`docs/DESIGN.md §4.2`
 
-**G5 发布门。** SIM 的 G5 采用 `draft → pending → approved → released` 主路径，`submit`、`approve`、`reject`、`release` 是动作，`rejected` 是另一终态。新记录追加到 `evidence/release-gate.jsonl`，非法迁移返回 409，同态重复动作幂等返回；旧台账允许直接批准及改判兼容读取。批准必须带证据锚，驳回必须写理由；启用鉴权后，批准、驳回和发布只开放给 `super_admin` 或 `release` 角色。`custom/server/governance/lifecycle/release-state.ts:17-19,49-58,75-101,139-191`；`custom/server/simcenter/simcenter-controller.ts:943-1019`
+**G5 发布门。** SIM 的 G5 采用 `draft → pending → approved → released` 主路径，`submit`、`approve`、`reject`、`release` 是动作，`rejected` 是另一终态。新记录追加到 `evidence/release-gate.jsonl`，非法迁移返回 409，同态重复动作幂等返回；旧台账允许直接批准及改判兼容读取。批准必须带证据锚，驳回必须写理由；启用鉴权后，批准、驳回和发布只开放给 `super_admin` 或 `release` 角色。`custom/server/governance/lifecycle/release-state.ts:17-19,49-58,75-101,139-191`；`custom/server/simcenter/uat-release-routes.ts`（`POST /release-gate`，非法迁移返回 409 并保证幂等）；状态机本体在 `custom/server/governance/lifecycle/release-state.ts`
 
 **UAT。** UAT 按验收标准逐条判定，不是一次整包按钮。每条 AC 有 `pending`、`pass`、`conditional`、`reject`；记录采用 append-only，最新判定胜出，历史完整保留。`conditional` 必须写说明，并二选一携带 `acknowledged:true`（真人认可）或 `pending:true`（机器评估待认可），两者互斥；`reject` 必须写理由并阻断该 AC。`custom/server/governance/lifecycle/uat-state.ts:6-15,69-111,114-151`
 
@@ -195,7 +195,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 1. `aistudio-full-1.0.21-overlay-src.tar.gz`。
 2. `swarm-yuan-offline-1.0.21-overlay-everything.zip`。
 
-两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件；ModelScope 只更新 `swarm-yuan/` 目录，按版本放置 everything zip 与单条 `SHA256SUMS-v<版本>.txt`，旧版本保留，整体源码包不上传 ModelScope（其 `aistudio/` 目录保留 1.0.15、1.0.16 两版历史件）。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json:130-160`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:3-15`
+两件主资产附配套 SHA256SUMS 校验件。GitHub Release 只挂这两件主资产与校验件。ModelScope 自 v1.0.21 起与 GitHub 发同三件：更新 `swarm-yuan/` 目录，按版本放置 everything zip、整体源码包与单条 `SHA256SUMS-v<版本>.txt`，旧版本保留（2026-11-26 用户裁决双通道同件，spec `2026-11-26-modelscope-full-package-policy.md`）。此前 v1.0.17 至 v1.0.20 只传 everything 包；其 `aistudio/` 目录保留 1.0.15、1.0.16 两版历史件，不再更新。四模块源码包和 DMG/zip 构建物不再上传远端，也不再作为默认打包目标。`RELEASE-MANIFEST.json` 的 `packaging.artifactDistribution` 字段与 `releaseBatches` 中 v1.0.21 一行
 
 默认 `npm run release:packages` 只打整体包；确需本地生成四模块加整体的 4+1 全量时，必须显式使用 `--all-modules`。模块边界和 `packageIncludes` 仍保留，用于发布检查与改动归属，不因上传面收窄而删除。`scripts/make-release-packages.mjs:38-50`；`docs/superpowers/specs/2026-11-03-release-asset-policy-twopackage.md:11-15`
 
@@ -209,7 +209,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 - 日常 G5 面板读取 `workspace.dailyTasks` 中的 review／近期 done 任务，并嵌入发布类 `ApprovalPanel`；文件注释明确“推演 release-gate 台账回到全流程推演，不在日常页写入”。`custom/client/ia2/views/stage/DailyG5Panel.vue:1-2,17-23,30-47`
 - 日常 UAT 面板只把 review 任务列为待判，动作回到任务卡或审批系统，不写推演 UAT 台账。`custom/client/ia2/views/stage/DailyUatPanel.vue:1-2,19-45`
-- SIM G5/UAT 才按 run 读写 `runs/<run>/evidence/release-gate.jsonl` 与 `uat-verdicts.jsonl`，并套用上述状态机与权限。`custom/server/simcenter/simcenter-controller.ts:752-883,886-1019`
+- SIM G5/UAT 才按 run 读写 `runs/<run>/evidence/release-gate.jsonl` 与 `uat-verdicts.jsonl`，并套用上述状态机与权限。`custom/server/simcenter/uat-release-routes.ts`（台账落位见该文件「台账落位」注释段）
 
 因此，不能用 SIM 的 G5/UAT 状态机截图证明日常任务已经验收，也不能把日常 `done` 当成 SIM UAT 或 G5 通过。正本把 G5 与 UAT 独立 append-only 作为稳定契约是对的，但讲解时必须补上日常与 SIM 两条产品入口的差别。`docs/DESIGN.md §2.5`
 
@@ -217,9 +217,9 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 没有完全覆盖。2026-10-21 的专题 spec 只写 `conditional = note + acknowledged:true`；当前实现已增加 `pending:true` 作为机器评估待认可路径，并要求与 `acknowledged` 互斥，聚合中另列 `pendingAck`。授课应以当前代码为准，不能说所有 conditional 都已获真人认可。`docs/superpowers/specs/2026-10-21-g5-uat-state-machine.md:21-31`；`custom/server/governance/lifecycle/uat-state.ts:32-51,69-111,133-150`
 
-### 4.3 看板状态表少了什么
+### 4.3 看板状态表是否列全
 
-正本 §4.2 列了 triage、todo、ready、running、review、blocked、done／archived，漏掉 `scheduled`。当前默认工作流明确把 `scheduled` 放在 todo 与 ready 之间，且它不可派发，unblock 时才重新计算就绪状态。培训材料若只按正本表格讲，会让学员漏掉“等待时间”与“等待人”的区别。`docs/DESIGN.md §4.2`；`runtime/hermes_cli/kanban_workflow.py:114-142`；`runtime/hermes_cli/kanban_db.py:3951-3981,4259-4285`
+已列全。正本 §4.2 现在写明八列加 `scheduled` 共九态，与内核默认工作流一致（2026-11-26 文档刷新批复核；此前本节记录的正本缺项已消除）。`scheduled` 放在 todo 与 ready 之间，只由排期动作进入，不是拖拽目标，也不可派发，解除阻塞时才重新计算就绪状态。培训时仍要讲清“等待时间”与“等待人”的区别。`docs/DESIGN.md §4.2`；`runtime/hermes_cli/kanban_workflow.py:114-142`；`runtime/hermes_cli/kanban_db.py`（`scheduled` 相关分支按函数名检索）
 
 ### 4.4 HumanGate 严格模式是否默认拒绝自批并限制角色
 
@@ -229,11 +229,11 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 ### 4.5 旧版本注记哪些已经不能当作当前值
 
-2026-11-09 培训刷新批已按当前载体重核三处事实：
+版本类事实已按当前载体复核三处（数字总账一行最近核实于 2026-11-24，其余同 v1.0.21 发布轮）：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.4／zcode 4.0.0／驾驶舱 0.8.30-studio.3／agent teams v0.23.4-team.1／yuan v2.103.0／整体包 1.0.21-overlay），核实日 2026-11-24（hermes-agent v0.23.4 换血批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:68-91`
-2. 整合正本 §5.4 的当前基线表已随 2026-11-23 批归为 hermes-studio v0.8.30；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md:7,24`
-3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已随 2026-11-23 批归为 hermes-studio v0.8.30。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json` 的 releaseBatches 节；`vendor/VENDOR.md:7,24`
+1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.4／zcode 4.0.0／驾驶舱 0.8.30-studio.3／agent teams v0.23.4-team.1／yuan v2.103.0／整体包 1.0.21-overlay），其中 agent teams 一行最近核实于 2026-11-24（hermes-agent v0.23.4 换血批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md` §C 版本基线
+2. 整合正本 §5.4 的当前基线表已随 2026-11-23 批归为 hermes-studio v0.8.30；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md` 基线表行
+3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已随 2026-11-23 批归为 hermes-studio v0.8.30。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json` 的 releaseBatches 节与 vendorBaseline 字段；`vendor/VENDOR.md` 基线表行
 
 历史报告与历史 spec 中仍会出现成文时点的旧值（v0.8.0、studio.1、team.1、v2.95.0、1.0.0-overlay、zcode 3.17.1）。识别规则是：版本一律以当前载体与 VENDOR 表格为准，文档里的版本只代表其成文时点，不能当作现行值。
 
@@ -252,11 +252,11 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 - 附录 C.1 收 57 份方法论，C.2 的 51 是补入前的历史快照；当前数字应读 `facts.conf`，不能拿 51 当现行总数。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md:70-72,166-180`
 - 附录 D.1 的 43 是运行与方案复盘根因条数，文件头的 21 是推演轮次数，两者不是同一分母。`docs/superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md:1-5`
 
-数字总账已经规定 spec 数、补丁数和测试数由工具或当次输出给出，不纳入滚动总账。新机械索引按这一原则提供文件级快照，但仍不替文档判定现行性。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md:79-90`
+数字总账已经规定 spec 数、补丁数和测试数由工具或当次输出给出，不纳入滚动总账。新机械索引按这一原则提供文件级快照，但仍不替文档判定现行性。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md` §D 不纳入总账的数字
 
 ### 4.8 哪些开放边界不能被讲成已交付
 
-正本 §6.4 仍明确列出：SIM 批量与注意力入口未完全只读，ACP 编码前技能装载与真实回合未完整验证，桌面双平台未逐平台验收，长期记忆全链未验证，真实长任务与断点恢复未复验，真实多轮图运行未复验，主动性执法默认关闭，性能首载与聚合时延未在当前版本复测。2026-11-06 新增的四项边界已有 run28 后证据：总监姿态已首跑并记录 14 次自主派发；黄金集观察态已真跑，但 14 例误杀仍是判分器校准缺口，不得写成黄金集全过或已升硬门；帧采集已独立核验并修报错态与整板空白态判据，缺帧和降级仍如实呈现；跨轮指标已有 run27／run28 两轮留档，两轮记录不等于长期趋势结论。讲师应把这些作为当前证据与剩余边界的分界，不用既有测试数量替代目标环境证据。`docs/DESIGN.md §6.4`
+正本 §6.4 目前仍列为开放的有：SIM 批量与注意力入口未完全只读；ACP 编码前的技能装载与真实回合未完整验证；桌面未逐平台构建与安装验收；长期记忆全链未验证，Ekko 运行时退役未执行；真实长任务与断点恢复未复验；主动性执法门默认关闭。以下几项已有证据但不能讲过头：接口时延与首载时延已于 2026-11-25 首次采集，是单次测量，不是长期基线；跨轮指标已有 run27 至 run31 五轮留档，五轮不等于长期趋势结论；黄金集观察态已真跑，14 例误杀仍是判分器校准缺口，不得写成黄金集全过或已升硬门；总监派发在 run29 实测 51 次只有 5 次走通，不得写成已兑现。讲师应把这些作为当前证据与剩余边界的分界，不用既有测试数量替代目标环境证据。`docs/DESIGN.md §6.4`
 
 ## 5. 文档维护者怎样守住后续一致性
 

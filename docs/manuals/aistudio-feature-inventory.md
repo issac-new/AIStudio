@@ -2,7 +2,7 @@
 
 > 面向需要查入口、备课和解释功能边界的用户与讲师。
 >
-> 基线：`d06ad3027`（N34 清偿批工作分支头，合并后以主干为准）；版本：AIStudio `1.0.20-overlay`；盘点日期：2026-11-24。
+> 基线：`16e9155b7`（主干）；版本：AIStudio `1.0.21-overlay`；盘点日期：2026-11-26（上一轮为 2026-11-24，基线 `d06ad3027`）。
 >
 > **这是一份静态代码盘点，不等于全部活体验证。**“真写”表示代码会调用写接口、写文件、改 Git、启停进程或修改外部服务，不表示本次已在每种部署上执行成功。矩阵服务、模型供应商、Git 仓、PTY、桌面桥、SSH/Docker、推演数据目录是否可用，需要按目标环境另行验收。空态、离线回退、未接线和本地模拟均按代码原义标注。
 
@@ -12,15 +12,19 @@
 
 | 类别 | 数量 | 计数说明 | 主要证据 |
 |---|---:|---|---|
-| 默认内容路由 | **80** | 工作总览、项目与执行记录等 19 + 六阶段 6 + SIM 9 + 专题 4 + IDE 1 + 独立 Matrix 2 + 收编设置/Hermes 28 + 未收编 11 | `scripts/regression/route-manifest.ts:91-133` |
-| 重定向 | **41** | 注入态真实注册链 41 条，含 pet=false 的 petdex 重定向与 catch-all 1 条 | `custom/client/ia2/routes.ts:56-68,138-145`；`patches/297-client-router-cockpit-family-removal.patch:83-85` |
-| 默认禁用的公开外链 | **2** | 路由记录存在，默认守卫送回 `/app`，不计入 80 个可用内容页 | `patches/523-client-s3-entries-gates.patch:15-18` |
-| 桌面桥条件页 | **2** | 浏览器与下载历史，仅 `hasDesktopBrowserBridge()` 为真时注册，不计入 80 | `vendor/hermes-studio/packages/client/src/router/index.ts:290-303` |
+| 默认内容路由 | **83** | 工作总览、项目与执行记录等 19 + 六阶段 6 + SIM 9 + 专题 4 + IDE 1 + 独立 Matrix 2 + 收编设置/Hermes 27 + 未收编上游页 15 | `scripts/regression/route-manifest.ts`；分章数字见第二至九章 |
+| 重定向 | **43** | 注入态真实注册链 43 条，含上游的 `/hermes/version-preview`（见第八节说明）、pet=false 的 petdex 重定向与全匹配兜底 1 条 | `custom/client/ia2/routes.ts:56-68,138-145`；`patches/297-client-router-cockpit-family-removal.patch:83-85` |
+| 默认禁用的公开外链 | **2** | 路由记录存在，默认守卫送回 `/app`，不计入 83 个可用内容页 | `patches/523-client-s3-entries-gates.patch:15-18` |
+| 桌面桥条件页 | **2** | 浏览器与下载历史，仅 `hasDesktopBrowserBridge()` 为真时注册，不计入 83 | `vendor/hermes-studio/packages/client/src/router/index.ts:290-303` |
 | 六阶段页签 | **37** | ①6、②4、③4、④5、⑤6、⑥12 | `custom/client/ia2/stage-tabs.ts:30-89` |
 | 四专题页签 | **26** | 评测 8、技能治理 3、本体 9、流程架构 6 | 四个专题主视图的 `*_TABS` 注册表 |
 | IDE 辅助栏页签 | **23** | 编码 3、知识 3、观测 6、协作 4、工具与配置 7 | `custom/client/ide/views/IdeSidePane.vue:66-94` |
 
-**本次注入态实跑结果是 123 条路由、82 页、41 重定向。**`route-manifest.ts` 另生成 37 个阶段页签，因此走查态总数为 160。82 页含两个默认被禁公开外链，扣除后就是本文的 80；桌面桥两页不提前计入默认 Web 页面。生成器已补齐真实 bootstrap 的 projects 注册，所以项目列表和项目详情在这 80 页内；旧 `/hermes/history*` 两页由补丁退役，catch-all 计入 41 条重定向，不再把未注入 vendor 的临时结果当成产品计数。
+**本次注入态实跑结果是 129 条路由、86 页、43 重定向。**86 页的构成是：83 个默认内容页 + 2 个默认被禁的公开外链 + 1 个空渲染的起始页 `/home`。桌面桥两页在无桌面桥的环境不注册，不提前计入默认 Web 页面。`route-manifest.ts` 另生成 37 个阶段页签，因此走查态总数为 166。
+
+与上一轮（2026-11-24）相比，页面数由 82 变为 86，原因有两处，都在本轮订正：收编设置那一章多算了一个已不存在的版本预览页（上游 v0.8.28 已删除，现为重定向），同时漏收了上游的插件四页与起始页。
+
+项目列表和项目详情两页在这 83 页内；旧 `/hermes/history*` 两页已由补丁退役；全匹配的兜底重定向计入第十一节。计数只取注入态的真实注册链，不把未注入的临时结果当成产品计数。
 
 ### 边界标签怎么读
 
@@ -138,8 +142,9 @@
 | `audit` 审计与变更 | 四源审计、PROV-O、变更单、冻结窗口、事故/事件流 | 审计查询只读；变更草拟/提交/决议/实施和冻结窗口为真写，冻结冲突不能静默绕过。`custom/client/ia2/views/gov/GovAuditChangeView.vue:1-12`；`custom/client/governance/components/ChangeGovernanceSection.vue:1-18,130-180` |
 | `trust` 长程可信 | 主张审计、双准入、完整性栅栏、断点核对 | 真写检查案件与审计事件；页面不能直接改完成态，准入由服务端证据判定。`custom/client/ia2/views/gov/LongHorizonTrustPanel.vue:1-16,106-211` |
 | `reviewGov` 评审治理 | 风险分档、熔断、发现项、审批、夜间扫描、合并 | 真写案例和治理动作；PR 导入不主动回写 GitHub/GitLab。`custom/client/ia2/views/gov/ReviewGovPanel.vue:1-15,51-62,130-281` |
-| `improve` 改进实验 | 提案、探测、组合、晋级、回滚、经验库 | 真写实验记录；**本页不跑模型**，探测只认 Eval Studio 真实运行，缺证据不放行。`custom/client/ia2/views/gov/HarnessImprovePanel.vue:1-5,230-360` |
+| `improve` 改进实验 | 提案、探测、组合、晋级、回滚、经验库、后继轨迹 | 真写实验记录；**本页不跑模型**，探测只认 Eval Studio 真实运行，缺证据不放行。`custom/client/ia2/views/gov/HarnessImprovePanel.vue:1-5,230-360` |
 | `metrics` 度量检查 | 容量、六门/六域、AI 质量、评测运营、驾驭工程 | 以只读聚合为主；可显式运行六域体检并留痕，不能把历史台账当成本轮新结果。`custom/client/ia2/views/stage/StageMetricsPanel.vue:1-18`；`custom/client/ia2/views/gov/GovHealthSection.vue:60-80` |
+| （度量检查内）RSI 生命周期段 | 生命周期七阶段覆盖、主张三层证据图 | **只读声明式盘点**：八组要求乘三层的格子各标已检查、部分检查或未评估，公平、隐私等多格为未评估，未评估不是通过。2026-11-20 与 2026-11-26 两批加入。`custom/client/governance/components/RsiLifecycleSection.vue`；`custom/server/harness/rsi-lifecycle.ts` |
 | `docs` 文档评审 | 治理工件和评审 | 与②同一实现、无 `g2` 限定，读写边界相同。`custom/client/ia2/stage-tabs.ts:83`；`custom/client/ia2/views/gov/GovDocsReviewView.vue:49-89,242-247` |
 | `gateLog` 质量门记录 | 全部六门修复单与历史 | 真写合法状态迁移，空 `gates` 表示全部门。`custom/client/ia2/stage-tabs.ts:84`；`custom/client/ia2/views/stage/StageGatePanel.vue:1-10` |
 | `proactivity` 主动性两轴 | 两轴矩阵、执法策略解析态、目标漂移 | **本签只读**，编辑和确认回①环境与资产；`HERMES_PROACTIVITY_ENFORCE` 未开时策略仅呈现不拦截。`custom/client/ia2/stage-tabs.ts:85-87`；`custom/client/governance/components/ProactivitySection.vue:1-9,195-199,216-295` |
@@ -273,9 +278,10 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 
 ---
 
-## 八、收编设置与 Hermes：28 个内容路由
+## 八、收编设置与 Hermes：27 个内容路由
 
-这些页面统一由 `IaLegacyShell + IaSettingsSidebar` 承载；`/hermes/kanban`、`/hermes/journey` 和 pet=false 时的 `/hermes/petdex` 都是重定向，不在 28 个内容页内。装载总表：`custom/client/ia2/views/legacy-view-loaders.ts:3-38`；统一壳：`custom/client/ia2/views/IaLegacyShell.vue:1-17`。
+这些页面统一由 `IaLegacyShell + IaSettingsSidebar` 承载；`/hermes/kanban`、`/hermes/journey` 和 pet=false 时的 `/hermes/petdex` 都是重定向，
+`/hermes/version-preview` 落到上游的插件页（见第十一节），不在 27 个内容页内。装载总表：`custom/client/ia2/views/legacy-view-loaders.ts:3-38`；统一壳：`custom/client/ia2/views/IaLegacyShell.vue:1-17`。
 
 | # | 路由与功能 | 实现与边界 |
 |---:|---|---|
@@ -306,7 +312,6 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 | 25 | `/hermes/theme` 主题外观 | 明暗、风格、字号、颜色、背景与预设 | 真写主题定制与背景文件；默认首次启动暗色中文只是初始偏好，用户显式选择会保留。`custom/client/ia2/routes.ts:137`；`vendor/hermes-studio/packages/client/src/views/hermes/ThemeView.vue:31-47,68-140`；`registries/client/entry.mts:22-50` |
 | 26 | `/hermes/skills-usage` 技能用量 | 按周期统计技能动作和趋势 | 只读。`custom/client/ia2/routes.ts:139`；`vendor/hermes-studio/packages/client/src/views/hermes/SkillsUsageView.vue:8-18,130-158` |
 | 27 | `/hermes/terminal` Web 终端 | 浏览器 PTY 终端 | 真写 shell，`super_admin` 专属，不是模拟终端。`custom/client/ia2/routes.ts:140-142`；`vendor/hermes-studio/packages/client/src/views/hermes/TerminalView.vue:1-17` |
-| 28 | `/hermes/version-preview` 版本预览 | GitHub 预览设置 | `super_admin`；路由存在但侧栏/目录还需 `VITE_HERMES_PREVIEW=1` 才显示。`custom/client/ia2/routes.ts:143`；`custom/client/ia2/views/gov/gov-settings-registry.ts:138-153`；`vendor/hermes-studio/packages/client/src/views/hermes/VersionPreviewView.vue:10-20` |
 
 `/studio/agents` 的 agent 管理中心默认收编开关关闭，因此没有出现在本表；它仍留在上游未收编页中，见下一节。
 
@@ -319,7 +324,9 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 | Agent 在单聊里发可计算卡片/表单/确认卡 | MCP 工具 `ekko_studio_show_surface`（`ekko-studio-interaction`，toolset `plan`）发送 `ekko-ui/v1` 或 `ekko-ui/v2` JSON；Studio 用白名单原生组件渲染，用户一次填写提交后工具返回结构化 payload，同一 run 继续。v2 起表达式含算术/比较/格式化/条件/循环模板，目录 38 项（新增 chart/image/metric/tabs/tab-panel/steps/empty/descriptions），动作新增 `surface.turn`（发起新一轮对话）/`surface.copy`/`surface.open_url`，本地交互零模型调用；v1 spec 行为不变（spec：`docs/superpowers/specs/2026-11-24-ekko-ui-v2-batch1.md`）。协议与目录：`custom/client/chat/ekko-ui/protocol.ts`；渲染器：`custom/client/chat/ekko-ui/EkkoUISurface.vue`；聊天卡片：`custom/client/chat/components/EkkoUISurfaceCard.vue`；宿主：`custom/server/ekko-ui/surface-runs.ts`；补丁 777-779。**边界**：阻塞式单挂起的生命周期不变（持久化与续改见下一行），沙箱逻辑与 app_block 逃生舱在批三/四且按能力位默认关闭；服务启动时 `studio-autoinject` 会把缺失的 `ekko-studio-interaction` 补进各 profile（用户自管或显式禁用的同名服务不覆盖）；若用户显式禁用该服务，Agent 拿不到工具，会退回普通对话或 clarify。 |
 | Agent 创建可持久、可续改的界面 | MCP 工具 `ekko_studio_surface_create` / `_update` / `_inspect` / `_close` / `_catalog`（与 `show_surface` 同一 MCP 服务、同一 toolset，全部非阻塞、立即返回回执）。创建绑定当前轮 `context_id`；更新带 `base_revision` 与六种补丁（改属性/改样式/替换节点/插入子节点/删节点/改状态初值）或整版规格，版本不符返回 409 并带当前版本号；校验失败返回 422，错误文案列出可用值。界面与用户状态落 `~/.hermes-web-ui/ekko-ui-surfaces.db`（`EKKO_UI_DB` 可覆写）。接口八个，挂在 `/api/studio/surfaces` 下：`create` / `update` / `inspect` / `close` / `catalog`（MCP 用）与 `/:id`、`/:id/state`、`/:id/actions`（客户端用）。服务端向会话推 `ui.surface.presented` / `updated` / `closed`；续接轮由客户端经既有发消息通道发起。实现：`custom/server/ekko-ui/protocol-bridge.ts`、`surface-store.ts`、`persistent-surfaces.ts`、`persistent-controller.ts`，`custom/client/chat/ekko-ui/surface-sync.ts`；补丁 819-820；spec：`docs/superpowers/specs/2026-11-25-ekko-ui-v2-batch2.md`。**边界**：提交后界面保持可用，`surface.cancel` 只记录不起轮；不做多人协同、跨标签页状态同步、历史版本留存；模型对话历史里的工具调用参数不做压缩（只保证工具结果是精简回执）；开关 `EKKO_UI_PERSISTENT=0` 时创建与更新返回 503。 |
 
-## 九、未收编的上游页：11 个内容路由
+**版本预览页已不存在。** 上游 v0.8.28 起删除了版本预览视图，版本预览改为独立插件；本仓的收编条目与对应补丁 745 同批退役（`custom/client/ia2/routes.ts`、`legacy-view-loaders.ts`、`gov-settings-registry.ts` 三处注释同述）。此前本清单把它计为收编内容页是错的：那一行引用的行号实际是宠物图鉴的重定向逻辑。原 `/hermes/version-preview` 现为上游重定向，落到 `/studio/plugins`。
+
+## 九、未收编的上游页：15 个内容路由
 
 “未收编”表示不使用 `IaLegacyShell`，不表示不可用或没有权限。上游公共布局/路由 meta 仍按原实现生效。旧 `/hermes/history` 与 `/hermes/history/session/:sessionId` 已由补丁退役，不再是本组内容页；现行历史入口是第二节的 `/app/history*`。
 
@@ -338,8 +345,15 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 | 11 | `/ekko/settings` ekko 设置 | `super_admin`，runtime/model/tools/modules/advanced 配置自动保存，真实写配置。`vendor/hermes-studio/packages/client/src/router/index.ts:232-237`；`vendor/hermes-studio/packages/client/src/views/ekko/SettingsView.vue:28-43,69-144` |
 
 ---
+| 12 | `/studio/plugins` 插件中心 | 上游 Studio 插件的列表、安装、启停与配置，真实写插件目录；仅超级管理员入口。版本预览自上游 v0.8.28 起是这里的独立插件。`vendor/hermes-studio/packages/client/src/router/index.ts:11`；`vendor/hermes-studio/packages/client/src/views/StudioPluginsView.vue` |
+| 13 | `/studio/plugins/:pluginId/:viewId?` 插件页面 | 渲染指定插件的页面视图，`:viewId` 可选；真实调用插件请求。`vendor/hermes-studio/packages/client/src/router/index.ts:14`；`vendor/hermes-studio/packages/client/src/views/PluginPageView.vue` |
+| 14 | `/studio/plugin-settings/:pluginId/:viewId` 插件设置 | 指定插件的设置视图，真实写插件配置。`vendor/hermes-studio/packages/client/src/router/index.ts:12`；同上 `PluginPageView.vue` |
+| 15 | `/studio/plugin-agent-settings/:pluginId/:viewId?` 插件的智能体设置 | 插件面向 coding agent 的设置视图，`:viewId` 可选。`vendor/hermes-studio/packages/client/src/router/index.ts:13`；同上 `PluginPageView.vue` |
+| 16 | `/home` 起始页 | 组件为空渲染，访问不会显示内容；作为路由记录存在，是 `/hermes/version-preview` 等上游重定向的落点之一。`vendor/hermes-studio/packages/client/src/router/index.ts:10` |
 
-## 十、默认禁外链与桌面条件页：4 个不计入 80 的页面
+插件四页（12—15）是上游基线自带的路由，2026-11-24 盘点时即未收录，不是其后新增；2026-11-26 文档刷新批补入。`/home`（16）组件为空渲染，访问不显示内容，只作为路由记录存在，不计入上面的 15 个可用内容页。
+
+## 十、默认禁外链与桌面条件页：4 个不计入 83 的页面
 
 | 类型 | 路由 | 默认行为与实现 |
 |---|---|---|
@@ -348,11 +362,11 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 | 桌面桥条件页 | `/hermes/browser` | 仅 `hasDesktopBrowserBridge()` 为真注册，管理桌面浏览器，不收编进 IaLegacyShell。`vendor/hermes-studio/packages/client/src/router/index.ts:290-303`；`custom/client/ia2/routes.ts:506-513` |
 | 桌面桥条件页 | `/hermes/browser/downloads` | 同一桌面桥条件下注册下载历史。`vendor/hermes-studio/packages/client/src/router/index.ts:292-297`；`vendor/hermes-studio/packages/client/src/views/hermes/DesktopBrowserView.vue:1-14` |
 
-另外两个常见“条件存在但仍计入 80”的例子：`/desktop-pet` 与 `/studio/agents`。前者路由仍注册，后者是上游 super_admin 路由仍在；它们不属于本节四个额外页面。
+另外两个常见“条件存在但仍计入 83”的例子：`/desktop-pet` 与 `/studio/agents`。前者路由仍注册，后者是上游 super_admin 路由仍在；它们不属于本节四个额外页面。
 
 ---
 
-## 十一、41 个重定向：旧链接到底落在哪里
+## 十一、43 个重定向：旧链接到底落在哪里
 
 含参路径中的 `:runId`、`:sessionId`、`:roomId` 按对应参数传递。标注“保 query”的记录会保留原筛选/上下文；未标的不应自行假设所有 query 都有消费者。
 
@@ -397,17 +411,19 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 | 37 | `/hermes/history/group-chat/:roomId` | `hermes.groupChatRoom`，传 `roomId`。`vendor/hermes-studio/packages/client/src/router/index.ts:252-258` |
 | 38 | `/hermes/group-chat/history/:roomId` | `hermes.groupChatRoom`，传 `roomId`。`vendor/hermes-studio/packages/client/src/router/index.ts:259-265` |
 | 39 | `/hermes/coding-agents` | `hermes.agentManager`。`vendor/hermes-studio/packages/client/src/router/index.ts:271-274` |
-| 40 | `/hermes/petdex` | pet=false 时去 `/app/gov/settings`；不是可用内容页，开启 pet 后才注册图鉴页。`custom/client/ia2/routes.ts:138-145` |
-| 41 | `/:pathMatch(.*)*` | 注入补丁先兜底 `/app`，`ia2NotFoundGuard` 识别该兜底并改到 `/app/not-found?from=<原地址>`；已知旧链接不重定向到 404。`patches/297-client-router-cockpit-family-removal.patch:83-85`；`custom/client/ia2/routes.ts:164-185` |
+| 40 | `/app/collab/session/:sessionId` | `/app/s/chat/:sessionId`，保参数。`custom/client/ia2/routes.ts:65` |
+| 41 | `/hermes/version-preview` | `/studio/plugins`。上游基线的重定向：版本预览视图自 v0.8.28 起删除，改为独立插件；本仓原收编条目已退役。`vendor/hermes-studio/packages/client/src/router/index.ts`（`/hermes/version-preview` 条目） |
+| 42 | `/hermes/petdex` | pet=false 时去 `/app/gov/settings`；不是可用内容页，开启 pet 后才注册图鉴页。`custom/client/ia2/routes.ts:138-145` |
+| 43 | `/:pathMatch(.*)*` | 注入补丁先兜底 `/app`，`ia2NotFoundGuard` 识别该兜底并改到 `/app/not-found?from=<原地址>`；已知旧链接不重定向到 404。`patches/297-client-router-cockpit-family-removal.patch:83-85`；`custom/client/ia2/routes.ts:164-185` |
 
-### 两类不计入 41 的“看起来像重定向”行为
+### 两类不计入 43 的“看起来像重定向”行为
 
 - `/app/sim?tab=orchestration|settings` 是 `beforeEnter` 规范化，分别去独立编排/设置页，并只保留 `run/from`；其他 `tab` 放行。实现：`custom/client/ia2/routes.ts:146-162`。
 - `/app/board?tab=<旧签>` 是组件内旧签迁移，10 个旧键去 SIM/治理路由，非法键回看板；不是独立 route record。实现：`custom/client/ia2/views/TasksView.vue:13-36,115-139`。
 
 ---
 
-## 十二、19 个特性开关：默认状态与真实作用
+## 十二、20 个特性开关：默认状态与真实作用
 
 所有浏览器开关必须经 `VITE_` 注入。`eval/skillgov/ontology/bpa` 只裁剪导航和页面呈现，不能当服务端安全边界。总定义：`config/features.ts:1-12,74-99`。
 
@@ -432,6 +448,7 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 | `skillgov` / `VITE_CUSTOM_SKILLGOV` | 开 | 同上，不能用来禁止技能扫描 API。`custom/client/skillgov/index.ts:7-15`；`registries/client/bootstrap.ts:59-63` |
 | `ontology` / `VITE_CUSTOM_ONTOLOGY` | 开 | 同上，不能用来禁止本体 API。`custom/client/ontology/index.ts:8-16`；`registries/client/bootstrap.ts:65-68` |
 | `bpa` / `VITE_CUSTOM_BPA` | 开 | 同上，不能用来禁止流程架构 API。`custom/client/bpa/index.ts:7-15`；`registries/client/bootstrap.ts:70-73` |
+| `expdual` / `VITE_CUSTOM_EXPDUAL` | 开 | 只控制 `/app/expdual` 双轨经验台账的导航入口；关闭后端点与服务端能力仍在，不是数据开关。`config/features.ts:67-70,99` |
 
 另有一个不属于 `features.ts` 的入口开关：`VITE_HERMES_PREVIEW=1` 控制版本预览在设置目录和侧栏中是否可见，路由本身仍要求 super_admin。`custom/client/ia2/views/gov/gov-settings-registry.ts:138-153`。
 
@@ -472,8 +489,8 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 
 ## 十四、讲师最容易讲错的边界
 
-1. **“80 是仓库全部页面”不准确。**80 是默认 Web 配置下扣除两个禁公开外链后的内容路由，包含 projects 两页与 records 两页；桌面桥还条件增加 2 页，默认禁用外链也仍有 2 条注册记录。
-2. **“41 是组件内所有跳转”不准确。**41 只数 route record，含 pet=false 的 petdex 重定向；SIM 的 `beforeEnter` 和看板组件内旧签迁移另列，不重复计数。
+1. **“83 是仓库全部页面”不准确。**83 是默认 Web 配置下扣除两个禁公开外链与一个空渲染起始页后的内容路由，包含 projects 两页与 records 两页；桌面桥还条件增加 2 页，默认禁用外链也仍有 2 条注册记录。
+2. **“43 是组件内所有跳转”不准确。**43 只数 route record，含 pet=false 的 petdex 重定向；SIM 的 `beforeEnter` 和看板组件内旧签迁移另列，不重复计数。
 3. **“阶段 37 签包含看板、SIM、专题”不准确。**37 仅 `STAGE_TABS`；看板本地 4 签、SIM 4 签、专题 26 签、IDE 23 签分别计算。
 4. **“推演不碰真实数据”错误。**导演台启动明确创建真实看板任务并调用代理；只有模块拆解离线回退、红队规则评估、本地白板等标为模拟/离线的部分才可按离线讲。
 5. **“所有审批都写服务端”错误。**IDE `deliver` 的通过/退回只是 sessionStorage 本地标记；正式审批要去收件箱、G5 或治理面板。
@@ -496,7 +513,7 @@ IDE 主壳负责任务/会话/工作区，`/ide` 与 `/ide/*` 只是兼容重定
 
 本轮未启动桌面端、Matrix homeserver、模型供应商、真实推演、PTY、SSH/Docker 或目标浏览器，因此：
 
-- 不断言 80 页在当前每台机器都能加载出业务数据；
+- 不断言 83 页在当前每台机器都能加载出业务数据；
 - 不断言每个真写按钮都已在活体环境执行成功；
 - 不将源码中的历史注释当成验收结果，计数和边界以现行代码为准；
 - 不把路由可达当成数据授权，资源级权限仍须按第 13 节四层验收。

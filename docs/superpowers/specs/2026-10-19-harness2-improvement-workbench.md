@@ -1,6 +1,9 @@
 # Harness² 改进实验台设计：把「测量」接成「闭环」（2026-10-19）
 
-> 状态：实施中（feat/harness2-workbench）。
+> 状态：已实施；专题档案（2026-11-26 文档刷新批定性，spec `2026-11-26-docs-manual-refresh.md`）。
+> **现行设计以 `docs/DESIGN.md` §4.8 与数字总账 `2026-10-23-swarmstudio-design-ledger.md` 为准。**
+> 本文保留成文时点的专题设计与批次记录，不随批回写；两者不一致时按正本。2026-11-20 之后落地的
+> 生命周期审计、后继轨迹联合判定、评估条件溯源、回滚残留与主张层级证据图只写在正本 §4.8。
 > 调研源：InfoQ《谷歌开源Harness，支持 OpenCode 和 Codex：国内开发者接入Jev实测“真行”》（2026-10-19 14:24）+ EasyShip.AI《谷歌最新开源了自我改进框架：Harness²！》（2026-10-19 11:38）+ github.com/google-research/harness2 源码级调研（见同目录《2026-10-19-harness2-source-notes.md》）。
 
 ## 主旨三句话
@@ -116,6 +119,10 @@ submitted/approved --reject--> rejected
 | POST | `/proposals/:id/promote` | 晋级门禁 + 可选写盘 |
 | POST | `/proposals/:id/rollback` | 回滚冠军与已写文件 |
 | GET | `/surfaces` | 八类可编辑面清单与冠军态 |
+| GET | `/library` | 可复用零件库（版本并存，旧版不覆盖） |
+| GET | `/schedule` | 读取探测调度策略（`$HERMES_HOME/harness-schedule.json`） |
+| POST | `/schedule/bootstrap` | 首次生成调度策略文件 |
+| POST | `/schedule/validate` | 校验调度策略取值并回传有效值 |
 | POST | `/proposals/suggest` | 起草建议（加权检索 top3＋stale 刷新清单，R8） |
 | DELETE | `/proposals/:id` | 删除草稿（未提交前） |
 | POST | `/proposals/:id/baseline` | 绑定基线运行 |
@@ -136,7 +143,7 @@ submitted/approved --reject--> rejected
 
 ## 6. 晋级门禁（三档，逐条带 code）
 
-判定在 `loop.ts` 纯函数层（`evaluatePromotion()`），service 只读证据与编排。分三档：**硬阻塞**（无条件拦）、**证据门**（同一份证据缺省只告警，对应 env 可升为硬闸）、**警告**（人裁决参考，不拦截）。code 的单一事实源是 `loop-report.ts`，数量由守门测试 `four-paper-absorption.test.ts` 钉住（当前 57 个，含 2026-11-05 新增四个）；新增 code 必须同时改本节与守门测试。
+判定在 `loop.ts` 纯函数层（`evaluatePromotion()`），service 只读证据与编排。分三档：**硬阻塞**（无条件拦）、**证据门**（同一份证据缺省只告警，对应 env 可升为硬闸）、**警告**（人裁决参考，不拦截）。code 的单一事实源是 `loop-report.ts`，数量由守门测试 `four-paper-absorption.test.ts` 钉住（当前 59 个，含 2026-11-05 新增四个；数量由 `four-paper-absorption.test.ts` 核对）；新增 code 必须同时改本节与守门测试。
 
 ### 6.1 硬阻塞
 
@@ -229,9 +236,8 @@ submitted/approved --reject--> rejected
 - 不做跨机器的 harness 版本同步；冠军记录在本机 store。
 - 不做统计显著性检验（置信区间/自助法）；单跑仅给警告。后续可接 Eval 的 k 采样与校准数据。
 - expcandidates 导入只做证据链接，不改写原候选语义；来源仍标 expcandidate id。
-- 未实现按域物理目录隔离与“整棵树多文件快照”；单文件面的快照已存，多文件面待后续。
-- 未实现源文的 2K 候选自动生成、匿名选择器、R=4k/P=3k 账本对账；这些需要内置 Proposer/rollout，属下一阶段。
-- 未移植常驻文本 24k 上限、技能触发行检查、脚本 compile、hooks schema 校验；本批只做 managed 面的路径安全、非空与防泄漏。
+- 不实现源文的 2K 候选自动生成、匿名选择器、R=4k/P=3k 账本对账；这些需要内置 Proposer/rollout，属下一阶段。
+- 按域物理目录隔离不在本设计范围。（多文件树快照、24k 上限、脚本编译、hooks 校验已于第二批实现，见 §12a；此处原列的三条过期挂账于 2026-11-26 删除。）
 
 ## 13. 一键自动探测（2026-10-19 第三批，用户裁定「做到批准后自动发起探测为止」）
 
@@ -246,7 +252,7 @@ submitted/approved --reject--> rejected
 2. **驱动**：沿用 kanban 派发先例，子进程 `hermes -p <profile> --cli --accept-hooks chat -q <题面>`，env 重指 `HERMES_HOME=<隔离 home>` + `HERMES_RUN_TRACE_DIR=<隔离 traces>`，trace 不混生产目录。profile 由提案 `profile` 字段指定（缺省从 targetPath 的 profiles/<name> 推导）。
 3. **判分**：任务完成后直读隔离 trace（`evidenceFromTraceLines`），以内联证据调 `runReplayEval`——不依赖全局 trace 目录。运行落 Eval Studio，`target.harnessRef=<提案>:<候选>`（EvalRunTarget 新增字段）保证可归因。
 4. **回填**：`probe.evalRunId` 指向新运行，走既有 recordProbe 逻辑算行为对比；回归集可选同跑（`regressionSetId`），未提供则晋级仍被 `regression_missing` 拦，可手工绑定。
-5. **任务形态**：探测在服务端进程内顺序执行（预算账本需要串行），同提案并发二次发起返回 409。每题默认上限 10 分钟、每提案默认 5 题（可调、上限 50）。服务重启后「running」任务判失联，需人工重新发起——v1 如实挂账，不做断点续跑。
+5. **任务形态**：探测在服务端进程内按调度策略并发执行（`probeConcurrency` 缺省 2，可调 1 至 8；`custom/server/harness/workbench/schedule-policy.ts:36,57`），同提案并发二次发起返回 409。每题默认上限 10 分钟、每提案默认 5 题（可调、上限 50）。服务重启后「running」任务判失联，需人工重新发起——v1 如实挂账，不做断点续跑。
 6. **判分通道**：生产走本地 clef 裁判（EVAL_JUDGE_* 配置）；裁判离线时判词如实落 unknown（online=false），晋级门按既有 quality_unknown 警告处理。测试注入离线 ask，绝不在单元测试里触真实裁判服务。
 
 ### 边界
@@ -294,7 +300,7 @@ skills 面晋级要求 `skillDifferential`（同集有技能/无技能两态）�
 
 | 项 | 缺省 | 开启方式 |
 |---|---|---|
-| 证据门五门 | 告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT}=1` |
+| 证据门七门 | 告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT,EXECUTION}=1` 六个开关，加编辑类别严格开关 `HARNESS2_EDIT_CLASS_STRICT=1`；保留率门与增益崩塌门恒为阻断（同 §6.2 表） |
 | 自动证据供给 | 随一键探测执行 | 无需开关（预算内自动跑） |
 | 反事实变换类 | `rename_ids` | 其余三类待人工指定 |
 | 存储后端 | JSON 文件 | `HARNESS2_STORE_SQLITE=1` |

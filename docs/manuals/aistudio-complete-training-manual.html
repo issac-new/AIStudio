@@ -86,6 +86,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .board .bar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.92cqw;color:#fff;background:#1f5fae;white-space:nowrap}
 .board .bar i:nth-child(2){background:#4a86c8}
 .board .bar i:nth-child(3){background:#9fc0e2;color:#173b68}
+.board .bar i:nth-child(4){background:#c9d9ea}
+.board .bar i:nth-child(5){background:#e3ecf5;color:#33475f}
 .board .layers{display:grid;grid-template-columns:1fr 1fr;gap:.35cqw}
 .board .layers div{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;padding:.18cqw .55cqw;font-size:1.08cqw;background:#fff;color:#33475f}
 .board .chain{display:flex;align-items:center;gap:.3cqw;flex-wrap:wrap;font-size:1.08cqw;color:#33475f}
@@ -534,10 +536,10 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
   <div class="row main">
     <div class="card hero">
       <h3><span class="n">A</span>门禁规模</h3>
-      <div class="big"><b>59</b><span>道门禁 · 204 变量</span></div>
-      <div class="bar"><i style="width:20%">核心 12</i><i style="width:54%">标准 32</i><i style="width:26%">合规 19</i></div>
-      <div class="chips"><span class="chip">返回码 0/1/2</span><span class="chip">gate-runs 默认关闭</span></div>
-      <p>204 个配置变量参与判定；显式目录才落盘</p>
+      <div class="big"><b>59</b><span>道门禁 · 205 变量</span></div>
+      <div class="bar"><i style="width:20.3%">核心 12</i><i style="width:33.9%">架构 20</i><i style="width:32.2%">合规 19</i><i style="width:3.4%"></i><i style="width:10.2%">仅建议 6</i></div>
+      <div class="chips"><span class="chip">另有决策与阶段守卫 2</span><span class="chip">返回码 0/1/2</span><span class="chip">gate-runs 默认关闭</span></div>
+      <p>205 个配置变量参与判定；显式目录才落盘</p>
     </div>
     <div class="side">
       <div class="card">
@@ -626,27 +628,27 @@ html:fullscreen .slide{width:100vw;height:100vh;aspect-ratio:auto;border-radius:
 
 <section class="slide">
   <header class="slide-head"><div style="display:flex;align-items:flex-start"><span class="no">16</span><h2>附录：调研吸收台账</h2></div><span class="time">备查</span></header>
-  <p class="slide-lead">三个交付物的调研吸收台账：来源、关键要点与落地口径；每一项可回到规格、代码与守门测试。</p>
+  <p class="slide-lead">三个交付物的调研吸收台账：来源、关键要点与在产品里的做法；每一项可回到规格、代码与自动化检查。</p>
   <div class="slide-body">
     <table class="ledger">
       <colgroup><col style="width:11%"><col style="width:19%"><col style="width:70%"></colgroup>
-      <thead><tr><th>交付物</th><th>台账项</th><th>关键要点与落地口径</th></tr></thead>
+      <thead><tr><th>交付物</th><th>台账项</th><th>关键要点与在产品里的做法</th></tr></thead>
       <tbody>
-        <tr><td rowspan="5"><b>AIStudio</b><br><span class="dim">hermes agent teams</span></td><td><b>上游基线</b></td><td>hermes-studio 0.8.30（ekko-studio）· hermes-agent 0.23.4（NousResearch）：团队运行时、网关与协议基线；补丁只做增量，不另起炉灶。</td></tr>
-        <tr><td><b>团队与编排</b></td><td>AgentTeams（项目一级模型、执行记录、拓扑契约、技能导出）· vivo Harness W1—W4（契约执法、结果协议、验收 DSL）· super-agent（编排域六表、授权强度三档、准入观察态）。</td></tr>
+        <tr><td rowspan="5"><b>AIStudio</b><br><span class="dim">hermes agent teams</span></td><td><b>上游基线</b></td><td>hermes-studio 0.8.30（ekko-studio）· hermes-agent 0.23.4（NousResearch）：团队运行时与网关协议基线；补丁只做增量。</td></tr>
+        <tr><td><b>团队与编排</b></td><td>AgentTeams（项目一级状态机、执行记录、拓扑契约、技能导出）· vivo Harness W1—W4（契约执法、结果协议、验收 DSL）· super-agent（编排域六表、授权强度三档、准入观察态）。</td></tr>
         <tr><td><b>规格与质量</b></td><td>AI Native 五篇（规格保真度门、终止码、三类失败模式、上下文开销比）· MASS/DeerFlow（交接质量账本：交付率、掉落、停滞、抖动）· PluginRSI（组件库：晋级即沉淀、版本并存、旧版不覆盖）。</td></tr>
         <tr><td><b>治理与演化</b></td><td>主动式 AI 综述（澄清与暂缓、注意力与资源分账）· Harmony/EvoTeam/RSI（多目标分解、团队库与交接规则、证据分级）。</td></tr>
-        <tr><td><b>经验与边界</b></td><td>expdual/ai-agent-handbook（双轨经验台账、运行轨迹、恢复真值、停止条件与预算租约）；12 个吸收批次均有 spec 与守门，可逐项回查。</td></tr>
+        <tr><td><b>经验与边界</b></td><td>expdual/ai-agent-handbook（双轨经验台账、运行轨迹、恢复真值、停止条件与预算租约）；各吸收批次均有规格与检查，可逐项回查。</td></tr>
         <tr><td rowspan="3"><b>swarm-yuan</b><br><span class="dim">目标技能</span></td><td><b>框架规则 81</b></td><td>前端 16 · 后端与语言 19 · 数据存储 18 · 消息调度 12 · 工具 4 · 测试 3 · 数据处理 3 · 基础设施 4 · AI 应用 2；技术栈最佳实践转成可检查规则。</td></tr>
-        <tr><td><b>运行时与方法 76</b></td><td>外部运行时 15（深度接线 4：GitNexus、graphify、claude-mem、open-code-review；CLI 6；方法论引用 5）· 方法论与规范 61（42 份随技能分发；生成流程 13、质量验证 10、安全合规 9、行业 profile 8 等）。</td></tr>
-        <tr><td><b>研究档案 106</b></td><td>运行时刷新 51 · 基础设计 26 · 真实回归 10 · 方法论吸收 10 · 审计 5 · 换栈 4；代表：ponytail、mattpocock/skills、FIBO 2026Q3、TOGAF、DeepSeek Harness、NESMA GB/T 42588-2023、ASD-STE100；研究结论回写规则与门禁。</td></tr>
+        <tr><td><b>运行时与方法 78</b></td><td>外部运行时 15（深度接线 4：GitNexus、graphify、claude-mem、ocr；CLI 6；方法论引用 5）· 方法论与规范 63（44 份随技能分发）。</td></tr>
+        <tr><td><b>研究档案 106</b></td><td>运行时刷新 51 · 基础设计 26 · 真实回归 10 · 方法论吸收 10 · 审计 5 · 换栈 4；代表：ponytail、mattpocock/skills、FIBO、TOGAF、NESMA GB/T 42588-2023、ASD-STE100；研究结论回写规则。</td></tr>
         <tr><td rowspan="3"><b>Ycode</b><br><span class="dim">zcode 受管分叉</span></td><td><b>基线 4.0.0</b></td><td>a4b44451；活跃补丁 14 枚（002—015），上游同步＋补丁重放，不冻结上游。</td></tr>
         <tr><td><b>002—007</b></td><td>会话导入 RPC（importSession）· 桌面操作活体实现、无宿主回落、组合按键修复、默认启用、对齐官方宿主协议。</td></tr>
-        <tr><td><b>008—013 与边界</b></td><td>broker 错误码 unavailable 保留 errno · 技能根兼容 .claude/skills · macOS open-file 并入启动 · MCP 参数名消毒（吸收 Qwen Code 1.0，剪除 required 幽灵项）· Android JDK 主版本校验 · 生产依赖安全刷新（overrides 钉 38 条）；001 已退役留档，CUA 的 Windows/Linux 代码路径未做真机验证。</td></tr>
-        <tr><td colspan="3"><b>标准规范映射：</b>国内 GB/T 22239（等保）、GB/T 39786（密评）、GB/T 43848（开源安全）、GB/T 25000（质量）、GB/T 8566/8567/15532（过程·文档·测试）、GB/T 42588（估算）、GB/T 36572（电力监控）、GB 44496（汽车升级）、YY/T 0664（医疗器械软件）；国际 ISO/IEC/IEEE 29148（需求）、OWASP ASVS 5.0、CWE、SPDX、SLSA L2、NIST SP 800-218、ISO/IEC 42001、ISO 26262、IEC 62443、PCI DSS、ISO 8583（支付报文）；逐条映射到门禁与证据，条款可回查 standards-map.conf。</td></tr>
+        <tr><td><b>008—015 与边界</b></td><td>broker 错误码统一为 unavailable · 技能根兼容 .claude/skills · macOS 打开文件并入启动 · MCP 参数名清洗（吸收自 Qwen Code 1.0）· Android JDK 主版本校验 · 生产依赖安全刷新（钉 38 条）· 开发依赖安全刷新（审计通告 77 降到 20）· 预装文档工具接入；001 已退役留档，桌面操作的 Windows/Linux 路径未做真机验证。</td></tr>
+        <tr><td colspan="3"><b>标准规范映射：</b>国内 GB/T 22239（等保）、GB/T 39786（密评）、GB/T 43848（开源安全）、GB/T 25000（质量）、GB/T 8566/8567/15532（过程·文档·测试）、GB/T 42588（估算）、GB/T 36572（电力监控）、GB 44496（汽车升级）、YY/T 0664（医疗器械软件）；国际 ISO/IEC/IEEE 29148（需求）、OWASP ASVS 5.0、CWE、SPDX、SLSA L2、NIST SP 800-218、ISO/IEC 42001、ISO 26262、IEC 62443、PCI DSS、ISO 8583（支付报文）；门禁规则与标准条款的逐条映射见 standards-map.conf（覆盖其中的国标与 CWE、OWASP ASVS、SLSA 等）；行业专属标准另见行业 profile 与方法论文档。</td></tr>
       </tbody>
     </table>
-    <p class="ledger-note">口径：补丁注入＋规格＋守门；能力地图为单一事实源；数量为目录实数，版本随安装变化。</p>
+    <p class="ledger-note">数量为目录实数，以能力地图为准。</p>
   </div>
   <footer class="slide-foot"><span>AIStudio 技术培训 · 15 分钟</span><span>16 / 16 · 附录</span></footer>
 </section>

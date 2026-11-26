@@ -165,9 +165,9 @@ flowchart TB
 
 四论在技术实现中各有对应机制：系统论靠清单、边集与本体看边界和依赖；信息论靠 `facts.conf` 单一事实源、skip 单列与返回码看准口径和噪声；科学方法论靠模板双态夹具、Mutation Check 与外部有效性边界保证结论可复现；控制论靠门禁-测试-审查闭环、gate-runs、状态机与反馈更新完成纠偏。四者不是四套新工具，而是对已有机制的归类，证据面与上表逐列对齐。
 
-## 吸收全景：81 个框架、15 个运行时和 61 份方法论从哪里来
+## 吸收全景：81 个框架、15 个运行时和 63 份方法论从哪里来
 
-这一节回答“它凭什么有这些能力、每样从哪里来、什么时候生效”。来源分三类，分开列以免把外部吸收误当自研：**外部调研吸收**（真实项目研究、开源技能与方法论）、**行业标准映射**、**自研机制**。可回查范围分四层，各以对应载体为准：61 份 references／方法论逐档登记于 `skills/swarm-yuan/references/capability-map.md`（来源、证据分级、消费节点），由 G25 双向对账（实存文档必须入账、账上不登记不存在文档）；81 个框架以 `skills/swarm-yuan/references/frameworks/` 目录与 `FACT_FRAMEWORKS=81` 为正本；106 篇研究档案以 `skills/swarm-yuan/docs/research/` 目录为准；27 个物化技能以 `skills/swarm-yuan/runtime/mattpocock-skills/MANIFEST.md` 为准。所以下面每一项都能回到对应目录或账本，不是宣传清单。
+这一节回答“它凭什么有这些能力、每样从哪里来、什么时候生效”。来源分三类，分开列以免把外部吸收误当自研：**外部调研吸收**（真实项目研究、开源技能与方法论）、**行业标准映射**、**自研机制**。可回查范围分四层，各以对应载体为准：63 份 references／方法论逐档登记于 `skills/swarm-yuan/references/capability-map.md`（来源、证据分级、消费节点），由 G25 双向对账（实存文档必须入账、账上不登记不存在文档）；81 个框架以 `skills/swarm-yuan/references/frameworks/` 目录与 `FACT_FRAMEWORKS=81` 为正本；106 篇研究档案以 `skills/swarm-yuan/docs/research/` 目录为准；27 个物化技能以 `skills/swarm-yuan/runtime/mattpocock-skills/MANIFEST.md` 为准。所以下面每一项都能回到对应目录或账本，不是宣传清单。
 
 ### 81 个技术栈框架规则
 
@@ -187,7 +187,7 @@ flowchart TB
 
 ### 15 个外部运行时（三层接线）
 
-接线深度不同，责任不同。三层各自带降级载体：深度层回退内置 grep 与本地解析，CLI 层用随技能分发的降级载体或仓内物化原文，方法论层只是引用、缺席不阻塞；共同边界是**未装不阻塞但逐项披露**，分层说明见 `skills/swarm-yuan/SKILL.md:46`：
+接线深度不同，责任不同。三层各自带降级载体：深度层回退内置 grep 与本地解析，CLI 层用随技能分发的降级载体或仓内物化原文，方法论层只是引用、缺席不阻塞；共同边界是**未装不阻塞但逐项披露**，分层说明见 `skills/swarm-yuan/SKILL.md:47-53`：
 
 | 层 | 对象 | 怎样接线 | 未安装时 |
 |---|---|---|---|
@@ -208,9 +208,9 @@ flowchart TB
 
 名单以目录与 `MANIFEST.md` 为正本；目标技能侧不随包，缺失时按方法论层改写降级。
 
-### 61 份方法论与规范文档
+### 63 份方法论与规范文档
 
-分组按主要用途归纳，权威登记以 capability-map 与 `skills/swarm-yuan/references/` 目录为准；带来源的条目在文件头保留原始出处，版本与轮次细节见 `skills/swarm-yuan/assets/facts.conf:54-79` 注释：
+分组按主要用途归纳，权威登记以 capability-map 与 `skills/swarm-yuan/references/` 目录为准；带来源的条目在文件头保留原始出处，版本与轮次细节见 `skills/swarm-yuan/assets/facts.conf:80` 起的注释：
 
 | 主题域 | 文档 | 代表性来源 |
 |---|---|---|
@@ -224,7 +224,7 @@ flowchart TB
 | 估算与治理（3） | cost-estimation-methodology、decision-governance、governance-agents | cost-estimation＝NESMA GB/T 42588-2023 功能点估算 |
 | 行业 profile（8） | industry-profile-automotive、industry-profile-energy、industry-profile-finance、industry-profile-gov、industry-profile-industrial、industry-profile-medical、industry-profile-payment、industry-profile-telecom | payment 吸收 hermes pay-team 人格内核；配置覆盖层见 `skills/swarm-yuan/assets/industry-profiles/` |
 
-61 档中 42 档随技能分发（以 `skills/swarm-yuan/assets/registry/dist.tsv` 为准），其余仅生成器侧；8 个行业 profile 由 `--industry` 渲染进 conf、不作为 references 分发。
+63 档中 44 档随技能分发（以 `skills/swarm-yuan/assets/registry/dist.tsv` 为准），其余仅生成器侧；8 个行业 profile 由 `--industry` 渲染进 conf、不作为 references 分发。
 
 ### 研究与案例档案（生成器侧）
 
@@ -239,7 +239,7 @@ flowchart TB
 | 审计与安全加固 | R7、R8、R54、R119、R126 | 5 |
 | 换栈演练 | R58、R60、R62、R64 | 4 |
 
-这些是生成器侧档案，不随目标技能分发；分发面以 `FACT_UNIVERSAL_FILES=109`（lite 51）为正本。
+这些是生成器侧档案，不随目标技能分发；分发面以 `FACT_UNIVERSAL_FILES=113`（lite 52）为正本。
 
 ### 行业标准映射
 
@@ -249,7 +249,7 @@ flowchart TB
 
 - **单一事实源**：capability-map 逐档登记来源、证据、消费节点与触发；自检 G25 双向对账，孤儿零容忍。
 - **三载体一致**：每次方法论吸收要求 references、SKILL.md、facts.conf 三处同步，G13/G14/G15/G17 逐项实测。
-- **吞吐有界**：新增知识受预算约束（门禁 59、变量 204、上下文表面等以 facts.conf 为准），吸收不是无限堆料。
+- **吞吐有界**：新增知识受预算约束（门禁 59、变量 205、上下文表面等以 facts.conf 为准），吸收不是无限堆料。
 - **默认不启用**：框架规则按命中注入、行业 profile 显式选择、方法论层是引用不是依赖——知道“有什么”不等于“全都开着”。
 
 ## 4. 六段目录和生成档位各装什么
@@ -360,7 +360,7 @@ state-machine 只能逐级前进，普通 `set phase` 和 `set created_at` 被�
 
 precheck 是目标技能内的门禁执行器：按 core、arch、compliance 三层配置加载（可再叠加 industry 与 `precheck.patch.conf` 覆盖层），按 `--all`/`--all-full`/`--compliance-suite` 三档执行。项目定制优先放覆盖层，降低升级漂移。`TEST_CMD`、`BUILD_CMD`、`MUTATION_CMD` 会作为 shell 命令执行，只能使用受信任配置。
 
-当前数字以 `skills/swarm-yuan/assets/facts.conf:24-46` 为准：门禁总数 59，其中 FULL 53、advisory-only 6；聚合执行面记为 `--all`=12、`--all-full`=32、`--compliance-suite`=19，分别对应核心、standard 和合规套件。FULL 53 由 standard 32、compliance 19 和 `decision_audit/state_phase` 2 组成，不等于 `--all-full` 的数量。配置变量为 204，即 core 30、arch 126、compliance 48。
+当前数字以 `skills/swarm-yuan/assets/facts.conf:24-46` 为准：门禁总数 59，其中 FULL 53、advisory-only 6；聚合执行面记为 `--all`=12、`--all-full`=32、`--compliance-suite`=19，分别对应核心、standard 和合规套件。FULL 53 由 standard 32、compliance 19 和 `decision_audit/state_phase` 2 组成，不等于 `--all-full` 的数量。配置变量为 205，即 core 31、arch 126、compliance 48。
 
 三种聚合模式都会遍历各自数组并累计 FAIL，最后统一汇总。单个 FAIL 不中止后续检查，也不会被后续 PASS 抵消。`skills/swarm-yuan/assets/precheck.sh:1879-1898`
 
@@ -910,7 +910,7 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"                               
 | 标准与个性化研发能力 | `skills/swarm-yuan/references/standards-compliance.md`；`skills/swarm-yuan/references/security-spec.md`；`skills/swarm-yuan/references/domain-knowledge.md`；`skills/swarm-yuan/scripts/mine-habits.sh` |
 | 本体化组织资产与拼装 | `skills/swarm-yuan/assets/ontology/`；`skills/swarm-yuan/references/business-ontology-methodology.md:253-258`；`skills/swarm-yuan/README.md:75-80,217-245` |
 | 数字与预算 | `skills/swarm-yuan/assets/facts.conf` |
-| 吸收全景 | `skills/swarm-yuan/references/capability-map.md`；`skills/swarm-yuan/assets/facts.conf:54-79` |
+| 吸收全景 | `skills/swarm-yuan/references/capability-map.md`；`skills/swarm-yuan/assets/facts.conf:80` |
 | 生成总流程与日常入口 | `skills/swarm-yuan/SKILL.md:56-132`；`skills/swarm-yuan/references/generation-flow.md` |
 | 安装参数与默认根 | `skills/swarm-yuan/install.sh:1-24,580-754` |
 | 生成落点、strict 与 SCHEMA_EPOCH | `skills/swarm-yuan/scripts/generator/subcommands.sh:280-519,798-885,978-1006` |

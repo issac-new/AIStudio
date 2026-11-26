@@ -546,6 +546,8 @@
 {"at":"2026-11-26T07:53:56Z","spec":"docs/superpowers/specs/2026-11-26-full-retro-design-revision-batch.md","receipt":"9c7b12d8c55d45c2b669b5293ae0bea1316933ce","commit":"a6440a9e2"}
 {"at":"2026-11-26T07:53:56Z","spec":"docs/superpowers/specs/2026-11-26-modelscope-full-package-policy.md","receipt":"ee10bcad1405b1add9edb7afc6492aa1addfc9e2","commit":"a6440a9e2"}
 {"at":"2026-11-26T14:22:38Z","spec":"docs/superpowers/specs/2026-11-26-run32-plan-sync.md","receipt":"a84b7cede35c62d62d7a0b89e36f4026f13af39c","commit":"16e9155b7"}
+{"at":"2026-11-26T15:22:56Z","spec":"docs/superpowers/specs/2026-11-26-docs-manual-refresh.md","receipt":"a51fb05c45624fd832b8bc17ad7375a896540551","commit":"16e9155b7"}
+{"at":"2026-11-26T15:23:15Z","spec":"docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md","receipt":"0ea02e3cfe2cf2e6c74ab0eae44016f737f8bc5f","commit":"16e9155b7"}
 {"at":"2026-11-26T15:47:24Z","spec":"docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md","receipt":"6285df1b4c71b456a6d8108535b03e32ff2e67cb","commit":"6f2c3b7ed"}
 {"at":"2026-11-26T16:03:37Z","spec":"docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md","receipt":"f94d478551c002a726f51ce473e57e71916a828c","commit":"49ad79a62"}
 {"at":"2026-11-27T00:14:36Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"b60b312c0815829fe225b4290c6fac684b57e86c","commit":"6a1afc103"}
