@@ -34,8 +34,11 @@ fi
 # runtime/plugins 只读配置读取〔style-charter〕——均为 harness→产品只读方向，非反向依赖；
 # 2026-11-01 补 runtime/hermes_cli：721 建卡幂等两文件定点补位读 runtime 模板，
 # 只写 SIM 快照不写产品仓；2026-11-26 补 archive：pristine 基线导出读 HEAD 子树
-# 〔spec 2026-11-26-run32-plan-sync 决策 2——git archive 只读不写仓，产物落 SIM_ROOT/var〕）
-wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/plugins|runtime/hermes_cli|package\.json|\.overlay-injected|rev-parse|archive'
+# 〔spec 2026-11-26-run32-plan-sync 决策 2——git archive 只读不写仓，产物落 SIM_ROOT/var〕；
+# 同日 runtime 消费面收窄为前缀：runtime 覆盖层消费本就整层（deploy-agent-runtime
+# --runtime 整层部署），pristine 跳过判定与漂移自愈同源读 runtime/$tf 模板，
+# 窄条目（plugins/hermes_cli 字面）罩不住通配形态）
+wl='patches|deploy-agent-runtime\.mjs|custom/client|custom/server|custom/qgate|runtime/|package\.json|\.overlay-injected|rev-parse|archive'
 bad2=$(grep -rn 'OVERLAY_ROOT' "$HERE"/*.sh "$HERE"/mux/*.sh 2>/dev/null \
   | grep -vE "^\S+:\s*#" \
   | grep '\$OVERLAY_ROOT' | grep -vE "$wl" | head -5 || true)
