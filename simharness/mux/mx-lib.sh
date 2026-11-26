@@ -1031,7 +1031,14 @@ mx_drift_audit() { # <patchname> <patchfile> <tree> —— 只在「语义已在
       # 真正接线文件在 SIM 是旧副本；provision 只复制 git 跟踪文件，未跟踪的接线文件
       # 永远回灌不进来 → 每次 mx-up 都卡在这里）。收敛法：该文件若在宿主树存在且
       # 含补丁内容，直接从宿主回灌（宿主=补丁态权威），回灌后再判一次。
-      local _hf="${HERMES_AGENT_SRC_FROM:-$HOME/.hermes/hermes-agent}/$tf"
+      local _hf
+      if [[ "${HERMES_AGENT_SRC_PRISTINE:-0}" == "1" && -f "$OVERLAY_ROOT/runtime/$tf" ]]; then
+        # pristine 源（2026-11-26 run32）：整理态权威=runtime 覆盖层模板——宿主有
+        # H-1 漂移（31 件滞后），从宿主回灌会把漂移带进快照（604→605 冲突实录）
+        _hf="$OVERLAY_ROOT/runtime/$tf"
+      else
+        _hf="${HERMES_AGENT_SRC_FROM:-$HOME/.hermes/hermes-agent}/$tf"
+      fi
       if [ -f "$_hf" ]; then
         mkdir -p "$(dirname "$tree/$tf")"
         cp "$_hf" "$tree/$tf"
@@ -1061,6 +1068,22 @@ mx_apply_agent_patches() {
   for p in "${_rt[@]}"; do  # 636=干完不交卷 push 兜底；637=网关续作泵（静默根治，V8.35）；643=darwin 裸 mautrix 解门控（原拟 638 与 638-server-simcenter-routes 撞号改 643）（2026-10-17 macOS pm 正规安装无 mautrix 根治，B 案正路；配套锁重解+mx-sim-mautrix-ensure.sh A 案兜底）；705=会话上下文绝对尺寸轮换（run23 实证：上下文涨到 76K-241K 被上游流截断，水位百分比口径在长上限模型上永不咬合）；707=terminal-incomplete 掐流残响不得当完成（run23 实证：只 WARNING 后照常结算，回合成终态不再进重试面）。722=EmptyStreamError 归类 timeout 入自动恢复梯子（run24 四现场：流掐断回合耗尽即死无自恢复）；723=dispatcher「ready 非空 0 spawn」拒绝原因聚合（run24 实证 196 tick；根因=板级团队围栏拒子编制 assignee）。725=chat 回合终态失败后同会话续做恢复（run24 四现场：回合死即静止，只能人工 DM 唤醒）；726=修 725 的 kwarg 冲突（run25 G2 熔断实锤：kwargs 带 conversation_history 撞显式实参，recovery 哑火）。729=recovery 转发白名单抽纯函数（行为可测；与 726 同判定点收敛）。701-704/706 非 agent 面（产品/custom）不在本清单
     local pf="$PATCH_DIR/$p"
     [[ -f "$pf" ]] || fail "缺 patch 文件：$pf"
+    # pristine 源专通道（2026-11-26 run32 重建实录）：本清单补丁按 v0.22.x 基线撰写，
+    # 对 v0.23.4 纯净树上下文多失配（604 起 apply --check 连环失配）；而 1b 的 runtime
+    # 覆盖层会整体替换目标文件（整理态已含各补丁语义）。凡目标文件全部被 runtime/
+    # 覆盖者直接跳过——跳过依据=下一步整体替换提供语义，非「已在位」造假；覆盖不到
+    # 的文件仍走 apply/语义检查/heal（heal 源 pristine 模式下优先 runtime 模板）。
+    if [[ "${HERMES_AGENT_SRC_PRISTINE:-0}" == "1" ]]; then
+      local _covered=1 _rtf
+      while IFS= read -r _rtf; do
+        [ -n "$_rtf" ] || continue
+        [[ -f "$OVERLAY_ROOT/runtime/$_rtf" ]] || { _covered=0; break; }
+      done < <(git -C "$tree" apply --numstat "$pf" 2>/dev/null | awk '{print $3}')
+      if [[ "$_covered" == 1 && -n "$_rtf" ]]; then
+        log "运行时 patch 跳过（pristine 源：目标文件由 1b runtime 覆盖层整体替换）：$p"
+        continue
+      fi
+    fi
     if git -C "$tree" apply --reverse --check "$pf" >/dev/null 2>&1; then
       log "运行时 patch 已在位：$p"; continue
     fi
