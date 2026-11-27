@@ -1,5 +1,5 @@
 // custom/server/agentidentity/roster-gaps.ts
-// 户口五要素缺口判定（纯函数，不读盘）。
+// 户口五要素缺口判定（纯函数，不读盘）＋第五级自治刻度配置的上下文读取（见文件末尾）。
 //
 // 2026-11-27 自 agent-identity.ts 下沉为独立模块：准入并查户口（lifecycle.canTransition）需要
 // 复用本判定，而 agent-identity.ts 已依赖 lifecycle.ts，反向引用会成环。agent-identity.ts
@@ -58,4 +58,24 @@ export function rosterGaps(identity: RosterSubject): RosterGap[] {
 
 export function rosterStatus(identity: RosterSubject): 'complete' | 'blocked' {
   return rosterGaps(identity).length === 0 ? 'complete' : 'blocked'
+}
+
+// ── 第五级自治刻度配置（协作等级取 5 的前提，2026-11-27）──
+//
+// 为什么放在这里而不是让各调用点自己读：协作等级 5 的卡在保存、卡片视图、准入、派单门、六问
+// 五处都会被 cardGaps 判定；只要有一处漏传上下文，合法保存的等级 5 单元就会在别处被拦
+// （实测：只接了保存与视图两条路径时，派单门与准入把它拦下）。上下文由本函数统一读出，
+// 各 IO 入口调用，判定纯函数本身不读盘。
+// 依赖方向：autonomygov/store.ts 与 rules.ts 只依赖 lib/*，不引用任何业务域；
+// 唯一的反向边是 autonomygov/controller.ts → agentidentity，本模块不触碰它，无环。
+import { assess } from '../autonomygov/rules'
+import { listScale } from '../autonomygov/store'
+
+/** 是否存在判定通过的第五级自治刻度配置。读失败按未配置处理：宁可拒绝第五级，不误放行。 */
+export function al5Configured(): boolean {
+  try {
+    return listScale().some((entry) => entry.al === 5 && assess(entry).verdict === 'ok')
+  } catch {
+    return false
+  }
 }

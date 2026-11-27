@@ -20,7 +20,7 @@ import {
 } from './responsibility'
 import { listJudgments } from './judgments'
 import { canTransition, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
-import { rosterGaps, type RosterGap } from './roster-gaps'
+import { al5Configured, rosterGaps, type RosterGap } from './roster-gaps'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
 export type CredentialStatus = 'active' | 'revoked'
@@ -612,7 +612,7 @@ export function transitionIdentity(
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
   // 就绪度上下文只取本单元的人署名记录；评测重测读数本层不接（无数据源即不传，按未知处理）
-  const verdict = canTransition(identity, input, listPeople(), { judgments: listJudgments(id) })
+  const verdict = canTransition(identity, input, listPeople(), { judgments: listJudgments(id), al5Configured: al5Configured() })
   if (verdict.problems.length > 0) return { ok: verdict.problems.length === 0, problems: verdict.problems }
   const lc = normalizeLifecycle(identity.lifecycle)
   const from = lc.stage
@@ -699,7 +699,7 @@ export function getCardView(
     card: identity.responsibilityCard ?? null,
     lifecycle: lc,
     stage: stageOf(identity),
-    gaps: cardGaps(identity.responsibilityCard, people, { forAdmission: lc.stage === 'registered', ...opts }),
+    gaps: cardGaps(identity.responsibilityCard, people, { forAdmission: lc.stage === 'registered', al5Configured: opts.al5Configured ?? al5Configured() }),
     unitType: identity.responsibilityCard?.unitType ?? null,
     riskTier: identity.responsibilityCard ? normalizeRiskTier(identity.responsibilityCard.riskTier) : null,
     collabLevel: identity.responsibilityCard?.collabLevel ?? null,

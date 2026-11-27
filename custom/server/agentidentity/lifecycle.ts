@@ -59,6 +59,8 @@ export interface TransitionContext {
   judgments?: Pick<JudgmentRecord, 'kind'>[]
   /** stabilityRetest>=2 的评测读数条数 */
   stabilityReadings?: number
+  /** 存在判定通过的第五级自治刻度配置（协作等级取 5 的前提）；由调用方读出传入，本域不反向依赖 autonomygov */
+  al5Configured?: boolean
 }
 
 export function initialLifecycle(): Lifecycle {
@@ -135,7 +137,7 @@ export function canTransition(
 
   if (input.to === 'admitted') {
     // 卡与户口并查：两处缺口都报，便于一次补齐
-    for (const gap of cardGaps(identity.responsibilityCard, people, { forAdmission: true })) {
+    for (const gap of cardGaps(identity.responsibilityCard, people, { forAdmission: true, al5Configured: ctx.al5Configured })) {
       problems.push(gap.detail)
     }
     for (const gap of rosterGaps({

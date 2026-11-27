@@ -791,8 +791,7 @@ import type { ResponsibilityCard } from '../agentidentity/responsibility'
 import type { TransitionInput } from '../agentidentity/lifecycle'
 // 协作等级 5 的条件式裁决（用户 2026-11-05：AL5 须有判定通过的自治刻度配置）：
 // 由本层读出上下文传入域层，agentidentity 不反向依赖 autonomygov（那会成环）
-import { assess } from '../autonomygov/rules'
-import { listScale } from '../autonomygov/store'
+import { al5Configured } from '../agentidentity/roster-gaps'
 
 function govActorOf(ctx: { state?: { user?: { username?: string } } }): string {
   return ctx.state?.user?.username ?? 'anonymous'
@@ -954,15 +953,6 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
           },
         }
       : {}),
-  }
-}
-
-/** 是否存在判定通过的第五级自治刻度配置（协作等级取 5 的前提）。读失败按未配置处理。 */
-function al5Configured(): boolean {
-  try {
-    return listScale().some((entry) => entry.al === 5 && assess(entry).verdict === 'ok')
-  } catch {
-    return false
   }
 }
 

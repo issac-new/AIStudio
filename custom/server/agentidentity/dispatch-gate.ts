@@ -9,6 +9,7 @@ import { listIdentities, type AgentIdentity } from './agent-identity'
 import { listPeople, type Person } from './people'
 import { stageOf } from './lifecycle'
 import { cardGaps } from './responsibility'
+import { al5Configured } from './roster-gaps'
 
 export type UnitGateDecision = 'pass' | 'block' | 'unknown' | 'skipped'
 
@@ -28,6 +29,8 @@ export interface UnitGateFacts {
   identities: AgentIdentity[] | null
   people: Person[]
   mode: 'on' | 'off'
+  /** 存在判定通过的第五级自治刻度配置；缺省按未配置（协作等级 5 的卡按缺口拦）。由读盘包装层注入 */
+  al5Configured?: boolean
 }
 
 /** 派单门开关的环境变量名：值为 'off' 时门关闭（skipped / gate_off）。 */
@@ -54,7 +57,7 @@ export function assessUnitDispatchGate(facts: UnitGateFacts): UnitGateVerdict {
   }
   // 责任卡按非准入口径（不带 forAdmission）：准入证据是准入闸的事，派单门只看卡面要素与责任人在岗；
   // 缺口明细附在 card_invalid 之后，便于派单被拒绝时直接看到缺什么
-  const gaps = cardGaps(bound.responsibilityCard, facts.people)
+  const gaps = cardGaps(bound.responsibilityCard, facts.people, { al5Configured: facts.al5Configured })
   if (gaps.length) {
     return {
       target, applicable: true, identityId: bound.id, decision: 'block',
@@ -81,5 +84,5 @@ export function readUnitGateFacts(
     identities = null
     people = []
   }
-  return { target, targetKind, identities, people, mode: resolvedMode }
+  return { target, targetKind, identities, people, mode: resolvedMode, al5Configured: al5Configured() }
 }

@@ -130,6 +130,15 @@ describe('lifecycle', () => {
     })
   })
 
+  it('协作等级 5：无上下文不准入；带 al5Configured 上下文可准入', () => {
+    const lv5 = { ...base, responsibilityCard: { ...card, collabLevel: 5 as const } }
+    const input = { to: 'admitted' as const, by: 'p-1', reason: 'ok' }
+    const noCtx = canTransition(lv5 as never, input, people)
+    expect(noCtx.ok).toBe(false)
+    expect(noCtx.problems.join()).toContain('自治刻度')
+    expect(canTransition(lv5 as never, input, people, { al5Configured: true }).problems).toEqual([])
+  })
+
   it('退役需交接项与确认人', () => {
     expect(canTransition(running as never, { to: 'retired', by: 'p-1', reason: 'x', exit: { kind: 'pause', items: [] } }, people).ok).toBe(false)
     expect(canTransition(running as never, { to: 'retired', by: 'p-1', reason: 'x', exit: { kind: 'pause', items: ['交接待办'], confirmedBy: 'p-2' } }, people).ok).toBe(true)

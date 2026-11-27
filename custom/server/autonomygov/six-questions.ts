@@ -5,6 +5,7 @@ import type { AgentIdentity } from '../agentidentity/agent-identity'
 import type { JudgmentRecord } from '../agentidentity/judgments'
 import type { Person } from '../agentidentity/people'
 import { cardGaps } from '../agentidentity/responsibility'
+import { al5Configured } from '../agentidentity/roster-gaps'
 import type { BridgeDecision } from '../decisiongraph/semantica-client'
 import type { EvalRun } from '../eval/types'
 
@@ -56,7 +57,9 @@ export function sixQuestions(deps: SixQuestionDeps): SixQuestionAnswer[] {
       }
 
   // Q2 无无主执行单元：卡无缺口且主责任人是在岗自然人
-  const unowned = identities.filter((i) => cardGaps(i.responsibilityCard, people).length > 0)
+  // 协作等级 5 的卡须带上下文判定，否则合法保存的等级 5 单元会被算作缺卡单元
+  const lv5 = al5Configured()
+  const unowned = identities.filter((i) => cardGaps(i.responsibilityCard, people, { al5Configured: lv5 }).length > 0)
   const q2: SixQuestionAnswer = identities.length === 0
     ? {
         id: 'q2', question: '责任卡是否签署、台账里是否还有无主执行单元', answer: 'unknown',

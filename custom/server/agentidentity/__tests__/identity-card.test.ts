@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -13,7 +13,7 @@ let p1 = ''
 let p2 = ''
 let unitId = ''
 
-function card(primaryOwner: string, reviewer?: string): ResponsibilityCard {
+function card(primaryOwner: string, reviewer?: string, over: Partial<ResponsibilityCard> = {}): ResponsibilityCard {
   const c: ResponsibilityCard = {
     deliveryStandard: '交付可复现的测试报告与证据链',
     unitType: 'assistant',
@@ -28,6 +28,7 @@ function card(primaryOwner: string, reviewer?: string): ResponsibilityCard {
     maintainer: p1,
     deploymentLocation: 'studio:8802',
     admissionEvidence: { representativeTasks: ['t1'], edgeCases: ['e1'], dataPermissionReview: ['d1'], recordedAt: Date.now() },
+    ...over,
   }
   // 签署须带版本指纹（2026-11-24 批一）：指纹按卡内容实时计算，准入门才认这份签署
   c.businessOwnerSign = { signedBy: p1, signedAt: Date.now(), cardRevision: cardRevision(c), stale: false }
@@ -93,6 +94,51 @@ describe('identity card + lifecycle', () => {
     expect(updateResponsibilityCard(unitId, noType as ResponsibilityCard, 't').ok).toBe(false)
     expect(updateResponsibilityCard(unitId, { ...card(p1), unitType: 'post' }, 't').ok).toBe(false)
     expect(updateResponsibilityCard(unitId, { ...card(p1), unitType: 'post', reviewer: p2 }, 't').ok).toBe(true)
+  })
+})
+
+describe('协作等级 5 的上下文由 IO 层自动读出（落盘路径）', () => {
+  const scaleDir = () => join(dir, 'autonomy-gov')
+  function writeAl5(ok: boolean): void {
+    // 直接落一条自治刻度配置到隔离目录：ok=true 时判定通过（抽样审计 > 0 且有人工扫描）
+    mkdirSync(scaleDir(), { recursive: true })
+    const fs = require('node:fs') as typeof import('node:fs')
+    fs.writeFileSync(join(scaleDir(), 'scale.json'), JSON.stringify({ entries: [{
+      target: 'worker', al: 5, dod: { criteria: ['c'], sample: 's', stopCondition: 'sc' },
+      auditSampling: ok ? 0.2 : 0, humanScan: ok, reviewedAt: 1,
+    }] }))
+  }
+
+  it('无 AL5 配置：等级 5 的卡无法保存；有配置后可保存、可准入（transitionIdentity 不需另传上下文）', () => {
+    process.env.HERMES_AUTONOMY_GOV_DIR = scaleDir()
+    try {
+      const lv5 = card(p1, undefined, { collabLevel: 5 })
+      // 域层直接调用不传上下文 → 拒绝（上下文由 HTTP 层注入；此处验证的是随后的落盘路径）
+      expect(updateResponsibilityCard(unitId, lv5, 't', { al5Configured: false }).ok).toBe(false)
+      expect(updateResponsibilityCard(unitId, lv5, 't', { al5Configured: true }).ok).toBe(true)
+      writeAl5(true)
+      // 关键：准入走真实 transitionIdentity，不另传上下文——IO 层须自己读出 AL5 配置
+      const r = transitionIdentity(unitId, { to: 'admitted', by: p1, reason: '准入' }, 't')
+      expect(r.problems).toEqual([])
+      expect(getCardView(unitId)?.gaps).toEqual([])
+    } finally {
+      delete process.env.HERMES_AUTONOMY_GOV_DIR
+      rmSync(scaleDir(), { recursive: true, force: true })
+    }
+  })
+
+  it('AL5 配置判定不通过（无抽样审计）：已保存的等级 5 单元准入被拒', () => {
+    process.env.HERMES_AUTONOMY_GOV_DIR = scaleDir()
+    try {
+      expect(updateResponsibilityCard(unitId, card(p1, undefined, { collabLevel: 5 }), 't', { al5Configured: true }).ok).toBe(true)
+      writeAl5(false)
+      const r = transitionIdentity(unitId, { to: 'admitted', by: p1, reason: '准入' }, 't')
+      expect(r.ok).toBe(false)
+      expect(r.problems.join()).toContain('自治刻度')
+    } finally {
+      delete process.env.HERMES_AUTONOMY_GOV_DIR
+      rmSync(scaleDir(), { recursive: true, force: true })
+    }
   })
 })
 
