@@ -1,7 +1,7 @@
 ---
 name: fusion-governance-patterns
 description: "融合治理模式库：蓝军评审/终态 as-is/源码 patch 固化三域。"
-version: 1.0.0
+version: 1.0.1
 metadata:
   hermes:
     tags: [devops, fusion, review, governance, patch-persistence]
@@ -71,7 +71,7 @@ Goal-Backward FORCE 立场（假设目标未达成直到证据证明）+ 并行�
 
 ```
 1. 抓取 → 2. 深读（delegate clone --depth 1，file:line）→ 3. 现状扫描（机械 grep/sqlite，现状断言全部带 file:line）
-→ 4. 融合方案（吸收/保留/不吸收三分+逐项编号收/砍+理由）→ 5. 蓝军评审（5 lens，critical+major 全修出 v2）
+→ 4. 融合方案（逐项编号收/砍+理由；判定词以 `article-methodology-fusion` 的「跨对象总规程」词表为准：吸收、收缩吸收、等效印证、记档待定、不吸收）→ 5. 蓝军评审（5 lens，critical+major 全修出 v2）
 → 6. 批量落地（Tier 分层+锚点优先级+dry-run JSON+从后往前插+审计复验）
 → 7. 真源码修复走三件套固化（行为验证先行）→ 8. 发布（github-profile-distribution 三道闸：公开变体/密钥终扫/最小提交面）
 ```

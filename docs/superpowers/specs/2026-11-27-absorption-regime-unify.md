@@ -273,13 +273,13 @@ T1 删脚本后，规格 `2026-11-05-ainative-absorption.md` 抬头指向的 `re
 
 实测结果（工作树 `refactor/absorption-regime-unify`，基线 main 60fb6243c；2026-11-28 实跑）。
 
-1. 守门测试 `custom/__tests__/absorption-ledger.test.ts`（新增，10 例）：先红后绿——总账文件不存在时五条文件级断言全部报找不到文件，五个边角用例通过；建总账后 10 例全过。同批复跑 `custom/__tests__/docs-ssot-guard.test.ts`、`scripts/__tests__/regression-matrix.test.ts`、`custom/__tests__/evidence-binary-freeze.test.ts`、`custom/__tests__/mimo-coding-agent.test.ts`、`custom/__tests__/precommit-vendor-guard.test.ts`、`custom/__tests__/qgate-repo-scope-fence.test.ts`、`scripts/__tests__/harness-doctor.test.ts`、`scripts/__tests__/make-offline-package.test.ts`：九个文件 81 例全过。`custom/__tests__/l2-kit-parity.test.ts` 随合并档回归的根测试面通过。
+1. 守门测试 `custom/__tests__/absorption-ledger.test.ts`（新增，首版 10 例，独立审查后 14 例）：先红后绿——总账文件不存在时五条文件级断言全部报找不到文件，边角用例通过；建总账后全过。同批复跑 `custom/__tests__/docs-ssot-guard.test.ts`、`scripts/__tests__/regression-matrix.test.ts`、`custom/__tests__/evidence-binary-freeze.test.ts`、`custom/__tests__/mimo-coding-agent.test.ts`、`custom/__tests__/precommit-vendor-guard.test.ts`、`custom/__tests__/qgate-repo-scope-fence.test.ts`、`scripts/__tests__/harness-doctor.test.ts`、`scripts/__tests__/make-offline-package.test.ts`：九个文件 81 例全过。`custom/__tests__/l2-kit-parity.test.ts` 随合并档回归的根测试面通过。
 2. 变异探针 3 个，全部判红：删表一一轮（L011）→ 断言 B 判红；新建一份规格并在抬头声明不存在的编号 L999 → 断言 B、C 判红；删表二 P001 的回看日 → 断言 D 判红。做完后总账的摘要与变异前一致（`ff5027b9…`），探针规格已删除。
 3. `node scripts/governance-lint.mjs --budget`：0 problem；`limits.scripts` 78，等于在册脚本数；退役清单 15 条变 14 条。
 4. `node scripts/maintenance/gen-doc-indexes.mjs --check`：0 problem（新规格入索引后 789 份）；`node scripts/merge-invariants.mjs --check`：pass。
 5. 回灌后 `python3.14 -m pytest team/tests/test_profiles_secret_hygiene.py -q`：2 passed；改文件头后 `bash skills/swarm-yuan/tests/test-doc-numbers.sh`：256 项断言 0 失败。
 6. 合并前 `npm run regress -- --scope merge`：一次全过，15 个面 15 通过、0 失败、0 未执行，退出码 0。根测试面 1274 个文件通过、10,427 例通过、11 例跳过；推演面 30 个文件通过，其中改过的 `mechanism-behavior.test.ts` 34 例通过。当时机器 5 分钟平均负载 134 到 148，没有出现超时。
-7. 记忆索引实测（字符数按码点计）：主索引从 25,526 码点降到 13,181，行数 137 变 128；超过 160 字符的行从 112 降到 0，最长一行从 597 降到 140；重复登记从 5 个文件降到 0；断链 0；成员 127 个（原 126 个一个不少，加长期规则一条；其中含另一会话在实施期间新增的一条）。备份压缩包内 920 个 Markdown 文件，与打包时目录一致。归档索引页头订正为 491 条、2026-10-06 至 2026-11-12。15 份过期记忆在末尾各追加一行现状说明，原文未改。
+7. 记忆索引实测（字符数按码点计）：主索引从 25,526 码点降到 13,120，行数 137 变 128；超过 160 字符的行从 112 降到 0，最长一行从 597 降到 140；重复登记从 5 个文件降到 0；断链 0；成员 127 个（原 126 个一个不少，加长期规则一条；其中含另一会话在实施期间新增的一条）。备份压缩包内 920 个 Markdown 文件，与打包时目录一致。归档索引页头订正为 491 条、2026-10-06 至 2026-11-12。15 份过期记忆在末尾各追加一行现状说明，原文未改。
 8. 未做与未验证：
    - 两份枢纽技能的新正本未部署到宿主，宿主副本仍是 1.7.0 与 1.5.0。
    - hermes 夜间自主跑的吸收轮不入总账。
@@ -296,6 +296,23 @@ T1 删脚本后，规格 `2026-11-05-ainative-absorption.md` 抬头指向的 `re
 - §4 的 T1 写「读登记目录的只有脚本自己与它的测试」。实施时另查到两处文字引用：推演测试里一条指向被删测试文件的豁免条目（已删除）；swarm-yuan 状态机归档阶段的一句运行提示（属技能资产，登记为 P021，随下次发版删除）。
 - 过期候选第 13 行（衰减审计口径）经核实不成立：该记忆自带现状注记，未动。实际订正 15 份，不是 14 份。
 - 「机制扩展停止」的裁定日期并非两种写法并存：10-31 是方案里下判断的日子，11-01 是写进设计正本的日子，各有依据。
+- 独立审查指出回填里有五格是按语义判的，不是来源档明文写出的档位，违反了本规格第 2 节的回填口径。已订正为未声明：L001 的默认行为变更（规格只说判据零变化，同批另把红队种子库从 4 个向量改成 6 个）；L015 的深度（列了一手材料，没有写读到了哪一档）；L017、L019、L022 的默认行为变更。
+- 记档待定 P003（OO-Harness 骨架）首提于 2026-10-19 的设计正本第 322 行，L010 是二次挂账；提出处改指该正本，回看日按首提起算改为 2026-12-18。
+
+### 独立审查与修复
+
+独立审查由一个未参与实施的子代理只读完成，结论「修完可以」：严重 0 条、重要 3 条、次要 5 条。主会话逐条对照代码核实，全部属实；其中三条次要问题（提出处只认路径、回填含推断、另两个技能仍写旧裁决口径）被升为要修。
+
+| 审查发现 | 处置 | 证据 |
+|---|---|---|
+| 五个边角用例里两个空转、一个只测一半：互相指向与字面量跳过写在文件级断言内，边角用例测的是夹具自身 | 抽成四个纯函数（声明解析、互相指向判定、提出处查找、字面量跳过），文件级断言与边角用例调同一套 | 变异探针 B、C 各判红对应用例 |
+| 抬头声明的编号用「非空白串」截取：写成「L023。」或「L023（接 L007）」会连标点截走而误红；用半角冒号则被静默跳过 | 只认 L 加三位数字、P 加三位数字、以「不适用」开头三种；全角半角冒号都收 | 变异探针 A 判红两条用例 |
+| 规程正本写「任何一轮都记在同一本账」，与本规格第 6 节排除 hermes 自主轮次相抵 | 规程正本三处、`harness-fusion-patterns` 一处加限定：只收 AIStudio 仓内发起的轮次，hermes 自主轮次留在宿主研究目录 | 文字改动 |
+| 总账抬头说治理类事项「写规格文件名」，测试只认仓内路径 | 测试对不含目录的值回退到规格目录查找；抬头补写行号放「事项」里 | 变异探针 D 判红对应用例 |
+| 回填五格属推断；P003 首提日错 | 见上一节两条勘误 | 数据订正 |
+| 另两个技能仍写「四判定」与三分法 | 各改一句指向统一词表，版本升到 1.0.1；`fusion-landing-audit` 里的「机制级四判定」说的是另一件事，未动 | 文字改动 |
+
+修复后的变异探针四个，每个撤掉一处修复，对应用例判红且只红该管的那条；做完后测试文件的摘要与变异前一致（`ed8f7bab…`），14 例全过。审查者列出的八项搁置事项逐条裁决，记在实施计划的执行账本里。
 
 ## 设计文档影响
 

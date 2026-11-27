@@ -40,10 +40,38 @@ export function parseTable(md: string, title: string): Row[] {
   return grid.slice(2).map((cells) => Object.fromEntries(head.map((h, i) => [h, cells[i] ?? ''])))
 }
 
-// 规格抬头里「吸收总账：」后面的记号；没写则 null。
+// 规格抬头里「吸收总账：」后面的记号。只认三种：轮次编号（L 加三位数字）、待定编号（P 加三位数字）、
+// 以「不适用」开头；全角半角冒号都收，后面的句号与括号说明不截走。没写或写得不合格式都返回 null。
 export function declaredId(head: string): string | null {
-  const m = /吸收总账：\s*(\S+)/.exec(head)
-  return m?.[1] ? m[1].replace(/`/g, '') : null
+  const m = /吸收总账[：:]\s*`?(L\d{3}|P\d{3}|不适用)/.exec(head)
+  return m?.[1] ?? null
+}
+
+// 规格抬头是否写明「不适用」（本规格不是吸收轮，或没有外来材料）。
+export function declaredNotApplicable(head: string): boolean {
+  const id = declaredId(head)
+  return !!id && id.startsWith('不适用')
+}
+
+// 「规格声明了编号，总账必须认这个账」：返回毛病描述；没有毛病返回 null。
+// 声明的编号要在表一，且那一行的来源档必须就是这份规格。
+export function brokenDeclaration(declared: string | null, specDoc: string, rounds: Row[]): string | null {
+  if (!declared || declared.startsWith('不适用')) return null
+  const row = rounds.find((r) => r['编号'] === declared)
+  if (!row) return `声明的 ${declared} 不在表一`
+  const doc = row['来源档'] ?? ''
+  if (LITERAL.has(doc) || !doc) return `声明的 ${declared} 那一行没有来源档`
+  return doc === specDoc ? null : `声明的 ${declared} 指向 ${doc}，不是本规格`
+}
+
+// 表二的「提出处」是不是一个真实存在的地方：轮次编号、仓内路径，或只写了规格文件名。
+export function missingOrigin(from: string, pathExists: (p: string) => boolean): boolean {
+  return !pathExists(from) && !pathExists(join(SPECS, from))
+}
+
+// 来源档这一格要不要做存在性检查：空格与两个字面量都不查。
+export function needsDocCheck(doc: string): boolean {
+  return !!doc && !LITERAL.has(doc)
 }
 
 // 规格目录直接子文件里，日期达标且文件名含关键词的 Markdown。
@@ -59,7 +87,7 @@ export function badDeferRow(row: Row, roundIds: Set<string>, pathExists: (p: str
   const from = row['提出处'] ?? ''
   if (!from || !DATE_RE.test(row['回看日'] ?? '')) return '缺提出处或回看日'
   if (/^L\d{3}$/.test(from)) return roundIds.has(from) ? null : `轮次 ${from} 不在表一`
-  return pathExists(from) ? null : `提出处 ${from} 不是轮次编号，也不是存在的文件`
+  return missingOrigin(from, pathExists) ? `提出处 ${from} 不是轮次编号，也不是存在的文件` : null
 }
 
 // 取值词表检查；kind 区分表一与表二。
@@ -88,7 +116,7 @@ describe('吸收总账', () => {
   it('A 来源档真实', () => {
     for (const row of parseTable(ledger(), '一、轮次')) {
       const doc = row['来源档'] ?? ''
-      if (LITERAL.has(doc) || !doc) continue
+      if (!needsDocCheck(doc)) continue
       expect(existsSync(join(ROOT, doc)), `${row['编号']} 的来源档不存在：${doc}`).toBe(true)
     }
   })
@@ -102,7 +130,7 @@ describe('吸收总账', () => {
     )
     for (const name of matchingSpecs(specNames(), SINCE_NAME)) {
       expect(
-        referenced.has(name) || /吸收总账：不适用/.test(headOf(name)),
+        referenced.has(name) || declaredNotApplicable(headOf(name)),
         `${name} 没有入账，抬头也没写不适用`,
       ).toBe(true)
     }
@@ -111,11 +139,8 @@ describe('吸收总账', () => {
   it('C 新规格声明的行不悬空', () => {
     const rounds = parseTable(ledger(), '一、轮次')
     for (const name of specNames().filter((n) => n.slice(0, 10) >= SINCE_DECL)) {
-      const id = declaredId(headOf(name))
-      if (!id || id.startsWith('不适用')) continue
-      const row = rounds.find((r) => r['编号'] === id)
-      expect(row, `${name} 声明的 ${id} 不在表一`).toBeDefined()
-      expect(row?.['来源档'], `${name} 声明的 ${id} 指向别的规格`).toBe(`${SPECS}/${name}`)
+      const problem = brokenDeclaration(declaredId(headOf(name)), `${SPECS}/${name}`, rounds)
+      expect(problem, name).toBeNull()
     }
   })
 
@@ -156,10 +181,39 @@ describe('总账解析与判定（边角用例）', () => {
     expect(rounds[1]?.['来源档']).toBe('未声明')
   })
 
-  it('声明的编号存在但来源档指向别的规格，互相指向的判定不成立', () => {
-    const row = parseTable(md, '一、轮次').find((r) => r['编号'] === declaredId('> 吸收总账：`L001`'))
-    expect(row?.['来源档']).toBe('docs/a.md')
-    expect(row?.['来源档']).not.toBe(`${SPECS}/2026-12-01-other-research.md`)
+  it('来源档为空或两个字面量时不做存在性检查，其余都要查', () => {
+    expect(needsDocCheck('')).toBe(false)
+    expect(needsDocCheck('未声明')).toBe(false)
+    expect(needsDocCheck('不适用')).toBe(false)
+    expect(needsDocCheck('docs/a.md')).toBe(true)
+  })
+
+  it('抬头声明：全角半角冒号都收，后面的句号与括号说明不截走', () => {
+    expect(declaredId('> 吸收总账：L023。')).toBe('L023')
+    expect(declaredId('> 吸收总账：L023（接 L007）')).toBe('L023')
+    expect(declaredId('> 吸收总账: `L023`')).toBe('L023')
+    expect(declaredId('> 吸收总账：P004')).toBe('P004')
+    expect(declaredId('> 吸收总账：不适用（治理整顿）')).toBe('不适用')
+    expect(declaredNotApplicable('> 吸收总账：不适用（治理整顿，无外来材料）')).toBe(true)
+    expect(declaredNotApplicable('> 吸收总账：L023')).toBe(false)
+  })
+
+  it('抬头声明：不合格式的记号不认，免得把别处的文字当成编号', () => {
+    expect(declaredId('> 状态：已实施')).toBeNull()
+    expect(declaredId('> 吸收总账：待定')).toBeNull()
+    expect(declaredId('> 吸收总账：L23')).toBeNull()
+    expect(declaredId('> 吸收总账：l023')).toBeNull()
+    expect(declaredId('')).toBeNull()
+  })
+
+  it('互相指向：编号不在表一、来源档指向别的规格、来源档是字面量，都判为毛病', () => {
+    const rounds = parseTable(md, '一、轮次')
+    expect(brokenDeclaration('L001', 'docs/a.md', rounds)).toBeNull()
+    expect(brokenDeclaration('L001', `${SPECS}/2026-12-01-other-research.md`, rounds)).toContain('不是本规格')
+    expect(brokenDeclaration('L009', 'docs/a.md', rounds)).toContain('不在表一')
+    expect(brokenDeclaration('L002', 'docs/a.md', rounds)).toContain('没有来源档')
+    expect(brokenDeclaration(null, 'docs/a.md', rounds)).toBeNull()
+    expect(brokenDeclaration('不适用（治理整顿）', 'docs/a.md', rounds)).toBeNull()
   })
 
   it('提出处写成 l001 或 L1 判红，不在表一的编号判红，存在的文件路径放行', () => {
@@ -172,8 +226,22 @@ describe('总账解析与判定（边角用例）', () => {
     expect(badDeferRow({ 提出处: 'L001', 回看日: '2027/01/01' }, ids, never)).toBe('缺提出处或回看日')
   })
 
-  it('只认直接子文件里日期达标的 Markdown', () => {
-    const names = ['2026-11-20-foo-research', '2026-11-20-bar-research.md', '2026-09-01-x-absorption.md', '2026-11-20-plain.md']
+  it('提出处只写规格文件名时，回退到规格目录去找', () => {
+    const never = (): boolean => false
+    const onlySpecDir = (p: string): boolean => p === `${SPECS}/2026-11-27-absorption-regime-unify.md`
+    expect(missingOrigin('2026-11-27-absorption-regime-unify.md', onlySpecDir)).toBe(false)
+    expect(missingOrigin('2026-11-27-absorption-regime-unify.md', never)).toBe(true)
+    expect(missingOrigin('docs/superpowers/specs/2026-11-27-absorption-regime-unify.md', onlySpecDir)).toBe(false)
+  })
+
+  it('只认直接子文件里日期达标的 Markdown；含关键词但不是文件、或不是 .md 的都不算', () => {
+    const names = [
+      '2026-11-20-foo-research',
+      '2026-11-20-bar-research.md',
+      '2026-11-20-baz-absorb.txt',
+      '2026-09-01-x-absorption.md',
+      '2026-11-20-plain.md',
+    ]
     expect(matchingSpecs(names, SINCE_NAME)).toEqual(['2026-11-20-bar-research.md'])
   })
 

@@ -69,7 +69,7 @@ metadata:
 1. **抓取**：curl + regex 提取 js_content div（`wechat-article-research` skill 零依赖路径）
 2. **深读**：delegate_task 子代理 clone GitHub 仓库 --depth 1，按 SKILL.md → models → scripts → references 优先级深读，产出带 file:line 的 deep-dive 报告
 3. **现状扫描**：机械 grep + sqlite 实测 Hermes 现状（严禁 LLM 主观判断）
-4. **融合方案**：按"吸收/保留/不吸收"三分，零代码等效优先；**上游数字必须机械复现 ≥3 个关键数字再引用**。判定词与落地成色以 `article-methodology-fusion` 的「跨对象总规程」词表为准（吸收、收缩吸收、等效印证、记档待定、不吸收）；本轮不落地的记「记档待定」并进吸收总账 `team/shared/research/absorption-ledger.md`
+4. **融合方案**：按"吸收/保留/不吸收"三分，零代码等效优先；**上游数字必须机械复现 ≥3 个关键数字再引用**。判定词与落地成色以 `article-methodology-fusion` 的「跨对象总规程」词表为准（吸收、收缩吸收、等效印证、记档待定、不吸收）；本轮不落地的记「记档待定」；在 AIStudio 仓内发起的轮次进吸收总账 `team/shared/research/absorption-ledger.md`，hermes 自主轮次留在宿主的 research 目录
 5. **蓝军评审**：delegate_task 5-lens 对抗评审（事实核查/过度设计/遗漏/可行性/偏好对齐），critical+major 逐项修正后出 v2
 6. **批量落地**：Tier 1/2/3 分层补齐 + 锚点优先级 + dry-run JSON + 从后往前插入 + 审计复验
 

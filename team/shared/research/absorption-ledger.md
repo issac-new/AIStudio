@@ -2,14 +2,14 @@
 
 > 三类对象（AIStudio、hermes 智能体团队、swarm-yuan）乘四类材料（文章、论文、报告；代码仓；技能包；上游版本差量）的唯一查重、挂账与回看账本。规程正本：`team/skills/devops/article-methodology-fusion/SKILL.md` 的「跨对象总规程」一节；入口规则：仓规第 15 条；守门：`custom/__tests__/absorption-ledger.test.ts`。
 > 取值：深度＝源码级、全文级、摘要级；裁决词＝吸收、收缩吸收、等效印证、记档待定、不吸收；成色＝语义、机制、效力；默认行为变更＝有、无。计数写成以斜杠分隔的非负整数，裁决计数五段、成色计数三段，顺序同上。来源档没写的事实记「未声明」，没有外来材料可裁的轮次记「不适用」。
-> 用法：吸收轮开工先在表一按来源查同源；收口在表一加一行，记档待定项逐条进表二；下一次吸收轮读出表里已到回看日的行并汇报。表二的「提出处」写提出它的轮次编号，治理类事项写规格文件名。
-> 回填口径（L001 到 L022，2026-10-24 至 2026-11-27）：深度与默认行为变更只取来源档明文；裁决计数与成色计数因来源档没有按统一词表给出计数，记未声明，其中 L017、L022 没有外来材料，记不适用。
+> 用法：吸收轮开工先在表一按来源查同源；收口在表一加一行，记档待定项逐条进表二；下一次吸收轮读出表里已到回看日的行并汇报。表二的「提出处」写提出它的轮次编号；治理类事项写规格的仓内路径，或只写规格文件名（不带目录时按规格目录 `docs/superpowers/specs/` 去找），行号写在「事项」里。本账只收 AIStudio 仓内发起的轮次；hermes 夜间自主跑的轮次不入账，其裁决记录留在宿主 `~/.hermes/shared/research/`。
+> 回填口径（L001 到 L022，2026-10-24 至 2026-11-27）：深度与默认行为变更只取来源档明文写出的档位，来源档没有用这几个词表述的一律记未声明；裁决计数与成色计数因来源档没有按统一词表给出计数，记未声明，其中 L017、L022 没有外来材料，记不适用。各轮实际做了什么、验证到什么程度，以来源档为准，本账不做转述。
 
 ## 一、轮次
 
 | 编号 | 日期 | 来源 | 深度 | 对象 | 裁决计数 | 成色计数 | 默认行为变更 | 来源档 | 回看日 |
 |---|---|---|---|---|---|---|---|---|---|
-| L001 | 2026-10-24 | 《多 Agent 群体协作的评测基准设计方法》（微信公众号文章） | 未声明 | AIStudio | 未声明 | 未声明 | 无 | `docs/superpowers/specs/2026-10-24-swarm-eval-benchmark-absorption.md` | 2026-12-23 |
+| L001 | 2026-10-24 | 《多 Agent 群体协作的评测基准设计方法》（微信公众号文章） | 未声明 | AIStudio | 未声明 | 未声明 | 未声明 | `docs/superpowers/specs/2026-10-24-swarm-eval-benchmark-absorption.md` | 2026-12-23 |
 | L002 | 2026-10-25 | 《AI Agent 数据飞轮：让每个 Bad Case 自动长成资产》（微信公众号文章） | 未声明 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-10-25-agent-data-flywheel-absorption.md` | 2026-12-24 |
 | L003 | 2026-10-26 | 《京东零售技术架构负责人贺岩：企业级AI研发闭环体系的搭建与实战》（演讲实录文章） | 未声明 | AIStudio | 未声明 | 未声明 | 未声明 | `docs/superpowers/specs/2026-10-26-joyai-closed-loop-absorption.md` | 2026-12-25 |
 | L004 | 2026-10-27 | kimi-code 2.3.3 等上游版本差异 | 未声明 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-10-27-version-diff-absorption.md` | 2026-12-26 |
@@ -23,14 +23,14 @@
 | L012 | 2026-11-11 | zcode 上游 v3.18.0 与 Qwen Code 1.0 | 源码级 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-11-11-zcode-3180-sync-and-qwen-absorb.md` | 2027-01-10 |
 | L013 | 2026-11-12 | 《AI Agent 手册》aliyun/ai-agent-handbook 第 03 到 24 章 | 未声明 | AIStudio、hermes 智能体团队 | 未声明 | 未声明 | 无 | `docs/superpowers/specs/2026-11-12-ai-agent-handbook-absorption.md` | 2027-01-11 |
 | L014 | 2026-11-16 | 《Building always-on agents》中文拆解稿 | 未声明 | AIStudio、hermes 智能体团队 | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-11-16-always-on-agents-absorption.md` | 2027-01-15 |
-| L015 | 2026-11-20 | Agnes Harness（量子位文章，加论文 21 页、报告 5 页、README 三份一手材料） | 全文级 | AIStudio | 未声明 | 未声明 | 无 | `docs/superpowers/specs/2026-11-20-agnes-harness-absorption.md` | 2027-01-19 |
+| L015 | 2026-11-20 | Agnes Harness（量子位文章，加论文 21 页、报告 5 页、README 三份一手材料） | 未声明 | AIStudio | 未声明 | 未声明 | 无 | `docs/superpowers/specs/2026-11-20-agnes-harness-absorption.md` | 2027-01-19 |
 | L016 | 2026-11-20 | RSI 生命周期综述（论文加公众号导读） | 全文级 | AIStudio | 未声明 | 未声明 | 无 | `docs/superpowers/specs/2026-11-20-rsi-lifecycle-absorption.md` | 2027-01-19 |
-| L017 | 2026-11-21 | 无外来材料：推演融入产品的定性与路线图（用户立法） | 不适用 | AIStudio | 不适用 | 不适用 | 无 | `docs/superpowers/specs/2026-11-21-sim-product-absorption-roadmap.md` | 2027-01-20 |
+| L017 | 2026-11-21 | 无外来材料：推演融入产品的定性与路线图（用户立法） | 不适用 | AIStudio | 不适用 | 不适用 | 未声明 | `docs/superpowers/specs/2026-11-21-sim-product-absorption-roadmap.md` | 2027-01-20 |
 | L018 | 2026-11-23 | RSI 递归理论的知乎解读文章 | 全文级 | AIStudio | 未声明 | 未声明 | 无 | `docs/superpowers/specs/2026-11-23-rsi-recursive-theory.md` | 2027-01-22 |
-| L019 | 2026-11-25 | zcode 4.0 能力对照报告 | 未声明 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-11-25-zcode-400-capability-absorption.md` | 2027-01-24 |
+| L019 | 2026-11-25 | zcode 4.0 能力对照报告 | 未声明 | AIStudio | 未声明 | 未声明 | 未声明 | `docs/superpowers/specs/2026-11-25-zcode-400-capability-absorption.md` | 2027-01-24 |
 | L020 | 2026-11-26 | Trustworthy RSI 综述 arXiv 2610.35193（82 页）；L007 的同源第二轮 | 全文级 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-11-26-trustworthy-rsi-fulltext.md` | 2027-01-25 |
 | L021 | 2026-11-26 | Palantir 自我改进架构（公众号文章，加四篇官方文档） | 全文级 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md` | 2027-01-25 |
-| L022 | 2026-11-27 | 无新材料：Palantir 批七项待裁决事项的用户裁决（L021 的接续轮） | 不适用 | AIStudio | 不适用 | 不适用 | 有 | `docs/superpowers/specs/2026-11-27-palantir-rulings-followup.md` | 2027-01-26 |
+| L022 | 2026-11-27 | 无新材料：Palantir 批七项待裁决事项的用户裁决（L021 的接续轮） | 不适用 | AIStudio | 不适用 | 不适用 | 未声明 | `docs/superpowers/specs/2026-11-27-palantir-rulings-followup.md` | 2027-01-26 |
 
 ## 二、记档待定
 
@@ -38,7 +38,7 @@
 |---|---|---|---|---|
 | P001 | L008 | `ROUTING_MIN_RANK1` 初值 90，待对生成物实测后调整 | 2027-01-02 | 记档待定 |
 | P002 | L009 | 上下文开销比的 token 口径（现为字符代理比值） | 2027-01-04 | 记档待定 |
-| P003 | L010 | OO-Harness 的 base、specialized、router 骨架 | 2027-01-04 | 记档待定 |
+| P003 | `docs/superpowers/specs/2026-10-19-harness2-improvement-workbench.md` | OO-Harness 的 base、specialized、router 骨架（首提于该正本第 322 行，2026-10-19；L010 二次挂账） | 2026-12-18 | 记档待定 |
 | P004 | L013 | LLM 硬准入 | 2027-01-11 | 记档待定 |
 | P005 | L013 | 手册批 5（资产登记册与 Agent Release） | 2027-01-11 | 记档待定 |
 | P006 | L014 | `evaluateFourMode` 接入执行链 | 2027-01-15 | 记档待定 |
