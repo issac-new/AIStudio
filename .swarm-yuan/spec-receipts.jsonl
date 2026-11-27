@@ -566,3 +566,4 @@
 {"at":"2026-11-27T02:20:25Z","spec":"docs/DESIGN.md","receipt":"91e8f2df076fc999ec15db80b34ff90ab7b10aae","commit":"4a8f5c4aa"}
 {"at":"2026-11-27T02:20:25Z","spec":"docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md","receipt":"19067fda8c03078c6d37c6a4ac6ded7467c44f20","commit":"4a8f5c4aa"}
 {"at":"2026-11-27T02:20:25Z","spec":"docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md","receipt":"70cc08b969511a73d7e0293ea194df91158bb47a","commit":"4a8f5c4aa"}
+{"at":"2026-11-27T02:41:59Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"3b315a7353399baf2bfb9264c72d61d9ba562f06","commit":"7c3eed1e2"}

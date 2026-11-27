@@ -1,30 +1,26 @@
 {
-  "taskId": "docs-manual-refresh-20261126",
-  "statement": "文档刷新批：设计正本、培训材料与使用手册按现行实现刷新，并落实独立审查订正与用户裁决（裁决第 3 项授权合并推送）——用户指令「更新设计文档、培训及使用手册」「按建议做」「按建议完成裁决」",
+  "taskId": "run32-plan-sync-20261126",
+  "statement": "run32 开跑前方案与程序同步：run31 后八天设计变更吸收（派单层 T1 逃生口/pristine 快照源/P2-P3 产品面供给＋探针组 18/开跑窗废止注记/台账回填）——用户指令「修订全流程推演方案及推演程序，启动新一轮推演」＋「无避让时段夜间正常跑」",
   "scope": [
     "docs/**",
-    "README.md",
-    "team/README.md",
-    "team/README_zh.md",
-    "scripts/regression/route-manifest.ts",
-    "custom/__tests__/interactive-training-manual.test.ts",
-    "custom/__tests__/aistudio-complete-training-manual.test.ts",
-    ".swarm-yuan/spec-receipts.jsonl",
+    "simharness/**",
     "custom/qgate/**",
-    ".qgate/registers/**"
+    ".qgate/registers/**",
+    ".swarm-yuan/**"
   ],
   "acceptance": [
-    "When 文档检查四件跑 Then 51 条全过",
-    "When 文档对账四件跑 Then 全过",
-    "When 合并档回归 merge 档跑 Then 15 个测试面全过",
-    "When 合入 main 推送 Then 推送前门全过"
+    "When capability-probes.test.ts 跑 Then 十八组全绿",
+    "When jargon-source-gate 跑 Then HARD=0",
+    "When run-gates.sh 跑 Then 全过",
+    "When regress merge scope 跑 Then 全过",
+    "When 合入 main 推送 Then pre-push 门全过"
   ],
-  "confirmedBy": "用户 2026-11-26 指令与 2026-11-27「按建议完成裁决」；范围与验收条目由执行会话拟定",
-  "confirmedAt": "2026-11-27T02:24:41.390Z",
+  "confirmedBy": "用户 2026-11-26 指令",
+  "confirmedAt": "2026-11-26T14:40:21.139Z",
   "revisions": [
     {
-      "at": "2026-11-27T02:24:41.390Z",
-      "reason": "范围修订为实际变更集——补漏演示稿测试文件 custom/__tests__/aistudio-complete-training-manual.test.ts（门禁模拟时点名）"
+      "at": "2026-11-26T14:40:21.139Z",
+      "reason": "范围修订为实际变更集——设计索引重生成/门 pin 重绑/规格收据账本/任务卡注册文件属随批机械件"
     }
   ]
 }
