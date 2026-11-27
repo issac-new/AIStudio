@@ -217,6 +217,19 @@ describe('审阅结论：置信档', () => {
     expect(a.limitations).toContain('没有耗时读数：无法判断执行时间的变化')
   })
 
+  it('成本与耗时都下降：写进支撑读数，带百分比；不出现在限制里', () => {
+    const a = assess(withEvidence(proposal(), { costUsd: 0.8, latencyMs: 800 }))
+    expect(a.strengths).toContain('单次调用成本相对基线下降 20.0%')
+    expect(a.strengths).toContain('执行耗时相对基线下降 20.0%')
+    expect(a.limitations.some((l) => l.includes('耗时'))).toBe(false)
+  })
+
+  it('耗时上升：写进限制并注明现行规则不拦', () => {
+    const a = assess(withEvidence(proposal(), { latencyMs: 1250 }))
+    expect(a.limitations).toContain('执行耗时相对基线上升 25.0%：现行规则不拦耗时回退')
+    expect(a.strengths.some((l) => l.includes('耗时'))).toBe(false)
+  })
+
   it('限制里不重复已经是阻断项的事实（回归失败、质量倒退）', () => {
     const p = withEvidence(
       proposal(),

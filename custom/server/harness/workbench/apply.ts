@@ -144,7 +144,7 @@ export function rollbackProposalFile(proposal: Proposal): ApplyResult {
     if (!Array.isArray(snap.touched)) throw new Error('快照格式非法')
     const restores: Array<{ path: string; run: () => void }> = []
     for (const t of snap.touched) {
-      const r = resolveManagedTarget(proposal.surfaceKey, t.path, hermesHome(), { requireExists: false, relaxPattern: true })
+      const r = resolveManagedTarget(proposal.surfaceKey, t.path, hermesHome(), { requireExists: false, relaxPattern: true, restoring: true })
       if (!r.ok || !r.abs) throw new Error(`回滚路径 ${t.path} 不可写：${r.error}`)
       if (t.action === 'write') {
         if (!existsSync(r.abs)) throw new Error(`文件 ${t.path} 已被外部删除，请人工处理`)

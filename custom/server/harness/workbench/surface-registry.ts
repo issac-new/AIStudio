@@ -30,6 +30,8 @@ interface ScanSpec {
   writableRoots: string[] | null
   /** 允许写入的相对路径正则（在 writableRoots 之内再收窄）。 */
   writablePattern?: RegExp
+  /** 只建议面的领地（相对 HERMES_HOME）：树候选不受文件名格式约束，但这些路径仍不可写（2026-11-27）。 */
+  claims?: RegExp[]
   /** 扫描器：返回相对 HERMES_HOME 的文件路径。 */
   scan: (home: string) => string[]
 }
@@ -131,6 +133,7 @@ const SURFACES: SurfaceDef[] = [
     note: '权限模式、审批规则、质量门与约束卡分散在既有管理面；本台只给目标锚点，不直接改。',
     spec: {
       writableRoots: null,
+      claims: [/^profiles\/[^/]+\/config\.yaml$/, /^profiles\/_shared\/constraint-policy\.md$/],
       scan: (home) => {
         const out: string[] = []
         for (const rel of scanProfilesFile(home, 'config.yaml')) out.push(rel)
@@ -171,6 +174,7 @@ const SURFACES: SurfaceDef[] = [
     note: '工具描述与使用边界；本台扫描真实覆盖文件，缺席如实标注。',
     spec: {
       writableRoots: null,
+      claims: [/^profiles\/_shared\/tool-guidance\.md$/],
       scan: (home) => {
         const out: string[] = []
         for (const rel of ['tool-desc-overrides.json', 'config/tool-descriptions.json', 'profiles/_shared/tool-guidance.md']) {
@@ -192,6 +196,7 @@ const SURFACES: SurfaceDef[] = [
     note: '子智能体定义影响委派边界；改动须走编排与权限评审。',
     spec: {
       writableRoots: null,
+      claims: [/^profiles\/[^/]+\/subagents\//],
       scan: (home) => {
         const out = scanProfilesNested(home, 'subagents', '.md', 2)
         walk(home, 'agents', 2, (_rel, name) => name.endsWith('.md'), out)
@@ -341,7 +346,7 @@ export interface ResolvedTarget {
  * managed 面目标路径解析：只接受 writableRoots 内、命中 writablePattern、且真实存在
  * 的文件。绝对路径会转成相对 HERMES_HOME；`..` 一律拒绝；符号链接逃出 HOME 也拒绝。
  */
-export function resolveManagedTarget(key: SurfaceKey, input: string, home = hermesHome(), opts: { requireExists?: boolean; relaxPattern?: boolean } = {}): ResolvedTarget {
+export function resolveManagedTarget(key: SurfaceKey, input: string, home = hermesHome(), opts: { requireExists?: boolean; relaxPattern?: boolean; restoring?: boolean } = {}): ResolvedTarget {
   const def = surfaceDef(key)
   if (!def) return { ok: false, error: `未知可编辑面：${key}` }
   if (def.applyMode !== 'managed' || !def.spec.writableRoots) {
@@ -360,6 +365,14 @@ export function resolveManagedTarget(key: SurfaceKey, input: string, home = herm
   if (rel.split('/').includes('..')) return { ok: false, error: '目标路径不允许包含 ..' }
   if (!def.spec.writableRoots.some((root) => rel === root || rel.startsWith(`${root}/`))) {
     return { ok: false, error: `目标路径必须位于 ${def.spec.writableRoots.join(' / ')} 下` }
+  }
+  // 树候选（relaxPattern）不受文件名格式约束，但不得写入只建议面的领地（2026-11-27）：
+  // 这些面的产物落在可写根 profiles/ 下，不拦等于借树候选绕过「只出建议」。回滚恢复（restoring）跳过。
+  if (opts.relaxPattern && !opts.restoring) {
+    const owner = SURFACES.find((x) => x.applyMode === 'advisory' && x.spec.claims?.some((re) => re.test(rel)))
+    if (owner && owner.key !== key) {
+      return { ok: false, error: `路径属于只建议面「${owner.nameZh}」，${def.nameZh}面的树候选不可写（该面只出建议，由既有管理面执行）` }
+    }
   }
   if (!opts.relaxPattern && def.spec.writablePattern && !def.spec.writablePattern.test(rel)) {
     return { ok: false, error: '目标文件名不符合该面的可写格式' }
