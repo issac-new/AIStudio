@@ -563,3 +563,6 @@
 {"at":"2026-11-27T01:36:04Z","spec":"docs/superpowers/specs/2026-11-27-palantir-rulings-followup.md","receipt":"36c5aa1778846ff84772344f322f0d1aa8667eb4","commit":"b694f2e24"}
 {"at":"2026-11-27T01:37:41Z","spec":"docs/superpowers/specs/2026-11-26-trustworthy-rsi-fulltext.md","receipt":"e31b6fb5f6aa9586601365ee46d8502edcfb7e9b","commit":"14120661d"}
 {"at":"2026-11-27T01:42:03Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"0428a89ad4bd3557b5ee970a0ad265348b806564","commit":"fd0f853d7"}
+{"at":"2026-11-27T02:20:25Z","spec":"docs/DESIGN.md","receipt":"91e8f2df076fc999ec15db80b34ff90ab7b10aae","commit":"4a8f5c4aa"}
+{"at":"2026-11-27T02:20:25Z","spec":"docs/superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md","receipt":"19067fda8c03078c6d37c6a4ac6ded7467c44f20","commit":"4a8f5c4aa"}
+{"at":"2026-11-27T02:20:25Z","spec":"docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md","receipt":"70cc08b969511a73d7e0293ea194df91158bb47a","commit":"4a8f5c4aa"}
