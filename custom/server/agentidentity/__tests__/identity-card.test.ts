@@ -142,6 +142,92 @@ describe('协作等级 5 的上下文由 IO 层自动读出（落盘路径）', 
   })
 })
 
+describe('扩权门不可绕过（独立审查阻断 1、2）', () => {
+  const rosterWiden = () => updateIdentity(unitId, { toolAllowlist: ['read_file', 'bash'] }, 't')
+
+  it('运行态直接保存降了风险档的卡：强制转入变更态并留下变更前快照，不得静默生效', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    expect(transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't').ok).toBe(true)
+    expect(transitionIdentity(unitId, { to: 'running', by: p1, reason: 'ok' }, 't').ok).toBe(true)
+    // 降档属扩权：保存本身可以成功，但单元必须转入变更态，降档不能直接对运行态生效
+    expect(updateResponsibilityCard(unitId, card(p1, undefined, { riskTier: 'tier1' }), 't').ok).toBe(true)
+    const v = getCardView(unitId)
+    expect(v?.stage).toBe('changing')
+    expect(v?.lifecycle.history.at(-1)?.to).toBe('changing')
+    expect(v?.lifecycle.history.at(-1)?.snapshot?.riskTier).toBe('tier2')
+    // 恢复须豁免
+    const refused = transitionIdentity(unitId, { to: 'running', by: p1, reason: 'r', evidenceRefs: ['a', 'b'] }, 't')
+    expect(refused.ok).toBe(false)
+    expect(refused.problems.join()).toContain('风险档')
+  })
+
+  it('运行态直接保存升了协作等级的卡：同样转入变更态', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't')
+    transitionIdentity(unitId, { to: 'running', by: p1, reason: 'ok' }, 't')
+    expect(updateResponsibilityCard(unitId, card(p1, undefined, { collabLevel: 4, collabLevelNote: '仅单点验证' }), 't').ok).toBe(true)
+    expect(getCardView(unitId)?.stage).toBe('changing')
+  })
+
+  it('运行态直接改户口扩大工具白名单：同样转入变更态（户口写路径不得绕过扩权门）', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't')
+    transitionIdentity(unitId, { to: 'running', by: p1, reason: 'ok' }, 't')
+    expect(updateIdentity(unitId, { toolAllowlist: ['read_file', 'bash'] }, 't').ok).toBe(true)
+    const v = getCardView(unitId)
+    expect(v?.stage).toBe('changing')
+    expect(v?.lifecycle.history.at(-1)?.snapshot?.toolAllowlist).toEqual(['read_file'])
+    const refused = transitionIdentity(unitId, { to: 'running', by: p1, reason: 'r', evidenceRefs: ['a', 'b'] }, 't')
+    expect(refused.ok).toBe(false)
+    expect(refused.problems.join()).toContain('白名单')
+  })
+
+  it('运行态直接改户口清空「不做」禁区：转入变更态；只收紧（缩小白名单）不转', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't')
+    transitionIdentity(unitId, { to: 'running', by: p1, reason: 'ok' }, 't')
+    expect(updateIdentity(unitId, { capabilityBoundary: { can: ['读文件'], cannot: [] } }, 't').ok).toBe(true)
+    expect(getCardView(unitId)?.stage).toBe('changing')
+    expect(transitionIdentity(unitId, { to: 'running', by: p1, reason: '收紧', evidenceRefs: ['a', 'b'], expansionWaiver: '把禁区清空属扩权，走查豁免' }, 't').ok).toBe(true)
+    // 收紧不是扩权：缩小白名单不转变更态
+    expect(updateIdentity(unitId, { toolAllowlist: ['read_file'] }, 't').ok).toBe(true)
+    expect(getCardView(unitId)?.stage).toBe('running')
+  })
+
+  it('署名记录文件读不了（权限／占用）：迁移不因此报错，按无数据源处理（fail-soft，方向只会更严）', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    // 把 judgments.jsonl 写成一个不可读的目录，模拟读失败
+    mkdirSync(join(dir, 'judgments.jsonl'))
+    const r = transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't')
+    expect(r.ok).toBe(true)
+    rmSync(join(dir, 'judgments.jsonl'), { recursive: true, force: true })
+  })
+
+  it('运行态保存只改文字字段（交付标准）：不转变更态', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't')
+    transitionIdentity(unitId, { to: 'running', by: p1, reason: 'ok' }, 't')
+    expect(updateResponsibilityCard(unitId, card(p1, undefined, { deliveryStandard: '改写的交付标准' }), 't').ok).toBe(true)
+    expect(getCardView(unitId)?.stage).toBe('running')
+  })
+
+  it('变更中扩权后再换主责任人：不得用新快照覆盖基线，恢复仍须豁免', () => {
+    expect(updateResponsibilityCard(unitId, card(p1), 't').ok).toBe(true)
+    transitionIdentity(unitId, { to: 'admitted', by: p1, reason: 'ok' }, 't')
+    transitionIdentity(unitId, { to: 'running', by: p1, reason: 'ok' }, 't')
+    transitionIdentity(unitId, { to: 'changing', by: p1, reason: '调整' }, 't')
+    expect(rosterWiden().ok).toBe(true)
+    // 已在变更态再换责任人：阶段仍是 changing，且不得追加第二条带新快照的变更事件
+    expect(updateResponsibilityCard(unitId, card(p2), 't').ok).toBe(true)
+    const v = getCardView(unitId)
+    expect(v?.stage).toBe('changing')
+    expect(v?.lifecycle.history.filter((e) => e.to === 'changing').length).toBe(1)
+    const refused = transitionIdentity(unitId, { to: 'running', by: p2, reason: 'r', evidenceRefs: ['a', 'b'] }, 't')
+    expect(refused.ok).toBe(false)
+    expect(refused.problems.join()).toContain('白名单')
+  })
+})
+
 describe('卡片视图透出类型／风险档／协作等级／就绪度（供台账界面使用）', () => {
   it('无卡单元：四项读数均如实为空或未知，不装绿', () => {
     const v = getCardView(unitId)

@@ -60,10 +60,21 @@ describe('responsibility card', () => {
     expect(normalizeRiskTier('bogus' as never)).toBeNull()
   })
 
-  it('风险档只收三级取值；旧值可读但新保存拒绝', () => {
-    expect(validateCard({ ...base, riskTier: 'tier1' }, people).join()).not.toContain('riskTier')
-    expect(validateCard({ ...base, riskTier: 'tier3' }, people).join()).not.toContain('riskTier')
-    expect(validateCard({ ...base, riskTier: 'medium' }, people).join()).toContain('riskTier')
+  it('风险档只收三级取值；旧值新保存拒绝（写入口径）', () => {
+    expect(validateCard({ ...base, riskTier: 'tier1' }, people, { forSave: true }).join()).not.toContain('riskTier')
+    expect(validateCard({ ...base, riskTier: 'tier3' }, people, { forSave: true }).join()).not.toContain('riskTier')
+    expect(validateCard({ ...base, riskTier: 'medium' }, people, { forSave: true }).join()).toContain('riskTier')
+  })
+
+  it('读侧对存量旧风险档放行（D6：读侧映射不改写；旧档不是缺口，否则存量带卡单元合并当天全部停派）', () => {
+    expect(validateCard({ ...base, riskTier: 'medium' }, people).join()).not.toContain('riskTier')
+    expect(cardGaps({ ...base, riskTier: 'high' }, people)).toEqual([])
+    expect(cardGaps({ ...base, riskTier: 'low' }, people)).toEqual([])
+  })
+
+  it('顶岗型下限按归一后的等级判：存量 high（归一为二级）满足下限，不因旧值被拦', () => {
+    const post = { ...base, unitType: 'post' as const, reviewer: 'p-2' }
+    expect(validateCard({ ...post, riskTier: 'high' }, people).join()).not.toContain('不得低于二级')
   })
 
   it('顶岗型风险档不得低于二级', () => {

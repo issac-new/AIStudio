@@ -333,8 +333,9 @@ describe('WorkUnitLedgerSection 框架对齐（2026-11-27：类型／风险档�
     expect(box.text()).toContain('净贡献')
     expect(box.text()).toContain('净贡献核算尚无数据源')
     expect(box.text()).toContain('无驳回类署名记录')
-    // 就绪项不带缺口文案（不把就绪渲染成有问题）
-    expect(box.text()).toContain('就绪')
+    // 就绪项不带缺口文案（不把就绪渲染成有问题）：该项只有名称与徽标
+    const readyItem = w.find('[data-testid="gov-workunit-ready-discretion"]')
+    expect(readyItem.find('.wu__ready-gap').exists()).toBe(false)
     // 三态徽标各显示各自的文字：未知是「未知」，不被空态文案覆盖
     expect(w.find('[data-testid="gov-workunit-ready-net-contribution"]').text()).toContain('未知')
     expect(w.find('[data-testid="gov-workunit-ready-net-contribution"]').text()).not.toContain('暂无就绪度读数')
@@ -343,22 +344,40 @@ describe('WorkUnitLedgerSection 框架对齐（2026-11-27：类型／风险档�
     w.unmount()
   })
 
-  it('迁移表单目标为 running 且当前为 changing：出现豁免理由输入框；填写后随请求体上送', async () => {
+  it('变更后恢复：豁免框不常显；服务端判定属扩权并拒绝后才出现，填写后随请求体上送', async () => {
     const calls = setup5([{
       id: 'aid-1', name: 'unit-a', stage: 'changing', card: { primaryOwner: 'p-1', unitType: 'assistant', riskTier: 'tier2' },
     }])
+    let attempts = 0
+    const baseImpl = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+      if (url.endsWith('/transition') && (init?.method ?? 'GET') === 'POST' && attempts++ === 0) {
+        // 第一次也记入 calls，才能断言「第一次确实没送豁免」
+        calls.push({ url, method: 'POST', body: init?.body ? JSON.parse(init.body) : undefined })
+        return { ok: false, status: 400, json: async () => ({ problems: ['本次变更属扩权（工具白名单变多）：五项能力须全部就绪，或填写豁免理由。'] }) } as unknown as Response
+      }
+      return baseImpl(url, init)
+    })
     const w = await mount5()
     await w.find('[data-testid="gov-workunit-trans-open-unit-a"]').trigger('click')
     await w.find('[data-testid="gov-workunit-trans-to"]').setValue('running')
-    const waiver = w.find('[data-testid="gov-workunit-trans-waiver"]')
-    expect(waiver.exists()).toBe(true)
+    // 豁免框不常显：是否扩权由服务端判定，界面不诱导填写
+    expect(w.find('[data-testid="gov-workunit-trans-waiver"]').exists()).toBe(false)
+    // 第一次提交不带豁免，被服务端以「属扩权」拒绝后，豁免框才出现
     await w.find('[data-testid="gov-workunit-trans-evidence"]').setValue('重新验证\n重新授权')
     await w.find('[data-testid="gov-workunit-trans-reason"]').setValue('恢复运行')
+    await w.find('[data-testid="gov-workunit-trans-submit"]').trigger('click')
+    await flushPromises()
+    const waiver = w.find('[data-testid="gov-workunit-trans-waiver"]')
+    expect(waiver.exists()).toBe(true)
     await waiver.setValue('试点需要，业务负责人已同意')
     await w.find('[data-testid="gov-workunit-trans-submit"]').trigger('click')
     await flushPromises()
-    const t = calls.filter((c) => c.url.endsWith('/transition')).at(-1)
-    expect((t?.body as Record<string, unknown>).expansionWaiver).toBe('试点需要，业务负责人已同意')
+    const posts = calls.filter((c) => c.url.endsWith('/transition'))
+    expect(posts.length).toBe(2)
+    // 第一次确实没送豁免；第二次带上了所填理由
+    expect(JSON.stringify(posts[0].body ?? {})).not.toContain('expansionWaiver')
+    expect((posts[1].body as Record<string, unknown>).expansionWaiver).toBe('试点需要，业务负责人已同意')
     w.unmount()
   })
 

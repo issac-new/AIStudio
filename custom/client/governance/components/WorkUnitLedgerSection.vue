@@ -109,6 +109,8 @@ const transTo = ref('')
 const transReason = ref('')
 const transEvidence = ref('')
 const transWaiver = ref('')
+// 豁免框按需出现：是否扩权由服务端判定，界面不预先诱导填写
+const waiverNeeded = ref(false)
 const exitKind = ref('pause')
 const exitItems = ref('')
 
@@ -292,6 +294,7 @@ function openTransition(row: Row): void {
   transReason.value = ''
   transEvidence.value = ''
   transWaiver.value = ''
+  waiverNeeded.value = false
   exitKind.value = 'pause'
   exitItems.value = ''
 }
@@ -315,7 +318,12 @@ async function doTransition(): Promise<void> {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...auth() }, body: JSON.stringify(body),
   })
   const json = (await res.json().catch(() => ({}))) as { ok?: boolean; problems?: string[] }
-  if (!res.ok || json.ok === false) { error.value = json.problems?.join('；') ?? `HTTP ${res.status}`; return }
+  if (!res.ok || json.ok === false) {
+    error.value = json.problems?.join('；') ?? `HTTP ${res.status}`
+    // 服务端判定本次属扩权且未豁免：此时才显示豁免框
+    if (/属扩权/.test(error.value)) waiverNeeded.value = true
+    return
+  }
   msg.value = T.value.okMsg
   transFor.value = ''
   await refresh()
@@ -479,7 +487,7 @@ onMounted(() => { void loadMe(); void refresh() })
       <label>{{ T.formBy }}<span class="wu__readonly" data-testid="gov-workunit-trans-by">{{ me ?? T.meNone }}</span></label>
       <label>{{ T.formReason }}<input v-model="transReason" data-testid="gov-workunit-trans-reason" /></label>
       <label v-if="needRestartEvidence">{{ T.formEvidence }}<textarea v-model="transEvidence" rows="2" data-testid="gov-workunit-trans-evidence" /></label>
-      <label v-if="needRestartEvidence">{{ T.formWaiver }}<textarea v-model="transWaiver" rows="2" data-testid="gov-workunit-trans-waiver" /></label>
+      <label v-if="needRestartEvidence && waiverNeeded">{{ T.formWaiver }}<textarea v-model="transWaiver" rows="2" data-testid="gov-workunit-trans-waiver" /></label>
       <template v-if="transTo === 'retired'">
         <label>{{ T.formExitKind }}
           <select v-model="exitKind" data-testid="gov-workunit-exit-kind">

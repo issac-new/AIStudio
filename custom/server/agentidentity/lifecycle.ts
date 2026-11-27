@@ -26,6 +26,8 @@ export interface LifecycleEvent {
   evidenceRefs: string[]
   /** 进入变更时的范围快照（2026-11-27 起，仅 to='changing' 的事件携带；存量事件可缺） */
   snapshot?: ScopeSnapshot
+  /** 本次判定命中的扩权维度（to='changing' 的自动转变更事件、或 to='running' 的扩权恢复事件携带） */
+  expansion?: ScopeExpansionKind[]
   /** 扩权变更的豁免理由（仅 to='running' 且本次判定为扩权时携带） */
   expansionWaiver?: string
 }
@@ -106,6 +108,14 @@ function lastChangingSnapshot(identity: { lifecycle?: Lifecycle }): ScopeSnapsho
   return undefined
 }
 
+/** 本次变更相对「首次进入变更时的快照」命中的扩权维度；无快照返回 null（无法判断）。落盘层用它记录事件。 */
+export function expansionOf(identity: { lifecycle?: Lifecycle } & Parameters<typeof scopeSnapshotOf>[0]):
+  | ScopeExpansionKind[]
+  | null {
+  const before = lastChangingSnapshot(identity)
+  return before ? isScopeExpansion(before, scopeSnapshotOf(identity)) : null
+}
+
 /** 判定所用的身份最小面：户口（能力边界/白名单/审计）＋ 责任卡 ＋ 生命周期。 */
 export type TransitionIdentity = {
   name?: string
@@ -152,14 +162,13 @@ export function canTransition(
   if (from === 'changing' && input.to === 'running') {
     if ((input.evidenceRefs ?? []).length < 2) problems.push('变更后重启须有重新验证与重新授权两条证据')
     // 扩权判定：变更前取进入变更时的快照，变更后取当前身份的范围
-    const before = lastChangingSnapshot(identity)
     const after = scopeSnapshotOf(identity)
     const waiver = typeof input.expansionWaiver === 'string' && input.expansionWaiver.trim() ? input.expansionWaiver.trim() : ''
-    if (!before) {
+    const hits = expansionOf(identity)
+    if (hits === null) {
       // 存量变更事件无快照：无法判断是否扩权，按规格要求豁免理由，不默认未扩权
       if (!waiver) problems.push('本次变更无变更前快照，无法判断是否扩权——须填写豁免理由（说明范围未变或已获授权）')
     } else {
-      const hits = isScopeExpansion(before, after)
       if (hits.length) {
         if (!waiver) {
           const items = readiness({ snapshot: after, judgments: ctx.judgments ?? [], stabilityReadings: ctx.stabilityReadings })

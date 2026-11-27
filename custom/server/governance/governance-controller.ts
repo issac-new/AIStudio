@@ -929,7 +929,8 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
     deliveryStandard: String(b.deliveryStandard ?? ''),
     ...(b.unitType !== undefined ? { unitType: String(b.unitType) as ResponsibilityCard['unitType'] } : {}),
     riskTier: String(b.riskTier ?? '') as ResponsibilityCard['riskTier'],
-    ...(b.collabLevel !== undefined && b.collabLevel !== null && Number.isFinite(collabLevel)
+    // 传了但不是有限数值（如 "abc"）：原样下传为 NaN，由 validateCard 报 collabLevel 问题（不静默丢弃）
+    ...(b.collabLevel !== undefined && b.collabLevel !== null
       ? { collabLevel: collabLevel as NonNullable<ResponsibilityCard['collabLevel']> }
       : {}),
     ...(b.collabLevelNote ? { collabLevelNote: String(b.collabLevelNote) } : {}),

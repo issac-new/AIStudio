@@ -198,6 +198,13 @@ describe('workunit routes', () => {
     expect(ok.body.identity.responsibilityCard.collabLevel).toBe(5)
   })
 
+  it('协作等级为非数值（如 "abc"）→ 400，不被静默丢弃（控制器注释称不吞，行为须一致）', async () => {
+    const id = await freshUnit('collab-bad-unit')
+    const r = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ collabLevel: 'abc' }))
+    expect(r.status).toBe(400)
+    expect(r.body.problems.join()).toContain('collabLevel')
+  })
+
   it('顶岗型风险档取一级 → 400（不得低于二级）', async () => {
     const id = await freshUnit('post-tier1-unit')
     const r = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'post', reviewer: bob, riskTier: 'tier1' }))

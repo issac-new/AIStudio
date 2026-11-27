@@ -56,6 +56,20 @@ describe('assessUnitDispatchGate：判定顺序与原因码', () => {
     const v = assessUnitDispatchGate(base({ people: [person('alice', false), person('bob')] }))
     expect(v.reasons).toContain('card_invalid')
   })
+  it('存量卡（旧风险档、未声明类型）在派单门只因「未声明类型」被拦，不因旧档被拦', () => {
+    const v = assessUnitDispatchGate(base({ identities: [admitted({ responsibilityCard: card({ unitType: undefined, riskTier: 'medium' }) })] }))
+    expect(v.decision).toBe('block')
+    const why = v.reasons.join('；')
+    expect(why).toContain('unitType')
+    expect(why).not.toContain('riskTier')
+  })
+
+  it('顶岗型复核人同人的已准入单元被派单门拦截，原因含缺口明细', () => {
+    const v = assessUnitDispatchGate(base({ identities: [admitted({ responsibilityCard: card({ unitType: 'post', reviewer: 'alice' }) })] }))
+    expect(v.decision).toBe('block')
+    expect(v.reasons.join('；')).toContain('不得为同一人')
+  })
+
   it.each([
     [true, 'pass', '有判定通过的 AL5 配置 → 放行'],
     [false, 'block', '无 AL5 配置 → card_invalid 拦截'],

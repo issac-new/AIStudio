@@ -69,6 +69,10 @@ const POST_RISK_FLOOR: RiskTierLevel = 'tier2'
 /** 协作等级校验的可选上下文：al5Configured=存在判定通过的自治刻度配置（由调用方读 autonomygov 后传入，本模块不反向依赖）。 */
 export interface CardValidateOptions {
   al5Configured?: boolean
+  /** 写入口径（保存责任卡）：风险档只收三级取值。缺省为读侧口径——存量旧值 low|medium|high
+   *  只要能归一就不算缺口（spec D6：读侧映射不改写）。读侧若把旧值当缺口，存量带卡单元会在
+   *  本批合并当天全部被派单门拦下（独立审查阻断 3）。 */
+  forSave?: boolean
 }
 
 const RISK_LEVELS: RiskTierLevel[] = ['tier1', 'tier2', 'tier3']
@@ -101,11 +105,15 @@ export function validateCard(
   if (card.unitType !== 'assistant' && card.unitType !== 'post') {
     problems.push('unitType 必填（助手型或顶岗型）——未声明类型的执行单元不得准入')
   }
-  if (!isWritableRiskTier(card.riskTier)) {
-    problems.push('riskTier 须为 tier1|tier2|tier3（旧值 low|medium|high 可读，重新保存须改三级取值）')
+  // 风险档：写入口径只收三级取值；读侧口径只要求能归一（旧值可读）
+  const tier = normalizeRiskTier(card.riskTier)
+  if (opts.forSave ? !isWritableRiskTier(card.riskTier) : tier === null) {
+    problems.push(opts.forSave
+      ? 'riskTier 须为 tier1|tier2|tier3（旧值 low|medium|high 可读，重新保存须改三级取值）'
+      : 'riskTier 取值无法识别（既非三级取值，也非存量旧值）')
   }
-  // 顶岗型风险档下限：结果直接生效的单元不能是「可独立执行」
-  if (card.unitType === 'post' && isWritableRiskTier(card.riskTier) && RISK_ORDER[card.riskTier] < RISK_ORDER[POST_RISK_FLOOR]) {
+  // 顶岗型风险档下限：按归一后的等级判（存量 high 归一为二级，满足下限）
+  if (card.unitType === 'post' && tier && RISK_ORDER[tier] < RISK_ORDER[POST_RISK_FLOOR]) {
     problems.push('顶岗型执行单元风险档不得低于二级（结果直接生效，至少复核后生效）')
   }
   if (!active.has(card.primaryOwner)) problems.push('primaryOwner 必须是在岗自然人')

@@ -15,11 +15,11 @@ import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 import { listPeople, type Person } from './people'
 import {
-  cardGaps, cardRevision, normalizeRiskTier, readiness, scopeSnapshotOf, validateCard,
-  type ResponsibilityCard, type ReadinessItem,
+  cardGaps, cardRevision, isScopeExpansion, normalizeRiskTier, readiness, scopeSnapshotOf, validateCard,
+  type ResponsibilityCard, type ReadinessItem, type ScopeSnapshot,
 } from './responsibility'
 import { listJudgments } from './judgments'
-import { canTransition, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
+import { canTransition, expansionOf, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
 import { al5Configured, rosterGaps, type RosterGap } from './roster-gaps'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
@@ -336,6 +336,27 @@ function normalizeAudit(a: AuditRequirement): AuditRequirement {
   return { sampling, retentionDays, ...(a.note ? { note: a.note } : {}) }
 }
 
+/** 写路径共用：范围写入后与写前快照比对，命中扩权即把已准入／运行中的单元转入变更态。
+ *  责任卡保存与户口更新两条写路径都必须调用——只堵一条，另一条就能绕过扩权门。
+ *  已在变更态：不追加事件、不覆盖快照（基线以首次进入变更时为准）。
+ *  registered 态：尚未准入，无所谓「扩权」，不转。 */
+function enterChangingIfExpanded(
+  identity: AgentIdentity,
+  lc: Lifecycle,
+  before: ScopeSnapshot,
+  reason: 'owner-change' | 'scope-expansion',
+): void {
+  if (lc.stage === 'registered' || lc.stage === 'changing' || lc.stage === 'retired') return
+  const expanded = isScopeExpansion(before, scopeSnapshotOf(identity))
+  if (reason === 'scope-expansion' && expanded.length === 0) return
+  lc.history.push({
+    from: lc.stage, to: 'changing', at: Date.now(), by: identity.responsibilityCard?.primaryOwner ?? identity.owner,
+    reason, evidenceRefs: [], snapshot: before,
+    ...(expanded.length ? { expansion: expanded } : {}),
+  })
+  lc.stage = 'changing'
+}
+
 export function updateIdentity(
   id: string,
   patch: {
@@ -351,6 +372,8 @@ export function updateIdentity(
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
+  // 户口写前快照：能力边界与工具白名单是范围维度，改宽属扩权
+  const before = scopeSnapshotOf(identity)
   if (patch.owner !== undefined) {
     if (typeof patch.owner !== 'string' || !patch.owner.trim()) return { ok: false, problems: ['owner 必填'] }
     identity.owner = patch.owner.trim()
@@ -378,6 +401,9 @@ export function updateIdentity(
     if (Object.keys(normalized.bindings).length) identity.runtimeBindings = normalized.bindings
     else delete identity.runtimeBindings
   }
+  const lc = normalizeLifecycle(identity.lifecycle)
+  enterChangingIfExpanded(identity, lc, before, 'scope-expansion')
+  identity.lifecycle = lc
   identity.updatedAt = Date.now()
   writeStore(store)
   appendEvent({ actor, action: 'update', targetId: id, detail: JSON.stringify(patch) })
@@ -532,6 +558,17 @@ export function _useStoreDirForTests(dir: string): void {
   process.env.AGENT_IDENTITY_NO_EVENTS = '0'
 }
 
+/** 本单元的人署名记录（就绪度上下文）。读不到按「无数据源」处理：不抛、不阻断——
+ *  署名记录只是就绪度的输入之一，缺了只会让就绪度更严（纠错通道、裁量保障判为未就绪），
+ *  不会更松；若在此抛错，包括退出在内的全部迁移都会因此失败。 */
+function safeListJudgments(id: string): ReturnType<typeof listJudgments> {
+  try {
+    return listJudgments(id)
+  } catch {
+    return []
+  }
+}
+
 // ── 责任卡与五阶段生命周期（2026-11-06 第一增量）──
 // 写入路径只有两条：保存责任卡、迁移生命周期。两者都校验在岗自然人与阶段守卫；
 // 存量身份不批量回填，缺口由 getCardView 报出。
@@ -544,7 +581,7 @@ export function updateResponsibilityCard(
   opts: { al5Configured?: boolean } = {},
 ): { ok: boolean; problems: string[]; identity?: AgentIdentity } {
   const people = listPeople()
-  const problems = validateCard(card, people, opts)
+  const problems = validateCard(card, people, { ...opts, forSave: true })
   if (problems.length) return { ok: problems.length === 0, problems }
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
@@ -564,15 +601,15 @@ export function updateResponsibilityCard(
   }
   identity.responsibilityCard = next
   const lc = normalizeLifecycle(identity.lifecycle)
-  // 主责任人变更不是静默改名：已准入/运行中的单元强制转入变更态，重启须两条证据；
-  // 同样留下变更前快照（与显式迁入 changing 同口径），恢复时才有依据判断是否扩权
-  if (prevOwner && prevOwner !== next.primaryOwner && lc.stage !== 'registered') {
-    lc.history.push({
-      from: lc.stage, to: 'changing', at: Date.now(), by: next.primaryOwner,
-      reason: 'owner-change', evidenceRefs: [], snapshot: before,
-    })
-    lc.stage = 'changing'
-  }
+  // 已准入／运行中的单元，保存卡若触及范围，必须转入变更态（重启须两条证据并过扩权判定）：
+  //   - 主责任人变更：不是静默改名；
+  //   - 扩权（降风险档、升协作等级）：否则运行态直接保存一张降档的卡就能绕过扩权门
+  //     （独立审查阻断 1）。只改文字字段（如交付标准）不转变更态。
+  // 已在变更态：不再追加事件——变更前快照以首次进入变更时为准，后到的保存不得用新快照
+  // 覆盖基线，否则「变更中先扩权、再换责任人」会把此前的扩权洗掉（独立审查阻断 2）。
+  const ownerChanged = Boolean(prevOwner) && prevOwner !== next.primaryOwner
+  if (ownerChanged) enterChangingIfExpanded(identity, lc, before, 'owner-change')
+  else enterChangingIfExpanded(identity, lc, before, 'scope-expansion')
   identity.lifecycle = lc
   identity.updatedAt = Date.now()
   writeStore(store)
@@ -611,8 +648,7 @@ export function transitionIdentity(
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
-  // 就绪度上下文只取本单元的人署名记录；评测重测读数本层不接（无数据源即不传，按未知处理）
-  const verdict = canTransition(identity, input, listPeople(), { judgments: listJudgments(id), al5Configured: al5Configured() })
+  const verdict = canTransition(identity, input, listPeople(), { judgments: safeListJudgments(id), al5Configured: al5Configured() })
   if (verdict.problems.length > 0) return { ok: verdict.problems.length === 0, problems: verdict.problems }
   const lc = normalizeLifecycle(identity.lifecycle)
   const from = lc.stage
@@ -620,10 +656,13 @@ export function transitionIdentity(
   const snapshot = input.to === 'changing' ? scopeSnapshotOf(identity) : undefined
   const expansionWaiver = typeof input.expansionWaiver === 'string' && input.expansionWaiver.trim()
     ? input.expansionWaiver.trim() : undefined
+  // 恢复事件记下本次命中的扩权维度（与判定同口径），豁免才有据可查
+  const expansion = input.to === 'running' ? expansionOf(identity) : null
   lc.history.push({
     from, to: input.to, at: Date.now(), by: input.by,
     reason: input.reason.trim(), evidenceRefs: input.evidenceRefs ?? [],
     ...(snapshot ? { snapshot } : {}),
+    ...(expansion && expansion.length ? { expansion } : {}),
     ...(input.to === 'running' && expansionWaiver ? { expansionWaiver } : {}),
   })
   lc.stage = input.to
@@ -704,6 +743,6 @@ export function getCardView(
     riskTier: identity.responsibilityCard ? normalizeRiskTier(identity.responsibilityCard.riskTier) : null,
     collabLevel: identity.responsibilityCard?.collabLevel ?? null,
     // 就绪度只读本单元的人署名记录；评测重测读数本层不接（无数据源即按未知）
-    readiness: readiness({ snapshot, judgments: listJudgments(id) }),
+    readiness: readiness({ snapshot, judgments: safeListJudgments(id) }),
   }
 }
