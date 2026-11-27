@@ -1,26 +1,26 @@
 {
-  "taskId": "absorption-regime-unify-20261128",
-  "statement": "吸收制度合一、台账退役与记忆清理（规格 2026-11-27-absorption-regime-unify，用户 2026-11-27「按 C 做」、11-28 批准）：规程合一为一份跨对象总规程；吸收总账与守门测试；仓规第 15 条入口；退役规格按域登记机制并冻结两份停更快照；设计正本同步",
+  "taskId": "run32-plan-sync-20261126",
+  "statement": "run32 开跑前方案与程序同步：run31 后八天设计变更吸收（派单层 T1 逃生口/pristine 快照源/P2-P3 产品面供给＋探针组 18/开跑窗废止注记/台账回填）——用户指令「修订全流程推演方案及推演程序，启动新一轮推演」＋「无避让时段夜间正常跑」",
   "scope": [
-    "AGENTS.md",
     "docs/**",
-    "team/skills/**",
-    "team/shared/**",
-    "skills/swarm-yuan/docs/**",
-    "simharness/tests/**",
-    "scripts/**",
-    "custom/__tests__/**",
-    "config/**",
-    ".swarm-yuan/**",
+    "simharness/**",
+    "custom/qgate/**",
     ".qgate/registers/**",
-    "custom/qgate/**"
+    ".swarm-yuan/**"
   ],
   "acceptance": [
-    "When 守门测试跑 Then 14 例全过且四个变异探针各判红对应用例",
-    "When governance-lint --budget 跑 Then 0 problem 且 scripts 上限等于在册数",
-    "When regress merge scope 跑 Then 各面通过（环境原因单面复跑并记录）",
+    "When capability-probes.test.ts 跑 Then 十八组全绿",
+    "When jargon-source-gate 跑 Then HARD=0",
+    "When run-gates.sh 跑 Then 全过",
+    "When regress merge scope 跑 Then 全过",
     "When 合入 main 推送 Then pre-push 门全过"
   ],
-  "confirmedBy": "用户 2026-11-28「批准」",
-  "confirmedAt": "2026-11-27T17:03:15.612Z"
+  "confirmedBy": "用户 2026-11-26 指令",
+  "confirmedAt": "2026-11-26T14:40:21.139Z",
+  "revisions": [
+    {
+      "at": "2026-11-26T14:40:21.139Z",
+      "reason": "范围修订为实际变更集——设计索引重生成/门 pin 重绑/规格收据账本/任务卡注册文件属随批机械件"
+    }
+  ]
 }
