@@ -332,12 +332,15 @@ log "default 板保留为串板哨兵"
 #       每账号 = 本账号 profile（default）+ 两块板的 team agent profile；admin 是
 #       super_admin 走角色旁路不映射。studio 用户行由 matrix-login 建号产生，
 #       缺席即跳过（账号首次登录后重跑本脚本收敛）。幂等：先清后播。
+#       查找键=matrix_user_id（2026-11-27 run32 根治：v0.8.30 起建行用户名带 hash
+#       后缀 fanfan-<12hex>，按基名精确匹配恒落空→只清不播，grant 全灭致
+#       PROFILE_GRANT_REQUIRED 连环——采集链三连败+G2 判读断的共因）。
 WEBUI_DB="$WEBUI_HOME/hermes-web-ui.db"
 if [ -f "$WEBUI_DB" ]; then
   mxp_sqlite "$WEBUI_DB" "delete from user_profiles;" || true
   _seeded=0
   for u in $(node_users); do
-    _uid=$(mxp_sqlite "$WEBUI_DB" "select id from users where username='$u' limit 1;")
+    _uid=$(mxp_sqlite "$WEBUI_DB" "select id from users where matrix_user_id='@${u}:${SERVER_NAME:-matrix.test}' limit 1;")
     [ -n "${_uid:-}" ] || continue
     mxp_sqlite "$WEBUI_DB" "insert or replace into user_profiles(user_id,profile_name,is_default,created_at) values(${_uid},'${u}',1,strftime('%s','now')*1000);" || true
     for a in $(agents_of "$u"); do
