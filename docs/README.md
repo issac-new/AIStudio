@@ -14,9 +14,9 @@
 | 部署、配置与运维检查 | [管理员运维参考](manuals/aistudio-operations-reference.md) |
 | 设计事实源与冲突裁决 | [设计文档导读](manuals/aistudio-design-document-guide.md) |
 | 全部 spec 可点击索引 | [设计文档全量索引](manuals/aistudio-design-document-index.md) |
-| 最新成文的完整推演轮与真实报告案例 | [run28 案例](manuals/aistudio-interactive-training.html#scene=project-run28-case)（课程主入口；run29 至 run31 其后已完成，但尚未编写培训案例）：含代偿 6/6、净额 5/6、自主派发、黄金集观察态与证据缺口；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)（可选来源） |
-| 历史推演与补流案例 | [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的教学档案，不代表当前最新轮 |
-| 完整培训手册（15 分钟版） | [AIStudio 技术培训演示稿](manuals/aistudio-complete-training-manual.html)：PPT 形态 17 页（12 图＋2 页结构化看板＋1 页附录台账），16:9 翻页演示、A4 横向打印；`npm run training` 后访问 `/aistudio-complete-training-manual.html` |
+| 推演真实报告的证据链案例 | [run28 案例](manuals/aistudio-interactive-training.html#scene=project-run28-case)（课程主入口）：含代偿 6/6、净额 5/6、自主派发、黄金集观察态与证据缺口；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)（可选来源）。run28 是证据链教学的主案例，不是最新一轮：其后 run29、run30、run31 已完成，三轮对照见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md)第 15 章 |
+| 历史推演与补流案例 | [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的教学档案，是 run28 之前的历史案例 |
+| 完整培训手册（15 分钟版） | [AIStudio 技术培训演示稿](manuals/aistudio-complete-training-manual.html)：PPT 形态 17 页（封面＋15 页内容＋1 页附录台账；12 张图、2 页结构化看板），16:9 翻页演示、A4 横向打印；`npm run training` 后访问 `/aistudio-complete-training-manual.html` |
 | 14 幕交互培训与一键启动 | [交互培训页](manuals/aistudio-interactive-training.html)；`npm run training` |
 | Windows x64 排查 | [windows-x64-setup.md](windows-x64-setup.md) |
 | 一页看懂产品（离线单文件） | [intro.html](intro.html) |

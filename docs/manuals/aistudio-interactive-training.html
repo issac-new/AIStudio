@@ -406,7 +406,7 @@ dialog .timeline { margin-top: 16px; flex-wrap: wrap; }
 <div id="printRoot" hidden></div>
 <dialog id="topologyDialog" aria-label="六团队拓扑"><div class="topology-canvas"></div><p class="mode-note">亮线=当前步骤路径，浅绿=已走查；点击高亮节点可前进（跟练模式）。</p><div class="dialog-actions"><button id="closeTopologyButton" type="button">关闭拓扑</button></div></dialog>
 <dialog id="courseDialog" aria-labelledby="courseDialogTitle"><h2 id="courseDialogTitle">课程目录 · 六团队 14 幕</h2><div class="part-nav" id="partNav"></div><div class="course-dialog-nav" id="courseDialogNav"></div><div class="dialog-actions"><button id="followButton" type="button" aria-pressed="false">开始跟练</button><button id="restartButton" type="button">从头播放</button><button id="nextCoachButton" type="button">下一幕</button><span class="mode-note" id="modeNote">可逐步播放或点击高亮节点</span></div><div class="timeline" id="timeline" aria-label="场景进度"></div><label class="sr-only" for="mobileStep">选择培训场景</label><select class="sr-only" id="mobileStep"></select><div class="dialog-actions"><button id="closeCourseButton" type="button">返回培训</button></div></dialog>
-<dialog id="helpDialog" aria-labelledby="helpTitle"><h2 id="helpTitle">培训页操作</h2><ul><li>正文按「原理 → 实操 → 案例 → 证据」阅读；点击实操步骤或左右键定位，右侧同步显示讲解重点与验收。</li><li>空格播放/暂停讲解；「查看本步拓扑与证据流」打开拓扑弹窗，R 切换当前步骤路径/全部流转，? 打开帮助。</li><li>跟练模式点击高亮节点进入下一步，幕末进入下一幕；减少动态效果跟随系统或帮助中的开关。</li><li>打印按钮输出 14 页 A4 横屏完整教案。</li></ul><p>所有界面与数据均为培训模拟，不会修改真实任务、账号、审批或代码。</p><p>适用版本：AIStudio 1.0.21-overlay。参考资料请通过本地启动器打开。</p><p>完整参考材料：</p><div class="dialog-actions"><a href="/aistudio-training-and-user-guide.md" target="_blank" rel="noopener">六团队培训手册</a><a href="/aistudio-feature-inventory.md" target="_blank" rel="noopener">全量功能清单</a><a href="/aistudio-operations-reference.md" target="_blank" rel="noopener">管理员运维参考</a><a href="/aistudio-design-document-guide.md" target="_blank" rel="noopener">设计文档导读</a><a href="/aistudio-design-document-index.md" target="_blank" rel="noopener">全部规格索引</a><a href="#scene=project-run28-case" data-scene-link>run28 最新完整推演</a><a href="/aistudio-run25-simulation-case.md" target="_blank" rel="noopener">run25 历史对照</a><a href="#scene=development-swarm-yuan-tech" data-scene-link>swarm-yuan 独立技术说明</a><a href="/aistudio-swarm-yuan-developer-guide.md" target="_blank" rel="noopener">swarm-yuan 完整研发指南</a></div><div class="dialog-actions"><button id="motionButton" type="button" aria-pressed="false">动效</button><button id="fullscreenButton" type="button">全屏 ⛶</button><button id="printButton" type="button">打印 14 页 A4</button><button id="closeHelpButton" type="button">知道了</button></div></dialog>
+<dialog id="helpDialog" aria-labelledby="helpTitle"><h2 id="helpTitle">培训页操作</h2><ul><li>正文按「原理 → 实操 → 案例 → 证据」阅读；点击实操步骤或左右键定位，右侧同步显示讲解重点与验收。</li><li>空格播放/暂停讲解；「查看本步拓扑与证据流」打开拓扑弹窗，R 切换当前步骤路径/全部流转，? 打开帮助。</li><li>跟练模式点击高亮节点进入下一步，幕末进入下一幕；减少动态效果跟随系统或帮助中的开关。</li><li>打印按钮输出 14 页 A4 横屏完整教案。</li></ul><p>所有界面与数据均为培训模拟，不会修改真实任务、账号、审批或代码。</p><p>适用版本：AIStudio 1.0.21-overlay。参考资料请通过本地启动器打开。</p><p>完整参考材料：</p><div class="dialog-actions"><a href="/aistudio-training-and-user-guide.md" target="_blank" rel="noopener">六团队培训手册</a><a href="/aistudio-feature-inventory.md" target="_blank" rel="noopener">全量功能清单</a><a href="/aistudio-operations-reference.md" target="_blank" rel="noopener">管理员运维参考</a><a href="/aistudio-design-document-guide.md" target="_blank" rel="noopener">设计文档导读</a><a href="/aistudio-design-document-index.md" target="_blank" rel="noopener">全部规格索引</a><a href="#scene=project-run28-case" data-scene-link>run28 证据链案例</a><a href="/aistudio-run25-simulation-case.md" target="_blank" rel="noopener">run25 历史对照</a><a href="#scene=development-swarm-yuan-tech" data-scene-link>swarm-yuan 独立技术说明</a><a href="/aistudio-swarm-yuan-developer-guide.md" target="_blank" rel="noopener">swarm-yuan 完整研发指南</a></div><div class="dialog-actions"><button id="motionButton" type="button" aria-pressed="false">动效</button><button id="fullscreenButton" type="button">全屏 ⛶</button><button id="printButton" type="button">打印 14 页 A4</button><button id="closeHelpButton" type="button">知道了</button></div></dialog>
 <script type="module">
 const PARTS = [
   { id: 'product', name: '产品需求分析', subtitle: 'Spec、AC 与可追溯验收' },
@@ -956,7 +956,7 @@ const SCENES = [
     deliverables: ['放行或冻结的发布决策单', '日常/SIM 写面及 UAT/G5/真实发布对照表', '完整 G6 行动项和 DISP 记录'],
     checks: ['日常 UAT/G5 没有写 SIM 台账', 'done、UAT、G5、实际发布分别取证', 'GAP 没有豁免成 PASS', '报告快照、补证和新债没有混成同一时点'],
     pitfalls: ['把 approved 或资产上传直接写成 released 和观察完成', '用 report_done 替代 retro_done'],
-    references: [{ label: 'run28 最新完整推演案例', href: '/aistudio-run28-simulation-case.md' }, { label: 'run25 历史对照', href: '/aistudio-run25-simulation-case.md' }],
+    references: [{ label: 'run28 证据链案例（run29 至 run31 其后已完成，对照见培训手册第 15 章）', href: '/aistudio-run28-simulation-case.md' }, { label: 'run25 历史对照', href: '/aistudio-run25-simulation-case.md' }],
     nodes: [
       node('g4', '测试与独立评审', '当前 commit 与证据', 12, 28, { kicker: 'VERIFY' }),
       node('uat', '日常 UAT', '任务/评审级判定', 39, 28, { kicker: 'DAILY UAT' }),
@@ -972,7 +972,7 @@ const SCENES = [
     handoff: { consumes: [{ scene: 'project-release-retro', artifact: 'release-decision' }, { scene: 'operations-readiness', artifact: 'readiness' }], produces: 'ops-timeline', next: 'audit-evidence-remediation' },
  part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500, layer: 'simulation', practiceRef: '17.5',
     summary: '恢复先看真实 claim、日志和故障分类，不能手改任务真值；Graph legacy/shadow/on、多 gateway 和进度联邦都有明确边界，发布后仍需观察、复验和必要回滚。',
-    action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 分类，再沿发布回执、观察指标、异常和回滚路径走查。',
+    action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 六类分类，再沿发布回执、观察指标、异常和回滚路径走查。',
     proof: '恢复动作有界且没有扩大权限或伪造 running；实际发布有通道回执，观察、负责人和具体回滚命令齐全，异常能够回流处置。',
     focus: 'observe', target: '观察与回滚',
     inputs: ['停滞任务的 claim/run、worker 日志、diagnostics 和近期事件', '培训发布包、通道回执、观察指标和具体回滚 runbook'],
@@ -1061,14 +1061,14 @@ const SCENES = [
     phase: 'capstone', navShort: '综合验收', caseEvidenceIds: ['gross-net', 'debt-disposition', 'dispatch-autonomy', 'coverage-report', 'coverage-follow-up', 'golden-observation', 'duration'],
     handoff: { consumes: [{ scene: 'product-overview', artifact: 'case-index' }, { scene: 'product-spec-design', artifact: 'spec-review' }, { scene: 'development-swarm-yuan-tech', artifact: 'skill-supply' }, { scene: 'operations-readiness', artifact: 'readiness' }, { scene: 'project-dispatch', artifact: 'dispatch-recon' }, { scene: 'development-swarm', artifact: 'skill-live' }, { scene: 'development-delivery', artifact: 'commit-pack' }, { scene: 'testing-g4-review', artifact: 'g4-pack' }, { scene: 'testing-eval', artifact: 'eval-pack' }, { scene: 'audit-posture-approval', artifact: 'approval-pack' }, { scene: 'project-release-retro', artifact: 'release-decision' }, { scene: 'operations-release', artifact: 'ops-timeline' }, { scene: 'audit-evidence-remediation', artifact: 'audit-pack' }], produces: 'capstone-verdict', next: null },
     feedsNextCycle: 'product-spec-design',
- part: 'project', title: 'run28 报告带读：流程完成不等于净额全过', short: 'run28 最新完整案例', route: '/app/stage/govern', duration: 10000, layer: 'simulation', practiceRef: '17.2',
-    summary: 'run28 是当前最新完整轮。阅读时先固定 RUN ID 和双报告，再分别检查含代偿六闸、净额判据、代偿台账、组织自主性和后续帧证据。',
+ part: 'project', title: 'run28 报告带读：流程完成不等于净额全过', short: 'run28 证据链案例', route: '/app/stage/govern', duration: 10000, layer: 'simulation', practiceRef: '17.2',
+    summary: 'run28 是证据链教学的主案例，不是最新一轮：其后 run29、run30、run31 已完成，最新一轮是 run31（出了报告但六道质量门未全过）。阅读时先固定 RUN ID 和双报告，再分别检查含代偿六闸、净额判据、代偿台账、组织自主性和后续帧证据。',
     action: '沿评审、G5、发布、复盘和证据回流逐步带读 run28，不把 26 步完成写成零缺陷或全部真人批准。',
     proof: '能同时说清含代偿 6/6 与净额 5/6、open 65 与已修 8/65、11/13 与 13/14，以及 44954 秒和旧 14h29m 的不同口径。',
     focus: 'g5', target: '带读 run28 证据',
     inputs: ['run28 的 final-report.html、simulation-report.html 与 state.env', 'frame-verify.json、golden-gate.json 和 run-metrics.jsonl'],
     steps: [
-      '固定 RUN ID=20261107-v8-run28 和双报告路径，确认 26 步完成；run27 已完成，run29 没有完整报告，不能用轮号替代证据。',
+      '固定 RUN ID=20261107-v8-run28 和双报告路径，确认 26 步完成。run29、run30、run31 在本轮之后都已完成并各有复盘，引用时按培训手册第 15 章的对照表说明各自算什么，不能用轮号替代证据。',
       '分别读取含代偿六闸 6/6 与净额 5/6：G5 的 director-proxy 代批不计净额通过，也不计真人批准。',
       '拆开 open 65、65/65 有处置结论和净额已修 8/65；自主派发 14 条不与脚本预写 48 条、卡代操作 4 张混算。',
       '用 report_done-run_started_at 得 44954 秒即 12h29m14s；旧 spec 的 14h29m 作为另一口径披露，不直接替换。',

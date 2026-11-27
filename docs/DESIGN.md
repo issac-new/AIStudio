@@ -184,6 +184,12 @@ hermes 的设计公理与 AIStudio 的工程原则按同一语义合并，不并
 沟通同时使用 Matrix 房间和统一身份聊天窗。
 人的 Matrix 客户端可以直接连接通信基座。
 智能体消息与执行委托必须经过本机 hermes gateway。
+聊天面板头部的账号指示器可切换 Matrix 账号（2026-11-13 两批，
+spec 见 `superpowers/specs/2026-11-13-matrix-account-switch.md`）：
+列表合并两类账号——各档位 `.env` 里配置的账号（令牌或密码形态）与本机登录过的账号，
+后者存在浏览器本地多槽凭据仓，登出不清除。点档位账号会先登录再联动切换档位，
+全程不重启进程；简报投递身份随当前账号变化。登录页的「本机账号」区走同一套切换，
+效果等同免密登录。账号列表接口只返回档位名、用户标识与服务器地址，不返回令牌。
 统一身份聊天窗支持 Agent 发起的声明式界面（Ekko UI Surface）。
 Agent 发送 `ekko-ui/v1` 或 `ekko-ui/v2` JSON 描述，宿主按受信任的白名单组件渲染原生界面；
 v2 起界面可计算——表达式含算术、比较、格式化、条件与循环模板，部件目录 38 项
@@ -235,7 +241,7 @@ eval 的多裁判多数决或派单的确定性纯函数。
 当前接入 toolresultguard，两个开关默认全关、互不联动：`TRG_FASTPATH=1` 启用快路径，
 `TRG_HANDOFF=1` 时灰区回交更强模型（S2 失败回落既有「灰区放行+警示」）；
 不开时行为与既有版本一致。eval judge 核验后不需要改（键已含 state/questions/model/salt，
-跑批另有 judgeFingerprint）；派单链来源字段留待批二在途合并后接入。
+跑批另有 judgeFingerprint）；派单链来源字段与派单计划同源，恒为规则判定。
 
 ### 2.4 IDE 工作区
 
@@ -307,7 +313,7 @@ G5 采用三条取证线：集成真值、缺陷修复与复审和安全条件�
 
 专题工作台把分散的运行痕迹转成可核对视图。
 它们从权威源读取，除明确标注的标注层外，不保存第二份业务真值。
-四项工作台是入口；以下五组视图属于读模型或标注层，不另立工作台。
+四项工作台是入口；以下各组视图属于读模型或标注层，不另立工作台。
 
 | 工作台 | 设计职责 | 主要数据源 |
 |---|---|---|
@@ -320,9 +326,15 @@ FIBO 表只把概念与设计规格的提及关系作为读侧投影，不在本
 新增概念必须同时补来源和守门测试；
 概念、域和场景数量由本体守门测试锁定。
 
-**能力供需视图。** 治理页在度量纪律之后展示能力供需表：每个能力标签的需求、供给单元/Agent/技能包、
-缺口、跨板复用、供给时效与源可用性；任务抽屉展示单任务的能力准入与候选。
-两者都是只读投影，不接管派单；源缺席显示 `available:false` 与缺口，不渲染成 0。
+**能力供需。** 治理页在度量纪律之后展示能力供需表，任务抽屉展示单任务的能力准入与候选。
+能力标签以能力台账 L2/L3 与既有技能标签为词表，不新建第五套标签。
+任务 `skills` 声明的需求与能力图、技能清单、profile 声明、舰队上报的供给做只读供需投影；
+缺口只表示「有需求且完全无供给」，不用减法制造虚假缺口。
+派单前能力准入只警告，不改派单权威、不自动改派；缺供给是否升级为硬拦截另立开关与评审。
+能力组三项指标——供给时效、跨项目复用率、人机团队成功率——未发生实际决策前只登记
+`consumerPlan`（计划决策/阈值/owner），仍按装饰计数；人机团队成功率在
+OutcomeTeam/Settlement 落地前返回 `available:false`，不写 0 或 100。
+供需表与任务抽屉都不接管派单；源缺席显示 `available:false` 与缺口，不渲染成 0。
 
 **交付效能。** 日报汇总当日任务、阻塞和建议。
 难度×步骤矩阵看活有多难、干到哪一步。
@@ -342,14 +354,6 @@ FIBO 表只把概念与设计规格的提及关系作为读侧投影，不在本
 审计面只记工具名与成败、不记技能名，因此「按技能分布」明写不可得，不编造。
 反向指标「接口数」不再占位：它按任务面板九个面中可用面数的中位数派生，
 取样最近三个已完成任务并回报样本量。运行时未记录的数据一律如实报缺口，不为凑指标去插桩。
-
-**能力供需。** 能力标签以能力台账 L2/L3 与既有技能标签为词表，不新建第五套标签。
-任务 `skills` 声明的需求与能力图、技能清单、profile 声明、舰队上报的供给做只读供需投影；
-缺口只表示「有需求且完全无供给」，不用减法制造虚假缺口。
-派单前能力准入只警告，不改派单权威、不自动改派；缺供给是否升级为硬拦截另立开关与评审。
-能力组三项指标——供给时效、跨项目复用率、人机团队成功率——未发生实际决策前只登记
-`consumerPlan`（计划决策/阈值/owner），仍按装饰计数；人机团队成功率在
-OutcomeTeam/Settlement 落地前返回 `available:false`，不写 0 或 100。
 
 **自治刻度与责任边界。** 每个可自动执行的目标（profile 或 workflow 节点）登记一条自治配置：
 AL0–AL5 自主等级、60 分线（验收判据、真实样例、停止条件）、抽样审计比例与人工策略扫描。
@@ -387,7 +391,7 @@ AL5 不是禁止项而是条件项——须同时具备抽样审计与人工策�
 这些读数只观测，不直接进门禁；实验旋钮状态和分桶口径见 4.8。
 
 **工作项全景。** 以看板 taskId 为统一上下文锚，
-一次查询汇聚任务卡、看板事件、证据、评测、评审、计划、图运行和 trace 八面。
+一次查询汇聚任务卡、看板事件、证据、评测、评审、计划、图运行、trace 和泳道时间线九面。
 每面独立 fail-soft，源缺席返回 available:false。
 trace 没有 taskId 索引、评测任务按 origin 双路匹配等覆盖边界写在返回里，
 不把“未建立关联”误报成“没有产物”。
@@ -414,6 +418,8 @@ AI 拆模块是可选增强，判定端不可用时回落词表并如实标注�
 团队负责人判定与全局角色分开处理。
 组织关键权限变更需要双人会签。
 紧急通道必须带 `[BREAK-GLASS]` 标记，并保留完整审计记录。
+Matrix 账号切换是身份面的一部分：共享或培训环境上操作前先核对当前账号，
+因为审批、消息与简报都以切换后的身份留痕。
 
 ### 2.8 对象、控制面与呈现的整合边界
 
@@ -534,7 +540,7 @@ Matrix 协作、Studio/IDE 会话与统一身份聊天窗消息分别定义消�
   产品面可以更换呈现方式，运行面仍独立工作。
 - 治理实现单源：六闸判读、判词语义、熔断、UAT 判定、问题配对、
   台账阈值与评测判据的计算正本只在产品治理域
-  （`custom/server/governance` 与 `custom/server/eval/e2e-verdict`）；
+  （`custom/server/governance` 与 `custom/server/eval/e2e-verdict.ts`）；
   推演侧只经治理客户端调用并落证据，不持第二套判据。
   G5 与 UAT 状态机实现属治理域，推演兼容路由冻结，启动器属推演域；
   报告撰写留在推演域，报告验收规则属治理域。
@@ -593,7 +599,7 @@ worker 的能力边界由可用工具、可加载技能、资料密级和角色�
 30 个账号、42 个智能体配置，以及 28 块看板；
 这些是推演参数，不是产品硬上限。
 产品实际部署以 `team/` 和组织注册表为准。
-当前仓库 `team/profiles` 提供 30 个 agent profile（含 orchestrator），
+当前仓库 `team/profiles` 提供 27 个 agent profile（含 orchestrator），
 看板按领域注册表配置，不能把推演编制当成通用部署数量。
 当前团队按领域分板，orchestrator 只调度，worker 按领域团队归属；
 团队与板的数量由 `team/` 和领域注册表定义，不在正文写死。
@@ -606,10 +612,10 @@ worker 的能力边界由可用工具、可加载技能、资料密级和角色�
 | 岗位三范式 | 岗位如何分工 | 基座、领域、治理 |
 | 接力五岗位 | 一单需求如何流转 | 需求、开发、测试、交付、运维 |
 | 推演编制 | 演练环境多大 | 15 人、30 账号、42 智能体配置、28 看板 |
-| 当前仓库 | 本仓有多少活动 profile | 30 个 agent profile |
+| 当前仓库 | 本仓有多少活动 profile | 27 个 agent profile |
 
 42 是推演环境的配置总量，含调度与执行实例；
-30 是当前 `team/profiles` 的活动 profile 数。
+27 是当前 `team/profiles` 的活动 profile 数。
 两者不是同一口径，不能相减当成缺口。
 
 能力装配分四层，每层只消费上一层的结果，不互相改写：
@@ -709,7 +715,7 @@ claim）；定时器分 cron（外部日程）与 follow-up（agent 自设跟进
 记忆走 Hindsight 唯一 provider，任务进度用 `session_checkpoints` 五节文档；权限沿用
 审批账本与四挡契约；发件箱由 `custom/server/outbox` 承担。
 
-**Run 收口三态。** 每次后台 Run 结束只允许三种结局（`custom/server/notify/run-outcome`）：
+**Run 收口三态。** 每次后台 Run 结束只允许三种结局（`custom/server/notify/run-outcome.ts`）：
 写发件箱 `outbox`／判定无需通知 `silence`／延迟调用 `deferred`；`reasonCode` 为闭集
 （`delivered/nothing-new/below-threshold/cooldown/quiet-hours/budget-capped/duplicate/
 deferred-window/deferred-approval/deferred-followup/error`），JSONL append-only、环形
@@ -740,7 +746,7 @@ failed，陈旧 firing 五分钟自愈。cron 仍负责用户日程/周期任务
 **空闲 dreaming。** 网关安静 ≥30 分钟且无运行中会话时，`_dreaming_watcher`（30 分钟
 粗节拍）调 Hindsight `reflect` 做跨会话模式提炼，产出以 tag `dream` retain 回同一
 bank；每 profile 24h 至多一次（`state_meta: memory:dream:last_at`），空结果不占预算；
-`HERMES_MEMORY_DREAMING=off` 关闭。30 份 profile 的 `hindsight/config.json` 键归一为
+`HERMES_MEMORY_DREAMING=off` 关闭。27 份 profile 的 `hindsight/config.json` 键归一为
 provider 实际读取的 `recall_prefetch_method`。
 
 **延迟工具调用。** 审批超时在无人值守场景（`approvals.defer_on_timeout` 缺省
@@ -769,7 +775,7 @@ AIStudio 是单一完整项目仓。
 | `simharness/` | 全流程推演程序与场景——其中的组织/治理/串联类功能＝**研发治理和协作的能力**（2026-11-21 立法，产品正身：组织=roster/角色/board 围栏、治理=六闸/审计/判词/台账、串联=26 步主链/派单/审批传输；判读/报告/评测/运行中心已产品承接，能力面按 P1-P4 路线图收敛——P1 对账＋P2 场景库/P3 拍摄位 REST 已落地、P4 归档预备态，spec 2026-11-21-sim-product-absorption-roadmap）；环境供给/采集/场景为推演设施。运行态：SIM 实体随 11-18 归档轮拆除，重建走 mx-setup |
 | `skills/swarm-yuan/` | 项目技能生成器本体 |
 | `registries/`、`config/` | 注册入口与特性配置 |
-| `docs/superpowers/specs/` | 设计正本、专题规格与决策档案 |
+| `docs/superpowers/specs/` | 专题规格与决策档案（整合设计正本另见 `docs/DESIGN.md`） |
 
 `vendor/` 的 git 跟踪内容保持 pristine。
 注入后的工作树脏态是构建结果，不作为新的上游基线提交。
@@ -827,7 +833,7 @@ Electron 桌面构建是可选发布能力。
 `runtime/hermes-records/` 是仓内脱敏工作副本，不是全部记录的系统正本。
 集群设计正本在 `team/`，部分决策注册表的系统源位置由 MANIFEST 标明。
 
-六条跨域契约：
+七条跨域契约：
 
 | 契约 | 连接内容 | 必须守住的结果 |
 |---|---|---|
@@ -902,7 +908,7 @@ sequenceDiagram
 任何产品功能不得另起一条绕过本机 gateway 的智能体执行链。
 
 执行面统一契约（2026-11-10 裁决，spec 见 `superpowers/specs/2026-11-10-execution-kernel-unification.md`）：
-Hermes `AIAgent` 是唯一会话/审批/记忆/事件所有者；通用对话内核只此一个（Ekko 运行时退役）。
+Hermes `AIAgent` 是唯一会话/审批/记忆/事件所有者；通用对话内核只此一个（目标状态是 Ekko 运行时退役，尚未执行，见 6.4）。
 编码后端白名单只保留三个可选 app——Ycode（仓内分叉）、Zcode（官方 CLI）、DeepSeek Harness，
 其余具名后端承接结清后逐家退役。权限统一为 ZCode 四挡（build/guarded/plan/yolo），
 单一事实源=`zcode-agent-model-state.ts` 的模式目录；`edit` 保留历史映射不删。
@@ -1028,9 +1034,16 @@ Ycode 分叉部署位、桥兜底。直接 `acp_send` 只解析 ACP 桥命令，
 设计、开发、代码审查和裁决使用主模型。
 只有输出可由机械检查验证且不涉及架构判断的任务，才允许使用辅助模型。
 共享台账与产线代码即使看似简单，也不能仅为了省成本而降档。
-当前注册表以 `aim` 作为主模型占位符，实际提供方由代理层解析。
-当前只保留主模型和辅助模型两档，不新增第三模型或第三供应商；
-扩展接线要先提案并验证。
+Studio 内嵌 Agent 的模型调用统一经 cc-switch（2026-11-21 模型池统一，
+spec 见 `superpowers/specs/2026-11-21-model-pool-unification.md`）：
+默认上游 `http://127.0.0.1:15721/hermes/v1`，单一供应商 `cc-switch-route`，
+因此 cc-switch 在线是内嵌 Agent 的运行前置条件。
+可用模型是白名单，单一事实源为 `custom/server/modelpool/pool.ts`，诊断读面为
+只读端点 `GET /api/modelpool`；默认模型 `glm-5.3`，`aim` 只是占位符选项，
+另含轻任务辅助档与重评审档。显式设 `EKKO_MODEL_UPSTREAM_BASE_URL=self`
+回退原 Studio 内部模型网关。白名单变更走代码与测试，不改配置文件。
+图节点可显式指定模型或能力档位并写入卡片的路由审计块；
+未指定时仍按 profile 默认。
 路由表是声明性契约，验收仍需检查实际 profile 配置与执行日志。
 
 已批准任务内的普通编码可以自动执行。
@@ -1040,6 +1053,17 @@ Ycode 分叉部署位、桥兜底。直接 `acp_send` 只解析 ACP 桥命令，
 不复制第二份执行脚本。
 
 ### 4.4 验证与证据
+
+**独立验收与交付版本。** 任务卡有三级完成验证（2026-11-19 交付真值验收与交付版本绑定，
+spec 见 `superpowers/specs/2026-11-19-delivery-truth-acceptance.md`）。
+`standard` 是缺省，行为不变。`independent` 要求完成时附逐条验收报告：
+每条验收条件给出通过、不通过或不适用，审查者不能是执行者，报告绑定当次交付版本。
+`strict:pr` 要求 PR 验收必过。
+打回返修默认最多 5 轮，超过即拒绝再次送审并记事件。
+验收报告绑定送审时记录的交付版本；返修后重新送审会生成新版本，旧报告随之失效。
+缺项时完成被拒并返回带代码的原因清单，调用方可按代码分支。
+两个开关不在常规路径上：强行再送审可越过返修上限，
+`HERMES_KANBAN_ACCEPTANCE_OVERRIDE=1` 可越过验收报告要求；两者都落事件。
 
 验证不是单一的“测试通过”。硬性检查看退出码，指标看阈值，
 结论可信度看证据档位。三者不能互相替代。
@@ -1332,7 +1356,8 @@ Model 归因须排除前六维。
 默认仍是观察态；`enforce=1`（或 `GOLDEN_GATE_ENFORCE=1`）且校准未达标才阻断。
 门检运行不触发失败样本自动回流，避免负例污染回归库。
 失败分类保留 eval 六类原值，另加 canonical 七类（ENV/TIMEOUT/PRODUCT/SCRIPT/
-FLOW/UNKNOWN/FLAKY）做跨域对账；归因顺序仍是先环境、再 Harness、最后模型。
+FLOW/UNKNOWN/FLAKY）做跨域对账，其中 `FLAKY` 是归人工的复核标记，不是第七类根因；
+归因顺序仍是先环境、再 Harness、最后模型。
 
 改进实验可以比较候选方案，但不得绕过评测泄漏、成本、预算和人工批准约束。
 改进实验台采用提案退火预算、失败假设不复提和停滞转向未探索面。
@@ -1517,6 +1542,15 @@ Person 每账号记忆）随执行内核统一 P3 退役，存量一次性迁入
 因此不能把“全系统默认失败即关闭”写成已经生效的事实。
 读模型采用 fail-soft，但不可用状态必须显式呈现。
 
+**技能调用授权。** 可为技能配置访问控制表（2026-11-19 技能调用授权，
+spec 见 `superpowers/specs/2026-11-19-skill-call-authorization.md`）：
+按调用主体与技能名设安装、调用、编辑三类规则，通配符匹配技能名。
+拒绝优先于允许，未命中主体时按缺省规则，策略文件解析失败即拒绝。
+每次判定写入审计，带用户、profile、会话与运行标识。
+未配置访问控制表时行为不变。
+边界：只覆盖 Studio 内嵌运行时与技能供给；
+命令行技能工具和 ZCode 的技能工具没有 Studio 用户身份，不受此表约束。
+
 任务按不确定性、后果和可逆性三个轴分层，评分时取保守高判。
 
 | 层级 | 进入条件 | 执行与治理方式 |
@@ -1649,8 +1683,8 @@ B 类改造需要改变上游行为，必须进入对应补丁序列。
 清理流程应能反向还原。上游升级先替换 pristine 基线，
 再重放补丁并运行回归，不能在注入态上猜测升级结果。
 
-当前失败语义按目标树和失败类型区分：hermes-studio 补丁应用失败会中止，
-hermes-agent 与 Ycode 补丁应用失败可以告警后跳过。
+当前失败语义按通道处理：某通道内一枚补丁应用失败时，回滚该通道本次会话已改的文件，
+其余通道继续；该通道记为失败，不把半套注入当成完成。
 series 登记的补丁文件缺失时仍会中止。
 注入清单中的 `appliedPatches` 与 `appliedZcodePatches` 记录 series 处理结果，
 不是逐补丁成功凭证。验收必须检查目标代码和实际运行。
@@ -1754,6 +1788,13 @@ Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号�
 显式使用 `--all-modules`。模块边界与包含清单仍保留，
 用于发布检查与改动归属，不因上传面收窄而删除。
 
+发布前检查能力验收矩阵（2026-11-12，spec 见
+`superpowers/specs/2026-11-12-capability-acceptance-matrix.md`）：
+`config/capability-acceptance.json` 登记每项能力是可用、实验还是已退役。
+标为可用的能力，静态检查当场评估；运行期证据超过 30 天算未验证，不算通过。
+实验与已退役的能力不拦发布，但必须写明降级理由。
+`npm run release:preflight` 执行这项检查。
+
 对外只发两件主资产，各附 `SHA256SUMS` 校验件：
 
 1. 整体源码包 `aistudio-full-<版本>-src.tar.gz`。
@@ -1774,6 +1815,14 @@ simharness 随驾驶舱源码发布，但不因此进入桌面安装包。
 桌面版本升级必须考虑本机缓存，不能复用旧版本号冒充新包。
 单仓构建的上游根按显式 `OVERLAY_UPSTREAM_ROOT`＞仓内 `vendor/`＞旧兄弟 `upstream/` 解析；
 使用隔离构建树时须显式设置该环境变量并检查实际输出路径；未做逐平台验收就保持未验证。
+
+运行时部署到宿主（`scripts/deploy-agent-runtime.mjs`）有两条约束。
+一是在关联工作树里执行时，默认写到检出内的影子目录 `.runtime-deploy-shadow/`，
+不碰宿主的 hermes 安装树；确需部署到宿主须显式 `RUNTIME_DEPLOY_ALLOW_WORKTREE=1`
+（2026-11-12，spec 见 `superpowers/specs/2026-11-12-worktree-host-write-isolation.md`）。
+二是部署后对安装树做导入冒烟：目标同时有虚拟环境与网关入口时执行一次网关导入，
+失败则整次部署记为失败并打印备份路径，不自动回滚，由人按备份决定
+（2026-11-20，spec 见 `superpowers/specs/2026-11-20-deploy-import-smoke.md`）。
 
 ## 6、使用、验证与维护
 
@@ -1903,13 +1952,13 @@ Ycode 七个测试面自
 | 边界 | 当前事实 | 验收要求 |
 |---|---|---|
 | 引擎身份 | 委托脚本与直接 `acp_send` 的引擎解析不同 | 检查 `engine_bin` 路径和实际引擎版本或日志 |
+| 独立验收的版本绑定（2026-11-26 实测） | 交付版本只在送审与完成两个时点记录。评审期间改说明文字、改某条验收条件的措辞或新增附件后，绑定旧版本的验收报告仍可通过；只有新增或删除验收条件才被拒，拦截依赖验收条件编号一致 | 送审后卡片被改动即拒绝完成，并补覆盖评审期间改动的测试；在此之前不得宣称“交付物变化即作废旧报告” |
 | 技能先行 | 提示词纪律与独立生成端点并存，ACP 未全程机械保证 | 检查技能生成、装载和真实调用证据 |
 | SIM 只读 | 观察端点与部分守卫已存在，批量和注意力入口有缺口 | 所有写入口排除 SIM 任务后才可宣称隔离 |
-| 补丁注入 | agent 与 Ycode 补丁应用失败可跳过，登记文件缺失仍中止；部署侧 manifest 另记逐补丁真实状态 | 检查目标代码，不把 applied 清单当成功凭证 |
+| 补丁注入 | 补丁应用失败即回滚该通道本次变更并记失败，其余通道继续；登记文件缺失仍中止；部署侧 manifest 另记逐补丁真实状态 | 检查目标代码，不把 applied 清单当成功凭证 |
 | 工具执法 | 总闸与 strict 均为显式配置 | 区分观察、fail-open 与严格拒绝区域 |
 | 桌面构建 | 上游根按显式 `OVERLAY_UPSTREAM_ROOT`＞仓内 `vendor/`＞旧兄弟 `upstream/` 解析，runtime 独立钉版 | 隔离构建时显式设置根目录，分别验证 Web UI 与 runtime |
 | 产品命名 | 主品牌为 AIStudio，桌面工程与产物仍保留 SwarmStudio 标识 | 区分品牌文案与安装、协议兼容标识 |
-| 性能基线 | 首载与聚合时延未在当前版本复测 | 以本轮实测为准，不沿用旧秒数 |
 | 外部集成 | 分享房、真实 Matrix 双账号、多机和第二名会签人未在本轮复验 | 在目标环境实测后再宣称 |
 | 真实 ACP 回合 | 技能生成与发现已验证；装载、编码前调用和真实 ACP 回合未验证 | 以 Skill 调用日志和真实回合补证 |
 | 长期记忆 | 写入、保留和受控注入的全链未验证；统一口径已立（Hindsight 唯一 provider）；Ekko 存量实测零数据、M1 空集收口，随 P3 退役未执行 | 保持目标契约，不宣称已生效；退役验收按记忆统一批 M2 |
@@ -1925,14 +1974,14 @@ Ycode 七个测试面自
 | 平台交付核心（2026-11-06 P1） | 注入 manifest v2（逐补丁 sha256/真实状态/严格尾部增量/失败回滚）+部署三态（kept=partial）+统一上游根四入口前置+bundle 身份（build 产 bundleId，release:gate 终检缺席/畸形/过期/复算不符全拦）+release:gate 14 步真跑链（--require-pass/--no-cache/--since，waived/CONDITIONAL/缓存/过期全拦） | failed 混入 applied/deploy kept 报 complete/身份过期过门/任一步非零仍续行四负例守门；release:gate 于本批提交树 14 步全绿 |
 | 平台推演与文档核心（2026-11-06 P2） | SIM_ROOT 单一所有权（owner/driver-lock/resident/clean-lease 四因子判活，link 独占提交，product/bash/relay/sim-launch 四方共守）+烧机收据 digest 真身绑定（最新 fail 覆盖）+clearance 投影跨清场+DISP 末次适用 pairing 同构（泛指不批量解禁）+文档 marker 块生成器（真注册链单一事实源）+催办 routed/sent/received 诚实三态 | 双 owner/旧 pass 盖新 fail/清场删债/伪键回写解禁四反例守门（终审核真）；真烧机与桌面构建未活体=已知开口按 spec 红线不宣称 |
 | 总监派发（2026-11-06 O7，run28 后复核） | director 姿态已完成首跑，记录 14 次自主派发；需求草稿移交、等待自主任务书、超时降级 strict、`self-dispatch.jsonl` 独立台账与报告净额实算均已进入实跑；缺省零行为不变 | 按轮对照自主派发与 `dispatch-preset` 计数，核对自主派发确由组织产出而非脚本代写 |
-| 黄金集门检（2026-11-06 G4 子门，run28 后复核） | 30 例 P2P 材料已在 run28 完成观察态真跑并落 `evidence/evals/golden-gate.json`；实测 14 例误杀，说明判分器尚未校准，当前仍不阻断主门 | 保持观察态并校准误杀；未达到校准判据前不得升为硬门，也不得把本轮主门通过解释为黄金集全过 |
+| 黄金集门检（2026-11-06 G4 子门，run28 后复核） | 30 例 P2P 材料已在 run28 完成观察态真跑并落该轮运行目录内的黄金集门检产物（运行产物，不入库）；实测 14 例误杀，说明判分器尚未校准，当前仍不阻断主门 | 保持观察态并校准误杀；未达到校准判据前不得升为硬门，也不得把本轮主门通过解释为黄金集全过 |
 | 帧证据二态（2026-11-06，run28 后复核） | run28 帧采集与独立核验已完成；报错态与整板空白态判据已修，问题帧翻红、补拍与降级凭证均按真实状态呈现 | 继续按注册帧形态核验，保留报错、空白和缺帧的负面结论；摘要不得写「全部实拍」，隔离与降级步不计入可核验实拍 |
 | 跨轮指标留档（2026-11-06 O1，run28 后复核；2026-11-24 更新） | `docs/governance/run-metrics.jsonl` 已有 run27 至 run31 五轮记录（另含 run7 一轮），连续两轮判据已具备实际输入 | 按既定指标阈值消费两轮序列；缺轮、断档或指标缺席仍如实标注，不把两轮留档直接写成长期趋势结论 |
 | 执行证据链（2026-11-12 handbook 吸收） | run-trace schema 1.2（span_kind/Context Manifest/step/compaction/HITL span）在插件侧实现并有行为门；HITL 只做同 trace 边界标记（trace_boundary=interrupt/resume），不新建 trace 文件；Manifest 权限模式与信任级来自部署 env，缺省不猜；schema 1.2 事件须插件部署到目标 profile 后才出现在新 trace（旧 JSONL 读侧兼容已守门） | 以真实会话 trace 核对 span_kind 覆盖与 manifest 指纹稳定性；不得据旧 1.1 trace 宣称已有该面 |
 | 恢复真值与多 agent 预算（2026-11-12 handbook 吸收） | Action Ledger/幂等三态/恢复查未结算已接线（guard 默认关）；LLM 请求硬准入未接——`call_id/attempt_id` 已随 span 落账，预算租约先立账本语义，接入点属执行内核统一范围；团队停止 enforce 默认关且委派深度仅采纳调用方显式值（台账无 parent 链不猜）；黄金集 F2P 用合成负例，非 ground truth | 硬准入接入前不得宣称"LLM 调用受预算拦截"；深度事实须有真实 parent 链来源后才可注入；F2P 读数只证明判据区分力下限 |
 | 交接合同闭环（2026-11-13 超级智能体吸收批一） | 看板 PATCH/DELETE/decompose 三写入口接入 `authorizeTaskIds`＋`requestBoard`（隐藏 profile 404 与 complete/block 同权，补丁 770）；证据压缩器归档失败即 passthrough（无全文不摘要、模型零调用，补丁 771）；delegate_task 每任务 `strict_output_schema` 显式严格合同（失败关闭；interrupted/执行错误/max_iterations 原因优先不被覆盖；默认宽松行为字节级不变，补丁 772） | 严格模式仅由调用方显式声明生效，不得描述为默认行为；归档失败保真由 runtime/tests 与补丁内 vendor 测试双面锁定；三入口授权与既有写路径同权以控制器行为测试核验 |
-| 任务版本化与分级验证（2026-11-14 超级智能体吸收批二） | tasks 行级 `version` 乐观锁——所有改任务行路径（操作者动词＋claim/recompute_ready/reclaim 等内核迁移）事务内递增，携带 `expected_version` 不匹配即 409，缺省兼容放行记 legacy 事件；task_events 每行五字段 envelope（version/actor/time/reason/trace_id）；卡级 `verification` 三档（standard 缺省/independent=review handoff 回执/strict:pr=PR acceptance 必过），complete_task 单点拦、拒绝不自动改状态；runtime 六镜像（kanban_db/kanban_db_connect/kanban/kanban_parser/kanban_tools/kanban_tools_schemas）随批同构 | 兼容期 legacy 流量可识别可收敛；等级证据只认 kanban 库内源（PR acceptance store/review lane），Person/claims 留后续接入点；Vue 客户端 expectedVersion 发送挂账下一批 |
-| 回归矩阵（2026-11-24） | `config/regression-matrix.json` 登记全部测试面及其关口，推送前钩子执行其推送前档，口径见 6.3。推演 harness、Python 与 Ycode 七个测试面自 2026-11-25 起由 `regression-axes.yml` 覆盖（命令就是回归矩阵里的测试面，正向路径触发，含 `team/**`）；此前只靠钩子强制 | 把关测试断言五项——发现、归属、CI 引用、钩子接线、manual 逃逸通道闭合（manual 面必须 scopes 恰为全量档且带注记理由，2026-11-26 由四项扩五项）；给 CI 补这三个面须先在分支上验证再合入，不得只改工作流文件；设计侧记录（2026-11-25）：本批已全部实施，后续三批清偿（挂账台账 N35-1 至 N35-12）见 `docs/superpowers/specs/2026-11-25-full-retro-pending-closeout.md` |
+| 任务版本化与分级验证（2026-11-14 超级智能体吸收批二） | tasks 行级 `version` 乐观锁——所有改任务行路径（操作者动词＋claim/recompute_ready/reclaim 等内核迁移）事务内递增，携带 `expected_version` 不匹配即 409，缺省兼容放行记 legacy 事件；task_events 每行五字段 envelope（version/actor/time/reason/trace_id）；卡级 `verification` 三档（standard 缺省/independent=逐条 AC 验收报告，见 4.4/strict:pr=PR acceptance 必过），complete_task 单点拦、拒绝不自动改状态；runtime 六镜像（kanban_db/kanban_db_connect/kanban/kanban_parser/kanban_tools/kanban_tools_schemas）随批同构 | 兼容期 legacy 流量可识别可收敛；等级证据只认 kanban 库内源（PR acceptance store/review lane），Person/claims 留后续接入点；Vue 客户端 expectedVersion 发送挂账下一批 |
+| 回归矩阵（2026-11-24） | `config/regression-matrix.json` 登记全部测试面及其关口，推送前钩子执行其推送前档，口径见 6.3。推演 harness、Python 与 Ycode 七个测试面自 2026-11-25 起由 `regression-axes.yml` 覆盖（命令就是回归矩阵里的测试面，正向路径触发，含 `team/**`）；此前只靠钩子强制 | 把关测试断言五项——发现、归属、CI 引用、钩子接线、manual 逃逸通道闭合（manual 面必须 scopes 恰为全量档且带注记理由，2026-11-26 由四项扩五项）；设计侧记录（2026-11-25）：本批已全部实施，后续三批清偿（挂账台账 N35-1 至 N35-12）见 `docs/superpowers/specs/2026-11-25-full-retro-pending-closeout.md` |
 | 会话库缺席（2026-11-24） | `$HERMES_HOME/state.db` 尚未生成时（全新安装、从未启动过的 profile），会话列表与详情读面返回空结果（补丁 817）；此前只读开库直接抛错，IDE 壳与协作历史页共 7 条路由得到 500 | `custom/upstream-compat/__tests__/sessions-db-missing-home.test.ts` 先红后绿；库存在时走原路径，行为不变 |
 | 注入尾部增量（2026-11-24） | 增量注入改为按通道比对前缀：非末位通道的尾部追加不再被误判成中插；此前给 hermes-studio 通道每加一枚补丁都被迫全量重放 | `inject-manifest` 三例（通道尾部追加放行、同通道中插仍拒、通道顺序颠倒仍拒）；补丁 817 经增量通道真实应用 |
 | Ycode 依赖安全刷新（2026-11-24） | Ycode 基线锁文件的生产依赖审计报出 266 条通告（严重 3、高危 93），上游没有更新可同步。zcode-patch 013 在根 `package.json` 的 `pnpm.overrides` 追加 38 条，把带通告的包钉到同大版本内的最小修补版本，锁文件随之重新解析；刷新后余 13 条（严重 0、高危 5），都要跨大版本才能修或属 Electron 本体，挂账待裁决。引擎依赖是否就绪改为以锁文件为准：`node_modules` 里记录锁文件指纹，指纹落后即补装；此前只看目录在不在，已有安装不会跟进锁文件变化。续批（同日）：开发依赖同样处理（zcode-patch 014，含测试框架升到 4.1.12），Ycode 全部依赖通告 77→20 条，剩下的都只能跨大版本才能修或属 Electron 本体；依赖审计进合并前档与全量档（`dependency-audit` 面），比对已接受通告清单，清单之外的高危或严重才失败 | 把关测试逐条核对覆盖项已在 `vendor/zcode` 的 `package.json` 与锁文件里，干净树不得带覆盖项；`zcode-engine-ensure` 八例锁指纹判据与失败时的降级；Ycode 四条验证面在同一棵树上全过 |

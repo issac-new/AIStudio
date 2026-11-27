@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import type { Server } from 'node:http'
 import { createTrainingServer } from '../../scripts/start-training-manual.mjs'
 
@@ -559,7 +559,15 @@ describe('AIStudio 交互培训课程契约', () => {
   it('六团队手册覆盖独立交付主线、实现边界和所有参考材料', () => {
     const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
     const feature = readFileSync(resolve(root, 'docs/manuals/aistudio-feature-inventory.md'), 'utf8')
-    expect(feature).toContain('默认内容路由 | **80**')
+    // 功能清单的总数不写死：头部声明的默认内容页数必须等于各章声明数之和（2026-11-26 文档刷新批；
+    // 此前断言写死 80，清单多算一个已删除的页面并漏收五个上游页面时仍全绿）。
+    const contentTotal = Number(/默认内容路由 \| \*\*(\d+)\*\*/.exec(feature)?.[1])
+    const chapterTotals = [
+      ...feature.matchAll(/^## [二三四五六七八九]、[^\n]*?(\d+) 个内容路由/gm),
+    ].map(match => Number(match[1]))
+    expect(chapterTotals, '功能清单第二至九章应各有「N 个内容路由」声明').toHaveLength(8)
+    expect(contentTotal, '功能清单缺「默认内容路由 | **N**」').toBeGreaterThan(0)
+    expect(chapterTotals.reduce((sum, n) => sum + n, 0), '默认内容页数不等于各章声明之和').toBe(contentTotal)
     expect(feature).toContain('IDE 辅助栏页签 | **23**')
     for (const route of ['/app/projects', '/app/projects/:id', '/app/records', '/app/records/:kind/:id']) expect(feature).toContain(route)
     for (const text of [
@@ -598,8 +606,36 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(run28Case).toMatch(/open\s*=?\s*65/)
     for (const text of ['/app/projects', '/app/records', 'run28 裁决开立：先决定放行或冻结', 'contractGuardHook', '13/14']) expect(html).toContain(text)
     const yuanGuide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'), 'utf8')
-    for (const text of ['Step 1-13', '研发四阶段', 'L4 state-machine build guard', 'R134', '真实 ACP 编码回合', '59', '204', '`--all-full`=32', 'SCHEMA_EPOCH', 'shortcut:']) {
-      expect(yuanGuide).toContain(text)
+    // 门禁数与配置变量数不写死：读载体。此前此处断言 '204'，指南停在旧值时仍全绿
+    // （2026-11-26 文档刷新批改为结构断言；同文件上方技术指南断言已是同一写法）。
+    const factsForGuide = readFileSync(resolve(root, 'skills/swarm-yuan/assets/facts.conf'), 'utf8')
+    const factOf = (key: string): string => {
+      const match = new RegExp(`^${key}=(\\d+)`, 'm').exec(factsForGuide)
+      expect(match, `facts.conf 缺 ${key}`).not.toBeNull()
+      return String(match?.[1])
+    }
+    // 数字断言带语境：裸数字做子串匹配时，文档别处出现同一数字即可误过
+    // （2026-11-26 变异探针实证：改掉一处 205 后仍全绿）。绑定到陈述该数字的短语上。
+    // 随技能分发的档数读注册表的 distributed 列（standard/compliance/lite 三类计入分发）。
+    // 变异探针实证：只锁总数不锁分发数时，把 44 改回 42 仍全绿。
+    const referencesTsv = readFileSync(resolve(root, 'skills/swarm-yuan/assets/registry/references.tsv'), 'utf8')
+    const distributedCount = referencesTsv
+      .split('\n')
+      .filter((line) => line && !line.startsWith('#'))
+      .filter((line) => ['standard', 'compliance', 'lite'].includes(line.split('\t')[5] ?? ''))
+      .length
+    const core = factOf('FACT_CONF_VARS_CORE')
+    const arch = factOf('FACT_CONF_VARS_ARCH')
+    const comp = factOf('FACT_CONF_VARS_COMPLIANCE')
+    expect(Number(factOf('FACT_CONF_VARS'))).toBe(Number(core) + Number(arch) + Number(comp))
+    for (const text of [
+      'Step 1-13', '研发四阶段', 'L4 state-machine build guard', 'R134', '真实 ACP 编码回合', '`--all-full`=32', 'SCHEMA_EPOCH', 'shortcut:',
+      `门禁总数 ${factOf('FACT_GATES_TOTAL')}，`,
+      `配置变量为 ${factOf('FACT_CONF_VARS')}，即 core ${core}、arch ${arch}、compliance ${comp}`,
+      `${factOf('FACT_REFERENCES')} 份 references`,
+      `${factOf('FACT_REFERENCES')} 档中 ${distributedCount} 档随技能分发`,
+    ]) {
+      expect(yuanGuide, `研发指南缺少：${text}`).toContain(text)
     }
   })
 
@@ -759,5 +795,173 @@ describe('培训分层与诚实催办（P2 Task 3）', () => {
     expect(interactive).toContain('本页不执行')
     const printFn = html.slice(html.indexOf('function printPage'), html.indexOf('function preparePrint'))
     expect(printFn).toContain('本页不执行')
+  })
+})
+
+describe('文档结构检查（2026-11-26 文档刷新批）', () => {
+  const feature = readFileSync(resolve(root, 'docs/manuals/aistudio-feature-inventory.md'), 'utf8')
+
+  it('功能清单：带编号的表格行连续不断开，行数等于本章声明的数量', () => {
+    // 2026-11-26 蓝军实证：第九章表格外（分隔线之后）另放了五行编号行，按表格解析全部丢失。
+    const chapters = [...feature.matchAll(/^## ([一二三四五六七八九十]+)、([^\n]*)$/gm)]
+    expect(chapters.length).toBeGreaterThan(10)
+    // 编号行是「内容路由」的章：编号行数必须等于标题声明的路由数
+    const routeChapters = new Set(['二', '四', '七', '八', '九', '十一'])
+    for (const [index, chapter] of chapters.entries()) {
+      const end = chapters[index + 1]?.index ?? feature.length
+      const body = feature.slice(chapter.index!, end)
+      const lines = body.split('\n')
+      const numbered = lines
+        .map((line, at) => ({ line, at }))
+        .filter(({ line }) => /^\| \d+ \| /.test(line))
+      if (numbered.length === 0) continue
+      const numbers = numbered.map(({ line }) => Number(/^\| (\d+) \|/.exec(line)![1]))
+      expect(numbers, `第${chapter[1]}章编号行应从 1 连续编号`).toEqual(numbers.map((_, at) => at + 1))
+      // 首末编号行之间不允许出现非表格行（空行、分隔线、说明段都算把表格断开）
+      const between = lines.slice(numbered[0].at, numbered[numbered.length - 1].at + 1)
+        .filter(line => !line.startsWith('|'))
+      expect(between, `第${chapter[1]}章编号表格中间有非表格行`).toEqual([])
+      if (routeChapters.has(chapter[1])) {
+        const declared = chapter[2].match(/(\d+) 个(?:内容路由|重定向)/)
+        expect(declared, `第${chapter[1]}章标题应声明数量`).not.toBeNull()
+        expect(numbered.length, `第${chapter[1]}章编号行数与标题声明不符`).toBe(Number(declared![1]))
+      }
+    }
+  })
+
+  it('功能清单：路由清单生成器覆盖注册入口里全部会注册路由的模块', () => {
+    // 2026-11-26 蓝军实证：/app/expdual 在 bootstrap 注册、生成器漏登记，路由计数少一条。
+    const bootstrap = readFileSync(resolve(root, 'registries/client/bootstrap.ts'), 'utf8')
+    const generator = readFileSync(resolve(root, 'scripts/regression/route-manifest.ts'), 'utf8')
+    const imported = (text: string) => new Set(
+      [...text.matchAll(/import\('\.\.\/\.\.\/custom\/client\/([a-z0-9-]+)'\)/g)].map(match => match[1]),
+    )
+    const entryModules = imported(bootstrap)
+    const generatorModules = imported(generator)
+    expect(entryModules.size, '注册入口应引入多个 custom 模块').toBeGreaterThan(5)
+    // 这五个模块的路由不走 registerRoute 收集：ia2、ide 由生成器用 build*Routes 另行加入，
+    // branding、cockpit、kanban 不注册页面路由。名单之外出现漏登记即失败。
+    const notCollected = new Set(['branding', 'cockpit', 'ia2', 'ide', 'kanban'])
+    const missing = [...entryModules].filter(name => !generatorModules.has(name) && !notCollected.has(name))
+    expect(missing, '这些模块在 bootstrap 注册路由，但 scripts/regression/route-manifest.ts 没有引入').toEqual([])
+  })
+
+  it('研发指南：参考文档分组表逐行数量、合计与登记表一致', () => {
+    // 2026-11-26 蓝军实证：分组表九行相加只有 61，登记表是 63，两份文档漏列。
+    const guide = readFileSync(resolve(root, 'docs/manuals/aistudio-swarm-yuan-developer-guide.md'), 'utf8')
+    const heading = /^### (\d+) 份方法论与规范文档$/m.exec(guide)
+    expect(heading, '研发指南缺「N 份方法论与规范文档」小节').not.toBeNull()
+    const start = heading!.index! + heading![0].length
+    const section = guide.slice(start, guide.indexOf('\n### ', start) === -1 ? guide.length : guide.indexOf('\n### ', start))
+    const rows = [...section.matchAll(/^\| ([^|（]+)（(\d+)） \| ([^|]+) \|/gm)]
+    expect(rows.length, '分组表应有九个主题域').toBe(9)
+    const listed = new Set<string>()
+    for (const row of rows) {
+      const items = row[3].split('、').map(item => item.trim()).filter(Boolean)
+      expect(items.length, `「${row[1].trim()}」声明 ${row[2]} 份，实列 ${items.length} 份`).toBe(Number(row[2]))
+      for (const item of items) listed.add(item)
+    }
+    const total = rows.reduce((sum, row) => sum + Number(row[2]), 0)
+    expect(Number(heading![1]), '小节标题的份数').toBe(total)
+    const facts = readFileSync(resolve(root, 'skills/swarm-yuan/assets/facts.conf'), 'utf8')
+    // facts.conf 的赋值行数字后带行内注释，只比对数值
+    expect(Number(/^FACT_REFERENCES=(\d+)/m.exec(facts)?.[1]), 'facts.conf 的 FACT_REFERENCES 与分组表合计不符').toBe(total)
+    const registry = readFileSync(resolve(root, 'skills/swarm-yuan/assets/registry/references.tsv'), 'utf8')
+    const registered = new Set(registry.split('\n').filter(line => line && !line.startsWith('#')).map(line => line.split('\t')[0]))
+    expect([...listed].filter(id => !registered.has(id)), '分组表列了登记表没有的文档').toEqual([])
+    expect([...registered].filter(id => !listed.has(id)), '分组表漏列登记表里的文档').toEqual([])
+  })
+
+  it('文档间指向培训手册小节与培训课程场景的锚点都真实存在', () => {
+    // 2026-11-26 实证：README 与使用指南指向「#34-创建首个管理员账号」，手册分层重排后该小节早已不在。
+    const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
+    const slug = (heading: string) => heading.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').trim().replace(/\s+/g, '-')
+    const manualAnchors = new Set([...manual.matchAll(/^#{1,6} (.+)$/gm)].map(match => slug(match[1])))
+    const { SCENES } = courseData()
+    const sceneIds = new Set(SCENES.map(scene => scene.id))
+    const sources = [
+      resolve(root, 'README.md'),
+      ...['docs', 'docs/manuals'].flatMap(dir => readdirSync(resolve(root, dir))
+        .filter(file => /\.(md|html)$/.test(file) && file !== 'aistudio-training-and-user-guide.md')
+        .map(file => resolve(root, dir, file))),
+    ]
+    const dangling: string[] = []
+    let checked = 0
+    for (const file of sources) {
+      const text = readFileSync(file, 'utf8')
+      for (const match of text.matchAll(/aistudio-training-and-user-guide\.md#([^\s)'"<>]+)/g)) {
+        checked += 1
+        if (!manualAnchors.has(decodeURIComponent(match[1]))) dangling.push(`${file.slice(root.length + 1)} → #${match[1]}`)
+      }
+      for (const match of text.matchAll(/aistudio-interactive-training\.html#scene=([a-z0-9-]+)/g)) {
+        checked += 1
+        if (!sceneIds.has(match[1])) dangling.push(`${file.slice(root.length + 1)} → scene=${match[1]}`)
+      }
+    }
+    expect(checked, '应当至少检查到十处锚点').toBeGreaterThan(10)
+    expect(dangling, '悬空锚点').toEqual([])
+  })
+
+  it('团队说明：档位数等于 team/profiles 的实际档位目录数', () => {
+    // 2026-11-26 蓝军实证：两份说明写 30 个，三个领域网关档位于 2026-11-18 并入主档位后实际是 27 个。
+    const actual = readdirSync(resolve(root, 'team/profiles'), { withFileTypes: true })
+      .filter(entry => entry.isDirectory() && entry.name !== '_shared').length
+    expect(actual).toBeGreaterThan(10)
+    for (const [file, pattern, headline] of [
+      ['team/README_zh.md', /^### .+?（(\d+) 个 profile）/gm, `**本仓 ${actual} 个 profile**`],
+      ['team/README.md', /^### .+?\((\d+) profiles?\)/gm, `**${actual} profiles**`],
+    ] as const) {
+      const text = readFileSync(resolve(root, file!), 'utf8')
+      const sections = [...text.matchAll(pattern!)].filter(match => !match[0].includes('已移除'))
+      expect(sections.length, `${file} 应有团队分节`).toBeGreaterThan(5)
+      expect(sections.reduce((sum, match) => sum + Number(match[1]), 0), `${file} 各分节档位数之和`).toBe(actual)
+      expect(text, `${file} 开头的档位数`).toContain(headline!)
+    }
+  })
+
+  it('功能清单：路由定义行的行号锚点能落到对应路由上', () => {
+    // 2026-11-26 实证：清单里的路由行号几乎整体偏位——本仓路由文件 99 处只有 15 处落到该路由的定义上，
+    // 上游路由文件偏 5—6 行；这些行号在任何一版已提交文件里都没对过。规则：某行主题是路由路径时，
+    // 它引用的路由文件里只要定义了这条路径，同一行引用该文件的行号就必须有一段落到定义上。
+    // 上游文件只读 git show 取已提交基线，不读注入后的工作树；本仓文件直接读工作树。
+    expect(feature, '功能清单应声明行号基准').toContain('本文引用的 `vendor/` 行号按已提交的基线文件')
+    const vendorRouter = 'vendor/hermes-studio/packages/client/src/router/index.ts'
+    const fileLines = new Map<string, string[]>()
+    const linesOf = (file: string): string[] => {
+      if (!fileLines.has(file)) {
+        fileLines.set(file, file.startsWith('vendor/')
+          ? execFileSync('git', ['show', `HEAD:${file}`], { cwd: root, encoding: 'utf8' }).split('\n')
+          : readFileSync(resolve(root, file), 'utf8').split('\n'))
+      }
+      return fileLines.get(file)!
+    }
+    const routeFiles = /((?:custom\/client\/[a-z0-9-]+\/(?:routes|index)\.ts|vendor\/hermes-studio\/packages\/client\/src\/router\/index\.ts)):([\d,-]+)/g
+    let checked = 0
+    for (const line of feature.split('\n')) {
+      const subject = [...line.matchAll(/`([^`]+)`/g)].map(match => match[1]).find(token => token.startsWith('/'))
+      if (!subject) continue
+      // 三种写法都认：annex('路径'…) 一行式、path: '路径'、重定向表的 from:；/app 下的子路由写相对路径。
+      // 清单把正则参数缩写成 :section(...)，按左前缀匹配。
+      const forms = [subject.split('(')[0]]
+      if (subject.startsWith('/app/')) forms.push(subject.slice('/app/'.length).split('(')[0])
+      const needle = new RegExp(`(?:annex\\(\\s*|path:\\s*|from:\\s*)'(?:${[...new Set(forms)].map(form => form.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})${subject.includes('(') ? '\\(' : "'"}`)
+      // 按文件分别判断：同一行引用同一个文件可能有多个行号（路径定义、守卫逻辑等），
+      // 只要其中一段落到定义上，这个文件的行号就算对。
+      const byFile = new Map<string, number[][]>()
+      for (const anchor of line.matchAll(routeFiles)) {
+        const ranges = byFile.get(anchor[1]) ?? []
+        ranges.push(...anchor[2].split(',').map(range => range.split('-').map(Number)))
+        byFile.set(anchor[1], ranges)
+      }
+      for (const [file, ranges] of byFile) {
+        const defined = linesOf(file).map((text, at) => (needle.test(text) ? at + 1 : 0)).filter(Boolean)
+        // 该文件里没有这条路径的定义时不判（例如清单只是提到一个已退役的路径）
+        if (defined.length === 0) continue
+        const hit = ranges.some(([from, to]) => defined.some(at => at >= from && at <= (to ?? from)))
+        expect(hit, `「${subject}」引用 ${file}:${ranges.map(range => range.join('-')).join('、')}，但这条路由定义在第 ${defined.join('、')} 行`).toBe(true)
+        checked += 1
+      }
+    }
+    expect(checked, '应当至少检查到一百处路由行号').toBeGreaterThan(100)
   })
 })

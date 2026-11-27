@@ -1,7 +1,7 @@
 # AIStudio 设计事实与容量基线
 
 > 本文是《AIStudio 终态设计文档》的数字附录，不是独立设计正本。
-> 核实日：2026-11-26（run32 方案程序同步批——§C 各行已随 11-26 发版批核对进位，本批仅进表头日期并同步运行基面注记；spec `2026-11-26-run32-plan-sync.md`）。
+> 核实日：2026-11-27（run32 方案程序同步批与文档刷新批——§C 各行已随 11-26 发版批核对进位；run32 批同步运行基面注记，文档刷新批订正 §A 跨域契约条数与团队档数；spec `2026-11-26-run32-plan-sync.md`、`2026-11-26-docs-manual-refresh.md`）。
 > 口径：区分稳定设计参数、参考部署和版本快照。
 > 用途：防止同一数字在多处定义，不滚动记录开发轮次。
 
@@ -18,7 +18,7 @@
 | 推演主链步骤 / 质量门 | 26 / 6 | `2026-10-05-mux-v8-fullflow-plan.md` |
 | 人工介入点 | 14 | 冻结需求与推演责任契约 |
 | 运行时组件 | 5 | 驾驶舱、Matrix、hermes agent、Ycode、swarm-yuan |
-| 跨域契约 | 5 | 技能、能力委托、任务证据、治理审批、推演验证 |
+| 跨域契约 | 7 | 技能供给、能力发现与委托、能力供需、任务与证据、治理与审批、推演验证、命令行与自动化（与正本 §3.9 表七行一致；此前记 5 是漏计能力供需与命令行两项） |
 | 发布形态 | 4 个模块包＋1 份整体源码包 | `RELEASE-MANIFEST.json` |
 | spec 强制层数 | 4 | L1 写时 / L2 提交 / L3 门禁 / L4 准入（`spec-first-lib.sh`） |
 | spec 机检段落 | 4 | 变更、决策记录、验证、设计文档影响 |
@@ -52,7 +52,7 @@
 | 探测并发缺省 | 2（上限 8，另按单元数与预算超支二次收敛） | 调度面 `probeConcurrency`：>1 时按有界池并行「题×样本」，预算按在途估值预扣，并发下证据只认 stream-json（`2026-11-03-harmony-multiobjective.md`） |
 | 断点推断缺省阈值 | 边界 3 分／间歇 20 分／节奏钳 5-120 分 | 看板生命周期事件推断断点：状态边界或长间歇判为断点，否则按事件间隔中位数推测下一断点；缺证据判非断点（`2026-11-03-proactive-intervention-governance.md`） |
 | 注意力偏好缺省 | 日 8／时 3／冷却 30 分／退避 12h／安静 22:00-08:00 | 同上；`attention.json` 可改，反馈不自动改写 |
-| 改进实验证据门缺省档 | 5 门告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT}` 逐门升硬闸；缺省不阻断（同上 §6.2） |
+| 改进实验证据门缺省档 | 7 门告警 | `HARNESS2_RSI_REQUIRE_{NOISE,ATTRIBUTION,CONSTRAINTS,COUNTERFACTUAL,HELDOUT,EXECUTION}` 六个开关加编辑类别严格开关 `HARNESS2_EDIT_CLASS_STRICT`；逐门升硬闸，缺省不阻断；另有保留率门与增益崩塌门恒为阻断，不受开关影响（`custom/server/harness/workbench/loop-config.ts:78-84`，同上 §6.2） |
 | 反事实预演预算 | 单 sync 上限 5 条；`ANTICIPATION_PREVIEW=off` 关闭 | 干预收益双通道：预演差值优先（置信减权融合），失败/关闭回静态启发式表（`2026-11-14-proactive-ai-round2.md` P2） |
 | earned autonomy 建议阈值 | 冷启动 <20 hold／收紧：人介入 >30% 或积压 >50%／放宽：≥50 样本零介入且自动放行 >90% | advisory-only 不动档；放宽永须人确认（同上 P4） |
 | 发现测试判据 | 无锚点判 unsupported／正确沉默＝对已解决集零重复报告／验证负担＝超 maxFindings 比例 | discovery 形态评测四指标，指纹并入 discovery 字段且存量逐字节兼容（同上 P1） |
@@ -82,7 +82,7 @@
 | 看板 | 28 | 每人两块，主管不建板 |
 | 任务并发 | 30 | 推演运行参数，不是跨环境保证 |
 
-当前仓库 `team/profiles` 有 30 个 agent profile（含 orchestrator，不含 `_shared`）。
+当前仓库 `team/profiles` 有 27 个 agent profile（含 orchestrator，不含 `_shared`）；2026-11-18 把三个域 orchestrator 并入主 orchestrator 后由 30 降为 27。
 `profiles.yaml` 等注册表可能保留历史条目，活动编制以 `team/profiles`
 和组织注册信息为准。看板按领域注册表配置，不能把推演编制当成产品部署数量。
 
@@ -117,7 +117,7 @@ zcode 的基线谱系、包版本和补丁序列是三个不同口径。
 2026-11-11 v1.0.15 发布轮核对：驾驶舱 studio.1→studio.2（identity-chat/执行内核 P0b-P1/技能存储合一/IDE 收窄等 custom 23 文件＋patches 17 文件实质变更，声明前进包不重发）、teams team.1→team.2（补丁 763-766＋runtime 技能存储＋acp-client P0b）、yuan v2.100.2→v2.100.3（技能根统一批收编＋门禁注释修正）、整体包 1.0.14→1.0.15；zcode/ycode 行持平（3.17.2，活跃补丁 9）。同批清偿 identity-chat 批2 守门债（K19 双棘轮＋raci 白名单，spec 2026-11-10-identity-chat-matrix-batch2 域内）。
 2026-11-17 run31 方案同步批核对：studio 行随基线升 v0.8.21（312425cca，2026-11-13 双升级批）、zcode/ycode 行随同步升 3.18.2（fec97590，同批；**VENDOR.md zcode 表行当批被 merge 撤出漏入**——b8b6202c0 第三次清偿只救回 studio 行，本批随 VENDOR_SYNC=1 第四次清偿补 zcode 行）、驾驶舱/teams/yuan/整体包四行随 v1.0.16 发布轮进位（0.8.20-studio.3／v0.23.1-team.3／v2.100.4／1.0.16-overlay，载体 RELEASE-NOTES/team/VERSION/CHANGELOG/package.json 实测）；agent 行持平 v0.23.1。此前核实日停在 2026-11-09，本批清偿设计导读先行于总账本体的漂移。
 2026-11-23 台账最新版与兼容升级批核对：studio 行随基线升 v0.8.30（8a51d1bcf，v0.8.28→v0.8.30 为 16 提交/117 文件，5 枚补丁适配、clean+inject 510/510 零失败幂等二连）、驾驶舱行随底座换血归 0.8.30-studio.1（扩展序归 1，声明前进包不重发）；agent/zcode/ycode/teams 行持平（v0.23.3／3.18.2 @fec97590／v2.103.0／v0.23.3-team.2）。Ycode 宿主 RPC 复制面同批同步 fec97590（旧 pin 872ad96 清偿，守门废除全文件豁免）。安装版快照 ZCode.app 3.19.1 属另账事实源，公开源码未发布，不入基线行。spec 2026-11-23-tech-ledger-latest-compat。
-2026-11-26 全面复盘与发版批核对（spec `2026-11-26-release-v1.0.21-overlay.md`）：驾驶舱行同底座进 0.8.30-studio.3、整体源码包行进 1.0.21-overlay；hermes-agent 行已于 v0.23.4 换血批升 v0.23.4（agent teams 载体 v0.23.4-team.1）；studio／zcode／yuan 行持平（v0.8.30／4.0.0 @a4b44451／v2.103.0）。补丁在册由 510 增至 518（patches 504＋zcode 14）。回归矩阵全量档 23 面在 199a18ad1 首跑、标签提交 806ddd183 独立检出复跑同过（发版后加固与文档清偿见挂账台账 N36）。ModelScope 通道自本版起每版加发整体源码包（双通道同件，2026-11-26 用户裁决）。本表只汇总当前载体值，此前核对段保留其成文时点，不回写历史。
+2026-11-26 全面复盘与发版批核对（spec `2026-11-26-release-v1.0.21-overlay.md`）：驾驶舱行同底座进 0.8.30-studio.3、整体源码包行进 1.0.21-overlay；hermes-agent 行已于 v0.23.4 换血批升 v0.23.4（agent teams 载体 v0.23.4-team.1）；studio／zcode／yuan 行持平（v0.8.30／4.0.0 @a4b44451／v2.103.0）。补丁在册由 510 增至 518（patches 504＋zcode 14）。回归矩阵全量档 23 面在 199a18ad1 首跑、标签提交 806ddd183 独立检出复跑同过（发版后加固与文档清偿见挂账台账 N36）；发版后可信 RSI 后续批新增 `governance-rsi-walkthrough`，矩阵现为 24 个测试面（推送前 10、合并前 15、全量 24）。ModelScope 通道自本版起每版加发整体源码包（双通道同件，2026-11-26 用户裁决）。本表只汇总当前载体值，此前核对段保留其成文时点，不回写历史。
 2026-11-23 ZCode 4.0.0 同步发版批核对：zcode/ycode 行随基线升 4.0.0（a4b44451＝tag v4.0.0＝上游 main 头，差量 2209 文件含未发布源码的 3.19.x 全部变更；补丁 11 条零退役，004/006/009/011 重做、其余原样应用；clean+inject 510/510 零失败幂等二连）、驾驶舱行同底座进 0.8.30-studio.2、整体源码包行进 1.0.20-overlay；studio/agent/teams 行持平（v0.8.30／v0.23.3／v0.23.3-team.2）。上一段「安装版另账」的口径自本批作废：上游源码已公开，本机安装版 4.0.0 与源码基线合一。Ycode 宿主 RPC 复制面同批同步 a4b44451。spec 2026-11-23-zcode-400-upgrade-release。
 2026-11-09 培训刷新批核对（成文时点在同日台账刷新批之前，所记载体值为当时快照）：hermes-studio 基线维持 v0.8.17；v1.0.14 发布载体已将驾驶舱、agent teams、yuan skill 与整体源码包分别进位到 0.8.17-studio.2、v0.23.0-team.2、v2.100.1、1.0.14-overlay，Ycode 维持 3.17.2。本表只汇总当前载体值，此前核对段保留其成文时点，不回写历史。
 Electron 桌面 runtime 另有独立钉版，不与 agent teams 模块版本互推。

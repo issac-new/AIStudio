@@ -79,9 +79,34 @@ describe('AIStudio 15 分钟演示稿契约', () => {
     for (const fact of ['1.0.21-overlay', '0.8.30-studio.3', 'v0.23.4-team.1', '4.0.0', 'v2.103.0']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
-    for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', '59 道门禁', 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭', '研发小循环', '组织大循环', 'Matrix', '本体', '对象 · 关系 · 动作', 'GB/T 22239', 'ISO 26262', 'OWASP ASVS 5.0', '博学 · 审问 · 慎思 · 明辨 · 笃行 · 不贰过 · 举一反三']) {
+    // 门禁数不写死：读技能的事实来源文件（2026-11-26 文档刷新批；写死旧值会让数字过期后仍全绿）。
+    const factsDeck = readFileSync(resolve(root, 'skills/swarm-yuan/assets/facts.conf'), 'utf8')
+    const gatesTotal = new RegExp(`^FACT_GATES_TOTAL=(\\d+)`, 'm').exec(factsDeck)?.[1]
+    const confVars = new RegExp(`^FACT_CONF_VARS=(\\d+)`, 'm').exec(factsDeck)?.[1]
+    expect(gatesTotal, 'facts.conf 缺 FACT_GATES_TOTAL').toBeTruthy()
+    expect(confVars, 'facts.conf 缺 FACT_CONF_VARS').toBeTruthy()
+    for (const fact of ['SOP', '五项能力', '六层', '三类目录', '六段目录', '档位', 'SCHEMA_EPOCH', 'lessons', `${gatesTotal} 道门禁`, `${confVars} 变量`, `${confVars} 个配置变量`, 'gate-runs', '四层拦截', '变异验证', 'ACP', 'R134', 'skill → spec → loop → graph → harness → multi-agent（memory）→ RSI', '约束驾驭', '研发小循环', '组织大循环', 'Matrix', '本体', '对象 · 关系 · 动作', 'GB/T 22239', 'ISO 26262', 'OWASP ASVS 5.0', '博学 · 审问 · 慎思 · 明辨 · 笃行 · 不贰过 · 举一反三']) {
       expect(html, `核心理念缺失：${fact}`).toContain(fact)
     }
+    // 门禁面板的大数字与分段条必须等于载体并互斥（核心＋架构＋合规＝总数）。
+    // 变异探针实证：只断言短语「N 道门禁」时，把面板大数字 59 改成 56 仍全绿（短语命中的是别处文本）。
+    const factNum = (key: string): number => {
+      const match = new RegExp(`^${key}=(\\d+)`, 'm').exec(factsDeck)
+      expect(match, `facts.conf 缺 ${key}`).not.toBeNull()
+      return Number(match?.[1])
+    }
+    const gatesCore = factNum('FACT_GATES_CORE')
+    const gatesArch = factNum('FACT_GATES_ARCH')
+    const gatesComp = factNum('FACT_GATES_COMPLIANCE')
+    const gatesAdvisory = factNum('FACT_GATES_ADVISORY_ONLY')
+    // decision/state-phase 守卫 2：完整执行序列减去核心、架构、合规三段（完整序列已含合规，不能再用总数去减）
+    const gatesRest = factNum('FACT_GATES_FULL') - gatesCore - gatesArch - gatesComp
+    // 分段条五段互斥，合计必须等于总数（此前只画三段共 51，漏了仅建议 6 与决策守卫 2）。
+    expect(gatesCore + gatesArch + gatesComp + gatesAdvisory + gatesRest).toBe(Number(gatesTotal))
+    const pct = (n: number): string => (n / Number(gatesTotal) * 100).toFixed(1)
+    expect(html).toContain(`<div class="big"><b>${gatesTotal}</b><span>道门禁 · ${confVars} 变量</span></div>`)
+    expect(html).toContain(`<div class="bar"><i style="width:${pct(gatesCore)}%">核心 ${gatesCore}</i><i style="width:${pct(gatesArch)}%">架构 ${gatesArch}</i><i style="width:${pct(gatesComp)}%">合规 ${gatesComp}</i><i style="width:${pct(gatesRest)}%"></i><i style="width:${pct(gatesAdvisory)}%">仅建议 ${gatesAdvisory}</i></div>`)
+    expect(html).toContain(`另有决策与阶段守卫 ${gatesRest}`)
     expect(html).toContain('全部通过不等同于业务正确')
     expect(html).toContain('真实缺陷语料仍在采集')
     expect(html).not.toContain('【待补】')

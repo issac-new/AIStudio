@@ -145,7 +145,7 @@ npm run serve &                                   # 3. 后端 :8647
 npm run dev                                       # 4. 前端 :8649（vite，改代码即时热更新）
 ```
 
-浏览器打开 `http://localhost:8649`。已有账号直接登录。共享或培训环境首次建号使用[《培训和使用手册》的随机密码流程](docs/manuals/aistudio-training-and-user-guide.md#34-创建首个管理员账号)；`HERMES_WEB_UI_DEV_BOOTSTRAP=1` 仅限隔离开发环境的空库引导。出厂默认口令已删除。
+浏览器打开 `http://localhost:8649`。已有账号直接登录。共享或培训环境首次建号使用[《培训和使用手册》的随机密码流程](docs/manuals/aistudio-training-and-user-guide.md#161-共享培训或生产怎样启动)；`HERMES_WEB_UI_DEV_BOOTSTRAP=1` 仅限隔离开发环境的空库引导。出厂默认口令已删除。
 
 改了 B 类 patch 后须 `npm run clean && npm run inject` 再重启后端。完整走法（三种模式的典型流程、角色旅程、服务重启、排障）见[《使用指南》](docs/USAGE.md)。
 
@@ -169,7 +169,7 @@ npm run dev                                       # 4. 前端 :8649（vite，改
 - [全量功能清单](docs/manuals/aistudio-feature-inventory.md)：全部路由、页签、写读边界、特性开关和未接线能力。
 - [管理员运维参考](docs/manuals/aistudio-operations-reference.md)：启动注入、配置、数据、健康检查与故障分类。
 - [设计文档导读](docs/manuals/aistudio-design-document-guide.md)与[全量索引](docs/manuals/aistudio-design-document-index.md)：设计事实源、阅读顺序、正本与实现差异及全部 spec 链接。
-- [run28 案例（交互培训专题）](docs/manuals/aistudio-interactive-training.html#scene=project-run28-case)：当前最新完整轮，覆盖含代偿 6/6 与净额 5/6、自主派发 14 条、黄金集 14 例误杀、报告呈现 11/13 与后续帧核验 13/14；[完整 Markdown](docs/manuals/aistudio-run28-simulation-case.md)为可选来源。
+- [run28 案例（交互培训专题）](docs/manuals/aistudio-interactive-training.html#scene=project-run28-case)：证据链教学的主案例，不是最新一轮（其后 run29 至 run31 已完成，三轮对照见[《培训和使用手册》](docs/manuals/aistudio-training-and-user-guide.md)第 15 章）；覆盖含代偿 6/6 与净额 5/6、自主派发 14 条、黄金集 14 例误杀、报告呈现 11/13 与后续帧核验 13/14；[完整 Markdown](docs/manuals/aistudio-run28-simulation-case.md)为可选来源。
 - [run25 全流程推演案例（历史）](docs/manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的历史档案，保留六闸、UAT、GAP、事故和未做项的判读价值，不代表当前最新轮。
 - [14 幕交互拓扑培训](docs/manuals/aistudio-interactive-training.html)：按“规则与技能→执行与验证→治理与复盘→案例综合验收”组织 run28 复核工作包；每幕有前序交接物、run28 证据和下一步，项目与研发各 3 幕；`npm run training` 一键启动，以六套独立拓扑展示跨团队协作与角色交付，面向 PC 横屏使用。
 - [AIStudio 终态设计文档](docs/DESIGN.md)：理念、产品、设计、实施与验证的唯一正本。

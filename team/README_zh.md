@@ -1,14 +1,14 @@
 # SwarmTeam — Hermes Agent 多 Agent Profile 分发仓库
 
 > 基于 [Hermes Agent](https://hermes-agent.nousresearch.com) 的生产级多智能体系统。
-> **本仓 30 个 profile** 分布在 8 个团队（swarm/product/ops/platform/aiteam/pay/data/hack），由 orchestrator 统一路由，基于 Kanban 进行任务分解。
-> 口径：本仓实况=30 profile / 8 团队 / 9 看板；41 是 2026-10 公开分发包口径（含已退役 IC 设计团队 11 个），下文明册保留作历史记录。
+> **本仓 27 个 profile** 分布在 8 个团队（swarm/product/ops/platform/aiteam/pay/data/hack），由 orchestrator 统一路由，基于 Kanban 进行任务分解。
+> 口径：本仓实况=27 profile / 8 团队 / 8 看板（2026-11-26 清点 `team/profiles/`，不含 `_shared`；三个领域网关档位已于 2026-11-18 并入顶层 `orchestrator`）；41 是 2026-10 公开分发包口径（含已退役 IC 设计团队 11 个），下文明册保留作历史记录。
 
 ## 概览
 
 本仓库分发 Hermes Agent 多智能体团队配置。每个 profile 有独立的 SOUL.md 人格、config.yaml 配置和角色专属规则。Orchestrator 是所有 Gateway 消息（Matrix/Weixin/API Server/Email）的唯一入口，通过看板将任务路由到专家 profile。
 
-**30 个 profile** · **8 个团队** · **8 个看板**（eda 域 2026-10-28 退役）· 全量 skills + 六层 _shared 共享规则
+**27 个 profile** · **8 个团队** · **8 个看板**（eda 域 2026-10-28 退役）· 全量 skills + 六层 _shared 共享规则
 
 ## Profile 名册
 
@@ -44,34 +44,37 @@
 | `platform-skill-miner` | 技能挖掘 |
 | `platform-ontology-curator` | 本体治理 |
 
-### AI Team（6 个 profile）— AI 研究
+### AI Team（5 个 profile）— AI 研究
 
 | Profile | 角色 |
 |---------|------|
-| `aiteam-orchestrator` | 领域网关 |
 | `aiteam-architecture` | 模型架构 |
 | `aiteam-multimodal` | 多模态 |
 | `aiteam-embodied` | 具身智能 |
 | `aiteam-training` | 训练对齐 |
 | `aiteam-scout` | 情报侦察 |
 
-### Pay 团队（4 个 profile）— 支付清算
+> 原 `aiteam-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
+
+### Pay 团队（3 个 profile）— 支付清算
 
 | Profile | 角色 |
 |---------|------|
-| `pay-orchestrator` | 领域网关 |
 | `pay-clearing` | 清算结算 |
 | `pay-fintech` | 金融科技 |
 | `pay-infra` | 支付基础设施 |
 
-### Data 团队（4 个 profile）— 实时数据栈
+> 原 `pay-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
+
+### Data 团队（3 个 profile）— 实时数据栈
 
 | Profile | 角色 |
 |---------|------|
-| `data-orchestrator` | 领域网关 |
 | `data-arch` | 数仓架构 |
 | `data-flink` | Flink 流计算 |
 | `data-infra` | 存储基础设施 |
+
+> 原 `data-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
 
 ### [已移除] 团队（11 个 profile）— IC 设计自动化
 
@@ -103,7 +106,7 @@
 
 ## 领域网关原则
 
-`aiteam` / `pay` / `data` / `[已移除]` 各有独立 orchestrator 作为领域网关，负责领域内子任务分解与路由；跨领域任务由顶层 `orchestrator` 统一调度，禁止跳过领域网关直派下游 worker。
+（2026-11-18 起）`aiteam` / `pay` / `data` 三个领域不再各设 orchestrator：三个领域网关档位已并入顶层 `orchestrator`，由顶层直接把任务派给各领域的执行档位（提交 `36df007ea`）。派单约定保存在技能 `skills/devops/domain-team-dispatch/SKILL.md`。
 
 ## 架构
 
@@ -154,13 +157,31 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 ## 版本
 
-当前版本：**v0.23.4-team.1**；上一版：**v0.23.3-team.2**（0.23.4 换血批进位；其间的版本小节待补，挂账 N36 台账）。版本真源为 [VERSION](VERSION)。
+当前版本：**v0.23.4-team.1**；上一条版本线：**v0.23.3-team.2**。完整三位底座版本跟随上游基线，每次底座升级后扩展序归 1。版本真源为 [VERSION](VERSION)。
 
 完整三位底座版本跟随 `vendor/VENDOR.md` 的 hermes-agent 基线，`-team.N` 是 AIStudio 团队扩展发布序。因此，**0.23.0 是上游底座版本**，**team.2 是该底座上的第二次团队扩展发布**，不是上游的 `team.2` 版本。
 
 当前 AIStudio **1.0.21-overlay** 配套 agent teams **v0.23.4-team.1**、hermes-agent 上游底座 **0.23.4**、yuan **v2.103.0**、Ycode **4.0.0**（已发布的 1.0.18～1.0.20 资产所带 agent teams 为 v0.23.3-team.2；其中 1.0.18 与 1.0.19 的 Ycode 为 3.18.2）。各模块版本独立，yuan 与 Ycode 的版本不计入 team 扩展序。
 
-### 本轮变化（v0.23.0-team.2）
+### 本轮变化（v0.23.4-team.1）
+
+上游底座 hermes-agent **v0.23.3 → v0.23.4**（提交 `8fc0374447`，1143 个提交、1316 个文件）。上游主要变化：定时晨报链加固（晨报只读、蓝图技能保留）、网关会话提示钩子（快照副本惰性、负责人范围参数脱敏）、档位与插件互斥、共享指标每日快照、Gemini 4 模型目录。五枚覆盖补丁在新基线上手工重锚（391、612、732、741、786）；重放结果为 511 枚补丁全部应用，连续两次运行结果一致。运行时覆盖层按新的注入基线重新镜像 30 个文件；看门狗 hostile-load 热修按既定通道继续由运行时承载。规格：`docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md`。
+
+### v0.23.3-team.1（2026-11-20）
+
+上游底座 **v0.23.2 → v0.23.3**（提交 `caafe5389a`，1675 个提交、3948 个文件）。上游主要变化是会话存储层合并：根目录下 60 多个 `hermes_state_*.py` 模块并入 `persistence/` 包。覆盖补丁相应重锚：前缀链表（485）与读池存活时间（755）迁入新包，补丁路由表扩展了 `persistence/`；后续存储适配新的 `state_meta` 接口。重放结果为 489 枚补丁全部应用；运行时覆盖层 194 件全部一致。
+
+### v0.23.2-team.1（2026-11-18）
+
+- **升级底座并重新镜像运行时**：hermes-agent 底座 v0.23.1 → v0.23.2（规格 `docs/superpowers/specs/2026-11-17-vendor-upgrade-agent-v0232.md`），扩展序归 1。档位内容无变化；运行时覆盖层按新的注入基线重新镜像 20 个文件。16 枚补丁在新基线上手工重锚；全量重放 491 枚全部应用。
+- 0.23.1 底座线上的历史版本为 v0.23.1-team.1 至 team.3。
+
+### v0.23.1-team.1（2026-11-10）
+
+- **升级底座并重新镜像运行时**：hermes-agent 底座 v0.23.0 → v0.23.1（规格 `docs/superpowers/specs/2026-11-10-vendor-upgrade-agent-v0231.md`），扩展序归 1。档位内容无变化；运行时覆盖层重新镜像 12 个文件。
+- 0.23.0 底座线上的历史版本为 v0.23.0-team.1 至 team.2（下节）。
+
+### v0.23.0-team.2
 
 - **新增共享团队库与交接规则**：增加 `team/shared/team-library.yaml` 和 `team/shared/handoff-rules.yaml`，定义可复用团队族以及明确的列/角色交接契约。
 - **仅前进扩展序**：hermes-agent 底座保持 **0.23.0**，只有团队扩展序从 `team.1` 进到 `team.2`；本轮没有升级上游底座。

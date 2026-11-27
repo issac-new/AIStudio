@@ -89,12 +89,13 @@ async function main(): Promise<void> {
     }
 
     const registrations: Array<Promise<void>> = []
-    const [{ registerEval }, { registerBpa }, { registerOntology }, { registerSkillgov }, { registerProjects }] = await Promise.all([
+    const [{ registerEval }, { registerBpa }, { registerOntology }, { registerSkillgov }, { registerProjects }, { registerExpdual }] = await Promise.all([
       import('../../custom/client/eval'),
       import('../../custom/client/bpa'),
       import('../../custom/client/ontology'),
       import('../../custom/client/skillgov'),
       import('../../custom/client/projects'),
+      import('../../custom/client/expdual'),
     ])
     registrations.push(registerEval())
     if (features.bpa) registrations.push(registerBpa())
@@ -102,6 +103,10 @@ async function main(): Promise<void> {
     if (features.skillgov) registrations.push(registerSkillgov())
     // 与 registries/client/bootstrap.ts 同链：项目列表和详情是无开关的默认能力。
     registrations.push(registerProjects())
+    // 经验台账 /app/expdual 在 bootstrap 里无条件注册（2026-11-12 加入）；此前漏在这里，
+    // 路由计数因此少一条。新增会注册路由的模块时须同步这里，结构检查见
+    // custom/__tests__/interactive-training-manual.test.ts。
+    registrations.push(registerExpdual())
     await Promise.all(registrations)
     for (const record of getRegisteredRoutes()) router.addRoute(record)
     if (features.matrixChat) {

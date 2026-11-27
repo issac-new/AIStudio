@@ -1,6 +1,6 @@
 # AIStudio 使用指南
 
-本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控团队培训时，使用[《产品交付团队培训手册》](manuals/aistudio-training-and-user-guide.md)；研发核心工具技能使用[《swarm-yuan 技术说明》](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)为可选来源）；查全部页面用[《全量功能清单》](manuals/aistudio-feature-inventory.md)，部署运维用[《管理员运维参考》](manuals/aistudio-operations-reference.md)，查设计依据用[《设计文档导读》](manuals/aistudio-design-document-guide.md)和[《全量索引》](manuals/aistudio-design-document-index.md)，读懂当前最新完整轮与真实推演报告用[《run28 案例》](manuals/aistudio-interactive-training.html#scene=project-run28-case)（[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源）。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《14 幕交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](DESIGN.md)。
+本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控团队培训时，使用[《产品交付团队培训手册》](manuals/aistudio-training-and-user-guide.md)；研发核心工具技能使用[《swarm-yuan 技术说明》](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)为可选来源）；查全部页面用[《全量功能清单》](manuals/aistudio-feature-inventory.md)，部署运维用[《管理员运维参考》](manuals/aistudio-operations-reference.md)，查设计依据用[《设计文档导读》](manuals/aistudio-design-document-guide.md)和[《全量索引》](manuals/aistudio-design-document-index.md)，读懂推演真实报告用[《run28 案例》](manuals/aistudio-interactive-training.html#scene=project-run28-case)（[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源；run28 是证据链教学的主案例，其后 run29 至 run31 的对照见培训手册第 15 章）。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《14 幕交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](DESIGN.md)。
 
 ## 1、启动（浏览器 web 版）
 
@@ -48,7 +48,7 @@ npm run dev
 
 已有账号直接登录。共享或培训环境首次建号时，在启动前执行 `node vendor/hermes-studio/bin/hermes-web-ui.mjs reset-default-login`，使用命令生成的随机密码。隔离开发环境的空库也可显式设置 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`，不要把该入口用于共享培训环境。出厂默认口令已删除。
 
-全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#34-创建首个管理员账号)。
+全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#161-共享培训或生产怎样启动)。
 
 ## 2、三种工作模式怎么走
 
@@ -67,6 +67,8 @@ npm run dev
 - 催办：卡住的任务先解析「负责人、所属板、未指派」三态路由；当前版本只完成路由解析、不自动发送消息，发送与接收需经真实通知入口并各自留证。
 - 审批：14 个人工介入点都进审批收件箱（`/app/inbox`），批准或打回全程留痕。
 - 沟通：房间页是完整 Matrix 客户端（`/app/s/room/:roomId`）。统一身份聊天窗（`/app/collab`）在一个窗口里与全部 AI 身份会话。
+- 切换账号：聊天面板头部的账号指示器可以切换 Matrix 账号（各档位配置的账号与本机登录过的账号合并在一个列表），不重启进程。切换后审批、消息与简报都以新身份留痕；共享或培训机上操作前先核对当前账号。
+- 界面卡：单聊里 Agent 可能发一张原生界面卡（表单、确认、图表）。填完并提交才算回答，提交后自动发起一轮新对话；卡片和已填内容会保留，重开会话仍在。共享机器上换人前检查未提交的界面卡。
 - 检索：点击顶部搜索框或按 `Cmd/Ctrl+K`。统一弹窗可搜索 Matrix 会话、看板任务、运行、治理文档、人员和命令。弹窗支持类型计数及看板、状态、负责人、时间筛选。旧 `/app/search` 链接仍可用于唤起弹窗。
 
 ### 2.2 IDE 工作区（`/app/ide`）
@@ -75,6 +77,8 @@ npm run dev
 
 模型与思考档跟随 ZCode 配置单一源。用量页签呈现 token、成本与上下文趋势，零新增埋点。AIStudio IDE 会话默认关闭电脑操作，并注入禁用标记。Ycode 插件的内置默认值不等于会话已获得执行授权。实际运行仍受凭据与系统权限约束。
 
+做文档转换（转 PDF、抽取文本等）时，桌面版预装目录就绪的话，引擎会话可以直接用 pandoc、pdftotext、qpdf 等文档工具；目录未就绪时回退到系统已有的程序，离线安装包不带这些工具。
+
 ### 2.3 全流程推演（`/app/sim`）
 
 推演把一次完整交付真实走一遍。主链从需求冻结到发布复盘，共 26 步。六道质量门依次为 G1 需求冻结、G2 架构评审、G3 编码门禁、G4 独立测试、G5 发布准出和 G6 复盘。
@@ -82,6 +86,19 @@ npm run dev
 人在导演台建真实任务，查看进度并处理人工闸。监督器发现断环与停滞后催办。每轮推演产出可审计报告与证据库。最终报告位于该轮 run 目录的 `evidence/final-report.html`。用静态文件服务打开报告，保留截图的相对路径。
 
 推演与日常共享能力，设计目标是不共享导航与写入口。**当前边界**：SIM 任务的只读观察端点与部分前端守卫已在位，但批量操作与注意力入口尚未排除 SIM 任务（设计正本 §4.10、§6.4 如实登记），验收以此为准——不要把它当成已闭合的隔离保证。
+
+引用任何一轮推演前先分清三件事：是否出了报告、六道质量门是否全过、机制是否真的生效。最新一轮 run31 出了报告但六闸未全过；run29 六闸全过但总监派发 51 次只走通 5 次。详见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md)第 15 章。
+
+改代码后要跑的测试不止 `npm test`（它只覆盖 `custom/` 与 `scripts/`）。合并到主干前跑 `npm run regress -- --scope merge`（15 个测试面），发版前跑 `npm run regress -- --scope full`（24 个测试面）。目标机缺工具链时该面记“未执行”，不算通过。
+
+### 2.4 治理与改进（`/app/stage/govern`）
+
+⑥治理阶段有 12 个页签，常用入口：
+
+- `?tab=improve` 改进实验：提案、探测、组合、晋级、回滚。页面不跑模型，探测只认评测集的真实运行；写盘需要人工批准并设 `HARNESS2_APPLY=1`。
+- `?tab=metrics` 度量检查：生命周期审计与证据图。证据图里标“未评估”的格子不少（公平、隐私等），看到未评估就是没评估过，不是通过。
+
+组织工作台是 AI 原生组织的治理面，默认关闭，设 `OUTCOME_WORKBENCH=1` 才开放；关闭时它的接口全部返回 404。
 
 ## 3、角色旅程：从哪里入手
 
@@ -92,6 +109,7 @@ npm run dev
 | 架构与研发 | ④开发阶段页与 `/app/ide` | 看板领任务、IDE 编码、评审治理 |
 | 测试 | ⑤验收阶段页 | G4 独立测试、评测岛（评测集、红队、稳定性复测） |
 | 安全、运维、审计 | ⑥治理阶段页 | 安全审计六阶段、集群巡检（检测器数量以 `custom/server/clusterinspector/` 代码与守门为准，不在文档写死）、长程可信、问题单 |
+| 项目管理 | `/app/board` 与⑥治理阶段页 | 任务卡、派单、⑥治理的遗留项清算、问题清单、质量门记录；改进实验与度量检查 |
 
 ## 4、服务重启与排障
 
@@ -143,7 +161,7 @@ npm run build:dmg:win   # Windows x64：zip + NSIS 安装器（必须在 Windows
 
 ## 6、延伸阅读
 
-- [run28 案例（交互培训专题）](manuals/aistudio-interactive-training.html#scene=project-run28-case)：当前最新完整轮，分列含代偿与净额六闸、自主派发、黄金集观察态、报告呈现与后续帧核验；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源。
+- [run28 案例（交互培训专题）](manuals/aistudio-interactive-training.html#scene=project-run28-case)：证据链教学的主案例，分列含代偿与净额六闸、自主派发、黄金集观察态、报告呈现与后续帧核验；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源。其后 run29 至 run31 的对照见培训手册第 15 章。
 - [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的历史教学材料，不代表当前最新轮。
 - [AIStudio 终态设计文档](DESIGN.md)：理念、产品、设计、实施与验证的唯一正本。
 - [设计文档导航](superpowers/specs/2026-10-21-ncwk-unified-product-design.md)：正本、附件和历史档案入口。

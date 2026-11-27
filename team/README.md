@@ -1,14 +1,14 @@
 # SwarmTeam — Hermes Agent Multi-Profile Distribution
 
 > A production-grade multi-agent system built on [Hermes Agent](https://hermes-agent.nousresearch.com).
-> **30 profiles** in this repo across 8 domain teams (swarm / product / ops / platform / aiteam / pay / data / hack), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
-> 口径：本仓 `team/profiles` 实况=30 profile / 8 团队 / 9 看板（`team/shared/domain-registry.yaml` + `tests/test_board_ownership.py` 机械校验）。下文表格与历史段落里的 41 是 2026-10 公开分发包口径（含已退役的 IC 设计团队 11 个 profile），保留作历史记录，不代表本仓现状。
+> **27 profiles** in this repo across 8 domain teams (swarm / product / ops / platform / aiteam / pay / data / hack), unified routing via orchestrator, Kanban-based task decomposition with persistent git worktree workspaces.
+> 口径：本仓 `team/profiles` 实况=27 profile / 8 团队 / 8 看板（2026-11-26 清点 `team/profiles/`，不含 `_shared`；三个领域网关档位已于 2026-11-18 并入顶层 `orchestrator`；`team/shared/domain-registry.yaml` + `tests/test_board_ownership.py` 机械校验）。下文表格与历史段落里的 41 是 2026-10 公开分发包口径（含已退役的 IC 设计团队 11 个 profile），保留作历史记录，不代表本仓现状。
 
 ## Overview / 概览
 
 This repository distributes a multi-agent team configuration for Hermes Agent. Each profile has its own SOUL.md personality, config.yaml, and role-specific rules. The orchestrator is the single entry point for all Gateway messages (Matrix/Weixin/API Server/Email) and routes tasks to specialist profiles via Kanban boards.
 
-**30 profiles** · **8 teams** · **8 Kanban boards** · persistent worktree workspaces
+**27 profiles** · **8 teams** · **8 Kanban boards** · persistent worktree workspaces
 
 ### Version
 
@@ -54,7 +54,7 @@ The current AIStudio **1.0.21-overlay** distribution carries agent teams **v0.23
 
 ## Profile Roster / Profile 名册
 
-> 本仓 30 个 profile，横跨 8 个领域团队。历史分发包曾含 41 个（其中 IC 设计团队 11 个已退役，家庭团队因隐私从不入库）——历史口径保留在下方名册表。
+> 本仓 27 个 profile，横跨 8 个领域团队。历史分发包曾含 41 个（其中 IC 设计团队 11 个已退役，家庭团队因隐私从不入库）——历史口径保留在下方名册表。
 
 ### Swarm Team (4 profiles) — Software Engineering
 
@@ -88,34 +88,37 @@ The current AIStudio **1.0.21-overlay** distribution carries agent teams **v0.23
 | `platform-skill-miner` | 平台技能挖掘师 (Skill Miner) | 模式识别者 | Scan completed tasks; pattern clustering; skill extraction | 334 |
 | `platform-ontology-curator` | 本体策展师 (Ontology Curator) | 语义层守门人 | ontology.md maintenance; semantic layer evolution; marking propagation | 334 |
 
-### AI Team (6 profiles) — AI 研究
+### AI Team (5 profiles) — AI 研究
 
 | Profile | Role |
 |---------|------|
-| `aiteam-orchestrator` | 领域网关：模型架构/多模态/具身智能路由 |
 | `aiteam-architecture` | Transformer/MoE/推理引擎架构调研 |
 | `aiteam-multimodal` | 视觉-语言/多模态对齐调研 |
 | `aiteam-embodied` | 具身智能/世界模型调研 |
 | `aiteam-training` | 训练算法/对齐技术调研 |
 | `aiteam-scout` | arXiv/会议前沿侦察 |
 
-### Pay Team (4 profiles) — 支付清算
+> 原 `aiteam-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
+
+### Pay Team (3 profiles) — 支付清算
 
 | Profile | Role |
 |---------|------|
-| `pay-orchestrator` | 领域网关：支付/清算/结算/对账路由 |
 | `pay-infra` | 支付基础设施/核心系统 |
 | `pay-clearing` | 清算/对账/差错处理 |
 | `pay-fintech` | 跨境支付/合规/风控 |
 
-### Data Team (4 profiles) — 实时数据栈
+> 原 `pay-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
+
+### Data Team (3 profiles) — 实时数据栈
 
 | Profile | Role |
 |---------|------|
-| `data-orchestrator` | 领域网关：Flink/Paimon/MinIO 运维路由 |
 | `data-infra` | 集群基础设施/容器化 |
 | `data-arch` | 数仓架构/数据建模 |
 | `data-flink` | Flink 流批处理调优 |
+
+> 原 `data-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
 
 ### [已移除] Team (11 profiles) — IC 设计自动化
 
@@ -146,7 +149,7 @@ The current AIStudio **1.0.21-overlay** distribution carries agent teams **v0.23
 
 ### Domain Gateway Pattern / 领域网关原则
 
-`aiteam` / `pay` / `data` / `[已移除]` 各有独立 orchestrator 作为领域网关，负责领域内子任务分解与路由；跨领域任务由顶层 `orchestrator` 统一调度，禁止跳过领域网关直派下游 worker。
+（2026-11-18 起）`aiteam` / `pay` / `data` 三个领域不再各设 orchestrator：三个领域网关档位已并入顶层 `orchestrator`，由顶层直接把任务派给各领域的执行档位（提交 `36df007ea`）。派单约定保存在技能 `skills/devops/domain-team-dispatch/SKILL.md`。
 
 ## Architecture / 架构
 
