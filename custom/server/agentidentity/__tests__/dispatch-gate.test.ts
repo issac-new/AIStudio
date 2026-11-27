@@ -19,7 +19,7 @@ const unit = (over: Partial<AgentIdentity> = {}): AgentIdentity => ({
   runtimeBindings: { agents: ['zcode'] }, ...over,
 })
 const card = (over: Partial<ResponsibilityCard> = {}): ResponsibilityCard => ({
-  deliveryStandard: '可复现', riskTier: 'medium', primaryOwner: 'alice', escalation: ['e'], pauseConditions: ['p'],
+  deliveryStandard: '可复现', unitType: 'assistant', riskTier: 'tier2', primaryOwner: 'alice', escalation: ['e'], pauseConditions: ['p'],
   takerOver: 'bob', testCaseVersion: 'tc-1', costBudget: { limit: 1, unit: 'CNY' }, maintainer: 'alice', deploymentLocation: 'x', ...over,
 })
 const admitted = (over: Partial<AgentIdentity> = {}): AgentIdentity =>

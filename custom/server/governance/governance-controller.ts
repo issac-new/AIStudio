@@ -920,9 +920,16 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
   const cost = (b.costBudget ?? {}) as Record<string, unknown>
   const ev = b.admissionEvidence as Record<string, unknown> | undefined
   const strs = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : [])
+  // 类型／协作等级／等级标注：非法取值原样下传，由 validateCard 报问题（控制器不吞、不猜默认值）
+  const collabLevel = typeof b.collabLevel === 'number' ? b.collabLevel : Number(b.collabLevel)
   return {
     deliveryStandard: String(b.deliveryStandard ?? ''),
+    ...(b.unitType !== undefined ? { unitType: String(b.unitType) as ResponsibilityCard['unitType'] } : {}),
     riskTier: String(b.riskTier ?? '') as ResponsibilityCard['riskTier'],
+    ...(b.collabLevel !== undefined && b.collabLevel !== null && Number.isFinite(collabLevel)
+      ? { collabLevel: collabLevel as NonNullable<ResponsibilityCard['collabLevel']> }
+      : {}),
+    ...(b.collabLevelNote ? { collabLevelNote: String(b.collabLevelNote) } : {}),
     primaryOwner: String(b.primaryOwner ?? ''),
     ...(b.reviewer ? { reviewer: String(b.reviewer) } : {}),
     escalation: strs(b.escalation),

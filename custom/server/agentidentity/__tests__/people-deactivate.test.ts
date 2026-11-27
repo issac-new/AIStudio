@@ -33,7 +33,7 @@ function seedPerson(id: string): void {
 
 /** 缺省由 alice 主责与维护、bob 接管的有效责任卡。 */
 const card = (over: Partial<ResponsibilityCard> = {}): ResponsibilityCard => ({
-  deliveryStandard: '可复现', riskTier: 'medium', primaryOwner: 'alice', escalation: ['出错升级'], pauseConditions: ['出错即停'],
+  deliveryStandard: '可复现', unitType: 'assistant', riskTier: 'tier2', primaryOwner: 'alice', escalation: ['出错升级'], pauseConditions: ['出错即停'],
   takerOver: 'bob', testCaseVersion: 'tc-1', costBudget: { limit: 1, unit: 'CNY' }, maintainer: 'alice', deploymentLocation: '本机',
   ...over,
 })

@@ -67,7 +67,7 @@ async function req(method: string, path: string, payload?: unknown, as?: string)
 function card(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     deliveryStandard: '交付可复现的测试报告与证据链',
-    riskTier: 'medium',
+    unitType: 'assistant', riskTier: 'tier2',
     primaryOwner: alice,
     escalation: ['关键规则无法验证时升级'],
     pauseConditions: ['出现越权调用时暂停'],
@@ -128,6 +128,60 @@ describe('workunit routes', () => {
     expect(r.body.identity.capabilityBoundary).toEqual({ can: ['改代码'], cannot: ['改发布'] })
     expect(r.body.identity.auditRequirement.sampling).toBe(0.5)
     expect(r.body.identity.runtimeBindings).toEqual({ agents: ['zcode'] })
+  })
+
+  it('保存责任卡透传单元类型与协作等级（2026-11-27 框架对齐）', async () => {
+    const id = await freshUnit('passthrough-unit')
+    const saved = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'assistant', collabLevel: 3 }))
+    expect(saved.status).toBe(200)
+    const c = saved.body.identity.responsibilityCard
+    expect(c.unitType).toBe('assistant')
+    expect(c.collabLevel).toBe(3)
+    expect(c.riskTier).toBe('tier2')
+  })
+
+  it('非法单元类型 → 400 并点名 unitType（控制器不吞、不猜默认值）', async () => {
+    const id = await freshUnit('bad-type-unit')
+    const r = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'robot' }))
+    expect(r.status).toBe(400)
+    expect(r.body.problems.join()).toContain('unitType')
+  })
+
+  it('旧风险档取值新保存被拒 → 400（读侧可读、写入只收三级）', async () => {
+    const id = await freshUnit('legacy-risk-unit')
+    const r = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ riskTier: 'medium' }))
+    expect(r.status).toBe(400)
+    expect(r.body.problems.join()).toContain('riskTier')
+  })
+
+  it('顶岗型复核人未分离 → 400；分离后 200', async () => {
+    const id = await freshUnit('post-unit')
+    const same = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'post', reviewer: alice }))
+    expect(same.status).toBe(400)
+    expect(same.body.problems.join()).toContain('不得为同一人')
+    const none = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'post' }))
+    expect(none.status).toBe(400)
+    expect(none.body.problems.join()).toContain('复核人')
+    const ok = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'post', reviewer: bob }))
+    expect(ok.status).toBe(200)
+    expect(ok.body.identity.responsibilityCard.unitType).toBe('post')
+  })
+
+  it('顶岗型风险档取一级 → 400（不得低于二级）', async () => {
+    const id = await freshUnit('post-tier1-unit')
+    const r = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'post', reviewer: bob, riskTier: 'tier1' }))
+    expect(r.status).toBe(400)
+    expect(r.body.problems.join()).toContain('不得低于二级')
+  })
+
+  it('协作等级取 4 缺「仅单点验证」标注 → 400；补标注后 200', async () => {
+    const id = await freshUnit('collab4-unit')
+    const bad = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ collabLevel: 4 }))
+    expect(bad.status).toBe(400)
+    expect(bad.body.problems.join()).toContain('单点验证')
+    const ok = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ collabLevel: 4, collabLevelNote: '仅单点验证' }))
+    expect(ok.status).toBe(200)
+    expect(ok.body.identity.responsibilityCard.collabLevelNote).toBe('仅单点验证')
   })
 
   it('完整卡可保存并走完准入/运行', async () => {
