@@ -571,3 +571,4 @@
 {"at":"2026-11-27T05:05:45Z","spec":"docs/DESIGN.md","receipt":"9cb0fbf1d952c991ed050a51419c4079c0ce7017","commit":"2fa474757"}
 {"at":"2026-11-27T05:30:44Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"5fba7109b51f6b0eda59e3e54767f559899fd37c","commit":"18bc1d3c3"}
 {"at":"2026-11-27T09:36:09Z","spec":"docs/superpowers/specs/2026-11-27-review-followup-batch.md","receipt":"76e633ec5411af48a54a5b570a6c947ac6407964","commit":"3ab08d1c2"}
+{"at":"2026-11-27T09:40:05Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"d35e0edae59eabcd74309b0b3a727a526ea5e75b","commit":"6c5062456"}
