@@ -557,6 +557,9 @@
 {"at":"2026-11-26T15:47:24Z","spec":"docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md","receipt":"6285df1b4c71b456a6d8108535b03e32ff2e67cb","commit":"6f2c3b7ed"}
 {"at":"2026-11-26T16:03:37Z","spec":"docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md","receipt":"f94d478551c002a726f51ce473e57e71916a828c","commit":"49ad79a62"}
 {"at":"2026-11-27T00:14:36Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"b60b312c0815829fe225b4290c6fac684b57e86c","commit":"6a1afc103"}
+{"at":"2026-11-27T01:31:44Z","spec":"docs/DESIGN.md","receipt":"51025964070a5b78a90a2db857696f6858c21724","commit":"1640ce3e3"}
+{"at":"2026-11-27T01:31:45Z","spec":"docs/superpowers/specs/2026-11-26-docs-manual-refresh.md","receipt":"bdf21372115d54d440dd0ad52f3f5be9d2c191dc","commit":"1640ce3e3"}
+{"at":"2026-11-27T01:31:45Z","spec":"docs/superpowers/specs/2026-11-26-v1021-release-pending-batch.md","receipt":"f865b697329c7c48f23034ac88c8bfc888e8af16","commit":"1640ce3e3"}
 {"at":"2026-11-27T01:36:04Z","spec":"docs/superpowers/specs/2026-11-27-palantir-rulings-followup.md","receipt":"36c5aa1778846ff84772344f322f0d1aa8667eb4","commit":"b694f2e24"}
 {"at":"2026-11-27T01:37:41Z","spec":"docs/superpowers/specs/2026-11-26-trustworthy-rsi-fulltext.md","receipt":"e31b6fb5f6aa9586601365ee46d8502edcfb7e9b","commit":"14120661d"}
 {"at":"2026-11-27T01:42:03Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"0428a89ad4bd3557b5ee970a0ad265348b806564","commit":"fd0f853d7"}
