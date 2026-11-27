@@ -163,10 +163,10 @@ Gateway Messages (Matrix/Weixin/API Server/Email)
 │  (project-scoped, persistent git branch)            │
 └──────────────────┬──────────────────────────────────┘
                    ↓
-   ┌────┬────┬───┬────┬────┬────┬────┬────┬────┐
-   swarm  product ops platform aiteam pay  data  [已移除]  worker
-   board  board  board  board  board  board board board
-   (4)    (2)    (4)   (2)    (6)    (4)  (4)  (11)
+   ┌──────┬──────┬────┬──────┬──────┬────┬────┬────┐
+   swarm   product  ops  platform aiteam  pay   data  hack
+   board    board  board    board  board board board board
+   (4)      (2)    (4)      (2)    (5)   (3)   (3)   (4)
 ```
 
 **8 Kanban Boards**（与 `team/shared/domain-registry.yaml` 的活跃条目逐条对应）: `swarm` (software), `product` (PM), `ops` (SRE), `platform` (self-improvement), `aiteam` (AI research), `pay` (payment/clearing), `data` (data stack), `hack` (authorized security testing). `eda`（IC design）已于 2026-10-28 标 retired（仅剩 orchestrator 成员，无领域执行者），条目保留作历史锚。

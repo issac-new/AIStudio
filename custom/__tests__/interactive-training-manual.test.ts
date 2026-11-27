@@ -902,6 +902,37 @@ describe('文档结构检查（2026-11-26 文档刷新批）', () => {
     expect(dangling, '悬空锚点').toEqual([])
   })
 
+  it('功能清单：页签数声明与各章来源一致', () => {
+    // 2026-11-27 二轮审查实证：经验台账并入后「专题 26 签」漏改成 30，正文两处残留——
+    // 这类页签数声明此前无任何检查。数值全部由文档自身推导，不写死。
+    const headerTab = (label: string): number => {
+      const match = new RegExp(`\\| ${label} \\| \\*\\*(\\d+)\\*\\*`).exec(feature)
+      expect(match, `功能清单缺「${label}」页签声明`).not.toBeNull()
+      return Number(match![1])
+    }
+    const chapterTitle = (marker: RegExp, what: string): number => {
+      const match = marker.exec(feature)
+      expect(match, `功能清单缺${what}`).not.toBeNull()
+      return Number(match![1])
+    }
+    expect(headerTab('六阶段页签')).toBe(chapterTitle(/## 三、[^\n]*?(\d+) 个页签/, '第三章页签数'))
+    expect(headerTab('IDE 辅助栏页签')).toBe(chapterTitle(/## 六、[^\n]*?(\d+) 个辅助页签/, '第六章页签数'))
+    const chapterFive = feature.slice(
+      feature.indexOf('## 五、'),
+      feature.indexOf('## 六、'),
+    )
+    const sectionTabs = [...chapterFive.matchAll(/^### 5\.\d [^\n]*?，(\d+) 签$/gm)].map(m => Number(m[1]))
+    expect(sectionTabs.length, '第五章应有每节页签数声明').toBeGreaterThan(4)
+    expect(headerTab('五专题页签')).toBe(sectionTabs.reduce((sum, n) => sum + n, 0))
+    // 正文里的「专题 N 签」提及必须与头部声明一致（二轮审查实证：两处正文残留 26）
+    const fiveTabs = headerTab('五专题页签')
+    const proseMentions = [...feature.matchAll(/专题 (\d+) 签/g)].map(m => Number(m[1]))
+    expect(proseMentions.length, '应有「专题 N 签」的正文提及').toBeGreaterThan(0)
+    for (const n of proseMentions) {
+      expect(n, `正文「专题 ${n} 签」与页签声明 ${fiveTabs} 不一致`).toBe(fiveTabs)
+    }
+  })
+
   it('团队说明：档位数等于 team/profiles 的实际档位目录数', () => {
     // 2026-11-26 蓝军实证：两份说明写 30 个，三个领域网关档位于 2026-11-18 并入主档位后实际是 27 个。
     const actual = readdirSync(resolve(root, 'team/profiles'), { withFileTypes: true })

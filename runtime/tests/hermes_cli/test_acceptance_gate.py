@@ -190,6 +190,32 @@ def test_attachment_added_after_review_is_rejected(tmp_path, kanban_home):
         assert kb.get_task(conn, tid).status == "review"
 
 
+def test_attachment_deleted_after_review_is_rejected(tmp_path, kanban_home):
+    """送审时随附附件、送审后删除：当前内容摘要变化，凭旧报告完成同样被拒（删除方向）。"""
+    with kbc.connect() as conn:
+        tid = kb.create_task(
+            conn, title="attachment deleted after review", assignee="ops", body=BODY,
+            verification="independent",
+        )
+        note = tmp_path / "spec-draft.txt"
+        note.write_text("送审时随附的草稿", encoding="utf8")
+        att_id = kb.add_attachment(
+            conn, tid, filename="spec-draft.txt", stored_path=str(note),
+            size=note.stat().st_size, uploaded_by="ops",
+        )
+        assert kb.claim_task(conn, tid) is not None
+        assert kb.request_review(
+            conn, tid, reviewer="reviewer-1", summary="含附件送审", force=True,
+        ) is True
+        version = _latest_version(conn, tid)
+        assert version["content"]["attachments"], "送审版本应已含附件清单"
+        assert kb.delete_attachment(conn, att_id) is not None
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            _complete_with_report_for(conn, tid, version)
+        assert [b["code"] for b in ei.value.blockers] == ["delivery_version_stale"]
+        assert kb.get_task(conn, tid).status == "review"
+
+
 def test_rerequest_after_edit_issues_new_version_and_new_report_passes(tmp_path, kanban_home):
     tid = _setup_independent(tmp_path)
     with kbc.connect() as conn:
