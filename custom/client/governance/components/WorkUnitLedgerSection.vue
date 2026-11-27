@@ -36,7 +36,7 @@ const T = computed(() => zh.value ? {
   formEvidence: '重启证据引用（重新验证、重新授权，每行一条）',
   formExitKind: '退出类型', exitPause: '暂停', exitRevoke: '撤权', exitDecommission: '下线',
   formExitItems: '交接事项（每行一条，必填）', formExitConfirm: '退出确认人',
-  readinessUnknown: '暂无就绪度读数',
+  readinessEmpty: '暂无就绪度读数',
   exitItemsRequired: '退出须登记交接事项（每行一条）',
   me: '当前登录身份', meNone: '未登录（单机部署需设置 AISTUDIO_LOCAL_OPERATOR）',
   empty: '暂无执行单元', fail: '操作失败', okMsg: '已提交',
@@ -66,7 +66,7 @@ const T = computed(() => zh.value ? {
   formEvidence: 'Restart evidence refs (re-validation, re-authorization; one per line)',
   formExitKind: 'Exit kind', exitPause: 'pause', exitRevoke: 'revoke', exitDecommission: 'decommission',
   formExitItems: 'Handover items (one per line, required)', formExitConfirm: 'Exit confirmed by',
-  readinessUnknown: 'No readiness readings yet',
+  readinessEmpty: 'No readiness readings yet',
   exitItemsRequired: 'Exit requires handover items (one per line)',
   me: 'Signed in as', meNone: 'Not signed in (set AISTUDIO_LOCAL_OPERATOR for local single-machine deployment)',
   empty: 'No units registered', fail: 'Operation failed', okMsg: 'Submitted',
@@ -418,7 +418,7 @@ onMounted(() => { void loadMe(); void refresh() })
           <span v-if="item.state !== 'yes' && item.gap" class="wu__ready-gap">{{ item.gap }}</span>
         </li>
       </ul>
-      <p v-else class="wu__sub">{{ T.readinessUnknown }}</p>
+      <p v-else class="wu__sub">{{ T.readinessEmpty }}</p>
     </div>
 
     <div v-if="editing" class="wu__form" data-testid="gov-workunit-card-form">

@@ -335,6 +335,11 @@ describe('WorkUnitLedgerSection 框架对齐（2026-11-27：类型／风险档�
     expect(box.text()).toContain('无驳回类署名记录')
     // 就绪项不带缺口文案（不把就绪渲染成有问题）
     expect(box.text()).toContain('就绪')
+    // 三态徽标各显示各自的文字：未知是「未知」，不被空态文案覆盖
+    expect(w.find('[data-testid="gov-workunit-ready-net-contribution"]').text()).toContain('未知')
+    expect(w.find('[data-testid="gov-workunit-ready-net-contribution"]').text()).not.toContain('暂无就绪度读数')
+    expect(w.find('[data-testid="gov-workunit-ready-correction-channel"]').text()).toContain('未就绪')
+    expect(w.find('[data-testid="gov-workunit-ready-discretion"] .wu__ready-state').text()).toBe('就绪')
     w.unmount()
   })
 
