@@ -1,6 +1,6 @@
 # 吸收制度合一、台账退役与记忆清理（2026-11-27）
 
-> 状态：用户 2026-11-28 批准；已实施（仓内部分五个提交，记忆清理在仓外完成），待独立审查与合入。实测结果见「验证」。实施计划见 `docs/superpowers/plans/2026-11-28-absorption-regime-unify.md`。
+> 状态：用户 2026-11-28 批准；已实施并通过独立审查（仓内部分，记忆清理在仓外完成），待合入。实测结果见「验证」。实施计划见 `docs/superpowers/plans/2026-11-28-absorption-regime-unify.md`。
 > 来源：用户 2026-11-27 指令「按 C 做」。C 方案出自同日对「调研学了很多却形不成演进路线」的复盘：把三套吸收制度合并成一套，退役一批台账，清理项目记忆。调查事实存在项目记忆 `rsi-route-retro-20261127`。
 > 吸收总账：不适用（治理整顿，无外来材料）。
 
@@ -278,7 +278,7 @@ T1 删脚本后，规格 `2026-11-05-ainative-absorption.md` 抬头指向的 `re
 3. `node scripts/governance-lint.mjs --budget`：0 problem；`limits.scripts` 78，等于在册脚本数；退役清单 15 条变 14 条。
 4. `node scripts/maintenance/gen-doc-indexes.mjs --check`：0 problem（新规格入索引后 789 份）；`node scripts/merge-invariants.mjs --check`：pass。
 5. 回灌后 `python3.14 -m pytest team/tests/test_profiles_secret_hygiene.py -q`：2 passed；改文件头后 `bash skills/swarm-yuan/tests/test-doc-numbers.sh`：256 项断言 0 失败。
-6. 合并前 `npm run regress -- --scope merge`：一次全过，15 个面 15 通过、0 失败、0 未执行，退出码 0。根测试面 1274 个文件通过、10,427 例通过、11 例跳过；推演面 30 个文件通过，其中改过的 `mechanism-behavior.test.ts` 34 例通过。当时机器 5 分钟平均负载 134 到 148，没有出现超时。
+6. 合并前 `npm run regress -- --scope merge`，共跑两次。第一次（独立审查修复之前）一次全过：15 个面 15 通过、0 失败、0 未执行，退出码 0；根测试面 1274 个文件通过、10,427 例通过；推演面 30 个文件通过，其中改过的 `mechanism-behavior.test.ts` 34 例通过。第二次（审查修复之后）15 个面 14 通过、1 失败：失败的是根测试面里的 `scripts/__tests__/overlay-pristine-replay.test.ts`，报「清理脚本拒绝执行：检测到 8647 端口有 AIStudio server 在运行」。原因是另一会话在回归期间临时起过服务，触发了清理脚本的保护闸；事后查该端口已无进程，本批的 21 个改动文件没有碰过清理或注入脚本，该用例在第一次回归里通过。按回归工具给出的办法单面复跑根测试面（`npm run regress -- --scope merge --axis vitest`）：1 面 1 通过，1274 个文件通过、10,431 例通过，该用例 2 例通过。两次回归时机器 5 分钟平均负载在 75 到 148 之间。修复后没有拿到一次 15 个面同时通过的记录。
 7. 记忆索引实测（字符数按码点计）：主索引从 25,526 码点降到 13,120，行数 137 变 128；超过 160 字符的行从 112 降到 0，最长一行从 597 降到 140；重复登记从 5 个文件降到 0；断链 0；成员 127 个（原 126 个一个不少，加长期规则一条；其中含另一会话在实施期间新增的一条）。备份压缩包内 920 个 Markdown 文件，与打包时目录一致。归档索引页头订正为 491 条、2026-10-06 至 2026-11-12。15 份过期记忆在末尾各追加一行现状说明，原文未改。
 8. 未做与未验证：
    - 两份枢纽技能的新正本未部署到宿主，宿主副本仍是 1.7.0 与 1.5.0。
