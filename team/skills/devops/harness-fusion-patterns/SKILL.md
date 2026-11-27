@@ -1,7 +1,7 @@
 ---
 name: harness-fusion-patterns
 description: "调研吸收外部Harness(BetterHarness等)优化Hermes时的机制速查与落地模式。"
-version: 1.4.0
+version: 1.6.0
 metadata:
   hermes:
     tags: [devops, research, agent-behavior, fusion, harness, governance]
@@ -24,7 +24,7 @@ metadata:
 
 | 机制 | 一句话定义 | 本机裁决 | 裁决风险 |
 |---|---|---|---|
-| Action Fusion（动作融合） | edit/write 工具附带 follow-up 验证命令，harness 本地执行后一次性返回合并观察，省掉中间一轮模型决策。锚论文 3425 + 源码 `action-fusion/then-run.ts` | **增量补充，需改写**。Hermes 下 `patch`/`write_file` 与 `terminal` 跑测试是分立两次模型决策，正是它要省的那轮。**须 Hermes 工具层重写复合工具，非装扩展**（Pi 实现强绑 ExtensionContext API，不可复用） | 工具调用失败时模型须重发整个调用修小错，可能反增 token。定位为高频小模式优化，量级有限 |
+| Action Fusion（动作融合） | edit/write 工具附带 follow-up 验证命令，harness 本地执行后一次性返回合并观察，省掉中间一轮模型决策。锚论文 3425 + 源码 `action-fusion/then-run.ts` | **已落地（2026-11-10 台账状态修正）**：平台工具层已原生提供 `then_run` 参数（write_file/patch 可携带验证命令，内容哈希守卫，exit code 与输出合并回结果）——形态与 Pi then-run.ts 等效。剩余动作：使用惯例入技能（编辑类操作默认用 then_run 融合验证，省一轮模型决策）。发现路径=本轮机械盘点，见文末「then_run 台账脱节教训」 | 工具调用失败时模型须重发整个调用修小错，可能反增 token。定位为高频小模式优化，量级有限 |
 | Online Context Compact（在线上下文压缩） | 把「完成一个 plan 子任务」当候选压缩点，仅当未来节省能偿还重写 prompt cache 成本才压，带 window 保护、`minimumRequestsSinceCompaction` 冷却。锚论文 3428 + 源码 `online-context-compact/economics.ts` 的 `decideCompaction` | **增量补充，需改写**。采纳「节省收益 vs cache 重写成本」经济门思想骨架；**前沿 cache 经济（cacheWriteReadRatio=12.5）不适用本机 cc-switch**（本地代理不暴露 OpenAI 式 cache pricing 信号，Reddit 已警告对本地模型是 massive cache miss 配方）。落地前**须先实测本机 cache 命中率与重写成本重新标定**，四机制中最易负效果，**最大风险** | 照搬前沿比率＝省小钱毁缓存反增延迟。无本机测量数据前禁止接线 |
 | ObservationPack（观察打包） | >10KiB 大工具结果本地存档，上下文只留稳定句柄+首尾摘录，第 3 次起用句柄替换，模型可按页精确取回。锚论文 3436 + 源码 `observation-pack/ledger.ts`、`observation.ts` | **增量补充，本机价值最高**。本机无「逐观察、句柄化、按需分页召回」观察层机制（会话级压缩是压平上下文，本机制保留可精确取回引用，层级不同不冲突，本机真实能力缺口）。纯本地、无额外模型调用、不中断运行，最容易安全落地 | 存档永不自动删（须配清理）；句柄失效须审计轨迹保底 |
 | Evidence-Preserving Reducer（证据保留精简器） | 长日志首次阅读委派廉价模型产精简回执，回执每条引文对存档日志逐字 sha256 验证，通过才呈主模型，失败主模型看原文。锚论文 3540 + 源码 `evidence-preserving-reducer/receipt.ts` 逐字校验 | **增量补充，与集群红线兼容**。集群红线「LLM 调用禁绕 cc-switch」——廉价模型经 cc-switch 白名单路由即可兼容。与 hindsight 不重复：hindsight 是长期语义记忆召回，reducer 是「廉价模型先读 + 引文可机械验证」执行层机制。**唯一外发数据机制，须过 cc-switch 白名单 + SECURITY 等价审查后才可接线**。操作细则不复制于此——单一事实源挂 `grounded-citations` skill，此处只记裁决与指针 | 廉价模型转述失真；唯 sha256 逐字对账把「转述不可信」变成可机械验证问题 |
@@ -69,7 +69,7 @@ metadata:
 1. **抓取**：curl + regex 提取 js_content div（`wechat-article-research` skill 零依赖路径）
 2. **深读**：delegate_task 子代理 clone GitHub 仓库 --depth 1，按 SKILL.md → models → scripts → references 优先级深读，产出带 file:line 的 deep-dive 报告
 3. **现状扫描**：机械 grep + sqlite 实测 Hermes 现状（严禁 LLM 主观判断）
-4. **融合方案**：按"吸收/保留/不吸收"三分，零代码等效优先；**上游数字必须机械复现 ≥3 个关键数字再引用**
+4. **融合方案**：按"吸收/保留/不吸收"三分，零代码等效优先；**上游数字必须机械复现 ≥3 个关键数字再引用**。判定词与落地成色以 `article-methodology-fusion` 的「跨对象总规程」词表为准（吸收、收缩吸收、等效印证、记档待定、不吸收）；本轮不落地的记「记档待定」并进吸收总账 `team/shared/research/absorption-ledger.md`
 5. **蓝军评审**：delegate_task 5-lens 对抗评审（事实核查/过度设计/遗漏/可行性/偏好对齐），critical+major 逐项修正后出 v2
 6. **批量落地**：Tier 1/2/3 分层补齐 + 锚点优先级 + dry-run JSON + 从后往前插入 + 审计复验
 
@@ -143,3 +143,23 @@ scan 声称 evidence_strength 覆盖 11/27(40%)，实测严格字段名 grep 仅
 
 等效不吸收：RTK 日志折叠（terminal 已有截断，折叠手法并入 §5）、消融协同论、11 坑中 9 项（对照关系见 FUSION-REPORT 矩阵 B 行）。
 **消融警示**（HarnessPro 论文）：单抄一个机制（如只给 RHO 塞动态路由）省钱但掉点，机制协同才推帕累托前沿——本集群四机制同期落地即按此设计。
+
+## 第五波速查（2026-11-10，RSI/harness 优化器自进化波）
+
+> 存档 `~/.hermes/shared/research/20261110-rsi-org-harness-evolution/`（notes-A/B/C/D 四线 + FUSION-REPORT.md）。4 子代理调研线，其中 2 条死于收尾通道（供应商流中断）但语料完整，由 orchestrator 从转录机械打捞补写笔记——产物完好零重派。
+
+**上游主浪（窗口 2026-09-15~11-10，全带 URL 见 notes）**：
+
+1. **RSI 优化器自进化成波**：AIDE²（arXiv:2609.26457，held-out+OOD 泛化+奖励作弊率 55%→32%，RSI 泛化判据迄今最硬证据）；Skill∞（2610.35434，技能层 RSI，与本机 skill 治理直接同构）；Self-HPO（2610.22791，harness-策略共进化）；微软 Saddler 系列（ActiveSaddler 2610.00906 课程自适应 / ParetoSaddler 2611.02079 晋升-部署分离+质量成本双目标）；VERSE（2610.02616）/FreeEvolve（2610.09197）/MESH（2610.05300）；IDM（2610.13991 事前预测门，四域最高+46%）；Memento 3（2610.11794 重放接受门）；RSI-Opt（2610.32026 跨模型迁移两面证据）。
+2. **Harness 优化自动化**：HarnessFlow（2611.06254，MCTS 搜 harness 配置空间）；AgentFlow（2604.20801，类型化图 DSL 合成多 agent 挖洞 harness，Chrome 10 个 0day 含 2 Critical）；CTXAgent（2610.34425 自控上下文）；实证两篇 2609.20804（组件级消融，反整体评估）/2610.34577（重思验证）；OpenAI 官方 harness-engineering 学科文（2026-02-11，基线漏录补录）。
+3. **组织线**：Agensh（2609.26781 无中心 1024 agents，agent 数量=组织 scaling 维度）；AMOD（2610.27531 组织反事实审计）；**Loop-Back Authority（2609.14767：层级打回每次使开放产出清晰度 -0.14、hedging +53%，首稿无差异——损失全部来自打回环节）**；Meta-Team v2（2605.29790 组织层自进化）；Teams of Coding Agents（2610.17471 团队算力分配：盲目加 agent 成本 3-7 倍）。
+4. **基线证伪**：METR 时间跨度页官方停更（metr.org/time-horizons/，2026-11-10 回源）+ 2610.12466 效度质疑。本机引用 METR「7 个月倍增」一律降级为历史数据；新引用用 Anthropic ~4 个月（When AI builds itself，2026-06-04，窗口外补遗）。
+
+**本机裁决（逐条依据见 FUSION-REPORT.md）**：
+
+- **吸收（零代码，本波已落）**：clef-jev 增菜单策划纪律+上游端点对照（JevCascade / vLLM systemone）；eval-calibration 增 ASR 测量效度节（2609.25173 / 2610.23254）；delegation-brief-format §2.3 开放式任务验收前移（Loop-Back Authority）；本节速查。
+- **派卡**：llm-redteam v1.8.0 升级包（OWASP 2026 波次+ACS+ASI07+防御工程节）；MCP 扫描器基线扫描；held-out 泛化抽验并入 RSI 类卡验收（AIDE² 判据）。
+- **登记待裁决**：受控并发 scaling 实验（Agensh，必带成本核算）；delegation 参数受控搜索（HarnessFlow 思路，适应度=验收通过率+成本）；IDM 事前预测门；AMOD 反事实审计。
+- **等效已有**：OpenCode 后台服务化 ≡ multiplexer@8650；CLE 47.7%（模型内持续学习不可靠）⇒ 外置 skill/记忆路线正确性佐证；vLLM `/v1/systemone` ≡ clef-flash 三原语（决策服务标准化信号）。
+
+**then_run 台账脱节教训**：平台工具层原生提供 then_run 在本地融合台账零记录（SoL-Pi 裁决停在「需改写」状态）直到本轮机械盘点才发现。教训：**工具层能力清单应入周期盘点**（fleet-artifact-sync 审计可选项），禁依赖被动偶遇发现能力变化。
