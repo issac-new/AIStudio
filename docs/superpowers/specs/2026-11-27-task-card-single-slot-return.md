@@ -12,6 +12,10 @@
 - 吸收批按门规定的通道（`node custom/qgate/dist/cli.js intent …`）登记了自己的任务卡 `palantir-self-improvement-20261126`，并把两道门里的 `acknowledgedSha256` 同步成新卡的哈希（99ef1335f 先例的做法），随批推送成功（合并提交 4ba389de8，推送前门禁 5 个面 5 通过）。
 - 本提交把另一会话的登记与两处绑定恢复成 0079bf135 上的版本：`.qgate/registers/task-intent.json`、`custom/qgate/gate-packs/l0/gates/scope-check.yaml`、`custom/qgate/gate-packs/l0/gates/intent-drift.yaml` 三份文件按字节还原，对方的修订留痕（`revisions`）一并保留。
 
+### 第二次（2026-11-27，裁决落地批）
+
+同日 Palantir 吸收批的裁决落地（规格 2026-11-27-palantir-rulings-followup）推送时，槽位里仍是 `run32-plan-sync-20261126`，按同样的做法登记了 `palantir-rulings-followup-20261127`，推送（合并提交 1391eaaf2）后把另一会话在 b694f2e24 上的登记与两处绑定按字节归还。用户已把这一做法定为仓规（`AGENTS.md` 工作规则第 14 条）。
+
 ### 验收判据
 
 验收方式：提交前在工作树里逐项核对，命令与结果见「验证」一节。
@@ -35,6 +39,7 @@
 - 归还后 `.qgate/registers/task-intent.json` 的 sha256 与两道门里的 `acknowledgedSha256` 三者相同。
 - `node custom/qgate/dist/cli.js run L0.scope-check --changed <三份文件> --include-disabled` 与同参数的 `L0.intent-drift`：见提交前实测输出。
 - 推送前门的最终结果以推送日志为准，不在本规格内预先声明。
+- 第二次归还：三份文件与 b694f2e24 上的版本逐字节一致；卡片哈希与两处绑定一致。
 
 ## 设计文档影响
 
