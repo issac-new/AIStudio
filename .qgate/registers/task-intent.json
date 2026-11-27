@@ -1,26 +1,30 @@
 {
-  "taskId": "run32-plan-sync-20261126",
-  "statement": "run32 开跑前方案与程序同步：run31 后八天设计变更吸收（派单层 T1 逃生口/pristine 快照源/P2-P3 产品面供给＋探针组 18/开跑窗废止注记/台账回填）——用户指令「修订全流程推演方案及推演程序，启动新一轮推演」＋「无避让时段夜间正常跑」",
+  "taskId": "delivery-version-stale-guard-20261127",
+  "statement": "交付版本过期校验：独立验收的任务在送审后被改动正文或附件，凭旧验收报告完成即拒绝（拦截码 delivery_version_stale）——用户裁决 2026-11-27「按建议完成裁决」第 1 项，立项修复文档刷新批挂账 R-12",
   "scope": [
-    "docs/**",
-    "simharness/**",
+    "runtime/hermes_cli/kanban_db.py",
+    "runtime/hermes_cli/delivery_version.py",
+    "runtime/tests/hermes_cli/test_acceptance_gate.py",
+    "runtime/tests/hermes_cli/test_delivery_version.py",
+    "patches/series",
+    "patches/822-agent-kanban-delivery-version-stale-guard.patch",
+    "config/mechanism-budget.json",
+    "docs/DESIGN.md",
+    "docs/manuals/aistudio-training-and-user-guide.md",
+    "docs/manuals/aistudio-design-document-index.md",
+    "docs/superpowers/specs/2026-11-27-delivery-version-stale-guard.md",
+    ".swarm-yuan/spec-receipts.jsonl",
     "custom/qgate/**",
-    ".qgate/registers/**",
-    ".swarm-yuan/**"
+    ".qgate/registers/**"
   ],
   "acceptance": [
-    "When capability-probes.test.ts 跑 Then 十八组全绿",
-    "When jargon-source-gate 跑 Then HARD=0",
-    "When run-gates.sh 跑 Then 全过",
-    "When regress merge scope 跑 Then 全过",
-    "When 合入 main 推送 Then pre-push 门全过"
+    "When 卡片在送审后被改正文、改验收条件措辞或增删附件 Then 凭旧报告完成被拒且拦截码为 delivery_version_stale",
+    "When 卡片未改动 Then 合法报告照常完成",
+    "When 打回后重新送审 Then 新版本的报告通过且完成后不再另记版本",
+    "When py-runtime 测试面跑 Then 全过",
+    "When 合并档回归 merge 档跑 Then 15 个测试面全过",
+    "When 合入 main 推送 Then 推送前门全过"
   ],
-  "confirmedBy": "用户 2026-11-26 指令",
-  "confirmedAt": "2026-11-26T14:40:21.139Z",
-  "revisions": [
-    {
-      "at": "2026-11-26T14:40:21.139Z",
-      "reason": "范围修订为实际变更集——设计索引重生成/门 pin 重绑/规格收据账本/任务卡注册文件属随批机械件"
-    }
-  ]
+  "confirmedBy": "用户 2026-11-27「按建议完成裁决」第 1 项；范围与验收条目由执行会话拟定",
+  "confirmedAt": "2026-11-27T05:08:39.934Z"
 }
