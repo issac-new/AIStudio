@@ -18,6 +18,8 @@
 12. 多会话 merge 冲突属主解（2026-11-04 用户裁决）：双活会话下在 main 上发起的 merge 报冲突时，**只有分支属主会话有权解冲突并完成 merge**（唯一例外=属主明确让渡）；非属主发现他人 merge 冲突只通报不动手。依据 v0.22.7 轮实录：代解即使结果优质，同轮 VENDOR.md 台账在 merge 环节被静默回退旧版且无人对 merge 全量内容负责（75af34ee7 回植才闭环）——决策链见 `.swarm-yuan/decisions.jsonl` 同日 UserChallenge 条。
 13. 机制预算与退役条件（2026-11-05 治理可信度修复）：新增门/钩子/脚本/账本必须在 `config/mechanism-budget.json` 登记 `sunset`（owner、reviewBy、retireWhen），并配对一项删除或降级；`node scripts/governance-lint.mjs --budget` 超限即失败。门、脚本、账本、npm 脚本四类的上限须等于在册数：退役机制后同批下调 `limits`，上限高于在册数同样报 problem（2026-11-23 复盘：scripts 上限 139 对在册 74，预算约束空转两日）。禁止只加不减——上一轮复盘的 D3（治理通胀）就是新增机制没有退役条件。合并后静态不变量（manifest/docs/L2/收据）由 `scripts/merge-invariants.mjs --check` 在 `pre-push` 与 `scripts/maintenance/merge-to-main.mjs` 双点拦截。
 
+14. 任务卡单槽位与并发推送（2026-11-27 用户裁决，按执行会话推荐）：推送前门的 `L0.scope-check` 与 `L0.intent-drift` 按 `.qgate/registers/task-intent.json` 里登记的任务卡收窄改动范围，卡只有一个槽位。槽位里是别的会话在途任务的卡时，本批推送会被判「范围外」：先撤回本地主干上的合并（`git reset --keep <origin/main>`；共用主干上的未推送合并会连带阻塞他人推送），再在自己的分支上经 `node custom/qgate/dist/cli.js intent …` 登记本批任务卡（范围写实际变更集，验收条目取自规格），并把 `custom/qgate/gate-packs/l0/gates/scope-check.yaml` 与 `intent-drift.yaml` 里的 `acknowledgedSha256` 同步成命令打印的哈希，随批推送；推送成功后把对方在先的登记与两处绑定按字节归还（带一份 `DESIGN_SYNC: none` 的治理规格）。不得用 `qgate waive` 或 `git commit --no-verify` 代替。先例见规格 2026-11-27-task-card-single-slot-return。
+
 ## 目录导航
 
 | 路径 | 作用 |

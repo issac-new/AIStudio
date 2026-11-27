@@ -6,8 +6,8 @@
 //
 // 用法：node scripts/diagram-export-png.mjs <src.html> <out.png> [scale=2]
 // 退出码：0 成功；2 参数错；1 渲染/浏览器失败（stderr 含原因）。
-import { pathToFileURL } from 'node:url'
-import { existsSync } from 'node:fs'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { existsSync, realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const NETWORK_IDLE_TIMEOUT_MS = 15_000
@@ -22,19 +22,29 @@ function parseScale(value) {
   return scale
 }
 
-async function launchBrowser(chromium) {
-  try {
-    return await chromium.launch()
-  } catch (e) {
-    console.error(`[diagram-export-png] bundled chromium 不可用，回退系统 Chrome（${String(e.message).split('\n')[0]}）`)
+/**
+ * 浏览器解析链：bundled chromium → 系统 Chrome → 系统 Edge（2026-11-27）。
+ * 某台机器上系统 Chrome 可能起不来（宿主缺系统隐私授权时启动即崩），而 Edge 在同样被拒时仍能启动；
+ * 默认的浏览器缓存还可能被磁盘水位清扫抹掉。每一级失败只记一行原因，三级都失败才抛错。
+ * 抛错而不直接退出进程，是为了能被单测以假浏览器对象验证回退顺序。
+ */
+export async function launchBrowser(chromium, log = console.error) {
+  const chain = [
+    { label: 'bundled chromium', options: undefined },
+    { label: '系统 Chrome', options: { channel: 'chrome' } },
+    { label: '系统 Edge', options: { channel: 'msedge' } },
+  ]
+  const reasons = []
+  for (const [index, step] of chain.entries()) {
     try {
-      return await chromium.launch({ channel: 'chrome' })
-    } catch (e2) {
-      console.error(`[diagram-export-png] 系统 Chrome 也不可用：${String(e2.message).split('\n')[0]}`)
-      console.error('[diagram-export-png] 修复：npx playwright install chromium（或装 Google Chrome）')
-      process.exit(1)
+      return await chromium.launch(step.options)
+    } catch (e) {
+      const reason = String(e && e.message ? e.message : e).split('\n')[0]
+      reasons.push(`${step.label}（${reason}）`)
+      log(`[diagram-export-png] ${step.label} 不可用（${reason}）${index === chain.length - 1 ? '，没有可回退的浏览器' : '，回退下一级'}`)
     }
   }
+  throw new Error(`浏览器均不可用——${reasons.join('；')}。修复：npx playwright install chromium（或装 Google Chrome / Microsoft Edge）`)
 }
 
 async function main() {
@@ -95,7 +105,20 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(`[diagram-export-png] 失败：${e.message}`)
-  process.exit(1)
-})
+// 只在作为命令行入口时执行主流程；被单测导入时不执行。两侧都取真实路径，避免经符号链接调用时误判。
+function isEntryPoint() {
+  if (!process.argv[1]) return false
+  // 只包住取真实路径这一步（文件不存在或无法解析时视为非入口）；其他错误照常抛出，不吞。
+  const real = (p) => realpathSync(p)
+  try {
+    return real(resolve(process.argv[1])) === real(fileURLToPath(import.meta.url))
+  } catch {
+    return false
+  }
+}
+if (isEntryPoint()) {
+  main().catch((e) => {
+    console.error(`[diagram-export-png] 失败：${e.message}`)
+    process.exit(1)
+  })
+}

@@ -117,7 +117,13 @@ export function reviewAssessment(input: {
       break
   }
 
-  if (ev.latencyMs == null) soft.push('没有耗时读数：无法判断执行时间的变化')
+  // 成本与耗时的变化此前只在候选表里；审阅结论一并写明（2026-11-27）。现行规则只在增益超出噪声带时裁决成本，不裁决耗时。
+  const costDelta = probe?.contrast?.costDeltaPct ?? null
+  if (costDelta != null && costDelta < 0) strengths.push(`单次调用成本相对基线下降 ${(Math.abs(costDelta) * 100).toFixed(1)}%`)
+  const latencyDelta = probe?.contrast?.latencyDeltaPct ?? null
+  if (latencyDelta != null && latencyDelta < 0) strengths.push(`执行耗时相对基线下降 ${(Math.abs(latencyDelta) * 100).toFixed(1)}%`)
+  else if (latencyDelta != null && latencyDelta > 0) soft.push(`执行耗时相对基线上升 ${(latencyDelta * 100).toFixed(1)}%：现行规则不拦耗时回退`)
+  else if (latencyDelta == null) soft.push('没有耗时读数：无法判断执行时间的变化')
 
   const confidence = hard.length > 0 ? 'insufficient' : soft.length > 0 ? 'limited' : 'sufficient'
   return { confidence, ...comparability, strengths, limitations: [...hard, ...soft] }
