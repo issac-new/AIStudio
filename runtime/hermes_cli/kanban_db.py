@@ -3349,8 +3349,11 @@ def _independent_acceptance(
         return False, str(exc), exc.blockers, None
     # 不可变交付版本绑定（结果交付后续批）：存在 active 版本时，报告必须绑定
     # 同一 versionId/checksum；旧版本报告因 checksum 不匹配自然失效。没有版本的
-    # 历史卡保持兼容（本批不追溯造版本）。
-    from hermes_cli.delivery_version import latest_delivery_version, verify_delivery_version
+    # 历史卡保持兼容（本批不追溯造版本）。版本只在送审与完成两个时点记录，两次
+    # 记录之间卡片被改动不会产生新版本，所以还要核对卡片当前内容等于该版本。
+    from hermes_cli.delivery_version import (
+        current_delivery_checksum, latest_delivery_version, verify_delivery_version,
+    )
     version = latest_delivery_version(conn, task_id)
     if version is not None:
         version_blockers: list[dict] = []
@@ -3360,6 +3363,24 @@ def _independent_acceptance(
                 "title": "交付版本自校验失败",
                 "detail": f"versionId={version.get('versionId')} 的 checksum/内容不一致",
                 "action": "重新走 request_review 生成新版本；不要手改事件载荷",
+            })
+        # 过期校验（2026-11-27）：报告绑定的是送审时冻结的内容。送审之后卡片正文或
+        # 附件有改动，照抄旧 versionId/checksum 的报告不得让改动后的卡片完成。
+        current_checksum = current_delivery_checksum(conn, task_id)
+        if current_checksum != version.get("checksum"):
+            version_blockers.append({
+                "code": "delivery_version_stale",
+                "title": "卡片在送审后被改动",
+                # 工具层只把 detail 返回给调用方（不带 action），所以下一步指引要写进 detail。
+                "detail": (
+                    f"卡片在送审后被改动：当前内容的校验和 {current_checksum[:16]}… 与交付版本 "
+                    f"{version.get('versionId')}（校验和 {str(version.get('checksum'))[:16]}…）不一致；"
+                    "实现方改完后须重新 kanban_request_review 生成新版本，审查者按新版本重新审查"
+                ),
+                "action": (
+                    "实现方改完卡片后重新 kanban_request_review 生成新版本，"
+                    "审查者按新版本重新审查并提交新报告"
+                ),
             })
         report_version = normalized.get("deliveryVersionId")
         if not report_version:

@@ -12,6 +12,9 @@
   同 checksum 重复创建返回既有版本（幂等），不追加新事件。
 - 新版本创建时，先把当前 active 版本标 superseded，再追加新版本；旧验收报告因
   `deliveryVersionId`/`artifactChecksum` 不匹配而自然失效。
+- 版本只在 `request_review` 与 `complete_task` 记录；两次记录之间卡片被改动
+  （正文或附件）不会产生新版本，由 `current_delivery_checksum` 与版本 checksum 的
+  比对识别（独立验收据此拒绝凭旧版本报告完成，见 kanban_db._independent_acceptance）。
 - 附件哈希在版本创建时读取持久附件文件计算；文件缺失如实记 `missing=true`，
   sha256=null，不猜内容。
 - 调用方必须已经持有 write_txn（与 _append_event 同约定）。
@@ -98,6 +101,19 @@ def version_id_of(checksum: str) -> str:
     return f"dv_{checksum[:16]}"
 
 
+def _current_content(conn, task_id: str) -> dict[str, Any]:
+    """卡片当前内容（正文加附件）；记录版本与过期校验共用这一处算法。"""
+    return delivery_content(task_id, _task_body(conn, task_id), _attachments(conn, task_id))
+
+
+def current_delivery_checksum(conn, task_id: str) -> str:
+    """卡片当前内容的校验和。
+
+    与最新交付版本的 checksum 不一致，说明版本记录之后卡片被改动过。
+    """
+    return delivery_checksum(_current_content(conn, task_id))
+
+
 def _event_rows(conn, task_id: str) -> list[Any]:
     return conn.execute(
         "SELECT id, kind, payload FROM task_events WHERE task_id = ? "
@@ -162,9 +178,7 @@ def record_delivery_version(
 
     返回完整版本 dict（含 versionId/checksum/content/manifest/seq 等）。
     """
-    body = _task_body(conn, task_id)
-    attachments = _attachments(conn, task_id)
-    content = delivery_content(task_id, body, attachments)
+    content = _current_content(conn, task_id)
     checksum = delivery_checksum(content)
     current = latest_delivery_version(conn, task_id)
     if current is not None and current.get("checksum") == checksum:

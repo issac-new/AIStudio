@@ -2,7 +2,7 @@
   "recordedAt": "2026-11-25",
   "limits": {
     "gates": 47,
-    "patches": 504,
+    "patches": 505,
     "zcodePatches": 14,
     "scripts": 79,
     "ledgers": 4,
@@ -469,6 +469,19 @@
         "owner": "Palantir 自我改进架构吸收轮（2026-11-26-palantir-self-improvement-architecture）",
         "reviewBy": "2027-02-26",
         "retireWhen": "审阅结论与原因归属连续两轮推演无消费（面板读数无人看、起草器提示词无人改）时降级为纯报告字段并移除面板块"
+      }
+    },
+    {
+      "at": "2026-11-27",
+      "delta": "+1 patch（822 交付版本过期校验）/ +0 gates / +0 scripts / +0 ledgers / +0 npm scripts；limits.patches 504→505 对齐在册数",
+      "reason": "送审后卡片被改动即拒绝凭旧验收报告完成（用户裁决 2026-11-27 立项，spec 2026-11-27-delivery-version-stale-guard）：在独立验收校验里加一步卡片当前内容校验和的比对，不新增门、脚本、账本或接口",
+      "pairedRemovals": [
+        "822 随上游 hermes-agent 原生提供等价的送审后改动校验时从 series 退役，届时 limits.patches 同批下调"
+      ],
+      "sunset": {
+        "owner": "交付版本过期校验（2026-11-27-delivery-version-stale-guard）",
+        "reviewBy": "2027-02-27",
+        "retireWhen": "上游 hermes-agent 的独立验收原生核对卡片当前内容等于交付版本时，822 从 series 移除并把 limits.patches 下调 1"
       }
     }
   ],
