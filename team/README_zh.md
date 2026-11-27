@@ -1,14 +1,14 @@
 # SwarmTeam — Hermes Agent 多 Agent Profile 分发仓库
 
 > 基于 [Hermes Agent](https://hermes-agent.nousresearch.com) 的生产级多智能体系统。
-> **本仓 30 个 profile** 分布在 8 个团队（swarm/product/ops/platform/aiteam/pay/data/hack），由 orchestrator 统一路由，基于 Kanban 进行任务分解。
-> 口径：本仓实况=30 profile / 8 团队 / 9 看板；41 是 2026-10 公开分发包口径（含已退役 IC 设计团队 11 个），下文明册保留作历史记录。
+> **本仓 27 个 profile** 分布在 8 个团队（swarm/product/ops/platform/aiteam/pay/data/hack），由 orchestrator 统一路由，基于 Kanban 进行任务分解。
+> 口径：本仓实况=27 profile / 8 团队 / 8 看板（2026-11-26 清点 `team/profiles/`，不含 `_shared`；三个领域网关档位已于 2026-11-18 并入顶层 `orchestrator`）；41 是 2026-10 公开分发包口径（含已退役 IC 设计团队 11 个），下文明册保留作历史记录。
 
 ## 概览
 
 本仓库分发 Hermes Agent 多智能体团队配置。每个 profile 有独立的 SOUL.md 人格、config.yaml 配置和角色专属规则。Orchestrator 是所有 Gateway 消息（Matrix/Weixin/API Server/Email）的唯一入口，通过看板将任务路由到专家 profile。
 
-**30 个 profile** · **8 个团队** · **8 个看板**（eda 域 2026-10-28 退役）· 全量 skills + 六层 _shared 共享规则
+**27 个 profile** · **8 个团队** · **8 个看板**（eda 域 2026-10-28 退役）· 全量 skills + 六层 _shared 共享规则
 
 ## Profile 名册
 
@@ -44,34 +44,37 @@
 | `platform-skill-miner` | 技能挖掘 |
 | `platform-ontology-curator` | 本体治理 |
 
-### AI Team（6 个 profile）— AI 研究
+### AI Team（5 个 profile）— AI 研究
 
 | Profile | 角色 |
 |---------|------|
-| `aiteam-orchestrator` | 领域网关 |
 | `aiteam-architecture` | 模型架构 |
 | `aiteam-multimodal` | 多模态 |
 | `aiteam-embodied` | 具身智能 |
 | `aiteam-training` | 训练对齐 |
 | `aiteam-scout` | 情报侦察 |
 
-### Pay 团队（4 个 profile）— 支付清算
+> 原 `aiteam-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
+
+### Pay 团队（3 个 profile）— 支付清算
 
 | Profile | 角色 |
 |---------|------|
-| `pay-orchestrator` | 领域网关 |
 | `pay-clearing` | 清算结算 |
 | `pay-fintech` | 金融科技 |
 | `pay-infra` | 支付基础设施 |
 
-### Data 团队（4 个 profile）— 实时数据栈
+> 原 `pay-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
+
+### Data 团队（3 个 profile）— 实时数据栈
 
 | Profile | 角色 |
 |---------|------|
-| `data-orchestrator` | 领域网关 |
 | `data-arch` | 数仓架构 |
 | `data-flink` | Flink 流计算 |
 | `data-infra` | 存储基础设施 |
+
+> 原 `data-orchestrator`（领域网关）已于 2026-11-18 并入顶层 `orchestrator`，目录已删（提交 `36df007ea`）。
 
 ### [已移除] 团队（11 个 profile）— IC 设计自动化
 
@@ -103,7 +106,7 @@
 
 ## 领域网关原则
 
-`aiteam` / `pay` / `data` / `[已移除]` 各有独立 orchestrator 作为领域网关，负责领域内子任务分解与路由；跨领域任务由顶层 `orchestrator` 统一调度，禁止跳过领域网关直派下游 worker。
+（2026-11-18 起）`aiteam` / `pay` / `data` 三个领域不再各设 orchestrator：三个领域网关档位已并入顶层 `orchestrator`，由顶层直接把任务派给各领域的执行档位（提交 `36df007ea`）。派单约定保存在技能 `skills/devops/domain-team-dispatch/SKILL.md`。
 
 ## 架构
 

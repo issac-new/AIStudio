@@ -972,7 +972,7 @@ const SCENES = [
     handoff: { consumes: [{ scene: 'project-release-retro', artifact: 'release-decision' }, { scene: 'operations-readiness', artifact: 'readiness' }], produces: 'ops-timeline', next: 'audit-evidence-remediation' },
  part: 'operations', title: '停滞恢复、发布观察与回滚', short: '恢复与发布观察', route: '/app/stage/govern', duration: 8500, layer: 'simulation', practiceRef: '17.5',
     summary: '恢复先看真实 claim、日志和故障分类，不能手改任务真值；Graph legacy/shadow/on、多 gateway 和进度联邦都有明确边界，发布后仍需观察、复验和必要回滚。',
-    action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN/FLAKY 七类分类，再沿发布回执、观察指标、异常和回滚路径走查。',
+    action: '对一个停滞案例按 ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN 六类分类，再沿发布回执、观察指标、异常和回滚路径走查。',
     proof: '恢复动作有界且没有扩大权限或伪造 running；实际发布有通道回执，观察、负责人和具体回滚命令齐全，异常能够回流处置。',
     focus: 'observe', target: '观察与回滚',
     inputs: ['停滞任务的 claim/run、worker 日志、diagnostics 和近期事件', '培训发布包、通道回执、观察指标和具体回滚 runbook'],

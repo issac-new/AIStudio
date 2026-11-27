@@ -619,7 +619,7 @@ commit / 版本：
 5. 发起一次低风险 Ycode/ACP 任务，记录 `engine_bin_source`、`engine_bin`、工作区和真实回执；provider 写 zcode 不足以证明用了 Ycode 分叉。`runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py:129-154,243-248`。
 6. 预演结束后按培训约定归档测试卡和测试消息，保留必要证据，不批量清空数据库。
 
-任何一步缺依赖，就把该实操标为未验证，不用截图、静态页面或口头说明冒充完成。培训依赖原则见 `docs/manuals/aistudio-training-and-user-guide.md:832-903`。
+任何一步缺依赖，就把该实操标为未验证，不用截图、静态页面或口头说明冒充完成。培训的环境依赖与完成判据见《培训和使用手册》第 17 章各实操小节（`docs/manuals/aistudio-training-and-user-guide.md` 的 §17.1 至 §17.6）。
 
 ## 15. 六类故障分类与处置
 

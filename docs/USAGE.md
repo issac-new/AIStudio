@@ -48,7 +48,7 @@ npm run dev
 
 已有账号直接登录。共享或培训环境首次建号时，在启动前执行 `node vendor/hermes-studio/bin/hermes-web-ui.mjs reset-default-login`，使用命令生成的随机密码。隔离开发环境的空库也可显式设置 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`，不要把该入口用于共享培训环境。出厂默认口令已删除。
 
-全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#34-创建首个管理员账号)。
+全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#161-共享培训或生产怎样启动)。
 
 ## 2、三种工作模式怎么走
 
