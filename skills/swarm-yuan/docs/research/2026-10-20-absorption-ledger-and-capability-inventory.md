@@ -1,5 +1,7 @@
 # swarm-yuan 调研吸收台账与全量功能特性（现状视图 · 2026-10-20）
 
+> **已冻结（2026-11-28）**：本稿是 2026-10-20 的派生视图，10-24 后停更，不承载真值。现行载体：`skills/swarm-yuan/references/capability-map.md`（方法论与运行时登记）与 `team/shared/research/absorption-ledger.md`（跨对象吸收总账）。下文按当时事实保留。
+
 > **定位**：本稿是"一页看清现状"的派生视图，回答两个问题：swarm-yuan 吸收了哪些外部来源、各在什么版本；它最新版有哪些能力、数字口径是多少。历史沿革与逐轮证据不在本稿（见各权威源）。
 > **口径头**：整理日 2026-10-20。版本基线 = 已发版 v2.88.1（2026-10-20）。main 另含三批未发版增量：R126 可靠性收口轮（874324d）、R126 深度复盘重构轮（2b11e5c）、R127 运行时蒸馏与设计总览汇编（9888956）；本轮台账整理随 docs/absorption-ledger-inventory 分支合入。详见 §3.10 与 §四。
 > **真值指向**：数字以 `swarm-yuan/assets/facts.conf` 为准；运行时基线以 `docs/upstream-baseline.md` 为准；吸收整合以 `swarm-yuan/references/capability-map.md` 为准。本稿与三者冲突时，以三者为准并请回改本稿。

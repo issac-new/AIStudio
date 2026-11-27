@@ -1,5 +1,7 @@
 # 规格库 registry/（主规格库，2026-11-05 AI Native 吸收批 T7 立）
 
+> **已冻结（2026-11-28）**：`scripts/spec-archive.mjs` 与它的测试已退役（规格 2026-11-27-absorption-regime-unify 的 T1：立后只用过 `ainative` 一个域，脚本没有自动调用方）。本目录只作历史锚，不再维护；吸收轮的查重、挂账与回看改用 `team/shared/research/absorption-ledger.md`。下文是冻结前的说明，按当时事实保留。
+
 Spec-Anchored Level 2 的合并正本：`scripts/spec-archive.mjs` 把含 OpenSpec delta 段
 （### ADDED/MODIFIED/REMOVED Requirements）的治理 spec 合并到本目录 `<域>.md`
 （域=spec 显式「## 规格域」行，缺省取文件名日期后首段）。

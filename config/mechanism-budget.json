@@ -4,7 +4,7 @@
     "gates": 47,
     "patches": 505,
     "zcodePatches": 14,
-    "scripts": 79,
+    "scripts": 78,
     "ledgers": 4,
     "npmScripts": 52
   },
@@ -483,6 +483,14 @@
         "reviewBy": "2027-02-27",
         "retireWhen": "上游 hermes-agent 的独立验收原生核对卡片当前内容等于交付版本时，822 从 series 移除并把 limits.patches 下调 1"
       }
+    },
+    {
+      "at": "2026-11-28",
+      "delta": "-1 scripts / +0 gates / +0 ledgers / +0 npm scripts；limits.scripts 79→78 对齐在册数",
+      "reason": "规格按域登记机制退役（spec 2026-11-27-absorption-regime-unify 的 T1，用户 2026-11-28 批准）：2026-11-05 立后只用过 ainative 一个域，脚本无自动调用方；与新增的吸收总账（Markdown 文档，不占账本预算）配对。登记目录 docs/superpowers/specs/registry/ 冻结保留",
+      "pairedRemovals": [
+        "删除 scripts/spec-archive.mjs 与 scripts/__tests__/spec-archive.test.ts（sunset 条目同步移出册；脚本与测试可从 git 历史召回，退役前最后在册的提交是 e01d7ab40）"
+      ]
     }
   ],
   "sunset": [
@@ -585,16 +593,6 @@
       "check": {
         "type": "filePresent",
         "path": "scripts/harness-doctor.mjs"
-      }
-    },
-    {
-      "id": "spec-archive",
-      "owner": "docs",
-      "reviewBy": "2026-12-20",
-      "retireWhen": "主规格库 registry 由状态机自动维护后",
-      "check": {
-        "type": "filePresent",
-        "path": "scripts/spec-archive.mjs"
       }
     },
     {

@@ -56,6 +56,7 @@
 | P018 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | hermes 侧技能 `local-skill-fusion-routing` 是否退役（入站引用 1 处） | 2026-12-27 | 记档待定 |
 | P019 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | hermes 侧技能 `upstream-agent-skill-fusion` 是否退役（入站引用 1 处） | 2026-12-27 | 记档待定 |
 | P020 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | 附录 B（历史索引，自述目录数量不滚动维护）是否退役 | 2026-12-27 | 记档待定 |
+| P021 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | swarm-yuan 状态机归档阶段的提示仍指向已退役的 spec-archive 脚本（`skills/swarm-yuan/assets/state-machine.sh`）；随 swarm-yuan 下次发版删除该提示 | 2026-12-27 | 记档待定 |
 
 记档待定项的退役判据沿用域退役判据：多轮确认人与智能体都不用才退役，入站引用数只是静态证据。
 
