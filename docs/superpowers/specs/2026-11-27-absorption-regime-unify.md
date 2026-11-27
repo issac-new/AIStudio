@@ -1,6 +1,6 @@
 # 吸收制度合一、台账退役与记忆清理（2026-11-27）
 
-> 状态：用户 2026-11-28 批准；实施中。「验证」一节在收口时回填实测数字。实施计划见 `docs/superpowers/plans/2026-11-28-absorption-regime-unify.md`。
+> 状态：用户 2026-11-28 批准；已实施（仓内部分五个提交，记忆清理在仓外完成），待独立审查与合入。实测结果见「验证」。实施计划见 `docs/superpowers/plans/2026-11-28-absorption-regime-unify.md`。
 > 来源：用户 2026-11-27 指令「按 C 做」。C 方案出自同日对「调研学了很多却形不成演进路线」的复盘：把三套吸收制度合并成一套，退役一批台账，清理项目记忆。调查事实存在项目记忆 `rsi-route-retro-20261127`。
 > 吸收总账：不适用（治理整顿，无外来材料）。
 
@@ -209,8 +209,51 @@ T1 删脚本后，规格 `2026-11-05-ainative-absorption.md` 抬头指向的 `re
 - `scripts/spec-archive.mjs` 与其测试文件不存在；`docs/superpowers/specs/registry/README.md` 含「已冻结」；`config/mechanism-budget.json` 没有 `spec-archive` 条目，`limits.scripts` 等于在册脚本数。
 - `docs/absorption-domain-README.md` 不超过 15 行，页内三个链接的目标文件都存在。
 - T2 文件前 6 行含冻结声明与两个指向现行载体的链接。
-- 记忆索引：总字符数不超过 22,000；同一文件只出现一次；被索引的文件全部存在；备份压缩包存在且能列出 919 个文件。
+- 记忆索引：总字符数不超过 22,000；同一文件只出现一次；被索引的文件全部存在；备份压缩包存在，且文件数与打包时的目录一致。
 - `AGENTS.md` 含第 15 条，引用总账路径与规程正本路径。
+
+### 任务卡：完成条件
+
+- 上面「验收判据」的七条逐条成立，实测数字写在「验证」一节。
+- 合并档回归按回归工具的判定收口；单面超时的单面复跑并如实记录。
+- 独立审查的严重与重要问题清零；次要问题逐条登记。
+
+### 任务卡：输入与来源
+
+- 用户 2026-11-27 的复盘指令与「按 C 做」，2026-11-28 的「批准」。
+- 设计依据是「一、现在哪里出了问题」一节的证据，全部带文件与行号。
+
+### 任务卡：工作流边界
+
+- 只在本仓工作树 `refactor/absorption-regime-unify` 内改动；主检出只用于同步与合并。
+- 记忆清理只动 ZCode 项目记忆目录的索引与 14 行候选；不动 hermes 的 hindsight 记忆。
+- 「6. 不在本批的事」一节列出的七项不做。
+
+### 任务卡：工具与副作用
+
+- 新增一个测试文件，改规程、文档、仓规与预算各一处，删一个脚本与它的测试。不新增门、钩子、脚本、npm 脚本。
+- 不写宿主 `~/.hermes/` 下任何文件；记忆目录动手前先打备份包。
+- 删除的两个文件可从 git 历史召回。
+
+### 任务卡：结果与证据
+
+- 规程正本 `team/skills/devops/article-methodology-fusion/SKILL.md` 2.0.0；总账 `team/shared/research/absorption-ledger.md`；守门测试 `custom/__tests__/absorption-ledger.test.ts`。
+- 实测记录见「验证」；执行中做的取舍见提交信息与实施计划的执行账本。
+
+### 任务卡：异常与恢复
+
+- 提交钩子拦截时按钩子给的办法处置，不用 `--no-verify`。
+- 守门测试判红先查总账与规格目录的真实状态，不改测试迁就数据。
+- 记忆清理出问题，用备份包整目录还原。
+- 退役的脚本确需再用时，从提交 `e01d7ab40` 召回。
+
+### 任务卡：验收反例
+
+- 规格抬头声明了一个总账里不存在的编号：断言 C 判红。
+- 表二某行删掉回看日：断言 D 判红。
+- 文件名含关键词的新规格既没入账、抬头也没写不适用：断言 B 判红。
+- 一份吸收规格读到的是摘要级却直接落了地：违反规程第 1 步的硬约束，独立审查应拦下。
+- 落地物是默认关闭的开关却把「默认行为变更」记成有：与规程第 1 步的硬约束相抵，审查应拦下。
 
 ## 决策记录
 
@@ -228,16 +271,31 @@ T1 删脚本后，规格 `2026-11-05-ainative-absorption.md` 抬头指向的 `re
 
 ## 验证
 
-实施后逐条执行，实测数字回填本节。
+实测结果（工作树 `refactor/absorption-regime-unify`，基线 main 60fb6243c；2026-11-28 实跑）。
 
-1. `npx vitest run custom/__tests__/absorption-ledger.test.ts`（新增）；同批复跑 `custom/__tests__/docs-ssot-guard.test.ts`、`custom/__tests__/l2-kit-parity.test.ts`、`scripts/__tests__/regression-matrix.test.ts`，以及引用 `AGENTS.md` 的测试文件。
-2. 变异探针 3 个；做完后核对被改文件的合并摘要与变异前一致。
-3. `node scripts/governance-lint.mjs --budget`：0 problem，`scripts` 上限等于在册数。
-4. `node scripts/gen-doc-indexes.mjs --check` 与 `node scripts/merge-invariants.mjs --check`。
-5. 回灌后跑 `team/tests` 的隐私测试；T2 改文件头后跑 swarm-yuan 的文档数字测试 `test-doc-numbers.sh`。
-6. 合并前 `npm run regress -- --scope merge`；负载高导致单面超时的，按回归工具给出的办法单面复跑并如实记录。
-7. 记忆索引实测：总字符数、行数、重复数、断链数；备份压缩包内的文件数。
-8. 实施时如仍未做，须写进交付说明的未验证项：宿主副本未更新；hermes 自主轮次未入账；项目技能认知快照未刷新。
+1. 守门测试 `custom/__tests__/absorption-ledger.test.ts`（新增，10 例）：先红后绿——总账文件不存在时五条文件级断言全部报找不到文件，五个边角用例通过；建总账后 10 例全过。同批复跑 `custom/__tests__/docs-ssot-guard.test.ts`、`scripts/__tests__/regression-matrix.test.ts`、`custom/__tests__/evidence-binary-freeze.test.ts`、`custom/__tests__/mimo-coding-agent.test.ts`、`custom/__tests__/precommit-vendor-guard.test.ts`、`custom/__tests__/qgate-repo-scope-fence.test.ts`、`scripts/__tests__/harness-doctor.test.ts`、`scripts/__tests__/make-offline-package.test.ts`：九个文件 81 例全过。`custom/__tests__/l2-kit-parity.test.ts` 随合并档回归的根测试面通过。
+2. 变异探针 3 个，全部判红：删表一一轮（L011）→ 断言 B 判红；新建一份规格并在抬头声明不存在的编号 L999 → 断言 B、C 判红；删表二 P001 的回看日 → 断言 D 判红。做完后总账的摘要与变异前一致（`ff5027b9…`），探针规格已删除。
+3. `node scripts/governance-lint.mjs --budget`：0 problem；`limits.scripts` 78，等于在册脚本数；退役清单 15 条变 14 条。
+4. `node scripts/maintenance/gen-doc-indexes.mjs --check`：0 problem（新规格入索引后 789 份）；`node scripts/merge-invariants.mjs --check`：pass。
+5. 回灌后 `python3.14 -m pytest team/tests/test_profiles_secret_hygiene.py -q`：2 passed；改文件头后 `bash skills/swarm-yuan/tests/test-doc-numbers.sh`：256 项断言 0 失败。
+6. 合并前 `npm run regress -- --scope merge`：一次全过，15 个面 15 通过、0 失败、0 未执行，退出码 0。根测试面 1274 个文件通过、10,427 例通过、11 例跳过；推演面 30 个文件通过，其中改过的 `mechanism-behavior.test.ts` 34 例通过。当时机器 5 分钟平均负载 134 到 148，没有出现超时。
+7. 记忆索引实测（字符数按码点计）：主索引从 25,526 码点降到 13,181，行数 137 变 128；超过 160 字符的行从 112 降到 0，最长一行从 597 降到 140；重复登记从 5 个文件降到 0；断链 0；成员 127 个（原 126 个一个不少，加长期规则一条；其中含另一会话在实施期间新增的一条）。备份压缩包内 920 个 Markdown 文件，与打包时目录一致。归档索引页头订正为 491 条、2026-10-06 至 2026-11-12。15 份过期记忆在末尾各追加一行现状说明，原文未改。
+8. 未做与未验证：
+   - 两份枢纽技能的新正本未部署到宿主，宿主副本仍是 1.7.0 与 1.5.0。
+   - hermes 夜间自主跑的吸收轮不入总账。
+   - 项目技能 aistudio-dev 的认知快照未刷新。
+   - swarm-yuan 状态机归档阶段仍有一句提示指向已退役的脚本（总账记档待定 P021）。
+   - 记忆目录里有 321 个主题文件既不在主索引、也不在归档索引，本批未处置，待用户裁决。
+   - 主检出 `vendor/zcode` 引擎产物的现状未采集（订正记忆时沿用了子代理的核对结果）。
+
+### 实施勘误（原判断保留，事实更正在旁）
+
+- §5 写「现有 919 个主题文件」「只有索引进上下文」。实测备份时 920 个、收口时 921 个；且主索引收 126 个、归档索引收 474 个，另有 321 个两头都不在——并非其余都能从归档索引查到。处置待用户裁决。
+- 验收判据写指针页「三个链接」。实际列了五个指针（总账、技术组件台账、10-01 的两份报告、规程正本），页长 12 行；五个目标文件都存在。
+- §2 写记档待定「蒸发挂账 12 行、待判载体 8 行」，共 20 行。实施中多登记一行 P021（swarm-yuan 状态机归档提示指向已退役脚本），共 21 行。
+- §4 的 T1 写「读登记目录的只有脚本自己与它的测试」。实施时另查到两处文字引用：推演测试里一条指向被删测试文件的豁免条目（已删除）；swarm-yuan 状态机归档阶段的一句运行提示（属技能资产，登记为 P021，随下次发版删除）。
+- 过期候选第 13 行（衰减审计口径）经核实不成立：该记忆自带现状注记，未动。实际订正 15 份，不是 14 份。
+- 「机制扩展停止」的裁定日期并非两种写法并存：10-31 是方案里下判断的日子，11-01 是写进设计正本的日子，各有依据。
 
 ## 设计文档影响
 
