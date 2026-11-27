@@ -1,14 +1,14 @@
 ---
 name: readjudication-orch
 description: 旧裁决重判编排：分层triage+试点判读+双口径翻案率+证据包派工，方法论权威源在 default 侧融合技能。
-version: 1.0.0
+version: 1.0.1
 tags: [orchestrator, readjudication, fusion, audit]
 related_skills: [research-ledger-reconciliation, fusion-landing-audit, article-methodology-fusion]
 ---
 
 # 旧裁决重判编排（readjudication-orch）
 
-orchestrator 侧编排手册：用户质疑「当时裁决的分析完善点有问题」（当时模型能力/前提过期）时如何组织重判。对账/重校正的完整方法论权威源=default profile 的 research-ledger-reconciliation（三轴：对账管落地状态、重校正管内容真伪、重裁决管判定质量）；融合落地对账=fusion-landing-audit；裁决矩阵四判定的方法修法=article-methodology-fusion 第 5 步。本件只存 orchestrator 编排层经验，防与 default 件双事实源漂移。
+orchestrator 侧编排手册：用户质疑「当时裁决的分析完善点有问题」（当时模型能力/前提过期）时如何组织重判。对账/重校正的完整方法论权威源=default profile 的 research-ledger-reconciliation（三轴：对账管落地状态、重校正管内容真伪、重裁决管判定质量）；融合落地对账=fusion-landing-audit；裁决矩阵的判定词与方法修法=article-methodology-fusion 的「跨对象总规程」词表（五个判定词）与第 5 步。本件只存 orchestrator 编排层经验，防与 default 件双事实源漂移。
 
 ## 触发判别（先分层再派工）
 
