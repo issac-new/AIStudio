@@ -39,6 +39,7 @@ Koa 服务端扩展层。每个域一个目录，`*-controller.ts` 挂 REST，�
 | `team-library/` | 团队库读模型与建议选择（EvoTeam 吸收，2026-11-08）：家族＝四维身份＋候选名单＋版本史＋成败证据；只出 reuse/cold_start 建议，不接管派单（`/api/harness/team-library/*`） |
 | `handoff/` | 交接契约族：质量账本（只读）/验收断言/主张回执/阶段键/团队作用域交接规则（`handoff-rules.ts` 建议注入，不阻断派发） |
 | `outcome/` | 业务结果合同域（AI 原生运行模型批一，`OUTCOME_WORKBENCH=1` 启用）：合同状态机＋追加制事件哈希链＋版本绑定测量＋结算＋派单最小上下文快照＋决策画像矩阵（riskTier 判据正身在此，`approval-inbox/risk-tier.ts` 退为薄委托）；与 `approval-inbox/` 边界＝outcome 绑定条目以合同门为权威（`dual_sign_required` 双签），风险档闸只管未绑定条目；挂载补丁 804（看板列 805/审批守卫 806 为 agent 侧接线） |
+| `bpa/` | 流程架构域（APQC PCF 分级＋治理体检＋PEMM 成熟度＋场景准入）：`bpa-admission.ts` 四条排除规则三态判定（业务主责/可比基线/数据合规/重大影响复核，纯函数）、`bpa-admission-store.ts` 追加式签署结论账本（可进试点/暂缓，登录身份签署、原子写）；只披露不设门——命中不阻断结果合同创建（2026-11-28 德勤方法论吸收批 D7）；节点场景准入字段（trigger/dataSources/dataCompliance/majorImpact/reviewer）经 PUT /node 整体透传，编辑器必须同步保存（漏同步=改名即丢） |
 
 ## 测试约定
 

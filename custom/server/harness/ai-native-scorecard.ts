@@ -46,7 +46,76 @@ function fileAgeDays(root: string, rel: string): number | null {
   } catch { return null }
 }
 
-export function buildAiNativeScorecard(): AiNativeScorecard {
+/** 治理姿态里评分卡用得上的读数（2026-11-28）。只取这几项，评分卡不依赖姿态的完整结构。 */
+export interface PostureReading {
+  /** 执法总闸是否开着（与执法正身同判据）。 */
+  enforceMasterOn: boolean
+  /** 显式关掉审批的档案数（裸奔）。 */
+  bareProfiles: number
+  /** 未声明或读不出审批模式的档案数。 */
+  partialProfiles: number
+  /** 档案总数；0＝一个档案都没读到。 */
+  totalProfiles: number
+  /** 执法面可见的已加载规则总数。 */
+  loadedRuleTotal: number
+}
+
+/** 默认取数：读真实治理姿态。任何失败都由调用处按「未知」处理，不在这里猜。 */
+function readPosture(): PostureReading {
+  // 动态 require：治理姿态域依赖较多且带盘读，评分卡被 harness 控制器同步调用，避免顶层互相引用
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { collectGovernancePosture } = require('../governance/posture') as typeof import('../governance/posture')
+  const posture = collectGovernancePosture()
+  return {
+    enforceMasterOn: posture.global.enforceMasterOn,
+    bareProfiles: posture.summary.bare,
+    partialProfiles: posture.summary.partial + posture.summary.configMissing,
+    totalProfiles: posture.summary.total,
+    loadedRuleTotal: posture.global.loadedRuleTotal,
+  }
+}
+
+/** 目录下的子目录数；目录不存在或读失败返回 null（此前未保护，目录缺席会让整张评分卡报错）。 */
+function countSubdirsSafe(dir: string): number | null {
+  try {
+    return readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).length
+  } catch { return null }
+}
+
+/** 两条权限判据共用的读数与结论。
+ *  least-privilege（正向）：总闸开、没有档案裸奔、有已加载规则才算做到。
+ *  no-broad-permission（反向）：总闸关＝权限确实过大（反向判据成立）；有档案裸奔＝部分成立。 */
+function permissionReadings(posture: PostureReading | null): {
+  least: CriterionStatus
+  leastEvidence: string
+  broad: CriterionStatus
+  broadEvidence: string
+} {
+  const facts = posture
+    ? `执法总闸=${posture.enforceMasterOn ? '开' : '关'}；档案 ${posture.totalProfiles} 个，其中显式关闭审批 ${posture.bareProfiles} 个、未声明或读不出 ${posture.partialProfiles} 个；已加载规则 ${posture.loadedRuleTotal} 条`
+    : '治理姿态读取失败，无法评估执法总闸与各档案审批模式'
+  if (!posture) {
+    return { least: 'unknown', leastEvidence: `${facts}——unknown 不猜数`, broad: 'unknown', broadEvidence: facts }
+  }
+  const bare = posture.bareProfiles > 0
+  const noProfiles = posture.totalProfiles === 0
+  let least: CriterionStatus
+  if (!posture.enforceMasterOn) least = 'fail'
+  else if (noProfiles || bare || posture.loadedRuleTotal === 0) least = 'partial'
+  else least = 'pass'
+  let broad: CriterionStatus
+  if (!posture.enforceMasterOn) broad = 'fail'
+  else if (bare || noProfiles) broad = 'partial'
+  else broad = 'pass'
+  return {
+    least,
+    leastEvidence: `${facts}；分层限制：默认策略包（凭证/.git/破坏性红线）＋角色工具矩阵＋managed 锁定通道；沙箱：路径沙箱在、HERMES_TOOL_SANDBOX_ROOTS 未配默认不拦`,
+    broad,
+    broadEvidence: `${facts}；判定：总闸关＝权限过大成立；有档案显式关闭审批＝部分成立`,
+  }
+}
+
+export function buildAiNativeScorecard(deps: { posture?: () => PostureReading } = {}): AiNativeScorecard {
   const root = repoRoot()
   const criteria: Criterion[] = []
   const push = (id: string, stance: Criterion['stance'], title: string, status: CriterionStatus, evidence: string) =>
@@ -90,17 +159,20 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
       ci && enforced ? 'pass' : enforced || ci ? 'partial' : 'fail',
       `governance.yml CI 门=${ci}（T6）；pre-push 默认强拦=${enforced}`)
   }
+  // 治理姿态读数：两条权限判据共用。取数抛错按「读不到」处理，判 unknown，不让整张评分卡报错。
+  let posture: PostureReading | null
+  try {
+    posture = (deps.posture ?? readPosture)()
+  } catch {
+    posture = null
+  }
+  const permission = permissionReadings(posture)
   {
-    // 5 权限最小化（D1 记账项：30/31 off + 总闸未开）
-    const profiles = readdirSync(join(root, 'team/profiles'), { withFileTypes: true }).filter((d) => d.isDirectory()).length
-    const enforceEnv = process.env.HERMES_TOOL_ENFORCE === '1'
-    const rulesExist = existsSync(join(root, 'custom/server/approval-rules/approval-domain.ts'))
-    // D1 实施（2026-11-05 用户令直接做完）：总闸默认开＋默认策略包（红线基线随仓
-    // 分发）＋managed-settings 锁定面＋角色工具矩阵在位；审批由推演承担（mx-approval-proxy
-    // 代批＋HumanGate 闭环）。沙箱半边=路径沙箱在（roots 配置才生效），OS 沙箱 opt-in。
+    // 5 权限最小化：2026-11-28 之前此处写死 'partial'，证据文案里的数字（角色工具矩阵 30/30）
+    // 没有读数来源。现按治理姿态的真实读数判定；未用到的变量已删。
     push('least-privilege', 'positive', 'Agent 权限最小化、环境沙箱化',
-      'partial',
-      `执法面全启用：总闸默认开（HERMES_TOOL_ENFORCE=${enforceEnv ? '1' : '默认'}）＋默认策略包（凭证/.git/破坏性红线）＋角色工具矩阵 30/30＋managed 锁定通道；审批由推演承担（mx-approval-proxy 代批＋HumanGate 闭环）；沙箱半边：路径沙箱在、HERMES_TOOL_SANDBOX_ROOTS 未配默认不拦（OS 沙箱 opt-in）`)
+      permission.least,
+      permission.leastEvidence)
   }
   {
     // 6 生产信号回流评测/规格
@@ -121,9 +193,10 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
       contract ? 'pass' : 'fail', `completion_contract DoD 回执=${contract}`)
   }
   {
-    const gates = readdirSync(join(root, 'custom/qgate/gate-packs'), { withFileTypes: true }).filter((d) => d.isDirectory()).length
+    const gates = countSubdirsSafe(join(root, 'custom/qgate/gate-packs'))
     push('eval-gates', 'negative', '有评测门槛与合并拦截（不是改完就合）',
-      gates >= 5 ? 'pass' : gates >= 1 ? 'partial' : 'fail', `gate-pack 域数=${gates}（L0-L5 门集）`)
+      gates === null ? 'unknown' : gates >= 5 ? 'pass' : gates >= 1 ? 'partial' : 'fail',
+      gates === null ? '门禁包目录读不到，无法评估' : `gate-pack 域数=${gates}（L0-L5 门集）`)
   }
   {
     const retro = existsSync(join(root, 'scripts/recurrence-report.mjs'))
@@ -132,10 +205,10 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
       retro && decisions ? 'pass' : retro || decisions ? 'partial' : 'fail', `复发报告=${retro}；决策台账=${decisions}`)
   }
   {
-    // 与 5 同源（权限过大=反向判据成立=fail）
-    const enforceEnv = process.env.HERMES_TOOL_ENFORCE === '1'
+    // 与 5 同源（权限过大=反向判据成立=fail）。2026-11-28 之前写死 'pass'，与正向判据的
+    // 写死 'partial' 互相矛盾且都不随实际状态变。
     push('no-broad-permission', 'negative', 'Agent 权限不与高级工程师一样大',
-      'pass', `分层限制在位：默认策略包红线 deny（凭证/.git/破坏性 shell）＋高危外发 require_approval（推演代批）＋角色工具矩阵按 8 角色收面＋managed 组织锁定通道（D1 2026-11-05 实施）`)
+      permission.broad, permission.broadEvidence)
   }
 
   // ── 第 12 条：缓存纪律可见 ──
@@ -161,7 +234,7 @@ export function buildAiNativeScorecard(): AiNativeScorecard {
     gaps: criteria.filter((c) => c.status === 'fail').map((c) => `${c.id}：${c.title}——${c.evidence}`),
     notes: [
       '口径是「可测量可拦截可追责」的判据在位性，不是运行达标率；pass=机制在位且有执法面。',
-      'unknown 不计分母（缺数据不摊薄也不抬分）——D1 权限最小化按 2026-11-05 用户裁决只记账。',
+      'unknown 不计分母（缺数据不摊薄也不抬分）。两条权限判据读治理姿态的真实读数（执法总闸、各档案审批模式、已加载规则数），读不到判 unknown。',
     ],
   }
 }

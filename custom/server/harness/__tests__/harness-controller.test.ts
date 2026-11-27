@@ -247,9 +247,21 @@ describe('四子路由 HTTP 投影', () => {
     ])
     expect(body.counts.covered + body.counts.partial + body.counts.missing).toBe(9)
     for (const layer of body.layers) {
-      expect(typeof layer.score).toBe('number')
+      // 分数：已评估检查项的得分；本层没有可评估项时为 null（2026-11-28），不显示成 0
+      expect(layer.score === null || (typeof layer.score === 'number' && layer.score >= 0 && layer.score <= 100)).toBe(true)
       expect(Array.isArray(layer.checks)).toBe(true)
+      for (const check of layer.checks) {
+        expect(['yes', 'partial', 'no', 'unavailable']).toContain(check.status)
+      }
+      // 无法评估的检查项不计入分数：有分数时，分数只由已评估项决定
+      const scored = layer.checks.filter((c: { status: string }) => c.status !== 'unavailable')
+      if (scored.length === 0) {
+        expect(layer.score).toBeNull()
+      } else {
+        expect(typeof layer.score).toBe('number')
+      }
       expect(Array.isArray(layer.gaps)).toBe(true)
+      expect(Array.isArray(layer.unevaluated)).toBe(true)
     }
     expect(body.meta.note).toContain('自检清单')
   })

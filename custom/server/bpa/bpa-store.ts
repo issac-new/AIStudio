@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import type { BpaConfig, BpaNode, PemmAssessment } from './bpa-types'
-import { BPA_DEFAULT_CONFIG } from './bpa-types'
+import { BPA_DEFAULT_CONFIG, PEMM_FACTORS } from './bpa-types'
 import { underWebUi } from '../lib/paths'
 
 function storeDir(): string {
@@ -143,9 +143,24 @@ export function appendMaturity(entry: PemmAssessment): PemmAssessment[] {
   return history
 }
 
-/** PEMM 总体成熟度=最低分因素（短板决定论：能动因素不齐，流程无法持续高绩效）。 */
-export function pemmOverall(scores: Partial<Record<string, number>>): number | null {
-  const vals = Object.values(scores).filter((v): v is number => typeof v === 'number' && v >= 0 && v <= 4)
-  if (vals.length === 0) return null
-  return Math.min(...vals)
+/** PEMM 打分进度：哪些因素已打、哪些没打。只认 PEMM_FACTORS 里的键，分值须是 0–4 的整数。 */
+export function pemmProgress(scores: Partial<Record<string, number>> | null | undefined): {
+  scoredCount: number
+  total: number
+  missing: string[]
+} {
+  const missing = PEMM_FACTORS.map((f) => f.key).filter((k) => {
+    const v = scores?.[k]
+    return !(typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 4)
+  })
+  return { scoredCount: PEMM_FACTORS.length - missing.length, total: PEMM_FACTORS.length, missing }
+}
+
+/** PEMM 总体成熟度＝九项里的最低分（短板决定论：能动因素不齐，流程无法持续高绩效）。
+ *  九项全部打了合法分值才给结论，否则 null——没打分的因素可能正是最短板。
+ *  2026-11-28 之前只取已打分项的最低分：打一项 P4 就返回 4，与客户端同款缺陷一并改。
+ *  客户端 custom/client/bpa/pemm.ts 的 pemmOverall 是同一口径的镜像（两端不互相引用）。 */
+export function pemmOverall(scores: Partial<Record<string, number>> | null | undefined): number | null {
+  if (pemmProgress(scores).missing.length > 0) return null
+  return Math.min(...PEMM_FACTORS.map((f) => scores![f.key] as number))
 }

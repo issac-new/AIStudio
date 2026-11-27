@@ -278,12 +278,21 @@ export function toolAllowedByList(tool: string, list: string[]): boolean {
 // 覆盖并收紧（真实执行 cwd/workspaceRoot 基准 + canonical 判定取代入参 cwd 猜测），
 // 不保留并行实现——路径判定单一事实源在 contracts/execution.ts。
 
-/** 总闸判定（D1 2026-11-05）：managed-settings 锁定 > env 显式 0 关 > 默认开。
- *  独立函数便于 doctor/评分卡/测试同口径消费。 */
-export function masterSwitchOn(): boolean {
-  const managed = loadManagedSettings()
+/** 总闸判据（D1 2026-11-05）：managed-settings 锁定 > env 显式 0 关 > 默认开。
+ *  纯函数、只看传入的环境与锁定设置，供读模型（治理姿态/九层体检/记分卡）与执法
+ *  同口径消费——2026-11-28 之前三处读模型各自写 `=== '1'`，未设环境变量时执法在生效
+ *  而面板显示「关」。 */
+export function toolEnforceOn(
+  env: Record<string, string | undefined>,
+  managed: { toolEnforceLocked?: boolean; toolEnforce?: 0 | 1 } | null,
+): boolean {
   if (managed && managed.toolEnforceLocked) return managed.toolEnforce === 1
-  return process.env.HERMES_TOOL_ENFORCE !== '0'
+  return env.HERMES_TOOL_ENFORCE !== '0'
+}
+
+/** 总闸判定（读进程环境与部署侧锁定设置）。 */
+export function masterSwitchOn(): boolean {
+  return toolEnforceOn(process.env, loadManagedSettings())
 }
 
 export function evaluateEnforcement(

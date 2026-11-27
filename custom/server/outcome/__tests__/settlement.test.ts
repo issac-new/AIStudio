@@ -244,6 +244,63 @@ describe('suggestVerdict gte/lte/eq 精确比较（target 相等边界）', () =
   }
 })
 
+describe('suggestVerdict 基线读数（B5 2026-11-28：合同自带基线进建议面，不改判定）', () => {
+  /** 把合同里某度量的 baseline 换成给定值。 */
+  const withBaseline = (c: OutcomeContract, measureId: string, baseline: number | null): OutcomeContract => ({
+    ...c,
+    measures: c.measures.map((m) => (m.measureId === measureId ? { ...m, baseline } : m)),
+  })
+
+  it('基线已登记：读数带 baseline/actual 与方向说明；verdict 判定不因基线改变', () => {
+    const c = withBaseline(atVersion(1), 'm-gte', 60)  // gte：actual 越高越好
+    const ms: OutcomeMeasurement[] = [meas({ outcomeId: 'oc-1', measureId: 'm-gte', contractVersion: 1, actual: 90 })]
+    const r = suggestVerdict(c, ms)
+    const reading = r.baselineReadings.find((b) => b.measureId === 'm-gte')!
+    expect(reading).toMatchObject({ baseline: 60, actual: 90, deltaFromBaseline: 30 })
+    expect(reading.note).toContain('优于基线')
+    // 判定不变：met 仍按 target=80 判（90≥80 met），与基线无关
+    expect(r.perMeasure.find((p) => p.measureId === 'm-gte')?.met).toBe(true)
+  })
+
+  it('lte 语义：actual 低于基线才是优于基线（方向说明按算子翻转）', () => {
+    const c = withBaseline(atVersion(1), 'm-lte', 3)
+    const ms: OutcomeMeasurement[] = [meas({ outcomeId: 'oc-1', measureId: 'm-lte', contractVersion: 1, actual: 1 })]
+    const r = suggestVerdict(c, ms)
+    const reading = r.baselineReadings.find((b) => b.measureId === 'm-lte')!
+    expect(reading).toMatchObject({ baseline: 3, actual: 1, deltaFromBaseline: -2 })
+    expect(reading.note).toContain('优于基线')
+    // 反向：actual 高于基线=劣于
+    const worse = suggestVerdict(withBaseline(atVersion(1), 'm-lte', 3), [meas({ outcomeId: 'oc-1', measureId: 'm-lte', contractVersion: 1, actual: 5 })])
+    expect(worse.baselineReadings.find((b) => b.measureId === 'm-lte')!.note).toContain('劣于基线')
+  })
+
+  it('基线未登记（null）：如实说明、delta 为空——不补零造对照', () => {
+    const ms: OutcomeMeasurement[] = [meas({ outcomeId: 'oc-1', measureId: 'm-gte', contractVersion: 1, actual: 90 })]
+    const r = suggestVerdict(atVersion(1), ms)
+    const reading = r.baselineReadings.find((b) => b.measureId === 'm-gte')!
+    expect(reading.baseline).toBeNull()
+    expect(reading.deltaFromBaseline).toBeNull()
+    expect(reading.note).toContain('未登记基线')
+  })
+
+  it('当前版本测量缺席：actual 为空，读数仍带合同基线', () => {
+    const c = withBaseline(atVersion(1), 'm-gte', 60)
+    const r = suggestVerdict(c, [])
+    const reading = r.baselineReadings.find((b) => b.measureId === 'm-gte')!
+    expect(reading).toMatchObject({ baseline: 60, actual: null, deltaFromBaseline: null })
+    expect(reading.note).toContain('测量')
+  })
+
+  it('eq 算子：delta 恒空（差值无方向语义）', () => {
+    const c = withBaseline(atVersion(1), 'm-eq', 0)
+    const ms: OutcomeMeasurement[] = [meas({ outcomeId: 'oc-1', measureId: 'm-eq', contractVersion: 1, actual: 1 })]
+    const r = suggestVerdict(c, ms)
+    const reading = r.baselineReadings.find((b) => b.measureId === 'm-eq')!
+    expect(reading.baseline).toBe(0)
+    expect(reading.deltaFromBaseline).toBeNull()
+  })
+})
+
 describe('validateSettlementInput', () => {
   const contract = atVersion(2)
   const measurements: OutcomeMeasurement[] = [

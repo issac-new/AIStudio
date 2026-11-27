@@ -216,6 +216,9 @@ describe('回归锁：代表输入 → 既有输出（委托化前后必须逐�
       [{ kind: 'review', domain: 'production' }, 'high'],
       [{ kind: 'kanban', title: '生产环境发版审批' }, 'high'],
       [{ kind: 'kanban', title: '支付渠道接入' }, 'medium'],
+      [{ kind: 'kanban', title: '自动付款 Agent 隔离验证' }, 'high'],
+      [{ kind: 'kanban', title: '个人信息导出工具' }, 'high'],
+      [{ kind: 'kanban', title: '结算对账日报' }, 'medium'],
       [{ kind: 'kanban' }, 'medium'],
     ]
     for (const [input, expected] of semantic) {

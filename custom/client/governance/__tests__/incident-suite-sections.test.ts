@@ -128,6 +128,94 @@ describe('③ 虚拟损益表面板', () => {
     expect(w.find('[data-testid="vp-benefit-note"]').text()).toContain('不编造')
     expect(w.find('.vp__src-note').text()).toContain('价目表')  // pricing=false 如实点名
   })
+
+  it('用量库缺席：成本与 token 显示「—」，不显示成 0——与注记「相关列为空不是 0」一致', async () => {
+    const api = await import('@/custom/governance/api/incident-suite')
+    vi.mocked(api.fetchVirtualPnl).mockResolvedValueOnce({
+      days: 30, currency: 'CNY',
+      rows: [
+        { profile: 'coding-agent', delivered: 3, inFlight: 1, tokens: { input: null, output: null, calls: null }, costIdle: null, costPeak: null, unpricedRows: 0, costPerDeliveredIdle: null, costPerDeliveredPeak: null, lastActiveAt: null },
+      ],
+      global: { interventions: null, reworkHours: null, waitP95SecondsWithinDay: null },
+      anomalies: [],
+      benefitNote: 'x',
+      sourcesAvailable: { usageDb: false, kanban: true, pricing: true },
+      windowing: { tokensWindowed: true, costWindowed: true, dailyWindowed: true, note: '用量三面均按所选天数统计' },
+    } as never)
+    const w = mount(VirtualPnlSection)
+    await flushPromises()
+    const text = w.find('[data-testid="vp-table"]').text()
+    expect(w.find('.vp__src-note').text()).toContain('用量库')
+    // 成本区间与 token 都是「— / —」
+    expect(text).toContain('— / —')
+    // 改动前这里显示「0 ~ 0」
+    expect(text).not.toContain('0 ~ 0')
+    expect(text).not.toContain('0 / 0')
+    // 交付数照常显示（看板库在）
+    expect(w.find('[data-testid="vp-row-coding-agent"]').text()).toContain('3')
+  })
+
+  it('看板库缺席：交付与在途显示「—」，单位成本不说「无交付」而说读不到', async () => {
+    const api = await import('@/custom/governance/api/incident-suite')
+    vi.mocked(api.fetchVirtualPnl).mockResolvedValueOnce({
+      days: 30, currency: 'CNY',
+      rows: [
+        { profile: 'coding-agent', delivered: null, inFlight: null, tokens: { input: 3000, output: 2000, calls: 10 }, costIdle: 0.01, costPeak: 0.02, unpricedRows: 0, costPerDeliveredIdle: null, costPerDeliveredPeak: null, lastActiveAt: 1790000000000 },
+      ],
+      global: { interventions: null, reworkHours: null, waitP95SecondsWithinDay: null },
+      anomalies: [],
+      benefitNote: 'x',
+      sourcesAvailable: { usageDb: true, kanban: false, pricing: true },
+      windowing: { tokensWindowed: true, costWindowed: true, dailyWindowed: true, note: '用量三面均按所选天数统计' },
+    } as never)
+    const w = mount(VirtualPnlSection)
+    await flushPromises()
+    const row = w.find('[data-testid="vp-row-coding-agent"]')
+    expect(row.text()).toContain('交付读不到')
+    expect(row.text()).not.toContain('无交付')
+    expect(w.find('.vp__src-note').text()).toContain('看板交付')
+    // 交付与在途两个单元格显示「—」，不是 0
+    const cells = row.findAll('td')
+    expect(cells[1]?.text()).toBe('—交付读不到')
+    expect(cells[2]?.text()).toBe('—')
+    // 成本面读得到（用量库在）：照常显示数字，不被交付面拖成空
+    expect(cells[4]?.text()).toContain('0.01 ~ 0.02')
+  })
+
+  it('用量按天查询失败回退全量：面板顶部提示哪一面回退了', async () => {
+    const api = await import('@/custom/governance/api/incident-suite')
+    vi.mocked(api.fetchVirtualPnl).mockResolvedValueOnce({
+      days: 7, currency: 'CNY',
+      rows: [{ profile: 'coding-agent', delivered: 1, inFlight: 0, tokens: { input: 900, output: 100, calls: 3 }, costIdle: 0, costPeak: 0, unpricedRows: 1, costPerDeliveredIdle: 0, costPerDeliveredPeak: 0, lastActiveAt: 1 }],
+      global: { interventions: null, reworkHours: null, waitP95SecondsWithinDay: null },
+      anomalies: [],
+      benefitNote: 'x',
+      sourcesAvailable: { usageDb: true, kanban: true, pricing: true },
+      windowing: { tokensWindowed: false, costWindowed: false, dailyWindowed: false, note: '用量按天查询失败，已回退全量：token 面、成本面、日成本序列的数字是全量、不是近 7 天' },
+    } as never)
+    const w = mount(VirtualPnlSection)
+    await flushPromises()
+    const note = w.find('[data-testid="vp-windowing-note"]')
+    expect(note.exists()).toBe(true)
+    expect(note.text()).toContain('全量')
+    expect(note.text()).toContain('不是近 7 天')
+  })
+
+  it('用量三面都按天生效：不显示回退提示', async () => {
+    const api = await import('@/custom/governance/api/incident-suite')
+    vi.mocked(api.fetchVirtualPnl).mockResolvedValueOnce({
+      days: 30, currency: 'CNY',
+      rows: [],
+      global: { interventions: null, reworkHours: null, waitP95SecondsWithinDay: null },
+      anomalies: [],
+      benefitNote: 'x',
+      sourcesAvailable: { usageDb: true, kanban: true, pricing: true },
+      windowing: { tokensWindowed: true, costWindowed: true, dailyWindowed: true, note: '用量三面均按所选天数统计' },
+    } as never)
+    const w = mount(VirtualPnlSection)
+    await flushPromises()
+    expect(w.find('[data-testid="vp-windowing-note"]').exists()).toBe(false)
+  })
 })
 
 describe('④ 自治阶梯面板', () => {

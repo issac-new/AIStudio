@@ -10,6 +10,7 @@ import { listScale } from '../autonomygov/store'
 import { collectAssigneeStats, kanbanDbFiles, openReadonly } from '../governance/governance-analytics'
 import { buildPanorama } from '../workitem/panorama'
 import { underHermes } from '../lib/paths'
+import { resolveStudioDb } from '../harness/cost-accounts'
 import type { DerivedReading } from './types'
 
 /** 小样本下限：低于此值给 available:false（比例/中位数在小样本上无解释力）。 */
@@ -370,5 +371,57 @@ export async function interfaceCount(): Promise<DerivedReading> {
     sample: counts.length,
     available: true,
     gap: `取样 ${counts.length}/${ids.length} 个已完成任务${failed ? `（${failed} 个读取失败）` : ''}；面数越少说明上下文越集中`,
+  })
+}
+
+// ---------- 批 C：单位成本可得率（2026-11-28） ----------
+
+/** 单位成本可得率＝可估出成本的 Studio 会话数 / 窗口内 Studio 会话总数。
+ *
+ *  口径限定（spec D13，如实声明）：只覆盖 Studio 会话（session_usage）——看板任务的
+ *  执行用量不进 Studio 用量表（worker 的用量落 Hermes 侧状态库），本读数不覆盖看板任务；
+ *  「会话」按 session_id 去重，「可估」按该会话至少一行 cost_usd 非 NULL。
+ *  样本下限沿用本文件 MIN_SAMPLE：会话太少时 0%/100% 都是单点误导。 */
+export function unitCostAvailability(days = 7, explicitDb?: string): DerivedReading {
+  const base = {
+    key: 'measure/unit-cost-availability',
+    title: '单位成本可得率',
+    definition: '可估出成本的 Studio 会话数 / 窗口内 Studio 会话总数（口径限定 Studio 会话——看板任务的执行用量不进 Studio 用量表，不在本读数覆盖内；「可估」按会话至少一行 cost_usd 非 NULL）',
+    sources: ['session_usage (cost_usd)', 'harness/cost-accounts resolveStudioDb'],
+  }
+  const dbFile = resolveStudioDb(explicitDb)
+  if (!dbFile) {
+    return reading({ ...base, value: null, sample: 0, available: false, gap: 'Studio 用量库读不到（候选路径均不存在）——成本可得率无法统计，不写 0%' })
+  }
+  const sinceS = Math.floor((Date.now() - days * 86_400_000) / 1000)
+  let total: number
+  let priced: number
+  try {
+    const { DatabaseSync } = require('node:sqlite') as typeof import('node:sqlite')
+    const db = new DatabaseSync(dbFile, { readOnly: true })
+    try {
+      const row = db.prepare(
+        `SELECT COUNT(DISTINCT session_id) AS total,
+                COUNT(DISTINCT CASE WHEN cost_usd IS NOT NULL THEN session_id END) AS priced
+         FROM session_usage WHERE created_at >= ? AND session_id IS NOT NULL`,
+      ).get(sinceS) as { total?: number; priced?: number }
+      total = Number(row?.total ?? 0)
+      priced = Number(row?.priced ?? 0)
+    } finally {
+      db.close()
+    }
+  } catch (e) {
+    return reading({ ...base, value: null, sample: 0, available: false, gap: `Studio 用量库读不到（${e instanceof Error ? e.message.slice(0, 120) : String(e)}）——不写 0%` })
+  }
+  if (total < MIN_SAMPLE) {
+    return reading({ ...base, value: null, sample: total, available: false, gap: `窗口内 Studio 会话仅 ${total} 个，低于样本下限 ${MIN_SAMPLE}——小样本的成本可得率是单点误导` })
+  }
+  return reading({
+    ...base,
+    value: Number((priced / total).toFixed(4)),
+    sample: total,
+    available: true,
+    // 0% 是真实结论（量出来了但一条都没计价）——如实提示驱动补计价，不是缺席
+    ...(priced === 0 ? { gap: '窗口内没有任何会话估出成本（cost_usd 全空）——0% 是实测结论，检查价目表与计价链路' } : {}),
   })
 }

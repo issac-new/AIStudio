@@ -19,6 +19,8 @@ import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { hermesHome as resolveHermesHome } from '../lib/paths'
 import { underWebUi } from '../lib/paths'
+import { toolEnforceOn } from '../toolpipeline/enforce-gate'
+import { loadManagedSettings } from '../managedsettings/managed-settings'
 
 export type PostureLamp = 'governed' | 'partial' | 'bare'
 
@@ -149,7 +151,9 @@ export function collectGovernancePosture(deps: PostureDeps = {}): GovernancePost
   const now = deps.now?.() ?? Date.now()
 
   const global: PostureGlobal = {
-    enforceMasterOn: env.HERMES_TOOL_ENFORCE === '1',
+    // 与执法正身同判据（toolEnforceOn）：未设环境变量＝默认开，显式 0 才关，锁定设置优先。
+    // 此前写 `=== '1'`，未设时执法在生效而本面板显示「关」（2026-11-28 修复）。
+    enforceMasterOn: toolEnforceOn(env, loadManagedSettings()),
     strictOn: env.HERMES_TOOL_ENFORCE_STRICT === '1',
     enforceMode: env.HERMES_TOOL_ENFORCE_MODE ?? null,
     sandboxRoots: envListCount(env, 'HERMES_TOOL_SANDBOX_ROOTS'),

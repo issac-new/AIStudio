@@ -7,6 +7,8 @@
  *   POST /api/bpa/validate       立即体检
  *   POST /api/bpa/seed           载入示例架构（覆盖写，需 confirm=true）
  *   GET/POST /api/bpa/maturity   PEMM 成熟度：历史 / 提交自评
+ *   GET  /api/bpa/admission      场景准入：四条排除规则三态判定 + 各节点最新签署结论（2026-11-28）
+ *   POST /api/bpa/admission/:nodeId/sign  签署「可进入试点/暂缓」（登录身份；pilot 须四条全清）
  */
 import Router from '@koa/router'
 import type { Context } from 'koa'
@@ -23,8 +25,22 @@ import { PCF_CATEGORIES, pcfGapReport } from './bpa-pcf'
 import { readAudit, recordAudit, reviewDue } from './bpa-audit'
 import { exportArchitectureMarkdown } from './bpa-export'
 import { readTaskLinks, upsertTaskLink, removeTaskLink, groupByProcess } from './bpa-task-link'
+import { assessAdmission, ADMISSION_RULES } from './bpa-admission'
+import { appendAdmissionRecord, readAdmissionRecords, type BpaAdmissionRecord } from './bpa-admission-store'
+import { listPeople } from '../agentidentity/people'
+import { requireAuthenticatedActor } from '../approval-inbox/human-gate'
+import { ok, fail, bodyOf } from '../lib/http'
 
 const router = new Router({ prefix: '/api/bpa' })
+
+/** 在岗自然人（id+显示名）；名单读不到返回 null——主责规则如实「无法判定」，不猜。 */
+function activePeopleOrNull(): Array<{ id: string; name: string }> | null {
+  try {
+    return listPeople().filter((p) => p.active).map((p) => ({ id: p.id, name: p.name }))
+  } catch {
+    return null
+  }
+}
 
 function snapshot(): { config: BpaConfig; nodes: BpaNode[]; updatedAt: number; report: ReturnType<typeof validateArchitecture>; store: string } {
   const arch = readArchitecture()
@@ -206,6 +222,85 @@ router.post('/maturity', async (ctx: Context) => {
   }
   const history = appendMaturity(entry)
   ctx.body = { ok: true, entry, overall: pemmOverall(scores), history }
+})
+
+// —— 场景准入（B1/B2，2026-11-28）：四条排除规则三态判定 + 人签署的可进试点/暂缓 ——
+// 只披露不设门（2026-11-01「机制扩展停止」）：结果合同创建不被这里阻断，缺口在这里可见。
+router.get('/admission', async (ctx: Context) => {
+  const arch = readArchitecture()
+  const activePeople = activePeopleOrNull()
+  // 每节点取最新签署记录：一次读账折叠成 Map（不逐节点重读文件）
+  const latestByNode = new Map<string, BpaAdmissionRecord>()
+  for (const r of readAdmissionRecords()) {
+    const cur = latestByNode.get(r.nodeId)
+    if (!cur || r.signedAt >= cur.signedAt) latestByNode.set(r.nodeId, r)
+  }
+  ok(ctx, {
+    rules: ADMISSION_RULES,
+    peopleAvailable: activePeople !== null,
+    nodes: arch.nodes.map((n) => ({
+      ...assessAdmission(n, { activePeople }),
+      latest: latestByNode.get(n.id) ?? null,
+    })),
+    checkedAt: Date.now(),
+  })
+})
+
+router.post('/admission/:nodeId/sign', async (ctx: Context) => {
+  let actor: { username: string }
+  try {
+    actor = requireAuthenticatedActor(ctx)
+  } catch (e) {
+    fail(ctx, 401, e instanceof Error ? e.message : '需要登录身份', { code: 'authenticated_actor_required' })
+    return
+  }
+  const body = bodyOf<{ conclusion?: unknown; reason?: unknown }>(ctx)
+  // 署名取服务端登录身份；请求体同名字段（signedBy）不读取（2026-11-24 批一 D6 先例）
+  const conclusion = body.conclusion === 'pilot' || body.conclusion === 'deferred' ? body.conclusion : null
+  if (!conclusion) {
+    fail(ctx, 400, 'conclusion 须为 pilot（可进入试点）或 deferred（暂缓）', { code: 'invalid_input', problems: ['conclusion 缺失或取值非法'] })
+    return
+  }
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+  if (reason.length < 10) {
+    fail(ctx, 400, `reason 须至少 10 字（现 ${reason.length} 字）——签署结论是对外承诺，一句话理由不足以复核`, { code: 'invalid_input', problems: ['reason 过短'] })
+    return
+  }
+  // 签署人须为在岗自然人（登录名匹配编号或姓名；与责任卡 primaryOwner 同纪律）。
+  // 名单读不到时拒绝：署名是执法面，核不了就不放（fail-closed），与读模型的 fail-soft 相反。
+  const activePeople = activePeopleOrNull()
+  const signerIsPerson = activePeople !== null
+    && activePeople.some((p) => p.id === actor.username || p.name === actor.username)
+  if (!signerIsPerson) {
+    fail(ctx, 400, activePeople === null
+      ? '在岗自然人名单读不到，无法核实签署人——签署暂不接受（名单恢复后重试）'
+      : `签署人 ${actor.username} 不是在岗自然人（准入结论须由在岗自然人签署）`, { code: 'signer_not_active' })
+    return
+  }
+  const arch = readArchitecture()
+  const node = arch.nodes.find((n) => n.id === ctx.params.nodeId)
+  if (!node) {
+    fail(ctx, 404, `节点 ${ctx.params.nodeId} 不存在`, { code: 'not_found' })
+    return
+  }
+  const assessment = assessAdmission(node, { activePeople })
+  if (conclusion === 'pilot' && assessment.derived === 'blocked') {
+    fail(ctx, 409, '存在命中或无法判定的排除规则，不能签署「可进入试点」——先补齐缺口，或签署「暂缓」', {
+      code: 'admission_blocked',
+      problems: assessment.pendingItems,
+    })
+    return
+  }
+  const record = appendAdmissionRecord({
+    nodeId: node.id,
+    nodeName: node.name,
+    conclusion,
+    reason,
+    rulesSnapshot: assessment.rules,
+    pendingItems: assessment.pendingItems,
+    signedBy: actor.username,
+  })
+  ok(ctx, { record, assessment })
 })
 
 export default router

@@ -318,6 +318,74 @@ describe('驾驭工程四 Section 挂载渲染', () => {
     expect(w.find('[data-testid="harness-nine-note"]').text()).toContain('不是认证')
   })
 
+  it('B7 九层体检：窗口内无事件的检查项标「无法评估」，单列清单，分数为空显示「—」不显示 0', async () => {
+    const api = await import('@/custom/governance/api/harness')
+    vi.mocked(api.fetchNineLayers).mockResolvedValueOnce({
+      ok: true, days: 7,
+      layers: [
+        {
+          key: 'tools', status: 'covered', score: 100, gaps: [], unevaluated: ['审计参数摘要：窗口内无工具调用，无法评估'], actions: [],
+          checks: [
+            { key: 'contracts', label: '工具契约', status: 'yes', evidence: '已声明契约 30 项', critical: true },
+            { key: 'summary', label: '审计参数摘要', status: 'unavailable', evidence: '窗口内无工具调用，无法评估' },
+          ],
+        },
+        // 全部无法评估：分数为 null
+        {
+          key: 'observability', status: 'missing', score: null, gaps: [], unevaluated: ['逐工具调用审计：窗口内无审计行，无法评估'], actions: [],
+          checks: [
+            { key: 'audit', label: '逐工具调用审计', status: 'unavailable', evidence: '窗口内无审计行，无法评估', critical: true },
+          ],
+        },
+      ],
+      counts: { covered: 1, partial: 0, missing: 1 },
+      meta: { source: 'x', note: 'n', layersOrder: [] },
+    } as unknown as Awaited<ReturnType<typeof api.fetchNineLayers>>)
+    const w = await mountComp('@/custom/governance/components/NineLayersSection.vue')
+    await flushPromises()
+
+    const summaryCheck = w.find('[data-testid="harness-nine-check-tools-summary"]')
+    expect(summaryCheck.classes()).toContain('nl__check--unavailable')
+    expect(summaryCheck.text()).toContain('无法评估')
+    // 无法评估不画成叉：记号是「—」
+    expect(summaryCheck.find('.nl__mark').text()).toBe('—')
+    // 单列清单与差距分列
+    const unevaluated = w.find('[data-testid="harness-nine-unevaluated-tools"]')
+    expect(unevaluated.exists()).toBe(true)
+    expect(unevaluated.text()).toContain('审计参数摘要')
+    expect(unevaluated.text()).toContain('1')
+    // 分数为空：显示「—」，不显示 0
+    const score = w.find('[data-testid="harness-nine-score-observability"]')
+    expect(score.text()).toBe('—')
+    expect(score.classes()).toContain('nl__score--na')
+    // 有分数的层照常显示数字
+    expect(w.find('[data-testid="harness-nine-score-tools"]').text()).toBe('100')
+  })
+
+  it('B7 九层体检：旧服务端不带 unevaluated 字段时，从检查项状态推出清单', async () => {
+    const api = await import('@/custom/governance/api/harness')
+    vi.mocked(api.fetchNineLayers).mockResolvedValueOnce({
+      ok: true, days: 7,
+      layers: [
+        {
+          key: 'tools', status: 'covered', score: 100, gaps: [], actions: [],
+          checks: [
+            { key: 'contracts', label: '工具契约', status: 'yes', evidence: '已声明契约 30 项' },
+            { key: 'errors', label: '失败调用有机器可读错误分类', status: 'unavailable', evidence: '窗口内无失败调用，无法评估' },
+          ],
+        },
+      ],
+      counts: { covered: 1, partial: 0, missing: 0 },
+      meta: { source: 'x', note: 'n', layersOrder: [] },
+    } as unknown as Awaited<ReturnType<typeof api.fetchNineLayers>>)
+    const w = await mountComp('@/custom/governance/components/NineLayersSection.vue')
+    await flushPromises()
+    const unevaluated = w.find('[data-testid="harness-nine-unevaluated-tools"]')
+    expect(unevaluated.exists()).toBe(true)
+    expect(unevaluated.text()).toContain('失败调用有机器可读错误分类')
+    expect(unevaluated.text()).toContain('窗口内无失败调用')
+  })
+
   it('B8 运行运维面：过程质量/决策账/运行清单/预算/恢复判定', async () => {
     const w = await mountComp('@/custom/governance/components/HarnessRunOpsSection.vue')
     await flushPromises()

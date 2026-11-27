@@ -4,8 +4,13 @@
 //   Tools / Loop / Memory / Context / Sandbox / Verification / Permissions /
 //   Observability / Evals——前六层让 Agent「能做事」，后三层决定团队「敢不敢
 //   让它做事」。本模块把每层拆成可核对的检查项，逐项给 yes/partial/no 与
-//   真实证据；数据缺席标 unavailable，不猜数（与 maturity.ts/rsi-maturity.ts
-//   同一纪律：自检清单非认证）。
+//   真实证据；数据缺席不猜数（与 maturity.ts/rsi-maturity.ts 同一纪律：自检清单非认证）。
+//
+// 「没有数据」分两种（2026-11-28 修复）：
+//   - 机制在位性（契约数、守卫在不在、文件在不在）：0 就是没有，判 no；
+//   - 机制在、只是窗口内没发生事件（没有调用、没有失败、没有完成行）：判不出质量，
+//     标 unavailable——不计分母、不进差距与动作建议；本层全部无法评估时分数为 null。
+//   此前两者混为 no，一个安静的窗口就能把健全的层拉到不及格。
 //
 // 定位：治理页「九层运行体检」读模型。collect 与 build 分离——纯组装可单测，
 // 采集全部 fail-soft（源缺席/坏文件/权限不足都降级为 0 或 null）。
@@ -21,6 +26,8 @@ import { listRuns as listEvalRuns, auditSnapshot as evalAuditSnapshot } from '..
 import { coverageOfSets } from '../eval/coverage'
 import { listSets as listHeldoutSets } from '../heldout/held-out-store'
 import { resolveLoopBaseDir } from '../loop/paths'
+import { toolEnforceOn } from '../toolpipeline/enforce-gate'
+import { loadManagedSettings } from '../managedsettings/managed-settings'
 
 export type NineLayerKey =
   | 'tools'
@@ -33,7 +40,7 @@ export type NineLayerKey =
   | 'observability'
   | 'evals'
 
-export type CheckStatus = 'yes' | 'partial' | 'no'
+export type CheckStatus = 'yes' | 'partial' | 'no' | 'unavailable'
 export type LayerStatus = 'covered' | 'partial' | 'missing'
 
 export interface NineLayerCheck {
@@ -41,7 +48,7 @@ export interface NineLayerCheck {
   /** 检查项中文名（服务端单一事实源，UI 直接展示）。 */
   label?: string
   status: CheckStatus
-  /** 真实证据（计数/文件/环境开关）；unavailable 时说明缺席原因。 */
+  /** 真实证据（计数/文件/环境开关）；unavailable 时说明窗口内为何无事件可评。 */
   evidence: string
   /** 关键检查：缺失时该层不得判 covered（安全/恢复底线）。 */
   critical?: boolean
@@ -50,11 +57,14 @@ export interface NineLayerCheck {
 export interface NineLayer {
   key: NineLayerKey
   status: LayerStatus
-  /** 0~100：yes=1 / partial=0.5 / no=0 的加权百分比。 */
-  score: number
+  /** 0~100：已评估检查项里 yes=1 / partial=0.5 / no=0 的百分比；unavailable 不计分母。
+   *  本层没有可评估的检查项时为 null（界面显示「—」，不显示 0）。 */
+  score: number | null
   checks: NineLayerCheck[]
-  /** 未达标检查对应的差距说明。 */
+  /** 未达标检查对应的差距说明（unavailable 单列在 unevaluated）。 */
   gaps: string[]
+  /** 无法评估的检查项：窗口内无事件可评，不等于缺失。 */
+  unevaluated: string[]
   /** 建议动作（按检查项映射，供后续轮次排期）。 */
   actions: string[]
 }
@@ -218,30 +228,44 @@ function layerOf(
   checks: NineLayerCheck[],
 ): NineLayer {
   const labels = NINE_LAYER_CHECKS[key]
-  const total = checks.length || 1
-  const point = checks.reduce((sum, c) => sum + (c.status === 'yes' ? 1 : c.status === 'partial' ? 0.5 : 0), 0)
-  const score = Math.round((point / total) * 100)
+  const labelOf = (check: NineLayerCheck, idx: number): string =>
+    labels.find((l) => l.key === check.key)?.label ?? labels[idx]?.label ?? check.key
+  const pointOf = (c: NineLayerCheck): number | null =>
+    c.status === 'yes' ? 1 : c.status === 'partial' ? 0.5 : c.status === 'no' ? 0 : null
+  // 无法评估不计分母：机制在、窗口内没事件，既不抬分也不摊薄
+  const scored = checks.map((c) => pointOf(c)).filter((p): p is number => p !== null)
+  const score = scored.length > 0 ? Math.round((scored.reduce((s, p) => s + p, 0) / scored.length) * 100) : null
   const gaps: string[] = []
+  const unevaluated: string[] = []
   const actions: string[] = []
   checks.forEach((check, idx) => {
+    const label = labelOf(check, idx)
+    if (check.status === 'unavailable') {
+      // 没有事件不等于机制缺失：不进差距，也不给整改动作
+      unevaluated.push(`${label}：${check.evidence}`)
+      return
+    }
     if (check.status === 'yes') return
+    gaps.push(`${label}：${check.evidence}`)
     const def = labels.find((l) => l.key === check.key) ?? labels[idx]
-    gaps.push(`${def?.label ?? check.key}：${check.evidence}`)
     if (def?.action) actions.push(def.action)
   })
-  const criticalFailed = checks.some((c) => c.critical && c.status === 'no')
-  const status: LayerStatus = criticalFailed
-    ? (score >= 40 ? 'partial' : 'missing')
-    : score >= 80 ? 'covered' : score >= 40 ? 'partial' : 'missing'
-  const enriched = checks.map((check, idx) => ({
-    ...check,
-    label: labels.find((l) => l.key === check.key)?.label ?? labels[idx]?.label ?? check.key,
-  }))
-  return { key, status, score, checks: enriched, gaps, actions: [...new Set(actions)] }
+  // 关键检查项缺失，或关键检查项无法评估（没有证据不等于通过）：该层不得判 covered
+  const criticalBlocked = checks.some(
+    (c) => c.critical && (c.status === 'no' || c.status === 'unavailable'),
+  )
+  const status: LayerStatus = score === null
+    ? 'missing'
+    : criticalBlocked
+      ? (score >= 40 ? 'partial' : 'missing')
+      : score >= 80 ? 'covered' : score >= 40 ? 'partial' : 'missing'
+  const enriched = checks.map((check, idx) => ({ ...check, label: labelOf(check, idx) }))
+  return { key, status, score, checks: enriched, gaps, unevaluated, actions: [...new Set(actions)] }
 }
 
-function ratio(numerator: number, denominator: number): number {
-  return denominator > 0 ? numerator / denominator : 0
+/** 比例类检查的窗口内有无事件：分母为 0 即无事件可评。 */
+function hasEvents(denominator: number): boolean {
+  return denominator > 0
 }
 
 /** 纯组装：九层检查项 → 分数/状态/差距/动作（不 IO，便于单测）。 */
@@ -256,16 +280,20 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
   const o = inputs.observability
   const e = inputs.evals
 
-  const summaryRatio = ratio(t.preWithSummary, t.preEntries)
-  const classifiedRatio = ratio(t.classifiedFailures, t.failedPosts)
-  const durationRatio = ratio(o.postsWithDuration, o.postEntries)
+  const summaryRatio = t.preWithSummary / t.preEntries
+  const classifiedRatio = t.classifiedFailures / t.failedPosts
+  const durationRatio = o.postsWithDuration / o.postEntries
+  const hasCalls = hasEvents(t.preEntries)
+  const hasFailures = hasEvents(t.failedPosts)
+  const hasPosts = hasEvents(o.postEntries)
+  const hasAudits = hasEvents(o.auditEntries)
 
   const layers: NineLayer[] = [
     layerOf('tools', [
       { key: 'contracts', critical: true, status: t.contracts >= 10 ? 'yes' : t.contracts > 0 ? 'partial' : 'no', evidence: `已声明契约 ${t.contracts} 项` },
-      { key: 'summary', status: summaryRatio >= 0.9 ? 'yes' : summaryRatio > 0 ? 'partial' : 'no', evidence: t.preEntries ? `${Math.round(summaryRatio * 100)}% 的调用带参数摘要（${t.preWithSummary}/${t.preEntries}）` : '窗口内无工具调用' },
-      { key: 'errors', status: classifiedRatio >= 0.9 ? 'yes' : classifiedRatio > 0 ? 'partial' : 'no', evidence: t.failedPosts ? `${Math.round(classifiedRatio * 100)}% 的失败带错误分类（${t.classifiedFailures}/${t.failedPosts}）` : '窗口内无失败调用' },
-      { key: 'duplicates', status: t.auditedCalls > 0 ? 'yes' : 'partial', evidence: t.auditedCalls > 0 ? `重复签名检测已接线；窗口内命中 ${t.duplicateFlagged} 次` : '检测已接线，窗口内无调用' },
+      { key: 'summary', status: !hasCalls ? 'unavailable' : summaryRatio >= 0.9 ? 'yes' : summaryRatio > 0 ? 'partial' : 'no', evidence: hasCalls ? `${Math.round(summaryRatio * 100)}% 的调用带参数摘要（${t.preWithSummary}/${t.preEntries}）` : '窗口内无工具调用，无法评估' },
+      { key: 'errors', status: !hasFailures ? 'unavailable' : classifiedRatio >= 0.9 ? 'yes' : classifiedRatio > 0 ? 'partial' : 'no', evidence: hasFailures ? `${Math.round(classifiedRatio * 100)}% 的失败带错误分类（${t.classifiedFailures}/${t.failedPosts}）` : '窗口内无失败调用，无法评估' },
+      { key: 'duplicates', status: t.auditedCalls > 0 ? 'yes' : 'unavailable', evidence: t.auditedCalls > 0 ? `重复签名检测已接线；窗口内命中 ${t.duplicateFlagged} 次` : '检测已接线，窗口内无调用，无法评估' },
     ]),
     layerOf('loop', [
       { key: 'bounds', critical: true, status: lo.runawayGuard && lo.guardedEdges ? 'yes' : lo.runawayGuard || lo.guardedEdges ? 'partial' : 'no', evidence: `runaway guard=${lo.runawayGuard ? '在' : '缺'}，回边守卫=${lo.guardedEdges ? '在' : '缺'}` },
@@ -295,7 +323,7 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
     layerOf('verification', [
       { key: 'gates', critical: true, status: v.gatePacks >= 10 ? (v.typecheckScript ? 'yes' : 'partial') : 'no', evidence: `gate pack ${v.gatePacks} 个；typecheck 脚本=${v.typecheckScript ? '有' : '无'}` },
       { key: 'evalGate', status: v.evalSets > 0 ? 'partial' : 'no', evidence: v.evalSets > 0 ? '评测集存在；尚未接入常用门禁 profile' : '无固定评测集' },
-      { key: 'external', status: v.releaseGate || v.uiOracle ? 'yes' : 'partial', evidence: `发布门=${v.releaseGate ? '在' : '缺'}，UI Oracle=${v.uiOracle ? '在' : '缺'}` },
+      { key: 'external', status: v.releaseGate && v.uiOracle ? 'yes' : v.releaseGate || v.uiOracle ? 'partial' : 'no', evidence: `发布门=${v.releaseGate ? '在' : '缺'}，UI Oracle=${v.uiOracle ? '在' : '缺'}` },
       { key: 'release', status: v.releaseGate ? 'yes' : 'no', evidence: v.releaseGate ? 'release gate 在档' : '未发现发布准出检查' },
     ]),
     layerOf('permissions', [
@@ -303,12 +331,12 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
       { key: 'identity', critical: true, status: p.identityInEnforcement ? 'yes' : 'no', evidence: p.identityInEnforcement ? '按发起用户裁决' : '裁决只看 profile，userId 仅入审计' },
       { key: 'scope', critical: true, status: p.scopedApprovals ? 'yes' : 'no', evidence: p.scopedApprovals ? '审批带范围/期限' : '审批记录缺 scope/expiresAt/source' },
       { key: 'allowAudit', critical: true, status: p.allowDecisionsAudited ? 'yes' : 'no', evidence: p.allowDecisionsAudited ? '放行决策入账' : 'ladder-pass/mode-pass 放行不落账' },
-      { key: 'approvals', status: p.approvalRecords > 0 ? 'yes' : 'partial', evidence: `审批历史可查 ${p.approvalRecords} 条（环形上限 500）` },
+      { key: 'approvals', status: p.approvalRecords > 0 ? 'yes' : 'unavailable', evidence: p.approvalRecords > 0 ? `审批历史可查 ${p.approvalRecords} 条（环形上限 500）` : '环形账内暂无审批记录，无法评估' },
     ]),
     layerOf('observability', [
-      { key: 'audit', critical: true, status: o.auditEntries > 0 ? 'yes' : 'no', evidence: `窗口内审计行 ${o.auditEntries} 条` },
-      { key: 'duration', status: durationRatio >= 0.9 ? 'yes' : durationRatio > 0 ? 'partial' : 'no', evidence: o.postEntries ? `${Math.round(durationRatio * 100)}% 的完成行带耗时（${o.postsWithDuration}/${o.postEntries}）` : '窗口内无完成行' },
-      { key: 'errors', status: classifiedRatio >= 0.9 ? 'yes' : classifiedRatio > 0 ? 'partial' : 'no', evidence: t.failedPosts ? `${Math.round(classifiedRatio * 100)}% 的失败带错误分类` : '窗口内无失败调用' },
+      { key: 'audit', critical: true, status: hasAudits ? 'yes' : 'unavailable', evidence: hasAudits ? `窗口内审计行 ${o.auditEntries} 条` : '窗口内无审计行，无法评估（审计未启用或无工具调用）' },
+      { key: 'duration', status: !hasPosts ? 'unavailable' : durationRatio >= 0.9 ? 'yes' : durationRatio > 0 ? 'partial' : 'no', evidence: hasPosts ? `${Math.round(durationRatio * 100)}% 的完成行带耗时（${o.postsWithDuration}/${o.postEntries}）` : '窗口内无完成行，无法评估' },
+      { key: 'errors', status: !hasFailures ? 'unavailable' : classifiedRatio >= 0.9 ? 'yes' : classifiedRatio > 0 ? 'partial' : 'no', evidence: hasFailures ? `${Math.round(classifiedRatio * 100)}% 的失败带错误分类` : '窗口内无失败调用，无法评估' },
       { key: 'manifest', status: o.runManifest ? 'yes' : 'no', evidence: o.runManifest ? `运行清单 ${o.runManifestCount ?? '?'} 条（模型/提示词指纹/权限模式/契约版本）` : '未发现运行清单（模型/参数/提示词版本）' },
       { key: 'cost', status: o.costPerRun ? 'yes' : 'no', evidence: o.costEvidence ?? (o.costPerRun ? '成本可按 run 归集' : '成本只有按天/按模型聚合') },
     ]),
@@ -329,7 +357,7 @@ export function buildNineLayers(inputs: NineLayersInputs): NineLayersReport {
     counts,
     meta: {
       source: 'governance/harness + toolpipeline/audit + loop/graph + eval store + repo specs',
-      note: '九层体检是自检清单，不是认证；数据缺席按 unavailable/partial 计，不造运行数据。',
+      note: '九层体检是自检清单，不是认证；机制缺失判缺失，窗口内无事件可评的检查项标「无法评估」且不计分，不造运行数据。',
       layersOrder: NINE_LAYER_ORDER,
     },
   }
@@ -459,7 +487,8 @@ export async function collectNineLayersInputs(days = 7): Promise<NineLayersInput
   } catch { heldoutQuestions = 0 }
 
   const contractsWithTimeout = BUILTIN_CONTRACTS.filter((c) => c.timeoutMs > 0).length
-  const enforceEnabled = process.env.HERMES_TOOL_ENFORCE === '1'
+  // 总闸读数与执法正身同判据（未设环境变量＝默认开）；此前写 `=== '1'`，执法在生效而这里显示关
+  const enforceEnabled = toolEnforceOn(process.env, loadManagedSettings())
   const policyCount = queryPolicyDecisions({ days, limit: 1 }).total
   const latestApproval = queryApprovalLog(1)[0]
   const scopedApprovals = !!latestApproval && !!latestApproval.scope && !!latestApproval.source

@@ -192,7 +192,8 @@ export type NineLayerKeyDto =
   | 'verification' | 'permissions' | 'observability' | 'evals'
 
 export type NineLayerStatusDto = 'covered' | 'partial' | 'missing'
-export type NineCheckStatusDto = 'yes' | 'partial' | 'no'
+/** unavailable＝机制在、窗口内无事件可评（2026-11-28）：不计分母，不等于缺失。 */
+export type NineCheckStatusDto = 'yes' | 'partial' | 'no' | 'unavailable'
 
 export interface NineLayerCheckDto {
   key: string
@@ -205,9 +206,12 @@ export interface NineLayerCheckDto {
 export interface NineLayerDto {
   key: NineLayerKeyDto
   status: NineLayerStatusDto
-  score: number
+  /** 已评估检查项的得分；本层没有可评估项时为 null，界面显示「—」。 */
+  score: number | null
   checks: NineLayerCheckDto[]
   gaps: string[]
+  /** 无法评估的检查项说明（窗口内无事件），与差距分列。旧服务端不带此字段。 */
+  unevaluated?: string[]
   actions: string[]
 }
 

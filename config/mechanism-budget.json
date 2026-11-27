@@ -490,7 +490,19 @@
       "reason": "规格按域登记机制退役（spec 2026-11-27-absorption-regime-unify 的 T1，用户 2026-11-28 批准）：2026-11-05 立后只用过 ainative 一个域，脚本无自动调用方；与新增的吸收总账（Markdown 文档，不占账本预算）配对。登记目录 docs/superpowers/specs/registry/ 冻结保留",
       "pairedRemovals": [
         "删除 scripts/spec-archive.mjs 与 scripts/__tests__/spec-archive.test.ts（sunset 条目同步移出册；脚本与测试可从 git 历史召回，退役前最后在册的提交是 e01d7ab40）"
-      ]
+      ],
+      "delta": "+0 scripts / +0 gates / +0 ledgers / +0 npm scripts / +0 patches；新增 3 个域模块（custom/server/bpa/bpa-admission.ts、bpa-admission-store.ts 场景准入纯函数与结论账本；custom/server/obsalerts/issue-store.ts 信号问题记录）、6 个端点（bpa 准入读取+签署 2、harness obs-issues 建/列/关 3、metricpolicy unit-cost-availability 1）、1 个 JSON 存储（bpa-admission.json，域内文件不进 LEDGERS）——均不占预算上限",
+      "reason": "德勤 AI 落地方法论吸收批（spec 2026-11-28-ai-adoption-admission-gates）：批 A 读数不造假修复（九层体检/五流诊断/评分卡/执法总闸读数统一/流程成熟度/虚拟损益/人机团队成功率，全部只读模型无新机制）＋批 B 场景准入（四条排除规则三态判定＋人签署的可进试点/暂缓，只披露不设门）＋批 C 单位成本可得率读数。遵守 2026-11-01「机制扩展停止」：零新门码，准入命中不阻断结果合同创建（D7）",
+      "pairedRemovals": [
+        "三处「读不到数据即给好结论」的默认行为被取代：九层体检窗口零事件判 unavailable 不计分、五流诊断看板库读不到判 unknown、评分卡权限两项按治理姿态实数判定——旧语义（缺数记 0 分/判 ok/写死结论）退役",
+        "「批三 OutcomeTeam/Settlement 未落地」的过期文案被实算读数取代（capabilitypool/metrics.ts humanAiTeamSuccess）"
+      ],
+      "sunset": {
+        "owner": "德勤方法论吸收批（2026-11-28-ai-adoption-admission-gates）",
+        "reviewBy": "2027-02-28",
+        "retireWhen": "读数修复不属新增机制（是既有不变量「源缺席不猜数」的落实），无退役动作；本条目保留作登记。若场景准入面板连续两轮真实使用零签署且无消费方引用，bpa-admission 两模块与 obs-issues 三端点并入域退役判据复评"
+      }
+
     }
   ],
   "sunset": [

@@ -137,8 +137,8 @@ describe('validateMetricInput：结构校验', () => {
 })
 
 describe('内置登记簿：口径完整且全部如实标为装饰', () => {
-  it('九个内置指标都以 measure/ 开头、带 sources（除接口数占位）', () => {
-    expect(BUILTIN_METRICS.length).toBe(9)
+  it('十个内置指标都以 measure/ 开头、带 sources（除接口数占位）', () => {
+    expect(BUILTIN_METRICS.length).toBe(10)
     for (const m of BUILTIN_METRICS) {
       expect(m.key.startsWith('measure/')).toBe(true)
       expect(m.namespace).toBe('measure')

@@ -4,6 +4,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 import { collectGovernancePosture } from '../posture'
+import { _pinManagedSettingsForTests, _unpinManagedSettingsForTests } from '../../managedsettings/managed-settings'
 
 const root = mkdtempSync(join(tmpdir(), 'posture-'))
 
@@ -58,10 +59,11 @@ describe('governance posture（治理姿态对账）', () => {
     }
   })
 
-  it('全局面：执法总闸/strict/规则计数如实呈现（未配置=0/关）', () => {
+  it('全局面：执法总闸/strict/规则计数如实呈现（总闸未配置＝默认开；strict 未配置＝关）', () => {
     const home = makeHome('t3', {})
     const r = collectGovernancePosture({ hermesHome: home, env: {} })
-    expect(r.global.enforceMasterOn).toBe(false)
+    // 总闸与执法正身同判据（D1 2026-11-05 默认开）：未设环境变量时执法在生效，读数不能显示「关」
+    expect(r.global.enforceMasterOn).toBe(true)
     expect(r.global.strictOn).toBe(false)
     expect(r.global.sandboxRoots).toBe(0)
     const r2 = collectGovernancePosture({
@@ -71,5 +73,32 @@ describe('governance posture（治理姿态对账）', () => {
     expect(r2.global.enforceMasterOn).toBe(true)
     expect(r2.global.strictOn).toBe(true)
     expect(r2.global.sandboxRoots).toBe(2)
+  })
+})
+
+describe('治理姿态总闸读数与执法正身同口径（2026-11-28）', () => {
+  it('未设置环境变量：执法总闸按默认开显示，不显示成关', () => {
+    const home = makeHome('t-master-default', {})
+    const r = collectGovernancePosture({ hermesHome: home, env: {} })
+    expect(r.global.enforceMasterOn).toBe(true)
+  })
+
+  it('显式设为 0 才显示关', () => {
+    const home = makeHome('t-master-off', {})
+    const off = collectGovernancePosture({ hermesHome: home, env: { HERMES_TOOL_ENFORCE: '0' } })
+    expect(off.global.enforceMasterOn).toBe(false)
+    const on = collectGovernancePosture({ hermesHome: home, env: { HERMES_TOOL_ENFORCE: '1' } })
+    expect(on.global.enforceMasterOn).toBe(true)
+  })
+
+  it('部署侧锁定优先：锁定开则环境变量设 0 也显示开', () => {
+    _pinManagedSettingsForTests({ version: 1, toolEnforceLocked: true, toolEnforce: 1 })
+    try {
+      const home = makeHome('t-master-locked', {})
+      const r = collectGovernancePosture({ hermesHome: home, env: { HERMES_TOOL_ENFORCE: '0' } })
+      expect(r.global.enforceMasterOn).toBe(true)
+    } finally {
+      _unpinManagedSettingsForTests()
+    }
   })
 })

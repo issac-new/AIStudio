@@ -48,6 +48,9 @@ function parseAndValidate(text: string, source: string): ManagedSettings | null 
 
 /** 读取托管配置（5s 缓存；两处都不在=未托管）。 */
 export function loadManagedSettings(): ManagedSettings | null {
+  // 测试隔离生效时不读盘：本机 ~/.hermes-web-ui/managed-settings.json 不认 HERMES_HOME，
+  // 读模型的测试若读到它，「未设置＝默认开」之类的断言会被带偏。
+  if (pinned) return pinned.value
   if (cache && Date.now() - cache.at < TTL_MS) return cache.value
   const deploy = join(homedir(), '.hermes-web-ui', 'managed-settings.json')
   let value: ManagedSettings | null = null
@@ -66,5 +69,19 @@ export function loadManagedSettings(): ManagedSettings | null {
 
 /** 测试注入清缓存。 */
 export function resetManagedSettingsCache(): void {
+  cache = null
+}
+
+let pinned: { value: ManagedSettings | null } | null = null
+
+/** 测试隔离：固定返回一份托管设置（传 null＝当作未托管），不读盘。用完调解除函数。 */
+export function _pinManagedSettingsForTests(value: ManagedSettings | null): void {
+  pinned = { value }
+  cache = null
+}
+
+/** 解除测试隔离，恢复真实读取。 */
+export function _unpinManagedSettingsForTests(): void {
+  pinned = null
   cache = null
 }

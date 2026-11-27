@@ -8,7 +8,7 @@ import { exportArchitectureMarkdown } from '../bpa-export'
 import { validateArchitecture } from '../bpa-validate'
 import { seedArchitecture } from '../bpa-seed'
 import { readArchitecture, writeArchitecture } from '../bpa-store'
-import type { BpaValidationReport, PemmAssessment } from '../bpa-types'
+import { PEMM_FACTORS, type BpaValidationReport, type PemmAssessment } from '../bpa-types'
 
 let dir: string
 const reportOf = (over: Partial<BpaValidationReport> = {}): BpaValidationReport => ({
@@ -58,7 +58,10 @@ describe('bpa-export', () => {
     const seeded = seedArchitecture()
     writeArchitecture(seeded.nodes, seeded.config)
     const arch = readArchitecture()
-    const mat: PemmAssessment = { id: 'x', scoredAt: 1, scores: { design: 2, leadership: 1 } }
+    const mat: PemmAssessment = {
+      id: 'x', scoredAt: 1,
+      scores: Object.fromEntries(PEMM_FACTORS.map((f) => [f.key, f.key === 'leadership' ? 1 : 2])) as PemmAssessment['scores'],
+    }
     const md = exportArchitectureMarkdown(arch, validateArchitecture(arch), mat)
     for (const anchor of [
       '# 流程架构报告',
@@ -81,6 +84,24 @@ describe('bpa-export', () => {
     // 表格行含 KPI 与 IO 列
     expect(md).toContain('验收标准一次通过率')
     expect(md).toContain('PCF 4.0')
+  })
+
+  it('导出报告：九项没打齐的评估不出总体成熟度，写明已打几项与缺哪些', () => {
+    const seeded = seedArchitecture()
+    writeArchitecture(seeded.nodes, seeded.config)
+    const arch = readArchitecture()
+    // 只打一项：此前报告会写「总体成熟度：P4」
+    const partial: PemmAssessment = { id: 'p', scoredAt: 1, scores: { design: 4 } }
+    const md = exportArchitectureMarkdown(arch, validateArchitecture(arch), partial)
+    expect(md).toContain('已打分 1/9')
+    expect(md).toContain('未打分')
+    expect(md).not.toMatch(/总体成熟度[^\n]*P\d/)
+    expect(md).toContain('· 流程设计：P4')
+    // 一项都没打：此前 Math.min() 得 Infinity，报告会写「PInfinity」
+    const empty: PemmAssessment = { id: 'e', scoredAt: 1, scores: {} }
+    const mdEmpty = exportArchitectureMarkdown(arch, validateArchitecture(arch), empty)
+    expect(mdEmpty).not.toContain('Infinity')
+    expect(mdEmpty).toContain('已打分 0/9')
   })
 
   it('空态与缺评估态不炸（引导语兜底）', () => {

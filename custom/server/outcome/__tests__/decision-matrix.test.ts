@@ -155,6 +155,26 @@ describe('classifyDecisionProfile 三维映射', () => {
     expect(p.basis.join()).toContain('one-way')
   })
 
+  it('评审/看板：资金收付动作与个人数据类别词 → high（B4 2026-11-28；业务域名词不收、命令面不动）', () => {
+    // 资金动作词：文章例「自动付款 Agent」此前恒 medium（unknown 可逆性、单签 ask）
+    expect(classifyDecisionProfile({ kind: 'kanban', title: '自动付款 Agent 隔离验证' }))
+      .toMatchObject({ riskTier: 'high', reversibility: 'unknown' })
+    // 只命中「退款」，不与 HIGH_SEMANTIC 的「上线」等词重叠——否则删词探针抓不到
+    expect(classifyDecisionProfile({ kind: 'review', title: '退款审核流程' }))
+      .toMatchObject({ riskTier: 'high' })
+    // 敏感数据类别词
+    expect(classifyDecisionProfile({ kind: 'kanban', title: '个人信息导出工具' }))
+      .toMatchObject({ riskTier: 'high' })
+    expect(classifyDecisionProfile({ kind: 'kanban', title: '客户信息脱敏脚本' }))
+      .toMatchObject({ riskTier: 'high' })
+    // 业务域名词不收：这块板叫 pay，域名词命中等于按部门贴高危标签（存量实测「支付」143 条、93 条来自 pay 板）
+    expect(classifyDecisionProfile({ kind: 'kanban', title: '支付渠道接入' }).riskTier).toBe('medium')
+    expect(classifyDecisionProfile({ kind: 'kanban', title: '结算对账日报' }).riskTier).toBe('medium')
+    // 命令面不动：检索「退款」仍是只读命令判低、写支付模块的脚本仍是写副作用判中——都不得因词面升 high
+    expect(classifyDecisionProfile({ kind: 'command', detail: 'grep 退款 src/pay' }).riskTier).toBe('low')
+    expect(classifyDecisionProfile({ kind: 'command', detail: 'node scripts/refund-batch.js' }).riskTier).toBe('medium')
+  })
+
   it('评审/看板：HIGH_SEMANTIC 同判据定 risk；不可证明 → unknown；语义命中对外词表照记', () => {
     expect(classifyDecisionProfile({ kind: 'review', title: '发布准出检查' }))
       .toMatchObject({ riskTier: 'high', reversibility: 'one-way', externalEffect: false })

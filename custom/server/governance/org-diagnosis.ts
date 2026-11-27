@@ -9,10 +9,14 @@
  * 阈值为 v1 校准值（阈值须按真实数据分布复调，不预设为永恒真理）：
  *   升级 pending>72h / 任务无人认领>72h / changes_requested 滞留>48h /
  *   语义上下文缺册率>20% 警 >50% 断 / 派发未送达率>30% 警 / in-flight≥5 过载。
+ *
+ * 读不到与没有（2026-11-28）：读看板库的信号（台账档、过载、未指派、打回）先探库可读性
+ * （kanbanReadability）。一个库都没找到、或有库打不开，一律 unknown 并写明读不到——
+ * 此前读失败被回退成 0 再判成「均有台账档」「无过载」。库在且可查、确实没有任务，才是 ok。
  */
 import {
   collectAssigneeStats, collectQgateRuns, collectSquadStats, dedupeDispatchEntries, deriveUsage,
-  dispatchStats, kanbanDbFiles, openReadonly,
+  dispatchStats, kanbanDbFiles, kanbanReadability, openReadonly,
 } from './governance-analytics'
 import { loadCapabilityLedger } from './governance-ledger'
 import { readDispatchLedger } from './dispatch-ledger'
@@ -79,6 +83,31 @@ function sev(ok: boolean, warnThreshold: number, alertThreshold: number, ratio: 
 
 interface KanbanAgingRow { unclaimedOld: number; unclaimedTotal: number; crOld: number; crTotal: number }
 
+/** 看板库可读性结论：readable 才允许读库的信号给 ok/warn/alert。 */
+interface KanbanReadState {
+  state: 'readable' | 'no_db' | 'unreadable'
+  found: number
+  unreadable: number
+}
+
+/** 读看板库的信号的统一出口（2026-11-28）。严重级别、取值、说明三者同源——
+ *  库读不到时整体是 unknown，不会出现「级别是未知、文案却说正常」的半截状态。
+ *  读失败此前被回退成 0，再被判成「均有台账档」「无过载」「无未指派任务」：
+ *  三个 catch 里只写了注释「信号侧 unknown」，没有任何代码真的把信号置为 unknown。 */
+function kanbanSignal(
+  read: KanbanReadState,
+  whenReadable: () => { severity: OrgSignal['severity']; value: string; detail: string },
+): Pick<OrgSignal, 'severity' | 'value' | 'detail'> {
+  if (read.state === 'readable') return whenReadable()
+  return {
+    severity: 'unknown',
+    value: '—',
+    detail: read.state === 'no_db'
+      ? '未找到看板库，读不到任务数据（没有库不等于没有任务）'
+      : `看板库 ${read.unreadable}/${read.found} 个打不开，读不到任务数据`,
+  }
+}
+
 async function kanbanAging(now: number): Promise<KanbanAgingRow> {
   const out: KanbanAgingRow = { unclaimedOld: 0, unclaimedTotal: 0, crOld: 0, crTotal: 0 }
   for (const file of kanbanDbFiles()) {
@@ -127,11 +156,19 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
   const semanticMissing = columnEntries.filter((e) => !ledgerUnitIds.has(e.specialist as string))
 
   let unmappedCount = 0
+  let usageFailed = false
   try {
     const [assigneeStats, squadStats] = await Promise.all([collectAssigneeStats(), collectSquadStats()])
     const usage = deriveUsage(ledger ?? { version: 1, reviewedAt: '', domains: [], capabilities: [], units: [] }, assigneeStats, squadStats, { dispatchEntries: dedup, now })
     unmappedCount = usage.unmappedAssignees.length
-  } catch { /* usage 聚合失败保持 0，信号侧 unknown */ }
+  } catch { usageFailed = true }
+
+  // 看板库读不读得到：下面的台账档、过载、未指派、打回四条信号都读它，读不到一律 unknown。
+  // 与 catch 分开判：collectAssigneeStats 在库打不开时不抛错而是返回空表，光靠 catch 抓不到。
+  const kanbanRead: KanbanReadState = { state: 'readable', found: 0, unreadable: 0 }
+  try {
+    Object.assign(kanbanRead, await kanbanReadability())
+  } catch { kanbanRead.state = 'unreadable' }
 
   const escalations = listAll()
   sources['escalation'] = escalations.length
@@ -146,12 +183,13 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
   sources['kanban-tasks'] = aging.unclaimedTotal + aging.crTotal
 
   const assigneeInFlight = new Map<string, number>()
+  let overloadFailed = false
   try {
     const assigneeStats = await collectAssigneeStats()
     for (const [name, s] of assigneeStats) {
       if (name !== '(未指派)' && s.inFlight >= 5) assigneeInFlight.set(name, s.inFlight)
     }
-  } catch { /* 过载信号侧 unknown */ }
+  } catch { overloadFailed = true }
 
   const gates = collectQgateRuns()
   sources['qgate-runs'] = gates.runs
@@ -181,11 +219,15 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
         },
         {
           id: 'usage.unmappedAssignees',
-          severity: unmappedCount === 0 ? 'ok' : unmappedCount <= 3 ? 'warn' : 'alert',
-          value: `${unmappedCount} 人`,
-          detail: unmappedCount === 0
-            ? '活跃 assignee 均有台账档'
-            : `活跃但台账无档的 assignee ${unmappedCount} 个——责任面（谁主责）对这些人是断的`,
+          ...kanbanSignal(kanbanRead, () => usageFailed
+            ? { severity: 'unknown', value: '—', detail: '看板负责人统计读取失败，无法评估台账建档情况' }
+            : {
+                severity: unmappedCount === 0 ? 'ok' : unmappedCount <= 3 ? 'warn' : 'alert',
+                value: `${unmappedCount} 人`,
+                detail: unmappedCount === 0
+                  ? '活跃 assignee 均有台账档'
+                  : `活跃但台账无档的 assignee ${unmappedCount} 个——责任面（谁主责）对这些人是断的`,
+              }),
           evidence: 'kanban assignee × capability-ledger',
         },
       ],
@@ -232,20 +274,24 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
       signals: [
         {
           id: 'task.unclaimedAging',
-          severity: aging.unclaimedTotal === 0 ? 'unknown' : aging.unclaimedOld === 0 ? 'ok' : aging.unclaimedOld <= 3 ? 'warn' : 'alert',
-          value: `${aging.unclaimedOld}/${aging.unclaimedTotal}`,
-          detail: aging.unclaimedTotal === 0
-            ? '无未指派在途任务'
-            : `未指派在途任务 ${aging.unclaimedOld} 件超 72h 无人认领——任务安排了责任没落下去`,
+          ...kanbanSignal(kanbanRead, () => ({
+            severity: aging.unclaimedTotal === 0 ? 'unknown' : aging.unclaimedOld === 0 ? 'ok' : aging.unclaimedOld <= 3 ? 'warn' : 'alert',
+            value: `${aging.unclaimedOld}/${aging.unclaimedTotal}`,
+            detail: aging.unclaimedTotal === 0
+              ? '无未指派在途任务'
+              : `未指派在途任务 ${aging.unclaimedOld} 件超 72h 无人认领——任务安排了责任没落下去`,
+          })),
           evidence: 'kanban tasks（root+boards，排除 done/archived）',
         },
         {
           id: 'task.changesRequestedAging',
-          severity: aging.crTotal === 0 ? 'unknown' : aging.crOld === 0 ? 'ok' : aging.crOld <= 3 ? 'warn' : 'alert',
-          value: `${aging.crOld}/${aging.crTotal}`,
-          detail: aging.crTotal === 0
-            ? '无 changes_requested 在途任务'
-            : `changes_requested 滞留 ${aging.crOld} 件超 48h——打回之后没有人牵头接住`,
+          ...kanbanSignal(kanbanRead, () => ({
+            severity: aging.crTotal === 0 ? 'unknown' : aging.crOld === 0 ? 'ok' : aging.crOld <= 3 ? 'warn' : 'alert',
+            value: `${aging.crOld}/${aging.crTotal}`,
+            detail: aging.crTotal === 0
+              ? '无 changes_requested 在途任务'
+              : `changes_requested 滞留 ${aging.crOld} 件超 48h——打回之后没有人牵头接住`,
+          })),
           evidence: 'kanban tasks（root+boards）',
         },
       ],
@@ -257,11 +303,15 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
       signals: [
         {
           id: 'assignee.overload',
-          severity: assigneeInFlight.size === 0 ? 'ok' : assigneeInFlight.size <= 2 ? 'warn' : 'alert',
-          value: `${assigneeInFlight.size} 人`,
-          detail: assigneeInFlight.size === 0
-            ? '无 in-flight≥5 的过载 assignee（阈值 v1 校准值）'
-            : `in-flight≥5 的过载 assignee：${[...assigneeInFlight.entries()].map(([n, c]) => `${n}(${c})`).join('、')}——关键角色过载信号（三账资源账联动）`,
+          ...kanbanSignal(kanbanRead, () => overloadFailed
+            ? { severity: 'unknown', value: '—', detail: '看板在途统计读取失败，无法评估过载' }
+            : {
+                severity: assigneeInFlight.size === 0 ? 'ok' : assigneeInFlight.size <= 2 ? 'warn' : 'alert',
+                value: `${assigneeInFlight.size} 人`,
+                detail: assigneeInFlight.size === 0
+                  ? '无 in-flight≥5 的过载 assignee（阈值 v1 校准值）'
+                  : `in-flight≥5 的过载 assignee：${[...assigneeInFlight.entries()].map(([n, c]) => `${n}(${c})`).join('、')}——关键角色过载信号（三账资源账联动）`,
+              }),
           evidence: 'kanban in-flight 统计（阈值 5 为 v1 校准值）',
         },
         {
@@ -295,11 +345,14 @@ export async function orgDiagnosis(opts: { now?: number } = {}): Promise<OrgDiag
         },
         {
           id: 'gate.failNoFollowup',
-          severity: aging.crTotal === 0 && gates.runs === 0 ? 'unknown' : aging.crOld === 0 ? 'ok' : 'warn',
-          value: `${aging.crOld} 件`,
-          detail: aging.crOld === 0
-            ? '打回任务均在 48h 内有人接手（以 changes_requested 滞留为反馈闭环代理信号）'
-            : `打回任务 ${aging.crOld} 件超 48h 无后续——验证信号发了，经验没回到系统`,
+          // 看板库读不到时无法知道有没有打回滞留——即使有门禁运行记录也判不了
+          ...kanbanSignal(kanbanRead, () => ({
+            severity: aging.crTotal === 0 && gates.runs === 0 ? 'unknown' : aging.crOld === 0 ? 'ok' : 'warn',
+            value: `${aging.crOld} 件`,
+            detail: aging.crOld === 0
+              ? '打回任务均在 48h 内有人接手（以 changes_requested 滞留为反馈闭环代理信号）'
+              : `打回任务 ${aging.crOld} 件超 48h 无后续——验证信号发了，经验没回到系统`,
+          })),
           evidence: 'kanban changes_requested 滞留（反馈闭环代理信号）',
         },
       ],
