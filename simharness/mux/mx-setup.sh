@@ -241,6 +241,68 @@ PYN
 done
 log "config schema 对齐：${_schema_ok} 份盖章，${_schema_skip} 份跳过"
 
+# ── 4e. 重建初始化自愈（2026-11-27 run32 四轮烧机实录根治，spec 2026-11-27-sim-rebuild-init）──
+# 空库 studio 有三道一次性初始化，缺一即烧机连败（run32 实录：账号激活门 ×2 + 浏览器锚点 ×1）：
+# ①超管引导：webui DB 无活动超管时 reset-default-login（只写 SIM WEBUI_HOME，禁触宿主）；
+# ②账号预激活：v0.8.30 激活门（ACCOUNT_PENDING_ACTIVATION/PROFILE_GRANT_REQUIRED）要求
+#   matrix 交换建行的用户 status=active 且绑定 profile——run31 时代无此门，重建首启须
+#   逐账号「首登建行→管理面激活+grant」，admin 交换账号（governance 判读 _gov_tok 来源）
+#   同闸（run32 G1 判读「服务不可达」实锤=_gov_tok 空）。密码换 matrix token 走 creds
+#   约定式（与上方登录段同源），激活走 PUT /api/auth/users/:id（超管闸）。
+# ③浏览器锚点：PLAYWRIGHT_BROWSERS_PATH=$SIM_ROOT/pw-browsers 缺 chromium 时
+#   npx playwright install chromium（采集链预检的回落引擎；宿主 Chrome 故障时唯一兜底）。
+# 幂等：三项均「已满足即跳过」，反复跑 setup 无副作用。段内失败只告警不阻断（与 4b-4d 同风格）；
+# 但 ②若整批失败会复现 G1 判读不可达——尾行自检 studio_login 并大声告警。
+if [[ "$MX_ROLE" != "agent" ]]; then
+  _HWUI_CLI="$(command -v hermes-web-ui || echo /opt/homebrew/bin/hermes-web-ui)"
+  _webui_db="$WEBUI_HOME/hermes-web-ui.db"
+  _sa=0
+  if [[ -f "$_webui_db" ]]; then
+    _sa=$(sqlite3 "file:$_webui_db?mode=ro" "SELECT count(*) FROM users WHERE role='super_admin' AND status='active'" 2>/dev/null || echo 0)
+  fi
+  if [ "$_sa" = "0" ]; then
+    if HERMES_WEB_UI_HOME="$WEBUI_HOME" "$_HWUI_CLI" reset-default-login >/dev/null 2>&1; then
+      log "超管引导：webui DB 无活动超管，已 reset-default-login（$_webui_db）"
+    else
+      log "超管引导告警：reset-default-login 失败——治理判读链将不可用，人工检查 $_HWUI_CLI"
+    fi
+  fi
+  _at=$(curl -sf -m 5 -X POST "http://127.0.0.1:${STUDIO_PORT}/api/auth/login" -H 'content-type: application/json' \
+    -d '{"username":"admin","password":"123456"}' | python3 -c 'import json,sys; print(json.load(sys.stdin).get("token",""))' 2>/dev/null || true)
+  if [ -n "$_at" ]; then
+    _act=0; _skip=0
+    for u in $(node_users); do
+      _mt=$(mx_login "$u" "$(login_password_for "$u")" 2>/dev/null | tr -d '\n')
+      [ -n "$_mt" ] || { _skip=$((_skip+1)); continue; }
+      _uid=$(human_mxid "$u")
+      printf '{"matrixAccessToken":"%s","matrixUserId":"%s","homeserverUrl":"%s"}' "$_mt" "$_uid" "$HS" \
+        | curl -sf -m 5 -X POST "http://127.0.0.1:${STUDIO_PORT}/api/auth/matrix-login" -H 'content-type: application/json' --data @- >/dev/null 2>&1 || true
+      _row=$(sqlite3 "file:$_webui_db?mode=ro" "SELECT id||'|'||status FROM users WHERE matrix_user_id='$_uid'" 2>/dev/null)
+      _rid="${_row%%|*}"; _rst="${_row##*|}"
+      [ "$_rst" = "active" ] && continue
+      [ -n "$_rid" ] || { _skip=$((_skip+1)); continue; }
+      _pr=$(curl -sf -m 5 -X PUT "http://127.0.0.1:${STUDIO_PORT}/api/auth/users/$_rid" \
+        -H "authorization: Bearer $_at" -H 'content-type: application/json' \
+        -d "{\"status\":\"active\",\"profiles\":[\"$u\"]}" 2>/dev/null) && _act=$((_act+1)) || _skip=$((_skip+1))
+    done
+    [ "$_act" -gt 0 ] && log "账号预激活：${_act} 个置 active+grant（跳过 ${_skip}——已激活或登录缺 token）"
+    _govtok=$(curl -sf -m 5 -X POST "http://127.0.0.1:${STUDIO_PORT}/api/auth/matrix-login" -H 'content-type: application/json' \
+      --data "$(printf '{"matrixAccessToken":"%s","matrixUserId":"%s","homeserverUrl":"%s"}' \
+        "$(mx_login admin "$(login_password_for admin)" 2>/dev/null | tr -d '\n')" "$(human_mxid admin)" "$HS")" \
+      | python3 -c 'import json,sys; print("1" if json.load(sys.stdin).get("token") else "0")' 2>/dev/null || echo 0)
+    [ "$_govtok" = "1" ] || log "治理判读自检告警：admin 交换仍不可用（G1 判读链将走不可达兜底）——人工补激活 admin 交换账号"
+  else
+    log "账号预激活告警：admin 初始口令不可登录（超管引导缺位）——治理判读链与预激活整段跳过"
+  fi
+  if ! ls "$SIM_ROOT/pw-browsers"/chromium* >/dev/null 2>&1; then
+    if ( cd "$HARNESS_ROOT" && PLAYWRIGHT_BROWSERS_PATH="$SIM_ROOT/pw-browsers" npx playwright install chromium >/dev/null 2>&1 ); then
+      log "浏览器锚点：chromium 已装 $SIM_ROOT/pw-browsers（采集链回落引擎）"
+    else
+      log "浏览器锚点告警：playwright install 失败——采集链预检将拒绝开跑，人工执行 PLAYWRIGHT_BROWSERS_PATH=$SIM_ROOT/pw-browsers npx playwright install chromium"
+    fi
+  fi
+fi
+
 # ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
 # 围栏=全编制名册（2026-11-02 立法 specs/2026-11-02-board-fence-full-roster.md）：SIM 单
 # home 内基名＋全部子编制 profile 都是合法领卡人（缺陷卡跨板指派子编制、修订卡指基名），
