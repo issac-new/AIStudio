@@ -23,7 +23,7 @@
 | 设计事实与容量基线（数字总账） | [2026-10-23-swarmstudio-design-ledger.md](superpowers/specs/2026-10-23-swarmstudio-design-ledger.md) |
 | 文档导航（正本、附件、历史档案入口） | [2026-10-21-ncwk-unified-product-design.md](superpowers/specs/2026-10-21-ncwk-unified-product-design.md) |
 | 历史 spec 全量索引 | [2026-10-21-swarmstudio-appendix-a-spec-index.md](superpowers/specs/2026-10-21-swarmstudio-appendix-a-spec-index.md) |
-| 上游吸收域单页索引 | [absorption-domain-README.md](absorption-domain-README.md) |
+| 吸收总账（外来材料的查重、裁决、落地成色与回看） | [absorption-ledger.md](../team/shared/research/absorption-ledger.md)；规程正本见 [article-methodology-fusion](../team/skills/devops/article-methodology-fusion/SKILL.md)；组件版本轴见技术组件台账；2026-10-01 组件吸收批的入口见 [absorption-domain-README.md](absorption-domain-README.md) |
 
 ## 目录职责
 
@@ -38,6 +38,7 @@
 | `manuals/` | 面向人的手册与规范 |
 | `reviews/` | 终态评审记录 |
 | `upstream-analysis/` | 上游组件分析；`component-ledger.md` 已降级为历史指针，现行台账见 `team/shared/research/` |
+| `../team/shared/research/` | 技术组件台账（组件版本轴）与吸收总账（各轮吸收的裁决、记档待定与回看） |
 | `wx-research-20261021-digests/` | 三公众号调研的逐篇精读笔记（语料） |
 | `2026-10-02-4articles-sources/`、`2026-10-04-nine-sources-sources/` | 调研原文语料 |
 | `comm-collab-v13-research.md`、`comm-collab-v14-unified-chat.md` | 协作/统一聊天专题调研（未判定是否现行入口，按规则 5 留在 `docs/` 根并在此登记；确认过期后移入 `reports/`） |

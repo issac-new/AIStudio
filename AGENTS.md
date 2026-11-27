@@ -20,6 +20,8 @@
 
 14. 任务卡单槽位与并发推送（2026-11-27 用户裁决，按执行会话推荐）：推送前门的 `L0.scope-check` 与 `L0.intent-drift` 按 `.qgate/registers/task-intent.json` 里登记的任务卡收窄改动范围，卡只有一个槽位。槽位里是别的会话在途任务的卡时，本批推送会被判「范围外」：先撤回本地主干上的合并（`git reset --keep <origin/main>`；共用主干上的未推送合并会连带阻塞他人推送），再在自己的分支上经 `node custom/qgate/dist/cli.js intent …` 登记本批任务卡（范围写实际变更集，验收条目取自规格），并把 `custom/qgate/gate-packs/l0/gates/scope-check.yaml` 与 `intent-drift.yaml` 里的 `acknowledgedSha256` 同步成命令打印的哈希，随批推送；推送成功后把对方在先的登记与两处绑定按字节归还（带一份 `DESIGN_SYNC: none` 的治理规格）。不得用 `qgate waive` 或 `git commit --no-verify` 代替。先例见规格 2026-11-27-task-card-single-slot-return。
 
+15. 吸收轮入口（2026-11-28 用户批准，规格 2026-11-27-absorption-regime-unify）：外来材料（文章、论文、报告、代码仓、技能包、上游版本差量）用于改进本仓、hermes 智能体团队或 swarm-yuan 之前，先查吸收总账 `team/shared/research/absorption-ledger.md` 的同源行，再按 `team/skills/devops/article-methodology-fusion/SKILL.md` 的「跨对象总规程」执行。收口时在总账写轮次行，记档待定项逐条入账；新写的吸收规格在抬头写「吸收总账：编号」。守门是 `custom/__tests__/absorption-ledger.test.ts`。
+
 ## 目录导航
 
 | 路径 | 作用 |
