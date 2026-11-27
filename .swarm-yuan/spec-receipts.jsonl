@@ -548,3 +548,4 @@
 {"at":"2026-11-26T14:22:38Z","spec":"docs/superpowers/specs/2026-11-26-run32-plan-sync.md","receipt":"a84b7cede35c62d62d7a0b89e36f4026f13af39c","commit":"16e9155b7"}
 {"at":"2026-11-26T15:47:24Z","spec":"docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md","receipt":"6285df1b4c71b456a6d8108535b03e32ff2e67cb","commit":"6f2c3b7ed"}
 {"at":"2026-11-26T16:03:37Z","spec":"docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md","receipt":"f94d478551c002a726f51ce473e57e71916a828c","commit":"49ad79a62"}
+{"at":"2026-11-27T00:14:36Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"b60b312c0815829fe225b4290c6fac684b57e86c","commit":"6a1afc103"}
