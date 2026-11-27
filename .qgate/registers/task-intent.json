@@ -1,26 +1,25 @@
 {
-  "taskId": "run32-plan-sync-20261126",
-  "statement": "run32 开跑前方案与程序同步：run31 后八天设计变更吸收（派单层 T1 逃生口/pristine 快照源/P2-P3 产品面供给＋探针组 18/开跑窗废止注记/台账回填）——用户指令「修订全流程推演方案及推演程序，启动新一轮推演」＋「无避让时段夜间正常跑」",
+  "taskId": "review-followup-20261127",
+  "statement": "二轮审查收尾批：文档口径订正（功能清单专题页签数、团队说明架构图）、删除附件用例、页签数断言、过期校验并发窗口登记——两路只读审查（R-16）属实条目的处置",
   "scope": [
-    "docs/**",
-    "simharness/**",
+    "docs/manuals/aistudio-feature-inventory.md",
+    "team/README.md",
+    "team/README_zh.md",
+    "runtime/tests/hermes_cli/test_acceptance_gate.py",
+    "custom/__tests__/interactive-training-manual.test.ts",
+    "docs/manuals/aistudio-design-document-index.md",
+    "docs/superpowers/specs/2026-11-27-review-followup-batch.md",
+    ".swarm-yuan/spec-receipts.jsonl",
     "custom/qgate/**",
-    ".qgate/registers/**",
-    ".swarm-yuan/**"
+    ".qgate/registers/**"
   ],
   "acceptance": [
-    "When capability-probes.test.ts 跑 Then 十八组全绿",
-    "When jargon-source-gate 跑 Then HARD=0",
-    "When run-gates.sh 跑 Then 全过",
-    "When regress merge scope 跑 Then 全过",
-    "When 合入 main 推送 Then pre-push 门全过"
+    "When 功能清单与两份团队说明搜旧口径 Then 零残留",
+    "When 删除附件用例跑 Then py-runtime 面全过",
+    "When 页签数断言变异探针跑 Then 两个方向均变红",
+    "When 合并档回归 merge 档跑 Then 15 个测试面全过",
+    "When 合入 main 推送 Then 推送前门全过"
   ],
-  "confirmedBy": "用户 2026-11-26 指令",
-  "confirmedAt": "2026-11-26T14:40:21.139Z",
-  "revisions": [
-    {
-      "at": "2026-11-26T14:40:21.139Z",
-      "reason": "范围修订为实际变更集——设计索引重生成/门 pin 重绑/规格收据账本/任务卡注册文件属随批机械件"
-    }
-  ]
+  "confirmedBy": "用户 2026-11-27「继续」按挂账 R-16 建议续办；范围与验收条目由执行会话拟定",
+  "confirmedAt": "2026-11-27T09:36:23.619Z"
 }

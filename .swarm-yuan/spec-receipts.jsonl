@@ -570,3 +570,4 @@
 {"at":"2026-11-27T05:05:30Z","spec":"docs/superpowers/specs/2026-11-27-delivery-version-stale-guard.md","receipt":"96d25235268b057f87fc76367ec5769e9532d608","commit":"e4dc94d77"}
 {"at":"2026-11-27T05:05:45Z","spec":"docs/DESIGN.md","receipt":"9cb0fbf1d952c991ed050a51419c4079c0ce7017","commit":"2fa474757"}
 {"at":"2026-11-27T05:30:44Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"5fba7109b51f6b0eda59e3e54767f559899fd37c","commit":"18bc1d3c3"}
+{"at":"2026-11-27T09:36:09Z","spec":"docs/superpowers/specs/2026-11-27-review-followup-batch.md","receipt":"76e633ec5411af48a54a5b570a6c947ac6407964","commit":"3ab08d1c2"}

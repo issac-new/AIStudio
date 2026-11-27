@@ -119,7 +119,7 @@ Gateway 消息 (Matrix/Weixin/API Server/Email)
 └──────────────────┬──────────────────────────────┘
                    ↓
   swarm · product · ops · platform · aiteam
-  pay · data · [已移除] · hack · worker （10 看板）
+  pay · data · hack （8 看板）
 ```
 
 ## 核心特性
