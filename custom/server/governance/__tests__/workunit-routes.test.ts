@@ -20,7 +20,11 @@ let bob = 'bob'
 beforeAll(async () => {
   process.env.AGENT_IDENTITY_STORE = dir
   process.env.AGENT_IDENTITY_NO_EVENTS = '0'
+  // 自治刻度存储同样隔离：不设会落 ~/.hermes-web-ui/autonomy-gov（宿主真实台账）
+  process.env.HERMES_AUTONOMY_GOV_DIR = dir
   const { governanceRoutes } = await import('../governance-controller')
+  // 协作等级 5 的上下文由控制器读自治刻度得出：测试应用须同时挂上 autonomygov 路由
+  const { autonomyGovRoutes } = await import('../../autonomygov/controller')
   const app = new Koa()
   app.use(bodyParser())
   // 测试登录态中间件：req 的 as 参数经请求头传入，置 ctx.state.user（requireAuthenticatedActor 的唯一信源）
@@ -29,6 +33,7 @@ beforeAll(async () => {
     if (as) ctx.state.user = { id: as, username: as, role: 'super_admin' }
     await next()
   })
+  app.use(autonomyGovRoutes.routes())
   app.use(governanceRoutes.routes())
   const server = createServer(app.callback())
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r))
@@ -41,7 +46,12 @@ beforeAll(async () => {
   bob = b.body.person.id
   await req('POST', `/api/governance/people/${bob}/activate`)
 
-  const reg = await req('POST', '/api/governance/agent-identity/register', { name: 'worker', kind: 'agent', owner: 'team' })
+  // 户口齐备（2026-11-27 框架对齐：准入并查户口，权限范围／能力边界／审计要求缺一不可准入）
+  const reg = await req('POST', '/api/governance/agent-identity/register', {
+    name: 'worker', kind: 'agent', owner: 'team', toolAllowlist: ['read_file'],
+    capabilityBoundary: { can: ['读文件'], cannot: ['改生产配置'] },
+    auditRequirement: { sampling: 0.1, retentionDays: 30 },
+  })
   unitId = reg.body.identity.id
 
   afterAll(() => {
@@ -49,6 +59,7 @@ beforeAll(async () => {
     rmSync(dir, { recursive: true, force: true })
     delete process.env.AGENT_IDENTITY_STORE
     delete process.env.AGENT_IDENTITY_NO_EVENTS
+    delete process.env.HERMES_AUTONOMY_GOV_DIR
   })
 })
 
@@ -83,7 +94,12 @@ function card(overrides: Record<string, unknown> = {}): Record<string, unknown> 
 
 /** 登记一个带完整责任卡的执行单元（不签署），返回单元 id。 */
 async function freshUnit(name: string): Promise<string> {
-  const reg = await req('POST', '/api/governance/agent-identity/register', { name, kind: 'agent', owner: 'team' })
+  // 户口齐备（2026-11-27 框架对齐：准入并查户口）；只保存卡、不准入的用例同样可用
+  const reg = await req('POST', '/api/governance/agent-identity/register', {
+    name, kind: 'agent', owner: 'team', toolAllowlist: ['read_file'],
+    capabilityBoundary: { can: ['读文件'], cannot: ['改生产配置'] },
+    auditRequirement: { sampling: 0.1, retentionDays: 30 },
+  })
   expect(reg.status).toBe(200)
   const saved = await req('PUT', `/api/governance/agent-identity/${reg.body.identity.id}/card`, card())
   expect(saved.status).toBe(200)
@@ -165,6 +181,21 @@ describe('workunit routes', () => {
     const ok = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ unitType: 'post', reviewer: bob }))
     expect(ok.status).toBe(200)
     expect(ok.body.identity.responsibilityCard.unitType).toBe('post')
+  })
+
+  it('协作等级取 5：无通过的自治刻度配置 → 400；有配置后 200（上下文由控制器读出传入）', async () => {
+    const id = await freshUnit('collab5-unit')
+    const bad = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ collabLevel: 5 }))
+    expect(bad.status).toBe(400)
+    expect(bad.body.problems.join()).toContain('自治刻度')
+    // 登记一条判定通过的 AL5 自治刻度（抽样审计 > 0 且有人工扫描）
+    const scale = await req('PUT', '/api/autonomygov/scale/worker', {
+      al: 5, dod: { criteria: ['c'], sample: 's', stopCondition: 'sc' }, auditSampling: 0.2, humanScan: true,
+    }, 'alice')
+    expect(scale.status).toBe(200)
+    const ok = await req('PUT', `/api/governance/agent-identity/${id}/card`, card({ collabLevel: 5 }))
+    expect(ok.status).toBe(200)
+    expect(ok.body.identity.responsibilityCard.collabLevel).toBe(5)
   })
 
   it('顶岗型风险档取一级 → 400（不得低于二级）', async () => {

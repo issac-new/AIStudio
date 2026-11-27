@@ -294,5 +294,7 @@ export function scopeSnapshotOf(identity: {
     toolAllowlist: strs(identity.toolAllowlist),
     riskTier: normalizeRiskTier(card?.riskTier) ?? 'tier3',
     collabLevel: card?.collabLevel ?? 1,
+    // 检验用例版本供就绪度判定；不参与扩权比较（isScopeExpansion 只比五个范围维度）
+    ...(nonEmpty(card?.testCaseVersion) ? { testCaseVersion: card.testCaseVersion } : {}),
   }
 }

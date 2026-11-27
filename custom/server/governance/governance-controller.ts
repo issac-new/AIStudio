@@ -789,6 +789,10 @@ import { appendJudgment, listJudgments, type JudgmentKind } from '../agentidenti
 import { activatePerson, deactivatePerson, listPeople, upsertPerson } from '../agentidentity/people'
 import type { ResponsibilityCard } from '../agentidentity/responsibility'
 import type { TransitionInput } from '../agentidentity/lifecycle'
+// 协作等级 5 的条件式裁决（用户 2026-11-05：AL5 须有判定通过的自治刻度配置）：
+// 由本层读出上下文传入域层，agentidentity 不反向依赖 autonomygov（那会成环）
+import { assess } from '../autonomygov/rules'
+import { listScale } from '../autonomygov/store'
 
 function govActorOf(ctx: { state?: { user?: { username?: string } } }): string {
   return ctx.state?.user?.username ?? 'anonymous'
@@ -953,15 +957,27 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
   }
 }
 
+/** 是否存在判定通过的第五级自治刻度配置（协作等级取 5 的前提）。读失败按未配置处理。 */
+function al5Configured(): boolean {
+  try {
+    return listScale().some((entry) => entry.al === 5 && assess(entry).verdict === 'ok')
+  } catch {
+    return false
+  }
+}
+
 router.get('/agent-identity/:id/card', async (ctx) => {
-  const view = getCardView(String(ctx.params.id ?? ''))
+  const view = getCardView(String(ctx.params.id ?? ''), { al5Configured: al5Configured() })
   if (!view) { fail(ctx, 404, '身份不存在', { code: 'not-found' }); return }
   ok(ctx, { view })
 })
 
 router.put('/agent-identity/:id/card', async (ctx) => {
   if (superAdminDenied(ctx)) return
-  const res = updateResponsibilityCard(String(ctx.params.id ?? ''), cardFromBody(bodyOf(ctx)), govActorOf(ctx as never))
+  // al5Configured：存在任一判定为 ok 的 AL5 自治刻度配置。读失败按「未配置」处理（宁可拒绝第五级，不误放行）
+  const res = updateResponsibilityCard(String(ctx.params.id ?? ''), cardFromBody(bodyOf(ctx)), govActorOf(ctx as never), {
+    al5Configured: al5Configured(),
+  })
   if (!res.ok) { fail(ctx, 400, '责任卡校验未通过', { code: 'invalid-card', problems: res.problems }); return }
   ok(ctx, { identity: res.identity })
 })
@@ -996,6 +1012,10 @@ router.post('/agent-identity/:id/transition', async (ctx) => {
             confirmedBy: actor.username,
           },
         }
+      : {}),
+    // 扩权豁免理由：由迁移人（登录身份）署名，随生命周期事件留存；非字符串或空白不传
+    ...(typeof b.expansionWaiver === 'string' && b.expansionWaiver.trim()
+      ? { expansionWaiver: b.expansionWaiver.trim() }
       : {}),
   }
   const res = transitionIdentity(String(ctx.params.id ?? ''), input, actor.username)
