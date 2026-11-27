@@ -134,6 +134,88 @@ def test_report_without_delivery_version_is_rejected(tmp_path, kanban_home):
         assert kb.get_task(conn, tid).status == "review"
 
 
+def _complete_with_report_for(conn, tid: str, version: dict) -> bool:
+    """按最新评审周期提交绑定 ``version`` 的通过报告并请求完成。"""
+    cycle = [e for e in kb.list_events(conn, tid) if e.kind == "review_requested"][-1]
+    report = _report(version, reviewRequestedEventId=cycle.id)
+    return kb.complete_task(
+        conn, tid, summary="复核通过", metadata={"acceptance_report": report}, force=True,
+    )
+
+
+# ---- 送审后卡片被改动（2026-11-27 交付版本过期校验）----
+
+
+def test_body_edited_after_review_rejects_old_report(tmp_path, kanban_home):
+    tid = _setup_independent(tmp_path)
+    with kbc.connect() as conn:
+        version = _latest_version(conn, tid)
+        assert kb.edit_task(conn, tid, body=BODY + "\n补充说明：产物放在 hello.txt\n") is True
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            _complete_with_report_for(conn, tid, version)
+        codes = [b["code"] for b in ei.value.blockers]
+        assert codes == ["delivery_version_stale"]
+        assert "kanban_request_review" in ei.value.blockers[0]["action"]
+        assert kb.get_task(conn, tid).status == "review"
+        assert _kinds(conn, tid).count("acceptance_blocked") == 1
+        # 被拒的完成不得顺带记出新版本：最新版本仍是送审时那个
+        assert _latest_version(conn, tid)["versionId"] == version["versionId"]
+
+
+def test_ac_wording_changed_after_review_is_rejected(tmp_path, kanban_home):
+    """只改验收条件的措辞、编号不变：契约 AC 一致，但卡片内容已不是送审时那份。"""
+    tid = _setup_independent(tmp_path)
+    with kbc.connect() as conn:
+        version = _latest_version(conn, tid)
+        kb.edit_task(conn, tid, body="任务正文\nAC-1: 产物存在且非空\nAC-2: TAP 报告零失败\n")
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            _complete_with_report_for(conn, tid, version)
+        assert [b["code"] for b in ei.value.blockers] == ["delivery_version_stale"]
+        assert kb.get_task(conn, tid).status == "review"
+
+
+def test_attachment_added_after_review_is_rejected(tmp_path, kanban_home):
+    tid = _setup_independent(tmp_path)
+    with kbc.connect() as conn:
+        version = _latest_version(conn, tid)
+        note = tmp_path / "review-note.txt"
+        note.write_text("评审补充材料", encoding="utf8")
+        kb.add_attachment(
+            conn, tid, filename="review-note.txt", stored_path=str(note),
+            size=note.stat().st_size, uploaded_by="reviewer-1",
+        )
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            _complete_with_report_for(conn, tid, version)
+        assert [b["code"] for b in ei.value.blockers] == ["delivery_version_stale"]
+        assert kb.get_task(conn, tid).status == "review"
+
+
+def test_rerequest_after_edit_issues_new_version_and_new_report_passes(tmp_path, kanban_home):
+    tid = _setup_independent(tmp_path)
+    with kbc.connect() as conn:
+        old = _latest_version(conn, tid)
+        kb.edit_task(conn, tid, body=BODY + "\n补充说明一行\n")
+        assert kb.claim_review_task(conn, tid) is not None
+        ok, _ = kb.request_changes(conn, tid, reason="卡片已补充说明，请按新内容重新送审")
+        assert ok is True
+        assert kb.claim_task(conn, tid) is not None
+        assert kb.request_review(
+            conn, tid, reviewer="reviewer-1", summary="按新内容重新送审",
+        ) is True
+        new = _latest_version(conn, tid)
+        assert new["versionId"] != old["versionId"]
+        # 旧版本的报告在新周期上提交：版本不匹配，照旧被拒
+        with pytest.raises(kb.VerificationLevelBlocked) as ei:
+            _complete_with_report_for(conn, tid, old)
+        assert "delivery_version_mismatch" in [b["code"] for b in ei.value.blockers]
+        assert _complete_with_report_for(conn, tid, new) is True
+        assert kb.get_task(conn, tid).status == "done"
+        # 完成不再另记版本：验收报告绑定的版本就是最终交付版本
+        assert _latest_version(conn, tid)["versionId"] == new["versionId"]
+        report_event = [e for e in kb.list_events(conn, tid) if e.kind == "acceptance_report"][-1]
+        assert report_event.payload["deliveryVersionId"] == new["versionId"]
+
+
 def test_implementer_cannot_review_own_work(tmp_path, kanban_home):
     tid = _setup_independent(tmp_path)
     with kbc.connect() as conn:

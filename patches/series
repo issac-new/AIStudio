@@ -1418,3 +1418,6 @@
 # 与「解析当前轮会话」交给自定义宿主（自定义代码不反向引用上游模块）；给 Agent 的两段说明补 v2 指引；
 # 聊天挂载点让 surface_create 的工具消息渲染为持久式卡片。须在 777/778/779 之后。
 821-studio-ekko-ui-persistent-wiring.patch
+# 822：交付版本过期校验——独立验收完成前核对卡片当前内容的校验和等于交付版本（送审后改正文、改验收
+# 条件措辞或增删附件即拒绝凭旧报告完成，拦截码 delivery_version_stale）。runtime 模板同批改动；须在 814 之后。
+822-agent-kanban-delivery-version-stale-guard.patch

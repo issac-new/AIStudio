@@ -1,0 +1,92 @@
+# 822（2026-11-27 用户裁决立项）：交付版本过期校验——独立验收在完成前核对「卡片当前内容的校验和＝交付版本的校验和」。
+# 交付版本只在 request_review 与 complete_task 记录，两次记录之间改正文、改验收条件措辞或增删附件不会产生
+# 新版本；此前照抄旧 versionId/checksum 的报告仍能让改动后的卡片完成。拦截码 delivery_version_stale。
+# runtime/hermes_cli 同批改动（模板与本补丁结果逐字节一致）；须在 814 之后。规格 2026-11-27-delivery-version-stale-guard。
+diff --git a/hermes_cli/delivery_version.py b/hermes_cli/delivery_version.py
+index 0b63b7a..3455a97 100644
+--- a/hermes_cli/delivery_version.py
++++ b/hermes_cli/delivery_version.py
+@@ -12,6 +12,9 @@
+   同 checksum 重复创建返回既有版本（幂等），不追加新事件。
+ - 新版本创建时，先把当前 active 版本标 superseded，再追加新版本；旧验收报告因
+   `deliveryVersionId`/`artifactChecksum` 不匹配而自然失效。
++- 版本只在 `request_review` 与 `complete_task` 记录；两次记录之间卡片被改动
++  （正文或附件）不会产生新版本，由 `current_delivery_checksum` 与版本 checksum 的
++  比对识别（独立验收据此拒绝凭旧版本报告完成，见 kanban_db._independent_acceptance）。
+ - 附件哈希在版本创建时读取持久附件文件计算；文件缺失如实记 `missing=true`，
+   sha256=null，不猜内容。
+ - 调用方必须已经持有 write_txn（与 _append_event 同约定）。
+@@ -98,6 +101,19 @@ def version_id_of(checksum: str) -> str:
+     return f"dv_{checksum[:16]}"
+ 
+ 
++def _current_content(conn, task_id: str) -> dict[str, Any]:
++    """卡片当前内容（正文加附件）；记录版本与过期校验共用这一处算法。"""
++    return delivery_content(task_id, _task_body(conn, task_id), _attachments(conn, task_id))
++
++
++def current_delivery_checksum(conn, task_id: str) -> str:
++    """卡片当前内容的校验和。
++
++    与最新交付版本的 checksum 不一致，说明版本记录之后卡片被改动过。
++    """
++    return delivery_checksum(_current_content(conn, task_id))
++
++
+ def _event_rows(conn, task_id: str) -> list[Any]:
+     return conn.execute(
+         "SELECT id, kind, payload FROM task_events WHERE task_id = ? "
+@@ -162,9 +178,7 @@ def record_delivery_version(
+ 
+     返回完整版本 dict（含 versionId/checksum/content/manifest/seq 等）。
+     """
+-    body = _task_body(conn, task_id)
+-    attachments = _attachments(conn, task_id)
+-    content = delivery_content(task_id, body, attachments)
++    content = _current_content(conn, task_id)
+     checksum = delivery_checksum(content)
+     current = latest_delivery_version(conn, task_id)
+     if current is not None and current.get("checksum") == checksum:
+diff --git a/hermes_cli/kanban_db.py b/hermes_cli/kanban_db.py
+index 05f25eb..a2c8610 100644
+--- a/hermes_cli/kanban_db.py
++++ b/hermes_cli/kanban_db.py
+@@ -3349,8 +3349,11 @@ def _independent_acceptance(
+         return False, str(exc), exc.blockers, None
+     # 不可变交付版本绑定（结果交付后续批）：存在 active 版本时，报告必须绑定
+     # 同一 versionId/checksum；旧版本报告因 checksum 不匹配自然失效。没有版本的
+-    # 历史卡保持兼容（本批不追溯造版本）。
+-    from hermes_cli.delivery_version import latest_delivery_version, verify_delivery_version
++    # 历史卡保持兼容（本批不追溯造版本）。版本只在送审与完成两个时点记录，两次
++    # 记录之间卡片被改动不会产生新版本，所以还要核对卡片当前内容等于该版本。
++    from hermes_cli.delivery_version import (
++        current_delivery_checksum, latest_delivery_version, verify_delivery_version,
++    )
+     version = latest_delivery_version(conn, task_id)
+     if version is not None:
+         version_blockers: list[dict] = []
+@@ -3361,6 +3364,24 @@ def _independent_acceptance(
+                 "detail": f"versionId={version.get('versionId')} 的 checksum/内容不一致",
+                 "action": "重新走 request_review 生成新版本；不要手改事件载荷",
+             })
++        # 过期校验（2026-11-27）：报告绑定的是送审时冻结的内容。送审之后卡片正文或
++        # 附件有改动，照抄旧 versionId/checksum 的报告不得让改动后的卡片完成。
++        current_checksum = current_delivery_checksum(conn, task_id)
++        if current_checksum != version.get("checksum"):
++            version_blockers.append({
++                "code": "delivery_version_stale",
++                "title": "卡片在送审后被改动",
++                # 工具层只把 detail 返回给调用方（不带 action），所以下一步指引要写进 detail。
++                "detail": (
++                    f"卡片在送审后被改动：当前内容的校验和 {current_checksum[:16]}… 与交付版本 "
++                    f"{version.get('versionId')}（校验和 {str(version.get('checksum'))[:16]}…）不一致；"
++                    "实现方改完后须重新 kanban_request_review 生成新版本，审查者按新版本重新审查"
++                ),
++                "action": (
++                    "实现方改完卡片后重新 kanban_request_review 生成新版本，"
++                    "审查者按新版本重新审查并提交新报告"
++                ),
++            })
+         report_version = normalized.get("deliveryVersionId")
+         if not report_version:
+             version_blockers.append({

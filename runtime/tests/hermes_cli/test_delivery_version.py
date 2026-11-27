@@ -9,6 +9,7 @@ import pytest
 from hermes_cli import kanban_db as kb
 from hermes_cli import kanban_db_connect as kbc
 from hermes_cli.delivery_version import (
+    current_delivery_checksum,
     delivery_checksum,
     latest_delivery_version,
     record_delivery_version,
@@ -87,3 +88,21 @@ def test_corrupt_version_is_detected():
     assert verify_delivery_version({
         "versionId": f"dv_{checksum[:16]}", "checksum": checksum, "content": good,
     }) is True
+
+
+def test_current_delivery_checksum_tracks_card_content(tmp_path, kanban_home):
+    """卡片当前内容的校验和与已记录版本同算法：未改动时相等，改正文或加附件后不等。"""
+    with kbc.connect() as conn:
+        tid = kb.create_task(conn, title="dv-current", assignee="w", body="AC-1: 产物存在\n")
+        v1 = record_delivery_version(conn, tid, source="test")
+        assert current_delivery_checksum(conn, tid) == v1["checksum"]
+
+        kb.edit_task(conn, tid, body="AC-1: 产物存在\n补充说明\n")
+        assert current_delivery_checksum(conn, tid) != v1["checksum"]
+
+        attachment = tmp_path / "extra.txt"
+        attachment.write_text("extra", encoding="utf8")
+        kb.add_attachment(conn, tid, filename="extra.txt", stored_path=str(attachment), size=5)
+        v2 = record_delivery_version(conn, tid, source="test")
+        assert v2["checksum"] == current_delivery_checksum(conn, tid)
+        assert latest_delivery_version(conn, tid)["versionId"] == v2["versionId"]
