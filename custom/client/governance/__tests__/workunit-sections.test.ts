@@ -252,6 +252,211 @@ describe('WorkUnitLedgerSection 数字员工批一（准入证据/签署/迁移/
   })
 })
 
+describe('WorkUnitLedgerSection 框架对齐（2026-11-27：类型／风险档／协作等级／就绪度／豁免）', () => {
+  interface View5 { unitType?: string | null; riskTier?: string | null; collabLevel?: number | null; readiness?: { id: string; state: string; gap: string }[] }
+  function setup5(units: { id: string; name: string; stage?: string; card?: Record<string, unknown> | null; view?: View5 }[]) {
+    const calls: { url: string; method: string; body: unknown }[] = []
+    fetchMock.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+      const method = init?.method ?? 'GET'
+      const body = init?.body ? JSON.parse(init.body) : undefined
+      calls.push({ url, method, body })
+      if (url === '/api/auth/me') return jsonResponse({ user: { username: 'alice', role: 'super_admin' } })
+      if (url === '/api/governance/agent-identity') {
+        return jsonResponse({ ok: true, identities: units.map((u) => ({ id: u.id, name: u.name, kind: 'agent', owner: 'team' })), events: [] })
+      }
+      if (url === '/api/governance/people') {
+        return jsonResponse({ ok: true, people: [{ id: 'p-1', name: 'alice', active: true, emails: [] }, { id: 'p-2', name: 'bob', active: true, emails: [] }] })
+      }
+      const cardMatch = url.match(/\/agent-identity\/([^/]+)\/card$/)
+      if (cardMatch && method === 'GET') {
+        const u = units.find((x) => x.id === decodeURIComponent(cardMatch[1]))
+        return jsonResponse({ ok: true, view: { card: u?.card ?? null, stage: u?.stage ?? 'registered', gaps: [], ...(u?.view ?? {}) } })
+      }
+      if (cardMatch && method === 'PUT') return jsonResponse({ ok: true, identity: {} })
+      if (url.endsWith('/transition')) return jsonResponse({ ok: true, identity: {} })
+      return jsonResponse({ ok: true })
+    })
+    return calls
+  }
+
+  async function mount5() {
+    const { default: C } = await import('../components/WorkUnitLedgerSection.vue')
+    const w = mount(C)
+    await flushPromises()
+    return w
+  }
+
+  it('台账表显示类型、风险档、协作等级三列（中文标签，不显示内部取值）', async () => {
+    setup5([
+      { id: 'aid-1', name: 'unit-a', stage: 'running', card: { primaryOwner: 'p-1' },
+        view: { unitType: 'post', riskTier: 'tier2', collabLevel: 3, readiness: [] } },
+      { id: 'aid-2', name: 'unit-b', card: null, view: { unitType: null, riskTier: null, collabLevel: null, readiness: [] } },
+    ])
+    const w = await mount5()
+    expect(w.find('[data-testid="gov-workunit-type-unit-a"]').text()).toContain('顶岗型')
+    expect(w.find('[data-testid="gov-workunit-risk-unit-a"]').text()).toContain('二级')
+    expect(w.find('[data-testid="gov-workunit-collab-unit-a"]').text()).toContain('3')
+    // 未声明如实显示「—」，不显示假值
+    expect(w.find('[data-testid="gov-workunit-type-unit-b"]').text()).toBe('—')
+    expect(w.find('[data-testid="gov-workunit-risk-unit-b"]').text()).toBe('—')
+    w.unmount()
+  })
+
+  it('文案不出现「AI员工负责」类措辞', async () => {
+    setup5([{ id: 'aid-1', name: 'unit-a', card: null }])
+    const w = await mount5()
+    expect(w.text()).not.toContain('AI员工')
+    expect(w.text()).not.toContain('AI 员工')
+    w.unmount()
+  })
+
+  it('五项就绪度如实显示：未知／未就绪带缺口文案，就绪不显示缺口', async () => {
+    setup5([{
+      id: 'aid-1', name: 'unit-a', stage: 'running', card: { primaryOwner: 'p-1' },
+      view: {
+        unitType: 'assistant', riskTier: 'tier2', collabLevel: 3,
+        readiness: [
+          { id: 'net-contribution', state: 'unknown', gap: '净贡献核算尚无数据源' },
+          { id: 'correction-channel', state: 'no', gap: '无驳回类署名记录' },
+          { id: 'discretion', state: 'yes', gap: '' },
+          { id: 'reliability', state: 'yes', gap: '' },
+          { id: 'case-maintenance', state: 'yes', gap: '' },
+        ],
+      },
+    }])
+    const w = await mount5()
+    // 就绪度随单元详情显示：点开该单元后可见
+    expect(w.find('[data-testid="gov-workunit-readiness-unit-a"]').exists()).toBe(false)
+    await w.find('[data-testid="gov-workunit-edit-unit-a"]').trigger('click')
+    const box = w.find('[data-testid="gov-workunit-readiness-unit-a"]')
+    expect(box.exists()).toBe(true)
+    expect(box.text()).toContain('净贡献')
+    expect(box.text()).toContain('净贡献核算尚无数据源')
+    expect(box.text()).toContain('无驳回类署名记录')
+    // 就绪项不带缺口文案（不把就绪渲染成有问题）
+    expect(box.text()).toContain('就绪')
+    w.unmount()
+  })
+
+  it('迁移表单目标为 running 且当前为 changing：出现豁免理由输入框；填写后随请求体上送', async () => {
+    const calls = setup5([{
+      id: 'aid-1', name: 'unit-a', stage: 'changing', card: { primaryOwner: 'p-1', unitType: 'assistant', riskTier: 'tier2' },
+    }])
+    const w = await mount5()
+    await w.find('[data-testid="gov-workunit-trans-open-unit-a"]').trigger('click')
+    await w.find('[data-testid="gov-workunit-trans-to"]').setValue('running')
+    const waiver = w.find('[data-testid="gov-workunit-trans-waiver"]')
+    expect(waiver.exists()).toBe(true)
+    await w.find('[data-testid="gov-workunit-trans-evidence"]').setValue('重新验证\n重新授权')
+    await w.find('[data-testid="gov-workunit-trans-reason"]').setValue('恢复运行')
+    await waiver.setValue('试点需要，业务负责人已同意')
+    await w.find('[data-testid="gov-workunit-trans-submit"]').trigger('click')
+    await flushPromises()
+    const t = calls.filter((c) => c.url.endsWith('/transition')).at(-1)
+    expect((t?.body as Record<string, unknown>).expansionWaiver).toBe('试点需要，业务负责人已同意')
+    w.unmount()
+  })
+
+  it('豁免理由留空时请求体不带 expansionWaiver（不送空串）', async () => {
+    const calls = setup5([{ id: 'aid-1', name: 'unit-a', stage: 'changing', card: { primaryOwner: 'p-1' } }])
+    const w = await mount5()
+    await w.find('[data-testid="gov-workunit-trans-open-unit-a"]').trigger('click')
+    await w.find('[data-testid="gov-workunit-trans-to"]').setValue('running')
+    await w.find('[data-testid="gov-workunit-trans-evidence"]').setValue('a\nb')
+    await w.find('[data-testid="gov-workunit-trans-reason"]').setValue('恢复')
+    await w.find('[data-testid="gov-workunit-trans-submit"]').trigger('click')
+    await flushPromises()
+    const t = calls.filter((c) => c.url.endsWith('/transition')).at(-1)
+    expect(JSON.stringify(t?.body ?? {})).not.toContain('expansionWaiver')
+    w.unmount()
+  })
+
+  it('保存责任卡时上送 unitType／collabLevel（三级风险档下拉）', async () => {
+    const calls = setup5([{ id: 'aid-1', name: 'unit-a', card: null }])
+    const w = await mount5()
+    await w.find('[data-testid="gov-workunit-edit-unit-a"]').trigger('click')
+    const type = w.find('[data-testid="gov-workunit-form-type"]')
+    expect(type.exists()).toBe(true)
+    const typeValues = type.findAll('option').map((o) => o.attributes('value'))
+    expect(typeValues).toEqual(expect.arrayContaining(['assistant', 'post']))
+    // 不替人选类型：缺省是占位项（未声明），服务端会判缺口
+    expect((type.element as HTMLSelectElement).value).toBe('')
+    await type.setValue('post')
+    const risk = w.find('[data-testid="gov-workunit-form-risk"]')
+    expect(risk.findAll('option').map((o) => o.attributes('value'))).toEqual(['tier1', 'tier2', 'tier3'])
+    await risk.setValue('tier3')
+    const collab = w.find('[data-testid="gov-workunit-form-collab"]')
+    // 协作等级是可选字段：占位项「未声明」＋五个等级
+    expect(collab.findAll('option').map((o) => o.attributes('value'))).toEqual(['', '1', '2', '3', '4', '5'])
+    await collab.setValue('3')
+    await w.find('[data-testid="gov-workunit-save-card"]').trigger('click')
+    await flushPromises()
+    const put = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/card'))
+    const body = put!.body as Record<string, unknown>
+    expect(body.unitType).toBe('post')
+    expect(body.riskTier).toBe('tier3')
+    expect(body.collabLevel).toBe(3)
+    w.unmount()
+  })
+
+  it('协作等级选 4 时出现「仅单点验证」标注输入框并随请求体上送', async () => {
+    const calls = setup5([{ id: 'aid-1', name: 'unit-a', card: null }])
+    const w = await mount5()
+    await w.find('[data-testid="gov-workunit-edit-unit-a"]').trigger('click')
+    const collab = w.find('[data-testid="gov-workunit-form-collab"]')
+    expect(w.find('[data-testid="gov-workunit-form-collab-note"]').exists()).toBe(false)
+    await collab.setValue('4')
+    const note = w.find('[data-testid="gov-workunit-form-collab-note"]')
+    expect(note.exists()).toBe(true)
+    await note.setValue('仅单点验证')
+    await w.find('[data-testid="gov-workunit-save-card"]').trigger('click')
+    await flushPromises()
+    const put = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/card'))
+    expect((put!.body as Record<string, unknown>).collabLevelNote).toBe('仅单点验证')
+    w.unmount()
+  })
+
+  it('退役前置提示按单元类型：顶岗型且登录人即主责任人时提示；助手型同样情形不提示', async () => {
+    // 部署约定「登录名即自然人 id」：登录人 alice 同时是主责任人——服务端会拒绝，界面须前置提示
+    const mountWith = async (unitType: string) => {
+      setup5([{ id: 'aid-1', name: 'unit-a', stage: 'running', card: { primaryOwner: 'alice' }, view: { unitType } }])
+      const w = await mount5()
+      await w.find('[data-testid="gov-workunit-trans-open-unit-a"]').trigger('click')
+      await w.find('[data-testid="gov-workunit-trans-to"]').setValue('retired')
+      return w
+    }
+    const post = await mountWith('post')
+    expect(post.text()).toContain('顶岗型执行单元：退出确认人不得与主责任人为同一人')
+    post.unmount()
+    const assistant = await mountWith('assistant')
+    expect(assistant.text()).not.toContain('退出确认人不得与主责任人为同一人')
+    assistant.unmount()
+  })
+
+  it('服务端拒绝迁移（如扩权未豁免）时错误可见，不显示为成功', async () => {
+    fetchMock.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+      const method = init?.method ?? 'GET'
+      if (url === '/api/auth/me') return jsonResponse({ user: { username: 'alice', role: 'super_admin' } })
+      if (url === '/api/governance/agent-identity') return jsonResponse({ ok: true, identities: [{ id: 'aid-1', name: 'unit-a', kind: 'agent', owner: 'team' }], events: [] })
+      if (url === '/api/governance/people') return jsonResponse({ ok: true, people: [{ id: 'p-1', name: 'alice', active: true, emails: [] }] })
+      if (url.endsWith('/transition') && method === 'POST') {
+        return { ok: false, status: 400, json: async () => ({ problems: ['本次变更属扩权（工具白名单变多）：五项能力须全部就绪，或填写豁免理由。未就绪：净贡献核算（未知）'] }) } as unknown as Response
+      }
+      if (url.includes('/card')) return jsonResponse({ ok: true, view: { card: { primaryOwner: 'p-1' }, stage: 'changing', gaps: [] } })
+      return jsonResponse({ ok: true })
+    })
+    const w = await mount5()
+    await w.find('[data-testid="gov-workunit-trans-open-unit-a"]').trigger('click')
+    await w.find('[data-testid="gov-workunit-trans-to"]').setValue('running')
+    await w.find('[data-testid="gov-workunit-trans-evidence"]').setValue('a\nb')
+    await w.find('[data-testid="gov-workunit-trans-reason"]').setValue('恢复')
+    await w.find('[data-testid="gov-workunit-trans-submit"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="gov-workunit-err"]').text()).toContain('扩权')
+    w.unmount()
+  })
+})
+
 describe('JudgmentRecordsSection', () => {
   it('空态显示「暂无署名记录」；表单字段齐', async () => {
     fetchMock.mockImplementation(async (url: string) => {
