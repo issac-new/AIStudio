@@ -32,6 +32,11 @@ export interface AssigneeStat {
   inFlight: number
   lastActiveAt: number | null
   durationsS: number[]
+  /** 完成时间不早于 completedFromS 的 done+archived 件数（2026-11-28）。未传窗时等于 done+archived。
+   *  在途任务是时点数不是流量，不套时间窗。供虚拟损益表把交付面与成本面放到同一时间窗。 */
+  deliveredInWindow: number
+  /** deliveredInWindow 用的完成时间下限（unix 秒）；未传窗时为 null。 */
+  deliveredWindowFrom: number | null
 }
 
 interface KanbanTaskRow {
@@ -69,7 +74,13 @@ export async function fetchTaskTitleByTaskId(taskId: string, homeDir?: string): 
   return null
 }
 
-export async function collectAssigneeStats(homeDir?: string): Promise<Map<string, AssigneeStat>> {
+/** 各负责人的任务统计。opts.completedFromS 给出后，另计「完成时间不早于它的 done+archived 件数」
+ *  （deliveredInWindow）；既有字段（total/done/archived/…）始终是全量，不随窗变。 */
+export async function collectAssigneeStats(
+  homeDir?: string,
+  opts: { completedFromS?: number } = {},
+): Promise<Map<string, AssigneeStat>> {
+  const fromS = typeof opts.completedFromS === 'number' && Number.isFinite(opts.completedFromS) ? opts.completedFromS : null
   const stats = new Map<string, AssigneeStat>()
   for (const file of kanbanDbFiles(homeDir)) {
     let db
@@ -84,13 +95,17 @@ export async function collectAssigneeStats(homeDir?: string): Promise<Map<string
         const key = r.assignee?.trim() || '(未指派)'
         const s = stats.get(key) ?? {
           assignee: key, total: 0, done: 0, archived: 0, blocked: 0, inFlight: 0,
-          lastActiveAt: null, durationsS: [],
+          lastActiveAt: null, durationsS: [], deliveredInWindow: 0, deliveredWindowFrom: fromS,
         }
         s.total += 1
         if (r.status === 'done') s.done += 1
         else if (r.status === 'archived') s.archived += 1
         else if (r.status === 'blocked') s.blocked += 1
         else s.inFlight += 1
+        const delivered = r.status === 'done' || r.status === 'archived'
+        if (delivered && (fromS === null || typeof r.completed_at === 'number' && r.completed_at >= fromS)) {
+          s.deliveredInWindow += 1
+        }
         const lastMs = Math.max(r.created_at ?? 0, r.started_at ?? 0, r.completed_at ?? 0) * 1000
         if (lastMs > 0 && (s.lastActiveAt === null || lastMs > s.lastActiveAt)) s.lastActiveAt = lastMs
         if (r.completed_at != null && r.started_at != null && r.completed_at >= r.started_at) {
@@ -102,6 +117,35 @@ export async function collectAssigneeStats(homeDir?: string): Promise<Map<string
     finally { try { db.close() } catch { /* 已关 */ } }
   }
   return stats
+}
+
+/** 看板库可读性（2026-11-28）。collectAssigneeStats 在库打不开时跳过并返回空表，调用方
+ *  因此分不清「读不到」与「库是空的」，把读失败显示成「均有台账档」「无过载」。本探针只回答
+ *  三态，不改既有函数的返回形状（它有十余个调用方）：
+ *    no_db      一个看板库都没找到——没有库不等于没有任务
+ *    unreadable 找到了库，但至少一个打不开或查不了任务表
+ *    readable   找到的库全部可查（库里没有任务也是这一态） */
+export type KanbanReadability = 'readable' | 'no_db' | 'unreadable'
+
+export async function kanbanReadability(
+  homeDir?: string,
+): Promise<{ state: KanbanReadability; found: number; unreadable: number }> {
+  const files = kanbanDbFiles(homeDir)
+  if (files.length === 0) return { state: 'no_db', found: 0, unreadable: 0 }
+  let unreadable = 0
+  for (const file of files) {
+    let db: Awaited<ReturnType<typeof openReadonly>> | undefined
+    try {
+      db = await openReadonly(file)
+      // 能打开还不够：确认任务表可查（残缺库同样读不出任务）
+      db.prepare('SELECT 1 FROM tasks LIMIT 1').get()
+    } catch {
+      unreadable += 1
+    } finally {
+      try { db?.close() } catch { /* 已关 */ }
+    }
+  }
+  return { state: unreadable > 0 ? 'unreadable' : 'readable', found: files.length, unreadable }
 }
 
 // ---------- squad 评估台账 ----------

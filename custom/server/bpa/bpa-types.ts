@@ -41,6 +41,17 @@ export interface BpaNode {
   supports?: string[]
   decomposition?: BpaDecomposition
   note?: string
+  // —— 场景准入字段（2026-11-28 B3，全部可缺省；存量节点不回填）——
+  /** 触发条件：什么情况下启动、由谁触发（任务边界六段之「触发」） */
+  trigger?: string
+  /** 数据来源与新鲜度要求（任务边界六段之「数据」） */
+  dataSources?: string
+  /** 数据合规结论：cleared=已核（合法依据在档）；pending=待核；none=声明不涉及敏感数据 */
+  dataCompliance?: 'cleared' | 'pending' | 'none'
+  /** 是否重大影响（对经营、合规、客户有重大影响） */
+  majorImpact?: boolean
+  /** 复核人（majorImpact=true 时由准入规则检查） */
+  reviewer?: string
   updatedAt: number
 }
 

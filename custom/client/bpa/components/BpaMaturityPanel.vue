@@ -1,16 +1,18 @@
 <!-- overlay/custom/client/bpa/components/BpaMaturityPanel.vue -->
 <!-- PEMM 成熟度评估：5 流程能动因素 × 4 企业能力，各因素 P0-P4 自评；
-     短板决定论（总体=最低分），历史留痕支持变革前后对比。 -->
+     短板决定论（总体=九项最低分），历史留痕支持变革前后对比。
+     九项全部打分才给总体结论、才画雷达图（2026-11-28）：没打分的因素可能正是最短板，
+     此前未打分的被画成 0、总体只取已打分项的最低分——打一项 P4 就显示「总体 P4」。 -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { bpaApi, type PemmAssessment } from '@/custom/bpa/api'
-import { PEMM_FACTORS, PEMM_LEVEL_NAMES } from '@/custom/bpa/pemm'
+import { PEMM_FACTORS, PEMM_LEVEL_NAMES, pemmOverall, type PemmScores } from '@/custom/bpa/pemm'
 import type { BpaMessages } from '@/custom/bpa/i18n'
 
 const props = defineProps<{ L: BpaMessages }>()
 
-const scores = ref<Record<string, number>>({})
+const scores = ref<PemmScores>({})
 const note = ref('')
 const history = ref<PemmAssessment[]>([])
 const busy = ref(false)
@@ -25,14 +27,15 @@ let trendChart: echarts.ECharts | null = null
 const enablers = computed(() => PEMM_FACTORS.filter((f) => f.board === 'enabler'))
 const capabilities = computed(() => PEMM_FACTORS.filter((f) => f.board === 'capability'))
 
-const scoredCount = computed(() => Object.keys(scores.value).filter((k) => PEMM_FACTORS.some((f) => f.key === k)).length)
-const overall = computed<number | null>(() => (scoredCount.value === 0 ? null : Math.min(...Object.entries(scores.value).filter(([k]) => PEMM_FACTORS.some((f) => f.key === k)).map(([, v]) => v))))
-const weakest = computed(() => {
-  if (overall.value === null) return []
-  return Object.entries(scores.value).filter(([k, v]) => PEMM_FACTORS.some((f) => f.key === k) && v === overall.value)
-    .map(([k]) => PEMM_FACTORS.find((f) => f.key === k)?.nameZh ?? k)
-})
+const summary = computed(() => pemmOverall(scores.value))
+const scoredCount = computed(() => summary.value.scoredCount)
+const overall = computed<number | null>(() => summary.value.overall)
+const weakest = computed(() => summary.value.weakest)
 const overallName = computed(() => (overall.value === null ? '' : PEMM_LEVEL_NAMES[overall.value]?.nameZh ?? ''))
+/** 历史记录里某一次评估的总体成熟度：该次九项打齐才是最低分，否则为空。 */
+function overallOfRecord(s: PemmScores): number | null {
+  return pemmOverall(s).overall
+}
 
 async function loadHistory(): Promise<void> {
   try {
@@ -85,10 +88,12 @@ function scheduleRetry(): void {
 }
 
 function renderCharts(): void {
-  // 雷达：9 因素当前评估（P0-P4 → 0-4）
+  // 雷达：九项打齐才画。未打齐时不画——此前未打分的因素被画成 0（看起来是 P0）。
+  // 不需要「打齐后又变不齐」的撤图分支：分数只经加载历史（挂载时一次）与单选按钮（只能选、
+  // 不能取消）两条路变化，齐备后不会退回不齐备。
   if (radarRef.value && !chartReady(radarRef.value)) scheduleRetry()
   if (trendRef.value && history.value.length >= 1 && !chartReady(trendRef.value)) scheduleRetry()
-  if (radarRef.value && chartReady(radarRef.value)) {
+  if (radarRef.value && summary.value.complete && chartReady(radarRef.value)) {
     if (!radarChart) radarChart = echarts.init(radarRef.value)
     radarChart.setOption({
       backgroundColor: 'transparent',
@@ -103,18 +108,18 @@ function renderCharts(): void {
         areaStyle: { opacity: 0.25 },
         lineStyle: { width: 2 },
         data: [{
-          value: PEMM_FACTORS.map((f) => scores.value[f.key] ?? 0),
+          value: PEMM_FACTORS.map((f) => scores.value[f.key]),
           name: props.L.maturity.title,
         }],
       }],
     }, true)
   }
-  // 趋势线：各轮评估的总体成熟度（短板决定）
+  // 趋势线：各轮评估的总体成熟度（短板决定）；该轮九项打齐才有值，否则该点留空
   if (trendRef.value && history.value.length >= 1 && chartReady(trendRef.value)) {
     if (!trendChart) trendChart = echarts.init(trendRef.value)
     const pts = history.value.map((h) => ({
       t: new Date(h.scoredAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric' }),
-      v: Math.min(...Object.values(h.scores)),
+      v: overallOfRecord(h.scores),
     }))
     trendChart.setOption({
       backgroundColor: 'transparent',
@@ -130,6 +135,7 @@ function renderCharts(): void {
         lineStyle: { width: 2, color: '#4f6ef7' },
         itemStyle: { color: '#4f6ef7' },
         areaStyle: { opacity: 0.1 },
+        connectNulls: false,
       }],
     }, true)
   }
@@ -154,11 +160,33 @@ onBeforeUnmount(() => { maturityResizeObserver?.disconnect(); maturityResizeObse
         <p class="muted small">{{ L.maturity.weakest }}：{{ weakest.join('、') }}</p>
       </div>
     </div>
+    <div
+      class="overall overall--pending"
+      v-else
+      data-testid="bpa-pemm-overall-pending"
+      :data-scored="scoredCount"
+    >
+      <div class="overall__score">
+        <span class="num num--muted">—</span>
+      </div>
+      <div class="overall__meta">
+        <p class="muted" data-testid="bpa-pemm-progress">{{ L.maturity.progressPrefix }} {{ scoredCount }}/9</p>
+        <p class="muted small">{{ L.maturity.incompleteHint }}</p>
+      </div>
+    </div>
 
     <div class="charts">
       <div class="chart-box">
         <h4>{{ L.maturity.radarTitle }}</h4>
-        <div ref="radarRef" class="chart" data-testid="bpa-pemm-radar"></div>
+        <p v-if="!summary.complete" class="muted small chart-tip" data-testid="bpa-pemm-radar-pending">
+          {{ L.maturity.radarPending }}（{{ scoredCount }}/9）
+        </p>
+        <div
+          ref="radarRef"
+          class="chart"
+          :class="{ 'chart--hidden': !summary.complete }"
+          data-testid="bpa-pemm-radar"
+        ></div>
       </div>
       <div class="chart-box">
         <h4>{{ L.maturity.trendTitle }}</h4>
@@ -199,7 +227,7 @@ onBeforeUnmount(() => { maturityResizeObserver?.disconnect(); maturityResizeObse
         <tbody>
           <tr v-for="h in [...history].reverse()" :key="h.id">
             <td class="mono">{{ new Date(h.scoredAt).toLocaleString() }}</td>
-            <td>P{{ Math.min(...Object.values(h.scores)) }}</td>
+            <td>{{ overallOfRecord(h.scores) === null ? '—' : `P${overallOfRecord(h.scores)}` }}</td>
             <td class="muted">{{ h.note || '—' }}</td>
           </tr>
         </tbody>
@@ -221,13 +249,16 @@ onBeforeUnmount(() => { maturityResizeObserver?.disconnect(); maturityResizeObse
     padding: 10px;
     h4 { margin: 0 0 4px; font-size: 13px; }
     .chart { width: 100%; height: 260px; }
+    .chart--hidden { height: 0; min-height: 0; }
     .chart-tip { margin: 0 0 4px; }
   }
 }
 .overall { display: flex; gap: 16px; align-items: center; border: 1px solid var(--accent-primary); border-radius: 10px; padding: 12px 16px; flex-wrap: wrap;
   .overall__score { display: flex; align-items: baseline; gap: 10px;
-    .num { font-size: 30px; font-weight: 700; color: var(--accent-primary); } }
+    .num { font-size: 30px; font-weight: 700; color: var(--accent-primary); }
+    .num--muted { font-weight: 400; opacity: 0.6; } }
   .overall__meta p { margin: 0; } }
+.overall--pending { border-style: dashed; }
 .board { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
   h3 { margin: 0 0 4px; font-size: 14px; } }
 .factor { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px dashed var(--border-color);

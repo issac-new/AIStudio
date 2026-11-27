@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import {
   APPROVAL_CLASS_RULES, applyApprovalBridge, evaluateEnforcement, ekkoEnforceGateHook,
   isUnknownMcpTool, mcpCategoryOf, toolCategoryOf, riskOfCall, approvalPointHit,
+  toolEnforceOn,
 } from '../enforce-gate'
 import { upsertLadder, _useLadderDirForTests, _resetLadderDirForTests, type AutonomyLadderEntry } from '../../autonomyladder/autonomy-ladder'
 import { queryGovEvents, _useGovEventDirForTests, _resetGovEventDirForTests } from '../../govbus/event-log'
@@ -218,5 +219,28 @@ describe('执法钩子（ekkoEnforceGateHook）', () => {
     // 强制异常路径用 env 注入坏 JSON 不易——这里验证"未配置即放行"的降级语义
     const v = await hook.preExecute!('terminal_exec', { command: 'ls' }, { profileId: 'ghost' })
     expect(v).toBeUndefined()
+  })
+})
+
+describe('总闸判据纯函数（2026-11-28：读模型与执法正身同口径）', () => {
+  // 不碰进程环境：只测传入的那一份环境。锁定设置在此不设，走环境分支。
+  it('未设置环境变量时总闸是开的（D1 2026-11-05 默认开）', () => {
+    expect(toolEnforceOn({})).toBe(true)
+  })
+
+  it('显式设为 0 才关；其它任何取值（含 1、空串、拼错）都是开', () => {
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '0' })).toBe(false)
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '1' })).toBe(true)
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '' })).toBe(true)
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: 'off' })).toBe(true)
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: undefined })).toBe(true)
+  })
+
+  it('锁定设置优先于环境变量：锁定开则环境变量设 0 也不关', () => {
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '0' }, { toolEnforceLocked: true, toolEnforce: 1 })).toBe(true)
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '1' }, { toolEnforceLocked: true, toolEnforce: 0 })).toBe(false)
+    // 锁了别的项、没锁总闸：仍按环境变量
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '0' }, { toolEnforceLocked: false, toolEnforce: 1 })).toBe(false)
+    expect(toolEnforceOn({ HERMES_TOOL_ENFORCE: '0' }, null)).toBe(false)
   })
 })

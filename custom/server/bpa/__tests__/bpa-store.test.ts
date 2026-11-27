@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   readArchitecture, writeArchitecture, upsertNode, deleteNodeCascade,
-  isValidNodeId, BpaUpsertError, appendMaturity, readMaturityHistory, pemmOverall,
+  isValidNodeId, BpaUpsertError, appendMaturity, readMaturityHistory, pemmOverall, pemmProgress,
 } from '../bpa-store'
-import type { BpaNode } from '../bpa-types'
+import { PEMM_FACTORS, type BpaNode, type PemmFactorKey } from '../bpa-types'
 
 let dir: string
 const archFile = () => join(dir, 'arch.json')
@@ -83,14 +83,30 @@ describe('bpa-store', () => {
     expect(arch.nodes.find((x) => x.id === 'L1-02')?.drivers).toEqual([])
   })
 
-  it('成熟度：历史追加截尾 50 + 短板决定论', () => {
-    expect(pemmOverall({ design: 2, leadership: 3 })).toBe(2)
-    expect(pemmOverall({})).toBeNull()
+  it('成熟度：历史追加截尾 50 + 九项打齐才按短板给总体', () => {
     for (let i = 0; i < 55; i++) {
       appendMaturity({ id: `p${i}`, scoredAt: i, scores: { design: (i % 5) as 0 | 1 | 2 | 3 | 4 } })
     }
     const history = readMaturityHistory()
     expect(history).toHaveLength(50)
     expect(history[0]?.id).toBe('p5')
+  })
+
+  it('总体成熟度：九项打齐取最低分；差一项也不给结论（没打分的可能正是最短板）', () => {
+    const all = (level: number) => Object.fromEntries(PEMM_FACTORS.map((f) => [f.key, level])) as Record<PemmFactorKey, number>
+    expect(pemmOverall(all(3))).toBe(3)
+    expect(pemmOverall({ ...all(4), staff: 1, culture: 1 })).toBe(1)
+    // 2026-11-28 之前：只打一项 P4 也返回 4
+    expect(pemmOverall({ design: 4 })).toBeNull()
+    expect(pemmOverall({ ...all(4), owner: undefined } as Partial<Record<PemmFactorKey, number>>)).toBeNull()
+    expect(pemmOverall({})).toBeNull()
+  })
+
+  it('打分进度：列出还没打分的因素，非法分值不算已打分', () => {
+    const all = (level: number) => Object.fromEntries(PEMM_FACTORS.map((f) => [f.key, level])) as Record<PemmFactorKey, number>
+    expect(pemmProgress(all(2))).toEqual({ scoredCount: 9, total: 9, missing: [] })
+    expect(pemmProgress({})).toMatchObject({ scoredCount: 0, total: 9 })
+    expect(pemmProgress({ ...all(2), design: 9 as 0 | 1 | 2 | 3 | 4 })).toMatchObject({ scoredCount: 8, missing: ['design'] })
+    expect(pemmProgress({ ...all(2), staff: NaN })).toMatchObject({ scoredCount: 8, missing: ['staff'] })
   })
 })

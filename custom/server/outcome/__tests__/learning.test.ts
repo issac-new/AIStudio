@@ -89,6 +89,9 @@ describe('buildOutcomeComparison（同口径对照）', () => {
     expect(improved.baselineOutcomeId).toBe('oc-old')
     expect(improved.effect).toBe('improved')
     expect(improved.rows[0].baseline?.actual).toBe(5)
+    // B5：对照行带本合同自带的基线声明（与 baseline 字段不同义——那是另一份合同的实测）
+    expect(improved.rows[0].declaredBaseline).toBeTruthy()
+    expect(typeof improved.rows[0].declaredBaseline!.baseline === 'number' || improved.rows[0].declaredBaseline!.baseline === null).toBe(true)
     const drifted = buildOutcomeComparison(settled('oc-new2', 0, 200), [settled('oc-old2', 5, 100, '口径已改')])
     expect(drifted.baselineOutcomeId).toBeNull() // 无同口径基线可挑
     expect(drifted.effect).toBe('unknown')

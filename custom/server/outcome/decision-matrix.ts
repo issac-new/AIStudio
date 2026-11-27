@@ -99,6 +99,17 @@ function isReadonlyGit(rest: string): boolean {
 /** 高危语义关键词（评审/看板卡标题与详情）。 */
 const HIGH_SEMANTIC = /(发布|准出|上线|发版|生产|release|deploy|production)/i
 
+/** 业务动作语义词（2026-11-28 B4，只用于评审/看板面）：资金收付动作与个人/客户数据类别。
+ *  与 HIGH_COMMAND、ONE_WAY_COMMAND 有意分开维护（同 v1 画像词表先例——三表判据不同步，
+ *  改一处不得静默影响另一处）。词表取舍（存量 3733 条标题实测，2026-11-28）：
+ *  - 不收业务域名词（支付/结算）：「支付」命中 143 条、其中 93 条来自名为 pay 的看板板，
+ *    「结算」命中 75 条——域名词命中等于按部门贴高危标签，不是风险分级；
+ *  - 收资金动作词与数据类别词：存量命中「个人信息」2 条（0.05%），其余动作词命中 0 条；
+ *  - 命令面不加这些词：写支付模块的代码、grep 退款 会被词面误伤。
+ *  命中后果＝评审卡置顶计入高危数＋台账 risk=high＋治理总线事件升级；不设新门码
+ *  （2026-11-01「机制扩展停止」裁定），可逆性不因此判 one-way（标题词面不足以支撑双签）。 */
+const HIGH_BUSINESS_LEXICON = /(付款|转账|汇款|打款|放款|扣款|退款|收款|个人数据|个人信息|客户信息|敏感数据)/i
+
 function classifyCommand(detail: string): RiskTier {
   const text = detail.trim()
   if (!text) return 'medium'
@@ -161,9 +172,9 @@ export function classifyDecisionProfile(input: DecisionClassifyInput): DecisionP
     if (externalEffect) basis.push('external-effect:lexicon')
     return { riskTier, reversibility, externalEffect, basis }
   }
-  // 评审/看板：riskTier 沿用 HIGH_SEMANTIC 同判据；非命令不可证明可逆性 → unknown 起步
+  // 评审/看板：riskTier 沿用 HIGH_SEMANTIC 与业务动作词表同判据；非命令不可证明可逆性 → unknown 起步
   const haystack = `${input.title ?? ''} ${input.detail ?? ''} ${input.domain ?? ''}`
-  const riskTier: RiskTier = HIGH_SEMANTIC.test(haystack) ? 'high' : 'medium'
+  const riskTier: RiskTier = (HIGH_SEMANTIC.test(haystack) || HIGH_BUSINESS_LEXICON.test(haystack)) ? 'high' : 'medium'
   const basis: string[] = [`risk-tier:${riskTier}`]
   const oneWay = ONE_WAY_COMMAND.some(re => re.test(haystack))
   const reversibility: Reversibility = oneWay ? 'one-way' : 'unknown'

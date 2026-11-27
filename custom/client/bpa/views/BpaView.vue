@@ -14,6 +14,7 @@ import BpaMapPanel from '../components/BpaMapPanel.vue'
 import BpaLinkPanel from '../components/BpaLinkPanel.vue'
 import BpaPcfPanel from '../components/BpaPcfPanel.vue'
 import BpaGovernancePanel from '../components/BpaGovernancePanel.vue'
+import BpaAdmissionPanel from '../components/BpaAdmissionPanel.vue'
 import BpaMaturityPanel from '../components/BpaMaturityPanel.vue'
 
 const i18nCtx = useI18n()
@@ -22,7 +23,7 @@ const L = computed(() => {
   return loc.startsWith('zh') ? bpaMessages.zh.bpa : bpaMessages.en.bpa
 })
 
-const BPA_TABS = ['registry', 'map', 'link', 'pcf', 'governance', 'maturity'] as const
+const BPA_TABS = ['registry', 'map', 'link', 'pcf', 'governance', 'admission', 'maturity'] as const
 const tab = useTabQuery('tab', BPA_TABS, 'registry')
 const dto = ref<BpaArchitectureDto | null>(null)
 const busy = ref(false)
@@ -82,7 +83,7 @@ onMounted(() => void load())
     <TopicPageLayout>
     <template #tabs>
       <nav v-if="dto && !(dto.nodes.length === 0 && tab === 'registry')" class="bpa-view__tabs" data-testid="bpa-tabs">
-        <button v-for="t in (['registry','map','link','pcf','governance','maturity'] as const)" :key="t"
+        <button v-for="t in (['registry','map','link','pcf','governance','admission','maturity'] as const)" :key="t"
           type="button" :class="{ active: tab === t }" :data-testid="`bpa-tab-${t}`" @click="tab = t">
           {{ L.tabs[t] }}
           <span v-if="t === 'governance' && dto.report.bySeverity.high > 0" class="badge badge-high">{{ dto.report.bySeverity.high }}</span>
@@ -96,6 +97,7 @@ onMounted(() => void load())
       <BpaLinkPanel v-show="tab === 'link'" :L="L" :dto="dto" />
       <BpaPcfPanel v-show="tab === 'pcf'" :L="L" :dto="dto" @goto="t => tab = t" />
       <BpaGovernancePanel v-show="tab === 'governance'" :L="L" :dto="dto" :active="tab === 'governance'" @updated="onUpdated" />
+      <BpaAdmissionPanel v-show="tab === 'admission'" :L="L" :active="tab === 'admission'" />
       <BpaMaturityPanel v-show="tab === 'maturity'" :L="L" />
     </template>
     <p v-else-if="!error" class="muted">…</p>

@@ -23,12 +23,16 @@ const form = reactive({
   section: 'OPERATING' as BpaSection, pcfRef: '', owner: '', decomposition: '' as '' | BpaDecomposition, note: '',
   kpis: [] as Array<{ name: string; target: string; unit?: string }>,
   inputsText: '', outputsText: '', driversText: '', supportsText: '',
+  // 场景准入字段（2026-11-28 B3；仅 L3 编辑器暴露，漏同步会在改名时被 save() 重建抹掉）
+  trigger: '', dataSources: '', dataCompliance: '' as '' | 'cleared' | 'pending' | 'none',
+  majorImpact: false, reviewer: '',
 })
 
 function resetForm(): void {
   form.id = ''; form.name = ''; form.level = 1; form.parentId = null
   form.section = 'OPERATING'; form.pcfRef = ''; form.owner = ''; form.decomposition = ''; form.note = ''
   form.kpis = []; form.inputsText = ''; form.outputsText = ''; form.driversText = ''; form.supportsText = ''
+  form.trigger = ''; form.dataSources = ''; form.dataCompliance = ''; form.majorImpact = false; form.reviewer = ''
 }
 
 /** 建议编号：同级兄弟末段顺延（段数=层级，如 L3-01-02-03）。 */
@@ -72,11 +76,26 @@ function startEdit(node: BpaNode): void {
   form.outputsText = (node.outputs ?? []).join('，')
   form.driversText = (node.drivers ?? []).join('，')
   form.supportsText = (node.supports ?? []).join('，')
+  form.trigger = node.trigger ?? ''
+  form.dataSources = node.dataSources ?? ''
+  form.dataCompliance = node.dataCompliance ?? ''
+  form.majorImpact = node.majorImpact === true
+  form.reviewer = node.reviewer ?? ''
 }
 
 function cancelEdit(): void {
   editing.value = false; creating.value = false; error.value = ''
 }
+
+/** 自然人候选（datalist 用）：治理域既有 /api/governance/people 读接口，只列在岗。
+ *  读不到就空列表——复核人仍可手填，不因候选缺席而不可编辑。 */
+const peopleOptions = ref<Array<{ id: string; name: string }>>([])
+void (async () => {
+  try {
+    const r = await bpaApi.govPeople()
+    peopleOptions.value = (r.people ?? []).filter((p) => p.active).map((p) => ({ id: p.id, name: p.name }))
+  } catch { /* 名单缺席：复核人仍可手填 */ }
+})()
 
 const parseList = (s: string): string[] =>
   s.split(/[,，;；、]/).map((x) => x.trim()).filter(Boolean)
@@ -98,6 +117,11 @@ async function save(): Promise<void> {
     ...(form.supportsText.trim() ? { supports: parseList(form.supportsText) } : {}),
     ...(form.decomposition ? { decomposition: form.decomposition } : {}),
     ...(form.note.trim() ? { note: form.note.trim() } : {}),
+    ...(form.level === 3 && form.trigger.trim() ? { trigger: form.trigger.trim() } : {}),
+    ...(form.level === 3 && form.dataSources.trim() ? { dataSources: form.dataSources.trim() } : {}),
+    ...(form.level === 3 && form.dataCompliance ? { dataCompliance: form.dataCompliance } : {}),
+    ...(form.level === 3 ? { majorImpact: form.majorImpact } : {}),
+    ...(form.level === 3 && form.reviewer.trim() ? { reviewer: form.reviewer.trim() } : {}),
     updatedAt: Date.now(),
   }
   try {
@@ -199,6 +223,32 @@ function linkCount(n: BpaNode): number {
           <button type="button" class="ghost" @click="form.kpis.splice(i, 1)">✕</button>
         </div>
         <button type="button" class="ghost" @click="form.kpis.push({ name: '', target: '' })">{{ L.registry.addKpi }}</button>
+      </fieldset>
+
+      <fieldset v-if="form.level === 3" class="admission" data-testid="bpa-node-admission-fields">
+        <legend>{{ L.registry.admissionFields }}<span class="muted small">（{{ L.registry.l3only }}）</span></legend>
+        <div class="grid">
+          <label>{{ L.registry.trigger }}<input v-model="form.trigger" :placeholder="L.registry.triggerPh" /></label>
+          <label>{{ L.registry.dataSources }}<input v-model="form.dataSources" :placeholder="L.registry.dataSourcesPh" /></label>
+          <label>{{ L.registry.dataCompliance }}
+            <select v-model="form.dataCompliance">
+              <option value="">{{ L.registry.complianceUnset }}</option>
+              <option value="cleared">{{ L.registry.complianceCleared }}</option>
+              <option value="pending">{{ L.registry.compliancePending }}</option>
+              <option value="none">{{ L.registry.complianceNone }}</option>
+            </select>
+          </label>
+          <label>{{ L.registry.majorImpact }}
+            <select v-model="form.majorImpact">
+              <option :value="false">{{ L.registry.majorNo }}</option>
+              <option :value="true">{{ L.registry.majorYes }}</option>
+            </select>
+          </label>
+          <label>{{ L.registry.reviewer }}<input v-model="form.reviewer" class="mono" list="bpa-people-ids" :placeholder="L.registry.reviewerPh" /></label>
+          <datalist id="bpa-people-ids">
+            <option v-for="p in peopleOptions" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </datalist>
+        </div>
       </fieldset>
 
       <div class="grid" v-if="form.level === 3">

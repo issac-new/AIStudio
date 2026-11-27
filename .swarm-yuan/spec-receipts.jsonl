@@ -576,3 +576,5 @@
 {"at":"2026-11-27T16:45:25Z","spec":"docs/superpowers/specs/2026-11-27-absorption-regime-unify.md","receipt":"2cbdc7383c8c8b02c40427e0c803035a403d3871","commit":"97cf50fad"}
 {"at":"2026-11-27T16:53:10Z","spec":"docs/superpowers/specs/2026-11-27-absorption-regime-unify.md","receipt":"12437061ed77384f998b996af14820e6e6b0ecfd","commit":"a662c6b90"}
 {"at":"2026-11-27T17:03:02Z","spec":"docs/superpowers/specs/2026-11-27-absorption-regime-unify.md","receipt":"b6ce8a78290235d30d2dff8824ac1a517212a03e","commit":"6343f2592"}
+{"at":"2026-11-27T19:25:22Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"602fb9b73bc96646343c2d1eae29d800528e77e3","commit":"9a767f238"}
+{"at":"2026-11-27T19:29:02Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"dc812e3858fc1911f2ad9541503c665be0d969cc","commit":"eae7f722a"}

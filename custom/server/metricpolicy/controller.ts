@@ -9,6 +9,7 @@ import { bodyOf, fail, ok } from '../lib/http'
 import { auditRegistry, inspectMetric, namespaceOfKey, validateMetricInput } from './policy'
 import {
   autonomyRate, humanMachineRatio, humanMinutesPerTask, interfaceCount, reworkRate, skillUsage,
+  unitCostAvailability,
 } from './derive'
 import { capabilityMetrics } from '../capabilitypool/metrics'
 import { getMetric, listMetrics, putMetric, removeMetric } from './store'
@@ -130,6 +131,13 @@ metricPolicyRoutes.get('/core', async (ctx) => {
     readings: [autonomy, ratio, minutes, rework, interfaces],
     skillUsage: skills,
   })
+})
+
+/** 单位成本可得率（批 C 2026-11-28）：独立端点——不进 /core（http-projection 锁 5 条），
+ *  也不进 /capability（那是能力组口径，成本归集不属于它）。 */
+metricPolicyRoutes.get('/unit-cost-availability', (ctx) => {
+  const days = Math.min(90, Math.max(1, Math.round(Number(ctx.query.days) || 7)))
+  ok(ctx, { reading: unitCostAvailability(days) })
 })
 
 /** 能力组指标（批二点五）：供给时效/复用率/人机团队成功率；未落地项 available:false。 */

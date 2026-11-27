@@ -4,6 +4,7 @@
  * 报告=架构的镜子：Owner/KPI/链路/差距四账全落纸）。
  */
 import type { BpaArchitecture } from './bpa-store'
+import { pemmOverall, pemmProgress } from './bpa-store'
 import type { BpaValidationReport } from './bpa-types'
 import { PEMM_FACTORS } from './bpa-types'
 import { enumerateE2E } from './bpa-e2e'
@@ -112,9 +113,15 @@ export function exportArchitectureMarkdown(
   if (!maturity) {
     L.push('尚未评估。')
   } else {
-    const vals = Object.entries(maturity.scores).filter(([k]) => PEMM_FACTORS.some((f) => f.key === k))
-    const overall = Math.min(...vals.map(([, v]) => v))
-    L.push(`- 时间：${new Date(maturity.scoredAt).toLocaleString('zh-CN')}；总体成熟度（短板决定）：P${overall}`)
+    // 总体成熟度只在九项打齐时给出（2026-11-28）：此前取已打分项的最低分，打一项 P4 就写「总体 P4」；
+    // 一项都没打时 Math.min() 得 Infinity，报告会写「PInfinity」。
+    const overall = pemmOverall(maturity.scores)
+    const progress = pemmProgress(maturity.scores)
+    L.push(
+      overall === null
+        ? `- 时间：${new Date(maturity.scoredAt).toLocaleString('zh-CN')}；已打分 ${progress.scoredCount}/${progress.total}，不出总体成熟度（${progress.missing.length === progress.total ? '九项均未打分' : `未打分：${progress.missing.map((k) => PEMM_FACTORS.find((f) => f.key === k)?.nameZh ?? k).join('、')}`}）`
+        : `- 时间：${new Date(maturity.scoredAt).toLocaleString('zh-CN')}；总体成熟度（短板决定）：P${overall}`,
+    )
     for (const f of PEMM_FACTORS) {
       const v = maturity.scores[f.key]
       if (v === undefined) continue

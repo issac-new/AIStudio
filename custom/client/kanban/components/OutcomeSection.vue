@@ -588,11 +588,13 @@ async function doCreateOutcome(): Promise<void> {
           </span>
         </div>
         <table class="outcome-comparison__table">
-          <thead><tr><th>度量</th><th>目标</th><th>基线</th><th>本次</th></tr></thead>
+          <thead><tr><th>度量</th><th>目标</th><th>登记基线</th><th>基线实测</th><th>本次</th></tr></thead>
           <tbody>
             <tr v-for="row in comparison.rows" :key="row.measureId">
               <td>{{ row.name }}</td>
               <td>{{ row.operator === 'gte' ? '≥' : row.operator === 'lte' ? '≤' : '=' }}{{ row.target }}</td>
+              <!-- 登记基线=本合同创建时登记的起点值；基线实测=另一份同口径合同的实测。两者不同义（2026-11-28 B5） -->
+              <td data-testid="outcome-comparison-declared" :title="row.declaredBaseline?.note">{{ row.declaredBaseline?.baseline ?? '未登记' }}</td>
               <td>{{ row.baseline && row.baseline.availability === 'available' ? row.baseline.actual : '未知' }}</td>
               <td data-testid="outcome-comparison-eval">{{ row.evaluation && row.evaluation.availability === 'available' ? row.evaluation.actual : '未知' }}</td>
             </tr>

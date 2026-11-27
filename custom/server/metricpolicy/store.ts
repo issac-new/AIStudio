@@ -140,6 +140,21 @@ export const BUILTIN_METRICS: MetricDef[] = [
     version: 1,
     builtin: true,
   },
+  {
+    key: 'measure/unit-cost-availability',
+    namespace: 'measure',
+    title: '单位成本可得率',
+    definition: '可估出成本的 Studio 会话数 / 窗口内 Studio 会话总数（口径限定 Studio 会话——看板任务的执行用量不进 Studio 用量表，不在本读数覆盖内）',
+    sources: ['session_usage (cost_usd)', 'harness/cost-accounts resolveStudioDb'],
+    consumers: [],
+    consumerPlan: {
+      decision: '成本归集链路补齐（可得率低先修计价，不谈单位成本）',
+      threshold: '可得率 < 0.5',
+      owner: '平台运营',
+    },
+    version: 1,
+    builtin: true,
+  },
 ]
 
 function isUsableMetric(v: unknown): v is MetricDef {

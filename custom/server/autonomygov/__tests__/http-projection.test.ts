@@ -234,19 +234,19 @@ describe('premiselog 路由', () => {
 })
 
 describe('metricpolicy 路由', () => {
-  it('GET /metrics 返回九个内置指标', async () => {
+  it('GET /metrics 返回十个内置指标', async () => {
     const r = await fetch(`${base}/api/metricpolicy/metrics`)
     expect(r.status).toBe(200)
     const b = await r.json() as { entries: { key: string }[] }
-    expect(b.entries.length).toBe(9)
+    expect(b.entries.length).toBe(10)
   })
 
-  it('GET /audit 报装饰数=9（内置指标如实无消费者）', async () => {
+  it('GET /audit 报装饰数=10（内置指标如实无消费者）', async () => {
     const r = await fetch(`${base}/api/metricpolicy/audit`)
     const b = await r.json() as { decorativeCount: number; errorCount: number; namespaces: { measure: number } }
-    expect(b.decorativeCount).toBe(9)
+    expect(b.decorativeCount).toBe(10)
     expect(b.errorCount).toBe(0)
-    expect(b.namespaces.measure).toBe(9)
+    expect(b.namespaces.measure).toBe(10)
   })
 
   it('PUT 结算指标派生自测量指标 → 409 cross-track', async () => {
@@ -276,7 +276,7 @@ describe('metricpolicy 路由', () => {
   it('GET /decorative 带判据句', async () => {
     const r = await fetch(`${base}/api/metricpolicy/decorative`)
     const b = await r.json() as { entries: { judgement: string }[] }
-    expect(b.entries.length).toBe(9)
+    expect(b.entries.length).toBe(10)
     expect(b.entries[0].judgement).toContain('哪个决策')
   })
 

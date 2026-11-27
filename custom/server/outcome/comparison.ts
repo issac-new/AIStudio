@@ -22,6 +22,9 @@ export interface ComparisonRow {
   operator: string
   baseline: { outcomeId: string; actual: number | null; availability: string } | null
   evaluation: { outcomeId: string; actual: number | null; availability: string } | null
+  /** 本合同自带的基线声明（B5 2026-11-28）。与上面 baseline 字段不同义：那是另一份同口径
+   *  合同的实测；这是本合同登记的起点值。null=未登记基线（合法未知，不补零）。 */
+  declaredBaseline: { baseline: number | null; note: string } | null
 }
 
 export type ComparisonEffect = 'improved' | 'degraded' | 'unknown'
@@ -91,6 +94,11 @@ export function buildOutcomeComparison(
       definition: m.definition,
       target: m.target,
       operator: m.operator,
+      // 合同自带基线（B5）：只披露，不参与 effect 判定（判定仍按两份合同的实测达成数）
+      declaredBaseline: {
+        baseline: m.baseline,
+        note: m.baseline === null ? '本合同未登记基线（合法未知，不补零）' : `本合同登记的起点值：${m.baseline}`,
+      },
       baseline: baseline && sameCaliber && baseLatest
         ? { outcomeId: baseline.contract.outcomeId, actual: baseLatest.actual, availability: baseLatest.availability }
         : null,

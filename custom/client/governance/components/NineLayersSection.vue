@@ -2,12 +2,13 @@
 <!-- 驾驭工程 B7：九层运行体检（2026-10-18 Harness 可靠性轮）。
      骨架来自《Harness Engineering 从零到生产》：Tools/Loop/Memory/Context/Sandbox/
      Verification/Permissions/Observability/Evals。逐层给真实证据、差距与建议动作；
-     自检清单非认证，数据缺席按 partial/missing 显示，不造数。自取数 /api/harness/nine-layers。 -->
+     自检清单非认证。没有数据分两种：机制缺失判缺失；机制在、窗口内无事件可评判「无法评估」，
+     不计分也不进差距（2026-11-28）。自取数 /api/harness/nine-layers。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { governanceMessages } from '@/custom/governance/i18n'
-import { fetchNineLayers, type NineLayersDto, type NineLayerKeyDto } from '@/custom/governance/api/harness'
+import { fetchNineLayers, type NineLayersDto, type NineLayerDto, type NineLayerKeyDto, type NineCheckStatusDto } from '@/custom/governance/api/harness'
 
 const i18nCtx = useI18n()
 const L = computed(() => {
@@ -50,8 +51,26 @@ function statusLabel(status: 'covered' | 'partial' | 'missing' | undefined): str
   return String(L.value.nineStatusMissing ?? 'missing')
 }
 
-function checkMark(status: 'yes' | 'partial' | 'no'): string {
-  return status === 'yes' ? '✓' : status === 'partial' ? '◐' : '✗'
+function checkMark(status: NineCheckStatusDto): string {
+  if (status === 'yes') return '✓'
+  if (status === 'partial') return '◐'
+  if (status === 'unavailable') return '—'
+  return '✗'
+}
+
+function scoreOf(layer: NineLayerDto | undefined): string {
+  // null＝本层没有可评估的检查项：显示「—」，不把「没证据」画成 0 分
+  if (!layer || layer.score === null || layer.score === undefined) return '—'
+  return String(layer.score)
+}
+
+/** 无法评估的检查项数：旧服务端不带 unevaluated 字段时从检查项状态数出来。 */
+function unevaluatedOf(layer: NineLayerDto | undefined): string[] {
+  if (!layer) return []
+  if (Array.isArray(layer.unevaluated)) return layer.unevaluated
+  return layer.checks
+    .filter((c) => c.status === 'unavailable')
+    .map((c) => `${c.label ?? c.key}：${c.evidence}`)
 }
 
 onMounted(() => void refresh())
@@ -92,7 +111,12 @@ onMounted(() => void refresh())
         <header class="nl__head">
           <span class="nl__idx">{{ idx + 1 }}</span>
           <span class="nl__name">{{ layerNames[idx] ?? lk }}</span>
-          <span class="nl__score">{{ layerOf(lk)?.score ?? 0 }}</span>
+          <span
+            class="nl__score"
+            :class="{ 'nl__score--na': layerOf(lk)?.score === null || layerOf(lk)?.score === undefined }"
+            :title="layerOf(lk)?.score === null || layerOf(lk)?.score === undefined ? L?.nineScoreNotAvailable : L?.nineScore"
+            :data-testid="`harness-nine-score-${lk}`"
+          >{{ scoreOf(layerOf(lk)) }}</span>
           <span class="nl__badge" :class="`nl__badge--${layerOf(lk)?.status ?? 'missing'}`">
             {{ statusLabel(layerOf(lk)?.status) }}
           </span>
@@ -111,6 +135,13 @@ onMounted(() => void refresh())
             </span>
           </li>
         </ul>
+
+        <div v-if="unevaluatedOf(layerOf(lk)).length > 0" class="nl__block nl__block--unevaluated" :data-testid="`harness-nine-unevaluated-${lk}`">
+          <div class="nl__blocktitle">{{ L?.nineUnevaluated }}（{{ unevaluatedOf(layerOf(lk)).length }}）</div>
+          <ul class="nl__gaplist">
+            <li v-for="(item, ui) in unevaluatedOf(layerOf(lk))" :key="ui">{{ item }}</li>
+          </ul>
+        </div>
 
         <div v-if="(layerOf(lk)?.gaps.length ?? 0) > 0" class="nl__block">
           <div class="nl__blocktitle">{{ L?.nineGaps }}</div>
@@ -155,6 +186,7 @@ onMounted(() => void refresh())
 .nl__idx { font-size: 10px; opacity: 0.55; width: 12px; }
 .nl__name { font-size: 13px; font-weight: 600; }
 .nl__score { margin-left: auto; font-size: 12px; font-weight: 600; }
+.nl__score--na { opacity: 0.55; font-weight: 400; }
 .nl__badge { font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--border-color); }
 .nl__badge--covered { color: var(--success); }
 .nl__badge--partial { color: var(--warning); }
@@ -165,6 +197,8 @@ onMounted(() => void refresh())
 .nl__check--yes .nl__mark { color: var(--success); }
 .nl__check--partial .nl__mark { color: var(--warning); }
 .nl__check--no .nl__mark { color: var(--danger); }
+.nl__check--unavailable .nl__mark { opacity: 0.6; }
+.nl__check--unavailable .nl__evidence { font-style: italic; }
 .nl__checkbody { display: flex; flex-direction: column; }
 .nl__checklabel { font-weight: 500; }
 .nl__critical { color: var(--danger); margin-left: 2px; }
@@ -173,5 +207,7 @@ onMounted(() => void refresh())
 .nl__blocktitle { font-size: 10.5px; font-weight: 600; opacity: 0.75; }
 .nl__gaplist { margin: 2px 0 0; padding-left: 14px; font-size: 10.5px; opacity: 0.8; display: flex; flex-direction: column; gap: 1px; }
 .nl__block--actions { opacity: 0.9; }
+.nl__block--unevaluated { border-top-style: solid; }
+.nl__block--unevaluated .nl__gaplist { font-style: italic; }
 .nl__note { font-size: 10.5px; opacity: 0.6; }
 </style>

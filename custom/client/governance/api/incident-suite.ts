@@ -51,13 +51,16 @@ export function incidentReportMdUrl(sessionId: string): string {
 
 // ---- E. 虚拟损益表 ----
 
+/** 某一来源缺席时它那一侧的数字是 null，不是 0（2026-11-28）；旧服务端不带 windowing。 */
 export interface VirtualPnlRowDto {
   profile: string
-  delivered: number
-  inFlight: number
-  tokens: { input: number; output: number; calls: number }
-  costIdle: number
-  costPeak: number
+  /** 近 N 天内完成的 done+archived 件数；看板库缺席时 null。 */
+  delivered: number | null
+  /** 在途件数（时点数）；看板库缺席时 null。 */
+  inFlight: number | null
+  tokens: { input: number | null; output: number | null; calls: number | null }
+  costIdle: number | null
+  costPeak: number | null
   unpricedRows: number
   costPerDeliveredIdle: number | null
   costPerDeliveredPeak: number | null
@@ -74,6 +77,8 @@ export interface VirtualPnlDto {
   anomalies: Array<{ profile: string; day: string; costPeak: number; trailingMeanPeak: number; ratio: number; note: string }>
   benefitNote: string
   sourcesAvailable: { usageDb: boolean; kanban: boolean; pricing: boolean }
+  /** 用量三面是否按所选天数统计；某一面查询失败回退全量时 note 写明哪一面。旧服务端不带此字段。 */
+  windowing?: { tokensWindowed: boolean; costWindowed: boolean; dailyWindowed: boolean; note: string }
 }
 
 export function fetchVirtualPnl(days = 30): Promise<VirtualPnlDto> {

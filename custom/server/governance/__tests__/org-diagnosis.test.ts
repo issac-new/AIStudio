@@ -72,6 +72,67 @@ describe('五流断点诊断（甲1）', () => {
     expect(decision.signals.find((s) => s.id === 'dispatch.undelivered')!.severity).toBe('unknown')
   })
 
+  it('看板库文件在但打不开：台账档与过载两个信号判 unknown，不说「均有台账档」「无过载」', async () => {
+    // 定位得到、打不开——这是「读不到」，与「库是空的」必须分开
+    writeFileSync(join(homeDir, 'kanban.db'), 'this is not a sqlite database')
+    const { orgDiagnosis } = await import('../org-diagnosis')
+    const r = await orgDiagnosis({ now: 1_800_000_000_000 })
+    const unmapped = r.flows.find((f) => f.flow === 'information')!.signals.find((s) => s.id === 'usage.unmappedAssignees')!
+    expect(unmapped.severity).toBe('unknown')
+    expect(unmapped.value).toBe('—')
+    expect(unmapped.detail).toContain('读不到')
+    expect(unmapped.detail).not.toContain('均有台账档')
+    const overload = r.flows.find((f) => f.flow === 'resource')!.signals.find((s) => s.id === 'assignee.overload')!
+    expect(overload.severity).toBe('unknown')
+    expect(overload.value).toBe('—')
+    expect(overload.detail).toContain('读不到')
+    expect(overload.detail).not.toContain('无 in-flight')
+    // 责任流两条信号读的也是看板库：同样不能显示成「无未指派在途任务」
+    const unclaimed = r.flows.find((f) => f.flow === 'responsibility')!.signals.find((s) => s.id === 'task.unclaimedAging')!
+    expect(unclaimed.severity).toBe('unknown')
+    expect(unclaimed.value).toBe('—')
+    expect(unclaimed.detail).toContain('读不到')
+    expect(unclaimed.detail).not.toContain('无未指派')
+    // 反馈流的「打回跟进」同样读看板库
+    const followup = r.flows.find((f) => f.flow === 'feedback')!.signals.find((s) => s.id === 'gate.failNoFollowup')!
+    expect(followup.severity).toBe('unknown')
+    expect(followup.value).toBe('—')
+    expect(followup.detail).toContain('打不开')
+    expect(followup.detail).not.toContain('均')
+    // 整份报告里：所有读不到的信号，级别、取值、说明三者必须一致——都是未知
+    for (const f of r.flows) {
+      for (const s of f.signals) {
+        if (s.detail.includes('读不到')) {
+          expect(s.severity, s.id).toBe('unknown')
+          expect(s.value, s.id).toBe('—')
+        }
+      }
+    }
+  })
+
+  it('看板库在且能读、确实没有任务：两个信号才是 ok', async () => {
+    const { DatabaseSync } = await import('node:sqlite')
+    const db = new DatabaseSync(join(homeDir, 'kanban.db'))
+    db.exec('CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT, assignee TEXT, status TEXT, created_at INTEGER, started_at INTEGER, completed_at INTEGER)')
+    db.close()
+    const { orgDiagnosis } = await import('../org-diagnosis')
+    const r = await orgDiagnosis({ now: 1_800_000_000_000 })
+    const unmapped = r.flows.find((f) => f.flow === 'information')!.signals.find((s) => s.id === 'usage.unmappedAssignees')!
+    expect(unmapped.severity).toBe('ok')
+    expect(unmapped.value).toBe('0 人')
+    const overload = r.flows.find((f) => f.flow === 'resource')!.signals.find((s) => s.id === 'assignee.overload')!
+    expect(overload.severity).toBe('ok')
+    expect(overload.value).toBe('0 人')
+  })
+
+  it('完全没有看板库：同样判 unknown——没有库不等于没有任务', async () => {
+    const { orgDiagnosis } = await import('../org-diagnosis')
+    const r = await orgDiagnosis({ now: 1_800_000_000_000 })
+    const overload = r.flows.find((f) => f.flow === 'resource')!.signals.find((s) => s.id === 'assignee.overload')!
+    expect(overload.severity).toBe('unknown')
+    expect(overload.detail).toContain('未找到看板库')
+  })
+
   it('断点判定：pending 超 72h=alert；未归因=warn 且入 unattributed 列表', async () => {
     const now = 1_800_000_000_000
     esc('old-pending', 'terminal', now - 80 * 3600 * 1000) // 80h 未裁决

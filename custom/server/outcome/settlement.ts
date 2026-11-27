@@ -22,12 +22,31 @@ export interface PerMeasureMet {
   met: boolean | null
 }
 
+/** 单度量的基线对照读数（B5 2026-11-28）：合同自带 baseline 与当前版本实测的并排。
+ *  只读披露，不参与 verdict 判定（判定只看 actual vs target，spec §4.2 口径不变）。
+ *  方向说明按算子翻转：gte 下 actual≥基线为优于，lte 下 actual≤基线为优于；eq 无方向语义。 */
+export interface MeasureBaselineReading {
+  measureId: string
+  name: string
+  /** 合同自带基线；null=未登记（合法未知，不补零造对照） */
+  baseline: number | null
+  /** 当前版本最新实测；null=测量缺席或不可用 */
+  actual: number | null
+  operator: MeasureOperator
+  /** actual − baseline；eq 或任一侧为 null 时为 null */
+  deltaFromBaseline: number | null
+  /** 人读说明（含「未登记基线」「测量缺席」的缺口态） */
+  note: string
+}
+
 export interface SuggestVerdictResult {
   verdict: OutcomeVerdict
   /** 与 contract.measures 同序同长（含缺失位 met=null），供签署人逐条核对。 */
   perMeasure: PerMeasureMet[]
   /** 无任何当前版本测量记录的 measureId（合同序）；非空则 verdict 恒为 unknown。 */
   missingMeasureIds: string[]
+  /** 基线对照读数（合同序；B5 2026-11-28，签署人核对时「比起点进步多少」的依据面） */
+  baselineReadings: MeasureBaselineReading[]
 }
 
 /** operator 与 target 精确比较（spec §4.2 裁决口径；gte/lte 含等、eq 严格相等，
@@ -95,7 +114,32 @@ export function suggestVerdict(
   else if (perMeasure.every((p) => p.met === false)) verdict = 'missed'
   else verdict = 'partial'
 
-  return { verdict, perMeasure, missingMeasureIds }
+  // 基线对照读数（B5 2026-11-28）：只读披露，不改判定。与 perMeasure 同序，缺失测量照列。
+  const baselineReadings: MeasureBaselineReading[] = measures.map((m) => {
+    const latest = latestCurrentMeasurement(contract, pool, m.measureId)
+    const actual = latest !== null && latest.availability === 'available' ? latest.actual : null
+    const baseline = m.baseline
+    const delta = baseline !== null && actual !== null && m.operator !== 'eq' ? actual - baseline : null
+    let note: string
+    if (baseline === null) note = '合同未登记基线，无从对照起点（不补零造对照）'
+    else if (actual === null) note = '当前版本测量缺席或不可用，无实际值可比'
+    else if (m.operator === 'eq') note = `基线 ${baseline}，实际 ${actual}（eq 算子无方向语义，只列两值）`
+    else {
+      const better = m.operator === 'gte' ? actual >= baseline : actual <= baseline
+      note = `基线 ${baseline}，实际 ${actual}：${better ? '优于基线' : '劣于基线'}（${m.operator === 'gte' ? '越高越好' : '越低越好'}）`
+    }
+    return {
+      measureId: m.measureId,
+      name: m.name,
+      baseline,
+      actual,
+      operator: m.operator,
+      deltaFromBaseline: delta,
+      note,
+    }
+  })
+
+  return { verdict, perMeasure, missingMeasureIds, baselineReadings }
 }
 
 /** 结算签署入参（控制器 Task 7 组装 Settlement 正身前的把关面；spec §4.2

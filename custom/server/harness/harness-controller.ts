@@ -58,6 +58,8 @@ import { workbenchRoutes } from './workbench/controller'
 import { teamLibraryRoutes } from '../team-library/controller'
 import { capabilityPoolRoutes } from '../capabilitypool/controller'
 import { fail, ok } from '../lib/http'
+import { createSignalIssue, closeSignalIssue, listSignalIssues } from '../obsalerts/issue-store'
+import { requireAuthenticatedActor } from '../approval-inbox/human-gate'
 // 融合批四（D7）：启动器上移 simcenter（推演运行域）；路由前缀冻结——本域只保留装配位。
 import { simLaunchRoutes } from '../simcenter/sim-launch'
 // 长程任务可信执行层（2026-10-22）：逐条主张审计、完成态双准入、完整性栅栏、原子断点。
@@ -390,6 +392,68 @@ router.get('/obs-alerts', async (ctx) => {
   } catch (e) {
     fail(ctx, 500, e instanceof Error ? e.message : String(e))
   }
+})
+
+// —— 信号问题记录（B6 2026-11-28）：告警与事故另立来源类型，建单抄入运行清单版本锚点 ——
+// 为什么不放宽评测处置单：处置单关闭判据全是评测专有，放宽后告警类记录关不掉（spec D12）。
+// 创建不必登录（记录信号，可自动化）；关闭须登录（「可以关了」是人的决定）。
+router.get('/obs-issues', (ctx) => {
+  ok(ctx, { issues: listSignalIssues() })
+})
+
+router.post('/obs-issues', (ctx) => {
+  const body = (ctx.request.body ?? {}) as {
+    sourceKind?: unknown; sourceKey?: unknown; title?: unknown
+    severity?: unknown; detail?: unknown; runId?: unknown; sessionId?: unknown
+  }
+  const sourceKind = body.sourceKind === 'obs-alert' || body.sourceKind === 'incident' ? body.sourceKind : null
+  if (!sourceKind) {
+    fail(ctx, 400, 'sourceKind 须为 obs-alert（观测告警）或 incident（事故）', { code: 'invalid_input', problems: ['sourceKind 缺失或取值非法'] })
+    return
+  }
+  const sourceKey = typeof body.sourceKey === 'string' && body.sourceKey.trim() ? body.sourceKey.trim() : null
+  if (!sourceKey) {
+    fail(ctx, 400, 'sourceKey 必填（告警的稳定键约定：kind@窗口起点；事故用 incident:<sessionId>）', { code: 'invalid_input', problems: ['sourceKey 缺失'] })
+    return
+  }
+  const title = typeof body.title === 'string' && body.title.trim() ? body.title.trim() : null
+  if (!title) {
+    fail(ctx, 400, 'title 必填（问题一句话）', { code: 'invalid_input', problems: ['title 缺失'] })
+    return
+  }
+  // 署名可选记录（有登录态就记；创建是记录信号不是人的裁决）
+  let createdBy: string | undefined
+  try {
+    createdBy = requireAuthenticatedActor(ctx).username
+  } catch { createdBy = undefined }
+  const { created, record } = createSignalIssue({
+    sourceKind,
+    sourceKey,
+    title,
+    severity: typeof body.severity === 'string' ? body.severity : 'warn',
+    detail: typeof body.detail === 'string' ? body.detail : '',
+    runId: typeof body.runId === 'string' ? body.runId : undefined,
+    sessionId: typeof body.sessionId === 'string' ? body.sessionId : undefined,
+  })
+  ok(ctx, { created, record, ...(created && createdBy ? { createdBy } : {}) })
+})
+
+router.post('/obs-issues/:id/close', (ctx) => {
+  let actor: { username: string }
+  try {
+    actor = requireAuthenticatedActor(ctx)
+  } catch (e) {
+    fail(ctx, 401, e instanceof Error ? e.message : '关闭需要登录身份', { code: 'authenticated_actor_required' })
+    return
+  }
+  const body = (ctx.request.body ?? {}) as { closureNote?: unknown }
+  const closureNote = typeof body.closureNote === 'string' ? body.closureNote : ''
+  const r = closeSignalIssue(ctx.params.id, closureNote, actor.username)
+  if (!r.ok) {
+    fail(ctx, r.reason?.includes('不存在') ? 404 : 409, r.reason ?? '关闭失败', { code: r.reason?.includes('不存在') ? 'not_found' : 'close_rejected' })
+    return
+  }
+  ok(ctx, { record: r.record })
 })
 
 // 任务五档路由（2026-10-23 HarnessPro 挂账清偿 G2）：结构化任务事实 →

@@ -4,7 +4,7 @@
      未配置如实注记（benefitNote 服务端单一事实源）。 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { fetchVirtualPnl, type VirtualPnlDto } from '@/custom/governance/api/incident-suite'
+import { fetchVirtualPnl, type VirtualPnlDto, type VirtualPnlRowDto } from '@/custom/governance/api/incident-suite'
 
 const DAYS_OPTIONS = [7, 30, 90]
 const days = ref(30)
@@ -40,6 +40,11 @@ function fmtNum(v: number | null): string {
   return v >= 10000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))
 }
 
+/** 整数计数（交付、在途）：读不到显示「—」。 */
+function fmtCount(v: number | null): string {
+  return v == null ? '—' : String(v)
+}
+
 const sourceNote = computed(() => {
   if (!report.value) return ''
   const s = report.value.sourcesAvailable
@@ -49,6 +54,19 @@ const sourceNote = computed(() => {
   if (!s.pricing) missing.push('价目表')
   return missing.length > 0 ? `数据源缺席：${missing.join('、')}（相关列为空不是 0）` : ''
 })
+
+/** 用量某一面按天查询失败、回退成全量时才显示；三面都按天生效不显示。旧服务端不带该字段也不显示。 */
+const windowingNote = computed(() => {
+  const w = report.value?.windowing
+  if (!w) return ''
+  return w.tokensWindowed && w.costWindowed && w.dailyWindowed ? '' : w.note
+})
+
+function unitCostCell(r: VirtualPnlRowDto): string {
+  if (r.costPerDeliveredPeak != null) return `${fmtCost(r.costPerDeliveredIdle)} ~ ${fmtCost(r.costPerDeliveredPeak)}`
+  if (r.delivered === null || r.costPeak === null) return '—（成本或交付读不到）'
+  return '—（无交付）'
+}
 
 onMounted(() => void refresh())
 </script>
@@ -65,6 +83,7 @@ onMounted(() => void refresh())
 
     <div v-if="error" class="vp__error">{{ error }}</div>
     <div v-if="sourceNote" class="vp__src-note">{{ sourceNote }}</div>
+    <div v-if="windowingNote" class="vp__window-note" data-testid="vp-windowing-note">{{ windowingNote }}</div>
 
     <template v-if="report">
       <div class="vp__global" data-testid="vp-global">
@@ -79,22 +98,25 @@ onMounted(() => void refresh())
 
       <table class="vp__table" data-testid="vp-table">
         <thead><tr>
-          <th>Agent</th><th>交付</th><th>在途</th>
+          <th>Agent</th><th>交付（近 {{ report.days }} 天完成）</th><th>在途</th>
           <th>tokens（入/出）</th><th>成本区间（{{ report.currency }}）</th>
           <th>单位成本/件</th><th>价值/件</th><th>最近活跃</th>
         </tr></thead>
         <tbody>
-          <tr v-for="r in report.rows" :key="r.profile">
+          <tr v-for="r in report.rows" :key="r.profile" :data-testid="`vp-row-${r.profile}`">
             <td class="vp__profile">{{ r.profile }}</td>
-            <td>{{ r.delivered }}</td>
-            <td>{{ r.inFlight }}</td>
+            <td :title="r.delivered === null ? '看板库读不到，交付数未知' : `近 ${report.days} 天内完成`">
+              <template v-if="r.delivered === null">—<span class="vp__na">交付读不到</span></template>
+              <template v-else>{{ fmtCount(r.delivered) }}</template>
+            </td>
+            <td :title="r.inFlight === null ? '看板库读不到，在途数未知' : '在途是时点数，不按天数过滤'">{{ fmtCount(r.inFlight) }}</td>
             <td class="vp__num">{{ fmtNum(r.tokens.input) }} / {{ fmtNum(r.tokens.output) }}</td>
             <td class="vp__num">{{ fmtCost(r.costIdle) }} ~ {{ fmtCost(r.costPeak) }}<template v-if="r.unpricedRows > 0">（{{ r.unpricedRows }} 行未计价）</template></td>
-            <td class="vp__num">{{ r.costPerDeliveredPeak != null ? `${fmtCost(r.costPerDeliveredIdle)} ~ ${fmtCost(r.costPerDeliveredPeak)}` : '—（无交付）' }}</td>
+            <td class="vp__num">{{ unitCostCell(r) }}</td>
             <td class="vp__num">{{ r.valuePerDelivered != null ? fmtCost(r.valuePerDelivered) : '—' }}</td>
             <td class="vp__num">{{ r.lastActiveAt ? new Date(r.lastActiveAt).toLocaleDateString() : '—' }}</td>
           </tr>
-          <tr v-if="report.rows.length === 0"><td colspan="8" class="vp__empty-row">暂无数据（用量与看板两源均空）</td></tr>
+          <tr v-if="report.rows.length === 0"><td colspan="8" class="vp__empty-row">{{ report.sourcesAvailable.usageDb && report.sourcesAvailable.kanban ? '暂无数据（用量与看板两源均空）' : '暂无数据（用量库或看板库缺席）' }}</td></tr>
         </tbody>
       </table>
 
@@ -118,6 +140,7 @@ onMounted(() => void refresh())
 .vp__refresh { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--accent-primary); }
 .vp__error { font-size: 11px; color: var(--error); }
 .vp__src-note { font-size: 10.5px; color: var(--ia-stale); }
+.vp__window-note { font-size: 10.5px; color: var(--warning); border: 1px solid var(--warning); border-radius: 6px; padding: 3px 8px; }
 .vp__global { font-size: 11px; color: var(--text-muted); }
 .vp__anomalies { display: flex; flex-direction: column; gap: 2px;
   .vp__anomaly { font-size: 11px; color: var(--ia-stale); background: rgba(var(--warning-rgb), 0.12); border-radius: 6px; padding: 3px 8px; } }
@@ -126,6 +149,7 @@ onMounted(() => void refresh())
   td { padding: 3px 10px 3px 0; border-bottom: 1px solid var(--border-color); } }
 .vp__profile { font-weight: 600; }
 .vp__num { font-family: ui-monospace, monospace; font-size: 10px; white-space: nowrap; }
+.vp__na { font-size: 10px; opacity: 0.6; margin-left: 4px; }
 .vp__empty-row { text-align: center; color: var(--text-muted); padding: 12px; }
 .vp__benefit { font-size: 10px; color: var(--text-muted); }
 </style>
