@@ -64,6 +64,7 @@
 | 空闲 dreaming 预算 | 1 次/24h；空闲 ≥30 分钟；`HERMES_MEMORY_DREAMING=off` 关闭 | 只读最近 24h 会话摘要，产出 tag `dream` retain；失败 fail-soft（同上 P5） |
 | 延迟工具调用 TTL | 24h；仅无人值守 principal 默认 defer | 超时→挂起落 `deferred.jsonl`→结束本轮；用户回复经 `responses/<request_id>.json` 唤醒（同上 P6） |
 | 卡级验证三档 | standard／independent／strict:pr | 等级不满足 fail-closed 拒完成（判定器异常也拒）；行级乐观锁 `expected_version` CAS 不匹配 409 `version_conflict`；迁移 envelope 五字段事务级落账（`2026-11-14-superagent-contract-batch2.md`） |
+| 吸收制度 | 规程 1 份；总账 1 本；判定词 5 个；成色 3 档；深度 3 档 | `team/skills/devops/article-methodology-fusion`（规程正本）与 `team/shared/research/absorption-ledger.md`（总账）；守门 `custom/__tests__/absorption-ledger.test.ts`（`2026-11-27-absorption-regime-unify.md`） |
 
 页签、路由、工具、检测器和专题页面属于实现清单。
 其数量由注册表、代码和守门测试给出，不在本文手工维护。
