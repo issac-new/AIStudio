@@ -76,7 +76,7 @@ describe('AIStudio 15 分钟演示稿契约', () => {
   })
 
   it('关键事实与版本一致，指南核心理念不缺失，边界不隐藏', () => {
-    for (const fact of ['1.0.21-overlay', '0.8.30-studio.3', 'v0.23.4-team.1', '4.0.0', 'v2.103.0']) {
+    for (const fact of ['1.0.21-overlay', '0.8.30-studio.3', 'v0.23.5-team.1', '4.0.0', 'v2.103.0']) {
       expect(html, `版本缺失：${fact}`).toContain(fact)
     }
     // 门禁数不写死：读技能的事实来源文件（2026-11-26 文档刷新批；写死旧值会让数字过期后仍全绿）。

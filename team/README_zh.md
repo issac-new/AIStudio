@@ -157,15 +157,15 @@ Windows 见 [WINDOWS-INSTALL.md](WINDOWS-INSTALL.md) / [WINDOWS-OFFLINE-INSTALL.
 
 ## 版本
 
-当前版本：**v0.23.4-team.1**；上一条版本线：**v0.23.3-team.2**。完整三位底座版本跟随上游基线，每次底座升级后扩展序归 1。版本真源为 [VERSION](VERSION)。
+当前版本：**v0.23.5-team.1**；上一条版本线：**v0.23.4-team.1**。完整三位底座版本跟随上游基线，每次底座升级后扩展序归 1。版本真源为 [VERSION](VERSION)。
 
 完整三位底座版本跟随 `vendor/VENDOR.md` 的 hermes-agent 基线，`-team.N` 是 AIStudio 团队扩展发布序。因此，**0.23.0 是上游底座版本**，**team.2 是该底座上的第二次团队扩展发布**，不是上游的 `team.2` 版本。
 
-当前 AIStudio **1.0.21-overlay** 配套 agent teams **v0.23.4-team.1**、hermes-agent 上游底座 **0.23.4**、yuan **v2.103.0**、Ycode **4.0.0**（已发布的 1.0.18～1.0.20 资产所带 agent teams 为 v0.23.3-team.2；其中 1.0.18 与 1.0.19 的 Ycode 为 3.18.2）。各模块版本独立，yuan 与 Ycode 的版本不计入 team 扩展序。
+当前 AIStudio **1.0.21-overlay** 配套 agent teams **v0.23.5-team.1**、hermes-agent 上游底座 **0.23.5**、yuan **v2.103.0**、Ycode **4.0.0**（已发布的 1.0.18～1.0.21 资产所带 agent teams 为 v0.23.4-team.1——1.0.21 发布早于 2026-11-28 的本次换血；其中 1.0.18 与 1.0.19 的 Ycode 为 3.18.2）。各模块版本独立，yuan 与 Ycode 的版本不计入 team 扩展序。
 
-### 本轮变化（v0.23.4-team.1）
+### 本轮变化（v0.23.5-team.1）
 
-上游底座 hermes-agent **v0.23.3 → v0.23.4**（提交 `8fc0374447`，1143 个提交、1316 个文件）。上游主要变化：定时晨报链加固（晨报只读、蓝图技能保留）、网关会话提示钩子（快照副本惰性、负责人范围参数脱敏）、档位与插件互斥、共享指标每日快照、Gemini 4 模型目录。五枚覆盖补丁在新基线上手工重锚（391、612、732、741、786）；重放结果为 511 枚补丁全部应用，连续两次运行结果一致。运行时覆盖层按新的注入基线重新镜像 30 个文件；看门狗 hostile-load 热修按既定通道继续由运行时承载。规格：`docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md`。
+上游底座 hermes-agent **v0.23.4 → v0.23.5**（提交 `a428f5344f`，1277 个提交、1146 个文件）。上游主要变化：插件宿主与 profile 名治理加固流（profile 改名/删除后拒绝宿主启动、provider 扫描防陈旧、launcher 防串台）、plugin-catalog/catalog 档位推进、CLI OSC 7577 程序化 resume 协议、macOS CLT git 桩防护群、凭证池报错命名、gemini 与 solstice 模型插件合并为内置 google。一枚覆盖补丁在新基线上手工重锚（372：上游插入 lifecycle_ledger/memory_status 两条 import 后 import 块重锚）；重放结果为 519 枚补丁全部应用（agent 115＋studio 390＋zcode 14），连续两次运行结果一致。运行时覆盖层 14 件差集逐件判定：4 件纯滞后重新镜像、8 件 D9 承载内容保持、2 件外科合并（看门狗 hostile-load 容忍叠加到上游 #148527 forensics 重构上且 deferrals 保留进 dump 快照；file_tools 陈旧会话拒写守卫并入新 precheck 链首）。规格：`docs/superpowers/specs/2026-11-28-vendor-upgrade-agent-v0235.md`。
 
 ### v0.23.3-team.1（2026-11-20）
 

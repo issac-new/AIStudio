@@ -5,7 +5,7 @@
 | 组件 | 当前版本 |
 |---|---|
 | AIStudio 整体 | 1.0.21-overlay |
-| agent teams | v0.23.4-team.1 |
+| agent teams | v0.23.5-team.1 |
 | hermes-agent 上游底座 | 0.23.4 |
 | yuan | v2.103.0 |
 | Ycode | 4.0.0（包版本；基线 a4b44451） |

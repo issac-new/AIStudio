@@ -180,13 +180,13 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 |---|---|---|
 | 整体源码包 | `1.0.21-overlay`，tag `v1.0.21-overlay` | `RELEASE-MANIFEST.json` 的 `packaging.fullPackage`，仓根 `package.json`／`package-lock.json` 同步 |
 | 驾驶舱模块声明 | `0.8.30-studio.3` | `RELEASE-MANIFEST.json` 与 `RELEASE-NOTES.md` 版本节首行 |
-| agent teams | `v0.23.4-team.1` | `team/VERSION`，机器载体 `team/version.json` |
+| agent teams | `v0.23.5-team.1` | `team/VERSION`，机器载体 `team/version.json` |
 | Ycode | `4.0.0` | `vendor/zcode/package.json` |
 | yuan skill | `v2.103.0` | `skills/swarm-yuan/CHANGELOG.md` |
 
 这些值可直接在 `RELEASE-MANIFEST.json` 的 modules 与 packaging 节、以及 `RELEASE-NOTES.md` 的「版本」节 对账。驾驶舱在 2026-11-11 v1.0.15 发布轮随 identity-chat/执行内核/技能存储等实质变更声明前进到 0.8.20-studio.2，但按两件资产政策不重发 cockpit 模块包；版本前进不等于该模块包已重新上传。
 
-上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.30、`8a51d1bcf`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.4、`8fc0374447`；zcode 包版本为 4.0.0、`a4b44451`（与 tag v4.0.0 及本机安装版 4.0.0 同一；自 2026-11-23 起源码基线与安装版合一，此前「安装版另账」的说法作废）。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
+上游基线另看 `vendor/VENDOR.md`：hermes-studio 为 v0.8.30、`8a51d1bcf`（tag 命名回归 0.8.x 线，v1.0.9 的 package.json 本就是 0.8.11，谱系前进非降级）；hermes-agent 为 v0.23.5、`a428f5344f`；zcode 包版本为 4.0.0、`a4b44451`（与 tag v4.0.0 及本机安装版 4.0.0 同一；自 2026-11-23 起源码基线与安装版合一，此前「安装版另账」的说法作废）。zcode 的谱系、包版本和补丁序列是三个口径，不互相推算。`vendor/VENDOR.md:5-15`
 
 ### 3.2 每版只发哪两件资产
 
@@ -231,7 +231,7 @@ HumanGate store 还有历史兼容边界：可识别的旧版裸 grant 行会升
 
 版本类事实已按当前载体复核三处（数字总账一行最近核实于 2026-11-24，其余同 v1.0.21 发布轮）：
 
-1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.4／zcode 4.0.0／驾驶舱 0.8.30-studio.3／agent teams v0.23.4-team.1／yuan v2.103.0／整体包 1.0.21-overlay），其中 agent teams 一行最近核实于 2026-11-24（hermes-agent v0.23.4 换血批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md` §C 版本基线
+1. 数字总账 §C 全表随载体对齐（hermes-studio v0.8.30／hermes-agent v0.23.5／zcode 4.0.0／驾驶舱 0.8.30-studio.3／agent teams v0.23.5-team.1／yuan v2.103.0／整体包 1.0.21-overlay），其中 agent teams 一行最近核实于 2026-11-28（hermes-agent v0.23.5 换血批）；此前核对段保留其成文时点。`docs/superpowers/specs/2026-10-23-swarmstudio-design-ledger.md` §C 版本基线
 2. 整合正本 §5.4 的当前基线表已随 2026-11-23 批归为 hermes-studio v0.8.30；升级规则与历史来路仍归 `vendor/VENDOR.md`、对应 spec 与 git，不把历史升级注记改写成当前值。`docs/DESIGN.md §5.4`；`vendor/VENDOR.md` 基线表行
 3. `RELEASE-MANIFEST.json` 的 cockpit notes 与 `vendorBaseline` 摘要均已随 2026-11-23 批归为 hermes-studio v0.8.30。维护时应保留这项修正，不要从旧报告把 v1.0.9 或更早值复制回来。`RELEASE-MANIFEST.json` 的 releaseBatches 节与 vendorBaseline 字段；`vendor/VENDOR.md` 基线表行
 
