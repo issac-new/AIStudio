@@ -198,7 +198,7 @@ describe('派单门（数字员工批一）', () => {
 
   // 与 dispatch-gate.test.ts 同源的责任卡夹具：卡面要素齐备 + 责任人 alice/bob 在岗 → 门 pass
   const VALID_CARD = {
-    deliveryStandard: '可复现', riskTier: 'medium', primaryOwner: 'alice', escalation: ['e'],
+    deliveryStandard: '可复现', unitType: 'assistant', riskTier: 'tier2', primaryOwner: 'alice', escalation: ['e'],
     pauseConditions: ['p'], takerOver: 'bob', testCaseVersion: 'tc-1',
     costBudget: { limit: 1, unit: 'CNY' }, maintainer: 'alice', deploymentLocation: 'x',
   }

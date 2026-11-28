@@ -14,8 +14,13 @@ import { join } from 'path'
 import { atomicWriteJson } from '../lib/fs-store'
 import { underWebUi } from '../lib/paths'
 import { listPeople, type Person } from './people'
-import { cardGaps, cardRevision, validateCard, type ResponsibilityCard } from './responsibility'
-import { canTransition, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
+import {
+  cardGaps, cardRevision, isScopeExpansion, normalizeRiskTier, readiness, scopeSnapshotOf, validateCard,
+  type ResponsibilityCard, type ReadinessItem, type ScopeSnapshot,
+} from './responsibility'
+import { listJudgments } from './judgments'
+import { canTransition, expansionOf, normalizeLifecycle, stageOf, type Lifecycle, type TransitionInput } from './lifecycle'
+import { al5Configured, rosterGaps, type RosterGap } from './roster-gaps'
 
 export type IdentityKind = 'human' | 'agent' | 'bot' | 'service'
 export type CredentialStatus = 'active' | 'revoked'
@@ -237,54 +242,9 @@ export function getIdentity(id: string): AgentIdentity | null {
   return readStore().identities.find((i) => i.id === id) ?? null
 }
 
-// ── 户口五要素（2026-11-05 组织治理能力批）──
-//
-// 来源：《定义权之争》下篇动作 3「给 Agent 发户口」——名字、能力边界、权限范围、
-// 审计要求、负责人。仓内原有前三项中的名字/负责人/权限范围，能力边界与审计要求缺失。
-//
-// 纪律：缺口**不 fail-closed 拒绝注册**。存量 30 个 profile 身份全部缺这两项，
-// 一次性拒绝会让既有部署立即不可用。改为「注册放行 + 缺口可见 + 门禁拦新增」。
-
-export type RosterField = 'name' | 'capability-boundary-can' | 'capability-boundary-cannot'
-  | 'permission-scope' | 'audit-requirement' | 'owner'
-
-export interface RosterGap {
-  field: RosterField
-  /** 人读说明：缺什么、为什么这条要单独判 */
-  detail: string
-}
-
-/** 单身份的户口缺项（空数组=五要素齐备）。纯函数，不读盘。 */
-export function rosterGaps(identity: Pick<AgentIdentity,
-  'name' | 'owner' | 'toolAllowlist' | 'capabilityBoundary' | 'auditRequirement'>): RosterGap[] {
-  const gaps: RosterGap[] = []
-  if (typeof identity.name !== 'string' || !identity.name.trim()) {
-    gaps.push({ field: 'name', detail: '缺身份名——无名身份无法被派单与追溯' })
-  }
-  const can = Array.isArray(identity.capabilityBoundary?.can) ? identity.capabilityBoundary!.can.filter((c) => c && String(c).trim()) : []
-  const cannot = Array.isArray(identity.capabilityBoundary?.cannot) ? identity.capabilityBoundary!.cannot.filter((c) => c && String(c).trim()) : []
-  if (can.length === 0) {
-    gaps.push({ field: 'capability-boundary-can', detail: '缺能力边界（能做什么）——只写许可不写设计意图，能力与权限会被混同' })
-  }
-  if (cannot.length === 0) {
-    gaps.push({ field: 'capability-boundary-cannot', detail: '缺能力边界（不做什么）——不声明禁区等于默许扩权' })
-  }
-  if (!Array.isArray(identity.toolAllowlist) || identity.toolAllowlist.length === 0) {
-    gaps.push({ field: 'permission-scope', detail: '缺权限范围——空白名单是「未声明」，不等于无限制' })
-  }
-  const sampling = identity.auditRequirement?.sampling
-  if (!identity.auditRequirement || typeof sampling !== 'number' || !Number.isFinite(sampling) || sampling <= 0) {
-    gaps.push({ field: 'audit-requirement', detail: '缺审计要求（抽样比例）——凭证可撤销不等于有审计' })
-  }
-  if (typeof identity.owner !== 'string' || !identity.owner.trim()) {
-    gaps.push({ field: 'owner', detail: '缺负责人——没有人愿意为之负责的结果在组织里等于不存在' })
-  }
-  return gaps
-}
-
-export function rosterStatus(identity: Parameters<typeof rosterGaps>[0]): 'complete' | 'blocked' {
-  return rosterGaps(identity).length === 0 ? 'complete' : 'blocked'
-}
+// rosterGaps / rosterStatus / RosterGap / RosterField 已下沉至 ./roster-gaps（2026-11-27：准入并查户口须复用该判定，
+// 本文件已依赖 lifecycle，原地保留会成环）。此处重新导出，既有消费方的导入路径不变。
+export { rosterGaps, rosterStatus, type RosterField, type RosterGap } from './roster-gaps'
 
 export interface RosterGapRow {
   id: string
@@ -376,6 +336,27 @@ function normalizeAudit(a: AuditRequirement): AuditRequirement {
   return { sampling, retentionDays, ...(a.note ? { note: a.note } : {}) }
 }
 
+/** 写路径共用：范围写入后与写前快照比对，命中扩权即把已准入／运行中的单元转入变更态。
+ *  责任卡保存与户口更新两条写路径都必须调用——只堵一条，另一条就能绕过扩权门。
+ *  已在变更态：不追加事件、不覆盖快照（基线以首次进入变更时为准）。
+ *  registered 态：尚未准入，无所谓「扩权」，不转。 */
+function enterChangingIfExpanded(
+  identity: AgentIdentity,
+  lc: Lifecycle,
+  before: ScopeSnapshot,
+  reason: 'owner-change' | 'scope-expansion',
+): void {
+  if (lc.stage === 'registered' || lc.stage === 'changing' || lc.stage === 'retired') return
+  const expanded = isScopeExpansion(before, scopeSnapshotOf(identity))
+  if (reason === 'scope-expansion' && expanded.length === 0) return
+  lc.history.push({
+    from: lc.stage, to: 'changing', at: Date.now(), by: identity.responsibilityCard?.primaryOwner ?? identity.owner,
+    reason, evidenceRefs: [], snapshot: before,
+    ...(expanded.length ? { expansion: expanded } : {}),
+  })
+  lc.stage = 'changing'
+}
+
 export function updateIdentity(
   id: string,
   patch: {
@@ -391,6 +372,8 @@ export function updateIdentity(
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: false, problems: [`身份不存在：${id}`] }
+  // 户口写前快照：能力边界与工具白名单是范围维度，改宽属扩权
+  const before = scopeSnapshotOf(identity)
   if (patch.owner !== undefined) {
     if (typeof patch.owner !== 'string' || !patch.owner.trim()) return { ok: false, problems: ['owner 必填'] }
     identity.owner = patch.owner.trim()
@@ -418,6 +401,9 @@ export function updateIdentity(
     if (Object.keys(normalized.bindings).length) identity.runtimeBindings = normalized.bindings
     else delete identity.runtimeBindings
   }
+  const lc = normalizeLifecycle(identity.lifecycle)
+  enterChangingIfExpanded(identity, lc, before, 'scope-expansion')
+  identity.lifecycle = lc
   identity.updatedAt = Date.now()
   writeStore(store)
   appendEvent({ actor, action: 'update', targetId: id, detail: JSON.stringify(patch) })
@@ -572,6 +558,17 @@ export function _useStoreDirForTests(dir: string): void {
   process.env.AGENT_IDENTITY_NO_EVENTS = '0'
 }
 
+/** 本单元的人署名记录（就绪度上下文）。读不到按「无数据源」处理：不抛、不阻断——
+ *  署名记录只是就绪度的输入之一，缺了只会让就绪度更严（纠错通道、裁量保障判为未就绪），
+ *  不会更松；若在此抛错，包括退出在内的全部迁移都会因此失败。 */
+function safeListJudgments(id: string): ReturnType<typeof listJudgments> {
+  try {
+    return listJudgments(id)
+  } catch {
+    return []
+  }
+}
+
 // ── 责任卡与五阶段生命周期（2026-11-06 第一增量）──
 // 写入路径只有两条：保存责任卡、迁移生命周期。两者都校验在岗自然人与阶段守卫；
 // 存量身份不批量回填，缺口由 getCardView 报出。
@@ -580,14 +577,18 @@ export function updateResponsibilityCard(
   id: string,
   card: ResponsibilityCard,
   actor: string,
+  // 协作等级取 5 须有判定通过的自治刻度配置；由调用方（控制器）读出传入，本域不反向依赖 autonomygov
+  opts: { al5Configured?: boolean } = {},
 ): { ok: boolean; problems: string[]; identity?: AgentIdentity } {
   const people = listPeople()
-  const problems = validateCard(card, people)
+  const problems = validateCard(card, people, { ...opts, forSave: true })
   if (problems.length) return { ok: problems.length === 0, problems }
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
   const prevOwner = identity.responsibilityCard?.primaryOwner
+  // 变更前快照须在写卡之前取：此刻的身份范围才是「变更前」（写卡后风险档/协作等级已是新值）
+  const before = scopeSnapshotOf(identity)
   // 签署不随请求体写入（防冒填）：HTTP 层的 cardFromBody 已丢弃该字段；域层对直接调用方
   // 传入的签署对象保持兼容（以请求传入为准，否则保留既有签署），只按新卡面指纹重算 stale。
   // 指纹不含签署与准入证据，故补登证据不会让签署失效，改卡面内容才会。
@@ -600,14 +601,15 @@ export function updateResponsibilityCard(
   }
   identity.responsibilityCard = next
   const lc = normalizeLifecycle(identity.lifecycle)
-  // 主责任人变更不是静默改名：已准入/运行中的单元强制转入变更态，重启须两条证据
-  if (prevOwner && prevOwner !== next.primaryOwner && lc.stage !== 'registered') {
-    lc.history.push({
-      from: lc.stage, to: 'changing', at: Date.now(), by: next.primaryOwner,
-      reason: 'owner-change', evidenceRefs: [],
-    })
-    lc.stage = 'changing'
-  }
+  // 已准入／运行中的单元，保存卡若触及范围，必须转入变更态（重启须两条证据并过扩权判定）：
+  //   - 主责任人变更：不是静默改名；
+  //   - 扩权（降风险档、升协作等级）：否则运行态直接保存一张降档的卡就能绕过扩权门
+  //     （独立审查阻断 1）。只改文字字段（如交付标准）不转变更态。
+  // 已在变更态：不再追加事件——变更前快照以首次进入变更时为准，后到的保存不得用新快照
+  // 覆盖基线，否则「变更中先扩权、再换责任人」会把此前的扩权洗掉（独立审查阻断 2）。
+  const ownerChanged = Boolean(prevOwner) && prevOwner !== next.primaryOwner
+  if (ownerChanged) enterChangingIfExpanded(identity, lc, before, 'owner-change')
+  else enterChangingIfExpanded(identity, lc, before, 'scope-expansion')
   identity.lifecycle = lc
   identity.updatedAt = Date.now()
   writeStore(store)
@@ -646,13 +648,22 @@ export function transitionIdentity(
   const store = readStore()
   const identity = store.identities.find((i) => i.id === id)
   if (!identity) return { ok: identity !== undefined, problems: [`身份不存在：${id}`] }
-  const verdict = canTransition(identity, input, listPeople())
+  const verdict = canTransition(identity, input, listPeople(), { judgments: safeListJudgments(id), al5Configured: al5Configured() })
   if (verdict.problems.length > 0) return { ok: verdict.problems.length === 0, problems: verdict.problems }
   const lc = normalizeLifecycle(identity.lifecycle)
   const from = lc.stage
+  // 进入变更时此刻的身份范围即「变更前」：先取快照再落迁移，供恢复时比对是否扩权
+  const snapshot = input.to === 'changing' ? scopeSnapshotOf(identity) : undefined
+  const expansionWaiver = typeof input.expansionWaiver === 'string' && input.expansionWaiver.trim()
+    ? input.expansionWaiver.trim() : undefined
+  // 恢复事件记下本次命中的扩权维度（与判定同口径），豁免才有据可查
+  const expansion = input.to === 'running' ? expansionOf(identity) : null
   lc.history.push({
     from, to: input.to, at: Date.now(), by: input.by,
     reason: input.reason.trim(), evidenceRefs: input.evidenceRefs ?? [],
+    ...(snapshot ? { snapshot } : {}),
+    ...(expansion && expansion.length ? { expansion } : {}),
+    ...(input.to === 'running' && expansionWaiver ? { expansionWaiver } : {}),
   })
   lc.stage = input.to
   if (input.to === 'retired') lc.exit = { ...input.exit!, confirmedAt: Date.now() }
@@ -698,19 +709,40 @@ export function transitionIdentity(
   return { ok: true, problems: [], identity: { ...identity }, revoked }
 }
 
-export function getCardView(id: string): {
+export interface CardView {
   card: ResponsibilityCard | null
   lifecycle: Lifecycle
   stage: string
   gaps: ReturnType<typeof cardGaps>
-} | null {
+  /** 单元类型（2026-11-27）；无卡或未声明为 null */
+  unitType: ResponsibilityCard['unitType'] | null
+  /** 归一后的三级风险档；卡面存量旧值不改写，只在读侧映射。无卡或非法为 null */
+  riskTier: ReturnType<typeof normalizeRiskTier>
+  /** 协作等级；无卡或未声明为 null */
+  collabLevel: ResponsibilityCard['collabLevel'] | null
+  /** 五项能力就绪度（只记录，不评分）；未知与未就绪均带缺口说明 */
+  readiness: ReadinessItem[]
+}
+
+export function getCardView(
+  id: string,
+  // 协作等级 5 的上下文：视图判定与保存判定同口径，已合法保存的等级 5 不应在视图里被报成缺口
+  opts: { al5Configured?: boolean } = {},
+): CardView | null {
   const identity = getIdentity(id)
   if (!identity) return null
   const lc = normalizeLifecycle(identity.lifecycle)
+  const people = listPeople()
+  const snapshot = scopeSnapshotOf(identity)
   return {
     card: identity.responsibilityCard ?? null,
     lifecycle: lc,
     stage: stageOf(identity),
-    gaps: cardGaps(identity.responsibilityCard, listPeople(), { forAdmission: lc.stage === 'registered' }),
+    gaps: cardGaps(identity.responsibilityCard, people, { forAdmission: lc.stage === 'registered', al5Configured: opts.al5Configured ?? al5Configured() }),
+    unitType: identity.responsibilityCard?.unitType ?? null,
+    riskTier: identity.responsibilityCard ? normalizeRiskTier(identity.responsibilityCard.riskTier) : null,
+    collabLevel: identity.responsibilityCard?.collabLevel ?? null,
+    // 就绪度只读本单元的人署名记录；评测重测读数本层不接（无数据源即按未知）
+    readiness: readiness({ snapshot, judgments: safeListJudgments(id) }),
   }
 }

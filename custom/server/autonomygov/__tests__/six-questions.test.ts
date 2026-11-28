@@ -8,7 +8,7 @@ const people: Person[] = [
   { id: 'p-1', name: 'alice', emails: [], active: true, source: 'manual', createdAt: 1 },
 ]
 const card: ResponsibilityCard = {
-  deliveryStandard: 'x', riskTier: 'low', primaryOwner: 'p-1',
+  deliveryStandard: 'x', unitType: 'assistant', riskTier: 'tier1', primaryOwner: 'p-1',
   escalation: ['e'], pauseConditions: ['p'], takerOver: 'p-1',
   testCaseVersion: 'tc', costBudget: { limit: 1, unit: 'u' }, maintainer: 'p-1', deploymentLocation: 'loc',
 }

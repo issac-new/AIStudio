@@ -54,6 +54,7 @@ import { atomicWriteJson } from '../lib/fs-store'
 import { bodyOf, created, fail, ok } from '../lib/http'
 import { activePersonIds, listPeople } from '../agentidentity/people'
 import { getIdentity, rosterStatus } from '../agentidentity/agent-identity'
+import { al5Configured } from '../agentidentity/roster-gaps'
 import { assessUnitDispatchGate, DISPATCH_GATE_MODE_ENV } from '../agentidentity/dispatch-gate'
 import { appendContributionReview, listContributionReviews } from '../agentidentity/judgments'
 import type { ContributionReviewInput, ContributionReviewRecord } from '../agentidentity/judgments'
@@ -531,6 +532,7 @@ export function createOutcomeRoutes(opts: OutcomeControllerOptions = {}): Router
           identities: [identity],
           people: listPeople(),
           mode,
+          al5Configured: al5Configured(),
         })
         return verdict.decision !== 'block'
       } catch {

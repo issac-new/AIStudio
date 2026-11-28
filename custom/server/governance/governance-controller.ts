@@ -789,6 +789,9 @@ import { appendJudgment, listJudgments, type JudgmentKind } from '../agentidenti
 import { activatePerson, deactivatePerson, listPeople, upsertPerson } from '../agentidentity/people'
 import type { ResponsibilityCard } from '../agentidentity/responsibility'
 import type { TransitionInput } from '../agentidentity/lifecycle'
+// 协作等级 5 的条件式裁决（用户 2026-11-05：AL5 须有判定通过的自治刻度配置）：
+// 由本层读出上下文传入域层，agentidentity 不反向依赖 autonomygov（那会成环）
+import { al5Configured } from '../agentidentity/roster-gaps'
 
 function govActorOf(ctx: { state?: { user?: { username?: string } } }): string {
   return ctx.state?.user?.username ?? 'anonymous'
@@ -920,9 +923,17 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
   const cost = (b.costBudget ?? {}) as Record<string, unknown>
   const ev = b.admissionEvidence as Record<string, unknown> | undefined
   const strs = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : [])
+  // 类型／协作等级／等级标注：非法取值原样下传，由 validateCard 报问题（控制器不吞、不猜默认值）
+  const collabLevel = typeof b.collabLevel === 'number' ? b.collabLevel : Number(b.collabLevel)
   return {
     deliveryStandard: String(b.deliveryStandard ?? ''),
+    ...(b.unitType !== undefined ? { unitType: String(b.unitType) as ResponsibilityCard['unitType'] } : {}),
     riskTier: String(b.riskTier ?? '') as ResponsibilityCard['riskTier'],
+    // 传了但不是有限数值（如 "abc"）：原样下传为 NaN，由 validateCard 报 collabLevel 问题（不静默丢弃）
+    ...(b.collabLevel !== undefined && b.collabLevel !== null
+      ? { collabLevel: collabLevel as NonNullable<ResponsibilityCard['collabLevel']> }
+      : {}),
+    ...(b.collabLevelNote ? { collabLevelNote: String(b.collabLevelNote) } : {}),
     primaryOwner: String(b.primaryOwner ?? ''),
     ...(b.reviewer ? { reviewer: String(b.reviewer) } : {}),
     escalation: strs(b.escalation),
@@ -947,14 +958,17 @@ function cardFromBody(b: Record<string, unknown>): ResponsibilityCard {
 }
 
 router.get('/agent-identity/:id/card', async (ctx) => {
-  const view = getCardView(String(ctx.params.id ?? ''))
+  const view = getCardView(String(ctx.params.id ?? ''), { al5Configured: al5Configured() })
   if (!view) { fail(ctx, 404, '身份不存在', { code: 'not-found' }); return }
   ok(ctx, { view })
 })
 
 router.put('/agent-identity/:id/card', async (ctx) => {
   if (superAdminDenied(ctx)) return
-  const res = updateResponsibilityCard(String(ctx.params.id ?? ''), cardFromBody(bodyOf(ctx)), govActorOf(ctx as never))
+  // al5Configured：存在任一判定为 ok 的 AL5 自治刻度配置。读失败按「未配置」处理（宁可拒绝第五级，不误放行）
+  const res = updateResponsibilityCard(String(ctx.params.id ?? ''), cardFromBody(bodyOf(ctx)), govActorOf(ctx as never), {
+    al5Configured: al5Configured(),
+  })
   if (!res.ok) { fail(ctx, 400, '责任卡校验未通过', { code: 'invalid-card', problems: res.problems }); return }
   ok(ctx, { identity: res.identity })
 })
@@ -989,6 +1003,10 @@ router.post('/agent-identity/:id/transition', async (ctx) => {
             confirmedBy: actor.username,
           },
         }
+      : {}),
+    // 扩权豁免理由：由迁移人（登录身份）署名，随生命周期事件留存；非字符串或空白不传
+    ...(typeof b.expansionWaiver === 'string' && b.expansionWaiver.trim()
+      ? { expansionWaiver: b.expansionWaiver.trim() }
       : {}),
   }
   const res = transitionIdentity(String(ctx.params.id ?? ''), input, actor.username)
