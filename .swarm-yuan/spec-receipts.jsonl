@@ -581,3 +581,4 @@
 {"at":"2026-11-27T19:25:22Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"602fb9b73bc96646343c2d1eae29d800528e77e3","commit":"9a767f238"}
 {"at":"2026-11-27T19:29:02Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"dc812e3858fc1911f2ad9541503c665be0d969cc","commit":"eae7f722a"}
 {"at":"2026-11-28T00:03:50Z","spec":"docs/superpowers/specs/2026-11-27-workunit-framework-align.md","receipt":"39c907d6b709860d9e48ab08447a02752ea56b66","commit":"6fae7ae25"}
+{"at":"2026-11-28T00:20:44Z","spec":"docs/superpowers/specs/2026-11-28-task-card-return-workunit-align.md","receipt":"21806e5300c67e16d23c71a839a5d7ed791cd83f","commit":"70b3723ae"}
