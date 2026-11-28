@@ -37,7 +37,7 @@
 - [x] 投影面：docs:sync 投影块重写＋docs:check 绿（routes=130）；手册断言数组进位 v0.23.5-team.1；team/README（en/zh）现状行与 What changed 节随批；design-document-guide 快照＋数字总账（基线行/teams 行/2026-11-28 核对段前置）随批。
 - [x] `npm test` 全量 **10643 过/0 红**＋11 跳过（首轮 4 红定谳：2 红=培训手册 HTML 总览图/上游基线行滞留 v0.23.4-team.1/0.23.4，随批进位后守门 7/7 复绿；另 2 红复跑未复现判抖动）；`npm run regress -- --scope merge` **15/15 通过 0 失败 0 未执行**。
 - [x] 独立审查（蓝军自查，子代理配额窗口 2026-11-28~12-03 期间主会话执行）：①基线纯净性=staged 树三元组（mode/oid/path）与上游 tag 全量对比 **27,866=27,866 零差异**（强于 v0234 抽验）；②372 语义等价=+行集合逐字节相同（rstrip 归一）＋pristine 底座 apply 过＋py_compile 过＋**反向还原=pristine 32,938B 逐字节相等**；③注入面=journal 双 complete（519/519）＋deploy 幂等 197 相同；④runtime D9=14 件差集逐件判定有账＋两合并件标记锚核验＋py-runtime 282/282；⑤载体链/投影面=release:check 四模块＋docs:check＋gen-doc-indexes 800 specs 0 problem；⑥提交卫生=staged vendor 面=pristine 换血清单 1146 行双向差集空＋studio 树注入态未混入＋冲突标记扫描零命中。零 P0/P1。
-- [ ] merge 后 main 抽验：vendor/hermes-agent 面 diff 非零；merge 树与分支树零差异；主检出注入态重建。（收口时做）
+- [x] merge 后 main 抽验（2026-11-28 合并当晚实测回填）：merge ce8fed344 的 vendor/hermes-agent 面 **1146 文件非零**；merge 树与分支尖 2944456e5 对比**仅他会话在先 docs 提交一件**（244719e6f 顺带推送，其余零差异）；主检出 clean+inject 重建 **status=complete（505/505，0 非 applied）**、journal 基线 treeOid f377a5b99=HEAD vendor 树——宿主部署面经 RUNTIME_DEPLOY_TARGET 改道演练目录未触（D4/H-1 挂账维持，部署预检曾因宿主 35 件差异拒启，属保留目标机制正常工作）。任务卡登记归还链：登记 6c14242a→推送→归还 25601f97（cmp 三件与 e9a13c1db 逐字节一致，治理规格补记）。
 
 ## 设计文档影响
 
