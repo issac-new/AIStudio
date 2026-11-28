@@ -1,22 +1,30 @@
 {
-  "taskId": "design-integration-sync-20261128",
-  "statement": "设计文档整合同步：吸收制度合一批与德勤方法论批落地后的正本缺口补齐——执法总闸默认开、人机团队成功率实算两处事实订正；场景准入、无法评估口径、单位成本可得率补入；§6.4 增两行；附表 B 增三条术语（规格 2026-11-28-design-integration-sync）",
+  "taskId": "run32-plan-sync-20261126",
+  "statement": "run32 开跑前方案与程序同步：run31 后八天设计变更吸收（派单层 T1 逃生口/pristine 快照源/P2-P3 产品面供给＋探针组 18/开跑窗废止注记/台账回填）——用户指令「修订全流程推演方案及推演程序，启动新一轮推演」＋「无避让时段夜间正常跑」",
   "scope": [
-    "docs/DESIGN.md",
-    "docs/manuals/aistudio-design-document-index.md",
-    "docs/superpowers/specs/2026-11-28-design-integration-sync.md",
-    ".swarm-yuan/spec-receipts.jsonl",
-    ".qgate/registers/task-intent.json",
-    "custom/qgate/gate-packs/l0/gates/scope-check.yaml",
-    "custom/qgate/gate-packs/l0/gates/intent-drift.yaml"
+    "docs/**",
+    "simharness/**",
+    "custom/qgate/**",
+    ".qgate/registers/**",
+    ".swarm-yuan/**"
   ],
   "acceptance": [
-    "When 正本改动逐条对代码锚点 Then 每句陈述都能在锚点找到对应",
-    "When gen-doc-indexes --check 跑 Then 795 份 0 问题",
-    "When 读正本与规格的守门测试跑 Then 全过",
-    "When 合并档回归 merge 档跑 Then 全部测试面通过",
-    "When 合入 main 推送 Then 推送前门全过"
+    "When capability-probes.test.ts 跑 Then 十八组全绿",
+    "When jargon-source-gate 跑 Then HARD=0",
+    "When run-gates.sh 跑 Then 全过",
+    "When regress merge scope 跑 Then 全过",
+    "When 合入 main 推送 Then pre-push 门全过"
   ],
-  "confirmedBy": "用户 2026-11-28 指令「合入main 清理无用分支，更新整体设计文档」；范围与验收条目由执行会话拟定",
-  "confirmedAt": "2026-11-28T00:40:44.416Z"
+  "confirmedBy": "用户 2026-11-26 指令",
+  "confirmedAt": "2026-11-28T00:03:47.652Z",
+  "revisions": [
+    {
+      "at": "2026-11-26T14:40:21.139Z",
+      "reason": "范围修订为实际变更集——设计索引重生成/门 pin 重绑/规格收据账本/任务卡注册文件属随批机械件"
+    },
+    {
+      "at": "2026-11-28T00:03:47.652Z",
+      "reason": "run32 同线程任务补记：2026-11-28 进位批 e30f56c43（方案 §5.18 四条＋mx-setup 4f 车道自检，七轮烧机实录修订）——范围仍在 docs/**/simharness/** 卡面内，补记验收锚"
+    }
+  ]
 }
