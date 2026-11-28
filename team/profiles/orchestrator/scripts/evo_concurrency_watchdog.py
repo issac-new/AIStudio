@@ -8,7 +8,7 @@
   - provider_health：MGLM/MBGM 的 is_healthy / consecutive_failures
 
 三档状态机（降档立即；升档走"试探-回退"自适应，不设固定等待期）：
-  L0 NORMAL   12/4（用户批准基线）
+  L0 NORMAL   8/5（现行配置基线，以 config.yaml 为准）
   L1 GUARDED   6/2（触发：15min 内 bigmodel 429 ≥3，或任一 provider cf≥2）
   L2 CRITICAL  2/1（触发：15min 内 429 ≥10 或 503 ≥3，或任一 provider 熔断跳闸 is_healthy=0）
 
@@ -51,7 +51,7 @@ T_L1_429, T_L2_429 = 3, 10
 T_L2_503 = 3
 
 LEVELS = {
-    "L0": {"max_in_progress": 8, "per_profile": 3},
+    "L0": {"max_in_progress": 8, "per_profile": 5},
     "L1": {"max_in_progress": 6, "per_profile": 2},
     "L2": {"max_in_progress": 2, "per_profile": 1},
 }

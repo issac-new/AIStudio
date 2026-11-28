@@ -1163,4 +1163,76 @@ describe('文档结构检查（2026-11-26 文档刷新批）', () => {
     expect(tools).toContain(`choco install python${python!.replace('.', '')}`)
     expect(tools).toContain(`JavaScript runtime（不低于 ${node}）`)
   })
+
+  it('并发看门狗：文件头、L0 常量、配置模板与共享段的 L0 值一致', () => {
+    // 2026-11-28 实证：文件头写 12/4、常量写 8/3、配置模板写 8/5，三个说法并存，而宿主上实际生效的是 8/5。
+    // 基准值取自调度入口档位的配置模板；其余四处都必须等于它。
+    const capsOf = (text: string): [number, number] | null => {
+      const total = /^\s*max_in_progress:\s*(\d+)\s*$/m.exec(text)?.[1]
+      const perProfile = /^\s*max_in_progress_per_profile:\s*(\d+)\s*$/m.exec(text)?.[1]
+      return total && perProfile ? [Number(total), Number(perProfile)] : null
+    }
+    const orchestratorTemplate = readFileSync(resolve(root, 'team/profiles/orchestrator/config.yaml'), 'utf8')
+    const baseline = capsOf(orchestratorTemplate)
+    expect(baseline, '调度入口档位的配置模板缺并发上限两键').not.toBeNull()
+    for (const file of ['team/config.yaml', 'team/shared/profiles.yaml']) {
+      expect(capsOf(readFileSync(resolve(root, file), 'utf8')), `${file} 的并发上限与调度入口配置模板不一致`).toEqual(baseline)
+    }
+    const script = readFileSync(resolve(root, 'team/profiles/orchestrator/scripts/evo_concurrency_watchdog.py'), 'utf8')
+    const header = /L0 NORMAL\s+(\d+)\/(\d+)/.exec(script)
+    const constant = /"L0":\s*\{\s*"max_in_progress":\s*(\d+),\s*"per_profile":\s*(\d+)\s*\}/.exec(script)
+    expect(header, '看门狗文件头缺 L0 行').not.toBeNull()
+    expect(constant, '看门狗缺 L0 常量').not.toBeNull()
+    expect([Number(header![1]), Number(header![2])], '看门狗文件头的 L0 与配置模板不一致').toEqual(baseline)
+    expect([Number(constant![1]), Number(constant![2])], '看门狗 L0 常量与配置模板不一致').toEqual(baseline)
+  })
+
+  it('团队共享说明：档位、领域、范式、责任登记的数量等于登记表实数', () => {
+    // 2026-11-28 实证：说明写「本仓 30 个 profile」「9 个域」「覆盖 12/30」，登记表实数早已不同。
+    const readme = readFileSync(resolve(root, 'team/shared/README.md'), 'utf8')
+    const profilesYaml = readFileSync(resolve(root, 'team/shared/profiles.yaml'), 'utf8').split('\n')
+    const profilesBlock = profilesYaml.slice(0, profilesYaml.findIndex(line => /^shared_config:/.test(line))).join('\n')
+    const entries = [...profilesBlock.matchAll(/^ {2}([A-Za-z0-9_-]+):\s*$/gm)].map(match => match[1])
+    expect(entries.length, 'profiles.yaml 的 profiles 块解析不出条目').toBeGreaterThan(10)
+    const active = readdirSync(resolve(root, 'team/profiles'), { withFileTypes: true })
+      .filter(entry => entry.isDirectory() && entry.name !== '_shared').map(entry => entry.name)
+    for (const name of active) expect(entries, `现役档位 ${name} 不在 profiles.yaml 里`).toContain(name)
+    const domains = [...readFileSync(resolve(root, 'team/shared/domain-registry.yaml'), 'utf8').matchAll(/^- domain:/gm)].length
+    const paradigms = [...readFileSync(resolve(root, 'team/shared/paradigm-map.yaml'), 'utf8').matchAll(/^ {2}[A-Za-z0-9_-]+:\s*(?:base|domain|governance)\b/gm)].length
+    const owners = [...readFileSync(resolve(root, 'team/shared/owner-registry.yaml'), 'utf8').matchAll(/^- profile:/gm)].length
+    expect(domains).toBeGreaterThan(5)
+    expect(paradigms).toBeGreaterThan(5)
+    expect(owners).toBeGreaterThan(5)
+    expect(readme).toContain(`现列 ${entries.length} 个档位条目`)
+    expect(readme).toContain(`其中 ${active.length} 个在本仓有目录`)
+    expect(readme).toContain(`另 ${entries.length - active.length} 个只在宿主上`)
+    expect(readme).toContain(`${domains} 个域 → 看板`)
+    expect(readme).toContain(`断言 ${domains} 板`)
+    expect(readme).toContain(`${paradigms} 个 profile 的三范式归属`)
+    expect(readme).toContain(`当前覆盖 ${owners} 个 profile`)
+  })
+
+  it('被证据推翻的说法不再出现在参照文档、设计正本与培训手册里', () => {
+    // 2026-11-28 逐条核实的结论（规格 2026-11-28-rulings-followup-cluster-doc）。这些说法各自有核实来源：
+    // 建卡层跨域检查已不存在；名册读不出来时派单器一张卡也不派；完成时没有「自动加未验证标记」这一步；
+    // 看板默认工作流另有 scheduled 与 blocked；机制域是七个加一条横切约束；现行规模是 26 个 worker、27 个档位。
+    const reference = readFileSync(resolve(root, 'team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md'), 'utf8')
+    const design = readFileSync(resolve(root, 'docs/DESIGN.md'), 'utf8')
+    const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
+    const clusterChapter = manual.slice(manual.search(/^## \d+\. AI 集群怎样干活，人怎样跟它协作$/m), manual.indexOf('\n## ', manual.search(/^## \d+\. AI 集群怎样干活，人怎样跟它协作$/m) + 1))
+    for (const banned of [
+      '建卡层拒绝跨域建卡', '建卡层——直接建越域的卡会被系统报错拒绝', '这道检查由安装目录里的一份补丁提供',
+      '降级为不隔离而不是停摆', '[UNVERIFIED]', 'evidence_strength=unobserved',
+      '29 worker', '八个机制域 = ', 'L0 正常 12/4', '状态机 triage→todo→ready→running→review→done',
+      '白名单含 meta_watchdog 自身', 'API Server 的消息不进任务卡', '过三道闸——相同内容',
+    ]) {
+      expect(reference.includes(banned), `参照文档又出现「${banned}」`).toBe(false)
+      expect(design.includes(banned), `设计正本又出现「${banned}」`).toBe(false)
+      expect(clusterChapter.includes(banned), `培训手册集群协作章又出现「${banned}」`).toBe(false)
+    }
+    // 正面事实：两份文档都写明了现行做法
+    expect(design).toContain('建卡层目前没有检查')
+    expect(clusterChapter).toContain('这项检查现在已不存在')
+    expect(reference).toContain('名册存在但读不出来时，这张板一张卡也不派')
+  })
 })

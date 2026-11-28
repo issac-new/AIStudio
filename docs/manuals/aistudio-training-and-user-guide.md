@@ -139,7 +139,7 @@
 - 派单器只认本板名册。名册写在每块板运行时的配置文件 `board.json` 里（不在本仓），字段名是 `profiles` 或 `profile_scope`。写了名册，不在名册上的执行岗就领不到这块板的卡；名册读不出来时，派单器一张卡也不派。没写名册的板不设这道限制。
 - 跨板的依赖不能用卡的依赖字段（`parents`）表达。做法是在子卡正文里写上父卡编号，再做上下文注入（`context_from`）。
 - 执行岗（worker）只看得到自己那块板，看不到别的板的卡。
-- 技能手册里还写了“建卡时就拦住越域的卡”。这道检查由安装目录里的一份补丁提供，是否生效要到部署现场确认。
+- 技能手册里还写了“建卡时就拦住越域的卡”。这项检查现在已不存在：本仓和宿主上的现行补丁里都没有它，越域建卡不会被系统拒绝，所以建卡时写明板名是唯一的保证。
 
 **落在哪**：`runtime/hermes_cli/kanban_db.py`（选板函数 `get_current_board`）；`runtime/hermes_cli/kanban_db_dispatch.py`（名册检查 `_board_team_allowlist`）；`team/profiles/orchestrator/SOUL.md` 的「跨板编排」一段；`team/profiles/orchestrator/references/matrix-conventions.md`（跨岗引用上游任务的写法）；`team/skills/devops/kanban-domain-isolation/SKILL.md`。
 
@@ -195,7 +195,7 @@
 - 系统硬性检查的有这几项。没有总结也没有结果的“完成”被拒绝。声称自己建过的子卡，编号必须真实存在。卡上写了验收条件（AC）或完成定义（dod 块）时，完成回执要经得起系统重算；没写 AC 也没写 dod 块的卡不查。派发之后改过验收条件的，完成被拒，只能恢复原文或重新派发。
 - T2、T3 档的卡，总结里要写至少 3 步自我解释，每步回答三个问题：做了什么、为什么这么做、怎么验证的。出现数字时，要紧跟“怎么测的”和可以照着重跑的命令。
 - 卡流转进评审列时，交接规则另要求三项证据：改动文件清单、复现命令、未验证项。这条规则是建议，缺了不拦截。
-- 提醒一个名字不一致：规范里产出字段叫 `artifacts_produced`，工具实际读取的是 `artifacts`。写产出文件路径时用后者。
+- 键名说明：规范里产出字段叫 `artifacts_produced`，`artifacts` 是它的别名，运行时会把别名归一。集群现行的运行时（宿主上）已实现这项归一；本仓构建里还没有，读取产物路径用的是 `artifacts`。写产出文件路径时用 `artifacts`，两边都认。
 
 **落在哪**：`team/profiles/_shared/02-org-orchestration/ontology.md` 第 3.2 节（完成交接的字段结构）；`team/shared/completion-contract.md`（总结的自我解释标准）；`team/shared/handoff-rules.yaml`（列与列之间的交接规则）；`runtime/completion_contract.py` 和 `runtime/hermes_cli/kanban_db.py`（完成时的系统检查）。
 
