@@ -260,6 +260,21 @@ describe('闸门耗时台账 mx-gate-timing', () => {
       '[mux 10:30:00] [真值] G2 结论 ✓',
       '[mux 10:40:00] [mux FAIL 10:40:00] G2 两轮未过',
     ].join('\n'), 'utf8')
+    const gates = (JSON.parse(bash(`bash '${join(MX, 'mx-gate-timing.sh')}' --format json burn-fixture`, { AIPAY_SIM_ROOT: TMP })).data.gates) as Array<{
+      gate: string; span_sec: number; rounds: number; pass_marks: number; passed: boolean; outcome: string
+    }>
+    const byGate = Object.fromEntries(gates.map((g) => [g.gate, g])) as Record<string, (typeof gates)[number]>
+    // 同闸多次打回：G2 的三次打回（✗、FAIL、FAIL）各计一轮，首尾跨度是 10:10 到 10:40
+    expect(byGate.G2.rounds).toBe(3)
+    expect(byGate.G2.pass_marks).toBe(1)
+    expect(byGate.G2.span_sec).toBe(1800)
+    // 无 pass 键判未过：state.env 里没有 G2 的键，打回过就是 rounds>0
+    expect(byGate.G2.passed).toBe(false)
+    expect(byGate.G2.outcome).toBe('rounds>0')
+    // 跨闸互不串：G2 的打回不计到 G1；G1 有自己的 pass 键，结论是通过
+    expect(byGate.G1.rounds).toBe(0)
+    expect(byGate.G1.pass_marks).toBe(1)
+    expect(byGate.G1.outcome).toBe('pass')
   })
 })
 // ── 6) 失联唤醒与采集不静默（2026-11-04 run26 复盘批）：行为断言，不测 marker

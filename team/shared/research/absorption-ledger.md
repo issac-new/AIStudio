@@ -32,6 +32,8 @@
 | L021 | 2026-11-26 | Palantir 自我改进架构（公众号文章，加四篇官方文档） | 全文级 | AIStudio | 未声明 | 未声明 | 有 | `docs/superpowers/specs/2026-11-26-palantir-self-improvement-architecture.md` | 2027-01-25 |
 | L022 | 2026-11-27 | 无新材料：Palantir 批七项待裁决事项的用户裁决（L021 的接续轮） | 不适用 | AIStudio | 不适用 | 不适用 | 未声明 | `docs/superpowers/specs/2026-11-27-palantir-rulings-followup.md` | 2027-01-26 |
 | L023 | 2026-11-27 | 《人类员工与AI员工协作下的组织管理研究报告（讨论稿）》（课题研究组 2026-11；总账建立前 2026-11-06 执行单元责任台账轮为其同源前轮） | 全文级 | AIStudio | 9/0/8/4/3 | 1/12/3 | 有 | `docs/superpowers/specs/2026-11-27-workunit-framework-align.md` | 2026-12-28 |
+| L024 | 2026-11-16 | 《腾讯开源 LoopForge：把 Coding Agent 编成研发团队工作流，告别团队内耗》（微信公众号文章），加 GitHub Tencent/LoopForge 源码；总账建立前执行的同源首轮，2026-11-28 回填 | 未声明 | AIStudio | 未声明 | 未声明 | 未声明 | `docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md` | 2026-12-28 |
+| L025 | 2026-11-28 | 《用 LoopForge 迭代 LoopForge：手把手搭一套 24 小时运转的 AI 研发工作台》（微信公众号文章，加 GitHub Tencent/LoopForge 源码 fd039e5）；L024 的同源第二轮 | 源码级 | AIStudio | 3/0/12/9/3 | 1/1/1 | 有 | `docs/superpowers/specs/2026-11-28-loopforge-scheduled-tasks-absorption.md` | 2026-12-28 |
 
 ## 二、记档待定
 
@@ -64,6 +66,14 @@
 | P019 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | hermes 侧技能 `upstream-agent-skill-fusion` 是否退役（入站引用 1 处） | 2026-12-27 | 记档待定 |
 | P020 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | 附录 B（历史索引，自述目录数量不滚动维护）是否退役 | 2026-12-27 | 记档待定 |
 | P021 | `docs/superpowers/specs/2026-11-27-absorption-regime-unify.md` | swarm-yuan 状态机归档阶段的提示仍指向已退役的 spec-archive 脚本（`skills/swarm-yuan/assets/state-machine.sh`）；随 swarm-yuan 下次发版删除该提示 | 2026-12-27 | 记档待定 |
+| P022 | L025 | 自动化产出的刹车：建卡查重、队列水位、「本轮无事可做」结果（看板域只有派发去重；2026-11-28 读数＝标题归一后重复多出的卡 50/2748、未完成卡 68） | 2026-12-28 | 记档待定 |
+| P023 | L025 | 流程节点打回携带产物并从指定节点重跑（图只有恢复、分叉、重放三个入口；首轮规格第 171 行已延后） | 2026-12-28 | 记档待定 |
+| P024 | L025 | 评审与执行环节分别指定模型和执行器（流程图节点类型与评审策略配置都没有模型字段） | 2026-12-28 | 记档待定 |
+| P025 | L025 | `custom/server/autosched/automation-schedule.ts` 的「到期自停＋无人值守授权」判定没有生产调用点：接线还是按域退役判据处理 | 2026-12-28 | 记档待定 |
+| P026 | L025 | 「假重构改了行为」与安全类隐患两条审查机检 | 2026-12-28 | 记档待定 |
+| P027 | L025 | 日常维护类定时任务：在途工作树巡检、补单测的存量基线、架构守护 | 2026-12-28 | 记档待定 |
+| P028 | L025 | 定时任务的排班总览与单次执行成本读数 | 2026-12-28 | 记档待定 |
+| P029 | L025 | 夜间循环按单一职责拆分（对象是 hermes 智能体团队，须在 `team/` 正本裁决） | 2026-12-28 | 记档待定 |
 
 记档待定项的退役判据沿用域退役判据：多轮确认人与智能体都不用才退役，入站引用数只是静态证据。
 
