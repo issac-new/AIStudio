@@ -586,3 +586,4 @@
 {"at":"2026-11-28T00:20:44Z","spec":"docs/superpowers/specs/2026-11-28-task-card-return-workunit-align.md","receipt":"21806e5300c67e16d23c71a839a5d7ed791cd83f","commit":"70b3723ae"}
 {"at":"2026-11-28T01:43:46Z","spec":"docs/superpowers/specs/2026-11-28-design-alignment-cluster-doc.md","receipt":"cb5cc0abc2494ba6df8dc0f18c3d2427c0d96ed0","commit":"5a67b8753"}
 {"at":"2026-11-28T01:51:00Z","spec":"docs/superpowers/specs/2026-11-28-design-alignment-cluster-doc.md","receipt":"b06028faa11796884ac476d203ca628eca20b557","commit":"2fce64846"}
+{"at":"2026-11-28T01:55:59Z","spec":"docs/superpowers/specs/2026-11-27-task-card-single-slot-return.md","receipt":"1c1a09441cf37832f0841254ba792fb140ec59ae","commit":"7378df9ed"}
