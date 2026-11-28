@@ -6,6 +6,7 @@
     "custom/server/autonomygov/**",
     "custom/server/governance/**",
     "custom/server/outcome/**",
+    "custom/server/__tests__/**",
     "custom/client/governance/**",
     "docs/**",
     "team/shared/research/**",
@@ -23,5 +24,11 @@
     "When 合入 main 推送 Then pre-push 门全过"
   ],
   "confirmedBy": "用户 2026-11-28 确认（规格批准＋三项裁决）",
-  "confirmedAt": "2026-11-28T00:03:25.388Z"
+  "confirmedAt": "2026-11-28T00:16:42.018Z",
+  "revisions": [
+    {
+      "at": "2026-11-28T00:16:42.018Z",
+      "reason": "范围修订：raci-dispatch 与 zcode-mention-dispatch 两个派单门夹具测试在 custom/server/__tests__/（本批夹具对齐改过），初登记 scope 漏列"
+    }
+  ]
 }
