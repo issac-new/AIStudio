@@ -301,6 +301,24 @@ if [[ "$MX_ROLE" != "agent" ]]; then
       log "浏览器锚点告警：playwright install 失败——采集链预检将拒绝开跑，人工执行 PLAYWRIGHT_BROWSERS_PATH=$SIM_ROOT/pw-browsers npx playwright install chromium"
     fi
   fi
+  # 4f 模型车道自检（2026-11-28 七轮烧机实录，spec 2026-11-28-sim-plan-proc-sync）：cc-switch
+  # 车道路由以故障转移队列为准（providers.in_failover_queue=1），仅建行不入队=通道永不路由
+  # （11-27 恢复缺口实录）。队列空或成员无一健康即大声告警不阻断——车道属宿主共享面，修复
+  # 走 cc-switch（换 key/调队列），供给段不代改。
+  _ccdb="$HOME/.cc-switch/cc-switch.db"
+  if [ -f "$_ccdb" ]; then
+    _q=$(sqlite3 "$_ccdb" "SELECT count(*) FROM providers WHERE app_type='hermes' AND in_failover_queue=1" 2>/dev/null || echo 0)
+    _qh=$(sqlite3 "$_ccdb" "SELECT count(*) FROM provider_health h JOIN providers p ON p.id=h.provider_id AND p.app_type=h.app_type WHERE p.app_type='hermes' AND p.in_failover_queue=1 AND h.is_healthy=1" 2>/dev/null || echo 0)
+    if [ "$_q" = "0" ]; then
+      log "模型车道告警：hermes 车道故障转移队列为空（in_failover_queue 全 0）——agent LLM 调用将全 503（11-27 实录），人工补队列成员"
+    elif [ "$_qh" = "0" ]; then
+      log "模型车道告警：hermes 车道队列成员当前无一健康（429/401 类）——agent 靠熔断冷却重试骑行，开跑前宜先恢复或换通道"
+    else
+      log "模型车道自检：队列 ${_q} 成员、健康 ${_qh}"
+    fi
+  else
+    log "模型车道告警：cc-switch DB 缺席（$_ccdb）——直连车道不可用"
+  fi
 fi
 
 # ── 5. 每账号 2 块独立 kanban + team 围栏（按节点切片）───
