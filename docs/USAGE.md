@@ -1,6 +1,6 @@
 # AIStudio 使用指南
 
-本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控团队培训时，使用[《产品交付团队培训手册》](manuals/aistudio-training-and-user-guide.md)；研发核心工具技能使用[《swarm-yuan 技术说明》](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)为可选来源）；查全部页面用[《全量功能清单》](manuals/aistudio-feature-inventory.md)，部署运维用[《管理员运维参考》](manuals/aistudio-operations-reference.md)，查设计依据用[《设计文档导读》](manuals/aistudio-design-document-guide.md)和[《全量索引》](manuals/aistudio-design-document-index.md)，读懂推演真实报告用[《run28 案例》](manuals/aistudio-interactive-training.html#scene=project-run28-case)（[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源；run28 是证据链教学的主案例，其后 run29 至 run31 的对照见培训手册第 15 章）。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《14 幕交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](DESIGN.md)。
+本指南面向第一次启动 AIStudio 的用户。内容涵盖启动、三种工作模式、角色入口与排障。需要产品需求分析、项目管理、研发、测试、运维监控、安全合规及审计内控团队培训时，使用[《产品交付团队培训手册》](manuals/aistudio-training-and-user-guide.md)；研发核心工具技能使用[《swarm-yuan 技术说明》](manuals/aistudio-interactive-training.html#scene=development-swarm-yuan-tech)（[研发交付指南](manuals/aistudio-swarm-yuan-developer-guide.md)为可选来源）；查全部页面用[《全量功能清单》](manuals/aistudio-feature-inventory.md)，部署运维用[《管理员运维参考》](manuals/aistudio-operations-reference.md)，查设计依据用[《设计文档导读》](manuals/aistudio-design-document-guide.md)和[《全量索引》](manuals/aistudio-design-document-index.md)，读懂推演真实报告用[《run28 案例》](manuals/aistudio-interactive-training.html#scene=project-run28-case)（[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源；run28 是证据链教学的主案例，其后 run29 至 run31 的对照见培训手册第 16 章）。需要交互拓扑导览时，运行 `npm run training`，或双击 `docs/manuals/start-training.command`（macOS）/ `start-training.bat`（Windows），打开[《14 幕交互拓扑培训》](manuals/aistudio-interactive-training.html)。安装与架构背景见 [README](../README.md)。设计事实见[《AIStudio 终态设计文档》](DESIGN.md)。
 
 ## 1、启动（浏览器 web 版）
 
@@ -48,7 +48,7 @@ npm run dev
 
 已有账号直接登录。共享或培训环境首次建号时，在启动前执行 `node vendor/hermes-studio/bin/hermes-web-ui.mjs reset-default-login`，使用命令生成的随机密码。隔离开发环境的空库也可显式设置 `HERMES_WEB_UI_DEV_BOOTSTRAP=1`，不要把该入口用于共享培训环境。出厂默认口令已删除。
 
-全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#161-共享培训或生产怎样启动)。
+全局账号角色为 `super_admin` 和 `admin`。团队领导与组织治理岗属于另外的职责判断。组织关键权限变更需双人会签。详细步骤见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md#171-共享培训或生产怎样启动)。
 
 ## 2、三种工作模式怎么走
 
@@ -87,7 +87,7 @@ npm run dev
 
 推演与日常共享能力，设计目标是不共享导航与写入口。**当前边界**：SIM 任务的只读观察端点与部分前端守卫已在位，但批量操作与注意力入口尚未排除 SIM 任务（设计正本 §4.10、§6.4 如实登记），验收以此为准——不要把它当成已闭合的隔离保证。
 
-引用任何一轮推演前先分清三件事：是否出了报告、六道质量门是否全过、机制是否真的生效。最新一轮 run31 出了报告但六闸未全过；run29 六闸全过但总监派发 51 次只走通 5 次。详见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md)第 15 章。
+引用任何一轮推演前先分清三件事：是否出了报告、六道质量门是否全过、机制是否真的生效。最新一轮 run31 出了报告但六闸未全过；run29 六闸全过但总监派发 51 次只走通 5 次。详见[《培训和使用手册》](manuals/aistudio-training-and-user-guide.md)第 16 章。
 
 改代码后要跑的测试不止 `npm test`（它只覆盖 `custom/` 与 `scripts/`）。合并到主干前跑 `npm run regress -- --scope merge`（15 个测试面），发版前跑 `npm run regress -- --scope full`（24 个测试面）。目标机缺工具链时该面记“未执行”，不算通过。
 
@@ -161,9 +161,10 @@ npm run build:dmg:win   # Windows x64：zip + NSIS 安装器（必须在 Windows
 
 ## 6、延伸阅读
 
-- [run28 案例（交互培训专题）](manuals/aistudio-interactive-training.html#scene=project-run28-case)：证据链教学的主案例，分列含代偿与净额六闸、自主派发、黄金集观察态、报告呈现与后续帧核验；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源。其后 run29 至 run31 的对照见培训手册第 15 章。
+- [run28 案例（交互培训专题）](manuals/aistudio-interactive-training.html#scene=project-run28-case)：证据链教学的主案例，分列含代偿与净额六闸、自主派发、黄金集观察态、报告呈现与后续帧核验；[完整 Markdown](manuals/aistudio-run28-simulation-case.md)为可选来源。其后 run29 至 run31 的对照见培训手册第 16 章。
 - [run25 全流程推演案例（历史）](manuals/aistudio-run25-simulation-case.md)：run25 完整轮与 run26 补流清偿的历史教学材料，不代表当前最新轮。
 - [AIStudio 终态设计文档](DESIGN.md)：理念、产品、设计、实施与验证的唯一正本。
+- [Hermes Agent 集群设计文档](../team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md)：AI 集群（hermes agent）怎样组织、按什么规则派单、技能手册怎样治理；讲集群内部机制时读它。人与集群协作的日常做法见培训手册第 2 章，两份设计正本的分工见终态设计文档 1.1 节。
 - [设计文档导航](superpowers/specs/2026-10-21-ncwk-unified-product-design.md)：正本、附件和历史档案入口。
 - [全流程推演方案](superpowers/specs/2026-10-05-mux-v8-fullflow-plan.md)：26 步六闸的判据与运行规程。
 - [设计事实与容量基线](superpowers/specs/2026-10-23-swarmstudio-design-ledger.md)：稳定参数、参考部署与版本快照。

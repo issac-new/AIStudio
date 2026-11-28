@@ -33,8 +33,8 @@ This document lists all third-party CLI tools referenced by SwarmTeam skills and
 | Tool | winget | choco | Purpose |
 |------|--------|-------|---------|
 | **git** | `winget install Git.Git` | `choco install git` | Version control |
-| **node** | `winget install OpenJS.NodeJS.LTS` | `choco install nodejs-lts` | JavaScript runtime |
-| **python** | `winget install Python.Python.3.12` | `choco install python` | Python runtime |
+| **node** | `winget install OpenJS.NodeJS.LTS` | `choco install nodejs-lts` | JavaScript runtime（不低于 23） |
+| **python** | `winget install Python.Python.3.14` | `choco install python314` | Python runtime（离线包与 agent 安装需 3.14） |
 | **uv** | `winget install astral-sh.uv` | `choco install uv` | Fast Python package manager |
 | **gh** | `winget install GitHub.cli` | `choco install gh` | GitHub CLI |
 | **jq** | `winget install jqlang.jq` | `choco install jq` | JSON processor |
@@ -73,7 +73,7 @@ matplotlib, cryptography, httpx, pytest, debugpy, pre-commit, commitizen, cookie
 
 ## npm Tools (covered by package-all.json)
 
-31 Node.js packages including: @anthropic-ai/claude-code, puppeteer, pnpm, nx, artillery,
+37 Node.js packages including: @anthropic-ai/claude-code, puppeteer, pnpm, nx, artillery,
 @mermaid-js/mermaid-cli, @stoplight/spectral-cli, etc.
 
 ---

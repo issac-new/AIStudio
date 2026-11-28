@@ -23,7 +23,7 @@
 | [附录 B](../superpowers/specs/2026-10-21-swarmstudio-appendix-b-plans-research.md) | 55 份实施计划与 32 份研究／复盘的历史索引 | 查决策来路和事故背景，不把历史“已实施”直接当作当前仍有效 |
 | [附录 C](../superpowers/specs/2026-10-21-swarmstudio-appendix-c-capability-corpus.md) | swarm-yuan 方法论、早期决策与研究索引 | 查能力层语料；当前数字改读 `skills/swarm-yuan/assets/facts.conf`，决策全文读技能根的设计演进正本 |
 | [附录 D](../superpowers/specs/2026-10-21-swarmstudio-appendix-d-lessons-rules.md) | 历史根因、证伪假设、否决项和工作规则 | 用于风险讲解与复盘；否决项保留当时适用范围，不扩成跨领域永久禁令 |
-| hermes 集群设计、上游架构与组件 ADR | 组件内部事实源和决策凭证 | 总体结构仍归整合正本，内部实现细节回到这些专题材料 |
+| [Hermes Agent 集群设计文档](../../team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md)、上游架构与组件 ADR | 组件内部事实源和决策凭证 | 总体结构仍归整合正本，内部实现细节回到这些专题材料；讲 AI 集群的组织与派单规则时读集群设计文档，两份正本的分工见整合正本 1.1 节 |
 | [产品交付团队培训手册](aistudio-training-and-user-guide.md) | 面向六团队的操作手册 | 产品需求、项目管理、研发、测试、运维、安全审计各有交付路径，不替代设计正本与实现证据 |
 | [swarm-yuan 研发交付指南](aistudio-swarm-yuan-developer-guide.md) | 研发核心工具技能指南 | 项目技能生成、九节点、precheck、hooks、变异验证与真实 ACP 链 |
 | [run25 推演案例](aistudio-run25-simulation-case.md) | 最新方案与真实报告的对照案例 | 讲解 26 步、六闸、G4-E、UAT、补流和未做项的时点与口径差异 |
@@ -57,7 +57,7 @@
 5. 按课程主题读全流程推演方案、G5/UAT、HumanGate、主动性、工具策略等专题 spec，并回读本导读第 4 章的当前差异。
 6. 最后查 `RELEASE-MANIFEST.json`、`vendor/VENDOR.md` 和机械索引，核对当前版本与文件覆盖；附录 B-D 只按需追溯历史。
 
-角色重点与正本 §6.2 一致：主管与产品读第 1—2 章与 §3.9；架构与研发读第 3—5 章；测试与安全读 §2.5、§4.4、§4.9；运维与审计读 §3.9、§4.5—4.6、第 6 章。讲师另需读培训手册的环境依赖和完成判据，不能把页面打开或模拟审批当成功能验证。`docs/DESIGN.md §6.2`；`docs/manuals/aistudio-training-and-user-guide.md` 第 1 章（§1.1 至 §1.3 的分角色学习路径）与第 17 章各实操小节的环境依赖、完成判据
+角色重点与正本 §6.2 一致：主管与产品读第 1—2 章与 §3.9；架构与研发读第 3—5 章；测试与安全读 §2.5、§4.4、§4.9；运维与审计读 §3.9、§4.5—4.6、第 6 章。讲师另需读培训手册的环境依赖和完成判据，不能把页面打开或模拟审批当成功能验证。`docs/DESIGN.md §6.2`；`docs/manuals/aistudio-training-and-user-guide.md` 第 1 章（§1.1 至 §1.3 的分角色学习路径）与第 18 章各实操小节的环境依赖、完成判据
 
 ## 2. 稳定设计机制应该怎样讲
 

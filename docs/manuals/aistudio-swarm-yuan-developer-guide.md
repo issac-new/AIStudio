@@ -64,7 +64,7 @@ flowchart TB
 
 ## 谁定方向、谁守门、谁干活：三层投影与四论
 
-**一句话定位：人定方向 · 机器守门 · AI 干活。** 一个人或少数几个人带少量 AI 助手时，可以靠人盯、靠模型自觉；AI 员工多了之后，质量不能靠模型自觉，必须靠机制——每个“必须”都要有机器检查、可复核证据和失败阻断。逐字正本见 `team/profiles/orchestrator/SOUL.md:3-4`；设计文档同句见 `runtime/hermes-records/design/hermes-complete-design-doc.md:3`。
+**一句话定位：人定方向 · 机器守门 · AI 干活。** 一个人或少数几个人带少量 AI 助手时，可以靠人盯、靠模型自觉；AI 员工多了之后，质量不能靠模型自觉，必须靠机制——每个“必须”都要有机器检查、可复核证据和失败阻断。逐字正本见 `team/profiles/orchestrator/SOUL.md:3-4`；设计文档同句见 `team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md:3`。
 
 | 层 | 对象 | 人机分工 | 与手册章节的对应 |
 |---|---|---|---|
@@ -905,8 +905,8 @@ bash "$YUAN_SRC/tests/e2e/run-fieldchange-e2e.sh"                               
 | 主题 | 当前事实源 |
 |---|---|
 | 版本与发布 | `RELEASE-MANIFEST.json` 的 `modules.yuan-skill`；`skills/swarm-yuan/CHANGELOG.md:3-8` |
-| 产品总原则与四论 | `team/profiles/orchestrator/SOUL.md:3-4`；`runtime/hermes-records/design/hermes-complete-design-doc.md:3`；`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118` |
-| 三层投影 | `team/profiles/orchestrator/SOUL.md:3-4`（一句话＋三层原句）；`docs/DESIGN.md:17-19`、`:404-414` 仅作组件职责与分层图辅助 |
+| 产品总原则与四论 | `team/profiles/orchestrator/SOUL.md:3-4`；`team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md:3`；`skills/swarm-yuan/references/four-theories-methodology.md:5-18,104-118` |
+| 三层投影 | `team/profiles/orchestrator/SOUL.md:3-4`（一句话＋三层原句）；`docs/DESIGN.md:17-19`、`:441-458` 仅作组件职责与分层图辅助 |
 | 标准与个性化研发能力 | `skills/swarm-yuan/references/standards-compliance.md`；`skills/swarm-yuan/references/security-spec.md`；`skills/swarm-yuan/references/domain-knowledge.md`；`skills/swarm-yuan/scripts/mine-habits.sh` |
 | 本体化组织资产与拼装 | `skills/swarm-yuan/assets/ontology/`；`skills/swarm-yuan/references/business-ontology-methodology.md:253-258`；`skills/swarm-yuan/README.md:75-80,217-245` |
 | 数字与预算 | `skills/swarm-yuan/assets/facts.conf` |
