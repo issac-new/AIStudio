@@ -25,8 +25,20 @@ describe('SaaSStore', () => {
 
   it('init creates schema and RLS policies', async () => {
     const store = new SaaSStore({ connectionString: 'postgres://localhost/test', tenantId: 'tenant-a' })
+    // 换成会记下每条语句的假客户端：init 发了什么语句，只能从记下的语句里验
+    const queries: string[] = []
+    ;(store as unknown as { pool: unknown }).pool = {
+      connect: async () => ({
+        query: async (text: string) => { queries.push(text); return { rows: [] } },
+        release: () => {},
+      }),
+    }
     await store.init()
-    // Verify schema SQL was queried (mocked)
+    for (const table of ['loops', 'loop_contracts', 'loop_verifications', 'loop_events']) {
+      expect(queries.some((sql) => sql.includes(`CREATE TABLE IF NOT EXISTS ${table} (`))).toBe(true)
+      expect(queries).toContain(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`)
+    }
+    expect(queries.filter((sql) => sql.includes('CREATE POLICY IF NOT EXISTS'))).toHaveLength(4)
   })
 
   it('getLoop returns null for non-existent', async () => {
@@ -49,8 +61,10 @@ describe('SaaSStore', () => {
 
   it('close ends the pool', async () => {
     const store = new SaaSStore({ connectionString: 'postgres://localhost/test', tenantId: 'tenant-a' })
+    const end = vi.fn()
+    ;(store as unknown as { pool: unknown }).pool = { end }
     await store.close()
-    // Verify pool.end was called
+    expect(end).toHaveBeenCalledTimes(1)
   })
 })
 
