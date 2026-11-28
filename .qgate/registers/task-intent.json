@@ -1,33 +1,30 @@
 {
-  "taskId": "rulings-followup-cluster-doc-20261128",
-  "statement": "九项裁决落地（上一批规格 2026-11-28-design-alignment-cluster-doc 的 P1-P9）：用户指令「继续 按推荐建议裁决」；规格 docs/superpowers/specs/2026-11-28-rulings-followup-cluster-doc.md",
+  "taskId": "run32-plan-sync-20261126",
+  "statement": "run32 开跑前方案与程序同步：run31 后八天设计变更吸收（派单层 T1 逃生口/pristine 快照源/P2-P3 产品面供给＋探针组 18/开跑窗废止注记/台账回填）——用户指令「修订全流程推演方案及推演程序，启动新一轮推演」＋「无避让时段夜间正常跑」",
   "scope": [
-    ".swarm-yuan/spec-receipts.jsonl",
-    "custom/__tests__/interactive-training-manual.test.ts",
-    "custom/__tests__/role-tool-matrix.test.ts",
-    "docs/DESIGN.md",
-    "docs/manuals/aistudio-design-document-index.md",
-    "docs/manuals/aistudio-operations-reference.md",
-    "docs/manuals/aistudio-training-and-user-guide.md",
-    "docs/superpowers/specs/2026-11-28-rulings-followup-cluster-doc.md",
-    "team/config.yaml",
-    "team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md",
-    "team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md.stale-pre-20261128-sync-0019",
-    "team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md.stale-pre-stale-values-20261128-1112",
-    "team/profiles/orchestrator/scripts/evo_concurrency_watchdog.py",
-    "team/shared/README.md",
-    ".qgate/registers/task-intent.json",
-    "custom/qgate/gate-packs/l0/gates/scope-check.yaml",
-    "custom/qgate/gate-packs/l0/gates/intent-drift.yaml"
+    "docs/**",
+    "simharness/**",
+    "custom/qgate/**",
+    ".qgate/registers/**",
+    ".swarm-yuan/**"
   ],
   "acceptance": [
-    "When 读者打开设计正本 Then 3.4 节不再声称建卡层有跨域检查、4.2 节把 artifacts 写成契约别名、1.1 节说明配置文件里多出的 21 个条目是本仓不分发的档位",
-    "When 读者查并发看门狗 Then 文件头、L0 常量、根模板、共享段与调度入口模板的 L0 都是 8 和 5",
-    "When 读者查参照文档 Then 11-28 同步内容已恢复、32 处过期说法已订正且改前快照在库",
-    "When 管理员读运维参考 16.1 节 Then 能看到两个闰年触发任务的修正命令",
-    "When 读者查团队共享说明 Then 四个数量等于登记表实数",
-    "When 结构测试与合并档回归执行 Then 全部通过"
+    "When capability-probes.test.ts 跑 Then 十八组全绿",
+    "When jargon-source-gate 跑 Then HARD=0",
+    "When run-gates.sh 跑 Then 全过",
+    "When regress merge scope 跑 Then 全过",
+    "When 合入 main 推送 Then pre-push 门全过"
   ],
-  "confirmedBy": "用户 2026-11-28 指令「继续 按推荐建议裁决」；范围与验收条目由执行会话 zcode 按规格拟定",
-  "confirmedAt": "2026-11-28T05:59:02.229Z"
+  "confirmedBy": "用户 2026-11-26 指令",
+  "confirmedAt": "2026-11-28T00:03:47.652Z",
+  "revisions": [
+    {
+      "at": "2026-11-26T14:40:21.139Z",
+      "reason": "范围修订为实际变更集——设计索引重生成/门 pin 重绑/规格收据账本/任务卡注册文件属随批机械件"
+    },
+    {
+      "at": "2026-11-28T00:03:47.652Z",
+      "reason": "run32 同线程任务补记：2026-11-28 进位批 e30f56c43（方案 §5.18 四条＋mx-setup 4f 车道自检，七轮烧机实录修订）——范围仍在 docs/**/simharness/** 卡面内，补记验收锚"
+    }
+  ]
 }
