@@ -23,7 +23,7 @@ spec:
       taskIntent:
         file: ".qgate/registers/task-intent.json"
         require: false
-        acknowledgedSha256: "25601f978f6b03953c1be189edd2ef08221e26b3f964821dc8f0d38896ede842"
+        acknowledgedSha256: "f33be1c8269d123b68554c106a50a4e8b6e6bdda7516c1da71ad0a460b3ec414"
       evidenceType: scope-check-result
   evidence:
     required:
