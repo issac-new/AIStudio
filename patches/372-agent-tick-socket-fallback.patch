@@ -1,16 +1,13 @@
 diff --git a/gateway/shutdown_watchdog.py b/gateway/shutdown_watchdog.py
-index 5854b42dc3..352072002e 100644
 --- a/gateway/shutdown_watchdog.py
 +++ b/gateway/shutdown_watchdog.py
-@@ -23,6 +23,7 @@ from pathlib import Path
- from typing import Any, Callable, Dict, Optional
+@@ -25,4 +25,5 @@
+ from typing import Any, Callable, Dict, Iterator, Optional
  
- from gateway.restart import GATEWAY_SERVICE_RESTART_EXIT_CODE
+ # Top-level, not lazy: at fire time the host may be thrashing, and a first import reads disk.
 +from gateway.control_socket import _fits_sun_path, _fallback_socket_path  # HERMES_CUSTOM[tick-sock-fallback]
- from hermes_constants import get_hermes_home, get_process_hermes_home
- from utils import atomic_json_write
- 
-@@ -198,7 +199,11 @@ def get_loop_tick_socket_path(home: Optional[Path] = None, pid: Optional[int] =
+ from gateway.lifecycle_ledger import sample_memory, sample_oom_kills, sample_pressure_stall
+@@ -315,7 +316,11 @@ def get_loop_tick_socket_path(home: Optional[Path] = None, pid: Optional[int] =
      (#90502).
      """
      pid = int(pid if pid is not None else os.getpid())

@@ -51,7 +51,7 @@
         "runtime/",
         "vendor/hermes-agent/"
       ],
-      "version": "v0.23.4-team.1",
+      "version": "v0.23.5-team.1",
       "versionCarrier": "team/VERSION",
       "buildCommand": "team/skills/devops/public-repo-release 六步（白名单圈资产→secret 扫描→rsync 发布仓）",
       "artifacts": "公开 git 仓工作树（issac-new/SwarmTeam 归档态）＋本清单源码包 aistudio-agent-teams-<ver>-src.tar.gz",
@@ -213,5 +213,5 @@
     "checksums": "SHA256SUMS（随 dist/release/ 目录）",
     "artifactDistribution": "two-package-only（2026-11-03 用户立法为全局长期规则：每版只上传 2 件——aistudio-full-<ver>-src.tar.gz＋swarm-yuan-offline-<ver>-everything.zip（附配套 SHA256SUMS 校验件），双通道分工：Github Release 挂两件主资产及校验件；ModelScope 更新 swarm-yuan/ 目录（everything zip＋整体源码包＋单条 SHA256SUMS-v<版本>.txt，旧版本保留；2026-11-26 用户裁决「modelscope也要发full包」改为双通道同件并收敛口径挂账 N34-11——此前 1.0.17～1.0.20 只传 everything，其 aistudio/ 目录保留 1.0.15、1.0.16 两版历史件不再更新））。四模块源码包（cockpit/agent-teams/ycode/yuan-skill）与 DMG/zip 构建物不再上传任何远端也不打包——make-release-packages 默认只打整体包，--all-modules 显式打 4+1 全量（逃生通道）。"
   },
-  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.8.30（2026-11-23 升级批） / hermes-agent v0.23.4（2026-11-24 升级批） / zcode 包版本 4.0.0、基线 a4b44451（2026-11-23 同步批，与 tag v4.0.0 及本机安装版 4.0.0 同一）。模块大版本对齐基准，与产品扩展序不互推）"
+  "vendorBaseline": "vendor/VENDOR.md（上游钉版台账：hermes-studio v0.8.30（2026-11-23 升级批） / hermes-agent v0.23.5（2026-11-28 升级批） / zcode 包版本 4.0.0、基线 a4b44451（2026-11-23 同步批，与 tag v4.0.0 及本机安装版 4.0.0 同一）。模块大版本对齐基准，与产品扩展序不互推）"
 }

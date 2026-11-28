@@ -12,11 +12,11 @@ This repository distributes a multi-agent team configuration for Hermes Agent. E
 
 ### Version
 
-Current: **v0.23.4-team.1** (base bumped 2026-11-24 with the vendor upgrade to hermes-agent v0.23.4; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.23.3-team.2.
+Current: **v0.23.5-team.1** (base bumped 2026-11-28 with the vendor upgrade to hermes-agent v0.23.5; extension counter reset to 1 per scheme — full 3-segment base tracks vendor/VENDOR.md, `-team.N` is our extension release count; truth source: [VERSION](VERSION)). Previous line: v0.23.4-team.1.
 
-### What changed in this release (v0.23.4-team.1)
+### What changed in this release (v0.23.5-team.1)
 
-Upstream base hermes-agent **v0.23.3 → v0.23.4** (`8fc0374447`, 1143 commits / 1316 files). Headline upstream changes: cron morning-brief chain hardening (read-only briefs, blueprint skills preserved), gateway session-prompt hooks (inert snapshot copies, owner-scope param redaction), profile/plugin mutual exclusion, shared-metrics daily snapshot, Gemini 4 model catalog. Five overlay patches hand-reanchored onto the new baseline (391/612/732/741/786); replay: **511/511 patches applied, idempotent double-run complete**. Runtime overlay re-mirrored 30 files against the new injected baseline; the watchdog hostile-load hotfix stays runtime-carried per D9 (restored after mirror refresh). Spec `docs/superpowers/specs/2026-11-24-vendor-upgrade-agent-v0234.md`.
+Upstream base hermes-agent **v0.23.4 → v0.23.5** (`a428f5344f`, 1277 commits / 1146 files). Headline upstream changes: plugin-host/profile-name hardening wave (refuse hosts on renamed or removed profiles, stale provider scans re-checked, launcher anti-cross-talk), plugin-catalog/catalog scope bumps, CLI OSC 7577 programmatic resume protocol, macOS CLT git-stub guards, credential-pool error naming, gemini and solstice model providers merged into bundled google. One overlay patch hand-reanchored (372: import-block re-anchor after upstream inserted the lifecycle_ledger/memory_status imports); replay: **519/519 patches applied (agent 115 + studio 390 + zcode 14), idempotent double-run complete**. Runtime overlay: 14-file diff adjudicated per file — 4 pure-stale re-mirrored, 8 D9 carriers kept, 2 surgical merges (watchdog hostile-load tolerance onto the upstream #148527 forensics refactor with deferrals kept in the dump snapshot; file_tools stale-session write guard onto the new precheck chain). Spec `docs/superpowers/specs/2026-11-28-vendor-upgrade-agent-v0235.md`.
 
 ### What changed in v0.23.3-team.1 (2026-11-20)
 
@@ -33,7 +33,7 @@ Upstream base hermes-agent **v0.23.2 → v0.23.3** (`caafe5389a`, 1675 commits /
 - Previous releases in the 0.23.0 base line: v0.23.0-team.1..team.2 (below).
 
 ### What changed in v0.23.0-team.1 (2026-11-06)
-The current AIStudio **1.0.21-overlay** distribution carries agent teams **v0.23.4-team.1** (repo head; the published 1.0.18 to 1.0.20 assets carried v0.23.3-team.2), hermes-agent upstream **0.23.4** (repo head), yuan **v2.103.0**, and Ycode **4.0.0** (repo head; the published 1.0.18 and 1.0.19 assets carried 3.18.2). These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
+The current AIStudio **1.0.21-overlay** distribution carries agent teams **v0.23.5-team.1** (repo head; published assets: 1.0.18–1.0.20 carried v0.23.3-team.2, 1.0.21 carried v0.23.4-team.1 — 1.0.21 shipped before the 2026-11-28 vendor upgrade), hermes-agent upstream **0.23.5** (repo head), yuan **v2.103.0**, and Ycode **4.0.0** (repo head; the published 1.0.18 and 1.0.19 assets carried 3.18.2). These module versions are independent; the yuan and Ycode versions are not part of the team extension counter.
 
 - **Base bump only**: hermes-agent base v0.22.7 → v0.23.0 (vendor upgrade 2026-11-06, spec `docs/superpowers/specs/2026-11-06-vendor-upgrade-agent-v0230.md`); extension counter reset to 1. No profile content changes.
 
