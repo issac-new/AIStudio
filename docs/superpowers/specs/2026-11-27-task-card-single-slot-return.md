@@ -83,6 +83,8 @@
 - 登记与归还（rulings-followup-cluster-doc-20261128，2026-11-28）：授权时点是用户答复「合并并推送」之后，此前提交只留在分支上。登记范围用 `git diff --name-only origin/main..分支` 的全量变更面加三份登记文件，一次写全，未发生范围修订（卡片哈希 8ca45995…，两道门绑定程序化取全 64 位哈希）；推送 86718e5ab 成功后按字节恢复 run32-plan-sync-20261126 的三份文件（a0e8fdbbb 版本，卡片哈希 25601f97…，逐文件 `cmp` 与留底一致）；两道门以归还后的三份文件加本规格为变更集在本地判通过。
 - 登记与归还（loopforge-scheduled-absorb-20261128，2026-11-28）：推送 b5c79db9a 成功（合并前回归 15 个面 14 通过，全量测试面有 1 个宿主环境红：`custom/server/services/hermes/__tests__/kanban-title-edit.regression-1.test.ts`，主干单跑同红；推送前门的 L0 门全过，回归矩阵推送前档 5 个面 5 通过）后按字节恢复 run32-plan-sync-20261126 的三份文件（e9a13c1db 版本，卡片哈希 25601f97…，逐文件 `cmp` 与留底一致）；两道门以归还后的三份文件加本规格为变更集在本地判通过。
 
+- 登记与归还（vendor-upgrade-agent-v0235-20261128，2026-11-28）：登记范围取实际变更集（vendor/hermes-agent 换血＋patches/runtime/team/docs/custom/scripts/simharness/AGENTS/README/RELEASE-MANIFEST/VENDOR.md），一次写全未修订（卡片哈希 6c14242a…，两道门哈希同步时首版正则漏配带引号形态致绑定未生效，amend 并入后推送）；推送 ce8fed344 成功（prepush 5/5；main 本地含他会话在先 docs 提交 244719e6f 顺带推送，合并树与分支零差异）后按字节恢复 run32-plan-sync-20261126 的三份文件（5294f4315 版本=e9a13c1db 按字节，卡片哈希 25601f97…，逐文件 cmp 与留底一致）；两道门以归还后的三份文件加本规格为变更集在本地判通过。
+
 ## 设计文档影响
 
 DESIGN_SYNC: none
