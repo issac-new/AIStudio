@@ -72,7 +72,7 @@ export function renderBlock({ version, releaseModules, featureGates, manifest })
   const c = manifest.counts;
   const lines = [];
   lines.push(BEGIN_MARKER);
-  lines.push('### 17.10 当前构建的页面路由投影（生成区，勿手改）');
+  lines.push('### 18.10 当前构建的页面路由投影（生成区，勿手改）');
   lines.push('');
   lines.push('本节由 `npm run docs:sync` 从真实载体生成：路由与特性开关出自注册链清单（`scripts/regression/route-manifest.ts`），版本出自 `package.json`，模块版本出自 `RELEASE-MANIFEST.json`。`npm run docs:check`（并入 `release:check`）对账，漂移即非零——手册不维护第二份路由清单。');
   lines.push('');

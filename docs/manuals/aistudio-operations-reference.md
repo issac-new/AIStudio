@@ -619,7 +619,7 @@ commit / 版本：
 5. 发起一次低风险 Ycode/ACP 任务，记录 `engine_bin_source`、`engine_bin`、工作区和真实回执；provider 写 zcode 不足以证明用了 Ycode 分叉。`runtime/hermes-skills/coding-delegate/scripts/zcode-acp-delegate.py:129-154,243-248`。
 6. 预演结束后按培训约定归档测试卡和测试消息，保留必要证据，不批量清空数据库。
 
-任何一步缺依赖，就把该实操标为未验证，不用截图、静态页面或口头说明冒充完成。培训的环境依赖与完成判据见《培训和使用手册》第 17 章各实操小节（`docs/manuals/aistudio-training-and-user-guide.md` 的 §17.1 至 §17.6）。
+任何一步缺依赖，就把该实操标为未验证，不用截图、静态页面或口头说明冒充完成。培训的环境依赖与完成判据见《培训和使用手册》第 18 章各实操小节（`docs/manuals/aistudio-training-and-user-guide.md` 的 §18.1 至 §18.6）。
 
 ## 15. 六类故障分类与处置
 
@@ -636,9 +636,134 @@ commit / 版本：
 
 `FLAKY` 不占六类中的额外一席，也不能凭一次“偶发”定性；同一命令跨次结果不同才有判据，确认后走隔离和豁免登记。`skills/swarm-yuan/references/failure-taxonomy.md:22-24`。
 
-## 16. 写操作总清单与未验证边界
+## 16. 集群的自动动作与不可手改的文件
 
-### 16.1 执行前必须按写操作审批的命令
+本章回答四个问题：集群会定时替管理员做哪些动作，哪些文件不可手改，升级和备份的正规入口在哪里，删定时任务之前要先留什么。结论都取自仓内的登记文件和脚本正文；仓内只有转发脚本、正文不在仓里的，当场写明。
+
+先分清两件事。`team/profiles/orchestrator/cron/jobs.json` 是本仓登记的定时任务定义，共 14 项，12 项启用，2 项停用（`微信补投队列tick` 自 2026 年 9 月 21 日、`ccswitch-param-apply` 自 2026 年 10 月 20 日）。它是脱敏后的快照：路径里的用户名已换成 `/Users/YOURNAME`，最近运行时间、连续失败次数这类字段停在 2026 年 10 月 28 日。某台机器上是否真的在跑、跑到哪一步，要按 16.1 末尾的只读命令现场看。回收 git worktree（git 的工作树副本）的自动动作不在这份登记里，见 16.4。
+
+**本章依据的文件**如下。调度入口（orchestrator）的操作类参考在 `team/profiles/orchestrator/references/` 下，它们是从调度入口规则文件里拆出来的小节，文件里的节号（如 0.5.2、3.6）沿用原文件的编号，不是本文的节号。
+
+| 文件 | 讲什么 |
+|---|---|
+| `team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md` | 集群设计正本：组织、调度、技能手册库治理、看门狗、备份与升级的设计依据。它里面的规模数字以它自己给出的安装树复核命令为准 |
+| `team/profiles/orchestrator/SOUL.md` | 调度入口的守则：三级路由阈值、定级标记、打回标记、跨板编排 |
+| `team/profiles/orchestrator/orchestrator_rules.md` | 调度入口的规则文件。路由阈值以 `SOUL.md` 为准；它的看板路由表仍列着三个已并入顶层调度入口的领域网关（pay、aiteam、data 各自的 orchestrator），读到时以 `SOUL.md` 和 `team/README_zh.md` 的名册为准 |
+| `team/profiles/orchestrator/references/matrix-conventions.md` | 在消息平台（Matrix）里怎样发任务请求 |
+| `team/profiles/orchestrator/references/notification-format.md` | 任务状态变更时怎样通知、哪些情况自动订阅 |
+| `team/profiles/orchestrator/references/board-keywords.md` | 安全类关键词命中哪块看板 |
+| `team/profiles/orchestrator/references/topic-tags.md` | 话题标签的定义与用法 |
+| `team/profiles/orchestrator/references/routing-examples.md` | 路由判定示例 |
+| `team/profiles/orchestrator/references/workspace-packaging.md` | 父任务完成时怎样把工作目录打包给子任务 |
+| `team/profiles/orchestrator/references/implementation-examples.md` | 建任务等操作的实现示例 |
+| `team/profiles/orchestrator/cron/jobs.json`、`team/profiles/ops-devops/cron/jobs.json` | 定时任务登记，见 16.1 与 16.3 |
+
+16.1 起所说的看门狗，指定时巡检、发现异常后按预定规则自动处置的脚本。
+
+### 16.1 看门狗会自动做什么
+
+| 动作或文件 | 它做什么 | 本仓载体 | 人要注意什么 |
+|---|---|---|---|
+| 卡片的卡死巡检与收回重派（登记名 `kanban卡死巡检推进`） | 每 30 分钟触发一次。登记项指向的仓内脚本只有两行，作用是转发给仓外的同名脚本。它扫哪些卡、按什么阈值判卡死、怎样收回重派，都写在仓外那份脚本里，本文未在仓内核实。 | `team/profiles/orchestrator/cron/jobs.json`、`team/profiles/orchestrator/scripts/kanban_stuck_watchdog.sh` | 仓外脚本不在时，这个任务以退出码 127 失败，登记里留有这样一次失败记录。当前有没有卡停住，用第 13.2 节的 `hermes kanban sleeping-workers` 看。 |
+| 被暂停的定时任务自动恢复（登记名 `cron暂停巡检自愈`） | 每天 08:00、14:00、20:00 运行，用 `hermes cron list --all` 取任务状态。白名单只有一项，即夜间Loop存活看门狗；它被暂停时，脚本自动执行 `hermes cron resume` 并输出告警，取不到状态时也输出告警。另有一份已退役任务编号的黑名单，编号一旦重新处于启用状态，脚本只告警，不自动删。 | `team/profiles/orchestrator/scripts/cron_paused_watchdog.sh` | 想长期停掉白名单里的任务，要同时把它从脚本的白名单里去掉，否则最迟到下一次巡检就被恢复。一切正常时脚本不输出，也就不投递消息。 |
+| 并发档位的自动改写（登记名 `evo并发熔断看门狗`） | 每 5 分钟运行，只读代理服务的请求日志，把并发分成 L0、L1、L2 三档。近 15 分钟 BigModel 的 429（HTTP 状态码，请求被限速）达到 10 次、503（HTTP 状态码，服务不可用）达到 3 次或已有供应商熔断，判为 L2；429 达到 3 次、出现 503 或有供应商连续失败达到 2 次，判为 L1；其余为 L0。写进主配置的三档上限：L0 是 8 和 3，L1 是 6 和 2，L2 是 2 和 1，前一个数是总并发，后一个数是单个 profile（一个智能体角色的配置目录）的并发。 | `team/profiles/orchestrator/scripts/evo_concurrency_watchdog.py` | 处在 L1 或 L2 时有人把并发数改回去，下一次巡检会改回低档；L0 时脚本不写配置。档位变化不发邮件，只留在定时任务的执行记录里。 |
+
+三类都是启用状态。三行的核实深度不同：并发看门狗和暂停巡检的脚本正文都在仓里，表中数字取自脚本常量；卡死巡检在仓里只有转发脚本。并发看门狗还要知道三点。降到低档立即执行，从 L2 回到 L1 也立即执行，只有回到 L0 才要求近 5 分钟零错误且不少于 5 条真实请求，上一次回升失败后还要等退避时间，退避时长按 10、20、40 分钟递增，40 分钟封顶。降档那一刻，脚本读出配置里的当前值记作基线，回升时写回的是这个基线。脚本的文件头把 L0 写成 12 和 4，与脚本常量的 8 和 3 不一致，以常量为准。
+
+| 登记名 | 周期 | 用途（核实到的一层） | 本仓载体 |
+|---|---|---|---|
+| `邮箱检查 (bot-mail@example.com)` | 每 30 分钟 | 用邮件命令行工具取未读邮件，有未读才输出摘要，没有就不输出。 | `team/profiles/orchestrator/scripts/check-email.sh` |
+| `ccswitch-bgm-watchdog` | 每分钟 | 只在周一到周五 14:00 到 18:00 之间动作：近 5 分钟官方通道的请求达到 2 次，就调用切换脚本把它移出故障转移队列。切换脚本动手前先备份代理数据库。 | `team/profiles/orchestrator/scripts/ccswitch-bgm-watchdog.sh` |
+| `worldmonitor-sentinel` | 每小时第 7 分和第 37 分 | 检查一份技能文件在不在。不在就从归档目录拷回并输出告警；拷贝失败也输出告警。 | `team/profiles/orchestrator/scripts/worldmonitor_sentinel.sh` |
+| `meta-watchdog: watchdog健康交叉互检` | 每 360 分钟 | 仓内脚本是转发，正文不在仓里。从登记名看，用途是给其他看门狗做交叉检查。 | `team/profiles/orchestrator/scripts/meta_watchdog.sh` |
+| `session-wire-drift-watchdog` | 每 60 分钟 | 扫描各 profile 会话库里未结束会话钉住的接口模式，与 profile 配置比对。登记项只写了脚本名；不带参数时只报告，发现不一致以退出码 1 结束。带 `--fix` 才改写，改写前把原记录备份成 JSON。 | `team/profiles/orchestrator/scripts/session_wire_watchdog.py` |
+| `capability-gap 看门狗（RSI S2）` | 每 60 分钟 | 仓内脚本是薄包装，正文不在仓里。登记里的一次失败输出显示，它会用看板命令在 platform 板建能力缺口修复卡。 | `team/profiles/orchestrator/scripts/run-capability-gap-watchdog.sh` |
+| `夜间Loop存活看门狗` | 每天 06:30 | 仓内脚本是转发。文件头注写明用途：夜间 Loop 的完成标记缺失时告警。 | `team/profiles/orchestrator/scripts/loop_liveness_watchdog.sh` |
+| `skill-mining-weekly` | 2 月 29 日 03:07，只有闰年才有 | 智能体任务（要启动模型执行提示词）：从最近完成的看板任务里归纳反复出现的操作模式，评审技能提案。登记备注说排程已改为不触发、由统一夜间 Loop 驱动；但表达式在闰年仍会触发，登记里的下次运行时间是 2028 年 2 月 29 日。 | `team/profiles/orchestrator/cron/jobs.json` 登记项 |
+| `ttvv-monthly-report` | 2 月 29 日 03:09，只有闰年才有 | 智能体任务：运行任务用时统计脚本并分析趋势。同样由统一夜间 Loop 驱动，同样在闰年被触发。 | `team/profiles/orchestrator/cron/jobs.json` 登记项 |
+
+这张表是其余 9 项启用中的登记项。登记文件是 2026 年 10 月 28 日的脱敏快照，其中的运行状态字段不代表目标机器的现状，例如快照里 `worldmonitor-sentinel` 的连续失败次数是 187。要看某台机器的真实状态，用下面的只读办法，`HERMES_HOME` 指 Hermes 的运行根目录。第一条列出指定 profile 的定时任务：每个任务带一枚状态标记（active、paused、completed 或 disabled），并列出最近一次运行的时间、结果和连续失败次数；该 profile 没有调度器在服务时，命令会给出提示。第二条让并发看门狗只打印读到的信号和档位，不写任何文件。
+
+```bash
+HERMES_HOME=<profile 目录> hermes cron list --all
+EVO_CONC_DRYRUN=1 python3 <profile 目录>/scripts/evo_concurrency_watchdog.py
+```
+`cron list` 不带 `--all` 时只列启用和暂停的任务。它读取时会重新设置 cron 目录的权限，还可能新建输出目录，所以按第 13.2 节的「业务只读」对待，不算第 13.1 节的严格零写入探针。`HERMES_HOME` 要显式指向目标 profile，否则命令只看主 profile 的任务，会把「状态未知」当成故障。
+
+### 16.2 哪些文件由脚本生成、改了会被覆盖
+
+判断一个文件能不能手改，先看谁在写它。下表里的文件都有脚本或调度器在写，手改的内容会在下一次写入时丢失，属于不可手改的文件。要改其中的值，改它的来源。
+
+| 文件或目录 | 由谁按哪份输入生成 | 什么时候会被覆盖 | 人要注意什么 |
+|---|---|---|---|
+| 各 profile 的 `.env` | `team/shared/generate-configs.py`。输入是 `team/shared/profiles.yaml` 里各 profile 的 `env_extra`，加上共享变量文件 `.env.common`。 | 该脚本不带 `--dry-run` 或 `--diff` 运行时，整体重写。 | 生成的 `.env` 文件头写明不要手工编辑。`.env.common` 不在仓里，仓内只有只列变量名的 `.env.common.example`。 |
+| 各 profile 的 `config.yaml` | 同一脚本。输入是 `profiles.yaml` 的 `shared_config` 段和各 profile 自己的段。 | 同上一行。另有两条路也会重新生成：`team/shared/skill-fence.py` 以 `apply --with-configs` 运行时，会重建主模型供应商与 `profiles.yaml` 不一致的 profile；`hermes update` 之后由 git 的 post-merge 钩子（合并完成后自动执行的脚本）调起，钩子文件在宿主上，仓内只有脚本注释为证。 | 生成时只保留原文件里十个自动管理段（`mcp_servers`、`clearances`、`moa` 等），其余键全部重写。不在保留名单里的手改字段会丢。 |
+| 各 profile 的 `skills/` 挂载目录 | `team/shared/skill-fence.py`。输入是 `profiles.yaml` 的 `skills_enabled`（允许的类目）和 `skills_pinned`（单独点名的技能）。 | `skill-fence.py apply` 运行时，以及上面说的 post-merge 钩子。 | 声明之外的条目，符号链接被删，真实目录被移进 `skills-archive/<profile>/`，不删除，并记入 `MANIFEST.md`。声明了却缺失的条目被补成指向共享层的链接。没有声明 `skills_enabled` 的 profile 不受管理。 |
+| 主配置 `config.yaml` 里的 `max_in_progress` 和 `max_in_progress_per_profile` 两行 | `evo_concurrency_watchdog.py`（见 16.1）。 | 并发档位不是 L0 时，每 5 分钟检查一次。 | 只替换这两个数字，保留注释。L0 时不写。改这两个数之前先确认档位，否则会被改回。 |
+| `cron/jobs.json` 的运行态字段（`next_run_at`、`last_run_at`、`last_status`、`failure_streak` 等），以及 `cron/output/`、锁文件、临时文件 | 调度器。 | 每次调度。 | 任务定义可以改，运行态字段不要改：`next_run_at` 由调度器在发现它与表达式不符时自行重算。改任务定义的做法见 16.5。 |
+
+第二行最容易出事。手改的值当时生效，下一次生成被写回旧值，文件语法仍然合法，启动也不报错。识别办法是看修改时间：多个 profile 的 `config.yaml` 和 `profiles.yaml` 的修改时间落在同一秒，说明生成脚本刚跑过。所以修任何要在全部 profile 生效的字段，改 `profiles.yaml` 这个来源。想先看会改成什么，用 `generate-configs.py --diff`，或者不带参数运行 `skill-fence.py`，两者都只预览、不写文件。
+
+并发配置还有两处要留意。第一，仓内 orchestrator 的 `config.yaml` 模板里也有这两个键，值是 8 和 5；派单器实际读主配置还是 profile 自己的配置，取决于网关以哪个运行根目录启动，本文未核实。第二，仓内的网关内嵌派单器（dispatcher，负责把看板任务分给 worker 的组件）把并发设置注明为启动时读取一次、重启才生效；并发看门狗文件头说的每拍重新读取、60 秒内生效，在仓内代码里只对独立运行的派单循环成立。看门狗改了配置文件，不代表运行中的网关已经按新值派单。Studio 一侧由 `npm run inject` 生成的文件见第 3.2 节，这里不重复。
+
+### 16.3 升级必须走安全脚本
+
+结论：升级 Hermes Agent 用安全脚本 `hermes-update-safe.sh`，不要直接运行 `hermes update`。先交代一个事实：仓内的 `team/profiles/ops-devops/scripts/hermes-update-safe.sh` 只有 6 行，它把调用转发给宿主上的正本，正本不在仓里。
+
+仓内能核实的部分如下。
+
+- 它登记在 ops-devops 的定时任务里，登记名 `hermes-update-safe-verify`，每周三 03:00 以纯脚本方式运行（`no_agent`，不启动模型），输出投递到微信。
+- 登记里保存的一次失败输出显示：脚本先执行更新，再打印一份「校验汇总」，把问题分成「需人工处理项」和「已知告警（基线内，无新增）」两类；校验不过时以退出码 1 结束，并声明自己「仅告警不自动修复」。那次被列为需人工处理的是三项：微信适配器文件不存在、微信适配器补丁的标记缺失、看板写护栏的注册代码被更新冲掉。
+- 更新前是否先做快照、除了这三项还核对什么：正本不在仓内，本文未在仓内核实。
+
+直接运行 `hermes update` 的风险，仓内的技能文件里有记录。
+
+- 它实际是在 Agent 安装目录里执行 `git pull`，官方没有更新后钩子，补丁重放和技能目录整理要靠自建的 git 钩子（`team/skills/devops/update-time-inventory-self-healing/SKILL.md`）。
+- 本地打在源码上的改动会被冲掉。看板写护栏的注册代码丢失后，所有新连接的写入都会失败，技能文件记录这个问题已三次复发（`team/skills/devops/hermes-fleet-ops-lessons/SKILL.md`）。
+- 更新后的同步可能把技能目录换成空壳，只能靠对比技能数量发现（`team/skills/devops/update-skill-library-repair/SKILL.md`）。
+- 无人值守时，更新可能停在「是否恢复本地改动」的交互提示上一直挂着；更新进行中手工补的源码会被反复重置（同 `hermes-fleet-ops-lessons`）。
+
+补丁成批重放的入口是 `team/patches/apply-source-patches.sh`：每个补丁先查是否已在，不在才应用，冲突时写日志留给人工。升级后要读该登记项的最近一次输出，出现「需人工处理项」就逐条处理，不要把任务跑完当成升级成功。本地源码补丁的留档位置见 16.4。
+
+### 16.4 备份与恢复的入口
+
+仓内能核实的备份和留档入口有四处，即下表第 1、4、5、7 行；恢复命令只有一个，即第 3 行。下表逐项说明各备份什么、放在哪里、怎样恢复；恢复步骤不在仓内的，直接写明。
+
+| 入口 | 备份什么，放在哪里 | 怎样恢复 | 人要注意什么 |
+|---|---|---|---|
+| `team/profiles/platform-skill-miner/scripts/skill-full-backup.sh` | 只备份 orchestrator 一个 profile 的 `skills/` 目录。打包时取符号链接指向的真实内容，排除 `.curator_backups`。产物是 `orch-skills-<UTC时间>.tar.gz` 和一份带 SHA256 的清单文件，放在外置盘 `/Volumes/nvme2230/hermes-backups/skills/`，保留最近 14 份。 | 恢复步骤不在本仓脚本里。 | 外置盘没挂载时，它只写一行 SKIP 日志并以退出码 0 结束，所以退出码 0 不等于备份成功，要看 `logs/skill-backup.log`。触发方式本文未在仓内核实。 |
+| 季度恢复演练：登记名 `季度DR恢复演练(dr-drill-quarterly)`，脚本 `team/profiles/ops-devops/scripts/dr_drill_cron.sh` | 不产备份，只验证能不能恢复。每年 1、4、7、10 月的 1 日 04:17 运行演练器，时限 900 秒；三类场景全过时不输出，否则输出摘要并以非 0 退出码结束。 | 不适用。 | 演练器正本 `run_dr_drill.sh` 在仓外。演练失败说明备份不可恢复，比备份任务失败更紧急。 |
+| `team/shared/skill-lifecycle.py restore <技能名>` | 对应的留档动作是 `skill-fence.py` 和 `skill-lifecycle.py apply`，它们把技能移进 `skills-archive/`。 | 这是仓内唯一能核实的恢复命令：把归档里的技能目录移回原位，目标位置已有同名目录时拒绝执行。 | 移回之后要重跑 `generate-configs.py` 和 `skill-fence.py apply`，脚本结束时会打印这句提示。 |
+| 本地源码补丁的留档：`team/profiles/_shared/decisions/` | 存放打在 Agent 源码上的本地补丁备份，例如看板写护栏注册代码（`kanban-udf-restore-20261009.patch`）、微信适配器噪声过滤（`weixin-adapter-noisefilter.patch`）。 | 重新应用补丁，做法见 `team/skills/devops/hermes-fleet-ops-lessons/SKILL.md` 第一节。 | 该技能文件提醒，旧恢复脚本的锚点会随代码演进失配，失配时要按当时的代码结构手工处理。16.3 的重放脚本只处理补丁目录里固定名单上的补丁，不含这里的留档。 |
+| `team/profiles/orchestrator/scripts/worktree-daily-reclaim.sh` 的回收留档 | 回收 worktree 之前，把未合并的提交转存成 `archive/<任务号>` 分支，把主仓没有或内容不同的未追踪文件拷到外置盘目录，保留 30 天后删除。 | 恢复步骤不在本仓脚本里。 | 它不在 `jobs.json` 里；技能文件记载它已并入统一夜间 Loop 的回收步，入口是 launchd（macOS 系统定时服务）。 |
+| `team/profiles/_shared/skill-provisioning.json` | 它不备份数据，内容是每个角色应挂载哪些技能的清单，顶层字段是 `roles`，每项含 `match`、`skills`、`note`。 | 不适用。 | 不要把它当恢复来源。 |
+| 改动前的就地备份 | 并发看门狗每天第一次写配置前留 `config.yaml.bak-evo-<月日>`；`session_wire_watchdog.py --fix` 改写前把每条原记录存成 JSON；改 `jobs.json` 的约定是先留 `.bak-<月日>`。 | 从对应的 `.bak` 文件或 JSON 取回。 | 这些备份都在原文件所在的目录树下。 |
+
+仓内没有覆盖整个集群的恢复脚本。参照文档第 4.7 节还写了 SOUL 资产的版本化、上下文工件的基线快照与回滚、向远端仓库自动推送几项，它们的脚本都不在本仓，本文未核实，不在这里写恢复步骤。Studio 自身数据的落点和备份注意事项见第 7 节。
+
+### 16.5 删除定时任务前先存退役档案
+
+纪律只有一句：删除任何定时任务之前，先把它的完整定义存进退役档案，再从 `jobs.json` 里删。先交代一个事实：退役档案是与 `jobs.json` 同目录的 `retired_jobs.json`，它不入库（`team/.gitignore` 把它列为运行态文件），所以它的字段格式和已有条目本文未在仓内核实。
+
+仓内能核实的是档案该装什么，以及一次有记录的删除。
+
+- 档案里要放三样东西：任务的完整定义、怎样恢复、和现役任务有没有调度冲突的警告。出处是参照文档和 `team/skills/devops/nightly-intel-radar/SKILL.md`。
+- 有记录的一例：旧的雷达任务 `fa8b11f3d382` 已从 `jobs.json` 物理删除，定义存进了退役档案；这个编号同时是 `cron_paused_watchdog.sh` 黑名单的第一项，它一旦重新启用，巡检会告警。出处是 `team/skills/devops/nightly-radar-runbook/SKILL.md`。
+
+操作时的六条规矩，出自 `team/skills/devops/cron-job-management/SKILL.md`。
+
+1. 只想暂停的任务用暂停，写 `enabled=false` 和 `paused_reason`，不要删除。
+2. 真要删除时三处一起处理：launchd 一侧卸载并删除 plist；cron 一侧先做 `.bak` 备份，再从 `jobs.json` 删条目；最后把任务编号记进看门狗黑名单。
+3. 被删的入口任务如果在复活看门狗的白名单里，必须同步从白名单去掉，否则会被自动恢复，和新入口重复运行。
+4. 黑名单只收已删除任务的编号，只想暂停的任务不要放进去。巡检脚本只在编号处于启用状态时才告警。
+5. 复活一个任务前，先核对它和现役任务的调度冲突。
+6. 改 `jobs.json` 用加锁、临时文件整体替换、留 `.bak`、改完重读核对的做法，仓内范例是 `team/profiles/orchestrator/scripts/migrate_night_jobs_noagent.py`。
+
+删除 profile 本身时同样先备份再删，清单在 `team/skills/devops/agent-profile-lifecycle/SKILL.md` 的删除一节。
+
+## 17. 写操作总清单与未验证边界
+
+### 17.1 执行前必须按写操作审批的命令
 
 - `npm install`、`pnpm install`、`npm run inject`、`npm run clean`、`npm run dev`、`npm run serve`。
 - `npm run zcode:ensure`、`npm run zcode:serve`、`node scripts/zcode-engine.mjs install-cli`。
@@ -651,7 +776,7 @@ commit / 版本：
 
 对应证据分别见第 3、5、9、12、13.3 节。 dry-run 只有 `node scripts/deploy-agent-runtime.mjs` 与 `npm run release:packages -- --dry-run` 这两个本文明确给出的只读形式；去掉 dry-run 或加上 `--apply` 后就是写操作。`scripts/deploy-agent-runtime.mjs:1-10`、`scripts/make-release-packages.mjs:8-17,36-41`。
 
-### 16.2 本文没有宣称完成的验证
+### 17.2 本文没有宣称完成的验证
 
 - 未启动当前 worktree 的后端、前端、gateway、Matrix、Ycode 或 worker。
 - 未使用真实 Studio JWT、API_SERVER_KEY、Synapse token 或模型凭据。

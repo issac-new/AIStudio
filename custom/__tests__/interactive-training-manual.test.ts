@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { execFileSync, spawnSync } from 'node:child_process'
 import type { Server } from 'node:http'
 import { createTrainingServer } from '../../scripts/start-training-manual.mjs'
@@ -570,13 +570,18 @@ describe('AIStudio 交互培训课程契约', () => {
     expect(chapterTotals.reduce((sum, n) => sum + n, 0), '默认内容页数不等于各章声明之和').toBe(contentTotal)
     expect(feature).toContain('IDE 辅助栏页签 | **23**')
     for (const route of ['/app/projects', '/app/projects/:id', '/app/records', '/app/records/:kind/:id']) expect(feature).toContain(route)
+    // 章节号会随插章顺延（2026-11-28 新增第 2 章后原编号整体加一），按标题找章，不写死编号
+    for (const title of [
+      '产品需求分析团队：怎样形成可执行的 Spec 与设计',
+      '研发团队核心技能：用 swarm-yuan 约束真实交付',
+      '项目管理团队：怎样开工、派工与配置容量',
+      '项目管理团队：怎样使用 G1-G6 质量门',
+      '运维监控团队：怎样部署、观测、恢复与发布',
+      '安全合规及审计内控团队：怎样独立核验',
+    ]) {
+      expect(new RegExp(`^## \\d+\\. ${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm').test(manual), `手册缺章节「${title}」`).toBe(true)
+    }
     for (const text of [
-      '## 2. 产品需求分析团队：怎样形成可执行的 Spec 与设计',
-      '## 4. 研发团队核心技能：用 swarm-yuan 约束真实交付',
-      '## 8. 项目管理团队：怎样开工、派工与配置容量',
-      '## 10. 项目管理团队：怎样使用 G1-G6 质量门',
-      '## 13. 运维监控团队：怎样部署、观测、恢复与发布',
-      '## 14. 安全合规及审计内控团队：怎样独立核验',
       'SIM 则按步 20 G5、步 21 UAT 执行',
       '没有实际发送 Matrix 或外部消息',
       '不是逐 AC 三态编辑台账',
@@ -715,22 +720,25 @@ describe('培训分层与诚实催办（P2 Task 3）', () => {
     // 真实章节号集：从 "## N. 标题" 提取
     const chapters = new Map<number, string>()
     for (const m of manualText.matchAll(/^## (\d+)\. (.+)$/gm)) chapters.set(Number(m[1]), m[2].trim())
-    expect(chapters.size).toBeGreaterThanOrEqual(17)
-    // §1.1 表六行：团队 → 期望章节号集（2026-11-06 P2 修正：产品 2/7、项目 7-12、
-    // 研发 3-7、测试 6/7、运维 13、审计 14——与各章标题归属一致）
-    const expected: Record<string, number[]> = {
-      '产品需求分析': [2, 7],
-      '项目管理': [7, 8, 9, 10, 11, 12],
-      '研发': [3, 4, 5, 6, 7],
-      '测试': [6, 7],
-      '运维监控': [13],
-      '安全合规及审计内控': [14],
+    const numbers = [...chapters.keys()].sort((a, b) => a - b)
+    expect(numbers, '手册章号应从 1 连续编号').toEqual(numbers.map((_, at) => at + 1))
+    // 期望按章节标题给出（章节号会随插章顺延；2026-11-28 新增「AI 集群怎样干活」后六支团队都加读这一章）
+    const cluster = 'AI 集群怎样干活，人怎样跟它协作'
+    const review = '研发与测试团队：怎样完成独立评审、UAT 与发布交接'
+    const expected: Record<string, string[]> = {
+      '产品需求分析': [cluster, '产品需求分析团队：怎样形成可执行的 Spec 与设计', review],
+      '项目管理': [cluster, review, '项目管理团队：怎样开工、派工与配置容量', '项目管理团队：running、blocked、review 怎样分类处置', '项目管理团队：怎样使用 G1-G6 质量门', '项目管理团队：怎样作验收与发布决策', '项目管理团队：怎样做 G6 复盘与受控改进'],
+      '研发': [cluster, '研发团队：怎样建立任务契约、依赖与工作区', '研发团队核心技能：用 swarm-yuan 约束真实交付', '研发团队：怎样在 IDE 中完成可审查编码', '测试团队：怎样做独立测试与 Eval 闭环', review],
+      '测试': [cluster, '测试团队：怎样做独立测试与 Eval 闭环', review],
+      '运维监控': [cluster, '运维监控团队：怎样部署、观测、恢复与发布'],
+      '安全合规及审计内控': [cluster, '安全合规及审计内控团队：怎样独立核验'],
     }
+    const numberByTitle = new Map([...chapters].map(([n, title]) => [title, n]))
     const tableStart = manualText.indexOf('| 团队 | 主读章节 |')
     const tableEnd = manualText.indexOf('每章都要留下交付物', tableStart)
     expect(tableStart).toBeGreaterThan(-1)
     const table = manualText.slice(tableStart, tableEnd)
-    for (const [team, chapterNumbers] of Object.entries(expected)) {
+    for (const [team, titles] of Object.entries(expected)) {
       const row = table.split('\n').find(line => line.startsWith(`| ${team} |`))
       expect(row, `§1.1 缺 ${team} 行`).toBeTruthy()
       const refs = [...row!.matchAll(/第 ([\d、—\-]+) 章/g)]
@@ -745,18 +753,18 @@ describe('培训分层与诚实催办（P2 Task 3）', () => {
           return [Number(part)]
         })
         .sort((a, b) => a - b)
+      const chapterNumbers = titles.map(title => {
+        expect(numberByTitle.has(title), `手册缺章节「${title}」`).toBe(true)
+        return numberByTitle.get(title)!
+      }).sort((a, b) => a - b)
       expect(refs, `${team} 主读章节与期望不一致`).toEqual(chapterNumbers)
-      for (const n of chapterNumbers) {
-        expect(chapters.has(n), `第 ${n} 章被 ${team} 引用但真实标题不存在`).toBe(true)
-      }
     }
   })
 
-  it('手册 §8.4 定义催办三态：routed-only/unassigned/解析失败，未发送是定义不是提示', () => {
-    const section = manualText.slice(
-      manualText.indexOf('### 8.4 `routed` 和催办不等于 worker'),
-      manualText.indexOf('### 8.5'),
-    )
+  it('手册「routed 和催办不等于 worker」一节定义催办三态：routed-only/unassigned/解析失败，未发送是定义不是提示', () => {
+    const start = manualText.search(/^### \d+\.4 `routed` 和催办不等于 worker$/m)
+    expect(start, '手册缺「routed 和催办不等于 worker」一节').toBeGreaterThan(-1)
+    const section = manualText.slice(start, manualText.indexOf('\n### ', start + 1))
     expect(section).toContain('routed-only')
     expect(section).toContain('sent/received 均为 null')
     expect(section).toContain('unassigned')
@@ -766,11 +774,14 @@ describe('培训分层与诚实催办（P2 Task 3）', () => {
     expect(section).toContain('路由已解析')
   })
 
-  it('交互页每幕声明 layer=simulation 且 practiceRef 命中手册真实 17.x 小节', () => {
+  it('交互页每幕声明 layer=simulation 且 practiceRef 命中手册「技术实操」章的真实小节', () => {
     const { SCENES } = courseData()
-    // 真实 17.x 小节标题集
+    // 实操章的章节号从标题推导（章节号会随插章顺延），不写死
+    const practiceChapter = [...manualText.matchAll(/^## (\d+)\. (.+)$/gm)].find(m => m[2].trim() === '技术实操、故障索引与参考材料')?.[1]
+    expect(practiceChapter, '手册缺「技术实操、故障索引与参考材料」章').toBeTruthy()
+    // 真实小节标题集
     const sections = new Map<string, string>()
-    for (const m of manualText.matchAll(/^### (17\.\d+) (.+)$/gm)) sections.set(m[1], m[2].trim())
+    for (const m of manualText.matchAll(new RegExp(`^### (${practiceChapter}\\.\\d+) (.+)$`, 'gm'))) sections.set(m[1], m[2].trim())
     expect(sections.size).toBeGreaterThanOrEqual(7)
     const partToTeam: Record<string, string> = {
       development: '研发', project: '项目管理团队', product: '产品需求分析团队',
@@ -779,13 +790,48 @@ describe('培训分层与诚实催办（P2 Task 3）', () => {
     for (const scene of SCENES) {
       expect(scene.layer, `${scene.id} 缺 layer 声明`).toBe('simulation')
       expect(scene.practiceRef, `${scene.id} 缺 practiceRef`).toBeTruthy()
-      expect(sections.has(scene.practiceRef), `${scene.id} practiceRef ${scene.practiceRef} 不指向真实 17.x 小节`).toBe(true)
+      expect(sections.has(scene.practiceRef), `${scene.id} practiceRef ${scene.practiceRef} 不指向实操章的真实小节`).toBe(true)
       expect(sections.get(scene.practiceRef), `${scene.id} practiceRef 指错团队小节`).toContain(partToTeam[scene.part])
     }
     // 每幕模拟声明渲染面在位（renderCoach 消费 practiceRef/layer）
     expect(html).toContain('id="coachLayer"')
     expect(html).toContain('layer=simulation')
     expect(html).toContain('scene.practiceRef')
+  })
+
+  it('交互页每幕「六团队手册」参考标签指向的手册章节真实存在，且含本团队的章', () => {
+    // 2026-11-28 实证：新增第 2 章后手册整体顺延，14 个 practiceRef 有测试兜住并随批改了，
+    // 而 6 幕的参考标签（如「六团队手册 §8、§17.2」）不归任何测试管，靠加宽扫描窗口才找出来。
+    const { SCENES } = courseData()
+    const chapters = new Map<number, string>()
+    for (const m of manualText.matchAll(/^## (\d+)\. (.+)$/gm)) chapters.set(Number(m[1]), m[2].trim())
+    const sections = new Set([...manualText.matchAll(/^### (\d+\.\d+) /gm)].map(m => m[1]))
+    const teamOf: Record<string, string> = {
+      development: '研发团队', project: '项目管理团队', product: '产品需求分析团队',
+      testing: '测试团队', operations: '运维监控团队', audit: '安全合规及审计内控团队',
+    }
+    let checked = 0
+    for (const scene of SCENES) {
+      for (const reference of (scene.references ?? []) as Array<{ label: string; href: string }>) {
+        if (!reference.href.includes('aistudio-training-and-user-guide.md') || !reference.label.includes('§')) continue
+        checked += 1
+        const cited: string[] = []
+        for (const token of reference.label.slice(reference.label.indexOf('§') + 1).split('、')) {
+          for (const part of token.split('-')) cited.push(part.replace(/^§/, '').trim())
+        }
+        expect(cited.length, `${scene.id} 的参考标签「${reference.label}」解析不出章节`).toBeGreaterThan(0)
+        for (const part of cited) {
+          const exists = part.includes('.') ? sections.has(part) : chapters.has(Number(part))
+          expect(exists, `${scene.id} 的参考标签「${reference.label}」指向手册里不存在的 ${part}`).toBe(true)
+        }
+        const chapterLevel = cited.filter(part => !part.includes('.')).map(Number).filter(n => n !== 1)
+        if (chapterLevel.length > 0 && teamOf[scene.part]) {
+          const owned = chapterLevel.some(n => chapters.get(n)?.includes(teamOf[scene.part]!))
+          expect(owned, `${scene.id}（${teamOf[scene.part]}）的参考标签「${reference.label}」没有指到本团队的章`).toBe(true)
+        }
+      }
+    }
+    expect(checked, '应当至少检查到六处手册章节标签').toBeGreaterThanOrEqual(6)
   })
 
   it('命令块标注「本页不执行」：交互面板与打印页两处代码块都带标注', () => {
@@ -994,5 +1040,127 @@ describe('文档结构检查（2026-11-26 文档刷新批）', () => {
       }
     }
     expect(checked, '应当至少检查到一百处路由行号').toBeGreaterThan(100)
+  })
+
+  it('培训手册「AI 集群怎样干活，人怎样跟它协作」章十个小节齐全', () => {
+    // 2026-11-28 集群设计对齐批：六支团队都靠这一章了解 AI 集群的规矩（§1.1 主读表把它指给所有团队）。
+    // 小节被删、改名或并章时这里当场变红。
+    const manual = readFileSync(resolve(root, 'docs/manuals/aistudio-training-and-user-guide.md'), 'utf8')
+    const start = manual.search(/^## \d+\. AI 集群怎样干活，人怎样跟它协作$/m)
+    expect(start, '手册缺「AI 集群怎样干活，人怎样跟它协作」章').toBeGreaterThan(-1)
+    const chapter = manual.slice(start, manual.indexOf('\n## ', start + 1))
+    const titles = [...chapter.matchAll(/^### \d+\.\d+ (.+)$/gm)].map(match => match[1].trim())
+    expect(titles).toEqual([
+      '集群的编制与五岗接力',
+      '唯一调度入口与三级路由',
+      '建卡必须带板名、跨板不互派',
+      'AI 只看得到白名单里的手册',
+      '卡死与阻塞时系统会自动做什么',
+      '完成交接要带哪三样',
+      '打回与返修',
+      '两套评审的适用边界',
+      '定级与变更三分法',
+      '主动性治理的边界',
+    ])
+    // 这一章不转抄集群设计正本的规模数字（那些数字只在安装树上成立），档位名册指向名册文件
+    expect(chapter).toContain('team/shared/profiles.yaml')
+    expect(/(?<![\d.])921(?![\d.])/.test(chapter), '这一章不应出现技能总数 921').toBe(false)
+  })
+
+  it('运维参考「集群的自动动作与不可手改的文件」章五小节齐全，每节都指到本仓文件', () => {
+    // 2026-11-28 实证：看门狗、不可手改、备份恢复、安全升级、退役档案五类内容此前在运维参考里一个字都没有，
+    // 而定时任务登记与脚本都在仓里。仓内只有转发脚本的部分，章内必须写明「未在仓内核实」，不许写成已核实。
+    const operations = readFileSync(resolve(root, 'docs/manuals/aistudio-operations-reference.md'), 'utf8')
+    const start = operations.search(/^## \d+\. 集群的自动动作与不可手改的文件$/m)
+    expect(start, '运维参考缺「集群的自动动作与不可手改的文件」章').toBeGreaterThan(-1)
+    const chapter = operations.slice(start, operations.indexOf('\n## ', start + 1))
+    const sections = [...chapter.matchAll(/^### \d+\.(\d+) (.+)$/gm)]
+    expect(sections.map(match => match[2].trim())).toEqual([
+      '看门狗会自动做什么',
+      '哪些文件由脚本生成、改了会被覆盖',
+      '升级必须走安全脚本',
+      '备份与恢复的入口',
+      '删除定时任务前先存退役档案',
+    ])
+    for (const keyword of ['看门狗', '不可手改', '备份', '恢复', '退役档案', '安全脚本']) {
+      expect(chapter.includes(keyword), `运维参考新章缺关键词「${keyword}」`).toBe(true)
+    }
+    // 每个小节都至少指到一个仓内真实存在的 team/ 路径（不写行号，路径必须在）
+    for (const [, n] of sections) {
+      const from = chapter.indexOf(`### 16.${n} `)
+      const body = chapter.slice(from, chapter.indexOf('\n### ', from + 1) === -1 ? chapter.length : chapter.indexOf('\n### ', from + 1))
+      const paths = [...body.matchAll(/`(team\/[\w./-]+\.(?:sh|py|json|md|yaml|patch))`/g)].map(match => match[1])
+      expect(paths.length, `运维参考 16.${n} 没有指向仓内文件`).toBeGreaterThan(0)
+      for (const path of paths) expect(existsSync(resolve(root, path)), `运维参考 16.${n} 指向的 ${path} 不存在`).toBe(true)
+    }
+    // 指向集群设计正本的入口在，且链接指得到文件
+    expect(chapter).toContain('team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md')
+    for (const reference of ['matrix-conventions.md', 'notification-format.md', 'board-keywords.md', 'topic-tags.md', 'routing-examples.md', 'workspace-packaging.md', 'implementation-examples.md']) {
+      expect(chapter.includes(`team/profiles/orchestrator/references/${reference}`), `运维参考新章缺操作类参考 ${reference} 的入口`).toBe(true)
+    }
+  })
+
+  it('设计正本声明了与集群设计正本的分工，且不转抄它的规模数字', () => {
+    const design = readFileSync(resolve(root, 'docs/DESIGN.md'), 'utf8')
+    const reference = 'team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md'
+    expect(statSync(resolve(root, reference)).size, '集群设计正本应存在且有分量').toBeGreaterThan(100_000)
+    // 路径在 3.9 节还会出现一次，这里只认 1.1 节里的分工声明
+    const section = design.slice(design.indexOf('### 1.1 系统定义'), design.indexOf('### 1.2 服务对象'))
+    expect(section.length, '设计正本缺 1.1 节').toBeGreaterThan(0)
+    expect(section, '设计正本 1.1 节应写明两份正本的分工').toContain('两份正本的分工')
+    expect(section, '设计正本 1.1 节应给出集群设计正本的路径').toContain(reference)
+    // 集群设计正本的规模数字以它自己的安装树复核命令为准；本仓镜像与安装树的数量不同（2026-11-28 核实），转抄即写错
+    for (const banned of [/(?<![\d.])921(?![\d.])/, /(?<![\d.])83(?![\d.])\s*(本|个)?\s*脚本/, /(?<![\d.])99(?![\d.])\s*条?\s*规则/]) {
+      expect(banned.test(design), `设计正本不应转抄集群规模数字：${banned}`).toBe(false)
+    }
+  })
+
+  it('文档入口都链接到集群设计正本，且链接指得到文件', () => {
+    for (const file of ['docs/README.md', 'docs/USAGE.md', 'docs/manuals/aistudio-design-document-guide.md']) {
+      const text = readFileSync(resolve(root, file), 'utf8')
+      const links = [...text.matchAll(/\]\(([^)\s]+hermes-complete-design-doc\.md)\)/g)].map(match => match[1])
+      expect(links.length, `${file} 应有指向集群设计正本的链接`).toBeGreaterThan(0)
+      for (const link of links) {
+        expect(existsSync(resolve(dirname(resolve(root, file)), link.split('#')[0]!)), `${file} 的链接 ${link} 指不到文件`).toBe(true)
+      }
+    }
+  })
+
+  it('Windows 两份安装说明：档位数等于 team/profiles 的实际档位目录数', () => {
+    // 2026-11-28 实证：两份说明停在 30/36 个档位、aiteam 6 个；同类问题此前只给两份团队说明加了检查，漏了这两份。
+    const dirs = readdirSync(resolve(root, 'team/profiles'), { withFileTypes: true }).filter(entry => entry.isDirectory())
+    const actual = dirs.filter(entry => entry.name !== '_shared').length
+    const ofTeam = (prefix: string) => dirs.filter(entry => entry.name.startsWith(prefix)).length
+    expect(actual).toBeGreaterThan(10)
+    const install = readFileSync(resolve(root, 'team/WINDOWS-INSTALL.md'), 'utf8')
+    expect(install).toContain(`本仓 ${actual} profiles / 8 teams`)
+    expect(install).toContain(`All ${actual} Profiles`)
+    // 名册表各行档位数之和（已移除的团队不计）
+    const rows = [...install.matchAll(/^\| \*\*([\w-]+)\*\* \((\d+)[^)]*\) \|/gm)]
+    expect(rows.length, 'WINDOWS-INSTALL 应有名册表').toBeGreaterThan(5)
+    expect(rows.reduce((sum, row) => sum + Number(row[2]), 0), 'WINDOWS-INSTALL 名册表各团队档位数之和').toBe(actual)
+    for (const team of ['aiteam', 'pay', 'data']) {
+      expect(Number(rows.find(row => row[1] === team)?.[2]), `WINDOWS-INSTALL 名册表 ${team} 行的档位数`).toBe(ofTeam(`${team}-`))
+    }
+    const offline = readFileSync(resolve(root, 'team/WINDOWS-OFFLINE-INSTALL.md'), 'utf8')
+    const current = [...offline.matchAll(/本仓当前 (\d+)/g)].map(match => Number(match[1]))
+    expect(current, 'WINDOWS-OFFLINE-INSTALL 的「本仓当前 N」处数').toHaveLength(2)
+    for (const n of current) expect(n, 'WINDOWS-OFFLINE-INSTALL 的本仓档位数').toBe(actual)
+  })
+
+  it('工具参考：npm 包数与 Python、Node 版本要求跟得上事实来源', () => {
+    // 2026-11-28 实证：工具参考写 Python 3.12、31 个 npm 包；事实来源是 package-all.json 与 Windows 排查文档。
+    const tools = readFileSync(resolve(root, 'team/TOOLS-REFERENCE.md'), 'utf8')
+    const deps = Object.keys(JSON.parse(readFileSync(resolve(root, 'team/package-all.json'), 'utf8')).dependencies)
+    expect(deps.length).toBeGreaterThan(30)
+    expect(tools).toContain(`\n${deps.length} Node.js packages including:`)
+    const setup = readFileSync(resolve(root, 'docs/windows-x64-setup.md'), 'utf8')
+    const python = /\| Python \| [^|\n]*需 (\d+\.\d+) \|/.exec(setup)?.[1]
+    const node = Number(/\| Node\.js \| ≥ (\d+)/.exec(setup)?.[1])
+    expect(python, 'Windows 排查文档应写明 Python 版本要求').toBeTruthy()
+    expect(node, 'Windows 排查文档应写明 Node 下限').toBeGreaterThan(0)
+    expect(tools).toContain(`winget install Python.Python.${python}`)
+    expect(tools).toContain(`choco install python${python!.replace('.', '')}`)
+    expect(tools).toContain(`JavaScript runtime（不低于 ${node}）`)
   })
 })

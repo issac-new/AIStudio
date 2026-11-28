@@ -46,7 +46,7 @@ git commit -m "init"
 
 ## Installation / 安装
 
-### Option A: Batch Install (All 36 Profiles) — Recommended
+### Option A: Batch Install (All 27 Profiles) — Recommended
 
 ```powershell
 # Clone the repo
@@ -76,12 +76,12 @@ hermes profile install $env:TEMP\SwarmTeam\profiles\worker-researcher --alias -y
 ### Option C: Install a Single Team
 
 ```powershell
-# Install only the aiteam team (6 profiles)
+# Install only the aiteam team (5 profiles)
 Get-ChildItem "$env:TEMP\SwarmTeam\profiles\aiteam-*" -Directory | ForEach-Object {
     hermes profile install $_.FullName --alias -y
 }
 
-# Install only the pay team (4 profiles)
+# Install only the pay team (3 profiles)
 Get-ChildItem "$env:TEMP\SwarmTeam\profiles\pay-*" -Directory | ForEach-Object {
     hermes profile install $_.FullName --alias -y
 }
@@ -202,7 +202,7 @@ hermes profile update worker-coder
 
 ---
 
-## Profile Roster（本仓 30 profiles / 8 teams；41/10 为 2026-10 公开分发包历史口径）
+## Profile Roster（本仓 27 profiles / 8 teams；41/10 为 2026-10 公开分发包历史口径）
 
 | Team | Profiles | Purpose |
 |------|----------|---------|
@@ -210,12 +210,13 @@ hermes profile update worker-coder
 | **product** (2) | product-manager, product-researcher | Product management |
 | **ops** (4) | ops-sre, ops-incident-commander, ops-devops, ops-eval | DevOps & SRE |
 | **platform** (2) | platform-skill-miner, platform-ontology-curator | Self-improving system |
-| **aiteam** (6) | aiteam-orchestrator + architecture/multimodal/embodied/training/scout | AI research domain |
-| **pay** (4) | pay-orchestrator, pay-infra, pay-clearing, pay-fintech | Payment & clearing domain |
-| **data** (4) | data-orchestrator, data-infra, data-arch, data-flink | Realtime data stack (Flink/Paimon/MinIO) |
-| **[已移除]** (11) | [已移除]/physics/pdk/toolchain/backend/dv/ipcore/packtest/ams/ai/rev | [已移除] / IC design automation |
+| **aiteam** (5) | aiteam-architecture, aiteam-multimodal, aiteam-embodied, aiteam-training, aiteam-scout | AI research domain |
+| **pay** (3) | pay-infra, pay-clearing, pay-fintech | Payment & clearing domain |
+| **data** (3) | data-infra, data-arch, data-flink | Realtime data stack (Flink/Paimon/MinIO) |
+| **[已移除]** (11，历史口径，已退役，不计入本仓 27) | [已移除]/physics/pdk/toolchain/backend/dv/ipcore/packtest/ams/ai/rev | [已移除] / IC design automation |
 | **hack** (4) | hack-recon/auditor/exploit/forensics | Authorized security testing |
 
+> 三个领域网关（aiteam-、pay-、data-orchestrator）已于 2026-11-18 并入顶层 `orchestrator`，目录已删。
 > [已移除] family-team profiles are excluded from this public distribution for family-privacy reasons.
 
 See `README.md` for detailed capabilities of each profile.

@@ -4,7 +4,7 @@
 // swarm-yuan failure-taxonomy 六类（ENV/TIMEOUT/PRODUCT/SCRIPT/FLOW/UNKNOWN）。
 // 本模块只增不改：canonical 作为跨域对账键，旧 rootCause 联合与旧台账值原样保留。
 //
-// 归因顺序沿用手册第 17 章：先环境、再 Harness、最后模型。canonical 的 ENV/TIMEOUT
+// 归因顺序沿用手册第 18 章：先环境、再 Harness、最后模型。canonical 的 ENV/TIMEOUT
 // 属于执行环境；PRODUCT/SCRIPT/FLOW 属于 Harness/产品；UNKNOWN 不猜；FLAKY 归人工。
 
 export const CANONICAL_FAILURE_CATEGORIES = [

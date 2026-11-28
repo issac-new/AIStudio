@@ -24,6 +24,37 @@ AIStudio 是一套由人指挥 AI 团队交付软件的工作系统。
 测试验证。全流程推演 harness 用真实链路演练这四条主线，
 并保存可供审计的证据。
 
+从整体看，五个组件落在三层上，这是集群设计正本使用的分法，细致的分层见 3.1。
+驾驶舱在最上层，承接人的操作与审批；
+hermes agent 在中间，本文档称它为「集群」；
+swarm-yuan 生成的目标技能在最下层，由集群里的 worker 加载使用。
+Matrix 负责传消息，Ycode 在本机执行编码任务。
+消息经 gateway 进入集群，调度入口把它变成看板卡再派给 worker；
+执行记录写回看板与运行证据，驾驶舱只读取这些权威来源（见 3.9），
+不另存一份任务状态。
+
+集群内部是一个调度入口（orchestrator）加一组专业 worker。
+调度入口只拆任务、派任务，不自己执行；worker 按团队归属，团队按领域分板。
+现役档位以 `team/profiles/` 下的目录为准，当前 27 个，分属 8 个团队（含调度入口）。
+`team/shared/profiles.yaml` 是这些档位的配置来源，其中还保留着已退役档位的条目，不能当作现役名册。
+岗位范式、能力装配与隔离原则见 3.4。
+
+集群内部的设计另有一份正本，路径是
+`team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md`。
+两份正本的分工如下，内容不互相转抄。
+
+| 正本 | 讲什么 | 不讲什么 |
+|---|---|---|
+| 本文档 | 整体理念、五个组件之间的接口与跨域契约；集群与整体相接的部分见 3.4、4.2 | 集群内部的调度细则、岗位手册、脚本与定时任务清单 |
+| 集群设计正本 | 组织控制层的机制、载体与维护纪律：调度与编排、组织与能力边界、技能手册库治理、看门狗、备份与升级 | 驾驶舱、Ycode 与 swarm-yuan 的生成链路 |
+
+集群设计正本里的规模数字（技能、脚本、规则、看板的数量）以它自己给出的
+安装树复核命令为准，本文档与其他手册不转抄。
+有三项机制只在集群设计正本里讲，因为它们的实现文件在宿主安装树（`~/.hermes/`）上、不在本仓：
+红蓝对抗演练编排（协议文件与算分器）、技能工程与评测体系（两份技能）、
+判分器防回流（守卫脚本；本仓只有 `team/skills/devops/worker-completion-independence-verification/SKILL.md` 对它的描述）。
+生产知识库的选型记录与部署手册在本仓 `docs/knowledge-base/`，集群侧怎样接入它在集群设计正本里讲。
+
 ### 1.2 服务对象
 
 第一用户是负责交付的主管，而不是 AI 智能体。
@@ -640,6 +671,11 @@ worker 的能力边界由可用工具、可加载技能、资料密级和角色�
 | 能力目录 | 每机上报 profile、角色和技能数，供派发与审计读取 | 能力上报 |
 | 技能供给 | 按 manifest 补齐缺失，先干跑再应用，失败可回滚 | 中央供给清单 |
 
+表中「中央供给清单」的本仓载体是 `team/profiles/_shared/skill-provisioning.json`：
+它按档位名的匹配规则列出每个岗位应当具备的技能，是技能供给的期望态清单。
+它与 `team/shared/profiles.yaml` 的挂载白名单是两份不同的清单，
+前者回答「岗位应该配齐哪些技能」，后者回答「岗位允许加载哪些技能」，两份对账即知漂移。
+
 领域隔离采用三层隔离：手册层只让岗位加载白名单技能；
 派单层只认本板名册；建卡层拒绝跨域建卡。
 资料密级沿引用链合取，多个标签取最严格一档，派单前检查。
@@ -844,7 +880,9 @@ Electron 桌面构建是可选发布能力。
 | 贡献回顾 | `custom/server/agentidentity/judgments.ts` 判别联合（`kind='contribution_review'`） | 人署名唯一写面（human-entry）；签署人限合同 owner/verifier、person 禁自评；事实面 fail-soft，无总分/排名/因果信用比例 |
 
 `runtime/hermes-records/` 是仓内脱敏工作副本，不是全部记录的系统正本。
-集群设计正本在 `team/`，部分决策注册表的系统源位置由 MANIFEST 标明。
+集群设计正本在 `team/`，具体文件是
+`team/profiles/orchestrator/references/design-doc/hermes-complete-design-doc.md`（分工见 1.1）；
+部分决策注册表的系统源位置由 MANIFEST 标明。
 
 七条跨域契约：
 
@@ -997,6 +1035,18 @@ Python 与 TS 同边界同 env（`KANBAN_UNMARKED_TIER`，非法值回落 T2）�
 
 看板 done 表示任务完成；发布类任务还要经过 4.5 的观察窗，
 才能对外收口。
+
+worker 报完成时，`kanban_complete` 的 summary 与 metadata 按完成交接结构（CompletionHandoff）填写，
+字段定义在 `team/profiles/_shared/02-org-orchestration/ontology.md`：
+`artifacts_produced`（产出了什么）、`findings`（发现了什么）、`decisions`（决定了什么）
+是验收方判断「真做完还是自述做完」的三项依据。
+键名有一处要留意：运行时模板读取的产物字段是 `metadata.artifacts`（文件路径列表，
+用来把产物作为附件上传、在清理临时工作区前保存），它不读 `artifacts_produced`；
+交接时产出文件路径写在 `artifacts`。
+
+收尾解释的质量标准另见 `team/shared/completion-contract.md`：
+T2、T3 卡的 summary 至少分三步写清做了什么、为什么这么做、怎么验证的，
+每一步的验证都要有真实工具输出；缺任一步或验证没有输出支撑，该步按未验证处理，由验收方退回。
 
 任务依赖 `parents` 只在同板内用于阻塞判定。
 跨板协作通过卡内引用和上下文注入表达。
@@ -1338,6 +1388,13 @@ Ycode 分叉（`zcode-patches` 009）直接读取用户目录与工作区的 `.c
 领域知识库必须锁定版本，引用前检查现行来源。
 退役资产先归档并保留召回路径，不静默删除。
 同主题技能不超过 3 本，技能正文有字节预算，禁止为单一 bug 建长期技能。
+
+挂载白名单的单一事实源是 `team/shared/profiles.yaml`。
+每个档位用 `skills_enabled` 列出允许加载的技能类目，用 `skills_pinned` 列出单独允许的顶层技能，
+两者合起来就是这个档位能加载的全部技能，清单之外的不挂载。
+`team/shared/skill-fence.py` 按这份清单整理每个档位的技能目录：
+清单外的链接被解除，清单外的真实目录移入可召回的归档目录而不是删除，
+清单内缺失的条目补成指向共享层的链接。
 
 成本控制作用于提示词、工具说明、技能正文和历史上下文。
 共享参数集中定义，技能正文按需读取，工具按岗位最小化配置。
@@ -1820,6 +1877,10 @@ Ycode 命令行入口的 `--version` 读的是 CLI 工作区自己的版本号�
 升级批次、补丁再生与退役记录归各自 spec 与 git 历史，不写入本节。
 补丁数量由 `patches/series` 与 `zcode-patches/series` 计算，不在正文维护。
 技术组件台账只收外部组件型调研线，不含仓内四大基线。
+台账在 `team/shared/research/tech-components-ledger-20261027/tech-components-ledger.md`，
+是组件型调研线的唯一事实源：每条记录上游仓库、相对基线的增量判级和跟进状态。
+上游超过 90 天没有新提交的调研线标为退役，保留历史轨迹，只停止跟进上游增量。
+三棵 vendor 树的钉版以 `vendor/VENDOR.md` 为准，台账不重复登记。
 
 ### 5.5 发布与版本
 
