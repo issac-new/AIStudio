@@ -6,12 +6,12 @@
 
 | 位置 | 内容 | 事实源边界 |
 |---|---|---|
-| `team/shared/profiles.yaml` | 本仓 30 个 profile 的差异清单（toolsets/plugins/skills/端口/assignee）；47 是某次 live 舰队快照口径，非本仓数 | profile 差异唯一事实源 |
+| `team/shared/profiles.yaml` | 档位差异清单（toolsets/plugins/skills/端口/assignee）：现列 48 个档位条目，其中 27 个在本仓有目录，另 21 个只在宿主上；它是宿主登记的同步快照，不按本仓目录数计 | profile 差异唯一事实源 |
 | `~/.hermes/shared/generate-configs.py` | 由 profiles.yaml 生成各 profile 的 config.yaml + .env（精简 override 模式） | 生成器，不要手改产物 |
 | `~/.hermes/shared/.env.common` | 共享密钥/通用变量（`${VAR}` 引用注入 config.yaml） | 密钥唯一事实源 |
-| `team/shared/domain-registry.yaml` | 9 个域 → 看板 → profile 成员 → owner 映射（`tests/test_board_ownership.py` 断言 9 板） | 域划分事实源 |
-| `team/shared/paradigm-map.yaml` | 30 个 profile 的三范式归属（基座/领域/治理） | 范式事实源（2026-10-28 K11 落库；改判只改此表与 `tests/test_paradigm_map.py`） |
-| `team/shared/owner-registry.yaml` | 模块级 ownership + matrix 号 + backup；当前覆盖 12/30 profile（`scope: legacy-partial`），未覆盖者按 orchestrator 兜底 | 职责事实源（部分覆盖，见文件头） |
+| `team/shared/domain-registry.yaml` | 10 个域 → 看板 → profile 成员 → owner 映射（`tests/test_board_ownership.py` 断言 10 板） | 域划分事实源 |
+| `team/shared/paradigm-map.yaml` | 27 个 profile 的三范式归属（基座/领域/治理） | 范式事实源（2026-10-28 K11 落库；改判只改此表与 `tests/test_paradigm_map.py`） |
+| `team/shared/owner-registry.yaml` | 模块级 ownership + matrix 号 + backup；当前覆盖 12 个 profile（`scope: legacy-partial`；现役 27 个），未覆盖者按 orchestrator 兜底 | 职责事实源（部分覆盖，见文件头） |
 | `~/.hermes/shared/capability-graph.yaml` | 各 profile 能力/可靠度（done/(done+failed) 自动聚合） | 自动生成区勿手改 |
 | `team/shared/acp-harness-catalog.yaml` | ACP harness 启动目录（binary/npx/args/cwdArgs/model.envKeys）；新增标准 harness 只加一条目录项 | 启动规格事实源；准入/退役仍以 `config/execution-contract.json` 为准 |
 | `~/.hermes/profiles/<name>/` | 每 profile：`SOUL.md`（身份，运行时自动注入，不可改名挪位）+ config.yaml + .env | 角色细则事实源 |

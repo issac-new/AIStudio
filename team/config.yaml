@@ -438,7 +438,7 @@ kanban:
   auto_decompose_per_tick: 3
   dispatch_stale_timeout_seconds: 14400
   max_in_progress: 8
-  max_in_progress_per_profile: 3
+  max_in_progress_per_profile: 5
 code_execution:
   mode: project
   timeout: 300

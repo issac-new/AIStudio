@@ -1,4 +1,4 @@
-// 角色工具矩阵守门（2026-11-05 AI Native D1）：30/30 profile 全覆盖、角色全定义、
+// 角色工具矩阵守门（2026-11-05 AI Native D1）：全部 profile 全覆盖、角色全定义、
 // deny 面与默认策略包不冲突。矩阵是治理正本（谁来审计谁能用什么），执法在 toolpolicy。
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -32,7 +32,7 @@ describe('角色工具矩阵（D1 治理正本）', () => {
     expect(text.length).toBeGreaterThan(0)
   })
 
-  it('30/30 profile 全覆盖（新 profile 必须显式归角色）', () => {
+  it('全部 profile 都归了角色（新 profile 必须显式归角色；数量按 team/profiles 目录推导）', () => {
     const dirs = readdirSync(resolve(ROOT, 'team/profiles'), { withFileTypes: true })
       .filter((d) => d.isDirectory() && !d.name.startsWith('_'))
       .map((d) => d.name)
