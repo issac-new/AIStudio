@@ -33,7 +33,7 @@
 | L022 | 2026-11-27 | 无新材料：Palantir 批七项待裁决事项的用户裁决（L021 的接续轮） | 不适用 | AIStudio | 不适用 | 不适用 | 未声明 | `docs/superpowers/specs/2026-11-27-palantir-rulings-followup.md` | 2027-01-26 |
 | L023 | 2026-11-27 | 《人类员工与AI员工协作下的组织管理研究报告（讨论稿）》（课题研究组 2026-11；总账建立前 2026-11-06 执行单元责任台账轮为其同源前轮） | 全文级 | AIStudio | 9/0/8/4/3 | 1/12/3 | 有 | `docs/superpowers/specs/2026-11-27-workunit-framework-align.md` | 2026-12-28 |
 | L024 | 2026-11-16 | 《腾讯开源 LoopForge：把 Coding Agent 编成研发团队工作流，告别团队内耗》（微信公众号文章），加 GitHub Tencent/LoopForge 源码；总账建立前执行的同源首轮，2026-11-28 回填 | 未声明 | AIStudio | 未声明 | 未声明 | 未声明 | `docs/superpowers/specs/2026-11-16-loopforge-sop-trust.md` | 2026-12-28 |
-| L025 | 2026-11-28 | 《用 LoopForge 迭代 LoopForge：手把手搭一套 24 小时运转的 AI 研发工作台》（微信公众号文章，加 GitHub Tencent/LoopForge 源码 fd039e5）；L024 的同源第二轮 | 源码级 | AIStudio | 3/0/12/9/3 | 0/0/0 | 无 | `docs/superpowers/specs/2026-11-28-loopforge-scheduled-tasks-absorption.md` | 2026-12-28 |
+| L025 | 2026-11-28 | 《用 LoopForge 迭代 LoopForge：手把手搭一套 24 小时运转的 AI 研发工作台》（微信公众号文章，加 GitHub Tencent/LoopForge 源码 fd039e5）；L024 的同源第二轮 | 源码级 | AIStudio | 3/0/12/9/3 | 1/1/1 | 有 | `docs/superpowers/specs/2026-11-28-loopforge-scheduled-tasks-absorption.md` | 2026-12-28 |
 
 ## 二、记档待定
 
